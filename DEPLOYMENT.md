@@ -1,0 +1,128 @@
+# Deployment & Security Guide
+
+This guide covers installing Bethesda EMR, keeping data safe, and securing it on a clinic
+network. Bethesda EMR ships with **safe defaults** (random secrets, no default admin), but a
+few things depend on *your* environment and are **your responsibility as the deployer** —
+especially network access and HTTPS.
+
+---
+
+## 1. Requirements
+
+- A machine that stays on: a small dedicated PC, a server, or a NAS that supports Docker.
+- **Docker** (Docker Desktop on Windows/Mac, Docker Engine / Container Manager on Linux/NAS).
+- For real use: a UPS is strongly recommended (power loss can corrupt databases).
+
+## 2. Install (first run)
+
+```bash
+# Windows (PowerShell)
+./setup.ps1
+
+# Linux / macOS / NAS
+./setup.sh
+```
+
+On first run the script:
+1. Generates a `.env` file with **strong random secrets** (database password, JWT secret).
+2. Starts the stack with `docker compose up -d --build`.
+
+Then open **http://localhost:8080** (or `http://<host-ip>:8080` from another computer on the
+network). You will be asked to **create the administrator account** — choose your own ID and
+password. There is no `admin/admin`.
+
+Add the rest of your staff in **Settings → Staff**, each with only the permissions they need.
+
+## 3. Secrets (`.env`)
+
+- The `.env` file holds your database password and JWT secret. It is **git-ignored** and must
+  **never be committed or shared**.
+- **Do not delete `.env`.** If you lose it, the app's secret won't match the database anymore.
+- Re-running `setup` will **not** overwrite an existing `.env` (your secrets are kept).
+- These secrets are generated per-install, so no two deployments share the same keys, and
+  none of them are the public defaults from this repository.
+
+## 4. Backups (opt-in — set this up!)
+
+Backups are **off by default** and turned on by setting a path on a *different drive* (so a
+single disk failure doesn't take your data with it).
+
+In `.env`:
+```
+BACKUP_PATH=D:\bethesda-backups        # Windows example
+# BACKUP_PATH=/volume2/bethesda-backups  # NAS example
+BACKUP_RETENTION_DAYS=30
+BACKUP_TIME=02:00
+```
+Then restart (`docker compose up -d`). The app will make a daily `pg_dump` to that folder and
+keep the last `BACKUP_RETENTION_DAYS` days. You can also back up manually and see the list in
+**Settings → Backup**. If no path is set, that screen shows a clear warning.
+
+> **3-2-1 rule:** another drive protects against disk failure, but not theft or fire. Keep an
+> extra copy somewhere else too (a USB drive taken off-site, another machine, or cloud if you
+> have internet).
+
+To **restore** a backup: `gunzip -c backupfile.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
+
+## 5. Network & security — **your responsibility**
+
+This is the part that depends entirely on *your* site. Bethesda EMR can't decide it for you.
+
+### Keep it on the clinic LAN
+- The app should be reachable **only from computers inside your clinic** (the local network).
+- **Do not forward these ports on your router to the internet.** A machine behind a normal
+  router (NAT) is already not reachable from the internet unless you deliberately forward ports
+  — so usually this just means *don't set up port forwarding*.
+
+### Ports
+| Port | Service | Who needs to reach it |
+|------|---------|-----------------------|
+| 8080 | EMR (web) | clinic computers (browsers) |
+| 8090 | PACS web/viewer (optional) | clinic computers + the EMR host |
+| 4242 | PACS DICOM (optional) | imaging devices only |
+
+Lock these down to your LAN with the host's firewall if you can. Don't expose them publicly.
+
+### HTTPS (optional, recommended on Wi-Fi)
+By default the app is served over plain HTTP. On a trusted **wired** LAN the risk is low. On
+**Wi-Fi**, or if you ever allow remote access, you should put HTTPS in front so passwords and
+patient data are encrypted in transit. Options:
+- **NAS users:** most NAS (Synology/QNAP) have a built-in reverse proxy + certificate manager —
+  point it at port 8080 and enable HTTPS from the NAS UI. Easiest path.
+- **Reverse proxy:** put [Caddy](https://caddyserver.com) or nginx/Traefik in front. Caddy can
+  issue a local self-signed certificate automatically (`tls internal`) for LAN use, or a real
+  certificate via Let's Encrypt if you have a domain name and internet.
+- **Self-signed certificate:** fine for internal use; browsers show a one-time warning you
+  accept.
+
+Choose based on your setup. If you need remote access from outside the clinic, use a **VPN**
+into the clinic network rather than exposing the app directly.
+
+## 6. Optional PACS (medical imaging)
+
+The PACS companion (Orthanc) lives in a separate folder/stack. Run its own `setup` script,
+which generates a random Orthanc password and a worklist **bridge token**. Paste that bridge
+token into the EMR under **Settings → Order Feed → Bridge Token** so the two pair up. Orthanc
+is **not** distributed by this project — it is pulled as an official Docker image.
+
+## 7. Updates
+
+Bethesda EMR has a built-in migration runner, so updating is simple:
+1. Get the new version of the code.
+2. Run `docker compose up -d --build` (or the `setup` script).
+
+New database migrations apply automatically on startup; your existing data is preserved.
+**Always take a backup before updating.** After the backend container is recreated, if the web
+page shows a 502, restart the web container once (`docker restart bethesda-emr-web`).
+
+## 8. Before you go live — checklist
+
+- [ ] Ran `setup` so `.env` has unique random secrets (don't use the repo defaults).
+- [ ] Created your real administrator account via the first-run wizard.
+- [ ] Added real staff with least-privilege permissions; removed any test accounts.
+- [ ] Set `BACKUP_PATH` to another drive, and verified a backup file appears.
+- [ ] Have a second, off-site copy of backups.
+- [ ] Ports are not forwarded to the internet; firewall limits them to the LAN.
+- [ ] (If Wi-Fi / remote) HTTPS is set up.
+- [ ] (If using PACS) Orthanc password changed and bridge token paired.
+- [ ] Confirmed the host starts Docker automatically on boot, and ideally has a UPS.

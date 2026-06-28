@@ -1,0 +1,38 @@
+Bethesda EMR — License
+
+Copyright (c) 2026 Bethesda EMR project (sponsored by the church
+"행복한 섬김의 열매 / Fruit of Joyful Devotion", for Bethesda Hospital, Madagascar).
+
+This is a non-profit, source-available project. It is NOT released under a
+standard open-source license. Please read and respect the terms below.
+
+You ARE permitted to:
+  1. Use this software, free of charge, including in a hospital or clinic.
+  2. Modify the source code for your own use and adapt it to your own
+     facility's needs.
+  3. Run it on your own servers/computers for your own operations.
+
+You are NOT permitted to:
+  1. Redistribute the software or any modified version of it — that is, you may
+     not republish, repackage, mirror, sell, sublicense, or otherwise hand it
+     out to others, whether under this name or another name.
+  2. Remove or misrepresent this notice or the project's origin.
+
+If you would like to use this software in a way the terms above do not cover
+(for example, distributing it to other organizations), please contact the
+project first.
+
+Attribution:
+  This software was developed through "vibe coding" with Claude
+  (Anthropic's Claude / Claude Code).
+
+NO WARRANTY:
+  This software is provided "as is", without warranty of any kind, express or
+  implied, including but not limited to the warranties of merchantability,
+  fitness for a particular purpose, and non-infringement. In no event shall the
+  authors or sponsors be liable for any claim, damages, or other liability,
+  whether in an action of contract, tort, or otherwise, arising from, out of, or
+  in connection with the software or the use or other dealings in the software.
+  It is the deployer's responsibility to ensure the system is configured safely
+  (secrets, backups, network security) and used in compliance with local laws
+  and medical-data regulations.

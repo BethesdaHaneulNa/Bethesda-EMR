@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bethesda-emr-db
+    environment:
+      POSTGRES_DB: medconnect
+      POSTGRES_USER: medconnect
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-medconnect2026!}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # NOTE: schema is applied by the backend migration runner (src/config/migrate.js),
+      # not by initdb, so new migrations also reach existing databases on update.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medconnect -d medconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    container_name: bethesda-emr-api
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: medconnect
+      DB_USER: medconnect
+      DB_PASSWORD: ${DB_PASSWORD:-medconnect2026!}
+      JWT_SECRET: ${JWT_SECRET:-medconnect_jwt_secret_change_this_in_production}
+      PORT: 3000
+      TZ: ${TZ:-Indian/Antananarivo}
+      # Backups are opt-in: leave BACKUP_PATH empty to disable. Set it (e.g. D:\medconnect-backups
+      # on Windows, /volume2/backups on a NAS) to enable scheduled + manual DB backups.
+      BACKUP_PATH: ${BACKUP_PATH:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_TIME: ${BACKUP_TIME:-02:00}
+    volumes:
+      # When BACKUP_PATH is empty, mounts a throwaway local folder and the app keeps backups off.
+      - ${BACKUP_PATH:-./.nobackup}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: bethesda-emr-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
