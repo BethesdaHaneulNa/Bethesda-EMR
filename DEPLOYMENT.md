@@ -15,15 +15,16 @@ especially network access and HTTPS.
 
 ## 2. Install (first run)
 
-```bash
-# Windows (PowerShell)
-./setup.ps1
+**Easiest (Windows, no commands):** download the repo ZIP (**`Code ▾` → Download ZIP**), unzip,
+and double-click **`start.bat`**. It does everything below and opens the app in your browser.
 
-# Linux / macOS / NAS
-./setup.sh
+**Command line (Linux / macOS / NAS, or if you prefer):**
+```bash
+./setup.sh      # Linux / macOS / NAS
+.\setup.ps1     # Windows PowerShell
 ```
 
-On first run the script:
+On first run, either way:
 1. Generates a `.env` file with **strong random secrets** (database password, JWT secret).
 2. Starts the stack with `docker compose up -d --build`.
 
@@ -33,7 +34,28 @@ password. There is no `admin/admin`.
 
 Add the rest of your staff in **Settings → Staff**, each with only the permissions they need.
 
-## 3. Secrets (`.env`)
+## 3. Keep it running automatically (always-on server)
+
+A clinic server should come back up by itself after a reboot or a power cut (important where
+power is unreliable). Two things make that happen:
+
+1. **Docker Desktop must start with the computer.** In Docker Desktop, go to
+   **Settings (⚙) → General** and tick **"Start Docker Desktop when you sign in to your
+   computer."** Then Docker launches automatically every time the PC starts.
+2. **The app restarts itself.** The containers are configured with `restart: unless-stopped`, so
+   once Docker is up they start again on their own. You don't need to run `start.bat` after every
+   reboot — only the very first time.
+
+So the normal cycle is: **power comes back → the PC boots → you sign in → Docker starts → the EMR
+is up**, with no manual steps.
+
+- **For a true unattended server** (comes back with *no one* present after a power cut), also turn
+  on **Windows automatic sign-in** so it doesn't wait at the login screen. Only do this if the
+  machine is in a locked/secure room, since anyone who can power it on is then signed in.
+- **Use a UPS** (battery backup). It both rides out short outages and protects the database from
+  corruption during sudden power loss.
+
+## 4. Secrets (`.env`)
 
 - The `.env` file holds your database password and JWT secret. It is **git-ignored** and must
   **never be committed or shared**.
@@ -42,7 +64,7 @@ Add the rest of your staff in **Settings → Staff**, each with only the permiss
 - These secrets are generated per-install, so no two deployments share the same keys, and
   none of them are the public defaults from this repository.
 
-## 4. Backups (opt-in — set this up!)
+## 5. Backups (opt-in — set this up!)
 
 Backups are **off by default** and turned on by setting a path on a *different drive* (so a
 single disk failure doesn't take your data with it).
@@ -64,7 +86,7 @@ keep the last `BACKUP_RETENTION_DAYS` days. You can also back up manually and se
 
 To **restore** a backup: `gunzip -c backupfile.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
 
-## 5. Network & security — **your responsibility**
+## 6. Network & security — **your responsibility**
 
 This is the part that depends entirely on *your* site. Bethesda EMR can't decide it for you.
 
@@ -98,14 +120,14 @@ patient data are encrypted in transit. Options:
 Choose based on your setup. If you need remote access from outside the clinic, use a **VPN**
 into the clinic network rather than exposing the app directly.
 
-## 6. Optional PACS (medical imaging)
+## 7. Optional PACS (medical imaging)
 
 The PACS companion (Orthanc) lives in a separate folder/stack. Run its own `setup` script,
 which generates a random Orthanc password and a worklist **bridge token**. Paste that bridge
 token into the EMR under **Settings → Order Feed → Bridge Token** so the two pair up. Orthanc
 is **not** distributed by this project — it is pulled as an official Docker image.
 
-## 7. Updates
+## 8. Updates
 
 When the app shows a "🔔 Update available" banner (admins only), update with one action:
 
@@ -126,7 +148,7 @@ from the host instead.)
 If something looks wrong after an update, your data is safe — restore the pre-update backup:
 `gunzip -c _pre-update-backups/<file>.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
 
-## 8. Before you go live — checklist
+## 9. Before you go live — checklist
 
 - [ ] Ran `setup` so `.env` has unique random secrets (don't use the repo defaults).
 - [ ] Created your real administrator account via the first-run wizard.
@@ -136,4 +158,4 @@ If something looks wrong after an update, your data is safe — restore the pre-
 - [ ] Ports are not forwarded to the internet; firewall limits them to the LAN.
 - [ ] (If Wi-Fi / remote) HTTPS is set up.
 - [ ] (If using PACS) Orthanc password changed and bridge token paired.
-- [ ] Confirmed the host starts Docker automatically on boot, and ideally has a UPS.
+- [ ] Enabled **Docker Desktop → Settings → General → "Start Docker Desktop when you sign in"** so the server comes back up after a reboot/power cut (see section 3). Ideally a UPS too.
