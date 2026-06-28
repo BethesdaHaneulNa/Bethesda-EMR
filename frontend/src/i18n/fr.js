@@ -144,6 +144,7 @@ export default {
   additionalHint: "Charge suppl.",
   additionalBannerHint: "Articles ajoutés après paiement",
   alreadyBilled: "Déjà facturé",
+  alreadySettled: "Déjà payé en totalité",
   noAdditional: "Aucun ajout",
   prescriptions: "Ordonnances",
   drugs: "Médicaments",

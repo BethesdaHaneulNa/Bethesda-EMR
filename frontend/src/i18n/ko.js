@@ -144,6 +144,7 @@ export default {
   additionalHint: "추가 청구액",
   additionalBannerHint: "수납 후 진료실에서 항목이 추가되었습니다",
   alreadyBilled: "이미 수납",
+  alreadySettled: "이미 수납 완료",
   noAdditional: "추가 항목 없음",
   prescriptions: "처방",
   drugs: "약",

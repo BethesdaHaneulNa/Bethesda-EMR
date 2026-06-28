@@ -153,6 +153,7 @@ export default {
   additionalHint: "Additional charge",
   additionalBannerHint: "Items were added after payment",
   alreadyBilled: "Already billed",
+  alreadySettled: "Already paid in full",
   noAdditional: "No additional items",
   prescriptions: "Prescriptions",
   drugs: "Drugs",

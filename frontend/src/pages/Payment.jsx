@@ -158,6 +158,8 @@ export default function PaymentPage() {
   }
   function chargeTotal(){ return chargeRows().reduce(function(s,r){ return s+r.total_price; },0); }
   function subtotal(){ return chargeTotal(); }
+  // already fully billed and nothing new to charge → nothing to confirm (avoid a 0 Ar receipt)
+  function nothingToCharge(){ return isAdditional() && subtotal() <= 0.0001; }
   function prevBal(){ return parseFloat(sel?.previous_balance)||0; }
   function discountAmt(){ if(discount.type==='percent') return Math.round(subtotal()*(Number(discount.value)||0)/100); return Number(discount.value)||0; }
   function totalDue(){ return Math.max(0,subtotal()-discountAmt()+prevBal()); }
@@ -296,10 +298,12 @@ export default function PaymentPage() {
         <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'#7c3aed':'#1e2433',color:sel?'#ede9fe':'#475569',border:'1px solid '+(sel?'#a855f7':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
         <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'#5b21b6':'#1e2433',color:sel?'#ede9fe':'#475569',border:'1px solid '+(sel?'#8b5cf6':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.reading||'판독소견'}</button>
         <div style={{flex:1}}></div>
-        {tab==='waiting'&&sel&&billItems&&!sel.needs_refund?(<>
+        {tab==='waiting'&&sel&&billItems&&!sel.needs_refund?(nothingToCharge()?(
+          <span style={{color:'#34d399',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
+        ):(<>
           <button onClick={function(){doConfirm('unpaid')}} style={{background:'#ef444420',color:'#f87171',border:'1px solid #ef444440',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
           <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':'partial')}} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',cursor:'pointer',fontSize:15,fontWeight:800}}>{t.confirmPayment}</button>
-        </>):null}
+        </>)):null}
         <button onClick={loadLists} style={{background:'#1e2433',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
 
@@ -503,7 +507,7 @@ export default function PaymentPage() {
     }
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <PatientHeader p={sel} />
-      {isAdditional()?<div style={{background:'#3b82f615',border:'1px solid #3b82f640',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#60a5fa'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
+      {isAdditional()&&subtotal()>0.0001?<div style={{background:'#3b82f615',border:'1px solid #3b82f640',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#60a5fa'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'#f59e0b12',border:'1px solid #f59e0b40',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#f59e0b'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'#fbbf24',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
       <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
         <div>
