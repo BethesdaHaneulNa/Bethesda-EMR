@@ -1,9 +1,10 @@
 #!/bin/sh
 # One-click update for Bethesda EMR (Linux / macOS / NAS).
-# Backs up the database, updates to the latest released version, rebuilds, and verifies.
-# Your data is never touched until a backup has been made.
+# Backs up the database, gets the latest version (via git if present, otherwise by downloading
+# the latest release), rebuilds, and verifies. Your data and .env are preserved.
 set -e
 cd "$(dirname "$0")"
+REPO="BethesdaHaneulNa/Bethesda-EMR"
 echo "=== Bethesda EMR - Update ==="
 
 # 1) Safety backup (always)
@@ -15,11 +16,29 @@ docker exec bethesda-emr-db sh -c "pg_dump -U medconnect -d medconnect --no-owne
 docker cp bethesda-emr-db:/tmp/_preupdate.sql.gz "$backup"
 docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz
 
-# 2) Get the latest released code
-echo "[2/4] Downloading the latest version..."
-git fetch origin --tags --quiet 2>/dev/null || git fetch origin --tags
-tag=$(git tag --sort=-v:refname | head -n1)
-if [ -n "$tag" ]; then git checkout --quiet "$tag"; echo "      -> $tag"; else git pull --ff-only origin main; fi
+# 2) Get the latest version
+echo "[2/4] Getting the latest version..."
+if [ -d ".git" ]; then
+  git fetch origin --tags --quiet 2>/dev/null || git fetch origin --tags
+  tag=$(git tag --sort=-v:refname | head -n1)
+  if [ -n "$tag" ]; then git checkout --quiet "$tag"; echo "      -> $tag (git)"; else git pull --ff-only origin main; fi
+else
+  tag=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
+  echo "      -> $tag (download)"
+  command -v unzip >/dev/null 2>&1 || { echo "[!] Need git or unzip to update. Please install one."; exit 1; }
+  tmp=$(mktemp -d)
+  curl -fsSL "https://github.com/$REPO/archive/refs/tags/$tag.zip" -o "$tmp/src.zip"
+  unzip -q "$tmp/src.zip" -d "$tmp"
+  src=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n1)
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude='.env' --exclude='backups' --exclude='_pre-update-backups' --exclude='.git' "$src"/ ./
+  else
+    cp -f "$PWD/.env" "$tmp/.env.keep" 2>/dev/null || true
+    cp -R "$src"/. ./
+    cp -f "$tmp/.env.keep" "$PWD/.env" 2>/dev/null || true
+  fi
+  rm -rf "$tmp"
+fi
 
 # 3) Rebuild & restart
 echo "[3/4] Rebuilding and restarting (this can take a few minutes)..."

@@ -1,11 +1,16 @@
 # One-click update for Bethesda EMR (Windows).
-# Backs up the database, updates to the latest released version, rebuilds, and verifies.
-# Your data is never touched until a backup has been made.
+# Backs up the database, gets the latest version (via git if present, otherwise by downloading
+# the latest release), rebuilds, and verifies. Your data and .env are preserved.
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+$repo = 'BethesdaHaneulNa/Bethesda-EMR'
 Write-Host "=== Bethesda EMR - Update ===" -ForegroundColor Cyan
 
-# 1) Safety backup (always, regardless of the BACKUP_PATH setting)
+# Is Docker running?
+docker info *> $null
+if ($LASTEXITCODE -ne 0) { Write-Host "[!] Start Docker Desktop first, then run this again." -ForegroundColor Yellow; pause; exit 1 }
+
+# 1) Safety backup (always)
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
 New-Item -ItemType Directory -Force -Path "_pre-update-backups" | Out-Null
 $backup = "_pre-update-backups\preupdate_$stamp.sql.gz"
@@ -13,14 +18,29 @@ Write-Host "[1/4] Backing up the database -> $backup"
 docker exec bethesda-emr-db sh -c "pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz"
 docker cp bethesda-emr-db:/tmp/_preupdate.sql.gz $backup
 docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz
-Write-Host ("      saved ({0:N1} KB)" -f ((Get-Item $backup).Length / 1KB))
 
-# 2) Get the latest released code
-Write-Host "[2/4] Downloading the latest version..."
-git fetch origin --tags --quiet
-$tag = git tag --sort=-v:refname | Select-Object -First 1
-if ($tag) { git checkout --quiet $tag; Write-Host "      -> $tag" }
-else { git pull --ff-only origin main }
+# 2) Get the latest version
+Write-Host "[2/4] Getting the latest version..."
+if (Test-Path ".git") {
+  git fetch origin --tags --quiet
+  $tag = git tag --sort=-v:refname | Select-Object -First 1
+  if ($tag) { git checkout --quiet $tag; Write-Host "      -> $tag (git)" } else { git pull --ff-only origin main }
+} else {
+  $rel = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'Bethesda-EMR' }
+  $tag = $rel.tag_name
+  Write-Host "      -> $tag (download)"
+  $tmp = Join-Path $env:TEMP "bethesda-update"
+  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+  $zip = Join-Path $tmp "src.zip"
+  Invoke-WebRequest "https://github.com/$repo/archive/refs/tags/$tag.zip" -OutFile $zip -UseBasicParsing
+  Expand-Archive $zip -DestinationPath $tmp -Force
+  $src = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
+  # copy new files over the current folder, but keep .env, backups, and pre-update backups
+  robocopy $src $PSScriptRoot /E /NFL /NDL /NJH /NJS /NP /XF ".env" /XD "backups" "_pre-update-backups" ".git" | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "Copying updated files failed (robocopy $LASTEXITCODE)" }
+  Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # 3) Rebuild & restart
 Write-Host "[3/4] Rebuilding and restarting (this can take a few minutes)..."

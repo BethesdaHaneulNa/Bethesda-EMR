@@ -128,14 +128,16 @@ is **not** distributed by this project — it is pulled as an official Docker im
 
 ## 8. Updates
 
-When the app shows a "🔔 Update available" banner (admins only), update with one action:
+When the app shows a "🔔 Update available" banner (admins only), update with one action —
+whether you installed by **Download ZIP** or by `git clone`:
 
 - **Windows:** double-click **`update.bat`**
 - **Linux / macOS / NAS:** run **`./update.sh`**
 
 The update script does everything safely, in order:
 1. **Backs up** the database first (to `_pre-update-backups/`) — your data is never touched until a backup exists.
-2. Downloads the **latest released version**.
+2. Gets the **latest released version** (via git if the folder is a git clone, otherwise by
+   downloading the release — your `.env` and `backups/` are kept either way).
 3. Rebuilds and restarts the containers.
 4. Verifies the app is healthy.
 
