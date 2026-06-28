@@ -1,11 +1,13 @@
-# Bethesda EMR
+# Bethesda EMR — a free EMR for small hospitals & clinics
 
-A lightweight, trilingual (English / 한국어 / Français) Electronic Medical Record system
-built for small hospitals and clinics — especially those just beginning to move from
-paper to digital records.
+**A free, self-hosted, multilingual Electronic Medical Record (EMR / EHR) system for small
+hospitals and clinics** — especially those just beginning to move from paper to digital records.
+It's lightweight, runs anywhere with **Docker**, and works in **English / 한국어 / Français**.
 
-> **Non-profit project.** Made freely available in the hope that hospitals in Madagascar,
-> across Africa, and anywhere healthcare is becoming computerized can use it.
+> **Free & non-profit.** Made freely available so hospitals in Madagascar, across Africa, and
+> anywhere healthcare is becoming computerized can use it — free to use and modify (see
+> [License](#license--please-read)). *Note: free and source-available, but not an OSI
+> "open-source" license — redistribution is not permitted.*
 
 ---
 
