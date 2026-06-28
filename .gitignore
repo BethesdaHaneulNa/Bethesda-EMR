@@ -7,3 +7,4 @@ dist/
 build/
 backups-test/
 .claude/settings.local.json
+_pre-update-backups/

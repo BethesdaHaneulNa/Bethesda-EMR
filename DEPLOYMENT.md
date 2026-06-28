@@ -107,13 +107,24 @@ is **not** distributed by this project — it is pulled as an official Docker im
 
 ## 7. Updates
 
-Bethesda EMR has a built-in migration runner, so updating is simple:
-1. Get the new version of the code.
-2. Run `docker compose up -d --build` (or the `setup` script).
+When the app shows a "🔔 Update available" banner (admins only), update with one action:
 
-New database migrations apply automatically on startup; your existing data is preserved.
-**Always take a backup before updating.** After the backend container is recreated, if the web
-page shows a 502, restart the web container once (`docker restart bethesda-emr-web`).
+- **Windows:** double-click **`update.bat`**
+- **Linux / macOS / NAS:** run **`./update.sh`**
+
+The update script does everything safely, in order:
+1. **Backs up** the database first (to `_pre-update-backups/`) — your data is never touched until a backup exists.
+2. Downloads the **latest released version**.
+3. Rebuilds and restarts the containers.
+4. Verifies the app is healthy.
+
+Database migrations apply automatically on startup; existing data is preserved. The banner
+clears once you're on the latest version. (Updating from inside the app's UI is intentionally
+not offered — a container rebuilding itself is unsafe for a medical system, so the update runs
+from the host instead.)
+
+If something looks wrong after an update, your data is safe — restore the pre-update backup:
+`gunzip -c _pre-update-backups/<file>.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
 
 ## 8. Before you go live — checklist
 
