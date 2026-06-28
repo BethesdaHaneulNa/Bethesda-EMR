@@ -1,5 +1,8 @@
 export default {
   appTitle: "Bethesda EMR",
+  updateAvailable: "새 버전", updateTitle: "업데이트 가능", currentVersion: "현재", releaseNotes: "변경 내역",
+  howToUpdate: "업데이트 방법", viewOnGithub: "GitHub에서 보기",
+  updateSteps: "1) 백업 먼저 (설정 → 백업)\n2) 새 코드 받기 (git pull 또는 새 버전 내려받기)\n3) setup 스크립트 실행, 또는  docker compose up -d --build\n→ DB 마이그레이션은 자동 적용됩니다",
   setupTitle: "초기 설정", setupSubtitle: "관리자 계정을 만드세요", displayName: "이름 (표시용)",
   adminId: "관리자 아이디", setupPwHint: "6자 이상", confirmPassword: "비밀번호 확인",
   createAdmin: "관리자 계정 만들기", pwTooShort: "비밀번호는 6자 이상이어야 합니다", pwMismatch: "비밀번호가 일치하지 않습니다",

@@ -35,6 +35,7 @@ app.use('/api/stats', require('./routes/stats.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/lab', require('./routes/lab.routes'));
 app.use('/api/backup', require('./routes/backup.routes'));
+app.use('/api/version', require('./routes/version.routes'));
 
 // JSON fallback for unknown API routes so frontend never receives index.html for API calls
 app.use('/api', (req, res) => {

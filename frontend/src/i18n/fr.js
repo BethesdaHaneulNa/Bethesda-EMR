@@ -1,5 +1,8 @@
 export default {
   appTitle: "Bethesda EMR",
+  updateAvailable: "Mise à jour", updateTitle: "Mise à jour disponible", currentVersion: "Actuel", releaseNotes: "Nouveautés",
+  howToUpdate: "Comment mettre à jour", viewOnGithub: "Voir sur GitHub",
+  updateSteps: "1) Sauvegardez d'abord (Paramètres → Sauvegarde)\n2) Récupérez le nouveau code (git pull ou téléchargez)\n3) Lancez le script setup, ou  docker compose up -d --build\n→ Les migrations s'appliquent automatiquement",
   setupTitle: "Configuration initiale", setupSubtitle: "Créez le compte administrateur", displayName: "Nom affiché",
   adminId: "Identifiant admin", setupPwHint: "au moins 6 caractères", confirmPassword: "Confirmer le mot de passe",
   createAdmin: "Créer le compte admin", pwTooShort: "Le mot de passe doit comporter au moins 6 caractères", pwMismatch: "Les mots de passe ne correspondent pas",
