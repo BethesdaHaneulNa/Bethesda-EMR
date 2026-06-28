@@ -93,6 +93,16 @@ See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, a
 
 ---
 
+## Questions & feature requests
+
+Have a question, hit a problem, or want a feature added? Please open an **Issue** on this
+repository — it's the best place, and the answer is visible to others who may wonder the same.
+
+문의, 버그 신고, 추가했으면 하는 기능이 있으시면 이 저장소에 **Issue**를 남겨주세요.
+(질문/답변이 공개돼서 다른 분들에게도 도움이 됩니다.)
+
+---
+
 ## License — please read
 
 This is a **non-profit, source-available** project, **not** a standard open-source release.
