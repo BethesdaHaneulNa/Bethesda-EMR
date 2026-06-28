@@ -1,3 +1,7 @@
+# Fixed project name so the data volume is the same no matter which folder you run from
+# (re-downloading a newer version keeps your existing data).
+name: bethesda-emr
+
 services:
   db:
     image: postgres:16-alpine

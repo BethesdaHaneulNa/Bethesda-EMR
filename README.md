@@ -55,22 +55,32 @@ modality worklist, image viewing inside the EMR, and radiology readings.
 
 ## Quick start
 
-Requires **Docker** (Docker Desktop on Windows/Mac, Docker Engine on Linux/NAS).
+**The people who use it every day (reception, doctors, pharmacy) install nothing** — they just
+open the clinic server's address in a web browser. Only **one server** needs to be set up, once.
+
+### The easy way — Windows, no commands
+
+1. Install **[Docker Desktop](https://www.docker.com/products/docker-desktop)** (a normal
+   installer — do this once) and start it.
+2. On this page, click the green **`Code ▾`** button → **Download ZIP**, then unzip it
+   (right-click → Extract All).
+3. Double-click **`start.bat`**.
+
+It downloads, builds, and starts everything, then opens the app in your browser, where you
+**create your administrator account**. There is no default password. (The first run takes a few
+minutes; if Windows shows a security prompt for `start.bat`, choose *More info → Run anyway*.)
+
+### Command line — Linux / macOS / NAS (or if you prefer)
 
 ```bash
-# Windows (PowerShell)
-./setup.ps1
-
-# Linux / macOS / NAS
-./setup.sh
+./setup.sh      # Linux / macOS / NAS
+.\setup.ps1     # Windows PowerShell
 ```
 
-The setup script generates a `.env` with **strong random secrets** on first run, then starts
-everything. Open **http://localhost:8080** and you'll be asked to **create your administrator
-account** — there is no default password.
+Either way, setup generates strong random secrets on first run and starts everything at
+**http://localhost:8080**.
 
-That's it. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, and
-the optional PACS.
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, and the optional PACS.
 
 ---
 
