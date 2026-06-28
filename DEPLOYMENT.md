@@ -64,25 +64,24 @@ is up**, with no manual steps.
 - These secrets are generated per-install, so no two deployments share the same keys, and
   none of them are the public defaults from this repository.
 
-## 5. Backups (opt-in — set this up!)
+## 5. Backups (on by default)
 
-Backups are **off by default** and turned on by setting a path on a *different drive* (so a
-single disk failure doesn't take your data with it).
+Backups are **on by default** — a daily `pg_dump` is saved to the **`backups`** folder next to
+the app, keeping the last `BACKUP_RETENTION_DAYS` (30) days. In **Settings → Backup** you can
+**back up now**, see the list, and **download** any backup to a USB / another drive.
 
-In `.env`:
+**To save automatically to another drive** (recommended, so a single disk failure can't take the
+data with it), set a path in `.env` and restart (`docker compose up -d` or `start.bat`):
 ```
 BACKUP_PATH=D:\bethesda-backups        # Windows example
 # BACKUP_PATH=/volume2/bethesda-backups  # NAS example
 BACKUP_RETENTION_DAYS=30
 BACKUP_TIME=02:00
 ```
-Then restart (`docker compose up -d`). The app will make a daily `pg_dump` to that folder and
-keep the last `BACKUP_RETENTION_DAYS` days. You can also back up manually and see the list in
-**Settings → Backup**. If no path is set, that screen shows a clear warning.
 
 > **3-2-1 rule:** another drive protects against disk failure, but not theft or fire. Keep an
-> extra copy somewhere else too (a USB drive taken off-site, another machine, or cloud if you
-> have internet).
+> extra copy somewhere else too — use the **⬇ download** button to put one on a USB taken
+> off-site, another machine, or cloud if you have internet.
 
 To **restore** a backup: `gunzip -c backupfile.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
 

@@ -38,6 +38,7 @@ export default function SettingsPage() {
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
   async function loadBackup(){ try { setBackup(await api.get('/backup/status')); } catch(e){ setBackup(null); } }
   async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); await loadBackup(); } catch(e){ alert((t.backupFail||'백업 실패')+': '+(e.message||'')); } setBackupBusy(false); }
+  async function downloadBackup(name){ try { var token=localStorage.getItem('medconnect_token'); var res=await fetch('/api/backup/download/'+encodeURIComponent(name),{headers:token?{Authorization:'Bearer '+token}:{}}); if(!res.ok){ alert((t.backupFail||'다운로드 실패')+' ('+res.status+')'); return; } var blob=await res.blob(); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); } catch(e){ alert((t.backupFail||'다운로드 실패')+': '+e.message); } }
 
   async function loadAll(){
     try {
@@ -564,23 +565,17 @@ export default function SettingsPage() {
             <div style={{fontWeight:700,fontSize:15,color:tx,marginBottom:5}}>💾 {t.backupTab||'백업'}</div>
             <div style={{fontSize:13,color:t3,marginBottom:16,lineHeight:1.6}}>{t.backupIntro||'데이터베이스를 정기/수동으로 백업합니다. 백업 경로는 설치 시 .env의 BACKUP_PATH로 지정해요(앱은 C, 백업은 D 식). 경로가 없으면 백업은 꺼집니다.'}</div>
             {!backup?(<div style={{color:t3}}>{t.loading||'Loading…'}</div>):(<>
-              {!backup.enabled?(
-                <div style={{background:'#7c2d1220',border:'1px solid #ef444455',borderRadius:8,padding:'14px 16px',marginBottom:14}}>
-                  <div style={{fontWeight:800,fontSize:14,color:'#f87171',marginBottom:6}}>⚠ {t.backupOff||'백업 미설정 — 데이터가 보호되지 않습니다'}</div>
-                  <div style={{fontSize:13,color:t2,lineHeight:1.6}}>{t.backupOffHow||'백업을 켜려면 .env 파일에 BACKUP_PATH 를 지정하고(예: D:\\medconnect-backups) 다시 시작하세요(docker compose up -d).'}</div>
+              <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:14,marginBottom:14}}>
+                <div style={{display:'flex',gap:24,flexWrap:'wrap'}}>
+                  <div><div style={{fontSize:12,color:t3}}>{t.backupStatus||'상태'}</div><div style={{fontSize:14,fontWeight:800,color:'#34d399'}}>✓ {t.backupOnAuto||'자동 백업 켜짐'}</div></div>
+                  <div><div style={{fontSize:12,color:t3}}>{t.backupPath||'저장 위치'}</div><div style={{fontSize:14,color:tx,fontFamily:'monospace'}}>{backup.custom?backup.hostPath:(t.backupAppFolder||'앱 폴더 (backups)')}</div></div>
+                  <div><div style={{fontSize:12,color:t3}}>{t.backupSchedule||'자동'}</div><div style={{fontSize:14,color:tx}}>{t.backupDaily||'매일'} {backup.time}</div></div>
+                  <div><div style={{fontSize:12,color:t3}}>{t.backupRetention||'보관'}</div><div style={{fontSize:14,color:tx}}>{backup.retentionDays}{t.days||'일'}</div></div>
                 </div>
-              ):(
-                <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:14,marginBottom:14}}>
-                  <div style={{display:'flex',gap:24,flexWrap:'wrap'}}>
-                    <div><div style={{fontSize:12,color:t3}}>{t.backupStatus||'상태'}</div><div style={{fontSize:14,fontWeight:800,color:'#34d399'}}>✓ {t.backupOn||'사용 중'}</div></div>
-                    <div><div style={{fontSize:12,color:t3}}>{t.backupPath||'경로'}</div><div style={{fontSize:14,color:tx,fontFamily:'monospace'}}>{backup.hostPath}</div></div>
-                    <div><div style={{fontSize:12,color:t3}}>{t.backupSchedule||'자동'}</div><div style={{fontSize:14,color:tx}}>{t.backupDaily||'매일'} {backup.time}</div></div>
-                    <div><div style={{fontSize:12,color:t3}}>{t.backupRetention||'보관'}</div><div style={{fontSize:14,color:tx}}>{backup.retentionDays}{t.days||'일'}</div></div>
-                  </div>
-                </div>
-              )}
+                {!backup.custom?<div style={{fontSize:12,color:'#fbbf24',marginTop:10,lineHeight:1.5}}>{t.backupSafetyTip||'⚠ 같은 디스크에 저장돼요. 고장·도난 대비해 아래 ⬇로 USB 등 다른 곳에 복사하거나, 다른 드라이브 자동저장은 .env의 BACKUP_PATH로 지정하세요.'}</div>:null}
+              </div>
               <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:14}}>
-                <button onClick={runBackup} disabled={!backup.enabled||backupBusy} style={{background:backup.enabled?'#16a34a':'#1e2433',color:backup.enabled?'#fff':'#475569',border:'none',borderRadius:6,padding:'9px 18px',cursor:backup.enabled&&!backupBusy?'pointer':'not-allowed',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
+                <button onClick={runBackup} disabled={backupBusy} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:6,padding:'9px 18px',cursor:backupBusy?'wait':'pointer',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
                 <button onClick={loadBackup} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'9px 14px',cursor:'pointer',fontSize:14}}>↻ {t.refresh||'새로고침'}</button>
                 {backup.last?<span style={{fontSize:13,color:t3}}>{t.backupLast||'최근'}: {String(backup.last.mtime).replace('T',' ').slice(0,16)} ({fmtBytes(backup.last.size)})</span>:null}
               </div>
@@ -594,6 +589,7 @@ export default function SettingsPage() {
                           <td style={{padding:'7px 12px',color:tx,fontFamily:'monospace'}}>{b.name}</td>
                           <td style={{padding:'7px 12px',color:t2,textAlign:'right',whiteSpace:'nowrap'}}>{fmtBytes(b.size)}</td>
                           <td style={{padding:'7px 12px',color:t3,textAlign:'right',whiteSpace:'nowrap'}}>{String(b.mtime).replace('T',' ').slice(0,16)}</td>
+                          <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={function(){downloadBackup(b.name)}} title={t.download||'다운로드'} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'3px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}>⬇ {t.download||'다운로드'}</button></td>
                         </tr>; })}
                       </tbody>
                     </table>}

@@ -34,14 +34,15 @@ services:
       JWT_SECRET: ${JWT_SECRET:-medconnect_jwt_secret_change_this_in_production}
       PORT: 3000
       TZ: ${TZ:-Indian/Antananarivo}
-      # Backups are opt-in: leave BACKUP_PATH empty to disable. Set it (e.g. D:\medconnect-backups
-      # on Windows, /volume2/backups on a NAS) to enable scheduled + manual DB backups.
+      # Backups are ON by default and saved to ./backups (a folder next to the app). To save
+      # them on another drive instead, set BACKUP_PATH (e.g. D:\bethesda-backups on Windows,
+      # /volume2/backups on a NAS). You can also download any backup from Settings -> Backup.
       BACKUP_PATH: ${BACKUP_PATH:-}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_TIME: ${BACKUP_TIME:-02:00}
     volumes:
-      # When BACKUP_PATH is empty, mounts a throwaway local folder and the app keeps backups off.
-      - ${BACKUP_PATH:-./.nobackup}:/backups
+      # Default: the app's own ./backups folder. Override the host side with BACKUP_PATH.
+      - ${BACKUP_PATH:-./backups}:/backups
     depends_on:
       db:
         condition: service_healthy

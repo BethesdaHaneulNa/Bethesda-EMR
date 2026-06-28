@@ -1,17 +1,20 @@
-// Database backup service. Backups are opt-in: if BACKUP_PATH is not set, nothing runs.
-// When set, the host path is mounted at /backups and we write gzipped pg_dump files there,
-// pruning beyond the retention window, plus a daily scheduled run at BACKUP_TIME.
+// Database backup service. Backups are ON by default — /backups is always mounted (to the
+// app's own ./backups folder unless BACKUP_PATH points to another drive). We write gzipped
+// pg_dump files there, prune beyond the retention window, run daily at BACKUP_TIME, and let
+// the UI download any backup so a copy can be saved to a USB / another drive.
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
 const DIR = '/backups';
+const PREFIX = 'bethesda_';
 
 function cfg() {
   const hostPath = (process.env.BACKUP_PATH || '').trim();
   return {
-    enabled: !!hostPath,
-    hostPath,
+    enabled: true,            // always on (/backups is always mounted)
+    custom: !!hostPath,       // true if a specific drive/folder was set via BACKUP_PATH
+    hostPath,                 // empty = the app's own ./backups folder
     dir: DIR,
     retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10) || 30,
     time: (process.env.BACKUP_TIME || '02:00').trim(),
@@ -22,10 +25,18 @@ function listBackups() {
   try {
     if (!fs.existsSync(DIR)) return [];
     return fs.readdirSync(DIR)
-      .filter(f => f.startsWith('medconnect_') && f.endsWith('.sql.gz'))
+      .filter(f => (f.startsWith(PREFIX) || f.startsWith('medconnect_')) && f.endsWith('.sql.gz'))
       .map(f => { const st = fs.statSync(path.join(DIR, f)); return { name: f, size: st.size, mtime: st.mtime }; })
       .sort((a, b) => b.mtime - a.mtime);
   } catch (e) { return []; }
+}
+
+// Resolve a backup file path safely (no traversal) for download. Returns null if invalid/missing.
+function resolveBackup(name) {
+  if (!/^[A-Za-z0-9_.-]+\.sql\.gz$/.test(name || '')) return null;
+  const full = path.join(DIR, name);
+  if (path.dirname(full) !== DIR) return null;
+  return fs.existsSync(full) ? full : null;
 }
 
 function stamp() {
@@ -46,7 +57,7 @@ function runBackup() {
     const c = cfg();
     if (!c.enabled) return resolve({ ok: false, error: 'backup path not configured' });
     if (!fs.existsSync(DIR)) return resolve({ ok: false, error: 'backup directory not mounted' });
-    const file = path.join(DIR, `medconnect_${stamp()}.sql.gz`);
+    const file = path.join(DIR, `${PREFIX}${stamp()}.sql.gz`);
     const env = Object.assign({}, process.env, { PGPASSWORD: process.env.DB_PASSWORD || '' });
     const cmd = `pg_dump -h ${process.env.DB_HOST || 'db'} -p ${process.env.DB_PORT || 5432} ` +
       `-U ${process.env.DB_USER || 'medconnect'} -d ${process.env.DB_NAME || 'medconnect'} ` +
@@ -87,4 +98,4 @@ function startScheduler() {
   }, 30000); // check twice a minute
 }
 
-module.exports = { cfg, listBackups, runBackup, startScheduler };
+module.exports = { cfg, listBackups, runBackup, startScheduler, resolveBackup };
