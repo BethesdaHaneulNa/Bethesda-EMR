@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { dicomDate } = require('../utils/localDate');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -82,7 +83,7 @@ router.get('/dicom-mwl', bridgeOrAuth, async (req, res) => {
     const mwlEntries = result.rows.map(r => ({
       PatientName: r.last_name + '^' + r.first_name,
       PatientID: r.patient_id,   // aliased from p.chart_no above
-      PatientBirthDate: r.date_of_birth ? r.date_of_birth.toISOString().split('T')[0].replace(/-/g,'') : '',
+      PatientBirthDate: dicomDate(r.date_of_birth),
       PatientSex: r.gender === 'M' ? 'M' : (r.gender === 'F' ? 'F' : ''),
       AccessionNumber: r.accession_no,
       StudyInstanceUID: r.study_instance_uid,
@@ -90,7 +91,7 @@ router.get('/dicom-mwl', bridgeOrAuth, async (req, res) => {
       ScheduledStationAETitle: r.station_ae,
       ScheduledProcedureStepDescription: r.requested_procedure,
       ScheduledPerformingPhysicianName: '',
-      ScheduledProcedureStepStartDate: r.scheduled_date ? r.scheduled_date.toISOString().split('T')[0].replace(/-/g,'') : '',
+      ScheduledProcedureStepStartDate: dicomDate(r.scheduled_date),
       ScheduledProcedureStepStartTime: r.scheduled_time || '',
       BodyPartExamined: r.body_part || '',
     }));

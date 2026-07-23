@@ -1,7 +1,7 @@
 const express = require('express');
 const net = require('net');
 const { pool } = require('../config/database');
-const { todayLocal } = require('../utils/localDate');
+const { todayLocal, dicomDate } = require('../utils/localDate');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -177,13 +177,13 @@ router.get('/worklist-feed', async (req, res) => {
       patient_id: r.chart_no,
       patient_name: [r.last_name, r.first_name].filter(Boolean).join(' '),
       dicom_patient_name: `${r.last_name || ''}^${r.first_name || ''}`,
-      birth_date: r.date_of_birth ? r.date_of_birth.toISOString().slice(0,10).replace(/-/g,'') : '',
+      birth_date: dicomDate(r.date_of_birth),
       sex: r.gender === 'M' ? 'M' : (r.gender === 'F' ? 'F' : ''),
       modality: r.modality,
       procedure_code: r.order_code,
       procedure_name: r.order_name,
       body_part: r.body_part || '',
-      scheduled_date: r.scheduled_date ? r.scheduled_date.toISOString().slice(0,10).replace(/-/g,'') : '',
+      scheduled_date: dicomDate(r.scheduled_date),
       scheduled_time: String(r.scheduled_time || '').replace(/:/g,'').slice(0,6),
       study_instance_uid: r.study_instance_uid,
       memo: r.memo || ''

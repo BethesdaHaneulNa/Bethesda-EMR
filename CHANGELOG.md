@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.1.1 — 2026-07-23
+
+**Every date sent to an imaging device was one day early.** Dates read out of
+the database were formatted in UTC while the clinic runs three hours ahead, so
+each one crossed back over midnight on the way out: a patient born on the 10th
+reached the modality as the 9th, and an order placed today was scheduled for
+yesterday — which a device that asks the worklist for *today* does not match at
+all, leaving the technician with an empty screen and a patient in front of them.
+
+Affects the modality worklist feed and the bridge feed (`/api/pacs/worklist-feed`,
+`/api/worklist/mwl`). Nothing stored in the database was wrong, so the correct
+dates appear as soon as you update — but images already captured carry the birth
+date the device was given at the time.
+
+Anyone using the PACS bridge should also update it; see the
+[Bethesda PACS](https://github.com/BethesdaHaneulNa/Bethesda-PACS) repository.
+
 ## v1.1.0 — 2026-07-23
 
 A full pass over every module (reception, consultation, pharmacy, lab, payment,

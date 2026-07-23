@@ -10,4 +10,17 @@ function todayLocal() {
   return new Date().toLocaleDateString('en-CA');
 }
 
-module.exports = { todayLocal };
+// A DATE column arrives from node-postgres as a Date at midnight *local* time,
+// so reading it back with toISOString() moves it across the UTC offset and the
+// date leaves the building a day early: a patient born on the 10th is sent to
+// the imaging device as the 9th, and today's order is scheduled for yesterday --
+// which a device that queries the worklist for today will not match at all.
+// Format in the same zone the value was built in. DICOM wants YYYYMMDD.
+function dicomDate(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-CA').replace(/-/g, '');
+}
+
+module.exports = { todayLocal, dicomDate };
