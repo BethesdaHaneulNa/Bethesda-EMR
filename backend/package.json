@@ -1,6 +1,6 @@
 {
   "name": "bethesda-emr-api",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Bethesda EMR Backend API",
   "main": "src/index.js",
   "scripts": {

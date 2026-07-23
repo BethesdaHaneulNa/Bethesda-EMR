@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.2.1 — 2026-07-24
+
+**A backup missed at 02:00 was gone for good.** The scheduler asked "is it 02:00
+right now?" every thirty seconds, so it only fired if the server happened to be
+running during that exact minute. If the power was out at two in the morning —
+or the machine was simply switched off — that night's backup never happened,
+nothing retried it, and nobody was told. The gaps that leaves are invisible
+until the day someone needs to restore.
+
+It now asks whether a backup has happened since it was last due, and takes one
+if not. A machine that comes back at eight in the morning backs up shortly
+after it starts; one that was off for a week takes a single backup on return,
+not seven. A failing backup is retried every 30 minutes rather than every 30
+seconds, so a database that is down does not mean a `pg_dump` all night.
+
+The catch-up file is named for when it actually ran (`..._0835`), not for the
+slot it missed.
+
 ## v1.2.0 — 2026-07-23
 
 **A way to see whether the system is working.** Until now nothing here answered

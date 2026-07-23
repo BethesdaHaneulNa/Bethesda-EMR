@@ -79,23 +79,52 @@ function runBackup() {
   });
 }
 
-let lastSlot = '';
+// The most recent time the backup was supposed to run, at or before `now`.
+function lastDueTime(now, hhmm) {
+  const [h, m] = String(hhmm || '02:00').split(':').map(n => parseInt(n, 10));
+  const due = new Date(now);
+  due.setHours(isNaN(h) ? 2 : h, isNaN(m) ? 0 : m, 0, 0);
+  if (due > now) due.setDate(due.getDate() - 1);  // today's slot has not come round yet
+  return due;
+}
+
+// Wait this long between attempts when a backup keeps failing, so a database
+// that is down does not mean a pg_dump every thirty seconds all night.
+const RETRY_MINUTES = 30;
+let lastAttempt = 0;
+
+// Ask "has a backup happened since it was last due?" rather than "is it 02:00
+// right now?". The old check only fired if the container happened to be running
+// during that exact minute: a power cut at two in the morning meant the night's
+// backup simply never happened, nothing retried it, and nobody was told. The
+// gaps that leaves are invisible until the day someone needs to restore.
+//
+// Comparing against the most recent slot also means a machine that was off for
+// a week takes one backup when it comes back, not seven.
+function backupDue() {
+  const c = cfg();
+  if (!c.enabled) return false;
+  if (Date.now() - lastAttempt < RETRY_MINUTES * 60000) return false;
+  const newest = listBackups()[0];
+  if (!newest) return true;                       // nothing at all yet
+  return newest.mtime < lastDueTime(new Date(), c.time);
+}
+
+function tick() {
+  if (!backupDue()) return;
+  lastAttempt = Date.now();
+  console.log('[backup] backup is due — starting…');
+  runBackup().then(r => console.log('[backup] ' + (r.ok ? `done ${r.file} (${r.size}b)` : `FAILED ${r.error}`)));
+}
+
 function startScheduler() {
   const c = cfg();
   if (!c.enabled) { console.log('[backup] disabled (BACKUP_PATH not set) — no automatic backups'); return; }
   console.log(`[backup] enabled → ${c.hostPath} · daily at ${c.time} · keep ${c.retentionDays}d`);
-  setInterval(() => {
-    const cur = cfg();
-    if (!cur.enabled) return;
-    const d = new Date(); const p = n => String(n).padStart(2, '0');
-    const hhmm = `${p(d.getHours())}:${p(d.getMinutes())}`;
-    const slot = `${d.toDateString()} ${cur.time}`;
-    if (hhmm === cur.time && lastSlot !== slot) {
-      lastSlot = slot;
-      console.log('[backup] scheduled backup starting…');
-      runBackup().then(r => console.log('[backup] ' + (r.ok ? `done ${r.file} (${r.size}b)` : `FAILED ${r.error}`)));
-    }
-  }, 30000); // check twice a minute
+  // Catch up shortly after boot rather than immediately: the machine has just
+  // come back, and the database is the thing we are about to read.
+  setTimeout(tick, 120000);
+  setInterval(tick, 60000);
 }
 
 module.exports = { cfg, listBackups, runBackup, startScheduler, resolveBackup };
