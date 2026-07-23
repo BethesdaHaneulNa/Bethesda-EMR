@@ -1,7 +1,7 @@
 const express = require('express');
-const net = require('net');
 const { pool } = require('../config/database');
 const { todayLocal, dicomDate } = require('../utils/localDate');
+const { tcpCheck } = require('../utils/tcpCheck');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -37,24 +37,6 @@ function normalizeConfig(body) {
   if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 10004;
   if (body.auto_create_worklist !== undefined) out.auto_create_worklist = !!body.auto_create_worklist;
   return out;
-}
-
-function tcpCheck(host, port, timeoutMs = 3000) {
-  return new Promise(resolve => {
-    const socket = new net.Socket();
-    let done = false;
-    function finish(ok, message) {
-      if (done) return;
-      done = true;
-      try { socket.destroy(); } catch (e) {}
-      resolve({ ok, host, port, message });
-    }
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => finish(true, 'TCP connection succeeded'));
-    socket.once('timeout', () => finish(false, 'Connection timed out'));
-    socket.once('error', err => finish(false, err.message));
-    socket.connect(port, host);
-  });
 }
 
 // Authenticated settings UI
@@ -197,6 +179,33 @@ router.get('/worklist-feed', async (req, res) => {
       return res.send(csv);
     }
     res.json({ config: { worklist_scp_host: cfg.worklist_scp_host, worklist_scp_port: cfg.worklist_scp_port, worklist_scp_ae: cfg.worklist_scp_ae }, count: rows.length, rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// The bridge reports in after every sync. It runs in its own compose project
+// with no port of its own, so nothing here can reach out and ask how it is
+// doing -- without this the only record of a broken bridge is a line in a
+// container log nobody reads. Same shared token as the feed above.
+router.post('/bridge-heartbeat', async (req, res) => {
+  try {
+    const cfg = await ensureConfig();
+    const body = req.body || {};
+    const token = body.token || req.query.token || req.header('x-bridge-token');
+    if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
+
+    const detail = {
+      synced: Number(body.synced) || 0,
+      failed: Number(body.failed) || 0,
+      poll_seconds: Number(body.poll_seconds) || 0,
+      error: String(body.error || '').slice(0, 500),
+    };
+    await pool.query(
+      `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
+            VALUES ('worklist_bridge', NOW(), $1, $2)
+       ON CONFLICT (name) DO UPDATE SET last_seen = NOW(), ok = EXCLUDED.ok, detail = EXCLUDED.detail`,
+      [body.ok !== false, JSON.stringify(detail)]
+    );
+    res.json({ received: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

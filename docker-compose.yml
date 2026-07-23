@@ -55,6 +55,16 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    # /api/health touches the app itself, not just the port, so a process that
+    # is up but broken still reports as broken. 127.0.0.1 rather than localhost:
+    # inside the container that name resolves to ::1 first and the server only
+    # listens on IPv4, so "localhost" fails against a perfectly healthy app.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build: ./frontend
@@ -64,6 +74,12 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 volumes:
   pgdata:
