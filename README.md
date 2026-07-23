@@ -86,6 +86,26 @@ See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, a
 
 ---
 
+## Is it working? — the status window
+
+Double-click **`server-status.bat`** on the machine that runs the clinic and leave the window
+open. It re-checks every 15 seconds and shows one line per part of the system — patient records,
+the application server, the EMR screen, disk space, last night's backup, imaging, and the device
+worklist — in **Français / English / 한국어** (there is a button to switch).
+
+It reads the machine directly rather than asking the EMR, so it keeps answering when the EMR
+itself is the thing that broke — which is when you most need it. A green banner means everything
+is working; red names what is not, in words a member of staff can repeat over the phone.
+
+Several failures here are silent by nature: a backup that has not run for a month, a disk quietly
+filling up, or an imaging worklist that stopped updating while every container still looks like it
+is running. Those are the ones this window exists for.
+
+For scripting, `powershell -File server-status.ps1 -Console` prints the same check once and exits
+`0` when everything is fine, `1` if something needs attention, `2` if something is broken.
+
+---
+
 ## Architecture
 
 - **PostgreSQL 16** + **Express (Node 20)** API + **React** front-end (served by nginx)
