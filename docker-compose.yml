@@ -10,6 +10,12 @@ services:
       POSTGRES_DB: medconnect
       POSTGRES_USER: medconnect
       POSTGRES_PASSWORD: ${DB_PASSWORD:-medconnect2026!}
+      # Same clock as the backend and the staff's screens. Columns defaulting to
+      # CURRENT_DATE (visit_date, billing_date) must mean "today at the clinic";
+      # left on UTC they roll over at the wrong moment, so visits and payments
+      # taken after local midnight are filed under the previous day.
+      TZ: ${TZ:-UTC}
+      PGTZ: ${TZ:-UTC}
     volumes:
       - pgdata:/var/lib/postgresql/data
       # NOTE: schema is applied by the backend migration runner (src/config/migrate.js),

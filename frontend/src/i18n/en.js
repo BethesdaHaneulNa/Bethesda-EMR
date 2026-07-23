@@ -56,6 +56,7 @@ export default {
   dispensingPending: "Dispensing Pending", dispensingCompleted: "Dispensed", dispenseComplete: "Dispense Complete",
   pharmacySearchPlaceholder: "Patient / Chart No. / Medicine", selectRxPatient: "Select a prescription patient on the left.",
   pharmacyOnlyCompleted: "Only medication orders from completed consultations are shown.",
+  stockShortWarn: "Recorded stock was lower than the quantity dispensed — check the shelf count:",
   refresh: "Refresh", pharmacy: "Pharmacy", noRxToShow: "No prescriptions to show",
   rxUnit: "Rx", chartNo: "Chart No.", doctor: "Doctor",
   colDrugName: "Drug", colDose: "Dose", colFreq: "Freq", colDays: "Days", colRoute: "Route", colQty: "Qty", colMemo: "Memo",

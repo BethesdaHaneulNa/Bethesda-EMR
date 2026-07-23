@@ -129,7 +129,7 @@ router.put('/consultations/:id/dispense', async (req, res) => {
     await client.query('BEGIN');
 
     const rxResult = await client.query(
-      `SELECT id, drug_id, drug_name, total_qty
+      `SELECT id, drug_id, drug_name, total_qty, COALESCE(dispense_type,'internal') AS dispense_type
        FROM prescription
        WHERE consultation_id = $1 AND status = 'ordered'
        ORDER BY sort_order, id
@@ -142,14 +142,32 @@ router.put('/consultations/:id/dispense', async (req, res) => {
       return res.status(404).json({ error: 'No pending prescriptions for this consultation' });
     }
 
+    // An "external" line is a paper prescription the patient fills at an outside
+    // pharmacy — the clinic never hands the drug over (billing skips it for the
+    // same reason), so its quantity must not leave our shelf count.
+    const shortages = [];
     for (const rx of rxResult.rows) {
-      if (rx.drug_id) {
+      if (rx.drug_id && rx.dispense_type !== 'external') {
         const qty = Math.ceil(Number(rx.total_qty) || 0);
         if (qty > 0) {
+          // Clamping at zero keeps the count sane, but the difference would then
+          // vanish without trace and the shelf and the ledger drift apart, so
+          // report what could not be covered instead of swallowing it.
+          const cur = await client.query(
+            'SELECT COALESCE(stock_qty,0) AS stock_qty FROM drug WHERE id = $1 FOR UPDATE',
+            [rx.drug_id]
+          );
+          const before = Number(cur.rows[0] && cur.rows[0].stock_qty);
           await client.query(
             'UPDATE drug SET stock_qty = GREATEST(COALESCE(stock_qty,0) - $1, 0), updated_at = NOW() WHERE id = $2',
             [qty, rx.drug_id]
           );
+          if (isFinite(before) && before < qty) {
+            shortages.push({
+              prescription_id: rx.id, drug_id: rx.drug_id, drug_name: rx.drug_name,
+              requested: qty, available: before, missing: qty - before,
+            });
+          }
         }
       }
     }
@@ -163,7 +181,10 @@ router.put('/consultations/:id/dispense', async (req, res) => {
     );
 
     await client.query('COMMIT');
-    res.json({ success: true, dispensed_count: updated.rows.length, prescriptions: updated.rows });
+    res.json({
+      success: true, dispensed_count: updated.rows.length,
+      prescriptions: updated.rows, shortages,
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });

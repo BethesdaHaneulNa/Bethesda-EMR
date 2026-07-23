@@ -1,9 +1,23 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
+const { todayLocal } = require('../utils/localDate');
+const { PAYMENT_STATUSES } = require('../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Voiding a bill undoes the balances it absorbed: the older bills go back to
+// carrying their own outstanding amount. amount_paid was never touched when the
+// balance was carried, so total_due - amount_paid restores the original figure.
+async function restoreCarried(client, billingId) {
+  await client.query(
+    `UPDATE billing SET outstanding = GREATEST(total_due - amount_paid, 0),
+            carried_into_id = NULL, updated_at = NOW()
+      WHERE carried_into_id = $1`,
+    [billingId]
+  );
+}
 
 // GET /api/billing/pending - visits awaiting payment
 router.get('/pending', async (req, res) => {
@@ -27,13 +41,13 @@ router.get('/pending', async (req, res) => {
        d.code as dept_code, s.name as doctor_name,
        (SELECT COALESCE(SUM(outstanding),0) FROM billing WHERE patient_id = p.id AND outstanding > 0 AND payment_status <> 'cancelled') as previous_balance,
        EXISTS (SELECT 1 FROM billing bx WHERE bx.visit_id = v.id AND bx.payment_status = 'cancelled') as needs_rebill,
-       COALESCE((SELECT amount_paid FROM billing WHERE visit_id = v.id AND payment_status = 'cancelled' ORDER BY cancelled_at DESC NULLS LAST, id DESC LIMIT 1),0) as prior_paid,
+       COALESCE((SELECT net_paid FROM billing WHERE visit_id = v.id AND payment_status = 'cancelled' ORDER BY cancelled_at DESC NULLS LAST, id DESC LIMIT 1),0) as prior_paid,
        (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
        (l.has_active_bill AND (l.billed_total - l.live_total) > 0.01) as needs_refund,
        GREATEST(l.live_total - l.billed_total, 0) as extra_due,
        GREATEST(l.billed_total - l.live_total, 0) as refund_due,
        (SELECT id FROM billing WHERE visit_id = v.id AND payment_status <> 'cancelled' ORDER BY created_at DESC, id DESC LIMIT 1) as active_bill_id,
-       COALESCE((SELECT SUM(amount_paid) FROM billing WHERE visit_id = v.id AND payment_status <> 'cancelled'),0) as active_paid
+       COALESCE((SELECT SUM(net_paid) FROM billing WHERE visit_id = v.id AND payment_status <> 'cancelled'),0) as active_paid
        FROM visit v
        JOIN patient p ON v.patient_id = p.id
        JOIN live l ON l.visit_id = v.id
@@ -59,7 +73,7 @@ router.get('/pending', async (req, res) => {
 router.get('/completed', async (req, res) => {
   try {
     const { date } = req.query;
-    const billDate = date || new Date().toISOString().slice(0,10);
+    const billDate = date || todayLocal();
     const result = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
        v.id as visit_id, v.visit_date, d.code as dept_code, s.name as doctor_name, c.name as cashier_name
@@ -137,9 +151,55 @@ router.post('/', async (req, res) => {
     const { visit_id, patient_id, consult_fee, drug_total, procedure_total, subtotal,
             discount_amount, discount_type, discount_value, previous_balance, total_due,
             amount_paid, change_amount, outstanding, payment_status, note, items } = req.body;
-    // Generate receipt number
-    const now = new Date();
-    const receipt_no = 'R-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*9000)+1000);
+
+    // A receipt is a financial record, so refuse impossible figures here rather
+    // than storing them. The payment screen already clamps these, but a stale
+    // browser tab, a future UI change or a direct API call should not be able to
+    // write a negative charge or a discount larger than the bill. Note that
+    // amount_paid legitimately exceeds total_due — it is the cash handed over,
+    // with the difference returned as change_amount.
+    const money = { consult_fee, drug_total, procedure_total, subtotal, discount_amount,
+                    previous_balance, total_due, amount_paid, change_amount, outstanding };
+    for (const [field, raw] of Object.entries(money)) {
+      const value = parseFloat(raw ?? 0);
+      if (!isFinite(value) || value < 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: field + ' must be a number >= 0' });
+      }
+    }
+    if (parseFloat(discount_amount ?? 0) > parseFloat(subtotal ?? 0) + 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'discount cannot exceed the subtotal' });
+    }
+    if (parseFloat(change_amount ?? 0) > parseFloat(amount_paid ?? 0) + 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'change cannot exceed the amount received' });
+    }
+    // Mirrors the billing_payment_status_check constraint. Left to the database
+    // an unknown status aborts the insert as a 500 carrying the raw constraint
+    // text, which tells the cashier nothing about what to do next.
+    if (payment_status != null && payment_status !== '' && !PAYMENT_STATUSES.includes(String(payment_status))) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'payment_status must be one of ' + PAYMENT_STATUSES.join(', ') });
+    }
+
+    // Receipt number: R-YYYYMMDD-NNNN, sequential per day.
+    //
+    // This used to be a random 4-digit suffix, which collides with the UNIQUE
+    // constraint on receipt_no long before a clinic runs out of numbers: with a
+    // 9000-value space the odds of a repeat pass 50% at ~110 receipts in a day,
+    // and a collision surfaces to the cashier as a raw 500 error mid-payment.
+    // The advisory lock serialises number allocation for the duration of this
+    // transaction, so concurrent cashiers cannot pick the same number.
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['billing_receipt_no']);
+    const seqResult = await client.query(
+      `SELECT COALESCE(MAX(NULLIF(regexp_replace(receipt_no, '^R-\\d{8}-', ''), '')::int), 0) + 1 AS next
+         FROM billing
+        WHERE billing_date = CURRENT_DATE
+          AND receipt_no ~ '^R-\\d{8}-\\d+$'`
+    );
+    const dayStamp = (await client.query(`SELECT to_char(CURRENT_DATE, 'YYYYMMDD') AS d`)).rows[0].d;
+    const receipt_no = 'R-' + dayStamp + '-' + String(seqResult.rows[0].next).padStart(4, '0');
     const result = await client.query(
       `INSERT INTO billing (visit_id, patient_id, receipt_no, consult_fee, drug_total, procedure_total, subtotal,
        discount_amount, discount_type, discount_value, previous_balance, total_due, amount_paid, change_amount,
@@ -159,6 +219,36 @@ router.post('/', async (req, res) => {
         );
       }
     }
+
+    // Absorb the carried-forward balance. `previous_balance` was added to this
+    // bill's total_due, so the older bills it came from must stop carrying it —
+    // otherwise the debt is counted twice and every later visit re-bills it.
+    // Oldest first, and only bills that fit entirely within previous_balance, so
+    // that voiding this bill can restore them exactly (see the void route).
+    const carried = parseFloat(previous_balance) || 0;
+    if (carried > 0.01) {
+      const priorRes = await client.query(
+        `SELECT id, outstanding FROM billing
+          WHERE patient_id = $1 AND id <> $2
+            AND payment_status <> 'cancelled'
+            AND carried_into_id IS NULL
+            AND outstanding > 0
+          ORDER BY billing_date ASC, id ASC`,
+        [patient_id, billing.id]
+      );
+      let remaining = carried;
+      for (const prior of priorRes.rows) {
+        const amount = parseFloat(prior.outstanding) || 0;
+        if (amount > remaining + 0.01) break;
+        await client.query(
+          `UPDATE billing SET outstanding = 0, carried_into_id = $2, updated_at = NOW()
+            WHERE id = $1`,
+          [prior.id, billing.id]
+        );
+        remaining -= amount;
+      }
+    }
+
     await client.query('COMMIT');
     res.status(201).json(billing);
   } catch (err) {
@@ -191,73 +281,113 @@ router.get('/patient/:patientId/history', async (req, res) => {
 
 // PUT /api/billing/:billingId/void - 영수 취소 (해당 내원은 다시 수납 대기로 돌아감)
 router.put('/:billingId/void', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const { reason } = req.body;
     // 취소된 영수는 잔액 계산에서 제외되므로 outstanding=0 (크레딧 누적 방지)
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
               cancelled_at=NOW(), cancelled_by=$2, cancel_reason=$3, updated_at=NOW()
         WHERE id=$1 AND payment_status<>'cancelled' RETURNING *`,
       [req.params.billingId, req.user.id, reason || null]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found or already cancelled' });
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found or already cancelled' });
+    }
+    await restoreCarried(client, req.params.billingId);
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally { client.release(); }
 });
 
 // PUT /api/billing/visit/:visitId/void-active - 내원의 모든 활성(미취소) 영수를 일괄 취소
 // (정정 처리 시 잔재 영수가 남아 합계가 부풀지 않도록)
 router.put('/visit/:visitId/void-active', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const { reason } = req.body;
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
               cancelled_at=NOW(), cancelled_by=$2, cancel_reason=$3, updated_at=NOW()
         WHERE visit_id=$1 AND payment_status<>'cancelled' RETURNING id`,
       [req.params.visitId, req.user.id, reason || null]
     );
+    for (const row of result.rows) await restoreCarried(client, row.id);
+    await client.query('COMMIT');
     res.json({ voided: result.rows.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally { client.release(); }
 });
 
 // GET /api/billing/patient/:patientId/balance - 환자 잔액(owed>0 미수 / refund>0 환불예정)
 router.get('/patient/:patientId/balance', async (req, res) => {
   try {
-    // 취소된 영수는 '없던 일'로 완전 제외. 잔액 = 살아있는 영수들의 (청구 - 수납) 합.
+    // 취소된 영수는 '없던 일'로 완전 제외.
+    // 미수는 outstanding 기준 — 이월된 영수는 outstanding=0 이라 이중 계산되지 않는다.
+    // (total_due - amount_paid 로 계산하면 이월분이 옛 영수와 새 영수 양쪽에 잡힌다.)
     const r = await pool.query(
-      `SELECT COALESCE(SUM(total_due - amount_paid),0) AS net
+      `SELECT COALESCE(SUM(GREATEST(outstanding,0)),0) AS owed,
+              COALESCE(SUM(GREATEST(net_paid - total_due,0)),0) AS refund
          FROM billing WHERE patient_id = $1 AND payment_status <> 'cancelled'`,
       [req.params.patientId]
     );
-    const net = parseFloat(r.rows[0].net) || 0;  // >0: 미수(더 받아야), <0: 환불(돌려줘야)
-    res.json({ owed: net > 0 ? net : 0, refund: net < 0 ? -net : 0 });
+    res.json({
+      owed: parseFloat(r.rows[0].owed) || 0,
+      refund: parseFloat(r.rows[0].refund) || 0
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/billing/:id/pay - 기존 영수의 미수를 받아서 정산 (부분/전액)
 router.post('/:id/pay', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const amount = parseFloat(req.body.amount) || 0;
-    if (amount <= 0) return res.status(400).json({ error: 'amount must be > 0' });
-    const cur = await pool.query(
-      `SELECT total_due, amount_paid FROM billing WHERE id=$1 AND payment_status<>'cancelled'`,
+    const amount = parseFloat(req.body.amount);
+    if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'amount must be > 0' });
+    await client.query('BEGIN');
+    // FOR UPDATE: read-modify-write on money. Without the row lock two cashiers
+    // settling the same bill at once both read the old amount_paid and the second
+    // UPDATE overwrites the first — both get a success response but only one
+    // payment is recorded, so cash collected goes missing from the books.
+    const cur = await client.query(
+      `SELECT total_due, amount_paid, net_paid FROM billing
+        WHERE id=$1 AND payment_status<>'cancelled' FOR UPDATE`,
       [req.params.id]
     );
-    if (cur.rows.length === 0) return res.status(404).json({ error: 'Not found or cancelled' });
+    if (cur.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found or cancelled' });
+    }
     const due = parseFloat(cur.rows[0].total_due) || 0;
     const paid = parseFloat(cur.rows[0].amount_paid) || 0;
-    const outstanding = due - paid;
-    if (amount > outstanding + 0.5) return res.status(400).json({ error: 'amount exceeds outstanding' });
+    // What is still owed depends on the cash kept, not the note handed over.
+    const outstanding = due - (parseFloat(cur.rows[0].net_paid) || 0);
+    if (amount > outstanding + 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'amount exceeds outstanding' });
+    }
     const newPaid = paid + amount;
-    const newOut = due - newPaid;
+    const newOut = outstanding - amount;
     const status = newOut <= 0.5 ? 'paid' : 'partial';
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE billing SET amount_paid=$2, outstanding=$3, payment_status=$4, cashier_id=$5, updated_at=NOW()
         WHERE id=$1 RETURNING *`,
       [req.params.id, newPaid, newOut > 0 ? newOut : 0, status, req.user.id]
     );
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally { client.release(); }
 });
 
 module.exports = router;

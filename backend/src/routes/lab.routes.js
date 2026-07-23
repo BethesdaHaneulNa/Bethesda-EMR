@@ -129,14 +129,29 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
     const oi = await client.query('SELECT * FROM order_item WHERE id = $1', [req.params.orderItemId]);
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Order not found' }); }
     const order = oi.rows[0];
+    // Only a lab order belongs on this screen. Accepting any order id would let a
+    // consultation fee or an imaging order be flipped to 'completed' from here,
+    // which drops it out of the worklist that department is still waiting on.
+    if (order.code_type !== 'lab') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Order is not a lab order' });
+    }
     const vis = await client.query('SELECT visit_date FROM visit WHERE id = $1', [order.visit_id]);
     const rdate = (vis.rows[0] && vis.rows[0].visit_date) || null;
 
-    await client.query('DELETE FROM lab_result WHERE order_item_id = $1', [req.params.orderItemId]);
     const results = Array.isArray(req.body.results) ? req.body.results : [];
-    for (let i = 0; i < results.length; i++) {
-      const it = results[i] || {};
-      if ((it.value == null || it.value === '') && (it.comment == null || it.comment === '')) continue;
+    const filled = results.filter((it) => it && ((it.value != null && it.value !== '') ||
+                                                 (it.comment != null && it.comment !== '')));
+    // Marking an order completed with nothing recorded takes it off the pending
+    // list, so a test that was never resulted looks done to everyone downstream.
+    if (filled.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'At least one result value or comment is required' });
+    }
+
+    await client.query('DELETE FROM lab_result WHERE order_item_id = $1', [req.params.orderItemId]);
+    for (let i = 0; i < filled.length; i++) {
+      const it = filled[i] || {};
       const flag = computeFlag(it.value, it.ref_low, it.ref_high);
       await client.query(
         `INSERT INTO lab_result
@@ -161,8 +176,10 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
   } finally { client.release(); }
 });
 
-// ── all lab results for a patient (any logged-in: doctors view) ──
-router.get('/patient/:patientId/results', async (req, res) => {
+// ── all lab results for a patient (doctors view + the lab's own screen) ──
+// Only Consultation.jsx and Lab.jsx read this. Left open to every logged-in
+// account it also handed a patient's full result history to reception.
+router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT lr.*, oc.code AS panel_code, oc.name AS panel_name

@@ -1,15 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { badDateRange } = require('../utils/validate');
 
 router.use(authMiddleware);
+// The sidebar only shows the Statistics tile to accounts holding 'stats', but the
+// routes themselves were open to any logged-in user — so reception or the
+// pharmacy could read the clinic's takings and the full debtor list, names and
+// phone numbers included, straight from the API.
+router.use(permMiddleware('stats'));
 
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
   try {
     let { from, to } = req.query;
+    const badRange = badDateRange(from, to);
+    if (badRange) return res.status(400).json({ error: badRange });
     if (!from || !to) {
       const r = await pool.query("SELECT date_trunc('month', CURRENT_DATE)::date AS f, CURRENT_DATE AS t");
       from = from || r.rows[0].f;
@@ -51,7 +59,7 @@ router.get('/summary', async (req, res) => {
          COALESCE(SUM(drug_total),0)::numeric AS drug,
          COALESCE(SUM(procedure_total),0)::numeric AS procedure,
          COALESCE(SUM(consult_fee+drug_total+procedure_total),0)::numeric AS gross,
-         COALESCE(SUM(amount_paid),0)::numeric AS paid,
+         COALESCE(SUM(net_paid),0)::numeric AS paid,
          COUNT(*) FILTER (WHERE payment_status <> 'cancelled')::int AS bill_count,
          COUNT(*) FILTER (WHERE payment_status = 'cancelled')::int AS cancelled_count
        FROM billing
@@ -71,8 +79,8 @@ router.get('/summary', async (req, res) => {
     // 5) 미수 / 환불 (실시간 잔액, 기간 무관)
     const bal = await pool.query(
       `SELECT
-         COALESCE(SUM(total_due-amount_paid) FILTER (WHERE total_due-amount_paid > 0),0)::numeric AS owed,
-         COALESCE(-SUM(total_due-amount_paid) FILTER (WHERE total_due-amount_paid < 0),0)::numeric AS refund
+         COALESCE(SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid > 0),0)::numeric AS owed,
+         COALESCE(-SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid < 0),0)::numeric AS refund
        FROM billing WHERE payment_status <> 'cancelled'`);
 
     const r = rev.rows[0];
@@ -103,7 +111,7 @@ router.get('/monthly', async (req, res) => {
        FROM visit WHERE visit_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
        GROUP BY 1 ORDER BY 1`, [months - 1]);
     const b = await pool.query(
-      `SELECT to_char(date_trunc('month', billing_date),'YYYY-MM') AS ym, COALESCE(SUM(amount_paid),0)::numeric AS revenue
+      `SELECT to_char(date_trunc('month', billing_date),'YYYY-MM') AS ym, COALESCE(SUM(net_paid),0)::numeric AS revenue
        FROM billing WHERE payment_status <> 'cancelled'
          AND billing_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
        GROUP BY 1 ORDER BY 1`, [months - 1]);
@@ -121,10 +129,10 @@ router.get('/outstanding', async (req, res) => {
       `WITH bal AS (
          SELECT p.id, p.chart_no, p.last_name, p.first_name,
                 COALESCE(NULLIF(p.mobile,''), p.phone) AS contact,
-                SUM(b.total_due - b.amount_paid) AS net,
-                MIN(b.billing_date) FILTER (WHERE b.total_due - b.amount_paid > 0) AS owed_since,
+                SUM(b.total_due - b.net_paid) AS net,
+                MIN(b.billing_date) FILTER (WHERE b.total_due - b.net_paid > 0) AS owed_since,
                 MAX(b.billing_date) AS last_date,
-                COUNT(*) FILTER (WHERE (b.total_due - b.amount_paid) <> 0) AS open_bills
+                COUNT(*) FILTER (WHERE (b.total_due - b.net_paid) <> 0) AS open_bills
          FROM billing b JOIN patient p ON b.patient_id = p.id
          WHERE b.payment_status <> 'cancelled'
          GROUP BY p.id, p.chart_no, p.last_name, p.first_name, p.mobile, p.phone
@@ -155,6 +163,8 @@ router.get('/drug-usage', async (req, res) => {
     const fmt = gran === 'day' ? 'YYYY-MM-DD' : (gran === 'year' ? 'YYYY' : 'YYYY-MM');
 
     let { from, to } = req.query;
+    const badRange = badDateRange(from, to);
+    if (badRange) return res.status(400).json({ error: badRange });
     if (!from || !to) {
       const span = gran === 'day' ? "interval '29 days'" : (gran === 'year' ? "interval '4 years'" : "interval '11 months'");
       const trunc = gran === 'day' ? 'day' : (gran === 'year' ? 'year' : 'month');

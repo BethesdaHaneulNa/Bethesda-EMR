@@ -92,7 +92,14 @@ export default function PharmacyPage() {
     if(!window.confirm(patientName(sel) + ' '+t.dispenseComplete+'?' )) return;
     setBusy(true);
     try {
-      await api.put('/pharmacy/consultations/' + sel.consultation_id + '/dispense');
+      var r = await api.put('/pharmacy/consultations/' + sel.consultation_id + '/dispense');
+      // Stock never goes negative, so a shortage is otherwise invisible: the
+      // count just sits at 0 while more was handed out than we had on record.
+      var short = (r && r.shortages) || [];
+      if(short.length){
+        alert((t.stockShortWarn || 'Stock recorded was not enough — check the shelf count:') + '\n' +
+          short.map(function(s){ return '· ' + s.drug_name + ': ' + s.requested + ' / ' + s.available; }).join('\n'));
+      }
       await loadData();
       setSel(null);
     } catch(err){ alert('Error: ' + err.message); }

@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
+const { VISIT_TYPES, VISIT_STATUSES } = require('../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -61,6 +62,12 @@ router.get('/patient/:patientId', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { patient_id, visit_type, department_id, doctor_id, chief_complaint, reception_memo } = req.body;
+    // visit_type selects the consultation fee (newVisit -> C01, followUp -> C02 ...),
+    // and the billing query falls back to the new-visit price for anything it does
+    // not recognise, so an unknown value quietly overcharges the patient.
+    if (!VISIT_TYPES.includes(String(visit_type))) {
+      return res.status(400).json({ error: 'visit_type must be one of ' + VISIT_TYPES.join(', ') });
+    }
     const now = new Date();
     const reception_time = now.toTimeString().split(' ')[0].substring(0,5);
     const result = await pool.query(
@@ -78,6 +85,9 @@ router.post('/', async (req, res) => {
 router.put('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
+    if (!VISIT_STATUSES.includes(String(status))) {
+      return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
+    }
     const result = await pool.query(
       'UPDATE visit SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
       [status, req.params.id]

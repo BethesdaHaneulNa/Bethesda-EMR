@@ -1,6 +1,7 @@
 const express = require('express');
 const net = require('net');
 const { pool } = require('../config/database');
+const { todayLocal } = require('../utils/localDate');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -148,7 +149,7 @@ router.get('/worklist-feed', async (req, res) => {
     const token = req.query.token || req.header('x-bridge-token');
     if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
 
-    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const date = req.query.date || todayLocal();
     const params = [date];
     let idx = 2;
     let where = `wl.scheduled_date = $1 AND wl.status = 'scheduled'`;

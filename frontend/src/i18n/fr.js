@@ -47,6 +47,7 @@ export default {
   dispensingPending: "En attente", dispensingCompleted: "Délivré", dispenseComplete: "Terminer délivrance",
   pharmacySearchPlaceholder: "Patient / N° dossier / Médicament", selectRxPatient: "Sélectionnez une ordonnance à gauche.",
   pharmacyOnlyCompleted: "Seules les ordonnances des consultations terminées sont affichées.",
+  stockShortWarn: "Le stock enregistré était inférieur à la quantité délivrée — vérifiez le stock réel :",
   refresh: "Actualiser", pharmacy: "Pharmacie", noRxToShow: "Aucune ordonnance à afficher",
   rxUnit: "ord.", chartNo: "N° dossier", doctor: "Médecin",
   colDrugName: "Médicament", colDose: "Dose", colFreq: "Fréq.", colDays: "Jours", colRoute: "Voie", colQty: "Qté", colMemo: "Note",

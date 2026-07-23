@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
+const { badPatient } = require('../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -54,6 +55,8 @@ router.get('/chart/:chartNo', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
+    const invalid = badPatient(req.body);
+    if (invalid) return res.status(400).json({ error: invalid });
     // Generate chart number
     const chartResult = await pool.query("SELECT generate_chart_no() as chart_no");
     const chart_no = chartResult.rows[0].chart_no;
@@ -72,6 +75,8 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
+    const invalid = badPatient(req.body);
+    if (invalid) return res.status(400).json({ error: invalid });
     const result = await pool.query(
       `UPDATE patient SET last_name=$1, first_name=$2, national_id=$3, date_of_birth=$4, gender=$5, phone=$6, mobile=$7, address=$8, city=$9, region=$10, blood_type=$11, allergies=$12, reception_note=COALESCE($13, reception_note), updated_at=NOW()
        WHERE id=$14 RETURNING *`,

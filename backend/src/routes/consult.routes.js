@@ -1,5 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { todayLocal } = require('../utils/localDate');
+const { badAmounts } = require('../utils/validate');
 const { authMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -147,6 +149,8 @@ router.get('/:id/prescriptions', async (req, res) => {
 router.post('/:id/prescriptions', async (req, res) => {
   try {
     const { drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
+    if (invalid) return res.status(400).json({ error: invalid });
     const result = await pool.query(
       `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
@@ -161,6 +165,8 @@ router.post('/:id/prescriptions', async (req, res) => {
 router.put('/prescription/:rxId', async (req, res) => {
   try {
     const { dose, frequency, days, route, memo, total_qty, unit_price } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
+    if (invalid) return res.status(400).json({ error: invalid });
     const calcQty = total_qty !== undefined && total_qty !== null && total_qty !== ''
       ? total_qty
       : ((parseFloat(dose) || 0) * (parseInt(frequency) || 1) * (parseInt(days) || 1));
@@ -191,6 +197,8 @@ router.post('/:id/orders', async (req, res) => {
   try {
     await client.query('BEGIN');
     const { order_code_id, order_code, order_name, code_type, dose, frequency, days, quantity, unit_price, memo } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
+    if (invalid) { await client.query('ROLLBACK'); return res.status(400).json({ error: invalid }); }
     // Get consultation info
     const cResult = await client.query('SELECT visit_id, patient_id FROM consultation WHERE id = $1', [req.params.id]);
     if (cResult.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Consultation not found' }); }
@@ -241,7 +249,7 @@ router.post('/:id/orders', async (req, res) => {
 
     // If worklist enabled, create worklist log entry
     if (worklist_enabled && pacs_modality) {
-      const today = new Date().toISOString().slice(0,10).replace(/-/g, '');
+      const today = todayLocal().replace(/-/g, '');
       // DICOM AccessionNumber is VR=SH (max 16 chars). order_item.id is globally
       // unique, so 'YYMMDD-<orderId>' is unique, traceable and well under 16 chars.
       const accession = `${today.slice(2)}-${orderItem.id}`;
@@ -271,6 +279,8 @@ router.post('/:id/orders', async (req, res) => {
 router.put('/order/:orderId', async (req, res) => {
   try {
     const { dose, frequency, days, quantity, memo, unit_price } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
+    if (invalid) return res.status(400).json({ error: invalid });
     const result = await pool.query(
       `UPDATE order_item
        SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price), updated_at=NOW()
