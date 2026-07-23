@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.2.0 — 2026-07-23
+
+**A way to see whether the system is working.** Until now nothing here answered
+that question. Every part could fail quietly: the imaging worklist could stop
+updating for hours, the nightly backup could have been failing for a month, the
+disk could be filling up — and the first sign of any of it was a member of staff
+saying something was wrong, if they connected it to a cause at all.
+
+### The status window
+
+Double-click **`server-status.bat`** on the machine that runs the clinic and
+leave it open. One line per part of the system — patient records, application
+server, EMR screen, disk space, last night's backup, imaging, device worklist —
+re-checked every 15 seconds, in **Français / English / 한국어**.
+
+It reads the machine directly instead of asking the EMR, so it keeps answering
+when the EMR is the thing that broke, which is when you most need it. Green
+means working; red names what is not, in words a member of staff can repeat over
+the phone rather than a container name and a health status.
+
+`powershell -File server-status.ps1 -Console` prints the same check once and
+exits `0` fine / `1` needs attention / `2` broken, for scripting.
+
+### Underneath
+
+- `GET /api/system/status` — the same checks as JSON, for any logged-in member
+  of staff. Whoever notices a problem is whoever happens to be at a screen, so
+  this is deliberately not restricted to the settings permission.
+- The imaging bridge now reports in after every cycle (`service_heartbeat`). It
+  runs in a separate stack with no port of its own, so nothing could reach out
+  and test it — silence is the signal.
+- Every service gained a Docker healthcheck; only the database had one.
+
+Update the PACS bridge alongside this — see
+[Bethesda PACS](https://github.com/BethesdaHaneulNa/Bethesda-PACS/releases).
+
 ## v1.1.1 — 2026-07-23
 
 **Every date sent to an imaging device was one day early.** Dates read out of
