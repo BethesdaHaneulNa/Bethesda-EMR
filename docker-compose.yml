@@ -37,7 +37,9 @@ services:
       DB_NAME: medconnect
       DB_USER: medconnect
       DB_PASSWORD: ${DB_PASSWORD:-medconnect2026!}
-      JWT_SECRET: ${JWT_SECRET:-medconnect_jwt_secret_change_this_in_production}
+      # No default. A published fallback secret lets anyone forge an admin token
+      # for any install that never overrode it, so this stops the stack instead.
+      JWT_SECRET: ${JWT_SECRET:?not set - run setup.sh (or setup.ps1) to generate .env, then start again}
       PORT: 3000
       TZ: ${TZ:-Indian/Antananarivo}
       # Backups are ON by default and saved to ./backups (a folder next to the app). To save

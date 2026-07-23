@@ -1,5 +1,15 @@
 const jwt = require('jsonwebtoken');
-const SECRET = process.env.JWT_SECRET || 'medconnect_jwt_secret';
+
+// No fallback on purpose. This secret is the only thing that makes a session
+// token unforgeable, so a default value published in the repository is the same
+// as no login screen at all: anyone can mint an admin token for any install that
+// kept it. setup.sh / setup.ps1 write a random 48-char secret into .env on first
+// run; refuse to start rather than come up quietly forgeable.
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+  console.error('JWT_SECRET is not set. Run setup.sh (or setup.ps1) to generate .env, then start again.');
+  process.exit(1);
+}
 
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
