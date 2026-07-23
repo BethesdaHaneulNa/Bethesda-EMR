@@ -34,5 +34,5 @@ fi
 docker compose up -d --build
 
 echo ""
-echo "Bethesda EMR is starting at http://localhost:8080"
+echo "Bethesda EMR is starting at http://localhost:9080"
 echo "Open it in a browser to create your administrator account."

@@ -80,7 +80,7 @@ minutes; if Windows shows a security prompt for `start.bat`, choose *More info â
 ```
 
 Either way, setup generates strong random secrets on first run and starts everything at
-**http://localhost:8080**.
+**http://localhost:9080**.
 
 See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, and the optional PACS.
 
@@ -89,9 +89,9 @@ See **[DEPLOYMENT.md](DEPLOYMENT.md)** for backups, updates, network security, a
 ## Architecture
 
 - **PostgreSQL 16** + **Express (Node 20)** API + **React** front-end (served by nginx)
-- One exposed port: **8080**
+- One exposed port: **9080**
 - Database migrations apply automatically on startup
-- Optional PACS runs as a separate stack (Orthanc) on port 8090
+- Optional PACS runs as a separate stack (Orthanc) on port 9090
 
 ---
 

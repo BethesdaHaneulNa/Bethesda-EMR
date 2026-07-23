@@ -50,12 +50,12 @@ echo "[4/4] Verifying..."
 sleep 8
 ok=0; i=0
 while [ $i -lt 15 ]; do
-  if curl -fs http://localhost:8080/api/health >/dev/null 2>&1; then ok=1; break; fi
+  if curl -fs http://localhost:9080/api/health >/dev/null 2>&1; then ok=1; break; fi
   sleep 3; i=$((i + 1))
 done
 if [ "$ok" = "1" ]; then
   echo ""
-  echo "[OK] Update complete - Bethesda EMR is running at http://localhost:8080"
+  echo "[OK] Update complete - Bethesda EMR is running at http://localhost:9080"
 else
   echo ""
   echo "[!] Health check did not pass. Your data is safe; restore from $backup if needed (see DEPLOYMENT.md)."

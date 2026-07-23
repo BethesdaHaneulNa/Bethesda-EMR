@@ -28,7 +28,7 @@ On first run, either way:
 1. Generates a `.env` file with **strong random secrets** (database password, JWT secret).
 2. Starts the stack with `docker compose up -d --build`.
 
-Then open **http://localhost:8080** (or `http://<host-ip>:8080` from another computer on the
+Then open **http://localhost:9080** (or `http://<host-ip>:9080` from another computer on the
 network). You will be asked to **create the administrator account** — choose your own ID and
 password. There is no `admin/admin`.
 
@@ -98,18 +98,36 @@ This is the part that depends entirely on *your* site. Bethesda EMR can't decide
 ### Ports
 | Port | Service | Who needs to reach it |
 |------|---------|-----------------------|
-| 8080 | EMR (web) | clinic computers (browsers) |
-| 8090 | PACS web/viewer (optional) | clinic computers + the EMR host |
+| 9080 | EMR (web) | clinic computers (browsers) |
+| 9090 | PACS web/viewer (optional) | clinic computers + the EMR host |
 | 4242 | PACS DICOM (optional) | imaging devices only |
 
 Lock these down to your LAN with the host's firewall if you can. Don't expose them publicly.
+
+### Windows: "the site can't be reached" even though Docker says everything is running
+On Windows, Hyper-V/WSL reserves blocks of TCP ports for its own use, and the blocks it picks
+change on every reboot. If your app's port lands inside one of those blocks, Docker cannot bind
+it — the containers still come up and `docker ps` still shows them as `Up`, but nothing is
+listening on the host, so the browser just times out. Nothing in the app looks broken, which
+makes this very hard to diagnose remotely.
+
+The EMR used to run on **8080** and the PACS on **8090**. Both sit inside a range Windows
+frequently reserves (we hit `8013–8112` in practice), so they were moved to **9080** and
+**9090**, which are outside the ranges Windows picks from.
+
+To check the reserved ranges on a Windows host:
+```
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+If a port you need appears in that list, pick a different one in `docker-compose.yml` rather
+than fighting Windows for it. On Linux hosts this problem does not exist.
 
 ### HTTPS (optional, recommended on Wi-Fi)
 By default the app is served over plain HTTP. On a trusted **wired** LAN the risk is low. On
 **Wi-Fi**, or if you ever allow remote access, you should put HTTPS in front so passwords and
 patient data are encrypted in transit. Options:
 - **NAS users:** most NAS (Synology/QNAP) have a built-in reverse proxy + certificate manager —
-  point it at port 8080 and enable HTTPS from the NAS UI. Easiest path.
+  point it at port 9080 and enable HTTPS from the NAS UI. Easiest path.
 - **Reverse proxy:** put [Caddy](https://caddyserver.com) or nginx/Traefik in front. Caddy can
   issue a local self-signed certificate automatically (`tls internal`) for LAN use, or a real
   certificate via Let's Encrypt if you have a domain name and internet.

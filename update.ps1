@@ -52,8 +52,8 @@ Write-Host "[4/4] Verifying..."
 Start-Sleep -Seconds 8
 $ok = $false
 for ($i = 0; $i -lt 15; $i++) {
-  try { if ((Invoke-RestMethod 'http://localhost:8080/api/health' -TimeoutSec 3).status -eq 'ok') { $ok = $true; break } } catch {}
+  try { if ((Invoke-RestMethod 'http://localhost:9080/api/health' -TimeoutSec 3).status -eq 'ok') { $ok = $true; break } } catch {}
   Start-Sleep -Seconds 3
 }
-if ($ok) { Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:8080" -ForegroundColor Green }
+if ($ok) { Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green }
 else { Write-Host "`n[!] Health check did not pass. Your data is safe. To restore if needed:`n    $backup`n    (see DEPLOYMENT.md - Restore)" -ForegroundColor Yellow }

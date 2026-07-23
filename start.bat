@@ -44,12 +44,12 @@ REM --- 3) Open the app in the browser ---
 echo.
 echo  Opening Bethesda EMR in your web browser...
 timeout /t 4 >nul
-start "" http://localhost:8080
+start "" http://localhost:9080
 
 color 0A
 echo.
 echo ==================================================
-echo    Bethesda EMR is running:  http://localhost:8080
+echo    Bethesda EMR is running:  http://localhost:9080
 echo.
 echo    The first screen asks you to create your
 echo    administrator account. After that, add your

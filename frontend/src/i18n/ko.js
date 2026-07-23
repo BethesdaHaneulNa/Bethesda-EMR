@@ -59,7 +59,7 @@ export default {
   feedIntroD: "영상 저장용 DICOM 서버는 기존 장비/SmartServer 설정을 그대로 쓰고, 여기서는 오더 Feed 주소와 Worklist 참고값만 관리해.",
   feedSec1: "PacsBridge / SmartServer가 가져갈 오더 Feed",
   emrPublicUrl: "EMR 공개 주소 / 실행 PC 주소",
-  egUrl: "예: http://192.168.0.55:8080",
+  egUrl: "예: http://192.168.0.55:9080",
   autoCreateWl: "영상/내시경 오더 저장 시 Worklist 대기 목록 자동 생성",
   feedUrlExample: "Feed URL 예시",
   hostPcIp: "실행PC_IP",

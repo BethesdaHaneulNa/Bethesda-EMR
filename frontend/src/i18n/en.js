@@ -68,7 +68,7 @@ export default {
   feedIntroD: "The DICOM image store keeps using your existing device/SmartServer settings; here you only manage the order Feed URL and Worklist reference values.",
   feedSec1: "Order Feed for PacsBridge / SmartServer",
   emrPublicUrl: "EMR public URL / host PC address",
-  egUrl: "e.g. http://192.168.0.55:8080",
+  egUrl: "e.g. http://192.168.0.55:9080",
   autoCreateWl: "Auto-create a Worklist entry when an imaging/endoscopy order is saved",
   feedUrlExample: "Feed URL examples",
   hostPcIp: "HOST_PC_IP",

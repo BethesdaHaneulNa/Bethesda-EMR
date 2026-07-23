@@ -31,5 +31,5 @@ TZ=Indian/Antananarivo
 docker compose up -d --build
 
 Write-Host ""
-Write-Host "Bethesda EMR is starting at http://localhost:8080"
+Write-Host "Bethesda EMR is starting at http://localhost:9080"
 Write-Host "Open it in a browser to create your administrator account."
