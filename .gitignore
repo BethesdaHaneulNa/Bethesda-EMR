@@ -9,3 +9,8 @@ backups-test/
 .claude/settings.local.json
 _pre-update-backups/
 backups/
+
+# Offline install kit (built by offline/pack.ps1) - multi-GB image tarballs,
+# and it bundles GPL/AGPL third-party images. Never commit it.
+bethesda-offline-kit/
+*.tar

@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.3.0 — 2026-07-24
+
+**Installing no longer requires the internet.** The first run built the images on
+the spot: Postgres, Node and nginx pulled from Docker Hub, every npm package
+fetched, Orthanc on top of that if imaging was wanted. Well over a gigabyte, at a
+site chosen for needing a clinic rather than for its bandwidth. On a slow link
+that is a day; on an intermittent one it fails halfway and leaves a half-built
+stack, which is a bad thing to be diagnosing in a room full of waiting patients.
+
+There is now an **offline install kit**. Before travelling, `offline/pack.ps1`
+(or `pack.sh`) builds everything where the connection is good, saves the images
+to a tarball, and assembles a USB folder with a clean copy of the source. On
+site, `install-offline.ps1` loads the images, copies the app to a local disk,
+generates fresh secrets and starts the stack — with the network unplugged.
+
+`setup` learned an `-Offline` / `--offline` flag that starts from the loaded
+images and refuses to build. It fails loudly on a missing image rather than
+quietly reaching for a registry that is not reachable.
+
+Two things the kit is careful about. Your own `.env` is never copied into it, so
+the secrets on your build machine do not travel and every clinic generates its
+own. And the installer always copies the app off the stick onto a local disk —
+running it from removable media works right up until someone unplugs it, and the
+database volume and backups live next to the compose file.
+
+Full instructions, including what to put on the stick by hand (the Docker
+installer — that machine cannot download it either), are in
+[OFFLINE-INSTALL.md](OFFLINE-INSTALL.md).
+
 ## v1.2.1 — 2026-07-24
 
 **A backup missed at 02:00 was gone for good.** The scheduler asked "is it 02:00

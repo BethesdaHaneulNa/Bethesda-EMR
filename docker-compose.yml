@@ -29,6 +29,11 @@ services:
 
   backend:
     build: ./backend
+    # Explicit name for the built image. Compose would name it this implicitly, but
+    # spelling it out is what makes `docker save` / `docker load` possible: the offline
+    # install kit (see OFFLINE-INSTALL.md) ships pre-built images by name, so a clinic
+    # with no usable internet never has to build.
+    image: bethesda-emr-backend:latest
     container_name: bethesda-emr-api
     environment:
       NODE_ENV: production
@@ -68,6 +73,7 @@ services:
 
   frontend:
     build: ./frontend
+    image: bethesda-emr-frontend:latest
     container_name: bethesda-emr-web
     ports:
       - "9080:80"

@@ -1,6 +1,10 @@
 # First-run setup for Bethesda EMR (Windows).
 # Generates a .env with strong random secrets (only if missing), then starts the stack.
 # Safe to re-run: it never overwrites an existing .env.
+#
+#   .\setup.ps1            normal install (builds the images; needs internet)
+#   .\setup.ps1 -Offline   use images already loaded from the offline kit; never builds
+param([switch]$Offline)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -28,7 +32,14 @@ TZ=Indian/Antananarivo
   Write-Host ".env already exists - keeping current secrets."
 }
 
-docker compose up -d --build
+if ($Offline) {
+  # --no-build fails loudly if an image is missing, instead of quietly reaching for
+  # the internet that an offline site does not have.
+  Write-Host "Offline mode: starting from pre-loaded images (no build, no downloads)."
+  docker compose up -d --no-build
+} else {
+  docker compose up -d --build
+}
 
 Write-Host ""
 Write-Host "Bethesda EMR is starting at http://localhost:9080"

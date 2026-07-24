@@ -28,6 +28,10 @@ On first run, either way:
 1. Generates a `.env` file with **strong random secrets** (database password, JWT secret).
 2. Starts the stack with `docker compose up -d --build`.
 
+> **No usable internet at the clinic?** That first run downloads well over a gigabyte and
+> will not finish on a slow or intermittent link. Build the images before you travel and
+> install from a USB stick instead — see **[OFFLINE-INSTALL.md](OFFLINE-INSTALL.md)**.
+
 Then open **http://localhost:9080** (or `http://<host-ip>:9080` from another computer on the
 network). You will be asked to **create the administrator account** — choose your own ID and
 password. There is no `admin/admin`.
