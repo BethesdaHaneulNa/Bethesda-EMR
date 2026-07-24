@@ -45,8 +45,8 @@ bethesda-offline-kit/
   installers/                  ← put the Docker installer here yourself
 ```
 
-**One manual step remains:** download the Docker Desktop installer and drop it in
-`installers/`. The clinic machine cannot fetch it, and nothing else works without it.
+**One manual step remains:** fill `installers/` yourself — see the next section. Nothing
+in the kit works without Docker, and the clinic machine cannot download it.
 
 Budget roughly 4–6 GB on the stick. Use exFAT or NTFS — FAT32 cannot hold a file over
 4 GB and the image tarballs are bigger than that.
@@ -59,6 +59,42 @@ for that reason: the tarballs are gigabytes, and they contain third-party binari
 (Orthanc is GPLv3+, with AGPLv3+ plugins) that the repositories deliberately do not
 publish. Giving the stick to a clinic *is* distribution, so
 [THIRD-PARTY-NOTICE.md](offline/THIRD-PARTY-NOTICE.md) rides along on it — leave it there.
+
+## 1b. What you must put in `installers/` yourself (Windows)
+
+This is the part that is easy to get wrong, because on a normal machine it happens
+invisibly. **Docker Desktop does not bring WSL with it.** Its default (per-user)
+installation supports the **WSL 2 backend only**, needs **WSL 2.1.5 or later**, and if WSL
+is missing it runs `wsl --install`, which downloads roughly 250 MB from Microsoft. On a
+machine with no internet that step simply fails, and Docker never starts.
+
+So download all of this before you travel and copy it into `installers/`:
+
+| File | Where from | Size |
+|---|---|---|
+| `Docker Desktop Installer.exe` | <https://www.docker.com/products/docker-desktop/> | ~600 MB |
+| `wsl.<version>.x64.msi` | <https://github.com/microsoft/WSL/releases> (pick the latest `x64.msi`) | ~250 MB |
+
+Then, on the clinic machine, **in this order**:
+
+1. **Virtualization must be on in the BIOS/UEFI.** If it is off, WSL cannot start at all
+   and nothing below will work. Check this first — it needs a reboot into firmware setup.
+2. Turn on the two Windows features (these are already on the machine; no download):
+   ```powershell
+   dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+   dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+   ```
+3. **Reboot.**
+4. Install `wsl.<version>.x64.msi` (double-click). Confirm with `wsl --version`.
+5. Install Docker Desktop, open it once, wait for **"Engine running"**.
+6. Now run `install-offline.ps1`.
+
+Check the machine's Windows edition and build too: Docker Desktop requires Windows 10
+22H2 (build 19045) or Windows 11 23H2 (build 22631) or newer. `winver` tells you.
+
+On a **Linux** or NAS host none of this applies — install Docker Engine from the
+distribution's packages (bring the `.deb`/`.rpm` files if there is no internet) and skip
+straight to section 2.
 
 ## 2. At the clinic — install
 

@@ -106,12 +106,38 @@ cp "$HERE/install-offline.sh" "$HERE/install-offline.ps1" "$HERE/THIRD-PARTY-NOT
    "$EMR_ROOT/OFFLINE-INSTALL.md" "$DEST/"
 chmod +x "$DEST/install-offline.sh" 2>/dev/null || true
 
-cat > "$DEST/installers/PUT-DOCKER-INSTALLER-HERE.txt" <<'EOF'
-Put the Docker Desktop (or Docker Engine) installer in this folder.
+cat > "$DEST/installers/PUT-INSTALLERS-HERE.txt" <<'EOF'
+PUT TWO FILES IN THIS FOLDER BEFORE YOU TRAVEL
+==============================================
 
-The clinic machine will not be able to download it, and nothing else in this kit
-works without Docker. Get it from https://www.docker.com/products/docker-desktop/
-while you still have internet, and drop the installer here.
+The clinic machine cannot download either of them, and nothing else in this kit
+works without them.
+
+1. Docker Desktop
+   https://www.docker.com/products/docker-desktop/          (~600 MB)
+
+2. WSL 2 - the standalone installer
+   https://github.com/microsoft/WSL/releases                (~250 MB)
+   Take the newest 'wsl.<version>.x64.msi'.
+
+Why the second one: Docker Desktop does NOT bundle WSL. Its default per-user
+install supports the WSL 2 backend only and needs WSL 2.1.5 or later; when WSL is
+missing it runs 'wsl --install', which downloads from Microsoft. With no internet
+that step fails and Docker never starts.
+
+Order on the clinic machine:
+  1. Turn on virtualization in the BIOS/UEFI (nothing works without it).
+  2. dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+     dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+  3. Reboot.
+  4. Install the WSL .msi, then check 'wsl --version'.
+  5. Install Docker Desktop, open it once, wait for "Engine running".
+  6. Run install-offline.ps1 in the kit folder.
+
+On a Linux or NAS host, ignore all of this and bring your distribution's Docker
+Engine packages instead.
+
+See OFFLINE-INSTALL.md section 1b for the same thing with more detail.
 EOF
 
 cat > "$DEST/MANIFEST.txt" <<EOF
@@ -134,4 +160,7 @@ EOF
 step "Done"
 cat "$DEST/MANIFEST.txt"
 echo "Kit is at: $DEST"
-echo "Remaining manual step: drop the Docker installer into $DEST/installers/"
+echo "Remaining manual step: put BOTH installers into $DEST/installers/"
+echo "  - Docker Desktop      https://www.docker.com/products/docker-desktop/"
+echo "  - WSL 2 (x64 .msi)    https://github.com/microsoft/WSL/releases"
+echo "  Docker Desktop does not bundle WSL, and the clinic cannot download one."

@@ -25,13 +25,29 @@ function Die([string]$m) { Write-Host ""; Write-Host "ERROR: $m" -ForegroundColo
 Step "Checking Docker"
 docker version --format '{{.Server.Version}}' 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
-  Die @"
-Docker is not running.
+  # Docker Desktop's default install runs on WSL 2 and does not bundle it - when WSL is
+  # missing it tries to download one, which is exactly what this machine cannot do. Say
+  # which prerequisite is actually missing rather than just "Docker is not running".
+  $wslVersion = $null
+  try { $wslVersion = (& wsl.exe --version 2>$null) -join ' ' } catch { }
+  $hint = if ($wslVersion) {
+    "WSL is present. Open Docker Desktop once and wait for it to say `"Engine running`", then run this again."
+  } else {
+    @"
+WSL 2 is missing, and Docker Desktop needs it. It does NOT install WSL for you -
+it downloads one, which this machine cannot do.
 
-Install it first - the installer is in this kit under 'installers\', because this
-machine cannot download it. After installing, open Docker Desktop once, wait for it
-to say "Engine running", then run this script again.
+Install the prerequisites from 'installers\' in this order:
+  1. Turn on virtualization in the BIOS/UEFI.
+  2. dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+     dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+  3. Reboot.
+  4. Install wsl.<version>.x64.msi, then check with: wsl --version
+  5. Install Docker Desktop, open it once, wait for "Engine running".
+Then run this script again. Full details in OFFLINE-INSTALL.md section 1b.
 "@
+  }
+  Die "Docker is not running.`n`n$hint"
 }
 Say "Docker is up."
 

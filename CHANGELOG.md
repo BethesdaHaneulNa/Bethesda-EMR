@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.3.1 — 2026-07-24
+
+**The offline kit was missing a prerequisite that only fails when you are already
+there.** It said to bring the Docker Desktop installer. That is not enough: Docker
+Desktop's default installation runs on the WSL 2 backend and **does not bundle
+WSL** — when WSL is absent it runs `wsl --install`, which downloads about 250 MB
+from Microsoft. On the machine the kit exists for, that step simply fails, and
+Docker never starts. Every other check would have passed right up to that point.
+
+The kit now asks for **two** downloads, and spells out the order they go in:
+BIOS virtualization, the two in-box Windows features via `dism`, a reboot, the
+standalone WSL `.msi`, then Docker Desktop. `install-offline.ps1` also checks for
+WSL when Docker will not answer, so the failure on site names the thing that is
+actually missing instead of just reporting that Docker is not running.
+
+Nothing in the application changed.
+
 ## v1.3.0 — 2026-07-24
 
 **Installing no longer requires the internet.** The first run built the images on
