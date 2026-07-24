@@ -1,5 +1,48 @@
 # Changelog
 
+## v1.3.2 — 2026-07-24
+
+**The restore command could quietly restore half a database.** Backups had never
+been restored — only written — so this had gone unnoticed. The documented command
+was `gunzip -c file.sql.gz | psql ...`, and it has two holes that only open on the
+worst day. A shell pipeline reports the exit status of its *last* command, so if
+`gunzip` dies on a truncated file its failure vanishes and `psql` succeeds on the
+part it received. And `psql` without `ON_ERROR_STOP` carries on past errors and
+still exits reporting success. Tested here deliberately: a backup cut off partway
+through restores with **exit code 0**. On the day someone reaches for that command,
+nobody is going to scroll back through the output looking for the errors.
+
+Restoring is now three commands that are identical on Windows, Linux and a NAS, and
+they run inside the database container: `docker cp` the file in, `gunzip -t` to
+prove the archive is complete before anything touches the database, then restore
+with `set -o pipefail`, `ON_ERROR_STOP=1` and `--single-transaction`. Either it
+restores completely or the database is left exactly as it was. Running it inside the
+container also stops the host's shell from re-encoding the SQL on the way through —
+piping a dump through PowerShell mangles the accents in French and Malagasy names,
+and reports success while doing it.
+
+`DEPLOYMENT.md` gained a real restore section: stop the app first (the restore drops
+every table, and the backend holds locks), restore, check the exit code, start again,
+and what to tell the staff about the gap between the backup and now.
+
+### Checking a backup before you need it
+
+**`verify-backup.ps1` / `verify-backup.sh`** restore a backup into a temporary
+database, compare it against the live one, and throw the temporary database away.
+Nothing of yours is written to. It checks the archive, that it restores without a
+single error, the schema, row counts per table, a checksum of every table's contents,
+and that each sequence is ahead of the largest id in its own table — a restore that
+loses that looks perfect until the first new patient collides with an existing record.
+
+Verifying an **older** backup is treated differently from the newest one, deliberately.
+An old backup *should* differ from today's database — that is the entire point of
+keeping it — so it is checked for soundness on its own terms rather than being failed
+for not matching. The tool would otherwise condemn exactly the backups you reach for
+in an emergency.
+
+An untested backup is not a backup. Run it once after setting up a clinic, and
+occasionally after that.
+
 ## v1.3.1 — 2026-07-24
 
 **The offline kit was missing a prerequisite that only fails when you are already

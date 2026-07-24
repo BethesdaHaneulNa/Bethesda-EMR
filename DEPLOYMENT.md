@@ -87,7 +87,98 @@ BACKUP_TIME=02:00
 > extra copy somewhere else too — use the **⬇ download** button to put one on a USB taken
 > off-site, another machine, or cloud if you have internet.
 
-To **restore** a backup: `gunzip -c backupfile.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
+To **restore** a backup, see [section 5b](#5b-restoring-a-backup) below — it is short, but
+the order matters and the obvious one-line version can fail silently.
+
+## 5b. Restoring a backup
+
+Do this when the database is lost or corrupted. You will be doing it on a bad day, so
+the steps are written to be followed literally.
+
+**Stop the app first.** The restore drops and recreates every table; if the backend is
+still connected it holds locks and the restore stalls or half-finishes.
+
+```powershell
+cd C:\Bethesda-EMR                      # wherever the app is installed
+docker compose stop backend frontend    # leave the database running
+```
+
+**Restore.** Copy the backup into the database container and unpack it *there*. These three
+commands are the same on Windows, Linux and a NAS — replace the filename with the backup
+you want (they are in `backups/`, newest last):
+
+```
+docker cp backups/bethesda_2026-07-24_0200.sql.gz bethesda-emr-db:/tmp/restore.sql.gz
+
+docker exec bethesda-emr-db gunzip -t /tmp/restore.sql.gz
+
+docker exec bethesda-emr-db sh -c "set -o pipefail; gunzip -c /tmp/restore.sql.gz | psql -v ON_ERROR_STOP=1 --single-transaction -U medconnect -d medconnect"
+```
+
+Every part of that is there for a reason, and none of it is optional:
+
+- **`gunzip -t` first** — tests that the archive is complete before anything touches the
+  database. A backup truncated by a full disk or a USB stick pulled early fails here, in
+  one clear line, instead of halfway through a restore.
+- **`set -o pipefail`** — a shell pipeline reports the exit code of the *last* command, so
+  without this `gunzip`'s failure disappears and `psql` happily reports success on the
+  half of the file it received. This is the trap: the obvious one-liner
+  `gunzip -c file | psql` **exits 0 on a truncated backup.**
+- **`ON_ERROR_STOP=1`** — otherwise `psql` continues past errors and still exits reporting
+  success. The errors scroll past and the last line looks fine.
+- **`--single-transaction`** — everything is applied or nothing is. Without it a failure
+  halfway leaves a database that is neither the old one nor the new one.
+
+Running it inside the container also avoids the host's shell mangling the file: piping SQL
+through PowerShell re-encodes it, and patient names with French or Malagasy accents arrive
+corrupted — from a restore that reported success.
+
+**Check the exit code.** This is the whole point of the above:
+
+```powershell
+echo $LASTEXITCODE      # PowerShell -- 0 means restored
+echo $?                 # bash
+```
+
+Anything other than `0` means **nothing was restored** (the transaction rolled back) and
+the database is still as it was. Read the error, fix it, and try again — a different
+backup file, or free up disk space. Then tidy up:
+
+```
+docker exec bethesda-emr-db rm -f /tmp/restore.sql.gz
+```
+
+**Start back up and look at it:**
+
+```powershell
+docker compose start backend frontend
+```
+
+Then open the app and check that recent patients and visits are there. Compare against
+what you expect from the date on the backup file: restoring the 2 a.m. backup means
+anything entered after 2 a.m. that day is gone, which is normal and worth telling the
+staff before they wonder.
+
+### Check a backup *before* you need it
+
+`verify-backup.ps1` restores a backup into a temporary database, compares it against the
+live one table by table, and throws the temporary database away. It never touches your
+data:
+
+```powershell
+.\verify-backup.ps1                                             # newest backup
+.\verify-backup.ps1 -File backups\bethesda_2026-07-15_0200.sql.gz
+```
+
+```bash
+./verify-backup.sh
+./verify-backup.sh backups/bethesda_2026-07-15_0200.sql.gz
+```
+
+It checks table count, row counts per table, sequence values (a restore that loses these
+collides on the first new record), index and constraint counts, and a content checksum of
+every table. Run it once after setting up a clinic, and occasionally after that. An
+untested backup is not a backup.
 
 ## 6. Network & security — **your responsibility**
 
@@ -168,8 +259,9 @@ clears once you're on the latest version. (Updating from inside the app's UI is 
 not offered — a container rebuilding itself is unsafe for a medical system, so the update runs
 from the host instead.)
 
-If something looks wrong after an update, your data is safe — restore the pre-update backup:
-`gunzip -c _pre-update-backups/<file>.sql.gz | docker exec -i bethesda-emr-db psql -U medconnect -d medconnect`
+If something looks wrong after an update, your data is safe — restore the pre-update backup
+from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-backup)
+(same steps, just a different folder).
 
 ## 9. Before you go live — checklist
 
