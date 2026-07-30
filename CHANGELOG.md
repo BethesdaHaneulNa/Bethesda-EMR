@@ -1,5 +1,98 @@
 # Changelog
 
+## v1.4.0 — 2026-07-30
+
+### A doctor can finally be put in a department
+
+The staff list has always had a Dept column and the API has always accepted
+`department_id`, but there was no field for it in the staff form — so the column read
+`—` for every single person and always would. `department.head_doctor_id` had the same
+shape of gap: in the schema since the first migration, with its own foreign key, read
+back by `GET /departments` as `head_name`, and the seed file even says heads are
+assigned in Settings. There was nothing to assign them with.
+
+Both now exist in the staff and department forms. The department form also gained the
+French name, which the API had been accepting and returning all along: the clinic is in
+Madagascar, the seeded departments already carry French names, and a department added
+later would otherwise have shown Korean on a French screen.
+
+A doctor's own department is deliberately separate from the department chosen per visit
+at reception. One doctor can see patients for more than one service, so what the visit
+was is a property of the visit, not of the person.
+
+### Revenue by department and by doctor
+
+Visit counts had been broken out by department and by doctor since the statistics screen
+was built; money had not — the revenue query summed the whole clinic. `billing.visit_id`
+is `NOT NULL`, so both breakdowns come from a join that was always available.
+
+They are computed on different keys, and this is the point rather than an oversight.
+Department revenue is grouped by the department chosen at reception, because that is what
+the consultation actually was. Doctor revenue is grouped by the attending doctor, because
+bonuses and performance are settled per person and grouping those by department would
+scatter one doctor's work across several rows. The totals agree; the rows do not have to.
+
+### The administrator account can no longer be locked out from the inside
+
+Nothing stopped someone editing the admin account created during setup and unchecking
+its settings permission, or moving it off the admin role, or deactivating it. Any of
+those closes the last door from the inside: Settings is the only screen that can hand
+the permission back, and no one can reach it any more. Short of editing the database by
+hand there is no way back.
+
+That account's login id, role, permissions and active status are now fixed in
+`admin.routes.js` — not merely greyed out in the form, because the form is not the only
+way to call the API. Its name, password, phone, email and department stay editable.
+
+Renaming it would have side-stepped a check that only looked at the login id, so demoting
+or deactivating *any* administrator is now refused when no other active administrator
+holds the settings permission. With a second admin in place, every account stays fully
+editable.
+
+### Buttons now respond to being pressed
+
+There are 140 buttons in this app and until now not one of them changed appearance when
+clicked. A click that did not register looked exactly like a click that did — and the
+natural response to an unsure click is to click again, which on a payment or a
+prescription screen is how a duplicate entry gets made. This was the oldest thing wrong
+with how the app feels, and it was never a styling preference.
+
+The cause was structural. Everything is styled with React inline style objects, and an
+inline style cannot express `:active`, `:hover`, or a media query. Five places had already
+worked around it by mutating `e.currentTarget.style` by hand on `onMouseEnter`; there is
+no equivalent trick for a press.
+
+`index.html` gained a `medconnect-motion` style block holding the easing and duration
+tokens and a `button:active` rule, which reaches all 140 buttons through the element
+selector without touching a single component. Press feedback is `scale(0.97)` over 160ms
+on `cubic-bezier(0.23, 1, 0.32, 1)`; hover brightness is gated behind
+`@media (hover: hover) and (pointer: fine)` so that a tap on a touch screen does not
+leave a hover stuck on.
+
+Eight `div`-based controls that behave like buttons — the Settings tabs, the gender
+selector, two toggles, the stat cards, the order-set header and tile, the chart-template
+picker — got a `pressable` class so they feel identical.
+
+**Thirty-four others deliberately did not.** Modal backdrops would scale the whole dimmed
+screen. `stopPropagation` wrappers are not buttons at all. And the patient queue, drug
+search results and visit lists are clicked continuously all day: at that frequency the
+right amount of animation is less, not more.
+
+`prefers-reduced-motion: reduce` is now honoured. Movement stops — the queue drawer
+appears without sweeping 290px across the screen, buttons do not travel, bars do not grow
+— while the brightness feedback that confirms a click landed stays. Reduced motion means
+gentler, not none.
+
+Two easings were corrected on the way past: the queue drawer was using the browser
+default `ease` and now uses `cubic-bezier(0.32, 0.72, 0, 1)`, and the Stats bars dropped
+from 300ms to 250ms on a real ease-out curve.
+
+The bars still animate `width`/`height` rather than `transform`, which is the textbook
+advice. Converting them would have distorted their corner radii at every intermediate
+value and broken the `min-width: 3px` floor that keeps a department with a tiny share
+visible at all. These bars animate once per data load, not continuously, so the trade was
+not worth taking. `plans/003` records what a proper fix would require.
+
 ## v1.3.3 — 2026-07-30
 
 **The same hole was still open on the writing side.** v1.3.2 closed it for restores
