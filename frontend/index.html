@@ -14,6 +14,58 @@
     input, select, textarea, button { font-size: 17px; }
     table { font-size: 16px; }
   </style>
+  <style id="medconnect-motion">
+    :root {
+      /* Strong ease-out for UI. The built-in `ease` is too weak for deliberate motion. */
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+      --dur-press: 160ms;
+      --dur-hover: 160ms;
+      --dur-modal: 200ms;
+    }
+
+    /* Press feedback. The screens are styled with inline objects, which cannot express
+       :active - hence the element selector here. transform and filter only: both are
+       composited, so this stays off the layout/paint path even on the busiest screen.
+       Without it a click that did not register looks exactly like one that did, and the
+       natural response to an unsure click on a chart is to click again. */
+    button {
+      transition: transform var(--dur-press) var(--ease-out),
+                  filter var(--dur-hover) var(--ease-out);
+    }
+    button:active:not(:disabled) { transform: scale(0.97); }
+    button:disabled { cursor: not-allowed; }
+
+    /* Hover is gated: on a touch screen a tap fires a false hover that then sticks. */
+    @media (hover: hover) and (pointer: fine) {
+      button:not(:disabled):hover { filter: brightness(1.12); }
+    }
+
+    /* For the div-based buttons that cannot become <button> without restructuring.
+       Applied deliberately and sparingly - not to modal backdrops, event-guard wrappers,
+       or the patient/drug/visit lists that staff click all day. */
+    .pressable {
+      transition: transform var(--dur-press) var(--ease-out),
+                  filter var(--dur-hover) var(--ease-out);
+    }
+    .pressable:active { transform: scale(0.97); }
+    @media (hover: hover) and (pointer: fine) {
+      .pressable:hover { filter: brightness(1.12); }
+    }
+
+    /* Reduced motion means fewer and gentler animations, not none. The brightness feedback
+       that confirms a click landed stays; the travel goes. */
+    @media (prefers-reduced-motion: reduce) {
+      button:active:not(:disabled),
+      .pressable:active { transform: none; }
+
+      /* The drawer keeps its translate - that is what hides it off-screen - but stops
+         sliding. Removing the transform instead would leave it parked over the chart. */
+      [data-motion="drawer"] { transition: none !important; }
+      [data-motion="bar"] { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>

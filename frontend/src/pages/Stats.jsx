@@ -75,7 +75,7 @@ export default function StatsPage(){
   var IS = { background:pn, border:'1px solid '+bd2, borderRadius:6, padding:'6px 10px', color:tx, fontSize:14 };
   function pbtn(p,label){ var on=period===p; return <button onClick={function(){pick(p)}} style={{ background:on?'#3b82f618':'transparent', color:on?'#60a5fa':t3, border:'1px solid '+(on?'#3b82f640':'transparent'), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{label}</button>; }
 
-  function Card(props){ return <div onClick={props.onClick} style={{ background:scBg, border:'1px solid '+(props.active?'#3b82f680':bd), borderRadius:10, padding:'14px 16px', flex:1, minWidth:140, cursor:props.onClick?'pointer':'default' }}>
+  function Card(props){ return <div onClick={props.onClick} className={props.onClick?'pressable':undefined} style={{ background:scBg, border:'1px solid '+(props.active?'#3b82f680':bd), borderRadius:10, padding:'14px 16px', flex:1, minWidth:140, cursor:props.onClick?'pointer':'default' }}>
     <div style={{ fontSize:13, color:t3, fontWeight:700 }}>{props.label}{props.onClick?<span style={{marginLeft:5,color:t3,fontSize:11}}>{props.active?'▲':'▼'}</span>:null}</div>
     <div style={{ fontSize:props.small?20:26, fontWeight:900, color:props.color||tx, fontFamily:'monospace', marginTop:4 }}>{props.value}<span style={{fontSize:13,color:t3,fontWeight:600,marginLeft:4}}>{props.unit||''}</span></div>
     {props.sub?<div style={{ fontSize:12, color:t3, marginTop:3 }}>{props.sub}</div>:null}
@@ -88,7 +88,7 @@ export default function StatsPage(){
       {rows.map(function(r,i){ return <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
         <div style={{ width:110, fontSize:13, color:t2, textAlign:'right', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.label}</div>
         <div style={{ flex:1, background:pn, borderRadius:5, height:22, position:'relative', overflow:'hidden' }}>
-          <div style={{ width:((r.value||0)/max*100)+'%', background:(r.color||'#3b82f6'), height:'100%', borderRadius:5, minWidth:r.value?3:0, transition:'width .3s' }}></div>
+          <div data-motion="bar" style={{ width:((r.value||0)/max*100)+'%', background:(r.color||'#3b82f6'), height:'100%', borderRadius:5, minWidth:r.value?3:0, transition:'width 250ms var(--ease-out)' }}></div>
         </div>
         <div style={{ width:90, fontSize:13, color:tx, fontFamily:'monospace', textAlign:'right' }}>{props.money?fmtAr(r.value)+' Ar':r.value}</div>
       </div>; })}
@@ -105,7 +105,7 @@ export default function StatsPage(){
       {rows.length===0?<div style={{color:t3,fontSize:13}}>{t.noData||'데이터 없음'}</div>:null}
       {rows.map(function(r,i){ var h=Math.round((r.value||0)/max*108); return <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, minWidth:30 }}>
         <div style={{ fontSize:11, color:t2, fontFamily:'monospace', whiteSpace:'nowrap' }}>{props.money?fmtAr(r.value):r.value}</div>
-        <div title={r.label} style={{ width:'72%', height:Math.max(h,2), background:props.color||'#3b82f6', borderRadius:'4px 4px 0 0', transition:'height .3s' }}></div>
+        <div title={r.label} data-motion="bar" style={{ width:'72%', height:Math.max(h,2), background:props.color||'#3b82f6', borderRadius:'4px 4px 0 0', transition:'height 250ms var(--ease-out)' }}></div>
         <div style={{ fontSize:11, color:t3 }}>{r.label}</div>
       </div>; })}
     </div>; }
@@ -160,6 +160,19 @@ export default function StatsPage(){
             <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){setShowList(showList==='owed'?null:'owed')}} active={showList==='owed'} />
             <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){setShowList(showList==='refund'?null:'refund')}} active={showList==='refund'} />
             <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={t.cases||'건'} color="#f59e0b" small />
+          </div>
+          {/* 과별·의사별 매출. 진료 섹션의 방문수 그래프와 같은 모양으로 두어, "몇 명 봤는지"와
+              "얼마가 들어왔는지"를 같은 눈높이에서 읽을 수 있게 한다. 과는 접수에서 고른 과,
+              의사는 담당의 기준이라 두 표의 합계는 같아도 줄 나눔은 다를 수 있다. */}
+          <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:14 }}>
+            <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'}</div>
+              <Bars money rows={(data.revenueByDept||[]).map(function(d){ return { label:(d.code||'-')+' '+(d.name||''), value:d.paid, color:'#10b981' }; })} />
+            </div>
+            <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'}</div>
+              <Bars money rows={(data.revenueByDoctor||[]).map(function(d){ return { label:d.name, value:d.paid, color:'#22c55e' }; })} />
+            </div>
           </div>
           {showList?<div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14, marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:900, color:showList==='owed'?'#f87171':'#c084fc', marginBottom:10 }}>

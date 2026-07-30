@@ -203,7 +203,7 @@ export function DocumentModal(props) {
             <div style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, color: t2, textTransform: 'uppercase' }}>{L(UI.templates, lang)}</div>
             {visible.map(function (tp) {
               var on = tp.code === code && mode === 'new';
-              return <div key={tp.code} onClick={function () { selectTemplate(tp.code); }} style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, borderLeft: on ? '3px solid #3b82f6' : '3px solid transparent', background: on ? '#3b82f612' : 'transparent', color: on ? '#93c5fd' : tx }}>{L(tp.name, lang)}</div>;
+              return <div key={tp.code} className="pressable" onClick={function () { selectTemplate(tp.code); }} style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, borderLeft: on ? '3px solid #3b82f6' : '3px solid transparent', background: on ? '#3b82f612' : 'transparent', color: on ? '#93c5fd' : tx }}>{L(tp.name, lang)}</div>;
             })}
           </div> : null}
 

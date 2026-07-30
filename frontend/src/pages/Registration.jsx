@@ -297,7 +297,7 @@ export default function RegistrationPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {['M', 'F'].map(function (g) {
                   var label = g === 'M' ? t.male : t.female;
-                  return <div key={g} onClick={function () { uf('gender', g); }} style={{ cursor: 'pointer', background: form.gender === g ? '#3b82f620' : '#1e2433', border: form.gender === g ? '1px solid #3b82f660' : '1px solid #2a3142', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: form.gender === g ? '#60a5fa' : t2, flex: 1, textAlign: 'center', fontWeight: 700 }}>{label}</div>;
+                  return <div key={g} className="pressable" onClick={function () { uf('gender', g); }} style={{ cursor: 'pointer', background: form.gender === g ? '#3b82f620' : '#1e2433', border: form.gender === g ? '1px solid #3b82f660' : '1px solid #2a3142', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: form.gender === g ? '#60a5fa' : t2, flex: 1, textAlign: 'center', fontWeight: 700 }}>{label}</div>;
                 })}
               </div>
             </div>

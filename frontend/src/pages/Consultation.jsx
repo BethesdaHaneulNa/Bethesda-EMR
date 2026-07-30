@@ -408,7 +408,7 @@ export default function ConsultationPage() {
       <div style={{display:'flex',height:sel?'calc(100vh - 120px)':'calc(100vh - 82px)',position:'relative'}}>
 
         {/* Slide-out queue */}
-        <div style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 0.25s ease',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px rgba(0,0,0,0.5)':'none'}}>
+        <div data-motion="drawer" style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px rgba(0,0,0,0.5)':'none'}}>
           <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:3,flexWrap:'wrap'}}>
             {['waiting','completed'].map(function(k){
               var c=k==='waiting'?'#3b82f6':'#10b981';
@@ -616,7 +616,7 @@ export default function ConsultationPage() {
                 var gkey = grp.group||'\u0000';
                 var open = !!expGroups[gkey];
                 return <div key={gi} style={{marginBottom:6}}>
-                  <div onClick={function(){toggleGroup(gkey)}} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 8px',cursor:'pointer',background:'#1a1f2e',borderRadius:5,border:'1px solid '+bd}}>
+                  <div className="pressable" onClick={function(){toggleGroup(gkey)}} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 8px',cursor:'pointer',background:'#1a1f2e',borderRadius:5,border:'1px solid '+bd}}>
                     <span style={{fontSize:11,color:t2,width:10}}>{open?'\u25be':'\u25b8'}</span>
                     <span style={{fontSize:13}}>📁</span>
                     <span style={{fontSize:13,fontWeight:800,color:'#e2e8f0'}}>{grp.group||t.ungrouped}</span>
@@ -624,7 +624,7 @@ export default function ConsultationPage() {
                   </div>
                   {open?<div style={{padding:'4px 0 2px 10px'}}>
                     {grp.sets.map(function(s){
-                      return <div key={s.id} onClick={function(){applySet(s)}} title={t.applySetHint} style={{background:scBg,borderRadius:5,padding:'7px 9px',marginBottom:5,border:'1px solid '+bd,borderLeft:'3px solid #10b981',cursor:'pointer'}}>
+                      return <div key={s.id} className="pressable" onClick={function(){applySet(s)}} title={t.applySetHint} style={{background:scBg,borderRadius:5,padding:'7px 9px',marginBottom:5,border:'1px solid '+bd,borderLeft:'3px solid #10b981',cursor:'pointer'}}>
                         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                           <span style={{fontSize:13,fontWeight:800,color:'#34d399'}}>{s.name}</span>
                           {s.dept_code?<span style={{fontSize:11,color:t2}}>{s.dept_code}</span>:null}

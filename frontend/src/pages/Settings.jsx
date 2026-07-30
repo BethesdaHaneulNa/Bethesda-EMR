@@ -215,6 +215,13 @@ export default function SettingsPage() {
 
   var bd='#232838',bd2='#2a3142',scBg='#1a1f2e',pn='#13161f',tx='#e2e8f0',t2='#94a3b8',t3='#64748b';
   var IS={width:'100%',background:'#0f1117',border:'1px solid #2a3142',borderRadius:5,padding:'7px 10px',color:'#e2e8f0',fontSize: 14,outline:'none',boxSizing:'border-box',fontFamily:'inherit'};
+  var LOCKED_IS=Object.assign({},IS,{background:'#15181f',color:'#8b95a5',cursor:'not-allowed'});
+
+  // The account the setup wizard created. Its role and permissions are fixed server-side
+  // (see admin.routes.js); greying them out here just stops someone trying. Editing any
+  // other admin is still allowed - the API refuses only the change that would leave
+  // nobody able to open Settings.
+  var lockedAdmin = !!(editItem && editItem.id && editItem.login_id === 'admin');
   var RC={frontdesk:'#3b82f6',doctor:'#10b981',pharmacy:'#8b5cf6',admin:'#ef4444'};
   var TC={fee:'#3b82f6',lab:'#f59e0b',imaging:'#8b5cf6',procedure:'#10b981'};
 
@@ -231,7 +238,7 @@ export default function SettingsPage() {
         <div style={{borderRight:'1px solid '+bd,background:pn,padding:'10px 0'}}>
           <div style={{padding:'0 12px 10px',fontSize: 14,fontWeight:700,color:tx}}>{t.settings}</div>
           {TABS.map(function(tab){
-            return <div key={tab.key} onClick={function(){setTab(tab.key);setQ('')}} style={{padding:'8px 14px',cursor:'pointer',background:activeTab===tab.key?'#3b82f612':'transparent',borderLeft:activeTab===tab.key?'3px solid #3b82f6':'3px solid transparent',color:activeTab===tab.key?'#60a5fa':t2,fontSize: 14,fontWeight:activeTab===tab.key?600:400}}>{tab.label}</div>;
+            return <div key={tab.key} className="pressable" onClick={function(){setTab(tab.key);setQ('')}} style={{padding:'8px 14px',cursor:'pointer',background:activeTab===tab.key?'#3b82f612':'transparent',borderLeft:activeTab===tab.key?'3px solid #3b82f6':'3px solid transparent',color:activeTab===tab.key?'#60a5fa':t2,fontSize: 14,fontWeight:activeTab===tab.key?600:400}}>{tab.label}</div>;
           })}
         </div>
 
@@ -480,7 +487,7 @@ export default function SettingsPage() {
                 <Fld label={t.emrPublicUrl}>
                   <input placeholder={t.egUrl} value={pacsConfig.emr_base_url||''} onChange={function(e){up('emr_base_url',e.target.value)}} style={IS}/>
                 </Fld>
-                <div onClick={function(){up('auto_create_worklist',!pacsConfig.auto_create_worklist)}} style={{marginTop:8,display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
+                <div className="pressable" onClick={function(){up('auto_create_worklist',!pacsConfig.auto_create_worklist)}} style={{marginTop:8,display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
                   <div style={{width:14,height:14,borderRadius:3,border:pacsConfig.auto_create_worklist?'2px solid #10b981':'2px solid #2a3142',background:pacsConfig.auto_create_worklist?'#10b981':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{pacsConfig.auto_create_worklist?<span style={{color:'#fff',fontSize: 12}}>✓</span>:null}</div>
                   <span style={{fontSize: 14,color:pacsConfig.auto_create_worklist?'#34d399':t3}}>{t.autoCreateWl}</span>
                 </div>
@@ -642,20 +649,33 @@ export default function SettingsPage() {
             {editType==='staff'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label="Name"><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label="Login ID"><input value={editItem.login_id||''} onChange={function(e){ue('login_id',e.target.value)}} style={IS}/></Fld>
+                <Fld label="Login ID"><input value={editItem.login_id||''} onChange={function(e){ue('login_id',e.target.value)}} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}/></Fld>
                 <Fld label="Password"><input value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder="••••" style={IS}/></Fld>
               </div>
+              {lockedAdmin?<div style={{fontSize:12,color:'#fbbf24',background:'#f59e0b18',border:'1px solid #f59e0b40',borderRadius:5,padding:'7px 9px',lineHeight:1.5}}>
+                🔒 {t.adminLocked||'설정 때 만든 관리자 계정입니다. 이름·비밀번호·연락처는 바꿀 수 있지만, 아이디와 역할·권한은 고정입니다 — 여기서 설정 권한을 빼면 아무도 설정 화면에 들어올 수 없게 됩니다.'}
+              </div>:null}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label="Role (label)"><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} style={IS}><option value="frontdesk">Front Desk</option><option value="doctor">Doctor</option><option value="pharmacy">Pharmacy</option><option value="lab">Lab</option><option value="admin">Admin</option></select></Fld>
+                <Fld label="Role (label)"><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}><option value="frontdesk">Front Desk</option><option value="doctor">Doctor</option><option value="pharmacy">Pharmacy</option><option value="lab">Lab</option><option value="admin">Admin</option></select></Fld>
                 <Fld label="Phone"><input value={editItem.phone||''} onChange={function(e){ue('phone',e.target.value)}} style={IS}/></Fld>
               </div>
+              {/* The staff list has always shown a Dept column and the API has always accepted
+                  department_id - there was simply no way to set it, so the column read "-" for
+                  everyone. This is the doctor's own department, which is separate from the
+                  department chosen per visit at reception. */}
+              <Fld label={t.department||'Department'}>
+                <select value={editItem.department_id||''} onChange={function(e){ue('department_id', e.target.value||null)}} style={IS}>
+                  <option value="">{t.unassigned||'(none)'}</option>
+                  {depts.map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
+                </select>
+              </Fld>
               <Fld label={(t.permissions||'Permissions (accessible screens)')}>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',background:'#0f1117',border:'1px solid #2a3142',borderRadius:5,padding:'8px 10px'}}>
                   {MODULES.map(function(m){
                     var perms=editItem.permissions||[];
                     var on=perms.indexOf(m.perm)>=0;
-                    return <label key={m.perm} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:13,color:on?'#e2e8f0':'#94a3b8'}}>
-                      <input type="checkbox" checked={on} onChange={function(){ var cur=editItem.permissions||[]; var next=on?cur.filter(function(x){return x!==m.perm}):cur.concat([m.perm]); ue('permissions',next); }} />
+                    return <label key={m.perm} style={{display:'flex',alignItems:'center',gap:6,cursor:lockedAdmin?'not-allowed':'pointer',fontSize:13,color:lockedAdmin?'#8b95a5':(on?'#e2e8f0':'#94a3b8')}}>
+                      <input type="checkbox" checked={on} disabled={lockedAdmin} onChange={function(){ var cur=editItem.permissions||[]; var next=on?cur.filter(function(x){return x!==m.perm}):cur.concat([m.perm]); ue('permissions',next); }} />
                       {m.icon} {t[m.key]||m.key}
                     </label>;
                   })}
@@ -702,7 +722,7 @@ export default function SettingsPage() {
                 </div>
                 <div style={{marginTop:6}}>
                   <Fld label={t.worklistFeedCreate}>
-                    <div onClick={function(){ue('worklist_enabled',!editItem.worklist_enabled)}} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
+                    <div className="pressable" onClick={function(){ue('worklist_enabled',!editItem.worklist_enabled)}} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
                       <div style={{width:14,height:14,borderRadius:3,border:editItem.worklist_enabled?'2px solid #10b981':'2px solid #2a3142',background:editItem.worklist_enabled?'#10b981':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{editItem.worklist_enabled?<span style={{color:'#fff',fontSize: 12}}>✓</span>:null}</div>
                       <span style={{fontSize: 14,color:editItem.worklist_enabled?'#34d399':t3}}>{editItem.worklist_enabled?'Enabled':'Disabled'}</span>
                     </div>
@@ -721,6 +741,20 @@ export default function SettingsPage() {
               <Fld label="Code"><input value={editItem.code||''} onChange={function(e){ue('code',e.target.value)}} style={IS}/></Fld>
               <Fld label="Name"><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
               <Fld label="English"><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
+              {/* Français is not optional here: the clinic is in Madagascar, the seeded
+                  departments already carry French names, and a department added later
+                  would otherwise fall back to Korean on a French screen. */}
+              <Fld label="Français"><input value={editItem.name_fr||''} onChange={function(e){ue('name_fr',e.target.value)}} style={IS}/></Fld>
+              {/* head_doctor_id has been in the schema and the API since the first migration
+                  (fk_dept_head), and the seed even says heads are assigned here - there was
+                  no field for it. Only doctors can head a department. */}
+              <Fld label={t.deptHead||'Head doctor'}>
+                <select value={editItem.head_doctor_id||''} onChange={function(e){ue('head_doctor_id', e.target.value||null)}} style={IS}>
+                  <option value="">{t.unassigned||'(none)'}</option>
+                  {staff.filter(function(s){return s.role==='doctor' && s.status!=='inactive'})
+                        .map(function(s){return <option key={s.id} value={s.id}>{s.name}</option>;})}
+                </select>
+              </Fld>
             </div>):null}
 
             <div style={{display:'flex',gap:8,marginTop:14}}>
