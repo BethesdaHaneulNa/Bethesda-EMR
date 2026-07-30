@@ -15,9 +15,22 @@ $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
 New-Item -ItemType Directory -Force -Path "_pre-update-backups" | Out-Null
 $backup = "_pre-update-backups\preupdate_$stamp.sql.gz"
 Write-Host "[1/4] Backing up the database -> $backup"
-docker exec bethesda-emr-db sh -c "pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz"
+# pipefail: a pipeline reports the status of its last command, so without it a failed
+# pg_dump exits 0 (gzip was fine) and we would update on top of an empty safety backup.
+# gzip -t proves the archive is whole. $ErrorActionPreference does NOT catch a native
+# command's exit code, so each step is checked explicitly.
+docker exec bethesda-emr-db sh -c "set -o pipefail; pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz && gzip -t /tmp/_preupdate.sql.gz"
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "[!] Safety backup failed - update aborted. Nothing has been changed." -ForegroundColor Red
+  docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz *> $null
+  exit 1
+}
 docker cp bethesda-emr-db:/tmp/_preupdate.sql.gz $backup
 docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz
+if (-not (Test-Path $backup) -or (Get-Item $backup).Length -eq 0) {
+  Write-Host "[!] Safety backup is missing or empty - update aborted. Nothing has been changed." -ForegroundColor Red
+  exit 1
+}
 
 # 2) Get the latest version
 Write-Host "[2/4] Getting the latest version..."

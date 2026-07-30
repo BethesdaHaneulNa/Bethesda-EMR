@@ -59,21 +59,28 @@ function runBackup() {
     if (!fs.existsSync(DIR)) return resolve({ ok: false, error: 'backup directory not mounted' });
     const file = path.join(DIR, `${PREFIX}${stamp()}.sql.gz`);
     const env = Object.assign({}, process.env, { PGPASSWORD: process.env.DB_PASSWORD || '' });
-    const cmd = `pg_dump -h ${process.env.DB_HOST || 'db'} -p ${process.env.DB_PORT || 5432} ` +
+    // `set -o pipefail` matters: a pipeline reports the status of its LAST command,
+    // so without it a pg_dump that dies half way through still exits 0 (gzip
+    // succeeded) and we would file a truncated dump as a good backup. `gzip -t`
+    // then proves the archive is complete rather than cut short.
+    const cmd = 'set -o pipefail; ' +
+      `pg_dump -h ${process.env.DB_HOST || 'db'} -p ${process.env.DB_PORT || 5432} ` +
       `-U ${process.env.DB_USER || 'medconnect'} -d ${process.env.DB_NAME || 'medconnect'} ` +
-      `--no-owner --clean --if-exists | gzip > "${file}"`;
+      `--no-owner --clean --if-exists | gzip > "${file}" && gzip -t "${file}"`;
     const ps = spawn('sh', ['-c', cmd], { env });
     let err = '';
     ps.stderr.on('data', d => { err += d.toString(); });
     ps.on('error', e => resolve({ ok: false, error: e.message }));
     ps.on('close', code => {
-      if (code === 0) {
-        let size = 0; try { size = fs.statSync(file).size; } catch (e) {}
+      let size = 0; try { size = fs.statSync(file).size; } catch (e) {}
+      if (code === 0 && size > 0) {
         try { prune(c.retentionDays); } catch (e) {}
         resolve({ ok: true, file: path.basename(file), size });
       } else {
+        // Never leave a partial dump on disk - it would read as a usable backup.
         try { fs.unlinkSync(file); } catch (e) {}
-        resolve({ ok: false, error: (err || ('pg_dump exited ' + code)).trim() });
+        const why = code === 0 ? 'backup file is empty' : ('pg_dump exited ' + code);
+        resolve({ ok: false, error: (err || why).trim() });
       }
     });
   });

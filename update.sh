@@ -12,9 +12,16 @@ stamp=$(date +%Y-%m-%d_%H%M)
 mkdir -p _pre-update-backups
 backup="_pre-update-backups/preupdate_$stamp.sql.gz"
 echo "[1/4] Backing up the database -> $backup"
-docker exec bethesda-emr-db sh -c "pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz"
+# pipefail is what makes `set -e` above actually fire here: a pipeline reports the
+# status of its last command, so without it a failed pg_dump exits 0 (gzip was fine)
+# and we would update on top of an empty safety backup. gzip -t proves it is whole.
+docker exec bethesda-emr-db sh -c "set -o pipefail; pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz && gzip -t /tmp/_preupdate.sql.gz"
 docker cp bethesda-emr-db:/tmp/_preupdate.sql.gz "$backup"
 docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz
+if [ ! -s "$backup" ]; then
+  echo "[!] Safety backup is missing or empty - update aborted. Nothing has been changed."
+  exit 1
+fi
 
 # 2) Get the latest version
 echo "[2/4] Getting the latest version..."
