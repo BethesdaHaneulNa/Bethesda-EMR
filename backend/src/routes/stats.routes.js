@@ -52,6 +52,33 @@ router.get('/summary', async (req, res) => {
        WHERE v.visit_date BETWEEN $1 AND $2
        GROUP BY s.name ORDER BY cnt DESC`, P);
 
+    // 3b) 진료과별 매출. billing 은 visit 을 통해 과에 붙는다(billing.visit_id).
+    //     기준은 접수에서 고른 과다: 한 의사가 여러 과의 진료를 볼 수 있으므로
+    //     "무슨 진료였는지"는 방문에 붙고, 의사 본인의 소속과와는 다를 수 있다.
+    const revByDept = await pool.query(
+      `SELECT COALESCE(d.code,'-') AS code, COALESCE(d.name,'(미지정)') AS name,
+              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
+              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
+              COUNT(*)::int AS bill_count
+         FROM billing b
+         JOIN visit v ON b.visit_id = v.id
+         LEFT JOIN department d ON v.department_id = d.id
+        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
+        GROUP BY d.code, d.name ORDER BY paid DESC`, P);
+
+    // 3c) 의사별 매출. 과별과 따로 뽑는다 — 상여·성과 산정은 사람 단위로 봐야 하고,
+    //     접수에서 고른 과로 묶으면 그 사람의 실적이 여러 과에 흩어진다.
+    const revByDoctor = await pool.query(
+      `SELECT s.name AS name,
+              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
+              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
+              COUNT(*)::int AS bill_count
+         FROM billing b
+         JOIN visit v ON b.visit_id = v.id
+         JOIN staff s ON v.doctor_id = s.id
+        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
+        GROUP BY s.name ORDER BY paid DESC`, P);
+
     // 4) 매출 (취소 제외, billing_date 기준)
     const rev = await pool.query(
       `SELECT
@@ -90,6 +117,14 @@ router.get('/summary', async (req, res) => {
       visits: visits.rows[0],
       byDept: byDept.rows,
       byDoctor: byDoctor.rows,
+      // numeric comes back from pg as a string; round it here so the client can render
+      // it straight into a bar without doing arithmetic on text.
+      revenueByDept: revByDept.rows.map(function (x) {
+        return { code: x.code, name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
+      }),
+      revenueByDoctor: revByDoctor.rows.map(function (x) {
+        return { name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
+      }),
       revenue: {
         gross: num(r.gross), paid: num(r.paid),
         consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure),

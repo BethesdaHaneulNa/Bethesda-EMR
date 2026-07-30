@@ -8,6 +8,28 @@ const { sendDbError } = require('../utils/dbError');
 const ROLES = ['frontdesk', 'doctor', 'pharmacy', 'lab', 'admin'];
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure'];
 
+// Keep in step with frontend/src/modules.js.
+const ALL_PERMS = ['registration', 'consultation', 'payment', 'pharmacy', 'lab', 'stats', 'settings'];
+
+// The account the setup wizard creates is the one you log in with to fix everything
+// else. Unchecking its settings permission, moving it off the admin role, renaming it
+// or deactivating it locks the last door from the inside: nobody can reach Settings to
+// undo it, and there is no recovery path short of editing the database by hand. Its
+// role, permissions, login id and active status are therefore fixed here rather than
+// merely greyed out in the UI, because the UI is not the only way to call this API.
+const BOOTSTRAP_ADMIN_LOGIN = 'admin';
+
+// Is there another way in besides this row? Used before demoting any admin, so that
+// renaming the bootstrap account does not quietly remove the protection above.
+async function otherSettingsAdminExists(excludeId) {
+  const r = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM staff
+      WHERE id <> $1 AND status = 'active' AND role = 'admin' AND 'settings' = ANY(permissions)`,
+    [excludeId]
+  );
+  return r.rows[0].n > 0;
+}
+
 // An UPDATE that matches no row returned `res.json(undefined)` — an empty body
 // with 200, which the caller reads as "saved". Nothing was saved.
 function sentMissing(res, result) {
@@ -188,14 +210,36 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
     if (!ROLES.includes(String(role))) {
       return res.status(400).json({ error: 'role must be one of ' + ROLES.join(', ') });
     }
-    const perms = Array.isArray(permissions) ? permissions : [];
+    let perms = Array.isArray(permissions) ? permissions : [];
+
+    const cur = await pool.query('SELECT id, login_id FROM staff WHERE id = $1', [req.params.id]);
+    if (sentMissing(res, cur)) return;
+
+    let effLogin = login_id, effRole = String(role), effStatus = status;
+    if (cur.rows[0].login_id === BOOTSTRAP_ADMIN_LOGIN) {
+      // Fixed, not merely discouraged - see BOOTSTRAP_ADMIN_LOGIN. Name, password,
+      // phone, email and department stay editable; the way back in does not.
+      effLogin = cur.rows[0].login_id;
+      effRole = 'admin';
+      effStatus = 'active';
+      perms = ALL_PERMS.slice();
+    } else if (effRole !== 'admin' || perms.indexOf('settings') < 0 || String(status) === 'inactive') {
+      // Not the bootstrap account, but it can still be the only one left holding the
+      // key - the account may simply have been renamed.
+      if (!(await otherSettingsAdminExists(req.params.id))) {
+        return res.status(400).json({
+          error: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
+        });
+      }
+    }
+
     let query, params;
     if (password) {
       query = `UPDATE staff SET login_id=$1, password_hash=crypt($2, gen_salt('bf')), name=$3, role=$4, permissions=$5, department_id=$6, phone=$7, email=$8, status=$9, updated_at=NOW() WHERE id=$10 RETURNING id, login_id, name, role, permissions, department_id, phone, status`;
-      params = [login_id, password, name, role, perms, department_id, phone, email, status, req.params.id];
+      params = [effLogin, password, name, effRole, perms, department_id, phone, email, effStatus, req.params.id];
     } else {
       query = `UPDATE staff SET login_id=$1, name=$2, role=$3, permissions=$4, department_id=$5, phone=$6, email=$7, status=$8, updated_at=NOW() WHERE id=$9 RETURNING id, login_id, name, role, permissions, department_id, phone, status`;
-      params = [login_id, name, role, perms, department_id, phone, email, status, req.params.id];
+      params = [effLogin, name, effRole, perms, department_id, phone, email, effStatus, req.params.id];
     }
     const result = await pool.query(query, params);
     if (sentMissing(res, result)) return;
@@ -205,6 +249,19 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
 
 router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
   try {
+    // Deactivating is the other way to lock everyone out, so it is gated the same way
+    // as the role and permission edits above.
+    const cur = await pool.query('SELECT id, login_id, role, permissions FROM staff WHERE id = $1', [req.params.id]);
+    if (sentMissing(res, cur)) return;
+    if (cur.rows[0].login_id === BOOTSTRAP_ADMIN_LOGIN) {
+      return res.status(400).json({ error: 'The administrator account created during setup cannot be deactivated.' });
+    }
+    const held = cur.rows[0].role === 'admin' && (cur.rows[0].permissions || []).indexOf('settings') >= 0;
+    if (held && !(await otherSettingsAdminExists(req.params.id))) {
+      return res.status(400).json({
+        error: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
+      });
+    }
     await pool.query("UPDATE staff SET status = 'inactive' WHERE id = $1", [req.params.id]);
     res.json({ success: true });
   } catch (err) { sendDbError(res, err); }
