@@ -4,6 +4,10 @@ import { useLang } from '../i18n/index.jsx';
 import { getUser, logout, api } from '../api/client.js';
 import { allowedModules, userPerms } from '../modules.js';
 
+// Injected by Vite from package.json (see vite.config.js). Guarded so the component still
+// renders if it is ever loaded outside a Vite build.
+var APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+
 var ROLE_INFO = {
   frontdesk: { icon: '🏥', color: '#3b82f6' },
   doctor: { icon: '🩺', color: '#10b981' },
@@ -58,6 +62,12 @@ export function TopBar() {
       <div style={{ background: 'linear-gradient(135deg,#1a1f2e,#141824)', borderBottom: '1px solid #232838', padding: '0 12px', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 16, color: '#f1f5f9', cursor: 'pointer' }} onClick={function () { navigate('/'); }}>{appTitle}</span>
+          {APP_VERSION ? (
+            <span title={(t.currentVersion || '현재') + ' v' + APP_VERSION}
+              style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', background: '#1e2433', border: '1px solid #2a3142', borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace', letterSpacing: '-.02em' }}>
+              v{APP_VERSION}
+            </span>
+          ) : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {ver && ver.updateAvailable ? (

@@ -5,6 +5,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { runMigrations } = require('./config/migrate');
 const { startScheduler } = require('./services/backup');
+// Read the version rather than hard-coding it: a stale number here is worse than none,
+// because /api/health is what an installer or a monitor checks to see what is running.
+const pkg = require('../package.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,7 +20,7 @@ app.use(morgan('short'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: pkg.version });
 });
 
 // Routes

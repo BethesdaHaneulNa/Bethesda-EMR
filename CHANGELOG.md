@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.3.3 — 2026-07-30
+
+**The same hole was still open on the writing side.** v1.3.2 closed it for restores
+and left `pg_dump | gzip` untouched, but a pipeline reports the exit status of its
+*last* command in both directions. A `pg_dump` that died half way through — database
+briefly unreachable, disk full, a connection dropped at 02:00 — still exited 0,
+because `gzip` had been perfectly happy to compress whatever reached it. `runBackup()`
+read that 0, filed the truncated file as a good backup, and pruned older ones on the
+strength of it.
+
+Tested deliberately, the same way the restore hole was: `pg_dump` against a database
+that does not exist, piped to `gzip`. Old behaviour — **exit code 0** and a 20-byte
+file recorded as a successful nightly backup. With `set -o pipefail` and a `gzip -t`
+on the result — **exit code 1**, and the file is deleted instead of kept. `runBackup()`
+now also refuses a zero-byte result: a backup that exists but is empty is worse than
+one that is missing, because it stops anyone from looking further.
+
+`update.ps1` and `update.sh` took their safety backup through the same pipeline. In
+`update.sh` the `set -e` at the top was already there to stop the update; it simply
+never fired, because the failing pipeline reported success. In `update.ps1` there was
+nothing to fire — `$ErrorActionPreference = 'Stop'` does not catch a native command's
+exit code — so an empty safety backup was followed by the update regardless. Both now
+verify the archive and stop before touching anything, and both check that the file
+copied out to the host is non-empty.
+
+### The running version is now visible
+
+The top bar shows the build's own version beside the application title, injected from
+`package.json` at build time. `/api/version` already knew it, but that endpoint is
+gated on the settings permission, so most users could not see which build they were
+on. What prompted this was someone looking at an update banner and asking why it was
+there when the files on disk were already current. The answer was that the image had
+not been rebuilt since v1.2.0 — the code was on disk, the container was not running
+it. A version in the corner makes that visible without opening a terminal.
+
 ## v1.3.2 — 2026-07-24
 
 **The restore command could quietly restore half a database.** Backups had never
