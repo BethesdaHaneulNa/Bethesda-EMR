@@ -13,7 +13,7 @@ Encaisser un patient qui sort de consultation :
 1. Cliquez sur **En attente** (en haut à gauche). La liste montre les patients à encaisser.
 2. Cliquez sur le nom du patient, par exemple **RAKOTO Jean**.
 3. Vérifiez au milieu : **Consultation**, **Ordonnances**, **Examens / Actes**. À droite, le **Total**.
-4. Prenez l'argent du patient. Dans **Montant Reçu**, tapez ce qu'il vous donne (ou cliquez sur **Exact**, **5,000**, **10,000**, **20,000**, **50,000**).
+4. Prenez l'argent du patient. Dans **Montant Reçu**, tapez ce qu'il vous donne (ou cliquez sur **Exact**, **5 000**, **10 000**, **20 000**, **50 000**).
 5. Lisez **Monnaie** et rendez ce montant au patient.
 6. Cliquez sur **Confirmer**.
 7. Le reçu s'ouvre. Cliquez sur **🖨 Imprimer Reçu**, donnez le reçu au patient, puis **Fermer**.
@@ -32,7 +32,7 @@ Encaisser un patient qui sort de consultation :
 
 1. Choisissez le patient dans **En attente**.
 2. Si le patient vous donne 20 000 Ar pour un total de 18 000 Ar : tapez `20000` dans **Montant Reçu**.
-3. **Monnaie** affiche **2,000 Ar**. Rendez 2 000 Ar.
+3. **Monnaie** affiche **2 000 Ar**. Rendez 2 000 Ar.
 4. Cliquez sur **Confirmer**. Le reçu indique **Montant remis** 20 000 Ar et **Monnaie rendue** 2 000 Ar.
 5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**.
 6. Pour une remise : tapez le montant dans **Remise** avant **Confirmer**.
@@ -71,12 +71,12 @@ L'accueil choisit le type de visite. Vous pouvez le changer à côté de **Consu
 
 Exemple : RASOA Marie a payé 18 000 Ar (consultation 15 000 + médicament 3 000). Ensuite le médecin retire le médicament.
 
-1. Elle revient dans **En attente** avec le badge **Correction** et **↩ À rembourser: 3,000 Ar**.
+1. Elle revient dans **En attente** avec le badge **Correction** et **↩ À rembourser: 3 000 Ar**.
 2. Cliquez sur son nom. L'écran montre **Articles actuels**, **Montant correct** 15 000, **Déjà encaissé** 18 000 et **Remboursement dû** 3 000.
-3. Cliquez sur **↩ Appliquer la correction**. La fenêtre dit « Appliquer la correction ? … **Rendez 3,000 Ar au patient.** ». Cliquez sur OK.
+3. Cliquez sur **↩ Appliquer la correction**. La fenêtre dit « Appliquer la correction ? … **Rendez 3 000 Ar au patient.** ». Cliquez sur OK.
 4. **Rendez 3 000 Ar** à la patiente. Un nouveau reçu (15 000 Ar) remplace l'ancien : il indique « Remplace le(s) reçu(s) » et « Remboursé au patient : 3 000 Ar ». L'ancien reçu est marqué **Remplacé** (« → remplacé par R-… »), pas **ANNULÉ** ; dans **Payé aujourd’hui**, il est rangé sous **▸ Annulés / remplacés**.
 
-Avant de cliquer, le cadre **Ce qui change** montre chaque ligne modifiée, par exemple « CBC (annulé) 1 → 0 −12,000 » (examen annulé par le médecin) ou « Amoxicilline 3 → 0 −1,500 » (médicament retiré).
+Avant de cliquer, le cadre **Ce qui change** montre chaque ligne modifiée, par exemple « CBC (annulé) 1 → 0 −12 000 » (examen annulé par le médecin) ou « Amoxicilline 3 → 0 −1 500 » (médicament retiré).
 
 Si le patient **n'avait pas tout payé**, il n'y a rien à rendre : la liste montre **↩ Reste impayé: N Ar**, et la fenêtre dit « **N Ar resteront impayés.** ». Son impayé diminue.
 
