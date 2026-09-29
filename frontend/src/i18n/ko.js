@@ -267,6 +267,12 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "성과 이름을 모두 입력하세요.",
+  rc_dobIncomplete: "생년월일을 끝까지 입력하세요 (연-월-일). 모르면 모두 비워 두세요.",
+  rc_dobInvalid: "생년월일이 올바른 날짜가 아닙니다. 미래 날짜는 넣을 수 없습니다.",
+  rc_cancelNotWaiting: "이미 진료가 시작되었거나 끝난 환자라 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
+  rc_error: "오류",
+  rc_saving: "저장 중…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

@@ -2,9 +2,15 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { badPatient } = require('../utils/validate');
+const { sendDbError } = require('../utils/dbError');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Columns PUT may change. chart_no is deliberately absent: it is the patient's
+// identity in every other module and on the imaging devices (DICOM PatientID).
+const PATIENT_FIELDS = ['last_name', 'first_name', 'national_id', 'date_of_birth', 'gender', 'phone', 'mobile',
+  'address', 'city', 'region', 'blood_type', 'allergies', 'reception_note'];
 
 // GET /api/patients - search/list
 router.get('/', async (req, res) => {
@@ -67,25 +73,39 @@ router.post('/', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 
 // PUT /api/patients/:id
+// Only the fields present in the body are written; a field left out keeps its
+// value. This used to overwrite every column, so a screen that did not know a
+// patient's address (the reception queue does not load it) wiped it by sending
+// an empty string. Sending a field as '' or null still clears it on purpose.
+// The name check still applies, so callers must send last_name/first_name.
 router.put('/:id', async (req, res) => {
   try {
-    const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
     const invalid = badPatient(req.body);
     if (invalid) return res.status(400).json({ error: invalid });
+    const sets = [];
+    const params = [];
+    for (const field of PATIENT_FIELDS) {
+      if (!Object.prototype.hasOwnProperty.call(req.body, field)) continue;
+      let value = req.body[field];
+      // DATE and the gender CHECK reject '', which only ever means "not known".
+      if ((field === 'date_of_birth' || field === 'gender') && value === '') value = null;
+      params.push(value);
+      sets.push(field + '=$' + params.length);
+    }
+    params.push(req.params.id);
     const result = await pool.query(
-      `UPDATE patient SET last_name=$1, first_name=$2, national_id=$3, date_of_birth=$4, gender=$5, phone=$6, mobile=$7, address=$8, city=$9, region=$10, blood_type=$11, allergies=$12, reception_note=COALESCE($13, reception_note), updated_at=NOW()
-       WHERE id=$14 RETURNING *`,
-      [last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, (reception_note === undefined ? null : reception_note), req.params.id]
+      `UPDATE patient SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,
+      params
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 

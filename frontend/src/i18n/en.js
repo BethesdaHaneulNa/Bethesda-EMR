@@ -276,6 +276,12 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "Enter both the last name and the first name.",
+  rc_dobIncomplete: "Finish the date of birth (year-month-day), or leave it all blank if unknown.",
+  rc_dobInvalid: "The date of birth is not a valid date. It cannot be in the future.",
+  rc_cancelNotWaiting: "This patient's consultation has already started or finished, so the waiting entry cannot be cancelled. The list has been refreshed.",
+  rc_error: "Error",
+  rc_saving: "Saving…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
