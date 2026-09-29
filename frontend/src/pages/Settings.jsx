@@ -107,6 +107,35 @@ export default function SettingsPage() {
   function uli(i,k,v){ setLabItems(function(p){ var n=p.slice(); n[i]=Object.assign({},n[i]); n[i][k]=v; return n; }); }
   function addLi(){ setLabItems(function(p){ return p.concat([{name:'',unit:'',ref_low:'',ref_high:'',ref_text:''}]); }); }
   function delLi(i){ setLabItems(function(p){ var n=p.slice(); n.splice(i,1); return n; }); }
+  // Reference ranges by sex and age (decision 4): rows under an item, saved with it.
+  // it._open only shows/hides the rows; the server ignores it.
+  function toggleRanges(i){ uli(i,'_open',!labItems[i]._open); }
+  function urng(i,j,k,v){ setLabItems(function(p){ var n=p.slice(); n[i]=Object.assign({},n[i]); n[i].ranges=(n[i].ranges||[]).slice(); n[i].ranges[j]=Object.assign({},n[i].ranges[j]); n[i].ranges[j][k]=v; return n; }); }
+  function addRng(i){ setLabItems(function(p){ var n=p.slice(); n[i]=Object.assign({},n[i]); n[i].ranges=(n[i].ranges||[]).concat([{sex:'',age_min:'',age_max:'',age_unit:'y',ref_low:'',ref_high:'',ref_text:'',note:''}]); return n; }); }
+  function delRng(i,j){ setLabItems(function(p){ var n=p.slice(); n[i]=Object.assign({},n[i]); n[i].ranges=(n[i].ranges||[]).slice(); n[i].ranges.splice(j,1); return n; }); }
+  // Same checks as rangeError() in backend/src/routes/lab.routes.js (which refuses the
+  // save anyway) -- here only to say it in the screen's language. Rows of the same
+  // sex must not overlap in age: with two candidates nobody could tell which applied.
+  function rangeProblem(it){
+    var DAYS={d:1,m:30.4375,y:365.25};
+    function ni(v){ return v===null||v===undefined||v===''?null:parseInt(v,10); }
+    function nn(v){ return v===null||v===undefined||v===''?NaN:parseFloat(v); }
+    var list=it.ranges||[], name=it.name||'';
+    for(var i=0;i<list.length;i++){
+      var r=list[i], lo=ni(r.age_min), hi=ni(r.age_max);
+      if((lo!==null&&(isNaN(lo)||lo<0))||(hi!==null&&(isNaN(hi)||hi<=0))||(lo!==null&&hi!==null&&lo>=hi)) return t.lb_errRangeAge.replace('{item}',name);
+      var L=nn(r.ref_low), H=nn(r.ref_high);
+      if(isNaN(L)&&isNaN(H)&&!String(r.ref_text||'').trim()) return t.lb_errRangeEmpty.replace('{item}',name);
+      if(!isNaN(L)&&!isNaN(H)&&L>H) return t.lb_errRangeLowHigh.replace('{item}',name);
+    }
+    function span(r){ var f=DAYS[r.age_unit||'y'], lo=ni(r.age_min), hi=ni(r.age_max); return [lo===null?-Infinity:lo*f, hi===null?Infinity:hi*f]; }
+    for(var a=0;a<list.length;a++) for(var b=a+1;b<list.length;b++){
+      if((list[a].sex||'')!==(list[b].sex||'')) continue;
+      var x=span(list[a]), y=span(list[b]);
+      if(x[0]<y[1]-0.5&&y[0]<x[1]-0.5) return t.lb_errRangeOverlap.replace('{item}',name);
+    }
+    return null;
+  }
   // Changing the unit of an item that already has results shows the old numbers
   // under the new unit (and re-flags them against the new range if re-saved);
   // so does a new row named like a deleted item that had results. Ask first --
@@ -123,6 +152,7 @@ export default function SettingsPage() {
   }
   async function saveLabItems(force){
     if(!labCode) return;
+    for(var q=0;q<labItems.length;q++){ if(!labItems[q].name) continue; var bad=rangeProblem(labItems[q]); if(bad){ alert(bad); return; } }
     if(force!==true){ var risk=labRisks(); if(risk){ setLabWarn(risk); return; } }
     setLabWarn(null);
     try {
@@ -626,17 +656,37 @@ export default function SettingsPage() {
               <button onClick={function(){ setNewPanelOpen(false); }} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 14px',cursor:'pointer',fontSize: 14}}>{t.cancel||'취소'}</button>
               <div style={{fontSize: 12,color:t3,width:'100%',marginTop:2}}>{t.newLabPanelHint||'새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.'}</div>
             </div>):null}
-            {labCode?(<div style={{maxWidth:760}}>
-              <div style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
-                <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div>
+            {labCode?(<div style={{maxWidth:860}}>
+              <div style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 150px 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
+                <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div><div></div>
               </div>
-              {labItems.map(function(it,i){return <div key={i} style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 32px',gap:6,marginBottom:5,alignItems:'center'}}>
+              {labItems.map(function(it,i){ var nr=(it.ranges||[]).length; return <div key={i}><div style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 150px 32px',gap:6,marginBottom:5,alignItems:'center'}}>
                 <input value={it.name||''} onChange={function(e){uli(i,'name',e.target.value)}} style={IS}/>
                 <input value={it.unit||''} onChange={function(e){uli(i,'unit',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_low!=null?it.ref_low:''} onChange={function(e){uli(i,'ref_low',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_high!=null?it.ref_high:''} onChange={function(e){uli(i,'ref_high',e.target.value)}} style={IS}/>
                 <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={IS}/>
+                <button onClick={function(){toggleRanges(i)}} title={t.lb_rangesHint} style={{background:nr?'#0e749022':'#1e2433',color:nr?'#67e8f9':t2,border:'1px solid '+(nr?'#06b6d455':bd2),borderRadius:4,padding:'6px 4px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{it._open?'▾':'▸'} {t.lb_ranges} ({nr})</button>
                 <button onClick={function(){delLi(i)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:4,padding:'6px 0',cursor:'pointer',fontSize: 13}}>✕</button>
+              </div>
+              {it._open?(<div style={{margin:'0 0 10px 24px',padding:'8px 10px',border:'1px solid '+bd,borderRadius:6,background:scBg}}>
+                <div style={{fontSize:12,color:t3,marginBottom:6}}>{t.lb_rangesHint}</div>
+                <div style={{display:'grid',gridTemplateColumns:'104px 58px 58px 80px 62px 62px 1fr 1.2fr 28px',gap:5,fontSize:11,color:t3,fontWeight:700,marginBottom:4}}>
+                  <div>{t.lb_sex}</div><div>{t.lb_ageFrom}</div><div>{t.lb_ageTo}</div><div></div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div>{t.lb_rangeNote}</div><div></div>
+                </div>
+                {(it.ranges||[]).map(function(r,j){ return <div key={j} style={{display:'grid',gridTemplateColumns:'104px 58px 58px 80px 62px 62px 1fr 1.2fr 28px',gap:5,marginBottom:4,alignItems:'center'}}>
+                  <select value={r.sex||''} onChange={function(e){urng(i,j,'sex',e.target.value)}} style={IS}><option value="">{t.lb_sexAll}</option><option value="M">{t.lb_sexM}</option><option value="F">{t.lb_sexF}</option></select>
+                  <input type="number" min="0" value={r.age_min!=null?r.age_min:''} onChange={function(e){urng(i,j,'age_min',e.target.value)}} style={IS}/>
+                  <input type="number" min="1" value={r.age_max!=null?r.age_max:''} onChange={function(e){urng(i,j,'age_max',e.target.value)}} style={IS}/>
+                  <select value={r.age_unit||'y'} onChange={function(e){urng(i,j,'age_unit',e.target.value)}} style={IS}><option value="d">{t.lb_unitD}</option><option value="m">{t.lb_unitM}</option><option value="y">{t.lb_unitY}</option></select>
+                  <input type="number" value={r.ref_low!=null?r.ref_low:''} onChange={function(e){urng(i,j,'ref_low',e.target.value)}} style={IS}/>
+                  <input type="number" value={r.ref_high!=null?r.ref_high:''} onChange={function(e){urng(i,j,'ref_high',e.target.value)}} style={IS}/>
+                  <input value={r.ref_text||''} onChange={function(e){urng(i,j,'ref_text',e.target.value)}} style={IS}/>
+                  <input value={r.note||''} onChange={function(e){urng(i,j,'note',e.target.value)}} style={IS}/>
+                  <button onClick={function(){delRng(i,j)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:4,padding:'5px 0',cursor:'pointer',fontSize:12}}>✕</button>
+                </div>; })}
+                <button onClick={function(){addRng(i)}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:12,fontWeight:600,marginTop:2}}>{t.lb_addRange}</button>
+              </div>):null}
               </div>;})}
               <div style={{display:'flex',gap:8,marginTop:10}}>
                 <button onClick={addLi} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
