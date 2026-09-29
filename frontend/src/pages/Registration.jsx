@@ -8,6 +8,11 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { tint } from '../theme.js';
 
 
+// Money: 17 300 in French (no-break space, so the number never splits across lines),
+// 17,300 in Korean and English - coordinator decision 2026-09-29, same as fmt() in Pharmacy.jsx.
+// toLocaleString() followed the PC's settings instead of the screen language.
+function fmtAr(n, lang) { return Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
+
 // [year, month, day] as two-digit strings, or null when the text is not a whole date.
 function parsePastedDob(text) {
   var s = String(text || '').trim();
@@ -615,7 +620,7 @@ export default function RegistrationPage() {
               {patientResults.map(function (p) {
                 return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: selectedPatient && selectedPatient.id === p.id ? 'var(--accent-a18)' : 'var(--bg-row)' }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{p.last_name} {p.first_name}</div>
-                  <div style={{ fontSize: 13, color: t2 }}>{p.chart_no} · {p.phone || p.mobile || ''} · {p.date_of_birth ? p.date_of_birth.split('T')[0] : ''}</div>
+                  <div style={{ fontSize: 13, color: t2 }}>{[p.chart_no, p.phone || p.mobile, p.date_of_birth ? p.date_of_birth.split('T')[0] : ''].filter(Boolean).join(' · ')}</div>
                 </div>;
               })}
             </div> : null}
@@ -713,8 +718,8 @@ export default function RegistrationPage() {
                 </div>
                 {(patBal.owed>0||patBal.refund>0)?
                   <div style={{ marginLeft:'auto', textAlign:'right' }}>
-                    {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)' }}>{Math.round(patBal.owed).toLocaleString()} Ar</span></div>:null}
-                    {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)' }}>{Math.round(patBal.refund).toLocaleString()} Ar</span></div>:null}
+                    {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.owed, langCtx.lang)} Ar</span></div>:null}
+                    {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.refund, langCtx.lang)} Ar</span></div>:null}
                   </div>
                 :null}
               </div>
@@ -764,7 +769,7 @@ export default function RegistrationPage() {
                     <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-strong)' }}>{v.last_name} {v.first_name}</span>
                     <span style={{ background: tint(v.status === 'completed' ? 'ok' : (v.status === 'in_progress' ? 'warn' : 'accent'), '18'), color: v.status === 'completed' ? 'var(--ok-ink)' : (v.status === 'in_progress' ? 'var(--warn-ink)' : 'var(--accent-ink)'), borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 800 }}>{v.status === 'completed' ? t.completed : (v.status === 'in_progress' ? t.in_progress : t.waiting)}</span>
                   </div>
-                  <div style={{ fontSize: 14, color: t2 }}>{v.chart_no} · {v.dept_code || ''} · {v.doctor_name || ''}</div>
+                  <div style={{ fontSize: 14, color: t2 }}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                   <div style={{ fontSize: 13, color: t3, marginTop: 3 }}>{v.chief_complaint || ''}</div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }} onClick={function (e) { e.stopPropagation(); }}>
                     {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { completeWithoutConsult(v, e); }} style={mb('ok')}>{t.toCompleted}</button> : null}
@@ -796,11 +801,11 @@ export default function RegistrationPage() {
                 <tbody>
                   {similarAsk.list.map(function (p) {
                     return <tr key={p.id} style={{ borderTop: '1px solid var(--line-soft)' }}>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)' }}>{p.chart_no}</td>
+                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>{p.chart_no}</td>
                       <td style={{ padding: '9px 12px', color: tx, fontWeight: 700 }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
-                      <td style={{ padding: '9px 12px', color: t2 }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
-                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{p.mobile || p.phone || '—'}</td>
-                      <td style={{ padding: '9px 12px', color: t2 }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
                       <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a60)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
                     </tr>;
                   })}
