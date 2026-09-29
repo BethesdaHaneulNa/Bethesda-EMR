@@ -304,7 +304,7 @@ export default function ConsultationPage() {
           {(pastView.orders||[]).map(function(o,i){
             return <div key={'po-'+i} style={{display:'flex',gap:8,padding:'6px 10px',borderBottom:'1px solid #1e2433',alignItems:'baseline'}}>
               <span style={{color:'#a78bfa',fontFamily:'monospace',fontSize: 12,fontWeight:700,width:64}}>{o.order_code}</span>
-              <span style={{color:tx,fontSize: 14,flex:1}}>{o.order_name}</span>
+              <span style={{color:o.status==='cancelled'?t3:tx,fontSize: 14,flex:1,textDecoration:o.status==='cancelled'?'line-through':'none'}}>{o.order_name}{orderTotalLine(o, o.status==='cancelled')}</span>
               <span style={{fontSize: 12}}>{orderStatus(o)}</span>
             </div>;
           })}
@@ -576,10 +576,12 @@ export default function ConsultationPage() {
     // order code's times and days when it has them, else 1 · 1 · 1. From an order set
     // the set's values come in through default_freq / default_days, same rule.
     var exam = oc.code_type==='lab' || oc.code_type==='imaging';
+    // No dose on a lab or imaging line: the order code's default dose ('1.000', the
+    // column default) showed under Posologie and meant nothing there.
     try {
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
-        dose:oc.default_dose, frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
+        dose:exam ? '' : oc.default_dose, frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
         quantity:1, unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
       });
       setOrderItems(function(p){ return p.concat([item]); });
@@ -737,7 +739,7 @@ export default function ConsultationPage() {
                   <span style={{fontWeight:600,fontSize: 14,color:'#f1f5f9'}}>{v.last_name} {v.first_name}</span>
                   <span style={{background:sc2+'18',color:sc2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600}}>{label(VISIT_STATUS_KEY, v.status)}</span>
                 </div>
-                <div style={{fontSize: 12,color:t2}}>{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}</div>
+                <div style={{fontSize: 12,color:t2}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                 <div style={{fontSize: 12,color:t3,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||''}</div>
               </div>;
             })}
@@ -799,8 +801,8 @@ export default function ConsultationPage() {
                       {/* One heading for both kinds of line (decision 29): a drug's daily total,
                           an order's quantity. Total = this column x days, for both (⑭). */}
                       <th title={t.cs_colDailyHint} style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:58,cursor:'help'}}>{t.cs_colDaily}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.tms}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.day}</th>
+                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.cs_colTimes}</th>
+                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.cs_colDays}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:70}}>{t.cs_colSig}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:64}}>{t.unit}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:55}}>{t.worklist}</th>
@@ -826,8 +828,8 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{rx.memo||''}</td>
                           </> : <>
                             <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                           </>}
@@ -858,8 +860,8 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{o.memo || o.body_part || ''}</td>
                           </> : <>
                           <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           </>}
@@ -883,7 +885,9 @@ export default function ConsultationPage() {
             <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
               {/* Vitals */}
               <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:10,alignItems:'stretch',background:scBg}}>
-                <div style={{flex:1,minWidth:0,display:'grid',gridTemplateColumns:'repeat(2, minmax(0, 1fr))',gap:'6px 8px'}}>
+                {/* Two columns when there is room, one when the middle column is narrow (a
+                    small screen): fixed at two, the boxes shrank to a sliver at 800px wide. */}
+                <div style={{flex:1,minWidth:0,display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(118px, 1fr))',gap:'6px 8px'}}>
                   {[
                     ['bp',t.cs_vBP,'??/??'],
                     ['temp',t.cs_vBT,'??.?'],
@@ -891,7 +895,7 @@ export default function ConsultationPage() {
                     ['rr',t.cs_vRR,'??'],
                     ['spo2',t.cs_vSpO2,'??']
                   ].map(function(item){
-                    return <div key={item[0]} style={{display:'grid',gridTemplateColumns:'52px minmax(0, 1fr)',alignItems:'center',gap:5}}>
+                    return <div key={item[0]} style={{display:'grid',gridTemplateColumns:'40px minmax(0, 1fr)',alignItems:'center',gap:5}}>
                       <span style={{fontSize: 13,color:item[0]==='bp'?'#f59e0b':t3,fontWeight:800}}>{item[1]}</span>
                       <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'5px 7px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
                     </div>;

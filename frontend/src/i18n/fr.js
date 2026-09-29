@@ -374,6 +374,8 @@ export default {
   cs_colDaily: "Dose/j",
   cs_colDailyHint: "Médicament : dose totale par jour. Examen / acte : quantité. Total = cette colonne × jours (les fois par jour ne sont pas multipliées). 2 jours sur un examen le facture deux fois.",
   cs_orderTotal: "facturé {n} fois",
+  cs_colTimes: "Fois",
+  cs_colDays: "Jours",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
