@@ -2,6 +2,113 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 작업 계획: ⑦ 내원구분 칸 · ④ 중복·동명이인 경고 (결정 대기, 코드 변경 없음)
+
+> **총괄 확인 (2026-09-29)**: 합침(위키만). ⑦·④ 작업 계획 확인 — 결정이 오면 이 계획대로. ⑦을 하게 되면 수납 세션에 알림.
+
+- **상태**: 보류 — `wiki/decisions.md` 20번(실장님 결정) 대기. 이 항목은 결정이 어느 쪽으로 나도 바로 시작할 수 있게 적어 둔 계획
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`4cb5841` 위, `develop` ff 뒤). 코드 변경 없음
+- **기준 코드**: `develop` `4cb5841`에서 다시 읽음
+
+### ⑦ 내원구분 칸
+
+**지금**: 접수 화면에 고르는 칸이 없어 새 접수는 모두 `newVisit`. 수납 화면이 청구 항목을 불러올 때 `visit_type`을 처음 값으로 쓰고(`Payment.jsx` 146행 `setVType(bi.visit_type || v.visit_type)`), 직원이 바꾸면 수납 확정 때 `PUT /visits/:id {visit_type}`로 내원에 다시 씀(232행). 진료비는 서버가 `visit_type` → `C01`~`C04`로 계산(`billing.routes.js` 78행 `/pending`, 444~470행 `buildCorrection`). 통계는 취소 아닌 내원을 `visit_type`으로 셈(`stats.routes.js` 53~55행).
+
+**결정 갈래** (decisions 20번 세부): (A) 기본값 — 늘 초진 / 전에 온 적 있으면 재진 / 최근 N일 안에 왔으면 재진 / 같은 과에 N일 안에 왔으면 재진. (B) 접수에서 「Sans consultation (0)」(진료비 없음)을 고를 수 있게 할지.
+
+**바꿀 파일**
+| 파일 | 무엇 |
+|---|---|
+| `frontend/src/pages/Registration.jsx` | 「Service / Type de Visite」 아래에 단추 줄 **Nouvelle · Suivi · Urgence · Référence** (+ (B)가 「예」면 **Sans consultation (0)**). 상태는 이미 있는 `visitForm.visitType`. 이미 있는 **공용 번역 키** `newVisit`·`followUp`·`emergency`·`referral`·`noConsult`를 씀(수납 화면과 같은 글자 — 새 키 불필요) |
+| 〃 `fillPatient` | (A)가 「재진 제안」이면: 환자를 고를 때 `GET /visits/patient/:id`(이미 있음, `status`·`visit_date`·`department_id` 반환)로 취소 아닌 이전 내원을 보고 기본값을 정함. 신규 환자는 늘 초진. 직원이 바꾼 값은 덮지 않음 |
+| 〃 `createOrUpdateVisit` | 새 접수: 지금처럼 `visit_type` 보냄. **접수 수정**: 1차 ②에서 `visit_type`을 빼 둔 상태 → 직원이 **이 화면에서 바꿨을 때만**(dirty 표시) 보냄. 수납이 그 사이 바꾼 값을 옛 값으로 덮지 않기 위함 |
+| `backend/src/routes/visit.routes.js` `/today` | 줄마다 `has_active_bill`(취소 안 된 청구가 있는지) 추가 — 청구가 있으면 접수 화면에서 단추를 잠그고 「수납에서 바꾸세요」 표시 |
+| `frontend/src/i18n/*.js` (rc_ 블록) | `rc_visitTypeLocked`(청구 뒤 잠김 안내) 1개. (A)가 제안 방식이면 `rc_visitTypeSuggested`(「전에 온 적이 있어 Suivi를 골라 두었습니다」 같은 작은 글) 1개 |
+| `wiki/modules/reception.md` | 2.4 칸 표에 **Type de Visite** 줄, 2.8에 잠김 안내, 3·4절 흐름·API, 7절 ⑦ 고침 |
+
+**API 모양**: 새 엔드포인트 없음. `POST /visits`·`PUT /visits/:id`는 1차에서 이미 `visit_type`을 검사함. `/visits/today` 응답에 `has_active_bill: boolean`만 늘어남(읽는 곳: 접수, 진료 — 진료는 모르는 칸을 무시하므로 영향 없음).
+
+**다른 모듈 영향**
+- **수납**: 코드 변경 불필요. 접수가 고른 값이 수납 화면 진료비 칸의 처음 값으로 뜸 → 수납 직원이 매번 바꾸던 일이 사라짐. 수납에서 바꾸는 기능은 그대로.
+- **청구 후 변경 위험**: 청구가 있는 내원의 `visit_type`을 접수가 바꾸면 `/pending`이 「추가 청구/환불」로 다시 올림(`needs_additional`/`needs_refund`). → 위처럼 **청구가 있으면 접수 단추를 잠금**. 서버에서 막지는 않음 — 수납 자신이 추가 청구 전에 `PUT /visits/:id {visit_type}`을 부르므로 서버에서 막으면 수납이 깨짐.
+- **통계**: 수납 전에도 초진/재진 수가 맞음. 과거 데이터는 그대로(바꾸지 않음).
+- **진료·약국·검사**: `visit_type`을 읽지 않음(grep 확인).
+
+**격리 스택 확인 시나리오** (프랑스어·한국어)
+1. 신규 환자 접수 — Nouvelle이 골라져 있음 → 등록 → DB `visit_type='newVisit'`
+2. Suivi로 바꿔 등록 → DB `followUp` → 진료 완료 처리 → 수납 화면 진료비 칸이 **Suivi / C02 가격**으로 뜸
+3. (제안 방식이면) 전에 온 환자를 고르면 Suivi가 골라져 있고 안내 글이 보임, 처음 온 환자는 Nouvelle, 취소된 내원만 있는 환자는 Nouvelle
+4. 대기 중 내원을 고르고 Urgence로 바꿔 「Modifier l'enregistrement」 → `emergency`. 종류를 **안 건드리고** 메모만 고치면 → 그 사이 DB에서 바꿔 둔 값이 유지됨(덮지 않음)
+5. 수납까지 끝난 내원을 고름 → 단추가 잠겨 있고 안내가 보임
+6. 통계 운영 현황의 초진/재진 수가 접수 직후 바로 맞게 나옴
+7. 「Sans consultation (0)」 — (B) 결정대로 보이거나 안 보임
+
+**크기**: 작음 — 화면 한 곳 + 서버 쿼리 한 줄 + 키 1~2개. 마이그레이션 없음.
+
+### ④ 중복·동명이인 경고
+
+**지금**: 1차 ③으로 연타·재시도 중복은 막음. 막지 못하는 것 — (가) 다른 날 같은 사람을 새 환자로 또 등록(차트 두 개, 합치는 기능 없음 — 7절 ⑲) (나) 같은 날 같은 환자를 두 번 접수(진료·청구 두 건 — 7절 ④).
+
+**결정 갈래**: (1) **경고만**(확인하면 진행) / **막기**. (2) 같은 사람으로 볼 기준 — 성·이름만 / 성·이름+생년월일(생년월일이 한쪽이라도 비면 이름만으로). (3) 같은 날 두 번 접수가 정상인 경우가 있는지(오전·오후 다른 과 등) — 있으면 (나)는 경고만이어야 함.
+
+**(가) 동명이인 — 바꿀 파일·API**
+| 파일 | 무엇 |
+|---|---|
+| `backend/src/routes/patient.routes.js` | **새** `GET /api/patients/similar?last_name=&first_name=&date_of_birth=` → `[{id, chart_no, last_name, first_name, date_of_birth, phone, last_visit_date}]`, 최대 10건. 비교는 `lower(trim())`, **성·이름이 뒤바뀐 경우도** 잡음(현장에서 순서가 섞임). 기준 (2)에 따라 생년월일 조건을 넣고 뺌. ⚠ `router.get('/:id')`보다 **먼저** 선언해야 함(아니면 `/:id`가 `similar`를 id로 받아 400) |
+| 〃 (막기로 결정되면) | `POST /patients`에서도 같은 검사 → 409 `Similar patient exists` — 창구가 두 곳이면 화면 검사만으로는 틈이 있음. 경고만이면 서버 검사 없음 |
+| `frontend/src/pages/Registration.jsx` | 새 환자를 만들기 직전(`createOrUpdateVisit`·`savePatientOnly`의 `POST /patients` 앞)에 `similar` 조회 → 있으면 **작은 창**: 후보 줄마다 차트번호·이름·생년월일·전화·마지막 내원과 **「Utiliser ce patient」**(이 환자로 접수 — `fillPatient` 후 계속), 아래에 **「Nouveau patient quand même」**(그래도 새로 등록, 막기면 없음)·**「Annuler」**. `window.confirm`으로는 「이 환자로」를 고를 수 없어 화면 안 창으로 만듦(Registration 안에서만, 공용 부품 아님) |
+| i18n (rc_) | `rc_similarTitle` `rc_similarUse` `rc_similarCreateAnyway` `rc_similarBlocked` `rc_cancel` 정도 5개 + 표 머리는 기존 공용 키(`chartNo`·`dob`·`phone`) |
+
+**(나) 같은 날 중복 접수 — 바꿀 파일·API**
+| 파일 | 무엇 |
+|---|---|
+| `frontend/src/pages/Registration.jsx` | `POST /visits` 전에, 이미 들고 있는 오늘 목록(`visits`, 30초마다 갱신)에서 같은 `patient_id`의 취소 아닌 내원을 찾음 → 경고면 `confirm(rc_dupVisit: 「{name} est déjà enregistré aujourd'hui ({상태}, {의사}). Enregistrer une seconde visite ?」)`, 막기면 알림만 |
+| `backend/src/routes/visit.routes.js` `POST /` | 서버 뒷받침: 오늘 같은 환자의 `registered`·`waiting`·`in_progress` 내원이 있으면 409 `Patient already registered today` — **경고만**이면 본문 `allow_duplicate: true`일 때 통과(화면이 확인 뒤 붙여 보냄), **막기**면 늘 409. `completed`는 (3) 결정에 따라 넣거나 뺌 |
+| `Registration.jsx` `errText` | `Patient already registered today` → `rc_dupVisit`류 안내 (서버 문구와 짝 — 3절에 적어 둔 규칙) |
+| i18n (rc_) | `rc_dupVisit` `rc_dupVisitBlocked` 2개 |
+
+**API 모양 요약**: 새 `GET /patients/similar` 하나. `POST /visits`에 선택 필드 `allow_duplicate` 하나와 409 하나. (막기면) `POST /patients`에 409 하나. 응답 형식 변화 없음. `client.js`는 오류 본문의 다른 필드를 버리고 `error` 문구만 넘기므로(총괄 파일), 화면은 **문구로** 구분함.
+
+**다른 모듈 영향**: 없음 — 환자·내원을 **만드는** 곳은 접수뿐(grep 확인). PatientFinder 안 건드림. 마이그레이션 없음(작은 병원이라 이름 비교에 색인 불필요. 환자 수만 명을 넘으면 `lower(last_name), lower(first_name)` 색인을 `101_reception_…`으로).
+
+**격리 스택 확인 시나리오** (프랑스어·한국어)
+1. `Rakoto Jean 1990-05-03`이 있을 때 새 환자 `Rakoto Jean` 입력 → 창에 후보 1건 → 「Utiliser ce patient」 → 새 차트 안 생기고 기존 차트로 접수됨
+2. 같은 입력 → 「Nouveau patient quand même」(경고만일 때) → 새 차트 생김 / (막기일 때) 버튼 없음
+3. 성·이름을 **뒤바꿔** `Jean Rakoto` 입력 → 후보로 잡힘
+4. 생년월일이 다른 동명이인 → 기준 (2)대로 잡히거나 안 잡힘
+5. 대소문자·앞뒤 공백만 다른 이름 → 잡힘
+6. 오늘 대기 중인 환자를 다시 접수 → 확인 창 → 취소하면 아무것도 안 생김 / 확인하면(경고만) 두 번째 내원 생김
+7. 창구 두 곳 흉내: 화면 목록이 오래된 상태에서 API로 같은 환자 내원을 먼저 만들어 두고 접수 → 서버 409 → 안내가 뜸
+8. 오늘 **취소된** 내원만 있는 환자 → 경고 없이 접수됨
+9. 1차 ③ 회귀: 버튼 연타·재시도에도 환자 1명
+
+**크기**: 보통 — 서버 조회 1개 + 서버 검사 1~2개 + 화면 안 창 1개 + 키 6~7개. (가)와 (나)는 따로 나눠 합칠 수 있음.
+
+- **바꾼 파일**: 이 노트만 · **공용 파일 변경**: 없음 · **번역 키**: 없음
+- **확인한 방법**: 계획에 적은 줄 번호·동작은 `4cb5841` 코드를 다시 읽어 확인(`Payment.jsx` 146·232·578행, `billing.routes.js` 78·444~470행, `stats.routes.js` 53~55행, `visit.routes.js`·`patient.routes.js` 라우트 순서, 공용 키 `newVisit`·`followUp`·`emergency`·`referral`·`noConsult`의 ko·fr 값)
+- **다른 세션에 부탁**: 없음 — ⑦을 하게 되면 **수납**에 「접수가 고른 진료비 종류가 처음 값으로 뜸」을 알려 달라고 총괄에 부탁할 예정
+
+## 2026-09-29 — 위키 2절(직원용 사용법)을 수납·통계 페이지 형식으로
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`1b1a6fb` 위, `develop` ff 뒤)
+- **한 일**: 총괄 요청대로 2절을 수납 페이지와 같은 구성으로 다시 씀. 프랑스어 화면 이름을 먼저, 괄호에 한국어.
+  - 권한 안내(**🏥 Enregistrement** 체크, Front Desk 기본)
+  - 2.1 화면 구성 + **버튼 표**(8개)
+  - 2.2 처음 온 환자 · 2.3 다시 온 환자
+  - 2.4 **왼쪽 칸별 뜻 표** — 환자 정보 8칸, 오늘 접수 3칸, 가운데 Dû·Rembours. 상자
+  - 2.5 대기 목록 **상태 표**(뜻 · 누가 바꾸나)
+  - 2.6 수정·취소
+  - 2.7 환자 찾기 창 — 다섯 화면 공용이라 칸 이름과 수납상태 뱃지 뜻까지
+  - 2.8 **이런 안내가 뜰 때 표** — 성공·확인 창 4개, 오류 창 9개, 목록이 빌 때
+- **바꾼 파일**: `wiki/modules/reception.md`(머리, 2절 전체, 8절), 이 노트. **코드 변경 없음**
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: 2절에 쓴 프랑스어 글자는 모두 `fr.js`의 실제 값과 대조함(메뉴 `Enregistrement`, 칸 이름, 탭, 찾기 창 칸·뱃지, `Fermer`, 권한 체크박스가 `아이콘 + t[m.key]`인 것까지). 안내 문구는 앞선 작업에서 격리 스택 화면으로 본 그대로. 「목록이 빌 때」 줄은 `loadData`가 실패해도 `Chargement`을 끝내는 것을 코드로 확인하고 씀
+- **확인 못 한 것**: 이번엔 화면을 다시 띄우지 않음(코드 변경 없음)
+- **위키**: `modules/reception.md` 2절 전체
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: 없음 — 참고로 2.7(환자 찾기 창)은 진료·수납·약국·임상병리 페이지에서 링크해 써도 됨
+
 ## 2026-09-29 — 대기 목록 자동 새로고침(⑰) + 2차 후보 결정 자료
 
 > **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 30초마다 대기 목록만 다시 받고 입력 중인 값은 그대로, 고른 내원은 상태만 맞춤, 느린 옛 응답이 새 목록을 못 덮게 번호 매김. 실행 중 EMR에서는 빌드·화면 열림만 확인(동작은 세션의 격리 스택 확인). 2차 후보 표는 결정 세션에 넘김.

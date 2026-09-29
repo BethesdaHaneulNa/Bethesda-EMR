@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware, ALL_PERMS } = require('../middleware/auth');
 const { sendDbError } = require('../utils/dbError');
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
@@ -8,8 +8,8 @@ const { sendDbError } = require('../utils/dbError');
 const ROLES = ['frontdesk', 'doctor', 'pharmacy', 'lab', 'admin'];
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure'];
 
-// Keep in step with frontend/src/modules.js.
-const ALL_PERMS = ['registration', 'consultation', 'payment', 'pharmacy', 'lab', 'stats', 'settings'];
+// Every module permission (ALL_PERMS) comes from middleware/auth.js, the backend's
+// single copy of frontend/src/modules.js.
 
 // The account the setup wizard creates is the one you log in with to fix everything
 // else. Unchecking its settings permission, moving it off the admin role, renaming it
@@ -80,19 +80,66 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
   } catch (err) { sendDbError(res, err); }
 });
 
+// Sent in full (not translated) and compared by the Settings screen, which then shows
+// its own se_ text: api/client.js passes the message on but not the status code.
+const ERR_STOCK_CHANGED = 'Stock changed while this drug was open';
+
+function blank(v) { return v === undefined || v === null || v === ''; }
+
+// The edit window used to send back the whole row it loaded, and this wrote its
+// stock_qty over whatever the drug held by then. Open a drug in the morning (100),
+// dispense 30 over the day (70), fix only its price in the afternoon: stock was back
+// to 100, silently (pharmacy H4). Adding the difference instead is no fix, because
+// "20 arrived" and "I counted 45" need opposite arithmetic and the server cannot
+// tell which was meant. So stock is written only when it was actually edited, and
+// only if nobody changed it in the meantime; otherwise the person is asked again.
+//
+//   no stock_qty sent, or stock_qty == stock_expected  -> stock left as it is now
+//   stock edited, current stock still == stock_expected -> the edit is saved
+//   stock edited, current stock != stock_expected     -> 409, nothing saved
+//   no stock_expected at all (a screen loaded before this change) -> written as sent
+//
+// The row is locked FOR UPDATE for the check and the write, the same lock dispensing
+// takes (pharmacy.routes.js), so a dispense cannot slip in between the two.
 router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
+  const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock, stock_expected } = req.body;
+  const invalid = badPrices(req.body, ['unit_price', 'stock_qty', 'min_stock']);
+  if (invalid) return res.status(400).json({ error: invalid });
+  // The column is an integer; 7.5 used to reach the database and come back as an error.
+  for (const f of ['stock_qty', 'min_stock']) {
+    if (!blank(req.body[f]) && !Number.isInteger(Number(req.body[f]))) return res.status(400).json({ error: f + ' must be a whole number' });
+  }
+  const client = await pool.connect();
   try {
-    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock } = req.body;
-    const invalid = badPrices(req.body, ['unit_price', 'stock_qty', 'min_stock']);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const cur = await client.query('SELECT stock_qty FROM drug WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+    const now = cur.rows[0].stock_qty;
+    const num = v => (blank(v) ? 0 : Number(v));
+
+    let newStock = now;
+    const edited = !blank(stock_qty) && (!('stock_expected' in req.body) || num(stock_qty) !== num(stock_expected));
+    if (edited) {
+      if ('stock_expected' in req.body && num(now) !== num(stock_expected)) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: ERR_STOCK_CHANGED, current: now });
+      }
+      newStock = stock_qty;
+    }
+
+    const result = await client.query(
       `UPDATE drug SET code=$1, name=$2, name_en=$3, generic_name=$4, category=$5, default_dose=$6, default_freq=$7,
        default_days=$8, default_route=$9, unit_price=$10, stock_qty=$11, min_stock=$12, updated_at=NOW() WHERE id=$13 RETURNING *`,
-      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock, req.params.id]
+      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, newStock, min_stock, req.params.id]
     );
-    if (sentMissing(res, result)) return;
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    sendDbError(res, err);
+  } finally {
+    client.release();
+  }
 });
 
 router.delete('/drugs/:id', permMiddleware('settings'), async (req, res) => {
@@ -299,7 +346,10 @@ router.get('/phrases', async (req, res) => {
     let query = 'SELECT * FROM phrase_dictionary WHERE is_active = true';
     const params = [];
     if (category) { query += ' AND category = $1'; params.push(category); }
-    query += ' ORDER BY category, sort_order';
+    // id breaks ties: every seeded phrase shares sort_order 0, so without it a phrase
+    // jumped to another place in its group - here and in the consultation screen's
+    // list - each time it was saved.
+    query += ' ORDER BY category, sort_order, id';
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }

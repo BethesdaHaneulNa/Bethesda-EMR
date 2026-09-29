@@ -169,12 +169,19 @@ data:
 ```powershell
 .\verify-backup.ps1                                             # newest backup
 .\verify-backup.ps1 -File backups\bethesda_2026-07-15_0200.sql.gz
+.\verify-backup.ps1 -Strict                                     # right after "Back up now": must match exactly
 ```
 
 ```bash
 ./verify-backup.sh
 ./verify-backup.sh backups/bethesda_2026-07-15_0200.sql.gz
+./verify-backup.sh --strict
 ```
+
+A backup taken at 02:00 and checked in the afternoon differs from the live database by the
+day's work. That is reported as information, not as a failure; only a difference in
+structure fails. Use `-Strict` / `--strict` straight after a manual backup, when nothing
+should differ at all.
 
 It checks table count, row counts per table, sequence values (a restore that loses these
 collides on the first new record), index and constraint counts, and a content checksum of

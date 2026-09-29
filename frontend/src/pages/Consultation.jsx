@@ -5,7 +5,7 @@ import { TopBar } from '../components/TopBar.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
-import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
+import { RadiologyReadings, PatientCheck } from '../components/RadiologyReadings.jsx';
 
 // The server refuses to change a dispensed prescription or delete an order that already
 // has a result (consult.routes.js). Its English refusal strings are matched here so the
@@ -26,24 +26,20 @@ function orderLocked(o){
   return !!o.worklist_sent_at && (o.worklist_status==='in_progress'||o.worklist_status==='completed');
 }
 
-// What the arrived images say about the patient (GET /pacs/viewer-url -> images). Same
-// look and wording as PatientCheck in RadiologyReadings.jsx (PACS session's file, not
-// exported): red when the images name another patient, amber when they name nobody.
-// Shown above the viewer, before anyone reads the study as this patient's.
-function ImagePatientCheck(props){
-  var im = props.images, t = props.t;
-  if(!im || (im.patient_check!=='mismatch' && im.patient_check!=='missing')) return null;
-  var mismatch = im.patient_check==='mismatch';
-  var text = mismatch
-    ? String(t.px_patientMismatch||'').replace('{id}', im.patient_id||'').replace('{name}', String(im.patient_name||'').replace(/\^/g,' ').trim())
-    : (t.px_patientMissing||'');
-  return <div style={{margin:'8px 14px 0',padding:'6px 9px',borderRadius:6,fontSize:13,fontWeight:700,lineHeight:1.5,
-    background:mismatch?'#7f1d1d55':'#78350f55', color:mismatch?'#fca5a5':'#fcd34d',
-    border:'1px solid '+(mismatch?'#b91c1c':'#b45309')}}>⚠ {text}</div>;
-}
+// Stored values the screen shows, and the translation key for each. The values
+// themselves (visit.status, phrase_dictionary.category, order_code.code_type) are what
+// the database and the other screens use, so they never change - only what is shown.
+var VISIT_STATUS_KEY = { registered:'cs_vsRegistered', waiting:'cs_vsWaiting', in_progress:'cs_vsInProgress', completed:'cs_vsCompleted', cancelled:'cs_vsCancelled' };
+var PHRASE_CATS = ['General','Internal','Surgery','Peds','OBGYN'];
+var PHRASE_CAT_KEY = { All:'cs_pcAll', General:'cs_pcGeneral', Internal:'cs_pcInternal', Surgery:'cs_pcSurgery', Peds:'cs_pcPeds', OBGYN:'cs_pcObgyn' };
+var CODE_TYPE_KEY = { lab:'cs_badgeLab', procedure:'cs_badgeProc', imaging:'cs_badgeImg' };
 
 export default function ConsultationPage() {
-  var langCtx = useLang(); var t = langCtx.t;
+  var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
+  function label(map, v){ var k = map[v]; return (k && t[k]) || v; }
+  // A phrase in the screen language when Settings has one (text_fr / text_en), else
+  // the phrase as entered. Korean uses the main text.
+  function phraseText(p){ return (lang==='fr' && p.text_fr) || (lang==='en' && p.text_en) || p.text || ''; }
   var user = getUser();
   var vs = useState([]), visits = vs[0], setVisits = vs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
@@ -89,7 +85,7 @@ export default function ConsultationPage() {
       var r = await api.get('/pacs/viewer-url?order_item_id='+orderItemId);
       setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null });
       setReadText(r.reading?r.reading.result_text:'');
-    } catch(e){ alert('Error: '+e.message); }
+    } catch(e){ alert(t.cs_errorPrefix+e.message); }
   }
   async function saveReading(){
     if(!viewer) return;
@@ -97,7 +93,7 @@ export default function ConsultationPage() {
       await api.put('/pacs/reading/'+viewer.order_item_id, { result_text: readText });
       setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: readText, result_by_name: (user&&user.name)||'', result_at: new Date().toISOString() }) }); });
       alert((t.save||'저장')+' ✓');
-    } catch(e){ alert('Error: '+e.message); }
+    } catch(e){ alert(t.cs_errorPrefix+e.message); }
   }
 
   useEffect(function(){ loadData(); },[]);
@@ -157,11 +153,11 @@ export default function ConsultationPage() {
   function renderPast(){
     var c = pastView.c;
     var vrows = [
-      ['BP', (c.bp_systolic!=null ? c.bp_systolic+'/'+(c.bp_diastolic!=null?c.bp_diastolic:'') : '\u2014')],
-      ['BT', (c.temperature!=null ? c.temperature : '\u2014')],
-      ['PR', (c.pulse!=null ? c.pulse : '\u2014')],
-      ['RR', (c.respiratory_rate!=null ? c.respiratory_rate : '\u2014')],
-      ['SpO2', (c.spo2!=null ? c.spo2 : '\u2014')]
+      [t.cs_vBP, (c.bp_systolic!=null ? c.bp_systolic+'/'+(c.bp_diastolic!=null?c.bp_diastolic:'') : '\u2014')],
+      [t.cs_vBT, (c.temperature!=null ? c.temperature : '\u2014')],
+      [t.cs_vPR, (c.pulse!=null ? c.pulse : '\u2014')],
+      [t.cs_vRR, (c.respiratory_rate!=null ? c.respiratory_rate : '\u2014')],
+      [t.cs_vSpO2, (c.spo2!=null ? c.spo2 : '\u2014')]
     ];
     return <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
       <div style={{padding:'8px 12px',background:'#3b82f618',borderBottom:'1px solid #3b82f650',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
@@ -211,7 +207,7 @@ export default function ConsultationPage() {
         respiratory_rate: parseInt(vt.rr)||null,
       });
       alert(t.save + ' ✓');
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   async function completeConsult(){
@@ -232,7 +228,7 @@ export default function ConsultationPage() {
       await loadData();
       setSel(null); setConsult(null);
       alert(t.completed + ' ✓');
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   // Drug / exam order autocomplete
@@ -284,7 +280,7 @@ export default function ConsultationPage() {
       });
       setRxList(function(p){ return p.concat([rx]); });
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   // A refusal usually means the pharmacy or lab moved on while this screen was open,
@@ -354,7 +350,7 @@ export default function ConsultationPage() {
         total_qty: (parseFloat(dose)||0) * freq * days
       });
       setRxList(function(list){ return list.map(function(r){ return r.id===rx.id ? updated : r; }); });
-    } catch(err){ if(!lockAlert(err)) alert('Error: '+err.message); }
+    } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
   }
 
   function updateOrderLocal(orderId, key, val){
@@ -372,7 +368,7 @@ export default function ConsultationPage() {
         unit_price: o.unit_price
       });
       setOrderItems(function(list){ return list.map(function(x){ return x.id===o.id ? updated : x; }); });
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
 
@@ -386,12 +382,12 @@ export default function ConsultationPage() {
       });
       setOrderItems(function(p){ return p.concat([item]); });
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   // 약속처방 세트 적용: 세트 항목을 현재 진료에 한 번에 추가
   async function applySet(set){
-    if(!consult){ alert(t.selectPatientLeft); return; }
+    if(!consult){ alert(t.cs_selectPatient); return; }
     if(pastView) setPastView(null);
     var items = (set && set.items) ? set.items : [];
     for(var i=0;i<items.length;i++){
@@ -448,9 +444,17 @@ export default function ConsultationPage() {
   var filteredPhrases = useMemo(function(){
     var r=phrases;
     if(phraseCat!=='All') r=r.filter(function(p){return p.category===phraseCat;});
-    if(phraseQ){var s=phraseQ.toLowerCase();r=r.filter(function(p){return p.text.toLowerCase().indexOf(s)>=0;});}
+    if(phraseQ){var s=phraseQ.toLowerCase();r=r.filter(function(p){return phraseText(p).toLowerCase().indexOf(s)>=0;});}
     return r;
-  },[phrases,phraseCat,phraseQ]);
+  },[phrases,phraseCat,phraseQ,lang]);
+
+  // The fixed categories first, then any other category Settings has used - before,
+  // a phrase filed under a new category could only be found under "All".
+  var phraseCats = useMemo(function(){
+    var extra = [];
+    (phrases||[]).forEach(function(p){ if(p.category && PHRASE_CATS.indexOf(p.category)<0 && extra.indexOf(p.category)<0) extra.push(p.category); });
+    return ['All'].concat(PHRASE_CATS, extra);
+  },[phrases]);
 
   var drugResults = useMemo(function(){
     if(!drugQ) return allDrugs;
@@ -502,7 +506,7 @@ export default function ConsultationPage() {
               return <div key={v.id} onClick={function(){pickPatient(v)}} style={{padding:'7px 10px',cursor:'pointer',borderBottom:'1px solid #1e2433',background:isSel?'#3b82f612':'transparent'}}>
                 <div style={{display:'flex',justifyContent:'space-between',marginBottom:1}}>
                   <span style={{fontWeight:600,fontSize: 14,color:'#f1f5f9'}}>{v.last_name} {v.first_name}</span>
-                  <span style={{background:sc2+'18',color:sc2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600}}>{v.status}</span>
+                  <span style={{background:sc2+'18',color:sc2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600}}>{label(VISIT_STATUS_KEY, v.status)}</span>
                 </div>
                 <div style={{fontSize: 12,color:t2}}>{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}</div>
                 <div style={{fontSize: 12,color:t3,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||''}</div>
@@ -548,7 +552,7 @@ export default function ConsultationPage() {
                         var isOrder=d.kind==='order';
                         return <div key={d.kind+'-'+d.id} onClick={function(){isOrder?addExamOrder(d):addDrugRx(d)}} style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:6,background:i===oSelIdx?'#3b82f620':'transparent',borderBottom:'1px solid #232838'}}
                           onMouseEnter={function(){setOSelIdx(i)}}>
-                          <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||d.code_type||'ORD'):'DRUG'}</span>
+                          <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||label(CODE_TYPE_KEY, d.code_type)||'ORD'):t.cs_badgeDrug}</span>
                           <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:55}}>{d.code}</span>
                           <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}</span>
                           <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):(d.default_route||'')}</span>
@@ -623,7 +627,7 @@ export default function ConsultationPage() {
                 </div>
               </div>
             </div>
-          ):<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',fontSize: 16,fontStyle:'italic'}}>{t.selectPatientLeft}</div>}
+          ):<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',fontSize: 16,fontStyle:'italic'}}>{t.cs_selectPatient}</div>}
         </div>
 
         {/* CENTER: Vitals + Note + Phrases */}
@@ -634,11 +638,11 @@ export default function ConsultationPage() {
               <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:10,alignItems:'stretch',background:scBg}}>
                 <div style={{flex:1,minWidth:0,display:'grid',gridTemplateColumns:'repeat(2, minmax(0, 1fr))',gap:'6px 8px'}}>
                   {[
-                    ['bp','BP','??/??'],
-                    ['temp','BT','??.?'],
-                    ['pulse','PR','??'],
-                    ['rr','RR','??'],
-                    ['spo2','SpO2','??']
+                    ['bp',t.cs_vBP,'??/??'],
+                    ['temp',t.cs_vBT,'??.?'],
+                    ['pulse',t.cs_vPR,'??'],
+                    ['rr',t.cs_vRR,'??'],
+                    ['spo2',t.cs_vSpO2,'??']
                   ].map(function(item){
                     return <div key={item[0]} style={{display:'grid',gridTemplateColumns:'52px minmax(0, 1fr)',alignItems:'center',gap:5}}>
                       <span style={{fontSize: 13,color:item[0]==='bp'?'#f59e0b':t3,fontWeight:800}}>{item[1]}</span>
@@ -656,25 +660,25 @@ export default function ConsultationPage() {
                 <span style={{fontWeight:700,fontSize: 13,color:tx}}>{t.consultNote}</span>
               </div>
               <div style={{flex:1,padding:'6px 10px',minHeight:0}}>
-                <textarea value={note} onChange={function(e){setNote(e.target.value)}} placeholder="S: Chief complaint...\nO: Examination...\nA: Assessment...\nP: Plan..."
+                <textarea value={note} onChange={function(e){setNote(e.target.value)}} placeholder={t.cs_notePlaceholder}
                   style={{width:'100%',height:'100%',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'8px 10px',color:tx,fontSize: 14,resize:'none',outline:'none',fontFamily:'inherit',boxSizing:'border-box',lineHeight:1.7}}/>
               </div>
               {/* Phrase dict */}
               <div style={{borderTop:'1px solid '+bd,height:'30%',minHeight:100,display:'flex',flexDirection:'column'}}>
                 <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:4}}>
                   <span style={{fontWeight:700,fontSize: 13,color:'#f59e0b'}}>{t.phraseDict}</span>
-                  {['All','General','Internal','Surgery','Peds','OBGYN'].map(function(c){
-                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'#f59e0b20':'transparent',color:phraseCat===c?'#fbbf24':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{c}</button>;
+                  {phraseCats.map(function(c){
+                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'#f59e0b20':'transparent',color:phraseCat===c?'#fbbf24':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{label(PHRASE_CAT_KEY, c)}</button>;
                   })}
                   <input value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',width:120,boxSizing:'border-box'}}/>
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
                   {filteredPhrases.map(function(p){
-                    return <div key={p.id} onClick={function(){insertPhrase(p.text)}} style={{padding:'4px 10px',cursor:'pointer',borderBottom:'1px solid #1e2433',display:'flex',gap:6}}
+                    return <div key={p.id} onClick={function(){insertPhrase(phraseText(p))}} style={{padding:'4px 10px',cursor:'pointer',borderBottom:'1px solid #1e2433',display:'flex',gap:6}}
                       onMouseEnter={function(e){e.currentTarget.style.background='#ffffff06'}}
                       onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <span style={{background:'#f59e0b20',color:'#fbbf24',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
-                      <span style={{fontSize: 13,color:'#cbd5e1'}}>{p.text}</span>
+                      <span style={{background:'#f59e0b20',color:'#fbbf24',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0}}>{label(PHRASE_CAT_KEY, p.category)}</span>
+                      <span style={{fontSize: 13,color:'#cbd5e1'}}>{phraseText(p)}</span>
                     </div>;
                   })}
                 </div>
@@ -703,7 +707,7 @@ export default function ConsultationPage() {
                   <div style={{fontSize: 13,color:'#94a3b8',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>
                 </div>;
               }):<div style={{padding:20,textAlign:'center',color:'#334155',fontSize: 14,fontStyle:'italic'}}>{t.noHistory}</div>
-            ):<div style={{padding:20,textAlign:'center',color:'#334155',fontSize: 14,fontStyle:'italic'}}>{t.selectPatientLeft}</div>
+            ):<div style={{padding:20,textAlign:'center',color:'#334155',fontSize: 14,fontStyle:'italic'}}>{t.cs_selectPatient}</div>
             ):(
               orderSets.length>0?osGrouped().map(function(grp,gi){
                 var gkey = grp.group||'\u0000';
@@ -792,7 +796,9 @@ export default function ConsultationPage() {
               {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{marginLeft:'auto',background:'#1e2433',color:'#a78bfa',border:'1px solid #2a3142',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:<div style={{marginLeft:'auto'}}></div>}
               <button onClick={function(){setViewer(null)}} style={{background:'#374151',color:'#e2e8f0',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
-            <ImagePatientCheck images={viewer.images} t={t} />
+            {/* What the arrived images say about the patient (viewer-url -> images): red when
+                they name another patient, amber when they name nobody. PACS's component. */}
+            <PatientCheck images={viewer.images} t={t} style={{margin:'8px 14px 0'}} />
             <div style={{flex:1,display:'flex',overflow:'hidden'}}>
               {viewer.url
                 ? <iframe src={viewer.url} title="PACS Viewer" style={{flex:1,border:0,background:'#000'}}></iframe>

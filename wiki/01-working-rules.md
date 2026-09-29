@@ -55,7 +55,7 @@
 |---|---|
 | 접수 | `frontend/src/pages/Registration.jsx` · `backend/src/routes/patient.routes.js` · `visit.routes.js` |
 | 진료 | `frontend/src/pages/Consultation.jsx` · `frontend/src/documents/surgical-records.jsx` · `op-figures.jsx` · `op-plates.js` · `referral.jsx` · `backend/src/routes/consult.routes.js` · `orderset.routes.js` · `document.routes.js` |
-| 수납 | `frontend/src/pages/Payment.jsx` · `backend/src/routes/billing.routes.js` |
+| 수납 | `frontend/src/pages/Payment.jsx` · `frontend/src/components/Receipt.jsx`(영수증) · `backend/src/routes/billing.routes.js` |
 | 약국 | `frontend/src/pages/Pharmacy.jsx` · `frontend/src/documents/external-rx.jsx` · `backend/src/routes/pharmacy.routes.js` |
 | 임상병리 | `frontend/src/pages/Lab.jsx` · `frontend/src/components/LabResults.jsx` · `backend/src/routes/lab.routes.js` |
 | 통계 | `frontend/src/pages/Stats.jsx` · `backend/src/routes/stats.routes.js` |
