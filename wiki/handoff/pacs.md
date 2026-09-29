@@ -2,6 +2,91 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 설계 메모: P-9 C 「EMR이 영상을 대신 보여 줌」 (실험 결과 포함)
+
+- **상태**: 보류 — 설계만(코드 없음). 총괄 확인 뒤 만듦
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만). **PACS 저장소** — 없음
+
+### 한 줄 요약
+영상 창(iframe)이 영상 서버(9090)가 아니라 **EMR 주소 `/api/pacs/viewer/…`** 를 엽니다. **EMR 백엔드(PACS 파일)가 그 요청을 받아 확인한 뒤 영상 서버에 비밀번호를 붙여 전달**합니다. 허락의 근거는 EMR이 영상 창을 열 때 심어 주는 **짧게 사는 쿠키**입니다. **nginx·EMR compose는 바꾸지 않아도 됩니다** — 기존 `/api/` 전달을 그대로 탑니다.
+
+### 격리 스택 실험 (2026-09-29, 이 PC 안에서만 — 실행 중 PACS는 안 건드림)
+- **E1** EMR 백엔드 컨테이너 → `host.docker.internal:9198`(**호스트 127.0.0.1에만 열린 포트**) → **닿음**(401 응답). ⇒ Windows(Docker Desktop)에서는 9090을 병원 네트워크에 열지 않고 **127.0.0.1에만** 열어도 EMR은 쓸 수 있음. *(리눅스 Docker에서는 127.0.0.1 포트가 컨테이너에서 안 보임 — 새 PC가 Windows라 해당 없음, 기록만.)*
+- **E2** 비밀번호를 붙여 주는 임시 nginx 중계(127.0.0.1:9199, `/api/pacs/viewer/` → Orthanc)로 Stone 뷰어를 엶 → **로그인 창 없이 열림**, `/api/pacs/viewer/` 같은 하위 경로에서도 됨(Stone이 상대 경로를 씀). 검사·시리즈 2개·환자 머리글 표시.
+  - Stone이 부른 경로 — **모두 GET**:
+    - `stone-webviewer/…` 정적 파일 27
+    - `system` 2
+    - `dicom-web/studies?0020000D=<UID>&includefield=…`
+    - `dicom-web/series?0020000D=<UID>&…`
+    - `dicom-web/instances?0020000D=<UID>&0020000E=<UID>&…`
+    - `dicom-web/studies/<UID>/series/<UID>/metadata`
+    - `dicom-web/studies/<UID>/series/<UID>/rendered`
+    - `dicom-web/studies/<UID>/series/<UID>/instances/<UID>/metadata`
+    - `…/instances/<UID>/frames/1/rendered`
+  - ⇒ **정적 파일·`system`을 뺀 모든 데이터 요청에 StudyInstanceUID가 들어 있음**(경로의 `studies/<UID>` 또는 필터 `0020000D=`). Orthanc 고유 ID 경로(`/studies/<id>`, `/instances/<id>`)는 안 씀.
+- **E3** EMR 웹 컨테이너의 nginx에 `auth_request` 모듈 있음 — 쓸 수는 있지만 아래 이유로 추천 안 함.
+- **알아 둘 것**: Stone 뷰어가 처음에 「Intended use … patients, research, quality assurance」 창을 띄우고, 화면 왼쪽 위에 빨간 글씨 **「Not for diagnostic usage」** 가 늘 보입니다. **지금 뷰어도 똑같습니다**(이번 변경과 무관). 진단용 인증 뷰어가 아니라는 표시 — 실장님이 알고 계셔야 할 사항이라 적음.
+
+### 설계
+**① iframe은 EMR 토큰을 헤더로 못 보냄 → 짧게 사는 쿠키**
+- 진료 화면이 이미 부르는 `GET /api/pacs/viewer-url?order_item_id=`(JWT + 진료 권한)가 응답과 함께 쿠키 `px_viewer`를 심음.
+  - 쿠키 속성: `HttpOnly; SameSite=Strict; Path=/api/pacs/viewer/; Max-Age=1800`.
+  - 내용: `{user id, 이 오더의 study UID(실제 UID 포함), 만료}`를 서버 비밀값(JWT_SECRET)으로 **HMAC 서명**. 최근 5개 study까지 담아 「새 탭에서 열기」도 됨.
+- `viewer-url`이 돌려주는 `url`은 **상대 주소** `/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`. 같은 출처라 iframe·새 탭 모두 쿠키가 따라감.
+- **nginx `auth_request`를 쓰지 않는 이유**: 그러려면 영상 서버 비밀번호를 nginx 설정에 넣어야 함 → EMR `.env` + compose 환경 변수 + 설정 템플릿. 현장에서 「비밀값 하나 더, 파일 하나 더」가 늘어남. 백엔드 한 곳에서 하면 **짝 맞추기 한 번으로 끝남**.
+
+**② 영상 서버 비밀번호는 서버 안에서만**
+- `pair-with-emr.ps1`이 이미 하는 일(토큰을 EMR에 stdin으로)에 **Orthanc 비밀번호도 같은 방법으로** 넣음 → `pacs_config.orthanc_password`(마이그레이션 8xx, 칸 추가만).
+- `GET /api/pacs/config`는 이 값을 **돌려주지 않음**(설정 화면에도 안 보임, 「설정됨/안 됨」만).
+- 영상 서버 주소는 `pacs_config.orthanc_url`(기본 `http://host.docker.internal:9090`, EMR 컨테이너에서 본 주소).
+- 알아 둘 것: 비밀번호가 EMR DB 백업에도 들어감. 백업에는 이미 모든 환자 기록이 있어 위험이 크게 늘지는 않음. 새 PC에서 복원한 뒤 `pair-with-emr`를 다시 돌리면 새 값으로 바뀜.
+
+**③ 무엇을 통과시키나 — 읽기 경로만, 연 검사만** (`/api/pacs/viewer/*`, PACS 파일 새로 `pacs.viewer.js`)
+- **GET만**. 그 밖(POST·PUT·DELETE)은 405.
+- 쿠키가 없거나, 서명이 틀리거나, 만료 → 401.
+- 요청마다 쿠키의 사용자가 **아직 활성이고 진료 권한이 있는지** DB로 확인(S1과 같게, 30초 캐시).
+- 허용 경로(목록에 없으면 403):
+  - `stone-webviewer/*`, `system`
+  - `dicom-web/studies/<UID>/…` — `<UID>`가 쿠키에 있을 때만
+  - `dicom-web/studies|series|instances?…` — **`0020000D`(또는 `StudyInstanceUID`) 필터가 있고 그 UID가 쿠키에 있을 때만**. 필터 없는 전체 목록 조회는 막힘 ⇒ **다른 환자의 study를 URL로 못 엶**.
+- 막힌 요청은 경로 모양만 로그에 남김(UID는 가림) — Stone 판이 바뀌어 새 경로를 부르면 알 수 있게. Orthanc는 26.6.1로 고정이라 당분간 바뀌지 않음.
+- 전달: Node `http.request`로 Orthanc에 흘려보냄(streaming), `Authorization: Basic …`은 서버에서만 붙임. 응답의 `WWW-Authenticate`는 지움(브라우저 로그인 창이 다시 뜨지 않게). 제한 시간은 연결 5초·응답 120초.
+
+**④ 설정의 「뷰어 주소」 칸과 9090**
+- 직원 브라우저는 9090을 쓰지 않음 → 설정의 **「PACS 웹/뷰어 주소」는 필요 없어짐**. 대신 「EMR이 영상 서버에 닿는 주소」(`orthanc_url`, 기본값 그대로면 손댈 일 없음)와 「영상 서버 비밀번호: 설정됨 ✓」 표시.
+  - 옛 `pacs_viewer_url`은 남겨 두되 쓰지 않음(데이터를 바꾸지 않음). P-25 경고는 새 칸 기준으로(설정 세션).
+- **9090은 병원 네트워크에 열 필요 없음**: PACS compose에서 `127.0.0.1:9090:8042`로(E1). Orthanc 관리 화면은 서버 PC에서만(`http://localhost:9090`). 방화벽 확인은 9080·4242만 남음. **4242(장비)는 그대로 병원 네트워크에.**
+
+**⑤ 현장에서 달라지는 것 (「복잡하지 않을 것」)**
+- **의사**: 영상 창이 로그인 없이 바로 열림. 새 탭도 됨. 30분 넘게 창을 열어 두었다가 새로 고치면 영상 창을 다시 열면 됨.
+- **설치하는 사람**: 할 일이 **줄어듦** — 뷰어 주소 입력, 9090 방화벽이 없어지고 `pair-with-emr` 한 번이면 끝.
+- 영상 서버 관리자 비밀번호는 직원에게 알려 줄 필요가 없어짐.
+
+### 세션별 몫
+| 누가 | 무엇 | 크기 |
+|---|---|---|
+| **PACS** | `pacs.viewer.js`(중계 + 경로 허용 목록 + 쿠키 확인), `viewer-url`이 쿠키를 심고 상대 주소를 돌려줌, 마이그레이션(`orthanc_url`, `orthanc_password`), `GET /config`에서 비밀번호 빼기, `pair-with-emr.ps1`이 Orthanc 비밀번호도 넣기, PACS compose 9090 → 127.0.0.1, setup·start.bat·README 안내, 설정 화면 오더 연동 탭의 칸 정리(PACS 몫), 위키 2.3·6.1 | 중간 |
+| 진료 | **없을 것으로 봄**(영상 창은 `viewer-url`의 `url`을 그대로 씀). 「새 탭에서 열기」도 같은 `url`. 만든 뒤 확인만 | — |
+| 설정 | 상태 화면: 「EMR → 영상 서버」 연결(백엔드가 `orthanc_url`에 비밀번호로 닿는지), P-25 경고를 새 칸 기준으로 | 작음 |
+| 총괄 | nginx·EMR compose **변경 없음**(확인만). 출발 전 확인 목록에서 9090 방화벽 줄 빼기. 실행 중 PACS의 9090을 127.0.0.1로 바꾸는 재생성 | 작음 |
+
+### 시험 계획 (격리 스택: EMR 9188 → PACS 9198)
+1. **의사**: 진료 → 영상 창 → 로그인 창 없이 영상. 새 탭도. 한국어·프랑스어.
+2. **막히는 것**
+   - 쿠키 없이 → 401
+   - 다른 환자 study UID를 주소에 넣음 → 403
+   - 필터 없는 `dicom-web/studies` → 403
+   - POST·DELETE → 405
+   - 만료된 쿠키 → 401
+   - 진료 권한을 뺀 계정(S1) → 다음 요청부터 401/403
+   - 수납·간호사 계정은 `viewer-url`부터 403
+3. **비밀번호**: `GET /config` 응답에 없음, EMR 로그에 없음. `pair-with-emr` 뒤에도 영상이 열림(비밀번호가 바뀌어도 같이 바뀜).
+4. **9090**: PACS 격리 스택을 127.0.0.1로 두고도 EMR이 닿음(E1에서 확인됨).
+5. **속도**: 영상 10장짜리 검사를 열 때 걸리는 시간, 직접 연결과 비교.
+6. **Stone의 다른 버튼**(다운로드 등)이 막히는지 — 막히면 막힌 경로를 보고 허용 여부를 결정(기본은 막음).
+
+- **바꾼 파일**: `wiki/handoff/pacs.md`만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음(설계상 1건) · **번역 키**: 없음
+
 ## 2026-09-29 — 영상 백업 만듦 (결정 41) · 위키 6.1 다시 · 2.6 한 줄 · 오프라인 키트 검토
 
 - **상태**: 확인 요청

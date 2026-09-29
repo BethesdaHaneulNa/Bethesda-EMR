@@ -446,10 +446,12 @@ router.get('/drug-usage', async (req, res) => {
       g.total_count += r.rx_count;
     }
     const drugs = Object.keys(drugMap).map(k => drugMap[k]).sort((a, b) => b.total_qty - a.total_qty);
-    const periodTotals = {};
-    periods.forEach(p => { periodTotals[p] = drugs.reduce((s, d) => s + (d.by_period[p] || 0), 0); });
 
-    res.json({ granularity: gran, basis: dispensed ? 'dispensed' : 'prescribed', from, to, periods, drugs, periodTotals, grandTotal: drugs.reduce((s, d) => s + d.total_qty, 0) });
+    // No total across drugs (decision 19 C-B, 2026-09-29): rows count different
+    // things — tablets, capsules, ampoules, bottles — so a sum over them has no
+    // unit and no meaning. Each drug keeps its own total; the table says how
+    // many drugs it lists.
+    res.json({ granularity: gran, basis: dispensed ? 'dispensed' : 'prescribed', from, to, periods, drugs });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
