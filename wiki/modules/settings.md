@@ -607,4 +607,4 @@
 | 2026-09-29 | 약속처방 편집 창: 포장 단위 약 줄에 **병·튜브 수** 칸 | `Settings.jsx` `drugPack`·`osQty`·저장 전 정수 확인(라우트는 진료 세션 것이라 그대로), `settings.ordersets.mjs` (2.9) | `c891715` |
 | 2026-09-29 | 업데이트가 끝나면 **새 버전의 백업을 하나 더** 만듦 — 업데이트 직후에도 복원할 수 있는 백업이 있게 | `update.ps1`·`update.sh` 5단계, `services/backup-cli.js`(새), `backup.js` `dumpOnce`의 작업 폴더 인자 (3-4) | `90daed6` |
 | 2026-09-29 | **가장 새 백업이 EMR보다 옛 버전**이면 백업 탭·서버 상태 창·상태 API에 노란 경고, `verify-backup`이 옛 버전 백업을 알아보고 5b 절차를 알려 줌 | `services/backup-version.js`(새), `backup.routes.js`·`status.routes.js`, `Settings.jsx` 백업 띠, `server-status.ps1` `Get-DumpMigrations`, `verify-backup.ps1/.sh` (2.7·2.10·2.11·3-5) | `39440aa` |
-| 2026-09-29 | 2.13(새 PC로 옮기기)을 `DEPLOYMENT.md` 5b에 맞춤 — 기본은 같은 버전 백업, 옛 백업은 5b 「older than the app」(한 트랜잭션·먼저 파일로 풀기) | 위키만 | (이 커밋) |
+| 2026-09-29 | 2.13(새 PC로 옮기기)을 `DEPLOYMENT.md` 5b에 맞춤 — 기본은 같은 버전 백업, 옛 백업은 5b 「older than the app」(한 트랜잭션·먼저 파일로 풀기) | 위키만 | `4f5ba87` |
