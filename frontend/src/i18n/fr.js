@@ -301,6 +301,13 @@ export default {
   rc_visitCancelled: "Visite annulée",
   rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
   rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » et le patient part à la caisse.",
+  rc_workDate: "Date de travail",
+  rc_prevDay: "Jour précédent",
+  rc_nextDay: "Jour suivant",
+  rc_backToToday: "Aujourd’hui",
+  rc_queueOfDate: "Attente / Terminé — {date}",
+  rc_pastDateBanner: "Vous consultez une date passée ({date}) : consultation et mise en ordre (annuler, terminer) seulement. Les nouveaux enregistrements et les modifications se font à la date du jour.",
+  rc_pastDateNoNew: "À une date passée, on ne peut ni créer ni modifier un enregistrement. Appuyez sur « Aujourd’hui » et enregistrez à la date du jour.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

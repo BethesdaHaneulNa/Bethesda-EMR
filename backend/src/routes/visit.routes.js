@@ -14,11 +14,8 @@ router.use(authMiddleware);
 // visit or follow-up (Registration.jsx suggestedVisitType). Registering, cancelling and editing a visit are
 // reception's; payment may also PUT /:id, but only to change visit_type (below).
 
-// GET /api/visits/today - today's queue
-router.get('/today', permMiddleware('registration', 'consultation'), async (req, res) => {
-  try {
-    const { status, doctor_id, department_id } = req.query;
-    let query = `SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.blood_type, p.allergies, p.reception_note, p.phone as patient_phone,
+// One queue row: the visit, who the patient is, department and doctor.
+const QUEUE_SELECT = `SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.blood_type, p.allergies, p.reception_note, p.phone as patient_phone,
                  d.code as dept_code, d.name as dept_name, s.name as doctor_name,
                  -- Reception locks the fee-type buttons once a bill exists: changing
                  -- visit_type then would put the visit back on the payment list as an
@@ -27,8 +24,36 @@ router.get('/today', permMiddleware('registration', 'consultation'), async (req,
                  FROM visit v
                  JOIN patient p ON v.patient_id = p.id
                  LEFT JOIN department d ON v.department_id = d.id
-                 LEFT JOIN staff s ON v.doctor_id = s.id
-                 WHERE v.visit_date = CURRENT_DATE`;
+                 LEFT JOIN staff s ON v.doctor_id = s.id`;
+
+// GET /api/visits/day?date=YYYY-MM-DD - reception's queue for its work date
+// (decided 2026-09-29, ⑩: the screen has a work date, like the clinic's own system,
+// so visits left waiting or in progress on an earlier day can be found and put in
+// order). No date means the database's today - CURRENT_DATE, the same "today" that
+// visit_date defaults to - and the answer always says which day it is and what today
+// is, so the screen never has to trust the PC's clock to know when midnight passed.
+// Answer: { date, today, visits: [rows like /today] }.
+router.get('/day', permMiddleware('registration'), async (req, res) => {
+  try {
+    const asked = req.query.date;
+    if (asked !== undefined && asked !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(String(asked))) {
+      return res.status(400).json({ error: 'date must be a date in YYYY-MM-DD form' });
+    }
+    const today = (await pool.query('SELECT CURRENT_DATE AS d')).rows[0].d;
+    const day = asked || today;
+    const result = await pool.query(
+      QUEUE_SELECT + ' WHERE v.visit_date = $1 ORDER BY v.reception_time ASC, v.created_at ASC', [day]);
+    res.json({ date: day, today: today, visits: result.rows });
+  } catch (err) {
+    sendDbError(res, err);
+  }
+});
+
+// GET /api/visits/today - today's queue (consultation's queue; reception uses /day)
+router.get('/today', permMiddleware('registration', 'consultation'), async (req, res) => {
+  try {
+    const { status, doctor_id, department_id } = req.query;
+    let query = QUEUE_SELECT + ' WHERE v.visit_date = CURRENT_DATE';
     const params = [];
     let idx = 1;
     if (status) { query += ` AND v.status = $${idx}`; params.push(status); idx++; }

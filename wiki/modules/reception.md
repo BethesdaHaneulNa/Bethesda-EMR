@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑳ 진료 없이 완료 → 진료비 없음 — 확인 요청. 다음(실장님 결정): ⑩ 작업일자 → ⑱ 차트번호 해마다 1번부터
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑩ 작업일자 — 확인 요청. 다음(실장님 결정): ⑱ 차트번호 해마다 1번부터(설계 메모 먼저)
 
 ## 1. 이 모듈이 하는 일
 
@@ -20,16 +20,17 @@
 
 ### 2.1 화면 열기와 화면 구성
 
-맨 위 메뉴 줄에서 **Enregistrement (접수)** 를 누릅니다. 화면은 세 칸입니다.
+맨 위 메뉴 줄에서 **Enregistrement (접수)** 를 누릅니다. 화면은 세 칸입니다. 왼쪽 맨 위에는 **Date de travail (작업일자)** 가 있습니다(2.5a).
 
 - **왼쪽 — Recherche / Enregistrement (환자 검색 / 접수)**: 환자 찾기, 환자 정보, 그 아래 **Service / Type de Visite (진료과 / 내원구분)** 에서 오늘 접수 내용.
 - **가운데 — Consultations précédentes (이전 진료 기록)**: 고른 환자의 지난 진료 기록(읽기만). 맨 위에 이름·차트번호와, 돈 문제가 있으면 **Dû (미수)** · **Rembours. (환불예정)** 상자.
-- **오른쪽 — Attente / Terminé aujourd'hui (오늘 대기 / 완료)**: 오늘 접수한 환자 목록. **30초마다 저절로** 새로 고쳐집니다(2.5).
+- **오른쪽 — Attente / Terminé aujourd'hui (오늘 대기 / 완료)**: 작업일자의 접수 목록(보통 오늘). **30초마다 저절로** 새로 고쳐집니다(2.5). 지난 날짜를 보고 있으면 제목이 「Attente / Terminé — 2026-09-28」처럼 그 날짜로 바뀝니다.
 
 버튼:
 
 | 버튼 | 하는 일 |
 |---|---|
+| **◀ · 날짜 · ▶ · Aujourd’hui (오늘로)** | 작업일자 — 하루 앞·뒤, 달력으로 고르기, 오늘로 돌아오기(2.5a) |
 | **🔍 Trouver patient (환자 찾기)** | 환자 찾기 창을 엶. 이름·차트번호로 찾아서 고름(2.7) |
 | **+ Nouveau patient (+ 신규 환자 입력)** | 왼쪽 칸을 모두 비우고 처음 온 환자를 입력 |
 | **Enregistrer / Mettre en attente (접수 / 대기 등록)** | 환자 정보를 저장하고 **오늘 대기 목록에 올림**. 처음 온 환자면 차트번호가 이때 생김 |
@@ -126,6 +127,19 @@
   - **진료중** 환자의 Terminer → 는 진료를 받은 것이라 내원구분이 그대로입니다.
 - 목록은 **30초마다 저절로** 새로 고쳐집니다. 왼쪽에 쓰던 내용은 그대로 남습니다. 다른 창을 보는 동안에는 쉬었다가, 돌아오면 30초 안에 맞춰집니다. 서버가 잠깐 멈춰도 목록은 지워지지 않습니다.
 
+### 2.5a Date de travail (작업일자) — 다른 날의 접수 보기
+
+왼쪽 맨 위의 **Date de travail (작업일자)** 는 오른쪽 목록이 **어느 날의 접수**를 보여 줄지 정합니다. 처음에는 **오늘**입니다.
+
+- **◀** 하루 전 · **▶** 하루 뒤 · 날짜 칸을 누르면 달력. 오늘보다 뒤로는 갈 수 없습니다(예약은 없음).
+- **지난 날짜**를 고르면 칸이 노랗게 바뀌고 「Vous consultez une date passée (…)」 안내가 뜹니다. 그 날짜에서는:
+  - 할 수 있는 것 — 보기, 그리고 **정리**: 남은 「En Attente」는 **Annuler l'attente**(취소), 남은 「En Attente」·「En cours」는 **Terminer →**(완료).
+  - 할 수 없는 것 — **새 접수·접수 수정**(파란 단추가 잠기고 「À une date passée…」가 보임). 환자 정보 저장(💾)은 됩니다.
+- **Aujourd’hui (오늘로)** 를 누르면 오늘로 돌아옵니다.
+- 화면을 켜 둔 채 **자정이 지나면**: 오늘을 보고 있던 화면은 30초 안에 저절로 새 날짜로 넘어갑니다. 지난 날짜를 일부러 골라 두었던 화면은 그 날짜에 머물고 노란 안내가 계속 보입니다. 자정 전에 골라 둔 어제 접수는 수정이 잠깁니다.
+
+> 전날 「En Attente」·「En cours」로 남은 접수는 다음 날 아침에 작업일자를 하루 전으로 돌려 정리하세요. ⚠ 진료를 받았는데 의사가 「완료」를 빠뜨린 환자라면, 접수에서 완료로 옮겨도 **수납 목록에는 오늘 날짜 것만 떠서** 나타나지 않을 수 있습니다 — 수납 창구에 알려 주세요(수납 쪽에 확인 요청 중).
+
 ### 2.6 접수 내용 고치기 · 대기 취소
 
 1. 오른쪽 목록에서 환자를 누르면 왼쪽에 그 접수 내용이 채워지고, 파란 버튼이 **Modifier l'enregistrement** 로 바뀝니다.
@@ -171,6 +185,8 @@
 | 「Dossier existant chargé. Vérifiez les informations, puis appuyez de nouveau sur le bouton.」 | 고른 기존 환자를 불러왔습니다. 정보를 확인하고 버튼을 **다시** 누릅니다 — 아직 접수되지 않았습니다 |
 | 「*이름* est déjà enregistré(e) aujourd’hui (…). Enregistrer une seconde visite ?」 | 오늘 이미 접수된 환자입니다. 같은 날 다른 일로 다시 왔으면 확인, 실수면 취소 |
 | 「… (peut-être à l’autre guichet). Enregistrer une seconde visite ?」 | 다른 창구에서 방금 접수한 것 같습니다. 대기 목록을 보고, 이미 있으면 취소 |
+| 노란 「Vous consultez une date passée (…) : consultation et mise en ordre… 」 | 작업일자가 지난 날입니다. 정리(취소·완료)만 됩니다. 접수하려면 **Aujourd’hui** |
+| 「À une date passée, on ne peut ni créer ni modifier un enregistrement…」 | 지난 날짜(또는 자정 전에 골라 둔 어제 접수)에서는 접수·수정이 안 됩니다. **Aujourd’hui** 를 누르고 오늘 날짜에서 합니다 |
 | 「Erreur : …」 | 위에 없는 오류입니다. 창의 글자를 그대로 적어 관리자에게 알립니다 |
 | 서버는 되는데 오른쪽 목록이 비어 있음 | 화면을 처음 열 때 서버에 닿지 못했을 수 있습니다. 30초 안에 저절로 다시 불러옵니다. 계속 비어 있으면 화면을 새로 고치고(F5), 그래도 안 되면 관리자에게 알립니다. (오늘 접수가 정말 없으면 당연히 비어 있습니다) |
 
@@ -190,7 +206,11 @@
 
 ### 흐름
 
-- **대기 목록 자동 새로고침** — 화면이 열려 있는 동안 30초마다, `document.hidden`이 아닐 때만 `refreshQueue()`가 `/visits/today`를 다시 받음 (임상병리 화면과 같은 규칙). 바꾸는 것은 `visits`와, 고른 내원(`sel`)의 **`status`·`has_active_bill`·`visit_type`** 뿐 — 그래야 진료가 시작된 내원에서 「대기 취소」 버튼이 사라지고, 그 사이 수납된 내원의 내원구분 단추가 잠김. `form`·`visitForm`·`memo`·`selectedPatient`는 건드리지 않아 쓰던 내용이 남음. 실패하면 조용히 기존 목록 유지(알림 없음). `queueSeq`(ref)가 요청마다 번호를 매겨, 느리게 온 옛 응답이 새 목록을 덮지 못하게 함 — `loadData()`도 같은 번호를 씀. 진료과·의사 목록은 자동으로 다시 받지 않음(바뀔 일이 드묾).
+- **작업일자** (2026-09-29 실장님 결정 ⑩) — `workDate`(보는 날)·`serverToday`(서버의 오늘)·`workRef`(`{date, follow}` — 30초 새로고침이 처음 만든 함수라 state 대신 ref로 읽음). 목록은 `GET /visits/day`로 받음: `follow`(오늘을 따라감 — 기본, 오늘로 돌아오면 다시 켜짐)면 날짜 없이 불러 서버가 오늘을 정하고, 아니면 `?date=`. 응답의 `today`로만 오늘을 앎 — **PC 시계는 쓰지 않음**(수납·통계의 `todayLocal`과 같은 원칙: 오늘은 서버가 정함). 그래서 자정 뒤 첫 새로고침에서 `follow` 화면은 저절로 새 날짜로 넘어감.
+  - `viewingPast` = 작업일자 < 오늘, `selIsPast` = 고른 내원의 `visit_date` < 오늘(자정을 넘겨 어제 내원을 고른 채인 경우). 둘 중 하나면 `createOrUpdateVisit`를 막음(단추 `disabled` + `rc_pastDateNoNew`). 상태 이동·대기 취소는 그대로(정리).
+  - 날짜를 바꾸면 고른 내원을 비움(`startNewPatient`) — 다른 날 내원을 열어 둔 채 두지 않으려고. ▶·달력은 오늘까지(`max`).
+  - 같은 날 중복 확인(`todayVisitOf`)은 화면 목록을 쓰는데, 새 접수는 오늘 목록일 때만 되므로 맞음.
+- **대기 목록 자동 새로고침** — 화면이 열려 있는 동안 30초마다, `document.hidden`이 아닐 때만 `refreshQueue()`가 작업일자의 목록(`/visits/day`)을 다시 받음 (임상병리 화면과 같은 규칙). 바꾸는 것은 `visits`와, 고른 내원(`sel`)의 **`status`·`has_active_bill`·`visit_type`** 뿐 — 그래야 진료가 시작된 내원에서 「대기 취소」 버튼이 사라지고, 그 사이 수납된 내원의 내원구분 단추가 잠김. `form`·`visitForm`·`memo`·`selectedPatient`는 건드리지 않아 쓰던 내용이 남음. 실패하면 조용히 기존 목록 유지(알림 없음). `queueSeq`(ref)가 요청마다 번호를 매겨, 느리게 온 옛 응답이 새 목록을 덮지 못하게 함 — `loadData()`도 같은 번호를 씀. 진료과·의사 목록은 자동으로 다시 받지 않음(바뀔 일이 드묾).
 - **환자 고르기** — 검색 결과나 환자 찾기 창에서 고르면 `fillPatient(p)`: 환자 행으로 `form`을 채우고 `sel`을 비우고 `/patients/:id/history`로 이전 진료를 불러옴.
 - **대기 목록에서 고르기** — `selectVisit(v)`: `/visits/today` 행으로 `form`·`visitForm`을 채움.
 - **보내는 환자 필드** — `patientBody()`가 화면에 있는 칸만 보냄: `last_name` `first_name`(앞뒤 공백 제거) `date_of_birth` `gender` `phone` `blood_type` `allergies` `reception_note`. `national_id` `mobile` `address` `city` `region`은 **보내지 않으므로 서버가 그대로 둠** (2026-09-29 전에는 대기 목록에서 고른 환자를 저장하면 이 칸들을 빈 값으로 덮었음 — 7절 ⑤). 나중에 이 칸들의 입력을 추가하면 `form`·`fillPatient`·`selectVisit`·`patientBody`에 같이 넣되, `selectVisit`은 `/visits/today` 행에 이 값이 없으니 `/patients/:id`로 받아 채워야 함.
@@ -260,7 +280,8 @@
 | `GET /patients/similar` | registration | 접수(동명이인 경고) |
 | `GET /patients/chart/:chartNo` | registration | 없음 |
 | `GET /patients/:id/billing-history` | payment | 없음 |
-| `GET /visits/today` | registration · consultation | 접수, 진료 |
+| `GET /visits/today` | registration · consultation | 진료 (접수는 2026-09-29부터 `/visits/day`) |
+| `GET /visits/day` | registration | 접수(작업일자) |
 | `GET /visits/patient/:patientId` | registration · consultation · lab · payment | PatientFinder 내원 모드(진료·임상병리·수납), **접수의 초진/재진 제안**(`loadPastVisits`). 약국은 환자 모드라 안 부름 |
 | `POST /visits` · `PUT /visits/:id/status` | registration | 접수 |
 | `PUT /visits/:id` | registration · payment — 단 **registration 없이 payment만** 있으면 `visit_type` 말고 다른 칸을 보내는 순간 403 (조용히 빼지 않음 — 잘못된 호출이 드러나게) | 접수, 수납(`visit_type`만) |
@@ -278,7 +299,8 @@
 | `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함. **트랜잭션**: 행을 `FOR UPDATE`로 읽고 → 고치고 → **변경 기록** `reception.patient.edit`을 같은 트랜잭션에(아래) | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
-| `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사 + `has_active_bill`(취소 안 된 청구가 있는지). 접수시각순 | 접수(30초마다), 진료(15초마다) |
+| `GET /api/visits/day?date=YYYY-MM-DD` | 그 날의 내원(행 모양은 `/today`와 같음 — `QUEUE_SELECT`) + `{date, today}`. 날짜가 없으면 `CURRENT_DATE`. 모양이 틀리면 400, 달력에 없는 날은 DB가 400(22008) | 접수(30초마다) |
+| `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사 + `has_active_bill`(취소 안 된 청구가 있는지). 접수시각순 | 진료(15초마다) |
 | `GET /api/visits/patient/:patientId` | 그 환자의 모든 내원 + 대표 청구 1건 | 접수(초진/재진 제안), PatientFinder |
 | `POST /api/visits` | 접수. `visit_type` 검사함. `status='waiting'`, `reception_time`은 서버 시각 `HH:MM`, `registered_by`는 로그인 직원. **오늘 같은 환자의 취소 아닌 내원이 있으면 409 `Patient already registered today`** — 본문에 `allow_duplicate: true`가 있으면 통과(직원이 확인한 뒤 화면이 붙임). 두 요청이 동시에 오면 둘 다 통과할 수 있음(잠금 없음 — 경고일 뿐이라) | 접수 |
 | `PUT /api/visits/:id/status` | 상태만 변경. `VISIT_STATUSES` 검사. **`cancelled`로는 `registered`·`waiting`인 내원만** 바꿀 수 있고, 아니면 409 `{error:'Only a waiting visit can be cancelled', status:<지금 상태>}` — 진료·처방·청구가 붙은 내원을 취소하면 다른 화면이 모두 무시하는 내원에 그것들이 매달려 버리기 때문 **`registered`·`waiting` → `completed`이면 같은 UPDATE에서 `visit_type='none'`**(진료 없이 끝낸 것 — 실장님 결정 ⑳). 취소 안 된 청구가 이미 있으면 바꾸지 않음. `in_progress → completed`는 그대로 | 접수 |
@@ -349,7 +371,7 @@
 ## 5. 다른 모듈과의 연결
 
 - **진료** — `/visits/today`를 15초마다 읽어 대기 환자를 보여줌. 환자를 열면 내원이 `in_progress`, 완료하면 `completed`. 진료 화면의 알레르기 경고는 접수에서 넣은 `patient.allergies`. `consultation.visit_id`로 내원에 매달림 (내원 하나에 진료 하나 — `idx_consult_visit_unique`).
-- **수납** — `status='completed'`인 내원이 수납 대기에 뜸. 진료비는 `visit.visit_type`으로 정해짐(`newVisit` C01, `followUp` C02, `none` 0). **접수가 고른 값이 수납 화면 진료비 칸의 처음 값**(`Payment.jsx`가 `bi.visit_type`을 읽음 — 수납 코드 변경 없이). 수납 화면에서 바꾸면 `PUT /visits/:id`로 내원에 다시 씀. 청구가 생기면 접수 쪽 단추는 잠김. 접수가 대기 중 환자를 「Terminer →」로 보내면 `none`(진료비 0)으로 수납 대기에 뜸. 접수 화면의 미수·환불예정 배지는 `/billing/patient/:id/balance`.
+- **수납** — `status='completed'`인 내원이 수납 대기에 뜸. 진료비는 `visit.visit_type`으로 정해짐(`newVisit` C01, `followUp` C02, `none` 0). **접수가 고른 값이 수납 화면 진료비 칸의 처음 값**(`Payment.jsx`가 `bi.visit_type`을 읽음 — 수납 코드 변경 없이). 수납 화면에서 바꾸면 `PUT /visits/:id`로 내원에 다시 씀. 청구가 생기면 접수 쪽 단추는 잠김. 접수가 대기 중 환자를 「Terminer →」로 보내면 `none`(진료비 0)으로 수납 대기에 뜸. ⚠ 수납 대기(`/billing/pending`)는 청구 전 내원을 **`visit_date = CURRENT_DATE`인 것만** 보여 줌 — 작업일자로 지난 날의 「진료중」 내원을 완료로 정리해도 수납 목록에 뜨지 않음(수납 세션에 확인 요청, 2026-09-29). 접수 화면의 미수·환불예정 배지는 `/billing/patient/:id/balance`.
 - **약국 · 임상병리** — 환자 찾기 창(`PatientFinder`)과 `chart_no`로 환자를 찾음. 검사 결과는 `lab_result.visit_id`로 내원에 붙음.
 - **PACS** — 워크리스트가 `patient.chart_no`를 DICOM **PatientID**로, `date_of_birth`·`gender`를 그대로 장비에 보냄 (`worklist.routes.js` 70·85행, `pacs.routes.js` 159행). 차트번호가 바뀌면 영상과 환자의 연결이 끊어집니다.
 - **통계** — `visit`를 날짜 범위로 세서 총 내원, 초진(`newVisit`)/재진(`followUp`)/기타, 상태별, 진료과별, 의사별, 월별 추이를 냄 (`stats.routes.js` 28~55·146행). 2026-09-29부터 접수에서 초진/재진을 고르므로 수납 전에도 맞게 잡힘(그 전 기록은 수납 전까지 모두 `newVisit`이었음).
@@ -386,7 +408,7 @@
 | ⑦ | ✅ 고침 (보통) | 내원구분을 고르는 칸이 없어 모든 접수가 `newVisit`였다. → 단추 **초진 · 재진 · 진료비 없음**(실장님 결정 — 응급·의뢰 없음), 같은 과에 온 적 있으면 재진 제안, 청구 뒤 잠금, 수정 때는 바꿨을 때만 저장 | `Registration.jsx` `suggestedVisitType` · `visit.routes.js` `/today` | 화면 9가지(3절 흐름대로) |
 | ⑧ | ✅ 고침 — S2 (보통) | 환자·내원 API에 모듈 권한 검사가 없었다(로그인만 하면 약국·검사 계정도 인적사항 수정·내원 상태 변경 가능). → 2026-09-29 실장님 결정 S2로 라우트별 권한(4절 표). 수납 권한만 있는 계정은 `PUT /visits/:id`에서 `visit_type`만 | `patient.routes.js` · `visit.routes.js` | 시험 스크립트 114건 + 역할별 화면 |
 | ⑨ | ✅ 고침 (보통) | `PUT /visits/:id`는 `visit_type`·`status` 검사를 안 한다 (`POST`는 함). 잘못된 `visit_type`은 수납에서 `C01` 진료비로 조용히 계산됨. 또 `COALESCE` 때문에 담당의·진료과를 **비울 수 없음** | `visit.routes.js:103-118` vs `:68` · `billing.routes.js:28-30` | 코드 |
-| ⑩ | 보통 | 지난 날의 대기가 사라진다. `/visits/today`는 오늘 것만 보여줘서, 어제 `waiting`·`in_progress`로 남은 내원은 접수·진료 화면 어디에도 안 나오고 통계에는 「진행중」으로 계속 남음. 의도인지 **확인 필요** | `visit.routes.js:19` · `stats.routes.js:37` | 코드 |
+| ⑩ | ✅ 고침 — 실장님 결정 | 지난 날의 대기가 사라졌다(`/visits/today`는 오늘 것만) → 접수 화면 맨 위 왼쪽에 **작업일자**(◀ 날짜 ▶, 오늘로). 지난 날은 보기와 정리만. 자정을 넘기면 오늘을 보던 화면은 저절로 새 날로 | `Registration.jsx` 작업일자 · `visit.routes.js` `GET /day` | 시험 4건 + 화면(어제 목록·정리·오늘로·자정 흉내) |
 | ⑪ | ✅ 고침 (낮음) | 알림 문구 일부가 영어로 고정 — `' required'`, `'Error: '`, 서버 오류 원문. 1차에서 이름·생년월일·취소 불가·오류 접두어를, 이어서 ⑪ 마무리에서 완료·확인 창 문장, 생년월일 칸 `YYYY/MM/DD`(→ `AAAA/MM/JJ`), 서버 연결 실패·기록 없음·형식 오류를 번역. 남은 것: 표에 없는 드문 서버 오류는 「Erreur : 원문」 | `Registration.jsx` `errText`·`fill` | 화면 |
 | ⑫ | ✅ 고침 — 실장님 결정 (낮음) | 성별 기본값이 「남」이라 안 누르고 넘어가면 여자 환자가 남자로 저장됐다 → 안 눌린 상태로 시작, 안 고르면 저장 안 됨(`rc_genderRequired`) | `Registration.jsx` `emptyForm`·`patientToForm`·`formProblem` | 화면 — 한국어·프랑스어 |
 | ⑬ | ✅ 고침 (낮음) | 서버 검사는 성별 `O`를 허용하는데 DB는 `M`/`F`만이라 DB 오류가 났다. 같이: API로 `2020-02-30` 같은 없는 날짜를 보내면 `new Date()`가 3월 1일로 넘겨 통과시켜 500. → `GENDERS = ['M','F']`, 생년월일은 `YYYY-MM-DD`이고 달력에 있는 날이어야 함(총괄 허락, 총괄 파일 `utils/validate.js`). 총괄이 `dbError.js`에 22008도 넣음 | `validate.js` `badPatient` | 시험 스크립트 7건 |
@@ -395,7 +417,7 @@
 | ⑯ | ✅ 고침 (낮음) | 검색이 「성 이름」 순서로만 찾았고, 검색어의 `%` `_`가 와일드카드로 먹혔고, `limit`에 숫자가 아니면 500이었다 → 두 순서 모두, `%` `_`는 글자 그대로(ESCAPE `!`), `limit` 1~200·`offset`은 숫자로 읽고 아니면 기본값, 검색어의 겹친 공백 정리 | `patient.routes.js` `GET /` | 시험 스크립트 7건 + API |
 | ⑰ | ✅ 고침 (낮음) | 접수 대기 목록에 자동 새로고침이 없었다 (진료 화면은 15초마다). ②의 원인이기도 했음. → 30초마다, 탭이 보일 때만, 입력값 유지, 실패해도 목록 유지 | `Registration.jsx` `refreshQueue` | 화면 — 뒤에서 `in_progress`로 바꾸고 30초 뒤 탭 이동·취소 버튼 사라짐·쓰던 메모 유지, API 멈춤 중 502에도 목록 유지·알림 없음, 가려진 63초 동안 요청 0건 |
 | ⑱ | 낮음 | 차트번호 99,999번을 넘으면 등록이 대부분 실패한다. PostgreSQL `LPAD`는 긴 문자열을 **잘라서** `100000`→`10000`이 되어 같은 해 번호와 겹침. 작은 병원에서는 먼 이야기 | `001_schema.sql:336` | 코드 |
-| ⑲ | 낮음 | 환자 비활성화·중복 환자 합치기 기능이 없다. ③으로 생긴 중복 차트를 정리할 방법이 DB 직접 수정뿐 | `patient.is_active` 쓰는 곳 없음 | 코드 |
+| ⑲ | 하지 않음 (실장님 결정) | 환자 비활성화·중복 환자 합치기 기능 — 2026-09-29 실장님 결정으로 **만들지 않음**. 중복 차트는 ③·④의 동명이인 경고로 생기지 않게 막는 쪽으로. 그래도 생기면 DB 직접 수정(총괄) | `patient.is_active` 쓰는 곳 없음 | — |
 | ⑳ | ✅ 고침 — 실장님 결정 | 대기 중 환자의 「완료로 →」가 진료 없이 내원을 완료시켜 초진 진료비(C01)로 수납에 보냈다 → 단추는 남기되, 이 경로로 완료되면 내원구분을 **진료비 없음**으로(서버, 청구 전만). 누를 때 확인 창 | `visit.routes.js` `PUT /:id/status` · `Registration.jsx` `completeWithoutConsult` | 시험 스크립트 3건 + 화면 |
 | ㉑ | ✅ 고침 — 총괄 `7ad4387` (높음) | **날짜가 하루 이르게 나오고, 접수에서 저장하면 생년월일이 실제로 하루 당겨진다.** node-postgres가 DATE를 서버 시간대(`Indian/Antananarivo`, UTC+3) 자정의 `Date`로 읽고, JSON으로 내보낼 때 UTC로 바뀌어 `1990-05-03` → `"1990-05-02T21:00:00.000Z"`가 됨. 화면들은 `split('T')[0]`으로 앞부분만 써서 **5월 2일**로 표시. 접수 화면은 이 값을 그대로 입력칸에 넣으므로 환자를 불러 저장할 때마다 DB의 생년월일이 하루씩 앞으로 감. 같은 이유로 환자 찾기 창의 내원 날짜, 진료 화면 머리의 생년월일, **인쇄 문서의 생년월일·나이**(`shared.jsx` `fmtDate`·`calcAge`)도 하루 이름. 워크리스트는 `dicomDate`로 이미 고쳐져 있음(CHANGELOG 276행) | `config/database.js`(DATE 파서 없음) · `Registration.jsx` `fillPatient`·`selectVisit`의 `split('T')` · `PatientFinder.jsx:69` · `shared.jsx:12-21` | **화면** — DB `1990-05-03` → 화면 `1990-05-02` → 「환자 정보 저장」 → DB `1990-05-02`. 시간대가 UTC보다 동쪽인 모든 설치에서 일어남 |
 | ㉒ | ✅ 고침 — 총괄 `b01c6a0`, `proxy_connect_timeout 5s` (낮음) | 서버(백엔드)가 멈춘 채 nginx가 예전 주소를 기억하고 있으면, 저장 버튼이 **1분 가까이** 「Enregistrement…」로 멈춰 있다가 「Impossible de joindre le serveur」가 뜸 (nginx 기본 연결 대기 60초). nginx를 백엔드가 멈춘 뒤 새로 띄운 경우엔 바로 뜸. 버튼 잠금이 풀리니 데이터 문제는 없음. 줄이려면 `frontend/nginx.conf`에 `proxy_connect_timeout`(총괄 소관) | `frontend/nginx.conf` `location /api/` | 화면 — 격리 스택에서 API 컨테이너만 멈추고 저장 |
@@ -457,7 +479,8 @@
 | 2026-09-29 | 접수 권한이 없는 계정은 환자 등록·접수 불가, 수납 계정은 진료비 종류만, 권한이 빠지면 안내 (⑧ · S2) | 라우트별 `permMiddleware`, 시험 `backend/test/reception.api.mjs` (4절 권한 표) | `3e03fa4` |
 | 2026-09-29 | 내원구분 단추 초진·재진·진료비 없음, 같은 과면 재진을 골라 둠, 수납 뒤 잠김, 수정 때 수납이 바꾼 값을 덮지 않음 (⑦) | `suggestedVisitType()`, `visitTypeSource`, `/visits/today`의 `has_active_bill`, `/visits/patient`에 접수 권한 (3절) | `520706d` |
 | 2026-09-29 | 같은 이름 환자가 있으면 새 차트 전에 묻기(이 환자로 / 그래도 새로 / 취소), 오늘 이미 접수된 환자면 두 번째 접수 전에 묻기 (③ ④) | `GET /patients/similar`, `confirmNewPatient()`, `postVisit()`, `POST /visits` 409·`allow_duplicate` (3·4절) | `25a7fac` |
-| 2026-09-29 | 대기 중 환자를 「Terminer →」로 보내면 확인 뒤 진료비 없음으로 수납에 (⑳, 실장님 결정) | `PUT /visits/:id/status`의 `CASE`, `completeWithoutConsult()` (4절) | (이 커밋) |
+| 2026-09-29 | 접수 화면 맨 위 왼쪽에 작업일자 — 지난 날의 접수를 보고 정리(취소·완료), 새 접수는 오늘만, 자정이 지나면 저절로 새 날 (⑩, 실장님 결정) | `GET /visits/day`, `workRef`·`viewingPast`·`selIsPast` (3·4절) | (이 커밋) |
+| 2026-09-29 | 대기 중 환자를 「Terminer →」로 보내면 확인 뒤 진료비 없음으로 수납에 (⑳, 실장님 결정) | `PUT /visits/:id/status`의 `CASE`, `completeWithoutConsult()` (4절) | `079b0fb` |
 | 2026-09-29 | 성별이 안 눌린 상태로 시작, 안 고르면 저장 안 됨 (⑫, 실장님 결정) | `emptyForm.gender = ''`, `formProblem()`, `rc_genderRequired` | `c135972` |
 | 2026-09-29 | 생년월일을 월부터 쳐도 칸이 섞이지 않음 (⑭), 같은 이름 경고가 악센트만 다른 이름(Hélène/Helene)도 찾음 | `DobInput` `emit`, `/patients/similar`의 `FOLD()` | `19ae811` |
 | 2026-09-29 | API가 성별 `O`·없는 날짜(2월 30일)·`1990-5-3` 같은 모양을 분명한 400으로 거절. 화면 동작은 그대로(원래 저장 전에 막음) (⑬) | 총괄 파일 `utils/validate.js` `GENDERS`·`badPatient`(허락), 화면 `errText`에 22008 문구 | `ec8559c` |

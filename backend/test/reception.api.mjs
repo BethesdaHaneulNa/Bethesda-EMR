@@ -109,6 +109,7 @@ const ROUTES = [
   ['POST', '/patients', { last_name: 'Permission', first_name: 'Created' }, ['registration']],
   ['PUT', '/patients/' + P.id, { last_name: 'Permission', first_name: 'Test' }, ['registration']],
   ['GET', '/visits/today', null, ['registration', 'consultation']],
+  ['GET', '/visits/day', null, ['registration']],
   ['GET', '/visits/patient/' + P.id, null, ['registration', 'consultation', 'lab', 'payment']],
   // allow_duplicate: the test patient is registered again and again today
   ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, ['registration']],
@@ -182,6 +183,17 @@ const one = await call('GET', '/patients?limit=1', null, A);
 check('⑯ limit=1 returns at most one', one.status === 200 && one.data.length <= 1);
 const huge = await call('GET', '/patients?limit=100000', null, A);
 check('⑯ limit is capped at 200', huge.status === 200 && huge.data.length <= 200);
+
+// ── ⑩ work date: /visits/day answers with the day it shows and the server's today ──
+const wd0 = await call('GET', '/visits/day', null, A);
+check('⑩ /visits/day without a date is today', wd0.status === 200 && wd0.data.date === wd0.data.today && /^\d{4}-\d{2}-\d{2}$/.test(wd0.data.today) && Array.isArray(wd0.data.visits), { status: wd0.status, date: wd0.data && wd0.data.date });
+check('⑩ today\'s list carries visit_date and has_active_bill', wd0.data.visits.every(v => String(v.visit_date).slice(0, 10) === wd0.data.today && 'has_active_bill' in v));
+const y = new Date(wd0.data.today + 'T00:00:00'); y.setDate(y.getDate() - 1);
+const yd = y.toLocaleDateString('en-CA');
+const wd1 = await call('GET', '/visits/day?date=' + yd, null, A);
+check('⑩ /visits/day?date=yesterday shows that day and still says what today is', wd1.status === 200 && wd1.data.date === yd && wd1.data.today === wd0.data.today && wd1.data.visits.every(v => String(v.visit_date).slice(0, 10) === yd), { date: wd1.data && wd1.data.date });
+const wd2 = await call('GET', '/visits/day?date=29-09-2026', null, A);
+check('⑩ a date not in YYYY-MM-DD form → 400', wd2.status === 400, { status: wd2.status });
 
 // ── ⑳ waiting → completed without a consultation becomes "no fee"; in progress → completed keeps its type ──
 const P20 = (await call('POST', '/patients', { last_name: 'Complete', first_name: 'Direct' + Date.now(), gender: 'F' }, A)).data;

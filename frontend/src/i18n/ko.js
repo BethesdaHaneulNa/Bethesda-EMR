@@ -301,6 +301,13 @@ export default {
   rc_visitCancelled: "접수 취소",
   rc_genderRequired: "성별을 고르세요 (남 / 여).",
   rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌어 수납으로 넘어갑니다. 계속할까요?",
+  rc_workDate: "작업일자",
+  rc_prevDay: "하루 전",
+  rc_nextDay: "하루 뒤",
+  rc_backToToday: "오늘로",
+  rc_queueOfDate: "대기 / 완료 — {date}",
+  rc_pastDateBanner: "지난 날짜({date})를 보는 중입니다. 보기와 정리(대기 취소·완료로)만 되고, 새 접수와 접수 수정은 오늘 날짜에서 합니다.",
+  rc_pastDateNoNew: "지난 날짜의 접수는 새로 만들거나 고칠 수 없습니다. 「오늘로」를 눌러 오늘 날짜에서 접수하세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",
