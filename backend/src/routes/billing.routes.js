@@ -307,6 +307,20 @@ router.post('/', canPay, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'change_amount, outstanding and payment_status must follow from total_due and amount_paid' });
     }
+    // The totals must add up to the lines (M3). The screen computes them from the
+    // same lines, so a real payment always passes; a request whose figures disagree
+    // (a stale or hand-made one) would otherwise store a total no line explains.
+    // This checks, it does not recompute: nothing a valid request sends is changed.
+    const lines = Array.isArray(items) ? items : [];
+    const lineSum = lines.reduce(function (s, it) { return s + (parseFloat(it.total_price) || 0); }, 0);
+    const sub = parseFloat(subtotal) || 0;
+    const partsSum = (parseFloat(consult_fee) || 0) + (parseFloat(drug_total) || 0) + (parseFloat(procedure_total) || 0);
+    const dueFromParts = Math.max(0, sub - (parseFloat(discount_amount) || 0) + (parseFloat(previous_balance) || 0));
+    if (Math.abs(lineSum - sub) > 0.5 || Math.abs(partsSum - sub) > 0.5 || Math.abs(due - dueFromParts) > 0.5 ||
+        lines.some(function (it) { return Math.abs((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0) - (parseFloat(it.total_price) || 0)) > 0.5; })) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'items, subtotal and total_due do not add up' });
+    }
 
     const visitRes = await client.query('SELECT patient_id FROM visit WHERE id = $1', [visit_id]);
     if (!visitRes.rows.length || String(visitRes.rows[0].patient_id) !== String(patient_id)) {

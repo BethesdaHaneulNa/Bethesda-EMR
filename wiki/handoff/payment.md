@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 7절 중 결정 없이 되는 것 정리 (M3 · L1 · L4 · L5 · L6 · L8)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop `a264315` merge
+- **한 일** — 금액 계산은 바꾸지 않음:
+  - **M3** `POST /api/billing`: 합계가 줄과 맞는지 **검사만**(다시 계산 안 함) — 항목 합 = 소계, 진료비+약+처치 = 소계, 총액 = max(0, 소계 − 할인 + 이전 미수), 줄 금액 = 수량 × 단가, 0.5 Ar 허용, 아니면 400. 화면은 같은 줄에서 계산하므로 정상 수납은 그대로.
+  - **L1** 화면에 남은 영어: 「Amount insufficient」 → `py_amountInsufficient`, 목록의 「+ Outstanding」 → 기존 `prevOutstanding`, 「No items」·Code·Date·Status → `py_noItems`·`py_code`·`py_date`·`py_status`, 상태 배지 → `py_stPaid` 등(취소는 회색으로 따로).
+  - **L4** 내원 종류 저장(`PUT /visits`)을 **수납이 저장된 뒤**로 옮김 — 거절된 수납이 내원 종류만 바꿔 놓지 않게.
+  - **L5** 마이그레이션 **`backend/sql/301_payment_billing_visit_index.sql`** — `billing(visit_id)` 인덱스만(데이터 변경 없음, 두 번 돌려도 됨).
+  - **L6** 「수납 완료」 버튼 건수에서 취소 영수 제외(목록에는 그대로).
+  - **L8** `refundDue()`·`Section` 삭제. 할인 `percent` 경로는 금액 함수 안이라 남김.
+  - 손대지 않은 것: M6(재수납 기본 금액)·M8(목록 환불 예정 금액)·L2(진료비 기본값)·L7(미수 내원 목록 동작)은 돈 기본값·목록 동작이 바뀌어 결정 필요, L9 화면 폭·L10 동등한 계산식은 그대로.
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `frontend/src/pages/Payment.jsx`, `backend/sql/301_payment_billing_visit_index.sql`(새)
+- **공용 파일 변경**: `i18n` ko·en·fr — `py_amountInsufficient`·`py_noItems`·`py_code`·`py_date`·`py_status`·`py_stPaid`·`py_stPartial`·`py_stUnpaid`·`py_stCancelled`·`py_stWaived`·`py_stWaiting`
+- **DB 마이그레이션**: `301_payment_billing_visit_index.sql`(인덱스 1개) — 격리 스택에서 적용 확인(`[migrate] applying 301_…`, `idx_bill_visit` 있음)
+- **확인한 방법**: `node --check`, 빌드. 격리 스택 9183:
+  - M3: 맞는 수납 201 / 소계 < 항목 합 · 총액 ≠ 소계−할인+이전미수 · 진료비+약+처치 ≠ 소계 · 줄 금액 ≠ 수량×단가 → 모두 400.
+  - 오늘의 회귀 전부 다시: 중복 수납(H1), 정정·미수 처리(S2~S11), 총량 없음(Q1~Q4), 취소 오더(C1~C4b), 미수 수납(A0·①~⑦, 방문 3개), 변경 기록 — 틀린 항목 0.
+  - ⚠ 테스트 스크립트를 오늘 develop에 맞게 고침(코드 아님): 진료 서버가 이제 약 총량을 「하루 총량 × 일수」로 직접 계산하므로 테스트 처방을 dose = 하루 총량으로, 접수가 같은 날 두 번째 내원을 확인 없이는 막으므로(`allow_duplicate`) 테스트가 확인을 보냄, 총량 없는 처방은 API로 못 만들어져 격리 DB에서 비움.
+- **확인 못 한 것**: 화면에서 L1 문구를 눌러 보지는 않음(키·빌드만). 
+- **위키**: `modules/payment.md` 3.8, 7절(M3·L1·L4·L5·L6·L8 닫음), 8절
+- **다른 세션에 부탁**:
+  - **진료** — `PUT /consultations/prescription/:id`는 용량·횟수·일수가 **바뀔 때만** 총량을 다시 계산합니다(옛 내원을 클릭만 해도 바뀌지 않게 — 좋은 설계). 그런데 그래서 **총량이 비어 있는 줄은 값을 안 바꾸고 다시 저장해도 계속 비어 있습니다**(격리 스택에서 확인: 200, `total_qty` null). 수납의 「총량 없음」 안내는 「진료실에서 다시 저장」을 권하므로, CASE에 `OR total_qty IS NULL`을 더해 주시면 안내대로 풀립니다. 실행 중 EMR에는 그런 줄이 0건이고 새 처방은 항상 계산되므로 급하지 않음.
+
 ## 2026-09-29 — 미리 보기: ⑭ 오더 청구를 「수량 × 일수」로 바꿀 때 수납이 볼 곳 (코드 전, 총괄 예고)
 
 - **상태**: 보류 — 진료 세션 설계 메모가 오면 시작 (코드 변경 없음)
