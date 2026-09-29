@@ -59,7 +59,7 @@
    | Rôle (역할) | 기본으로 체크되는 권한 |
    |---|---|
    | **Accueil** (접수) | Enregistrement (접수) · **Paiement (수납)** |
-   | **Médecin** (의사) | Consultation (진료) |
+   | **Médecin** (의사) | Consultation (진료) · **Pharmacie (약국)** — 2026-09-29 실장님 결정(약사가 없어서). 첫 화면은 그대로 진료. **이미 있는 의사 계정은 바뀌지 않습니다** — 필요하면 그 계정의 Modifier에서 Pharmacie를 체크 |
    | **Pharmacie** (약국) | Pharmacie (약국) |
    | **Laboratoire** (검사실) | Laboratoire (임상병리) |
    | **Infirmier(ère)** (간호사) | **Enregistrement (접수) · Pharmacie (약국) · Laboratoire (임상병리)** — 현장에는 약사가 없고 간호사가 조제와 검사를 함께 합니다. 접수는 환자 차트를 보려고 넣었습니다(2026-09-29 실장님 결정). **주의**: 접수 권한은 차트 보기만이 아니라 **환자 등록·수정, 내원 접수·취소까지** 모두 할 수 있습니다(화면 단위 권한이라 「보기만」은 없음) |
@@ -223,7 +223,7 @@
 
 ### 3-1. 권한 체계
 
-- **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`nurse`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`). **`nurse`(간호사)는 2026-09-29 추가** — 마다가스카르 현장에는 약사가 없고 간호사가 간호·조제·검사를 모두 하는데, 역할이 없어 간호사 계정을 「pharmacy」로 만들고 검사실 권한을 손으로 체크해야 했습니다. 기본 권한 `registration`+`pharmacy`+`lab`(2026-09-29 실장님 결정 — 접수는 환자 차트를 보려고. `permissions.js`·`modules.js` 한 줄씩). 기존 `pharmacy`·`lab` 역할은 그대로 둡니다. 역할 이름으로 동작이 갈리는 곳은 `doctor`(진료 목록 필터, 과장 선택)와 `admin`(잠금 방지)뿐이라 간호사는 권한 체크만으로 움직입니다. 상단바 아이콘은 💉(`TopBar.jsx`, 총괄). 로그인 뒤 처음 화면: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 마이그레이션은 합칠 때 `701` → **`020_settings_nurse_role.sql`** 로 번호가 바뀜.
+- **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`nurse`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`). **`nurse`(간호사)는 2026-09-29 추가** — 마다가스카르 현장에는 약사가 없고 간호사가 간호·조제·검사를 모두 하는데, 역할이 없어 간호사 계정을 「pharmacy」로 만들고 검사실 권한을 손으로 체크해야 했습니다. 기본 권한 `registration`+`pharmacy`+`lab`(2026-09-29 실장님 결정 — 접수는 환자 차트를 보려고. `permissions.js`·`modules.js` 한 줄씩). 기존 `pharmacy`·`lab` 역할은 그대로 둡니다. 역할 이름으로 동작이 갈리는 곳은 `doctor`(진료 목록 필터, 과장 선택)와 `admin`(잠금 방지)뿐이라 간호사는 권한 체크만으로 움직입니다. 상단바 아이콘은 💉(`TopBar.jsx`, 총괄). 로그인 뒤 처음 화면: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 마이그레이션은 합칠 때 `701` → **`020_settings_nurse_role.sql`** 로 번호가 바뀜. **역할 기본값이 쓰이는 곳은 두 군데뿐**입니다 — ① 직원 창에서 역할을 고를 때 자동 체크, ② 저장된 권한이 비어(NULL) 있는 계정. 모든 계정은 목록으로 저장되므로(013이 옛 계정도 채움), **기본값을 바꿔도 이미 있는 계정은 그대로**입니다(2026-09-29 의사 기본값에 약국을 더할 때 격리 스택에서 확인).
 - **권한(permissions)** 이 실제 접근을 정합니다: `staff.permissions TEXT[]`, 값은 `frontend/src/modules.js`의 `MODULES[].perm` 7개 — `registration` `consultation` `payment` `pharmacy` `lab` `stats` `settings`. 서버에는 이 목록이 **한 곳**에만 있습니다: `backend/src/middleware/permissions.js`의 `ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole` (2026-09-29, U9). `middleware/auth.js`·`admin.routes.js`(설치 관리자 고정)·`auth.routes.js`(첫 관리자 만들기)가 여기서 가져갑니다. 백엔드 이미지는 `backend/`만으로 빌드되어 `modules.js`를 불러올 수 없으므로 한 벌은 따로 둘 수밖에 없고, 대신 **`node backend/test/settings.permissions.mjs`** 가 두 목록(순서 포함)과 역할별 기본값이 같은지 확인합니다 — 설치·서버·DB 없이 파일 두 개만 읽음, 다르면 exit 1. **모듈을 추가하면 `modules.js`와 `permissions.js`를 같이 고치고 이 검사를 돌리세요.** (마이그레이션 `013`에도 같은 목록이 있지만 이미 적용된 파일이라 고치지 않습니다 — 옛 계정을 한 번 채우는 데만 쓰였음.)
 - 역할을 바꾸면 화면이 그 역할의 기본 권한으로 체크를 **덮어씁니다** (`Settings.jsx:659`). 권한이 `NULL`인 옛 계정은 역할 기본값으로 대신합니다(`effectivePerms`). 013 마이그레이션이 옛 계정을 채웠습니다.
 - **로그인 토큰(JWT)** 은 「누구인지」만 증명합니다. **권한·역할·상태는 요청마다 DB에서 읽습니다** (2026-09-29, S1 — 총괄이 `middleware/auth.js`에 구현). 비활성 계정은 다음 요청에서 401 「Account is inactive」 → 화면은 로그인 화면으로(`api/client.js`: 토큰을 보낸 401). 권한을 뺀 화면은 403 「Access denied」. 토큰 유효 12시간은 그대로. **화면 쪽 권한 사본**: 메뉴·라우트 가드는 로그인 때 `localStorage`(`medconnect_user`)에 저장한 권한을 쓰는데, 2026-09-29부터 `TopBar.jsx`(총괄)가 화면이 열릴 때·창으로 돌아올 때·5분마다 `GET /api/auth/me`로 다시 읽어 바뀌었으면 저장본을 고치고 메뉴를 다시 그립니다(U13 해결 — `/me`가 로그인 답과 같은 모양이라 맞물림). 라우트 가드는 **이동할 때** 새 값을 읽으므로, 권한을 뺀 화면을 보고 있던 사람은 옮길 때까지 그 화면에 남습니다.
@@ -513,4 +513,5 @@
 | 2026-09-29 | 약을 감출 때 그 약을 쓰는 약속처방 이름을 확인 창에(막지 않음) | `GET /admin/drugs/:id/order-sets`, `deleteItem` (4절) | `1f0f24d` |
 | 2026-09-29 | 이 변경 기록 정리, 다른 곳에서 고쳐진 S8·B9·B10 표시 | 위키만 | `4f9f84d` |
 | 2026-09-29 | 권한 시험 표에 새 라우트(이전 내원 접수, 재고 6개, 같은 환자 찾기) | `settings.access.mjs` | `b5e7f4c` · `8887333` |
-| 2026-09-29 | 설정에서 약을 저장해도 재고는 바뀌지 않음 — 재고는 약국 재고 기록으로만, 새 약은 0에서 시작 | `POST·PUT /admin/drugs`가 `stock_qty` 무시, H4 안전장치 삭제 (3-8) | (이 커밋) |
+| 2026-09-29 | 설정에서 약을 저장해도 재고는 바뀌지 않음 — 재고는 약국 재고 기록으로만, 새 약은 0에서 시작 | `POST·PUT /admin/drugs`가 `stock_qty` 무시, H4 안전장치 삭제 (3-8) | `73b0517` |
+| 2026-09-29 | 의사 역할을 고르면 진료·**약국**이 체크됨(결정). 이미 있는 의사 계정은 그대로 | `permissions.js`·`modules.js` 한 줄씩, 권한 시험 계정 11개 | (이 커밋) |

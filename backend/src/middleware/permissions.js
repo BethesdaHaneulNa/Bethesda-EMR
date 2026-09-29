@@ -17,7 +17,9 @@ const ALL_PERMS = Object.freeze(['registration', 'consultation', 'payment', 'pha
 const ROLE_DEFAULT_PERMS = Object.freeze({
   admin: ALL_PERMS,
   frontdesk: Object.freeze(['registration', 'payment']),
-  doctor: Object.freeze(['consultation']),
+  // Decided 2026-09-29: doctors also get pharmacy (there is no pharmacist). Only a new
+  // account or a role change picks this up; an account saved earlier keeps its own list.
+  doctor: Object.freeze(['consultation', 'pharmacy']),
   pharmacy: Object.freeze(['pharmacy']),
   lab: Object.freeze(['lab']),
   // No pharmacist at the clinic: nurses dispense and run the lab. Registration was

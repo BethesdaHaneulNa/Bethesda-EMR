@@ -17,7 +17,7 @@ export function defaultPermsForRole(role) {
   switch (role) {
     case 'admin': return MODULES.map(function (m) { return m.perm; });
     case 'frontdesk': return ['registration', 'payment'];
-    case 'doctor': return ['consultation'];
+    case 'doctor': return ['consultation', 'pharmacy'];   // decided 2026-09-29 (settings session)
     case 'pharmacy': return ['pharmacy'];
     case 'lab': return ['lab'];
     // No pharmacist at the clinic: nurses dispense and run the lab (settings session,
