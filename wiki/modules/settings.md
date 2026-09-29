@@ -177,6 +177,7 @@
 3. 줄: **Dossiers patients (base de donnees)** (환자 기록 · DB) · **Serveur de l'application** (앱 서버) · **Ecran de l'EMR** (EMR 화면) · **Espace disque** (디스크) · **Sauvegarde** (백업) · **Imagerie (PACS)** (영상) · **Liste de travail des appareils** (장비 워크리스트). 영상이 없는 병원은 **non installe (미설치)** 로 회색입니다.
 4. 줄의 상태 글자: **OK** 정상 · **ARRETE** 멈춤 · **DEMARRAGE** 시작 중 · **NE REPOND PAS** 응답 없음 · **ABSENT** 없음 · **INACCESSIBLE** 접속 안 됨.
    - **INACCESSIBLE** 옆에 「port 4242 bloque par Windows」 같은 글이 있으면 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용: `DEPLOYMENT.md` Windows 절).
+   - 노란 **A CORRIGER (고칠 것)** 줄 **Adresses de l'imagerie (Parametres)** (영상 주소, 2026-09-29): 설정 → **Flux d'ordres** 의 주소에 옛 포트(EMR **8080**, PACS 뷰어 **8090**)가 남아 있을 때만 나타납니다. 이대로면 진료실에서 영상이 열리지 않습니다. **Paramètres → Flux d'ordres** 에서 8080 → **9080**, 8090 → **9090** 으로 고치고 **Save** — 15초 안에 줄이 사라집니다. 값을 자동으로 바꾸지는 않습니다.
 5. 아래 버튼으로 언어를 바꿉니다 (Français → English → 한국어).
 
 ### 2.11 백업 검사 (담당자용, 서버 PC에서)
@@ -220,7 +221,7 @@
    - 옛 백업밖에 없을 때(연습에서 됨, **절차로 쓰기 전 실장님·총괄 확인 대기**): **새 PC의 빈 설치에서만** 복원 전에 DB를 비움 — `docker exec bethesda-emr-db psql -v ON_ERROR_STOP=1 -U medconnect -d medconnect -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"` → 위 복원 명령(종료 코드 0) → 앱 켜기 → 모자란 마이그레이션(연습 때 019~027, 9개)을 앱이 스스로 채움. **데이터가 있는 PC에서는 절대 하지 마세요** — 그 PC의 모든 것이 지워집니다.
    - 설치 뒤 **2분 넘게** 두었다가 복원하면, 그 사이 자동 백업이 **빈 DB**를 한 벌 만들어 둡니다. 해는 없지만 헷갈리지 않게 복원 뒤 **Sauvegarde** 목록에서 크기가 작은 첫 파일은 무시하세요.
 3. **로그인** — 이 PC에서 쓰던 `admin` 비밀번호로. (초기 설정 화면은 더 나오지 않음)
-4. **영상 주소 다시 적기** — 백업에는 **Flux d'ordres (오더 연동)** 의 주소 두 칸(EMR 주소, PACS 웹/뷰어 주소)이 **이 PC의 주소 그대로** 들어 있습니다(연습: `localhost:8080`·`localhost:8090` — 옛 예시대로 적힌 값). 새 PC의 주소(포트 **9080**·**9090**, 고정 IP)로 고쳐 **Sauver**. 브리지 토큰도 백업에서 넘어오므로 영상 쪽 짝 맞추기는 `wiki/02-before-departure.md` 대로.
+4. **영상 주소 다시 적기** — 백업에는 **Flux d'ordres (오더 연동)** 의 주소 두 칸(EMR 주소, PACS 웹/뷰어 주소)이 **이 PC의 주소 그대로** 들어 있습니다(연습: `localhost:8080`·`localhost:8090` — 6~7월 설치 때의 옛 안내대로 사람이 적은 값, PACS P-25). 옛 포트면 두 칸 아래와 서버 상태 창에 노란 경고가 뜹니다(2.10). 새 PC의 주소(포트 **9080**·**9090**, 고정 IP)로 고쳐 **Sauver**. 브리지 토큰도 백업에서 넘어오므로 영상 쪽 짝 맞추기는 `wiki/02-before-departure.md` 대로.
 5. **확인** — 다음이 이 PC와 같은지 봅니다: **Personnel** 직원 목록, **Médicaments** 약 가격·재고, **Codes d'actes**, **Établissement** 병원 정보, **Phrases types**. 연습 때는 백업 파일의 테이블 행 수가 모두 같았습니다(2차, 같은 버전 백업: 26개 모두 같음).
 6. **시험 계정·시험 데이터 정리** — 아래 「시험 데이터 — 선택지」에서 실장님이 고르신 대로. 시험 계정만이라면 **Personnel** 에서 시험 계정(`zz…`)마다 **Supprimer** → 확인. 지워지지 않고 **inactif** 로 남습니다(잘못 눌렀으면 관리자가 **Réactiver** — 2.5). 관리자 역할 시험 계정은 `admin`이 있으므로 비활성할 수 있습니다. (5개에 약 6초)
 7. **관리자 비밀번호 바꾸기** — **Personnel → admin 줄 Modifier → Mot de passe** 에 새 비밀번호 → **Sauver**. 칸의 흐린 글자 「Vide = inchangé」는 **비어 있다는 뜻**입니다(비워 두면 그대로). 바꾼 뒤 옛 비밀번호로는 로그인되지 않는 것을 확인. (1분 이내)
@@ -353,7 +354,8 @@
 | PACS | 컨테이너 `bethesda-pacs` (없으면 「미설치」) + **호스트 포트** (아래) | `pacs_config.worklist_scp_host`로 TCP 연결 |
 | 호스트 포트 (2026-09-29) | `bethesda-emr-web`·`bethesda-pacs`가 **게시하도록 설정된** 포트(`HostConfig.PortBindings` — 9080, 9090, 4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨」으로 바꾸고, `netsh interface ipv4 show excludedportrange protocol=tcp`의 예약 구간 안이면 「Windows가 막음」, 아니면 「닫힘」 | — (컨테이너 안에서는 알 수 없음) |
 | 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행. 60초 넘게 조용 → 빨강, `ok=false` → 빨강, `failed>0` → 노랑, **`detail.arrivals_error`가 있으면 노랑 `status.bridge.arrivals`** (2026-09-29, PACS P-20 — 아래) |
-| 화면 연결 | — | **아직 EMR 화면 어디에서도 부르지 않음**. 돌려주는 `status.*` 번역 키도 i18n에 없음 |
+| 영상 주소 (2026-09-29) | `docker exec bethesda-emr-db psql …`로 `pacs_config`의 두 주소를 읽어, 옛 포트면 노란 **A CORRIGER** 줄(없으면 줄 자체가 없음). DB가 OK일 때만 | `pacs_address`: 두 칸 모두 비면 off, `emr_base_url`의 포트가 8080이거나 `pacs_viewer_url`이 8090이면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok. 포트는 `스킴://호스트:포트` 모양에서만 읽음(`:80800`·`my8090host`는 해당 없음) |
+| 화면 연결 | — | **아직 EMR 화면 어디에서도 부르지 않음**. 돌려주는 `status.*` 번역 키도 i18n에 없음. 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
 
 - 2026-09-29, 이 PC의 실행 중 EMR에 대해 `server-status.ps1 -Console -Lang ko`를 **읽기만** 해서 돌려 봄: 7줄 모두 정상, 종료 코드 0. `/backups` 마운트 원본이 Windows 경로(`C:\Bethesda-EMR-main\backups`)로 잡히는 것 확인.
 - 디스크 검사는 **백업 드라이브**를 봅니다. `BACKUP_PATH`를 D:로 옮기면 DB가 있는 C:(Docker 디스크)는 보지 않습니다.
@@ -593,4 +595,5 @@
 | 2026-09-29 | 「Journal」에서 진료 기록 줄이 말로 읽힘(무엇을 고쳤는지, 칸 이름, 상태 값), 환자 수정 줄의 칸 목록도. 프랑스어 안내의 「ni les consultations」(→ 진료가 안 남는다고 읽힘)을 「ni les simples lectures」로 | `settingsAudit.js` 칸·값·`auditEntityText`·`auditSummary`, `se_` 44개 (3-10) | `139b9fc` |
 | 2026-09-29 | **누구나 자기 비밀번호를 바꿈** — 오른쪽 위 이름 → 「Changer mon mot de passe」, 지금 비밀번호 확인, 길이 제한 없음, 기록에 한 줄(값 없음) (S4 결정) | `POST /api/auth/password`, `settingsPassword.jsx`, `TopBar.jsx` 이름 한 줄, `settings.password.mjs` (2.2·3-3) | `34e8bc2` |
 | 2026-09-29 | 비활성 직원을 **Réactiver** 로 다시 활성 — 관리자만, 전과 같은 아이디·비밀번호·권한, 기록에 한 줄 (U2 결정) | `POST /admin/staff/:id/reactivate`, PUT 같은 규칙, `settings.reactivate.mjs` (2.5·4절) | `a6e0de8` |
-| 2026-09-29 | 11월 대비 복원 연습 2차: **옛 버전 백업은 문서 명령으로 복원되지 않음**(안전하게 멈춤) — 같은 버전으로 맞춰 가져가기, 빈 DB에 복원하는 길은 확인 대기. 영상 주소 두 칸이 백업과 함께 넘어감. 시험 데이터 선택지 A~D | 위키만(2.13·3-4) | (이 커밋) |
+| 2026-09-29 | 11월 대비 복원 연습 2차: **옛 버전 백업은 문서 명령으로 복원되지 않음**(안전하게 멈춤) — 같은 버전으로 맞춰 가져가기, 빈 DB에 복원하는 길은 확인 대기. 영상 주소 두 칸이 백업과 함께 넘어감. 시험 데이터 선택지 A~D | 위키만(2.13·3-4) | `d23067a` |
+| 2026-09-29 | 오더 연동 주소가 옛 포트(8080·8090)면 **설정 화면 두 칸 아래**와 **서버 상태 창**에 노란 경고(값은 바꾸지 않음) | `Settings.jsx` `oldPort`, `status.routes.js` `checkPacsAddresses`, `server-status.ps1` `Get-PacsAddressCheck` (2.10·3-6) | (이 커밋) |

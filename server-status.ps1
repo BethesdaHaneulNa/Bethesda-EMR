@@ -77,6 +77,10 @@ $T = @{
     portClosed = 'port {0} ferme'
     portReserved = 'port {0} bloque par Windows'
     advicePort = 'Windows bloque un port (ligne en rouge). Prevenez le responsable : DEPLOYMENT.md, partie Windows.'
+    pacsAddr = 'Adresses de l''imagerie (Parametres)'
+    stFix = 'A CORRIGER'
+    oldPort = 'ancien port {0} -> {1}'
+    adviceAddr = 'Ancienne adresse dans Parametres > Flux d''ordres : remplacez 8090 par 9090 et 8080 par 9080, puis enregistrez.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -113,6 +117,10 @@ $T = @{
     portClosed = 'port {0} not open'
     portReserved = 'port {0} held by Windows'
     advicePort = 'Windows is holding a port (red line). Tell the person in charge: DEPLOYMENT.md, Windows section.'
+    pacsAddr = 'Imaging addresses (Settings)'
+    stFix = 'TO FIX'
+    oldPort = 'old port {0} -> {1}'
+    adviceAddr = 'Old address in Settings > Order feed: change 8090 to 9090 and 8080 to 9080, then save.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -149,6 +157,10 @@ $T = @{
     portClosed = '{0} 포트 닫힘'
     portReserved = '{0} 포트를 Windows가 막음'
     advicePort = 'Windows가 포트를 막고 있습니다(빨간 줄). 관리자에게 알리세요: DEPLOYMENT.md의 Windows 절.'
+    pacsAddr = '영상 주소 (설정)'
+    stFix = '고칠 것'
+    oldPort = '옛 포트 {0} → {1}'
+    adviceAddr = '설정 → 오더 연동의 주소가 옛 포트입니다. 8090은 9090으로, 8080은 9080으로 고쳐 저장하세요.'
   }
 }
 
@@ -203,8 +215,35 @@ function Get-ComposeDir {
 }
 
 function New-Check {
-  param([string]$Key, [string]$State, [string]$Detail = '', [bool]$Port = $false)
-  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail; Port = $Port }
+  # Wide: the detail is a sentence for the wide column; the state column gets a short word.
+  param([string]$Key, [string]$State, [string]$Detail = '', [bool]$Port = $false, [bool]$Wide = $false)
+  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail; Port = $Port; Wide = $Wide }
+}
+
+# ------------------------------------------------------- imaging addresses
+#
+# The EMR moved from 8080 to 9080 and the PACS viewer from 8090 to 9090 (Windows
+# reserves the old ones). Addresses typed into Settings > Order feed from the old
+# instructions stay in the database - and travel with every backup - and the viewer
+# then does not open from the chart. This reads the two fields and warns; it changes
+# nothing. The EMR's own status check and the Settings screen say the same.
+# Returns $null when there is nothing to say (the row is then not shown at all).
+function Get-UrlPort {
+  param([string]$Url)
+  if ($Url -match '^[a-z]+://[^/:]+:(\d+)(/|$)') { return $Matches[1] }
+  return $null
+}
+function Get-PacsAddressCheck {
+  param($Strings)
+  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|',
+    '-c', 'SELECT coalesce(emr_base_url, ''''), coalesce(pacs_viewer_url, '''') FROM pacs_config WHERE id = 1')
+  if (-not $line) { return $null }
+  $parts = ([string]($line | Select-Object -First 1)) -split '\|', 2
+  $found = @()
+  if ((Get-UrlPort $parts[0].Trim()) -eq '8080') { $found += ($Strings.oldPort -f '8080', '9080') }
+  if ($parts.Count -gt 1 -and (Get-UrlPort $parts[1].Trim()) -eq '8090') { $found += ($Strings.oldPort -f '8090', '9090') }
+  if ($found.Count -eq 0) { return $null }
+  return New-Check 'pacsAddr' 'warn' ($found -join ', ') $false $true
 }
 
 # ------------------------------------------------------------ host ports
@@ -375,6 +414,11 @@ function Get-AllChecks {
     (Get-BackupCheck -Strings $Strings -BackupPath $backupPath),
     $checks['pacs'], $checks['bridge']
   )
+  # Only while the database answers; a row appears only when an address is old.
+  if ($checks['db'].State -eq 'ok') {
+    $addr = Get-PacsAddressCheck -Strings $Strings
+    if ($addr) { $ordered += $addr }
+  }
 
   $rank = @{ ok = 0; off = 0; warn = 1; down = 2 }
   $overall = 'ok'
@@ -400,6 +444,7 @@ function Get-Advice {
     if ($c.State -eq 'warn') {
       if ($c.Key -eq 'disk') { return $Strings.adviceDisk }
       if ($c.Key -eq 'backup') { return $Strings.adviceBackup }
+      if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
       return $Strings.adviceDown
     }
   }
@@ -527,14 +572,14 @@ function Update-Window {
 
     $state = New-Object System.Windows.Forms.Label
     # A port problem has a long explanation; it goes in the wide column, not this one.
-    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } elseif ($c.Port) { $s.stNoPort } else { $c.Detail }
+    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } elseif ($c.Port) { $s.stNoPort } elseif ($c.Wide) { $s.stFix } else { $c.Detail }
     $state.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
     $state.ForeColor = $color
     $state.Dock = 'Fill'
     $state.TextAlign = 'MiddleLeft'
 
     $detail = New-Object System.Windows.Forms.Label
-    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off' -or $c.Port) { $c.Detail } else { '' }
+    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off' -or $c.Port -or $c.Wide) { $c.Detail } else { '' }
     $detail.Font = New-Object System.Drawing.Font('Segoe UI', 9)
     $detail.ForeColor = [System.Drawing.Color]::FromArgb(90, 90, 90)
     $detail.Dock = 'Fill'

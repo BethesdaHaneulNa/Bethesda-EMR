@@ -787,6 +787,8 @@ export default {
   se_reactivate: "다시 활성",
   se_confirmReactivate: "{name} 계정을 다시 활성으로 바꿀까요? 전과 같은 아이디·비밀번호·권한으로 다시 로그인할 수 있습니다.",
   se_errReactivateAdmin: "비활성 직원을 다시 활성으로 바꾸는 것은 관리자만 할 수 있습니다.",
+  se_oldEmrPort: "옛 주소입니다(포트 8080). EMR은 이제 9080입니다 — 주소의 8080을 9080으로 바꾸고 저장하세요.",
+  se_oldViewerPort: "옛 주소입니다(포트 8090). PACS 뷰어는 이제 9090입니다 — 주소의 8090을 9090으로 바꾸고 저장하세요. 이대로면 진료실에서 영상이 열리지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

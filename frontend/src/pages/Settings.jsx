@@ -95,6 +95,11 @@ export default function SettingsPage() {
   // Same rule the server enforces (backend/src/routes/pacs.token.js) -- shown here
   // so the warning appears while typing, not after the devices go quiet.
   function pacsTokenUsable(v){ v=String(v||''); return v.length>=16 && v!=='change-me-bridge-token'; }
+  // The EMR moved 8080 -> 9080 and the PACS 8090 -> 9090 (Windows reserves the old ones).
+  // An address typed from the old instructions stays in pacs_config and the viewer does
+  // not open, so say so. Warn only - the value is not changed for anyone (settings session,
+  // 2026-09-29; the server status check says the same: status.routes.js).
+  function oldPort(url, port){ var m=String(url||'').trim().match(/^[a-z]+:\/\/[^\/:]+:(\d+)(\/|$)/i); return !!m && m[1]===String(port); }
   function pacsTokenShown(v){ return showBridgeToken ? (v||'') : '••••••••'; }
 
   async function savePacs(){
@@ -603,6 +608,7 @@ export default function SettingsPage() {
                 {!pacsTokenUsable(pacsConfig.bridge_token)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.px_tokenUnusable}</div>:null}
                 <Fld label={t.emrPublicUrl}>
                   <input placeholder={t.egUrl} value={pacsConfig.emr_base_url||''} onChange={function(e){up('emr_base_url',e.target.value)}} style={IS}/>
+                  {oldPort(pacsConfig.emr_base_url,8080)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldEmrPort}</div>:null}
                 </Fld>
                 <div className="pressable" onClick={function(){up('auto_create_worklist',!pacsConfig.auto_create_worklist)}} style={{marginTop:8,display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
                   <div style={{width:14,height:14,borderRadius:3,border:pacsConfig.auto_create_worklist?'2px solid #10b981':'2px solid #2a3142',background:pacsConfig.auto_create_worklist?'#10b981':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{pacsConfig.auto_create_worklist?<span style={{color:'#fff',fontSize: 12}}>✓</span>:null}</div>
@@ -622,7 +628,8 @@ export default function SettingsPage() {
                   <Fld label={(t.dicomPort||'DICOM Port')}><input type="number" value={pacsConfig.worklist_scp_port||4242} onChange={function(e){up('worklist_scp_port',Number(e.target.value))}} style={IS}/></Fld>
                 </div>
                 <Fld label="AE Title"><input value={pacsConfig.worklist_scp_ae||''} onChange={function(e){up('worklist_scp_ae',e.target.value)}} style={IS}/></Fld>
-                <div style={{marginTop:8}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')}><input placeholder="http://NAS_IP:9090" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
+                <div style={{marginTop:8}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')}><input placeholder="http://NAS_IP:9090" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/>
+                  {oldPort(pacsConfig.pacs_viewer_url,8090)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
                   <button onClick={function(){testPacs('worklist')}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
                   {pacsConfig.pacs_viewer_url?<a href={pacsConfig.pacs_viewer_url} target="_blank" rel="noreferrer" style={{background:'#1e2433',color:'#a78bfa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13,textDecoration:'none'}}>🖼 {t.openViewer||'뷰어 열기'}</a>:null}
