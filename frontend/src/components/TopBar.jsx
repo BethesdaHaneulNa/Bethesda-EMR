@@ -70,7 +70,11 @@ export function TopBar() {
     }
     sync();
     var i = setInterval(function () { if (!document.hidden) sync(); }, 300000);
-    return function () { clearInterval(i); };
+    // Coming back to the window is when someone has usually just been told
+    // "I gave you the permission, look again".
+    function onVisible() { if (!document.hidden) sync(); }
+    document.addEventListener('visibilitychange', onVisible);
+    return function () { clearInterval(i); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   useEffect(function () {
