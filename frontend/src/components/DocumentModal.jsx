@@ -216,6 +216,26 @@ export function DocumentModal(props) {
                   <label style={{ display: 'block', fontSize: 12, color: t2, marginBottom: 3 }}>{L(f.label, lang)}</label>
                   {f.type === 'textarea'
                     ? <textarea value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} rows={f.rows || 3} style={{ width: '100%', boxSizing: 'border-box', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+                    : f.type === 'checks'
+                    /* Operation notes are mostly a fixed set of findings the surgeon picks from
+                       (hernia type, appendicitis type, drain site). Typing those out every time is
+                       slower and spells them differently each time, which makes them useless to
+                       count later. Selections are stored as one comma-joined string so the saved
+                       document, the print layout and the history list all keep working unchanged. */
+                    ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, padding: '7px 9px' }}>
+                        {(f.options || []).map(function (opt) {
+                          var cur = String(values[f.key] || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                          var on = cur.indexOf(opt) >= 0;
+                          return <label key={opt} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12.5, color: on ? tx : t2, whiteSpace: 'nowrap' }}>
+                            <input type="checkbox" checked={on} onChange={function () {
+                              var next = on ? cur.filter(function (x) { return x !== opt; })
+                                            : f.options.filter(function (o) { return cur.indexOf(o) >= 0 || o === opt; });
+                              setField(f.key, next.join(', '));
+                            }} />
+                            {opt}
+                          </label>;
+                        })}
+                      </div>
                     : <input value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
                 </div>;
               })}
