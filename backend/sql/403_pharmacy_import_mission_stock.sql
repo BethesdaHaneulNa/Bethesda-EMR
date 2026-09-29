@@ -4,14 +4,16 @@
 -- Do not edit by hand: change the table or the script and generate again.
 --
 -- Decision of 2026-09-29 (wiki/handoff/coordinator.md, "가져올 약 결정"):
--- * 101 drugs go in with name, ingredient, form and category. Price 0 and no default
---   daily total or days: those are filled on site (the pharmacy and the bill show
---   "no total" / "no price" until then). Times a day and posology code come from the
---   old program's own posology where it named one clear code.
+-- * 101 drugs go in with name, ingredient, form and category. Price 0, filled on
+--   site (the bill shows "no price" until then).
+-- * Decision B: a drug has no default dose / times / days / posology - the order sets
+--   carry the dosing. The columns are not dropped: daily total and days stay empty,
+--   and the times a day and posology code read from the old program's own posology
+--   (where it named one clear code) are kept as they are but not used.
 -- * Stock = the quantity of the 2026-05-15 list (total 106467); each drug gets one
 --   "opening" row in the stock record with its own memo, so it is not mistaken for a
 --   count adjustment. Counted again on site.
--- * 64 drugs still have something to check (quantity differing from the old note,
+-- * 63 drugs still have something to check (quantity differing from the old note,
 --   same name under two codes, form, pack unit...). They go in as they are with the list
 --   in import_check; the Stock tab and the settings drug tab show it until someone marks
 --   it checked (import_check_done_at / _by). The list itself is kept.
@@ -70,9 +72,9 @@ VALUES
   ('MED-0062', 'Bonaling-A Tab', 'Dimenhydrinate 51mg', 'Antihistamine', 'Tablet', NULL, 2, NULL, 'BID', 0, 500, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0061"},{"k":"qty","d":"1,001정 ≈ 1001 ≠ 500"}]'::jsonb),
   ('MED-0063', 'Peniramin Tab 2mg', '(Chlorpheniramine Maleate) 2mg', 'Antihistamine', 'Tablet', NULL, 1, NULL, 'QD', 0, 1000, 0, FALSE, NULL, '[{"k":"qty","d":"1,700정 ≈ 1700 ≠ 1000"}]'::jsonb),
   ('MED-0065', 'Prednisolone 5mg Tab', 'Prednisolone 5mg', 'Corticosteroid', 'Tablet', NULL, NULL, NULL, NULL, 0, 4500, 0, FALSE, NULL, '[{"k":"qty","d":"4900 ≈ 4900 ≠ 4500"}]'::jsonb),
-  ('MED-0066', 'Metronidazole vaginal gel 5g', '(Metronidazole)', 'Gynecology', 'Vaginal / Gel', NULL, 2, NULL, 'BID', 0, 98, 0, TRUE, 'tube', '[{"k":"qty","d":"100개 ≈ 100 ≠ 98"},{"k":"posology","d":"1_2T BID"}]'::jsonb),
-  ('MED-0068', 'Amoxicillin 500mg', 'Amoxicillin 500mg', 'Antibiotic', 'Capsule', NULL, 2, NULL, 'BID', 0, 2000, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0069"},{"k":"qty","d":"650캡슐 ≈ 650 ≠ 2000"},{"k":"review"},{"k":"posology","d":"1_2T BID"}]'::jsonb),
-  ('MED-0069', 'Amoxicillin 500mg', 'Amoxicillin 500mg', 'Antibiotic', 'Capsule', NULL, 2, NULL, 'BID', 0, 2500, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0068"},{"k":"qty","d":"1,000캡슐 ≈ 1000 ≠ 2500"},{"k":"review"},{"k":"posology","d":"1_2T BID"}]'::jsonb),
+  ('MED-0066', 'Metronidazole vaginal gel 5g', '(Metronidazole)', 'Gynecology', 'Vaginal / Gel', NULL, 2, NULL, 'BID', 0, 98, 0, TRUE, 'tube', '[{"k":"qty","d":"100개 ≈ 100 ≠ 98"}]'::jsonb),
+  ('MED-0068', 'Amoxicillin 500mg', 'Amoxicillin 500mg', 'Antibiotic', 'Capsule', NULL, 2, NULL, 'BID', 0, 2000, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0069"},{"k":"qty","d":"650캡슐 ≈ 650 ≠ 2000"},{"k":"review"}]'::jsonb),
+  ('MED-0069', 'Amoxicillin 500mg', 'Amoxicillin 500mg', 'Antibiotic', 'Capsule', NULL, 2, NULL, 'BID', 0, 2500, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0068"},{"k":"qty","d":"1,000캡슐 ≈ 1000 ≠ 2500"},{"k":"review"}]'::jsonb),
   ('MED-0071', 'Flasinyl Tab', 'Metronidazole', 'Antibiotic', 'Tablet', NULL, 3, NULL, 'TID', 0, 800, 0, FALSE, NULL, '[{"k":"qty","d":"1,000정 ≈ 1000 ≠ 800"}]'::jsonb),
   ('MED-0073', 'Albendazole 400mg', 'Albendazole 400mg', 'Antiparasitic', 'Tablet', NULL, NULL, NULL, NULL, 0, 550, 0, FALSE, NULL, '[{"k":"qty","d":"990정 ≈ 990 ≠ 550"},{"k":"review"}]'::jsonb),
   ('MED-0076', 'Zelcome', 'Flubendazole 500mg', 'Antiparasitic', 'Tablet', NULL, 1, NULL, 'QD', 0, 32, 0, FALSE, NULL, '[{"k":"qty","d":"2정*8 ≈ 16 ≠ 32"}]'::jsonb),
@@ -84,9 +86,9 @@ VALUES
   ('MED-0082', 'Magmil Tab', 'Magnesium hydroxide', 'GI', 'Tablet', NULL, NULL, NULL, NULL, 0, 500, 0, FALSE, NULL, '[{"k":"qty","d":"900정 ≈ 900 ≠ 500"}]'::jsonb),
   ('MED-0083', 'Neutech Tab', 'Aloe 2mg caffeine hydrate 20mg Chlorpheniramine mileate 2mg Ethyl ampinobenzoate30mg Nicotinamide20mg Papaverine hydrochloryde Riboflavin Thiamine Hydrochoride 10mg', 'Cardiovascular', 'Tablet', NULL, NULL, NULL, NULL, 0, 2000, 0, FALSE, NULL, '[{"k":"qty","d":"90정*54 ≈ 4860 ≠ 2000"}]'::jsonb),
   ('MED-0084', 'Pansidil Cap', 'Calcium Pantothenate 60mg Keratine L Cystine 20mg medicinal yeast 100mg P Aminobenzoic Acid 20mg Thiamine Nitrate 60mg', 'Dermatology', 'Capsule', NULL, 3, NULL, 'TID', 0, 7290, 0, FALSE, NULL, '[{"k":"qty","d":"180정*20 ≈ 3600 ≠ 1890"},{"k":"qty","d":"180정*20 ≈ 3600 ≠ 1800"}]'::jsonb),
-  ('MED-0086', 'Feramine Q Tab', 'Cimicifuga Rhizome Extract 0,0364 Ml Saint john ''S Wort 80% MEthanol dried extract', 'Gynecology', 'Tablet', NULL, 2, NULL, 'BID', 0, 4260, 0, FALSE, NULL, '[{"k":"qty","d":"180정*17 ≈ 3060 ≠ 1200"},{"k":"posology","d":"1_2T BID"}]'::jsonb),
+  ('MED-0086', 'Feramine Q Tab', 'Cimicifuga Rhizome Extract 0,0364 Ml Saint john ''S Wort 80% MEthanol dried extract', 'Gynecology', 'Tablet', NULL, 2, NULL, 'BID', 0, 4260, 0, FALSE, NULL, '[{"k":"qty","d":"180정*17 ≈ 3060 ≠ 1200"}]'::jsonb),
   ('MED-0087', 'Caritopotene Soft Cap', 'Cucurbit Semen Oil Ext', 'Urology', 'Capsule', NULL, 2, NULL, 'BID', 0, 2860, 0, FALSE, NULL, '[{"k":"qty","d":"60정*44 ≈ 2640 ≠ 2460"},{"k":"qty","d":"60정*44 ≈ 2640 ≠ 400"}]'::jsonb),
-  ('MED-0088', 'Insandol Tab', 'Titrated Ext of the Unsaponifiable Fraction Of the Zea mays L 35mg', 'Other', 'Tablet', NULL, 3, NULL, 'TID', 0, 6000, 0, FALSE, NULL, '[{"k":"posology","d":"1_2T TID"}]'::jsonb),
+  ('MED-0088', 'Insandol Tab', 'Titrated Ext of the Unsaponifiable Fraction Of the Zea mays L 35mg', 'Other', 'Tablet', NULL, 3, NULL, 'TID', 0, 6000, 0, FALSE, NULL, NULL),
   ('MED-0090', 'Beecom tab', 'Ascorbic Acid Calcium Pantothenate 61mg Cyanocobalami D biotin', 'Vitamin', 'Tablet', NULL, NULL, NULL, NULL, 0, 0, 0, FALSE, NULL, '[{"k":"zero"}]'::jsonb),
   ('MED-0091', 'Hemorex 35mg', 'Pramoxine Hydrochloride 10mg', 'Dermatology', 'Tablet', NULL, NULL, NULL, NULL, 0, 18, 0, FALSE, NULL, '[{"k":"topical"}]'::jsonb),
   ('MED-0093', 'Madecassol', 'Titrated Ext of Centella', 'Dermatology', 'Tablet', NULL, NULL, NULL, NULL, 0, 209, 0, FALSE, NULL, '[{"k":"dup","d":"MED-0094, MED-0095"},{"k":"topical"}]'::jsonb),

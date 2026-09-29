@@ -559,7 +559,6 @@ export default {
   ph_chk_cat: "분류 확인",
   ph_chk_malaria: "말라리아약 — 의사 확인",
   ph_chk_topical: "정으로 되어 있으나 외용약(연고·크림)일 수 있음 — 포장 단위도",
-  ph_chk_posology: "옛 용법 「1_2」의 뜻(½? 1~2?)",
   ph_chk_packlabel: "포장 단위 말(통? 병?)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──

@@ -6,8 +6,13 @@
 //   node wiki/reference/drug-import-sql.js
 //
 // Decision of 2026-09-29 (wiki/handoff/coordinator.md, "가져올 약 결정"):
-// - the drug items go in (name, ingredient, form, category); price and daily total
-//   stay empty; the 25 example drugs are hidden;
+// - the drug items go in (name, ingredient, form, category); the price stays empty
+//   (0, filled on site); the 25 example drugs are hidden;
+// - decision B (same night): a drug has no default dose / times / days / posology any
+//   more - the order sets carry the dosing. The columns stay in the table; the daily
+//   total and days are left empty, and the times a day and posology code read from the
+//   old program (where it named one clear code) are kept but not used. The old
+//   posology's "1_2" is therefore not a point to check;
 // - stock = the quantity of the 2026-05-15 list, written to the stock record as an
 //   "opening" row with its own memo (not a count adjustment);
 // - nothing stops on a row that still has something to check: the row goes in as it
@@ -81,7 +86,7 @@ function checks(r) {
     else if ((m = p.match(/^분류 대응 없음\((.+)\)$/))) out.push({ k: 'cat', d: m[1] });
     else if (p.startsWith('말라리아약')) out.push({ k: 'malaria' });
     else if (p.startsWith('세부 분류는 외용')) out.push({ k: 'topical' });
-    else if (p.startsWith('옛 용법')) out.push({ k: 'posology', d: r['옛 용법 (원문)'] });
+    else if (p.startsWith('옛 용법')) continue;   // posology is not kept per drug (decision B)
     else throw new Error(r['코드'] + ': unknown check "' + p + '"');
   }
   // A pack drug whose unit word is itself uncertain (a jar or a bottle).
@@ -119,7 +124,8 @@ const drugs = rows.map(r => {
   if (route && !/^(QD|BID|TID|QID|Q\d+H)$/.test(route)) bad('route ' + route);
   const packText = r['포장 단위 약 (H2-B)'].trim();
   if (packText && packText !== '확인' && !PACK[packText]) bad('pack unit ' + packText);
-  // Decision: the price and the daily total stay empty now; filled on site later.
+  // Decision: the price stays empty now (filled on site); the daily total and days are
+  // not used at all (decision B). A value here means the table changed - stop.
   for (const col of ['채울 칸: 하루 총량', '채울 칸: 일수', '채울 칸: 가격', '채울 칸: 최소 재고']) {
     if (String(r[col]).trim()) bad(col + ' is filled - this script leaves it empty; change the script first');
   }
@@ -150,10 +156,12 @@ const sql = `-- 403 (pharmacy): the clinic's drug list from the old stock progra
 -- Do not edit by hand: change the table or the script and generate again.
 --
 -- Decision of 2026-09-29 (wiki/handoff/coordinator.md, "가져올 약 결정"):
--- * ${drugs.length} drugs go in with name, ingredient, form and category. Price 0 and no default
---   daily total or days: those are filled on site (the pharmacy and the bill show
---   "no total" / "no price" until then). Times a day and posology code come from the
---   old program's own posology where it named one clear code.
+-- * ${drugs.length} drugs go in with name, ingredient, form and category. Price 0, filled on
+--   site (the bill shows "no price" until then).
+-- * Decision B: a drug has no default dose / times / days / posology - the order sets
+--   carry the dosing. The columns are not dropped: daily total and days stay empty,
+--   and the times a day and posology code read from the old program's own posology
+--   (where it named one clear code) are kept as they are but not used.
 -- * Stock = the quantity of the 2026-05-15 list (total ${qtySum}); each drug gets one
 --   "opening" row in the stock record with its own memo, so it is not mistaken for a
 --   count adjustment. Counted again on site.

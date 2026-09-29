@@ -8,6 +8,8 @@ var FORM_KEY = {
   'Tablet': 'tablet', 'Capsule': 'capsule', 'Syrup': 'syrup', 'Suppository': 'supp',
   'Powder / Sachet': 'sachet', 'Vaginal / Gel': 'vaggel', 'Topical': 'topical', 'Ophthalmic': 'ophth',
 };
+// The choices of the settings drug form, in this order.
+export var DRUG_FORMS = Object.keys(FORM_KEY);
 export function formLabel(t, form) {
   if (!form) return '';
   var k = FORM_KEY[form];

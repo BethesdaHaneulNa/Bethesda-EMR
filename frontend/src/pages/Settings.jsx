@@ -5,7 +5,7 @@ import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
-import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
+import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../documents/drug-info.js';
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 
@@ -214,7 +214,10 @@ export default function SettingsPage() {
       } else if(editType==='drug'){
         // Stock is not saved from here any more - it moves only through the pharmacy's
         // Stock tab - so it is left out of the request (the server ignores it anyway).
+        // Nor the default dose, times, days and posology (decision B): the form no longer
+        // has them, and the server keeps what is already stored when they are not sent.
         var dbody=Object.assign({},item); delete dbody.stock_qty; delete dbody.stock_expected;
+        delete dbody.default_dose; delete dbody.default_freq; delete dbody.default_days; delete dbody.default_route;
         if(item.id) await api.put('/admin/drugs/'+item.id, dbody);
         else await api.post('/admin/drugs', dbody);
         setDrugs(await api.get('/admin/drugs'));
@@ -404,21 +407,19 @@ export default function SettingsPage() {
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',default_dose:'1.000',default_freq:1,default_days:7,default_route:'QD',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
+              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'#1e2433'}}>
-                {[t.code,t.colDrugName,t.ph_category,t.colDose,t.colFreq,t.colDays,t.ph_colDirections,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i>=7?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
+                {/* No default dose / times / days / posology (decision B, 2026-09-29): a drug
+                    carries its price; the doctor's order sets carry the dosing. */}
+                {[t.code,t.colDrugName,t.ph_category,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i===3||i===4?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               <tbody>{filteredDrugs.map(function(d){
                 return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
                   <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
                   <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'#fbbf24',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'#fbbf24',border:'1px solid #f59e0b60',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
-                  <td style={{padding:'4px 6px',color:t2,fontFamily:'monospace',fontSize: 12}}>{d.default_dose}</td>
-                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_freq}</td>
-                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_days}</td>
-                  <td style={{padding:'4px 6px',color:'#f59e0b',fontSize: 12}}>{d.default_route}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{d.unit_price}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'#f87171':'#34d399',fontWeight:600}}>{d.stock_qty}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
@@ -968,24 +969,24 @@ export default function SettingsPage() {
                 <Fld label={t.ph_genericName}><input value={editItem.generic_name||''} onChange={function(e){ue('generic_name',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.ph_nameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
               </div>
-              {/* Form and the "to check" list come with the imported drug list (403) and are
-                  only shown here; the points are marked checked in the pharmacy Stock tab. */}
-              {editItem.dosage_form ? <div style={{fontSize: 13,color:'#94a3b8'}}>{t.ph_form}: <b style={{color:tx}}>{formLabel(t,editItem.dosage_form)}</b></div> : null}
+              {/* The "to check" list comes with the imported drug list (403) and is only
+                  shown here; the points are marked checked in the pharmacy Stock tab. */}
               {checkList(editItem).length ? <div style={{fontSize: 13,color:checkOpen(editItem)?'#fbbf24':'#64748b',border:'1px solid '+(checkOpen(editItem)?'#f59e0b60':bd2),borderRadius:4,padding:'5px 8px'}}>
                 <div style={{fontWeight:700}}>{checkOpen(editItem)?'⚠ ':'✓ '}{t.ph_checkTitle}</div>
                 <ul style={{margin:'2px 0 0',paddingLeft:18}}>{checkList(editItem).map(function(c,i){return <li key={i}>{checkText(t,c)}</li>;})}</ul>
                 {checkOpen(editItem) ? <div style={{color:'#94a3b8',marginTop:2}}>{t.ph_checkWhere}</div> : null}
               </div> : null}
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
-                <Fld label={t.colDose}><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
-                {/* Empty stays empty: the imported drugs (403) come without times or days,
-                    and showing "1" here looked like a value the doctor would get. */}
-                <Fld label={t.colFreq}><input type="number" value={editItem.default_freq==null?'':editItem.default_freq} onChange={function(e){ue('default_freq',e.target.value===''?null:Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label={t.colDays}><input type="number" value={editItem.default_days==null?'':editItem.default_days} onChange={function(e){ue('default_days',e.target.value===''?null:Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label={t.ph_colDirections}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1.8fr 1.1fr 0.8fr 1fr',gap:6}}>
+              {/* No default dose / times / days / posology here (decision B, 2026-09-29):
+                  the order sets carry the dosing. The columns stay in the table, unused. */}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                 <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
+                <Fld label={t.ph_form}><select value={editItem.dosage_form||''} onChange={function(e){ue('dosage_form',e.target.value||null)}} style={IS}>
+                  <option value="">—</option>
+                  {DRUG_FORMS.map(function(f){return <option key={f} value={f}>{formLabel(t,f)}</option>})}
+                  {editItem.dosage_form && DRUG_FORMS.indexOf(editItem.dosage_form)<0 ? <option value={editItem.dosage_form}>{editItem.dosage_form}</option> : null}
+                </select></Fld>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr',gap:6}}>
                 <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
                 {/* Read-only: stock moves only through the pharmacy's Stock tab, where each
                     change is written to the stock record (receive / count / discard).

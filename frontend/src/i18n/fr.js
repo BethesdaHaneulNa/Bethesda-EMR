@@ -559,7 +559,6 @@ export default {
   ph_chk_cat: "Vérifier la catégorie",
   ph_chk_malaria: "Antipaludique — à vérifier par le médecin",
   ph_chk_topical: "Classé comprimé mais peut-être à usage externe (pommade, crème) — unité de conditionnement aussi",
-  ph_chk_posology: "Posologie d'origine « 1_2 » : ½ ou 1 à 2 ?",
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──

@@ -568,7 +568,6 @@ export default {
   ph_chk_cat: "Check the category",
   ph_chk_malaria: "Antimalarial - for the doctor to check",
   ph_chk_topical: "Filed as a tablet but may be topical (ointment, cream) - pack unit too",
-  ph_chk_posology: "Old posology \"1_2\": ½ or 1 to 2?",
   ph_chk_packlabel: "Pack word (jar? bottle?)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
