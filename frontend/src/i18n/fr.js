@@ -14,7 +14,7 @@ export default {
   loggingIn: "Connexion en cours...", welcomeBack: "Bienvenue",
   frontdesk: "Accueil", doctor: "Médecin", pharmacy: "Pharmacie", admin: "Administrateur",
   registration: "Enregistrement", consultation: "Consultation", payment: "Paiement",
-  chartNo: "N° Dossier", patientName: "Nom du Patient", firstName: "Prénom",
+  chartNo: "N° dossier", patientName: "Nom du Patient", firstName: "Prénom",
   lastName: "Nom", nationalId: "CIN", dateOfBirth: "Date de Naissance",
   age: "Âge", gender: "Sexe", male: "Masculin", female: "Féminin",
   phone: "Téléphone", mobile: "Portable", address: "Adresse", city: "Ville", region: "Région",
@@ -49,7 +49,7 @@ export default {
   pharmacyOnlyCompleted: "Seules les ordonnances des consultations terminées sont affichées.",
   stockShortWarn: "Le stock enregistré était inférieur à la quantité délivrée — vérifiez le stock réel :",
   refresh: "Actualiser", pharmacy: "Pharmacie", noRxToShow: "Aucune ordonnance à afficher",
-  rxUnit: "ord.", chartNo: "N° dossier", doctor: "Médecin",
+  rxUnit: "ord.", doctor: "Médecin",
   colDrugName: "Médicament", colDose: "Dose", colFreq: "Fréq.", colDays: "Jours", colRoute: "Voie", colQty: "Qté", colMemo: "Note",
   orderFeedSaved: "Réglages du flux d'ordres enregistrés",
   orderFeedTab: "Flux d'ordres",
@@ -371,6 +371,9 @@ export default {
   cs_noPackQtyCount: "{n} flacon(s)/tube(s) sans quantité",
   cs_noPackConfirm: "{n} médicament(s) sans quantité (flacons/tubes/unités) : {names}\n\nLa pharmacie s’arrêtera sur « quantité totale absente » et rien ne sera facturé. Terminer quand même la consultation ?",
   cs_packQtyWhole: "La quantité est un nombre entier d’au moins 1 (pas de demi-flacon).",
+  cs_colDaily: "Dose/j",
+  cs_colDailyHint: "Médicament : dose totale par jour. Examen / acte : quantité. Total = cette colonne × jours (les fois par jour ne sont pas multipliées). 2 jours sur un examen le facture deux fois.",
+  cs_orderTotal: "facturé {n} fois",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

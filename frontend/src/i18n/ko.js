@@ -49,7 +49,7 @@ export default {
   pharmacyOnlyCompleted: "진료 완료된 약 오더만 약국 대기 목록에 표시됩니다.",
   stockShortWarn: "재고가 조제량보다 적게 기록되어 있었습니다 — 실제 재고를 확인하세요:",
   refresh: "새로고침", pharmacy: "약국", noRxToShow: "표시할 처방이 없습니다",
-  rxUnit: "처방", chartNo: "차트번호", doctor: "의사",
+  rxUnit: "처방", doctor: "의사",
   colDrugName: "약품명", colDose: "용량", colFreq: "횟수", colDays: "일수", colRoute: "경로", colQty: "수량", colMemo: "메모",
   orderFeedSaved: "오더 연동 설정 저장됨",
   orderFeedTab: "오더 연동",
@@ -371,6 +371,9 @@ export default {
   cs_noPackQtyCount: "수량 없는 포장 약 {n}개",
   cs_noPackConfirm: "수량(병·튜브·개 수)이 없는 포장 약이 {n}개 있습니다: {names}\n\n약국에서 「총량 없음」으로 멈추고 청구되지 않습니다. 그래도 진료를 완료할까요?",
   cs_packQtyWhole: "수량은 1 이상의 정수로 적습니다(반 병은 안 됩니다).",
+  cs_colDaily: "일총투여",
+  cs_colDailyHint: "약: 하루 총량. 검사·처치: 수량. 총량 = 이 칸 × 일수(횟수는 곱하지 않음). 검사 줄의 일수를 2로 적으면 2회 청구됩니다.",
+  cs_orderTotal: "{n}회 청구",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

@@ -154,5 +154,6 @@ if ($includePacs -and $pacsOk) {
   Write-Host "  - check the ports 9090 and 4242 the same way; imaging devices send to 4242"
   Write-Host "  - if 9090 or 4242 will not open:  netsh int ipv4 show dynamicport tcp"
   Write-Host "    must start at 49152 (DEPLOYMENT.md, 'Windows dynamic port range')"
-  Write-Host "  - images are NOT in the EMR backup. Plan a copy of $pacsDst\storage to a second disk"
+  Write-Host "  - images are NOT in the EMR backup. Set up the nightly copy to an external disk:"
+  Write-Host "    in $pacsDst run  .\prepare-backup-disk.ps1  then  .\install-image-backup.ps1"
 }

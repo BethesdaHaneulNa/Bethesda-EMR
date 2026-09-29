@@ -58,7 +58,7 @@ export default {
   pharmacyOnlyCompleted: "Only medication orders from completed consultations are shown.",
   stockShortWarn: "Recorded stock was lower than the quantity dispensed — check the shelf count:",
   refresh: "Refresh", pharmacy: "Pharmacy", noRxToShow: "No prescriptions to show",
-  rxUnit: "Rx", chartNo: "Chart No.", doctor: "Doctor",
+  rxUnit: "Rx", doctor: "Doctor",
   colDrugName: "Drug", colDose: "Dose", colFreq: "Freq", colDays: "Days", colRoute: "Route", colQty: "Qty", colMemo: "Memo",
   orderFeedSaved: "Order feed settings saved",
   orderFeedTab: "Order Feed",
@@ -380,6 +380,9 @@ export default {
   cs_noPackQtyCount: "{n} pack item(s) without a quantity",
   cs_noPackConfirm: "{n} pack item(s) without a quantity (bottles/tubes/pieces): {names}\n\nThe pharmacy will stop on \"no total\" and nothing will be billed. Finish the consultation anyway?",
   cs_packQtyWhole: "The quantity is a whole number of at least 1 (no half bottles).",
+  cs_colDaily: "Daily",
+  cs_colDailyHint: "Drug: daily total. Exam / procedure: quantity. Total = this column x days (times a day are not multiplied). Days 2 on an exam line bills it twice.",
+  cs_orderTotal: "billed {n} times",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

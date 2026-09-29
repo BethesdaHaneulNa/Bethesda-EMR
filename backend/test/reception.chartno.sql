@@ -33,10 +33,24 @@ BEGIN
     c := generate_chart_no();
     IF c <> yy || '-100001' THEN RAISE EXCEPTION 'after 100000 gave %', c; END IF;
 
-    -- something that is not YY-digits is not counted
+    -- something that is not YY-digits is not counted, nor is another prefix (ZZ-000)
     INSERT INTO patient (chart_no, last_name, first_name) VALUES (yy || '-X9999999', 'ZZTEST', 'Odd');
+    INSERT INTO patient (chart_no, last_name, first_name) VALUES ('ZZ-999999', 'ZZTEST', 'OtherPrefix');
     c := generate_chart_no();
     IF c <> yy || '-100001' THEN RAISE EXCEPTION 'an odd chart number was counted: %', c; END IF;
+
+    -- a patient whose creation fails after taking a number does not use it up:
+    -- the next patient gets the same number (nothing is skipped)
+    BEGIN
+        INSERT INTO patient (chart_no, last_name, first_name) VALUES (c, 'ZZTEST', 'WillFail');
+        RAISE EXCEPTION 'simulated failure after numbering';
+    EXCEPTION WHEN raise_exception THEN
+        NULL;   -- the block's insert is rolled back
+    END;
+    IF generate_chart_no() <> c THEN RAISE EXCEPTION 'a failed creation skipped a number (% expected)', c; END IF;
+
+    -- six digits and more stay far inside the DICOM PatientID limit (64 characters)
+    IF length(yy || '-100001') > 64 THEN RAISE EXCEPTION 'chart number too long for DICOM'; END IF;
 
     RAISE NOTICE 'chart number checks passed';
 END $$;

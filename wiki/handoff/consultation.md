@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑭ 오더 총량 = 수량 × 일수 (진료 몫) · 검사 1·1·1 자동 · 칸 머리 「일총투여」
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `76457c9` 다음
+- **한 일** (총괄 승인 설계 그대로, `wiki/handoff/coordinator.md` 「진료 세션에게 — ⑭ 설계 승인」):
+  - **마이그레이션 201** `201_consultation_order_total.sql`:
+    - `order_item.total_qty DECIMAL(10,3)`을 추가합니다.
+    - `total_qty`가 빈 줄만 `COALESCE(quantity,1)`로 채웁니다. 기존 줄의 뜻은 그대로이고, 다시 돌려도 바뀌지 않습니다.
+  - **서버** `consult.routes.js`:
+    - 계산은 `orderTotal(quantity, days)` 하나입니다: 수량 × 일수(횟수는 곱하지 않음). 빈 수량은 1, 수량 0은 0입니다.
+    - POST는 수량·횟수·일수가 비면 1로 저장하고(NULL 없음), 늘 계산합니다.
+    - PUT은 수량이나 일수가 실제로 바뀌었거나 `total_qty`가 비었을 때만 다시 계산합니다. 횟수만 바뀌면 그대로입니다.
+    - 변경 기록 `ORDER_LOG`에 `total_qty`를 더했습니다.
+  - **화면** `Consultation.jsx`:
+    - 검사·영상 오더는 늘 1·1·1로 넣습니다. 처치는 오더 코드의 기본 횟수·일수(없으면 1)를 씁니다. 약속처방도 같은 함수를 지납니다.
+    - 첫 숫자 칸의 머리는 「일총투여」(fr « Dose/j », en « Daily ») 하나이고, 도움말 `cs_colDailyHint`가 붙습니다.
+    - 두 번 이상 청구되는 줄은 이름 아래에 「n회 청구 / facturé n fois」(`cs_orderTotal`)가 보입니다.
+- **바꾼 파일**: `backend/sql/201_consultation_order_total.sql`(새 파일) · `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_colDaily`, `cs_colDailyHint`, `cs_orderTotal`(진료 구역 안). 공용 키 `qty`는 건드리지 않았습니다.
+- **DB 마이그레이션**: `201_consultation_order_total.sql` — **총괄이 번호를 다시 매겨 주세요.** 칸 추가 + 빈 줄 채움입니다(총괄 승인: 값의 뜻이 바뀌지 않음).
+- **번역 키**: `cs_colDaily` · `cs_colDailyHint` · `cs_orderTotal` (ko · en · fr)
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택 9182에서 확인했습니다(시작 때 201이 적용됨: 「applying 201_consultation_order_total.sql」).
+  - **⑭ 시험 16개 전부 통과**:
+    - 칸이 생기고, 빈 줄이 없으며, 옛 줄은 모두 총량 = 수량입니다.
+    - 아무것도 안 보낸 검사는 1·1·1이고 총량 1입니다. 주사 1·1·5는 총량 5입니다.
+    - 일수 5→3이면 3, 횟수만 바꾸면 그대로 3, 수량 2이면 6, 그대로 저장하면 6입니다. 수량 0은 0, 1.5×2는 3입니다.
+    - 옛 줄(수량 2·일수 3·총량 2)은 메모만 고치면 2 그대로이고, 일수를 고치면 8입니다. 총량이 빈 줄은 저장하면 계산됩니다.
+    - 끝난 진료의 로그 줄에 일수 3→1과 총량 6→2가 남습니다.
+    - **마이그레이션을 한 번 더 돌려도 값이 같습니다**(md5 비교).
+  - 기존 시험도 모두 통과했습니다: 포장 16, 영상 취소 19, 취소 25, 로그 34, lock, total, s2, t400, tlow. 로그 시험의 오더 수량 줄은 `total_qty`가 같이 남는 것으로 기대값을 바꿨습니다.
+  - **화면**:
+    - FR: 칸 머리 「Dose/j」(도움말 « … 2 jours sur un examen le facture deux fois »). 검색으로 넣은 CBC와 Wound Dressing은 1·1·1이었습니다. Wound Dressing의 일수를 5로 바꾸니 « facturé 5 fois »가 나왔습니다.
+    - KO: 머리 「일총투여」와 「5회 청구」를 확인했습니다.
+- **확인 못 한 것**: 수납이 `total_qty`를 읽는 쪽(수납 세션 몫 — 이 커밋이 develop에 들어온 뒤). 그 전까지 수납은 여전히 `quantity`로 청구하므로, 일수가 2 이상인 새 줄은 1일치로 청구됩니다(실행 중 EMR에는 그런 줄이 0건).
+- **덧붙여 본 것(다음 일 — 위키 2절 따라 하기에서 다룰 것)**:
+  - 오더 줄의 「Fois」 입력 칸이 27px라 숫자가 스핀 단추에 가려 보이지 않습니다.
+  - 오더 줄의 Posologie 칸에 오더 코드의 기본 용량 「1.000」이 찍힙니다.
+  - 한국어 머리의 `tms`·`day`가 「Tms·Day」 영어 그대로입니다(공용 키).
+- **위키**: `modules/consultation.md` 머리 · 1(머리 문단) · 2.3(칸 표·검사 줄 설명) · 3.2(POST·PUT 오더) · 4(마이그레이션·`order_item`) · 5(수납) · 7.2 ⑭ · 8절
+- **총괄 확인 요청**: 마이그레이션 201 번호. 합치면 수납 세션에 「`total_qty` 읽기」 시작 알림을 부탁드립니다.
+- **다른 세션에 부탁**: 수납 — `COALESCE(o.total_qty, o.quantity, 1)`로 서버 3곳(121, 600/622)과 화면 3곳(Payment.jsx 184, 206-208, 596). 수량 0은 0입니다.
+- **남은 일 · 알려진 문제**: 다음은 위키 2절을 처음부터 따라 하며 고치고, 7절을 「결정 필요 / 결정 없이 가능」으로 나눠 보고하는 일입니다.
+
 ## 2026-09-29 — 영상 취소 물음 문구 (PACS 지적)
 
 - **상태**: 확인 요청
