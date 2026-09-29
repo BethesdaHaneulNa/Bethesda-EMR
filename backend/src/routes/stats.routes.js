@@ -42,7 +42,7 @@ function settlementSql(a) {
   return `(${p}consult_fee + ${p}drug_total + ${p}procedure_total = 0 AND ${p}previous_balance > 0)`;
 }
 
-// Which visit a receipt's money belongs to (decision 9, 2026-09-29).
+// Where a receipt's money came from, piece by piece (decision 9, 2026-09-29).
 //
 // A receipt can carry older debts (carry-over, migration 016; settlements,
 // payment M2): the older bills point at it through carried_into_id. Grouped by
@@ -56,10 +56,16 @@ function settlementSql(a) {
 // Each bill's total_due is broken into pieces, oldest first: what it carried
 // from each older bill (that bill's unpaid remainder, itself broken the same
 // way), then its own charges. Its net_paid pays the pieces in that order. A
-// cancelled bill carries nothing: a correction may leave replaced bills
+// piece remembers the visit whose treatment it was for and that visit's date,
+// so what is still unpaid can say since when it has been owed (problem 16).
+// A cancelled bill carries nothing: a correction may leave replaced bills
 // pointing at the new one, but the new bill's previous_balance already
 // excludes them.
-async function paidByVisit(bills) {
+//
+// `bills` rows need id, visit_id, visit_date, net_paid, total_due, billing_date.
+// Returns split(id) -> { paid: [pieces], unpaid: [pieces] }, piece =
+// { visit_id, visit_date, amount }.
+async function debtPieces(bills) {
   const byId = new Map();
   bills.forEach(function (b) { byId.set(b.id, b); });
   const src = await pool.query(
@@ -70,7 +76,7 @@ async function paidByVisit(bills) {
        SELECT c.id, c.visit_id, c.net_paid, c.total_due, c.billing_date, c.carried_into_id
          FROM billing c JOIN src ON c.carried_into_id = src.id WHERE c.payment_status <> 'cancelled'
      )
-     SELECT * FROM src`,
+     SELECT src.*, ${ymd('v.visit_date')} AS visit_date FROM src JOIN visit v ON v.id = src.visit_id`,
     [bills.map(function (b) { return b.id; })]
   );
   const carriedFrom = new Map();
@@ -80,35 +86,40 @@ async function paidByVisit(bills) {
     carriedFrom.get(c.carried_into_id).push(c);
   });
   const n = function (x) { return Number(x) || 0; };
-  const piecesMemo = new Map();
-  function pieces(id) {                 // [{visit_id, amount}] making up total_due, oldest first
-    if (piecesMemo.has(id)) return piecesMemo.get(id);
-    const b = byId.get(id);
-    const older = (carriedFrom.get(id) || []).slice().sort(function (x, y) {
+  const memo = new Map();
+  function pieces(b) {                  // pieces making up total_due, oldest debt first
+    const older = (carriedFrom.get(b.id) || []).slice().sort(function (x, y) {
       return x.billing_date < y.billing_date ? -1 : x.billing_date > y.billing_date ? 1 : x.id - y.id;
     });
     const out = []; let carried = 0;
-    older.forEach(function (c) { unpaid(c.id).forEach(function (p) { out.push(p); carried += p.amount; }); });
+    older.forEach(function (c) { split(c.id).unpaid.forEach(function (p) { out.push(p); carried += p.amount; }); });
     const own = n(b.total_due) - carried;
-    if (own > 0.005) out.push({ visit_id: b.visit_id, amount: own });
-    piecesMemo.set(id, out);
+    if (own > 0.005) out.push({ visit_id: b.visit_id, visit_date: b.visit_date, amount: own });
     return out;
   }
-  function split(id) {                  // net_paid laid over the pieces: [paid pieces, unpaid pieces]
-    const b = byId.get(id); let pay = n(b.net_paid); const paid = [], left = [];
-    pieces(id).forEach(function (p) {
+  function split(id) {                  // net_paid laid over the pieces
+    if (memo.has(id)) return memo.get(id);
+    const b = byId.get(id); let pay = n(b.net_paid); const paid = [], unpaid = [];
+    pieces(b).forEach(function (p) {
       const take = Math.min(pay, p.amount); pay -= take;
-      if (take > 0.005) paid.push({ visit_id: p.visit_id, amount: take });
-      if (p.amount - take > 0.005) left.push({ visit_id: p.visit_id, amount: p.amount - take });
+      if (take > 0.005) paid.push(Object.assign({}, p, { amount: take }));
+      if (p.amount - take > 0.005) unpaid.push(Object.assign({}, p, { amount: p.amount - take }));
     });
     // Paid beyond what was due (a refund owed) stays with the receipt's own visit.
-    if (pay > 0.005) paid.push({ visit_id: b.visit_id, amount: pay });
-    return [paid, left];
+    if (pay > 0.005) paid.push({ visit_id: b.visit_id, visit_date: b.visit_date, amount: pay });
+    const r = { paid: paid, unpaid: unpaid };
+    memo.set(id, r);
+    return r;
   }
-  function unpaid(id) { return split(id)[1]; }
+  return split;
+}
+
+// Cash of the given receipts per visit it paid for: Map visit_id -> amount.
+async function paidByVisit(bills) {
+  const split = await debtPieces(bills);
   const total = new Map();
   bills.forEach(function (b) {
-    split(b.id)[0].forEach(function (p) { total.set(p.visit_id, (total.get(p.visit_id) || 0) + p.amount); });
+    split(b.id).paid.forEach(function (p) { total.set(p.visit_id, (total.get(p.visit_id) || 0) + p.amount); });
   });
   return total;
 }
@@ -165,10 +176,10 @@ router.get('/summary', async (req, res) => {
     //     한 의사가 여러 과의 진료를 볼 수 있고, 상여·성과는 사람 단위로 보므로
     //     둘을 따로 묶는다. 과·의사 없는 방문은 code/name 이 null 인 한 줄.
     const periodBills = (await pool.query(
-      `SELECT b.id, b.visit_id, b.net_paid, b.total_due, b.billing_date,
+      `SELECT b.id, b.visit_id, ${ymd('v.visit_date')} AS visit_date, b.net_paid, b.total_due, b.billing_date,
               b.consult_fee + b.drug_total + b.procedure_total AS gross,
               ${settlementSql('b')} AS is_settlement
-         FROM billing b
+         FROM billing b JOIN visit v ON v.id = b.visit_id
         WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'`, P)).rows;
     const paidVisit = await paidByVisit(periodBills);
     const visitIds = Array.from(new Set(periodBills.map(function (b) { return b.visit_id; }).concat(Array.from(paidVisit.keys()))));
@@ -309,7 +320,6 @@ router.get('/outstanding', async (req, res) => {
        ), bal AS (
          SELECT patient_id,
                 SUM(owed) AS owed, SUM(refund) AS refund,
-                ${ymd('MIN(billing_date) FILTER (WHERE owed > 0)')} AS owed_since,
                 ${ymd('MAX(billing_date)')} AS last_date,
                 COUNT(*) FILTER (WHERE owed > 0) AS owed_bills,
                 COUNT(*) FILTER (WHERE refund > 0) AS refund_bills
@@ -319,12 +329,32 @@ router.get('/outstanding', async (req, res) => {
               COALESCE(NULLIF(p.mobile,''), p.phone) AS contact, bal.*
          FROM bal JOIN patient p ON p.id = bal.patient_id
         WHERE bal.owed > 0.5 OR bal.refund > 0.5`);
+    // Since when: the date of the oldest treatment still unpaid. The receipt now
+    // holding a debt can be much younger than the debt — after a partial
+    // balance settlement (payment M2) or a carry-over, what is left sits on a
+    // receipt dated the day of that payment — so the date is taken from the
+    // unpaid pieces (debtPieces), not from the receipts that carry them.
+    const owing = (await pool.query(
+      `SELECT b.id, b.patient_id, b.visit_id, ${ymd('v.visit_date')} AS visit_date, b.net_paid, b.total_due, b.billing_date
+         FROM billing b JOIN visit v ON v.id = b.visit_id
+        WHERE b.payment_status <> 'cancelled' AND b.outstanding > 0`)).rows;
+    const split = await debtPieces(owing);
+    const since = new Map();
+    owing.forEach(function (b) {
+      const left = split(b.id).unpaid;
+      // outstanding and the pieces agree for any bill written by the payment
+      // screen; if an old row does not, fall back to the bill's own visit.
+      const dates = left.length ? left.map(function (p) { return p.visit_date; }) : [b.visit_date];
+      dates.forEach(function (d) {
+        if (d && (!since.has(b.patient_id) || d < since.get(b.patient_id))) since.set(b.patient_id, d);
+      });
+    });
     const owed = [], refund = [];
     rows.rows.forEach(function (r) {
       const base = { patient_id: r.id, chart_no: r.chart_no, name: (r.last_name || '') + ' ' + (r.first_name || ''),
         contact: r.contact || '', last_date: r.last_date };
       const o = Math.round(Number(r.owed) || 0), f = Math.round(Number(r.refund) || 0);
-      if (Number(r.owed) > 0.5) owed.push(Object.assign({ amount: o, since: r.owed_since, open_bills: r.owed_bills }, base));
+      if (Number(r.owed) > 0.5) owed.push(Object.assign({ amount: o, since: since.get(r.id) || null, open_bills: r.owed_bills }, base));
       if (Number(r.refund) > 0.5) refund.push(Object.assign({ amount: f, open_bills: r.refund_bills }, base));
     });
     owed.sort(function (a, b) { return b.amount - a.amount; });
