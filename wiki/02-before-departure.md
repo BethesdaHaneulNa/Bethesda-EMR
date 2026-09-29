@@ -71,4 +71,5 @@
 | ☐ | 수술기록지 프랑스어 의학 용어 — [modules/consultation.md](modules/consultation.md) 3.6절 표 |
 | ☐ | 바이탈 약어 TA · T° · FC · FR |
 | ☐ | 상용구 24개의 프랑스어 문장 |
-| ☐ | 임상병리 참고치·단위 — [handoff/laboratory.md](handoff/laboratory.md)의 프랑스어 질문 |
+| ☐ | 임상병리 참고치 — 한국 기준으로 만든 표를 **의사 선생님이 한 번 보셨는지**(장비·시약에 따라 달라짐). 현장 검사 장비의 모델과 결과지에 찍히는 단위가 EMR의 단위와 같은지 |
+| ☐ | 소변 검사 등 글자 결과에서 Trace를 이상으로 볼지 |
