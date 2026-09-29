@@ -11,11 +11,15 @@ import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
 import { ReceiptModal } from '../components/Receipt.jsx';
 import { packWord } from '../documents/rx-dosing.js';
 
-function fmtAr(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+// Amounts: French puts a non-breaking space between thousands (« 108 850 »), as the
+// receipt and the pharmacy screen do; Korean and English a comma. What is typed in
+// an amount box is left as typed.
+function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 
 export default function PaymentPage() {
   var langCtx = useLang(); var t = langCtx.t;
+  function fmtAr(n){ return fmtAmount(n, langCtx.lang); }
   var ps = useState([]), pending = ps[0], setPending = ps[1];
   var cs = useState([]), completed = cs[0], setCompleted = cs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
@@ -469,7 +473,7 @@ export default function PaymentPage() {
           <div style={{flex:1,overflow:'auto'}}>
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
               var isSel=sel&&sel.id===v.id;
-              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',opacity:tab==='completed'&&v.payment_status==='cancelled'?0.6:1}}>
+              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',opacity:tab==='completed'&&v.payment_status==='cancelled'?0.85:1}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
                   {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
@@ -482,7 +486,7 @@ export default function PaymentPage() {
                 {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
                 {tab==='completed'?<>
                   <div style={{fontSize:12,color:'var(--accent-text)',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
-                  {billNote(v)?<div style={{fontSize:12,color:t3,marginTop:2}}>→ {billNote(v)}</div>:null}
+                  {billNote(v)?<div style={{fontSize:12,color:t2,marginTop:2}}>→ {billNote(v)}</div>:null}
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'var(--ok-text)',fontFamily:'monospace'}}>{fmtAr(v.total_due)} Ar</strong></div>
                 </>:null}
                 {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:3}}>+ {t.prevOutstanding}: {fmtAr(v.previous_balance)} Ar</div>:null}
@@ -506,14 +510,14 @@ export default function PaymentPage() {
             {rightTab2==='chart'? <PatientChart patientId={sel?sel.patient_id:null} /> : (
               !sel ? <div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{L.selectWaiting}</div> :
               receipts.length>0 ? <div style={{padding:'6px 8px'}}>
-              {patBalance.owed>0?<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--danger-a12)',border:'1px solid var(--danger-a30)',borderRadius:6,padding:'7px 10px',marginBottom:8}}>
+              {patBalance.owed>0?<div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center',justifyContent:'space-between',background:'var(--danger-a12)',border:'1px solid var(--danger-a30)',borderRadius:6,padding:'7px 10px',marginBottom:8}}>
                 <span style={{fontSize:13,color:'var(--danger-text)',fontWeight:800,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(patBalance.owed)} Ar</span>
-                <button onClick={settleAll} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--ok)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13,fontWeight:800}}>💵 {t.settleAll||'전체 미수 수납'}</button>
+                <button onClick={settleAll} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--ok)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'5px 10px',cursor:'pointer',fontSize:13,fontWeight:800,whiteSpace:'nowrap'}}>💵 {t.settleAll||'전체 미수 수납'}</button>
               </div>:null}
               {receipts.map(function(b,i){
                 var out=parseFloat(b.outstanding)||0;
                 var cancelled = b.payment_status==='cancelled';
-                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?'var(--danger-a40)':bd),borderRadius:5,padding:'8px 10px',marginBottom:6,opacity:cancelled?0.65:1}}>
+                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?'var(--danger-a40)':bd),borderRadius:5,padding:'8px 10px',marginBottom:6,opacity:cancelled?0.85:1}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                     <span style={{fontFamily:'monospace',fontSize:13,color:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(b.billing_date)}</span>
                     <span style={{fontSize:11,color:t2}}>{b.dept_code||''}</span>
@@ -524,9 +528,9 @@ export default function PaymentPage() {
                     <span style={{color:'var(--ok-text)'}}>{t.amountPaid}: {fmtAr(b.amount_paid)}</span>
                   </div>
                   {out>0&&!cancelled?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:2,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(out)} Ar</div>:null}
-                  {billNote(b)?<div style={{fontSize:12,color:t3,marginTop:2}}>→ {billNote(b)}</div>:null}
+                  {billNote(b)?<div style={{fontSize:12,color:t2,marginTop:2}}>→ {billNote(b)}</div>:null}
                   {cancelled&&b.refunded_amount!=null&&heldOn(b)>0.005?<div style={{fontSize:12,color:parseFloat(b.refunded_amount)>0?'var(--danger-text)':t2,marginTop:2,fontFamily:'monospace'}}>{parseFloat(b.refunded_amount)>0?t.py_refundedAt+': '+fmtAr(b.refunded_amount)+' Ar':t.py_keptAt+': '+fmtAr(heldOn(b))+' Ar'}</div>:null}
-                  <div style={{marginTop:4,display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{marginTop:4,display:'flex',flexWrap:'wrap',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
                     {cancelled&&!b.replaced_by_receipt_no? <span style={{fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',border:'1px solid var(--danger-a40)',borderRadius:4,padding:'1px 7px'}}>{t.cancelledBadge}</span> : billBadge(b)}
                     <div style={{flex:1}}></div>
                     {out>0&&!cancelled?<button onClick={function(){ setSettleBill(b); setSettleAmt(String(Math.round(out))); }} style={{background:'var(--ok-a18)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12,fontWeight:700}}>💵 {t.settleOutstanding}</button>:null}
@@ -783,8 +787,9 @@ export default function PaymentPage() {
 }
 
 function SumRow(p){
+  var lang = useLang().lang;
   return <div style={{display:'flex',justifyContent:'space-between',padding:'3px 0'}}>
     <span style={{fontSize:14,color:p.color||'var(--text-2)',fontWeight:p.bold?800:600}}>{p.label}</span>
-    <span style={{fontSize:p.bold?15:14,fontWeight:p.bold?900:600,color:p.color||'var(--text)',fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span>
+    <span style={{fontSize:p.bold?15:14,fontWeight:p.bold?900:600,color:p.color||'var(--text)',fontFamily:'monospace'}}>{fmtAmount(p.amount, lang)} Ar</span>
   </div>;
 }
