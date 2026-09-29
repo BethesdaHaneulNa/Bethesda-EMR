@@ -61,9 +61,12 @@ export function LabResults(props) {
   }
   function cell(r) {
     if (!r) return <span style={{ color: t3 }}>·</span>;
-    var color = r.flag === 'low' ? '#60a5fa' : r.flag === 'high' ? '#f87171' : tx;
-    var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : '';
-    return <span style={{ color: color, fontWeight: r.flag === 'low' || r.flag === 'high' ? 800 : 500 }}>{mark}{r.value}</span>;
+    // 'abnormal' is a text result that differs from its reference text (e.g. a
+    // positive malaria test): red like high, marked "!" since it is not "above".
+    var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';
+    var color = r.flag === 'low' ? '#60a5fa' : odd ? '#f87171' : tx;
+    var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : r.flag === 'abnormal' ? '! ' : '';
+    return <span style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
   }
 
   var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: '#161a26', whiteSpace: 'nowrap' };
