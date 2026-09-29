@@ -345,6 +345,12 @@ export default {
   lb_code: "코드",
   lb_codeNameRequired: "코드와 이름을 넣으세요.",
   lb_saved: "저장했습니다",
+  lb_unitWarnTitle: "이미 결과가 있는 항목입니다",
+  lb_unitWarnBody: "아래 항목의 단위를 바꾸면, 예전에 넣은 결과(옛 단위의 숫자)가 새 단위와 새 참고치로 보이고, 다시 저장하면 새 기준으로 판정됩니다.",
+  lb_sameNameWarnBody: "지운 항목과 같은 이름의 줄이 있습니다. 지운 항목의 예전 결과가 그 줄에 붙어 보입니다.",
+  lb_unitWarnSafe: "안전한 방법: 기존 줄은 그대로 두고, 이름이 다른 새 줄(예: 이름 뒤에 단위)을 추가한 뒤 옛 줄을 ✕ 로 지우세요.",
+  lb_resultCount: "결과 {n}건",
+  lb_saveAnyway: "그래도 저장",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",

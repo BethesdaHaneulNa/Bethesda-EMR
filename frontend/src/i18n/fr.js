@@ -345,6 +345,12 @@ export default {
   lb_code: "Code",
   lb_codeNameRequired: "Saisissez un code et un nom.",
   lb_saved: "Enregistré",
+  lb_unitWarnTitle: "Ces items ont déjà des résultats",
+  lb_unitWarnBody: "Si vous changez l'unité des items ci-dessous, les résultats déjà saisis (chiffres dans l'ancienne unité) s'afficheront avec la nouvelle unité et les nouvelles valeurs de référence, et seront réinterprétés selon ces valeurs s'ils sont réenregistrés.",
+  lb_sameNameWarnBody: "Une ligne porte le même nom qu'un item supprimé. Les anciens résultats de l'item supprimé s'afficheront sur cette ligne.",
+  lb_unitWarnSafe: "Méthode sûre : laissez la ligne existante telle quelle, ajoutez une nouvelle ligne avec un nom différent (par ex. l'unité après le nom), puis supprimez l'ancienne ligne avec ✕.",
+  lb_resultCount: "{n} résultat(s)",
+  lb_saveAnyway: "Enregistrer quand même",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
