@@ -6,6 +6,7 @@ import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
+import { PharmacyStock } from './PharmacyStock.jsx';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
@@ -274,14 +275,18 @@ export default function PharmacyPage() {
       <div style={{ background:'#161a26', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
         <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'#8b5cf620':'transparent', color:tab==='pending'?'#c4b5fd':t3, border:'1px solid '+(tab==='pending'?'#8b5cf650':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
         <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'#10b98120':'transparent', color:tab==='completed'?'#6ee7b7':t3, border:'1px solid '+(tab==='completed'?'#10b98150':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
+        <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'#f59e0b20':'transparent', color:tab==='stock'?'#fcd34d':t3, border:'1px solid '+(tab==='stock'?'#f59e0b50':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
+        {tab !== 'stock' ? <>
         <button onClick={loadData} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
         <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
         <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'#b45309':'#1e2433', color:sel?'#fde68a':'#475569', border:'1px solid '+(sel?'#f59e0b':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
         <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'#1e2433':'#1e2433', color:sel?'#ddd6fe':'#475569', border:'1px solid '+(sel?'#a855f7':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
+        </> : null}
         <div style={{ flex:1 }}></div>
         {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
+      {tab === 'stock' ? <PharmacyStock /> :
       <div style={{ display:'grid', gridTemplateColumns:'330px 1fr 320px', height:'calc(100vh - 88px)' }}>
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
@@ -379,7 +384,7 @@ export default function PharmacyPage() {
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'#60a5fa' }}>{t.pastVisits}</div>
           <div style={{ flex:1, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
-      </div>
+      </div>}
       <PatientFinder open={phFinderOpen} onClose={function(){setPhFinderOpen(false);}} mode="patient"
         onPickPatient={function(p){ pickPatient(p); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false);}} category="prescription"
