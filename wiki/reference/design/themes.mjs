@@ -104,7 +104,7 @@ export function value(themeKey, v, accent) {
 }
 
 // ── main: read snapshots, mark fields and the top bar, write themes.json ──
-if (process.argv[1].endsWith('themes.mjs')) {
+if ((process.argv[1] || '').endsWith('themes.mjs')) {
   const snaps = {}; const names = new Set();
   for (const f of fs.readdirSync('snaps').filter(f => f.startsWith('tok_'))) {
     const j = JSON.parse(fs.readFileSync('snaps/' + f, 'utf8'));
