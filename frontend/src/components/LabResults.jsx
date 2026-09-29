@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
 
-function ymd(d) { return d ? String(d).split('T')[0] : ''; }
+// A DATE column reaches the browser as the clinic's local midnight written in
+// UTC ("2026-09-28T21:00:00.000Z" for the 29th at UTC+3), so cutting at 'T'
+// showed every visit and result one day early. Read it back as a local date;
+// a plain "YYYY-MM-DD" is already a date and is kept as it is.
+function ymd(d) {
+  if (!d) return '';
+  var s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var x = new Date(s);
+  return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
+}
 
 // Date × test-item matrix of a patient's lab results (read-only).
 export function LabResults(props) {
@@ -11,7 +21,7 @@ export function LabResults(props) {
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
 
   useEffect(function () {
-    if (!props.patientId) { setRows([]); return; }
+    if (!props.patientId) { setRows([]); setLoading(false); return; }
     setLoading(true);
     api.get('/lab/patient/' + props.patientId + '/results')
       .then(function (r) { setRows(r || []); }).catch(function () { setRows([]); })

@@ -93,18 +93,18 @@ export default function SettingsPage() {
     try {
       var saved = await api.post('/lab/test-items/save', { order_code_id: labCode, items: labItems });
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
-      showToast(t.saved || 'Saved ✓');
+      showToast(t.lb_saved);
     } catch(err){ alert('Error: '+err.message); }
   }
   function unp(k,v){ setNewPanel(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
   async function createPanel(){
-    if(!newPanel.code || !newPanel.name){ alert((t.code||'Code')+' / '+(t.name||'Name')+' required'); return; }
+    if(!newPanel.code || !newPanel.name){ alert(t.lb_codeNameRequired); return; }
     try {
       var p = await api.post('/admin/order-codes', { code:newPanel.code.trim(), name:newPanel.name.trim(), code_type:'lab', group_name:'Lab', price:Number(newPanel.price)||0, price_clinic:Number(newPanel.price)||0 });
       var codes = await api.get('/admin/order-codes'); setOrderCodes(codes);
       setNewPanelOpen(false); setNewPanel({code:'',name:'',price:''});
       loadLabItems(String(p.id));
-      showToast(t.saved || 'Saved ✓');
+      showToast(t.lb_saved);
     } catch(err){ alert('Error: '+err.message); }
   }
 
@@ -536,17 +536,17 @@ export default function SettingsPage() {
           {/* CLINIC */}
           {activeTab==='labitems'?(<div style={{padding:'16px 20px'}}>
             <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:6}}>🧫 {t.labItems||'Lab Test Items'}</div>
-            <div style={{fontSize: 13,color:t3,marginBottom:12}}>{t.labItemsHint||'Define the result items (with reference ranges) for each lab panel. The lab screen lists these for entry; out-of-range values auto-flag.'}</div>
+            <div style={{fontSize: 13,color:t3,marginBottom:12}}>{t.lb_itemsHint}</div>
             <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:12}}>
               <span style={{fontSize: 14,color:t2}}>{t.labPanel||'Panel'}:</span>
               <select value={labCode} onChange={function(e){loadLabItems(e.target.value)}} style={Object.assign({},IS,{maxWidth:280})}>
-                <option value="">— {t.select||'select'} —</option>
+                <option value="">— {t.lb_selectPanel} —</option>
                 {orderCodes.filter(function(o){return o.code_type==='lab'}).map(function(o){return <option key={o.id} value={o.id}>{o.code} · {o.name}</option>})}
               </select>
               <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700}}>+ {t.newLabPanel||'새 검사 패널'}</button>
             </div>
             {newPanelOpen?(<div style={{display:'flex',gap:8,alignItems:'flex-end',marginBottom:14,background:scBg,border:'1px solid '+bd,borderRadius:8,padding:'10px 12px',flexWrap:'wrap'}}>
-              <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.code||'Code'}</label><input value={newPanel.code} onChange={function(e){unp('code',e.target.value)}} placeholder="L09" style={Object.assign({},IS,{width:90})}/></div>
+              <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.lb_code}</label><input value={newPanel.code} onChange={function(e){unp('code',e.target.value)}} placeholder="L09" style={Object.assign({},IS,{width:90})}/></div>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.name||'Name'}</label><input value={newPanel.name} onChange={function(e){unp('name',e.target.value)}} placeholder="Thyroid Panel" style={Object.assign({},IS,{width:220})}/></div>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.price||'Price'}</label><input type="number" value={newPanel.price} onChange={function(e){unp('price',e.target.value)}} placeholder="0" style={Object.assign({},IS,{width:100})}/></div>
               <button onClick={createPanel} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.add||'추가'}</button>
@@ -569,7 +569,7 @@ export default function SettingsPage() {
                 <button onClick={addLi} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
                 <button onClick={saveLabItems} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
-            </div>):<div style={{color:t3,fontSize: 14}}>{t.labPickPanel||'Pick a lab panel above to edit its items.'}</div>}
+            </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
           </div>):null}
 
           {activeTab==='backup'?(<div style={{padding:'16px 20px',maxWidth:780,overflow:'auto'}}>

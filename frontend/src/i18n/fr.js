@@ -282,6 +282,21 @@ export default {
   ph_typeLocked: "Ce médicament a déjà été délivré : interne/externe ne peut plus être changé. La liste est actualisée.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "Sélectionnez un patient à gauche",
+  lb_noPending: "Aucune analyse en attente de résultat",
+  lb_noCompleted: "Aucune analyse terminée aujourd'hui",
+  lb_noItemsDefined: "Aucun item défini pour cette analyse (à définir dans Paramètres → Items de test)",
+  lb_noItems: "Aucun item",
+  lb_nothingToSave: "Rien n'a été saisi. Saisissez au moins une valeur ou une note.",
+  lb_savedTests: "Enregistré et terminé",
+  lb_notSavedEmpty: "Rien de saisi, reste en attente",
+  lb_saveFailed: "Échec de l'enregistrement",
+  lb_itemsHint: "Définissez les items de résultat et les valeurs de référence de chaque panel. L'écran du laboratoire les affiche pour la saisie ; les valeurs hors normes sont signalées automatiquement.",
+  lb_selectPanel: "choisir un panel",
+  lb_pickPanel: "Choisissez un panel ci-dessus pour modifier ses items.",
+  lb_code: "Code",
+  lb_codeNameRequired: "Saisissez un code et un nom.",
+  lb_saved: "Enregistré",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   // ── end statistics ──
