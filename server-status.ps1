@@ -83,6 +83,14 @@ $T = @{
     adviceAddr = 'Ancienne adresse dans Parametres > Flux d''ordres : remplacez 8090 par 9090 et 8080 par 9080, puis enregistrez.'
     backupOldVersion = 'plus ancienne que l''application ({0} mise(s) a jour de la base manquante(s)) - {1}'
     adviceBackupOld = 'La derniere sauvegarde date d''avant la mise a jour de l''EMR. Dans l''EMR : Parametres > Sauvegarde > Sauvegarder.'
+    imgBackup = 'Sauvegarde des images (disque)'
+    imgOk = 'il y a {0} h - {1} Go libres sur {2} Go'
+    imgSilent = 'aucun compte rendu depuis {0} h'
+    imgNoDisk = 'disque de sauvegarde absent'
+    imgFailed = 'echec : {0}'
+    imgFull = 'disque presque plein : {0} Go libres sur {1} Go'
+    imgUnreadable = 'etat illisible (logs\image-backup-status.json)'
+    adviceImg = 'Sauvegarde des images : branchez le disque de sauvegarde ou remplacez-le s''il est plein. Sinon prevenez le responsable.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -125,6 +133,14 @@ $T = @{
     adviceAddr = 'Old address in Settings > Order feed: change 8090 to 9090 and 8080 to 9080, then save.'
     backupOldVersion = 'older than the app ({0} database update(s) missing) - {1}'
     adviceBackupOld = 'The newest backup is from before the EMR was updated. In the EMR: Settings > Backup > Back up now.'
+    imgBackup = 'Image backup (disk)'
+    imgOk = '{0} h ago - {1} GB free of {2} GB'
+    imgSilent = 'no report for {0} h'
+    imgNoDisk = 'backup disk not plugged in'
+    imgFailed = 'failed: {0}'
+    imgFull = 'disk almost full: {0} GB free of {1} GB'
+    imgUnreadable = 'status file unreadable (logs\image-backup-status.json)'
+    adviceImg = 'Image backup: plug in the backup disk, or replace it if it is full. Otherwise tell the person in charge.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -167,6 +183,14 @@ $T = @{
     adviceAddr = '설정 → 오더 연동의 주소가 옛 포트입니다. 8090은 9090으로, 8080은 9080으로 고쳐 저장하세요.'
     backupOldVersion = '앱보다 옛 버전 (DB 변경 {0}개 없음) - {1}'
     adviceBackupOld = '가장 새 백업이 EMR 업데이트 전 것입니다. EMR에서 설정 → 백업 → 「지금 백업」을 누르세요.'
+    imgBackup = '영상 백업 (디스크)'
+    imgOk = '{0}시간 전 - {2}GB 중 {1}GB 남음'
+    imgSilent = '{0}시간째 보고 없음'
+    imgNoDisk = '백업 디스크가 꽂혀 있지 않음'
+    imgFailed = '실패: {0}'
+    imgFull = '디스크가 거의 참: {1}GB 중 {0}GB 남음'
+    imgUnreadable = '상태 파일을 읽을 수 없음 (logs\image-backup-status.json)'
+    adviceImg = '영상 백업: 백업 디스크를 꽂거나, 가득 찼으면 바꾸세요. 그래도 안 되면 관리자에게 알리세요.'
   }
 }
 
@@ -386,6 +410,28 @@ function Get-DumpMigrations {
   return $names
 }
 
+# The nightly image backup to an external disk (PACS image-backup.ps1, decision 41)
+# writes its last result to the PACS folder's logs\image-backup-status.json - read here
+# rather than from the EMR, so this still answers when the EMR is down. No file (the
+# backup was never set up on this PC) -> no row at all.
+function Get-ImageBackupCheck {
+  param($Strings)
+  $dir = Get-ComposeDir -Container 'bethesda-pacs'
+  if (-not $dir) { return $null }
+  $file = Join-Path $dir 'logs\image-backup-status.json'
+  if (-not (Test-Path $file)) { return $null }
+  try { $s = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return New-Check 'imgBackup' 'warn' ($Strings.imgUnreadable) $false $true }
+  $at = $null
+  try { $at = [datetime]::Parse([string]$s.at, [Globalization.CultureInfo]::InvariantCulture) } catch {}
+  $hours = if ($at) { [math]::Round(((Get-Date) - $at).TotalHours) } else { $null }
+  if ($null -eq $hours -or $hours -gt $BackupStaleHours) { return New-Check 'imgBackup' 'warn' ($Strings.imgSilent -f $hours) $false $true }
+  if ($s.disk_found -eq $false) { return New-Check 'imgBackup' 'warn' $Strings.imgNoDisk $false $true }
+  if ($s.ok -ne $true) { return New-Check 'imgBackup' 'warn' ($Strings.imgFailed -f [string]$s.error) $false $true }
+  $free = [double]("0" + $s.free_gb); $total = [double]("0" + $s.total_gb)
+  if ($total -gt 0 -and ($free / $total) -lt 0.1) { return New-Check 'imgBackup' 'warn' ($Strings.imgFull -f [math]::Round($free), [math]::Round($total)) $false $true }
+  return New-Check 'imgBackup' 'ok' ($Strings.imgOk -f $hours, [math]::Round($free), [math]::Round($total))
+}
+
 function Get-BackupCheck {
   param($Strings, [string]$BackupPath, [bool]$DbOk = $false)
   if (-not $BackupPath -or -not (Test-Path $BackupPath)) {
@@ -458,6 +504,8 @@ function Get-AllChecks {
     (Get-BackupCheck -Strings $Strings -BackupPath $backupPath -DbOk ($checks['db'].State -eq 'ok')),
     $checks['pacs'], $checks['bridge']
   )
+  $img = Get-ImageBackupCheck -Strings $Strings
+  if ($img) { $ordered += $img }
   # Only while the database answers; a row appears only when an address is old.
   if ($checks['db'].State -eq 'ok') {
     $addr = Get-PacsAddressCheck -Strings $Strings
@@ -490,6 +538,7 @@ function Get-Advice {
       if ($c.Key -eq 'backup' -and $c.Wide) { return $Strings.adviceBackupOld }
       if ($c.Key -eq 'backup') { return $Strings.adviceBackup }
       if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
+      if ($c.Key -eq 'imgBackup') { return $Strings.adviceImg }
       return $Strings.adviceDown
     }
   }
@@ -526,7 +575,8 @@ $ColorPaper = [System.Drawing.Color]::FromArgb(248, 248, 246)
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $T[$script:CurrentLang].title
-$form.Size = New-Object System.Drawing.Size(620, 560)
+# Room for up to nine rows (the seven, plus imaging addresses and image backup when they show).
+$form.Size = New-Object System.Drawing.Size(620, 640)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = $ColorPaper
 

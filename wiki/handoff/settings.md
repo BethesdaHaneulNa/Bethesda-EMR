@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영상 백업 상태 줄 · 기록 탭의 검사 판정·포장 단위 (총괄 「설정 세션에게 (저녁)」)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`4336d19` 위)
+- **영상 백업 상태** (PACS `4d0b196`의 부탁):
+  - `status.routes.js` `checkImageBackup` → `pacs_image_backup` 항목. 보고 없음 → off, `last_seen` 36시간 넘음 → `status.imageBackup.silent`, `disk_found` false → `noDisk`, `ok` false → `failed`(`values.error`), `last_success` 없음·36시간 넘음 → `stale`, 여유 10% 미만 → `nearlyFull`, 모두 warn. 판단 순서도 이대로.
+  - `server-status.ps1` `Get-ImageBackupCheck`: `bethesda-pacs`의 compose 폴더 `logs\image-backup-status.json`. 파일이 없으면 줄 없음(영상 백업을 안 깐 PC). 같은 규칙(`at` 기준 36시간), 노란 A CORRIGER + 맨 아래 안내(fr·en·ko). 줄이 최대 9개가 되어 창 높이 560 → 640. BOM 유지.
+- **기록 탭** (임상병리 `97af696`·진료 `33e70a5`): 검사 결과의 `flag` 값을 말로(fr bas/normal/élevé/anormal, ko 낮음/정상/높음/이상, en low/normal/high/abnormal, 빈칸 —). `total_qty`는 이미 칸 이름이 있었음(`se_fld_totalQty`). 처방 기록에 새로 생긴 `pack_label` 칸 이름·값(`ph_pack_*`). 「값을 지운 줄은 값만」(선택)은 이미 — 지운 줄은 비어 있던 칸을 빼고 보여 줌(139b9fc).
+- **바꾼 파일**: `backend/src/routes/status.routes.js` · `server-status.ps1` · `frontend/src/pages/settingsAudit.js` · `wiki/modules/settings.md`(2.10, 3-6 표, 3-10, 8절)
+- **공용 파일 변경**: i18n `se_fld_packLabel`, `se_flag_low/normal/high/abnormal`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`. 격리 스택: `service_heartbeat`에 줄을 바꿔 넣어 상태 API 7가지(off / ok / silent / noDisk / failed·오류 글자 / stale / nearlyFull) 통과. 상태 창은 **실행 중 PACS 폴더를 건드리지 않게** 스크래치 사본에서 PACS 폴더 자리를 가짜 폴더로 바꿔 파일 없음·정상·디스크 없음(fr)·실패·거의 참(ko)·보고 없음(en), 창 캡처(9줄 모두 보임). 기록 탭: 격리에서 WBC 7 → 20으로 고친 실제 줄 — fr 「Indicateur: normal → élevé」, ko 「판정: 정상 → 높음」.
+- **다음 할 일**: 총괄의 정리 스크립트 검토 반영.
+
 ## 2026-09-29 — 시험 데이터 정리 스크립트 (결정 C) · backup-cli 작업 폴더
 
 - **상태**: **총괄 검토 요청** (데이터를 지우는 스크립트 — 규칙대로 검토 뒤에만 쓰임)
