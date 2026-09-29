@@ -269,6 +269,10 @@ export default {
   // ── begin reception (rc_) ──
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "「{name}」을(를) 지울까요?",
+  cs_dispensed: "조제됨",
+  cs_rxLocked: "약국에서 이미 조제한 약은 고치거나 지울 수 없습니다. 바꿔야 하면 약국에 알리고 새 줄로 처방하세요.",
+  cs_orderLocked: "결과가 이미 있는 오더(검사 결과 · 판독 · 촬영 시작)는 지울 수 없습니다.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   // ── end payment ──

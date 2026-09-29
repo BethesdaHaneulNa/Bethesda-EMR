@@ -278,6 +278,10 @@ export default {
   // ── begin reception (rc_) ──
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "Remove “{name}”?",
+  cs_dispensed: "Dispensed",
+  cs_rxLocked: "The pharmacy has already dispensed this drug, so it can no longer be changed or removed. Tell the pharmacy and prescribe a new line if needed.",
+  cs_orderLocked: "This order already has a result (lab values, a reading, or an exam started) and cannot be removed.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   // ── end payment ──

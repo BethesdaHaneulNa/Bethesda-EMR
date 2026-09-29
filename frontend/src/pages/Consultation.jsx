@@ -7,6 +7,25 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
 
+// The server refuses to change a dispensed prescription or delete an order that already
+// has a result (consult.routes.js). Its English refusal strings are matched here so the
+// doctor reads the reason in the screen language. Keep in step with the backend.
+var LOCK_MESSAGES = {
+  'Prescription already dispensed': 'cs_rxLocked',
+  'Order already has a result': 'cs_orderLocked',
+};
+
+// Mirrors the server's rule for a locked order, so the row can show it before anyone
+// tries: a lab order with results (lab sets status 'completed' only once a value is
+// saved), a written radiology reading, or an imaging study the modality has started.
+// worklist_sent_at is checked because orders without a worklist are stored with
+// worklist_status 'completed' from the start (consult.routes.js POST /:id/orders).
+function orderLocked(o){
+  if(o.status==='completed') return true;
+  if(String(o.result_text||'').trim()!=='') return true;
+  return !!o.worklist_sent_at && (o.worklist_status==='in_progress'||o.worklist_status==='completed');
+}
+
 export default function ConsultationPage() {
   var langCtx = useLang(); var t = langCtx.t;
   var user = getUser();
@@ -252,11 +271,33 @@ export default function ConsultationPage() {
     } catch(err){ alert('Error: '+err.message); }
   }
 
-  async function removeRx(rxId){
+  // A refusal usually means the pharmacy or lab moved on while this screen was open,
+  // so after telling the doctor, reload the rows to show their real state.
+  function lockAlert(err){
+    var key = LOCK_MESSAGES[err && err.message];
+    if(!key) return false;
+    alert(t[key]);
+    reloadItems();
+    return true;
+  }
+  async function reloadItems(){
+    if(!consult) return;
+    try { setRxList(await api.get('/consultations/'+consult.id+'/prescriptions')); } catch(e){}
+    try { setOrderItems(await api.get('/consultations/'+consult.id+'/orders')); } catch(e){}
+  }
+
+  // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
+  // clicks to read, so ask first.
+  function confirmRemove(name){
+    return window.confirm(String(t.cs_confirmRemove||'').replace('{name}', name||''));
+  }
+
+  async function removeRx(rx){
+    if(!confirmRemove(rx.drug_name)) return;
     try {
-      await api.del('/consultations/prescription/'+rxId);
-      setRxList(function(p){ return p.filter(function(r){return r.id!==rxId}); });
-    } catch(err){ alert(err.message); }
+      await api.del('/consultations/prescription/'+rx.id);
+      setRxList(function(p){ return p.filter(function(r){return r.id!==rx.id}); });
+    } catch(err){ if(!lockAlert(err)) alert(err.message); }
   }
 
   function updateRxLocal(rxId, key, val){
@@ -278,7 +319,7 @@ export default function ConsultationPage() {
         total_qty: (parseFloat(dose)||0) * freq * days
       });
       setRxList(function(list){ return list.map(function(r){ return r.id===rx.id ? updated : r; }); });
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ if(!lockAlert(err)) alert('Error: '+err.message); }
   }
 
   function updateOrderLocal(orderId, key, val){
@@ -343,11 +384,12 @@ export default function ConsultationPage() {
   }
   function toggleGroup(g){ setExpGroups(function(p){ var n=Object.assign({},p); n[g]=!n[g]; return n; }); }
 
-  async function removeOrder(orderId){
+  async function removeOrder(o){
+    if(!confirmRemove(o.order_name)) return;
     try {
-      await api.del('/consultations/order/'+orderId);
-      setOrderItems(function(p){ return p.filter(function(o){return o.id!==orderId}); });
-    } catch(err){ alert(err.message); }
+      await api.del('/consultations/order/'+o.id);
+      setOrderItems(function(p){ return p.filter(function(x){return x.id!==o.id}); });
+    } catch(err){ if(!lockAlert(err)) alert(err.message); }
   }
 
   function insertPhrase(text){ setNote(function(prev){ return prev?(prev+'\n'+text):text; }); }
@@ -496,22 +538,38 @@ export default function ConsultationPage() {
                     <tbody>
                       {rxList.map(function(rx){
                         var inStyle={background:'#0f1117',border:'1px solid #2a3142',borderRadius:4,padding:'3px 4px',color:tx,fontSize:14,width:'100%',boxSizing:'border-box',textAlign:'center'};
+                        // Dispensed: the pharmacy has handed it over and the server will
+                        // refuse any change, so show the values as plain text, not inputs.
+                        var done = rx.status==='dispensed';
+                        var cellRO={padding:'3px 4px',textAlign:'center',color:t2,fontSize:14};
                         return <tr key={'rx-'+rx.id} style={{borderBottom:'1px solid #1e2433'}}>
-                          <td style={{padding:'3px 5px'}}><span onClick={function(){removeRx(rx.id)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span></td>
+                          <td style={{padding:'3px 5px'}}>{done
+                            ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
+                            : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
                           <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}</td>
-                          <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 5px',textAlign:'center',color:'#34d399',fontSize: 12,fontWeight:700}}></td>
+                          {done ? <>
+                            <td style={cellRO}>{rx.dose||''}</td>
+                            <td style={cellRO}>{rx.frequency||''}</td>
+                            <td style={cellRO}>{rx.days||''}</td>
+                            <td style={cellRO}>{rx.route||''}</td>
+                            <td style={cellRO}>{rx.memo||''}</td>
+                          </> : <>
+                            <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                          </>}
+                          <td style={{padding:'3px 5px',textAlign:'center',color:'#34d399',fontSize: 12,fontWeight:700,whiteSpace:'nowrap'}}>{done ? t.cs_dispensed : ''}</td>
                         </tr>;
                       })}
                       {orderItems.map(function(o){
                         var inStyle={background:'#0f1117',border:'1px solid #2a3142',borderRadius:4,padding:'3px 4px',color:tx,fontSize:14,width:'100%',boxSizing:'border-box',textAlign:'center'};
                         return <tr key={'oi-'+o.id} style={{borderBottom:'1px solid #1e2433'}}>
-                          <td style={{padding:'3px 5px'}}><span onClick={function(){removeOrder(o.id)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span></td>
+                          <td style={{padding:'3px 5px'}}>{orderLocked(o)
+                            ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
+                            : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{o.order_code}</td>
                           <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}</td>
                           <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>

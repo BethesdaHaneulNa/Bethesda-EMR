@@ -2,14 +2,26 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { todayLocal } = require('../utils/localDate');
 const { badAmounts } = require('../utils/validate');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 router.use(authMiddleware);
 
+// Reads stay open to any signed-in user: the payment, pharmacy, lab and reception
+// screens show a visit's prescriptions and orders (PatientChart, DocumentModal).
+// Writing them is the doctor's job. The menu already hides this screen from other
+// roles, but the menu is not a lock - a pharmacy or cashier account could still
+// post prescriptions straight to these endpoints.
+const canConsult = permMiddleware('consultation');
+
+// Refusals the consultation screen recognises and translates. Keep these strings in
+// step with LOCK_MESSAGES in frontend/src/pages/Consultation.jsx.
+const RX_DISPENSED = 'Prescription already dispensed';
+const ORDER_HAS_RESULT = 'Order already has a result';
+
 // POST /api/consultations - start or reopen consultation
-router.post('/', async (req, res) => {
+router.post('/', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -56,7 +68,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/consultations/:id - save consultation note
-router.put('/:id', async (req, res) => {
+router.put('/:id', canConsult, async (req, res) => {
   try {
     const { subjective, objective, assessment, plan, note_text,
             bp_systolic, bp_diastolic, temperature, pulse, spo2, respiratory_rate, weight, height } = req.body;
@@ -74,7 +86,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // PUT /api/consultations/:id/complete - complete consultation
-router.put('/:id/complete', async (req, res) => {
+router.put('/:id/complete', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -103,7 +115,7 @@ router.get('/:id/diagnoses', async (req, res) => {
 });
 
 // POST /api/consultations/:id/diagnoses
-router.post('/:id/diagnoses', async (req, res) => {
+router.post('/:id/diagnoses', canConsult, async (req, res) => {
   try {
     const { icd_code, diagnosis_name, diagnosis_type, sort_order } = req.body;
     const result = await pool.query(
@@ -115,7 +127,7 @@ router.post('/:id/diagnoses', async (req, res) => {
 });
 
 // DELETE /api/consultations/diagnosis/:dxId
-router.delete('/diagnosis/:dxId', async (req, res) => {
+router.delete('/diagnosis/:dxId', canConsult, async (req, res) => {
   try {
     await pool.query('DELETE FROM diagnosis WHERE id = $1', [req.params.dxId]);
     res.json({ success: true });
@@ -146,7 +158,7 @@ router.get('/:id/prescriptions', async (req, res) => {
 });
 
 // POST /api/consultations/:id/prescriptions
-router.post('/:id/prescriptions', async (req, res) => {
+router.post('/:id/prescriptions', canConsult, async (req, res) => {
   try {
     const { drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo } = req.body;
     const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
@@ -161,8 +173,15 @@ router.post('/:id/prescriptions', async (req, res) => {
 });
 
 
+// A write that matched no row either hit a dispensed line or a missing one; say which.
+async function rxRefusal(res, rxId) {
+  const r = await pool.query('SELECT status FROM prescription WHERE id = $1', [rxId]);
+  if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+  return res.status(409).json({ error: RX_DISPENSED });
+}
+
 // PUT /api/consultations/prescription/:rxId - update prescription details
-router.put('/prescription/:rxId', async (req, res) => {
+router.put('/prescription/:rxId', canConsult, async (req, res) => {
   try {
     const { dose, frequency, days, route, memo, total_qty, unit_price } = req.body;
     const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
@@ -170,21 +189,28 @@ router.put('/prescription/:rxId', async (req, res) => {
     const calcQty = total_qty !== undefined && total_qty !== null && total_qty !== ''
       ? total_qty
       : ((parseFloat(dose) || 0) * (parseInt(frequency) || 1) * (parseInt(days) || 1));
+    // Once the pharmacy has handed the drug over, its stock is already deducted.
+    // Changing the line afterwards would move the bill but not the shelf, so the two
+    // would disagree for good. The status test sits in the UPDATE itself so a
+    // dispense landing at the same moment cannot slip between a check and the write.
     const result = await pool.query(
       `UPDATE prescription
        SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, total_qty=$6, unit_price=COALESCE($7, unit_price)
-       WHERE id=$8 RETURNING *`,
+       WHERE id=$8 AND status <> 'dispensed' RETURNING *`,
       [dose, parseInt(frequency) || 1, parseInt(days) || 1, route, memo, calcQty, unit_price, req.params.rxId]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // DELETE /api/consultations/prescription/:rxId
-router.delete('/prescription/:rxId', async (req, res) => {
+router.delete('/prescription/:rxId', canConsult, async (req, res) => {
   try {
-    await pool.query('DELETE FROM prescription WHERE id = $1', [req.params.rxId]);
+    // Same reason as the PUT above: a dispensed line stays.
+    const result = await pool.query(
+      "DELETE FROM prescription WHERE id = $1 AND status <> 'dispensed' RETURNING id", [req.params.rxId]);
+    if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -192,7 +218,7 @@ router.delete('/prescription/:rxId', async (req, res) => {
 // ── Order Items (Lab, Imaging, Procedures) ──
 
 // POST /api/consultations/:id/orders
-router.post('/:id/orders', async (req, res) => {
+router.post('/:id/orders', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -276,7 +302,7 @@ router.post('/:id/orders', async (req, res) => {
 
 
 // PUT /api/consultations/order/:orderId - update order item dosing/quantity details
-router.put('/order/:orderId', async (req, res) => {
+router.put('/order/:orderId', canConsult, async (req, res) => {
   try {
     const { dose, frequency, days, quantity, memo, unit_price } = req.body;
     const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
@@ -293,11 +319,31 @@ router.put('/order/:orderId', async (req, res) => {
 });
 
 // DELETE /api/consultations/order/:orderId
-router.delete('/order/:orderId', async (req, res) => {
+router.delete('/order/:orderId', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // 검사 작업로그(worklist_log)가 이 오더를 참조하므로 먼저 정리
+    // An order that has produced something is a record, not a request any more.
+    // lab_result and worklist_log both hang off order_item with ON DELETE CASCADE, so
+    // deleting a resulted order would silently take the lab values, the imaging
+    // accession and the radiology reading with it. Refuse instead.
+    // FOR UPDATE first: a lab result being saved right now needs a key lock on this
+    // row, so it either finishes before the check below sees it, or waits and then
+    // fails on the missing order - never lands on an order we are deleting.
+    const oi = await client.query(
+      'SELECT id, result_text FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
+    if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+    const produced = await client.query(
+      `SELECT EXISTS (SELECT 1 FROM lab_result WHERE order_item_id = $1)
+           OR EXISTS (SELECT 1 FROM worklist_log WHERE order_item_id = $1
+                                                   AND status IN ('in_progress','completed')) AS yes`,
+      [req.params.orderId]);
+    if (produced.rows[0].yes || String(oi.rows[0].result_text || '').trim() !== '') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: ORDER_HAS_RESULT });
+    }
+    // An unstarted worklist entry goes with the order (the FK cascades; explicit so
+    // the intent is visible here).
     await client.query('DELETE FROM worklist_log WHERE order_item_id = $1', [req.params.orderId]);
     await client.query('DELETE FROM order_item WHERE id = $1', [req.params.orderId]);
     await client.query('COMMIT');

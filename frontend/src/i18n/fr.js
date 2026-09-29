@@ -269,6 +269,10 @@ export default {
   // ── begin reception (rc_) ──
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "Retirer « {name} » ?",
+  cs_dispensed: "Délivré",
+  cs_rxLocked: "La pharmacie a déjà délivré ce médicament : il ne peut plus être modifié ni retiré. Prévenez la pharmacie et prescrivez une nouvelle ligne si nécessaire.",
+  cs_orderLocked: "Cette demande a déjà un résultat (analyses, compte-rendu ou examen commencé) : elle ne peut pas être retirée.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   // ── end payment ──
