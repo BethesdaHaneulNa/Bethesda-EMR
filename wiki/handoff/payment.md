@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — PatientChart 오더 상태 번역 (PACS 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) — H3와 섞지 않은 작은 커밋
+- **한 일**: 과거 내원 패널(`PatientChart.jsx`)의 오더 줄 상태가 `worklist_status` 원문(`sent`·`completed`, 영어)으로 나오던 것을 진료 화면 `orderStatus()`와 **같은 규칙·같은 번역 키**로 바꿈. 검사(lab)는 `cs_labPending`·`cs_labDone`·`cs_labCancelled`, 워크리스트로 보낸 오더(`worklist_sent_at` 있음)는 `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`, 그 밖은 표시 없음. 규칙까지 맞춘 이유: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 단순 번역만 하면 결과 없는 검사에 「Réalisé(촬영 완료)」가 붙음.
+- **바꾼 파일**: 없음(자기 파일)
+- **공용 파일 변경**: **`frontend/src/components/PatientChart.jsx`**(공용, 수납 주관 — 수납·약국이 씀) · 오더 줄 상태 표시만. 약국 화면의 과거 내원 패널도 같이 바뀜.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(진료의 `cs_` 키를 읽기만)
+- **확인한 방법**: 프론트 빌드. 격리 스택 9183, 프랑스어: 검사 L01(결과 없음) → 「En attente」(예전 `completed`), 영상 S1·내시경 E1(워크리스트 전송됨) → 「Envoyé」. S1의 전송 표시는 격리 DB에서 직접 넣음(PACS 없음).
+- **확인 못 한 것**: 약국 화면에서 직접 열어 보지는 않음(같은 부품). 촬영 중·완료 상태(PACS 없이 만들지 않음 — 키 매핑은 진료와 같음).
+- **위키**: `modules/payment.md` 4절 공용 부품(PatientChart), 8절
+- **다른 세션에 부탁**: 없음 (PACS 부탁 처리 완료 알림 — 총괄 경유)
+
 ## 2026-09-29 — 조사: 약 총량 계산식이 바뀌면 수납은? (총괄 요청, 코드 변경 없음)
 
 > **총괄 확인 (2026-09-29)**: H3 영수증 `dee58dc` 합침(`33d466e`) + 실행 중 EMR 반영. 총괄이 실행 중 EMR의 영수 2건을 API에서 받아 `ReceiptDoc`으로 688px 폭에 직접 찍어 확인: 프랑스어, 병원 정보·환자·항목·합계·상태 표시, 높이 534·508px. `Receipt.jsx`를 규칙 4절에 수납 소유로 넣음. 운영 병원 정보는 시드 예시 값(가짜 주소·전화·이메일)이라 실제 값 입력이 필요 — 결정 세션 경유로 실장님께 알림. 약 총량 조사 `4bc7133`: 조회 결과 운영 DB 처방 6건 중 `total_qty` NULL 0 · 0 0.
