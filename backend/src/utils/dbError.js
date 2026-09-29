@@ -10,6 +10,7 @@ const STATUS_BY_PG_CODE = {
   '23514': 400, // check_violation       — value outside the allowed set
   '22P02': 400, // invalid_text_representation — e.g. "abc" for a numeric column
   '22007': 400, // invalid_datetime_format
+  '22008': 400, // datetime_field_overflow — a date that does not exist (2020-02-30)
   '22003': 400, // numeric_value_out_of_range
 };
 
@@ -20,6 +21,7 @@ const MESSAGE_BY_PG_CODE = {
   '23514': 'A field has a value that is not allowed',
   '22P02': 'A field has the wrong format',
   '22007': 'A date field has the wrong format',
+  '22008': 'A date field has a date that does not exist',
   '22003': 'A number is out of range',
 };
 

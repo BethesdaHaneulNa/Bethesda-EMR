@@ -23,7 +23,6 @@ const MSG = Object.freeze({
   PASSWORD_REQUIRED: 'password is required',
   LAST_ADMIN: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
   SETUP_ADMIN_KEPT: 'The administrator account created during setup cannot be deactivated.',
-  STOCK_CHANGED: 'Stock changed while this drug was open',
 });
 
 // These name the field they are about, so they are built rather than fixed; the

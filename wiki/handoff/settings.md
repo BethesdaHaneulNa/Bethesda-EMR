@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 의사 기본 권한에 약국 (총괄 지시 2, 실장님 결정)
+
+- **상태**: 확인 요청 (기존 계정 처리는 **보류 — 총괄 확인 필요**)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`73b0517` 위)
+- **한 일**: 의사 역할 기본 권한 = 진료 + 약국. `backend/src/middleware/permissions.js`·`frontend/src/modules.js` 한 줄씩. 의사 첫 화면은 그대로 진료(`Login.jsx` `ROLE_ROUTES`). `settings.access.mjs` 계정을 11개로(의사 = 기본값 진료·약국, 진료만 계정 `se_cons` 새로).
+- **이미 있는 의사 계정 — 확인한 것**: 역할 기본값이 쓰이는 곳은 ① 직원 창에서 역할을 고를 때 자동 체크 ② 저장된 권한이 NULL인 계정(`auth.js`·`effectivePerms`) 두 군데뿐입니다. 모든 계정은 권한 목록이 저장되어 있어서(`013`이 옛 계정을 채웠고, 만드는 경로는 모두 목록을 저장) **이미 있는 의사 계정은 진료만 그대로**입니다. 격리 스택에서 확인: 기존 `doc1` = `consultation`, 새 `se_doc` = `consultation,pharmacy`. 복원 연습 때 본 실행 중 EMR 사본(오늘 02:21)의 의사 계정은 **`lee`(Dr. Lee, 진료만)**, **`zzdoc`(시험 계정, 진료만)** 둘.
+- **기존 계정 선택지** (총괄 확인 요청):
+  - (a) **마이그레이션 없이** 관리자가 Dr. Lee 한 명만 **Personnel → Modifier → Pharmacie 체크**. 실제 의사가 한 명이라 가장 간단하고, 누가 무엇을 받았는지 화면에서 보입니다. **추천.**
+  - (b) 마이그레이션(설정 번호대): `UPDATE staff SET permissions = array_append(permissions, 'pharmacy') WHERE role = 'doctor' AND NOT ('pharmacy' = ANY(permissions))` — 계정 권한을 **바꾸는** 마이그레이션이라 규칙상 총괄·실장님 확인 뒤에만. 쓰지 않았습니다.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(2.4 표, 3-1, 8절)
+- **공용 파일 변경**: `backend/src/middleware/permissions.js`·`frontend/src/modules.js` 의사 줄 (총괄 지시)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `settings.permissions.mjs` 통과, `npm run build`, 격리 스택 `settings.access.mjs` **107 × 11 = 1177건 모두 표와 같음**. 화면: 새로 추가 창에서 역할 Médecin → Consultation·Pharmacie 체크. 기존 의사 계정 권한 그대로(DB).
+
+## 2026-09-29 — 약 저장이 재고를 쓰지 않음 (총괄 지시 1)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a7b40e8`을 ff로 당긴 뒤)
+- **한 일**: 약국의 재고 칸 읽기 전용(`14ff4be`)에 맞춰 서버 쪽 — `POST /api/admin/drugs`는 재고 **0**으로 시작(요청의 `stock_qty` 무시, 빈 최소 재고는 10), `PUT /api/admin/drugs/:id`는 `stock_qty`·`stock_expected`를 **조용히 무시**(총괄 추천대로 — 옛 화면이 열린 채 저장해도 막히지 않게). 오전의 H4 안전장치(`stock_expected` + 409, 행 잠금 트랜잭션)는 필요 없어져 지웠고, 화면의 409 처리·`STOCK_CHANGED` 상수·번역 키 `se_stockChanged`도 지움. `settings.drugs.mjs`를 새 동작에 맞게 다시 씀.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js`(`STOCK_CHANGED` 삭제) · `frontend/src/pages/Settings.jsx`(`saveEdit` 약 부분만 — 약품 탭 화면은 안 건드림) · `backend/test/settings.drugs.mjs` · `backend/test/settings.messages.mjs` · `wiki/modules/settings.md`(2.12, 3-8 다시 씀, 4절, 7절 U10, 8절)
+- **공용 파일 변경**: i18n — `se_stockChanged` 삭제(ko·en·fr, `se_` 블록 안)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`, `settings.messages.mjs` 통과. 격리 스택 `settings.drugs.mjs` 9개 통과(위키 3-8). 화면: 프랑스어 약품 편집에서 단가만 바꿔 저장 → 알림 없이 「Enregistré」, DB 단가 4600·재고 50 그대로.
+- **다른 세션에 부탁**: **약국** — `backend/test/pharmacy.stock.mjs` 132행 「settings saves stock directly (until settings stops writing it)」와 그 뒤 「outside change bridged」 두 확인은 이제 실패합니다(설정이 재고를 안 쓰므로 PUT 뒤 재고가 그대로). 약국 시험을 「설정 저장이 재고를 바꾸지 않음」으로 바꿔 주세요. `moveStock`의 「outside」 연결 줄은 옛 DB·직접 SQL 대비로 남겨도 무방.
+
 ## 2026-09-29 — S2 표에 새 라우트 2개 · 날짜 SQL 확인
 
 - **상태**: 확인 요청

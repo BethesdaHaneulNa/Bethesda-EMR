@@ -1,102 +1,102 @@
-﻿확인할 점,코드,약 이름,성분,함량,제형 (옛 값),제형 (고친 값),EMR 분류,옛 분류,수량 합계,원래 수량 표기,묶음 수,옛 용법 (원문),옮길 횟수,옮길 용법,참고: 옛 용법으로 계산한 하루 총량 (가져오지 않음),채울 칸: 하루 총량,채울 칸: 일수,채울 칸: 가격,채울 칸: 최소 재고,병·개 단위 약?,흔한 용도
-옛 메모: 확인 필요(needs review),MED-0001,Amlodipine 5mg,Amlodipine 5mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,800,100정*8,1,QD,1,QD,,,,,,,Hypertension
-"수량 불일치(원래 표기 60캡슐*66 ≈ 3960, 수량 90)",MED-0003,Memorain Cap,ginko leaf extract 40mg Ginseng 40% ethanol dryed extract 100mg,,Capsule,Capsule,Cardiovascular,Cardiovascular,90,60캡슐*66,1,BID,2,BID,,,,,,,"Circulation support, venous symptoms"
-"수량 불일치(원래 표기 60정*83 ≈ 4980, 수량 3000)",MED-0004,Chisen Cap,Diosmin 300mg,,Capsule,Capsule,Cardiovascular,Cardiovascular,3000,60정*83,1,BID,2,BID,,,,,,,"Circulation support, venous symptoms"
-"수량 불일치(원래 표기 850정 ≈ 850, 수량 900)",MED-0007,Hutradol,Tylenol 162.5 + Tramadol 37.5: Hutradol tablet = Hantraset,,Tablet,Tablet,Analgesic,Analgesic / Antipyretic,900,850정,1,BID,2,BID,,,,,,,Moderate pain
-"수량 불일치(원래 표기 79병 ≈ 79, 수량 76)",MED-0009,PROFEIN,100mg/5ml,,Syrup,Syrup,Analgesic,Analgesic / Antipyretic,76,79병,1,,,,,,,,,예,"Fever, pain"
-"수량 불일치(원래 표기 30 병 ≈ 30, 수량 26)",MED-0010,SANDOL,Paracetamol Syrup 125/5ml,,Syrup,Syrup,Analgesic,Analgesic / Antipyretic,26,30 병,1,PRN,,,,,,,,예,"Fever, mild pain"
-"제형 틀림(좌약인데 Ophthalmic) / 수량 불일치(원래 표기 30개 ≈ 30, 수량 300)",MED-0011,Paracetamol Supp 125mg,Acetaminophen,,Ophthalmic,Suppository,Analgesic,Analgesic / Antipyretic,300,30개,1,PRN,,,,,,,,,"Fever, mild pain"
-제형 틀림(정인데 Ophthalmic) / 이름 확인,MED-0012,325mg Amiceta Tab,Acetaminophen Encapsulated 350mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,4000,"4,000정",1,1T TID,3,TID,3,,,,,,"Fever, mild pain"
-"제형 틀림(원래 표기 「300정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 250)",MED-0014,Taracet semi,Acetaminophen 162.5mg tramadol hydrocloride 18.75mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,250,300정*1,1,4T Q6H,4,Q6H,16,,,,,,"Pain, fever"
-"제형 틀림(원래 표기 「300정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 900)",MED-0015,Susphen 8hours ER 650mg,Acetaminophen 650mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,900,300정*1,1,2T TID,3,TID,6,,,,,,"Fever, mild pain"
-"제형 틀림(원래 표기 「30정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 30정*1 ≈ 30, 수량 390)",MED-0016,Hycephen,"Acetaminophen 325mg ,tramadol hydrocloride 18.75mg",,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,390,30정*1,1,2T Q6H,4,Q6H,8,,,,,,"Pain, fever"
-제형 틀림(정인데 Ophthalmic),MED-0017,Susphen night Tab,"Acetaminophen Chlorpheniramine mileate 2mg ,phenyleprine hydroclorhide 5mg",,Ophthalmic,Tablet,Respiratory,Respiratory,600,10정*60,1,1-2T Q4H,,,,,,,,,"Cold symptoms, fever, nasal congestion"
-옛 메모: 확인 필요(needs review),MED-0019,IBUPROFENE SYRUP,IBUPROFENE SYRUP,,Syrup,Syrup,Analgesic,Analgesic / Anti-inflammatory,2,2 BTL,1,,,,,,,,,예,"Pain, inflammation, fever"
-"수량 불일치(원래 표기 950정 ≈ 950, 수량 1000) / 이름 확인",MED-0023,Perison ( /500T),EPERISONE HCL 50mg: Perison tablets,,Tablet,Tablet,Musculoskeletal,Musculoskeletal,1000,950정,1,1T BID,2,BID,2,,,,,,"Muscle spasm, musculoskeletal pain"
-"수량 불일치(원래 표기 4,800캡슐 ≈ 4800, 수량 750)",MED-0025,Eldolant Cap,Erdosteine 300mg,,Capsule,Capsule,Respiratory,Respiratory,750,"4,800캡슐",1,1T TID,3,TID,3,,,,,,Cough with sputum
-"같은 이름 다른 코드: MED-0028 / 수량 불일치(원래 표기 336정 ≈ 336, 수량 280)",MED-0027,Daewoong Montelukast Tab 10mg,(Montelukast Sodium) 10.4mg,,Tablet,Tablet,Respiratory,Respiratory,280,336정,1,1QD,1,QD,1,,,,,,"Asthma, allergic rhinitis"
-"이름은 정(Tab)인데 제형은 Powder / Sachet — 확인 / 같은 이름 다른 코드: MED-0027 / 수량 불일치(원래 표기 28포 ≈ 28, 수량 8)",MED-0028,Daewoong Montelukast Tab 10mg,(Montelukast Sodium) 4mg,,Powder / Sachet,Powder / Sachet,Respiratory,Respiratory,8,28포,1,1QD,1,QD,1,,,,,,"Asthma, allergic rhinitis"
-"수량 불일치(원래 표기 10병 ≈ 10, 수량 9)",MED-0029,CARBO TOUX 5%,250ML,,Syrup,Syrup,Respiratory,Respiratory,9,10병,1,,,,,,,,,예,Cough
-"수량 불일치(원래 표기 1000정 ≈ 1000, 수량 800)",MED-0031,Bromhexine HCL,Bromhexine Hydrochloride 8mg,,Tablet,Tablet,Respiratory,Respiratory,800,1000정,1,1-2T TID,,,,,,,,,Cough with sputum
-옛 메모: 확인 필요(needs review),MED-0034,Ambroxol,Ambroxol,,Tablet,Tablet,Respiratory,Respiratory,500,,1,1T TID,3,TID,3,,,,,,Cough with sputum
-"수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 750) / 이름 확인",MED-0035,200mg Cimetidine Tab,Cimetidine,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정",1,1T TID,3,TID,3,,,,,,"Gastritis, reflux, ulcer symptoms"
-"수량 불일치(원래 표기 500정 ≈ 500, 수량 90)",MED-0037,Healing,625mg,,Tablet,Tablet,GI,Gastrointestinal,90,500정,1,1QD,1,QD,1,,,,,,Indigestion
-"수량 불일치(원래 표기 1,000정*1 ≈ 1000, 수량 750)",MED-0039,Tirogen Tab,Tiropamide Hydrocholoride 100mg,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정*1",1,1T TID,3,TID,3,,,,,,"Nausea, dyspepsia, abdominal cramps"
-"수량 불일치(원래 표기 1,000정*1 ≈ 1000, 수량 750)",MED-0040,Polybutine Tab 100mg,Trimebutine Maleate 100mg,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정*1",1,1T TID,3,TID,3,,,,,,"Nausea, dyspepsia, abdominal cramps"
-"수량 불일치(원래 표기 2,400정*1 ≈ 2400, 수량 1950) / 이름 확인",MED-0041,20mg Gasparmo,Pamotidine: 20mg,,Tablet,Tablet,GI,Gastrointestinal,1950,"2,400정*1",1,1T BID,2,BID,2,,,,,,"Gastritis, reflux, ulcer symptoms"
-"수량 불일치(원래 표기 2,400정 ≈ 2400, 수량 2250)",MED-0042,Mucoramine Tab,REBAMIPIDE 100mg,,Tablet,Tablet,GI,Gastrointestinal,2250,"2,400정",1,1T BID,2,BID,2,,,,,,"Gastritis, stomach discomfort"
-"수량 불일치(원래 표기 150정*2 ≈ 300, 수량 1800)",MED-0044,Anytal Triple Layered,Diastase protease Celullase 20mgTrimebutine Maleate 100mg Lipase calcium carbonate,,Tablet,Tablet,GI,Gastrointestinal,1800,150정*2,1,1T BID,2,BID,2,,,,,,"Nausea, dyspepsia, abdominal cramps"
-"수량 불일치(원래 표기 500정*1 ≈ 500, 수량 250)",MED-0046,Mosaone,"MOSAPRIDE Citrate Dihydrate 5,29mg",,Tablet,Tablet,GI,Gastrointestinal,250,500정*1,1,1T TID AFTER OR BEFOR MEAL,3,TID,3,,,,,,"Nausea, dyspepsia, abdominal cramps"
-"수량 불일치(원래 표기 250정*2 ≈ 500, 수량 390)",MED-0047,Bioflor Cap/Powder,Saccharomyce Boulardii,,Capsule,Capsule,GI,Gastrointestinal,390,250정*2,1,CAP/ Powder: 1-2C BID,,,,,,,,,"Diarrhea, gut flora support"
-"같은 이름 다른 코드: MED-0079 / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 1200)",MED-0048,Medilac-S Enteric Coated Cap,"Bacillus Subtilis 0,563 mg",,Capsule,Capsule,GI,Gastrointestinal,1200,300정*1,1,1C QD-2C TID,,,,,,,,,"Diarrhea, gut flora support"
-"수량 불일치(원래 표기 1정*1 ≈ 1, 수량 420)",MED-0049,Nexierd,Esomeprazole Magnesium Dihydrate,,Tablet,Tablet,GI,Gastrointestinal,420,1정*1,1,1T QD,1,QD,1,,,,,,"Reflux, gastritis, ulcer symptoms"
-"제형 틀림(제산제 Almagate, 원래 표기 「500정*2」는 정인데 Vaginal / Gel)",MED-0054,Almagel,Almagate 500mg,,Vaginal / Gel,Tablet,GI,Gastrointestinal,1000,500정*2,1,2T TID,3,TID,6,,,,,,"Heartburn, reflux, stomach pain"
-"수량 불일치(원래 표기 600정 ≈ 600, 수량 1380)",MED-0056,Beposen,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1380,600정,1,1T BID,2,BID,2,,,,,,"Allergic rhinitis, itching, urticaria"
-"수량 불일치(원래 표기 1,500정 ≈ 1500, 수량 600)",MED-0057,Beari On,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,600,"1,500정",1,1T BID,2,BID,2,,,,,,"Allergic rhinitis, itching, urticaria"
-"수량 불일치(원래 표기 300정*1 ≈ 300, 수량 1350)",MED-0058,Twolion,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1350,300정*1,1,1T BID,2,BID,2,,,,,,"Allergic rhinitis, itching, urticaria"
-"같은 이름 다른 코드: MED-0062 / 수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 500)",MED-0061,Bonaling-A Tab,Dimenhydrinate 50mg,,Tablet,Tablet,Antihistamine,Antihistamine / Antiemetic,500,"1,000정",1,1 BID,2,BID,2,,,,,,"Nausea, dizziness, motion sickness"
-"같은 이름 다른 코드: MED-0061 / 수량 불일치(원래 표기 1,001정 ≈ 1001, 수량 500)",MED-0062,Bonaling-A Tab,Dimenhydrinate 51mg,,Tablet,Tablet,Antihistamine,Antihistamine / Antiemetic,500,"1,001정",1,2 BID,2,BID,4,,,,,,"Nausea, dizziness, motion sickness"
-"수량 불일치(원래 표기 1,700정 ≈ 1700, 수량 1000)",MED-0063,Peniramin Tab 2mg,(Chlorpheniramine Maleate) 2mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1000,"1,700정",1,1 QD,1,QD,1,,,,,,"Allergic rhinitis, itching, urticaria"
-"수량 불일치(원래 표기 4900 ≈ 4900, 수량 4500)",MED-0065,Prednisolone 5mg Tab,Prednisolone 5mg,,Tablet,Tablet,Corticosteroid,Corticosteroid,4500,4900,1,,,,,,,,,,"Inflammation, allergic conditions"
-"수량 불일치(원래 표기 100개 ≈ 100, 수량 98) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0066,Metronidazole vaginal gel 5g,(Metronidazole),,Vaginal / Gel,Vaginal / Gel,Gynecology,Obstetrics / Gynecology,98,100개,1,1_2T BID,2,BID,,,,,,예,Vaginal infection
-"같은 이름 다른 코드: MED-0069 / 수량 불일치(원래 표기 650캡슐 ≈ 650, 수량 2000) / 옛 메모: 확인 필요(needs review) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0068,Amoxicillin 500mg,Amoxicillin 500mg,,Capsule,Capsule,Antibiotic,Antibiotic,2000,650캡슐,1,1_2T BID,2,BID,,,,,,,Bacterial infection
-"같은 이름 다른 코드: MED-0068 / 수량 불일치(원래 표기 1,000캡슐 ≈ 1000, 수량 2500) / 옛 메모: 확인 필요(needs review) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0069,Amoxicillin 500mg,Amoxicillin 500mg,,Capsule,Capsule,Antibiotic,Antibiotic,2500,"1,000캡슐",1,1_2T BID,2,BID,,,,,,,Bacterial infection
-"수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 800)",MED-0071,Flasinyl Tab,Metronidazole,,Tablet,Tablet,Antibiotic,Antibiotic / Antiprotozoal,800,"1,000정",1,1TID,3,TID,3,,,,,,"Anaerobic infection, protozoal infection"
-"수량 불일치(원래 표기 990정 ≈ 990, 수량 550) / 옛 메모: 확인 필요(needs review)",MED-0073,Albendazole 400mg,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,550,990정,1,,,,,,,,,,Intestinal worm infection
-"수량 불일치(원래 표기 2정*8 ≈ 16, 수량 32)",MED-0076,Zelcome,Flubendazole 500mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,32,2정*8,1,1T QD,1,QD,1,,,,,,Intestinal worm infection
-말라리아약 — 의사 확인 목록(급함),MED-0077,Combimal,Sulfadoxine,,Tablet,Tablet,Antimalarial,Antimalarial,300,50정*6,1,3T QD,1,QD,3,,,,,,Malaria treatment
-말라리아약 — 의사 확인 목록(급함),MED-0078,M-Artefix 80mg/480mg,M_Artefix 80mg/480mg,,Tablet,Tablet,Antimalarial,Antimalarial,30,5정*6,1,,,,,,,,,,Malaria treatment
-같은 이름 다른 코드: MED-0048,MED-0079,Medilac-S Enteric Coated Cap,Bacillus Subtilis-Enterococcus Faecium Culture 125mg,,Capsule,Capsule,GI,Gastrointestinal,9000,300x3캡슐,1,,,,,,,,,,"Diarrhea, gut flora support"
-제형 틀림(정인데 Ophthalmic) / 같은 이름 다른 코드: MED-0081,MED-0080,Silcon Tab,Polycarbophil Calcium 625mg,,Ophthalmic,Tablet,GI,Gastrointestinal,500,500정,1,,,,,,,,,,Constipation
-제형 틀림(정인데 Ophthalmic) / 같은 이름 다른 코드: MED-0080,MED-0081,Silcon Tab,Polycarbophil Calcium 625mg,,Ophthalmic,Tablet,GI,Gastrointestinal,100,100정,1,,,,,,,,,,Constipation
-"수량 불일치(원래 표기 900정 ≈ 900, 수량 500)",MED-0082,Magmil Tab,Magnesium hydroxide,,Tablet,Tablet,GI,Gastrointestinal,500,900정,1,1-2 BID,,,,,,,,,Constipation
-"수량 불일치(원래 표기 90정*54 ≈ 4860, 수량 2000)",MED-0083,Neutech Tab,Aloe 2mg caffeine hydrate 20mg Chlorpheniramine mileate 2mg Ethyl ampinobenzoate30mg Nicotinamide20mg Papaverine hydrochloryde Riboflavin Thiamine Hydrochoride 10mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,2000,90정*54,1,2-3T TID,,,,,,,,,"Circulation support, venous symptoms"
-"수량 불일치(원래 표기 180정*20 ≈ 3600, 수량 1890) / 수량 불일치(원래 표기 180정*20 ≈ 3600, 수량 1800)",MED-0084,Pansidil Cap,Calcium Pantothenate 60mg Keratine L Cystine 20mg medicinal yeast 100mg P Aminobenzoic Acid 20mg Thiamine Nitrate 60mg,,Capsule,Capsule,Dermatology,Dermatology,7290,180정*20,3,1C TID,3,TID,3,,,,,,Hair loss
-"수량 불일치(원래 표기 180정*17 ≈ 3060, 수량 1200) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0086,Feramine Q Tab,"Cimicifuga Rhizome Extract 0,0364 Ml Saint john 'S Wort 80% MEthanol dried extract",,Tablet,Tablet,Gynecology,Obstetrics / Gynecology,4260,180정*17,2,1_2T BID,2,BID,,,,,,,Menopausal symptoms
-"수량 불일치(원래 표기 60정*44 ≈ 2640, 수량 2460) / 수량 불일치(원래 표기 60정*44 ≈ 2640, 수량 400)",MED-0087,Caritopotene Soft Cap,Cucurbit Semen Oil Ext,,Capsule,Capsule,Urology,Urology,2860,60정*44,2,1C BID,2,BID,2,,,,,,Benign prostatic hyperplasia symptoms
-옛 용법 「1_2T TID」의 1_2 뜻(½? 1~2?) 확인,MED-0088,Insandol Tab,Titrated Ext of the Unsaponifiable Fraction Of the Zea mays L 35mg,,Tablet,Tablet,Other,Dental / Oral,6000,300정*20,1,1_2T TID,3,TID,,,,,,,Periodontal disease support
-수량 0,MED-0090,Beecom tab,Ascorbic Acid Calcium Pantothenate 61mg Cyanocobalami D biotin,,Tablet,Tablet,Vitamin,Vitamins / Supplements,0,,1,,,,,,,,,,Vitamin supplementation
-"같은 이름 다른 코드: MED-0094, MED-0095",MED-0093,Madecassol,Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,209,209개,1,,,,,,,,,,"Wounds, burns, skin irritation"
-"같은 이름 다른 코드: MED-0093, MED-0095",MED-0094,Madecassol,Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,93,93개,1,,,,,,,,,,"Wounds, burns, skin irritation"
-"같은 이름 다른 코드: MED-0093, MED-0094",MED-0095,Madecassol,Neomycin Sulfate Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,108,108개,1,,,,,,,,,,"Wounds, burns, skin irritation"
-"수량 불일치(원래 표기 31개 ≈ 31, 수량 1) / 옛 메모: 확인 필요(needs review)",MED-0096,Vaseline blanche,Vaseline blanche,,Topical,Topical,Dermatology,Dermatology / Wound Care,1,31개,1,,,,,,,,,예,"Wounds, burns, skin irritation"
-"수량 불일치(원래 표기 20개 ≈ 20, 수량 1) / 옛 메모: 확인 필요(needs review)",MED-0097,Sulfadiazine,Sulfadiazine,,Topical,Topical,Dermatology,Dermatology / Wound Care,1,20개,1,,,,,,,,,예,"Wounds, burns, skin irritation"
-"수량 불일치(원래 표기 8개 ≈ 8, 수량 3)",MED-0098,Neodex ophthalmic ointment 5g,Oxytetracycline Hydrochloride 5mg/g Polymyxin B Sulfate,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,3,8개,1,,,,,,,,,예,Eye infection or inflammation
-,MED-0002,Guinep,ginko leaf extract 40mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,120,120정,1,BID/ TID,,,,,,,,,"Circulation support, venous symptoms"
-,MED-0005,Retium,Dobesilate calcium hydrate 250mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,180,90정*2,1,BID,2,BID,,,,,,,"Circulation support, venous symptoms"
-,MED-0006,Januvia 50mg,SILTAGLIPINE HCL HYDRATE 56.69mg,,Tablet,Tablet,Endocrine,Endocrine / Antidiabetic,2016,"2,016정",1,QD,1,QD,,,,,,,Diabetes mellitus
-,MED-0008,Peloen,PELUBIPROFEN30mg:Peloen tablets,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,1800,"1,800정",1,,,,,,,,,,"Pain, inflammation, fever"
-,MED-0013,Ceclo Tab,Aceclofenac 100mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,1000,"1,000정",1,1T TID,3,TID,3,,,,,,"Pain, inflammation, fever"
-,MED-0018,Loxfenin,Loxoprofen Sodium Hydrate 68.1mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,30,30정*1,1,1T BID/TID,,,,,,,,,"Pain, inflammation, fever"
-,MED-0020,Laxib Tab,Celecoxib ( NSAID),,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,120,30정*4,1,1-4C QD/ 2C BID,,,,,,,,,"Pain, inflammation, fever"
-,MED-0021,Tak -Sen Soft Cap,Naproxen( NSAID )100mg,,Capsule,Capsule,Analgesic,Analgesic / Anti-inflammatory,100,10정*10,1,1-2C BID,,,,,,,,,"Pain, inflammation, fever"
-,MED-0022,Aceclofen,Aceclofenac 100mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,900,300정*3,1,1T BID,2,BID,2,,,,,,"Pain, inflammation, fever"
-,MED-0024,Miaron,Afloqualon 20 mg,,Tablet,Tablet,Musculoskeletal,Musculoskeletal,1000,500정*2,1,1T TID,3,TID,3,,,,,,"Muscle spasm, musculoskeletal pain"
-,MED-0026,Sudafed Tab,Peseudoephedrine Hydrocholoride 60mg,,Tablet,Tablet,Respiratory,Respiratory,2000,"2,000정",1,1T TID BID,,,,,,,,,Nasal congestion
-,MED-0030,ephedrine 40mg 4%,Montelukast Sodium,,Tablet,Tablet,Respiratory,Respiratory,500,500정,1,,,,,,,,,,Nasal congestion
-,MED-0032,Levopect,Levodroprizine 45 mg,,Tablet,Tablet,Respiratory,Respiratory,300,30정*10,1,1T BID,2,BID,2,,,,,,Cough
-,MED-0033,Muco -One,Erdosteine 300mg,,Tablet,Tablet,Respiratory,Respiratory,1000,100정*10,1,1C BID-TID,,,,,,,,,Cough with sputum
-,MED-0036,Macperan Tab,Metoclopramide 3.84mg,,Tablet,Tablet,GI,Gastrointestinal,1000,"1,000정",1,1T BID- 2T TID,,,,,,,,,"Nausea, dyspepsia, abdominal cramps"
-,MED-0038,Amis Tab,Artemisia Herb 95% Ethanol Soft Ext(20->1),,Tablet,Tablet,GI,Gastrointestinal,3000,"3,000정",1,1T BID,2,BID,2,,,,,,"Gastritis, stomach discomfort"
-,MED-0043,Bamedin,REBAMIPIDE 100mg,,Tablet,Tablet,GI,Gastrointestinal,900,100정*9,1,1T BID,2,BID,2,,,,,,"Gastritis, stomach discomfort"
-,MED-0045,Humorid,MOSAPRIDE SODIUM 5mg,,Tablet,Tablet,GI,Gastrointestinal,1800,"1,800정",1,1T TID,3,TID,3,,,,,,"Nausea, dyspepsia, abdominal cramps"
-,MED-0050,Bigcidine Cap,Nizatidine 150 mg (H2 Antagonist),,Capsule,Capsule,GI,Gastrointestinal,420,30정*14,1,1T BID/ 2T QD,,,,,,,,,"Gastritis, reflux, ulcer symptoms"
-,MED-0051,Gaster,Famotidine 20mg(H2 Antagonist),,Tablet,Tablet,GI,Gastrointestinal,1800,300정*6,1,1T BID/ 2T QD,,,,,,,,,"Gastritis, reflux, ulcer symptoms"
-,MED-0052,Stillen 2X,Artemisia Herb 95% Ethanol Soft Ext(20->1),,Tablet,Tablet,GI,Gastrointestinal,400,400정*1,1,1T BID,2,BID,2,,,,,,"Gastritis, stomach discomfort"
-,MED-0053,Algicell,Sodium Alginate,,Tablet,Tablet,GI,Gastrointestinal,360,30정*12,1,1-2PACKS TID/QID,,,,,,,,,"Heartburn, reflux, stomach pain"
-,MED-0055,Anemo,Scopolia Extract powder 10% Calcium carbonate,,Powder / Sachet,Powder / Sachet,GI,Gastrointestinal,2000,1000정*2,1,3T TID,3,TID,9,,,,,,"Heartburn, reflux, stomach pain"
-,MED-0059,Potas,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,300,300정*1,1,1T BID,2,BID,2,,,,,,"Allergic rhinitis, itching, urticaria"
-,MED-0060,Arazine,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,60,30정*2,1,1T BID,2,BID,2,,,,,,"Allergic rhinitis, itching, urticaria"
-,MED-0064,Dexamethasone Tab,Dexamethasone 0.75mg,,Tablet,Tablet,Corticosteroid,Corticosteroid,1000,"1,000정",1,,,,,,,,,,"Inflammation, allergic conditions"
-,MED-0067,Clotrimazole vaginal tablet 100mg,Clotrimazole,,Tablet,Tablet,Gynecology,Obstetrics / Gynecology,48,6x10,1,,,,,,,,,,Vaginal candidiasis
-,MED-0070,Cefaclor,Cefaclor Hydrate 250 mg (Cephalosporine ),,Capsule,Capsule,Antibiotic,Antibiotic,300,300캡슐*1,1,1C TID,3,TID,3,,,,,,Bacterial infection
-,MED-0072,Rosyth,ROXITHROMYCIN 150mg,,Tablet,Tablet,Antibiotic,Antibiotic,700,700T,1,1-2 QD,,,,,,,,,Bacterial infection
-,MED-0074,Gentazole 2tab -set,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,230,115BT *2,1,1T QD after 7 days 1T QD,1,QD,1,,,,,,Intestinal worm infection
-,MED-0075,Alnazole 2tab -set,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,334,167BT *2,1,1T QD after 7 days 1T QD,1,QD,1,,,,,,Intestinal worm infection
-,MED-0085,Ginsenside Cap,Ginseng40% Ethanol dried extract,,Capsule,Capsule,Vitamin,Vitamins / Supplements,3240,60정*54,1,2C QD or 1C BID( 8am 1pm),,,,,,,,,"Fatigue, nutritional support"
-,MED-0089,Tasna Vita Tab,Ascorbic Acid Calcium Pantothenate 60mg Cyanocobalami D biotin,,Tablet,Tablet,Vitamin,Vitamins / Supplements,2000,1000정*2,1,1T QD,1,QD,1,,,,,,Vitamin supplementation
-,MED-0091,Hemorex 35mg,Pramoxine Hydrochloride 10mg,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,18,18개,1,,,,,,,,,,"Wounds, burns, skin irritation"
-,MED-0092,Hydrocortisone Cream 20mg,(Hydrocortisone),,Topical,Topical,Dermatology,Dermatology / Wound Care,88,88개,1,,,,,,,,,예,"Wounds, burns, skin irritation"
-,MED-0099,Tolon Eye Drops,Fluromethanole 1mg/L,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,33,33개,1,,,,,,,,,예,Eye inflammation
-,MED-0100,Tolon T Eye Drops,"Fluromethanole 1mg/Ltetrahydrozoline Hydrocloride 0,25mg/L",,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,12,12개,1,,,,,,,,,예,Eye inflammation
-,MED-0101,Cuolone Eye Drops,Sodium Hyaluronate 1mg/L,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,12,12개,1,,,,,,,,,예,Dry eye
+﻿확인할 점,코드,약 이름,성분,함량,제형 (옛 값),제형 (고친 값),EMR 분류,옛 분류,수량 합계,원래 수량 표기,묶음 수,옛 용법 (원문),옮길 횟수,옮길 용법,참고: 옛 용법으로 계산한 하루 총량 (가져오지 않음),채울 칸: 하루 총량,채울 칸: 일수,채울 칸: 가격,채울 칸: 최소 재고,포장 단위 약 (H2-B),포장 단위 근거,흔한 용도
+옛 메모: 확인 필요(needs review),MED-0001,Amlodipine 5mg,Amlodipine 5mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,800,100정*8,1,QD,1,QD,,,,,,,,Hypertension
+"수량 불일치(원래 표기 60캡슐*66 ≈ 3960, 수량 90)",MED-0003,Memorain Cap,ginko leaf extract 40mg Ginseng 40% ethanol dryed extract 100mg,,Capsule,Capsule,Cardiovascular,Cardiovascular,90,60캡슐*66,1,BID,2,BID,,,,,,,,"Circulation support, venous symptoms"
+"수량 불일치(원래 표기 60정*83 ≈ 4980, 수량 3000)",MED-0004,Chisen Cap,Diosmin 300mg,,Capsule,Capsule,Cardiovascular,Cardiovascular,3000,60정*83,1,BID,2,BID,,,,,,,,"Circulation support, venous symptoms"
+"수량 불일치(원래 표기 850정 ≈ 850, 수량 900)",MED-0007,Hutradol,Tylenol 162.5 + Tramadol 37.5: Hutradol tablet = Hantraset,,Tablet,Tablet,Analgesic,Analgesic / Antipyretic,900,850정,1,BID,2,BID,,,,,,,,Moderate pain
+"수량 불일치(원래 표기 79병 ≈ 79, 수량 76)",MED-0009,PROFEIN,100mg/5ml,,Syrup,Syrup,Analgesic,Analgesic / Antipyretic,76,79병,1,,,,,,,,,병 (bottle),"Syrup, bottle, 「79병」","Fever, pain"
+"수량 불일치(원래 표기 30 병 ≈ 30, 수량 26)",MED-0010,SANDOL,Paracetamol Syrup 125/5ml,,Syrup,Syrup,Analgesic,Analgesic / Antipyretic,26,30 병,1,PRN,,,,,,,,병 (bottle),"Syrup, bottle, 「30 병」","Fever, mild pain"
+"제형 틀림(좌약인데 Ophthalmic) / 수량 불일치(원래 표기 30개 ≈ 30, 수량 300)",MED-0011,Paracetamol Supp 125mg,Acetaminophen,,Ophthalmic,Suppository,Analgesic,Analgesic / Antipyretic,300,30개,1,PRN,,,,,,,,,,"Fever, mild pain"
+제형 틀림(정인데 Ophthalmic) / 이름 확인,MED-0012,325mg Amiceta Tab,Acetaminophen Encapsulated 350mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,4000,"4,000정",1,1T TID,3,TID,3,,,,,,,"Fever, mild pain"
+"제형 틀림(원래 표기 「300정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 250)",MED-0014,Taracet semi,Acetaminophen 162.5mg tramadol hydrocloride 18.75mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,250,300정*1,1,4T Q6H,4,Q6H,16,,,,,,,"Pain, fever"
+"제형 틀림(원래 표기 「300정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 900)",MED-0015,Susphen 8hours ER 650mg,Acetaminophen 650mg,,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,900,300정*1,1,2T TID,3,TID,6,,,,,,,"Fever, mild pain"
+"제형 틀림(원래 표기 「30정*1」는 정인데 Ophthalmic) / 수량 불일치(원래 표기 30정*1 ≈ 30, 수량 390)",MED-0016,Hycephen,"Acetaminophen 325mg ,tramadol hydrocloride 18.75mg",,Ophthalmic,Tablet,Analgesic,Analgesic / Antipyretic,390,30정*1,1,2T Q6H,4,Q6H,8,,,,,,,"Pain, fever"
+제형 틀림(정인데 Ophthalmic),MED-0017,Susphen night Tab,"Acetaminophen Chlorpheniramine mileate 2mg ,phenyleprine hydroclorhide 5mg",,Ophthalmic,Tablet,Respiratory,Respiratory,600,10정*60,1,1-2T Q4H,,,,,,,,,,"Cold symptoms, fever, nasal congestion"
+옛 메모: 확인 필요(needs review),MED-0019,IBUPROFENE SYRUP,IBUPROFENE SYRUP,,Syrup,Syrup,Analgesic,Analgesic / Anti-inflammatory,2,2 BTL,1,,,,,,,,,병 (bottle),"Syrup, bottle, 「2 BTL」","Pain, inflammation, fever"
+"수량 불일치(원래 표기 950정 ≈ 950, 수량 1000) / 이름 확인",MED-0023,Perison ( /500T),EPERISONE HCL 50mg: Perison tablets,,Tablet,Tablet,Musculoskeletal,Musculoskeletal,1000,950정,1,1T BID,2,BID,2,,,,,,,"Muscle spasm, musculoskeletal pain"
+"수량 불일치(원래 표기 4,800캡슐 ≈ 4800, 수량 750)",MED-0025,Eldolant Cap,Erdosteine 300mg,,Capsule,Capsule,Respiratory,Respiratory,750,"4,800캡슐",1,1T TID,3,TID,3,,,,,,,Cough with sputum
+"같은 이름 다른 코드: MED-0028 / 수량 불일치(원래 표기 336정 ≈ 336, 수량 280)",MED-0027,Daewoong Montelukast Tab 10mg,(Montelukast Sodium) 10.4mg,,Tablet,Tablet,Respiratory,Respiratory,280,336정,1,1QD,1,QD,1,,,,,,,"Asthma, allergic rhinitis"
+"이름은 정(Tab)인데 제형은 Powder / Sachet — 확인 / 같은 이름 다른 코드: MED-0027 / 수량 불일치(원래 표기 28포 ≈ 28, 수량 8)",MED-0028,Daewoong Montelukast Tab 10mg,(Montelukast Sodium) 4mg,,Powder / Sachet,Powder / Sachet,Respiratory,Respiratory,8,28포,1,1QD,1,QD,1,,,,,,,"Asthma, allergic rhinitis"
+"수량 불일치(원래 표기 10병 ≈ 10, 수량 9)",MED-0029,CARBO TOUX 5%,250ML,,Syrup,Syrup,Respiratory,Respiratory,9,10병,1,,,,,,,,,병 (bottle),"Syrup, bottle, 「10병」",Cough
+"수량 불일치(원래 표기 1000정 ≈ 1000, 수량 800)",MED-0031,Bromhexine HCL,Bromhexine Hydrochloride 8mg,,Tablet,Tablet,Respiratory,Respiratory,800,1000정,1,1-2T TID,,,,,,,,,,Cough with sputum
+옛 메모: 확인 필요(needs review),MED-0034,Ambroxol,Ambroxol,,Tablet,Tablet,Respiratory,Respiratory,500,,1,1T TID,3,TID,3,,,,,,,Cough with sputum
+"수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 750) / 이름 확인",MED-0035,200mg Cimetidine Tab,Cimetidine,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정",1,1T TID,3,TID,3,,,,,,,"Gastritis, reflux, ulcer symptoms"
+"수량 불일치(원래 표기 500정 ≈ 500, 수량 90)",MED-0037,Healing,625mg,,Tablet,Tablet,GI,Gastrointestinal,90,500정,1,1QD,1,QD,1,,,,,,,Indigestion
+"수량 불일치(원래 표기 1,000정*1 ≈ 1000, 수량 750)",MED-0039,Tirogen Tab,Tiropamide Hydrocholoride 100mg,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정*1",1,1T TID,3,TID,3,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+"수량 불일치(원래 표기 1,000정*1 ≈ 1000, 수량 750)",MED-0040,Polybutine Tab 100mg,Trimebutine Maleate 100mg,,Tablet,Tablet,GI,Gastrointestinal,750,"1,000정*1",1,1T TID,3,TID,3,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+"수량 불일치(원래 표기 2,400정*1 ≈ 2400, 수량 1950) / 이름 확인",MED-0041,20mg Gasparmo,Pamotidine: 20mg,,Tablet,Tablet,GI,Gastrointestinal,1950,"2,400정*1",1,1T BID,2,BID,2,,,,,,,"Gastritis, reflux, ulcer symptoms"
+"수량 불일치(원래 표기 2,400정 ≈ 2400, 수량 2250)",MED-0042,Mucoramine Tab,REBAMIPIDE 100mg,,Tablet,Tablet,GI,Gastrointestinal,2250,"2,400정",1,1T BID,2,BID,2,,,,,,,"Gastritis, stomach discomfort"
+"수량 불일치(원래 표기 150정*2 ≈ 300, 수량 1800)",MED-0044,Anytal Triple Layered,Diastase protease Celullase 20mgTrimebutine Maleate 100mg Lipase calcium carbonate,,Tablet,Tablet,GI,Gastrointestinal,1800,150정*2,1,1T BID,2,BID,2,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+"수량 불일치(원래 표기 500정*1 ≈ 500, 수량 250)",MED-0046,Mosaone,"MOSAPRIDE Citrate Dihydrate 5,29mg",,Tablet,Tablet,GI,Gastrointestinal,250,500정*1,1,1T TID AFTER OR BEFOR MEAL,3,TID,3,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+"수량 불일치(원래 표기 250정*2 ≈ 500, 수량 390)",MED-0047,Bioflor Cap/Powder,Saccharomyce Boulardii,,Capsule,Capsule,GI,Gastrointestinal,390,250정*2,1,CAP/ Powder: 1-2C BID,,,,,,,,,,"Diarrhea, gut flora support"
+"같은 이름 다른 코드: MED-0079 / 수량 불일치(원래 표기 300정*1 ≈ 300, 수량 1200)",MED-0048,Medilac-S Enteric Coated Cap,"Bacillus Subtilis 0,563 mg",,Capsule,Capsule,GI,Gastrointestinal,1200,300정*1,1,1C QD-2C TID,,,,,,,,,,"Diarrhea, gut flora support"
+"수량 불일치(원래 표기 1정*1 ≈ 1, 수량 420)",MED-0049,Nexierd,Esomeprazole Magnesium Dihydrate,,Tablet,Tablet,GI,Gastrointestinal,420,1정*1,1,1T QD,1,QD,1,,,,,,,"Reflux, gastritis, ulcer symptoms"
+"제형 틀림(제산제 Almagate, 원래 표기 「500정*2」는 정인데 Vaginal / Gel)",MED-0054,Almagel,Almagate 500mg,,Vaginal / Gel,Tablet,GI,Gastrointestinal,1000,500정*2,1,2T TID,3,TID,6,,,,,,,"Heartburn, reflux, stomach pain"
+"수량 불일치(원래 표기 600정 ≈ 600, 수량 1380)",MED-0056,Beposen,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1380,600정,1,1T BID,2,BID,2,,,,,,,"Allergic rhinitis, itching, urticaria"
+"수량 불일치(원래 표기 1,500정 ≈ 1500, 수량 600)",MED-0057,Beari On,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,600,"1,500정",1,1T BID,2,BID,2,,,,,,,"Allergic rhinitis, itching, urticaria"
+"수량 불일치(원래 표기 300정*1 ≈ 300, 수량 1350)",MED-0058,Twolion,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1350,300정*1,1,1T BID,2,BID,2,,,,,,,"Allergic rhinitis, itching, urticaria"
+"같은 이름 다른 코드: MED-0062 / 수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 500)",MED-0061,Bonaling-A Tab,Dimenhydrinate 50mg,,Tablet,Tablet,Antihistamine,Antihistamine / Antiemetic,500,"1,000정",1,1 BID,2,BID,2,,,,,,,"Nausea, dizziness, motion sickness"
+"같은 이름 다른 코드: MED-0061 / 수량 불일치(원래 표기 1,001정 ≈ 1001, 수량 500)",MED-0062,Bonaling-A Tab,Dimenhydrinate 51mg,,Tablet,Tablet,Antihistamine,Antihistamine / Antiemetic,500,"1,001정",1,2 BID,2,BID,4,,,,,,,"Nausea, dizziness, motion sickness"
+"수량 불일치(원래 표기 1,700정 ≈ 1700, 수량 1000)",MED-0063,Peniramin Tab 2mg,(Chlorpheniramine Maleate) 2mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,1000,"1,700정",1,1 QD,1,QD,1,,,,,,,"Allergic rhinitis, itching, urticaria"
+"수량 불일치(원래 표기 4900 ≈ 4900, 수량 4500)",MED-0065,Prednisolone 5mg Tab,Prednisolone 5mg,,Tablet,Tablet,Corticosteroid,Corticosteroid,4500,4900,1,,,,,,,,,,,"Inflammation, allergic conditions"
+"수량 불일치(원래 표기 100개 ≈ 100, 수량 98) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0066,Metronidazole vaginal gel 5g,(Metronidazole),,Vaginal / Gel,Vaginal / Gel,Gynecology,Obstetrics / Gynecology,98,100개,1,1_2T BID,2,BID,,,,,,튜브 (tube),"Vaginal / Gel, piece, 「100개」",Vaginal infection
+"같은 이름 다른 코드: MED-0069 / 수량 불일치(원래 표기 650캡슐 ≈ 650, 수량 2000) / 옛 메모: 확인 필요(needs review) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0068,Amoxicillin 500mg,Amoxicillin 500mg,,Capsule,Capsule,Antibiotic,Antibiotic,2000,650캡슐,1,1_2T BID,2,BID,,,,,,,,Bacterial infection
+"같은 이름 다른 코드: MED-0068 / 수량 불일치(원래 표기 1,000캡슐 ≈ 1000, 수량 2500) / 옛 메모: 확인 필요(needs review) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0069,Amoxicillin 500mg,Amoxicillin 500mg,,Capsule,Capsule,Antibiotic,Antibiotic,2500,"1,000캡슐",1,1_2T BID,2,BID,,,,,,,,Bacterial infection
+"수량 불일치(원래 표기 1,000정 ≈ 1000, 수량 800)",MED-0071,Flasinyl Tab,Metronidazole,,Tablet,Tablet,Antibiotic,Antibiotic / Antiprotozoal,800,"1,000정",1,1TID,3,TID,3,,,,,,,"Anaerobic infection, protozoal infection"
+"수량 불일치(원래 표기 990정 ≈ 990, 수량 550) / 옛 메모: 확인 필요(needs review)",MED-0073,Albendazole 400mg,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,550,990정,1,,,,,,,,,,,Intestinal worm infection
+"수량 불일치(원래 표기 2정*8 ≈ 16, 수량 32)",MED-0076,Zelcome,Flubendazole 500mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,32,2정*8,1,1T QD,1,QD,1,,,,,,,Intestinal worm infection
+말라리아약 — 의사 확인 목록(급함),MED-0077,Combimal,Sulfadoxine,,Tablet,Tablet,Antimalarial,Antimalarial,300,50정*6,1,3T QD,1,QD,3,,,,,,,Malaria treatment
+말라리아약 — 의사 확인 목록(급함),MED-0078,M-Artefix 80mg/480mg,M_Artefix 80mg/480mg,,Tablet,Tablet,Antimalarial,Antimalarial,30,5정*6,1,,,,,,,,,,,Malaria treatment
+같은 이름 다른 코드: MED-0048,MED-0079,Medilac-S Enteric Coated Cap,Bacillus Subtilis-Enterococcus Faecium Culture 125mg,,Capsule,Capsule,GI,Gastrointestinal,9000,300x3캡슐,1,,,,,,,,,,,"Diarrhea, gut flora support"
+제형 틀림(정인데 Ophthalmic) / 같은 이름 다른 코드: MED-0081,MED-0080,Silcon Tab,Polycarbophil Calcium 625mg,,Ophthalmic,Tablet,GI,Gastrointestinal,500,500정,1,,,,,,,,,,,Constipation
+제형 틀림(정인데 Ophthalmic) / 같은 이름 다른 코드: MED-0080,MED-0081,Silcon Tab,Polycarbophil Calcium 625mg,,Ophthalmic,Tablet,GI,Gastrointestinal,100,100정,1,,,,,,,,,,,Constipation
+"수량 불일치(원래 표기 900정 ≈ 900, 수량 500)",MED-0082,Magmil Tab,Magnesium hydroxide,,Tablet,Tablet,GI,Gastrointestinal,500,900정,1,1-2 BID,,,,,,,,,,Constipation
+"수량 불일치(원래 표기 90정*54 ≈ 4860, 수량 2000)",MED-0083,Neutech Tab,Aloe 2mg caffeine hydrate 20mg Chlorpheniramine mileate 2mg Ethyl ampinobenzoate30mg Nicotinamide20mg Papaverine hydrochloryde Riboflavin Thiamine Hydrochoride 10mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,2000,90정*54,1,2-3T TID,,,,,,,,,,"Circulation support, venous symptoms"
+"수량 불일치(원래 표기 180정*20 ≈ 3600, 수량 1890) / 수량 불일치(원래 표기 180정*20 ≈ 3600, 수량 1800)",MED-0084,Pansidil Cap,Calcium Pantothenate 60mg Keratine L Cystine 20mg medicinal yeast 100mg P Aminobenzoic Acid 20mg Thiamine Nitrate 60mg,,Capsule,Capsule,Dermatology,Dermatology,7290,180정*20,3,1C TID,3,TID,3,,,,,,,Hair loss
+"수량 불일치(원래 표기 180정*17 ≈ 3060, 수량 1200) / 옛 용법 「1_2T BID」의 1_2 뜻(½? 1~2?) 확인",MED-0086,Feramine Q Tab,"Cimicifuga Rhizome Extract 0,0364 Ml Saint john 'S Wort 80% MEthanol dried extract",,Tablet,Tablet,Gynecology,Obstetrics / Gynecology,4260,180정*17,2,1_2T BID,2,BID,,,,,,,,Menopausal symptoms
+"수량 불일치(원래 표기 60정*44 ≈ 2640, 수량 2460) / 수량 불일치(원래 표기 60정*44 ≈ 2640, 수량 400)",MED-0087,Caritopotene Soft Cap,Cucurbit Semen Oil Ext,,Capsule,Capsule,Urology,Urology,2860,60정*44,2,1C BID,2,BID,2,,,,,,,Benign prostatic hyperplasia symptoms
+옛 용법 「1_2T TID」의 1_2 뜻(½? 1~2?) 확인,MED-0088,Insandol Tab,Titrated Ext of the Unsaponifiable Fraction Of the Zea mays L 35mg,,Tablet,Tablet,Other,Dental / Oral,6000,300정*20,1,1_2T TID,3,TID,,,,,,,,Periodontal disease support
+수량 0,MED-0090,Beecom tab,Ascorbic Acid Calcium Pantothenate 61mg Cyanocobalami D biotin,,Tablet,Tablet,Vitamin,Vitamins / Supplements,0,,1,,,,,,,,,,,Vitamin supplementation
+"세부 분류는 외용(Topical wound / skin medication)인데 제형은 정 — 연고·크림일 수 있음, 확인",MED-0091,Hemorex 35mg,Pramoxine Hydrochloride 10mg,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,18,18개,1,,,,,,,,,확인,"Tablet, 세부 분류 Topical wound / skin medication","Wounds, burns, skin irritation"
+"같은 이름 다른 코드: MED-0094, MED-0095 / 세부 분류는 외용(Topical wound / skin medication)인데 제형은 정 — 연고·크림일 수 있음, 확인",MED-0093,Madecassol,Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,209,209개,1,,,,,,,,,확인,"Tablet, 세부 분류 Topical wound / skin medication","Wounds, burns, skin irritation"
+"같은 이름 다른 코드: MED-0093, MED-0095 / 세부 분류는 외용(Topical wound / skin medication)인데 제형은 정 — 연고·크림일 수 있음, 확인",MED-0094,Madecassol,Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,93,93개,1,,,,,,,,,확인,"Tablet, 세부 분류 Topical wound / skin medication","Wounds, burns, skin irritation"
+"같은 이름 다른 코드: MED-0093, MED-0094 / 세부 분류는 외용(Topical wound / skin medication)인데 제형은 정 — 연고·크림일 수 있음, 확인",MED-0095,Madecassol,Neomycin Sulfate Titrated Ext of Centella,,Tablet,Tablet,Dermatology,Dermatology / Wound Care,108,108개,1,,,,,,,,,확인,"Tablet, 세부 분류 Topical wound / skin medication","Wounds, burns, skin irritation"
+"수량 불일치(원래 표기 31개 ≈ 31, 수량 1) / 옛 메모: 확인 필요(needs review)",MED-0096,Vaseline blanche,Vaseline blanche,,Topical,Topical,Dermatology,Dermatology / Wound Care,1,31개,1,,,,,,,,,개 (unit),"Topical, piece, 「31개」 · 통/병 — 확인","Wounds, burns, skin irritation"
+"수량 불일치(원래 표기 20개 ≈ 20, 수량 1) / 옛 메모: 확인 필요(needs review)",MED-0097,Sulfadiazine,Sulfadiazine,,Topical,Topical,Dermatology,Dermatology / Wound Care,1,20개,1,,,,,,,,,개 (unit),"Topical, piece, 「20개」 · 통/병 — 확인","Wounds, burns, skin irritation"
+"수량 불일치(원래 표기 8개 ≈ 8, 수량 3)",MED-0098,Neodex ophthalmic ointment 5g,Oxytetracycline Hydrochloride 5mg/g Polymyxin B Sulfate,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,3,8개,1,,,,,,,,,튜브 (tube),"Ophthalmic, piece, 「8개」 · 안연고",Eye infection or inflammation
+,MED-0002,Guinep,ginko leaf extract 40mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,120,120정,1,BID/ TID,,,,,,,,,,"Circulation support, venous symptoms"
+,MED-0005,Retium,Dobesilate calcium hydrate 250mg,,Tablet,Tablet,Cardiovascular,Cardiovascular,180,90정*2,1,BID,2,BID,,,,,,,,"Circulation support, venous symptoms"
+,MED-0006,Januvia 50mg,SILTAGLIPINE HCL HYDRATE 56.69mg,,Tablet,Tablet,Endocrine,Endocrine / Antidiabetic,2016,"2,016정",1,QD,1,QD,,,,,,,,Diabetes mellitus
+,MED-0008,Peloen,PELUBIPROFEN30mg:Peloen tablets,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,1800,"1,800정",1,,,,,,,,,,,"Pain, inflammation, fever"
+,MED-0013,Ceclo Tab,Aceclofenac 100mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,1000,"1,000정",1,1T TID,3,TID,3,,,,,,,"Pain, inflammation, fever"
+,MED-0018,Loxfenin,Loxoprofen Sodium Hydrate 68.1mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,30,30정*1,1,1T BID/TID,,,,,,,,,,"Pain, inflammation, fever"
+,MED-0020,Laxib Tab,Celecoxib ( NSAID),,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,120,30정*4,1,1-4C QD/ 2C BID,,,,,,,,,,"Pain, inflammation, fever"
+,MED-0021,Tak -Sen Soft Cap,Naproxen( NSAID )100mg,,Capsule,Capsule,Analgesic,Analgesic / Anti-inflammatory,100,10정*10,1,1-2C BID,,,,,,,,,,"Pain, inflammation, fever"
+,MED-0022,Aceclofen,Aceclofenac 100mg,,Tablet,Tablet,Analgesic,Analgesic / Anti-inflammatory,900,300정*3,1,1T BID,2,BID,2,,,,,,,"Pain, inflammation, fever"
+,MED-0024,Miaron,Afloqualon 20 mg,,Tablet,Tablet,Musculoskeletal,Musculoskeletal,1000,500정*2,1,1T TID,3,TID,3,,,,,,,"Muscle spasm, musculoskeletal pain"
+,MED-0026,Sudafed Tab,Peseudoephedrine Hydrocholoride 60mg,,Tablet,Tablet,Respiratory,Respiratory,2000,"2,000정",1,1T TID BID,,,,,,,,,,Nasal congestion
+,MED-0030,ephedrine 40mg 4%,Montelukast Sodium,,Tablet,Tablet,Respiratory,Respiratory,500,500정,1,,,,,,,,,,,Nasal congestion
+,MED-0032,Levopect,Levodroprizine 45 mg,,Tablet,Tablet,Respiratory,Respiratory,300,30정*10,1,1T BID,2,BID,2,,,,,,,Cough
+,MED-0033,Muco -One,Erdosteine 300mg,,Tablet,Tablet,Respiratory,Respiratory,1000,100정*10,1,1C BID-TID,,,,,,,,,,Cough with sputum
+,MED-0036,Macperan Tab,Metoclopramide 3.84mg,,Tablet,Tablet,GI,Gastrointestinal,1000,"1,000정",1,1T BID- 2T TID,,,,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+,MED-0038,Amis Tab,Artemisia Herb 95% Ethanol Soft Ext(20->1),,Tablet,Tablet,GI,Gastrointestinal,3000,"3,000정",1,1T BID,2,BID,2,,,,,,,"Gastritis, stomach discomfort"
+,MED-0043,Bamedin,REBAMIPIDE 100mg,,Tablet,Tablet,GI,Gastrointestinal,900,100정*9,1,1T BID,2,BID,2,,,,,,,"Gastritis, stomach discomfort"
+,MED-0045,Humorid,MOSAPRIDE SODIUM 5mg,,Tablet,Tablet,GI,Gastrointestinal,1800,"1,800정",1,1T TID,3,TID,3,,,,,,,"Nausea, dyspepsia, abdominal cramps"
+,MED-0050,Bigcidine Cap,Nizatidine 150 mg (H2 Antagonist),,Capsule,Capsule,GI,Gastrointestinal,420,30정*14,1,1T BID/ 2T QD,,,,,,,,,,"Gastritis, reflux, ulcer symptoms"
+,MED-0051,Gaster,Famotidine 20mg(H2 Antagonist),,Tablet,Tablet,GI,Gastrointestinal,1800,300정*6,1,1T BID/ 2T QD,,,,,,,,,,"Gastritis, reflux, ulcer symptoms"
+,MED-0052,Stillen 2X,Artemisia Herb 95% Ethanol Soft Ext(20->1),,Tablet,Tablet,GI,Gastrointestinal,400,400정*1,1,1T BID,2,BID,2,,,,,,,"Gastritis, stomach discomfort"
+,MED-0053,Algicell,Sodium Alginate,,Tablet,Tablet,GI,Gastrointestinal,360,30정*12,1,1-2PACKS TID/QID,,,,,,,,,,"Heartburn, reflux, stomach pain"
+,MED-0055,Anemo,Scopolia Extract powder 10% Calcium carbonate,,Powder / Sachet,Powder / Sachet,GI,Gastrointestinal,2000,1000정*2,1,3T TID,3,TID,9,,,,,,,"Heartburn, reflux, stomach pain"
+,MED-0059,Potas,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,300,300정*1,1,1T BID,2,BID,2,,,,,,,"Allergic rhinitis, itching, urticaria"
+,MED-0060,Arazine,BEPOTASTINE BESILATE 10mg,,Tablet,Tablet,Antihistamine,Antihistamine / Allergy,60,30정*2,1,1T BID,2,BID,2,,,,,,,"Allergic rhinitis, itching, urticaria"
+,MED-0064,Dexamethasone Tab,Dexamethasone 0.75mg,,Tablet,Tablet,Corticosteroid,Corticosteroid,1000,"1,000정",1,,,,,,,,,,,"Inflammation, allergic conditions"
+,MED-0067,Clotrimazole vaginal tablet 100mg,Clotrimazole,,Tablet,Tablet,Gynecology,Obstetrics / Gynecology,48,6x10,1,,,,,,,,,,,Vaginal candidiasis
+,MED-0070,Cefaclor,Cefaclor Hydrate 250 mg (Cephalosporine ),,Capsule,Capsule,Antibiotic,Antibiotic,300,300캡슐*1,1,1C TID,3,TID,3,,,,,,,Bacterial infection
+,MED-0072,Rosyth,ROXITHROMYCIN 150mg,,Tablet,Tablet,Antibiotic,Antibiotic,700,700T,1,1-2 QD,,,,,,,,,,Bacterial infection
+,MED-0074,Gentazole 2tab -set,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,230,115BT *2,1,1T QD after 7 days 1T QD,1,QD,1,,,,,,,Intestinal worm infection
+,MED-0075,Alnazole 2tab -set,Albendazole 400mg,,Tablet,Tablet,Antiparasitic,Antiparasitic,334,167BT *2,1,1T QD after 7 days 1T QD,1,QD,1,,,,,,,Intestinal worm infection
+,MED-0085,Ginsenside Cap,Ginseng40% Ethanol dried extract,,Capsule,Capsule,Vitamin,Vitamins / Supplements,3240,60정*54,1,2C QD or 1C BID( 8am 1pm),,,,,,,,,,"Fatigue, nutritional support"
+,MED-0089,Tasna Vita Tab,Ascorbic Acid Calcium Pantothenate 60mg Cyanocobalami D biotin,,Tablet,Tablet,Vitamin,Vitamins / Supplements,2000,1000정*2,1,1T QD,1,QD,1,,,,,,,Vitamin supplementation
+,MED-0092,Hydrocortisone Cream 20mg,(Hydrocortisone),,Topical,Topical,Dermatology,Dermatology / Wound Care,88,88개,1,,,,,,,,,튜브 (tube),"Topical, piece, 「88개」 · 크림/연고","Wounds, burns, skin irritation"
+,MED-0099,Tolon Eye Drops,Fluromethanole 1mg/L,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,33,33개,1,,,,,,,,,병 (bottle),"Ophthalmic, piece, 「33개」 · 점안액",Eye inflammation
+,MED-0100,Tolon T Eye Drops,"Fluromethanole 1mg/Ltetrahydrozoline Hydrocloride 0,25mg/L",,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,12,12개,1,,,,,,,,,병 (bottle),"Ophthalmic, piece, 「12개」 · 점안액",Eye inflammation
+,MED-0101,Cuolone Eye Drops,Sodium Hyaluronate 1mg/L,,Ophthalmic,Ophthalmic,Ophthalmic,Ophthalmic,12,12개,1,,,,,,,,,병 (bottle),"Ophthalmic, piece, 「12개」 · 점안액",Dry eye

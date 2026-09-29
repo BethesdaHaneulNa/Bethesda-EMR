@@ -82,9 +82,19 @@ function correctedForm(r) {
   return { form: r.form, note: '' };
 }
 
-// Handed out by the bottle / tube rather than counted as doses (H2).
-function packUnit(form) {
-  return /Ophthalmic|Syrup|Topical|Gel/i.test(form) ? '예' : '';
+// Handed out by the bottle / tube rather than counted as doses (H2, decided B on
+// 2026-09-29: such a drug is marked, and the doctor writes how many bottles/tubes).
+// Tablets, capsules, sachets and suppositories are counted one by one and are not.
+// Works on the corrected form, so the tablets filed as eye drops are left out.
+function packUnit(form, r) {
+  const n = (r.name + ' ' + r.generic_name).toLowerCase();
+  const t = ((r.notes || '').match(/Original stock text: ([^;]+)/) || [])[1] || '';
+  const why = [form, r.unit, t.trim() && '「' + t.trim() + '」'].filter(Boolean).join(', ');
+  if (/Syrup/i.test(form)) return { unit: '병 (bottle)', why: why };
+  if (/Ophthalmic/i.test(form)) return /ointment/.test(n) ? { unit: '튜브 (tube)', why: why + ' · 안연고' } : { unit: '병 (bottle)', why: why + ' · 점안액' };
+  if (/Gel/i.test(form)) return { unit: '튜브 (tube)', why: why };
+  if (/Topical/i.test(form)) return /cream|ointment|oint/.test(n) ? { unit: '튜브 (tube)', why: why + ' · 크림/연고' } : { unit: '개 (unit)', why: why + ' · 통/병 — 확인' };
+  return null;
 }
 
 const FREQ = { QD: 1, BID: 2, TID: 3, QID: 4 };
@@ -158,6 +168,9 @@ for (const [code, batches] of byCode) {
   if (!CATEGORY[r.classification]) checks.push('분류 대응 없음(' + r.classification + ')');
   if (category === 'Antimalarial') checks.push('말라리아약 — 의사 확인 목록(급함)');
 
+  // Filed as a tablet but sub-classed as a topical product: it may be an ointment.
+  const topicalTablet = /Tablet/.test(fc.form) && /topical/i.test(r.subclassification || '');
+  if (topicalTablet) checks.push('세부 분류는 외용(' + r.subclassification + ')인데 제형은 정 — 연고·크림일 수 있음, 확인');
   const fr = frequency(r.posology);
   if (/\d_\d/.test(r.posology)) checks.push('옛 용법 「' + r.posology + '」의 1_2 뜻(½? 1~2?) 확인');
   const per = perIntake(r.posology);
@@ -184,7 +197,8 @@ for (const [code, batches] of byCode) {
     '채울 칸: 일수': '',
     '채울 칸: 가격': '',
     '채울 칸: 최소 재고': '',
-    '병·개 단위 약?': packUnit(fc.form),
+    '포장 단위 약 (H2-B)': (packUnit(fc.form, r) || {}).unit || (topicalTablet ? '확인' : ''),
+    '포장 단위 근거': (packUnit(fc.form, r) || {}).why || (topicalTablet ? r.form + ', 세부 분류 ' + r.subclassification : ''),
     '흔한 용도': r.common_use,
   });
 }
@@ -196,5 +210,5 @@ const esc = v => { const s = String(v === null || v === undefined ? '' : v); ret
 const csv = '﻿' + [cols.map(esc).join(','), ...out.map(o => cols.map(c => esc(o[c])).join(','))].join('\r\n') + '\r\n';
 fs.writeFileSync(OUT, csv);
 const flagged = out.filter(o => o['확인할 점']).length;
-console.log('drugs', out.length, '| with something to check', flagged, '| pack-unit', out.filter(o => o['병·개 단위 약?']).length,
+console.log('drugs', out.length, '| with something to check', flagged, '| pack-unit', out.filter(o => o['포장 단위 약 (H2-B)']).length,
   '| frequency carried', out.filter(o => o['옮길 횟수'] !== '').length, '->', path.relative(process.cwd(), OUT));

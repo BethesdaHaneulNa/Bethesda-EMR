@@ -201,7 +201,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | `GET /config` | `settings` 권한 | `pacs_config` 한 줄 전체 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5) |
 | `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242 |
 | `GET /test` | `settings` 권한 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
-| `GET /viewer-url?order_item_id=` 또는 `?study=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
+| `GET /viewer-url?order_item_id=` 또는 `?study=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`** — `has_viewer`는 뷰어 주소가 설정됐는지만 말함(「설정 안 됨」과 「이 오더엔 영상 없음」 구분). 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18) |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음. **취소된 오더는 409** `Imaging order was cancelled`(`pacs.cancel.js`의 `ORDER_CANCELLED`) — 조건을 UPDATE 안에 넣어 동시에 들어온 취소를 덮지 않음 |
 | `GET /readings/patient/:patientId` | `consultation` 또는 `payment` 권한 | 환자의 영상 오더 전부(취소된 것 포함) + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check + `order_status`·`cancelled_at`·`cancel_reason` |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
@@ -345,7 +345,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-15 [낮음] 판독을 덮어쓰면 이전 판독이 사라짐(이력 없음).** `pacs.routes.js:100`. 서명·확정 개념도 없음.
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
 - **P-17 [낮음] ✅ 고침 (2026-09-29)** — 피드 주소 예시 `:9080`, `bridge.py` 기본값 9080, 설정 화면 예시 `http://NAS_IP:9090`, 번역 `pacsServerHint`(ko·en·fr, 기존 키 한 줄씩)와 그 한국어 기본 문구도 9090.
-- **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
+- **P-18 [낮음] ✅ 고침 (2026-09-29)** — 워크리스트로 안 간 영상 오더(UID 없음)의 `viewer-url`이 뷰어 첫 화면(PACS의 모든 환자 목록)을 돌려줘서 한 환자 차트 안에서 다른 환자 목록이 열릴 수 있었음. 이제 `url` 빈 값 + `no_study: true`, 안내 문구 키 `px_noStudy`. 진료 영상 창이 `no_study`면 그 문구를 보이는 것은 진료 세션 몫(총괄 전달). 판독 목록의 「영상보기」는 원래 UID가 있을 때만 보임.
 - **P-19 [낮음] ✅ 고침 (2026-09-29, 다른 세션)** — 진료 화면(진료 세션 `9dfcedc`)과 수납·약국 화면의 차트 `PatientChart.jsx`(수납 세션 `768eaa9`)가 같은 규칙·같은 `cs_ws*` 키로 보여 줌: Envoyé/전송됨, Réalisé/촬영 완료 …. 워크리스트로 가지 않는 오더에는 상태를 안 보임.
 - **P-21 [보통] ✅ 고침 (2026-09-29, S2)** — 영상 판독·뷰어 주소·연결 시험·워크리스트 API가 로그인만 확인했음(어느 직원이든 모든 환자의 영상 판독을 읽음). 4절 표대로 화면 권한으로 좁힘. `bridgeOrAuth`는 권한을 받는 함수가 됨(`bridgeOrAuth('settings')`).
 - **P-22 [낮음] ✅ 고침 (2026-09-29)** — 판독 날짜가 `result_at`(UTC ISO)을 `T` 앞에서 잘라 현지 00~03시에 쓴 판독이 전날로 보였음. `RadiologyReadings.jsx`의 `ymd()`를 임상병리 `LabResults.jsx`와 같은 규칙(날짜만 있는 값은 그대로, 시각이 있는 값은 **브라우저의 현지 날짜**)으로. 진료 영상 창의 같은 한 줄은 진료 세션 몫(총괄이 전달). 주의: 이 규칙은 **브라우저 PC의 시간대**를 따릅니다 — 마다가스카르 병원 PC에서는 맞고, 한국 시간으로 된 PC에서는 자정 근처 시각이 한국 날짜로 보임(격리 시험에서 18:40(+03) 취소가 한국 PC에서 다음 날로 보임).
@@ -367,3 +367,4 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | 낮은 항목 정리: P-20(`arrivals_error`, 비밀값 가림), P-11(작업목록 상태 API), P-12(시험 스크립트), P-17(8090 표기), `PUT /config` 부분 저장. P-13은 오프라인 키트 때문에 제안으로. 절차서에 재부팅 당일·장비 설치 날 확인 목록 | EMR `session/pacs` · PACS `6c135aa` |
 | 2026-09-29 | 서버 권한 S2 적용(P-21): viewer-url·readings·test·worklist를 화면 권한으로, worklist 쓰기·dicom-mwl 로그인 경로는 settings만 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | P-22 판독 날짜 현지로, P-23 영상 오더 취소 준비(`pacs.cancel.js`, 취소 정보·409·회색 표시) | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | P-18: UID 없는 오더에서 뷰어 첫 화면 대신 `no_study` + `px_noStudy` | EMR `session/pacs` (인계 노트 참고) |
