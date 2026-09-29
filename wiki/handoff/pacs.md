@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 총괄 확인: P-1 조치 끝 (재부팅 뒤)
+
+- **상태**: 끝. 실장님이 netsh 두 줄 실행 + 재부팅, 총괄이 절차서 ①~⑤를 그대로 진행.
+- ① 동적 포트 범위 ipv4·ipv6 모두 시작 49152 · 16384. 제외 구간에 4242·9080·9090 없음(남은 구간: 5357, 7895, 7936, 39091, 39721, 50000–50059, 60039–60338). 세 포트 모두 연결됨.
+- ② PACS 저장소 `main` `c9dc0b4` → **`6c135aa`**(ff). ③ 토큰 재발급 `OK`(값은 어디에도 찍지 않음). ④ `docker compose up -d --build` — 브리지·Orthanc 모두 다시 만들어짐, 둘 다 healthy.
+- ⑤-2 브리지 로그: `synced` 15초마다, 나쁜 문구 5종 모두 0. ⑤-3 heartbeat 10초 전 · ok · 오류 칸 비어 있음(EMR 재배포 뒤에도 6초 전 · ok). ⑤-4 새 브리지로 바뀐 뒤 EMR 로그의 `token=` 0줄(바뀌기 전 3분 창에는 옛 브리지의 6줄이 있었음 — 옛 토큰, 이제 무효).
+- **R-5**(⑤-5): `1 upload: 200` / `2 has IsStable: True | IsStable now: False` / `3 PatientID: PX-TEST-0000` / `5 IsStable after 75 s: True` / `6 CountInstances: 1` / `7 delete: 200` — 기대와 모두 같음.
+- **R-4**: `GET /api/pacs/test` → ok, host `host.docker.internal`, port 4242, 「TCP connection succeeded」.
+- **R-1 (일부)**: `http://localhost:9090/`와 `/stone-webviewer/index.html` 모두 **401** → 브라우저에서 로그인 창이 뜸(①). 영상 창 안에서 어떻게 보이는지는 화면으로 보지 않았음.
+- **찾은 것**: 실행 중 EMR의 `pacs_config.pacs_viewer_url`이 **`http://localhost:8090`**, `emr_base_url`이 `http://localhost:8080` — 9090·9080이 아님. 영상 창이 열리지 않는 주소. 설정 → 오더 연동에서 고쳐야 함(실장님께 안내).
+- **R-3**(server-status 창)은 보지 않았음.
+- ⑤-7 `.env` 백업(`pacs-env-before-p1`) 삭제함. 되돌리기용 이미지 이름표 `before-p1`은 남겨 둠.
+- 실장님 결정: 시험용 영상 서버(격리 스택) **허락**(웹 9198 · 영상 11298, 이 PC 안에서만, 실행 중 영상 서버와 storage는 건드리지 않음, 다 쓰면 내림).
+
 ## 2026-09-29 — P-13 조사: 새 PC 설치(결정 35)에서 PACS에 일어나는 일 · 고칠 것 목록
 
 - **상태**: 보류 — 읽고 적기만 함(아무것도 실행하지 않음, 코드 변경 없음). 고칠 것은 총괄과 같이 정함
