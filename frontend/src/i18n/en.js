@@ -1007,4 +1007,9 @@ export default {
   px_testUnknownHost: "That address cannot be found: check the spelling in Host / IP.",
   px_testNoHost: "Host / IP is empty. On the same PC, enter host.docker.internal.",
   // ── end pacs ──
+  // ── begin design (ds_) ──
+  ds_themeSwitch: "Screen colours (light / dark)",
+  ds_themeLight: "Light",
+  ds_themeDark: "Dark",
+  // ── end design ──
 };

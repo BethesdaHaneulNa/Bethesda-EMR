@@ -998,4 +998,9 @@ export default {
   px_testUnknownHost: "그런 주소를 찾을 수 없습니다: Host / IP 칸의 철자를 보세요.",
   px_testNoHost: "Host / IP 칸이 비어 있습니다. 같은 PC면 host.docker.internal을 적으세요.",
   // ── end pacs ──
+  // ── begin design (ds_) ──
+  ds_themeSwitch: "화면 색 (밝게 / 어둡게)",
+  ds_themeLight: "밝게",
+  ds_themeDark: "어둡게",
+  // ── end design ──
 };

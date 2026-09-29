@@ -297,7 +297,9 @@ router.get('/staff', permMiddleware('settings'), async (req, res) => {
     const result = await pool.query(
       `SELECT s.*, d.code as dept_code, d.name as dept_name FROM staff s LEFT JOIN department d ON s.department_id = d.id ORDER BY s.name`
     );
-    res.json(result.rows.map(r => { delete r.password_hash; return r; }));
+    // theme (migration 037) is each account's own screen choice: read and written only
+    // through /api/theme, so it does not travel with the staff list.
+    res.json(result.rows.map(r => { delete r.password_hash; delete r.theme; return r; }));
   } catch (err) { sendDbError(res, err); }
 });
 

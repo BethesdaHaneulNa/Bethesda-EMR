@@ -25,6 +25,8 @@
       --field-3: #1a1f2e;
       --field-4: #0c0f16;
       --field-5: #13161f;
+      --field-6: #11141c;
+      --field-locked: #15181f;
       --bg-row: #111827;
       --bg-group: #0f1622;
       --bg-col-2: #101521;
@@ -51,6 +53,7 @@
       --text-4: #475569;
       --text-5: #334155;
       --text-faint: #3a4253;
+      --text-locked: #8b95a5;
       --on-fill: #ffffff;
       --on-bright: #0f1117;
       --on-fill-blue: #dbeafe;
@@ -79,6 +82,7 @@
       --ok-ink: #10b981;
       --ok-text: #34d399;
       --ok-text-2: #6ee7b7;
+      --ok-text-3: #86efac;
       --warn: #f59e0b;
       --warn-strong: #b45309;
       --warn-ink: #f59e0b;
@@ -111,6 +115,10 @@
       --cyan-deep: #0e7490;
       --violet-deep: #5b21b6;
       --teal-ink: #14b8a6;
+      --status-ok: #22c55e;
+      --status-warn: #eab308;
+      --status-down: #ef4444;
+      --status-off: #64748b;
       --ok-strong-a15: #05966915;
       --cyan-a12: #06b6d412;
       --cyan-a15: #06b6d415;
@@ -118,6 +126,7 @@
       --cyan-a30: #06b6d430;
       --cyan-a50: #06b6d450;
       --cyan-a55: #06b6d455;
+      --cyan-deep-a22: #0e749022;
       --ok-a08: #10b98108;
       --ok-a12: #10b98112;
       --ok-a15: #10b98115;
@@ -126,10 +135,13 @@
       --ok-a30: #10b98130;
       --ok-a40: #10b98140;
       --ok-a50: #10b98150;
+      --teal-a15: #14b8a615;
       --ok-2-a15: #16a34a15;
       --ok-2-a40: #16a34a40;
+      --ok-text-a14: #34d39914;
       --ok-text-a18: #34d39918;
       --ok-text-a40: #34d39940;
+      --ok-text-a55: #34d39955;
       --accent-a08: #3b82f608;
       --accent-a12: #3b82f612;
       --accent-a15: #3b82f615;
@@ -186,6 +198,10 @@
       --warn-a55: #f59e0b55;
       --warn-a60: #f59e0b60;
       --warn-a66: #f59e0b66;
+      --danger-text-a14: #f8717114;
+      --danger-text-a55: #f8717155;
+      --warn-text-a14: #fbbf2414;
+      --warn-text-a55: #fbbf2455;
       --scrim: rgba(0,0,0,0.6);
       --scrim-30: rgba(0,0,0,0.3);
       --scrim-40: rgba(0,0,0,0.4);
@@ -219,6 +235,8 @@
       --field-3: #ffffff;
       --field-4: #ffffff;
       --field-5: #ffffff;
+      --field-6: #ffffff;
+      --field-locked: #eef1f5;
       --bg-row: #f8fafc;
       --bg-group: #eaf3f8;
       --bg-col-2: #f8fafc;
@@ -245,6 +263,7 @@
       --text-4: #5b6779;
       --text-5: #5b6779;
       --text-faint: #5b6779;
+      --text-locked: #566274;
       --on-fill: #ffffff;
       --on-bright: #ffffff;
       --on-fill-blue: #dbeafe;
@@ -273,6 +292,7 @@
       --ok-ink: #04694c;
       --ok-text: #04694c;
       --ok-text-2: #065f46;
+      --ok-text-3: #065f46;
       --warn: #b45309;
       --warn-strong: #92400e;
       --warn-ink: #944407;
@@ -304,7 +324,11 @@
       --teal-deep: #0f766e;
       --cyan-deep: #0e7490;
       --violet-deep: #5b21b6;
-      --teal-ink: #0e716a;
+      --teal-ink: #0c625c;
+      --status-ok: #166534;
+      --status-warn: #854008;
+      --status-down: #b01c1c;
+      --status-off: #566274;
       --ok-strong-a15: rgba(4,108,78,0.103);
       --cyan-a12: rgba(14,116,144,0.088);
       --cyan-a15: rgba(14,116,144,0.103);
@@ -312,6 +336,7 @@
       --cyan-a30: rgba(14,116,144,0.235);
       --cyan-a50: rgba(14,116,144,0.392);
       --cyan-a55: rgba(14,116,144,0.417);
+      --cyan-deep-a22: rgba(14,116,144,0.167);
       --ok-a08: rgba(4,120,87,0.039);
       --ok-a12: rgba(4,120,87,0.088);
       --ok-a15: rgba(4,120,87,0.103);
@@ -320,10 +345,13 @@
       --ok-a30: rgba(4,120,87,0.235);
       --ok-a40: rgba(4,120,87,0.314);
       --ok-a50: rgba(4,120,87,0.392);
+      --teal-a15: rgba(15,118,110,0.103);
       --ok-2-a15: rgba(21,128,61,0.103);
       --ok-2-a40: rgba(21,128,61,0.314);
+      --ok-text-a14: rgba(4,105,76,0.098);
       --ok-text-a18: rgba(4,105,76,0.118);
       --ok-text-a40: rgba(4,105,76,0.314);
+      --ok-text-a55: rgba(4,105,76,0.417);
       --accent-a08: rgba(37,99,235,0.039);
       --accent-a12: rgba(37,99,235,0.088);
       --accent-a15: rgba(37,99,235,0.103);
@@ -380,6 +408,10 @@
       --warn-a55: rgba(180,83,9,0.417);
       --warn-a60: rgba(180,83,9,0.471);
       --warn-a66: rgba(180,83,9,0.5);
+      --danger-text-a14: rgba(176,28,28,0.098);
+      --danger-text-a55: rgba(176,28,28,0.417);
+      --warn-text-a14: rgba(148,68,7,0.098);
+      --warn-text-a55: rgba(148,68,7,0.417);
       --scrim: rgba(15,23,42,0.45);
       --scrim-30: rgba(15,23,42,0.2);
       --scrim-40: rgba(15,23,42,0.3);

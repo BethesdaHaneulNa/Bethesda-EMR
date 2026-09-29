@@ -25,7 +25,9 @@ export const NEUTRAL = [
   ['field-2',      '#11151f', '#ffffff', 's'],
   ['field-3',      '#1a1f2e', '#ffffff', 's'],
   ['field-4',      '#0c0f16', '#ffffff', 's'],   // fields of the document window
-  ['field-5',      '#13161f', '#ffffff', 's'],   // date fields of the statistics screen   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
+  ['field-5',      '#13161f', '#ffffff', 's'],   // date fields of the statistics screen
+  ['field-6',      '#11141c', '#ffffff', 's'],   // fields of the password window
+  ['field-locked', '#15181f', '#eef1f5', 's'],   // a field that cannot be changed (settings)   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
   ['bg-row',       '#111827', '#f8fafc', 's'],   // a row of search results
   ['bg-group',     '#0f1622', '#eaf3f8', 's'],
   ['bg-col-2',     '#101521', '#f8fafc', 's'],
@@ -51,7 +53,8 @@ export const NEUTRAL = [
   ['text-3',       '#64748b', '#566274', 't'],   // t3
   ['text-4',       '#475569', '#5b6779', 't'],
   ['text-5',       '#334155', '#5b6779', 't'],
-  ['text-faint',   '#3a4253', '#5b6779', 't'],   // the dot in an empty table cell   // barely visible when dark; it is still text, so readable when light
+  ['text-faint',   '#3a4253', '#5b6779', 't'],
+  ['text-locked',  '#8b95a5', '#566274', 't'],   // text in a locked field   // the dot in an empty table cell   // barely visible when dark; it is still text, so readable when light
   ['on-fill',      '#ffffff', '#ffffff', 'x'],   // text on a coloured button: white in both
   ['on-bright',    '#0f1117', '#ffffff', 'x'],   // text on a bright green / amber / red button: near-black when dark (the colour is bright), white when light (the colour is deep)
   ['on-fill-blue', '#dbeafe', '#dbeafe', 'x'],   // pale text on a deep coloured button: the same on both screens
@@ -85,6 +88,7 @@ export const COLOR = [
   ['ok-ink',        '#10b981', '#04694c', 't'],
   ['ok-text',       '#34d399', '#04694c', 't'],
   ['ok-text-2',     '#6ee7b7', '#065f46', 't'],
+  ['ok-text-3',     '#86efac', '#065f46', 't'],
   ['warn',          '#f59e0b', '#b45309', 'c'],
   ['warn-strong',   '#b45309', '#92400e', 'c'],
   ['warn-ink',      '#f59e0b', '#944407', 't'],
@@ -117,16 +121,22 @@ export const COLOR = [
   ['teal-deep',     '#0f766e', '#0f766e', 'c'],
   ['cyan-deep',     '#0e7490', '#0e7490', 'c'],
   ['violet-deep',   '#5b21b6', '#5b21b6', 'c'],
-  ['teal-ink',      '#14b8a6', '#0e716a', 't'],
+  ['teal-ink',      '#14b8a6', '#0c625c', 't'],
+  // the server status dot and the words beside it (settings): one colour for both
+  ['status-ok',     '#22c55e', '#166534', 't'],
+  ['status-warn',   '#eab308', '#854008', 't'],
+  ['status-down',   '#ef4444', '#b01c1c', 't'],
+  ['status-off',    '#64748b', '#566274', 't'],
 ];
 
 // ── tints: family + two hex digits of alpha, as the screens write them (#3b82f640 → --accent-a40) ──
-const TINT_BASE = { '3b82f6': 'accent', '60a5fa': 'accent-text', 'ef4444': 'danger', 'dc2626': 'danger-strong', 'f59e0b': 'warn', '10b981': 'ok', '16a34a': 'ok-2', '059669': 'ok-strong', '34d399': 'ok-text', '8b5cf6': 'violet', 'a855f7': 'violet-2', '7c3aed': 'violet-strong', 'a78bfa': 'violet-text', '06b6d4': 'cyan', '94a3b8': 'text-2', '64748b': 'text-3' };
+const TINT_BASE = { '3b82f6': 'accent', '60a5fa': 'accent-text', '14b8a6': 'teal', '0e7490': 'cyan-deep', 'fbbf24': 'warn-text', 'f87171': 'danger-text', 'ef4444': 'danger', 'dc2626': 'danger-strong', 'f59e0b': 'warn', '10b981': 'ok', '16a34a': 'ok-2', '059669': 'ok-strong', '34d399': 'ok-text', '8b5cf6': 'violet', 'a855f7': 'violet-2', '7c3aed': 'violet-strong', 'a78bfa': 'violet-text', '06b6d4': 'cyan', '94a3b8': 'text-2', '64748b': 'text-3' };
 const TINTS_USED = '3b82f640 3b82f620 ef444418 f59e0b20 10b98118 ef444440 3b82f618 10b98140 3b82f612 f59e0b60 dc262630 dc262610 f59e0b18 f59e0b14 10b98120 8b5cf620 3b82f615 f59e0b55 f59e0b40 ef444450 ef444420 ef444412 3b82f660 3b82f650 f59e0b50 f59e0b12 ef444460 ef444430 a855f750 a855f718 8b5cf615 7c3aed55 7c3aed22 10b98150 f59e0b66 f59e0b45 f59e0b30 f59e0b0d ef444455 ef444415 ef44440d dc262640 dc262620 a855f714 a78bfa40 a78bfa18 94a3b818 8b5cf650 8b5cf640 64748b55 64748b22 64748b18 3b82f680 3b82f630 3b82f608 34d39940 34d39918 16a34a40 16a34a15 10b98115 10b98112 10b98108 06b6d455 05966915'
   // tints the screens build by joining a colour and an alpha ("c + '18'") - added screen by screen in stage 3
   + ' 10b98130 8b5cf630 06b6d415 06b6d430 f59e0b15 94a3b815 94a3b830'   // TopBar: the role chip
   + ' 06b6d420 06b6d450 06b6d412'   // Lab: the pending tab, the chosen patient
-  + ' 60a5fa15';   // Payment: the change line
+  + ' 60a5fa15'   // Payment: the change line
+  + ' 14b8a615 0e749022 34d39914 34d39955 fbbf2414 fbbf2455 f8717114 f8717155';   // Settings: the nurse role tag, the ranges button, the backup box
 const all = [...NEUTRAL, ...COLOR];
 const byName = Object.fromEntries(all.map(t => [t[0], t]));
 const lightAlpha = a => Math.min(1, a * 1.25);   // a tint needs more ink on white than on near-black

@@ -8,7 +8,7 @@ import { PasswordDialog } from '../pages/settingsPassword.jsx';
 // Settings session: the status dot (U3), for accounts with the settings permission.
 import { StatusDot } from '../pages/settingsStatus.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
-import { tint } from '../theme.js';
+import { tint, getTheme, setTheme } from '../theme.js';
 
 // Injected by Vite from package.json (see vite.config.js). Guarded so the component still
 // renders if it is ever loaded outside a Vite build.
@@ -45,11 +45,31 @@ export function TopBar() {
   var showVerState = useState(false); var showVer = showVerState[0]; var setShowVer = showVerState[1];
   var canSeeUpdate = user && userPerms(user).indexOf('settings') >= 0;
   var pwState = useState(false); var showPw = pwState[0]; var setShowPw = pwState[1];
+  // Design session: dark or light screen. The page already wears this PC's last choice
+  // (index.html sets it before the first paint); the account's own choice is read below.
+  var themeState = useState(getTheme()); var theme = themeState[0]; var setThemeShown = themeState[1];
 
   useEffect(function () {
     var i = setInterval(function () { setNow(new Date()); }, 1000);
     return function () { clearInterval(i); };
   }, []);
+
+  // The choice is remembered per account (director, 2026-09-29). Read it once the bar is
+  // up and change the screen only if it differs from what this PC last showed. A failed
+  // read leaves the screen as it is: the colour of the screen must never stop the work.
+  useEffect(function () {
+    if (!user) return;
+    api.get('/theme').then(function (r) {
+      if (r && (r.theme === 'light' || r.theme === 'dark') && r.theme !== getTheme()) setThemeShown(setTheme(r.theme));
+    }).catch(function () {});
+  }, []);
+
+  // Change at once, save behind. If the save fails the screen stays changed on this PC
+  // and nothing is shown - the next press, or the next login elsewhere, tries again.
+  function chooseTheme(v) {
+    setThemeShown(setTheme(v));
+    if (user) api.put('/theme', { theme: v }).catch(function () {});
+  }
 
   useEffect(function () {
     if (!canSeeUpdate) return;
@@ -126,6 +146,11 @@ export function TopBar() {
           <div style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
             {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].map(function (i) {
               return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? 'var(--accent)' : 'var(--chip)', color: lang === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{i[1]}</button>;
+            })}
+          </div>
+          <div role="group" aria-label={t.ds_themeSwitch} title={t.ds_themeSwitch} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
+            {[['dark', '🌙', t.ds_themeDark], ['light', '☀', t.ds_themeLight]].map(function (i) {
+              return <button key={i[0]} aria-pressed={theme === i[0]} onClick={function () { chooseTheme(i[0]); }} style={{ background: theme === i[0] ? 'var(--accent)' : 'var(--chip)', color: theme === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{i[1]} {i[2]}</button>;
             })}
           </div>
           {user ? (

@@ -40,6 +40,7 @@ app.use('/api/lab', require('./routes/lab.routes'));
 app.use('/api/backup', require('./routes/backup.routes'));
 app.use('/api/version', require('./routes/version.routes'));
 app.use('/api/system', require('./routes/status.routes'));
+app.use('/api/theme', require('./routes/theme.routes'));   // design: the screen an account chose (dark / light)
 
 // JSON fallback for unknown API routes so frontend never receives index.html for API calls
 app.use('/api', (req, res) => {

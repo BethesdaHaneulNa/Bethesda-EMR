@@ -998,4 +998,9 @@ export default {
   px_testUnknownHost: "Adresse introuvable : vérifiez l'orthographe dans Host / IP.",
   px_testNoHost: "Host / IP est vide. Sur le même PC, saisissez host.docker.internal.",
   // ── end pacs ──
+  // ── begin design (ds_) ──
+  ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",
+  ds_themeLight: "Clair",
+  ds_themeDark: "Sombre",
+  // ── end design ──
 };
