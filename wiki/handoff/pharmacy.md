@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — develop 당긴 뒤 정리 (총괄 요청)
+
+- **상태**: 확인 요청 (문서·주석만, 동작 변경 없음)
+- **커밋**: session/pharmacy — `git merge --ff-only develop`(`5e0e056`) 다음 커밋 하나
+- **한 일**: 총괄 요청대로 `develop`을 fast-forward로 당김. 시험 스크립트 머리에 「격리 스택 전용 — 운영 EMR·운영 DB에 돌리지 말 것」 한 줄(한·영). 위키 7절 H3을 해결됨으로(진료 `d1f473e`: 조제된 줄 수정·삭제 409, `consult.routes.js:180`·`:199`·`:212`를 읽어 확인), 3.3·5절 문구 갱신, 설정 화면 병합으로 밀린 `Settings.jsx` 줄 번호 갱신.
+- **바꾼 파일**: `backend/test/pharmacy.api.mjs`(주석), `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음
+- **확인한 방법**: `node --check backend/test/pharmacy.api.mjs`. 코드 동작이 바뀌지 않아 격리 스택은 다시 띄우지 않았습니다.
+- **확인 못 한 것**: 진료 쪽 409와 조제가 **동시에** 일어나는 경우는 코드로만 판단(수정 UPDATE가 조제의 줄 잠금을 기다린 뒤 `status <> 'dispensed'`를 다시 봄).
+- **다른 세션에 부탁**: 설정 — H4(약 저장 시 재고 덮어쓰기)는 병합 후에도 그대로입니다(`admin.routes.js:90`, `Settings.jsx:133`). 총괄이 전달 예정이라고 받음.
+- **남은 일 · 알려진 문제**: M3~M7 중 의학 판단이 없는 것(M3 지난 날 대기 처방, M6 조제 취소, M4 재고 표시)은 화면·재고 동작이 바뀌는 일이라 실장님께 먼저 여쭙니다(규칙 11절).
+
 ## 2026-09-29 — 약국 파일 안의 작은 버그 6건 수정 (실장님 지시 「1번부터」)
 
 > **총괄 확인 (2026-09-29)**: 합침(`93616cc`) + 실행 중 EMR 반영. 확인: 조제된 줄 원내/원외 전환 → 409 · `/completed` 진료당 한 줄에 성별·생년월일·알레르기 포함(오늘 조제 0건이라 형태만). 요청 1(이미지 이름표)은 총괄이 `657ba2c`로 `docker-compose.session.yml`에 `image: bethesda-s-${SESSION}-*:dev` 넣음 — 임시 `-f pharmacy-images.yml` 없이 규칙 7절 명령 그대로 쓰면 됨. 요청 2(생년월일)는 `7ad4387`로 전 모듈 해결. 요청 3(`npm ci`)은 규칙 8절을 `npm install --no-package-lock`으로 고침. `backend/test/pharmacy.api.mjs`는 그대로 둠(격리 스택 전용, 운영에선 돌리지 말 것).

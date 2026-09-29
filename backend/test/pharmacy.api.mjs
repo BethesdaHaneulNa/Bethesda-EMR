@@ -1,3 +1,6 @@
+// ⚠ 격리 스택 전용 — 운영 EMR(9080)·운영 DB에 절대 돌리지 마세요. 시험 환자를 만들고 실제로 재고를 뺍니다.
+//   ISOLATED SESSION STACK ONLY — never against the clinic's EMR or database.
+//
 // Pharmacy API checks: concurrent dispensing, lock order, the internal/external
 // guard and the completed list. Run against an ISOLATED stack only — it creates
 // test patients and dispenses them, which moves stock:
