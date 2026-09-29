@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
+
+- **상태**: 확인 요청 — 코드 변경 없음(문서만)
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `e853799` fast-forward
+
+### 1. `wiki/manual-fr/payment.md` — 수납·접수 직원용, 프랑스어
+
+- **구성**: `wiki/manual-fr/README.md` 규칙대로 En bref · Pas à pas(1~13) · Si ce message apparaît · À ne pas faire · Qui appeler.
+- **Pas à pas에서 다루는 것**:
+  - 수납과 거스름(Monnaie), 일부만 받음 / Impayé, 미수 나중에 받기(Encaisser impayé · Tout encaisser, 이전 미수 자동 더하기)
+  - 진료 종류, Supplément
+  - **Correction(과청구 = 차액만 돌려줌 — 기본 길, 시뮬레이션 ①의 RASOA Marie 예)**, 영수 취소와 「Avez-vous rendu … ?」, Re-facturer
+  - 지난 날 내원(📅), 가격 없음 · 총량 없음 · 병 수, 재출력, 목록에 없는 환자
+- **화면 글자 대조**: 격리 스택(9183, develop `e853799`)을 프랑스어로 띄워 가짜 환자로 확인했습니다.
+  - 가짜 환자: RAKOTO Jean · RABE Hery · RASOA Marie · ANDRIA Paul · RANDRIA Lova · RAZAFY Nirina
+  - 확인한 화면: 대기 목록의 배지·줄, 수납 화면(Montant Reçu · Exact · Monnaie 2,000), Confirmer → 영수증 창(🖨 Imprimer Reçu · Fermer), 정정 화면(Montant correct · Déjà encaissé · Remboursement dû · ↩ Appliquer la correction), 재수납 띠(↺ Re-facturer · Paiement reporté), 가격 없음(Sans prix)
+  - 나머지 문구(안내 표)는 `fr.js`의 `py_` 키를 그대로 옮겼습니다.
+  - 「Le montant reçu est inférieur au total.」은 화면 흐름에서 뜨지 않아(Confirmer가 부분 수납으로 처리) 표에서 뺐습니다.
+- **그림**: 없음(글 먼저 — 규칙 5).
+- **확인할 것(현지)**: 없음. 행정 용어는 화면 글자만 썼습니다.
+- **디자인 세션이 `Payment.jsx`를 끝낸 뒤 확인할 것**: 색 설명은 넣지 않았지만(배지 이름만), 단추 이름이 바뀌면 고쳐야 합니다.
+
+### 2. `wiki/reference/changelog-1.5.0/payment.md` — 영어, 폴더 README 규칙대로
+
+- **보이는 변화 먼저**:
+  - 중복 수납 막기, 정정(실제 받은 돈 · 차액만), 취소할 때 「돌려줬나」
+  - 현금 기록(날짜별 = 금고), 나중에 받은 미수는 받은 날 영수, 프랑스어 A4 영수증
+  - 청구가 진료 오더를 따름(총량 · 수량×일수 · 취소 오더 · 가격 없음 · 진료비 한 곳), 대기 목록 정리
+- **뒤에 짧게**: 합계 검사, 이월 두 번 막기, 권한, 변경 기록, 번역.
+- **`### After updating`**:
+  - 마이그레이션 027 · 031 · 033 · 036
+  - 036의 opening 확인 SQL
+  - 업데이트 뒤 백업
+  - 직원 설명서의 Correction · 취소 질문
+
+### 기록
+
+- **바꾼 파일**: `wiki/manual-fr/payment.md`(새), `wiki/reference/changelog-1.5.0/payment.md`(새)
+- **공용 파일 변경**: 없음
+- **확인 못 한 것**: 설명서를 A4로 인쇄해 쪽수를 재 보지 않았습니다(글 길이로는 3~4쪽).
+- **곁에 본 것(고치지 않음)**: `components/Receipt.jsx`의 글자 표 `RL`에 `refunded`가 두 번 있습니다(같은 값 「Remboursé au patient」, M6 때 제가 한 번 더 넣음). 동작은 같습니다. 디자인 세션이 끝난 뒤 한 줄 지우겠습니다.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — M9 (가) 구현: 현금 기록 `cash_movement` (수납 몫)
 
 - **상태**: 확인 요청 — 배포 전에 총괄이 실행 중 EMR의 백업 사본으로 확인(아래 SQL)
