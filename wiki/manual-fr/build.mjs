@@ -28,6 +28,7 @@ const CHAPTERS = [
   ['pacs', 'Imagerie'],
   ['statistics', 'Administration'],
   ['settings', 'Administration'],
+  ['design', 'Tout le personnel'],
 ];
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

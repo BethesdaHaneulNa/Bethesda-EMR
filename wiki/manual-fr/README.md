@@ -16,6 +16,7 @@
 | `statistics.md` | 통계 | 관리자 |
 | `settings.md` | 설정 | 관리자 |
 | `pacs.md` | PACS | 방사선사·의사 |
+| `design.md` | 디자인 | 모든 직원 (화면 색 바꾸기 — 밝게 / 어둡게) |
 
 ## 쓰는 규칙
 
