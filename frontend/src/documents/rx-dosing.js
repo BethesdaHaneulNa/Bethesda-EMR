@@ -93,10 +93,21 @@ export function fmtAmount(n) {
   return String(Math.round(n * 100) / 100);
 }
 
-// A unit word only where the drug name says what it is; otherwise the number stands
-// alone rather than calling a syrup a tablet.
-function unitOf(name) {
-  var s = String(name || '');
+// A unit word only where the drug's form or name says what it is; otherwise the number
+// stands alone rather than calling a syrup a tablet. The form (drug.dosage_form, set for
+// the drugs imported from the old stock list, migration 034) comes first: their names
+// rarely say "Tab" ("Amoxicillin 500mg" is a capsule). A line carries it only when the
+// screen's query joins the drug table; without it the name is read as before, so the
+// sentences of older prescriptions do not change.
+var FORM_UNIT = {
+  'Tablet':          { ko: '정', en: 'tab', fr: 'cp' },
+  'Capsule':         { ko: '캡슐', en: 'cap', fr: 'gél.' },
+  'Powder / Sachet': { ko: '포', en: 'sachet', fr: 'sachet' },
+  'Suppository':     { ko: '좌약', en: 'supp.', fr: 'suppo.' },
+};
+function unitOf(rx) {
+  if (rx && rx.dosage_form && FORM_UNIT[rx.dosage_form]) return FORM_UNIT[rx.dosage_form];
+  var s = String((rx && rx.drug_name) || '');
   if (/\b(tab|tabs|tablet|comprim)/i.test(s)) return { ko: '정', en: 'tab', fr: 'cp' };
   if (/\b(cap|caps|capsule|gélule|gelule)/i.test(s)) return { ko: '캡슐', en: 'cap', fr: 'gél.' };
   if (/\bsachet/i.test(s)) return { ko: '포', en: 'sachet', fr: 'sachet' };
@@ -112,7 +123,7 @@ export function doseSentence(rx, lang) {
   var daily = parseFloat(rx && rx.dose);
   var freq = parseInt(rx && rx.frequency, 10);
   var days = parseInt(rx && rx.days, 10);
-  var u = unitOf(rx && rx.drug_name);
+  var u = unitOf(rx);
   var unit = u ? u[l] : '';
   var total = storedTotal(rx);
   var totalText = hasTotal(rx) ? fmtAmount(total) : '—';
