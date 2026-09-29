@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — S1 후속 (화면 확인·위키) · `/admin/doctors` 권한 (S2)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `2c2ca89` 이후)
+- **한 일**:
+  1. **S1이 화면에서 어떻게 보이는지 확인** (격리 스택 9187, 빈 DB에서 계정 5개 만들어): ① 설정 권한을 뺀 관리자가 Établissement에서 저장 → 403 → 알림 「Erreur: Vous n'avez pas l'autorisation pour cela…」(새 키 `se_errAccessDenied` — 전에는 영어 「Access denied」) ② 그 관리자가 새로고침 → **메뉴에 Paramètres가 그대로 있고, 직원 목록이 빈 채로 조용히** 나옴(「직원이 없다」로 읽힘) → 고침: `loadAll`을 목록별로 따로 불러오고 실패하면 맨 위 빨간 줄로 이유 표시(U4도 같이 해결) ③ 비활성으로 바꾸자 다음 화면 요청에서 로그인 화면 → 로그인하면 「Ce compte est désactivé」 ④ 접수 직원에게 통계 권한을 **더하자** 서버는 200인데 **메뉴에 안 나오고 `/stats`를 쳐도 접수로 되돌아감** — 다시 로그인해야 함.
+  2. ④·②의 뿌리는 화면이 로그인 때 저장한 권한(`localStorage`)을 쓰는 것 — **U13**로 적고, 고칠 수 있게 **`GET /api/auth/me`가 현재 권한을 로그인 답과 같은 모양(null 없음)으로** 돌려주게 함(부르는 화면은 아직 없음).
+  3. `settingsMessages.js`에 `middleware/auth.js`(총괄)의 문구 5개(`Access denied` · `Could not verify the account` · `No token provided` · `Invalid token` · `Account is inactive`) — `settings.messages.mjs`가 이제 `middleware/auth.js`의 `error: '…'`도 읽어서 비교(45개 통과).
+  4. **S2 설정 몫**: `GET /api/admin/doctors` → `permMiddleware('registration','consultation')`. 다른 기준 자료 GET은 표대로 그대로.
+  5. 위키: 2.2·2.5(비활성은 바로 막힘, 권한 변경은 서버 즉시·메뉴는 다시 로그인), 2.12 표에 권한 없음 안내, 3-1(토큰은 누구인지만, 권한은 요청마다 DB), 4절 API 표, 7절(S1 고침(총괄)·U4 고침·U13 추가).
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `auth.routes.js`(`/me`) · `frontend/src/pages/Settings.jsx`(`loadAll`, 빨간 줄) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.messages.mjs` · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_errAccessDenied`·`se_errSessionEnded` 2개
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`, `settings.messages.mjs` 45개·`settings.permissions.mjs` 통과. 위 ①~④ 화면·API. `/admin/doctors`: 의사·간호사(접수 권한)·접수 200, 약국 역할 403. `/auth/me` → `{"permissions":["registration","payment","stats"], …}`.
+- **확인 못 한 것**: 다른 화면(접수·수납 등)이 403을 받을 때 어떻게 보이는지 — 각 화면 몫(아래 부탁).
+- **총괄 확인 요청**:
+  - **U13 (보통)**: 메뉴·라우트 가드가 옛 권한. 권한을 **더한** 직원은 다시 로그인할 때까지 그 화면을 못 엶(서버는 허락). 제안: `App.jsx`가 시작할 때(그리고 창에 돌아올 때) `GET /api/auth/me`로 `medconnect_user`의 `permissions`·`role`을 새로 고침 — `/me`는 준비됨. 그 전까지 위키 2.2·2.5에 「권한을 바꾸면 그 직원은 다시 로그인」으로 적어 둠. `02-before-departure.md`의 「12시간 유지」 문장은 총괄이 고친다고 하셨음.
+- **다른 세션에 부탁**: **모든 화면 세션** — S1·S2 뒤로 권한을 뺀 직원이 그 화면에 남아 있으면 요청마다 403 「Access denied」(영어)를 받습니다. 각 화면의 오류 표시에서 `seMessage`(`frontend/src/pages/settingsMessages.js`)를 쓰면 프랑스어 「Vous n'avez pas l'autorisation…」로 나옵니다.
+- **남은 일**: 다른 세션의 S2 적용이 끝나면 **역할 × 라우트 시험 스크립트**.
+
 ## 2026-09-29 — 새 PC로 옮기는 복원 연습 (총괄 부탁)
 
 > **총괄 확인 (2026-09-29)**: `c8437ad` 합침 + 실행 중 EMR 반영. 복원 연습 결과를 출발 전 목록 0절 (b)에 연결하고 「관리자 비밀번호를 알고 가기」를 넣음. 옛 백업을 복원해도 재시작 때 마이그레이션 019·020이 자동 적용된다는 확인이 특히 중요.

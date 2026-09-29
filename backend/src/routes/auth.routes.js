@@ -94,7 +94,14 @@ router.get('/me', authMiddleware, async (req, res) => {
       [req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: MSG.USER_NOT_FOUND });
-    res.json(result.rows[0]);
+    // The same shape of permissions as the login answer (never null), so a screen can
+    // refresh its stored copy from here. Since the server reads permissions from the
+    // database on every request (S1), the browser's copy from login is the only thing
+    // still out of date when an admin changes them: an added permission stays out of the
+    // menu, a removed one stays in it, until the next login.
+    const row = result.rows[0];
+    row.permissions = effectivePerms(row);
+    res.json(row);
   } catch (err) {
     res.status(500).json({ error: MSG.SERVER_ERROR });
   }

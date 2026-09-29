@@ -29,6 +29,8 @@
 - 로그인 화면: **Identifiant (아이디)** · **Mot de passe (비밀번호)** → **Connexion (로그인)**. 오른쪽 위 **EN · KO · FR** 로 언어를 바꿉니다.
 - 로그아웃: 오른쪽 위 빨간 **Déconnexion (로그오프)**.
 - 한 번 로그인하면 **12시간** 유지됩니다. 그 뒤에는 아무 버튼이나 누를 때 로그인 화면으로 돌아가니, 다시 로그인하면 됩니다.
+- **관리자가 직원을 비활성으로 바꾸면 그 직원은 바로 막힙니다** — 다음에 무엇을 누르거나 화면을 다시 불러오는 순간 로그인 화면으로 가고, 로그인하면 「Ce compte est désactivé…」가 뜹니다.
+- **권한을 바꾸면 서버는 바로 따릅니다.** 다만 위쪽 메뉴는 로그인할 때의 권한으로 그려져 있어서, 그 직원이 **Déconnexion 후 다시 로그인해야** 메뉴가 맞게 바뀝니다 — 권한을 **뺀** 화면은 메뉴에 남아 있어도 열면 「Vous n'avez pas l'autorisation…」, **더한** 화면은 다시 로그인해야 메뉴에 나타납니다 (7절 U13).
 
 ### 2.3 설정 화면의 탭
 
@@ -84,10 +86,10 @@
 
 - **바꾸기**: 그 줄의 **Modifier (수정)** → 고치고 **Sauver**.
 - **비밀번호 초기화**: **Modifier** 창의 **Mot de passe** 칸은 비어 있습니다. **비워 두면 그대로**, 새로 적으면 그 비밀번호로 바뀝니다. 새 비밀번호를 직원에게 알려 주세요.
-- **권한을 바꿔도 이미 로그인해 있는 직원에게는 바로 적용되지 않습니다.** 그 직원이 **Déconnexion** 후 다시 로그인해야 바뀝니다 (최대 12시간, 7절 S1).
+- **권한을 바꾸면** 서버는 바로 따르지만, 그 직원의 메뉴는 **다시 로그인해야** 바뀝니다 (2.2). 바꾼 뒤 그 직원에게 Déconnexion → 다시 로그인하라고 알려 주세요.
 - **그만둔 직원**: 그 줄의 **Supprimer (삭제)** → 「Désactiver ce membre du personnel ? … (이 직원을 비활성으로 바꿀까요?)」 → 확인. 지워지지 않고 **inactif** 가 되어 로그인이 막힙니다. 진료·수납 기록은 그대로 남습니다.
   - **주의**: 비활성 직원을 다시 **actif** 로 되돌리는 버튼이 아직 없습니다 (7절 U2).
-  - **주의**: 이미 로그인해 있던 화면은 최대 12시간 계속 쓸 수 있습니다. 급하면 그 PC에서 **Déconnexion** 하세요 (7절 S1).
+  - 비활성으로 바꾸면 **바로** 막힙니다 — 이미 로그인해 있던 화면도 다음 동작에서 로그인 화면으로 갑니다 (2026-09-29부터, S1).
 
 ### 2.6 관리자 계정 보호
 
@@ -184,6 +186,7 @@
 | **Ce compte est désactivé. Adressez-vous à un administrateur.** | 로그인 | 비활성(**inactif**)이 된 계정 | 관리자에게. 지금은 화면에서 되돌릴 수 없음 (7절 U2) |
 | **Le serveur ne répond pas. Regardez la fenêtre d'état sur le PC serveur.** | 로그인·설정 | 서버나 DB가 멈춤 | 서버 PC의 상태 창(2.10)을 봄 |
 | 로그인 화면으로 갑자기 돌아감 | 어디서나 | 로그인 12시간이 지남 | 다시 로그인 |
+| **Vous n'avez pas l'autorisation pour cela…** (알림 창, 또는 Paramètres 맨 위 빨간 줄) | 어디서나 | 관리자가 이 화면의 권한을 뺐음 (메뉴에는 아직 보임) | Déconnexion 후 다시 로그인하면 메뉴가 맞게 바뀜. 필요한 권한이면 관리자에게 |
 | **Le mot de passe doit comporter au moins 6 caractères** · **Les mots de passe ne correspondent pas** | 초기 설정 | 비밀번호가 6자 미만 / 확인 칸과 다름 | 다시 입력 |
 | **Cet identifiant existe déjà…** · **Un administrateur existe déjà. Connectez-vous.** | 초기 설정 | 그 아이디가 이미 있음 / 이미 관리자가 있음 | 로그인 화면에서 로그인 |
 | **Erreur: C'est le dernier administrateur actif pouvant ouvrir les Paramètres…** | Personnel 저장·삭제 | 이 계정이 **Paramètres** 에 들어갈 수 있는 마지막 관리자 | 먼저 다른 계정에 **Administrateur** 역할과 **Paramètres** 권한을 줌 (2.6) |
@@ -223,7 +226,7 @@
 - **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`nurse`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`). **`nurse`(간호사)는 2026-09-29 추가** — 마다가스카르 현장에는 약사가 없고 간호사가 간호·조제·검사를 모두 하는데, 역할이 없어 간호사 계정을 「pharmacy」로 만들고 검사실 권한을 손으로 체크해야 했습니다. 기본 권한 `registration`+`pharmacy`+`lab`(2026-09-29 실장님 결정 — 접수는 환자 차트를 보려고. `permissions.js`·`modules.js` 한 줄씩). 기존 `pharmacy`·`lab` 역할은 그대로 둡니다. 역할 이름으로 동작이 갈리는 곳은 `doctor`(진료 목록 필터, 과장 선택)와 `admin`(잠금 방지)뿐이라 간호사는 권한 체크만으로 움직입니다. 상단바 아이콘은 💉(`TopBar.jsx`, 총괄). 로그인 뒤 처음 화면: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 마이그레이션은 합칠 때 `701` → **`020_settings_nurse_role.sql`** 로 번호가 바뀜.
 - **권한(permissions)** 이 실제 접근을 정합니다: `staff.permissions TEXT[]`, 값은 `frontend/src/modules.js`의 `MODULES[].perm` 7개 — `registration` `consultation` `payment` `pharmacy` `lab` `stats` `settings`. 서버에는 이 목록이 **한 곳**에만 있습니다: `backend/src/middleware/permissions.js`의 `ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole` (2026-09-29, U9). `middleware/auth.js`·`admin.routes.js`(설치 관리자 고정)·`auth.routes.js`(첫 관리자 만들기)가 여기서 가져갑니다. 백엔드 이미지는 `backend/`만으로 빌드되어 `modules.js`를 불러올 수 없으므로 한 벌은 따로 둘 수밖에 없고, 대신 **`node backend/test/settings.permissions.mjs`** 가 두 목록(순서 포함)과 역할별 기본값이 같은지 확인합니다 — 설치·서버·DB 없이 파일 두 개만 읽음, 다르면 exit 1. **모듈을 추가하면 `modules.js`와 `permissions.js`를 같이 고치고 이 검사를 돌리세요.** (마이그레이션 `013`에도 같은 목록이 있지만 이미 적용된 파일이라 고치지 않습니다 — 옛 계정을 한 번 채우는 데만 쓰였음.)
 - 역할을 바꾸면 화면이 그 역할의 기본 권한으로 체크를 **덮어씁니다** (`Settings.jsx:659`). 권한이 `NULL`인 옛 계정은 역할 기본값으로 대신합니다(`effectivePerms`). 013 마이그레이션이 옛 계정을 채웠습니다.
-- **로그인 토큰(JWT)** 에 권한이 들어갑니다 (`middleware/auth.js` `generateToken`, 유효 12시간). 서버는 요청마다 DB를 다시 보지 않고 **토큰 안의 권한**으로 판단합니다. 그래서 권한 변경·비활성화는 다시 로그인할 때까지 적용되지 않습니다.
+- **로그인 토큰(JWT)** 은 「누구인지」만 증명합니다. **권한·역할·상태는 요청마다 DB에서 읽습니다** (2026-09-29, S1 — 총괄이 `middleware/auth.js`에 구현). 비활성 계정은 다음 요청에서 401 「Account is inactive」 → 화면은 로그인 화면으로(`api/client.js`: 토큰을 보낸 401). 권한을 뺀 화면은 403 「Access denied」. 토큰 유효 12시간은 그대로. **남은 차이**: 화면의 메뉴·라우트 가드는 로그인 때 `localStorage`(`medconnect_user`)에 저장한 권한을 쓰므로 다시 로그인할 때까지 옛 권한으로 그려짐(U13). `GET /api/auth/me`가 로그인과 같은 모양의 현재 권한을 돌려주므로(2026-09-29), 화면이 시작할 때 이것으로 저장본을 새로 고치면 풀림 — `App.jsx`(총괄).
 - **서버에서 권한을 검사하는 곳** (`permMiddleware`): 설정 API의 쓰기 전부, 백업 실행·다운로드, `pharmacy.routes`(전체), `stats.routes`(전체), `lab.routes`·`orderset.routes`·`pacs.routes` 일부.
   **검사하지 않는 곳**: `patient`·`visit`·`consult`·`billing`·`document` 라우트는 **로그인만** 확인합니다. 화면 메뉴는 권한대로 숨겨지지만, 로그인한 직원이면 누구든 API를 직접 불러 수납 취소 등을 할 수 있습니다 (7절 · 인계 노트 총괄 확인 요청).
 - 화면 쪽 접근 제한은 `App.jsx`의 라우트 가드가 `userPerms(user)`로 합니다 (localStorage의 `medconnect_user`).
@@ -356,9 +359,9 @@
 | `GET /api/auth/setup-status` | 없음 | `{needsSetup}` — 활성 관리자가 없으면 true |
 | `POST /api/auth/setup` | 없음 (관리자 없을 때만) | 첫 관리자 생성, 토큰 반환 |
 | `POST /api/auth/login` | 없음 | `{token, user}` |
-| `GET /api/auth/me` | 로그인 | 내 정보 (상태는 확인 안 함) |
+| `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29) |
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `clinic` | 로그인 | 목록 (다른 화면도 씀) |
-| `GET /api/admin/doctors` | 로그인 | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
+| `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
 | `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **`PUT /drugs/:id`** 는 `stock_expected`를 받고 재고 규칙이 따로 있음(3-8절, 409 가능) |
@@ -432,7 +435,7 @@
 
 | # | 심각도 | 문제 | 근거 |
 |---|---|---|---|
-| S1 | 높음 | 비활성화하거나 권한을 뺀 직원이 **이미 받은 토큰으로 최대 12시간** 계속 씀. 서버가 요청마다 DB의 상태·권한을 보지 않고 토큰 안의 권한을 믿음 | `middleware/auth.js` `authMiddleware`·`permMiddleware`, `generateToken` `expiresIn:'12h'` |
+| S1 | ~~높음~~ **고침 (총괄)** | ~~비활성·권한을 뺀 직원이 토큰으로 12시간 계속 씀~~ → 2026-09-29 실장님 결정, 총괄이 `middleware/auth.js`에서 요청마다 DB의 상태·권한을 읽게 함. 격리 스택에서 확인: 권한을 뺀 관리자가 저장 → 403 「Vous n'avez pas l'autorisation…」, 비활성으로 바꾸자 다음 화면 요청에서 로그인 화면 → 「Ce compte est désactivé」. 화면 메뉴가 늦게 바뀌는 것은 U13 | (옛 코드) `middleware/auth.js` |
 | S2 | 높음 | 접수·문서 API와 진료의 조회 API는 **로그인만** 확인. 예: 약국 직원도 API로 환자 정보를 고치거나 문서를 발급·취소할 수 있음. 권한은 화면 메뉴에서만 지켜짐. **2026-09-29 현재**: 수납(`billing`)은 수납 세션이 `payment` 검사를 넣었고, 진료의 **쓰기**는 원래 `consultation` 검사가 있었음. 남은 것 = `patient`·`visit`·`document` 전체, 진료 조회. 라우트별 허용 권한표 **초안**은 인계 노트 2026-09-29 「S2 초안」 — 막을지는 결정 세션이 실장님께 여쭙는 중 | `patient/visit/document.routes.js`에 `permMiddleware` 없음. 각 세션 소유 |
 | S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
 | S4 | 보통 (**일부 고침**) | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 직원 비밀번호 길이 제한 없음 — **결정 대기**. ~~비밀번호 칸이 가려지지 않음~~ → 2026-09-29: `type=password` + **Afficher/Masquer** 버튼, `autoComplete="new-password"`(브라우저가 관리자 자신의 비밀번호를 직원 칸에 채워 넣지 않게) | `Settings.jsx` 직원 편집 창, `admin.routes.js` POST staff |
@@ -467,7 +470,8 @@
 | U1 | ~~보통~~ **대부분 고침** | ~~설정 화면 글자 상당수가 영어로 고정~~ → 2026-09-29: 틀(탭 이름·공용 삭제 확인·편집 창 제목·오류·저장 알림)과 직원·오더 코드·상용구·진료과·병원 정보 탭, 그 편집 창을 `se_` 키로. 역할·오더 종류·상태도 번역해서 표시(저장 값은 그대로). **남은 것**: 약품 탭 안쪽(약국 몫 — 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·General 등 — DB에 저장되는 값이라 번역하지 않음) | (옛 코드) `Settings.jsx` |
 | U2 | 보통 | 비활성으로 만든 직원을 **다시 활성으로 되돌릴 방법이 화면에 없음** (상태 칸 없음) | `Settings.jsx:649-684` |
 | U3 | 보통 | `/api/system/status`를 화면 어디에서도 부르지 않음. 상태 창은 서버 PC에서만 보임 | `status.routes.js`, 프론트엔드에 호출 없음 |
-| U4 | 낮음 | 첫 화면 목록 불러오기가 하나라도 실패하면 뒤의 것(병원 정보·약속처방)이 안 불러와져 Clinic 탭이 「Loading…」에 멈춤 | `Settings.jsx:43-54` |
+| U4 | ~~낮음~~ **고침** | ~~첫 화면 목록 하나가 실패하면 뒤의 것이 안 불러와지고 조용함~~ → 2026-09-29: 목록을 따로따로 불러오고, 실패하면 Paramètres 맨 위에 빨간 줄로 이유(권한 없음 등)를 보여줌. 권한을 뺀 관리자에게 직원 목록이 **빈 채로** 보여 「직원이 없다」로 읽히던 것 | (옛 코드) `Settings.jsx` `loadAll` |
+| U13 | 보통 | **권한을 바꾼 직원의 메뉴는 다시 로그인해야 바뀜** — 메뉴·라우트 가드가 로그인 때 저장한 권한(`localStorage`)을 씀. 뺀 화면은 메뉴에 남고(열면 403 안내), 더한 화면은 나타나지 않음(주소를 쳐도 되돌아감, 서버는 허락). 격리 스택에서 확인. 고치려면 `App.jsx`(총괄)가 시작할 때 `GET /api/auth/me`로 저장본을 새로 고침 — `/me`는 준비됨 | `App.jsx`·`TopBar.jsx`·`modules.js`(총괄) |
 | U5 | 낮음 | 앱 제목을 비워서 저장할 수 없음 (빈 값이면 이전 값 유지) | `admin.routes.js:344` `COALESCE` |
 | U6 | 낮음 (**일부 고침**) | ~~로그인 화면 아래 버전이 `v1.0`으로 고정~~ → 2026-09-29: 상단바와 같은 빌드 버전(`__APP_VERSION__`). 로고 글자가 옛 이름의 「M」인 것은 그대로 | `Login.jsx` |
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
@@ -494,4 +498,5 @@
 | 2026-09-29 | 서버 안내를 화면 언어로 (U11: `settings.messages.js` ↔ `settingsMessages.js`, 검사 스크립트), 틀린 비밀번호에 안내가 안 뜨던 것 (U12), 직원 비밀번호 칸 가리기 (S4 일부) | `e2f794b` |
 | 2026-09-29 | 간호사(`nurse`) 역할 — 마이그레이션 701(→020), 기본 권한 약국+임상병리. 로그인 화면 버전을 상단바와 같게 | `47043f4` |
 | 2026-09-29 | 간호사 기본 권한을 결정대로 접수·약국·임상병리로 (코드는 총괄 `f4df9bc`), 위키 표·주의점, 첫 화면 확인 | (이 커밋) |
-| 2026-09-29 | 새 PC로 옮기는 복원 연습과 절차(2.13절). 연습 중 찾은 것: 기존 직원의 비밀번호 칸 힌트 「••••」가 비밀번호가 채워진 것처럼 보임 → 「Vide = inchangé」 | (이 커밋) |
+| 2026-09-29 | 새 PC로 옮기는 복원 연습과 절차(2.13절). 연습 중 찾은 것: 기존 직원의 비밀번호 칸 힌트 「••••」가 비밀번호가 채워진 것처럼 보임 → 「Vide = inchangé」 | `c8437ad` |
+| 2026-09-29 | S1 후속: 위키 2·3·7절(바로 막힘, 메뉴는 다시 로그인해야 — U13), 「Access denied」 등 인증 문구 번역, Paramètres 목록을 따로 불러오고 실패 이유 표시(U4), `/auth/me`가 현재 권한을 로그인과 같은 모양으로. S2: `/admin/doctors`에 registration·consultation | (이 커밋) |

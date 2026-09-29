@@ -34,6 +34,12 @@ var EXACT = {
   'A field has the wrong format': 'se_errFormat',
   'A date field has the wrong format': 'se_errFormat',
   'A number is out of range': 'se_errRange',
+  // middleware/auth.js (the coordinator's file). A 401 with a token sent never reaches a
+  // screen - api/client.js returns to the login page - so these show only on login.
+  'Access denied': 'se_errAccessDenied',
+  'Could not verify the account': 'se_errServer',
+  'No token provided': 'se_errSessionEnded',
+  'Invalid token': 'se_errSessionEnded',
   // api/client.js
   'Request failed': 'se_errServer',
 };

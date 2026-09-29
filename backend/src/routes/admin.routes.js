@@ -213,7 +213,10 @@ router.delete('/order-codes/:id', permMiddleware('settings'), async (req, res) =
 // Doctors list for registration/reception screens.
 // Front-desk users need this to assign a patient to a doctor, but they should
 // not receive the full staff management list.
-router.get('/doctors', async (req, res) => {
+// S2 (decided 2026-09-29): the list carries doctors' phone numbers and e-mail, so only
+// the screens that assign or see a doctor get it - reception (registration) and
+// consultation. Every other reference list below stays open to any signed-in user.
+router.get('/doctors', permMiddleware('registration', 'consultation'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT s.id, s.login_id, s.name, s.role, s.department_id, s.phone, s.email, s.status,

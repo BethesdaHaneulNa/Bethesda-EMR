@@ -20,6 +20,7 @@ export default function SettingsPage() {
   var edS = useState(null), editItem = edS[0], setEditItem = edS[1];
   var edT = useState(''), editType = edT[0], setEditType = edT[1];
   var spS = useState(false), showPw = spS[0], setShowPw = spS[1];
+  var leS = useState(''), loadError = leS[0], setLoadError = leS[1];
   var toS = useState(''), toast = toS[0], setToast = toS[1];
   var dcS = useState('All'), drugCat = dcS[0], setDrugCat = dcS[1];
   var ocF = useState('All'), ocFilter = ocF[0], setOcFilter = ocF[1];
@@ -52,17 +53,23 @@ export default function SettingsPage() {
   async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); } catch(e){ alert((t.backupFail||'백업 실패')+': '+seMessage(t,e.message||'')); } await loadBackup(); setBackupBusy(false); }
   async function downloadBackup(name){ try { var token=localStorage.getItem('medconnect_token'); var res=await fetch('/api/backup/download/'+encodeURIComponent(name),{headers:token?{Authorization:'Bearer '+token}:{}}); if(!res.ok){ alert((t.backupFail||'다운로드 실패')+' ('+res.status+')'); return; } var blob=await res.blob(); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); } catch(e){ alert((t.backupFail||'다운로드 실패')+': '+e.message); } }
 
+  // Each list loads on its own. They used to load one after another inside one try, so
+  // the first failure left every later tab empty (the Clinic tab stuck on "Loading…"),
+  // and the error went only to the console. Since permissions are read from the database
+  // on every request (S1), the likeliest failure is that this person's Settings
+  // permission was taken away while their browser still shows the menu - the staff list
+  // then came up empty, which reads as "there are no staff". Now it is said instead.
   async function loadAll(){
-    try {
-      setStaff(await api.get('/admin/staff'));
-      setDrugs(await api.get('/admin/drugs'));
-      setOrderCodes(await api.get('/admin/order-codes'));
-      setPhrases(await api.get('/admin/phrases'));
-      setDepts(await api.get('/admin/departments'));
-      setPacsConfig(await api.get('/pacs/config'));
-      try { setClinic(await api.get('/admin/clinic')); } catch(e){}
-      try { setOrderSets(await api.get('/order-sets')); } catch(e){ setOrderSets([]); }
-    } catch(err){ console.error(err); }
+    var jobs = [
+      ['/admin/staff', setStaff], ['/admin/drugs', setDrugs], ['/admin/order-codes', setOrderCodes],
+      ['/admin/phrases', setPhrases], ['/admin/departments', setDepts], ['/pacs/config', setPacsConfig],
+      ['/admin/clinic', setClinic], ['/order-sets', setOrderSets],
+    ];
+    var results = await Promise.all(jobs.map(function(j){
+      return api.get(j[0]).then(function(d){ j[1](d); return null; }, function(e){ return e.message || 'Request failed'; });
+    }));
+    var errs = results.filter(Boolean);
+    setLoadError(errs.length ? (errs.indexOf('Access denied')>=0 ? 'Access denied' : errs[0]) : '');
   }
 
   function showToast(msg){ setToast(msg); setTimeout(function(){ setToast(''); },2000); }
@@ -298,6 +305,7 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div style={{display:'flex',flexDirection:'column',overflow:'hidden',background:'#11141c'}}>
+          {loadError?<div style={{background:'#ef444418',borderBottom:'1px solid #ef444440',color:'#fca5a5',padding:'8px 14px',fontSize:13,fontWeight:600}}>⚠ {seMessage(t, loadError)}</div>:null}
 
           {/* STAFF */}
           {activeTab==='staff'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
