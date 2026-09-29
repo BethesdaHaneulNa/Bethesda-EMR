@@ -436,6 +436,7 @@ export default {
   st_billCount: "Treatment receipts",
   st_settlementsSub: "+ {n} balance settlement(s)",
   st_avgPerVisit: "Avg billed / visit",
+  st_otherVisits: "No fee / other",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",
