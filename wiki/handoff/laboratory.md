@@ -2,11 +2,69 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 작업 계획: 7번(검사실 대기 목록)이 「오더 즉시 + 최근 7일」로 결정될 때
+
+- **상태**: 보류 — 계획만. 결정이 오면 이대로 구현(코드 변경 없음)
+- **커밋**: session/laboratory — 이 항목과 같은 커밋(출발점 `develop` `ff37c0d`)
+- **한 일**: 총괄 요청. 결정 7번의 두 질문(① 진료 완료 전에도 뜰지 ② 며칠 전까지 뜰지)이 추천대로 「① 오더 즉시 · ② 최근 7일」로 나올 때의 작업을 미리 정리. 약국 M3(지난 날 대기 처방, 추천 7일)과 **같은 기간 정의·같은 표시**를 쓰도록 맞춤. ①·②는 따로 정할 수 있게 나눠 적음.
+- **바꾼 파일**: `wiki/handoff/laboratory.md` 만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+
+### 지금 (`lab.routes.js` `GET /pending`, `GET /completed`)
+
+| | 대기 (`/pending`) | 입력 완료 (`/completed`) |
+|---|---|---|
+| 조건 | `c.status = 'completed'` **그리고** `v.visit_date = CURRENT_DATE` · 오더 `status NOT IN ('completed','cancelled')` | `v.visit_date = CURRENT_DATE` · 오더 `status = 'completed'` |
+| 순서 | `c.updated_at` 오래된 것부터 | 최근 결과(`MAX(o.result_at)`)부터 |
+| 접수 취소 내원 | 따로 거르지 않음 | 따로 거르지 않음 |
+
+### 바꿀 쿼리
+
+**`GET /pending`**
+- ② 기간: `v.visit_date = CURRENT_DATE` → `v.visit_date >= CURRENT_DATE - 7`. 「오늘 + 지난 7일」(달력으로 8일). **약국 M3와 같은 식으로** 맞춥니다 — 약국이 다르게 정하면 그쪽에 맞춤.
+- ① 진료 완료 조건: `c.status = 'completed'` 줄을 뺌. 대신 `c.status AS consultation_status`를 내려 화면에서 「진료 중」 표시(아래).
+- 접수 취소 제외: `AND v.status <> 'cancelled'`. 지금 접수는 대기 중인 내원만 취소할 수 있게 막혀 있지만(`visit.routes.js` PUT `/:id/status`), 상태를 `waiting`으로 되돌린 뒤 취소하는 길은 막혀 있지 않고, 막기 전의 옛 데이터도 있을 수 있어 목록에서 한 번 더 거릅니다.
+- 새 칸: `(CURRENT_DATE - v.visit_date) AS days_ago` — 「어제」「3일 전」을 **서버 날짜로** 계산(브라우저 시계에 기대지 않음).
+- 순서: **오늘 것 먼저**(진료 시각 오래된 것부터 — 지금과 같음), 그 다음 **지난 날짜 최근 것부터**. `ORDER BY (v.visit_date = CURRENT_DATE) DESC, CASE WHEN v.visit_date = CURRENT_DATE THEN c.updated_at END ASC, v.visit_date DESC, c.updated_at ASC`
+
+**`GET /completed`**
+- 「오늘 **내원**한」 → 「오늘 **결과를 넣은**」으로: `o.status = 'completed' AND o.result_at >= CURRENT_DATE AND o.result_at < CURRENT_DATE + 1` (DB 시간대 기준 오늘. `result_at::date`는 인덱스를 못 타서 범위로). 어제 받은 검체를 오늘 끝내면 오늘 「입력 완료」에 나와야 하기 때문.
+- 접수 취소 제외 `AND v.status <> 'cancelled'`, `days_ago`도 같이.
+
+**`GET /visit/:visitId/orders`**(환자 찾기) — 날짜 제한 없음, 그대로 둠. 7일이 지난 검사는 이 길로 찾습니다.
+
+인덱스: `order_item`에 `(code_type, status)` 인덱스는 없지만 병원 규모(하루 수십 건)에서는 7일 범위라도 부담 없다고 봄. 느려지면 `CREATE INDEX … ON order_item (visit_id) WHERE code_type = 'lab' AND status = 'ordered'`를 501번 마이그레이션으로.
+
+### 화면 (`Lab.jsx`)
+
+- 왼쪽 목록 날짜 자리: `days_ago` 0 → 지금처럼 날짜, 1 → **「어제 / Hier」**, 2 이상 → **「N일 전 / Il y a N jours」**. 오늘 것이 아니면 글자색을 달리 해(주황) 눈에 띄게.
+- 오늘과 지난 날 사이에 얇은 구분 줄 「지난 날 미완료 / Non terminées des jours précédents」.
+- ①을 적용하면: 진료가 아직 안 끝난 줄에 작은 표시 **「진료 중 / En consultation」**. 결과 입력은 막지 않음.
+- ①을 적용하면 생기는 경우 하나: 검사실이 입력하는 사이에 의사가 그 오더를 지울 수 있음(결과 없는 오더는 삭제 가능). 그러면 저장이 404 「Order not found」가 됨 → 알림을 **「이 검사는 진료실에서 취소되었습니다 / Cet examen a été annulé en consultation」**으로 번역하고 목록을 다시 불러옴. (30초 자동 새로고침이 있어 대부분 그 전에 목록에서 사라짐)
+- 새 번역 키(예정): `lb_yesterday` · `lb_daysAgo`(`{n}` 자리) · `lb_previousDays` · `lb_inConsultation` · `lb_orderRemoved` — ko · en · fr.
+
+### 위키
+
+- 2절: 「오늘 온 환자 중 진료를 마친 환자만」 → 새 조건, 「어제」「N일 전」 표시, 「7일이 지나면 목록에서 빠지고 🔍 Trouver patient로 찾음」.
+- 3.1·4절 쿼리 설명, 5절 「오더가 검사실에 보이는 조건」, 7절 문제 7 ✅.
+
+### 확인 계획 (격리 스택 9185)
+
+SQL로 `visit_date`를 오늘·어제·3일 전·8일 전으로 바꾼 내원 4개, 접수 취소(`status='cancelled'`)된 내원에 오더 1개, 진료 중(`c.status='in_progress'`) 오더 1개를 만들고 — 대기 목록에 오늘·어제·3일 전·진료 중만 뜨는지, 순서, 「어제/3일 전/진료 중」 한국어·프랑스어, 8일 전·취소 내원이 안 뜨는지, 어제 오더를 오늘 저장하면 「입력 완료」에 뜨는지, 입력 중 오더 삭제 → 번역된 알림.
+
+### 결정 때 같이 여쭐 것 (결정 세션께)
+
+- **7일이 지난 미완료 검사는 목록에서 조용히 사라집니다.** 끝내 안 한 검사(환자가 안 옴 등)를 치우는 「검사 안 함(취소)」 버튼이 필요할 수 있습니다 — 결정 3번(취소 표시)과 같은 이야기이고, 약국 M3의 「조제 안 함」 버튼과도 같습니다. 세 곳이 같은 방식이면 좋겠습니다.
+- ①만 바꾸고 ②는 그대로(오늘만)도 가능합니다. 반대도 가능합니다.
+
+- **총괄 확인 요청**: 기간 정의(`CURRENT_DATE - 7`, 오늘 + 지난 7일)를 약국 M3와 맞춰야 합니다. 약국 세션 계획과 다르면 알려 주세요.
+- **다른 세션에 부탁**: 약국 — M3 기간·「어제/N일 전」 표시 방식을 임상병리와 같게(위). 진료 — ①을 적용하면 진료 중 오더가 검사실에 바로 보인다는 것만 알고 있으면 됨(진료 쪽 변경 없음).
+- **남은 일 · 알려진 문제**: 결정 대기.
+
 ## 2026-09-29 — 설정 검사항목: 결과 있는 항목의 단위 변경 전 경고 창
 
 > **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 경고는 묻기만 하고 막지 않음, 판정 규칙·기준값·저장 방식 변경 없음, `Settings.jsx`는 검사항목 탭 범위 안(상태 2줄 + 탭 함수·JSX) 확인. 실행 중 EMR에서 `GET /lab/test-items`에 `result_count`가 실려 오는 것 확인. 경고 창 화면은 세션의 격리 스택 확인(한국어·프랑스어)을 믿음.
 
-- **상태**: 확인 요청
+- **상태**: 합쳐짐(총괄 확인 완료)
 - **커밋**: session/laboratory `d7f8dd3` (출발점 `develop` `02a947c`)
 - **한 일**: 총괄 요청(7절 문제 21 안전장치). 설정 → 검사항목에서 저장 전에 확인 창을 띄움 — 막지 않고 묻기만(「그래도 저장 / 취소」). 판정 규칙·기준값·저장 방식은 그대로.
   - ① **결과가 있는 항목의 단위(Unité)를 바꾼 경우** — 항목 이름, 옛 단위 → 새 단위, 결과 건수, 안전한 방법(이름이 다른 새 줄 추가 → 옛 줄 ✕).
