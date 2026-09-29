@@ -82,6 +82,8 @@ Si le patient **n'avait pas tout payé**, il n'y a rien à rendre : la liste mon
 
 Si la liste montre **↩ Sans différence d’argent**, il n'y a ni argent à rendre ni impayé : le reçu est seulement réémis.
 
+Un médicament **déjà délivré** par la pharmacie et emporté par le patient n'est pas repris : il ne disparaît pas de la facture et il n'y a pas de remboursement. La correction ne concerne que les médicaments retirés **avant** la délivrance, et les examens ou imageries annulés.
+
 ### 8. Annuler un reçu (rare)
 
 N'annulez un reçu que si le reçu lui-même est faux (mauvais patient, par exemple). **Si seulement des articles ont changé, faites une Correction (7).**
