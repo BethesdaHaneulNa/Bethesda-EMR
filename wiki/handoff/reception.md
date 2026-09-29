@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑳ 진료 없이 「완료」 → 진료비 없음 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`c135972` 위)
+- **한 일**:
+  - 서버 `PUT /visits/:id/status`: `registered`·`waiting` → `completed`이면 **같은 UPDATE**에서 `visit_type='none'`. 단 취소 안 된 청구가 이미 있으면 그대로(수납 목록이 추가청구·환불로 흔들리지 않게). `in_progress → completed`와 다른 이동은 전과 같음
+  - 화면: 대기 중 환자의 「Terminer →」에 확인 창 `rc_completeNoConsult`(수납 금액이 바뀌므로)
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `frontend/src/pages/Registration.jsx`, `backend/test/reception.api.mjs`(⑳ 3건)
+- **공용 파일 변경**: i18n `rc_` 블록에 `rc_completeNoConsult` 1개
+- **DB 마이그레이션**: 없음 · **번역 키**: `rc_completeNoConsult` (ko · en · fr)
+- **다른 모듈 영향**:
+  - 이 API를 부르는 곳은 접수뿐(grep). 진료의 「진료 완료」는 `consult.routes.js`에서 따로 바꾸므로 영향 없음
+  - 수납: 이렇게 완료된 내원은 `none`(진료비 0)으로 수납 대기에 뜸 — 수납 코드는 `visit_type`을 읽기만
+- **확인한 방법**:
+  - `node --check`, `npm run build`. 격리 스택 9181, 시험 **151/151**
+  - ⑳ 3건: 대기 → 완료 = `none`, 진료중 → 완료 = `followUp` 그대로, 완료 → 대기로 되돌려도 다시 안 바뀜
+  - 화면(프랑스어): 「Terminer →」 → 「Terminer … sans consultation ? … « Sans frais »…」 → 아니오: 그대로 / 예: 완료, DB `none`
+- **확인 못 한 것**:
+  - 수납 화면에서 그 내원을 눌러 진료비 0을 본 것은 아님. 전에 API로 `none` → 진료비 0을 확인해 둠
+  - 한국어·영어 확인 창은 눈으로 안 봄(키는 넣음)
+- **위키**: `modules/reception.md` 머리, 2.1 버튼 표, 2.5, 2.8, 3절 상태 버튼, 4절 `/status` 줄, 5절 수납, 7절 ⑳ 고침, 8절
+- **다른 세션에 부탁**: **수납** — 참고: 접수에서 「Terminer →」로 끝낸 내원은 이제 `visit_type='none'`으로 옵니다
+
 ## 2026-09-29 — ⑫ 성별: 안 눌린 상태로 시작, 안 고르면 저장 안 됨 (실장님 결정)
 
 - **상태**: 확인 요청

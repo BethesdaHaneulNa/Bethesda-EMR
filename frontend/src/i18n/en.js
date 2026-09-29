@@ -309,6 +309,7 @@ export default {
   rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   rc_visitCancelled: "Visit cancelled",
   rc_genderRequired: "Choose the sex (Male / Female).",
+  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\" and the patient goes to the cashier.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
