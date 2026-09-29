@@ -413,6 +413,16 @@ export default {
   py_stWaived: "waived",
   py_stWaiting: "waiting",
   py_visitCancelled: "This visit was cancelled at reception — there is nothing to bill. Receipts and documents can still be viewed.",
+  py_correction: "Correction",
+  py_listRefund: "To refund",
+  py_listOwed: "Left unpaid",
+  py_listNoDiff: "No money difference",
+  py_listSeeCorrection: "Open to see the correction",
+  py_pastUnbilled: "earlier visit · not billed yet",
+  py_consultFeeMissing: "Consultation fee code {code} not found — the consultation counts as 0 Ar. Check the order codes in Settings.",
+  py_correctionHint: "Items were reduced after payment. The correction follows the amounts below (there may be nothing to refund).",
+  py_processCorrection: "Apply the correction",
+  py_qtyMissingPack: "No number of bottles / tubes for: {names}. The amount cannot be calculated. Ask the doctor to enter the number, then bill.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

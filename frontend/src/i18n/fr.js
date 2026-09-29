@@ -404,6 +404,16 @@ export default {
   py_stWaived: "exonéré",
   py_stWaiting: "en attente",
   py_visitCancelled: "Cette visite a été annulée à l’accueil — rien à encaisser. Les reçus et les documents restent consultables.",
+  py_correction: "Correction",
+  py_listRefund: "À rembourser",
+  py_listOwed: "Reste impayé",
+  py_listNoDiff: "Sans différence d’argent",
+  py_listSeeCorrection: "Ouvrir pour voir la correction",
+  py_pastUnbilled: "visite d’un jour passé · pas encore encaissée",
+  py_consultFeeMissing: "Code de consultation {code} introuvable — la consultation compte 0 Ar. Vérifiez les codes d’ordres dans Paramètres.",
+  py_correctionHint: "Articles réduits après paiement. La correction suit les montants ci-dessous (il peut n’y avoir rien à rembourser).",
+  py_processCorrection: "Appliquer la correction",
+  py_qtyMissingPack: "Nombre de flacons / tubes non indiqué pour : {names}. Le montant ne peut pas être calculé. Demandez au médecin de l’indiquer, puis encaissez.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

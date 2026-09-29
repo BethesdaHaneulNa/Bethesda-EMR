@@ -404,6 +404,16 @@ export default {
   py_stWaived: "면제",
   py_stWaiting: "대기",
   py_visitCancelled: "접수에서 취소된 내원입니다 — 수납할 것이 없습니다. 영수내역과 문서는 볼 수 있습니다.",
+  py_correction: "정정",
+  py_listRefund: "돌려줄 돈",
+  py_listOwed: "남을 미수",
+  py_listNoDiff: "돈 차이 없음",
+  py_listSeeCorrection: "눌러서 정정 내용 확인",
+  py_pastUnbilled: "지난 날 내원 · 아직 수납 안 됨",
+  py_consultFeeMissing: "진료비 코드 {code}가 없어 진료비를 0으로 계산합니다. 설정의 오더 코드를 확인하세요.",
+  py_correctionHint: "수납한 뒤 항목이 줄었습니다. 아래 금액대로 정정합니다(돌려줄 돈이 없을 수도 있습니다).",
+  py_processCorrection: "정정 처리",
+  py_qtyMissingPack: "병·튜브 수가 비어 있어 금액을 계산할 수 없는 약이 있습니다: {names}. 진료실에 그 약의 개수를 넣어 달라고 한 뒤 수납하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
