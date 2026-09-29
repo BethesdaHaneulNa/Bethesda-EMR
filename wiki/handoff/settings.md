@@ -2,6 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약을 감출 때 그 약을 쓰는 약속처방 알림 (진료 세션 발견)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`f3b8f01` 위)
+- **한 일**: 약속처방은 약 id를 복사해 두어서, 약을 감춰도(`is_active=false`) 그 세트가 계속 처방합니다. 설정 쪽 몫으로 — 새 API `GET /api/admin/drugs/:id/order-sets`(settings, 그 약을 쓰는 **활성** 세트의 id·이름), 공용 삭제 함수 `deleteItem`이 약이면 먼저 물어 보고 세트가 있으면 확인 창에 「이 약을 쓰는 약속처방 N개: 이름… 약을 감춰도 약속처방에는 남아 계속 처방됩니다… 그래도 감출까요?」. **막지는 않습니다.** 약품 탭 화면 글자는 안 건드림.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx`(`deleteItem`) · `backend/test/settings.access.mjs`(새 라우트 한 줄) · `wiki/modules/settings.md`(2.12 표, 4절 API, 8절)
+- **공용 파일 변경**: i18n `se_drugInSets` 1개 (ko·en·fr)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택 프랑스어 화면에서 확인 창을 「취소」로 답하는 가짜로 바꿔 문구만 봄 — ACT01 → 「1 ordonnance(s) type(s)… : Malaria Workup…」, ORS → 「… : Diarrhea / GE…」, AMLO5(세트 없음) → 「Supprimer ?」, 세 약 모두 그대로 남음. `settings.access.mjs` 1000건 — 새 라우트 표대로(settings만), 차이는 전과 같은 진료 500 두 건뿐.
+- **다른 세션에 부탁**: **약국** — `pharmacy.md` 2절(약 감추기)에 이 확인 창 한 줄. **진료** — 세트를 적용할 때 감춘 약 줄 빼기(진료 쪽 계획대로).
+
 ## 2026-09-29 — 역할 × 라우트 권한 시험 (S2 마지막 그물) · U13 남은 점 확인
 
 - **상태**: 확인 요청

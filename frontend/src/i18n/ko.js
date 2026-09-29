@@ -539,6 +539,7 @@ export default {
   se_pwKeep: "비우면 그대로",
   se_errAccessDenied: "이 작업을 할 권한이 없습니다. 관리자가 권한을 바꿨다면 로그아웃한 뒤 다시 로그인하세요.",
   se_errSessionEnded: "로그인이 끝났습니다. 다시 로그인하세요.",
+  se_drugInSets: "이 약을 쓰는 약속처방이 {n}개 있습니다: {names}.\n약을 감춰도 약속처방에는 그대로 남아 계속 처방됩니다. 약속처방 탭에서 그 줄을 빼거나 다른 약으로 바꾸세요.\n그래도 이 약을 감출까요?",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

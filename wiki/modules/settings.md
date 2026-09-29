@@ -196,6 +196,7 @@
 | **Erreur: Prix : saisissez un nombre.** · **… ne peut pas être négatif.** · **Stock : saisissez un nombre entier.** | 가격·재고 칸 | 숫자가 아니거나 음수, 재고에 소수 | 고쳐서 저장 |
 | **Le stock de ce médicament a changé pendant la modification…** | Médicaments 저장 | 창을 열어 둔 사이 그 약의 재고가 바뀜(조제 등). **아무것도 저장 안 됨**. 재고 칸은 지금 값으로 바뀌어 있음 | 재고 칸의 새 숫자를 보고 다시 맞춰 **Sauver**. 다른 칸의 입력은 그대로 있음 |
 | **Supprimer ?** | 목록의 Supprimer | 지울지 확인 (목록에서 숨겨지고 기록은 남음) | 맞으면 확인 |
+| **N ordonnance(s) type(s) utilisent ce médicament : …** | Médicaments의 Supprimer | 이 약을 쓰는 약속처방이 있음. 약을 감춰도 약속처방에는 남아 **계속 처방됨** | 먼저 **Ordonnances types** 에서 그 줄을 빼거나 다른 약으로 바꾼 뒤 감춤. 그래도 감추려면 확인 |
 | **Désactiver ce membre du personnel ? …** | Personnel의 Supprimer | 직원을 비활성으로 바꿀지 확인 | 맞으면 확인 (2.5) |
 | **Échec sauvegarde: …** | Sauvegarde의 Sauvegarder | 백업 실패. 뒤에 오류 문구 | 탭 맨 위가 빨간 띠로 바뀜 — 오류 문구를 담당자에게 (2.7) |
 
@@ -365,6 +366,7 @@
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
 | `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **`PUT /drugs/:id`** 는 `stock_expected`를 받고 재고 규칙이 따로 있음(3-8절, 409 가능) |
+| `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
 | `GET /api/backup/download/:name` | settings | 파일 내려받기 |
@@ -502,4 +504,5 @@
 | 2026-09-29 | 새 PC로 옮기는 복원 연습과 절차(2.13절). 연습 중 찾은 것: 기존 직원의 비밀번호 칸 힌트 「••••」가 비밀번호가 채워진 것처럼 보임 → 「Vide = inchangé」 | `c8437ad` |
 | 2026-09-29 | S1 후속: 위키 2·3·7절(바로 막힘, 메뉴는 다시 로그인해야 — U13), 「Access denied」 등 인증 문구 번역, Paramètres 목록을 따로 불러오고 실패 이유 표시(U4), `/auth/me`가 현재 권한을 로그인과 같은 모양으로. S2: `/admin/doctors`에 registration·consultation | `d277d53` |
 | 2026-09-29 | U13 해결(총괄) 확인, 2.2·2.5를 「새로 고치면 반영」으로 | `8ea4d78` |
-| 2026-09-29 | 역할 × 라우트 권한 시험 `settings.access.mjs`(990건, 모두 S2 표와 같음), U13 남은 점 해결(총괄) 확인 | (이 커밋) |
+| 2026-09-29 | 역할 × 라우트 권한 시험 `settings.access.mjs`(990건, 모두 S2 표와 같음), U13 남은 점 해결(총괄) 확인 | `f3b8f01` |
+| 2026-09-29 | 약을 감출 때 그 약을 쓰는 약속처방 이름을 확인 창에 (막지 않음) — 약속처방은 약 id를 복사해 두어 감춘 약을 계속 처방함(진료 세션 발견) | (이 커밋) |

@@ -539,6 +539,7 @@ export default {
   se_pwKeep: "Vide = inchangé",
   se_errAccessDenied: "Vous n'avez pas l'autorisation pour cela. Si un administrateur a modifié vos permissions, déconnectez-vous puis reconnectez-vous.",
   se_errSessionEnded: "Votre session est terminée. Reconnectez-vous.",
+  se_drugInSets: "{n} ordonnance(s) type(s) utilisent ce médicament : {names}.\nMasquer le médicament ne le retire pas de ces ordonnances types - elles continueront à le prescrire. Retirez-le ou remplacez-le dans l'onglet Ordonnances types.\nMasquer ce médicament quand même ?",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

@@ -132,6 +132,7 @@ const ROUTES = [
   ['DELETE', '/admin/staff/' + X,           [SET]],
   ['POST', '/admin/drugs',                  [SET], {}],
   ['PUT',  '/admin/drugs/' + X,             [SET], {}],
+  ['GET',  '/admin/drugs/' + X + '/order-sets', [SET]],
   ['DELETE', '/admin/drugs/' + X,           [SET]],
   ['POST', '/admin/order-codes',            [SET], {}],
   ['PUT',  '/admin/order-codes/' + X,       [SET], { code_type: 'fee' }],
