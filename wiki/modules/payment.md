@@ -334,8 +334,8 @@
 
 | 언제 | action | 한 줄에 들어가는 것 |
 |---|---|---|
-| 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: 영수번호 · total · paid(`net_paid`) · `refunded N` 또는 `not refunded (kept at the till)`(받은 돈이 있을 때, M6) — 사유. after에 `refunded_amount`. before→after(바뀐 칸만): 상태, 미수, 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`). 금액은 취소로 바뀌지 않아 before/after에서는 빠지므로 summary에 둠 |
-| 정정 `POST /visit/:id/correct` (환불이든 미수가 남든) | `payment.receipt.correct` | summary: 옛 영수번호 → 새 영수번호 · 바뀐 항목(`-DRG1`, `+X`, `PARA 9→6`) · refund N 또는 owed N — 사유. before→after: 영수번호·상태, 총액, 받은 돈, 환불, 미수, 항목×수량 |
+| 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: **영수번호 — 사유만**(2026-09-29 통합 시험 B4 — 말은 기록 탭이 번역하는 칸으로). before→after: 상태(`payment_status`), 미수. **after에만**: 총액(`total_due`), 받은 돈(`amount_paid` = `net_paid`), 돌려준 돈(`refunded_amount`, 0 = 창구에 둠, 받은 돈이 없으면 비움), 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`) — 기록은 바뀐 칸만 남기므로 취소로 바뀌지 않는 금액은 after 쪽에만 둠 |
+| 정정 `POST /visit/:id/correct` (환불이든 미수가 남든) | `payment.receipt.correct` | summary: **옛 영수번호 → 새 영수번호 · 바뀐 항목 코드**(`-DRG1`, `+X`, `PARA 9→6`) **— 사유**(말 없음, B4). before→after: 영수번호(`receipts`), 상태(`payment_status`, 영수마다 하나 — 배열), 총액, 받은 돈, 환불(`refund`), 미수, 항목×수량 |
 
 - 두 줄 모두 **바꾸는 트랜잭션 안에서, COMMIT 전에** 씁니다(`writeAudit(client, …)`) — 취소·정정이 롤백되면 줄도 없음. 거절(409·404)이면 줄 없음.
 - 격리 스택 확인(2026-09-29): 보통 수납·미수 수납 → 0줄 / 영수 취소 → 1줄 / 이미 취소된 영수 다시(404) → 0줄 / 이월된 옛 영수 취소(409) → 0줄 / 미수 수납 영수 취소 → 1줄(`balance_restored_to` 옛 영수) / 정정 환불 2,000 → 1줄(`-DRG1 · refund 2000`) / 화면이 본 환불액과 다름(409) → 0줄 / 정정 뒤 미수 → 1줄(`owed 10000`).
@@ -374,13 +374,13 @@
 |---|---|
 | `GET /cash-day?date=` | 그날 현금 기록 `{date, cash_in, cash_out, net, lines}` — 수납 또는 **통계** 권한(`canSeeCash`). 날짜 없으면 서버의 오늘, 모양이 틀리면 400 (3.12) |
 | `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 **유효(취소 안 된) 영수가 없는** 내원(L7 — 부분·미수 영수가 있어도 빠짐) + **지난 날 내원 중 영수가 한 장도 없고 청구할 것이 있는 것**(진료비 있음, 원내 처방이나 취소 안 된 오더 있음 — `HAS_CHARGES_SQL`, 2026-09-29 접수 작업일자) + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `missing_qty`, `past_unbilled`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid`, 정정 표시된 줄에는 `corr` |
-| `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함** |
+| `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함**. 줄마다 `replaced_by_receipt_no`(정정으로 바뀐 영수면 새 영수번호 — 「바뀜」과 「취소」를 나눔), `carried_into_receipt_no`(미수가 넘어간 영수) |
 | `GET /:billingId/detail` | 영수 1장 + `billing_item` + `carried_from`(이 영수가 미수를 넘겨받은 옛 영수: `receipt_no` · `billing_date` · `amount`). 영수에는 `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date`도 붙음(영수증용, 2026-09-29) |
 | `GET /visit/:visitId/items` | 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 진료비 `consult_prices`(`{C01: 15000, …}`, 행이 있는 코드만), 살아 있는 영수 id `active_bill_ids` |
 | `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
-| `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함) |
+| `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함). `replaced_by_receipt_no`, `carried_into_receipt_no` 같이 |
 | `PUT /:billingId/void` | 영수 취소 `{reason, refunded}` — 받은 돈이 있으면 `refunded`(true/false) 필수, 없으면 400. 이미 취소됐으면 404 (3.5) |
-| `GET /visit/:visitId/correction` | 정정하면 기록될 새 영수 미리보기 (DB는 안 바꿈). `items`, `subtotal`, `discount_amount`, `previous_balance`, `total_due`, `paid_so_far`, `refund`, `outstanding`, `payment_status`, `active_bill_ids`, `replaces`. 이월된 영수면 409 `BILL_CARRIED` |
+| `GET /visit/:visitId/correction` | 정정하면 기록될 새 영수 미리보기 (DB는 안 바꿈). `items`, `subtotal`, `discount_amount`, `previous_balance`, `total_due`, `paid_so_far`, `refund`, `outstanding`, `payment_status`, `active_bill_ids`, `replaces`, **`changes`**(바뀌는 줄마다 `item_name`·`item_code`·`item_type`·`pack_label`·`qty_before`→`qty_after`·`amount_before`→`amount_after`·`difference`·`cancelled_order` — 진료실이 취소한 오더면 true; 차액 합 = −환불 또는 +미수 변화, 2026-09-29 통합 시험 B3). 약 줄 `items`에 `pack_label`. 이월된 영수면 409 `BILL_CARRIED` |
 | `POST /visit/:visitId/correct` | 정정 실행 `{expected_active_bill_ids, expected_refund, expected_outstanding, reason}` (3.6). 201 + 새 영수(`refund` 포함) |
 | `GET /patient/:patientId/balance` | `{owed: Σ outstanding, refund: Σ max(net_paid − total_due, 0)}` (취소 제외) |
 | `POST /settle` | 미수 수납 `{bill_ids, amount, expected_outstanding}` → 오늘 날짜의 새 영수(3.4). 예전 `POST /:id/pay`는 2026-09-29 삭제 |
@@ -548,3 +548,4 @@
 | 2026-09-29 | 영수 취소 창이 「돈을 돌려줬습니까?」를 묻고 「항목만 바뀌었으면 정정」을 안내 · 돌려줬으면 영수증에 「Remboursé au patient」, 재수납 칸은 비움 · 여러 장 취소해도 칸이 맞음(M6) | `PUT /void`의 `refunded`, `billing.refunded_amount`·`replaced_by_id`(마이그레이션 033), `prior_paid` 계산, 변경 기록 (2.7·2.9·3.5·3.11·4·5·7절) | `f9ea726` |
 | 2026-09-29 | 환불 시뮬레이션 ①~④(현금 기준, 실장님 요청) — 돈은 맞고 통계의 날짜만 어긋남, 선택지 정리 · 정정 확인 창 첫 줄을 「Appliquer la correction ?」로(돌려줄 돈이 없을 때도 「환불 처리?」였음) · 과거 내원 머리의 빈 「· ·」 없앰 | `wiki/reference/payment-refund-simulation.md`, 2.12, `py_correctionConfirm`, `PatientChart.jsx` (2.11·2.12) | `9120009` |
 | 2026-09-29 | 돈이 창구에 들어오고 나갈 때마다 한 줄씩 남음(현금 기록) — 통계가 이것으로 「그날 받은 돈」을 세면 날마다 금고와 같고 지나간 날이 안 바뀜(M9 (가)) · 재수납 칸이 드문 경우에도 창구의 실제 돈과 같아짐 | `cash_movement`·`billing.held_used`(마이그레이션 304), `writeCash()` 네 곳, `GET /cash-day` (3.5·3.12·4·5·7절) | (이 커밋) |
+| 2026-09-29 | (통합 시험 B2·B3·B4 서버 몫) 정정 미리보기가 바뀌는 줄(취소된 검사 · 지운 약 · 병 수)을 알려 줌 · 영수 목록이 「정정으로 바뀐 영수」와 「미수가 넘어간 영수」를 알려 줌 · 변경 기록의 요약에서 영어를 빼고 칸으로 — 화면 쪽은 디자인 세션 뒤 | `buildCorrection().changes`, `/completed`·`/history`의 `replaced_by_receipt_no`·`carried_into_receipt_no`, `correctionAudit`·취소 기록 (3.11·4절) | (이 커밋) |
