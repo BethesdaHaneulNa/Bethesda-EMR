@@ -284,6 +284,21 @@ export default {
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "Select a patient on the left",
+  lb_noPending: "No tests waiting for results",
+  lb_noCompleted: "No tests finished today",
+  lb_noItemsDefined: "No items are defined for this test (define them in Settings → Lab Items)",
+  lb_noItems: "No items",
+  lb_nothingToSave: "Nothing entered. Enter at least one result value or note.",
+  lb_savedTests: "Saved and completed",
+  lb_notSavedEmpty: "Nothing entered, left pending",
+  lb_saveFailed: "Save failed",
+  lb_itemsHint: "Define the result items and reference ranges for each lab panel. The lab screen lists these for entry; values outside the range are flagged automatically.",
+  lb_selectPanel: "select a panel",
+  lb_pickPanel: "Pick a lab panel above to edit its items.",
+  lb_code: "Code",
+  lb_codeNameRequired: "Enter a code and a name.",
+  lb_saved: "Saved",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   // ── end statistics ──

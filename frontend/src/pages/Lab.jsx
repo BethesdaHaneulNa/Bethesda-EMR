@@ -6,10 +6,32 @@ import { LabResults } from '../components/LabResults.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 
-function ymd(d) { return d ? String(d).split('T')[0] : ''; }
+// A DATE column reaches the browser as the clinic's local midnight written in
+// UTC ("2026-09-28T21:00:00.000Z" for the 29th at UTC+3), so cutting at 'T'
+// showed every visit and result one day early. Read it back as a local date;
+// a plain "YYYY-MM-DD" is already a date and is kept as it is.
+function ymd(d) {
+  if (!d) return '';
+  var s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var x = new Date(s);
+  return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
+}
 function nm(v) { return ((v.last_name || '') + ' ' + (v.first_name || '')).trim(); }
+// French typing: "1,5" is 1.5 and "12 000" is 12000 (parseFloat alone reads 1
+// and 12). Same rule as readNumber() in backend/src/routes/lab.routes.js, which
+// decides the flag that is saved -- change both together.
+function readNumber(v) {
+  if (v == null) return NaN;
+  var s = String(v).trim().replace(/(\d)[\s  ]+(?=\d{3}(?!\d))/g, '$1');
+  if ((s.match(/,/g) || []).length === 1) s = s.replace(/(\d),(\d)/, '$1.$2');
+  return parseFloat(s);
+}
+function hasEntry(it) {
+  return (it.value != null && String(it.value).trim() !== '') || (it.comment != null && String(it.comment).trim() !== '');
+}
 function flagOf(v, lo, hi) {
-  var n = parseFloat(v); if (isNaN(n)) return '';
+  var n = readNumber(v); if (isNaN(n)) return '';
   if (lo != null && lo !== '' && n < parseFloat(lo)) return 'low';
   if (hi != null && hi !== '' && n > parseFloat(hi)) return 'high';
   if ((lo == null || lo === '') && (hi == null || hi === '')) return '';
@@ -28,6 +50,8 @@ export default function LabPage() {
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var fs = useState(false), finderOpen = fs[0], setFinderOpen = fs[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
+  var nts = useState(''), notice = nts[0], setNotice = nts[1];   // what the last save did
+  var rks = useState(0), resultsKey = rks[0], setResultsKey = rks[1]; // remounts LabResults after a save
 
   useEffect(function () { loadData(); }, []);
   function loadData() {
@@ -39,7 +63,7 @@ export default function LabPage() {
   }
 
   function pickConsult(g) {
-    setSel(g);
+    setSel(g); setNotice('');
     var orders = g.lab_orders || [];
     if (orders.length > 1) loadView('all', g);
     else if (orders.length === 1) loadView(orders[0].order_item_id, g);
@@ -68,16 +92,37 @@ export default function LabPage() {
       n[gi].items[ii] = Object.assign({}, n[gi].items[ii]); n[gi].items[ii][k] = val; return n;
     });
   }
+  // Saves only the tests that have something entered; the rest stay pending, so
+  // on 'All' the lab can finish the CBC now and the malaria test later. Saving
+  // them all used to stop at the first empty test with the server's error, after
+  // the tests before it were already completed and with the screen not refreshed.
   async function save() {
-    if (!groups.length) return;
-    setBusy(true);
-    try {
-      for (var i = 0; i < groups.length; i++) {
-        await api.post('/lab/order/' + groups[i].order_item_id + '/results', { results: groups[i].items });
-      }
-      loadData();
+    var toSave = groups.filter(function (g) { return g.items.some(hasEntry); });
+    var skipped = groups.filter(function (g) { return !g.items.some(hasEntry); });
+    if (!toSave.length) { alert(t.lb_nothingToSave); return; }
+    setBusy(true); setNotice('');
+    var done = [], failed = null;
+    for (var i = 0; i < toSave.length; i++) {
+      try {
+        await api.post('/lab/order/' + toSave[i].order_item_id + '/results', { results: toSave[i].items });
+        done.push(toSave[i].order_name);
+      } catch (e) { failed = { name: toSave[i].order_name, message: e.message }; break; }
+    }
+    loadData(); setResultsKey(function (k) { return k + 1; });
+    if (!failed && !skipped.length) {
       setSel(null); setView(null); setGroups([]);
-    } catch (e) { alert('Error: ' + e.message); }
+    } else {
+      // stay on this patient and reload, so the ✓ marks show what was saved
+      var v = view;
+      api.get('/lab/visit/' + sel.visit_id + '/orders').then(function (g) {
+        if (g) { setSel(g); loadView(v, g); }
+      }).catch(function () {});
+      var msg = [];
+      if (done.length) msg.push(t.lb_savedTests + ': ' + done.join(', '));
+      if (failed) msg.push(t.lb_saveFailed + ': ' + failed.name + ' — ' + failed.message);
+      else if (skipped.length) msg.push(t.lb_notSavedEmpty + ': ' + skipped.map(function (g) { return g.order_name; }).join(', '));
+      if (failed) alert(msg.join('\n')); else setNotice(msg.join(' · '));
+    }
     setBusy(false);
   }
 
@@ -88,7 +133,7 @@ export default function LabPage() {
   function itemGrid(gi, g, showHeader) {
     return <div key={g.order_item_id} style={{ marginBottom: 14 }}>
       {showHeader ? <div style={{ fontWeight: 800, fontSize: 14, color: '#67e8f9', marginBottom: 5 }}>{g.order_name}</div> : null}
-      {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.labNoMaster || '이 검사의 항목이 설정되지 않았습니다 (설정 → 검사항목에서 정의)'}</div> : (
+      {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItemsDefined}</div> : (
         <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', background: '#161a26', color: t3, fontSize: 13, fontWeight: 800 }}>
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
@@ -129,7 +174,7 @@ export default function LabPage() {
         {/* LEFT: pending consultations */}
         <div style={{ width: 300, borderRight: '1px solid ' + bd, background: pn, overflow: 'auto', flexShrink: 0 }}>
           {loading ? <div style={{ padding: 16, color: t3 }}>{t.loading || 'Loading…'}</div> : null}
-          {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? (t.labNoPending || '결과 대기 검사 없음') : (t.labNoCompleted || '완료 내역 없음')}</div> : null}
+          {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? t.lb_noPending : t.lb_noCompleted}</div> : null}
           {list.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
             return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? cyan + '12' : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
@@ -145,7 +190,7 @@ export default function LabPage() {
 
         {/* CENTER: entry */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.labSelectHint || '왼쪽에서 환자를 선택하세요'}</div> : (
+          {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
                 <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span></div>
@@ -164,10 +209,11 @@ export default function LabPage() {
               </div>
               {/* item grid(s) */}
               <div style={{ flex: 1, overflow: 'auto', padding: 14 }}>
-                {groups.length === 0 ? <div style={{ color: t3, fontSize: 14, padding: 10 }}>{t.labNoMaster || '항목이 없습니다'}</div>
+                {groups.length === 0 ? <div style={{ color: t3, fontSize: 14, padding: 10 }}>{t.lb_noItems}</div>
                   : groups.map(function (g, gi) { return itemGrid(gi, g, view === 'all'); })}
               </div>
-              <div style={{ padding: '10px 14px', borderTop: '1px solid ' + bd, background: '#161a26', display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid ' + bd, background: '#161a26', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
+                {notice ? <div style={{ flex: 1, color: '#6ee7b7', fontSize: 13 }}>{notice}</div> : null}
                 <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,#06b6d4,#0891b2)' : '#1e2433', color: '#fff', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
               </div>
             </>
@@ -177,7 +223,7 @@ export default function LabPage() {
         {/* RIGHT: history matrix */}
         <div style={{ width: 460, borderLeft: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 14, color: '#67e8f9' }}>🧪 {t.labResultsTitle || '검사결과'}</div>
-          <div style={{ flex: 1, overflow: 'hidden' }}><LabResults patientId={sel ? sel.patient_id : null} /></div>
+          <div style={{ flex: 1, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
         </div>
       </div>
       <PatientFinder open={finderOpen} onClose={function () { setFinderOpen(false); }} mode="visit"

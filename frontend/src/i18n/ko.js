@@ -275,6 +275,21 @@ export default {
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "왼쪽에서 환자를 선택하세요",
+  lb_noPending: "결과 대기 검사가 없습니다",
+  lb_noCompleted: "오늘 입력을 마친 검사가 없습니다",
+  lb_noItemsDefined: "이 검사는 항목이 정의되지 않았습니다 (설정 → 검사항목에서 정의)",
+  lb_noItems: "항목이 없습니다",
+  lb_nothingToSave: "입력한 결과가 없습니다. 결과값이나 비고를 하나 이상 넣으세요.",
+  lb_savedTests: "저장·완료",
+  lb_notSavedEmpty: "입력한 값이 없어 대기로 남김",
+  lb_saveFailed: "저장 실패",
+  lb_itemsHint: "검사 패널마다 결과 항목과 참고치를 정합니다. 검사실 화면에 이 항목들이 입력 칸으로 나오고, 참고치를 벗어난 값은 자동으로 표시됩니다.",
+  lb_selectPanel: "검사 패널 선택",
+  lb_pickPanel: "위에서 검사 패널을 고르면 항목을 고칠 수 있습니다.",
+  lb_code: "코드",
+  lb_codeNameRequired: "코드와 이름을 넣으세요.",
+  lb_saved: "저장했습니다",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   // ── end statistics ──
