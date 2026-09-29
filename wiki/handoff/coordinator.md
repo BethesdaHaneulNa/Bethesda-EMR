@@ -524,3 +524,18 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 - Settings.jsx의 색이 이름표가 됐고(`41eeb88`), 상단바에 밝은/어두운 전환 단추가 생겼습니다(develop `1a29bae`, 마이그레이션 037 `staff.theme`). **develop을 merge 한 뒤** 남은 일을 하세요. 색은 `var(--…)`·`tint()`로.
 - 총괄이 넣은 것: `admin.routes.js` 직원 목록에서 `theme`을 뺌 — 확인해 주세요.
 - 디자인 세션 부탁: ① 로그인 응답과 `/auth/me`에 `theme`(같은 PC에 다른 사람이 로그인할 때 화면이 바뀌는 순간이 없게) ② `settings.access.mjs` 표에 `/api/theme`(로그인만 있으면 됨, 자기 계정만) ③ `clean-test-data`·복원 연습이 새 칸 `staff.theme`에 걸리지 않는지.
+
+---
+
+## 2026-09-30 아침
+
+실장님 출근. 밀린 지시를 열 세션에 메시지로 보냄(결정·통계·약국·설정·디자인·수납·진료·접수·PACS·임상병리). 수납 `c814983`(위키) 합침.
+
+### 실장님 결정 (2026-09-30) — 약 가격 변경을 기록에 남김: (나) 가격이 바뀔 때만 한 줄
+- 총괄이 한 것: `backend/src/utils/audit.js`에 `ACTIONS.DRUG_PRICE = 'settings.drug.price'`, `wiki/03-change-log.md` 1절에 규칙.
+
+### 설정 세션에게 (2026-09-30) — 약 가격 기록 붙이기
+- `admin.routes.js`의 `PUT /drugs/:id`: 고치기 전 `unit_price`를 읽고, 저장 뒤 값이 다르면 `writeAudit(…, { action: ACTIONS.DRUG_PRICE, entity: 'drug', entity_id, summary: 코드 + ' ' + 이름, before: { unit_price }, after: { unit_price } })`. 읽기와 쓰기를 한 트랜잭션으로(`SELECT … FOR UPDATE`). 숫자는 `Number()`로 맞춰 「100.00」과 「100」이 다른 값으로 남지 않게.
+- 약을 새로 만들 때(`POST /drugs`)는 남기지 않음. 약국의 가져오기·재고 화면이 가격을 바꾸는 길이 있으면 그 길도(약국 세션과 확인).
+- 「기록」 탭: action 이름과 칸 이름 `unit_price` 번역(ko·en·fr), 환자 칸이 빈 줄이 표에서 어색하지 않게. 설명서 `manual-fr/settings.md` 「Lire le Journal」에 한 줄.
+- 시험: 가격만 바꿈 1줄 / 이름만 바꿈 0줄 / 같은 가격으로 저장 0줄 / 가격과 이름을 같이 바꿈 1줄(가격만) / 권한 없는 계정 403·0줄.

@@ -41,6 +41,7 @@ const ACTIONS = {
   STAFF_EDIT:           'settings.staff.edit',          // name, role, status, department
   STAFF_PERMISSIONS:    'settings.staff.permissions',
   STAFF_PASSWORD:       'settings.staff.password',      // that it was changed and by whom - never the value
+  DRUG_PRICE:           'settings.drug.price',          // unit price changed (decision 2026-09-30): before/after unit_price only
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 
