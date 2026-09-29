@@ -46,6 +46,8 @@ Ce qui peut apparaître en jaune ou en rouge :
 5. Préparez les médicaments **Interne** et remettez-les au patient.
 6. Cliquez sur **✓ Terminer délivrance**, puis sur **OK**. Le stock est déduit à ce moment-là.
 
+Les médicaments remis au patient ne sont pas repris. Si un médicament est parti par erreur (mauvais médicament, mauvais nombre), comptez le rayon et corrigez le stock dans **📦 Stock** avec **Inventaire**, en écrivant le motif dans **Note**. S'il faut rembourser le patient, prévenez l'administrateur.
+
 ### Imprimer l'ordonnance pour une pharmacie extérieure
 
 1. Le patient choisi, cliquez sur **💊 Ordonnance ext.** La fenêtre **Ordonnance externe** s'ouvre.
@@ -131,7 +133,8 @@ Les médicaments de l'ancien logiciel de stock (codes **MED-…**) ont été imp
 
 Appelez l'administrateur si :
 
-- un médicament a été remis par erreur (**✓ Terminer délivrance** ne s'annule pas : il faut rendre les médicaments au rayon et faire un **Inventaire** avec une note) ;
+- un patient doit être remboursé (médicament remis par erreur : il n'est pas repris ; le stock se corrige avec **Inventaire** et une note) ;
+- **✓ Terminer délivrance** a été cliqué par erreur avant de remettre les médicaments (cela ne s'annule pas) ;
 - **Contrôle** du rapport de fin de mois ne montre pas **✓** ;
 - un médicament manque dans la liste ou a un mauvais prix (ils se modifient dans **Paramètres**) ;
 - vous ne voyez pas le menu **Pharmacie**.
