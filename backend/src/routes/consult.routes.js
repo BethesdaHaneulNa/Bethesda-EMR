@@ -646,6 +646,24 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
   }
 });
 
+// GET /api/consultations/:id/billed-codes - the drug and order codes of this visit that are
+// on a bill still in force (not cancelled). The screen asks just before removing a line, to
+// add "already paid - the cashier will refund" to its question (integration test,
+// 2026-09-29). Matched by code, as the cashier matches what is already billed.
+router.get('/:id/billed-codes', canConsult, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT DISTINCT bi.item_code
+         FROM billing_item bi
+         JOIN billing b ON b.id = bi.billing_id
+         JOIN consultation c ON c.visit_id = b.visit_id
+        WHERE c.id = $1 AND b.payment_status <> 'cancelled'
+          AND bi.item_type NOT IN ('consultation', 'fee') AND COALESCE(bi.item_code, '') <> ''`,
+      [req.params.id]);
+    res.json(r.rows.map(function (x) { return x.item_code; }));
+  } catch (err) { sendDbError(res, err); }
+});
+
 // GET /api/consultations/:id/orders
 router.get('/:id/orders', canReadRx, async (req, res) => {
   try {

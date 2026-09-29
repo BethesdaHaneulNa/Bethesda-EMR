@@ -375,6 +375,12 @@ export default {
   cs_orderTotal: "{n}회 청구",
   cs_colTimes: "횟수",
   cs_colDays: "일수",
+  cs_noteSaved: "저장했습니다 ✓",
+  cs_consultDone: "진료를 마쳤습니다 ✓",
+  cs_readingSaved: "판독을 저장했습니다 ✓",
+  cs_noResults: "찾는 항목이 없습니다. 약 이름은 영어입니다(예: syrup).",
+  cs_removePaidNote: "이미 수납된 줄입니다 — 지우면 수납에서 환자에게 돌려줘야 합니다.",
+  cs_stock: "재고 {n}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

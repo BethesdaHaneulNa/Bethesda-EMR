@@ -42,7 +42,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
 
 ### 4. Prescrire un médicament
 
-1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom et la forme (**Comprimé**, **Gélule**, **Sirop**…). Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Vous pouvez aussi utiliser **+ Recherche médicament**.
+1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom, la forme (**Comprimé**, **Gélule**, **Sirop**…) et le **Stock** (en rouge s'il est à 0). Deux médicaments du même nom se distinguent par leur code et leur stock. Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Si rien ne correspond, la liste affiche **Aucun résultat**. Vous pouvez aussi utiliser **+ Recherche médicament**.
 2. Appuyez sur Entrée (ou cliquez). La ligne arrive **vide**, avec l'étiquette rouge **Indiquez dose/jour, fois et jours**.
 3. Remplissez les cases, à la manière de la clinique :
    - **Dose/j** : la dose **totale par jour** (par exemple `3` = 3 comprimés par jour).
@@ -85,6 +85,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 ### 8. Retirer ou annuler une ligne
 
 - Cliquez sur le ✕ rouge au début de la ligne. Le message **Retirer « … » ?** demande confirmation. Une ligne retirée ne revient pas.
+- Si la ligne est **déjà payée**, le message ajoute **Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient.** Envoyez alors le patient à la caisse.
 - Un examen qui a **déjà un résultat** (ou une image, ou un compte-rendu) ne peut pas être retiré. Le ✕ propose alors de le **marquer comme annulé** :
   1. Cliquez sur ✕. Un message explique que le résultat reste au dossier.
   2. Écrivez le motif (facultatif), puis **OK**. **Annuler** ne change rien.
@@ -100,6 +101,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 3. Écrivez le compte-rendu, puis cliquez sur **💾 Enregistrer**.
 4. **⊘ Images d'une demande annulée** : l'examen a été annulé. Les images restent visibles, mais aucun nouveau compte-rendu ne peut être enregistré.
 5. Tous les comptes-rendus du patient : bouton **Compte-rendu** dans la barre bleue.
+6. Séries, **Ouvrir dans un onglet ↗**, session expirée : voir le guide PACS, section 4.
 
 ### 10. Compte-rendu opératoire et lettre de référence
 
