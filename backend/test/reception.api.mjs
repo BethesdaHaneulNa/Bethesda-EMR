@@ -143,6 +143,17 @@ const sim4 = await call('GET', '/patients/similar?last_name=Permission', null, A
 check('④ similar: one name missing gives an empty list', sim4.status === 200 && ids(sim4).length === 0);
 check('④ similar: rows carry chart, birth date, phone, last visit', sim1.data[0] && ['chart_no', 'date_of_birth', 'phone', 'last_visit_date'].every(k => k in sim1.data[0]));
 
+// ── ④ accents are ignored (Hélène = Helene), both ways ──
+const stamp = String(Date.now());
+const PA = (await call('POST', '/patients', { last_name: 'Rabé', first_name: 'Hélène' + stamp }, A)).data;
+const PB = (await call('POST', '/patients', { last_name: 'Rakotoarisoa', first_name: 'Noel' + stamp }, A)).data;
+const acc1 = await call('GET', '/patients/similar?last_name=RABE&first_name=' + encodeURIComponent('helene' + stamp), null, A);
+check('④ similar: stored with accents, typed without', ids(acc1).includes(PA.id), { status: acc1.status });
+const acc2 = await call('GET', '/patients/similar?last_name=' + encodeURIComponent('Noël' + stamp) + '&first_name=' + encodeURIComponent('RAKOTOARISOA'), null, A);
+check('④ similar: stored without accents, typed with (and swapped)', ids(acc2).includes(PB.id), { status: acc2.status });
+const acc3 = await call('GET', '/patients/similar?last_name=Rabe&first_name=' + encodeURIComponent('Helena' + stamp), null, A);
+check('④ similar: a different letter still does not match', !ids(acc3).includes(PA.id));
+
 // ── ④ same-day second visit: warn (409) unless confirmed ──
 const P2 = (await call('POST', '/patients', { last_name: 'Duplicate', first_name: 'Day' + Date.now() }, A)).data;
 const d1 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);

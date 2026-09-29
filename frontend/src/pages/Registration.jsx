@@ -15,9 +15,13 @@ function DobInput(props) {
   var t = useLang().t;
   var mRef = useRef(null), dRef = useRef(null);
   function digits(v, max){ return String(v || '').replace(/\D/g, '').slice(0, max); }
+  // Always "year-month-day" with empty parts kept in place ("-05-" while only the
+  // month is typed), so value.split('-') puts each part back in its own box. Joining
+  // only the non-empty parts used to turn "-05-" into "05", which then showed up in
+  // the year box. All three empty is '' (no birth date). formProblem() refuses
+  // anything that is not a complete YYYY-MM-DD, so a partial value is never saved.
   function emit(y,m,d){
-    if (y.length === 4 && m.length === 2 && d.length === 2) onChange(y + '-' + m + '-' + d);
-    else onChange([y,m,d].filter(Boolean).join('-'));
+    onChange(y || m || d ? y + '-' + m + '-' + d : '');
   }
   var box = Object.assign({}, style, { display:'flex', alignItems:'center', gap:6, padding:'6px 8px' });
   var partStyle = { background:'transparent', border:0, outline:'none', color:style.color || '#e2e8f0', fontSize:style.fontSize || 17, fontFamily:'monospace', textAlign:'center' };
