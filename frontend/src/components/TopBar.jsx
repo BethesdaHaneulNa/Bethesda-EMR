@@ -48,6 +48,31 @@ export function TopBar() {
     api.get('/version').then(function (v) { setVer(v); }).catch(function () {});
   }, []);
 
+  // The server reads a member of staff's permissions on every request, so a change
+  // made in Settings applies at once there. The menu, though, is drawn from the copy
+  // stored at login: without this it kept showing a screen the account could no
+  // longer use (every request on it answered 403). Re-read the account when a screen
+  // opens and every five minutes; redraw only if something actually changed.
+  var refreshState = useState(0); var setRefresh = refreshState[1];
+  useEffect(function () {
+    if (!user) return;
+    function sync() {
+      api.get('/auth/me').then(function (me) {
+        var cur = getUser();
+        if (!me || !cur) return;
+        var same = cur.role === me.role && cur.name === me.name &&
+          JSON.stringify(cur.permissions || null) === JSON.stringify(me.permissions || null);
+        if (same) return;
+        localStorage.setItem('medconnect_user', JSON.stringify(Object.assign({}, cur, {
+          name: me.name, role: me.role, permissions: me.permissions, department_id: me.department_id })));
+        setRefresh(function (n) { return n + 1; });
+      }).catch(function () {});
+    }
+    sync();
+    var i = setInterval(function () { if (!document.hidden) sync(); }, 300000);
+    return function () { clearInterval(i); };
+  }, []);
+
   useEffect(function () {
     api.get('/admin/clinic').then(function (c) {
       if (c && c.app_title) { setAppTitle(c.app_title); localStorage.setItem('medconnect_app_title', c.app_title); }
