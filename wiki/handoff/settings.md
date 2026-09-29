@@ -2,6 +2,12 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약국 가져오기(034) 뒤 다시 확인 (코드 변경 없음)
+
+- **상태**: 보고
+- **확인**: develop `e6b68c1`(약국 가져오기 034 `dosage_form`, 진료 `7e17a6d` 약속처방 서버 검사 포함)로 ff, 새 DB 격리 스택. 가져온 약 101개 모두 활성·제형 있음. `settings.drugs.mjs` — **실제 `dosage_form` 칸으로** 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL 통과(흉내가 아니라 034의 칸). `settings.ordersets.mjs`(진료 서버 검사와 함께), access 1232건, messages, status, permissions 모두 통과.
+- **남은 것(예고)**: 수납의 `cash_movement`가 develop에 들어오면 `clean-test-data.ps1`(지우는 목록 맨 앞, 트랜잭션 안 `SET LOCAL bethesda.cleanup='on'`, id 비교 대상) + `settings.access.mjs`에 `GET /api/billing/cash-day`.
+
 ## 2026-09-29 — 약속처방 줄마다 일총투여·횟수·일수·용법 (실장님 지적, 가장 먼저)
 
 - **상태**: 확인 요청
