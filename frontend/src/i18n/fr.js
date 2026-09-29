@@ -465,6 +465,13 @@ export default {
   ph_reportEmpty: "Aucun registre de stock pour ce mois (avant le début du registre).",
   ph_rFormula: "Début + entrées − délivré + manque au registre ± ajustements − rebut = fin. Dates à l'heure de l'hôpital.",
   ph_stockReadOnlyHint: "Le stock se modifie dans Pharmacie → 📦 Stock (entrée, inventaire, rebut), où chaque mouvement est enregistré. Un nouveau médicament commence à 0.",
+  ph_packUnit: "Délivré à l'unité de conditionnement (flacon, tube…)",
+  ph_pack_bottle: "Flacon",
+  ph_pack_tube: "Tube",
+  ph_pack_inhaler: "Inhalateur",
+  ph_pack_unit: "Unité",
+  ph_packUnitHint: "À cocher pour les sirops, inhalateurs, collyres, crèmes… délivrés par flacon ou tube. Le médecin indiquera alors le nombre.",
+  ph_packUnitHintOn: "Le médecin indique le nombre de flacons/tubes (pas de calcul de quantité). Saisissez le prix par flacon/tube.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

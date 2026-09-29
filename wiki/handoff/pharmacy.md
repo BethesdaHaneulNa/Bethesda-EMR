@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — H2-B ①: 포장 단위 약 칸(마이그레이션 402) + 약품 탭 체크·단위
+
+- **상태**: 확인 요청 — **이것이 develop에 들어가야 설정(API 두 칸)·진료가 칸 이름을 보고 시작**(총괄 지시대로 먼저 한 커밋)
+- **커밋**: session/pharmacy — develop `a264315` 위 커밋 하나
+- **DB 마이그레이션**: `backend/sql/402_pharmacy_pack_unit.sql` — `drug.pack_unit`(boolean, 기본 false) · `drug.pack_label`(varchar(10)) · `prescription.pack_unit` · `prescription.pack_label`, 단위 `CHECK`(bottle · tube · inhaler · unit). **칸만 추가, 어떤 약도 표시하지 않음**(결정: 예시 약 4개 표시 안 함). 여러 번 돌려도 안전.
+- **칸 이름(다른 세션용)**
+  - 설정 `admin.routes.js` POST·PUT `/drugs`: `pack_unit`(불린), `pack_label`(`'bottle'|'tube'|'inhaler'|'unit'`|null). `pack_unit` 거짓이면 `pack_label` null로.
+  - 진료 `consult.routes.js`: POST 때 `drug_id`로 `drug.pack_unit`, `drug.pack_label`을 읽어 `prescription.pack_unit`, `prescription.pack_label`에 복사. 포장 단위 줄의 병·개 수는 요청 칸 `pack_qty`(정수 ≥ 1) → `total_qty`, 없으면 NULL. (설계는 아래 「H2 설계 메모」)
+- **약품 탭**(`Settings.jsx` 약품 탭 안): 편집 창 아래 「포장 단위 약」 체크 + 단위 고르기(켜면 기본 병, 끄면 비움) + 안내(단가는 병·튜브 하나 값). 목록 이름 옆에 단위 표시. 새 번역 키 `ph_packUnit`, `ph_pack_bottle|tube|inhaler|unit`, `ph_packUnitHint`, `ph_packUnitHintOn`(ko·en·fr).
+- **시험 고침**: `backend/test/pharmacy.stock.mjs` — 설정이 이제 재고를 안 쓰므로(설정 `73b0517`) 「설정 저장이 재고를 바꾼다 / 밖에서 바뀜 메움」 검사를 「설정 저장이 재고를 안 바꾼다 / 입고가 기록에서 바로 이어진다」로.
+- **확인한 방법**: 빌드. 격리 스택 9184에서 402 적용(네 칸, 기본값 false/비움), **한 번 더 돌려도 오류 없음**, 단위 CHECK가 `'jar'`를 거절. `pharmacy.stock.mjs`·`pharmacy.api.mjs` 전부 통과. 화면(관리자, 프랑스어): Codaep 편집 → 체크 전 단위 칸 흐림·안내 « À cocher pour les sirops… », 체크 → 단위 « Flacon »(Flacon/Tube/Inhalateur/Unité), 안내 « Le médecin indique le nombre… Saisissez le prix par flacon/tube », 저장 요청에 `pack_unit: true, pack_label: "bottle"`.
+- **확인 못 한 것**: 저장한 표시가 **남는지**는 설정 세션이 API에 두 칸을 넣은 뒤 확인됨(지금 서버는 모르는 칸을 무시). 시험으로 저장한 것은 없음 — 예시 약은 표시하지 않기로 해서 창을 취소로 닫음.
+- **위키**: 2.7(체크 사용법), 4절 DB 표 두 곳, 6절, 7절 H2 진행·「복용 단위」 후보, 8절.
+- **다른 세션에 부탁**: 설정 — API 두 칸(위 칸 이름). 진료 — 설계 메모대로(서버 규칙·처방 줄 수량 칸·약속처방 quantity).
+
 ## 2026-09-29 — H2 「포장 단위 약」(B) 설계 메모 + 검토표에 포장 단위 열
 
 - **상태**: 보류 — 총괄 설계 확인 대기(코드 전). 검토표 갱신은 확인 요청.
