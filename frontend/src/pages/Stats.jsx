@@ -273,6 +273,9 @@ export default function StatsPage(){
             <div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' }}>
               <div style={{ fontSize:12, color:t3, padding:'8px 12px', borderBottom:'1px solid '+bd }}>
                 {drugUsage.from} ~ {drugUsage.to} · {(drugUsage.drugs||[]).length} {t.drugsUnit||'품목'} · {t.totalUsage||'총 사용'} {fmtQty(drugUsage.grandTotal)}
+                {/* Which rules the numbers follow: prescribed (visit date, quantity written)
+                    or dispensed (day handed over, in-house, whole units — the stock report's). */}
+                <div style={{ marginTop:3 }}>{drugStat==='dispensed'?(t.st_rxBasisDispensed||'조제완료: 약국이 내준 날 기준 · 원내 약만 · 알약 단위로 올림 — 약국 재고 보고서의 출고와 같은 숫자'):(t.st_rxBasisAll||'처방전체: 처방한 날(내원일) 기준 · 처방한 수량 그대로')}</div>
               </div>
               <div style={{ overflow:'auto', maxHeight:'56vh' }}>
                 <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%', minWidth:540 }}>

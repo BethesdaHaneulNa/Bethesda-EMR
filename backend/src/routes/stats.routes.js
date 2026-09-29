@@ -385,10 +385,24 @@ router.get('/drug-usage', async (req, res) => {
       to = to || r.rows[0].t;
     }
 
-    const conds = ['v.visit_date BETWEEN $1 AND $2'];
+    // Two questions, two sets of rules (decision 18, 2026-09-29).
+    //  - All prescriptions: what doctors prescribed — by the day it was prescribed
+    //    (the visit date), in the quantity written.
+    //  - Dispensed: what left the pharmacy shelf — the same rules as the "out"
+    //    column of the pharmacy's monthly stock report, so the two screens agree
+    //    for the same month: by the day it was handed over (dispensed_at, clinic
+    //    time), in whole units as the stock is taken (Math.ceil in the pharmacy's
+    //    dispense), and only in-house lines of a drug the pharmacy stocks
+    //    (drug_id set). An outside prescription is marked dispensed too, but only
+    //    paper left the building. Grouped by the drug record, as the report is.
+    const dispensed = req.query.status === 'dispensed';
+    const dateCol = dispensed ? 'rx.dispensed_at::date' : 'v.visit_date';
+    const conds = [dateCol + ' BETWEEN $1 AND $2'];
     const P = [from, to];
-    if (req.query.status === 'dispensed') conds.push("rx.status = 'dispensed'");
-    else conds.push("rx.status <> 'cancelled'");
+    if (dispensed) {
+      conds.push("rx.status = 'dispensed'");
+      conds.push("rx.drug_id IS NOT NULL AND COALESCE(rx.dispense_type, 'internal') <> 'external'");
+    } else conds.push("rx.status <> 'cancelled'");
     // A cancelled registration's prescriptions were never used — unless the
     // pharmacy had already handed the drug over, in which case it left the
     // shelf and counts (decision 12). Reception can now cancel only a waiting
@@ -400,18 +414,18 @@ router.get('/drug-usage', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT to_char(v.visit_date, '${fmt}') AS period,
-              COALESCE(NULLIF(rx.drug_code,''),'-') AS drug_code,
-              rx.drug_name,
+      `SELECT to_char(${dateCol}, '${fmt}') AS period,
+              ${dispensed ? "COALESCE(NULLIF(d.code,''),'-')" : "COALESCE(NULLIF(rx.drug_code,''),'-')"} AS drug_code,
+              ${dispensed ? 'd.name' : 'rx.drug_name'} AS drug_name,
               COALESCE(d.category,'') AS category,
-              SUM(COALESCE(rx.total_qty,0))::numeric AS qty,
+              SUM(${dispensed ? 'CEIL(COALESCE(rx.total_qty,0))' : 'COALESCE(rx.total_qty,0)'})::numeric AS qty,
               COUNT(*)::int AS rx_count
          FROM prescription rx
          JOIN consultation c ON c.id = rx.consultation_id
          JOIN visit v ON v.id = c.visit_id
          LEFT JOIN drug d ON d.id = rx.drug_id
         WHERE ${conds.join(' AND ')}
-        GROUP BY period, rx.drug_code, rx.drug_name, d.category`,
+        GROUP BY 1, 2, 3, 4`,
       P
     );
 
@@ -429,7 +443,7 @@ router.get('/drug-usage', async (req, res) => {
     const periodTotals = {};
     periods.forEach(p => { periodTotals[p] = drugs.reduce((s, d) => s + (d.by_period[p] || 0), 0); });
 
-    res.json({ granularity: gran, from, to, periods, drugs, periodTotals, grandTotal: drugs.reduce((s, d) => s + d.total_qty, 0) });
+    res.json({ granularity: gran, basis: dispensed ? 'dispensed' : 'prescribed', from, to, periods, drugs, periodTotals, grandTotal: drugs.reduce((s, d) => s + d.total_qty, 0) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
