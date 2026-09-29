@@ -16,7 +16,6 @@
 
 > 병원 직원(관리자)이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다.
 > 설정 화면은 맨 위 메뉴의 **Paramètres (설정)** 입니다. **Paramètres** 권한이 있는 계정만 보입니다.
-> 서버가 보내는 안내 몇 가지는 아직 **영어로** 뜹니다 (2.12의 표, 7절 U11).
 
 ### 2.1 처음 설치했을 때 — 관리자 계정 만들기
 
@@ -50,7 +49,8 @@
 
 1. **Personnel (직원)** → 오른쪽 위 **+ Ajouter (+ 추가)**. **Nouvel élément (새로 추가)** 창이 뜹니다.
 2. **Nom (이름)**, **Identifiant (아이디)**, **Mot de passe (비밀번호)** 를 넣습니다.
-   - 비밀번호 칸에 **`1234`가 미리 들어 있습니다.** 그대로 두지 말고 바꾸세요. 입력한 비밀번호가 화면에 그대로 보이니 주변을 확인하세요 (7절 S4).
+   - 비밀번호는 **•••• 로 가려져** 있습니다. 옆의 **Afficher (보기)** 를 누르면 보이고, **Masquer (숨기기)** 로 다시 가립니다. 직원에게 비밀번호를 불러 줄 때 쓰세요.
+   - 새 직원 창에는 비밀번호 **`1234`가 미리 들어 있습니다.** **Afficher** 로 확인하고, 그대로 두지 말고 바꾸세요 (7절 S4 — 없앨지는 결정 대기).
 3. **Rôle (étiquette) (역할 · 표시용)** 에서 역할을 고릅니다. 고르면 아래 권한 칸이 그 역할의 기본값으로 **자동 체크**됩니다.
 4. **Permissions (écrans accessibles) (권한 · 접근 가능 화면)** 에서 이 직원이 들어갈 화면을 체크합니다. **실제로 무엇을 할 수 있는지는 역할이 아니라 이 체크가 정합니다.**
 
@@ -178,18 +178,17 @@
 
 | 안내 (화면에 보이는 그대로) | 어디서 | 뜻 | 할 일 |
 |---|---|---|---|
-| **Identifiant ou mot de passe incorrect** | 로그인 | 아이디나 비밀번호 칸이 비었음 | 둘 다 넣고 **Connexion** |
-| **Invalid credentials** (영어) | 로그인 | 아이디나 비밀번호가 틀림 | 다시 입력. 잊었으면 관리자에게 — 관리자가 **Personnel → Modifier → Mot de passe** 로 새로 정함 |
-| **Account is inactive** (영어) | 로그인 | 비활성(**inactif**)이 된 계정 | 관리자에게. 지금은 화면에서 되돌릴 수 없음 (7절 U2) |
-| **Server error** / **API response was not JSON…** (영어) | 로그인·어디서나 | 서버나 DB가 멈춤 | 서버 PC의 상태 창(2.10)을 봄 |
+| **Identifiant ou mot de passe incorrect** | 로그인 | 칸이 비었거나, 아이디·비밀번호가 틀림 | 다시 입력. 잊었으면 관리자에게 — 관리자가 **Personnel → Modifier → Mot de passe** 로 새로 정함 |
+| **Ce compte est désactivé. Adressez-vous à un administrateur.** | 로그인 | 비활성(**inactif**)이 된 계정 | 관리자에게. 지금은 화면에서 되돌릴 수 없음 (7절 U2) |
+| **Le serveur ne répond pas. Regardez la fenêtre d'état sur le PC serveur.** | 로그인·설정 | 서버나 DB가 멈춤 | 서버 PC의 상태 창(2.10)을 봄 |
 | 로그인 화면으로 갑자기 돌아감 | 어디서나 | 로그인 12시간이 지남 | 다시 로그인 |
 | **Le mot de passe doit comporter au moins 6 caractères** · **Les mots de passe ne correspondent pas** | 초기 설정 | 비밀번호가 6자 미만 / 확인 칸과 다름 | 다시 입력 |
-| **Login ID already exists** · **Setup already completed** (영어) | 초기 설정 | 그 아이디가 이미 있음 / 이미 관리자가 있음 | 로그인 화면에서 로그인 |
-| **Erreur: This is the last active administrator who can open Settings…** (영어) | Personnel 저장·삭제 | 이 계정이 **Paramètres** 에 들어갈 수 있는 마지막 관리자 | 먼저 다른 계정에 **Administrateur** 역할과 **Paramètres** 권한을 줌 (2.6) |
-| **Erreur: The administrator account created during setup cannot be deactivated.** (영어) | Personnel 삭제 | 설치 때 만든 `admin` 계정 | 비활성화할 수 없음 — 그대로 둠 |
-| **Erreur: A record with that code or ID already exists** (영어) | 저장할 때 | 같은 **Identifiant** 나 **Code** 가 이미 있음 | 다른 아이디·코드로 |
-| **Erreur: login_id is required** · **password is required** (영어) | Personnel 새로 추가 | 아이디·비밀번호 칸이 빔 | 채워서 저장 |
-| **Erreur: … must be a number / must not be negative / must be a whole number** (영어) | 가격·재고 칸 | 숫자가 아니거나 음수, 재고에 소수 | 고쳐서 저장 |
+| **Cet identifiant existe déjà…** · **Un administrateur existe déjà. Connectez-vous.** | 초기 설정 | 그 아이디가 이미 있음 / 이미 관리자가 있음 | 로그인 화면에서 로그인 |
+| **Erreur: C'est le dernier administrateur actif pouvant ouvrir les Paramètres…** | Personnel 저장·삭제 | 이 계정이 **Paramètres** 에 들어갈 수 있는 마지막 관리자 | 먼저 다른 계정에 **Administrateur** 역할과 **Paramètres** 권한을 줌 (2.6) |
+| **Erreur: Le compte administrateur créé à l'installation ne peut pas être désactivé.** | Personnel 삭제 | 설치 때 만든 `admin` 계정 | 비활성화할 수 없음 — 그대로 둠 |
+| **Erreur: Un élément avec ce code ou cet identifiant existe déjà.** | 저장할 때 | 같은 **Identifiant** 나 **Code** 가 이미 있음 | 다른 아이디·코드로 |
+| **Erreur: Saisissez un identifiant.** · **Saisissez un mot de passe.** | Personnel 새로 추가 | 아이디·비밀번호 칸이 빔 | 채워서 저장 |
+| **Erreur: Prix : saisissez un nombre.** · **… ne peut pas être négatif.** · **Stock : saisissez un nombre entier.** | 가격·재고 칸 | 숫자가 아니거나 음수, 재고에 소수 | 고쳐서 저장 |
 | **Le stock de ce médicament a changé pendant la modification…** | Médicaments 저장 | 창을 열어 둔 사이 그 약의 재고가 바뀜(조제 등). **아무것도 저장 안 됨**. 재고 칸은 지금 값으로 바뀌어 있음 | 재고 칸의 새 숫자를 보고 다시 맞춰 **Sauver**. 다른 칸의 입력은 그대로 있음 |
 | **Supprimer ?** | 목록의 Supprimer | 지울지 확인 (목록에서 숨겨지고 기록은 남음) | 맞으면 확인 |
 | **Désactiver ce membre du personnel ? …** | Personnel의 Supprimer | 직원을 비활성으로 바꿀지 확인 | 맞으면 확인 (2.5) |
@@ -224,6 +223,8 @@
 - 로그인 실패 횟수 제한은 없습니다.
 - 로그인 순서: 아이디 조회 → 비활성이면 「Account is inactive」 → 비밀번호 확인. 비밀번호를 몰라도 그 아이디가 있고 비활성인지 알 수 있습니다.
 - 토큰은 브라우저 `localStorage`(`medconnect_token`)에 저장. 서버가 401을 주면 `api/client.js`가 지우고 로그인 화면으로 보냅니다.
+- **로그인·첫 관리자 만들기는 `api/client.js`를 거치지 않습니다** (2026-09-29, `Login.jsx` `authPost`). 그 클라이언트는 401이면 무조건 「로그인이 끝났다」로 보고 로그인 화면을 다시 불러오는데, 로그인 화면에서 401은 **틀린 비밀번호·비활성 계정**의 답이라 안내가 뜨자마자 새로고침에 지워졌습니다 — 틀린 비밀번호를 넣으면 **아무 말 없이 칸만 비었습니다**(격리 스택에서 재현). 이제 안내가 남고 칸도 그대로입니다.
+- **서버 안내의 번역** (2026-09-29, U11): 로그인·설정 API가 사람에게 보여줄 문구는 영어 고정 문자열로 `backend/src/routes/settings.messages.js`(`MSG`, 필드 이름이 들어가는 것은 `fieldMsg`)에 모았고, 화면은 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)`로 **문자열을 맞춰** `se_` 문구로 바꿉니다(`api/client.js`가 상태 코드를 넘기지 않으므로 — 다른 세션들과 같은 방식, 총괄 결정). `utils/dbError.js`(총괄)의 문구와 `api/client.js`의 「API response was not JSON…」도 같은 표에 있습니다. 모르는 문구는 영어 그대로 보입니다(숨기지 않음). 로그인 화면은 받은 원문을 저장하고 **보여줄 때** 번역하므로 언어를 바꾸면 안내도 바뀝니다. **한쪽 문구를 바꾸면 다른 쪽도** — `node backend/test/settings.messages.mjs`가 어긋나면 알려줍니다(39개 항목).
 - `JWT_SECRET`이 없으면 백엔드가 시작을 거부합니다 (`middleware/auth.js`, `docker-compose.yml`의 `:?`). 공개된 기본값으로 토큰을 위조할 수 있기 때문입니다. `setup.ps1`/`setup.sh`가 무작위 값을 `.env`에 만듭니다.
 - 로그인 후 이동: `Login.jsx`의 `ROLE_ROUTES`로 **역할** 기준 화면으로 보내고, 권한이 없으면 `App.jsx` 가드가 `homePath()`로 다시 보냅니다.
 
@@ -350,6 +351,8 @@
 - 운영 스크립트: `server-status.ps1` · `server-status.bat` · `verify-backup.ps1` (· `verify-backup.sh`)
 - 권한 목록: `backend/src/middleware/permissions.js` (공용 폴더, 설정 세션이 만듦 — 3-1절)
 - 검사: `node backend/test/settings.permissions.mjs` — 서버 권한 목록 ↔ `modules.js` (설치·서버 불필요)
+- 서버 안내 문구: `backend/src/routes/settings.messages.js`(새) ↔ `frontend/src/pages/settingsMessages.js`(새), 검사 `node backend/test/settings.messages.mjs`
+- 약 재고 시험: `backend/test/settings.drugs.mjs` (격리 스택 전용)
 
 ### 공용 부품
 
@@ -410,7 +413,7 @@
 | S1 | 높음 | 비활성화하거나 권한을 뺀 직원이 **이미 받은 토큰으로 최대 12시간** 계속 씀. 서버가 요청마다 DB의 상태·권한을 보지 않고 토큰 안의 권한을 믿음 | `middleware/auth.js` `authMiddleware`·`permMiddleware`, `generateToken` `expiresIn:'12h'` |
 | S2 | 높음 | 접수·문서 API와 진료의 조회 API는 **로그인만** 확인. 예: 약국 직원도 API로 환자 정보를 고치거나 문서를 발급·취소할 수 있음. 권한은 화면 메뉴에서만 지켜짐. **2026-09-29 현재**: 수납(`billing`)은 수납 세션이 `payment` 검사를 넣었고, 진료의 **쓰기**는 원래 `consultation` 검사가 있었음. 남은 것 = `patient`·`visit`·`document` 전체, 진료 조회. 라우트별 허용 권한표 **초안**은 인계 노트 2026-09-29 「S2 초안」 — 막을지는 결정 세션이 실장님께 여쭙는 중 | `patient/visit/document.routes.js`에 `permMiddleware` 없음. 각 세션 소유 |
 | S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
-| S4 | 보통 | 새 직원 비밀번호 칸에 `1234`가 미리 들어가고, 비밀번호 칸이 가려지지 않음(`type="password"` 아님). 직원 비밀번호 길이 제한 없음 | `Settings.jsx:252,653`, `admin.routes.js:194` |
+| S4 | 보통 (**일부 고침**) | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 직원 비밀번호 길이 제한 없음 — **결정 대기**. ~~비밀번호 칸이 가려지지 않음~~ → 2026-09-29: `type=password` + **Afficher/Masquer** 버튼, `autoComplete="new-password"`(브라우저가 관리자 자신의 비밀번호를 직원 칸에 채워 넣지 않게) | `Settings.jsx` 직원 편집 창, `admin.routes.js` POST staff |
 | S5 | 보통 | 로그인 실패 횟수 제한 없음 (LAN 안이라 위험은 제한적) | `auth.routes.js:49` |
 | S6 | 보통 | API로 `status`를 빼고 직원을 저장하면 `status`가 `NULL`이 됨 (CHECK는 NULL을 통과). 그 계정은 로그인 불가, 관리자 수에서도 빠짐. 마지막 관리자면 첫 실행 화면이 다시 열려 **로그인 없이 새 관리자를 만들 수 있음**. 화면은 항상 status를 보내므로 API 직접 호출일 때만 | `admin.routes.js:218,226,241`, `auth.routes.js:9` |
 | S7 | 낮음 | 비밀번호 확인 전에 「Account is inactive」를 알려줘 계정 존재·상태가 드러남 | `auth.routes.js:63` |
@@ -449,7 +452,8 @@
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
 | U10 | ~~높음~~ **고침(안전장치)** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 제안 A 적용: 재고를 안 고쳤으면 안 건드림, 고쳤는데 그 사이 바뀌었으면 409로 다시 물음 (3-8절). 재고를 움직임으로만 바꾸는 것(B)은 약국 결정 대기 | (옛 코드) `admin.routes.js` DRUGS `stock_qty=$11` |
-| U11 | 보통 | 로그인·설정 서버가 보내는 안내가 **영어로** 뜸 — 「Invalid credentials」「Account is inactive」「This is the last active administrator…」「A record with that code or ID already exists」 등 (목록은 2.12). 화면은 서버 문구를 그대로 보여주고, `api/client.js`(총괄)는 상태 코드를 넘기지 않음. 고치려면 약 재고 안내처럼 고정 문구를 화면에서 비교해 `se_` 키로 바꾸거나, 서버가 코드(`code`)를 같이 보내게 해야 함 | `auth.routes.js`, `admin.routes.js`, `utils/dbError.js`(총괄) |
+| U11 | ~~보통~~ **고침** | ~~로그인·설정 서버 안내가 영어로 뜸~~ → 2026-09-29: 서버 문구를 `settings.messages.js` 상수로, 화면이 `settingsMessages.js`로 맞춰 번역 (3-3절). 오더 연동·검사항목 탭 함수의 오류 표시는 각 세션 몫이라 그대로 | (옛 코드) `auth.routes.js`, `admin.routes.js` |
+| U12 | ~~높음~~ **고침** | ~~틀린 비밀번호·비활성 계정으로 로그인하면 **아무 안내 없이 칸만 비움**~~ — `api/client.js`의 401 새로고침이 안내를 지움. → 2026-09-29: 로그인·첫 설정은 `Login.jsx`가 직접 보냄 (3-3절) | (옛 코드) `Login.jsx`가 `api.post` 사용 |
 
 ## 8. 변경 기록
 
@@ -464,4 +468,5 @@
 | 2026-09-29 | 상태 API가 브리지 heartbeat의 `arrivals_error`를 「확인 필요」로 (PACS P-20, 보내는 쪽은 PACS). 서버 권한 검사(S2) 라우트별 허용 권한표 초안 — 인계 노트 | `9d7e380` |
 | 2026-09-29 | 약 저장 재고 안전장치 (약국 H4 제안 A, U10) | `f44ab9e` |
 | 2026-09-29 | 상용구 편집 창에 프랑스어·영어 문장 칸, 목록을 화면 언어로, 상용구 정렬 고정 | `1d3e4fc` |
-| 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀 (탭 표, 직원 목록 칸, 백업 색 띠별 할 일, 병원 정보 칸, 오더 코드 칸, 서버 상태 창 띠·상태 글자, 「이런 안내가 뜰 때」 표). 7절 U11 추가 | (이 커밋) |
+| 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀 (탭 표, 직원 목록 칸, 백업 색 띠별 할 일, 병원 정보 칸, 오더 코드 칸, 서버 상태 창 띠·상태 글자, 「이런 안내가 뜰 때」 표). 7절 U11 추가 | `3b5ce27` |
+| 2026-09-29 | 서버 안내를 화면 언어로 (U11: `settings.messages.js` ↔ `settingsMessages.js`, 검사 스크립트), 틀린 비밀번호에 안내가 안 뜨던 것 (U12), 직원 비밀번호 칸 가리기 (S4 일부) | (이 커밋) |
