@@ -19,7 +19,34 @@ var UI = {
   lang:      { ko: '언어', en: 'Lang', fr: 'Langue' },
   draft:     { ko: '미발급(초안)', en: 'DRAFT', fr: 'BROUILLON' },
   fillForm:  { ko: '내용 입력', en: 'Fill in', fr: 'Saisie' },
+  bracketHint: { ko: '아직 고치지 않은 칸', en: 'Still to fill in', fr: 'À compléter' },
+  bracketConfirm: {
+    ko: '아직 고치지 않은 [ ] 칸이 있습니다:\n{list}\n\n이대로 발급하면 괄호째 인쇄되어 기록에 남습니다. 그래도 발급할까요?',
+    en: 'Some [ ] placeholders are still in the text:\n{list}\n\nIf you issue now they print as they are and stay on the record. Issue anyway?',
+    fr: 'Il reste des champs [ ] à compléter :\n{list}\n\nSi vous émettez maintenant, ils seront imprimés tels quels et resteront dans le dossier. Émettre quand même ?',
+  },
 };
+
+// Next value of a 'checks' field after ticking or unticking `opt`. The field's own rule
+// decides (see the note above YESNO in documents/surgical-records.jsx):
+//   f.single      - one answer; a new tick replaces the old one.
+//   f.noneOption  - "None" and the real answers exclude each other.
+//   otherwise     - any combination, kept in option order.
+// Stored as one comma-joined string, as before, so saved documents read the same.
+function nextChecks(f, cur, opt, on) {
+  if (on) return cur.filter(function (x) { return x !== opt; }).join(', ');
+  if (f.single) return opt;
+  var none = f.noneOption;
+  var keep = cur.filter(function (x) { return none ? (opt === none ? false : x !== none) : true; });
+  return f.options.filter(function (o) { return keep.indexOf(o) >= 0 || o === opt; }).join(', ');
+}
+
+// Default texts mark the parts the surgeon must choose in square brackets -
+// "Under [anesthesia], in [lithotomy/jackknife] position". Left as they are, the
+// brackets print on a signed record. This finds the ones still there.
+function openBrackets(s) {
+  return String(s || '').match(/\[[^\[\]\n]{1,60}\]/g) || [];
+}
 
 function pickPatient(p) {
   if (!p) return {};
@@ -104,6 +131,14 @@ export function DocumentModal(props) {
 
   async function doIssue() {
     if (!props.patient) return;
+    // Issuing is what makes the text a record, so this is the point to stop an
+    // unfinished "[anesthesia]" - a draft print is marked DRAFT and is left alone.
+    var left = [];
+    (template.fields || []).forEach(function (f) {
+      if (f.type === 'checks') return;
+      openBrackets(values[f.key]).forEach(function (b) { if (left.indexOf(b) < 0) left.push(b); });
+    });
+    if (left.length && !window.confirm(L(UI.bracketConfirm, lang).replace('{list}', left.join('  ')))) return;
     setSaving(true);
     var payload = {
       values: values,
@@ -227,16 +262,15 @@ export function DocumentModal(props) {
                           var cur = String(values[f.key] || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                           var on = cur.indexOf(opt) >= 0;
                           return <label key={opt} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12.5, color: on ? tx : t2, whiteSpace: 'nowrap' }}>
-                            <input type="checkbox" checked={on} onChange={function () {
-                              var next = on ? cur.filter(function (x) { return x !== opt; })
-                                            : f.options.filter(function (o) { return cur.indexOf(o) >= 0 || o === opt; });
-                              setField(f.key, next.join(', '));
-                            }} />
+                            <input type="checkbox" checked={on} onChange={function () { setField(f.key, nextChecks(f, cur, opt, on)); }} />
                             {opt}
                           </label>;
                         })}
                       </div>
                     : <input value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
+                  {f.type !== 'checks' && openBrackets(values[f.key]).length
+                    ? <div style={{ marginTop: 3, fontSize: 11.5, color: '#fbbf24', lineHeight: 1.4 }}>⚠ {L(UI.bracketHint, lang)}: {openBrackets(values[f.key]).join('  ')}</div>
+                    : null}
                 </div>;
               })}
             </div>

@@ -38,6 +38,15 @@ var FL = {
 
 var YESNO = ['Yes', 'No'];
 
+// How a checkbox group may be filled (DocumentModal.jsx, the 'checks' input):
+//   single: true         one answer only - Yes/No, a side, a grade, an amount. Ticking a
+//                        second one moves the tick; "Sponge count: Yes, No" is not a record.
+//   noneOption: 'None'   several allowed, but "None" excludes the rest: picking it clears
+//                        the others, picking anything else clears it.
+//   (neither)            any combination - sutures, clock positions, quadrants.
+// Which group is which is listed in wiki/modules/consultation.md (3.6). Documents issued
+// before this rule may hold two answers in a single group; they print as saved.
+
 function OpNoteLayout(props) {
   var v = props.values || {}, lang = props.lang, spec = props.spec || {};
   // Tighter than the other documents: an operation note with a figure has to fit one A4
@@ -49,7 +58,13 @@ function OpNoteLayout(props) {
 
   // Only print the procedure-detail rows that were actually filled in - an empty
   // "Fluid collection:" line on a signed record reads as "not checked", not "n/a".
-  var detail = (spec.extras || []).filter(function (f) { return String(v[f.key] || '').trim() !== ''; });
+  // A row still holding its untouched typing aid counts as empty too: the size rows
+  // start as " ×  ×  cm" so the surgeon only types the numbers, and printed as-is that
+  // reads "Size: × × cm" - a measurement that was never taken.
+  var detail = (spec.extras || []).filter(function (f) {
+    var s = String(v[f.key] || '').trim();
+    return s !== '' && s !== String(f.default || '').trim();
+  });
 
   // Called as a function, not <OpFigures/>, so the layout knows whether a figure exists
   // before deciding how to arrange the row. It holds no state, so this is safe.
@@ -149,14 +164,14 @@ function makeOp(code, name, title, defaults, spec) {
   fields.push({ key: 'findings', label: FL.findings, type: 'textarea', rows: 7, default: defaults.findings });
   if (spec.sutures) fields.push({ key: 'sutures', label: FL.sutures, type: 'checks', options: spec.sutures });
   if (spec.safety === 'B') {
-    fields.push({ key: 'gauzeCount', label: FL.gauzeCount, type: 'checks', options: YESNO });
+    fields.push({ key: 'gauzeCount', label: FL.gauzeCount, type: 'checks', options: YESNO, single: true });
     fields.push({ key: 'drains', label: FL.drains, type: 'text' });
     fields.push({ key: 'bloodLoss', label: FL.bloodLoss, type: 'text' });
-    fields.push({ key: 'biopsy', label: FL.biopsy, type: 'checks', options: YESNO });
+    fields.push({ key: 'biopsy', label: FL.biopsy, type: 'checks', options: YESNO, single: true });
   } else {
-    fields.push({ key: 'tissuePath', label: FL.tissuePath, type: 'checks', options: YESNO });
+    fields.push({ key: 'tissuePath', label: FL.tissuePath, type: 'checks', options: YESNO, single: true });
     fields.push({ key: 'drains', label: FL.drains, type: 'text' });
-    fields.push({ key: 'spongeCount', label: FL.spongeCount, type: 'checks', options: YESNO });
+    fields.push({ key: 'spongeCount', label: FL.spongeCount, type: 'checks', options: YESNO, single: true });
     fields.push({ key: 'bloodLoss', label: FL.bloodLoss, type: 'text' });
   }
   fields.push({ key: 'complications', label: FL.complications, type: 'text' });
@@ -195,7 +210,7 @@ var OPS = [
         { key: 'massType', label: { ko: '병변 종류', en: 'Mass Type', fr: 'Type de masse' }, type: 'checks',
           options: ['Epidermal cyst', 'Granuloma', 'Lipoma', 'Hemangioma', 'Fibroma', 'Giant cell tumor', 'Myositis ossificans', 'Sarcoma', 'Other'] },
         { key: 'massSize', label: { ko: '크기 (cm)', en: 'Size (cm)', fr: 'Taille (cm)' }, type: 'text', default: ' ×  ×  cm' },
-        { key: 'muscleLayer', label: { ko: '근육층 침범', en: 'Muscle Layer Involved', fr: 'Atteinte musculaire' }, type: 'checks', options: YESNO },
+        { key: 'muscleLayer', label: { ko: '근육층 침범', en: 'Muscle Layer Involved', fr: 'Atteinte musculaire' }, type: 'checks', options: YESNO, single: true },
       ] }),
 
   // ── hernia (탈장) ──
@@ -207,7 +222,7 @@ var OPS = [
     { safety: 'A', figure: 'hernia',
       sutures: ['Vicryl 2-0', 'Surgifit 3-0', 'Nylon 4-0', 'Nylon 5-0'],
       extras: [
-        { key: 'side', label: { ko: '부위', en: 'Side', fr: 'Côté' }, type: 'checks', options: ['Right', 'Left', 'Bilateral'] },
+        { key: 'side', label: { ko: '부위', en: 'Side', fr: 'Côté' }, type: 'checks', options: ['Right', 'Left', 'Bilateral'], single: true },
         { key: 'herniaType', label: { ko: '탈장 유형', en: 'Hernia Type', fr: 'Type de hernie' }, type: 'checks',
           options: ['Indirect - small', 'Indirect - medium', 'Indirect - large', 'Direct - small', 'Direct - medium', 'Direct - large', 'Combined', 'Femoral'] },
         { key: 'mesh', label: { ko: '메쉬', en: 'Mesh', fr: 'Filet' }, type: 'text' },
@@ -226,18 +241,18 @@ var OPS = [
         { key: 'port', label: { ko: 'Port 삽입', en: 'Port Insertion', fr: 'Insertion des trocarts' }, type: 'checks',
           options: ['Glove port', '5 mm'] },
         { key: 'appyType', label: { ko: '충수 상태', en: 'Type', fr: 'Type' }, type: 'checks',
-          options: ['Perforation', 'Gangrenous', 'Suppurative', 'Congestive'] },
+          options: ['Perforation', 'Gangrenous', 'Suppurative', 'Congestive'], single: true },
         { key: 'appySize', label: { ko: '충수 크기 (cm)', en: 'Appendix Size (cm)', fr: 'Taille de l’appendice (cm)' }, type: 'text', default: ' ×  cm' },
         { key: 'vessel', label: { ko: '충수 혈관 처리', en: 'Appendiceal Vessel', fr: 'Vaisseau appendiculaire' }, type: 'checks',
           options: ['Ligasure', 'Clip', 'Other'] },
         { key: 'base', label: { ko: '충수 기저부 처리', en: 'Appendix Base', fr: 'Base appendiculaire' }, type: 'checks',
           options: ['Endo-loop', 'Other'] },
         { key: 'fluidAmount', label: { ko: '복강 내 삼출액 양', en: 'Fluid Collection', fr: 'Épanchement' }, type: 'checks',
-          options: ['> 100 mL', '50–100 mL', '< 50 mL'] },
+          options: ['> 100 mL', '50–100 mL', '< 50 mL'], single: true },
         { key: 'fluidType', label: { ko: '삼출액 성상', en: 'Fluid Character', fr: 'Nature de l’épanchement' }, type: 'checks',
           options: ['Pus', 'Turbid', 'Serous'] },
         { key: 'jp', label: { ko: 'JP 배액관', en: 'JP Insertion', fr: 'Drain JP' }, type: 'checks',
-          options: ['None', 'RLQ', 'LLQ', 'Umbilicus', 'Other'] },
+          options: ['None', 'RLQ', 'LLQ', 'Umbilicus', 'Other'], noneOption: 'None' },
         { key: 'closure', label: { ko: '봉합 (근막 / 피부)', en: 'Closure (Fascia / Skin)', fr: 'Fermeture (fascia / peau)' }, type: 'checks',
           options: ['Fascia: Vicryl 2-0', 'Skin: Nylon 3-0', 'Skin: Nylon 4-0'] },
       ] }),
@@ -251,7 +266,7 @@ var OPS = [
     { safety: 'B', figure: 'breast',
       sutures: ['Surgifit 4-0', 'Surgifit 5-0', 'Nylon 4-0', 'Nylon 5-0'],
       extras: [
-        { key: 'side', label: { ko: '부위', en: 'Side', fr: 'Côté' }, type: 'checks', options: ['Right', 'Left', 'Bilateral'] },
+        { key: 'side', label: { ko: '부위', en: 'Side', fr: 'Côté' }, type: 'checks', options: ['Right', 'Left', 'Bilateral'], single: true },
         { key: 'quadrant', label: { ko: '사분면', en: 'Quadrant', fr: 'Quadrant' }, type: 'checks',
           options: ['Upper outer', 'Upper inner', 'Lower outer', 'Lower inner', 'Central / subareolar', 'Axillary'] },
         { key: 'lesionSize', label: { ko: '병변 크기 (cm)', en: 'Lesion Size (cm)', fr: 'Taille de la lésion (cm)' }, type: 'text', default: ' ×  ×  cm' },
@@ -269,7 +284,7 @@ var OPS = [
         { key: 'position', label: { ko: '병변 위치 (시계 방향)', en: 'Pile Position (clock)', fr: 'Position (cadran horaire)' }, type: 'checks', options: CLOCK },
         { key: 'position2', label: { ko: '술후 잔여 / 추가 위치', en: 'Post-op / Additional Position', fr: 'Position post-op / additionnelle' }, type: 'checks', options: CLOCK },
         { key: 'skinTag', label: { ko: '동반 병변', en: 'Associated Lesion', fr: 'Lésion associée' }, type: 'checks',
-          options: ['Skin tag', 'Anal fissure', 'Anal papilla', 'None'] },
+          options: ['Skin tag', 'Anal fissure', 'Anal papilla', 'None'], noneOption: 'None' },
       ] }),
 
   // ── anal fistula (치루) ──
@@ -285,7 +300,7 @@ var OPS = [
         { key: 'intOpening', label: { ko: '내공 위치 (시계 방향)', en: 'Internal Opening (clock)', fr: 'Orifice interne (cadran)' }, type: 'checks', options: CLOCK },
         { key: 'tractType', label: { ko: '치루 유형', en: 'Tract Type', fr: 'Type de trajet' }, type: 'checks',
           options: ['Submucosal', 'Intersphincteric', 'Transsphincteric', 'Suprasphincteric', 'Extrasphincteric'] },
-        { key: 'seton', label: { ko: 'Seton 유치', en: 'Seton Placed', fr: 'Seton posé' }, type: 'checks', options: YESNO },
+        { key: 'seton', label: { ko: 'Seton 유치', en: 'Seton Placed', fr: 'Seton posé' }, type: 'checks', options: YESNO, single: true },
       ] }),
 
   // ── procedures already in use at the mission clinic ──
