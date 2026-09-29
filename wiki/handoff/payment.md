@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약 수량은 `total_qty`만 읽음 (진료 계산식 변경 전 선행) · 영수증 작은 것 둘
+
+- **상태**: 확인 요청 — **이것이 합쳐진 뒤 진료의 계산식 변경을 합쳐 주세요**
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop merge(`9051c08`이 develop에 없어 ff 불가였음 → merge, 충돌 없음)
+- **한 일**:
+  - **대체 계산 다섯 곳 삭제** — `billing.routes.js` `/pending`의 `live_total`, `buildCorrection()`; `Payment.jsx` `drugTotal()`·`chargeRows()`·처방 표. 이제 모두 `total_qty`만(`rxQty()`). 계산식은 진료 서버 한 곳에만 남음 — 식이 바뀌어도 수납은 고칠 것 없음.
+  - **비어 있으면 0원으로 넘어가지 않게** — `/pending`에 `missing_qty`(목록에 「⚠ Quantité de médicament manquante」), 화면: 빨간 안내 + 금액 칸 「⚠ Quantité manquante」 + 「Confirmer」 거절. 서버: `POST /api/billing`과 정정(`buildCorrection`)이 409 `QTY_MISSING: <약 이름>`. 진료실이 그 처방을 다시 저장하면(PUT이 총량을 계산해 넣음) 풀림.
+  - 영수증 (a) 금액을 `15 000 Ar`(줄바꿈 없는 공백)로 — 영수증 안에서만. (b) `printDocument(node, title, 'fr')` — 팝업 차단 안내 프랑스어.
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `frontend/src/pages/Payment.jsx`, `frontend/src/components/Receipt.jsx`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — 수납 구역에 `py_qtyMissing`·`py_qtyMissingList`·`py_qtyMissingBlock` 3개
+- **DB 마이그레이션**: 없음 · **데이터 영향**: 없음(실행 중 DB는 `total_qty` NULL 0건·0 0건, 총괄 조회) — 금액이 달라지는 처방이 없음
+- **확인한 방법**: `node --check`, 빌드. 격리 스택 9183:
+  - Q1 보통 처방(9 × 200) → 전과 같은 금액으로 수납, 목록에서 빠짐.
+  - Q2 `total_qty` 없이 API로 처방 → 목록 `missing_qty=true`, 진료비만 수납하려 해도 409 `QTY_MISSING: NULLDRUG`; 진료실 다시 저장 → `total_qty=9`, 표시 사라짐.
+  - Q3 이미 수납한 내원에 빈 처방이 붙음 → 목록 「정정」 + 「수량 없음」, 정정 미리보기 409 `QTY_MISSING`(0으로 환불 계산 안 함).
+  - Q4 `total_qty=0` → 0으로 셈(예전 화면은 `용량×횟수×일수`로 셌음, 7절 L3).
+  - 앞 시나리오 T1~T5·S2·S4~S11 재실행 — 결과 동일.
+  - 화면 프랑스어: 목록 경고, 빨간 안내, AMOX 줄 「⚠ Quantité manquante | 350 | ⚠ Quantité manquante」, 「Confirmer」 → 프랑스어 경고창, 영수 안 생김. 한국어: 「⚠ 총량 없음」, 안내 문구. 영수증 재출력 금액 「16 800 Ar」, 팝업 막힘 → 「Le navigateur a bloqué la fenêtre d'impression…」.
+- **확인 못 한 것**: 없음(이번 범위).
+- **위키**: `modules/payment.md` 3.1(약값 줄 + 「약 수량은 진료 한 곳에서만」), 2.11(안내 두 줄), 3.10(숫자 표기·팝업 안내), 7절 L3, 8절
+- **다른 세션에 부탁**: **진료** — 계산식 변경 때 추가(POST `/consultations/:id/prescriptions`)도 `total_qty`가 비어 오면 서버가 계산해 넣도록(조사 항목 권고). 그러면 `QTY_MISSING`은 사실상 생기지 않음.
+- **남은 일**: M2(설계 승인됨) 시작.
+
 ## 2026-09-29 — M2 설계: 미수 수납 때 받은 날 날짜의 새 영수 발행 (코드 전, 확인 요청)
 
 - **상태**: 보류 — **총괄 설계 확인 후 코드 시작**

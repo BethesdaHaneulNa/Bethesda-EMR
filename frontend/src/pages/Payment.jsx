@@ -68,6 +68,10 @@ export default function PaymentPage() {
       alert(t.py_correctionCarried.split('{receipt}').join(String(err.message).replace(/^BILL_CARRIED:\s*/,'')));
       return;
     }
+    if(String(err && err.message).indexOf('QTY_MISSING')===0){
+      alert(t.py_qtyMissingBlock.replace('{names}', String(err.message).replace(/^QTY_MISSING:\s*/,'')));
+      return;
+    }
     if(String(err && err.message).indexOf('BILL_CHANGED')===0){
       alert(t.py_billChanged);
       setSel(null); setBillItems(null); loadLists();
@@ -161,7 +165,12 @@ export default function PaymentPage() {
     if(dbp != null) return dbp;
     return FEES[vType] != null ? FEES[vType] : FEES.newVisit;
   }
-  function drugTotal(){ return (billItems?.prescriptions||[]).reduce(function(s,r){ return s + (parseFloat(r.total_qty)||parseFloat(r.dose)*r.frequency*r.days) * (parseFloat(r.unit_price)||0); },0); }
+  // A prescription line's quantity is total_qty as consultation saved it - billing
+  // keeps no formula of its own. null means it is missing: shown as a warning and
+  // billing is refused (never counted as 0 without anyone noticing).
+  function rxQty(r){ return (r.total_qty==null || r.total_qty==='') ? null : (parseFloat(r.total_qty)||0); }
+  function missingQtyRx(){ return (billItems?.prescriptions||[]).filter(function(r){ return rxQty(r)==null; }); }
+  function drugTotal(){ return (billItems?.prescriptions||[]).reduce(function(s,r){ return s + (rxQty(r)||0) * (parseFloat(r.unit_price)||0); },0); }
   function procTotal(){ return (billItems?.orders||[]).reduce(function(s,o){ return s + (parseFloat(o.quantity)||1) * (parseFloat(o.unit_price)||0); },0); }
   function extraTotal(){ return extraItems.reduce(function(s,it){ return s + (parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1); },0); }
 
@@ -179,7 +188,7 @@ export default function PaymentPage() {
     var bm = {};
     (billItems?.billed_items||[]).forEach(function(b){ if(b.item_type==='consultation') return; var k=(b.item_code||''); bm[k]=(bm[k]||0)+(parseFloat(b.qty)||0); });
     (billItems?.prescriptions||[]).forEach(function(rx){
-      var qty=parseFloat(rx.total_qty)||parseFloat(rx.dose)*rx.frequency*rx.days; var up=parseFloat(rx.unit_price)||0;
+      var qty=rxQty(rx); if(qty==null) return; var up=parseFloat(rx.unit_price)||0;
       var billed=bm[rx.drug_code]||0; var nq=qty-billed; bm[rx.drug_code]=Math.max(0,billed-qty);
       if(nq>0.0001) rows.push({item_type:'drug',item_name:rx.drug_name,item_code:rx.drug_code,quantity:nq,unit_price:up,total_price:nq*up});
     });
@@ -213,6 +222,8 @@ export default function PaymentPage() {
   // viaConfirm: reached from the green confirm button with nothing in the cash box.
   function doConfirm(status, viaConfirm){ return once(function(){ return doConfirmNow(status, viaConfirm); }); }
   async function doConfirmNow(status, viaConfirm){
+    var mq = missingQtyRx();
+    if(mq.length){ alert(t.py_qtyMissingBlock.replace('{names}', mq.map(function(r){ return r.drug_name; }).join(', '))); return; }
     if(status==='paid' && amtPaidNum()<totalDue()){ alert('Amount insufficient'); return; }
     // "Unpaid" means nothing was received, so the whole total stays owed. It used to
     // subtract whatever sat in the cash box from the debt while recording 0 received.
@@ -370,6 +381,7 @@ export default function PaymentPage() {
                   {tab==='waiting'?(v.needs_additional?<span style={{background:'#3b82f618',color:'#60a5fa',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'#a855f718',color:'#c084fc',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.correctionBadge}</span>:v.needs_rebill?<span style={{background:'#ef444418',color:'#f87171',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'#f59e0b18',color:'#f59e0b',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):statusBadge(v.payment_status)}
                 </div>
                 <div style={{fontSize:13,color:t2}}>{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}</div>
+                {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'#f87171',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'#f87171',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
                 {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'#60a5fa',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
                 {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'#c084fc',marginTop:2,fontFamily:'monospace'}}>↩ {t.refundDue}: {fmtAr(v.refund_due)} Ar</div>:null}
@@ -487,7 +499,9 @@ export default function PaymentPage() {
         </div></>;
       if(!corr) return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>{head}<div style={{color:t3,padding:12}}>{t.loading}</div></div>;
       if(corr.error){
-        var carriedMsg = corr.error.indexOf('BILL_CARRIED')===0 ? t.py_correctionCarried.split('{receipt}').join(corr.error.replace(/^BILL_CARRIED:\s*/,'')) : corr.error;
+        var carriedMsg = corr.error.indexOf('BILL_CARRIED')===0 ? t.py_correctionCarried.split('{receipt}').join(corr.error.replace(/^BILL_CARRIED:\s*/,''))
+          : corr.error.indexOf('QTY_MISSING')===0 ? t.py_qtyMissingBlock.replace('{names}', corr.error.replace(/^QTY_MISSING:\s*/,''))
+          : corr.error;
         return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>{head}<div style={{background:'#ef444412',border:'1px solid #ef444440',borderRadius:8,padding:'12px 14px',color:'#fca5a5',fontSize:14}}>{carriedMsg}</div></div>;
       }
       return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
@@ -519,8 +533,10 @@ export default function PaymentPage() {
         </div>
       </div>;
     }
+    var mqRows = missingQtyRx();
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <PatientHeader p={sel} />
+      {mqRows.length?<div style={{background:'#ef444418',border:'1px solid #ef444460',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fca5a5',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingBlock.replace('{names}', mqRows.map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {isAdditional()&&subtotal()>0.0001?<div style={{background:'#3b82f615',border:'1px solid #3b82f640',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#60a5fa'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'#f59e0b12',border:'1px solid #f59e0b40',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#f59e0b'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'#fbbf24',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
       <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
@@ -536,7 +552,7 @@ export default function PaymentPage() {
             </select>
             <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
           </div>
-          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=parseFloat(rx.total_qty)||parseFloat(rx.dose)*rx.frequency*rx.days;return {code:rx.drug_code,name:rx.drug_name,qty:qty,unit:parseFloat(rx.unit_price)||0,total:qty*(parseFloat(rx.unit_price)||0)};})} />
+          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null};})} />
           <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=parseFloat(o.quantity)||1;return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0)};})} />
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}>
             <div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8}}>
@@ -612,7 +628,7 @@ export default function PaymentPage() {
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'#3b82f620',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'#60a5fa'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'#f1f5f9'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{p.chart_no} · {p.dept_code} · {p.doctor_name}</div></div></div>; }
   function Section(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',justifyContent:'space-between'}}><span style={{fontWeight:900,fontSize:16,color:'#60a5fa'}}>{p.title}</span><span style={{fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span></div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right')}>{fmtAr(r.qty)}</td><td style={td('right')}>{fmtAr(r.unit)}</td><td style={td('right','#34d399',800)}>{fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>No items</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right')}>{fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>No items</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'#bfdbfe',fontSize:13,borderBottom:'1px solid '+bd}; }
