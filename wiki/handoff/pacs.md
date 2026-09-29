@@ -2,6 +2,66 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 설계 메모: 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크, 새 영상만, 디스크 없으면 경고) · P-25 포트
+
+- **상태**: 보류 — 설계만(코드 없음). 총괄 확인 뒤 만듦
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만). **PACS 저장소** — 없음
+
+### 한 줄 요약
+**PACS 폴더의 PowerShell 스크립트를 Windows 작업 스케줄러가 매일 밤 02:30에 돌려**, Orthanc REST에서 **지난번 이후 새로 들어온 영상(DICOM 파일)**만 받아 외장 디스크에 쓰고, 결과를 EMR에 보고해 **상태 화면에 경고**가 뜨게 한다. 복원은 그 파일들을 Orthanc에 다시 올리는 스크립트 — **11월 새 PC로 영상을 옮길 때도 같은 방법**.
+
+### ① 무엇이 돌리나 — 호스트의 예약 작업
+- **Windows 작업 스케줄러**, 매일 **02:30**(EMR DB 백업 기본 02:00과 겹치지 않게), 「사용자가 로그온할 때만 실행」. Docker Desktop 자체가 로그온한 사용자 세션에서 돌아서 조건이 같음. 관리자 권한·비밀번호 저장이 필요 없음.
+- 등록은 `install-image-backup.ps1`이 한 번. 실행은 `image-backup.ps1`. 둘 다 PACS 저장소. 리눅스·NAS는 cron + `.sh`(같은 설계, 나중에).
+- 왜 컨테이너가 아닌가: USB 디스크는 드라이브 글자가 바뀌고 빠질 수 있음. 컨테이너의 마운트는 만들 때 고정되고, 디스크가 없으면 컨테이너가 안 뜨거나 빈 폴더에 씀. 왜 EMR 백업 서비스가 아닌가: 설정 세션 파일이고 EMR 컨테이너 안에서 돌아 호스트 USB를 못 봄.
+- 놓친 밤(PC가 꺼져 있었음)은 작업 스케줄러의 「예약을 놓치면 가능한 빨리 실행」으로 따라잡음.
+
+### ② 쓰는 중인 Orthanc를 어떻게 일관되게 — 파일 복사가 아니라 Orthanc에게 받기
+- `storage` 폴더를 통째로 복사하지 않음. 색인(SQLite)은 쓰는 중에 복사하면 깨질 수 있고, 그러려면 Orthanc를 멈춰야 함. 또 그 폴더 형식은 Orthanc 판에 묶임.
+- 대신 **Orthanc REST**:
+  - `GET /changes?since=<seq>&limit=500`에서 `NewInstance`를 모아 `GET /instances/<id>/file`로 **원본 DICOM 파일 그대로** 받음.
+  - 받는 것은 Orthanc가 다 저장한 것뿐이라 일관성 문제가 없음. 멈출 필요도 없음.
+  - 표준 DICOM이라 **다른 Orthanc 판·다른 PACS로도 복원 가능**.
+- 「새로 생긴 영상만」: 마지막 `seq`를 **디스크 자체에** 저장(`state.json`). 디스크를 새것으로 바꾸면 처음부터 전부 복사되어 저절로 맞음.
+- 파일 자리: `<디스크>:\BethesdaPACS\images\<StudyInstanceUID>\<SOPInstanceUID>.dcm` — **경로에 환자 이름을 넣지 않음**. 이미 있으면 건너뜀(다시 돌려도 안전). 하나 받을 때마다 크기 확인.
+- **지우지 않음**: Orthanc에서 지운 영상도 디스크에는 남음(실수로 지운 것 되살리기). 보관 기간 없음. 용량 경고로 관리.
+
+### ③ 대상 디스크를 어떻게 알아보나 — 표시 파일
+- 드라이브 글자는 바뀌므로, 디스크 맨 위의 **표시 파일 `BETHESDA-PACS-BACKUP.id`**(처음 준비할 때 `prepare-backup-disk.ps1`이 만듦: 디스크 ID·만든 날)로 찾음. 모든 드라이브를 훑어 이 파일이 있는 곳을 씀.
+- 표시 파일이 **둘 이상이면 멈추고 경고**(어느 쪽인지 모름). **없으면 「디스크 없음」 경고**. 볼륨 이름(label)은 보조 확인만.
+- 준비할 때 디스크가 **비어 있지 않으면 확인을 물음**(다른 디스크를 잘못 고르지 않게).
+
+### ④ 경고를 어디에
+- **EMR 상태 화면**: 스크립트가 끝나면 `POST /api/pacs/image-backup-report`(**PACS 라우트, 새로**, 브리지 토큰 — PACS `.env`에서 읽음)로 `{ok, disk_found, copied, total_on_disk, free_gb, error}`를 보냄 → `service_heartbeat`의 `pacs_image_backup` 줄.
+  - 설정 세션 부탁: `status.routes.js`에 줄 하나 — 디스크 없음 / 실패 / **마지막 성공이 36시간 넘음**(작업이 안 돈 것) / 여유 공간 10% 미만 → 노랑·빨강.
+  - 한 번도 보고가 없으면 「꺼짐」(영상 백업을 안 쓰는 병원).
+- **서버 상태 창**(`server-status.ps1`, 설정 세션): 호스트에서 돌므로 디스크의 `state.json`(마지막 성공 시각)을 직접 읽을 수 있음. EMR이 멈춰도 보임 — 설정 세션 부탁.
+- 스크립트 자신의 기록: PACS 폴더 `logs\image-backup.log`(환자 이름 없이 개수·오류만, 오래된 것 정리).
+
+### ⑤ 복원과 연습
+- **복원** `restore-image-backup.ps1`: 디스크의 `.dcm`를 Orthanc에 `POST /instances`로 다시 올림. 이미 있으면 Orthanc가 「이미 있음」으로 답해 **다시 돌려도 안전**. 끝나면 Orthanc 영상 수와 디스크 파일 수를 비교해 알려 줌.
+  - 쓰는 때: 디스크 고장 뒤, 그리고 **11월 새 PC**(PACS 설치 → EMR 백업 복원 → `pair-with-emr` → 영상 복원).
+  - 영상의 StudyInstanceUID가 그대로라 EMR 오더와의 연결(`study_instance_uid`·`image_study_uid`)도 그대로 살아남.
+- **연습**: `restore-image-backup.ps1 -Verify`(읽기만)를 달마다 — 디스크에서 무작위 20개를 읽어 DICOM으로 열리는지, 파일 수 ≥ Orthanc 수인지.
+  - 석 달에 한 번은 **PACS 격리 스택(9198)에 실제로 복원**해 영상이 열리는지 봄(실행 중 PACS는 안 건드림).
+  - EMR의 `verify-backup.ps1`과 같은 자리에 기록.
+
+### 용량·기타
+- 대강 CR 한 장 10~30MB, 초음파 한 검사 수십 MB. 하루 20검사 × 30MB ≈ 0.6GB → **1TB로 수년**(실제 장비가 붙으면 첫 달 수치로 다시 계산).
+- 디스크에는 환자 영상(개인정보)이 그대로 있음 → 서버 옆에 두되 잠금 장소. 암호화(BitLocker To Go)는 관리자 권한·복구 키 관리가 필요해 **실장님 결정**으로 남김.
+- 디스크를 늘 꽂아 두면 랜섬웨어에 같이 당할 수 있음 — 결정 41이 디스크 1개라서 여기까지. 두 개를 번갈아 쓰는 것은 나중 선택.
+
+### 만들 것과 세션별 몫
+| 누가 | 무엇 | 크기 |
+|---|---|---|
+| PACS | `prepare-backup-disk.ps1`, `image-backup.ps1`, `install-image-backup.ps1`(예약 작업 등록/해제), `restore-image-backup.ps1`(+`-Verify`), `pacs.routes.js`의 `POST /image-backup-report`, 위키 | 중간 — 격리 스택(Orthanc 9198 + 시험 USB 대신 폴더)으로 시험 |
+| 설정 | `status.routes.js` 줄 하나, `server-status.ps1` 줄 하나, 번역 | 작음 |
+| 총괄 | 출발 전 확인 목록에 「백업 디스크 준비·예약 작업 등록·연습 한 번」, 오프라인 키트에 스크립트 포함(PACS 폴더에 있으므로 자동) | 작음 |
+
+### P-25 포트 (총괄 질문)
+- PACS 저장소: 옛 포트가 남은 곳은 README의 「예전에 8090을 썼다」는 설명 한 곳뿐(의도). `start.bat`·`setup`은 이미 9090과 LAN IP 안내(`d3d001c`).
+- EMR 설정 화면 예시 `NAS_IP:8090`은 **`frontend/src/pages/Settings.jsx`의 오더 연동 탭**(PACS 몫)에 있었고, **P-17로 이미 `NAS_IP:9090`**, 피드 주소 예시도 `:9080`(`890c64a`, develop에 있음). 설정 세션에 전달할 것 없음.
+
 ## 2026-09-29 — G-1~G-4: 설치 때 토큰을 화면에 안 찍고 짝 맞추기 · 포트 경고 · LAN IP 안내
 
 - **상태**: 확인 요청
