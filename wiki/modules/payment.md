@@ -1,52 +1,257 @@
 # 수납 (Payment)
 
-> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: — · **상태**: 뼈대만 있음 — 세션이 코드를 읽고 채웁니다
+> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: 2026-09-29 · **상태**: 현황 파악 완료, 코드 변경 없음 — 7절의 문제 목록에 대해 실장님 결정 대기
 
 ## 1. 이 모듈이 하는 일
 
-_(작성 필요)_
+진료가 끝난 내원(`visit.status='completed'`)의 돈을 받는 화면입니다.
+
+- **청구** — 진료비(내원 종류별) + 원내 처방 약값 + 오더(검사·처치·영상) + 수납 창구에서 더하는 발급비(진단서·CD 등)를 합쳐 영수(`billing`)를 만듭니다.
+- **영수증** — 영수번호 `R-YYYYMMDD-NNNN`을 매기고 영수증을 출력·재출력합니다.
+- **미수금** — 덜 받은 돈을 영수에 남기고, 나중에 그 영수에서 받거나(미수 수납), 다음 내원 청구에 얹어 받습니다(이월).
+- **취소·재수납·추가 청구·정정(환불)** — 영수를 취소하면 그 내원은 다시 수납 대기로 돌아옵니다. 수납 뒤에 의사가 처방·오더를 늘리면 차액만 추가 청구하고, 줄이면 정정(환불) 대상으로 뜹니다.
+- 수납 창구에서 **문서 발급, 원외 처방전, 차트 보기, 영상 판독 소견 보기**도 합니다(다른 모듈의 부품을 불러 씀).
 
 ## 2. 화면 사용법 (직원용)
 
-> 병원 직원이 읽는 부분입니다. 버튼 이름 그대로, 순서대로 씁니다.
+> 병원 직원이 읽는 부분입니다. 버튼 이름은 **한국어 / 프랑스어** 순서로 적습니다.
 
-_(작성 필요)_
+### 화면 구성
+
+- **왼쪽** — 환자 목록. 위의 **수납 대기 / En attente** 와 **수납 완료 / Payé aujourd'hui** 버튼으로 목록을 바꿉니다. 검색 칸에 이름·차트번호·영수번호를 넣으면 걸러집니다.
+- **가운데** — 선택한 환자의 청구 내용.
+- **오른쪽** — **과거 내원 / Visites passées**(지난 진료 기록)와 **영수내역 / Historique Reçus**(이 환자의 모든 영수).
+
+### 보통 수납
+
+1. **수납 대기 / En attente** 목록에서 환자를 누릅니다. 목록에는 오늘 진료가 끝난 환자가 나옵니다.
+2. 가운데에서 **진료비 / Consultation** 종류(초진 Nouvelle · 재진 Suivi · 응급 Urgence · 의뢰 Référence · 진료 없음)를 확인합니다. 바꾸면 금액이 바로 바뀌고, 내원 기록의 종류도 같이 바뀝니다.
+3. 약·검사·처치는 진료실에서 넣은 대로 나옵니다. 진단서·CD 같은 발급비는 **발급/기타 / Délivrance / Autres** 옆의 **+ 항목 추가 / + Ajouter** 에서 고릅니다.
+4. 할인이 있으면 **할인 / Remise** 에 금액을 넣습니다.
+5. 이전에 덜 낸 돈이 있으면 **이전 미수 / Solde antérieur dû** 가 빨갛게 보이고 **총 수납액 / Total** 에 더해져 있습니다.
+6. **받은 금액 / Montant Reçu** 에 환자가 낸 돈을 넣습니다. **정확히 / Exact** 는 총액 그대로, 5,000·10,000… 버튼은 그 금액을 넣습니다. 더 받았으면 **거스름돈 / Monnaie** 가, 덜 받았으면 **미수금 / Impayé** 가 보입니다.
+7. 위쪽 초록 버튼 **수납 확정 / Confirmer** 를 누릅니다. 덜 받았으면 「부분 수납」으로 저장됩니다.
+   한 푼도 못 받았으면 빨간 **미수 처리 / Impayé** 를 누릅니다. — **주의(7절 H4)**: 이때 받은 금액 칸은 비워 두세요.
+8. 영수증 창이 뜨면 **영수증 출력 / Imprimer Reçu** 를 누릅니다. — **주의(7절 H3)**: 지금 이 창은 환자 이름과 합계가 비어서 나옵니다. 올바른 영수증은 **영수내역 → 재출력** 으로 뽑으세요.
+9. **버튼은 한 번만 누르세요.** 두 번 누르면 영수가 두 장 생깁니다(7절 H1).
+
+### 목록의 표시
+
+| 표시 | 뜻 | 할 일 |
+|---|---|---|
+| **대기 / En Attente** | 아직 수납 안 함 | 보통 수납 |
+| **추가 청구 / Supplément** | 수납 뒤에 처방·오더가 늘어남 | 늘어난 만큼만 청구됩니다. 보통 수납처럼 확정 |
+| **정정(환불) / Remboursement** | 수납 뒤에 처방·오더가 줄어듦 (또는 같은 내원에 영수가 두 장) | **정정(환불) 처리 / Rembourser** — **주의(7절 H2)**: 지금 이 기능은 금액을 잘못 기록합니다 |
+| **정정 재수납 / Re-facturer** | 영수를 취소해서 다시 받아야 함 | 전에 받은 돈이 **받은 금액**에 미리 들어가 있습니다. 실제로 돌려줬다면 지우고 새로 받으세요 |
+| 빨간 `+ Outstanding` | 이 환자에게 이전 미수가 있음 | 이번 청구에 자동으로 더해집니다 |
+
+### 미수금 받기 (나중에 온 환자)
+
+1. 환자를 고르고 오른쪽 **영수내역 / Historique Reçus** 를 누릅니다.
+2. 미수가 있는 영수에 **미수 수납 / Encaisser impayé** 를 누르고 받은 금액을 넣어 **수납 확정** 을 누릅니다. 여러 장을 한 번에 받으려면 위의 **전체 미수 수납 / Tout encaisser**.
+
+### 영수 취소 · 재출력
+
+- **영수내역** 에서 **영수취소 / Annuler** 를 누르고 사유를 적습니다. 그 내원은 **수납 대기**로 돌아와 **정정 재수납** 으로 뜹니다.
+- **재출력 / Réimprimer** 는 저장된 영수를 그대로 다시 뽑습니다(취소된 것은 「취소됨」 도장이 찍힘).
+
+### 그 밖의 버튼 (환자를 골랐을 때)
+
+**환자 찾기 / Trouver patient**(다른 날 내원도 찾아서 수납) · **문서/의뢰서 / Documents** · **원외 처방전 / Ordonnance ext.** · **차트뷰어 / Dossier (vue)** · **판독소견 / Compte-rendu** · **↻**(목록 새로고침).
 
 ## 3. 기능 상세
 
-_(작성 필요)_
+### 3.1 금액 용어와 공식 (현재 코드 기준)
+
+모든 금액은 아리아리(Ar), DB는 `DECIMAL(12,2)`. 한 영수(`billing` 한 줄)에 대해:
+
+| 이름 | 컬럼 | 공식 · 누가 계산 | 근거 |
+|---|---|---|---|
+| 진료비 | `consult_fee` | 내원 종류 → 오더 코드 `C01`(초진) `C02`(재진) `C03`(응급) `C04`(의뢰)의 `price_clinic`. `none`이면 0. 화면에서 계산 | `Payment.jsx:121-128` |
+| 약값 | `drug_total` | Σ(`total_qty` 없으면 `dose×frequency×days`) × `unit_price`. **원외 처방(`dispense_type='external'`)은 제외** | `Payment.jsx:129`, `billing.routes.js:118-121` |
+| 처치·검사 | `procedure_total` | Σ `order_item.quantity × unit_price` **+ 발급비(수납에서 추가한 fee 항목)** | `Payment.jsx:130-131,185` |
+| 소계 | `subtotal` | 이번에 **새로** 청구하는 항목의 합 (`chargeRows()`). 첫 수납이면 전부, 추가 청구면 차액만 | `Payment.jsx:137-160` |
+| 할인 | `discount_amount` | 직원이 넣은 금액(화면은 금액 할인만 씀. `percent` 계산 코드는 있으나 쓰이지 않음) | `Payment.jsx:164,557` |
+| 이전 미수 | `previous_balance` | 이 환자의 취소 안 된 영수의 `outstanding` 합 (서버 `/pending`이 계산해서 화면에 줌) | `billing.routes.js:42` |
+| 총 수납액 | `total_due` | `max(0, 소계 − 할인 + 이전 미수)` — 화면 계산, **서버는 그대로 저장** | `Payment.jsx:165` |
+| 받은 금액 | `amount_paid` | 환자가 **건넨** 돈 (1만 원짜리로 3천 원을 내면 10,000) | `Payment.jsx:193` |
+| 거스름돈 | `change_amount` | `max(0, 받은 금액 − 총 수납액)` | `Payment.jsx:168` |
+| **순수납** | `net_paid` | **DB 생성 컬럼** `amount_paid − change_amount` = 병원이 실제로 가진 돈. 매출은 이것으로 셉니다 | `017_billing_net_paid.sql` |
+| 미수 | `outstanding` | 확정 시 `max(0, 총 수납액 − 받은 금액)`. 이후 미수 수납·이월·취소가 바꿈 | `Payment.jsx:169,194` |
+| 상태 | `payment_status` | `paid`(받은 금액 ≥ 총액) · `partial` · `unpaid`(미수 처리) · `cancelled`(취소). `waiting`·`waived`는 제약에는 있으나 화면이 만들지 않음 | `Payment.jsx:305`, `006_billing_void.sql` |
+
+**「그로스」(통계의 gross)** = `consult_fee + drug_total + procedure_total` — 할인·이전 미수 **전**의 이번 진료분.
+
+### 3.2 추가 청구 (수납 뒤 처방·오더가 늘어난 경우)
+
+- 서버 `/pending`이 내원마다 **지금 금액**(`live_total`: 진료비+원내약+오더)과 **이미 청구한 금액**(`billed_total`: 취소 안 된 영수의 `consult_fee+drug_total+procedure_total`)을 비교합니다(`billing.routes.js:26-37`).
+  - `live − billed > 0.01` → `needs_additional` (목록에 「추가 청구」, 차액 `extra_due`)
+  - `billed − live > 0.01` → `needs_refund` (목록에 「정정(환불)」, `refund_due`)
+- 화면의 `chargeRows()`(`Payment.jsx:137-158`)는 `/billing/visit/:id/items`가 준 `billed_items`(이미 청구된 코드별 수량·금액)를 **코드·수량 단위로 빼서** 새로 청구할 줄만 만듭니다. 진료비는 금액 차이만큼(진료 종류를 올렸을 때 차액).
+- 새로 청구할 게 없으면(이미 다 받음) 확정 버튼 대신 「이미 수납 완료」가 뜹니다 — 0원 영수가 생기지 않게(v1.0.1 수정).
+- 주의: `billed_total`은 **할인 전** 금액이라, 할인해 준 내원도 항목이 그대로면 아무 표시가 없습니다(의도된 동작).
+
+### 3.3 이월 (이전 미수를 새 영수로 넘기기) — `016_billing_carryover.sql`
+
+- 새 영수의 `total_due`에 `previous_balance`를 더해 받으면, 서버가 **오래된 영수부터** 그 금액 안에 **통째로 들어가는** 것만 골라 `outstanding=0`, `carried_into_id=<새 영수 id>`로 바꿉니다(`billing.routes.js:228-250`).
+- 옛 영수의 `amount_paid`는 그대로 둡니다 — 그날의 현금 합계가 바뀌지 않게.
+- 새 영수를 취소하면 `restoreCarried()`가 옛 영수들의 `outstanding`을 `total_due − amount_paid`로 되돌리고 `carried_into_id`를 지웁니다(`billing.routes.js:13-20`).
+- 그래서 **한 환자의 미수 = Σ `outstanding`** (취소 제외)이 정답입니다. `Σ(total_due − net_paid)`로 세면 이월분이 옛 영수와 새 영수 양쪽에 잡힙니다 — 서버 주석(`billing.routes.js:333-335`)에도 적혀 있고, 통계가 지금 이렇게 셉니다(7절 H5).
+
+### 3.4 미수 수납 — `POST /api/billing/:id/pay`
+
+- 그 영수의 `amount_paid += 받은 금액`, `outstanding = (total_due − net_paid) − 받은 금액`, 0.5 이하가 남으면 `paid` 아니면 `partial`(`billing.routes.js:350-391`).
+- `FOR UPDATE` 행 잠금으로 두 창구가 동시에 받아도 한쪽이 사라지지 않게 했습니다.
+- 받은 돈은 **원래 영수의 날짜(`billing_date`)** 에 붙습니다. 별도의 입금 기록 테이블은 없습니다(7절 M2).
+- `cashier_id`는 이번에 받은 사람으로 **덮어씁니다** — 처음 수납한 사람 기록은 사라집니다.
+
+### 3.5 취소와 재수납
+
+- `PUT /:id/void` — `payment_status='cancelled'`, `outstanding=0`, 취소 시각·사람·사유 기록, 이 영수가 흡수한 이월을 되돌림(`billing.routes.js:283-306`). 취소된 영수는 모든 합계에서 **없던 일**로 빠집니다.
+- 취소만 되고 살아 있는 영수가 없는 내원은 날짜와 상관없이 **수납 대기**에 「정정 재수납」으로 다시 뜹니다(`billing.routes.js:60-61`).
+- 재수납 화면은 마지막 취소 영수의 `net_paid`(`prior_paid`)를 **받은 금액 칸에 미리 넣어** 같은 돈을 두 번 받지 않게 합니다(`Payment.jsx:104-106`). 취소할 때 돈을 실제로 돌려줬는지는 기록하지 않으므로, 직원이 판단해서 지워야 합니다.
+
+### 3.6 정정(환불) — `confirmCorrection()` (`Payment.jsx:211-233`)
+
+현재 동작:
+1. `PUT /visit/:id/void-active`로 그 내원의 살아 있는 영수를 **전부** 취소(이월도 되돌림).
+2. 지금 항목 전체(`fullCurrentItems()`, 할인·이전 미수 없음)로 영수 1장을 새로 만듦: `total_due = amount_paid = 지금 금액`, `change_amount = 환불액 = max(0, 이미 받은 순수납 − 지금 금액)`, `payment_status='paid'`.
+
+**이 공식은 여러 경우에 틀립니다** — 7절 H2에 재현 결과가 있습니다.
+
+### 3.7 영수번호
+
+`R-YYYYMMDD-NNNN`, 그날 안에서 순번. `pg_advisory_xact_lock`으로 번호 배정을 줄 세워 두 창구가 같은 번호를 받지 않습니다(`billing.routes.js:186-202`). 예전의 무작위 4자리는 하루 110장쯤에서 충돌했습니다.
+
+### 3.8 서버의 입력 검사 (`POST /api/billing`)
+
+음수 금액, 소계보다 큰 할인, 받은 돈보다 큰 거스름, 모르는 상태값을 400으로 거절합니다(`billing.routes.js:155-184`). **총액·미수·이전 미수가 항목과 맞는지는 검사하지 않습니다** — 화면이 보낸 값을 그대로 저장합니다(7절 M3).
 
 ## 4. 데이터 · API
 
 ### 화면
 
-- `frontend/src/pages/Payment.jsx`
+- `frontend/src/pages/Payment.jsx` — 수납 화면 전체(영수증 창 포함). 영수증은 `DocumentModal`이 아니라 이 파일 안의 인쇄 영역(`#receipt-print`)입니다.
 
-### 서버
+### 서버 — `backend/src/routes/billing.routes.js` (`/api/billing`, 로그인만 확인)
 
-- `backend/src/routes/billing.routes.js  (/api/billing)`
+| 메서드 · 경로 | 하는 일 |
+|---|---|
+| `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 `paid`/`waived` 영수가 없는 내원 + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid` |
+| `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함** |
+| `GET /:billingId/detail` | 영수 1장 + `billing_item` |
+| `GET /visit/:visitId/items` | 청구할 원내 처방·오더, `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult` |
+| `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션) |
+| `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함) |
+| `PUT /:billingId/void` | 영수 취소 `{reason}` |
+| `PUT /visit/:visitId/void-active` | 그 내원의 살아 있는 영수 모두 취소 (정정용) |
+| `GET /patient/:patientId/balance` | `{owed: Σ outstanding, refund: Σ max(net_paid − total_due, 0)}` (취소 제외) |
+| `POST /:id/pay` | 미수 수납 `{amount}` |
+
+그 밖에 수납 화면이 부르는 것: `GET /api/admin/order-codes?code_type=fee`(진료비 C01~C04 가격과 발급비 목록), `PUT /api/visits/:id`(진료 종류 저장).
 
 ### 공용 부품
 
-- frontend/src/components/PatientChart.jsx — 공용, 수납 주관
+- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음.
+- `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
+- `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
+- `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
 
 ### DB 테이블
 
-_(작성 필요)_
+**`billing`** (`001_schema.sql:245-276` + `006` · `016` · `017`)
+
+| 컬럼 | 뜻 |
+|---|---|
+| `id`, `visit_id`(NOT NULL), `patient_id` | |
+| `receipt_no` UNIQUE | `R-YYYYMMDD-NNNN` |
+| `billing_date` DATE 기본 `CURRENT_DATE` | 통계의 날짜 기준. DB 시간대는 `.env`의 `TZ` |
+| `consult_fee`, `drug_total`, `procedure_total`, `subtotal`, `discount_amount`, `discount_type`, `discount_value`, `previous_balance`, `total_due`, `amount_paid`, `change_amount`, `outstanding` | 3.1절 |
+| `net_paid` | 생성 컬럼 `amount_paid − change_amount` (017) |
+| `payment_method` | 기본 `cash`. 화면이 쓰지 않음 |
+| `payment_status` | `waiting·paid·partial·unpaid·waived·cancelled` (006의 CHECK, `utils/validate.js`의 `PAYMENT_STATUSES`와 같아야 함) |
+| `note`, `cashier_id` | |
+| `cancelled_at`, `cancelled_by`, `cancel_reason` | 006 |
+| `carried_into_id` → `billing(id)` | 이 영수의 미수를 흡수한 새 영수 (016) |
+| 인덱스 | `patient_id`, `billing_date`, `payment_status`, `carried_into_id`. **`visit_id` 인덱스 없음** |
+
+**`billing_item`** — `billing_id`(CASCADE), `item_type`(`consultation`·`drug`·오더의 `code_type`·`fee`), `item_name`, `item_code`, `quantity`, `unit_price`, `total_price`.
+
+**읽기만 하는 테이블** — `visit`, `consultation`, `prescription`(`dispense_type`), `order_item`, `order_code`(`code_type='fee'`: C01~C04 진료비와 DOC·CDR·CERT 발급비, `005_cashier_fees.sql`), `patient`, `department`, `staff`.
+
+### 금액 규칙의 역사 (마이그레이션)
+
+| 파일 | 무엇 · 왜 |
+|---|---|
+| `005_cashier_fees.sql` | 발급비 코드 DOC 5,000 · CDR 10,000 · CERT 8,000 추가 |
+| `006_billing_void.sql` | `cancelled` 상태와 취소 기록 컬럼 — 영수를 지우지 않고 취소 |
+| `009_unify_price.sql` | `price`와 `price_clinic`을 같은 값으로 맞춤(단일 가격). 코드는 여전히 `price_clinic` 우선 |
+| `016_billing_carryover.sql` | 이월된 미수가 두 번 청구되던 문제 → `carried_into_id` |
+| `017_billing_net_paid.sql` | 건넨 돈(`amount_paid`)을 매출로 세던 문제 → `net_paid` |
 
 ## 5. 다른 모듈과의 연결
 
-_(작성 필요)_
+- **진료 → 수납**: 진료 완료(`PUT /api/consultations/:id/complete`)가 `visit.status='completed'`로 바꾸면 수납 대기에 뜹니다. 수납 뒤 진료실이 처방·오더를 고치면 추가 청구/정정 표시로 나타납니다(진료실의 처방·오더 삭제는 행을 지웁니다 — `consult.routes.js:187,302`).
+- **약국**: 원외 처방(`dispense_type='external'`)은 수납에서 청구하지 않습니다. 약국 서버(`pharmacy.routes.js`)는 `billing`을 읽지 않으므로 수납 전에도 조제할 수 있습니다 — 그래야 하는지는 확인 필요.
+- **접수**: `Registration.jsx:66`이 `GET /api/billing/patient/:id/balance`로 환자의 미수/환불 예정을 보여줍니다. `visit.routes.js`의 `GET /api/visits/patient/:id`가 내원마다 최신 영수 상태·번호·총액을 붙여 줍니다. `patient.routes.js`의 `GET /api/patients/:id/billing-history`도 있으나 화면에서 쓰는 곳은 없습니다.
+- **통계** (`stats.routes.js`, 모두 `payment_status <> 'cancelled'`):
+  - 매출 합계·진료과별·의사별·월별 = `SUM(net_paid)`, 날짜는 `billing_date` (`stats.routes.js:57-93,148-152`). 과는 `visit.department_id`, 의사는 `visit.doctor_id`.
+  - 그로스 = `SUM(consult_fee+drug_total+procedure_total)`; 발급비 매출 = `billing_item.item_type='fee'`의 합.
+  - 취소 건수 = `cancelled_at` 날짜 기준.
+  - 미수·환불 요약과 명단 = 영수마다 `total_due − net_paid` (`stats.routes.js:108-111,164-176`) — **수납 화면(`outstanding`)과 다른 공식**, 7절 H5.
+  - 그래서: 이월된 돈은 새 영수 날짜의 매출로, 미수 수납은 **원래 영수 날짜**의 매출로 잡힙니다.
+- **설정**: 진료비(C01~C04)와 발급비는 설정 > 오더 코드에서 `code_type='fee'`로 관리합니다.
 
 ## 6. 설정 항목
 
-_(작성 필요)_
+- **진료비** — 오더 코드 `C01` 초진 · `C02` 재진 · `C03` 응급 · `C04` 의뢰의 가격(`price_clinic`). 코드를 못 읽으면 화면은 하드코딩 값(15,000 · 10,000 · 25,000 · 12,000, `Payment.jsx:10`)을 쓰고, 서버 `/pending`은 0으로 봅니다(7절 L3).
+- **발급/기타 항목** — `code_type='fee'`이고 C01~C04가 아닌 활성 코드가 **+ 항목 추가** 목록에 나옵니다.
+- **약값** — 처방 시점에 `prescription.unit_price`로 복사된 값. **오더 가격** — `order_item.unit_price`.
+- 영수증 머리말(병원명·주소)은 설정에서 바꿀 수 없습니다 — 코드에 「Bethesda Clinic / Antananarivo, Madagascar」로 박혀 있습니다(`Payment.jsx:388`).
+- 시간대 — `.env`의 `TZ`(기본 `Indian/Antananarivo`)가 `billing_date`·영수번호 날짜를 정합니다.
 
 ## 7. 알려진 문제 · 제약
 
-_(작성 필요)_
+2026-09-29 현황 파악. **「재현」** 은 격리 스택(9183)에서 화면과 같은 요청을 보내 숫자를 확인한 것, **「코드」** 는 코드를 읽고 판단한 것(아직 재현 안 함)입니다. 재현 스크립트: 인계 노트 참고.
+
+### 높음
+
+- **H1 중복 수납이 막혀 있지 않음** — `Payment.jsx:178-199` `doConfirm()`에 처리 중 잠금이 없고, 서버 `POST /`(`billing.routes.js:147`)도 같은 내원의 중복을 확인하지 않습니다. 1.4.0의 버튼 눌림 효과는 모양만 바꿉니다. **재현**: 15,000 내원에 확정 요청 2건 → 영수 2장(R-…-0001, -0002), 매출 30,000. 그 뒤 목록에 「정정(환불) 15,000」으로 뜨지만, 그 정정 처리가 다시 H2로 틀립니다. 같은 문제: 미수 수납 `settleConfirm`·`settleAll`(`Payment.jsx:252-280`)도 잠금 없음 — 부분 금액이면 두 번 기록됨(코드).
+- **H2 정정(환불) 처리가 금액을 잘못 기록** — `Payment.jsx:211-233`. 모두 **재현**:
+  - (가) 받은 금액을 `amount_paid = 지금 금액`, `change_amount = 환불액`으로 저장 → `net_paid = 지금 금액 − 환불액`. 17,000 받은 내원에서 약 2,000 삭제 → 새 영수 `net_paid` 13,000(맞는 값 15,000), 통계 미수 2,000.
+  - (나) 한 푼도 안 받은(미수) 영수도 정정하면 **전액 받은 것(`paid`)** 으로 기록 → 미수 17,000이 사라지고 받지 않은 15,000이 매출로 잡힘.
+  - (다) 이월을 흡수한 영수를 정정하면 옛 미수 10,000이 **다시 살아나는데**, 그 10,000을 받은 돈은 **환불액에도 들어감** → 화면 환불 12,000(맞는 값 2,000), 수납 화면 미수 10,000, 통계 미수 22,000.
+  - (라) 할인이 사라짐 — 새 영수는 할인 없이 발행되고 환불액은 할인 전 금액과 비교(코드).
+  - (마) 환불액이 새 금액보다 크면 서버가 400으로 거절하는데, 이때 **기존 영수는 이미 취소된 뒤**라 내원이 영수 없이 남음(코드).
+- **H3 수납 직후 영수증이 비어서 나옴** — 확정 후 `setTab('completed')`(`Payment.jsx:197`)가 탭 변경 효과(`:68`)로 선택 환자를 지우는데, 영수증 창(`:388-390`)은 그 선택 환자와 화면 계산값을 읽습니다. **재현(화면, 프랑스어)**: 16,800 Ar 수납에 20,000 받음 → 영수증 Patient·Chart 빈칸, Total **0 Ar**, Paid 20,000, 거스름 없음. DB 기록은 맞습니다(16,800).
+- **H4 「미수 처리」 때 받은 금액 칸의 숫자가 미수에서 빠짐** — `Payment.jsx:193-194`: `amount_paid`는 0으로 보내면서 `outstanding`은 `총액 − 칸의 숫자`. **재현**: 15,000 내원, 칸에 4,000 → 미수 처리 → `outstanding` 11,000(맞는 값 15,000). 수납 화면은 11,000, 통계는 15,000으로 서로 다름. 재수납 화면은 칸이 미리 채워지므로(3.5) 특히 잘 생깁니다.
+- **H5 통계의 미수가 이월된 빚을 두 번 셈** — `stats.routes.js:108-111,164-176`이 `total_due − net_paid`로 셉니다. **재현**: 1차 미수 15,000을 2차 내원에서 이월 포함 전액 수납 → 수납 화면 미수 0, 통계 미수 15,000(명단에도 올라감). **통계 세션 파일**이라 고치지 않고 부탁으로 남깁니다.
+
+### 보통
+
+- **M1 이미 이월된 영수에 미수 수납이 됨** — `/pay`(`billing.routes.js:360-376`)가 `outstanding` 컬럼이 아니라 `total_due − net_paid`로 남은 돈을 계산하고 `carried_into_id`를 보지 않습니다. **재현**: 이월된 영수에 15,000 수납 → 200 OK, 같은 빚을 두 번 받음. 화면 버튼은 `outstanding`을 보므로 보통은 안 뜨고, 오래 열어 둔 화면·API로만 가능.
+- **M2 미수 수납한 돈이 받은 날이 아니라 원래 영수 날짜의 매출로 잡힘** — 입금 기록 테이블 없이 원래 영수의 `amount_paid`를 올립니다(`billing.routes.js:380-384`). 오늘 받은 돈이 오늘 매출에 없고 지난 날 매출이 나중에 바뀌어, **하루 현금 마감과 맞지 않습니다**. 이월로 받은 돈은 반대로 새 영수 날짜에 잡혀 두 경로가 다릅니다. 받은 사람(`cashier_id`)도 덮어씀. 설계 결정 필요(코드).
+- **M3 서버가 금액을 다시 계산하지 않음** — `total_due`·`outstanding`·`previous_balance`를 화면 값 그대로 저장. 두 창구가 같은 환자를 동시에 받거나 오래된 화면에서 확정하면 이전 미수가 두 영수에 다 들어감(두 번째 영수는 흡수할 옛 영수가 없는데도 총액에는 포함)(코드).
+- **M4 이월된 옛 영수를 취소해도 새 영수에 그 빚이 남음** — 취소(`billing.routes.js:283-306`)가 `carried_into_id`가 있는 영수를 막지 않습니다(코드).
+- **M5 수납 API에 권한 검사 없음** — `billing.routes.js:8`은 로그인만 확인. 메뉴는 막혀 있지만 의사·검사실 계정도 API로 영수 취소·수납이 가능합니다. 접수 화면이 `balance`를 읽으므로 그 한 곳은 접수 권한도 허용해야 합니다(코드).
+- **M6 재수납 금액의 근거가 약함** — `prior_paid`는 마지막 취소 영수 1장만 봅니다(`billing.routes.js:44`). 추가 청구 영수까지 여러 장 취소했으면 일부만 채워짐. 취소 때 돈을 돌려줬는지 기록하지 않음(코드).
+- **M7 영수증이 현장에 맞지 않음** — 병원명·주소 하드코딩(`Payment.jsx:388`, 설정의 병원 정보를 안 씀), 글자가 영어 고정(Receipt·Date·Patient·Total·Paid·Thank you), 첫 영수증에 항목이 없음, 재출력(`:437-438`)에 할인·거스름·미수가 없음.
+
+### 낮음
+
+- **L1 번역 안 된 글자** — `'Amount insufficient'`(`:179`), `'+ Outstanding:'`(`:332`), `'No items'`(`:601`), `Code`·`Date`·`Status`(`:582,586`), 상태 배지가 `paid`·`partial` 영어 그대로(`:282-285`, `cancelled`는 주황으로 나옴). 화면 전용 글자 몇 개는 번역 파일이 아니라 `L` 객체 안의 삼항식(`:48-65`). 프랑스어에서 「미수 처리」 버튼과 「미수금」 표시가 둘 다 `Impayé`.
+- **L2 진료비 기본값이 화면과 서버에서 다름** — C01~C04를 못 읽으면 화면은 15,000 등(`Payment.jsx:10,127`), 서버 `/pending`은 0(`billing.routes.js:28-30`) → 거짓 정정 표시(코드상, 코드를 비활성화했을 때만).
+- **L3 `total_qty = 0`인 처방** — 화면은 `dose×frequency×days`로 대신 계산(`:129`), 서버는 0(`billing.routes.js:31`)(코드).
+- **L4 진료 종류 저장이 수납보다 먼저** — `:187`. 수납이 실패해도 내원 종류는 이미 바뀜.
+- **L5 `billing(visit_id)` 인덱스 없음** — `/pending`이 내원마다 `visit_id`로 여러 번 찾습니다. 데이터가 쌓이면 느려짐(코드).
+- **L6 「수납 완료」 개수에 취소 영수 포함** — `/completed`가 상태를 거르지 않음.
+- **L7 미수·부분 수납한 오늘 내원이 수납 대기 목록에 계속 남음** — 누르면 「이미 수납 완료」로 뜸(`billing.routes.js:58-59`, `Payment.jsx:301-302`)(코드).
+- **L8 쓰이지 않는 코드** — `refundDue()`(`:166`), `Section`(`:600`), 할인 `percent` 경로.
+- **L9 좁은 화면** — 1400px 폭에서 가운데 합계 상자 오른쪽이 잘림(화면 확인).
+- **L10 `restoreCarried`가 `amount_paid` 기준** — 나머지는 `net_paid` 기준. 거스름이 있는 영수는 미수가 없어 이월되지 않으므로 지금은 결과가 같음.
 
 ## 8. 변경 기록
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
+| 2026-09-29 | 현황 파악: 1~7절 작성, 문제 목록(재현 포함). 코드 변경 없음 | (이 커밋) |
