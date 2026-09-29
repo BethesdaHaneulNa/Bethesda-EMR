@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ㉓ 영상 뷰어 환자 확인 경고 + 상태 칸 3개 국어 (PACS 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `076bd3e`. `f48cec9` 뒤에 develop이 앞서 나가 fast-forward가 안 돼서, 처음엔 develop을 한 번 merge(`0bfa6ab`)했습니다. 총괄이 `f48cec9`를 합친 뒤 그 merge 커밋은 버리고 develop 위로 다시 올렸으므로, 이 브랜치는 다시 develop + 커밋 1개입니다.
+- **한 일**:
+  - 진료 화면 영상 뷰어 창의 머리 아래에 `GET /pacs/viewer-url` 응답 `images.patient_check` 경고를 보입니다. 다른 환자면(`mismatch`) 빨강, 환자번호가 없으면(`missing`) 노랑입니다. 문구는 `px_patientMismatch`·`px_patientMissing`을 그대로 쓰고, 모양은 `RadiologyReadings.jsx`의 `PatientCheck`와 같습니다. 그 부품이 export되어 있지 않고 PACS 소유 파일이라, `Consultation.jsx` 안에 같은 모양의 `ImagePatientCheck`를 뒀습니다.
+  - P-19: 상태 칸의 워크리스트 상태(`pending`·`sent`·`in_progress`·`completed`·`cancelled`)를 3개 국어로 보입니다. 과거 기록 보기도 같은 함수를 씁니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 진료 표시 사이에 키 5개만 추가(`px_` 키는 읽기만 함)
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_wsPending` · `cs_wsSent` · `cs_wsInProgress` · `cs_wsCompleted` · `cs_wsCancelled` (ko · en · fr)
+- **확인한 방법**:
+  - `npm run build` 통과.
+  - 격리 스택 9182(`:dev` 이미지, develop `076bd3e` 코드, 마이그레이션 019 적용)에서 시험 DB의 `worklist_log` 한 줄을 바꿔 가며 확인:
+    - `mismatch`(26-00999 RAZAFY^Paul): 한국어 빨간 경고 「영상에 적힌 환자는 「26-00999 RAZAFY Paul」으로…」
+    - `missing`: 프랑스어 노란 경고 「Les images ne portent aucun numéro de patient…」
+    - `match`: 경고 없음
+  - 상태 칸: 한국어 「촬영 중 / 결과 있음 / 결과 대기」, 프랑스어 「En cours / Résultat reçu / En attente」, 처치는 빈칸.
+- **확인 못 한 것**: 실제 워크리스트 브리지(`POST /pacs/study-arrived`)로 들어온 값으로는 보지 않았습니다(DB를 직접 바꿔서 시험). 과거 기록 보기의 상태 칸은 같은 함수라 따로 누르지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 상태, 2절(처방·오더 7·8번), 3.1(상태 칸, 영상 환자 확인), 7.2 ㉓, 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**:
+  - **PACS** — `RadiologyReadings.jsx`의 `PatientCheck`를 export해 주시면 진료 쪽의 복제본(`ImagePatientCheck`)을 지우고 그것을 쓰겠습니다. 급하지 않습니다.
+- **남은 일 · 알려진 문제**: 다음은 위키 2절(직원용 사용법)을 프랑스어 화면 기준으로 다시 쓰기(총괄 지시).
+
 ## 2026-09-29 — ⑥ 수술기록지 프랑스어 표시 + ㉒ 검사 오더 상태 칸 (임상병리 부탁)
 
 > **총괄 확인 (2026-09-29)**: 합침(`4b5d01c`) + 실행 중 EMR 반영. 총괄 렌더 도구에 프랑스어 전 양식·빽빽한 경우를 추가해 688px로 찍음: 12개 양식 630~899px, 빽빽한 경우 탈장 952 · 충수 990 · 유방 929 · 치질 917 · 치루(유형 3개) 973 — 모두 한 장, 그림 밖으로 나간 글자 0. 시계 D/G, 선택값·그림 글자 프랑스어 확인. 프랑스어 의학 용어 확인은 결정 세션 목록에 넣음(현지 의사 확인, 그때까지 지금 번역 유지).

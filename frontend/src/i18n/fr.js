@@ -293,6 +293,11 @@ export default {
   cs_labPending: "En attente",
   cs_labDone: "Résultat reçu",
   cs_labCancelled: "Annulé",
+  cs_wsPending: "Non envoyé",
+  cs_wsSent: "Envoyé",
+  cs_wsInProgress: "En cours",
+  cs_wsCompleted: "Réalisé",
+  cs_wsCancelled: "Annulé",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
