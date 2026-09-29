@@ -123,7 +123,14 @@ export default function LabPage() {
       try {
         await api.post('/lab/order/' + toSave[i].order_item_id + '/results', { results: toSave[i].items });
         done.push(toSave[i].order_name);
-      } catch (e) { failed = { name: toSave[i].order_name, message: e.message }; break; }
+      } catch (e) {
+        // With orders listed as soon as they are placed, the doctor can still
+        // delete one (allowed while it has no result) while it is being typed
+        // in here; the server then answers 404 'Order not found'.
+        var removed = e.message === 'Order not found';
+        failed = { name: toSave[i].order_name, message: removed ? t.lb_orderRemoved : e.message, removed: removed };
+        break;
+      }
     }
     loadData(); setResultsKey(function (k) { return k + 1; });
     if (!failed && !skipped.length) {
@@ -132,11 +139,16 @@ export default function LabPage() {
       // stay on this patient and reload, so the ✓ marks show what was saved
       var v = view;
       api.get('/lab/visit/' + sel.visit_id + '/orders').then(function (g) {
-        if (g) { setSel(g); loadView(v, g); }
+        if (!g) { setSel(null); setView(null); setGroups([]); return; }   // every lab order of the visit is gone
+        var orders = g.lab_orders || [];
+        // the test on screen may be the one removed in the consultation room
+        var still = v === 'all' ? orders.length > 1 : orders.some(function (o) { return o.order_item_id === v; });
+        setSel(g);
+        loadView(still ? v : (orders.length > 1 ? 'all' : orders[0].order_item_id), g);
       }).catch(function () {});
       var msg = [];
       if (done.length) msg.push(t.lb_savedTests + ': ' + done.join(', '));
-      if (failed) msg.push(t.lb_saveFailed + ': ' + failed.name + ' — ' + failed.message);
+      if (failed) msg.push((failed.removed ? '' : t.lb_saveFailed + ': ') + failed.name + ' — ' + failed.message);
       else if (skipped.length) msg.push(t.lb_notSavedEmpty + ': ' + skipped.map(function (g) { return g.order_name; }).join(', '));
       if (failed) alert(msg.join('\n')); else setNotice(msg.join(' · '));
     }
@@ -200,7 +212,7 @@ export default function LabPage() {
                 <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{nm(g)}</span>
                 <span style={{ color: t3, fontSize: 12 }}>{ymd(g.visit_date)}</span>
               </div>
-              <div style={{ fontSize: 12, color: t2 }}>{g.chart_no} · {g.doctor_name || ''}</div>
+              <div style={{ fontSize: 12, color: t2 }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: '#fbbf24', fontWeight: 700 }}>· {t.lb_inConsultation}</span> : null}</div>
               <div style={{ fontSize: 12, color: cyan, marginTop: 2 }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
             </div>;
           })}
@@ -211,7 +223,7 @@ export default function LabPage() {
           {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
-                <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span></div>
+                <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: '#fbbf24', border: '1px solid #f59e0b66', borderRadius: 4, padding: '1px 6px' }}>{t.lb_inConsultation}</span> : null}</div>
                 {sel.allergies ? <div style={{ marginTop: 4, color: '#fca5a5', fontSize: 13 }}>⚠ {sel.allergies}</div> : null}
               </div>
               {/* panel tabs: All + each panel */}

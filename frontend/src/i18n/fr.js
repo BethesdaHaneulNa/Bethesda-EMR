@@ -392,6 +392,8 @@ export default {
   lb_unitWarnSafe: "Méthode sûre : laissez la ligne existante telle quelle, ajoutez une nouvelle ligne avec un nom différent (par ex. l'unité après le nom), puis supprimez l'ancienne ligne avec ✕.",
   lb_resultCount: "{n} résultat(s)",
   lb_saveAnyway: "Enregistrer quand même",
+  lb_inConsultation: "En consultation",
+  lb_orderRemoved: "La demande de cet examen a été supprimée en consultation. La liste est rechargée.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
