@@ -284,6 +284,7 @@ export default {
   rc_visitNotFound: "Cet enregistrement est introuvable. La liste a été actualisée.",
   rc_serverDown: "Impossible de joindre le serveur. Réessayez dans un instant ; si cela continue, prévenez l'administrateur.",
   rc_badFormat: "Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres.",
+  rc_accessDenied: "Vous n'avez pas l'autorisation pour cette action. Demandez l'accès « Enregistrement » à l'administrateur.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

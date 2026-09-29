@@ -293,6 +293,7 @@ export default {
   rc_visitNotFound: "This registration could not be found. The list has been refreshed.",
   rc_serverDown: "Cannot reach the server. Try again in a moment; if it keeps happening, tell the administrator.",
   rc_badFormat: "A value has the wrong format. Check the date and number fields.",
+  rc_accessDenied: "You do not have permission for this. Ask the administrator for the Registration permission.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

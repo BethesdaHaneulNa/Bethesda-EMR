@@ -1,14 +1,20 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware, effectivePerms } = require('../middleware/auth');
 const { VISIT_TYPES, VISIT_STATUSES } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 
 const router = express.Router();
 router.use(authMiddleware);
 
+// Who may call what (decided 2026-09-29, S2), from the screens that call each route:
+// /today - reception and consultation's queues; /patient/:id - PatientFinder in
+// visit mode (consultation, lab, payment; pharmacy and reception use it in patient
+// mode, which never lists visits). Registering, cancelling and editing a visit are
+// reception's; payment may also PUT /:id, but only to change visit_type (below).
+
 // GET /api/visits/today - today's queue
-router.get('/today', async (req, res) => {
+router.get('/today', permMiddleware('registration', 'consultation'), async (req, res) => {
   try {
     const { status, doctor_id, department_id } = req.query;
     let query = `SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.blood_type, p.allergies, p.reception_note, p.phone as patient_phone,
@@ -32,7 +38,7 @@ router.get('/today', async (req, res) => {
 });
 
 // GET /api/visits/patient/:patientId - 환자의 전체 내원 이력 (외래 내역)
-router.get('/patient/:patientId', async (req, res) => {
+router.get('/patient/:patientId', permMiddleware('consultation', 'lab', 'payment'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT v.id, v.patient_id, v.visit_date, v.reception_time, v.visit_type, v.status,
@@ -60,7 +66,7 @@ router.get('/patient/:patientId', async (req, res) => {
 });
 
 // POST /api/visits - register new visit
-router.post('/', async (req, res) => {
+router.post('/', permMiddleware('registration'), async (req, res) => {
   try {
     const { patient_id, visit_type, department_id, doctor_id, chief_complaint, reception_memo } = req.body;
     // visit_type selects the consultation fee (newVisit -> C01, followUp -> C02 ...),
@@ -83,7 +89,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/visits/:id/status - update visit status
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', permMiddleware('registration'), async (req, res) => {
   try {
     const { status } = req.body;
     if (!VISIT_STATUSES.includes(String(status))) {
@@ -116,9 +122,20 @@ router.put('/:id/status', async (req, res) => {
 // '') clear the assignment - with the old COALESCE a doctor could never be removed.
 // visit_type and status are NOT NULL in practice, so null there means "unchanged".
 const VISIT_FIELDS = ['visit_type', 'department_id', 'doctor_id', 'chief_complaint', 'reception_memo', 'status'];
-router.put('/:id', async (req, res) => {
+router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) => {
   try {
     const body = req.body || {};
+    // Payment sets the consultation fee type at the till (Payment.jsx) and nothing
+    // else. An account with payment but not registration is refused - not quietly
+    // trimmed - if it sends any other field, so a wrong call is seen, not half-done.
+    if (effectivePerms(req.user).indexOf('registration') < 0) {
+      const others = VISIT_FIELDS.filter(function (f) {
+        return f !== 'visit_type' && Object.prototype.hasOwnProperty.call(body, f);
+      });
+      if (others.length) {
+        return res.status(403).json({ error: 'Access denied', detail: 'payment may change visit_type only, not ' + others.join(', ') });
+      }
+    }
     // Same checks as POST: visit_type picks the consultation fee, and billing
     // falls back to the new-visit price for anything it does not recognise.
     if (body.visit_type != null && !VISIT_TYPES.includes(String(body.visit_type))) {

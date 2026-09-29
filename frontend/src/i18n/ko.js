@@ -284,6 +284,7 @@ export default {
   rc_visitNotFound: "이 접수 기록을 찾을 수 없습니다. 목록을 새로 불러왔습니다.",
   rc_serverDown: "서버에 연결할 수 없습니다. 잠시 뒤 다시 누르세요. 계속되면 관리자에게 알리세요.",
   rc_badFormat: "입력한 값의 형식이 맞지 않습니다. 날짜와 숫자 칸을 확인하세요.",
+  rc_accessDenied: "이 작업을 할 권한이 없습니다. 관리자에게 「접수」 권한을 요청하세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",
