@@ -26,6 +26,7 @@
 - **확인 못 한 것**: 실제 병원 DB에서 이미 끊긴 결과가 얼마나 있는지(이름 짝짓기는 격리 스택에서 흉내만 냄). 병원 PC 브라우저 시간대가 서버와 같은지(날짜 표시가 이 전제에 기댐). 영어 화면은 빌드된 키만 확인하고 눌러 보지는 않음.
 - **위키**: `modules/laboratory.md` 상단 상태, 2절(입력·저장·설정 사용법), 3.1·3.3·3.4·3.5·3.6, 4절 API 표, 6절, 7절(✅ 표시, 19·20 추가), 8절
 - **총괄 확인 요청**:
+  - ⚠ **격리 스택이 실행 중인 EMR과 같은 이미지 이름으로 빌드됩니다.** `docker-compose.yml`이 `image: bethesda-emr-backend:latest` · `bethesda-emr-frontend:latest`를 박아 두었고 `docker-compose.session.yml`은 이것을 바꾸지 않습니다(`docker compose … config`로 확인). 그래서 규칙 7절대로 `up -d --build`를 하면 **병원 EMR이 쓰는 이미지 이름이 세션 코드로 바뀝니다.** 이 상태에서 병원 EMR을 `--build` 없이 다시 띄우면 합치지 않은 세션 코드가 올라갑니다. 이번에는 16:49에 총괄 쪽에서 다시 빌드해서, 지금 병원 EMR(web·api)에는 임상병리 코드가 없음을 확인했습니다(`lb_selectHint`·`readNumber` 없음). 약국·접수 세션은 이미 `bethesda-s-<세션>-*` 이름으로 빌드하고 있습니다. `docker-compose.session.yml`의 backend·frontend에 `image: bethesda-s-${SESSION}-backend:dev` 같은 줄을 넣는 것을 제안합니다(총괄 파일이라 손대지 않음).
   - **LabResults.jsx를 바꿨음**(진료 화면도 씀) — 날짜 읽기(`ymd`)와 환자 없을 때 로딩 멈춤만. 모양은 그대로.
   - 날짜 하루 당겨짐은 **프로젝트 전체 문제**입니다. `PatientFinder.jsx:69`(생년월일·내원일이 하루 빠르게 보이는 것 격리 스택에서 확인), `Payment.jsx:12`, `RadiologyReadings.jsx:5`, `documents/shared.jsx`의 `fmtDate`, 인쇄 문서까지 같은 방식입니다. 근본 해결은 `backend/src/config/database.js`에서 `pg.types.setTypeParser(1082, v => v)`로 DATE를 글자 그대로 받는 것으로 보입니다(총괄 파일이라 손대지 않음). 그렇게 바뀌어도 임상병리의 새 `ymd`는 `YYYY-MM-DD`를 그대로 쓰므로 문제없습니다.
 - **다른 세션에 부탁**:
