@@ -30,6 +30,89 @@ function ymd(expr) { return `to_char(${expr}, 'YYYY-MM-DD')`; }
 // which picks the viewer's language; a visit with no department has code NULL.
 const DEPT_COLS = 'd.code AS code, d.name AS name, d.name_en AS name_en, d.name_fr AS name_fr';
 
+// A balance-settlement receipt (payment M2): issued when an old debt is paid
+// later, dated the day the money came in. It charges nothing itself and only
+// carries the debt, so it is recognised by that shape — no charges, a previous
+// balance — rather than by its note, which is free text. Ordinary carry-over
+// receipts always have charges of their own, so no receipt from before M2
+// matches. Settlements are money received, not treatments: they count in
+// Encaissé but not in the receipt count or the average (decision 14).
+function settlementSql(a) {
+  const p = a ? a + '.' : '';
+  return `(${p}consult_fee + ${p}drug_total + ${p}procedure_total = 0 AND ${p}previous_balance > 0)`;
+}
+
+// Which visit a receipt's money belongs to (decision 9, 2026-09-29).
+//
+// A receipt can carry older debts (carry-over, migration 016; settlements,
+// payment M2): the older bills point at it through carried_into_id. Grouped by
+// the receipt's own visit, the cash paid on an old debt landed on whichever
+// visit happened to collect it — a doctor was credited for treatment someone
+// else gave. The office manager chose to give it back to the visit that
+// created the debt, with a partial payment settling the oldest debt first (the
+// same order carry-over absorbs debts in). Dates do not move: the money still
+// counts on the day of the receipt that took it (decision 8).
+//
+// Each bill's total_due is broken into pieces, oldest first: what it carried
+// from each older bill (that bill's unpaid remainder, itself broken the same
+// way), then its own charges. Its net_paid pays the pieces in that order. A
+// cancelled bill carries nothing: a correction may leave replaced bills
+// pointing at the new one, but the new bill's previous_balance already
+// excludes them.
+async function paidByVisit(bills) {
+  const byId = new Map();
+  bills.forEach(function (b) { byId.set(b.id, b); });
+  const src = await pool.query(
+    `WITH RECURSIVE src AS (
+       SELECT c.id, c.visit_id, c.net_paid, c.total_due, c.billing_date, c.carried_into_id
+         FROM billing c WHERE c.carried_into_id = ANY($1::int[]) AND c.payment_status <> 'cancelled'
+       UNION
+       SELECT c.id, c.visit_id, c.net_paid, c.total_due, c.billing_date, c.carried_into_id
+         FROM billing c JOIN src ON c.carried_into_id = src.id WHERE c.payment_status <> 'cancelled'
+     )
+     SELECT * FROM src`,
+    [bills.map(function (b) { return b.id; })]
+  );
+  const carriedFrom = new Map();
+  src.rows.forEach(function (c) {
+    if (!byId.has(c.id)) byId.set(c.id, c);
+    if (!carriedFrom.has(c.carried_into_id)) carriedFrom.set(c.carried_into_id, []);
+    carriedFrom.get(c.carried_into_id).push(c);
+  });
+  const n = function (x) { return Number(x) || 0; };
+  const piecesMemo = new Map();
+  function pieces(id) {                 // [{visit_id, amount}] making up total_due, oldest first
+    if (piecesMemo.has(id)) return piecesMemo.get(id);
+    const b = byId.get(id);
+    const older = (carriedFrom.get(id) || []).slice().sort(function (x, y) {
+      return x.billing_date < y.billing_date ? -1 : x.billing_date > y.billing_date ? 1 : x.id - y.id;
+    });
+    const out = []; let carried = 0;
+    older.forEach(function (c) { unpaid(c.id).forEach(function (p) { out.push(p); carried += p.amount; }); });
+    const own = n(b.total_due) - carried;
+    if (own > 0.005) out.push({ visit_id: b.visit_id, amount: own });
+    piecesMemo.set(id, out);
+    return out;
+  }
+  function split(id) {                  // net_paid laid over the pieces: [paid pieces, unpaid pieces]
+    const b = byId.get(id); let pay = n(b.net_paid); const paid = [], left = [];
+    pieces(id).forEach(function (p) {
+      const take = Math.min(pay, p.amount); pay -= take;
+      if (take > 0.005) paid.push({ visit_id: p.visit_id, amount: take });
+      if (p.amount - take > 0.005) left.push({ visit_id: p.visit_id, amount: p.amount - take });
+    });
+    // Paid beyond what was due (a refund owed) stays with the receipt's own visit.
+    if (pay > 0.005) paid.push({ visit_id: b.visit_id, amount: pay });
+    return [paid, left];
+  }
+  function unpaid(id) { return split(id)[1]; }
+  const total = new Map();
+  bills.forEach(function (b) {
+    split(b.id)[0].forEach(function (p) { total.set(p.visit_id, (total.get(p.visit_id) || 0) + p.amount); });
+  });
+  return total;
+}
+
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
@@ -76,34 +159,46 @@ router.get('/summary', async (req, res) => {
        WHERE v.visit_date BETWEEN $1 AND $2 AND v.status<>'cancelled'
        GROUP BY s.id ORDER BY cnt DESC`, P);
 
-    // 3b) 진료과별 매출. billing 은 visit 을 통해 과에 붙는다(billing.visit_id).
-    //     기준은 접수에서 고른 과다: 한 의사가 여러 과의 진료를 볼 수 있으므로
-    //     "무슨 진료였는지"는 방문에 붙고, 의사 본인의 소속과와는 다를 수 있다.
-    const revByDept = await pool.query(
-      `SELECT ${DEPT_COLS},
-              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
-              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
-              COUNT(*)::int AS bill_count
+    // 3b) 진료과별·의사별 매출. Money goes to the visit that created the debt it
+    //     paid (paidByVisit, decision 9); charges (Facturé) and the receipt count
+    //     stay with each receipt's own visit. 과는 접수에서 고른 과, 의사는 담당의 —
+    //     한 의사가 여러 과의 진료를 볼 수 있고, 상여·성과는 사람 단위로 보므로
+    //     둘을 따로 묶는다. 과·의사 없는 방문은 code/name 이 null 인 한 줄.
+    const periodBills = (await pool.query(
+      `SELECT b.id, b.visit_id, b.net_paid, b.total_due, b.billing_date,
+              b.consult_fee + b.drug_total + b.procedure_total AS gross,
+              ${settlementSql('b')} AS is_settlement
          FROM billing b
-         JOIN visit v ON b.visit_id = v.id
-         LEFT JOIN department d ON v.department_id = d.id
-        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY d.id ORDER BY paid DESC`, P);
-
-    // 3c) 의사별 매출. 과별과 따로 뽑는다 — 상여·성과 산정은 사람 단위로 봐야 하고,
-    //     접수에서 고른 과로 묶으면 그 사람의 실적이 여러 과에 흩어진다.
-    //     LEFT JOIN: bills for visits with no attending doctor form an
-    //     "unassigned" row, so the rows add up to the clinic's takings.
-    const revByDoctor = await pool.query(
-      `SELECT s.id AS doctor_id, s.name AS name,
-              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
-              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
-              COUNT(*)::int AS bill_count
-         FROM billing b
-         JOIN visit v ON b.visit_id = v.id
-         LEFT JOIN staff s ON v.doctor_id = s.id
-        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY s.id ORDER BY paid DESC`, P);
+        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'`, P)).rows;
+    const paidVisit = await paidByVisit(periodBills);
+    const visitIds = Array.from(new Set(periodBills.map(function (b) { return b.visit_id; }).concat(Array.from(paidVisit.keys()))));
+    const visitInfo = new Map();
+    (await pool.query(
+      `SELECT v.id, d.id AS dept_id, ${DEPT_COLS}, s.id AS doctor_id, s.name AS doctor_name
+         FROM visit v LEFT JOIN department d ON v.department_id = d.id LEFT JOIN staff s ON v.doctor_id = s.id
+        WHERE v.id = ANY($1::int[])`, [visitIds])).rows.forEach(function (v) { visitInfo.set(v.id, v); });
+    function breakdown(keyOf, rowOf) {
+      const rows = new Map();
+      function row(visitId) {
+        const v = visitInfo.get(visitId) || {};
+        const k = keyOf(v);
+        if (!rows.has(k)) rows.set(k, Object.assign(rowOf(v), { paid: 0, gross: 0, billCount: 0 }));
+        return rows.get(k);
+      }
+      paidVisit.forEach(function (amount, visitId) { row(visitId).paid += amount; });
+      periodBills.forEach(function (b) {
+        const r = row(b.visit_id);
+        r.gross += Number(b.gross) || 0;
+        if (!b.is_settlement) r.billCount += 1;
+      });
+      return Array.from(rows.values()).map(function (r) {
+        return Object.assign(r, { paid: Math.round(r.paid), gross: Math.round(r.gross) });
+      }).sort(function (x, y) { return y.paid - x.paid; });
+    }
+    const revenueByDept = breakdown(function (v) { return v.dept_id == null ? 'none' : v.dept_id; },
+      function (v) { return { code: v.code || null, name: v.name || null, name_en: v.name_en || null, name_fr: v.name_fr || null }; });
+    const revenueByDoctor = breakdown(function (v) { return v.doctor_id == null ? 'none' : v.doctor_id; },
+      function (v) { return { doctor_id: v.doctor_id || null, name: v.doctor_name || null }; });
 
     // 4) 매출 (취소 제외, billing_date 기준)
     const rev = await pool.query(
@@ -113,7 +208,9 @@ router.get('/summary', async (req, res) => {
          COALESCE(SUM(procedure_total),0)::numeric AS procedure,
          COALESCE(SUM(consult_fee+drug_total+procedure_total),0)::numeric AS gross,
          COALESCE(SUM(net_paid),0)::numeric AS paid,
-         COUNT(*)::int AS bill_count
+         COUNT(*) FILTER (WHERE NOT ${settlementSql()})::int AS bill_count,
+         COUNT(*) FILTER (WHERE ${settlementSql()})::int AS settlement_count,
+         COUNT(DISTINCT visit_id) FILTER (WHERE consult_fee+drug_total+procedure_total > 0)::int AS billed_visits
        FROM billing
        WHERE billing_date BETWEEN $1 AND $2 AND payment_status <> 'cancelled'`, P);
 
@@ -144,20 +241,20 @@ router.get('/summary', async (req, res) => {
       visits: visits.rows[0],
       byDept: byDept.rows,
       byDoctor: byDoctor.rows,
-      // numeric comes back from pg as a string; round it here so the client can render
-      // it straight into a bar without doing arithmetic on text.
-      revenueByDept: revByDept.rows.map(function (x) {
-        return { code: x.code, name: x.name, name_en: x.name_en, name_fr: x.name_fr,
-          paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
-      }),
-      revenueByDoctor: revByDoctor.rows.map(function (x) {
-        return { doctor_id: x.doctor_id, name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
-      }),
+      revenueByDept: revenueByDept,
+      revenueByDoctor: revenueByDoctor,
       revenue: {
         gross: num(r.gross), paid: num(r.paid),
         consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure - issuance.rows[0].amount),
         issuance: num(issuance.rows[0].amount), issuanceCount: issuance.rows[0].cnt,
-        billCount: r.bill_count, avg: r.bill_count > 0 ? num(r.paid / r.bill_count) : 0,
+        // Receipts for treatment only; balance settlements are counted apart.
+        billCount: r.bill_count, settlementCount: r.settlement_count,
+        // Average billed per visit (decision 14): Facturé over the visits that
+        // were charged something. Unlike cash over receipts, it does not move
+        // with unpaid bills, with old debts collected, or with a visit billed on
+        // several receipts.
+        billedVisits: r.billed_visits,
+        avgBilledPerVisit: r.billed_visits > 0 ? num(r.gross / r.billed_visits) : 0,
       },
       voidedCount: voided.rows[0].cnt,
       outstanding: { owed: num(bal.rows[0].owed), refund: num(bal.rows[0].refund) },
@@ -262,6 +359,11 @@ router.get('/drug-usage', async (req, res) => {
     const P = [from, to];
     if (req.query.status === 'dispensed') conds.push("rx.status = 'dispensed'");
     else conds.push("rx.status <> 'cancelled'");
+    // A cancelled registration's prescriptions were never used — unless the
+    // pharmacy had already handed the drug over, in which case it left the
+    // shelf and counts (decision 12). Reception can now cancel only a waiting
+    // visit, so this concerns older records.
+    conds.push("(v.status <> 'cancelled' OR rx.status = 'dispensed')");
     if (req.query.dispense_type === 'internal' || req.query.dispense_type === 'external') {
       P.push(req.query.dispense_type);
       conds.push(`rx.dispense_type = $${P.length}`);

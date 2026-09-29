@@ -1,6 +1,6 @@
 # 통계 (Statistics)
 
-> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 문제 1·2·3·4·5·6·10·11·13·15 고침 · 남은 것은 7절 참고
+> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 문제 1~6·9~15 고침(12 는 일부) · 8 결정대로 유지 · 7 은 총괄 확인 중
 
 ## 1. 이 모듈이 하는 일
 
@@ -43,12 +43,12 @@
 | 칸 | 뜻 |
 |---|---|
 | **Encaissé (수납액)** | 그 기간에 발행한 영수증에서 병원이 실제로 받은 돈(받은 돈 − 거스름돈). 아래 작은 글씨 **Facturé (청구액)** 는 할인 전 금액 |
-| **Factures (수납 건수)** | 그 기간에 발행한 영수증 수. 아직 한 푼도 안 받은 영수증도 1건으로 셉니다 |
-| **Moy. / facture (평균 단가)** | Encaissé ÷ Factures |
+| **Factures de soins (진료 영수)** | 그 기간에 **진료로** 발행한 영수증 수. 아직 한 푼도 안 받은 영수증도 1건으로 셉니다. 예전 미수를 나중에 받은 영수증(미수 수납)은 여기에 세지 않고, 아래 작은 글씨 **+ N règlement(s) de solde (+ 미수 수납 N건)** 으로 따로 보입니다 |
+| **Moy. facturée / visite (방문당 평균 청구액)** | Facturé ÷ 그 기간에 청구한 방문 수. 방문 한 번에 평균 얼마를 청구했는지 — 돈을 받았는지, 영수증이 몇 장으로 나뉘었는지와 관계없습니다 |
 | **Impayé (미수)** | **기간과 관계없이 지금 이 순간** 환자들에게 받을 돈의 합 |
 | **Remboursement dû (환불 예정)** | **지금 이 순간** 환자들에게 돌려줄 돈의 합 |
 | **Annulés (취소 영수)** | 그 기간에 취소한 영수증 수 |
-| **Recettes par service (진료과별 매출)** · **Recettes par médecin (의사별 매출)** | Encaissé 를 접수 때 고른 과별 / 담당 의사별로 나눈 것. 두 그래프의 줄 나눔은 다를 수 있지만, **어느 쪽이든 줄을 모두 더하면 Encaissé 와 같습니다.** 과·의사가 없는 방문은 **Non attribué** 줄 |
+| **Recettes par service (진료과별 매출)** · **Recettes par médecin (의사별 매출)** | Encaissé 를 접수 때 고른 과별 / 담당 의사별로 나눈 것. 예전 미수를 나중에 받은 돈은 **그 빚이 생긴 진료의 과·의사**에 붙습니다(받은 날짜에). 두 그래프의 줄 나눔은 다를 수 있지만, **어느 쪽이든 줄을 모두 더하면 Encaissé 와 같습니다.** 과·의사가 없는 방문은 **Non attribué** 줄 |
 | **Recettes par poste (항목별 매출)** | Facturé 를 **Consultation (진료비)** · **Médicaments (약)** · **Examens / Actes (검사/처치료)** · **Documents (서류)** 로 나눈 것. 네 줄을 더하면 Facturé 와 같습니다 |
 
 **미수·환불 명단 보기**
@@ -68,7 +68,7 @@
 4. 표는 약품별 수량이고, 많이 쓴 약이 위에 옵니다. 맨 아래 **Total** 줄이 기간별 합계입니다.
 5. **⬇ CSV** 를 누르면 표를 엑셀에서 열 수 있는 파일로 내려받습니다.
 
-> 이 표는 위의 기간 선택을 따르지 않습니다. 날짜는 처방한 날(내원일) 기준입니다.
+> 이 표는 위의 기간 선택을 따르지 않습니다. 날짜는 처방한 날(내원일) 기준입니다. 취소된 접수의 처방은 세지 않습니다 — 단 약국에서 이미 내준 약은 셉니다.
 
 ### 2.5 Tendance mensuelle (월별 추이)
 
@@ -76,8 +76,8 @@
 
 ### 2.6 숫자가 이상해 보일 때
 
-- **지난달 수납액이 전에 봤을 때와 다릅니다** — 그 달 영수증을 나중에 취소·정정했거나, 그 달 미수를 나중에 받으면 그 달 숫자가 바뀝니다. 지금 수납액은 「그 날짜에 발행한 영수증에서 지금까지 받은 돈」이고, 「그 날 금고에 들어온 돈」과는 다를 수 있습니다(3.4).
-- **Recettes par service 에서 어떤 과의 Encaissé 가 Facturé 보다 큽니다** — 그 과 방문에서 예전 미수를 함께 받았기 때문입니다(7절 9번).
+- **지난달 수납액이 전에 봤을 때와 다릅니다** — 그 달 영수증을 나중에 취소·정정하면 그 달 숫자가 바뀝니다. 예전 미수를 나중에 받은 돈은 **받은 날** 수납액에 들어가므로 지난 달을 바꾸지 않습니다(수납 화면이 받은 날짜의 새 영수증을 발행 — 단 이 방식 전에 받은 것은 원래 날짜에 남아 있음). 수납액은 「그 날짜에 발행한 영수증에서 받은 돈」이고, 정정한 날은 「그 날 금고에 들어온 돈」과 다를 수 있습니다(3.4).
+- **Recettes par service 에서 어떤 과의 Encaissé 가 Facturé 보다 큽니다** — 그 기간에 그 과의 예전 진료 미수를 받았기 때문입니다. 반대로 Facturé 가 크면 아직 못 받은 돈이 있다는 뜻입니다.
 - **Visites totales 가 접수 화면의 건수보다 적습니다** — 취소된 접수는 세지 않습니다. **Annulé** 칸을 보세요.
 
 ## 3. 기능 상세
@@ -91,26 +91,27 @@
 
 ### 3.2 `GET /api/stats/summary?from&to` — 숫자별 계산식
 
-기간 미지정 시 DB의 `CURRENT_DATE` 기준 이번 달 1일 ~ 오늘(`stats.routes.js:40`). 응답의 날짜는 모두 `ymd()`(`stats.routes.js:27`)로 `'YYYY-MM-DD'` 문자열로 만들어 보냅니다 — DATE 를 그대로 보내면 node-pg 가 현지 자정 Date 로 바꾸고 JSON 이 UTC 로 써서 하루 앞당겨 보이기 때문입니다. 날짜 형식은 `utils/validate.js` 의 `badDateRange` 가 검사합니다. 모든 기간 조건은 `BETWEEN from AND to`, 양 끝 날짜 포함입니다.
+기간 미지정 시 DB의 `CURRENT_DATE` 기준 이번 달 1일 ~ 오늘(`stats.routes.js:123`). 응답의 날짜는 모두 `ymd()`(`stats.routes.js:27`)로 `'YYYY-MM-DD'` 문자열로 만들어 보냅니다 — DATE 를 그대로 보내면 node-pg 가 현지 자정 Date 로 바꾸고 JSON 이 UTC 로 써서 하루 앞당겨 보이기 때문입니다. 날짜 형식은 `utils/validate.js` 의 `badDateRange` 가 검사합니다. 모든 기간 조건은 `BETWEEN from AND to`, 양 끝 날짜 포함입니다.
 
 | 화면의 숫자 | 계산 (`stats.routes.js` 줄) | 비고 |
 |---|---|---|
-| 총 내원 | `visit` 중 `visit_date` 가 기간 안이고 `status <> 'cancelled'` 인 행 수 (50) | 취소된 접수는 내원이 아니므로 뺌(2026-09-29 실장님 결정) |
+| 총 내원 | `visit` 중 `visit_date` 가 기간 안이고 `status <> 'cancelled'` 인 행 수 (133) | 취소된 접수는 내원이 아니므로 뺌(2026-09-29 실장님 결정) |
 | 고유 환자 | 같은 조건의 `COUNT(DISTINCT patient_id)` | 취소 제외 |
 | 초진 / 재진 | 같은 조건에서 `visit_type` = `newVisit` / `followUp` | 취소 제외. `emergency·referral·none` 은 `other_visits` 로 오지만 화면에 안 나옴 |
 | 완료 / 진행 중 / 취소 | `status` = `completed` / (`registered·waiting·in_progress`) / `cancelled` | 취소 칸만 취소를 셈 |
-| 진료과별 (내원) | `visit LEFT JOIN department`, 취소 제외, `d.id` 로 묶음 (64) | 과 없는 접수는 `code=null` 한 줄 → 화면이 「미지정」으로 표시 |
-| 의사별 (내원) | `visit LEFT JOIN staff ON doctor_id`, 취소 제외, `s.id` 로 묶음 (73) | 담당의 없는 접수는 `name=null` 한 줄 → 「미지정」. 동명이인은 따로 |
-| 수납액 | `billing` 중 `billing_date` 기간 안, `payment_status <> 'cancelled'` 인 행의 `SUM(net_paid)` (93) | `net_paid = amount_paid − change_amount` (마이그레이션 017). 이월 수납·나중 수납 규칙은 3.4 |
+| 진료과별 (내원) | `visit LEFT JOIN department`, 취소 제외, `d.id` 로 묶음 (147) | 과 없는 접수는 `code=null` 한 줄 → 화면이 「미지정」으로 표시 |
+| 의사별 (내원) | `visit LEFT JOIN staff ON doctor_id`, 취소 제외, `s.id` 로 묶음 (156) | 담당의 없는 접수는 `name=null` 한 줄 → 「미지정」. 동명이인은 따로 |
+| 수납액 | `billing` 중 `billing_date` 기간 안, `payment_status <> 'cancelled'` 인 행의 `SUM(net_paid)` (204) | `net_paid = amount_paid − change_amount` (마이그레이션 017). 미수 수납 영수(M2)도 포함 — 받은 돈이므로. 이월·정정 규칙은 3.4 |
 | 청구액 | 같은 행의 `SUM(consult_fee + drug_total + procedure_total)` | **할인 전**, 이월 잔액 제외 |
-| 수납 건수 | 같은 행 수 | 미수(`unpaid`) 영수도 1건으로 셈 |
-| 평균 단가 | 수납액 ÷ 수납 건수 (160) | 미수 영수가 분모에 들어가 평균이 낮아짐 |
-| 진료과별 매출 | 위 billing 행을 `visit.department_id` 로 묶은 `SUM(net_paid)` (82) | 접수 때 고른 과 기준. 이월로 받은 옛 미수도 **새 방문의 과**로 들어감 |
-| 의사별 매출 | 위 billing 행을 `visit.doctor_id LEFT JOIN staff` 로, `s.id` 로 묶음 (97) | 담당의 없는 방문의 영수는 「미지정」 줄. 줄 합계 = 수납액 |
-| 항목별: 진료비·약 | `SUM(consult_fee)`, `SUM(drug_total)` (109) | 할인 전 |
-| 항목별: 서류 | `billing_item.item_type='fee'` 의 `SUM(total_price)` (129) | 수납 화면에서 더한 발급비(DOC·CDR·CERT 등)와, 의사가 오더한 `code_type='fee'` 항목 |
-| 항목별: 검사/처치료 | `SUM(procedure_total)` − 서류 (158) | 수납 화면은 진료비·약이 아닌 것을 모두 `procedure_total` 에 넣으므로(`Payment.jsx:185`) 서류를 빼야 두 번 세지 않음. 네 막대 합 = 청구액 |
-| 취소 영수 | `payment_status='cancelled'` 이고 `COALESCE(cancelled_at::date, billing_date)` 가 기간 안 (121) | **취소한 날** 기준. `cancelled_at::date` 는 DB 세션 시간대로 날짜가 잘림 |
+| 진료 영수 (`billCount`) | 같은 행 중 **미수 수납 영수가 아닌 것**의 수 (211) | 미수 수납 영수 = 진료 금액 0 이고 `previous_balance > 0` (`settlementSql()`, 40). `note` 로 거르지 않는 이유: 자유 글이라 문구가 바뀌면 조용히 깨짐. M2 이전 영수에는 이 모양이 없음(이월 영수는 진료 금액이 있음). 미수(`unpaid`) 진료 영수도 1건 |
+| 미수 수납 (`settlementCount`) | 같은 행 중 미수 수납 영수의 수 (212) | 화면은 진료 영수 칸 아래 작은 글씨로만 |
+| 방문당 평균 청구액 (`avgBilledPerVisit`) | 청구액 ÷ `billedVisits` (257) — `billedVisits` = 같은 행 중 진료 금액이 있는 영수의 `COUNT(DISTINCT visit_id)` | 결정 14 (C). 미수·이월 수납·추가 영수에 흔들리지 않음. 할인 전 금액 기준 |
+| 진료과별 매출 | 수납액을 `paidByVisit()`(62)로 **빚이 생긴 방문**에 나눈 뒤 그 방문의 과로 묶음. 청구액·진료 영수 수는 영수 자기 방문의 과로 (167-202) | 결정 9 (B), 3.8 |
+| 의사별 매출 | 같은 방식으로 방문의 담당의로 묶음 | 담당의 없는 방문은 「미지정」 줄. 과별 줄 합 = 의사별 줄 합 = 수납액 |
+| 항목별: 진료비·약 | `SUM(consult_fee)`, `SUM(drug_total)` (204) | 할인 전 |
+| 항목별: 서류 | `billing_item.item_type='fee'` 의 `SUM(total_price)` (226) | 수납 화면에서 더한 발급비(DOC·CDR·CERT 등)와, 의사가 오더한 `code_type='fee'` 항목 |
+| 항목별: 검사/처치료 | `SUM(procedure_total)` − 서류 (248) | 수납 화면은 진료비·약이 아닌 것을 모두 `procedure_total` 에 넣으므로(`Payment.jsx`) 서류를 빼야 두 번 세지 않음. 네 막대 합 = 청구액 |
+| 취소 영수 | `payment_status='cancelled'` 이고 `COALESCE(cancelled_at::date, billing_date)` 가 기간 안 (218) | **취소한 날** 기준. `cancelled_at::date` 는 DB 세션 시간대로 날짜가 잘림 |
 | 미수 (카드) | 취소 아닌 **모든** billing 의 `SUM(GREATEST(outstanding,0))` (`OWED_SQL`) | 기간 무관. 수납 화면 환자 잔액과 같은 식. 이월된 옛 영수는 `outstanding=0` 이라 안 셈 |
 | 환불 예정 (카드) | 같은 행의 `SUM(GREATEST(net_paid − total_due,0))` (`REFUND_SQL`) | 기간 무관. 수납 화면과 같은 식 |
 
@@ -133,17 +134,17 @@
 |---|---|---|
 | 취소(void) — `006` | `payment_status='cancelled'`, `outstanding=0`, `cancelled_at` | 매출·미수에서 빠짐 ✅. 영수 날짜의 매출이 **나중에 줄어듦**(과거 기간 숫자가 바뀜) |
 | 정정(환불) — `POST /billing/visit/:id/correct` (수납 세션 `8a7ca96` 부터 서버가 만듦) | 그 방문의 활성 영수를 모두 취소하고, **오늘 날짜**로 새 영수 발행: `amount_paid` = 그 방문에서 지금까지 실제로 받은 돈, `change_amount` = 지금 돌려주는 돈, 모자라면 `outstanding`. 할인·이월·서류는 그대로 옮김 | `net_paid` = 받은 돈 − 돌려준 돈 = 올바른 금액(모자라면 받은 만큼). 원래 날짜의 매출은 사라지고 **정정한 날**에 잡힘. 돌려준 돈은 어느 날에도 음수로 안 잡힘. 격리 스택 예시: 9/20 20 000 → 9/29 정정(15 000, 5 000 환불) → 9/20 0, 9/29 +15 000 ✅ |
-| 이월 — `016` | 새 영수 `previous_balance` 에 옛 미수를 더하고, 옛 영수는 `outstanding=0, carried_into_id=새 영수` | 받은 돈은 새 영수 날짜의 수납액에 들어감 ✅(이중 집계 없음). 미수는 `outstanding` 으로 세어 옛 영수를 다시 세지 않음 ✅(2026-09-29 고침) |
+| 이월 — `016` | 새 영수 `previous_balance` 에 옛 미수를 더하고, 옛 영수는 `outstanding=0, carried_into_id=새 영수` | 받은 돈은 새 영수 날짜의 수납액에 들어감 ✅(이중 집계 없음). 미수는 `outstanding` 으로 세어 옛 영수를 다시 세지 않음 ✅. 과·의사별로는 받은 돈 중 옛 빚 몫을 **옛 방문**에 돌림 ✅(결정 9, 3.8) |
 | 순수납 — `017` | `net_paid = amount_paid − change_amount` | 통계는 전부 `net_paid` 사용 ✅ |
-| 나중 수납 — `POST /billing/:id/pay` | 옛 영수의 `amount_paid`·`outstanding` 을 고침. 수납한 날짜는 어디에도 안 남음(`updated_at` 뿐) | 받은 돈이 **원래 영수 날짜**의 수납액에 들어감. 오늘 금고에 들어온 돈과 통계의 오늘 수납액이 다름 |
+| 미수 수납 — `POST /billing/settle` (수납 M2, 예전 `/:id/pay` 는 삭제됨) | 받은 날짜로 새 영수 S 발행: 옛 영수와 **같은 방문**, 진료 칸 0, `previous_balance` = 받는 미수, `net_paid` = 받은 돈, 모자라면 S 에 `outstanding`. 옛 영수는 `outstanding=0`, `carried_into_id=S`. 전체 미수 수납은 방문마다 한 장 | 받은 돈이 **받은 날** 수납액에 ✅, 옛 날짜는 안 바뀜 ✅, 과·의사는 원래 방문 ✅. 진료 영수 수에는 안 셈(따로 `settlementCount`) ✅. M2 이전에 `/pay` 로 받은 돈은 원래 영수 날짜에 남아 있음 |
 
 즉 **통계 수납액 = 「그 날짜에 발행된 영수에서 지금까지 받은 돈」** 이지, 「그 날 금고에 들어온 돈」이 아닙니다. 수납 화면의 날짜별 목록도 같은 기준이라 둘은 서로 맞지만, 둘 다 금고와는 다를 수 있습니다.
 
-**실장님 결정 (2026-09-29, `wiki/decisions.md`, 통계 8 · 수납 M2)**: 이 계산식은 **그대로 둡니다**(8번 A). 대신 수납 세션이 **미수를 나중에 받을 때 받은 날짜의 새 영수를 발행**하게 바꿉니다(M2 (다), 이월과 같은 방식 — 옛 영수는 `outstanding=0`·`carried_into_id`=새 영수, 새 영수는 `previous_balance`=받는 미수·`net_paid`=받은 돈, 진료 금액 0). 그러면 통계를 고치지 않아도:
+**실장님 결정 (2026-09-29, `wiki/decisions.md`, 통계 8 · 수납 M2)**: 이 계산식은 **그대로 둡니다**(8번 A). 대신 수납 세션이 **미수를 나중에 받을 때 받은 날짜의 새 영수를 발행**하게 바꿨습니다(M2 (다), `develop` 에 합쳐짐, 이월과 같은 방식 — 옛 영수는 `outstanding=0`·`carried_into_id`=새 영수, 새 영수는 `previous_balance`=받는 미수·`net_paid`=받은 돈, 진료 금액 0). 그러면 통계를 고치지 않아도:
 
 - 받은 돈이 **받은 날** Encaissé 에 들어가고, 옛 날짜의 Encaissé 는 더 이상 나중에 바뀌지 않습니다. (M2 이전에 받은 미수는 원래 날짜에 남습니다 — 언제 받았는지 기록이 없음.)
 - 새 영수가 원래 방문에 붙으면 과별·의사별 매출은 **원래 진료한 과·의사**로 갑니다.
-- 대신 **Factures(영수 수)가 미수 수납 1건마다 1장 늘고**, 그날 Facturé(진료 금액)는 늘지 않으므로 과별 줄에서 Encaissé > Facturé 인 날이 생깁니다. 평균 단가에 미치는 영향은 14번 결정 자료.
+- 미수 수납 영수는 진료 영수 수(`billCount`)에 넣지 않고 `settlementCount` 로 따로 셉니다(결정 14). 그날 청구액(진료 금액)은 늘지 않으므로 과별 줄에서 수납액 > 청구액 인 날이 생깁니다.
 - 격리 스택에서 M2 방식을 이월 API 로 흉내 내어 확인: 8/28 20 000 중 5 000 → 9/15 미수 15 000 새 영수 → 8/28 Encaissé 5 000(그대로), 9/15 +15 000, FM · 김 선생에 붙음, 미수 0.
 - 정정(환불)한 날은 여전히 금고와 다를 수 있습니다(정정 영수가 올바른 금액 전체를 정정한 날에 가짐). 「그 날 금고에 들어온 돈」 칸은 **보류 — 필요해지면 나중에**(수납의 입출금 기록이 먼저 필요).
 
@@ -156,20 +157,33 @@
 
 **3차 (문제 2·3·4·5·6·11 고친 뒤)** — 과·담당의 없는 방문에 진료비 1 000 + 검사 2 000 + 서류 500 = 3 500 현금 추가. 접수 12건 중 취소 1 → 총 내원 11 ✅, 초진 10 · 재진 1 · 고유 환자 7 ✅, 과별 8 + 1 + 1 + 미지정 1 = 11 ✅, 의사별 9 + 미지정 2 = 11 ✅. 수납액 21 500 = 의사별 15 000 + 미지정 6 500 = 과별 8 000 + 7 000 + 3 500 + 3 000 ✅. 항목별 진료비 28 000 + 약 0 + 검사/처치료 2 000 + 서류 1 500 = 청구액 31 500 ✅. 발생일 2026-09-29 ✅, 약품 표 기간 `2025-10-01 ~ 2026-09-29` ✅. 한국어·프랑스어 화면에서 「취소 / Annulé」, 「미지정 / Non attribué」, 프랑스어 진료과 이름을 눈으로 확인.
 
+**4차 (결정 9·12·14 적용 뒤, 새 DB, 실제 수납 API 로)** — 김 선생 = 가정의학과(FM), 이 선생 = 내과(INT), 소아과(PED) 는 담당의 없음.
+S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월 6 000 = 9 000 전액. S2 일부 이월(옛 빚부터): 9/10 FM·김 8 000 미수 → 9/11 INT·이 5 000 + 8 000 중 10 000 수납. S3 세 방문 사슬: 9/10 FM·김 6 000 중 1 000 → 9/11 INT·이 4 000 + 5 000 중 2 000 → 9/12 PED 2 000 + 7 000 전액. S4 미수 수납(M2 `/settle`): 9/10 INT·이 7 000 중 2 000 → 9/12 에 5 000.
+
+| 날 | 수납액 | 과별 (손 계산 = 통계) | 의사별 | 진료 영수 · 미수 수납 | 방문당 평균 청구액 |
+|---|---|---|---|---|---|
+| 9/10 | 7 000 | FM 5 000 · INT 2 000 | 김 5 000 · 이 2 000 | 4 · 0 | 31 000 ÷ 4 = 7 750 |
+| 9/11 | 21 000 | FM 16 000 · INT 5 000 (예전 식이면 INT 21 000) | 김 16 000 · 이 5 000 | 3 · 0 | 12 000 ÷ 3 = 4 000 |
+| 9/12 | 14 000 | FM 3 000 · INT 9 000 · PED 2 000 | 김 3 000 · 이 9 000 · 미지정 2 000 | 1 · 1 | 2 000 ÷ 1 = 2 000 |
+| 9/10~12 | 42 000 | FM 24 000 · INT 16 000 · PED 2 000 | 김 24 000 · 이 16 000 · 미지정 2 000 | 8 · 1 | 45 000 ÷ 8 = 5 625 |
+
+모든 날에 과별 줄 합 = 의사별 줄 합 = 수납액 ✅. 미수 명단: S2 의 3 000(9/11 내과 진료분 — 옛 빚부터 갚았으므로 남은 것은 새 진료분) ✅. 약품(결정 12): 9/13 접수 셋 — 취소·미조제 15, 취소·조제됨 15, 정상 15(새 총량 식이 `total_qty` 를 하루 총량 × 일수로 다시 계산) → 처방전체 30, 조제완료 15 ✅(예전 식이면 45). 한국어·프랑스어 화면에서 「진료 영수 8건 + 미수 수납 1건 / Factures de soins 8 + 1 règlement(s) de solde」, 「방문당 평균 청구액 / Moy. facturée / visite 5 625」, 과·의사별 줄 확인.
+
 ### 3.5 `GET /api/stats/monthly?months=6`
 
-- `generate_series` 로 이번 달을 포함한 최근 `months` 개월을 모두 만들고, 달마다 취소 아닌 내원 수와 취소 아닌 billing `SUM(net_paid)` 를 붙입니다(`stats.routes.js:169`). months 는 1~24로 제한.
+- `generate_series` 로 이번 달을 포함한 최근 `months` 개월을 모두 만들고, 달마다 취소 아닌 내원 수와 취소 아닌 billing `SUM(net_paid)` 를 붙입니다(`stats.routes.js:266`). months 는 1~24로 제한.
 - **자료가 없는 달도 0 으로 한 줄씩 나옵니다.** 예전에는 자료가 있는 달만 돌려줘서 조용한 달이 그래프에서 사라지고, 양옆 막대가 이어진 달처럼 보였습니다(문제 13, 2026-09-29 고침).
 - 이번 달 이후 날짜(미래 날짜로 잘못 들어간 내원·영수)는 창 밖이라 세지 않습니다.
 - 격리 스택에서 내원 1건을 6월로 옮겨 확인: 04·05월 0, 06월 1, 07·08월 0, 09월 11 ✅(한국어·프랑스어 화면에 여섯 막대).
 
 ### 3.6 `GET /api/stats/drug-usage?granularity&from&to&status&dispense_type`
 
-- `prescription JOIN consultation JOIN visit` 에서 **`visit.visit_date`** 로 기간을 자르고 묶습니다(조제일 `dispensed_at` 이 아님)(`stats.routes.js:237`).
+- `prescription JOIN consultation JOIN visit` 에서 **`visit.visit_date`** 로 기간을 자르고 묶습니다(조제일 `dispensed_at` 이 아님)(`stats.routes.js:342`).
 - `status=dispensed` 면 조제 완료만, 아니면 `rx.status <> 'cancelled'` 전체. `dispense_type` 으로 원내·원외 필터.
+- **취소된 접수의 처방**(결정 12, C): 조건 `(v.status <> 'cancelled' OR rx.status = 'dispensed')`(366) — 처방전체에서는 빼되, 약국이 이미 내준 약은 선반을 떠났으므로 두 모드 모두에서 셉니다. 조제완료 ⊆ 처방전체가 유지됩니다.
 - 수량은 `SUM(COALESCE(total_qty,0))`. `total_qty` 가 비어 있는 처방은 0으로 셉니다.
 - **약 총량 계산식 (실장님 결정 2026-09-29, `wiki/decisions.md`)**: 처방 첫 칸은 **하루 총량(일총투여)**, 총량 `total_qty` = 하루 총량 × 일수. 계산·저장은 진료 쪽(처방 저장) 한 곳이고, 통계는 **저장된 `total_qty` 만 읽으므로 코드 변경 없음**. 옛 처방: 식이 바뀌기 전에 저장된 처방은 옛 식(용량 × 횟수 × 일수)의 값을 가집니다. 실행 중 EMR 의 처방 6건(2026-09-29)은 **현장 사용 전의 시험 데이터라 다시 계산하지 않고 그대로 둡니다**(총괄 판단) — 실제 진료 기록이 쌓이기 전이므로 약품 사용통계에 옛 식 수량이 섞일 일은 없습니다. 약국 재고 차감은 `Math.ceil(total_qty)`(`pharmacy.routes.js:151`)라 소수 수량이면 통계와 재고 차감량이 조금 다를 수 있습니다.
-- **취소된 접수의 처방도 들어갑니다**(visit.status 를 안 봄 — 문제 12, 결정 대기). 접수 취소는 처방을 같이 취소하지 않지만, 접수 세션이 「대기 중인 접수만 취소」로 바꿔서(`visit.routes.js` `PUT /:id/status`) 앞으로는 처방이 달린 접수가 취소될 일이 없습니다 — 예전 기록에만 남을 수 있음.
+- 참고: 접수 세션이 「대기 중인 접수만 취소」로 바꿔서(`visit.routes.js` `PUT /:id/status`) 앞으로는 처방이 달린 접수가 취소될 일이 없습니다 — 위 조건은 예전 기록용. 실행 중 EMR 에는 해당 기록 0건(총괄 조회).
 - 기본 기간: 일별 최근 30일, 월별 이번 달 포함 12개월, 연별 올해 포함 5년. 기본 기간도 `ymd()` 로 `'YYYY-MM-DD'` 문자열을 돌려줍니다(예전에는 Date 로 나가 `2025-09-30T21:00:00.000Z` 처럼 보였음, 문제 6 고침).
 - 결과를 약품(`drug_code|drug_name`)별 → 기간별 피벗으로 만들고 총량 내림차순 정렬. CSV 는 브라우저에서 만듭니다(BOM 포함 UTF-8).
 
@@ -179,6 +193,15 @@
 - `docker-compose.yml` 은 DB 컨테이너에 `TZ`·`PGTZ` 를 줍니다. 격리 스택에서 확인한 결과, 백엔드(node-pg) 연결의 시간대는 **`postgresql.conf` 의 `timezone` 값**(출처 `configuration file`)이고, 이 값은 **DB 가 처음 만들어질 때(initdb)** 의 `TZ` 로 한 번 쓰입니다. `PGTZ` 는 psql 같은 libpq 클라이언트에만 적용되고 node-pg 는 읽지 않습니다.
 - 새로 설치한 DB 는 `Indian/Antananarivo` 로 확인했습니다. **1.1.0 이전에 만들어진 DB 는 `UTC` 로 남아 있을 수 있습니다** — 확인 필요(7절 문제 7).
 - 화면의 기간 버튼은 브라우저 시계, 서버의 `todayLocal()` 은 백엔드 `TZ`, DB 기본값은 DB 시간대 — 세 시계가 같을 때만 「오늘」이 한 가지 뜻입니다.
+
+### 3.8 이월된 돈을 원래 방문으로 돌리기 (`paidByVisit`, 결정 9)
+
+- **왜**: 옛 미수를 다음 방문 영수에 얹어(이월) 받으면 돈 전체가 **다음 방문**의 과·의사로 들어가, 진료하지 않은 의사의 실적이 부풀었습니다. 미수 수납 버튼(M2)으로 받으면 원래 방문으로 가서, 받는 방법에 따라 결과가 달랐습니다. 실장님 결정: **원래 진료한 과·의사로**, 일부만 받았으면 **옛 빚부터** 갚은 것으로(수납이 이월을 흡수하는 순서와 같음). **날짜는 옮기지 않음** — 받은 영수의 날짜에 그대로(결정 8).
+- **어떻게**(`stats.routes.js:62`): 기간 안 영수마다 `total_due` 를 조각으로 나눕니다 — 먼저 그 영수로 넘어온 옛 영수들(`carried_into_id` 로 이 영수를 가리키는, 취소 안 된 영수, 오래된 순)의 **안 받은 나머지**, 그다음 자기 진료분(`total_due − 넘어온 합`). `net_paid` 를 그 순서로 채워 방문별로 나눕니다. 옛 영수의 「안 받은 나머지」도 같은 방식으로 재귀 계산하므로 A → B → C 사슬이면 C 에서 받은 돈이 A·B 방문에 맞게 갈립니다(4차 시험 S3). 넘어온 옛 영수들은 `WITH RECURSIVE` 한 번으로 모읍니다.
+- 취소된 영수는 조각이 되지 않습니다. 정정(`/correct`)은 대체된 영수들의 `carried_into_id` 를 새 영수로 옮기는데, 새 영수의 `previous_balance` 는 같은 방문 안의 몫을 이미 뺐으므로 취소된 것은 빼야 맞습니다.
+- `total_due` 보다 더 받은 돈(환불 예정)은 영수 자기 방문에 둡니다.
+- 청구액(Facturé)과 진료 영수 수는 **영수 자기 방문**에 둡니다 — 진료한 금액은 그 방문의 것이므로.
+- 같은 방문 안의 이월(M2 미수 수납 S, 추가 청구 영수)은 결과가 같아 따로 다룰 것이 없습니다.
 
 ## 4. 데이터 · API
 
@@ -192,7 +215,7 @@
 
 | 경로 | 인자 | 돌려주는 것 |
 |---|---|---|
-| `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount,avg}, voidedCount, outstanding{owed,refund}`. 과·의사 없음은 `code`/`name` 이 `null` |
+| `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount(진료 영수),settlementCount(미수 수납),billedVisits,avgBilledPerVisit}, voidedCount, outstanding{owed,refund}`. 과·의사 없음은 `code`/`name` 이 `null`. 과·의사별 `paid` 는 3.8 방식. 예전 `revenue.avg` 는 없어짐(`avgBilledPerVisit` 로) |
 | `GET /monthly` | `months` (1~24, 기본 6) | `[{ym, visits, revenue}]` |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
 | `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, from, to, periods, drugs[{drug_code,drug_name,category,total_qty,total_count,by_period}], periodTotals, grandTotal}` |
@@ -208,7 +231,7 @@
 | `visit` | `visit_date, visit_type, status, patient_id, department_id, doctor_id` | 접수 |
 | `department` | `id, code, name, name_en, name_fr` (화면이 언어에 맞는 이름을 고름) | 설정 |
 | `staff` | `id, name` | 설정 |
-| `billing` | `billing_date, payment_status, consult_fee, drug_total, procedure_total, total_due, net_paid, outstanding, cancelled_at, visit_id, patient_id` (`carried_into_id` 는 직접 안 씀 — 수납이 `outstanding` 에 반영) | 수납 |
+| `billing` | `billing_date, payment_status, consult_fee, drug_total, procedure_total, previous_balance, total_due, net_paid, outstanding, carried_into_id, cancelled_at, visit_id, patient_id` (`carried_into_id` 는 과·의사별 매출을 원래 방문으로 돌릴 때 — 3.8) | 수납 |
 | `billing_item` | `item_type, total_price` | 수납 |
 | `patient` | `chart_no, last_name, first_name, mobile, phone` | 접수 |
 | `prescription` | `drug_code, drug_name, drug_id, total_qty, status, dispense_type, consultation_id` | 진료·약국 |
@@ -244,13 +267,14 @@
 | 6 | ~~낮음~~ **고침** | **약품 표 기간 표시가 UTC 문자열.** 서버 기본 기간이 Date 로 응답되어 `2025-09-30T21:00:00.000Z ~ …` 로 보였음. `/summary` 의 기본 `range` 도 같은 문제였음 (2026-09-29) | `stats.routes.js:40-44`, `:253-259` |
 | 7 | 보통 (확인 필요 · 총괄) | **오래된 설치의 DB 시간대가 UTC 일 수 있음.** 백엔드 연결 시간대는 initdb 때 쓰인 `postgresql.conf` 값. 1.1.0 이전에 만든 DB 면 자정~03시 내원·수납이 전날로 들어가고, 통계 기본 기간·`cancelled_at::date` 도 UTC 로 잘림. 실행 중인 EMR 은 규칙상 확인하지 않음 | 3.7, `docker-compose.yml:17-18` |
 | 8 | **결정됨 — A 유지** (2026-09-29) | 수납액이 「금고 기준」이 아님. 실장님 결정: 통계 계산은 그대로, 수납 M2 (다)(미수 수납 때 받은 날짜의 새 영수)로 미수 수납 돈이 받은 날에 잡히게 함. 금고 칸은 보류. 정정한 날은 여전히 금고와 다를 수 있음(3.4) | 3.4, `wiki/decisions.md` |
-| 9 | 낮음 (결정 대기 — 인계 노트 「실장님 결정 자료」) | 진료과별·의사별 매출에 **이월로 받은 옛 미수가 새 방문의 과·의사로** 들어감(예: 김 선생 10 000 진료 중 6 000 을 다음 방문 때 이월로 받으면 그 6 000 이 이 선생 매출로). 나중 수납 버튼으로 받으면 원래 과·의사로 가서, 받는 방법에 따라 결과가 다름 | `stats.routes.js:82-91`, `:97-107` |
+| 9 | ~~낮음~~ **고침** (결정 9 B) | 진료과별·의사별 매출에 **이월로 받은 옛 미수가 새 방문의 과·의사로** 들어갔음. `carried_into_id` 로 원래 방문에 돌림, 일부 수납은 옛 빚부터 (2026-09-29, 3.8) | `stats.routes.js:62-116`, `:167-202` |
 | 10 | ~~낮음~~ **고침** | 미수 카드(영수별 양수 합)와 미수 명단(환자별 상계)의 기준이 달라 합계가 다를 수 있었음. (2026-09-29 문제 1과 함께 — 명단도 영수별 합으로, 상계 안 함) | `stats.routes.js:135-138` ↔ `:206-223` |
 | 11 | ~~낮음~~ **고침** | **프랑스어 화면에 한국어가 보임.** 취소 카드 라벨이 없는 키 `t.cancelled` 라 「취소」가 떴음 → `st_cancelled`. SQL 의 `'(미지정)'` → 화면이 `st_unassigned` 로 표시. 진료과 이름을 화면 언어에 맞게(`name_fr`/`name_en`/`name`) (2026-09-29) | `Stats.jsx:117-125`, `:149` |
-| 12 | 낮음 (결정 대기 — 인계 노트 「실장님 결정 자료」) | 약품 사용통계가 위쪽 기간 선택을 따르지 않고 기간을 고를 수 없음. **취소된 접수의 처방도 셈**(앞으로는 새로 안 생김, 3.6). `total_qty` 없는 처방은 0 | `Stats.jsx:36-44`, `stats.routes.js:261-268` |
+| 12 | 낮음 (**일부 고침**, 결정 12 C) | ~~취소된 접수의 처방도 셈~~ → 처방전체에서 빼고 조제된 것은 셈 (2026-09-29, 3.6). **남은 것**: 약품 사용통계가 위쪽 기간 선택을 따르지 않고 기간을 고를 수 없음. `total_qty` 없는 처방은 0(새 식 이후 진료 서버가 저장 시 계산) | `Stats.jsx:36-44`, `stats.routes.js:358-366` |
 | 13 | ~~낮음~~ **고침** | 월별 추이에서 자료 없는 달이 빠졌음(0 막대가 아니라 칸이 없어짐). `generate_series` 로 모든 달을 만듦 (2026-09-29) | `stats.routes.js:169-197` |
-| 14 | 낮음 (결정 대기 — 인계 노트 「실장님 결정 자료」) | 평균 단가 = Encaissé ÷ 영수증 수. 미수 영수가 분모에, 이월 수납이 분자에 들어가 흔들림(3 000 진료가 9 000 으로 보이는 날이 있음) | `stats.routes.js:116`, `:160` |
+| 14 | ~~낮음~~ **고침** (결정 14 C) | 평균 단가 = Encaissé ÷ 영수증 수 → **방문당 평균 청구액**(청구액 ÷ 청구한 방문 수). 영수 건수는 진료 영수만, 미수 수납은 작은 글씨로 따로 (2026-09-29) | `stats.routes.js:40-43`, `:204-215`, `:251-257`, `Stats.jsx:177-179` |
 | 15 | ~~낮음~~ **고침** | 기간을 바꿀 때마다 기간과 무관한 `/outstanding`·`/monthly` 를 다시 불렀음 → 월별은 화면 열 때 한 번, 명단은 열 때마다. 항상 0 이던 `revenue.cancelled_count` 삭제 (2026-09-29) | `Stats.jsx:35`, `:74-78`, `stats.routes.js:116` |
+| 16 | 낮음 (새로 찾음, 아직 그대로) | **미수 명단의 Depuis(발생일)가 빚이 생긴 날이 아닐 수 있음.** `owed_since` = 미수가 남은 영수 중 가장 이른 `billing_date` 인데, 미수 수납(M2)을 일부만 받으면 남은 빚이 **받은 날짜의 새 영수 S** 에 있어 발생일이 그 날로 보임(예: 8/28 진료 15 000 중 9/15 에 10 000 수납 → Depuis 9/15). 이월도 같음. 3.8 의 조각 계산으로 「남은 조각 중 가장 오래된 진료의 날짜」를 쓰면 고쳐짐. 코드로 확인, 격리 스택 재현은 아직 | `stats.routes.js:312` |
 
 ## 8. 변경 기록
 
@@ -264,4 +288,5 @@
 | 2026-09-29 | 8·9·12·14 결정 자료(인계 노트), 3.4 정정 행을 수납의 새 정정 규칙에 맞춤, 3.6 접수 취소 규칙 반영(코드 변경 없음) | `61f90fb` |
 | 2026-09-29 | 결정 8 기록: A 유지 · 수납 M2 (다)로 미수 수납을 받은 날에 · 금고 칸 보류(코드 변경 없음) | `bd91422` |
 | 2026-09-29 | 3.6 에 약 총량 결정(하루 총량 × 일수, 통계는 저장값만 읽음) 기록 · 14번 자료에 미수 수납 영수 거르기 의견(인계 노트) | `332012e` |
-| 2026-09-29 | 3.6 옛 처방 수량: 운영 처방 6건은 시험 데이터라 다시 계산하지 않음(총괄 판단) | (이 커밋) |
+| 2026-09-29 | 3.6 옛 처방 수량: 운영 처방 6건은 시험 데이터라 다시 계산하지 않음(총괄 판단) | `973d322` |
+| 2026-09-29 | 결정 9(이월 수납을 원래 과·의사로, 옛 빚부터) · 12(취소 접수 처방은 조제된 것만) · 14(방문당 평균 청구액, 진료 영수만 세고 미수 수납은 따로) 적용. 새 문제 16 기록 | (이 커밋) |

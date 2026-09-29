@@ -416,6 +416,9 @@ export default {
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",
   st_unassigned: "Unassigned",
+  st_billCount: "Treatment receipts",
+  st_settlementsSub: "+ {n} balance settlement(s)",
+  st_avgPerVisit: "Avg billed / visit",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",

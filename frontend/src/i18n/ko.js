@@ -407,6 +407,9 @@ export default {
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
   st_unassigned: "미지정",
+  st_billCount: "진료 영수",
+  st_settlementsSub: "+ 미수 수납 {n}건",
+  st_avgPerVisit: "방문당 평균 청구액",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",
