@@ -5,7 +5,7 @@
 ## 2026-09-29 — 현황 파악, 위키 첫 작성 (코드 변경 없음)
 
 - **상태**: 보류 — 무엇부터 고칠지 실장님 결정 대기
-- **커밋**: session/laboratory — 이 항목과 같은 커밋 (출발점 `develop` `a4a9ea6`)
+- **커밋**: session/laboratory `1724740` (출발점 `develop` `a4a9ea6`)
 - **한 일**: 임상병리 파일 전부(Lab.jsx · LabResults.jsx · lab.routes.js · 설정 검사항목 탭 · 014_lab.sql)와 진료에서 오더가 넘어오는 경로(consult.routes.js 오더 추가·삭제·완료, Consultation.jsx)를 읽고, `modules/laboratory.md`를 실제 코드 기준으로 채움. 문제 18개를 심각도·근거와 함께 7절에 정리.
 - **바꾼 파일**: `wiki/modules/laboratory.md`, `wiki/handoff/laboratory.md` (코드 변경 없음)
 - **공용 파일 변경**: 없음
