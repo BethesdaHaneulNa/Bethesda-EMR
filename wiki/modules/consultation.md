@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 하루 총량 빈 처방 표시 확인 요청 · 감춘 예시 약 + 약속처방은 결정 대기(7.2 ㉕)
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 문서의 빈 주소·전화 줄 숨김 확인 요청 · 다음은 약속처방의 감춘 약(7.2 ㉕ 가안)
 
 ## 1. 이 모듈이 하는 일
 
@@ -247,7 +247,7 @@
   - 체크 선택값은 영어 문자열(`Yes`, `3 o’clock`, `Skin tag`)이 그대로 저장값이자 키입니다. **옵션 문자열을 바꾸면 옛 문서의 그림·표시가 깨집니다.** 번역(7절 ⑥)은 저장값을 그대로 두고 인쇄할 때만 바꿔야 합니다.
 - 발행일 `today`는 `new Date().toISOString()` — UTC 날짜입니다(7절 ⑰).
 - 서명 칸의 의사는 `context.doctor_name`(= **내원의 담당의**) → 없으면 로그인한 사람.
-- `documents/shared.jsx` — `A4`(여백 `pad`), `ClinicHeader`, `DocMetaRow`, `PatientBox`(`minimal`이면 주소·전화 뺌 — 수술기록지), `DocSection`, `SignatureBlock`(`tight`), `printDocument(node, title, lang)`(새 창에 A4 노드 HTML을 복사, `@page{size:A4;margin:14mm}`, 350ms 뒤 인쇄. 팝업이 막혔을 때의 안내는 `lang`(문서 언어)으로 — 전에는 한국어만).
+- `documents/shared.jsx` — `A4`(여백 `pad`), `ClinicHeader`, `DocMetaRow`, `PatientBox`(`minimal`이면 주소·전화 뺌 — 수술기록지. 그 밖의 문서도 **값이 없는 주소·전화 줄은 줄째 뺌** — 2026-09-29 실장님 결정으로 접수가 주소를 받지 않아 주소 줄이 늘 비기 때문. 의뢰서·동의서·원외처방전(약국)에 해당), `DocSection`, `SignatureBlock`(`tight`), `printDocument(node, title, lang)`(새 창에 A4 노드 HTML을 복사, `@page{size:A4;margin:14mm}`, 350ms 뒤 인쇄. 팝업이 막혔을 때의 안내는 `lang`(문서 언어)으로 — 전에는 한국어만).
 
 ### 3.6 수술기록지 — `documents/surgical-records.jsx` · `op-figures.jsx` · `op-plates.js`
 
@@ -473,7 +473,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **하루 총량 없는 처방 표시** — 줄 표시·제목 옆 개수·완료할 때 한 번 확인(막지 않음). 감춘 예시 약이 약속처방으로 처방되는 것을 확인해 7.2 ㉕로 기록. 번역 키 `cs_` 4개 | (이 커밋) |
+| 2026-09-29 | **문서의 빈 주소·전화 줄 숨김**(공용 `PatientBox`) — 접수가 주소를 받지 않기로 해서(실장님 결정) 늘 빈칸이던 줄. 값이 있으면 예전처럼 인쇄. 렌더: 기존 12개 수술기록지·동의서 등 출력 HTML이 전과 바이트까지 같음 | (이 커밋) |
+| 2026-09-29 | **하루 총량 없는 처방 표시** — 줄 표시·제목 옆 개수·완료할 때 한 번 확인(막지 않음). 감춘 예시 약이 약속처방으로 처방되는 것을 확인해 7.2 ㉕로 기록. 번역 키 `cs_` 4개 | `40ccd6c` |
 | 2026-09-29 | **S2 — 서버 권한 = 화면 권한**(실장님 결정) — 처방·오더 읽기 consultation·payment·pharmacy, 진단 consultation, 문서 읽기 5개 권한·발급/취소 3개 권한, 약속처방 읽기 consultation·settings | `6b315c9` |
 | 2026-09-29 | **약 표기를 공용 `rx-dosing.js`로** — 진료 화면 풀이 줄·의뢰서 투약 글이 약국과 같은 문장(단위 정/cp, ½). 진료 쪽 계산·키 정리(`cs_rxStoredTotal`은 수납이 써서 유지). **검사·영상 진행 상태 30초 자동 반영**(임상병리 부탁) — 적던 칸은 그대로. 번역 키 `cs_rxUnevenFlag`·`cs_rxLegacy` 추가, `cs_rxBreakdown`·`cs_rxUneven` 삭제 | `bdd14bf` |
 | 2026-09-29 | **가격 0인 약·오더 표시** — 처방 줄·검색 목록에 「가격 없음 / Sans prix」, 제목 옆 개수, 도움말(설정에서 가격을 넣어도 기존 줄은 그대로 → 지우고 다시 넣기). 막지 않음. 번역 키 `cs_` 3개 | `f9924b7` |
