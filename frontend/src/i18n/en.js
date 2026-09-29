@@ -497,6 +497,9 @@ export default {
   ph_pack_unit: "Unit",
   ph_packUnitHint: "Tick for syrups, inhalers, eye drops, creams… handed out by the bottle or tube. The doctor then writes how many.",
   ph_packUnitHintOn: "The doctor writes how many bottles/tubes (no total is computed). Enter the unit price per bottle/tube.",
+  ph_genericName: "Ingredient (generic)",
+  ph_nameEn: "English name",
+  ph_minStockHint: "At or below this count the pharmacy Stock tab shows it in red. 0 = no minimum.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

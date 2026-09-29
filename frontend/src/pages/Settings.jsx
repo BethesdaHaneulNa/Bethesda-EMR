@@ -378,7 +378,7 @@ export default function SettingsPage() {
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',default_dose:'1.000',default_freq:1,default_days:7,default_route:'QD',unit_price:0,stock_qty:0})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
+              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',default_dose:'1.000',default_freq:1,default_days:7,default_route:'QD',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'#1e2433'}}>
@@ -394,7 +394,7 @@ export default function SettingsPage() {
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_days}</td>
                   <td style={{padding:'4px 6px',color:'#f59e0b',fontSize: 12}}>{d.default_route}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{d.unit_price}</td>
-                  <td style={{padding:'4px 6px',textAlign:'right',color:d.stock_qty<20?'#f87171':'#34d399',fontWeight:600}}>{d.stock_qty}</td>
+                  <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'#f87171':'#34d399',fontWeight:600}}>{d.stock_qty}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
                     <button onClick={function(){openEdit('drug',d)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
                     <button onClick={function(){deleteItem('drug',d.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
@@ -927,13 +927,18 @@ export default function SettingsPage() {
                 <Fld label={t.code}><input value={editItem.code||''} onChange={function(e){ue('code',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.colDrugName}><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
               </div>
+              {/* The API always took these; the form had no place for them (pharmacy L6). */}
+              <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:6}}>
+                <Fld label={t.ph_genericName}><input value={editItem.generic_name||''} onChange={function(e){ue('generic_name',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.ph_nameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
+              </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
                 <Fld label={t.colDose}><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.colFreq}><input type="number" value={editItem.default_freq||1} onChange={function(e){ue('default_freq',Number(e.target.value))}} style={IS}/></Fld>
                 <Fld label={t.colDays}><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
                 <Fld label={t.ph_colDirections}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
+              <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 1fr',gap:6}}>
                 <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
                 <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
                 {/* Read-only: stock moves only through the pharmacy's Stock tab, where each
@@ -941,6 +946,9 @@ export default function SettingsPage() {
                     Unchanged here, saveEdit leaves stock_qty out of the request. A new
                     drug starts at 0 and is received there. */}
                 <Fld label={t.ph_stock}><input type="number" value={editItem.id ? (editItem.stock_qty||0) : 0} readOnly disabled title={t.ph_stockReadOnlyHint} style={Object.assign({},IS,{opacity:.6,cursor:'not-allowed'})}/></Fld>
+                {/* At or below this the Stock tab shows the count in red; 0 = no minimum.
+                    Whole numbers only - the column is an integer and the API refuses others. */}
+                <Fld label={t.ph_minStock}><input type="number" min="0" step="1" value={editItem.min_stock==null?'':editItem.min_stock} title={t.ph_minStockHint} onChange={function(e){ue('min_stock',e.target.value===''?0:Math.max(0,Math.floor(Number(e.target.value))||0))}} style={IS}/></Fld>
               </div>
               <div style={{fontSize: 12,color:'#94a3b8'}}>📦 {t.ph_stockReadOnlyHint}
               </div>

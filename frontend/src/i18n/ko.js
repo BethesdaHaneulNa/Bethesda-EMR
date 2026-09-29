@@ -488,6 +488,9 @@ export default {
   ph_pack_unit: "개",
   ph_packUnitHint: "시럽·흡입기·안약·연고처럼 병·튜브로 주는 약이면 체크하세요. 의사가 처방할 때 병·개 수를 직접 적게 됩니다.",
   ph_packUnitHintOn: "의사가 병·개 수를 직접 적습니다(총량을 계산하지 않음). 단가는 병·개당 값으로 넣으세요.",
+  ph_genericName: "성분",
+  ph_nameEn: "영어 이름",
+  ph_minStockHint: "재고가 이 수 이하면 약국 재고 탭에서 빨간색으로 보입니다. 0이면 표시하지 않음.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

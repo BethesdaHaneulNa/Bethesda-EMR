@@ -488,6 +488,9 @@ export default {
   ph_pack_unit: "Unité",
   ph_packUnitHint: "À cocher pour les sirops, inhalateurs, collyres, crèmes… délivrés par flacon ou tube. Le médecin indiquera alors le nombre.",
   ph_packUnitHintOn: "Le médecin indique le nombre de flacons/tubes (pas de calcul de quantité). Saisissez le prix par flacon/tube.",
+  ph_genericName: "Principe actif",
+  ph_nameEn: "Nom anglais",
+  ph_minStockHint: "À ce niveau ou en dessous, le stock s'affiche en rouge dans l'onglet Stock de la pharmacie. 0 = pas de minimum.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",
