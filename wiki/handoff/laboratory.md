@@ -5,7 +5,7 @@
 ## 2026-09-29 — 결정 8 반영: 결과 표에서 같은 날 재검 둘 다 보이기
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `26b861b` (출발점 `develop` `23bde17`)
 - **한 일**: 실장님 결정 8(B). `LabResults.jsx` — 날짜·패널마다 오더를 입력 시각 순으로 1번째·2번째 칸에 배치, 재검이 있는 날짜만 「날짜 (1)」「날짜 (2)」로 나누고 값 아래에 입력 시각(HH:MM). 다른 패널은 1번 칸을 같이 써서 보통 날은 그대로 한 칸. 예전엔 나중 결과가 앞 결과를 덮어 하나만 보였음. 서버 변경 없음(`/lab/patient/:id/results`가 이미 `order_item_id`·`result_at`을 줌).
   - 총괄 요청: 위키 3.3에 `<x`·`>x` 예시 표(9줄, 코드로 판정 확인).
 - **바꾼 파일**: `frontend/src/components/LabResults.jsx` · `wiki/modules/laboratory.md`(2절, 3.3, 3.5, 7절 8, 8절)
