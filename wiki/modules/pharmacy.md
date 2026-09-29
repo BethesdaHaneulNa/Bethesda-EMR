@@ -63,7 +63,7 @@
 ### 2.3 원외 처방전 인쇄 — Ordonnance ext.
 
 1. 환자를 고른 상태에서 **💊 Ordonnance ext. (원외 처방전)** 를 누릅니다. **Ordonnance externe** 창이 열립니다.
-2. 가운데에 처방전 미리보기가 나옵니다. 표에는 **Externe 로 고른 약만** 나옵니다. 약 이름 아래에 먹는 법이 문장으로 찍힙니다. 예) « 1 cp × 3 fois/jour pendant 7 jours (total 21) ». 반 알 단위로 안 나눠지는 처방은 « 2 cp par jour en 3 prises, pendant 5 jours (total 10) » 처럼 하루 양으로 찍힙니다. 총 개수가 없는 약은 **Qté** 칸에 « à vérifier » 가 찍힙니다. 하나도 없으면 « Aucune ordonnance externe » 문구가 나오니, 창을 닫고 약을 **Externe** 로 바꾼 뒤 다시 여세요.
+2. 가운데에 처방전 미리보기가 나옵니다. 표에는 **Externe 로 고른 약만** 나옵니다. 약 이름 아래에 먹는 법이 문장으로 찍힙니다. 예) « 1 cp × 3 fois/jour pendant 7 jours (total 21) ». 반 알 단위로 안 나눠지는 처방은 « 2 cp par jour en 3 prises, pendant 5 jours (total 10) » 처럼 하루 양으로 찍힙니다. 총 개수가 없는 약은 **Qté** 칸에 « à vérifier » 가 찍힙니다. 하나도 없으면 « Aucune ordonnance externe » 문구가 나오고 **Émettre (발급)** 가 꺼지며 아래에 « ⚠ Aucun médicament n'est marqué « Externe » : rien à émettre… » 가 보입니다 — 번호가 붙은 빈 처방전이 나가지 않게(2026-09-29 통합 시험 A, 서버도 막음). 창을 닫고 약을 **Externe** 로 바꾼 뒤 다시 여세요.
 3. 왼쪽 **Saisie (내용 입력)** 에 필요하면 **Pharmacie (optionnel) (수신 약국, 선택)** 과 **Conseils / Remarques (복약지도 / 비고)** 를 적습니다.
 4. 처방전 언어는 창 오른쪽 위 **FR · EN · KO** 로 바꿀 수 있습니다. 환자가 가져갈 것이므로 보통 **FR** 입니다.
 5. **Émettre (발급)** 를 누르면 문서 번호가 붙어 기록에 남고, 오른쪽 **Historique (발급 이력)** 에 나타납니다. 이어서 **🖨 Réimprimer (재출력)** 를 눌러 인쇄합니다.
