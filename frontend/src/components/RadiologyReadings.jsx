@@ -82,6 +82,9 @@ export function RadiologyReadings(props) {
             ? <div style={{ fontSize: 12, color: t2, margin: '2px 0 6px' }}>{t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
             : null}
           <PatientCheck images={imagesOfRow(r)} t={t} />
+          {r.image_study_uid && r.image_study_uid !== r.study_instance_uid
+            ? <div style={{ fontSize: 12, color: '#fbbf24', margin: '0 0 6px' }}>{t.px_linkedByAccession}</div>
+            : null}
           <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#0f1117', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
             {r.result_text || (t.noReading || '판독 소견 없음')}
           </div>
