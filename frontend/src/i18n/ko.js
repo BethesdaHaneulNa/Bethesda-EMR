@@ -293,6 +293,11 @@ export default {
   cs_labPending: "결과 대기",
   cs_labDone: "결과 있음",
   cs_labCancelled: "취소됨",
+  cs_wsPending: "전송 전",
+  cs_wsSent: "전송됨",
+  cs_wsInProgress: "촬영 중",
+  cs_wsCompleted: "촬영 완료",
+  cs_wsCancelled: "취소됨",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
@@ -311,6 +316,18 @@ export default {
   ph_drugCostInternal: "약제비 (원내)",
   ph_alreadyDispensed: "다른 사람이 이 환자를 먼저 조제 완료했습니다. 재고는 한 번만 빠졌습니다. 목록을 새로 불러옵니다.",
   ph_typeLocked: "이미 조제 완료된 약은 원내/원외를 바꿀 수 없습니다. 목록을 새로 불러옵니다.",
+  ph_refillWarn: "같은 약이 {ago}일 전에 {supply}일분 처방되었습니다 — 아직 {left}일분 남음",
+  ph_selGone: "이 환자는 더 이상 조제 대기 목록에 없습니다. 다른 사람이 이미 조제 완료했을 수 있습니다. 약을 내어주기 전에 새로고침을 누르세요.",
+  ph_category: "분류",
+  ph_unitPrice: "단가",
+  ph_stock: "재고",
+  ph_cat_Antibiotic: "항생제",
+  ph_cat_Analgesic: "진통제",
+  ph_cat_Antimalarial: "항말라리아제",
+  ph_cat_Cardiovascular: "심혈관",
+  ph_cat_GI: "소화기",
+  ph_cat_Vitamin: "비타민",
+  ph_cat_Other: "기타",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

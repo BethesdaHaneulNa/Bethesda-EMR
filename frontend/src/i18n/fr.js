@@ -293,6 +293,11 @@ export default {
   cs_labPending: "En attente",
   cs_labDone: "Résultat reçu",
   cs_labCancelled: "Annulé",
+  cs_wsPending: "Non envoyé",
+  cs_wsSent: "Envoyé",
+  cs_wsInProgress: "En cours",
+  cs_wsCompleted: "Réalisé",
+  cs_wsCancelled: "Annulé",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
@@ -311,6 +316,18 @@ export default {
   ph_drugCostInternal: "Médicaments (interne)",
   ph_alreadyDispensed: "Ce patient a déjà été servi par quelqu'un d'autre. Le stock n'a été déduit qu'une fois. La liste est actualisée.",
   ph_typeLocked: "Ce médicament a déjà été délivré : interne/externe ne peut plus être changé. La liste est actualisée.",
+  ph_refillWarn: "Même médicament prescrit il y a {ago} j pour {supply} j — encore {left} j de traitement",
+  ph_selGone: "Ce patient n'est plus en attente. Quelqu'un l'a peut-être déjà servi. Appuyez sur Rafraîchir avant de remettre les médicaments.",
+  ph_category: "Catégorie",
+  ph_unitPrice: "Prix unitaire",
+  ph_stock: "Stock",
+  ph_cat_Antibiotic: "Antibiotique",
+  ph_cat_Analgesic: "Antalgique",
+  ph_cat_Antimalarial: "Antipaludique",
+  ph_cat_Cardiovascular: "Cardiovasculaire",
+  ph_cat_GI: "Gastro-intestinal",
+  ph_cat_Vitamin: "Vitamine",
+  ph_cat_Other: "Autre",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

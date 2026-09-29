@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: ⑥ 수술기록지 프랑스어 표시 + 검사 오더 상태 칸 확인 요청 (③④⑤⑦·⑧⑨⑪은 develop에 합쳐짐)
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 영상 뷰어 환자 확인 경고 + 상태 칸 3개 국어(PACS 부탁) 확인 요청 · ⑥까지는 develop에 합쳐짐
 
 ## 1. 이 모듈이 하는 일
 
@@ -53,7 +53,8 @@
    - **약**: 약국에서 이미 조제한 약입니다. 오른쪽 끝에 **「조제됨」**(Délivré)이 표시되고, 칸이 입력 칸이 아니라 글자로 바뀝니다. 바꿔야 하면 **약국에 알리고 새 줄로 처방**하세요.
    - **검사·영상**: 검사 결과가 들어왔거나, 판독이 쓰였거나, 촬영이 시작된 오더입니다. 수량·메모 칸은 고칠 수 있지만 줄을 지울 수는 없습니다.
    - 화면을 열어 둔 사이에 약국이 조제하면, ✕를 눌렀을 때 「이미 조제한 약」이라는 안내가 나오고 표가 새로 고쳐집니다.
-7. 영상 오더 줄의 **🖼** 버튼은 영상 뷰어와 판독 칸을 엽니다.
+7. 영상 오더 줄의 **🖼** 버튼은 영상 뷰어와 판독 칸을 엽니다. 영상이 다른 환자 이름으로 들어왔으면 뷰어 위에 **빨간 ⚠**, 영상에 환자번호가 없으면 **노란 ⚠**가 뜹니다 — 판독하기 전에 영상 속 환자 정보를 먼저 확인하세요.
+8. 줄 오른쪽 끝 상태 칸: 약은 「조제됨」, 검사는 「결과 대기 / 결과 있음」, 영상은 「전송됨 / 촬영 중 / 촬영 완료」.
 
 ### 약속처방 (오른쪽)
 
@@ -120,13 +121,14 @@
 - `pickPatient(v)` (91-112): `POST /consultations`로 진료를 **열거나 새로 만들고**, 처방·오더·환자 이력을 받습니다. 바이탈은 `bp_systolic`이 있을 때만 채웁니다(수축기 혈압이 비었으면 체온 등도 화면에 안 나옴 — 작은 흠).
 - `saveNote()` (165-180) · `completeConsult()` (182-201): `note_text`와 바이탈만 보냅니다. 완료는 저장 → `PUT /:id/complete` → `loadData()` 순서입니다. *저장을 안 누르고 완료해도 기록이 날아가지 않게* 완료가 먼저 저장합니다.
 - 처방·오더 줄은 **추가할 때 바로 서버에 INSERT**되고(`addDrugRx`, `addExamOrder`), 칸을 고치면 `onBlur`에서 PUT(`saveRx`, `saveOrder`), ✕는 `confirmRemove`(이름을 넣은 확인 창) 후 DELETE입니다. 「저장」 버튼과 무관합니다.
-- **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29).
+- **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다.
 - **잠긴 줄**(2026-09-29, 7절 ⑧⑨): 처방은 `rx.status === 'dispensed'`면 입력 칸 대신 글자로 그리고 ✕ 대신 🔒, WL 칸에 `cs_dispensed`. 오더는 파일 위쪽의 `orderLocked(o)`가 서버 규칙을 흉내 냅니다 — `o.status === 'completed'`(임상병리는 값이 하나라도 있어야 완료로 바꿈) 또는 `result_text`가 있음 또는 `worklist_sent_at`이 있고 `worklist_status`가 `in_progress`·`completed`. `worklist_sent_at`을 보는 이유: 워크리스트 없는 오더는 처음부터 `worklist_status='completed'`로 저장되기 때문. 오더는 줄 삭제만 막고 칸 수정은 그대로 둡니다(수량이 바뀌면 수납이 추가 청구/환불로 잡음).
 - 서버가 거절하면(화면이 열린 사이 약국·검사가 진행한 경우) `lockAlert`가 서버의 영어 문구를 `LOCK_MESSAGES`로 번역 키에 맞춰 알리고 `reloadItems()`로 처방·오더를 다시 읽습니다. **이 문구는 `consult.routes.js`의 `RX_DISPENSED`·`ORDER_HAS_RESULT`와 글자까지 같아야 합니다** — `api/client.js`가 오류 본문 중 `error` 문자열만 넘겨주기 때문(공용 파일이라 고치지 않음).
 - 약 추가 시 `total_qty = 용량 × 횟수 × 일수`를 화면이 계산해 보냅니다(248, 278). 약에 기본 용법이 없으면 **`route`에 `'TID'`**를 넣습니다(246, 7절 ⑮).
 - `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다.
 - 과거 보기 `openPast`/`renderPast` (114-163): 처방·오더를 읽어 가운데에 보여 주고, 왼쪽 오더 칸은 가립니다. 읽기 전용은 **이 화면에서만**이고, 「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열립니다(7절 ⑫).
 - 영상 판독: `openViewer` → `GET /pacs/viewer-url`, `saveReading` → `PUT /pacs/reading/:id`. 판독 칸은 `canRead`(권한 `consultation` 보유, 50줄)일 때만 쓸 수 있습니다.
+- **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, 파일 위쪽 `ImagePatientCheck`가 `patient_check`가 `mismatch`면 빨강, `missing`이면 노랑 경고를 뷰어 머리 아래에 보입니다. 문구는 PACS의 `px_patientMismatch`·`px_patientMissing` 그대로. 모양은 `RadiologyReadings.jsx`의 `PatientCheck`를 그대로 옮겼습니다 — 그 파일은 PACS 세션 소유이고 부품이 export되어 있지 않아서입니다(PACS가 export하면 그것을 쓰도록 바꾸면 됨). 이름의 `^`(DICOM 구분자)는 빈칸으로.
 
 **화면에 그대로 나오는 번역 안 된 글자** — 대기 상태값(`waiting` 등, 428), 문장사전 분류 버튼(573), 문장 본문(`p.text`만, 584 — DB의 `text_fr`/`text_en`은 안 씀), 진료 기록 placeholder(566), `DRUG` 배지(474), `Error:` 알림. 7절 ⑯.
 
@@ -377,6 +379,7 @@
 | ⑳ | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) | `Consultation.jsx` 86·533 |
 | ㉑ ✅ 09-29 | **높음** · 총괄 | **날짜가 하루 앞당겨 보인다 (시스템 전체).** _총괄이 고침(`7ad4387`): `backend/src/config/database.js`에서 DATE(1082)를 받은 문자열 그대로 넘김. 실행 중인 EMR에서도 재현됐었음(DB `2023-05-05` → API `2023-05-04T21:00:00.000Z`), 고친 뒤 API·접수 화면 모두 `2023-05-05`._ DB의 `DATE`(생년월일·내원일·진료일)를 `pg`가 JS `Date`(현지 자정)로 바꾸고, JSON은 UTC로 내보내 `1990-01-01` → `1989-12-31T21:00:00.000Z`가 되고, 화면은 `split('T')[0]`로 자른다 — **생년월일·과거 진료일·인쇄 문서의 생년월일이 모두 하루 이르다.** 격리 스택(TZ=`Indian/Antananarivo`, 실행 중인 EMR과 같은 `.env`)에서 재현. 실행 중인 EMR은 건드리지 않아 직접 확인하지 못했지만 같은 설정이다. 고칠 곳은 `backend/src/config/`의 `pg` 타입 파서(1082 = DATE를 문자열로) — 총괄 파일 | API 응답 `GET /patients/1` · `docker-compose.yml` 49 · `Consultation.jsx` 401 · `shared.jsx` `fmtDate` |
 | ㉒ ✅ 09-29 | 중간 · 임상병리 부탁 | **검사 오더가 결과 전부터 「completed」로 보였다.** 상태 칸이 영상용 `worklist_status`를 보여 주는데, 워크리스트 없는 오더는 처음부터 `completed`로 저장된다. → **고침**: 검사 오더는 `o.status`(결과 대기/결과 있음/취소됨), 워크리스트 오더는 그대로, 그 밖은 비움(3.1절) | `Consultation.jsx` `orderStatus` · `consult.routes.js` POST /:id/orders · 임상병리 위키 7절 9 |
+| ㉓ ✅ 09-29 | 중간 · PACS 부탁 | **영상 뷰어가 다른 환자의 영상일 수 있다는 경고를 보여 주지 않았다**(판독 목록에만 있었음), **상태 칸의 워크리스트 상태가 영어**(P-19). → **고침**: 뷰어 위 빨강/노랑 경고, 상태 칸 3개 국어 | `Consultation.jsx` `ImagePatientCheck` · `orderStatus` · `pacs.routes.js` `/viewer-url` |
 
 ### 7.3 제약 (버그는 아니지만 고칠 때 알아야 할 것)
 
@@ -389,7 +392,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **수술기록지 프랑스어 표시(⑥)** — 체크 칸·인쇄 선택값·그림 글자를 FR에서만 번역(`op-terms.js`, 저장값은 영어 그대로), 시계·유방 D/G, 충수 그림 틀을 프랑스어 단어에 맞게. **검사 오더 상태 칸(㉒)** — 결과 전 「completed」 대신 「결과 대기」. 번역 키 `cs_labPending`·`cs_labDone`·`cs_labCancelled` | (이 커밋) |
+| 2026-09-29 | **영상 환자 확인 경고 · 상태 칸 3개 국어(㉓, PACS 부탁)** — 뷰어 위에 `patient_check` 경고(mismatch 빨강 · missing 노랑), 워크리스트 상태 `cs_ws*` 5개 키 | (이 커밋) |
+| 2026-09-29 | **수술기록지 프랑스어 표시(⑥)** — 체크 칸·인쇄 선택값·그림 글자를 FR에서만 번역(`op-terms.js`, 저장값은 영어 그대로), 시계·유방 D/G, 충수 그림 틀을 프랑스어 단어에 맞게. **검사 오더 상태 칸(㉒)** — 결과 전 「completed」 대신 「결과 대기」. 번역 키 `cs_labPending`·`cs_labDone`·`cs_labCancelled` | `f48cec9` |
 | 2026-09-29 | **수술기록지 ③④⑤⑦** — 체크 칸 하나만/None 배타 규칙(공용 `DocumentModal`의 `checks` 입력), 손대지 않은 크기 칸 인쇄 안 함, 치루 단면도에 고른 유형 전부(무늬+범례), 소견의 `[괄호]` 경고·발급 확인. 모든 수술기록지 한 장 유지(충수 빡빡한 경우 1008px 그대로, 치루 유형 5개 최악 991px) | `a6ee24e` |
 | 2026-09-29 | **날짜 하루 앞당김(㉑) 고침** — 총괄. 생년월일·진료일이 API에서 UTC로 바뀌어 하루 이르게 보이고, 접수 화면에서 환자 정보를 저장하면 그 이른 날짜가 다시 저장되던 문제 | `7ad4387` |
 | 2026-09-29 | **기록 보호(⑧⑨⑪)** — 조제된 처방 수정·삭제 거절, 결과·판독·촬영이 생긴 오더 삭제 거절(409), 진료 쓰기 API에 `consultation` 권한, ✕에 확인 창, 잠긴 줄에 🔒·「조제됨」. 번역 키 `cs_confirmRemove`·`cs_dispensed`·`cs_rxLocked`·`cs_orderLocked` | `d1f473e` |
