@@ -64,7 +64,10 @@ router.get('/', permMiddleware(...SEARCH_READERS), async (req, res) => {
 // warning before a new chart is created (decided 2026-09-29, reception ④: warn only,
 // and the same person is judged by name alone). Case, surrounding and repeated
 // spaces are ignored, and a swapped order also matches, since first and last name
-// are often given the other way round at the desk. Accents are compared as typed.
+// are often given the other way round at the desk. Accents are ignored too (Hélène =
+// Helene), because the same name is typed both ways; the letters folded are the ones
+// French and Malagasy names use, in FOLD below - both sides go through the same SQL,
+// so the screen and the database cannot disagree about what "the same" means.
 // Declared before /:id, which would otherwise take "similar" for an id.
 router.get('/similar', permMiddleware('registration'), async (req, res) => {
   try {
@@ -74,14 +77,20 @@ router.get('/similar', permMiddleware('registration'), async (req, res) => {
     if (!last || !first) return res.json([]);
     // [[:space:]] rather than \s: inside a JS template literal "\s" loses its
     // backslash and Postgres would replace the letter s instead.
-    const LAST = "lower(regexp_replace(trim(p.last_name), '[[:space:]]+', ' ', 'g'))";
-    const FIRST = "lower(regexp_replace(trim(p.first_name), '[[:space:]]+', ' ', 'g'))";
+    const FOLD = function (sql) {
+      return "translate(lower(regexp_replace(trim(" + sql + "), '[[:space:]]+', ' ', 'g')), " +
+        "'àâäáãåæçéèêëíìîïñóòôöõøœúùûüýÿ', 'aaaaaaaceeeeiiiinooooooouuuuyy')";
+    };
+    const LAST = FOLD('p.last_name');
+    const FIRST = FOLD('p.first_name');
+    const Q1 = FOLD('$1::text');
+    const Q2 = FOLD('$2::text');
     const result = await pool.query(
       `SELECT p.id, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.phone, p.mobile,
               (SELECT MAX(v.visit_date) FROM visit v WHERE v.patient_id = p.id AND v.status <> 'cancelled') AS last_visit_date
          FROM patient p
         WHERE p.is_active = true
-          AND ( (${LAST} = $1 AND ${FIRST} = $2) OR (${LAST} = $2 AND ${FIRST} = $1) )
+          AND ( (${LAST} = ${Q1} AND ${FIRST} = ${Q2}) OR (${LAST} = ${Q2} AND ${FIRST} = ${Q1}) )
         ORDER BY p.created_at DESC
         LIMIT 10`,
       [last, first]
