@@ -969,6 +969,17 @@ export default {
   se_osGoneHint: "Les médicaments barrés ont été retirés de la liste. Ils ne sont pas prescrits quand l'ordonnance type est appliquée en consultation — supprimez-les ou remplacez-les par un médicament de la liste.",
   se_osGoneLine: "absent de la liste",
   se_osPick: "Stock {stock} · Prix {price}",
+  se_sysItem_emr_backup_copy: "Copie des sauvegardes de l'EMR (disque externe)",
+  se_sys_emrBackupCopy_ok: "Copiée il y a {hours_since_ok} h · {count} sur le disque (dernière {newest})",
+  se_sys_emrBackupCopy_failed: "Échec de la copie : {error}",
+  se_sys_emrBackupCopy_noDisk: "Disque externe absent",
+  se_sys_emrBackupCopy_notFound: "La sauvegarde des images ne trouve pas le dossier de l'EMR — prévenez le responsable",
+  se_sys_emrBackupCopy_none: "Aucune sauvegarde de l'EMR à copier",
+  se_sys_emrBackupCopy_never: "Jamais copiée pour le moment",
+  se_sys_emrBackupCopy_stale: "Pas de copie depuis {hours_since_ok} h",
+  se_backupIntro: "Sauvegarde automatique et manuelle de la base. Les sauvegardes sont dans le dossier de l'app ; téléchargez-en une (⬇) sur une clé USB si besoin.",
+  se_backupSafetyTip: "💾 Chaque nuit, elles sont aussi copiées sur le disque externe (avec la sauvegarde des images). Vérifiez que le disque est branché dans l'état (le point en haut, ou la fenêtre d'état du PC serveur). Vous pouvez aussi en télécharger une sur clé USB avec ⬇ ci-dessous.",
+  se_fld_refundedAmount: "Rendu au patient",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — EMR 백업 복사 상태 줄 · 백업 화면 안내 · 기록 탭 영수 칸 · 로그인 답의 theme (총괄 1~4)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `15b1a61` merge 위 — rebase 아님)
+- **총괄이 넣은 한 줄 확인**: `admin.routes.js` 직원 목록의 `delete r.theme` — 맞음. 격리에서 `/admin/staff` 답에 `theme` 없음 확인(아래 시험).
+- **1 EMR 백업 복사**: `status.routes.js` `checkEmrBackupCopy`(항목 `emr_backup_copy`)와 `server-status.ps1` `Get-EmrCopyCheck`(줄 `emrCopy`, 안내 「branchez le disque externe」).
+  - `detail.emr_backup` 키가 없으면(옛 PACS 스크립트) **줄 없음** — API는 `null`을 목록에서 뺌.
+  - warn: `failed`(오류 글자) · `no_disk` · `not_found` · `emr_backup_last_ok` 없음(`none`/`never`) · 36시간 넘음(`stale`). **36시간은 `emr_backup_last_ok`(EMR 시각)로**, `emr_backup_newest`는 보여 주기만.
+  - 상태 창은 PACS 폴더의 json이 아니라 **DB**에서 읽음(`emr_backup_last_ok`는 EMR이 붙이는 칸이라 파일에 없음). 오류 글자에 `|`가 있어도 잘리지 않게 마지막 칸으로. 창 높이 640 → 680(줄 최대 열).
+- **2 백업 화면**: 노란 안내 → 「💾 밤마다 외장 디스크로도 복사됩니다(영상 백업과 함께). 디스크가 꽂혀 있는지는 상태 창…에서 확인. 필요하면 ⬇로 USB에도」 — 경로와 상관없이 늘. 머리글의 BACKUP_PATH 문장도 뺌. 공용 키 `backupSafetyTip`·`backupIntro`는 두고 **설정 키 `se_backupSafetyTip`·`se_backupIntro`를 새로**(공용 키를 고치지 않으려고). 맨 아래 「다른 드라이브는 고장엔 대비, 도난·화재엔 안 됨 — USB에도」 주석(공용 `backupNote`류)은 그대로 맞는 말이라 둠.
+- **3 기록 탭(수납 B4)**: `settingsAudit.js` — 칸 `refunded_amount` 「Rendu au patient / 돌려준 돈」, `payment_status` 값은 수납 화면의 말(`py_st*`: payé · partiel · impayé · annulé · exonéré)로, **배열이면 값마다** 번역해 쉼표로. `receipts` 배열은 전부터 쉼표로. 수납 모양대로 만든 취소·정정 줄을 ko·en·fr로 풀어 확인(「Statut du paiement: payé → partiel」, 「Rendu au patient: — → 0」).
+- **4 디자인 세션 부탁**
+  - 로그인·첫 설치의 `user`와 `/auth/me`에 `theme`. 토큰(JWT)에는 넣지 않음.
+  - `settings.access.mjs`에 `GET`·`PUT /theme` [ALL] — 115 routes × 11 = **1265** 요청.
+  - `staff.theme`과 스크립트: 격리에서 admin을 light로 두고 백업 → `verify-backup -Strict` **VERIFIED**(내용까지 같음) → `clean-test-data -DryRun` 통과(직원은 id·상태만 보므로 새 칸과 무관). 037 전 백업의 5b 복원 연습은 다시 하지 않음(037은 칸만 더하고 기본값이 있어 5b 그대로 적용될 것으로 봄).
+- **덤(상태 점)**: 상단에 밝게/어둡게 단추가 생겨 점이 왼쪽으로 옮겨지자, 오른쪽 끝에 매단 목록이 화면 왼쪽으로 잘림 → 누른 자리에서 창 안으로 맞춰 여는 `position: fixed`로(`settingsStatus.jsx`), 목록이 길면 스크롤.
+- **5 약 가격 기록**: 결정 전이라 만들지 않음.
+- **공용 파일 변경**: i18n(설정 표시 안) `se_sysItem_emr_backup_copy`, `se_sys_emrBackupCopy_*` 7, `se_backupIntro`, `se_backupSafetyTip`, `se_fld_refundedAmount`. `auth.routes.js`(설정 파일).
+- **바꾼 파일**: `backend/src/routes/status.routes.js` · `backend/src/routes/auth.routes.js` · `server-status.ps1`(BOM·CRLF 유지) · `frontend/src/pages/Settings.jsx` · `settingsStatus.jsx` · `settingsAudit.js` · i18n 3개 · `backend/test/settings.access.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`, status·messages 시험(스택 없이). 새 격리 스택(9187): login·access(1265) 통과. 상태 API·theme 15가지(보고 없음 / 옛 보고 → 줄 없음, 방금 복사 ok·개수·가장 새 것, 30시간 ok, 40시간 stale, 이름 날짜가 옛날이어도 1시간 전 복사면 ok, failed·no_disk·not_found·none, overall warn, 로그인 답 theme dark → PUT light → /me·다음 로그인 light, 직원 목록에 theme 없음) 통과. 상태 창 사본(DB만 격리로): ok(fr) · failed(fr, 오류의 `|` 그대로) · stale(en) · no_disk(ko) · 옛 보고(줄 없음). 화면 fr·ko(밝은 화면): 백업 탭 안내, 상태 점 목록의 복사 줄(ok·실패), 목록이 창 안에서 열림.
+- **남은 것**: 약 가격 기록(결정 대기).
+
 ## 2026-09-29 — 통합 시험의 설정 몫 (B1 · C 넷)
 
 - **상태**: 확인 요청

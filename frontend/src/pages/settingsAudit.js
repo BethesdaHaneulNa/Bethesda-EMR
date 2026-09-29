@@ -40,7 +40,7 @@ var FIELDS = {
   // payment: receipts
   payment_status: 'se_fld_paymentStatus', outstanding: 'se_fld_outstanding',
   balance_restored_to: 'se_fld_balanceRestoredTo', receipts: 'se_fld_receipts', total_due: 'se_fld_totalDue',
-  amount_paid: 'se_fld_amountPaid', refund: 'se_fld_refund', items: 'se_fld_items',
+  amount_paid: 'se_fld_amountPaid', refund: 'se_fld_refund', refunded_amount: 'se_fld_refundedAmount', items: 'se_fld_items',
   // consultation (d7cee75): note and vital signs of a finished consultation
   subjective: 'se_fld_subjective', objective: 'se_fld_objective', assessment: 'se_fld_assessment', plan: 'se_fld_plan',
   note_text: 'se_fld_noteText', bp_systolic: 'se_fld_bpSys', bp_diastolic: 'se_fld_bpDia', temperature: 'se_fld_temperature',
@@ -112,6 +112,13 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'pack_label') return t['ph_pack_' + v] || v;
   if (field === 'diagnosis_type') return t['se_dx_' + v] || v;
   if (field === 'gender') return t['se_gender_' + v] || v;
+  // A receipt's status in the payment screen's words (py_st*): paid / partial / unpaid /
+  // cancelled / waived. A correction line lists one per receipt (an array, payment B4
+  // ada48fa), next to receipts in the same order.
+  if (field === 'payment_status') {
+    var st = function (x) { var k = 'py_st' + String(x).charAt(0).toUpperCase() + String(x).slice(1); return t[k] || String(x); };
+    return Array.isArray(v) ? (v.length ? v.map(st).join(', ') : '—') : st(v);
+  }
   if (field === 'department_id' && ctx && ctx.depts) {
     var d = ctx.depts.filter(function (x) { return String(x.id) === String(v); })[0];
     if (d) return d.code + ' - ' + d.name;

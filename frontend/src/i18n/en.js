@@ -978,6 +978,17 @@ export default {
   se_osGoneHint: "Struck-through drugs have been removed from the drug list. They are not prescribed when this set is applied in a consultation — remove them or replace them with a drug from the list.",
   se_osGoneLine: "not in the list",
   se_osPick: "Stock {stock} · Price {price}",
+  se_sysItem_emr_backup_copy: "EMR backup copy (external disk)",
+  se_sys_emrBackupCopy_ok: "Copied {hours_since_ok} h ago · {count} on the disk (newest {newest})",
+  se_sys_emrBackupCopy_failed: "Copy failed: {error}",
+  se_sys_emrBackupCopy_noDisk: "External disk not plugged in",
+  se_sys_emrBackupCopy_notFound: "The image backup cannot find the EMR folder — tell the person in charge",
+  se_sys_emrBackupCopy_none: "No EMR backup to copy",
+  se_sys_emrBackupCopy_never: "Never copied yet",
+  se_sys_emrBackupCopy_stale: "Not copied for {hours_since_ok} h",
+  se_backupIntro: "Back up the database automatically and manually. Backups are saved in the app's folder; download any backup (⬇) to a USB stick.",
+  se_backupSafetyTip: "💾 Every night they are also copied to the external disk (with the image backup). Check that the disk is plugged in on the status (the dot at the top, or the status window on the server PC). You can also download one to a USB stick with ⬇ below.",
+  se_fld_refundedAmount: "Refunded to the patient",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

@@ -153,6 +153,33 @@ async function checkImageBackup() {
   return { key: 'pacs_image_backup', state: 'ok', message: 'status.imageBackup.ok', values };
 }
 
+// The copy of the EMR's own backups to the same external disk, made by the night image
+// backup after the images (the director's decision, 2026-09-29: one external disk for
+// both; PACS a2e0c10 / cfc434c). Its fields travel in the same report (pacs.routes.js
+// /image-backup-report). A report from the older script has no emr_backup key at all:
+// nothing is known, so the line is not shown (returns null). Late is judged on
+// emr_backup_last_ok, stamped by the EMR's clock when the report arrives -
+// emr_backup_newest is the time in the file name, which a time zone can shift.
+const EMR_COPY_STALE_HOURS = 36;
+async function checkEmrBackupCopy() {
+  const r = await pool.query(`SELECT detail FROM service_heartbeat WHERE name = 'pacs_image_backup'`);
+  const d = (r.rows[0] && r.rows[0].detail) || {};
+  if (d.emr_backup === undefined) return null;
+  const lastOk = d.emr_backup_last_ok ? new Date(d.emr_backup_last_ok).getTime() : NaN;
+  const hours = isFinite(lastOk) ? Math.round((Date.now() - lastOk) / 3600000) : null;
+  const values = {
+    count: d.emr_backup_count == null ? null : d.emr_backup_count, newest: d.emr_backup_newest || '',
+    hours_since_ok: hours, error: d.emr_backup_error || '',
+  };
+  const warn = message => ({ key: 'emr_backup_copy', state: 'warn', message, values });
+  if (d.emr_backup === 'failed') return warn('status.emrBackupCopy.failed');
+  if (d.emr_backup === 'no_disk') return warn('status.emrBackupCopy.noDisk');
+  if (d.emr_backup === 'not_found') return warn('status.emrBackupCopy.notFound');
+  if (hours === null) return warn(d.emr_backup === 'none' ? 'status.emrBackupCopy.none' : 'status.emrBackupCopy.never');
+  if (hours > EMR_COPY_STALE_HOURS) return warn('status.emrBackupCopy.stale');
+  return { key: 'emr_backup_copy', state: 'ok', message: 'status.emrBackupCopy.ok', values };
+}
+
 // Settings > order feed: the imaging settings the EMR itself needs.
 //  - An address still on a port the EMR and the PACS left behind (EMR 8080 -> 9080, the
 //    image server 8090 -> 9090, both because Windows reserves the old ones). Typed from
@@ -201,8 +228,9 @@ router.get('/status', authMiddleware, async (req, res) => {
     checkBridge().catch(err => ({ key: 'bridge', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacs().catch(err => ({ key: 'pacs', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkImageBackup().catch(err => ({ key: 'pacs_image_backup', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
+    checkEmrBackupCopy().catch(err => ({ key: 'emr_backup_copy', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacsAddresses().catch(err => ({ key: 'pacs_address', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
-  ]);
+  ]).then(all => all.filter(Boolean));
   res.json({
     overall: worst(checks.map(c => c.state)),
     checked_at: new Date().toISOString(),

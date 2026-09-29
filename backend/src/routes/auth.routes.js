@@ -45,14 +45,14 @@ router.post('/setup', async (req, res) => {
     const r = await client.query(
       "INSERT INTO staff (login_id, password_hash, name, role, permissions, status) " +
       "VALUES ($1, crypt($2, gen_salt('bf')), $3, 'admin', $4, 'active') " +
-      "RETURNING id, login_id, name, role, permissions, department_id",
+      "RETURNING id, login_id, name, role, permissions, department_id, theme",
       [login_id, password, name, allPerms]
     );
     const user = r.rows[0];
     await client.query('UPDATE staff SET last_login = NOW() WHERE id = $1', [user.id]);
     await client.query('COMMIT');
     const token = generateToken(user);
-    res.json({ token, user: { id: user.id, login_id: user.login_id, name: user.name, role: user.role, permissions: effectivePerms(user), department_id: user.department_id } });
+    res.json({ token, user: { id: user.id, login_id: user.login_id, name: user.name, role: user.role, permissions: effectivePerms(user), department_id: user.department_id, theme: user.theme } });
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (e) { /* connection already out of the transaction */ }
     if (err.code === '23505') return res.status(409).json({ error: MSG.LOGIN_EXISTS });
@@ -71,7 +71,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: MSG.LOGIN_REQUIRED });
     }
     const result = await pool.query(
-      'SELECT id, login_id, password_hash, name, role, permissions, department_id, phone, status FROM staff WHERE login_id = $1',
+      'SELECT id, login_id, password_hash, name, role, permissions, department_id, phone, status, theme FROM staff WHERE login_id = $1',
       [login_id]
     );
     if (result.rows.length === 0) {
@@ -95,9 +95,12 @@ router.post('/login', async (req, res) => {
     // Update last_login
     await pool.query('UPDATE staff SET last_login = NOW() WHERE id = $1', [user.id]);
     const token = generateToken(user);
+    // theme (037, dark / light): the account's own screen, sent with the login so the page
+    // can switch before it draws - when someone else signs in on the same PC, the screen
+    // does not show the previous person's choice first (design session). Also in /me.
     res.json({
       token,
-      user: { id: user.id, login_id: user.login_id, name: user.name, role: user.role, permissions: effectivePerms(user), department_id: user.department_id }
+      user: { id: user.id, login_id: user.login_id, name: user.name, role: user.role, permissions: effectivePerms(user), department_id: user.department_id, theme: user.theme }
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -109,7 +112,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT s.id, s.login_id, s.name, s.role, s.permissions, s.department_id, s.phone, d.code as dept_code, d.name as dept_name FROM staff s LEFT JOIN department d ON s.department_id = d.id WHERE s.id = $1',
+      'SELECT s.id, s.login_id, s.name, s.role, s.permissions, s.department_id, s.phone, s.theme, d.code as dept_code, d.name as dept_name FROM staff s LEFT JOIN department d ON s.department_id = d.id WHERE s.id = $1',
       [req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: MSG.USER_NOT_FOUND });

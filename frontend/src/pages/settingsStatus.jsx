@@ -29,6 +29,7 @@ export function StatusDot(props) {
   var dS = useState(null), data = dS[0], setData = dS[1];
   var fS = useState(false), failed = fS[0], setFailed = fS[1];
   var oS = useState(false), open = oS[0], setOpen = oS[1];
+  var pS = useState(null), pos = pS[0], setPos = pS[1];   // where the list opens (fixed, in the window)
 
   function load() {
     var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -56,14 +57,21 @@ export function StatusDot(props) {
 
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
-      <button onClick={function () { setOpen(!open); if (!open) load(); }} title={title}
+      <button onClick={function (e) {
+          // The list opens under the dot but stays inside the window: with the theme switch
+          // the dot moved left in the top bar, and a list hung from its right edge ran off
+          // the left of the screen (2026-09-30).
+          var r = e.currentTarget.getBoundingClientRect(), w = Math.min(380, window.innerWidth * 0.92);
+          setPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)), width: w });
+          setOpen(!open); if (!open) load();
+        }} title={title}
         style={{ background: 'var(--chip)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 7px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
         <span style={{ width: 11, height: 11, borderRadius: '50%', background: COLORS[state] || COLORS.none, boxShadow: state === 'ok' || state === 'none' ? 'none' : '0 0 6px ' + COLORS[state] }}></span>
       </button>
       {open ? (
         <span>
           <span onClick={function () { setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 1999 }}></span>
-          <span style={{ position: 'absolute', top: 30, right: 0, zIndex: 2000, width: 380, maxWidth: '92vw', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px var(--shadow-50)', padding: 12, display: 'block' }}>
+          <span style={{ position: 'fixed', top: pos ? pos.top : 40, left: pos ? pos.left : 8, zIndex: 2000, width: pos ? pos.width : 380, maxWidth: '92vw', maxHeight: '80vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px var(--shadow-50)', padding: 12, display: 'block' }}>
             <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: COLORS[state] === COLORS.none ? 'var(--text-soft)' : COLORS[state], marginBottom: 8 }}>{title}</span>
             {failed ? <span style={{ display: 'block', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{t.se_sysFailedHint}</span> : null}
             {data && !failed ? (data.services || []).map(function (s) {

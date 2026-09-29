@@ -860,7 +860,7 @@ export default function SettingsPage() {
 
           {activeTab==='backup'?(<div style={{padding:'16px 20px',maxWidth:780,overflow:'auto'}}>
             <div style={{fontWeight:700,fontSize:15,color:tx,marginBottom:5}}>💾 {t.backupTab||'백업'}</div>
-            <div style={{fontSize:13,color:t3,marginBottom:16,lineHeight:1.6}}>{t.backupIntro}</div>
+            <div style={{fontSize:13,color:t3,marginBottom:16,lineHeight:1.6}}>{t.se_backupIntro||t.backupIntro}</div>
             {!backup?(<div style={{color:t3}}>{t.loading||'Loading…'}</div>):(<>
               {/* This used to read "automatic backup on" in green whatever had happened.
                   The state comes from services/backup.js health(), the same judgement the
@@ -897,7 +897,10 @@ export default function SettingsPage() {
                   <div><div style={{fontSize:12,color:t3}}>{t.backupRetention||'보관'}</div><div style={{fontSize:14,color:tx}}>{backup.retentionDays}{t.days||'일'}</div></div>
                 </div>
                 {backup.minKeep?<div style={{fontSize:12,color:t3,marginTop:8}}>{(t.se_bkMinKeep||'').replace('{n}',backup.minKeep)}</div>:null}
-                {!backup.custom?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:10,lineHeight:1.5}}>{t.backupSafetyTip||'⚠ 같은 디스크에 저장돼요. 고장·도난 대비해 아래 ⬇로 USB 등 다른 곳에 복사하거나, 다른 드라이브 자동저장은 .env의 BACKUP_PATH로 지정하세요.'}</div>:null}
+                {/* The director's decision (2026-09-29): one external disk for the image backup
+                    and the EMR's backups; the night image backup copies them. No more "set
+                    BACKUP_PATH" here - the status line "EMR backup copy" says whether it works. */}
+                <div style={{fontSize:12,color:'var(--warn-text)',marginTop:10,lineHeight:1.5}}>{t.se_backupSafetyTip}</div>
               </div>
               <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:14}}>
                 <button onClick={runBackup} disabled={backupBusy} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 18px',cursor:backupBusy?'wait':'pointer',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
