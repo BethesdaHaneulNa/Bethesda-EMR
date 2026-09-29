@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 주소로 켜는 미리 보기 (?theme=light) · develop 합치며 부딪힌 두 파일
+
+- **상태**: 확인 요청
+- **커밋**: session/design (이 항목과 같은 커밋). develop `736c788` 을 합친 뒤(합침 커밋 `5015ab5`)
+- **한 일**:
+  - **미리 보기**(coordinator.md 「디자인 세션에게 — 미리 보기」): `frontend/index.html` 의 첫 화면 스크립트가 주소의 `?theme=light` / `?theme=dark` 를 읽어 그 PC 의 `localStorage('medconnect_theme')` 에 적고, 주소에서 그 부분만 지움(`history.replaceState` — 다른 주소 값과 `#` 뒤는 그대로). `light` · `dark` 가 아니면 아무것도 하지 않음. 저장이 막힌 브라우저에서도 화면은 뜸(try/catch 를 읽기와 쓰기에 따로).
+  - **합치다 부딪힌 파일 둘**: `DocumentModal.jsx` · `PatientChart.jsx` 가 develop 에서 바뀌어 있었음. **develop 의 것을 그대로 받고**(다른 세션의 고침을 하나도 잃지 않게) 그 위에 색 작업을 다시 돌림 — 같은 이름표, 문서 창의 종이 미리보기는 그대로.
+  - 단추 · 901 · `theme.routes.js` 는 만들지 않았음(맨 마지막에). 앞 보고(`784bdff`)에서 「단추를 지금 넣겠다」고 쓴 것은 「미리 보기」 지시를 읽기 전의 말이었습니다 — **지시대로 단추는 맨 마지막에 넣습니다.**
+- **바꾼 파일**: 없음(자기 파일)
+- **공용 파일 변경**: `frontend/index.html`(첫 화면 스크립트 — 승인받음) · `frontend/src/components/DocumentModal.jsx` · `PatientChart.jsx`(색만, 다시 입힘)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**:
+  - 주소 규칙 여덟 가지를 따로 돌려 봄: `?theme=light` → 적용 · 주소 빈 값, `?a=1&theme=light` → `?a=1`, `?theme=dark&a=1` → `?a=1`, `?a=1&theme=light&b=2` → `?a=1&b=2`, `?theme=purple` · `?xtheme=light` · `?theme=lighter` · 빈 주소 → 무시.
+  - 격리 스택 9189: `/registration?theme=light` 로 열기 → 밝은 화면, 주소가 `/registration` 으로 바뀜, 저장됨. 다른 화면으로 새로 열어도 밝은 화면. `?theme=dark` → 어두운 화면.
+  - `check-dark.mjs develop`: DocumentModal 340줄 중 337(다른 3줄은 입력 칸 테두리), PatientChart 116줄 모두 같음.
+  - 합친 뒤 같은 34가지 상태의 계산된 색을 다시 비교 — **모두 같음**. 밝은 화면 `__audit()` — 기준 미달 없음(예외 셋은 위키 7절).
+  - 빌드 통과.
+- **확인 못 한 것**: 실행 중 EMR(9080)에서의 미리 보기는 총괄이 올린 뒤에. 로그인하지 않은 상태에서 `/?theme=light` 로 열었을 때(로그인 화면으로 넘어가는 길)는 격리 스택에서 보지 않았음 — 스크립트는 React 보다 먼저 돌므로 저장은 됨
+- **위키**: `modules/design.md` 머리 · 3.4 표 · 3.6(미리 보기) · 8
+- **총괄 확인 요청**: 실장님께 미리 보기 주소를 알려 드렸습니다 — `http://localhost:9080/?theme=light`(되돌리기 `?theme=dark`). 실행 중 EMR 에 올라간 뒤에 쓸 수 있습니다. 통계 · 설정 화면은 아직 어둡게 나온다는 것도 말씀드림
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: `Stats.jsx` · `Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx` → 단추 · 번역 · 901 · `theme.routes.js`. 설정 세션에 부탁할 것 하나(단추 때): 로그인 응답과 `/auth/me` 에 `theme` 을 실어 주면 같은 PC 에 다른 사람이 로그인했을 때 화면이 한 번 깜빡이지 않음
+
 ## 2026-09-29 — 3단계: 공용 부품 넷 (PatientFinder · PatientChart · DocumentModal 틀 · RadiologyReadings)
 
 - **상태**: 확인 요청
