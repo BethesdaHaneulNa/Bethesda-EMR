@@ -42,7 +42,7 @@ export default {
   searchNameChartPhone: "Nom / N° dossier / téléphone", searching: "Recherche...", newPatientInput: "Nouveau patient",
   newPatientAutoChart: "Généré automatiquement", updateVisit: "Modifier l'enregistrement", registerWaiting: "Enregistrer / Mettre en attente",
   cancelWaiting: "Annuler l'attente / Retirer", previousVisits: "Consultations précédentes", noPreviousVisits: "Aucun antécédent.",
-  selectPatientLeft: "Recherchez un patient ou saisissez un nouveau patient à gauche.", todayQueueCompleted: "Attente / Terminé aujourd'hui", queueSearch: "Rechercher dans la file", countPatients: "patients",
+  selectPatientLeft: "Recherchez un patient ou saisissez un nouveau patient à gauche.", selectPatientInList: "Choisissez un patient dans la liste à gauche.", todayQueueCompleted: "Attente / Terminé aujourd'hui", queueSearch: "Rechercher dans la file", countPatients: "patients",
   dispensingPending: "En attente", dispensingCompleted: "Délivré", dispenseComplete: "Terminer délivrance",
   pharmacySearchPlaceholder: "Patient / N° dossier / Médicament", selectRxPatient: "Sélectionnez une ordonnance à gauche.",
   pharmacyOnlyCompleted: "Seules les ordonnances des consultations terminées sont affichées.",

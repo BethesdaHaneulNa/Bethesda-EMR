@@ -42,7 +42,7 @@ export default {
   searchNameChartPhone: "이름 / 차트번호 / 연락처", searching: "검색 중...", newPatientInput: "신규 환자 입력",
   newPatientAutoChart: "신규 환자는 자동 생성", updateVisit: "접수 정보 수정", registerWaiting: "접수 / 대기 등록",
   cancelWaiting: "대기 취소 / 목록에서 빼기", previousVisits: "이전 진료 기록", noPreviousVisits: "이전 진료 기록이 없습니다.",
-  selectPatientLeft: "왼쪽에서 기존 환자를 검색하거나 신규 환자를 입력하세요.", todayQueueCompleted: "오늘 대기 / 완료", queueSearch: "대기목록 검색", countPatients: "명",
+  selectPatientLeft: "왼쪽에서 기존 환자를 검색하거나 신규 환자를 입력하세요.", selectPatientInList: "왼쪽 목록에서 환자를 고르세요.", todayQueueCompleted: "오늘 대기 / 완료", queueSearch: "대기목록 검색", countPatients: "명",
   dispensingPending: "조제 대기", dispensingCompleted: "조제 완료", dispenseComplete: "조제 완료",
   pharmacySearchPlaceholder: "환자명 / 차트번호 / 약명 검색", selectRxPatient: "왼쪽에서 처방 환자를 선택하세요.",
   pharmacyOnlyCompleted: "진료 완료된 약 오더만 약국 대기 목록에 표시됩니다.",
