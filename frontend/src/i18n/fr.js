@@ -805,6 +805,8 @@ export default {
   se_oldEmrPort: "Ancienne adresse (port 8080). L'EMR est maintenant sur le port 9080 : remplacez 8080 par 9080 puis enregistrez.",
   se_oldViewerPort: "Ancienne adresse (port 8090). La visionneuse PACS est maintenant sur le port 9090 : remplacez 8090 par 9090 puis enregistrez. Sinon les images ne s'ouvrent pas depuis le dossier.",
   se_setPackQtyHint: "Médicament délivré par conditionnement : appliquer cet ensemble prescrit ce nombre de flacons/tubes.",
+  se_bkOldVersion: "La sauvegarde la plus récente date d'une version plus ancienne de l'EMR",
+  se_bkOldVersionHint: "Aucune sauvegarde depuis la mise à jour de l'EMR. Celle-ci ne se restaure pas de la façon habituelle (il faut la procédure « plus ancienne que l'application » de DEPLOYMENT.md 5b). Appuyez sur « Sauvegarder » pour en faire une nouvelle.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

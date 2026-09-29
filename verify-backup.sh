@@ -175,6 +175,34 @@ else
   ok "every sequence is ahead of its own data"
 fi
 
+# From an older version of the app? It restored here because this is an empty
+# database; onto the running one the usual restore commands stop ("cannot drop
+# constraint ... depend on it") and DEPLOYMENT.md 5b's other commands are needed.
+# Found in the restore drill of 2026-09-29 (wiki/modules/settings.md 2.13).
+OLDER_VERSION=""
+if [ "$(psql_q "$TMP_DB" "select (to_regclass('public.schema_migrations') is not null)::text;")" = "true" ]; then
+  psql_q "$DB_NAME" "select filename from schema_migrations order by 1;" > "$WORK/mig.live"
+  psql_q "$TMP_DB"  "select filename from schema_migrations order by 1;" > "$WORK/mig.tmp"
+  NOT_IN_BACKUP="$(grep -vxF -f "$WORK/mig.tmp" "$WORK/mig.live" | tr '\n' ' ' || true)"
+  if [ -n "$NOT_IN_BACKUP" ]; then
+    OLDER_VERSION=1
+    info "this backup is from an older version of the app - database update(s) that came after it: $NOT_IN_BACKUP"
+    say "It restores into an empty database, as it just did here. To put it back on this machine,"
+    say "use DEPLOYMENT.md 5b, 'If the backup is older than the app': the usual commands stop on it."
+    if [ -n "$STRICT" ]; then
+      bad "with --strict the backup must be from the running version - press Back up now first"
+      FAILED=1; STRICT_OLDER=1
+    fi
+  else
+    ok "same version as the running app ($(wc -l < "$WORK/mig.tmp" | tr -d ' ') database updates)"
+  fi
+fi
+older_note() {
+  if [ -n "$OLDER_VERSION" ]; then
+    echo "  It is from an older version of the app: restore it with DEPLOYMENT.md 5b, 'If the backup is older than the app'."
+  fi
+}
+
 if [ -z "$IS_NEWEST" ]; then
   echo ""
   say "$(basename "$FILE") is not the newest backup, so it is not compared against the"
@@ -185,6 +213,7 @@ if [ -z "$IS_NEWEST" ]; then
     exit 1
   fi
   echo "VERIFIED - $(basename "$FILE") restores correctly."
+  older_note
   exit 0
 fi
 
@@ -264,7 +293,7 @@ fi
 
 echo ""
 if [ -n "$FAILED" ]; then
-  if [ -n "$STRICT_MISMATCH" ]; then
+  if [ -n "$STRICT_MISMATCH" ] || [ -n "$STRICT_OLDER" ]; then
     echo "VERIFY FAILED - this backup restores, but does not match the live database (--strict)."
   else
     echo "VERIFY FAILED - this backup would not restore cleanly. Do not rely on it."
@@ -272,3 +301,4 @@ if [ -n "$FAILED" ]; then
   exit 1
 fi
 echo "VERIFIED - $(basename "$FILE") restores correctly."
+older_note

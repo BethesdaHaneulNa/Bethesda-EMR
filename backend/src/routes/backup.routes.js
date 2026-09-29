@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware, permMiddleware, effectivePerms } = require('../middleware/auth');
 const backup = require('../services/backup');
+const { newestBackupVersion } = require('../services/backup-version');
 
 function summary(b) { return b ? { name: b.name, size: b.size, mtime: b.mtime } : null; }
 
 // Backup status + list (any authenticated user can see whether backups are on).
-router.get('/status', authMiddleware, (req, res) => {
+router.get('/status', authMiddleware, async (req, res) => {
   const c = backup.cfg();
   const h = backup.health();
   // pg_dump's own words on failure name hosts and databases; that is for whoever
@@ -16,6 +17,10 @@ router.get('/status', authMiddleware, (req, res) => {
     at: h.lastAttempt.at, ok: h.lastAttempt.ok, trigger: h.lastAttempt.trigger,
     file: h.lastAttempt.file || null, error: canManage ? (h.lastAttempt.error || null) : null,
   } : null;
+  // Is the newest backup from this version of the app? (services/backup-version.js)
+  let version;
+  try { version = await newestBackupVersion(); }
+  catch (e) { version = { state: 'unknown', file: null, missing: [], extra: [] }; }
   res.json({
     enabled: c.enabled,
     custom: c.custom,
@@ -31,6 +36,7 @@ router.get('/status', authMiddleware, (req, res) => {
     count: h.count,
     last: summary(h.newest),
     backups: h.list.map(summary),
+    version,
   });
 });
 

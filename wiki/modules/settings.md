@@ -1,6 +1,6 @@
 # 설정 (Settings)
 
-> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4·U2 끝남 · 11월 복원 연습 2차 끝남 — 옛 버전 백업 복원 문제(2.13)와 시험 데이터 선택지는 결정 대기
+> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4·U2 끝남 · 11월 복원 연습 2차 끝남, 옛 버전 백업 복원은 총괄 결정(5b) · 시험 데이터 선택지(2.13)는 결정 세션 대기
 
 ## 1. 이 모듈이 하는 일
 
@@ -113,6 +113,7 @@
    |---|---|---|---|
    | 초록 **✓ Sauvegardes en ordre** | 백업 정상 | 36시간 안에 백업이 있음. 옆에 **Dernière (최근)** 시각과 「il y a N h (N시간 전)」 | 없음. 가끔 **⬇ Télécharger** 로 USB에 한 벌 |
    | 노랑 **⚠ La dernière sauvegarde est trop ancienne** | 최근 백업이 오래됐습니다 | 36시간 넘게 새 백업이 없음 (어젯밤 백업이 안 됨) | **💾 Sauvegarder (지금 백업)** 을 누름. 빨강으로 바뀌면 아래 오류를 담당자에게 |
+   | 노랑 **⚠ La sauvegarde la plus récente date d'une version plus ancienne de l'EMR** | 가장 새 백업이 지금 EMR보다 옛 버전입니다 | EMR을 업데이트한 뒤로 새 백업이 없음. 이 백업은 보통 방법으로는 복원되지 않음(`DEPLOYMENT.md` 5b 「옛 버전」 방법) (2026-09-29) | **💾 Sauvegarder (지금 백업)** — 띠가 초록으로 |
    | 노랑 **⚠ Aucune sauvegarde** | 백업이 하나도 없습니다 | 백업 파일이 하나도 없음 (설치 직후) | **💾 Sauvegarder** 로 첫 백업 |
    | 빨강 **⚠ La dernière sauvegarde a échoué** | 마지막 백업이 실패했습니다 | 가장 최근 시도가 실패했고 그 뒤로 성공한 적이 없음. 아래에 **Dernière tentative (마지막 시도)** 시각, automatique/manuelle, **오류 문구** | 오류 문구를 **그대로** 담당자에게 전함. 자동 백업은 30분마다 다시 시도함 |
    | **⏳ Sauvegarde en cours** 표시 | 백업 진행 중 | 지금 백업이 돌고 있음 | 잠시 뒤 **↻ Rafraîchir (새로고침)** |
@@ -178,6 +179,7 @@
 3. 줄: **Dossiers patients (base de donnees)** (환자 기록 · DB) · **Serveur de l'application** (앱 서버) · **Ecran de l'EMR** (EMR 화면) · **Espace disque** (디스크) · **Sauvegarde** (백업) · **Imagerie (PACS)** (영상) · **Liste de travail des appareils** (장비 워크리스트). 영상이 없는 병원은 **non installe (미설치)** 로 회색입니다.
 4. 줄의 상태 글자: **OK** 정상 · **ARRETE** 멈춤 · **DEMARRAGE** 시작 중 · **NE REPOND PAS** 응답 없음 · **ABSENT** 없음 · **INACCESSIBLE** 접속 안 됨.
    - **INACCESSIBLE** 옆에 「port 4242 bloque par Windows」 같은 글이 있으면 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용: `DEPLOYMENT.md` Windows 절).
+   - **Sauvegarde** 줄이 노란 **A CORRIGER** 에 「plus ancienne que l'application (N mise(s) a jour …)」이면 가장 새 백업이 EMR 업데이트 전 것입니다(2.7의 같은 노란 띠). EMR에서 **Paramètres → Sauvegarde → Sauvegarder** (2026-09-29).
    - 노란 **A CORRIGER (고칠 것)** 줄 **Adresses de l'imagerie (Parametres)** (영상 주소, 2026-09-29): 설정 → **Flux d'ordres** 의 주소에 옛 포트(EMR **8080**, PACS 뷰어 **8090**)가 남아 있을 때만 나타납니다. 이대로면 진료실에서 영상이 열리지 않습니다. **Paramètres → Flux d'ordres** 에서 8080 → **9080**, 8090 → **9090** 으로 고치고 **Save** — 15초 안에 줄이 사라집니다. 값을 자동으로 바꾸지는 않습니다.
 5. 아래 버튼으로 언어를 바꿉니다 (Français → English → 한국어).
 
@@ -187,6 +189,7 @@
 2. 가장 새 백업을 임시 DB에 복원해 보고 지웁니다. 운영 데이터는 건드리지 않습니다. 백업이 다른 드라이브(`BACKUP_PATH`)에 있어도 스스로 찾습니다.
 3. 끝에 **「VERIFIED」** 면 그 백업은 복원됩니다. 중간의 노란 **「[info] the live database has changed since this backup…」** 는 백업 뒤에 직원들이 입력한 것이 있다는 뜻으로, 정상입니다.
 4. 백업과 운영 DB가 **완전히 같은지**까지 보려면: **Sauvegarde** 탭에서 **💾 Sauvegarder** 를 누르고, 바로 `.\verify-backup.ps1 -Strict`.
+5. 노란 **「[info] this backup is from an older version of the app …」** 와 끝의 「It is from an older version…」 — 그 백업은 EMR 업데이트 전 것입니다. 복원은 되지만 이 PC에 되돌릴 때는 `DEPLOYMENT.md` 5b의 **「If the backup is older than the app」** 명령을 써야 합니다(보통 명령은 멈춤 — 2.13). `-Strict`에서는 실패로 칩니다(업데이트 뒤 새 백업을 먼저). (2026-09-29)
 
 ### 2.12 이런 안내가 뜰 때
 
@@ -217,9 +220,9 @@
 
 1. **새 PC에 설치** — `OFFLINE-INSTALL.md` 대로. 브라우저에 **Configuration initiale (초기 설정)** 이 뜨면 **관리자를 만들지 말고** 다음으로 넘어갑니다(만들어도 복원 때 덮어써지지만 필요 없음). (격리 스택: 이미 빌드된 이미지로 9초. 새 PC에서 이미지를 불러오는 시간은 재지 않음)
 2. **복원** — PowerShell(또는 cmd)에서 `DEPLOYMENT.md` 「5b. Restoring a backup」 명령을 **그대로**: 앱 멈추기 → `docker cp` → `gunzip -t`(종료 코드 0) → 복원(종료 코드 **0** 이어야 함) → 임시 파일 지우기 → 앱 켜기. **Git Bash에서 치지 마세요**(`/tmp` 경로가 바뀜 — B10). (5초)
-   - **백업과 새 설치는 같은 버전이어야 합니다** (2026-09-29 2차 연습에서 확인). **떠나기 전에 이 PC를 새 PC에 깔 버전으로 먼저 업데이트**하고, 업데이트한 **뒤에** Sauvegarder 로 받은 백업을 가져가세요. 같은 버전이면 이 명령 그대로 종료 코드 0, 26개 테이블 모두 같음.
+   - **기본: 백업과 새 설치는 같은 버전** (총괄 결정 2026-09-29, 2차 연습에서 확인). **떠나기 전에 이 PC를 새 PC에 깔 버전으로 먼저 업데이트**하고(업데이트 스크립트가 끝에 새 버전 백업을 한 벌 만듦 — 3-4), 떠나기 직전 **Sauvegarder** 로 받은 백업을 가져가세요. 백업 탭 맨 위가 초록이면 같은 버전입니다(노란 「… version plus ancienne …」이면 옛 버전 — 2.7). 같은 버전이면 이 명령 그대로 종료 코드 0, 26개 테이블 모두 같음.
    - 백업이 **옛 버전**이면(예: 오늘 02:21 백업 = 마이그레이션 018, 새 설치 = 027) 복원 명령이 **종료 코드 3**으로 멈춥니다 — 「cannot drop constraint staff_pkey … other objects depend on it」. **아무것도 바뀌지 않습니다**(한 트랜잭션이라 되돌려짐). 백업의 「지우고 다시 만들기」가 자기가 아는 표만 지우는데, 새 버전에만 있는 표(`stock_movement` 등)가 직원 표를 붙잡고 있기 때문입니다.
-   - 옛 백업밖에 없을 때(연습에서 됨, **절차로 쓰기 전 실장님·총괄 확인 대기**): **새 PC의 빈 설치에서만** 복원 전에 DB를 비움 — `docker exec bethesda-emr-db psql -v ON_ERROR_STOP=1 -U medconnect -d medconnect -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"` → 위 복원 명령(종료 코드 0) → 앱 켜기 → 모자란 마이그레이션(연습 때 019~027, 9개)을 앱이 스스로 채움. **데이터가 있는 PC에서는 절대 하지 마세요** — 그 PC의 모든 것이 지워집니다.
+   - **옛 백업밖에 없을 때**: `DEPLOYMENT.md` 5b의 **「If the backup is older than the app」** 명령을 **그대로** 쓰세요(총괄 결정 2026-09-29). 백업을 **먼저 파일로 풀고**(여기서 종료 코드가 0이 아니면 파일이 손상 — 멈춤, 아무것도 안 바뀜), **DB 비우기와 복원을 한 트랜잭션**으로 합니다 → 앱을 켜면 모자란 마이그레이션(연습 때 019~027, 9개)을 앱이 스스로 채움. 연습 2차 때 쓴 「비우기 따로 → 복원 따로」보다 안전합니다: 손상된 백업을 파이프로 넣으면 DB가 **비워진 채** 남을 수 있음을 총괄이 확인했기 때문. `verify-backup` 이 옛 버전 백업이면 이 절을 가리킵니다(2.11).
    - 설치 뒤 **2분 넘게** 두었다가 복원하면, 그 사이 자동 백업이 **빈 DB**를 한 벌 만들어 둡니다. 해는 없지만 헷갈리지 않게 복원 뒤 **Sauvegarde** 목록에서 크기가 작은 첫 파일은 무시하세요.
 3. **로그인** — 이 PC에서 쓰던 `admin` 비밀번호로. (초기 설정 화면은 더 나오지 않음)
 4. **영상 주소 다시 적기** — 백업에는 **Flux d'ordres (오더 연동)** 의 주소 두 칸(EMR 주소, PACS 웹/뷰어 주소)이 **이 PC의 주소 그대로** 들어 있습니다(연습: `localhost:8080`·`localhost:8090` — 6~7월 설치 때의 옛 안내대로 사람이 적은 값, PACS P-25). 옛 포트면 두 칸 아래와 서버 상태 창에 노란 경고가 뜹니다(2.10). 새 PC의 주소(포트 **9080**·**9090**, 고정 IP)로 고쳐 **Sauver**. 브리지 토큰도 백업에서 넘어오므로 영상 쪽 짝 맞추기는 `wiki/02-before-departure.md` 대로.
@@ -233,7 +236,7 @@
 - 로그인 토큰의 서명 키(`.env`의 `JWT_SECRET`)는 새 PC가 새로 만들므로, 모든 사람이 새로 로그인합니다. 정상입니다.
 - **백업 파일에는 비밀번호 해시와 영상 브리지 토큰이 들어 있습니다.** USB는 옮긴 뒤 지우거나 잠가 두세요.
 
-**시험 데이터 — 선택지 (2026-09-29, 실장님 결정 대기)**
+**시험 데이터 — 선택지 (2026-09-29, 결정 세션에서 결정 대기 — 추천 C에 총괄 동의)**
 
 오늘 02:21 백업에 들어 있는 시험 데이터: 환자 **2명**(26-00001, 26-00002), 내원 3, 진료 3(하나는 7월 30일부터 「진행 중」), 처방 6(조제 1), 오더 7, 영상 작업목록 1, **영수 2장(합계 474,500 Ar, 둘 다 「paid」)**, 문서 1(소견서 D26-00001), 시험 직원 6명(`zz…`, 1명은 이미 비활성). 그 뒤 실행 중 EMR에서 한 시험도 있을 수 있습니다. 진짜로 남길 것: 직원 `admin`·`lee`, 병원 정보, 진료과 9, 오더 코드 40, 검사 항목 26, 상용구 24, 약속처방 3, 영상 설정. 약 25개는 예시 약이라 실제 약 목록을 들여올 때(약국 담당) 따로 정합니다.
 
@@ -327,6 +330,8 @@
 - **업데이트 전 백업**: `update.ps1`/`update.sh`가 `_pre-update-backups/preupdate_*.sql.gz`로 따로 받습니다 (같은 pipefail + `gzip -t` 방식). 이 파일은 백업 목록·보관 정리 대상이 아닙니다.
 
 ### 3-5. 백업 검증 (`verify-backup.ps1`, Linux는 `verify-backup.sh`)
+
+- **백업의 버전** (2026-09-29): 백업 파일 안의 `schema_migrations` 줄과 DB의 줄을 비교합니다 — DB에만 있는 것이 있으면 「앱보다 옛 버전」. 세 곳이 같은 판정: ① `services/backup-version.js` `newestBackupVersion()` → `GET /api/backup/status`의 `version {state: same|older|newer|none|unknown, missing, extra}`(백업 탭 노란 띠)와 `GET /api/system/status`의 `status.backup.oldVersion`. 백업 파일은 바뀌지 않으므로 파일마다(이름·크기·시각) **한 번만** 읽고, `schema_migrations` 블록이 끝나면 읽기를 멈춤. ② `server-status.ps1` `Get-DumpMigrations`(GZipStream, 같은 방식으로 한 번만) + `docker exec … psql`. ③ `verify-backup` — 임시 DB에 복원한 뒤 두 DB의 `schema_migrations`를 비교해 [info]와 5b 안내, `-Strict`/`--strict`에서는 실패. 격리 스택에서 DB에 가짜 마이그레이션 줄을 넣어 「업데이트」를 흉내 내 확인(same → older → 백업 → same, newer).
 
 매개변수 (2026-09-29): `-File`, `-DbContainer`(기본 `bethesda-emr-db`), `-ApiContainer`(기본: DB 이름의 `-db`를 `-api`로), `-BackupDir`, `-Strict`. `.sh`는 `--strict`와 환경변수 `DB_CONTAINER`·`API_CONTAINER`·`BACKUP_DIR`. 격리 스택에서 시험할 때는 **반드시 `-DbContainer bethesda-s-<코드>-db`** — 기본값은 실장님 운영 DB 컨테이너입니다.
 
@@ -600,4 +605,6 @@
 | 2026-09-29 | 11월 대비 복원 연습 2차: **옛 버전 백업은 문서 명령으로 복원되지 않음**(안전하게 멈춤) — 같은 버전으로 맞춰 가져가기, 빈 DB에 복원하는 길은 확인 대기. 영상 주소 두 칸이 백업과 함께 넘어감. 시험 데이터 선택지 A~D | 위키만(2.13·3-4) | `d23067a` |
 | 2026-09-29 | 오더 연동 주소가 옛 포트(8080·8090)면 **설정 화면 두 칸 아래**와 **서버 상태 창**에 노란 경고(값은 바꾸지 않음) | `Settings.jsx` `oldPort`, `status.routes.js` `checkPacsAddresses`, `server-status.ps1` `Get-PacsAddressCheck` (2.10·3-6) | `2ee2339` |
 | 2026-09-29 | 약속처방 편집 창: 포장 단위 약 줄에 **병·튜브 수** 칸 | `Settings.jsx` `drugPack`·`osQty`·저장 전 정수 확인(라우트는 진료 세션 것이라 그대로), `settings.ordersets.mjs` (2.9) | `c891715` |
-| 2026-09-29 | 업데이트가 끝나면 **새 버전의 백업을 하나 더** 만듦 — 업데이트 직후에도 복원할 수 있는 백업이 있게 | `update.ps1`·`update.sh` 5단계, `services/backup-cli.js`(새), `backup.js` `dumpOnce`의 작업 폴더 인자 (3-4) | (이 커밋) |
+| 2026-09-29 | 업데이트가 끝나면 **새 버전의 백업을 하나 더** 만듦 — 업데이트 직후에도 복원할 수 있는 백업이 있게 | `update.ps1`·`update.sh` 5단계, `services/backup-cli.js`(새), `backup.js` `dumpOnce`의 작업 폴더 인자 (3-4) | `90daed6` |
+| 2026-09-29 | **가장 새 백업이 EMR보다 옛 버전**이면 백업 탭·서버 상태 창·상태 API에 노란 경고, `verify-backup`이 옛 버전 백업을 알아보고 5b 절차를 알려 줌 | `services/backup-version.js`(새), `backup.routes.js`·`status.routes.js`, `Settings.jsx` 백업 띠, `server-status.ps1` `Get-DumpMigrations`, `verify-backup.ps1/.sh` (2.7·2.10·2.11·3-5) | `39440aa` |
+| 2026-09-29 | 2.13(새 PC로 옮기기)을 `DEPLOYMENT.md` 5b에 맞춤 — 기본은 같은 버전 백업, 옛 백업은 5b 「older than the app」(한 트랜잭션·먼저 파일로 풀기) | 위키만 | `4f5ba87` |

@@ -12,6 +12,7 @@ const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { tcpCheck } = require('../utils/tcpCheck');
 const { health: backupHealth, cfg: backupCfg } = require('../services/backup');
+const { newestBackupVersion } = require('../services/backup-version');
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ async function checkDisk() {
 
 // Same judgement as the Backup tab (services/backup.js health()), so the two can
 // never disagree about whether last night worked.
-function checkBackup() {
+async function checkBackup() {
   const h = backupHealth();
   if (h.state === 'none') {
     return { key: 'backup', state: 'warn', message: 'status.backup.none', values: {} };
@@ -67,6 +68,10 @@ function checkBackup() {
   // dies -- and it is the one nobody notices has been failing for a month.
   if (h.state === 'failed') return { key: 'backup', state: 'warn', message: 'status.backup.failed', values: { ...values, at: h.lastAttempt.at } };
   if (h.state === 'stale') return { key: 'backup', state: 'warn', message: 'status.backup.stale', values };
+  // Recent, but from before the last update: it restores only with DEPLOYMENT.md 5b's
+  // "older than the app" commands. Take a backup now (services/backup-version.js).
+  const v = await newestBackupVersion();
+  if (v.state === 'older') return { key: 'backup', state: 'warn', message: 'status.backup.oldVersion', values: { ...values, missing: v.missing } };
   return { key: 'backup', state: 'ok', message: 'status.backup.ok', values };
 }
 
@@ -144,7 +149,7 @@ router.get('/status', authMiddleware, async (req, res) => {
   const checks = await Promise.all([
     checkDatabase(),
     checkDisk(),
-    Promise.resolve(checkBackup()),
+    checkBackup().catch(err => ({ key: 'backup', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     // The database being down takes these with it; report that rather than a stack trace.
     checkBridge().catch(err => ({ key: 'bridge', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacs().catch(err => ({ key: 'pacs', state: 'warn', message: 'status.unknown', values: { error: err.message } })),

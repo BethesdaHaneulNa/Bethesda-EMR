@@ -814,6 +814,8 @@ export default {
   se_oldEmrPort: "This is the old address (port 8080). The EMR is now on 9080 - change 8080 to 9080 and save.",
   se_oldViewerPort: "This is the old address (port 8090). The PACS viewer is now on 9090 - change 8090 to 9090 and save. As it is, images will not open from the chart.",
   se_setPackQtyHint: "Pack-unit drug: applying this set prescribes this many bottles/tubes.",
+  se_bkOldVersion: "The newest backup is from an older version of the EMR",
+  se_bkOldVersionHint: "There has been no backup since the EMR was updated. This backup does not restore the usual way (it needs the \"older than the app\" steps in DEPLOYMENT.md 5b). Press \"Back up now\" to make a new one.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

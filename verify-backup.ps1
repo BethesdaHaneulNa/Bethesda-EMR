@@ -149,6 +149,7 @@ Psql 'postgres' "CREATE DATABASE $TempDb;" | Out-Null
 $failed = $false
 $skipCompare = $false
 $strictMismatch = $false
+$olderVersion = $false
 try {
   # Copy the file in and unzip it inside the container rather than piping the SQL
   # through PowerShell. Reading it into a string here would re-encode it on the way
@@ -214,6 +215,30 @@ try {
     $failed = $true
   } else {
     Ok "every sequence is ahead of its own data"
+  }
+
+  # From an older version of the app? It restored here because this is an empty
+  # database; onto the running one the usual restore commands stop ("cannot drop
+  # constraint ... depend on it") and DEPLOYMENT.md 5b's other commands are needed.
+  # Found in the restore drill of 2026-09-29 (wiki/modules/settings.md 2.13).
+  $hasMig = @(Psql $TempDb "select (to_regclass('public.schema_migrations') is not null)::text;")[0]
+  if ($hasMig -eq 'true') {
+    $liveMigs = @(Psql $DB_NAME "select filename from schema_migrations order by 1;")
+    $tmpMigs  = @(Psql $TempDb  "select filename from schema_migrations order by 1;")
+    $notInBackup = @($liveMigs | Where-Object { $tmpMigs -notcontains $_ })
+    if ($notInBackup.Count -gt 0) {
+      $olderVersion = $true
+      Info "this backup is from an older version of the app - $($notInBackup.Count) database update(s) came after it: $($notInBackup -join ', ')"
+      Say "It restores into an empty database, as it just did here. To put it back on this PC,"
+      Say "use DEPLOYMENT.md 5b, 'If the backup is older than the app': the usual commands stop on it."
+      if ($Strict) {
+        Bad "with -Strict the backup must be from the running version - press Back up now first"
+        $failed = $true
+        $strictMismatch = $true
+      }
+    } else {
+      Ok "same version as the running app ($($tmpMigs.Count) database updates)"
+    }
   }
 
   if (-not $isNewest) {
@@ -334,3 +359,6 @@ if ($failed) {
   exit 1
 }
 Write-Host "VERIFIED - $(Split-Path $File -Leaf) restores correctly." -ForegroundColor Green
+if ($olderVersion) {
+  Write-Host "  It is from an older version of the app: restore it with DEPLOYMENT.md 5b, 'If the backup is older than the app'." -ForegroundColor Yellow
+}

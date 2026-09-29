@@ -81,6 +81,8 @@ $T = @{
     stFix = 'A CORRIGER'
     oldPort = 'ancien port {0} -> {1}'
     adviceAddr = 'Ancienne adresse dans Parametres > Flux d''ordres : remplacez 8090 par 9090 et 8080 par 9080, puis enregistrez.'
+    backupOldVersion = 'plus ancienne que l''application ({0} mise(s) a jour de la base manquante(s)) - {1}'
+    adviceBackupOld = 'La derniere sauvegarde date d''avant la mise a jour de l''EMR. Dans l''EMR : Parametres > Sauvegarde > Sauvegarder.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -121,6 +123,8 @@ $T = @{
     stFix = 'TO FIX'
     oldPort = 'old port {0} -> {1}'
     adviceAddr = 'Old address in Settings > Order feed: change 8090 to 9090 and 8080 to 9080, then save.'
+    backupOldVersion = 'older than the app ({0} database update(s) missing) - {1}'
+    adviceBackupOld = 'The newest backup is from before the EMR was updated. In the EMR: Settings > Backup > Back up now.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -161,6 +165,8 @@ $T = @{
     stFix = '고칠 것'
     oldPort = '옛 포트 {0} → {1}'
     adviceAddr = '설정 → 오더 연동의 주소가 옛 포트입니다. 8090은 9090으로, 8080은 9080으로 고쳐 저장하세요.'
+    backupOldVersion = '앱보다 옛 버전 (DB 변경 {0}개 없음) - {1}'
+    adviceBackupOld = '가장 새 백업이 EMR 업데이트 전 것입니다. EMR에서 설정 → 백업 → 「지금 백업」을 누르세요.'
   }
 }
 
@@ -353,8 +359,35 @@ function Get-DiskCheck {
 }
 
 # The check nobody notices has been failing until the day they need it.
+# The migration file names in a backup's schema_migrations data, or $null. A backup
+# restores with the usual steps only onto the version that made it (DEPLOYMENT.md 5b), so
+# a newest backup from before the last update is worth a yellow line. Backup files never
+# change, so each is read once (by name, size and time) - not every 15 seconds.
+$script:DumpMigrationCache = @{}
+function Get-DumpMigrations {
+  param($File)
+  $key = '{0}|{1}|{2}' -f $File.FullName, $File.Length, $File.LastWriteTime.Ticks
+  if ($script:DumpMigrationCache.ContainsKey($key)) { return $script:DumpMigrationCache[$key] }
+  $names = $null
+  $fs = $null
+  try {
+    $fs = [IO.File]::OpenRead($File.FullName)
+    $gz = New-Object IO.Compression.GZipStream($fs, [IO.Compression.CompressionMode]::Decompress)
+    $rd = New-Object IO.StreamReader($gz, [Text.Encoding]::UTF8)
+    $inBlock = $false
+    while ($null -ne ($line = $rd.ReadLine())) {
+      if (-not $inBlock) { if ($line.StartsWith('COPY public.schema_migrations ')) { $inBlock = $true; $names = @() }; continue }
+      if ($line -eq '\.') { break }
+      $names += ($line -split "`t")[0]
+    }
+    $rd.Dispose()
+  } catch { $names = $null } finally { if ($fs) { $fs.Dispose() } }
+  $script:DumpMigrationCache[$key] = $names
+  return $names
+}
+
 function Get-BackupCheck {
-  param($Strings, [string]$BackupPath)
+  param($Strings, [string]$BackupPath, [bool]$DbOk = $false)
   if (-not $BackupPath -or -not (Test-Path $BackupPath)) {
     return New-Check 'backup' 'warn' $Strings.backupNone
   }
@@ -364,6 +397,17 @@ function Get-BackupCheck {
   $hours = [math]::Round(((Get-Date) - $newest.LastWriteTime).TotalHours)
   $detail = $Strings.backupAge -f $hours, $newest.Name
   if ($hours -gt $BackupStaleHours) { return New-Check 'backup' 'warn' $detail }
+  if ($DbOk) {
+    $inBackup = Get-DumpMigrations -File $newest
+    $inDb = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At',
+      '-c', 'SELECT filename FROM schema_migrations')
+    if ($null -ne $inBackup -and $inDb) {
+      $missing = @($inDb | Where-Object { $_ -and ($inBackup -notcontains $_) })
+      if ($missing.Count -gt 0) {
+        return New-Check 'backup' 'warn' ($Strings.backupOldVersion -f $missing.Count, $newest.Name) $false $true
+      }
+    }
+  }
   return New-Check 'backup' 'ok' $detail
 }
 
@@ -411,7 +455,7 @@ function Get-AllChecks {
   $ordered = @(
     $checks['db'], $checks['api'], $checks['web'],
     (Get-DiskCheck -Strings $Strings -BackupPath $backupPath),
-    (Get-BackupCheck -Strings $Strings -BackupPath $backupPath),
+    (Get-BackupCheck -Strings $Strings -BackupPath $backupPath -DbOk ($checks['db'].State -eq 'ok')),
     $checks['pacs'], $checks['bridge']
   )
   # Only while the database answers; a row appears only when an address is old.
@@ -443,6 +487,7 @@ function Get-Advice {
   foreach ($c in $Result.Checks) {
     if ($c.State -eq 'warn') {
       if ($c.Key -eq 'disk') { return $Strings.adviceDisk }
+      if ($c.Key -eq 'backup' -and $c.Wide) { return $Strings.adviceBackupOld }
       if ($c.Key -eq 'backup') { return $Strings.adviceBackup }
       if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
       return $Strings.adviceDown
