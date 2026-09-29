@@ -273,6 +273,9 @@ export default {
   // ── begin payment (py_) ──
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
+  ph_drugCostInternal: "약제비 (원내)",
+  ph_alreadyDispensed: "다른 사람이 이 환자를 먼저 조제 완료했습니다. 재고는 한 번만 빠졌습니다. 목록을 새로 불러옵니다.",
+  ph_typeLocked: "이미 조제 완료된 약은 원내/원외를 바꿀 수 없습니다. 목록을 새로 불러옵니다.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   // ── end laboratory ──

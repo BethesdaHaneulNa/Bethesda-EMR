@@ -273,6 +273,9 @@ export default {
   // ── begin payment (py_) ──
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
+  ph_drugCostInternal: "Médicaments (interne)",
+  ph_alreadyDispensed: "Ce patient a déjà été servi par quelqu'un d'autre. Le stock n'a été déduit qu'une fois. La liste est actualisée.",
+  ph_typeLocked: "Ce médicament a déjà été délivré : interne/externe ne peut plus être changé. La liste est actualisée.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   // ── end laboratory ──
