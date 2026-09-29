@@ -2,6 +2,14 @@
 
 Every figure on the Statistics screen was checked against a hand calculation on test data, and against the payment and pharmacy screens it summarises. Several did not agree. The details, with the reasoning and the tests, are in `wiki/modules/statistics.md` (sections 3 and 8).
 
+### Takings are now the till: money in and out on the day it moved
+
+The takings used to be the receipts issued that day. When a receipt was corrected or cancelled on a later day, the first day's figure dropped to zero and the whole amount reappeared on the day of the correction. So the statistics never matched the day's cash, and a day already closed kept changing. Take a receipt of 18 000 paid on Monday and corrected on Tuesday with 3 000 handed back: Monday showed 0 and Tuesday 15 000, while the till had +18 000 and −3 000.
+
+The payment screen now records every movement of cash as it happens (migration 036). The statistics read that record. The **Cash** card shows what came into the till minus what was handed back, with **In** and **Out** beneath, and a new **Cash by period** table gives it by day, month or year, with its CSV. A past day no longer changes when a receipt is corrected or cancelled later, and a day with more handed back than taken shows negative. The monthly trend follows the till too. Days before this release show exactly what the statistics showed before (the receipts then in force).
+
+Department and doctor revenue still follow the receipts, because they answer whose treatment the money paid for. Their titles now say "by receipt" and show their total, which can differ from the till on days with corrections. Billed amounts, the average per visit and the balances are unchanged. The billed amount now sits under the treatment receipt count.
+
 ### Debts already paid no longer show as owed
 
 When an old debt was added to a later receipt and paid there, the statistics still counted it against the old receipt. The patient stayed on the debtor list, with a phone number, for money they had already paid, and a partly paid carry-over was counted twice. The Unpaid and Refund due cards and both lists now use the same figures as the patient balance on the payment screen. The card total and the list total now agree. A patient who both owes money and is owed some now appears on both lists, as on the payment screen, instead of the two being netted.
@@ -24,9 +32,9 @@ Document fees were drawn twice under revenue by item: once inside procedures and
 
 The average used to be cash collected divided by receipts. Unpaid receipts, old debts collected and extra receipts on the same visit all moved it. It is now **Avg billed / visit**: the amount billed divided by the visits billed. The receipt count now covers treatment receipts only. Receipts issued when a patient pays an old debt appear beneath it as "+ N balance settlement(s)", and the money is still counted in the takings.
 
-### Cancelled receipts: staff cancellations only, with the money handed back
+### Cancelled receipts: staff cancellations only
 
-The Voided card counted both receipts cancelled by staff and receipts replaced by a correction, which are not refunds. It now counts staff cancellations only. Beneath it, **Handed back** shows the cash returned when those receipts were cancelled, on the day of the cancellation. The difference returned at a correction is not included, because the correction receipt's takings already exclude it. Receipts cancelled before this release, when nobody was asked, are left out of that amount rather than guessed.
+The Voided card counted both receipts cancelled by staff and receipts replaced by a correction, which are not refunds. It now counts staff cancellations only. The cash handed back when a receipt is cancelled appears as money out in the till figures, on the day it was handed back.
 
 ### Drug usage
 
@@ -43,9 +51,8 @@ The Voided card counted both receipts cancelled by staff and receipts replaced b
 - The French and English screens no longer show Korean text: the Cancelled label, the "unassigned" text, and the unit after counts. Department names follow the screen language.
 - The debtor list is loaded when it is opened, and the trend when the page opens, instead of on every change of dates.
 
-Not in this release: statistics by cash movement. The office manager decided on 2026-09-29 that the figures for a day should be the money that actually came in and went out. The payment session's cash record is being built first, and this draft will be updated when that work is merged.
-
 ### After updating
 
-- Tell the office staff before they open Statistics. The Unpaid total may be lower, because debts already paid through carry-over are no longer counted. Total visits leave out cancelled registrations. The average card has a new name and a new meaning.
-- No statistics migration. The figures depend on the database connection using the clinic's time zone, which this release fixes centrally. Check that `TZ` in `.env` is `Indian/Antananarivo`.
+- Tell the office staff before they open Statistics. The takings card is now **Cash**, the till for the day. The Unpaid total may be lower, because debts already paid through carry-over are no longer counted. Total visits leave out cancelled registrations. The average card has a new name and a new meaning.
+- Past days keep their figures after the update. From the update on, a day's **Cash** should match the cash counted at the till; if it does not, the record is the place to look (Statistics → Cash by period, or the payment screen's cash for the day).
+- No statistics migration (the cash record is payment's migration 036). The figures depend on the database connection using the clinic's time zone, which this release fixes centrally. Check that `TZ` in `.env` is `Indian/Antananarivo`.

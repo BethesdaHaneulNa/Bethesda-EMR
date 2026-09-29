@@ -1,16 +1,16 @@
 # Statistiques
 
-L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le nombre de visites, l'argent encaissé, ce que les patients doivent encore, et les médicaments prescrits ou délivrés. Il est réservé aux **responsables** (compte avec le droit « Statistiques »). Il ne modifie rien : on peut regarder sans risque.
+L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le nombre de visites, l'argent entré et sorti de la caisse, ce que les patients doivent encore, et les médicaments prescrits ou délivrés. Il est réservé aux **responsables** (compte avec le droit « Statistiques »). Il ne modifie rien : on peut regarder sans risque.
 
 ## En bref
 
 1. En haut de l'écran, cliquez sur **Statistiques**.
 2. Choisissez la période : **Aujourd'hui**, **Cette semaine** ou **Ce mois** (ou saisissez deux dates).
 3. Lisez **Activité** : combien de patients sont venus.
-4. Lisez **Recettes** : combien l'hôpital a encaissé.
+4. Lisez **Recettes** : la carte **Caisse** donne l'argent entré moins l'argent rendu.
 5. Pour savoir qui doit encore payer, cliquez sur la carte **Impayé ▼**.
-6. Descendez à **Usage médicaments** pour voir les médicaments prescrits ou délivrés.
-7. Pour garder le tableau des médicaments, cliquez sur **⬇ CSV** (fichier pour Excel).
+6. Pour la caisse jour par jour, regardez **Caisse par période**.
+7. Descendez à **Usage médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
 
 ## Pas à pas
 
@@ -22,7 +22,7 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 4. Pour une autre période, saisissez la date de début et la date de fin dans les deux cases à côté.
 5. Les chiffres se mettent à jour tout seuls. Pendant le calcul, `···` s'affiche à côté des dates.
 
-La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Usage médicaments** ni pour **Tendance mensuelle** (ils ont leurs propres dates).
+La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Caisse par période**, **Usage médicaments** et **Tendance mensuelle** (ils ont leurs propres dates).
 
 ### Lire « Activité » — combien de patients
 
@@ -36,17 +36,15 @@ La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pa
 
 ### Lire « Recettes » — combien d'argent
 
-<!-- à revoir : les cartes de Recettes changent bientôt (chiffres « de caisse » : entrées et sorties du jour, tableau par jour / mois / année) — décision du 2026-09-29. Mettre à jour quand l'écran sera livré. -->
-
 | Carte | Ce qu'elle compte |
 |---|---|
-| **Encaissé** | L'argent reçu sur les reçus émis pendant la période (argent donné moins monnaie rendue). En petit, **Facturé** : le montant facturé avant remise. |
-| **Factures de soins** | Les reçus de soins de la période, même non payés. En petit, **+ N règlement(s) de solde** : les reçus faits quand un patient a payé une ancienne dette. |
+| **Caisse** | L'argent **réellement entré dans la caisse moins l'argent rendu**, le jour où il a bougé. En petit : **Entrées** et **Sorties** (argent rendu lors d'une correction ou d'une annulation, monnaie rendue lors d'une nouvelle facturation). Corriger ou annuler un reçu plus tard **ne change pas les jours passés**. Un jour où l'on a surtout rendu de l'argent, **Caisse** peut être négative. |
+| **Factures de soins** | Les reçus de soins de la période, même non payés. En petit : **Facturé** (montant facturé avant remise) et **+ N règlement(s) de solde** (reçus faits quand un patient a payé une ancienne dette). |
 | **Moy. facturée / visite** | Montant facturé moyen par visite. |
 | **Impayé ▼** | Ce que les patients doivent **aujourd'hui**, toutes dates confondues. |
 | **Remboursement dû ▼** | Ce que l'hôpital doit rendre **aujourd'hui** (patient qui a trop payé). |
-| **Annulés** | Reçus annulés par le personnel pendant la période (pas ceux remplacés par une correction). En petit, **Rendu** : l'argent rendu au patient lors de ces annulations. |
-| **Recettes par service** · **Recettes par médecin** | **Encaissé** réparti par service et par médecin. Une ancienne dette payée plus tard compte pour le service et le médecin de la consultation d'origine. Chaque graphique, additionné, fait **Encaissé**. |
+| **Annulés** | Reçus annulés par le personnel pendant la période (pas ceux remplacés par une correction). L'argent rendu est dans les **Sorties** de **Caisse**. |
+| **Recettes par service — selon les reçus** · **Recettes par médecin — selon les reçus** | L'argent reçu, **selon les reçus**, réparti par service et par médecin : pour quel soin l'argent a été payé. Le total est écrit à côté du titre. Une ancienne dette payée plus tard compte pour le service et le médecin de la consultation d'origine. Ce total peut être différent de **Caisse** quand un reçu a été corrigé ou annulé un autre jour ; sur une longue période, les deux se rejoignent. |
 | **Recettes par poste** | **Facturé** réparti en **Consultation**, **Médicaments**, **Examens / Actes**, **Documents**. |
 
 ### Voir qui doit de l'argent
@@ -59,6 +57,15 @@ La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pa
 6. Cliquez de nouveau sur la carte pour fermer la liste. À chaque ouverture, la liste est rechargée.
 
 Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 chaque année.
+
+### La caisse jour par jour : « Caisse par période »
+
+1. Sous **Recettes**, dans **Caisse par période**, cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années.
+2. Pour une autre période, saisissez les deux dates à droite.
+3. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
+4. La ligne **Total** donne la période entière.
+5. Le **Net** d'un jour doit être égal à l'argent de la caisse ce jour-là. Si ce n'est pas le cas, prévenez l'administrateur.
+6. Cliquez sur **⬇ CSV** pour télécharger le tableau.
 
 ### Médicaments : « Usage médicaments »
 
@@ -74,8 +81,7 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 
 ### Tendance mensuelle
 
-En bas : les 6 derniers mois, **Visites totales** et **Encaissé**. Un mois sans activité s'affiche à 0.
-<!-- à revoir : la barre « Encaissé » passera au chiffre de caisse du mois avec le nouvel écran Recettes. -->
+En bas : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). Un mois sans activité s'affiche à 0.
 
 ## Si ce message apparaît
 
@@ -84,7 +90,9 @@ En bas : les 6 derniers mois, **Visites totales** et **Encaissé**. Un mois sans
 | **Aucune donnée** | Rien pour cette période (ou le calcul n'a pas pu se faire). | Vérifiez les deux dates. Si la période est bonne et que le problème reste, prévenez l'administrateur. |
 | **Chargement...** qui ne part pas | Le serveur ne répond pas. | Rechargez la page (touche F5). Si cela continue, prévenez l'administrateur. |
 | Le menu **Statistiques** n'apparaît pas | Votre compte n'a pas le droit « Statistiques ». | Demandez à l'administrateur (écran **Paramètres**). |
-| Le chiffre d'un jour passé a changé | Un enregistrement de ce jour a été annulé ou terminé plus tard, ou un reçu a été annulé ou corrigé. Un patient en attente terminé sans consultation passe de **Nouvelle** à **Sans frais / autres**. | Rien : c'est normal. <!-- à revoir : avec le nouvel écran Recettes, les chiffres d'argent des jours passés ne changeront plus. --> |
+| Le nombre de visites d'un jour passé a changé | Un enregistrement de ce jour a été annulé ou terminé plus tard. Un patient en attente terminé sans consultation passe de **Nouvelle** à **Sans frais / autres**. | Rien : c'est normal. |
+| **Caisse** d'un jour est négative | Ce jour-là, on a rendu plus d'argent qu'on n'en a reçu (par exemple une correction d'un reçu de la veille). | Rien : c'est normal. |
+| Le total de **Recettes par service** n'est pas égal à **Caisse** | Les graphiques comptent selon les reçus, la caisse selon le jour de l'argent. Un reçu corrigé ou annulé un autre jour les sépare. | Rien : sur une période plus longue, les deux se rejoignent. Pour la caisse, regardez **Caisse par période**. |
 | **Visites totales** plus petit que la liste de l'accueil | Les enregistrements annulés ne sont pas comptés. | Regardez la carte **Annulé**. |
 | **Aucune donnée** juste après avoir changé une date en haut | La date de début est après la date de fin. (Dans le tableau des médicaments, une telle date est simplement ignorée.) | Corrigez l'une des deux dates. |
 
@@ -99,7 +107,8 @@ En bas : les 6 derniers mois, **Visites totales** et **Encaissé**. Un mois sans
 ## Qui appeler
 
 Prévenez l'**administrateur** de l'EMR si :
-- un chiffre d'argent ne correspond pas à ce que montre l'écran **Paiement** pour le même patient ;
+- le **Net** d'un jour dans **Caisse par période** n'est pas égal à l'argent compté dans la caisse ;
+- un montant **Impayé** ne correspond pas à ce que montre l'écran **Paiement** pour le même patient ;
 - **Chargement...** reste affiché après avoir rechargé la page ;
 - un médicament délivré ne correspond pas aux sorties du rapport de stock pour le même mois.
 
