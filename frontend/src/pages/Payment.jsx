@@ -6,6 +6,7 @@ import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
+import { ReceiptModal } from '../components/Receipt.jsx';
 
 var FEES = { newVisit:15000, followUp:10000, emergency:25000, referral:12000, none:0 };
 function fmtAr(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); }
@@ -21,8 +22,7 @@ export default function PaymentPage() {
   var paid = useState(''), amountPaid = paid[0], setAmountPaid = paid[1];
   var ds = useState({type:'amount',value:0}), discount = ds[0], setDiscount = ds[1];
   var ns = useState(''), payNote = ns[0], setPayNote = ns[1];
-  var rs = useState(false), showReceipt = rs[0], setShowReceipt = rs[1];
-  var rns = useState(''), receiptNo = rns[0], setReceiptNo = rns[1];
+  var rids = useState(null), receiptId = rids[0], setReceiptId = rids[1];   // bill whose receipt is open
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var ts = useState('waiting'), tab = ts[0], setTab = ts[1];
   var qs = useState(''), q = qs[0], setQ = qs[1];
@@ -31,7 +31,6 @@ export default function PaymentPage() {
   var fcs = useState([]), feeCodes = fcs[0], setFeeCodes = fcs[1];
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
-  var rps = useState(null), reprintData = rps[0], setReprintData = rps[1];
   var sbs = useState(null), settleBill = sbs[0], setSettleBill = sbs[1];
   var sams = useState(''), settleAmt = sams[0], setSettleAmt = sams[1];
   var pbs = useState({owed:0,refund:0}), patBalance = pbs[0], setPatBalance = pbs[1];
@@ -240,7 +239,7 @@ export default function PaymentPage() {
         note:payNote, items:items,
         expected_active_bill_ids:(billItems && billItems.active_bill_ids) || [],
       });
-      setReceiptNo(result.receipt_no); setShowReceipt(true); await loadLists(); setTab('completed');
+      setReceiptId(result.id); await loadLists(); setTab('completed');
     } catch(err){ showError(err); }
   }
 
@@ -267,7 +266,7 @@ export default function PaymentPage() {
         expected_refund:corr.refund, expected_outstanding:corr.outstanding,
         reason:(t.correctionBadge||'정정'),
       });
-      setReceiptNo(result.receipt_no); setShowReceipt(true); await loadLists(); setTab('completed');
+      setReceiptId(result.id); await loadLists(); setTab('completed');
     } catch(err){ showError(err); }
   }
 
@@ -294,10 +293,7 @@ export default function PaymentPage() {
     }
   }
 
-  async function reprint(b){
-    try { setReprintData(await api.get('/billing/'+b.id+'/detail')); }
-    catch(err){ alert('Error: '+err.message); }
-  }
+  function reprint(b){ setReceiptId(b.id); }
 
   function settleConfirm(){ return once(settleConfirmNow); }
   async function settleConfirmNow(){
@@ -433,20 +429,6 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {showReceipt?(
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#fff',color:'#000',borderRadius:8,width:380,maxHeight:'90vh',overflow:'auto'}}>
-            <div id="receipt-print" style={{padding:'20px',fontFamily:"'Courier New',monospace"}}>
-              <div style={{textAlign:'center',borderBottom:'2px dashed #000',paddingBottom:10,marginBottom:10}}><div style={{fontSize:16,fontWeight:700}}>Bethesda Clinic</div><div style={{fontSize:12}}>Antananarivo, Madagascar</div></div>
-              <div style={{fontSize:13,marginBottom:8}}><div style={{display:'flex',justifyContent:'space-between'}}><span>Receipt:</span><strong>{receiptNo}</strong></div><div style={{display:'flex',justifyContent:'space-between'}}><span>Date:</span><span>{new Date().toLocaleDateString('en-CA')}</span></div><div style={{display:'flex',justifyContent:'space-between'}}><span>Patient:</span><strong>{sel?.last_name} {sel?.first_name}</strong></div><div style={{display:'flex',justifyContent:'space-between'}}><span>Chart:</span><span>{sel?.chart_no}</span></div></div>
-              <div style={{fontSize:14,borderTop:'1px dashed #000',paddingTop:8}}><div style={{display:'flex',justifyContent:'space-between',fontWeight:700}}><span>Total</span><span>{fmtAr(totalDue())} Ar</span></div><div style={{display:'flex',justifyContent:'space-between'}}><span>Paid</span><span>{fmtAr(amtPaidNum())} Ar</span></div>{outstandingAmt()>0?<div style={{display:'flex',justifyContent:'space-between',color:'#c00',fontWeight:700}}><span>Outstanding</span><span>{fmtAr(outstandingAmt())} Ar</span></div>:null}</div>
-              <div style={{textAlign:'center',borderTop:'2px dashed #000',paddingTop:8,marginTop:10,fontSize:13}}>Thank you</div>
-            </div>
-            <div style={{padding:'10px 14px',borderTop:'1px solid #ddd',display:'flex',gap:8,background:'#f5f5f5'}}><button onClick={function(){setShowReceipt(false);setSel(null);setBillItems(null)}} style={{flex:1,background:'#fff',border:'1px solid #ccc',borderRadius:5,padding:'8px',cursor:'pointer',fontSize:14}}>{t.close}</button><button onClick={function(){window.print()}} style={{flex:2,background:'#10b981',border:'none',borderRadius:5,padding:'8px',cursor:'pointer',fontSize:14,fontWeight:700,color:'#fff'}}>🖨 {t.printReceipt}</button></div>
-          </div>
-        </div>
-      ):null}
-
       {settleBill?(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={function(){setSettleBill(null)}}>
           <div style={{background:pn,border:'1px solid '+bd2,color:tx,borderRadius:10,width:380,padding:18}} onClick={function(e){e.stopPropagation()}}>
@@ -467,37 +449,8 @@ export default function PaymentPage() {
         </div>
       ):null}
 
-      {reprintData?(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'#fff',color:'#000',borderRadius:10,width:380,maxHeight:'90vh',overflow:'auto'}}>
-            <div id="receipt-print" style={{padding:'20px',fontFamily:"'Courier New',monospace"}}>
-              <div style={{textAlign:'center',fontWeight:900,fontSize:18,marginBottom:4}}>{t.clinicName||'Bethesda'}</div>
-              <div style={{textAlign:'center',fontSize:12,color:'#444',marginBottom:10}}>{L.receiptNo}: {reprintData.bill.receipt_no}</div>
-              {reprintData.bill.payment_status==='cancelled'?<div style={{textAlign:'center',color:'#c00',fontWeight:800,marginBottom:8,border:'2px solid #c00',borderRadius:4,padding:'3px'}}>{t.cancelledBadge}</div>:null}
-              <div style={{fontSize:13,marginBottom:8}}>
-                <div style={{display:'flex',justifyContent:'space-between'}}><span>Date:</span><span>{ymd(reprintData.bill.billing_date)}</span></div>
-                <div style={{display:'flex',justifyContent:'space-between'}}><span>Patient:</span><strong>{reprintData.bill.last_name} {reprintData.bill.first_name}</strong></div>
-                <div style={{display:'flex',justifyContent:'space-between'}}><span>Chart:</span><span>{reprintData.bill.chart_no}</span></div>
-              </div>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,borderTop:'1px dashed #000',marginTop:6}}><tbody>
-                {(reprintData.items||[]).map(function(it,idx){ return <tr key={idx}>
-                  <td style={{padding:'3px 0'}}>{it.item_name}</td>
-                  <td style={{padding:'3px 0',textAlign:'right'}}>{fmtAr(it.total_price)}</td>
-                </tr>; })}
-              </tbody></table>
-              <div style={{borderTop:'1px dashed #000',marginTop:8,paddingTop:8,fontSize:13}}>
-                <div style={{display:'flex',justifyContent:'space-between',fontWeight:700}}><span>{t.totalDue}</span><span>{fmtAr(reprintData.bill.total_due)} Ar</span></div>
-                <div style={{display:'flex',justifyContent:'space-between'}}><span>{t.amountPaid}</span><span>{fmtAr(reprintData.bill.amount_paid)} Ar</span></div>
-              </div>
-              <div style={{textAlign:'center',borderTop:'2px dashed #000',paddingTop:8,marginTop:10,fontSize:13}}>Thank you</div>
-            </div>
-            <div style={{padding:'10px 14px',borderTop:'1px solid #ddd',display:'flex',gap:8,background:'#f5f5f5'}}>
-              <button onClick={function(){setReprintData(null)}} style={{flex:1,background:'#fff',border:'1px solid #ccc',borderRadius:5,padding:'8px',cursor:'pointer',fontSize:14}}>{t.close}</button>
-              <button onClick={function(){window.print()}} style={{flex:2,background:'#10b981',border:'none',borderRadius:5,padding:'8px',cursor:'pointer',fontSize:14,fontWeight:700,color:'#fff'}}>🖨 {t.printReceipt}</button>
-            </div>
-          </div>
-        </div>
-      ):null}
+      {/* One receipt for right after payment and for reprints, read from the stored bill (components/Receipt.jsx). */}
+      <ReceiptModal billingId={receiptId} t={t} onClose={function(){ setReceiptId(null); }} />
       <PatientFinder open={finderOpen} onClose={function(){setFinderOpen(false)}} mode="visit"
         onPickVisit={function(v){ setTab('waiting'); selectVisit(v); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"
@@ -521,7 +474,6 @@ export default function PaymentPage() {
           </div>
         </div>
       ) : null}
-      <style>{"@media print{body *{visibility:hidden}#receipt-print,#receipt-print *{visibility:visible}#receipt-print{position:absolute;left:0;top:0;width:100%}}"}</style>
     </div>
   );
 
