@@ -55,7 +55,7 @@
    - 수납에서 이미 돈을 받은 뒤에 바꾸면, 수납 화면에 추가 수납이나 환불이 생깁니다.
 5. **Externe** 약이 있으면 원외 처방전을 인쇄합니다 → 2.3.
 6. **Interne** 약을 준비해 환자에게 줍니다.
-7. **✓ Terminer délivrance** 를 누르고, 「(환자 이름) Terminer délivrance?」 창에서 **OK** 를 누릅니다. 환자가 목록에서 사라지고 **Délivré** 탭으로 옮겨갑니다.
+7. **✓ Terminer délivrance** 를 누르고, « Terminer la délivrance pour (환자 이름) ? » 창에서 **OK** 를 누릅니다. 환자가 목록에서 사라지고 **Délivré** 탭으로 옮겨갑니다.
 8. « Le stock enregistré était inférieur à la quantité délivrée — vérifiez le stock réel » (재고가 조제량보다 적게 기록되어 있었습니다 — 실제 재고를 확인하세요) 창이 뜨면, 컴퓨터의 재고 숫자가 실제보다 적었다는 뜻입니다. 약 이름과 「내준 수 / 기록돼 있던 수」가 함께 나옵니다. 선반을 세어 **📦 Stock** 탭의 **Inventaire (실사)** 로 맞춰 주세요(2.6).
 
 > 오른쪽 위 **Médicaments (interne)** 금액은 **Externe** 약을 빼고 계산합니다. 수납 화면에서 받는 약값과 같습니다.

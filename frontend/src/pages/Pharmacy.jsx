@@ -8,7 +8,8 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord, missingTimes } from '../documents/rx-dosing.js';
 import { PharmacyStock } from './PharmacyStock.jsx';
 
-function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Thousands: 12,300 in Korean and English, 12 300 in French (integration test C).
+function fmt(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
 function timeText(v, locale){
   var raw = v.consultation_time || v.dispensed_at || v.visit_date;
@@ -188,7 +189,9 @@ export default function PharmacyPage() {
     // A line with no stored total takes nothing off the shelf (the server reads the
     // total, it does not work one out), so say so before the pharmacist confirms.
     var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
-    var ask = patientName(sel) + ' '+t.dispenseComplete+'?';
+    // A whole sentence per language, so the word order is right (« Terminer la
+    // délivrance pour RAKOTO Jean ? », integration test C).
+    var ask = fill(t.ph_dispenseConfirm, { name: patientName(sel) });
     if(unquantified.length) ask = t.ph_noTotalConfirm + '\n' + unquantified.map(function(rx){ return '· ' + rx.drug_name; }).join('\n') + '\n\n' + ask;
     if(!window.confirm(ask)) return;
     setBusy(true);
@@ -328,7 +331,7 @@ export default function PharmacyPage() {
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
-                  <div style={{ color:'var(--text-strong-2)', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug)}</div>
+                  <div style={{ color:'var(--text-strong-2)', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug, lc.lang)}</div>
                   {anyUnquantified ? <div style={{ color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
                 </div>
               </div>

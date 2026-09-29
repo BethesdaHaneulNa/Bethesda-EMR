@@ -562,6 +562,7 @@ export default {
   ph_chk_topical: "정으로 되어 있으나 외용약(연고·크림)일 수 있음 — 포장 단위도",
   ph_chk_packlabel: "포장 단위 말(통? 병?)",
   ph_chkQtyDetail: "{note} ≈ {n}, 가져온 수량 {qty}",
+  ph_dispenseConfirm: "{name} 환자의 조제를 완료할까요?",
   ph_u_cap: "캡슐",
   ph_u_tab: "정",
   ph_u_bottle: "병",

@@ -562,6 +562,7 @@ export default {
   ph_chk_topical: "Classé comprimé mais peut-être à usage externe (pommade, crème) — unité de conditionnement aussi",
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
   ph_chkQtyDetail: "{note} ≈ {n} ; quantité importée : {qty}",
+  ph_dispenseConfirm: "Terminer la délivrance pour {name} ?",
   ph_u_cap: "gél.",
   ph_u_tab: "cp",
   ph_u_bottle: "fl.",

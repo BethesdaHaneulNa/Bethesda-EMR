@@ -2,9 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 C1(확인 창 어순, 금액 자릿수)
+
+- **상태**: 확인 요청. 디자인 커밋(`a7d6c2b`, 약국 화면 색)이 develop에 들어온 뒤 그 위에서.
+- **한 일**: 조제 완료 확인 창을 언어마다 한 문장으로(`ph_dispenseConfirm`): FR « Terminer la délivrance pour RAKOTO Jean ? », KO 「RAKOTO Jean 환자의 조제를 완료할까요?」, EN « Finish dispensing for RAKOTO Jean? ». 총량 없는 약 안내가 앞에 붙는 것은 그대로. **Médicaments (interne)** 금액을 프랑스어에서 « 13 500 »(나눔 없는 빈칸)으로, ko·en은 쉼표 그대로.
+- **바꾼 파일**: `Pharmacy.jsx`(`fmt`, `dispense`의 확인 문장), i18n `ph_dispenseConfirm`(ko·en·fr), `wiki/modules/pharmacy.md` 2.2.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **확인한 방법**: 격리 9184 FR — 확인 창 « Terminer la délivrance pour TEST RAKOTO ? », 금액 « 13 500 ». `npm run build`.
+
 ## 2026-09-29 — 통합 시험 B(가져온 메모의 한국어, 같은 이름 두 줄) · C2(단위 말을 제형에서)
 
-- **상태**: 확인 요청(화면 파일 Pharmacy.jsx·PharmacyStock.jsx는 건드리지 않음 — 디자인 작업과 안 부딪힘). C1(확인 창 어순)과 금액의 프랑스어 자릿수(«12,300» → «12 300»)는 **Pharmacy.jsx라 디자인 커밋이 들어온 뒤**에 합니다.
+- **상태**: 확인 요청(화면 파일 Pharmacy.jsx·PharmacyStock.jsx는 건드리지 않음 — 디자인 작업과 안 부딪힘). 커밋 `4ce5ed7`.
 - **한 일**:
   - B 메모: 가져온 확인할 점의 자료(옛 프로그램의 원래 표기 「60캡슐*66」, 「79병」)를 **화면에서** 화면 언어로 — 한국어 단위 다섯 개(정·캡슐·병·개·포)를 cp · gél. · fl. · u. · sachet로, `*`를 ×로, 수량 항목은 « 60 gél. × 66 ≈ 3960 ; quantité importée : 90 ». 저장된 값은 그대로라 **마이그레이션 없음**(실행 중 DB 값 안 바꿈). 가져온 93개 항목 전부 FR 화면에 한국어 0 확인(node로 전부 그려 봄).
   - C2: `rx-dosing.js`가 단위 말을 `rx.dosage_form`에서 먼저 정함(Tablet cp · Capsule gél. · Powder / Sachet sachet · Suppository suppo.), 없으면 전처럼 이름에서. 옛 처방(예시 약, 제형 없음)의 문장은 그대로.

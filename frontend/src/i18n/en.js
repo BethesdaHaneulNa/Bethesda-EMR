@@ -571,6 +571,7 @@ export default {
   ph_chk_topical: "Filed as a tablet but may be topical (ointment, cream) - pack unit too",
   ph_chk_packlabel: "Pack word (jar? bottle?)",
   ph_chkQtyDetail: "{note} ≈ {n}; imported quantity: {qty}",
+  ph_dispenseConfirm: "Finish dispensing for {name}?",
   ph_u_cap: "caps",
   ph_u_tab: "tab",
   ph_u_bottle: "bottle",
