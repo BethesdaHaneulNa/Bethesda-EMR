@@ -327,5 +327,9 @@ export default {
   px_show: "보기",
   px_hide: "숨기기",
   px_tokenUnusable: "이 토큰은 쓸 수 없습니다. PACS를 설치할 때 화면에 나온 값(16자 이상)을 붙여넣으세요. 그 전까지는 영상 오더가 촬영 장비로 넘어가지 않습니다. PACS를 쓰지 않는 병원은 무시해도 됩니다.",
+  px_imagesArrived: "영상 {n}장 도착",
+  px_imagesWaiting: "영상 대기 중",
+  px_patientMismatch: "영상에 적힌 환자는 「{id} {name}」으로, 이 환자의 차트번호와 다릅니다. 다른 환자의 영상일 수 있으니 영상 속 환자 정보를 먼저 확인하세요.",
+  px_patientMissing: "영상에 환자번호가 없습니다. 영상 속 환자 정보를 먼저 확인하세요.",
   // ── end pacs ──
 };
