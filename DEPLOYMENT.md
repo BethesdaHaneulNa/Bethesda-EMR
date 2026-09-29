@@ -149,6 +149,46 @@ backup file, or free up disk space. Then tidy up:
 docker exec bethesda-emr-db rm -f /tmp/restore.sql.gz
 ```
 
+### If the backup is older than the app ("cannot drop constraint … depend on it")
+
+A backup only knows the tables that existed when it was taken. After an update has added
+tables, restoring a backup from *before* that update stops with exit code `3` and a line
+like:
+
+```
+ERROR:  cannot drop constraint staff_pkey on table public.staff because other objects depend on it
+```
+
+Nothing was changed (the transaction rolled back). This is the case for every backup taken
+before the last update, including the ones in `_pre-update-backups/`.
+
+Use these commands instead. They empty the database and restore the backup **in one
+transaction** — all of it happens or none of it does:
+
+```
+docker cp backups/bethesda_2026-07-24_0200.sql.gz bethesda-emr-db:/tmp/restore.sql.gz
+
+docker exec bethesda-emr-db sh -c "gunzip -c /tmp/restore.sql.gz > /tmp/restore.sql"
+
+docker exec bethesda-emr-db psql -v ON_ERROR_STOP=1 --single-transaction -U medconnect -d medconnect -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public" -f /tmp/restore.sql
+```
+
+- **Check the exit code after the second command.** Not `0` means the backup file is
+  damaged: stop there, nothing has been touched, use another backup.
+- The backup is unpacked to a file first, on purpose. Piping it straight into `psql` here
+  would empty the database and then run out of data on a damaged file — and keep the
+  result. (Tested: a truncated backup fails at the unpack step and the database is
+  untouched.)
+- Check the exit code after the third command as well: `0` means restored.
+- Tidy up: `docker exec bethesda-emr-db rm -f /tmp/restore.sql /tmp/restore.sql.gz`
+
+When the app starts again it brings the restored database up to its own version by itself
+(the log shows `[migrate] applying …`). Everything entered after the backup was taken is
+gone, as with any restore.
+
+> **After every update, take a backup** (Settings → Backup → "Back up now") **and run
+> `verify-backup.ps1`.** Until you do, every backup you hold is from the older version.
+
 **Start back up and look at it:**
 
 ```powershell
@@ -280,8 +320,13 @@ not offered — a container rebuilding itself is unsafe for a medical system, so
 from the host instead.)
 
 If something looks wrong after an update, your data is safe — restore the pre-update backup
-from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-backup)
-(same steps, just a different folder).
+from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-backup).
+That backup is from the version before the update, so use the commands under "If the
+backup is older than the app" there.
+
+**Moving to another machine:** update the old machine first, take a backup *after* the
+update, and restore that on the new machine, installed from the same version. Then the
+ordinary restore commands work as written.
 
 ## 9. Before you go live — checklist
 
