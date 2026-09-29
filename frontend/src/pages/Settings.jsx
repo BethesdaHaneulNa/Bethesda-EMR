@@ -957,7 +957,7 @@ export default function SettingsPage() {
                 <Fld label={t.colDays}><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
                 <Fld label={t.ph_colDirections}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 1fr',gap:6}}>
+              <div style={{display:'grid',gridTemplateColumns:'1.8fr 1.1fr 0.8fr 1fr',gap:6}}>
                 <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
                 <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
                 {/* Read-only: stock moves only through the pharmacy's Stock tab, where each
