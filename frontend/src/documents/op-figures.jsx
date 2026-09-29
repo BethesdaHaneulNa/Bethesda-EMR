@@ -10,6 +10,11 @@
 // selections are solid black, so nothing depends on colour surviving a mono printer.
 
 import { HERNIA_PANELS, APPENDIX_PLATE, APPENDIX_ANCHORS } from './op-plates.js';
+import { tr } from './op-terms.js';
+
+// Every drawing takes `lang`: its words go through tr() (op-terms.js), so a French note
+// reads French on the figure as well as in the table. What decides WHAT is drawn is
+// always the stored English value, never the translation.
 
 var INK = '#333';
 var FAINT = '#bbb';
@@ -76,8 +81,10 @@ function Dial(props) {
       {/* sized for the ~124 px the dial prints at, where 11 was barely legible */}
       <text x={c} y={13} textAnchor="middle" fontSize="13" fontWeight="700" fill={INK}>A</text>
       <text x={c} y={cy + r + 15} textAnchor="middle" fontSize="13" fontWeight="700" fill={INK}>P</text>
-      <text x={3} y={cy + 5} fontSize="13" fontWeight="700" fill={INK}>R</text>
-      <text x={g.W - 12} y={cy + 5} fontSize="13" fontWeight="700" fill={INK}>L</text>
+      {/* the patient's right and left: R / L, in French D(roite) / G(auche). A and P
+          (anterior / posterior) are the same letters in French. */}
+      <text x={3} y={cy + 5} fontSize="13" fontWeight="700" fill={INK}>{tr('R', props.lang)}</text>
+      <text x={g.W - 12} y={cy + 5} fontSize="13" fontWeight="700" fill={INK}>{tr('L', props.lang)}</text>
       {props.title ? <text x={c} y={g.H - 4} textAnchor="middle" fontSize="11" fill="#555">{props.title}</text> : null}
     </svg>
   );
@@ -87,7 +94,7 @@ function Dial(props) {
 export function AnalClock(props) {
   var g = CLK;
   return (
-    <Dial width={props.width} title={props.title}>
+    <Dial width={props.width} title={props.title} lang={props.lang}>
       {hours(props.value).map(function (h) {
         var m = g.pt(h, g.r - 14);
         return <g key={'m' + h}>
@@ -111,7 +118,7 @@ export function FistulaClock(props) {
   var g = CLK, ins = hours(props.internal), outs = hours(props.external);
   var IN_R = 24, OUT_R = g.r - 10;
   return (
-    <Dial width={props.width} title="● internal   ○ external">
+    <Dial width={props.width} title={tr('● internal   ○ external', props.lang)} lang={props.lang}>
       {ins.length === 1 ? outs.map(function (h) {
         var a = g.pt(h, OUT_R), b = g.pt(ins[0], IN_R);
         return <line key={'j' + h} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={MARK} strokeWidth="2" />;
@@ -171,8 +178,8 @@ export function BreastMap(props) {
       <line x1={150} y1={30} x2={150} y2={176} stroke={FAINT} strokeWidth="1" strokeDasharray="4 3" />
       {breast(96, true)}
       {breast(204, false)}
-      <text x={96} y={186} textAnchor="middle" fontSize="12" fontWeight="700" fill={INK}>R</text>
-      <text x={204} y={186} textAnchor="middle" fontSize="12" fontWeight="700" fill={INK}>L</text>
+      <text x={96} y={186} textAnchor="middle" fontSize="12" fontWeight="700" fill={INK}>{tr('R', props.lang)}</text>
+      <text x={204} y={186} textAnchor="middle" fontSize="12" fontWeight="700" fill={INK}>{tr('L', props.lang)}</text>
     </svg>
   );
 }
@@ -221,38 +228,71 @@ function FistulaAnatomy() {
   );
 }
 
+/* Several types selected = several tracts in one patient. They are all drawn on this one
+   section, each in its own line pattern with a legend underneath. Separate sections side
+   by side were tried first: they no longer fit beside the detail table, dropped onto a
+   line of their own, and pushed a note with ordinary-length findings onto a second page.
+   Patterns rather than colours, so a mono printer keeps them apart. */
+var FIS_DASH = [null, '7 3.5', '2.4 2.6', '10 3 2.4 3', '4 2'];
+var FIS_LEG = 12;                               // legend row height, viewBox units
+
 export function FistulaSection(props) {
   var picks = sel(props.tractType).filter(function (k) { return !!FIS_TRACT[k]; });
-  var t = FIS_ORDER.filter(function (k) { return picks.indexOf(k) >= 0; })[0] || null;
-  var tr = t ? FIS_TRACT[t] : null;
+  var ts = FIS_ORDER.filter(function (k) { return picks.indexOf(k) >= 0; });
+  var t = ts[0] || null;
+  var first = t ? FIS_TRACT[t] : null;
+  var multi = ts.length > 1;
+  var H = FIS_H + (multi ? 4 + FIS_LEG * ts.length : 0);
   var dw = props.width || 200;
+  var lang = props.lang;
   var lab = { fontSize: 10.5, fill: '#666' };   // ~8 px at the 200 px it prints at
   return (
-    <svg width={FIS_W} height={FIS_H} viewBox={'0 0 ' + FIS_W + ' ' + FIS_H}
-         style={{ flex: 'none', width: dw, height: Math.round(dw * FIS_H / FIS_W) }}>
+    <svg width={FIS_W} height={H} viewBox={'0 0 ' + FIS_W + ' ' + H}
+         style={{ flex: 'none', width: dw, height: Math.round(dw * H / FIS_W) }}>
       <FistulaAnatomy />
       <g transform={'matrix(-1 0 0 1 ' + FIS_W + ' 0)'}><FistulaAnatomy /></g>
       <line x1={114} y1={118} x2={146} y2={118} stroke={FAINT} strokeWidth="1" strokeDasharray="3 2" />
 
       {/* labels live on the right half, clear of the tract */}
       <line x1={153} y1={82} x2={168} y2={66} stroke="#999" strokeWidth="0.6" />
-      <text x={170} y={66} {...lab}>IAS</text>
+      <text x={170} y={66} {...lab}>{tr('IAS', lang)}</text>
       <line x1={178} y1={140} x2={196} y2={146} stroke="#999" strokeWidth="0.6" />
-      <text x={198} y={149} {...lab}>EAS</text>
-      <text x={196} y={44} {...lab}>levator ani</text>
+      <text x={198} y={149} {...lab}>{tr('EAS', lang)}</text>
+      {/* A translation may carry a line break ("releveur / de l'anus"); the last line
+          keeps the English baseline and earlier lines stack above it. */}
+      {tr('levator ani', lang).split('\n').reverse().map(function (ln, i) {
+        return <text key={'lev' + i} x={196} y={44 - i * 11} {...lab}>{ln}</text>;
+      })}
       <line x1={146} y1={118} x2={196} y2={120} stroke="#999" strokeWidth="0.6" />
-      <text x={198} y={123} {...lab}>dentate</text>
+      <text x={198} y={123} {...lab}>{tr('dentate', lang)}</text>
 
-      {tr ? <g>
-        <path d={tr[0]} fill="none" stroke={MARK} strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx={tr[1][0]} cy={tr[1][1]} r="3.6" fill={MARK} />
-        <circle cx={tr[2][0]} cy={tr[2][1]} r="3.6" fill={MARK} />
-        <text x={tr[1][0] + 5} y={tr[1][1] + 12} fontSize="9.5" fontWeight="700" fill={MARK}>int.</text>
-        <text x={tr[2][0]} y={FIS_H - 4} textAnchor="middle" fontSize="9.5" fontWeight="700" fill={MARK}>ext.</text>
+      {ts.map(function (k, i) {
+        var r = FIS_TRACT[k], dash = FIS_DASH[i % FIS_DASH.length];
+        return <g key={k}>
+          <path d={r[0]} fill="none" stroke={MARK} strokeWidth="2.4"
+                strokeLinecap={dash ? 'butt' : 'round'} strokeDasharray={dash || undefined} />
+          <circle cx={r[1][0]} cy={r[1][1]} r="3.6" fill={MARK} />
+          <circle cx={r[2][0]} cy={r[2][1]} r="3.6" fill={MARK} />
+        </g>;
+      })}
+      {/* int./ext. once, on the first tract: enough to say what the dots are, and the
+          external openings of two tracts can sit a few units apart. */}
+      {first ? <g>
+        <text x={first[1][0] + 5} y={first[1][1] + 12} fontSize="9.5" fontWeight="700" fill={MARK}>int.</text>
+        <text x={first[2][0]} y={FIS_H - 4} textAnchor="middle" fontSize="9.5" fontWeight="700" fill={MARK}>ext.</text>
       </g> : null}
-      <text x={FIS_W - 4} y={13} textAnchor="end" fontSize="10.5" fontWeight={t ? 700 : 400} fill={t ? MARK : '#999'}>
-        {t || 'tract type not selected'}
-      </text>
+      {multi ? ts.map(function (k, i) {
+        var y = FIS_H + 4 + FIS_LEG * i + 8, dash = FIS_DASH[i % FIS_DASH.length];
+        return <g key={'leg' + k}>
+          <line x1={8} y1={y - 3.5} x2={34} y2={y - 3.5} stroke={MARK} strokeWidth="2.4"
+                strokeLinecap={dash ? 'butt' : 'round'} strokeDasharray={dash || undefined} />
+          <text x={40} y={y} fontSize="10.5" fontWeight="700" fill={MARK}>{tr(k, lang)}</text>
+        </g>;
+      }) : (
+        <text x={FIS_W - 4} y={13} textAnchor="end" fontSize="10.5" fontWeight={t ? 700 : 400} fill={t ? MARK : '#999'}>
+          {tr(t || 'tract type not selected', lang)}
+        </text>
+      )}
     </svg>
   );
 }
@@ -278,7 +318,7 @@ export function HerniaPlate(props) {
         <image href={P.src} xlinkHref={P.src} width={P.w} height={P.h}
                x={(PANEL_W - P.w) / 2} y={(PANEL_H - P.h) / 2} />
         <text x={PANEL_W / 2} y={PANEL_H + 40} textAnchor="middle"
-              fontSize="31" fontWeight="700" fill={MARK}>{P.cap}</text>
+              fontSize="31" fontWeight="700" fill={MARK}>{tr(P.cap, props.lang)}</text>
       </svg>
     );
   });
@@ -302,12 +342,45 @@ var APPY_ANCHOR_SIDE = {                     // which way each word reads off it
 // came out around 7 px; 54 keeps them near 9 px, and the viewBox widens so the longest
 // ones (Postileal, Retrocecal) still fit.
 var APPY_FS = 54;
+var APPY_VB = { x: -175, y: -110, w: 1470, h: 1680 };
+
+// Rough width of a label in em. English keeps the plain half-em per letter the plate was
+// laid out with. The French words are longer and carry wide letters (æ, m) and narrow
+// ones (i, l, -), which half an em got wrong by up to 12% - enough for the ring round a
+// selected word to cut through it - so those are weighted, and bold (the selected look)
+// adds 10%.
+function appyEm(word, lang) {
+  if (lang !== 'fr') return word.length * 0.5;
+  var em = 0;
+  for (var i = 0; i < word.length; i++) {
+    var c = word.charAt(i);
+    em += /[æmwMW]/.test(c) ? 0.8 : /[il\-' .j]/.test(c) ? 0.3 : /[A-Z]/.test(c) ? 0.65 : 0.52;
+  }
+  return em * 1.1;
+}
+
+// The frame round the plate. English uses the fixed one it was drawn for. Another
+// language widens it just enough that its longest words (measured bold, ring included)
+// stay inside - otherwise "Rétro-iléale" and "Rétrocæcale" were cut off at the edges.
+// The plate then prints a few percent smaller; the words stay at their leader lines.
+function appyFrame(lang) {
+  if (lang !== 'fr') return APPY_VB;
+  var lo = APPY_VB.x, hi = APPY_VB.x + APPY_VB.w;
+  Object.keys(APPENDIX_ANCHORS).forEach(function (k) {
+    var a = APPENDIX_ANCHORS[k], anch = APPY_ANCHOR_SIDE[k] || 'start';
+    var w = appyEm(tr(k, lang), lang) * APPY_FS, pad = 14;
+    var x0 = anch === 'end' ? a[1] - w : anch === 'middle' ? (a[0] + a[1]) / 2 - w / 2 : a[0];
+    lo = Math.min(lo, x0 - pad); hi = Math.max(hi, x0 + w + pad);
+  });
+  return { x: Math.floor(lo), y: APPY_VB.y, w: Math.ceil(hi - lo), h: APPY_VB.h };
+}
+
 export function AppendixPlate(props) {
   var picks = sel(props.value);
   var P = APPENDIX_PLATE;
   // Several labels sit off the plate (the words were erased from its edges), so the
   // viewBox is wider and taller than the image on every side.
-  var VB = { x: -175, y: -110, w: 1470, h: 1680 };
+  var VB = appyFrame(props.lang);
   var keys = Object.keys(APPENDIX_ANCHORS);
   return (
     <svg width={VB.w} height={VB.h} viewBox={VB.x + ' ' + VB.y + ' ' + VB.w + ' ' + VB.h}
@@ -320,7 +393,8 @@ export function AppendixPlate(props) {
         var isAnat = APPY_ANATOMY.indexOf(k) >= 0;
         var x = anch === 'end' ? a[1] : anch === 'middle' ? (a[0] + a[1]) / 2 : a[0];
         var y = a[2] + APPY_FS * 0.36;       // a[2] is the word's middle, not its baseline
-        var w = k.length * APPY_FS * 0.5, box = null;
+        var word = tr(k, props.lang);
+        var w = appyEm(word, props.lang) * APPY_FS, box = null;
         if (on) {
           var bx = anch === 'end' ? x - w : anch === 'middle' ? x - w / 2 : x;
           box = <rect x={bx - 9} y={a[2] - APPY_FS * 0.62} width={w + 18} height={APPY_FS * 1.24}
@@ -330,7 +404,7 @@ export function AppendixPlate(props) {
           <g key={k}>
             {box}
             <text x={x} y={y} textAnchor={anch} fontSize={APPY_FS}
-                  fontWeight={on ? 700 : 400} fill={on ? MARK : isAnat ? '#6d6d6d' : '#8a8a8a'}>{k}</text>
+                  fontWeight={on ? 700 : 400} fill={on ? MARK : isAnat ? '#6d6d6d' : '#8a8a8a'}>{word}</text>
           </g>
         );
       })}
@@ -342,12 +416,12 @@ export function AppendixPlate(props) {
    template has no figure or nothing has been selected yet - an empty diagram on a signed
    record reads as "normal", which it does not mean. */
 export function OpFigures(props) {
-  var v = props.values || {}, kind = props.figure;
+  var v = props.values || {}, kind = props.figure, lang = props.lang;
   if (kind === 'anal') {
     if (!sel(v.position).length && !sel(v.position2).length) return null;
-    return <FigBox caption="Pile position (lithotomy view)">
-      <AnalClock value={v.position} title="pre-op" />
-      {sel(v.position2).length ? <AnalClock value={v.position2} title="post-op / additional" /> : null}
+    return <FigBox caption={tr('Pile position (lithotomy view)', lang)}>
+      <AnalClock value={v.position} title={tr('pre-op', lang)} lang={lang} />
+      {sel(v.position2).length ? <AnalClock value={v.position2} title={tr('post-op / additional', lang)} lang={lang} /> : null}
     </FigBox>;
   }
   if (kind === 'fistula') {
@@ -356,24 +430,26 @@ export function OpFigures(props) {
     var openings = sel(v.extOpening).length || sel(v.intOpening).length;
     var tract = sel(v.tractType).length;
     if (!openings && !tract) return null;
-    return <FigBox caption="Openings (lithotomy view) and tract">
-      {openings ? <FistulaClock internal={v.intOpening} external={v.extOpening} width={124} /> : null}
-      {tract ? <FistulaSection tractType={v.tractType} width={200} /> : null}
+    // Every selected type is drawn in the one section (see FistulaSection) - drawing
+    // only the first left the table saying two types beside a figure showing one.
+    return <FigBox caption={tr('Openings (lithotomy view) and tract', lang)}>
+      {openings ? <FistulaClock internal={v.intOpening} external={v.extOpening} width={124} lang={lang} /> : null}
+      {tract ? <FistulaSection tractType={v.tractType} width={200} lang={lang} /> : null}
     </FigBox>;
   }
   // The next three carry their own labels (R/L, the panel name, the ringed position),
   // so a caption line above them would only repeat the detail row beside them.
   if (kind === 'breast') {
     if (!sel(v.side).length && !sel(v.quadrant).length) return null;
-    return <FigBox><BreastMap side={v.side} quadrant={v.quadrant} /></FigBox>;
+    return <FigBox><BreastMap side={v.side} quadrant={v.quadrant} lang={lang} /></FigBox>;
   }
   if (kind === 'hernia') {
     if (!sel(v.herniaType).length) return null;
-    return <FigBox><HerniaPlate value={v.herniaType} /></FigBox>;
+    return <FigBox><HerniaPlate value={v.herniaType} lang={lang} /></FigBox>;
   }
   if (kind === 'appendix') {
     if (!sel(v.appyPosition).length) return null;
-    return <FigBox><AppendixPlate value={v.appyPosition} width={230} /></FigBox>;
+    return <FigBox><AppendixPlate value={v.appyPosition} width={230} lang={lang} /></FigBox>;
   }
   return null;
 }

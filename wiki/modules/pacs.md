@@ -1,6 +1,6 @@
 # PACS (의료 영상)
 
-> **담당**: PACS 세션 · 브랜치 `session/pacs` (EMR 저장소와 PACS 저장소 둘 다) · **마지막 갱신**: 2026-09-29 · **상태**: 토큰 보안(P-2·P-5) 고침 — 나머지는 7절
+> **담당**: PACS 세션 · 브랜치 `session/pacs` (EMR 저장소와 PACS 저장소 둘 다) · **마지막 갱신**: 2026-09-29 · **상태**: 토큰 보안(P-2·P-5) develop에 합침 · 영상 도착 확인(P-7)·환자번호 대조(P-3) 확인 요청 — 나머지는 7절
 
 ## 1. 이 모듈이 하는 일
 
@@ -9,6 +9,7 @@
 - 방사선사가 장비에 환자 이름·생년월일을 다시 치지 않아도 됩니다(오타로 영상이 엉뚱한 환자에 붙는 일을 줄이려는 목적).
 - 영상은 **EMR DB에 들어가지 않습니다.** Orthanc(별도 컨테이너)에 저장되고, EMR은 오더마다 정해 둔 **StudyInstanceUID**로 Orthanc 뷰어를 불러올 뿐입니다.
 - 판독 소견은 EMR의 `order_item.result_text`에 저장됩니다.
+- 영상이 PACS에 다 들어오면 브리지가 EMR에 알려 줍니다. 그러면 그 오더는 **장비 워크리스트에서 빠지고**, EMR에는 「영상 N장 도착」과 **영상 속 환자번호가 차트번호와 맞는지**가 기록됩니다.
 - PACS는 **선택 사항**입니다. PACS를 설치하지 않은 병원에서도 영상 오더·판독 입력은 됩니다(영상만 안 보임).
 
 구성은 저장소 두 개에 나뉘어 있습니다.
@@ -16,49 +17,96 @@
 | 부분 | 어디 | 무엇 |
 |---|---|---|
 | Orthanc 26.6.1 | PACS 저장소 `docker-compose.yml` (공식 이미지 `orthancteam/orthanc`, 우리가 수정하지 않음) | 영상 저장, DICOM 수신(C-STORE), 워크리스트 응답(MWL C-FIND), 웹 뷰어(Stone Web Viewer, Orthanc Explorer 2) |
-| 워크리스트 브리지 | PACS 저장소 `bridge/bridge.py` (우리 코드, Python) | EMR의 오더 피드를 15초마다 읽어 `.wl` 파일로 씀 |
+| 워크리스트 브리지 | PACS 저장소 `bridge/bridge.py` (우리 코드, Python) | EMR의 오더 피드를 15초마다 읽어 `.wl` 파일로 씀. 오더마다 Orthanc에 영상이 다 들어왔는지 보고 EMR에 알림 |
 | EMR 쪽 | EMR 저장소 `pacs.routes.js` · `worklist.routes.js` · `RadiologyReadings.jsx` (+ 진료 화면의 뷰어 창) | 워크리스트 생성, 피드 제공, 뷰어 주소, 판독 저장, 브리지 생존 신호 |
 
 ## 2. 화면 사용법 (직원용)
 
-> 병원 직원이 읽는 부분입니다. 버튼 이름은 한국어 화면 기준이며, 프랑스어 화면에서도 같은 자리에 있습니다.
+> 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR** 로 바꿉니다.
+>
+> 촬영 장비의 메뉴 이름은 장비마다 다릅니다. 장비를 설치한 뒤 채웁니다 — 확인 필요.
 
-### 의사 — 영상 오더 내기
+### 2.1 의사 — 영상 검사 내기
 
-1. **진료** 화면에서 환자를 고르고, 오더 목록에서 영상 검사(예: Chest PA, 복부 초음파)를 추가합니다.
-2. 오더 줄 오른쪽에 **`sent`** 가 보이면 촬영실 장비로 넘어간 것입니다. (이 글자는 아직 번역되지 않고 영어로 나옵니다.)
-3. 오더를 잘못 냈으면 그 줄을 지우면 됩니다. 15초 안에 장비 목록에서도 빠집니다.
+1. 맨 위 메뉴에서 **Consultation (진료)** 를 누르고, **File d'Attente (진료대기 현황)** 또는 **🔍 Trouver patient (환자 찾기)** 로 환자를 엽니다.
+2. **Prescriptions (처방)** 칸의 입력란 **Saisir médicament, code examen ou nom... (약/검사 코드 또는 이름 입력...)** 에 검사 이름을 쳐서 영상 검사(예: Chest PA, 초음파)를 추가합니다.
+3. 오더 줄 오른쪽 끝의 글자가 **`sent`** 이면 촬영실 장비로 넘어간 것입니다. 영상이 다 들어오면 **`completed`** 로 바뀝니다. (이 두 글자는 아직 번역되지 않아 영어로 나옵니다.)
+4. 잘못 낸 검사는 그 줄을 지우면 됩니다. 15초 안에 장비 목록에서도 빠집니다.
+   - 줄 앞에 **🔒** 가 있으면 지울 수 없습니다. 마우스를 올리면 *Cette demande a déjà un résultat… (결과가 이미 있는 오더는 지울 수 없습니다)* 가 보입니다. 영상이 이미 들어왔거나 판독을 쓴 검사입니다.
 
-> 오더는 **오늘 날짜로만** 장비에 보입니다. 오늘 낸 오더를 내일 촬영하면 장비 목록에 나오지 않습니다 — 이 경우 의사에게 오더를 다시 내 달라고 하세요. (7절 참고)
+> 검사는 **낸 날에만** 장비 목록에 나옵니다. 오늘 낸 검사를 내일 찍으려면 내일 다시 내야 합니다(7절 P-6).
 
-### 방사선사 — 촬영
+### 2.2 방사선사 — 촬영
 
-1. 장비(또는 장비 PC)에서 **워크리스트(Worklist / MWL)** 를 불러옵니다. 오늘 오더가 난 환자가 뜹니다.
-2. 목록에서 **촬영할 환자를 정확히 골라** 촬영합니다. 이름·차트번호(예: `26-00001`)·검사 이름을 꼭 확인하세요. 여기서 다른 환자를 고르면 영상이 그 환자에게 붙습니다.
+1. 장비(또는 장비 PC)에서 **워크리스트(Worklist / MWL)** 를 불러옵니다. 오늘 검사가 난 환자가 나옵니다.
+2. 목록에서 **찍을 환자를 정확히 고릅니다.** 이름 · 차트번호(예: `26-00001`) · 검사 이름을 환자와 맞춰 봅니다.
+   - **여기서 다른 환자를 고르면 영상이 그 환자의 기록에 붙고, EMR은 그것을 알아챌 수 없습니다.** 이 단계가 가장 중요합니다.
 3. 촬영이 끝나면 장비에서 PACS로 **전송(Send / Store)** 합니다.
-4. 워크리스트에 환자가 없으면 **환자 정보를 손으로 치지 말고** 먼저 의사에게 오더가 났는지 확인하세요. 손으로 친 영상은 EMR 오더와 연결되지 않아 진료 화면에서 볼 수 없습니다.
+4. 전송하고 **1~2분쯤 지나면 그 환자는 워크리스트에서 저절로 빠집니다.** 끝난 환자가 목록에 남아 있으면 다음 환자를 잘못 고르기 쉬워서입니다.
+   - 같은 검사를 더 찍어야 하면 장비에 남아 있는 그 검사에 이어서 찍어 보냅니다. (장비마다 다름 — 확인 필요)
 
-> 장비별 메뉴 이름은 장비마다 다릅니다 — 확인 필요 (현장 장비 목록을 받으면 채웁니다).
+**워크리스트에 환자가 없을 때**
 
-### 의사 — 영상 보기와 판독
+1. **환자 이름을 장비에 손으로 치지 마세요.** 손으로 친 영상은 EMR의 검사와 연결되지 않아 의사가 진료 화면에서 볼 수 없습니다.
+2. 의사에게 그 환자의 영상 검사를 **오늘** 냈는지 물어봅니다. 어제 낸 검사는 오늘 목록에 없습니다.
+3. 검사를 냈다면 15초쯤 기다렸다가 워크리스트를 다시 불러옵니다.
+4. 그래도 없으면 **전체 목록이 비어 있는지** 봅니다. 모든 환자가 안 보이면 PACS 연결 문제입니다 — 관리자(실장님)에게 알립니다. (관리자는 서버 상태 창의 **Imagerie (PACS)** · **Liste de travail des appareils (장비 워크리스트)** 줄을 봅니다.)
 
-1. **진료** 화면 오더 목록에서 영상 오더 줄의 **🖼** 버튼을 누릅니다.
-2. 큰 창이 열립니다. 왼쪽이 영상, 오른쪽이 **판독소견** 칸입니다.
-3. 판독을 쓰고 **💾 판독 저장** 을 누릅니다. 저장한 사람과 날짜가 위에 표시됩니다.
-4. 영상을 크게 보려면 **새 탭에서 열기 ↗** 를 누릅니다.
-5. 다 봤으면 **닫기 ✕** 를 누릅니다.
+### 2.3 의사 — 영상 보기와 판독
 
-> ⚠ **판독을 쓰는 중에 창 바깥 어두운 곳을 누르면 창이 닫히고, 저장하지 않은 판독은 사라집니다.** 먼저 「판독 저장」을 누르세요.
+1. **Consultation (진료)** 화면의 오더 목록에서 영상 검사 줄의 **🖼** 버튼을 누릅니다.
+2. **🖼 Visionneuse (영상 뷰어)** 창이 열립니다. 왼쪽이 영상, 오른쪽이 **🩻 Compte-rendu (판독소견)** 칸입니다. 창 맨 위에 EMR에서 고른 환자의 차트번호·이름이 보입니다.
+3. 오른쪽 칸 **Saisir le compte-rendu radiologique... (판독 소견을 입력하세요...)** 에 판독을 쓰고 **💾 Enregistrer (판독 저장)** 을 누릅니다. 위에 **Lu par (판독)** : 쓴 사람 · 날짜가 나옵니다.
+4. 영상을 크게 보려면 **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 를 누릅니다.
+5. 다 봤으면 **Fermer ✕ (닫기)** 를 누릅니다.
+
+> ⚠ **판독을 쓰는 중에 창 바깥의 어두운 곳을 누르면 창이 닫히고, 저장하지 않은 판독은 사라집니다.** 먼저 **Enregistrer** 를 누르세요.
 >
-> 처음 영상을 열 때 PACS 아이디·비밀번호를 물을 수 있습니다 — 확인 필요 (지금 설정은 Orthanc 관리자 계정 하나뿐입니다. 7절 참고).
+> 판독은 **진료 권한**이 있는 직원만 쓰고 고칠 수 있습니다. 판독을 고치면 이전 내용은 남지 않습니다.
 >
-> 영상이 아직 도착하지 않았으면 창은 열리지만 영상 칸이 비어 있습니다.
+> 처음 영상을 열 때 PACS 아이디·비밀번호를 물을 수 있습니다 — 확인 필요 (7절 P-9).
 
-### 지난 영상 검사 한눈에 보기
+### 2.4 환자의 영상 검사 한눈에 보기
 
-- **진료** 화면 위쪽 **🩻 판독소견** 버튼 → 이 환자의 모든 영상 검사가 날짜순으로 나오고, 각 판독 내용이 보입니다. **🖼 영상보기** 를 누르면 위의 영상 창이 열립니다.
-- **수납** 화면에도 **🩻 판독소견** 버튼이 있습니다. 여기서는 판독을 **읽기만** 할 수 있고 영상 창은 열리지 않습니다.
-- 판독은 **진료 권한**이 있는 직원만 쓰고 고칠 수 있습니다.
+- **Consultation (진료)** 화면 위쪽의 **🩻 Compte-rendu (판독소견)** 버튼 → 이 환자의 모든 영상 검사가 최근 것부터 나옵니다. 줄마다 날짜 · 종류(US, CR …) · 검사 이름 · 판독 내용이 보이고, **🖼 Voir image (영상보기)** 를 누르면 2.3의 영상 창이 열립니다.
+- 검사 이름 옆에 영상이 왔는지 나옵니다.
+  - **N image(s) reçue(s) (영상 N장 도착)** — 초록. 영상이 모두 들어왔습니다.
+  - **Images en attente (영상 대기 중)** — 회색. 아직 안 왔습니다(2.5 참고).
+  - *(2026-09-29 현재 알림: 병원 서버의 PACS 쪽 프로그램이 아직 새 버전으로 바뀌지 않아, 영상이 와도 계속 「Images en attente」로 나옵니다. 새 버전으로 바꾸면 없어집니다. 그 전까지는 🖼 로 직접 열어 보세요.)*
+  - 아무것도 없으면 워크리스트로 보내지 않는 검사입니다.
+- 영상 검사가 하나도 없으면 **Aucune imagerie (영상검사 내역이 없습니다)**, 판독이 없으면 **Aucun compte-rendu (판독 소견 없음)** 이 나옵니다.
+- **Paiement (수납)** 화면에도 **🩻 Compte-rendu (판독소견)** 버튼이 있습니다. 여기서는 **읽기만** 할 수 있고 영상 창은 열리지 않습니다.
+- 창을 닫았다가 다시 열면 새로 불러옵니다. 영상이 도착했는지 다시 보려면 닫고 다시 여세요.
+
+### 2.5 영상이 안 보일 때 — 순서대로
+
+1. **🩻 Compte-rendu (판독소견)** 목록에서 그 검사 옆 글자를 봅니다.
+2. **Images en attente (영상 대기 중)** 이면 영상이 아직 PACS에 안 왔습니다.
+   1. 방사선사가 전송한 지 **2분이 안 됐으면** 기다렸다가 목록을 닫고 다시 엽니다. 전송이 끝나고 1분쯤 새 영상이 없어야 「도착」으로 바뀝니다.
+   2. 몇 분이 지나도 그대로면 방사선사에게 묻습니다 — 전송했는지, **워크리스트에서 이 환자를 골라** 찍었는지. 환자 이름을 장비에 손으로 쳐서 찍었으면 이 검사와 연결되지 않습니다. 관리자에게 알립니다(연결하는 기능은 아직 없음, 7절 P-4).
+   3. 방사선사가 제대로 보냈다고 하면 관리자(실장님)에게 알립니다.
+3. **N image(s) reçue(s) (영상 N장 도착)** 인데 영상 창에 영상이 안 나오면:
+   1. 창 가운데에 **URL de la visionneuse PACS non definie… (PACS 뷰어 주소가 설정되지 않았습니다)** 가 보이면 설정이 안 된 것입니다. 관리자에게 알립니다. 그동안에도 판독은 쓸 수 있습니다.
+   2. 영상 칸이 까맣거나 「연결할 수 없음」이 나오면 이 컴퓨터가 PACS 서버에 닿지 않는 것입니다. **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 로 한 번 더 열어 보고, 그래도 안 되면 관리자에게 알립니다.
+   3. 아이디·비밀번호를 물으면 관리자에게 묻습니다. 모르는 값을 여러 번 넣지 마세요.
+4. 목록에 도착 여부가 아예 나오지 않으면 워크리스트로 보내지 않는 검사입니다. 설정에서 그 검사 코드를 확인해야 합니다 — 관리자에게 알립니다.
+
+### 2.6 환자 번호 경고가 떴을 때 — 순서대로
+
+**🩻 Compte-rendu (판독소견)** 목록에 이런 경고가 보일 수 있습니다.
+
+- 🟥 빨강 — *Les images sont au nom de « 26-00012 RAKOTO Jean », qui ne correspond pas au numéro de dossier de ce patient… (영상에 적힌 환자는 「26-00012 RAKOTO Jean」으로, 이 환자의 차트번호와 다릅니다…)* — 영상 속 환자번호가 이 환자의 차트번호와 다릅니다.
+- 🟧 노랑 — *Les images ne portent aucun numéro de patient… (영상에 환자번호가 없습니다…)* — 영상에 환자번호가 없습니다.
+
+둘 다 **장비에서 환자 정보를 손으로 치거나 고친 영상**일 때 생깁니다. 다른 환자의 영상일 수 있습니다.
+
+1. **아직 판독을 쓰지 마세요.**
+2. **🖼 Voir image (영상보기)** 로 영상을 열고, 영상 위에 적힌 환자 이름·번호·촬영 날짜를 봅니다.
+3. 방사선사에게 경고에 나온 번호·이름을 알려 주고, 누구를 찍은 영상인지 확인합니다.
+4. **이 환자의 영상이 맞으면**(번호만 잘못 쳤으면) 판독을 써도 됩니다. 판독에 「영상의 환자번호 오기 확인함」처럼 한 줄 남겨 두면 나중에 보는 사람이 압니다. 경고는 계속 보입니다.
+5. **다른 환자의 영상이면** 판독을 쓰지 말고 관리자(실장님)에게 알립니다. EMR에서 영상을 다른 환자로 옮기는 기능은 아직 없습니다. 이 환자는 다시 찍어야 할 수 있습니다 — 의사가 판단합니다.
+
+> **이 경고가 없다고 해서 반드시 맞는 환자의 영상은 아닙니다.** 방사선사가 워크리스트에서 **다른 환자를 골라** 찍었으면, 그 영상에는 고른 환자의 정보가 그대로 들어가 경고가 뜨지 않습니다. 영상 속 환자와 눈앞의 환자가 다르다고 느껴지면 2.6의 순서대로 확인하세요.
 
 ## 3. 기능 상세
 
@@ -80,14 +128,19 @@
  ④ 장비 촬영 → C-STORE → Orthanc   (포트 4242, AE Title MEDCONNECT)
       │  장비가 워크리스트의 StudyInstanceUID · AccessionNumber 를 영상에 그대로 넣는 것이 전제
       ▼
- ⑤ EMR에서 보기                     GET /api/pacs/viewer-url?order_item_id=…
+ ⑤ 브리지(같은 바퀴에서)             Orthanc POST /tools/find {StudyInstanceUID} → IsStable 이면
+      │                                POST /api/pacs/study-arrived  (헤더 X-Bridge-Token)
+      │  EMR: 영상 속 PatientID 와 chart_no 비교 → patient_check, worklist_log.status='completed',
+      │       order_item.worklist_status='completed'  → 다음 바퀴 피드에서 빠짐 → .wl 삭제
+      ▼
+ ⑥ EMR에서 보기                     GET /api/pacs/viewer-url?order_item_id=…
       │  → <pacs_viewer_url>/stone-webviewer/index.html?study=<study_instance_uid>
       │  진료 화면이 이 주소를 iframe 으로 띄움 (브라우저가 Orthanc 에 직접 접속)
       ▼
- ⑥ 판독 저장                        PUT /api/pacs/reading/:orderItemId  → order_item.result_text
+ ⑦ 판독 저장                        PUT /api/pacs/reading/:orderItemId  → order_item.result_text
 ```
 
-**영상과 오더를 잇는 것은 StudyInstanceUID 하나뿐입니다.** EMR은 Orthanc에 영상이 왔는지 묻지 않고, 환자 번호가 맞는지도 확인하지 않습니다(7절 P-3, P-4).
+**영상과 오더를 잇는 것은 StudyInstanceUID 하나뿐입니다.** 영상이 왔는지·환자번호가 맞는지는 브리지가 Orthanc에 물어 EMR에 알려 줍니다(⑤, 2026-09-29부터). EMR 백엔드가 Orthanc에 직접 묻지는 않습니다. 장비가 UID를 새로 만들면 여전히 연결되지 않습니다(7절 P-4).
 
 ### 3.2 번호 만드는 법 (`consult.routes.js` POST `/:id/orders`)
 
@@ -106,6 +159,12 @@
 2. 받은 줄마다 `accession_no`(없으면 `study_instance_uid`)를 파일 이름으로 `write_wl()` — `<이름>.wl.tmp`에 쓰고 `os.replace`로 바꿔 끼웁니다. Orthanc가 반쯤 쓴 파일을 읽지 않게 하려는 것.
    - 한 줄이 변환에 실패해도 그 줄만 건너뛰고(이전 좋은 `.wl`은 남김) 나머지는 계속합니다 (v1.0.0에서 고친 것).
 3. 이번 목록에 없는 `.wl` 파일은 **지웁니다** — 촬영 완료·취소·오더 삭제·날짜 지남.
+   - 이어서 `report_arrivals(rows)` — 받은 줄마다 Orthanc에 `POST /tools/find`(Level Study, StudyInstanceUID, Expand)로 묻고, 찾은 스터디가 **`IsStable`** 이면 `/studies/<id>/statistics`로 장수(`CountInstances`)를 얻어 EMR `POST /api/pacs/study-arrived`로 보냅니다(worklist_id, study_instance_uid, orthanc_study_id, 영상 속 PatientID·PatientName, instances).
+   - **왜 Stable까지 기다리나**: 첫 장이 들어오자마자 알리면, 여러 장짜리 검사를 보내는 중에 워크리스트에서 빠집니다. Orthanc는 `StableAge`(기본 60초) 동안 새 영상이 없으면 Stable로 봅니다 → 보통 전송 후 **60~75초**에 완료 처리, 그다음 바퀴(15초)에 `.wl` 삭제.
+   - **왜 브리지가 묻나**: 브리지는 Orthanc와 같은 compose 네트워크에 있고 EMR 토큰도 이미 가지고 있습니다. EMR이 직접 물으려면 EMR에 Orthanc 주소·비밀번호 설정이 새로 필요하고, `pacs_viewer_url`은 브라우저 기준 주소라 EMR 컨테이너에서 쓸 수 없습니다.
+   - Orthanc에 못 닿으면(꺼짐·비밀번호 틀림) 그 바퀴는 한 줄만 로그를 남기고 넘어갑니다 — 워크리스트 동기화는 계속됩니다. Orthanc 이름을 못 찾으면 한 바퀴가 약 4초 늦어짐(격리 시험에서 잰 값) — heartbeat 한계 60초 안.
+   - `ORTHANC_PASSWORD`가 없으면 이 단계는 꺼지고 시작 때 한 줄 경고.
+   - EMR이 옛 버전이라 `/study-arrived`가 없으면(EMR 공통 404 `API route not found`) 재시작 전까지 묻지 않고 한 줄만 남깁니다.
 4. `report()` — `/worklists/.heartbeat`에 현재 시각을 쓰고(컨테이너 healthcheck용), `POST /api/pacs/bridge-heartbeat`로 결과(synced, failed, error, poll_seconds)를 보냅니다. 둘 다 실패해도 반복은 멈추지 않습니다.
 5. `POLL_SECONDS`(기본 15초) 잠듭니다.
 
@@ -119,6 +178,7 @@
 | 토큰 불일치·토큰 미설정 (401) | 위와 같음 | EMR 상태 화면 — 브리지가 heartbeat도 같은 토큰으로 보내므로 **EMR에는 신호가 아예 안 옴** → 「보고 없음」. 브리지 로그에 원인(「EMR에 토큰 미설정」 / 「토큰 불일치」)이 나옴 |
 | 브리지 컨테이너가 멈춤·먹통 | 위와 같음 | 컨테이너 healthcheck(`.heartbeat` 60초), `server-status` 창, EMR 상태 화면 |
 | Orthanc가 멈춤 | 워크리스트 조회·전송 모두 실패 (장비 쪽 오류) | Orthanc healthcheck(`/system` 200/401), EMR 상태 화면의 PACS TCP 검사 |
+| 브리지가 Orthanc에 못 물음 (비밀번호 틀림 등) | 워크리스트는 정상, **끝난 환자가 빠지지 않음**(예전 동작) | 브리지 로그 `could not ask Orthanc about studies` 뿐 — **EMR 상태 화면에는 안 나옴**(7절 P-20) |
 | **호스트 포트가 안 잡힘** (Windows 예약 포트) | 장비가 4242에 연결 못 함, 뷰어가 안 열림 | **컨테이너 healthcheck는 「healthy」로 나옴** — 컨테이너 안에서만 확인하기 때문. EMR 상태 화면의 PACS 검사(설정된 Host:4242로 TCP)만 잡아냄 (7절 P-1) |
 
 EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일): heartbeat가 한 번도 없으면 「꺼짐」, 60초 넘게 없으면 「보고 없음」, `ok=false`면 「실패 중」, `failed>0`이면 「일부 실패」.
@@ -138,11 +198,16 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | `GET /config` | `settings` 권한 | `pacs_config` 한 줄 전체 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5) |
 | `PUT /config` | `settings` 권한 | 설정 저장. 보내지 않은 칸은 NULL이 됨(화면은 전체를 보내므로 지금은 문제 없음) |
 | `GET /test` | 로그인 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
-| `GET /viewer-url?order_item_id=` 또는 `?study=` | 로그인 | 뷰어 주소 + 오더 이름 + 판독. UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
+| `GET /viewer-url?order_item_id=` 또는 `?study=` | 로그인 | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음 |
-| `GET /readings/patient/:patientId` | 로그인 | 환자의 영상 오더 전부 + 판독 + 최신 accession/UID |
+| `GET /readings/patient/:patientId` | 로그인 | 환자의 영상 오더 전부 + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
 | `POST /bridge-heartbeat` | 브리지 토큰 (헤더, 본문 `token`, 쿼리 순) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀 |
+| `POST /study-arrived` | 브리지 토큰 | 본문 `{worklist_id, study_instance_uid, orthanc_study_id, patient_id, patient_name, instances}`. 한 트랜잭션에서 worklist_log(`FOR UPDATE`)를 완료 처리하고 영상 정보·`patient_check`를 저장, order_item.worklist_status=`completed`. 400(칸 없음)·404(항목 없음)·409(UID가 그 항목 것이 아님). 다시 보내도 안전(도착 시각은 처음 값 유지). `cancelled`는 그대로 둠 |
+
+**`images`** (`viewer-url` 응답) — 브리지가 보고하기 전에는 `null`(「아직 안 옴」과 「왔고 맞음」을 구분하려고). 보고 뒤: `{received_at, count, patient_id, patient_name, patient_check}`.
+
+**`patient_check`** — EMR이 정합니다(브리지가 보낸 판정을 믿지 않음). 영상 속 PatientID와 `patient.chart_no`를 앞뒤 공백 빼고 대소문자 무시로 비교: `match` / `mismatch` / `missing`(PatientID 없음). 잡는 것: 장비에서 손으로 치거나 고친 환자 정보. **못 잡는 것: 워크리스트에서 다른 환자를 고른 경우**(영상에 고른 환자의 정보가 그대로 들어감) — 그래서 끝난 환자를 목록에서 빼는 P-7이 짝입니다.
 
 **브리지 토큰 검사** — `backend/src/routes/pacs.token.js` (PACS 소유, 2026-09-29 새로 만듦). 피드·heartbeat·`/api/worklist`의 `bridgeOrAuth`가 모두 여기를 씁니다.
 
@@ -174,6 +239,8 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 |---|---|---|
 | `EMR_FEED_URL` | `http://host.docker.internal:9080/api/pacs/worklist-feed` | EMR 피드. heartbeat 주소는 여기서 `/worklist-feed`→`/bridge-heartbeat`로 바꿔 만듦 |
 | `BRIDGE_TOKEN` | `.env`에서 (setup이 48자 무작위 생성). **기본값 없음** — 2026-09-29 전에는 `change-me-bridge-token` | EMR 설정의 Bridge Token과 같아야 함. 헤더로 보냄 |
+| `ORTHANC_URL` | `http://orthanc:8042` | 영상 도착 확인용 (같은 compose 네트워크의 서비스 이름) |
+| `ORTHANC_USER` · `ORTHANC_PASSWORD` | `admin` · `.env`의 `ORTHANC_PASSWORD` | 비밀번호가 없으면 도착 확인을 끔 |
 | `WL_DIR` | `/worklists` | `.wl`을 쓰는 곳 |
 | `POLL_SECONDS` | `15` | 주기 |
 
@@ -181,11 +248,11 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 `ORTHANC__DICOM_AET=MEDCONNECT`, `DICOM_CHECK_CALLED_AET=false`, `REMOTE_ACCESS_ALLOWED=true`, `DICOM_ALWAYS_ALLOW_FIND_WORKLIST / FIND / STORE / ECHO = true`(장비 등록 없이 받음), `AUTHENTICATION_ENABLED=true`, 사용자 `admin` 하나(비밀번호 `.env`의 `ORTHANC_PASSWORD`), 워크리스트 플러그인(`/var/lib/orthanc/worklists`), DICOMweb, Stone Web Viewer, Orthanc Explorer 2. 포트 `9090→8042`(웹), `4242→4242`(DICOM).
 
-EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?study=`** 하나뿐입니다. EMR 백엔드는 Orthanc REST를 부르지 않습니다.
+EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?study=`** 하나뿐입니다. EMR 백엔드는 Orthanc REST를 부르지 않습니다. 브리지가 부르는 Orthanc REST: `POST /tools/find`, `GET /studies/<id>/statistics`.
 
 ### 비밀값 (이름과 의미만)
 
-- **`ORTHANC_PASSWORD`** — PACS `.env`. Orthanc `admin` 비밀번호. 뷰어로 영상을 보는 모든 사람이 이 계정을 씁니다.
+- **`ORTHANC_PASSWORD`** — PACS `.env`. Orthanc `admin` 비밀번호. 뷰어로 영상을 보는 모든 사람이 이 계정을 씁니다. 브리지도 영상 도착 확인에 씁니다(Orthanc 기본 인증에는 권한 구분이 없어 관리자 계정 그대로).
 - **`BRIDGE_TOKEN`** — PACS `.env`와 EMR `pacs_config.bridge_token`이 **같아야** 합니다(페어링). 오더 피드와 heartbeat의 유일한 인증. 16자 이상, 옛 기본값 불가.
 
 ### 공용 부품
@@ -197,17 +264,17 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 | 테이블 | 주요 칸 | 비고 |
 |---|---|---|
-| `worklist_log` (001) | order_item_id(FK, CASCADE — 007), patient_id, modality, station_ae, body_part, accession_no, study_instance_uid, scheduled_date, scheduled_time, status(`scheduled`/`in_progress`/`completed`/`cancelled`), completed_at | 오더 1개에 보통 1줄. **status를 `scheduled`에서 바꾸는 코드가 없음** |
+| `worklist_log` (001) | order_item_id(FK, CASCADE — 007), patient_id, modality, station_ae, body_part, accession_no, study_instance_uid, scheduled_date, scheduled_time, status(`scheduled`/`in_progress`/`completed`/`cancelled`), completed_at. **019(세션 번호 801):** images_received_at, orthanc_study_id, image_count, image_patient_id, image_patient_name, patient_check(`match`/`mismatch`/`missing`) | 오더 1개에 보통 1줄. `completed`로 바꾸는 곳은 `POST /study-arrived` |
 | `order_item` (001, 진료 소유) | pacs_modality, station_ae, body_part, worklist_status(`pending`/`sent`/…), worklist_sent_at, result_text, result_by, result_at | 판독은 여기 저장 |
 | `order_code` (설정 소유) | pacs_modality(US/CR/CT/MR/ES/OT), worklist_enabled, station_ae, body_part | 어떤 오더가 워크리스트로 가는지 정함 |
 | `pacs_config` (001, 015) | worklist_scp_host/port/ae, bridge_token, emr_base_url, pacs_viewer_url, auto_create_worklist, facility_name, notes | 한 줄(id=1). 015가 옛 한국 데모값(`BROKER`/`192.168.0.222`)을 Orthanc 기본값으로 바꿈 |
 | `service_heartbeat` (018, 설정과 공유) | name(`worklist_bridge`), last_seen, ok, detail(JSONB) | 현재 상태만, 이력 없음 |
 
-마이그레이션 `007_worklist_cascade.sql`(오더 삭제 시 worklist_log 같이 삭제), `015_pacs_viewer.sql`(pacs_viewer_url 추가·데모값 정리), `018_service_heartbeat.sql`. 셋 다 이미 적용된 파일이라 **고치지 않습니다**.
+마이그레이션 `007_worklist_cascade.sql`(오더 삭제 시 worklist_log 같이 삭제), `015_pacs_viewer.sql`(pacs_viewer_url 추가·데모값 정리), `018_service_heartbeat.sql`. 셋 다 이미 적용된 파일이라 **고치지 않습니다**. `019_pacs_image_arrival.sql` — PACS 번호대, 칸·CHECK 추가만(기존 줄은 안 바꿈). 합칠 때 총괄이 번호를 다시 매김.
 
 ## 5. 다른 모듈과의 연결
 
-- **진료** — 영상 오더를 만들고(`consult.routes.js`가 worklist_log 생성), 오더를 지우면 worklist_log도 지움. 영상 뷰어 창·🖼 버튼·판독 입력 UI가 `Consultation.jsx` 안에 있음. `consult.routes.js`도 `pacs_config`를 `CREATE TABLE IF NOT EXISTS`로 만드는데, 그 기본값이 옛 데모값(`192.168.0.222`/`10004`/`BROKER`/`Yonsei Shintong Clinic`)입니다 — 테이블이 이미 있으면 영향 없음.
+- **진료** — 영상 오더를 만들고(`consult.routes.js`가 worklist_log 생성), 오더를 지우면 worklist_log도 지움. 영상이 도착해 `worklist_status='completed'`가 되면 진료 화면이 그 오더를 **잠급니다**(삭제 불가 — `Consultation.jsx` `orderLocked`, `consult.routes.js` DELETE의 409). 영상 뷰어 창·🖼 버튼·판독 입력 UI가 `Consultation.jsx` 안에 있음. `consult.routes.js`도 `pacs_config`를 `CREATE TABLE IF NOT EXISTS`로 만드는데, 그 기본값이 옛 데모값(`192.168.0.222`/`10004`/`BROKER`/`Yonsei Shintong Clinic`)입니다 — 테이블이 이미 있으면 영향 없음.
 - **수납** — 「🩻 판독소견」에서 `RadiologyReadings`를 읽기 전용으로 띄움. 영상 오더 청구는 수납 모듈 몫.
 - **설정** — 오더 코드의 Modality·워크리스트 사용 여부, 오더 연동 탭(`/api/pacs/config`). 서버 상태(`status.routes.js` `checkBridge`·`checkPacs`, `server-status.ps1`)가 브리지·PACS를 봄.
 - **PatientChart**(수납 소유 공용) — 오더의 worklist_status를 글자로 보여줌.
@@ -228,13 +295,13 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 **설정 → 오더 코드** — 영상 검사마다 `Modality`와 `worklist_enabled`를 켜야 워크리스트로 갑니다.
 
-**PACS `.env`** — `ORTHANC_PASSWORD`, `BRIDGE_TOKEN`, (선택) `EMR_FEED_URL`. `setup`이 처음 한 번 만들고 다시 실행해도 덮어쓰지 않습니다.
+**PACS `.env`** — `ORTHANC_PASSWORD`(Orthanc와 브리지가 같이 씀), `BRIDGE_TOKEN`, (선택) `EMR_FEED_URL`. `setup`이 처음 한 번 만들고 다시 실행해도 덮어쓰지 않습니다.
 
 **장비 쪽** — PACS Host = 서버 IP, 포트 4242, Called AE = `MEDCONNECT`, 워크리스트도 같은 주소. 장비 자기 AE는 아무거나.
 
 ## 7. 알려진 문제 · 제약
 
-2026-09-29 코드 읽기로 찾은 것. **심각도**: 높음 / 보통 / 낮음. 아직 하나도 고치지 않았습니다.
+2026-09-29 코드 읽기로 찾은 것. **심각도**: 높음 / 보통 / 낮음. 고친 것은 ✅, 일부 고친 것은 🟡.
 
 ### 지금 돌아가는 PACS
 
@@ -248,10 +315,10 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 ### 환자 식별 (영상이 다른 환자·다른 오더에 붙는 경우)
 
-- **P-3 [보통] 영상이 맞는 환자의 것인지 EMR이 확인하지 않음.** `pacs.routes.js:91` — StudyInstanceUID만으로 뷰어를 엽니다. 방사선사가 워크리스트에서 다른 환자를 골라 찍으면 그 영상은 고른 환자(틀린 환자)의 오더에 붙어 그대로 보입니다. 뷰어 창 머리의 환자 이름은 EMR 쪽 이름이고, 영상 속 DICOM 환자 이름은 Stone 뷰어 안에만 나옵니다. 개선안: 뷰어를 열 때 EMR 백엔드가 Orthanc REST로 그 Study의 PatientID를 조회해 chart_no와 다르면 경고.
+- **P-3 [보통] 🟡 일부 고침 (2026-09-29)** — 브리지가 영상 도착을 알릴 때 EMR이 영상 속 PatientID를 chart_no와 비교해 `patient_check`로 저장하고, 「🩻 판독소견」 목록에 빨강·노랑 경고를 띄움. `viewer-url`도 `images.patient_check`를 돌려줌. **남은 것**: ① 영상 뷰어 창(진료 세션 파일 `Consultation.jsx`)에는 아직 경고가 없음 — 진료 세션에 부탁, ② 워크리스트에서 다른 환자를 고른 경우는 원리상 못 잡음(4절 `patient_check`). **원래 문제**: 영상이 맞는 환자의 것인지 EMR이 확인하지 않음. `pacs.routes.js:91` — StudyInstanceUID만으로 뷰어를 엽니다. 방사선사가 워크리스트에서 다른 환자를 골라 찍으면 그 영상은 고른 환자(틀린 환자)의 오더에 붙어 그대로 보입니다. 뷰어 창 머리의 환자 이름은 EMR 쪽 이름이고, 영상 속 DICOM 환자 이름은 Stone 뷰어 안에만 나옵니다. 개선안: 뷰어를 열 때 EMR 백엔드가 Orthanc REST로 그 Study의 PatientID를 조회해 chart_no와 다르면 경고.
 - **P-4 [보통] 장비가 StudyInstanceUID를 새로 만들면 영상이 오더에 안 붙음.** 연결 고리가 UID 하나뿐입니다(`pacs.routes.js:81-91`). README는 「Accession Number / Study UID로 맞춘다」고 하지만 코드는 UID만 씁니다. 일부 CR·초음파 장비는 워크리스트의 UID를 쓰지 않고 자기 UID를 만듭니다(장비별 확인 필요). 개선안: UID로 못 찾으면 AccessionNumber로 Orthanc에서 찾기.
 - **P-6 [보통] 워크리스트가 「오늘」만 나옴.** `pacs.routes.js:134`·`worklist.routes.js:75` — 어제 낸 오더를 오늘 찍으면 장비 목록에 없어서 손으로 입력 → P-4처럼 연결이 끊깁니다. `consult.routes.js`가 `scheduled_date=CURRENT_DATE`로 고정.
-- **P-7 [보통] 촬영이 끝나도 워크리스트에서 안 빠짐.** worklist_log.status를 `completed`로 바꾸는 곳이 없습니다(`PUT /api/worklist/:id/status`를 부르는 코드 없음). 끝난 환자가 하루 종일 장비 목록에 남아, 다음 환자를 찍을 때 잘못 고를 여지가 커집니다. `order_item.worklist_status`도 영원히 `sent`. 개선안: 브리지가 Orthanc에 해당 UID/Accession 영상이 들어왔는지 보고 완료 처리.
+- **P-7 [보통] ✅ 고침 (2026-09-29)** — 브리지가 Orthanc에서 Stable 스터디를 찾으면 `POST /api/pacs/study-arrived` → 완료 처리 → 다음 바퀴에 `.wl` 삭제. 격리 시험(가짜 Orthanc)으로 확인, **진짜 Orthanc·장비로는 아직 확인 못 함**(PACS 격리 스택 필요). 남은 한계: 피드가 「오늘」만 주므로 어제 오더의 영상이 오늘 도착하면, 또 자정을 넘겨 도착하면 완료 처리가 안 됨(P-6과 같이 풀 것). **과도기 주의 (2026-09-29)**: EMR 쪽은 develop(`7cfd6cc`)에 합쳐져 실행 중인데 PACS 브리지(`e109157`)는 아직 안 합쳐져서, 실행 중 시스템에서는 영상이 와도 판독 목록이 계속 「영상 대기 중」으로 보임. 장비가 아직 연결되지 않아 지금 영향은 없음. 브리지를 합치면 사라짐. **원래 문제**: 촬영이 끝나도 워크리스트에서 안 빠짐. worklist_log.status를 `completed`로 바꾸는 곳이 없습니다(`PUT /api/worklist/:id/status`를 부르는 코드 없음). 끝난 환자가 하루 종일 장비 목록에 남아, 다음 환자를 찍을 때 잘못 고를 여지가 커집니다. `order_item.worklist_status`도 영원히 `sent`. 개선안: 브리지가 Orthanc에 해당 UID/Accession 영상이 들어왔는지 보고 완료 처리.
 - **P-8 [낮음] 워크리스트의 `ScheduledStationAETitle = "ANY"`.** `bridge.py:76` — 장비가 조회할 때 자기 AE로 거르면(장비 설정에 흔함) "ANY"와 안 맞아 목록이 비어 보일 수 있습니다. 확인 필요(실제 장비로).
 
 ### 보안 (토큰 · 비밀번호)
@@ -270,7 +337,8 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
 - **P-17 [낮음] 옛 포트 표기.** (2026-09-29: 피드 주소 예시 `:8080`→`:9080`, `bridge.py` 기본값 8080→9080은 고침) 남은 것: 설정 화면 예시 `http://NAS_IP:8090`(`Settings.jsx` PACS 웹/뷰어 주소 칸), 번역 `pacsServerHint`(ko·en·fr 모두 「8090」). 지금은 9090(PACS)·9080(EMR).
 - **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
-- **P-19 [낮음] `worklist_status`가 번역 없이 영어(`sent`)로 보임.** `Consultation.jsx:524`, `PatientChart.jsx:70`.
+- **P-19 [낮음] `worklist_status`가 번역 없이 영어(`sent`, 이제 `completed`도)로 보임.** `Consultation.jsx`, `PatientChart.jsx:70`.
+- **P-20 [낮음] 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.** 도착 확인 실패는 브리지 로그에만 남음(`bridge.py` `report_arrivals`). heartbeat에 따로 싣고 `status.routes.js`(설정 세션)가 보여주게 할지는 미정.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
 - **격리 스택 없음** — PACS 저장소에서 `docker compose up`을 하면 실행 중인 PACS를 덮어씁니다(프로젝트 이름·컨테이너 이름·포트·`./storage` 폴더 고정). 격리 스택은 실장님 허락 후 만듭니다.
 - 브리지는 장비별로 워크리스트를 나누지 않습니다(모든 장비가 모든 오더를 봄). Modality로만 장비가 거를 수 있음.
@@ -280,4 +348,6 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-29 | 위키 첫 작성 — 실제 코드 기준으로 1~7절 채움, 문제 목록 P-1~P-19 | EMR `7b21719`, `0e94457` |
-| 2026-09-29 | 토큰 보안(P-2·P-5): 옛 기본값·짧은 토큰 거절, 설정 조회는 settings 권한, 화면에서 토큰 가림, 브리지는 헤더로 전송. P-1에 총괄 확인·조치 분담 기록 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | 토큰 보안(P-2·P-5): 옛 기본값·짧은 토큰 거절, 설정 조회는 settings 권한, 화면에서 토큰 가림, 브리지는 헤더로 전송. P-1에 총괄 확인·조치 분담 기록 | EMR `6e5c63a`(develop `f3a5810`) · PACS `43bd994` |
+| 2026-09-29 | 영상 도착 확인(P-7)·환자번호 대조(P-3): 브리지가 Orthanc Stable 스터디를 EMR에 알림, 워크리스트 자동 완료, 판독 목록에 도착·경고 표시, 마이그레이션 801(→ 합칠 때 019) | EMR `6456471`(develop `7cfd6cc`) · PACS `e109157` |
+| 2026-09-29 | 2절 직원용 사용법을 프랑스어 화면 기준으로 다시 씀(프랑스어 이름 + 괄호 한국어), 「영상이 안 보일 때」·「환자 번호 경고가 떴을 때」 순서 추가 | EMR `session/pacs` (인계 노트 참고) |

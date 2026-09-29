@@ -12,6 +12,7 @@ function DobInput(props) {
   var style = props.style || {};
   var parts = value ? value.split('-') : [];
   var year = parts[0] || '', month = parts[1] || '', day = parts[2] || '';
+  var t = useLang().t;
   var mRef = useRef(null), dRef = useRef(null);
   function digits(v, max){ return String(v || '').replace(/\D/g, '').slice(0, max); }
   function emit(y,m,d){
@@ -21,11 +22,11 @@ function DobInput(props) {
   var box = Object.assign({}, style, { display:'flex', alignItems:'center', gap:6, padding:'6px 8px' });
   var partStyle = { background:'transparent', border:0, outline:'none', color:style.color || '#e2e8f0', fontSize:style.fontSize || 17, fontFamily:'monospace', textAlign:'center' };
   return <div style={box}>
-    <input inputMode="numeric" value={year} placeholder="YYYY" maxLength={4} onChange={function(e){var v=digits(e.target.value,4); emit(v,month,day); if(v.length===4 && mRef.current)mRef.current.focus();}} style={Object.assign({}, partStyle, {width:58})}/>
+    <input inputMode="numeric" value={year} placeholder={t.rc_phYear} maxLength={4} onChange={function(e){var v=digits(e.target.value,4); emit(v,month,day); if(v.length===4 && mRef.current)mRef.current.focus();}} style={Object.assign({}, partStyle, {width:58})}/>
     <span style={{color:'#64748b'}}>-</span>
-    <input ref={mRef} inputMode="numeric" value={month} placeholder="MM" maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,v,day); if(v.length===2 && dRef.current)dRef.current.focus();}} style={Object.assign({}, partStyle, {width:34})}/>
+    <input ref={mRef} inputMode="numeric" value={month} placeholder={t.rc_phMonth} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,v,day); if(v.length===2 && dRef.current)dRef.current.focus();}} style={Object.assign({}, partStyle, {width:34})}/>
     <span style={{color:'#64748b'}}>-</span>
-    <input ref={dRef} inputMode="numeric" value={day} placeholder="DD" maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,month,v);}} style={Object.assign({}, partStyle, {width:34})}/>
+    <input ref={dRef} inputMode="numeric" value={day} placeholder={t.rc_phDay} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,month,v);}} style={Object.assign({}, partStyle, {width:34})}/>
   </div>;
 }
 
@@ -65,7 +66,36 @@ export default function RegistrationPage() {
   var ms = useState(''), memo = ms[0], setMemo = ms[1];
   var hs = useState([]), history = hs[0], setHistory = hs[1];
 
-  useEffect(function () { loadData(); }, []);
+  // The queue refreshes itself every 30 s while the tab is visible (same rule as
+  // the lab screen), so a patient the doctor has opened or finished moves tabs
+  // without anyone pressing anything. Only the queue is reloaded: the form on the
+  // left, the memo and the chosen doctor are never touched. A stale list is what
+  // let reception act on visits that had already moved on (7절 ②, ①).
+  useEffect(function () {
+    loadData();
+    var timer = setInterval(function () { if (!document.hidden) refreshQueue(); }, 30000);
+    return function () { clearInterval(timer); };
+  }, []);
+
+  // Numbers each queue load so a slow, older response cannot overwrite a newer one.
+  var queueSeq = useRef(0);
+  async function refreshQueue() {
+    var seq = ++queueSeq.current;
+    try {
+      var vData = await api.get('/visits/today');
+      if (seq !== queueSeq.current || !Array.isArray(vData)) return;
+      setVisits(vData);
+      // Keep the selected visit's status current, so the cancel button disappears
+      // once the doctor has started. Everything else about the selection stays.
+      setSel(function (prev) {
+        if (!prev) return prev;
+        var fresh = vData.filter(function (v) { return v.id === prev.id; })[0];
+        return fresh && fresh.status !== prev.status ? Object.assign({}, prev, { status: fresh.status }) : prev;
+      });
+    } catch (err) {
+      // A failed background refresh keeps the list it had rather than emptying it.
+    }
+  }
 
   useEffect(function () {
     var pid = selectedPatient ? selectedPatient.id : null;
@@ -75,9 +105,10 @@ export default function RegistrationPage() {
 
   async function loadData() {
     setLoading(true);
+    var seq = ++queueSeq.current;
     try {
       var vData = await api.get('/visits/today');
-      setVisits(vData);
+      if (seq === queueSeq.current) setVisits(vData);
       var dData = await api.get('/admin/departments');
       setDepts(dData);
       var sData = await api.get('/admin/doctors');
@@ -169,14 +200,29 @@ export default function RegistrationPage() {
     return null;
   }
 
-  // Server messages the staff can act on, in their language. Anything else is
-  // shown as it came, after a translated prefix.
+  // '{name}'-style slots, so each language can put the value where its grammar wants it.
+  function fill(s, vars) {
+    return String(s).replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? vars[k] : ''; });
+  }
+  function nameOf(p) { return ((p.last_name || '') + ' ' + (p.first_name || '')).trim(); }
+
+  // The API answers in English. Messages the staff can act on are matched here and
+  // shown in their language; anything else keeps the original after a translated
+  // prefix. If a message changes in patient/visit.routes.js or validate.js, change
+  // it here too.
   function errText(err) {
     var msg = (err && err.message) || '';
     if (msg === 'Patient name is required') return t.rc_nameRequired;
     if (msg.indexOf('date_of_birth') === 0) return t.rc_dobInvalid;
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
-    return t.rc_error + ': ' + msg;
+    if (msg === 'Patient not found') return t.rc_patientNotFound;
+    if (msg === 'Visit not found') return t.rc_visitNotFound;
+    if (msg === 'A field has the wrong format' || msg === 'A date field has the wrong format') return t.rc_badFormat;
+    // fetch() itself failing (Chrome / Firefox / Safari wording); nginx's JSON for a
+    // stopped backend (frontend/nginx.conf, api_backend_down.json); or an HTML error
+    // page from anything else in between.
+    if (/^(Failed to fetch|NetworkError|Load failed|API backend is not reachable)/.test(msg) || msg.indexOf('API response was not JSON') === 0) return t.rc_serverDown;
+    return fill(t.rc_errorWith, { msg: msg });
   }
 
   async function withBusy(fn) {
@@ -200,7 +246,7 @@ export default function RegistrationPage() {
         setSelectedPatient(saved);
         setForm(function (f) { return Object.assign({}, f, { chartNo: saved.chart_no || f.chartNo }); });
         await loadData();
-        alert(t.savePatientDone + (saved.chart_no ? ': ' + saved.chart_no : ''));
+        alert(fill(t.rc_patientSaved, { chart: saved.chart_no || '' }));
       } catch (err) {
         alert(errText(err));
       }
@@ -213,7 +259,7 @@ export default function RegistrationPage() {
     try {
       await api.put('/visits/' + v.id + '/status', { status: newStatus });
       await loadData();
-    } catch (err) { alert(errText(err)); }
+    } catch (err) { alert(errText(err)); loadData(); }
   }
 
   function createOrUpdateVisit() {
@@ -245,7 +291,7 @@ export default function RegistrationPage() {
             chief_complaint: visitForm.chiefComplaint,
             reception_memo: memo,
           });
-          alert(t.updateVisit + ' ✓');
+          alert(fill(t.rc_visitUpdated, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }) }));
         } else {
           await api.post('/visits', {
             patient_id: patient.id,
@@ -255,19 +301,21 @@ export default function RegistrationPage() {
             chief_complaint: visitForm.chiefComplaint,
             reception_memo: memo,
           });
-          alert(t.registerWaiting + ' ✓: ' + (patient.chart_no || form.chartNo));
+          alert(fill(t.rc_registered, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }), chart: patient.chart_no || form.chartNo }));
         }
         await loadData();
         startNewPatient();
       } catch (err) {
         alert(errText(err));
+        // The queue may be stale (visit gone, status moved on); show what is there now.
+        loadData();
       }
     });
   }
 
   function cancelVisit(v) {
     if (!v || !v.id) return;
-    if (!confirm(t.cancelWaiting + '? ' + v.last_name + ' ' + v.first_name)) return;
+    if (!confirm(fill(t.rc_cancelConfirm, { name: nameOf(v) }))) return;
     return withBusy(async function () {
       try {
         await api.put('/visits/' + v.id + '/status', { status: 'cancelled' });

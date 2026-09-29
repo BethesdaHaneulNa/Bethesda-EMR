@@ -287,19 +287,19 @@ export default function SettingsPage() {
           {/* DRUGS */}
           {activeTab==='drug'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
-              <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 Drugs</span>
+              <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',default_dose:'1.000',default_freq:1,default_days:7,default_route:'QD',unit_price:0,stock_qty:0})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ Add</button>
+              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',default_dose:'1.000',default_freq:1,default_days:7,default_route:'QD',unit_price:0,stock_qty:0})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'#1e2433'}}>
-                {['Code','Name','Cat','Dose','Freq','Days','Route','Price','Stock',''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i>=7?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
+                {[t.code,t.colDrugName,t.ph_category,t.colDose,t.colFreq,t.colDays,t.colRoute,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i>=7?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               <tbody>{filteredDrugs.map(function(d){
                 return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
                   <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
                   <td style={{padding:'4px 6px',color:tx}}>{d.name}</td>
-                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.category}</td>
+                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
                   <td style={{padding:'4px 6px',color:t2,fontFamily:'monospace',fontSize: 12}}>{d.default_dose}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_freq}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_days}</td>
@@ -722,19 +722,19 @@ export default function SettingsPage() {
 
             {editType==='drug'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:6}}>
-                <Fld label="Code"><input value={editItem.code||''} onChange={function(e){ue('code',e.target.value)}} style={IS}/></Fld>
-                <Fld label="Name"><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.code}><input value={editItem.code||''} onChange={function(e){ue('code',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.colDrugName}><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
-                <Fld label="Dose"><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
-                <Fld label="Freq"><input type="number" value={editItem.default_freq||1} onChange={function(e){ue('default_freq',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label="Days"><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label="Route"><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.colDose}><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.colFreq}><input type="number" value={editItem.default_freq||1} onChange={function(e){ue('default_freq',Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.colDays}><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.colRoute}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
-                <Fld label="Category"><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{'Antibiotic,Analgesic,Antimalarial,Cardiovascular,GI,Vitamin,Other'.split(',').map(function(c){return <option key={c}>{c}</option>})}</select></Fld>
-                <Fld label="Price"><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label="Stock"><input type="number" value={editItem.stock_qty||0} onChange={function(e){ue('stock_qty',Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
+                <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.ph_stock}><input type="number" value={editItem.stock_qty||0} onChange={function(e){ue('stock_qty',Number(e.target.value))}} style={IS}/></Fld>
               </div>
             </div>):null}
 
@@ -806,5 +806,10 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+// Drug tab (pharmacy session). The stored category stays the English word the
+// seed data and the statistics grouping use; only what is shown is translated.
+var DRUG_CATEGORIES = ['Antibiotic','Analgesic','Antimalarial','Cardiovascular','GI','Vitamin','Other'];
+function drugCatLabel(t, c){ return (c && t['ph_cat_' + c]) || c || ''; }
 
 function Fld(p){return <div><label style={{fontSize: 12,fontWeight:600,color:'#64748b',display:'block',marginBottom:3}}>{p.label}</label>{p.children}</div>}
