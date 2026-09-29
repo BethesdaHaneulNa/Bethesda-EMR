@@ -287,11 +287,21 @@ router.get('/:id/prescriptions', canReadRx, async (req, res) => {
 // TID line; rows saved then keep their total (see the PUT below).
 // Everything else - the pharmacy's stock deduction, the bill, the drug statistics -
 // reads total_qty as stored, so the formula lives here and nowhere else.
+// A daily dose or number of days left empty gives NO total (NULL), never 0 and never
+// "1 day" (decision B, 2026-09-29: drugs have no default dose any more, so a line
+// added from the search starts empty). The pharmacy stops on a line with no total and
+// the cashier's list flags it, so nothing goes out as 0 tablets / 0 charged or as one
+// day's worth the doctor never wrote.
 function rxTotal(dose, days) {
-  const d = parseFloat(dose) || 0;
-  const n = parseInt(days) || 1;
+  const d = parseFloat(dose);
+  const n = parseInt(days);
+  if (!(d > 0) || !(n > 0)) return null;
   return Math.round(d * n * 1000) / 1000;   // DECIMAL(10,3)
 }
+// An empty field is stored empty (NULL): times and days used to be filled with 1 here,
+// which turned a blank the doctor had not filled into a silent "once a day, 1 day".
+function blankNull(v) { return v === undefined || v === null || String(v).trim() === '' ? null : v; }
+function intOrNull(v) { const n = parseInt(v); return Number.isFinite(n) ? n : null; }
 
 // Pack-unit drugs (H2-B, decided 2026-09-29; columns from the pharmacy's 025): a syrup,
 // a cream, an inhaler is handed out by the bottle, tube or piece, so its line's
@@ -336,7 +346,7 @@ router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (cli
     `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo,
                                pack_unit, pack_label)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-    [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, total, unit_price, memo,
+    [req.params.id, drug_id, drug_code, drug_name, blankNull(dose), intOrNull(frequency), intOrNull(days), route, total, unit_price, memo,
      pack.pack_unit, pack.pack_label]
   );
   const rx = result.rows[0];
@@ -363,7 +373,7 @@ router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (cli
   const { dose, frequency, days, route, memo, unit_price } = req.body;
   const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
   if (invalid) return [400, { error: invalid }];
-  const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
+  const freq = intOrNull(frequency), nDays = intOrNull(days);
   const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
   const packSent = Object.prototype.hasOwnProperty.call(req.body, 'pack_qty');
   const pq = packSent ? packQty(req.body.pack_qty) : { qty: null };
@@ -391,7 +401,7 @@ router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (cli
              OR total_qty IS NULL
            THEN $6 ELSE total_qty END
      WHERE id=$8 RETURNING *`,
-    [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose, packSent, pq.qty]
+    [blankNull(dose), freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose, packSent, pq.qty]
   );
   const rx = result.rows[0];
   await recordEdit(client, req, await consultOf(client, rx.consultation_id), 'prescription', rx, rx.drug_name,
