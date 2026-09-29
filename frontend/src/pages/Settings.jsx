@@ -635,17 +635,24 @@ export default function SettingsPage() {
 
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12}}>
                 <div style={{fontWeight:700,fontSize: 14,color:'#60a5fa',marginBottom:10}}>2. {t.pacsServer||'PACS 서버 (Orthanc)'}</div>
-                <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginBottom:8}}>{t.pacsServerHint||'영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.'}</div>
+                <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginBottom:8}}>{t.pacsServerHint||'영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적습니다. 영상 창은 EMR이 대신 보여 주므로 진료실 PC가 9090에 닿을 필요는 없습니다.'}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 90px',gap:8}}>
                   <Fld label="Host / IP"><input placeholder="NAS_IP" value={pacsConfig.worklist_scp_host||''} onChange={function(e){up('worklist_scp_host',e.target.value)}} style={IS}/></Fld>
                   <Fld label={(t.dicomPort||'DICOM Port')}><input type="number" value={pacsConfig.worklist_scp_port||4242} onChange={function(e){up('worklist_scp_port',Number(e.target.value))}} style={IS}/></Fld>
                 </div>
                 <Fld label="AE Title"><input value={pacsConfig.worklist_scp_ae||''} onChange={function(e){up('worklist_scp_ae',e.target.value)}} style={IS}/></Fld>
-                <div style={{marginTop:8}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')}><input placeholder="http://NAS_IP:9090" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/>
-                  {oldPort(pacsConfig.pacs_viewer_url,8090)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
+                {/* P-9 (2026-09-29): the EMR shows the viewer itself and adds the image
+                    server's login on the server. The address below is where the EMR
+                    container reaches Orthanc; the password is set only by pair-with-emr
+                    and never comes to this screen - only whether it is set. */}
+                <div style={{marginTop:8}}><Fld label={t.px_orthancUrl}><input placeholder="http://host.docker.internal:9090" value={pacsConfig.orthanc_url||''} onChange={function(e){up('orthanc_url',e.target.value)}} style={IS}/>
+                  {oldPort(pacsConfig.orthanc_url,8090)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
+                <div style={{marginTop:4,fontSize:13,lineHeight:1.5,color:pacsConfig.orthanc_password_set?'#34d399':'#fbbf24'}}>{pacsConfig.orthanc_password_set?('✓ '+t.px_orthancPasswordSet):('⚠ '+t.px_orthancPasswordMissing)}</div>
+                {/* Kept, not used: an old backup restores this column, and removing the
+                    field would hide what it holds. */}
+                <div style={{marginTop:8,opacity:0.6}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')+' — '+t.px_viewerUrlUnused}><input placeholder="" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
                   <button onClick={function(){testPacs('worklist')}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
-                  {pacsConfig.pacs_viewer_url?<a href={pacsConfig.pacs_viewer_url} target="_blank" rel="noreferrer" style={{background:'#1e2433',color:'#a78bfa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13,textDecoration:'none'}}>🖼 {t.openViewer||'뷰어 열기'}</a>:null}
                 </div>
                 {pacsTest.worklist?<div style={{marginTop:8,fontSize: 13,color:pacsTest.worklist.ok?'#34d399':'#f87171'}}>{pacsTest.worklist.ok?'✓ ':'✗ '}{pacsTest.worklist.message}</div>:null}
               </div>

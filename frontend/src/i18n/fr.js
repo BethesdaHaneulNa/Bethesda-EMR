@@ -234,7 +234,7 @@ export default {
   settleAll: "Tout encaisser",
   settleAllConfirm: "Encaisser tous les impayés ?",
   pacsServer: "Serveur PACS (Orthanc)",
-  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (9090) sert à ouvrir la visionneuse depuis le dossier.",
+  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title. L'EMR affiche lui-même les images : les postes n'ont pas besoin d'accéder au port 9090.",
   pacsViewerUrl: "URL web / visionneuse PACS",
   dicomPort: "Port DICOM",
   testPacsBtn: "Tester PACS (DICOM)",
@@ -916,5 +916,9 @@ export default {
   px_readingOnCancelled: "Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.",
   px_noStudy: "Cette demande d'imagerie n'a pas été envoyée à la liste de travail des appareils : aucune image n'y est liée. Le compte-rendu peut quand même être saisi.",
   px_linkedByAccession: "L'appareil a donné son propre numéro d'étude à ces images ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.",
+  px_orthancUrl: "Adresse du serveur d'images vue par l'EMR (en général, ne pas modifier)",
+  px_orthancPasswordSet: "Mot de passe du serveur d'images enregistré — la visionneuse s'ouvre sans connexion",
+  px_orthancPasswordMissing: "Pas encore de mot de passe du serveur d'images. Sur le PC serveur, lancez pair-with-emr.ps1 dans le dossier du PACS.",
+  px_viewerUrlUnused: "n'est plus utilisée (l'EMR affiche les images)",
   // ── end pacs ──
 };
