@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { todayLocal } = require('../utils/localDate');
 const { badAmounts } = require('../utils/validate');
+const { sendDbError } = require('../utils/dbError');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -19,6 +20,17 @@ const canConsult = permMiddleware('consultation');
 // Decision S2 (2026-09-29): the server checks what the screens already check; the
 // route-by-route table is in wiki/handoff/settings.md "S2".
 const canReadRx = permMiddleware('consultation', 'payment', 'pharmacy');
+
+// Fields the tables require. Left out, they used to reach the database and come back
+// as a 500 carrying the driver's not-null message; checked here they are a 400 that
+// says which field. (Other constraint errors go through sendDbError below.)
+function blank(v) { return v === undefined || v === null || String(v).trim() === ''; }
+// prescription.route is VARCHAR(10): a longer sig was a 500 "value too long".
+const ROUTE_MAX = 10;
+function badRoute(route) {
+  return !blank(route) && String(route).length > ROUTE_MAX
+    ? 'route (sig) must be at most ' + ROUTE_MAX + ' characters' : null;
+}
 
 // Refusals the consultation screen recognises and translates. Keep these strings in
 // step with LOCK_MESSAGES in frontend/src/pages/Consultation.jsx.
@@ -66,7 +78,7 @@ router.post('/', canConsult, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally {
     client.release();
   }
@@ -86,7 +98,7 @@ router.put('/:id', canConsult, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 
@@ -103,7 +115,7 @@ router.put('/:id/complete', canConsult, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally {
     client.release();
   }
@@ -116,19 +128,20 @@ router.get('/:id/diagnoses', canConsult, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM diagnosis WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // POST /api/consultations/:id/diagnoses
 router.post('/:id/diagnoses', canConsult, async (req, res) => {
   try {
     const { icd_code, diagnosis_name, diagnosis_type, sort_order } = req.body;
+    if (blank(diagnosis_name)) return res.status(400).json({ error: 'diagnosis_name is required' });
     const result = await pool.query(
       'INSERT INTO diagnosis (consultation_id, icd_code, diagnosis_name, diagnosis_type, sort_order) VALUES ($1,$2,$3,$4,$5) RETURNING *',
       [req.params.id, icd_code, diagnosis_name, diagnosis_type || 'primary', sort_order || 0]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // DELETE /api/consultations/diagnosis/:dxId
@@ -136,7 +149,7 @@ router.delete('/diagnosis/:dxId', canConsult, async (req, res) => {
   try {
     await pool.query('DELETE FROM diagnosis WHERE id = $1', [req.params.dxId]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // ── Prescriptions ──
@@ -151,7 +164,7 @@ router.get('/visit/:visitId/prescriptions', canReadRx, async (req, res) => {
       [req.params.visitId]
     );
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // GET /api/consultations/:id/prescriptions
@@ -159,7 +172,7 @@ router.get('/:id/prescriptions', canReadRx, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM prescription WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // The one place the total of a prescription line is worked out. The clinic prescribes
@@ -182,7 +195,8 @@ router.post('/:id/prescriptions', canConsult, async (req, res) => {
   try {
     // total_qty from the client is ignored: the server works it out (rxTotal).
     const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']);
+    if (blank(drug_name)) return res.status(400).json({ error: 'drug_name is required' });
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
     if (invalid) return res.status(400).json({ error: invalid });
     const result = await pool.query(
       `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
@@ -190,7 +204,7 @@ router.post('/:id/prescriptions', canConsult, async (req, res) => {
       [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, rxTotal(dose, days), unit_price, memo]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 
@@ -206,7 +220,7 @@ router.put('/prescription/:rxId', canConsult, async (req, res) => {
   try {
     // total_qty from the client is ignored: the server works it out (rxTotal).
     const { dose, frequency, days, route, memo, unit_price } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']);
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
     if (invalid) return res.status(400).json({ error: invalid });
     const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
     const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
@@ -234,7 +248,7 @@ router.put('/prescription/:rxId', canConsult, async (req, res) => {
     );
     if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // DELETE /api/consultations/prescription/:rxId
@@ -245,7 +259,7 @@ router.delete('/prescription/:rxId', canConsult, async (req, res) => {
       "DELETE FROM prescription WHERE id = $1 AND status <> 'dispensed' RETURNING id", [req.params.rxId]);
     if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // ── Order Items (Lab, Imaging, Procedures) ──
@@ -256,6 +270,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
   try {
     await client.query('BEGIN');
     const { order_code_id, order_code, order_name, code_type, dose, frequency, days, quantity, unit_price, memo } = req.body;
+    if (blank(order_name)) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'order_name is required' }); }
     const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
     if (invalid) { await client.query('ROLLBACK'); return res.status(400).json({ error: invalid }); }
     // Get consultation info
@@ -326,7 +341,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
     res.status(201).json(orderItem);
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally {
     client.release();
   }
@@ -348,7 +363,7 @@ router.put('/order/:orderId', canConsult, async (req, res) => {
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // DELETE /api/consultations/order/:orderId
@@ -383,7 +398,7 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally {
     client.release();
   }
@@ -394,7 +409,7 @@ router.get('/:id/orders', canReadRx, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM order_item WHERE consultation_id = $1 ORDER BY created_at', [req.params.id]);
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 module.exports = router;

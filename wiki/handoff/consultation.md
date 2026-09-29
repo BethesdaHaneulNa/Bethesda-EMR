@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 빈 입력에 500 대신 400 (진료 API)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `c898cd1`
+- **한 일** (설정 세션의 권한 전체 시험에서 나온 두 건 + 같은 종류 두 건):
+  - `POST /consultations/:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`이 비면 **400** 「… is required」를 돌려줍니다. 같은 문제가 있던 `POST /:id/orders`의 `order_name`도 같이 막았습니다.
+  - 처방 용법(`route`, `VARCHAR(10)`)이 10자를 넘으면 POST·PUT 모두 400 「route (sig) must be at most 10 characters」를 돌려줍니다. 전에는 500 「value too long」이었습니다(7절 ⑮).
+  - `consult.routes.js`·`document.routes.js`·`orderset.routes.js`의 오류 응답 24곳을 전부 `utils/dbError.js`의 `sendDbError`로 바꿨습니다. 제약 오류는 4xx와 읽을 수 있는 문구로 나가고, 그 밖의 오류만 예전처럼 500입니다. 예: 없는 진료 id → 400 「Referenced record does not exist」.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `document.routes.js` · `orderset.routes.js` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: 없음(`utils/dbError.js`는 가져다 쓰기만 함)
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음. 화면은 서버 문구를 「Erreur : …」 뒤에 그대로 보여 줍니다.
+- **확인한 방법**: `node --check` 3개 파일 통과. 격리 스택 9182에서 다음을 확인했습니다.
+  - 새 시험 13개 전부 통과:
+    - 빈 진단·빈 처방·빈 오더 → 400, 11자 용법 POST·PUT → 400
+    - 없는 진료에 처방·진단 → 400
+    - 문서·약속처방 빈 입력은 원래대로 400
+    - 정상 진단·처방 201, 용법 딱 10자 201
+  - 기존 시험도 다시 돌려 모두 통과했습니다: 잠금 27개, 총량 13개, S2 권한 10개 경로 × 8계정.
+- **확인 못 한 것**: 화면에서 이 오류를 일부러 내 보지는 않았습니다(화면은 정상 입력만 보냄).
+- **위키**: `modules/consultation.md` 머리 상태, 3.2(필수 칸과 오류 응답), 7.2 ⑮, 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 임상병리 설계(결과 있는 검사 오더를 지우면 취소로 표시할지 묻기)가 오면 진료 몫을 하겠습니다.
+
 ## 2026-09-29 — 위키 2절(직원용 사용법)에 오늘 바뀐 것 정리 (코드 변경 없음)
 
 - **상태**: 확인 요청
