@@ -305,6 +305,8 @@ export default {
   lb_saved: "저장했습니다",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "취소",
+  st_unassigned: "미지정",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",

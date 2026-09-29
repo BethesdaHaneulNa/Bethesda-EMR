@@ -314,6 +314,8 @@ export default {
   lb_saved: "Saved",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "Cancelled",
+  st_unassigned: "Unassigned",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",

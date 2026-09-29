@@ -14,7 +14,7 @@ function rangeFor(p){
 }
 
 export default function StatsPage(){
-  var langCtx = useLang(); var t = langCtx.t;
+  var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
   var ps = useState('month'), period = ps[0], setPeriod = ps[1];
   var rs = useState(rangeFor('month')), range = rs[0], setRange = rs[1];
   var ds = useState(null), data = ds[0], setData = ds[1];
@@ -111,6 +111,15 @@ export default function StatsPage(){
     </div>; }
 
   var v = data?data.visits:{}, rev = data?data.revenue:{}, out = data?data.outstanding:{};
+  var unassigned = t.st_unassigned||'미지정';
+  // The server sends every name a department has; show the one for the screen's
+  // language. A visit with no department (or doctor) arrives with no code/name.
+  function deptLabel(d){
+    if(!d.code) return '- '+unassigned;
+    var nm = lang==='fr' ? (d.name_fr||d.name_en||d.name) : lang==='en' ? (d.name_en||d.name) : d.name;
+    return d.code+' '+(nm||'');
+  }
+  function doctorLabel(d){ return d.name||unassigned; }
 
   return <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'#0d0f16' }}>
     <TopBar />
@@ -137,16 +146,16 @@ export default function StatsPage(){
             <Card label={t.followUp||'재진'} value={v.follow_ups||0} unit={t.cases||'건'} small />
             <Card label={t.completed||'완료'} value={v.completed||0} unit={t.cases||'건'} color="#10b981" small />
             <Card label={t.active||'진행 중'} value={v.active||0} unit={t.cases||'건'} color="#f59e0b" small />
-            <Card label={t.cancelled||'취소'} value={v.cancelled||0} unit={t.cases||'건'} color="#f87171" small />
+            <Card label={t.st_cancelled||'취소'} value={v.cancelled||0} unit={t.cases||'건'} color="#f87171" small />
           </div>
           <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.byDept||'진료과별'}</div>
-              <Bars rows={(data.byDept||[]).map(function(d){ return { label:(d.code||'-')+' '+(d.name||''), value:d.cnt }; })} />
+              <Bars rows={(data.byDept||[]).map(function(d){ return { label:deptLabel(d), value:d.cnt }; })} />
             </div>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.byDoctor||'의사별'}</div>
-              <Bars rows={(data.byDoctor||[]).map(function(d){ return { label:d.name, value:d.cnt, color:'#8b5cf6' }; })} />
+              <Bars rows={(data.byDoctor||[]).map(function(d){ return { label:doctorLabel(d), value:d.cnt, color:'#8b5cf6' }; })} />
             </div>
           </div>
         </Section>
@@ -167,11 +176,11 @@ export default function StatsPage(){
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:14 }}>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'}</div>
-              <Bars money rows={(data.revenueByDept||[]).map(function(d){ return { label:(d.code||'-')+' '+(d.name||''), value:d.paid, color:'#10b981' }; })} />
+              <Bars money rows={(data.revenueByDept||[]).map(function(d){ return { label:deptLabel(d), value:d.paid, color:'#10b981' }; })} />
             </div>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'}</div>
-              <Bars money rows={(data.revenueByDoctor||[]).map(function(d){ return { label:d.name, value:d.paid, color:'#22c55e' }; })} />
+              <Bars money rows={(data.revenueByDoctor||[]).map(function(d){ return { label:doctorLabel(d), value:d.paid, color:'#22c55e' }; })} />
             </div>
           </div>
           {showList?<div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14, marginBottom:14 }}>
@@ -195,7 +204,7 @@ export default function StatsPage(){
                     <td style={{ padding:'7px 8px', color:tx, fontWeight:700 }}>{r.name}</td>
                     <td style={{ padding:'7px 8px', color:t2, fontFamily:'monospace' }}>{r.contact||'—'}</td>
                     <td style={{ padding:'7px 8px', color:showList==='owed'?'#f87171':'#c084fc', fontFamily:'monospace', fontWeight:800, textAlign:'right' }}>{fmtAr(r.amount)} Ar</td>
-                    {showList==='owed'?<td style={{ padding:'7px 8px', color:t2 }}>{r.since?String(r.since).split('T')[0]:'—'}</td>:null}
+                    {showList==='owed'?<td style={{ padding:'7px 8px', color:t2 }}>{r.since||'—'}</td>:null}
                     <td style={{ padding:'7px 8px', color:t3, textAlign:'right' }}>{r.open_bills}</td>
                   </tr>; })}
                   {((outData&&outData[showList])||[]).length===0?<tr><td colSpan={6} style={{ padding:'14px 8px', color:t3, textAlign:'center' }}>{t.noData||'데이터 없음'}</td></tr>:null}

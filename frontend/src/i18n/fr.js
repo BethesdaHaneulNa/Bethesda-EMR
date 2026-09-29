@@ -305,6 +305,8 @@ export default {
   lb_saved: "Enregistré",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "Annulé",
+  st_unassigned: "Non attribué",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",
