@@ -72,6 +72,8 @@ export default function RegistrationPage() {
   var vts = useState('auto'), visitTypeSource = vts[0], setVisitTypeSource = vts[1];
   // The patient's earlier visits (GET /visits/patient/:id), for the suggestion.
   var pvs = useState([]), pastVisits = pvs[0], setPastVisits = pvs[1];
+  // The same-name dialog: { list, resolve } while it is open (see askSimilar).
+  var sms = useState(null), similarAsk = sms[0], setSimilarAsk = sms[1];
 
   var ms = useState(''), memo = ms[0], setMemo = ms[1];
   var hs = useState([]), history = hs[0], setHistory = hs[1];
@@ -166,19 +168,89 @@ export default function RegistrationPage() {
     if (next !== visitForm.visitType) uv('visitType', next);
   }, [visitTypeSource, visitForm.department, visitForm.doctor, pastVisits, doctors]);
 
+  function patientToForm(p) {
+    return {
+      chartNo: p.chart_no || '', lastName: p.last_name || '', firstName: p.first_name || '',
+      dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
+      phone: p.phone || '',
+      bloodType: p.blood_type || '', allergies: p.allergies || '', receptionNote: p.reception_note || '',
+    };
+  }
+
   function fillPatient(p) {
     setSelectedPatient(p);
     setSel(null);
     setVisitTypeSource('auto');
     loadPastVisits(p.id);
-    setForm({
-      chartNo: p.chart_no || '', lastName: p.last_name || '', firstName: p.first_name || '',
-      dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
-      phone: p.phone || '',
-      bloodType: p.blood_type || '', allergies: p.allergies || '', receptionNote: p.reception_note || '',
-    });
+    setForm(patientToForm(p));
     setMemo('');
     loadHistory(p.id);
+  }
+
+  // ── Same-name and same-day warnings (decided 2026-09-29, reception ④) ──
+  // Warn only - staff confirm and carry on - and judge "the same person" by name
+  // alone. The dialog shows chart number, birth date, phone and last visit so staff
+  // can tell namesakes apart.
+  function askSimilar(list) {
+    return new Promise(function (resolve) { setSimilarAsk({ list: list, resolve: resolve }); });
+  }
+  function answerSimilar(answer) {
+    var open = similarAsk;
+    setSimilarAsk(null);
+    if (open) open.resolve(answer);
+  }
+  // Just before a new chart is created. True: go on creating it. False: stop - staff
+  // cancelled, or chose the existing patient, who is now loaded for them to check.
+  // Choosing the existing patient does not register straight away on purpose: what
+  // was typed for the "new" patient (allergies, phone) would otherwise vanish
+  // unseen; this way staff see the stored record and press the button again.
+  async function confirmNewPatient() {
+    var list = [];
+    try {
+      list = await api.get('/patients/similar?last_name=' + encodeURIComponent(form.lastName.trim()) +
+        '&first_name=' + encodeURIComponent(form.firstName.trim()));
+    } catch (e) {
+      list = [];   // the check is a courtesy; if it cannot run, registering still works
+    }
+    if (!Array.isArray(list) || !list.length) return true;
+    var answer = await askSimilar(list);
+    if (answer.action === 'new') return true;
+    if (answer.action === 'use') {
+      var p = answer.patient;
+      try { p = await api.get('/patients/' + p.id); } catch (e) { /* keep the short row */ }
+      // Like fillPatient, but the visit being prepared (doctor, complaint, memo) stays.
+      setSelectedPatient(p);
+      setSel(null);
+      setForm(patientToForm(p));
+      setVisitTypeSource('auto');
+      loadPastVisits(p.id);
+      loadHistory(p.id);
+      alert(t.rc_similarLoaded);
+    }
+    return false;
+  }
+  // The patient already in today's queue (not cancelled), from the list on screen.
+  function todayVisitOf(patientId) {
+    return visits.filter(function (v) { return v.patient_id === patientId && v.status !== 'cancelled'; })[0] || null;
+  }
+  // POST /visits with the same-day check: asks from the queue on screen first, and
+  // again if the server finds a visit the queue did not have yet (another desk).
+  // False when staff chose not to register a second visit.
+  async function postVisit(body, name) {
+    var already = todayVisitOf(body.patient_id);
+    if (already) {
+      var st = already.status === 'completed' ? t.completed : (already.status === 'in_progress' ? t.in_progress : t.waiting);
+      if (!confirm(fill(t.rc_dupVisit, { name: name, status: st, doctor: already.doctor_name ? ', ' + already.doctor_name : '' }))) return false;
+      body = Object.assign({}, body, { allow_duplicate: true });
+    }
+    try {
+      await api.post('/visits', body);
+    } catch (err) {
+      if (!err || err.message !== 'Patient already registered today') throw err;
+      if (!confirm(fill(t.rc_dupVisitOther, { name: name }))) { loadData(); return false; }
+      await api.post('/visits', Object.assign({}, body, { allow_duplicate: true }));
+    }
+    return true;
   }
 
   async function searchPatients() {
@@ -299,6 +371,7 @@ export default function RegistrationPage() {
         if (selectedPatient && selectedPatient.id) {
           saved = await api.put('/patients/' + selectedPatient.id, patientBody());
         } else {
+          if (!(await confirmNewPatient())) return;
           saved = await api.post('/patients', patientBody());
         }
         setSelectedPatient(saved);
@@ -327,6 +400,7 @@ export default function RegistrationPage() {
       try {
         var patient = selectedPatient;
         if (!patient || !patient.id) {
+          if (!(await confirmNewPatient())) return;
           patient = await api.post('/patients', patientBody());
           // Remember the new patient at once. If the visit below fails, pressing
           // the button again must register this patient, not create a second one.
@@ -353,14 +427,15 @@ export default function RegistrationPage() {
           await api.put('/visits/' + sel.id, vbody);
           alert(fill(t.rc_visitUpdated, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }) }));
         } else {
-          await api.post('/visits', {
+          var registered = await postVisit({
             patient_id: patient.id,
             visit_type: visitForm.visitType,
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
             chief_complaint: visitForm.chiefComplaint,
             reception_memo: memo,
-          });
+          }, nameOf({ last_name: form.lastName, first_name: form.firstName }));
+          if (!registered) return;
           alert(fill(t.rc_registered, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }), chart: patient.chart_no || form.chartNo }));
         }
         await loadData();
@@ -594,6 +669,39 @@ export default function RegistrationPage() {
       <DocumentModal open={chartViewOpen} onClose={function(){ setChartViewOpen(false); }} category="chart" readOnly={true}
         patient={selectedPatient ? { id: selectedPatient.id, chart_no: selectedPatient.chart_no, last_name: selectedPatient.last_name, first_name: selectedPatient.first_name, gender: form.gender, date_of_birth: form.dob } : null}
         context={{}} />
+      {similarAsk ? (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
+          <div role="dialog" aria-modal="true" style={{ background: pn, border: '1px solid #2a3142', borderRadius: 12, width: 760, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid ' + bd, background: scBg }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: '#fbbf24' }}>⚠ {t.rc_similarTitle}</div>
+              <div style={{ fontSize: 14, color: t2, marginTop: 4 }}>{t.rc_similarHint}</div>
+            </div>
+            <div style={{ overflow: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead><tr style={{ background: scBg }}>
+                  {[t.chartNo, t.name, t.dob, t.phone, t.rc_lastVisit, ''].map(function (h, i) { return <th key={i} style={{ textAlign: 'left', padding: '8px 12px', color: t3, fontWeight: 700, fontSize: 12 }}>{h}</th>; })}
+                </tr></thead>
+                <tbody>
+                  {similarAsk.list.map(function (p) {
+                    return <tr key={p.id} style={{ borderTop: '1px solid #1e2433' }}>
+                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: '#60a5fa' }}>{p.chart_no}</td>
+                      <td style={{ padding: '9px 12px', color: tx, fontWeight: 700 }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
+                      <td style={{ padding: '9px 12px', color: t2 }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2 }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
+                      <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f660', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
+                    </tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '12px 18px', borderTop: '1px solid ' + bd, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={function () { answerSimilar({ action: 'cancel' }); }} style={{ background: '#1e2433', color: t2, border: '1px solid #2a3142', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.rc_cancel}</button>
+              <button type="button" onClick={function () { answerSimilar({ action: 'new' }); }} style={{ background: '#10b98118', color: '#34d399', border: '1px solid #10b98140', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>{t.rc_similarCreate}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <PatientFinder open={regFinderOpen} onClose={function(){ setRegFinderOpen(false); }} mode="patient"
         onPickPatient={function(p){ fillPatient(p); }} />
     </div>
