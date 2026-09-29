@@ -383,6 +383,8 @@ export default {
   cs_colDaily: "Daily",
   cs_colDailyHint: "Drug: daily total. Exam / procedure: quantity. Total = this column x days (times a day are not multiplied). Days 2 on an exam line bills it twice.",
   cs_orderTotal: "billed {n} times",
+  cs_colTimes: "Times",
+  cs_colDays: "Days",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

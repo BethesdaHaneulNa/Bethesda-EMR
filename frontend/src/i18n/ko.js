@@ -374,6 +374,8 @@ export default {
   cs_colDaily: "일총투여",
   cs_colDailyHint: "약: 하루 총량. 검사·처치: 수량. 총량 = 이 칸 × 일수(횟수는 곱하지 않음). 검사 줄의 일수를 2로 적으면 2회 청구됩니다.",
   cs_orderTotal: "{n}회 청구",
+  cs_colTimes: "횟수",
+  cs_colDays: "일수",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
