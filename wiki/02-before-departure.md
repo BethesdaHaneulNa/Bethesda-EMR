@@ -25,7 +25,7 @@
 | ☐ | 관리자 비밀번호를 알고 감 (복원하면 초기 설정 화면이 나오지 않음) |
 | ☐ | **외장 USB 디스크 1개(1~2TB) — 영상 백업용**(결정 2026-09-29: 매일 밤 새로 생긴 영상만 복사, 디스크가 빠져 있으면 경고). 설치 묶음 USB와는 별개. 암호화하지 않음(결정) — **잠금 장소에 보관**(환자 영상이 그대로 들어 있음). **출발 전에 실제 USB 디스크로 한 번 해 볼 것**: `prepare-backup-disk.ps1` → `image-backup.ps1` → `restore-image-backup.ps1 -Verify`(지금까지는 시험용 폴더로만 확인). 예약 작업 등록(`install-image-backup.ps1`)은 현지 서버 PC에서 (`modules/pacs.md` 6.2) |
 | ☐ | 현지 PC에서도 **포트 범위 확인**: `netsh int ipv4 show dynamicport tcp` → 시작 49152 (Docker 설치·재부팅 뒤). 아니면 `DEPLOYMENT.md`의 두 줄 실행 후 재부팅 |
-| ☐ | 서버 PC의 **IP 고정**, 다른 PC에서 9080·9090·4242 연결 확인(`Test-NetConnection`), Windows 방화벽 |
+| ☐ | 서버 PC의 **IP 고정**, 다른 PC에서 **9080**과 **4242**(영상 장비) 연결 확인(`Test-NetConnection`), Windows 방화벽. 9090은 서버 PC 안에서만 열림 — 직원 PC에는 필요 없음(영상은 EMR 영상 창으로) |
 | ☐ | 복원 **뒤에** PACS 폴더에서 `.\pair-with-emr.ps1` 한 번(EMR과 PACS의 브리지 토큰을 다시 맞춤, 값은 화면에 나오지 않음), 설정 → 오더 연동의 뷰어 주소·피드 주소를 서버 LAN IP로 — 두 주소는 백업과 함께 옛 PC의 값으로 넘어옴 (`modules/pacs.md` 6.1) |
 | ☐ | 설치 묶음은 PACS 저장소 `main`이 최신이고 `git status`가 빈 상태에서 만들 것, 묶음 안에 `.env` 계열 파일이 없는지 확인 |
 
