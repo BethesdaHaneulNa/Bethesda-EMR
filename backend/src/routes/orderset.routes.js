@@ -5,6 +5,10 @@ const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const router = express.Router();
 router.use(authMiddleware);
 
+// Decision S2 (2026-09-29): order sets are read by the consultation screen (applying a
+// set) and the Settings order-set tab; written from Settings only.
+const canReadSets = permMiddleware('consultation', 'settings');
+
 // 세트 항목 일괄 삽입 (생성/수정 공용)
 async function insertItems(client, setId, items) {
   for (let idx = 0; idx < items.length; idx++) {
@@ -40,7 +44,7 @@ async function attachItems(sets) {
 }
 
 // GET /api/order-sets   (?department_id= 로 과별 필터, 과 없는 세트는 공통으로 포함)
-router.get('/', async (req, res) => {
+router.get('/', canReadSets, async (req, res) => {
   try {
     const { department_id } = req.query;
     let q = `SELECT os.*, d.code AS dept_code, d.name AS dept_name
@@ -57,7 +61,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/order-sets/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', canReadSets, async (req, res) => {
   try {
     const s = await pool.query(
       `SELECT os.*, d.code AS dept_code, d.name AS dept_name

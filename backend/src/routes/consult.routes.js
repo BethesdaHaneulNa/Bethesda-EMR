@@ -8,12 +8,17 @@ const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 router.use(authMiddleware);
 
-// Reads stay open to any signed-in user: the payment, pharmacy, lab and reception
-// screens show a visit's prescriptions and orders (PatientChart, DocumentModal).
-// Writing them is the doctor's job. The menu already hides this screen from other
-// roles, but the menu is not a lock - a pharmacy or cashier account could still
-// post prescriptions straight to these endpoints.
+// Writing prescriptions and orders is the doctor's job. The menu already hides this
+// screen from other roles, but the menu is not a lock - a pharmacy or cashier account
+// could still post prescriptions straight to these endpoints.
 const canConsult = permMiddleware('consultation');
+// Reading them: the screens that show a visit's prescriptions and orders -
+// consultation, and payment / pharmacy through PatientChart and the document window
+// (DocumentModal reads /visit/:id/prescriptions to fill a new document). Lab and
+// reception open documents read-only with no visit context, so they never call these.
+// Decision S2 (2026-09-29): the server checks what the screens already check; the
+// route-by-route table is in wiki/handoff/settings.md "S2".
+const canReadRx = permMiddleware('consultation', 'payment', 'pharmacy');
 
 // Refusals the consultation screen recognises and translates. Keep these strings in
 // step with LOCK_MESSAGES in frontend/src/pages/Consultation.jsx.
@@ -107,7 +112,7 @@ router.put('/:id/complete', canConsult, async (req, res) => {
 // ── Diagnosis ──
 
 // GET /api/consultations/:id/diagnoses
-router.get('/:id/diagnoses', async (req, res) => {
+router.get('/:id/diagnoses', canConsult, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM diagnosis WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
     res.json(result.rows);
@@ -137,7 +142,7 @@ router.delete('/diagnosis/:dxId', canConsult, async (req, res) => {
 // ── Prescriptions ──
 
 // GET /api/consultations/visit/:visitId/prescriptions  — 내원 단위 처방(문서 발급용)
-router.get('/visit/:visitId/prescriptions', async (req, res) => {
+router.get('/visit/:visitId/prescriptions', canReadRx, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT rx.* FROM prescription rx
@@ -150,7 +155,7 @@ router.get('/visit/:visitId/prescriptions', async (req, res) => {
 });
 
 // GET /api/consultations/:id/prescriptions
-router.get('/:id/prescriptions', async (req, res) => {
+router.get('/:id/prescriptions', canReadRx, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM prescription WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
     res.json(result.rows);
@@ -385,7 +390,7 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
 });
 
 // GET /api/consultations/:id/orders
-router.get('/:id/orders', async (req, res) => {
+router.get('/:id/orders', canReadRx, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM order_item WHERE consultation_id = $1 ORDER BY created_at', [req.params.id]);
     res.json(result.rows);

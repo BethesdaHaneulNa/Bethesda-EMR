@@ -1,12 +1,20 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authMiddleware);
 
+// Decision S2 (2026-09-29): the server allows what the screens use. The document window
+// (DocumentModal) is opened for editing from consultation, payment and pharmacy, and
+// read-only (the chart viewer, no issue or void buttons) from lab and reception.
+// Narrowing further by document kind (an outside prescription only for pharmacy and
+// consultation, say) was not asked for.
+const canReadDocs = permMiddleware('consultation', 'payment', 'pharmacy', 'lab', 'registration');
+const canIssueDocs = permMiddleware('consultation', 'payment', 'pharmacy');
+
 // GET /api/documents/patient/:id  — 발급 이력 (최신순)
-router.get('/patient/:id', async (req, res) => {
+router.get('/patient/:id', canReadDocs, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT d.*, s.name AS issued_by_name
@@ -21,7 +29,7 @@ router.get('/patient/:id', async (req, res) => {
 });
 
 // GET /api/documents/:id  — 단건 (재출력)
-router.get('/:id', async (req, res) => {
+router.get('/:id', canReadDocs, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT d.*, s.name AS issued_by_name
@@ -37,7 +45,7 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/documents  — 발급(저장). 발급번호 자동 부여.
 // body { template_code, template_name, patient_id, visit_id, consultation_id, lang, payload }
-router.post('/', async (req, res) => {
+router.post('/', canIssueDocs, async (req, res) => {
   try {
     const { template_code, template_name, patient_id, visit_id, consultation_id, lang, payload } = req.body;
     if (!template_code || !patient_id) {
@@ -59,7 +67,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST /api/documents/:id/void  — 발급 취소 (이력은 남기고 무효 표시)
-router.post('/:id/void', async (req, res) => {
+router.post('/:id/void', canIssueDocs, async (req, res) => {
   try {
     const { reason } = req.body;
     const r = await pool.query(

@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — S2: 서버 권한을 화면 권한대로 (진료 세션 파일)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `1062730`
+- **한 일** (실장님 결정 S2, 권한표 `wiki/handoff/settings.md` 「S2」 그대로):
+  - `consult.routes.js`: 처방·오더 읽기(`GET /visit/:visitId/prescriptions`, `GET /:id/prescriptions`, `GET /:id/orders`)는 `canReadRx` = consultation·payment·pharmacy, `GET /:id/diagnoses`는 consultation. 쓰기는 이미 consultation.
+  - `document.routes.js`: 읽기(`GET /patient/:id`, `GET /:id`)는 consultation·payment·pharmacy·lab·registration, 발급·취소(`POST /`, `POST /:id/void`)는 consultation·payment·pharmacy.
+  - `orderset.routes.js`: 읽기(`GET /`, `GET /:id`)는 consultation·settings. 쓰기는 이미 settings.
+  - **grep 재확인**: 임상병리(`Lab.jsx:261`)·접수(`Registration.jsx:509`)는 문서 창을 `readOnly`·`context={{}}`로 열어서, `/consultations/visit/…/prescriptions`를 부르지 않고 `/documents/patient/…`만 부릅니다. 그래서 표에 빠진 권한은 없었습니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `document.routes.js` · `orderset.routes.js` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음
+- **확인한 방법**: `node --check` 3개 파일 통과. 격리 스택 9182에서 확인했습니다.
+  - 권한별 시험 계정 8개(의사=consultation, 수납=payment, 접수=registration, 약국=pharmacy, 검사=lab, **간호사 role nurse = registration·pharmacy·lab**, 통계만, 설정만)로 10개 라우트를 모두 불러 봤고, 표와 전부 일치했습니다(통과해야 할 계정은 200·404, 나머지는 403). 시험 스크립트는 진료 scratchpad의 `s2-test.mjs`입니다.
+  - **간호사 계정으로 화면을 직접 눌러 봄**: 약국 화면에서 환자 선택, 원외처방전 창(방문 처방·문서 이력 읽기), 차트뷰어가 열리고 네트워크에 403이 없었습니다. 임상병리 화면에서 환자 선택 후 「Dossier (vue)」가 열리고 `/documents/patient/5`가 200이었습니다.
+- **확인 못 한 것**: 수납·약국 화면의 `PatientChart` 과거 내원 펼치기(`/consultations/:id/prescriptions`)는 화면으로 누르지 않았습니다. API로는 수납·약국·간호사 계정 모두 200인 것을 확인했습니다.
+- **위키**: `modules/consultation.md` 머리 상태, 3.2·3.3·3.4(권한), 4절 API 표 권한 칸, 7.2 ⑪, 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 다음은 총괄 부탁 「하루 총량이 빈 처방 표시」와 「감춘 예시 약이 약속처방으로 처방될 때」 확인입니다.
+
 ## 2026-09-29 — 약 표기를 공용 rx-dosing.js로 + 검사·영상 진행 상태 자동 반영
 
 - **상태**: 확인 요청
