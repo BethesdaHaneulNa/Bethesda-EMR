@@ -16,6 +16,7 @@
 | 환자 인적사항을 고침 | `reception.patient.edit` | 접수 |
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
+| 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
 
 **남기지 않는 것**
 
@@ -28,7 +29,7 @@
 - `entity` = `drug`, `entity_id` = 약 id, `summary` = 약 코드와 이름(`MED-0068 Amoxicillin 500mg`), `before`/`after` = `{ unit_price }`만.
 - 가격이 같으면 쓰지 않습니다(`writeAudit`이 바뀐 칸만 남기므로 그대로 넘기면 됨). 새 약을 만들 때의 첫 가격은 「처음 입력」이라 남기지 않습니다 — 단, 가져온 약(가격 0)에 처음 가격을 넣는 것은 **고침**이라 남습니다(0 → 100).
 - 환자와 관계없는 줄이라 `patient_id`·`visit_id`는 비웁니다.
-- 오더 코드(진료비·검사·처치)의 가격 변경은 이 결정에 들어 있지 않습니다 — 넣을지는 따로 여쭙니다.
+- **오더 코드(진료비·검사·영상·처치) 가격도 같은 모양으로 남깁니다**(2026-09-30 실장님 결정, (나)): `entity` = `order_code`, `summary` = 코드와 이름, `before`/`after` = 가격 칸만. 남기는 범위는 여덟 가지.
 
 ## 2. 한 줄에 들어가는 것
 
