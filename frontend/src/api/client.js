@@ -22,7 +22,10 @@ async function request(method, path, body) {
     throw new Error('API response was not JSON. Backend/proxy may be down. HTTP ' + res.status + ': ' + preview);
   }
 
-  if (res.status === 401) {
+  // A 401 with a token sent means the session ran out: back to the login page.
+  // A 401 with no token is an answer (wrong password, inactive account) - reloading
+  // the page there wiped the message before anyone could read it.
+  if (res.status === 401 && token) {
     localStorage.removeItem('medconnect_token');
     localStorage.removeItem('medconnect_user');
     window.location.href = '/login';
