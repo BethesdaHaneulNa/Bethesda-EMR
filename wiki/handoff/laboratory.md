@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 문제 14: 판정·참고치 규칙을 `backend/src/utils/labFlag.js`로
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `5d56c2b` (출발점 `develop` `66741f7`)
+- **한 일**: 총괄이 정한 위치에 새 파일 `backend/src/utils/labFlag.js`(허락받음) — `lab.routes.js`에 있던 순수 함수 135줄을 **그대로 옮김**(`readNumber`·`normWord`·`sameText`·`num`·`flagFor`·`SAME_WORDS`·`AGE_DAYS`·`ageIn`·`nullInt`·`rangeApplies`·`rangeLabel`·`refFor`·`rangeError`). `lab.routes.js`는 `flagFor`·`refFor`·`rangeError`·`nullInt`만 가져다 씀. DB를 쓰는 `rangesFor`·`patientForOrder`는 라우트에 남김.
+  - **화면은 이 파일을 가져올 수 없음**(프론트엔드 Docker 빌드가 `frontend/`만 봄) → `Lab.jsx` `flagFor` 등과 설정 탭 `rangeProblem`은 복사본으로 두고, **새 검사 스크립트 `backend/test/lab.flag.mjs`** 가 두 쪽을 535가지 경우에 돌려 다르면 exit 1(설치·서버·DB 필요 없음). 실행: `node backend/test/lab.flag.mjs`.
+- **다른 세션 파일에서 같은 계산을 하는 곳**: **없음** — `backend/src`·`frontend/src` 전체에서 `ref_low`·`ref_high`·`flagFor`·`computeFlag`·`'abnormal'`·`lab_result` 검색: `consult.routes.js`는 결과가 있는지(`EXISTS lab_result`)만 봄, `utils/audit.js`는 주석, `Settings.jsx`는 임상병리 검사항목 탭(`rangeProblem`)뿐.
+- **바꾼 파일**: `backend/src/utils/labFlag.js`(새) · `backend/src/routes/lab.routes.js` · `backend/test/lab.flag.mjs`(새) · `wiki/modules/laboratory.md`(3.3, 4절, 7절 14, 8절)
+- **공용 파일 변경**: `backend/src/utils/`에 새 파일 하나(총괄 허락) · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `node --check` 두 파일. `lab.flag.mjs` 535경우 0 불일치. **검사가 실제로 잡는지**: `Lab.jsx`의 `n < L`을 `n <= L`로 일부러 바꾸자 4건 불일치 보고 → 되돌림. 격리 스택(새 DB, 옮긴 코드로 빌드): 성별·나이 줄 저장 200·겹침 400, 여 성인 Hb `12,5` → 12–16 `F · ≥18y` 정상, 말라리아 `Positive` → abnormal, 크레아티닌 `1,5` → high. 스택 내림.
+- **총괄 확인 요청**: `backend/test/`에 임상병리 검사 파일 하나 추가(규칙 8절 「만든다면 자기 모듈 것만」). 프론트 복사본을 없애려면 프론트엔드 빌드가 공용 폴더를 볼 수 있어야 함(Docker 빌드 문맥 변경 — 총괄 몫).
+- **남은 일**: 24(좁은 화면 — 병원 PC 폭 대기). 결정 대기: 참고치 값·Trace·판정 기준선.
+
 ## 2026-09-29 — 영어 화면 확인 · 영상 오더 취소의 영향 확인 (코드 변경 없음)
 
 - **상태**: 확인 요청 (확인만)

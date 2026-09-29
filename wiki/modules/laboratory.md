@@ -217,7 +217,7 @@
 
 ### 3.3 이상 판정 (high · low · abnormal)
 
-같은 규칙이 **두 곳**에 있습니다 — 입력 중 글자색용 `Lab.jsx`, 저장할 때 DB에 남기는 `lab.routes.js` — 둘 다 `readNumber()`·`flagFor(value, lo, hi, refText)`와 같은 이름·같은 코드. **한쪽을 고치면 다른 쪽도 같이** 고쳐야 화면 색과 저장된 표시가 맞습니다.
+규칙의 원본은 **`backend/src/utils/labFlag.js`**(서버 공용, 결정 14 — 2026-09-29)입니다: `readNumber`·`flagFor`와 참고치 규칙(`ageIn`·`rangeApplies`·`refFor`·`rangeLabel`·`rangeError`), DB를 쓰지 않는 순수 함수. `lab.routes.js`가 이것을 씁니다. 화면은 백엔드 파일을 가져올 수 없어(프론트엔드는 `frontend/`만으로 빌드) **복사본**을 둡니다 — 입력 중 글자색용 `Lab.jsx`의 `readNumber`·`normWord`·`sameText`·`num`·`flagFor`, 설정 검사항목 탭의 `rangeProblem`(= `rangeError`). 둘이 어긋나면 화면 색과 저장된 판정이 달라지므로, **`node backend/test/lab.flag.mjs`** 가 두 쪽을 같은 535가지 경우(값 40종 × 참고치 13종 + 성별·나이 줄 15종)에 돌려 다르면 실패합니다(설치·서버·DB 필요 없음). **규칙을 고치면 `labFlag.js` → 복사본 → 이 검사 순서로.**
 
 1. 값을 `readNumber()`로 읽습니다(앞에 `<` `>` `<=` `>=` `≤` `≥`가 있으면 떼고 읽음).
    - 현장 직원이 프랑스식으로 적으므로, 쉼표가 **하나**면 소수점으로(`1,5` → 1.5), 숫자 사이에서 세 자리 앞 띄어쓰기는 천 단위로(`12 000` → 12000) 읽습니다. 그 뒤는 `parseFloat`과 같습니다(`5.2 H` → 5.2).
@@ -295,6 +295,8 @@
 - `frontend/src/components/LabResults.jsx` — 진료 화면에서도 씀 (`Consultation.jsx:7, 688`)
 
 ### 서버 — `backend/src/routes/lab.routes.js` (`/api/lab`, `index.js:39`)
+
+판정·참고치 규칙은 `backend/src/utils/labFlag.js`(3.3절), 검사 스크립트 `backend/test/lab.flag.mjs`.
 
 모든 요청은 로그인 필요(`authMiddleware`). 그 위에 **그 API를 쓰는 화면의 권한**을 서버가 다시 확인합니다(실장님 결정 S2) — 권한이 없으면 403. 서버는 권한을 매 요청마다 DB에서 읽으므로(S1, `middleware/auth.js`), 설정에서 권한을 바꾸면 서버 쪽에서는 바로 적용됩니다. 화면 위 메뉴는 화면을 열 때와 5분마다 계정을 다시 읽어 맞춰집니다(`TopBar.jsx`, 총괄 `c4d4d67`) — 다시 로그인할 필요 없음.
 권한 칸은 「이 중 하나라도 있으면 됨」입니다. 간호사 계정(기본 접수·약국·임상병리)은 `lab`이 있으므로 아래 `settings` 전용 하나를 뺀 전부를 씁니다.
@@ -442,7 +444,7 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 11 | 보통 · ✅ 고침 | **프랑스어 화면에 한국어가 나옴.** 번역 키가 없어 코드 안의 한국어 기본 문구가 그대로 뜸: `labSelectHint`, `labNoPending`, `labNoCompleted`, `labNoMaster`(Lab.jsx), `labItemsHint`, `labPickPanel`(설정 탭). 번역은 영어로 대체되지 않음(`i18n/index.jsx`) | `Lab.jsx:91, 132, 148, 167` · `Settings.jsx:535, 568` |
 | 12 | 보통 · ✅ 결정 반영(B — 참고 글자와 다르면 `abnormal`, `<x`·`>x`는 확실할 때만. Trace는 의사 확인 대기) | **문자 결과는 판정하지 않음.** 말라리아 RDT·요검사에 `Positive`를 넣어도 이상 표시 없음. `<5`, `>500` 같은 값도 판정 없음 | `lab.routes.js:9-10` |
 | 13 | 낮음 · ✅ 고침(한 줄 입력) | 항목이 정의되지 않은 패널은 결과를 넣을 칸이 없음(3.6절). 새 패널을 만들고 항목 정의 전에 오더가 나가면 완료 처리 불가 | `lab.routes.js:114-119` |
-| 14 | 낮음 (두 곳에 주석으로 서로 가리키게만 함) | 판정 규칙이 화면·서버 두 곳에(`flagFor` — 같은 이름·같은 코드), 참고치 표시가 두 곳에 따로 있음. 한쪽만 고치면 화면 색과 저장된 표시가 달라짐 | `Lab.jsx:11-17, 98` · `lab.routes.js:8-15` · `LabResults.jsx:45-51` |
+| 14 | 낮음 · ✅ 고침(서버 원본 `utils/labFlag.js`, 화면 복사본은 `backend/test/lab.flag.mjs`로 맞는지 검사) | 판정 규칙이 화면·서버 두 곳에(`flagFor` — 같은 이름·같은 코드), 참고치 표시가 두 곳에 따로 있음. 한쪽만 고치면 화면 색과 저장된 표시가 달라짐 | `Lab.jsx:11-17, 98` · `lab.routes.js:8-15` · `LabResults.jsx:45-51` |
 | 15 | 낮음 · ✅ 고침 | 서버가 판정할 때 참고치를 DB에서 읽지 않고 화면이 보낸 값을 믿음 | `lab.routes.js:155` |
 | 16 | 낮음 · ✅ 고침 | 검사 탭을 빠르게 바꾸면 늦게 온 응답이 화면을 덮을 수 있음(요청 순서 보장 없음) | `Lab.jsx:54-64` |
 | 17 | 낮음 · ✅ 고침 | 결과 표 첫 열에 `left:0`만 있고 `position: sticky`가 없어 가로 스크롤 때 검사명이 고정되지 않음 | `LabResults.jsx:67, 79` |
@@ -477,3 +479,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 2절 「의사 선생님이 확정한 참고치 표를 넣는 순서」(프랑스어 화면, 값 없음) · 7절 문제 5 결정 반영, 22–25 추가(취소 결과 칸 순서 등) · 취소 흐름 세 모듈 이어서 확인 — 위키만 | `f547b24` |
 | 2026-09-29 | 문제 22: 결과 표에서 취소된 결과는 번호 칸을 받지 않고 날짜 뒤 「✕」 칸으로 | `08f392c` |
 | 2026-09-29 | 문제 23: 결과 표 값마다 그 결과의 참고치 툴팁, 참고치 칸은 최근 유효 결과 기준 · 문제 25: 환자 찾기 실패 알림 번역 | `965bf56` |
+| 2026-09-29 | 문제 14: 판정·참고치 규칙을 `backend/src/utils/labFlag.js`로 옮김, 화면 복사본 일치 검사 `backend/test/lab.flag.mjs` | `5d56c2b` |
