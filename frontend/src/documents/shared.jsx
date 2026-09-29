@@ -84,8 +84,15 @@ export function DocMetaRow(props) {
 // Every copy carrying a home address widens the exposure for no gain. Documents that
 // exist so somebody can make contact (referral, certificate, outside prescription) keep
 // them, which is why this is a prop and not a deletion.
+//
+// An address or phone row with nothing to put in it is left out, not printed empty.
+// Reception does not record an address (decision 2026-09-29: no address, second phone
+// or ID-number fields), so the address row would be blank on every document; a blank
+// row on an issued record looks like a detail someone forgot to fill in.
 export function PatientBox(props) {
   var p = props.patient || {}, lang = props.lang;
+  var address = String(p.address || '').trim();
+  var phone = String(p.mobile || p.phone || '').trim();
   var cell = { border: '1px solid #999', padding: '4px 8px', fontSize: 12, verticalAlign: 'top' };
   var head = Object.assign({}, cell, { background: '#f0f0f0', fontWeight: 700, whiteSpace: 'nowrap', width: 90 });
   var sex = p.gender === 'M' ? L(DOC_LABELS.male, lang) : p.gender === 'F' ? L(DOC_LABELS.female, lang) : '';
@@ -105,16 +112,16 @@ export function PatientBox(props) {
           <td style={head}>{L(DOC_LABELS.sex, lang)}</td>
           <td style={cell}>{sex}</td>
         </tr>
-        {props.minimal ? null : (
+        {props.minimal || !address ? null : (
           <tr>
             <td style={head}>{L(DOC_LABELS.address, lang)}</td>
-            <td style={cell} colSpan={3}>{p.address || ''}</td>
+            <td style={cell} colSpan={3}>{address}</td>
           </tr>
         )}
-        {props.minimal ? null : (
+        {props.minimal || !phone ? null : (
           <tr>
             <td style={head}>{L(DOC_LABELS.phone, lang)}</td>
-            <td style={cell} colSpan={3}>{p.mobile || p.phone || ''}</td>
+            <td style={cell} colSpan={3}>{phone}</td>
           </tr>
         )}
       </tbody>
