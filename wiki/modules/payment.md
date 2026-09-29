@@ -1,6 +1,6 @@
 # 수납 (Payment)
 
-> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: 2026-09-29 · **상태**: H1 · H2 · H3 · H4 · H6 · M1 · M4 · M5 · M7 고침, H5는 통계가 고침 — 다음: M2(결정: 미수 수납 때 새 영수 — 설계 먼저)
+> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: 2026-09-29 · **상태**: H1 · H2 · H3 · H4 · H6 · M1 · M2 · M4 · M5 · M7 고침, H5는 통계가 고침
 
 ## 1. 이 모듈이 하는 일
 
@@ -8,7 +8,7 @@
 
 - **청구** — 진료비(내원 종류별) + 원내 처방 약값 + 오더(검사·처치·영상) + 수납 창구에서 더하는 발급비(진단서·CD 등)를 합쳐 영수(`billing`)를 만듭니다.
 - **영수증** — 영수번호 `R-YYYYMMDD-NNNN`을 매기고 영수증을 출력·재출력합니다.
-- **미수금** — 덜 받은 돈을 영수에 남기고, 나중에 그 영수에서 받거나(미수 수납), 다음 내원 청구에 얹어 받습니다(이월).
+- **미수금** — 덜 받은 돈을 영수에 남기고, 나중에 받으면 **받은 날짜의 새 영수**로 기록하거나(미수 수납), 다음 내원 청구에 얹어 받습니다(이월).
 - **취소·재수납·추가 청구·정정(환불)** — 영수를 취소하면 그 내원은 다시 수납 대기로 돌아옵니다. 수납 뒤에 의사가 처방·오더를 늘리면 차액만 추가 청구하고, 줄이면 정정(환불) 대상으로 뜹니다.
 - 수납 창구에서 **문서 발급, 원외 처방전, 차트 보기, 영상 판독 소견 보기**도 합니다(다른 모듈의 부품을 불러 씀).
 
@@ -119,14 +119,17 @@
 
 1. 환자를 고르고 오른쪽 위 **Reçus (영수내역)** 를 누릅니다. 영수증이 최근 것부터 나옵니다. 줄마다 날짜 · 진료과 · 영수번호, **Total (총 수납액)** · **Montant Reçu (받은 금액)**, 미수가 있으면 빨간 **Impayé: N Ar**, 상태 표시가 있습니다. 취소된 영수증은 줄이 그어지고 **ANNULÉ** 가 붙습니다.
 2. 미수가 있는 영수증의 **💵 Encaisser impayé (미수 수납)** 을 누릅니다. 작은 창에 미수 금액이 나오고 **Montant reçu (받은 금액)** 칸에 전액이 미리 들어가 있습니다. 일부만 받으면 금액을 고칩니다(**Total (전액)** · **+5,000** · **+10,000** · **+50,000** 버튼). **Confirmer** 를 누릅니다. 미수보다 많이 넣으면 「Ne peut dépasser l'impayé」.
-3. 미수 영수증이 여러 장이면 위쪽 빨간 줄의 **💵 Tout encaisser (전체 미수 수납)** 으로 한 번에 받습니다.
+   - 받으면 **오늘 날짜의 새 영수증**이 한 장 생기고 바로 영수증 창이 뜹니다(「Règlement du reçu R-… du …」 — 어느 영수증의 미수를 받았는지). 옛 영수증은 미수 0, 상태 **Reporté** 가 됩니다.
+   - 일부만 받았으면 남은 미수는 **새 영수증**에 남습니다. 다음에 받을 때는 그 새 영수증의 **Encaisser impayé** 를 누릅니다.
+3. 미수 영수증이 여러 장이면 위쪽 빨간 줄의 **💵 Tout encaisser (전체 미수 수납)** 으로 한 번에 받습니다. 확인 창에 「Un reçu par visite sera émis, N au total」 — **진료(방문)마다 영수증이 한 장씩** 생깁니다. 영수증 창이 차례로 뜨니 **Fermer** 를 누를 때마다 다음 장이 나옵니다.
 4. 「…déjà été reporté sur le reçu R-…」 안내가 뜨면, 그 미수는 이미 다른 영수증으로 넘어갔습니다. 안내에 나온 영수증에서 받습니다. 영수내역은 자동으로 새로 고쳐집니다.
 
-> 나중에 받은 미수는 지금 **처음 진료한 날**의 매출로 잡힙니다. 그날 금고의 현금과 통계가 다를 수 있습니다(7절 M2, 결정 대기).
+> 나중에 받은 미수는 **받은 날(오늘)** 의 매출로 잡힙니다 — 그날 금고의 현금과 통계가 맞습니다. 2026-09-29 이전에 받은 미수는 예전 방식대로 처음 진료한 날에 남아 있습니다.
 
 ### 2.9 영수증 취소 · 재출력
 
 - **Annuler (영수취소)** — **Motif d'annulation ? (취소 사유)** 를 적으면 영수증이 **ANNULÉ** 가 됩니다. 그 내원은 **En attente** 목록에 **Re-facturer** 로 돌아옵니다(2.7).
+  - **미수 수납 영수증(「Règlement du reçu …」)을 취소하면** 「미수를 받은 것」이 취소됩니다: 오늘 매출에서 빠지고, 옛 영수증의 미수가 원래 금액으로 되살아납니다. 돈을 돌려줬는지는 기록되지 않으니 필요하면 사유에 적으세요.
   - 「…reporté sur le reçu R-…, qui le facture maintenant. Annulez d’abord R-…」 안내가 뜨면, 이 영수증의 미수가 뒤의 영수증으로 넘어가 있는 것입니다. 안내에 나온 영수증을 **먼저** 취소한 뒤 이 영수증을 취소합니다.
 - **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
 
@@ -188,14 +191,18 @@
 - 새 영수를 취소하면 `restoreCarried()`가 옛 영수들의 `outstanding`을 `total_due − amount_paid`로 되돌리고 `carried_into_id`를 지웁니다(`restoreCarried()`). 정정은 되돌리지 않고 새 영수로 **옮깁니다**(3.6).
 - 그래서 **한 환자의 미수 = Σ `outstanding`** (취소 제외)이 정답입니다. `Σ(total_due − net_paid)`로 세면 이월분이 옛 영수와 새 영수 양쪽에 잡힙니다 — 서버 주석(`/patient/:id/balance`)에도 적혀 있습니다. 통계도 2026-09-29부터 `outstanding`으로 셉니다(7절 H5).
 
-### 3.4 미수 수납 — `POST /api/billing/:id/pay`
+### 3.4 미수 수납 — `POST /api/billing/settle` (2026-09-29, M2 — 실장님 결정 (다))
 
-- 그 영수의 `amount_paid += 받은 금액`, `outstanding = (total_due − net_paid) − 받은 금액`, 0.5 이하가 남으면 `paid` 아니면 `partial`.
-- `FOR UPDATE` 행 잠금으로 두 창구가 동시에 받아도 한쪽이 사라지지 않게 했습니다.
-- 받은 돈은 **원래 영수의 날짜(`billing_date`)** 에 붙습니다. 별도의 입금 기록 테이블은 없습니다(7절 M2).
-- `cashier_id`는 이번에 받은 사람으로 **덮어씁니다** — 처음 수납한 사람 기록은 사라집니다.
+나중에 받은 미수는 **받은 날짜의 새 영수 S**에 기록합니다(`billing.routes.js` 「Settlement」 절). 예전(`POST /:id/pay`, 삭제됨)은 옛 영수의 `amount_paid`를 올려서, 그 돈이 **옛 영수 날짜**의 매출이 되고 이미 마감한 날의 숫자가 나중에 바뀌었습니다(같은 데이터로 확인: 8/1 청구, 오늘 15,000 받음 → 예전 8/1 매출 +15,000·오늘 0, 지금 8/1 0·오늘 +15,000).
 
-- **이월된 영수에는 받지 않습니다**(2026-09-29, M1): `carried_into_id`가 있는 영수(그 빚이 이미 뒤의 영수로 넘어간 것)는 409 `BILL_CARRIED: <그 영수번호>`. 이런 영수는 `outstanding`이 0이지만 위 계산(`total_due − net_paid`)으로는 옛 금액이 남아 보여서, 예전에는 같은 빚을 두 번 받을 수 있었습니다. 계산식 자체는 그대로입니다. 화면은 `py_payCarried` 안내를 띄우고 영수내역을 새로 불러옵니다.
+- **요청** `{ bill_ids, amount, expected_outstanding }` — 한 방문의 미수 영수들. 환자 잠금 안에서: 같은 환자·같은 방문 · 취소 안 됨 · 이월 안 됨(아니면 409 `BILL_CARRIED`, M1) · `outstanding > 0`, 합계 O가 화면이 본 값과 다르면 409 `BILL_CHANGED`, `amount ≤ O`.
+- **새 영수 S**: `visit_id`·`patient_id` = 옛 영수의 것(통계가 원래 방문의 과·의사로 셈), 오늘 날짜·오늘 순번, `consult_fee = drug_total = procedure_total = subtotal = 0`, 항목 없음, `previous_balance = total_due = O`, `amount_paid = A`(받은 돈), `change_amount = 0`, `outstanding = O − A`, `paid`/`partial`, `note = 'settlement of R-…'`, `cashier_id` = 받은 직원(옛 영수의 수납자는 그대로).
+- **옛 영수**: `outstanding = 0`, `carried_into_id = S` — 이월(3.3)과 똑같음. `amount_paid`는 안 건드림 → **옛 날짜 매출은 더 이상 바뀌지 않음**.
+- **일부만 받으면** 남은 미수는 S에 → 다음 수납은 S를 대상으로(B → S₁ → S₂ 사슬, 영수증마다 바로 앞 영수번호가 찍힘).
+- **전체 미수 수납**: 화면이 미수 영수를 `visit_id`별로 묶어 **방문마다 한 번씩** 요청 → 방문마다 영수 한 장(통계 부탁: 한 장으로 모으면 돈이 한 방문의 과·의사로 몰림).
+- **취소**: S를 취소하면 `restoreCarried`로 옛 영수의 미수가 `total_due − amount_paid`로 되살아나고 오늘 매출에서 빠짐. 옛 영수는 S로 이월돼 있는 동안 취소·재수납 불가(M4·M1).
+- **⚠ 모양 약속 — 통계가 이 모양을 읽습니다. 바꾸려면 통계 세션과 함께**: 미수 수납 영수는 **`consult_fee + drug_total + procedure_total = 0` 이고 `previous_balance > 0`** (항목 없음). 통계는 이 모양으로 「진료 영수」와 「미수 수납 영수」를 구분합니다(비고 글자에는 기대지 않음, 2026-09-29 통계 세션). 영수증 부품도 같은 모양으로 알아봅니다(3.10).
+- 동시 요청: 같은 미수에 두 번 → 하나만 201, 다른 쪽은 이미 이월됐으므로 409.
 
 ### 3.5 취소와 재수납
 
@@ -227,7 +234,12 @@
 3. 새 영수 발행(비고 `correction of R-… · refund N`), 항목 저장.
 4. A들이 흡수했던 옛 영수들의 `carried_into_id`를 **새 영수로 옮김** — 되돌리지 않음. 새 영수가 그 이전 미수를 그대로 청구하기 때문입니다. (예전에는 되돌려서 옛 빚이 다시 살아났고, 그 빚을 갚은 돈은 환불액으로 잡혔습니다.)
 
-**거절되는 경우**: A 중 하나가 이미 다른 영수로 이월됐으면(`carried_into_id` 있음) 409 `BILL_CARRIED: <그 영수번호>`. 그 영수가 이미 이 내원의 미수를 청구하고 있으므로, 그것을 먼저 취소해야 합니다.
+**같은 방문 안의 이월**(2026-09-29, M2와 함께): 미수 수납 영수 S나 같은 방문의 추가 청구 영수가 그 방문의 앞 영수 미수를 넘겨받은 경우, A들 사이에 이월이 있습니다. 이 경우도 정정합니다 — 방문의 영수를 **전부 함께** 바꾸기 때문입니다.
+- `previous_balance` = Σ Aᵢ.`previous_balance` − **방문 안에서 넘어간 몫**(이월된 Aᵢ의 `total_due − amount_paid`, `restoreCarried`와 같은 값) → **다른 방문에서 온 빚만** 남음. 받은 돈 = Σ `net_paid`(S 포함).
+- 다른 방문에서 온 이월은 새 영수로 옮기고, A들 사이의 연결은 지움(A들은 취소되므로 — 남겨 두면 새 영수를 취소할 때 취소된 영수에 미수를 되살림).
+- 확인(격리 스택, 손 계산과 같음): 17,000 중 5,000 → 미수 수납 7,000 → 약 2,000 삭제 정정 = 총액 15,000·받은 돈 12,000·미수 3,000 / 전액 미수 수납 뒤 정정 = 환불 2,000 / B→S₁→S₂ 사슬 뒤 정정 = 받은 돈 11,000·미수 4,000 / 다른 방문 빚 15,000을 이월받고 미수 수납까지 한 방문 정정 = 이전 미수 15,000만 남고 환불 2,000.
+
+**거절되는 경우**: A 중 하나가 **다른 방문의** 영수로 이월됐으면 409 `BILL_CARRIED: <그 영수번호>`. 그 영수가 이미 이 내원의 미수를 청구하고 있으므로, 그것을 먼저 취소해야 합니다.
 
 **매출 날짜**: A들은 취소되어 원래 날짜의 매출에서 빠지고, 새 영수가 **오늘** 날짜로 전액을 가집니다(예전 방식도 같았음 — M2와 같은 종류의 문제).
 
@@ -255,7 +267,7 @@
 - **화면** — 돈을 쓰는 버튼(수납 확정 · 미수 처리 · 정정 · 미수 수납 · 전체 미수 수납 · 영수취소)은 모두 `once()`를 거칩니다(`Payment.jsx`). 요청 하나가 끝날 때까지 다른 요청을 받지 않고 버튼을 흐리게 합니다. 막는 것은 `useRef` 값이고 state는 표시용입니다 — 다음 렌더 전에 처리되는 두 번째 클릭은 state를 아직 못 보기 때문입니다.
 - **서버** — `GET /visit/:visitId/items`가 그 내원의 살아 있는 영수 id 목록 `active_bill_ids`를 주고, 화면은 수납할 때 그것을 `expected_active_bill_ids`로 돌려보냅니다. 서버는 **환자 단위 잠금**(`pg_advisory_xact_lock(hashtext('billing_patient'), patient_id)`) 안에서 지금 목록과 비교해 다르면 **409 `BILL_CHANGED: …`** 로 거절합니다. 두 번째 클릭, 다른 창구, 오래 열어 둔 화면이 모두 여기서 걸립니다. 필드가 없는 요청(옛 화면)도 409입니다.
 - **이전 미수** — 같은 잠금 안에서 `previous_balance`가 지금 넘길 수 있는 미수(취소 안 됨 · 이월 안 됨 · `outstanding>0`의 합)보다 크면 409. 같은 환자의 두 내원이 같은 옛 빚을 동시에 넣던 문제(M3의 일부)를 막습니다.
-- 영수취소(`/:id/void`), 정정(`/visit/:id/correct`), 미수 수납(`/:id/pay`)도 같은 환자 잠금을 겁니다. 이월 금액이 수납과 동시에 바뀌지 않게.
+- 영수취소(`/:id/void`), 정정(`/visit/:id/correct`), 미수 수납(`/settle`)도 같은 환자 잠금을 겁니다. 이월 금액이 수납과 동시에 바뀌지 않게.
 - 화면은 `BILL_CHANGED`로 시작하는 오류를 받으면 `py_billChanged` 안내를 띄우고 선택을 풀고 목록을 새로 불러옵니다.
 
 ### 3.10 영수증 (2026-09-29, H3 — 실장님 결정: 제대로 · 항상 프랑스어 · A4)
@@ -266,7 +278,7 @@
 - **언어**: `RECEIPT_LANG = 'fr'`. 글자는 문서 엔진처럼 `{ ko, en, fr }` 표(`RL` · `STATUS` · `VISIT_TYPE`)에 두고 프랑스어로만 그립니다 — 번역 파일(`i18n`)이 아니라 부품 안에 둔 이유: 화면 언어를 따르지 않는 인쇄물이고, 문서 엔진의 다른 양식도 같은 방식이기 때문입니다. 미리보기 창의 단추(닫기·출력)만 화면 언어입니다.
 - **용지**: `RECEIPT_PAGE = { size: 'A4', widthPx: 688 }` 한 곳에서 정합니다. 인쇄는 `printDocument()`(새 창, `@page{size:A4;margin:14mm}`). 80mm로 바꾸려면 이 상수와 전용 인쇄 창이 필요합니다(`printDocument`는 A4 고정) — 만들지 않음(결정).
 - **쪽 나눔**: 항목표 머리줄은 쪽마다 반복(`thead`), 줄은 쪼개지지 않음. 합계 덩어리는 `break-inside: avoid`라 **통째로** 다음 쪽으로 넘어가고, 맨 위에 「영수번호 · 환자」가 작게 붙습니다(떨어진 쪽이 어느 영수증인지 알게).
-- **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 항목이 없고 이전 미수가 있으면 「Règlement du solde antérieur」 — M2 미수 수납 영수를 위해) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
+- **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 미수 수납 영수(진료 칸 0 + 이전 미수 > 0, 3.4의 모양)는 항목 대신 옛 영수마다 「Règlement du reçu R-… du …」 한 줄, 연결이 없어진 취소 영수는 비고의 영수번호로; Sous-total·Solde antérieur 줄은 생략) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
 - **아직 없는 것**(현지 확인 필요, 인계 노트 참고): NIF/STAT 번호, 로고, 금액 글자 표기, 서명란. 숫자는 **프랑스어 표기 `15 000 Ar`**(줄바꿈 없는 공백, 영수증 안에서만 — 화면은 `15,000`), 날짜는 다른 문서와 같은 `YYYY-MM-DD`. 인쇄 창을 브라우저가 막으면 `printDocument(…, 'fr')`로 **프랑스어** 안내가 뜹니다(진료 세션이 `printDocument`에 언어 인자를 추가, 2026-09-29).
 
 ## 4. 데이터 · API
@@ -293,7 +305,7 @@
 | `GET /visit/:visitId/correction` | 정정하면 기록될 새 영수 미리보기 (DB는 안 바꿈). `items`, `subtotal`, `discount_amount`, `previous_balance`, `total_due`, `paid_so_far`, `refund`, `outstanding`, `payment_status`, `active_bill_ids`, `replaces`. 이월된 영수면 409 `BILL_CARRIED` |
 | `POST /visit/:visitId/correct` | 정정 실행 `{expected_active_bill_ids, expected_refund, expected_outstanding, reason}` (3.6). 201 + 새 영수(`refund` 포함) |
 | `GET /patient/:patientId/balance` | `{owed: Σ outstanding, refund: Σ max(net_paid − total_due, 0)}` (취소 제외) |
-| `POST /:id/pay` | 미수 수납 `{amount}` |
+| `POST /settle` | 미수 수납 `{bill_ids, amount, expected_outstanding}` → 오늘 날짜의 새 영수(3.4). 예전 `POST /:id/pay`는 2026-09-29 삭제 |
 
 그 밖에 수납 화면이 부르는 것: `GET /api/admin/order-codes?code_type=fee`(진료비 C01~C04 가격과 발급비 목록), `PUT /api/visits/:id`(진료 종류 저장).
 
@@ -346,7 +358,8 @@
   - 그로스 = `SUM(consult_fee+drug_total+procedure_total)`; 발급비 매출 = `billing_item.item_type='fee'`의 합.
   - 취소 건수 = `cancelled_at` 날짜 기준.
   - 미수·환불 요약과 명단 = 영수마다 미수 `GREATEST(outstanding,0)`, 환불 `GREATEST(net_paid − total_due,0)` — **수납 화면의 `/patient/:id/balance`와 같은 공식**(통계 세션 `52c4505`, develop에 합쳐짐). 예전에는 `total_due − net_paid`라 이월된 빚이 두 번 잡혔습니다(7절 H5).
-  - 그래서: 이월된 돈은 새 영수 날짜의 매출로, 미수 수납은 **원래 영수 날짜**의 매출로 잡힙니다.
+  - 그래서: 이월된 돈도, 미수 수납한 돈도 **받은 날(새 영수 날짜)** 의 매출로 잡힙니다(2026-09-29부터; 그 전에 받은 미수는 원래 영수 날짜에 남음). 과·의사는 원래 방문의 것.
+  - **미수 수납 영수의 모양**(진료 칸 0 + `previous_balance > 0`)을 통계가 읽어 구분합니다 — 3.4의 약속.
 - **설정**: 진료비(C01~C04)와 발급비는 설정 > 오더 코드에서 `code_type='fee'`로 관리합니다.
 
 ## 6. 설정 항목
@@ -380,7 +393,7 @@
 ### 보통
 
 - ~~**M1 이미 이월된 영수에 미수 수납이 됨**~~ — **고침(2026-09-29, 3.4)**: 409 `BILL_CARRIED`. 원래 문제: `/pay`(`billing.routes.js:360-376`)가 `outstanding` 컬럼이 아니라 `total_due − net_paid`로 남은 돈을 계산하고 `carried_into_id`를 보지 않습니다. **재현**: 이월된 영수에 15,000 수납 → 200 OK, 같은 빚을 두 번 받음. 화면 버튼은 `outstanding`을 보므로 보통은 안 뜨고, 오래 열어 둔 화면·API로만 가능.
-- **M2 미수 수납한 돈이 받은 날이 아니라 원래 영수 날짜의 매출로 잡힘** — 입금 기록 테이블 없이 원래 영수의 `amount_paid`를 올립니다(`billing.routes.js:380-384`). 오늘 받은 돈이 오늘 매출에 없고 지난 날 매출이 나중에 바뀌어, **하루 현금 마감과 맞지 않습니다**. 이월로 받은 돈은 반대로 새 영수 날짜에 잡혀 두 경로가 다릅니다. 받은 사람(`cashier_id`)도 덮어씀. 설계 결정 필요(코드).
+- ~~**M2 미수 수납한 돈이 받은 날이 아니라 원래 영수 날짜의 매출로 잡힘**~~ — **고침(2026-09-29, 3.4, 실장님 결정 (다))**: 받은 날짜의 새 영수. 받은 직원도 영수마다 남음. 원래 문제: 입금 기록 테이블 없이 원래 영수의 `amount_paid`를 올립니다(`billing.routes.js:380-384`). 오늘 받은 돈이 오늘 매출에 없고 지난 날 매출이 나중에 바뀌어, **하루 현금 마감과 맞지 않습니다**. 이월로 받은 돈은 반대로 새 영수 날짜에 잡혀 두 경로가 다릅니다. 받은 사람(`cashier_id`)도 덮어씀. 설계 결정 필요(코드).
 - **M3 서버가 금액을 다시 계산하지 않음** — `total_due`·`outstanding`을 화면 값 그대로 저장(코드). 이 중 「이전 미수가 두 영수에 다 들어가는」 경우는 H1 수정에서 막음(3.9).
 - ~~**M4 이월된 옛 영수를 취소해도 새 영수에 그 빚이 남음**~~ — **고침(2026-09-29, 3.5)**: 409 `BILL_CARRIED`, 뒤 영수번호 안내. 원래 문제: 취소(`billing.routes.js:283-306`)가 `carried_into_id`가 있는 영수를 막지 않습니다(코드).
 - ~~**M5 수납 API에 권한 검사 없음**~~ — **고침(2026-09-29, 4절)**: 의사 계정 403, 접수 전용 계정은 잔액만 200, 수납 계정 200 확인. 원래 문제: `billing.routes.js:8`은 로그인만 확인. 메뉴는 막혀 있지만 의사·검사실 계정도 API로 영수 취소·수납이 가능합니다. 접수 화면이 `balance`를 읽으므로 그 한 곳은 접수 권한도 허용해야 합니다(코드).
@@ -414,4 +427,5 @@
 | 2026-09-29 | H6 창구 발급비를 「정정(환불)·추가 청구」 판정에서 뺌, 정정의 발급비 유지도 같은 기준(`counterFeeCond()`) | `bf54e5b` |
 | 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | `dee58dc` |
 | 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | `768eaa9` |
-| 2026-09-29 | 약 수량은 `total_qty`만 읽음(대체 계산 다섯 곳 삭제), 비어 있으면 경고·수납 거절(`QTY_MISSING`). 영수증 금액 `15 000 Ar`, 인쇄 팝업 차단 안내 프랑스어 | (이 커밋) |
+| 2026-09-29 | 약 수량은 `total_qty`만 읽음(대체 계산 다섯 곳 삭제), 비어 있으면 경고·수납 거절(`QTY_MISSING`). 영수증 금액 `15 000 Ar`, 인쇄 팝업 차단 안내 프랑스어 | `5e42571` |
+| 2026-09-29 | M2 미수 수납은 받은 날짜의 새 영수(`POST /settle`, `/:id/pay` 삭제, 전체 미수 수납은 방문마다 한 장), 정정이 같은 방문 안의 이월을 받아들임, 영수증에 「Règlement du reçu …」 | (이 커밋) |

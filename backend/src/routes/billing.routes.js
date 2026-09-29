@@ -499,20 +499,31 @@ async function buildCorrection(db, visitId) {
   const visit = vr.rows[0];
 
   const ar = await db.query(
-    `SELECT id, receipt_no, net_paid, discount_amount, previous_balance, carried_into_id
+    `SELECT id, receipt_no, net_paid, discount_amount, previous_balance, carried_into_id, total_due, amount_paid
        FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' ORDER BY id`,
     [visitId]
   );
   const active = ar.rows;
   if (!active.length) throw { status: 409, error: BILL_CHANGED + ': this visit has no active bill' };
-  // A bill whose balance a later bill absorbed cannot be replaced here: the later
-  // bill already charges that balance. Voiding the later bill first restores it.
-  const carried = active.find(function (b) { return b.carried_into_id; });
+  const ids = active.map(function (b) { return b.id; });
+  // A bill whose balance a bill of ANOTHER visit absorbed cannot be replaced here:
+  // that bill already charges the balance. Voiding it first restores this one.
+  // A carry inside the visit is fine and common - a settlement receipt (M2) or an
+  // additional charge absorbs the visit's own earlier bill - since every bill of
+  // the visit is being replaced together (see internalCarried below).
+  const carried = active.find(function (b) { return b.carried_into_id && ids.indexOf(b.carried_into_id) < 0; });
   if (carried) {
     const into = await db.query('SELECT receipt_no FROM billing WHERE id = $1', [carried.carried_into_id]);
     throw { status: 409, error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || carried.carried_into_id) };
   }
-  const ids = active.map(function (b) { return b.id; });
+  // Balance passed from one bill of this visit to another. It sits in the later
+  // bill's previous_balance but is this visit's own debt, already inside the new
+  // total - only debt carried in from other visits stays as previous_balance.
+  // A carried bill keeps its amount_paid, so what it passed on is total_due - amount_paid
+  // (the same figure restoreCarried() gives back on a void).
+  const internalCarried = active.reduce(function (s, b) {
+    return s + (b.carried_into_id ? Math.max(0, (Number(b.total_due) || 0) - (Number(b.amount_paid) || 0)) : 0);
+  }, 0);
 
   // Same price sources as GET /pending, so the correction agrees with the flag
   // that put the visit on the list.
@@ -567,7 +578,7 @@ async function buildCorrection(db, visitId) {
 
   const subtotal = round2(consultFee + drugTotal + procTotal);
   const discount = round2(Math.min(subtotal, active.reduce(function (s, b) { return s + (Number(b.discount_amount) || 0); }, 0)));
-  const previousBalance = round2(active.reduce(function (s, b) { return s + (Number(b.previous_balance) || 0); }, 0));
+  const previousBalance = round2(Math.max(0, active.reduce(function (s, b) { return s + (Number(b.previous_balance) || 0); }, 0) - internalCarried));
   const totalDue = round2(Math.max(0, subtotal - discount + previousBalance));
   const kept = round2(active.reduce(function (s, b) { return s + (Number(b.net_paid) || 0); }, 0));
   const refund = round2(Math.max(0, kept - totalDue));
@@ -643,10 +654,15 @@ router.post('/visit/:visitId/correct', canPay, async (req, res) => {
         [bill.id, it.item_type, it.item_name, it.item_code, it.quantity, it.unit_price, it.total_price]
       );
     }
+    // Balances carried in from other visits move to the new bill, which charges
+    // them. Links between the replaced bills themselves are dropped: those bills
+    // are cancelled, and a link left on them would let a later void of the new
+    // bill "restore" a balance onto a cancelled bill.
     await client.query(
-      'UPDATE billing SET carried_into_id = $1, updated_at = NOW() WHERE carried_into_id = ANY($2::int[])',
+      'UPDATE billing SET carried_into_id = $1, updated_at = NOW() WHERE carried_into_id = ANY($2::int[]) AND NOT (id = ANY($2::int[]))',
       [bill.id, c.active_bill_ids]
     );
+    await client.query('UPDATE billing SET carried_into_id = NULL WHERE id = ANY($1::int[])', [c.active_bill_ids]);
     await client.query('COMMIT');
     res.status(201).json(Object.assign({}, bill, { refund: c.refund }));
   } catch (err) {
@@ -675,54 +691,98 @@ router.get('/patient/:patientId/balance', canSeeBalance, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/billing/:id/pay - 기존 영수의 미수를 받아서 정산 (부분/전액)
-router.post('/:id/pay', canPay, async (req, res) => {
+// ── Settlement of an unpaid balance (미수 수납, M2) ───────────────────────────
+//
+// Decided 2026-09-29 (wiki/decisions.md 23, option C): money received later for an
+// old debt is recorded on a NEW receipt dated the day it is received. It used to be
+// added to the old bill's amount_paid, so the cash counted as revenue of the old
+// bill's date - a day already closed, whose figure then changed - and today's cash
+// drawer held money today's report did not show.
+//
+// The new receipt S works exactly like a carry-over (016):
+//   visit_id / patient_id   the old bill's - statistics credit the original visit's
+//                            department and doctor (their request)
+//   consult/drug/procedure  0, no items - the clinical amount stays on the old date
+//   previous_balance        the old bills' outstanding, all of it (O)
+//   total_due               O
+//   amount_paid             what was received now (A <= O); change_amount 0
+//   outstanding             O - A, status paid / partial
+// and each old bill gets outstanding 0, carried_into_id = S, amount_paid unchanged.
+//
+// SHAPE CONTRACT - statistics tells a settlement receipt from a clinical one by its
+// shape: consult_fee + drug_total + procedure_total = 0 and previous_balance > 0
+// (not by the note text). Keep it that way; change it only together with statistics.
+//
+// Voiding S restores the old bills' balance (restoreCarried). The old bills cannot
+// be voided or settled again while carried (M4, M1). A correction of the visit
+// takes the carry inside the visit into account (buildCorrection).
+
+// POST /api/billing/settle - { bill_ids, amount, expected_outstanding }
+// bill_ids: the unpaid bills of ONE visit (the screen sends one; "settle all" sends
+// one call per visit, so each visit gets its own receipt). expected_outstanding is
+// the total the cashier saw; if it changed meanwhile nothing is written (409).
+router.post('/settle', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
-    const amount = parseFloat(req.body.amount);
+    const ids = (Array.isArray(req.body.bill_ids) ? req.body.bill_ids : [])
+      .map(function (x) { return parseInt(x, 10); }).filter(function (x) { return x > 0; });
+    const amount = round2(parseFloat(req.body.amount));
+    if (!ids.length) return res.status(400).json({ error: 'bill_ids required' });
     if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'amount must be > 0' });
     await client.query('BEGIN');
-    await lockPatientOfBill(client, req.params.id);
-    // FOR UPDATE: read-modify-write on money. Without the row lock two cashiers
-    // settling the same bill at once both read the old amount_paid and the second
-    // UPDATE overwrites the first — both get a success response but only one
-    // payment is recorded, so cash collected goes missing from the books.
-    const cur = await client.query(
-      `SELECT total_due, amount_paid, net_paid, carried_into_id FROM billing
-        WHERE id=$1 AND payment_status<>'cancelled' FOR UPDATE`,
-      [req.params.id]
+    await lockPatientOfBill(client, ids[0]);
+    const r = await client.query(
+      `SELECT id, patient_id, visit_id, receipt_no, outstanding, carried_into_id, payment_status
+         FROM billing WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE`,
+      [ids]
     );
-    if (cur.rows.length === 0) {
+    const rows = r.rows;
+    if (rows.length !== ids.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Billing not found' }); }
+    const first = rows[0];
+    if (rows.some(function (b) { return b.patient_id !== first.patient_id || b.visit_id !== first.visit_id; })) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Not found or cancelled' });
+      return res.status(400).json({ error: 'bill_ids must belong to one visit' });
     }
-    // A carried bill's debt now lives on the later bill that absorbed it (016):
-    // its outstanding is 0 but total_due - net_paid below still shows the old
-    // amount, so paying it here collected the same debt a second time. Refuse,
-    // naming the bill where the debt is now. Nothing else about the sum changes.
-    if (cur.rows[0].carried_into_id) {
-      const into = await client.query('SELECT receipt_no FROM billing WHERE id = $1', [cur.rows[0].carried_into_id]);
+    // Carried: the debt now lives on the later receipt (M1).
+    const carried = rows.find(function (b) { return b.carried_into_id; });
+    if (carried) {
+      const into = await client.query('SELECT receipt_no FROM billing WHERE id = $1', [carried.carried_into_id]);
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || cur.rows[0].carried_into_id) });
+      return res.status(409).json({ error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || carried.carried_into_id) });
     }
-    const due = parseFloat(cur.rows[0].total_due) || 0;
-    const paid = parseFloat(cur.rows[0].amount_paid) || 0;
-    // What is still owed depends on the cash kept, not the note handed over.
-    const outstanding = due - (parseFloat(cur.rows[0].net_paid) || 0);
-    if (amount > outstanding + 0.5) {
+    if (rows.some(function (b) { return b.payment_status === 'cancelled' || !(Number(b.outstanding) > 0); })) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': a bill was cancelled or already settled' });
+    }
+    const owedNow = round2(rows.reduce(function (s, b) { return s + (Number(b.outstanding) || 0); }, 0));
+    if (Math.abs(owedNow - (parseFloat(req.body.expected_outstanding) || 0)) > 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': the balance changed while the screen was open' });
+    }
+    if (amount > owedNow + 0.5) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'amount exceeds outstanding' });
     }
-    const newPaid = paid + amount;
-    const newOut = outstanding - amount;
-    const status = newOut <= 0.5 ? 'paid' : 'partial';
-    const result = await client.query(
-      `UPDATE billing SET amount_paid=$2, outstanding=$3, payment_status=$4, cashier_id=$5, updated_at=NOW()
-        WHERE id=$1 RETURNING *`,
-      [req.params.id, newPaid, newOut > 0 ? newOut : 0, status, req.user.id]
+    const received = Math.min(amount, owedNow);
+    const left = round2(owedNow - received);
+    const status = left <= 0.5 ? 'paid' : 'partial';
+
+    const receipt_no = await nextReceiptNo(client);
+    const ins = await client.query(
+      `INSERT INTO billing (visit_id, patient_id, receipt_no, consult_fee, drug_total, procedure_total, subtotal,
+       discount_amount, discount_type, discount_value, previous_balance, total_due, amount_paid, change_amount,
+       outstanding, payment_status, note, cashier_id)
+       VALUES ($1,$2,$3,0,0,0,0,0,'amount',0,$4,$4,$5,0,$6,$7,$8,$9) RETURNING *`,
+      [first.visit_id, first.patient_id, receipt_no, owedNow, received, status === 'paid' ? 0 : left, status,
+       'settlement of ' + rows.map(function (b) { return b.receipt_no; }).join(', '), req.user.id]
+    );
+    const settlement = ins.rows[0];
+    await client.query(
+      'UPDATE billing SET outstanding = 0, carried_into_id = $1, updated_at = NOW() WHERE id = ANY($2::int[])',
+      [settlement.id, ids]
     );
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+    res.status(201).json(settlement);
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });

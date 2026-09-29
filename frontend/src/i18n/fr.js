@@ -345,6 +345,7 @@ export default {
   py_qtyMissing: "⚠ Quantité manquante",
   py_qtyMissingList: "Quantité de médicament manquante",
   py_qtyMissingBlock: "Quantité totale manquante pour : {names}. Le montant ne peut pas être calculé. Demandez au médecin d’enregistrer à nouveau la prescription, puis encaissez.",
+  py_settleAllReceipts: "Un reçu par visite sera émis, {n} au total (daté d’aujourd’hui).",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
