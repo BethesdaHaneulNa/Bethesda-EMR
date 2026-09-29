@@ -83,7 +83,7 @@ router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res)
 // stays null until the bridge has reported the study (POST /study-arrived):
 // "nothing arrived yet" is a different answer from "arrived, and it matches".
 const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_count,
-                    image_patient_id, image_patient_name, patient_check`;
+                    image_patient_id, image_patient_name, patient_check, image_study_uid`;
 // Whether the imaging order was cancelled after it had a result (decision 3-B).
 // cancelled_at / cancel_reason are added by the consultation session's
 // migration; to_jsonb reads them without failing on a database that does not
@@ -99,6 +99,9 @@ function imagesOf(w) {
     patient_id: w.image_patient_id || '',
     patient_name: w.image_patient_name || '',
     patient_check: w.patient_check || '',
+    // 'accession' when the device made up its own UID and the bridge found the
+    // study by AccessionNumber (P-4) -- a weaker link, shown to the doctor.
+    linked_by: w.image_study_uid && w.image_study_uid !== w.study_instance_uid ? 'accession' : 'uid',
   };
 }
 
@@ -116,7 +119,9 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
       const w = await pool.query(
         `SELECT ${WL_COLUMNS} FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
       if (w.rows[0]) {
-        study = w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || '';
+        // Open the study the images really carry (P-4); it is the worklist's own UID
+        // unless the device made up a new one.
+        study = w.rows[0].image_study_uid || w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || '';
         images = imagesOf(w.rows[0]);
       }
       const o = await pool.query(
@@ -167,7 +172,7 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
               wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,
-              wl.image_patient_id, wl.image_patient_name, wl.patient_check,
+              wl.image_patient_id, wl.image_patient_name, wl.patient_check, wl.image_study_uid,
               ${ORDER_CANCEL_COLUMNS}
          FROM order_item oi
          JOIN visit v ON v.id = oi.visit_id
@@ -309,18 +314,22 @@ router.post('/study-arrived', async (req, res) => {
   const imagePatientId = String(b.patient_id || '').trim().slice(0, 64);
   const imagePatientName = String(b.patient_name || '').trim().slice(0, 200);
   const count = Number.isInteger(Number(b.instances)) && Number(b.instances) >= 0 ? Number(b.instances) : null;
+  const byAccession = b.found_by === 'accession';
+  const imageStudyUid = String(b.image_study_uid || '').slice(0, 128);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const w = await client.query(
-      `SELECT wl.id, wl.order_item_id, wl.study_instance_uid, p.chart_no
+      `SELECT wl.id, wl.order_item_id, wl.study_instance_uid, wl.accession_no, p.chart_no
          FROM worklist_log wl JOIN patient p ON p.id = wl.patient_id
         WHERE wl.id = $1 FOR UPDATE OF wl`, [worklistId]);
     if (!w.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
     const row = w.rows[0];
     // The UID is the link; a report for some other study must not land here.
-    if (row.study_instance_uid !== uid) {
+    // A study found by accession (the device made up its own UID, P-4) must
+    // carry this entry's accession number, and its own UID is kept apart.
+    if (row.study_instance_uid !== uid || (byAccession && (!imageStudyUid || String(b.accession_no || '') !== row.accession_no))) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Study does not belong to this worklist entry' });
     }
@@ -331,10 +340,12 @@ router.post('/study-arrived', async (req, res) => {
               completed_at = COALESCE(completed_at, NOW()),
               images_received_at = COALESCE(images_received_at, NOW()),
               orthanc_study_id = $2, image_count = $3,
-              image_patient_id = $4, image_patient_name = $5, patient_check = $6
+              image_patient_id = $4, image_patient_name = $5, patient_check = $6,
+              image_study_uid = $7
         WHERE id = $1`,
       [worklistId, String(b.orthanc_study_id || '').slice(0, 64) || null, count,
-       imagePatientId || null, imagePatientName || null, check]);
+       imagePatientId || null, imagePatientName || null, check,
+       byAccession && imageStudyUid !== row.study_instance_uid ? imageStudyUid : null]);
     await client.query(
       `UPDATE order_item SET worklist_status = 'completed', updated_at = NOW()
         WHERE id = $1 AND worklist_status <> 'cancelled'`, [row.order_item_id]);

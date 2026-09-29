@@ -730,5 +730,6 @@ export default {
   px_cancelledViewer: "Images d'une demande annulée. Elles restent au dossier ; aucun nouveau compte-rendu ne peut être enregistré.",
   px_readingOnCancelled: "Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.",
   px_noStudy: "Cette demande d'imagerie n'a pas été envoyée à la liste de travail des appareils : aucune image n'y est liée. Le compte-rendu peut quand même être saisi.",
+  px_linkedByAccession: "L'appareil a donné son propre numéro d'étude à ces images ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.",
   // ── end pacs ──
 };

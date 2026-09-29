@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-9 선택지: 영상 창이 영상 서버 로그인을 요구하는 문제 (결정 세션용)
+
+- **상태**: 보류 — 선택지만(코드 변경 없음), 실장님 결정 필요
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (위키만). **PACS 저장소** — 없음
+
+**지금 어떤가 (확인한 것)**
+- 영상 서버(Orthanc)는 로그인이 켜져 있고 계정은 **관리자 하나**뿐입니다. 이 계정으로는 영상 **삭제·수정**까지 됩니다.
+- 브라우저에서 `http://서버:9090`을 바로 열면 **로그인 창**이 뜹니다(R-1, 총괄 확인).
+- 그런데 **EMR 진료 화면의 영상 창 안에서는 로그인 창도 없이 까만 화면만** 나왔습니다(격리 스택, 앱 안 브라우저 — 서버 응답 401). 현장 Chrome/Edge에서도 같은지는 확인 필요. 의사는 왜 안 보이는지 알 수 없습니다.
+
+**실장님께 드릴 질문**: 「의사가 영상 창을 열 때 영상 서버 비밀번호를 쳐야 하는 방식을 어떻게 할까요?」
+
+| | 방법 | 의사가 겪는 것 | 보안 | 작업 |
+|---|---|---|---|---|
+| **A** | 지금대로 + 안내: PC마다 처음 한 번 **「Ouvrir dans un onglet (새 탭에서 열기)」**로 로그인해 브라우저가 기억하게 | PC·브라우저마다 첫 로그인 한 번. 그 뒤 영상 창 안에서 보이는지는 **확인 필요**(브라우저마다 다를 수 있음). 기억을 지우면 다시 까만 화면 | 모든 의사가 **관리자 비밀번호**를 알게 됨 → 영상 삭제 가능 | 없음(안내만) |
+| **B** | 영상 보기용 계정을 하나 더 만듦 | A와 같음 | 관리자 비밀번호와 **나뉘기만** 할 뿐, 영상 서버의 기본 로그인은 권한 구분이 없어 **여전히 삭제 가능** | 작음 |
+| **C** (추천) | **EMR이 대신 보여 줌** — 영상 창이 영상 서버가 아니라 EMR을 거쳐 열림, EMR이 서버 안에서만 영상 서버 비밀번호를 씀 | **EMR 로그인만 하면 바로 보임**. 로그인 창·까만 화면 없음 | 영상 서버 비밀번호가 **직원에게 가지 않음**, 진료 권한 있는 직원만 볼 수 있음(S2와 같게). 진료실 PC는 9080만 열려 있으면 됨(9090을 병원 네트워크에 안 열어도 됨) | 중간 — EMR 서버 설정(공용 파일, 총괄과)·뷰어 경로 확인 필요, 격리 스택으로 시험 가능 |
+| D | 영상 창을 없애고 늘 새 탭으로 | 새 탭에서 로그인(A와 같음), 판독 칸과 영상이 다른 창 | A와 같음 | 작음(진료 화면 변경) |
+
+**추천**: **C**. 11월 새 PC 설치 전에 끝내는 것을 목표로. 그때까지 현장에 영상 장비가 붙지 않으면 A 안내도 필요 없음. 장비가 먼저 붙으면 그동안은 A로 안내.
+
+- **바꾼 파일**: `wiki/handoff/pacs.md`만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인 못 한 것**: 현장 브라우저(Chrome/Edge)에서 영상 창 안의 모습, A에서 한 번 로그인한 뒤 영상 창이 보이는지.
+
+## 2026-09-29 — PACS 격리 스택으로 진짜 Orthanc 시험 · P-4 1·2단계 · P-8 확인
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋. **PACS 저장소** `session/pacs` **`94935f0`** (브리지 P-4 + `docker-compose.session.yml`) — `main`(`6c135aa`) 위 한 개
+- **한 일**:
+  - **PACS 격리 스택**(결정 24): `docker-compose.session.yml` — `-p bethesda-s-pacs-pacs`, 포트 **127.0.0.1:9198(웹)·11298(DICOM)**만, 영상·워크리스트는 이름 붙인 볼륨, 브리지 이미지 `bethesda-s-pacs-bridge:dev`, 브리지는 EMR 격리 스택 네트워크의 `backend`를 읽음, 시험용 값은 `--env-file`. `docker compose config`로 확인: 9090·4242·`./storage` 없음. 띄운 동안 실행 중 `bethesda-pacs`·`bethesda-worklist-bridge`는 그대로(같은 이미지·가동 시간).
+  - **P-7·P-3 끝까지(진짜 Orthanc 26.6.1)**: 오더 → `.wl` → 영상 업로드(REST, 장비 대신) → T1 3장 `match`, T2 `mismatch`(다른 환자번호) → 둘 다 `completed`, 다음 바퀴 `.wl` 삭제. 전송 뒤 1~2분.
+  - **P-4 1·2단계**: 브리지가 UID로 못 찾으면 AccessionNumber로(정확히 하나일 때만) → `found_by`·`accession_no`·`image_study_uid`를 보냄. EMR `/study-arrived`가 accession 일치를 다시 확인(아니면 409), **새 마이그레이션 `802_pacs_image_study_uid.sql`**(칸 추가만)의 `image_study_uid`에 저장, `viewer-url`은 그 UID로 엶(`images.linked_by`), 판독 목록에 노란 한 줄(`px_linkedByAccession`). 시험: UID를 새로 만든 T3 → accession으로 연결·`match`·뷰어 주소 실제 UID. 같은 accession 둘(T5) → 연결 안 함(로그 「more than one study carries accession」 — 바퀴마다 한 줄, 조금 시끄러움). 틀린 accession·실제 UID 없는 보고 → 409.
+  - **P-8 확인**: Orthanc가 자기에게 MWL C-FIND(장비처럼) — 거름 없음·`ANY`·`*` → 전부, **`XRAY01`(장비 자기 AE) → 0건**. `.wl`의 칸을 비우거나 빼도 0건 → 브리지로 못 고침. 선택지는 위키 7절 P-8(추천: 장비에서 AE 필터 끄기, 안 되는 장비만 장비별 `.wl`). 장비 설치 날 결정.
+  - **R-1 (영상 창 안)**: 진료 → 영상 창(iframe)이 Stone 뷰어를 부르면 **401**, 이 브라우저(앱 안 Chromium)에서는 **로그인 창도 없이 까만 화면**. 덩어리 4(P-9 선택지)에 반영.
+- **바꾼 파일**: EMR `backend/src/routes/pacs.routes.js`, **새** `backend/sql/802_pacs_image_study_uid.sql`, `frontend/src/components/RadiologyReadings.jsx`, `wiki/modules/pacs.md`(3.3, 4절 API·DB, 7절 P-4·P-7·P-8·격리 스택, 8절), `wiki/handoff/pacs.md` · PACS `bridge/bridge.py`, **새** `docker-compose.session.yml`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 표시 사이 키 1개
+- **DB 마이그레이션**: `802_pacs_image_study_uid.sql` — `worklist_log.image_study_uid VARCHAR(128)` 추가만(총괄이 다음 번호로 다시 매김)
+- **번역 키**: `px_linkedByAccession` (ko·en·fr)
+- **확인한 방법**: `node --check`, `py_compile`, 프론트 빌드, 격리 스택(EMR 9188 + PACS 9198/11298) — 위 시험, 판독 목록 프랑스어 화면(T3 노란 줄·T2 빨간 경고·T5 대기).
+- **확인 못 한 것**: 실제 장비의 C-STORE·MWL(장비 설치 날 D-1~D-7).
+- **총괄 확인 요청**: PACS `94935f0`은 브리지를 다시 빌드해야 반영됨(`docker compose up -d --build`, 실행 중 PACS에서 — 총괄). EMR 쪽이 먼저 합쳐져도 옛 브리지는 `found_by`를 안 보내므로 지금과 같음.
+- **격리 스택**: 아직 띄워 둠(덩어리 5 G-1~G-4 시험에 씀) — 끝나면 내림.
+
 ## 2026-09-29 — 직원용 안내: 결과 있는 영상 검사 「취소됨」 (결정 38-③)
 
 - **상태**: 확인 요청
