@@ -642,6 +642,7 @@ export default {
   se_errMissingRef: "Un élément lié n'existe plus. Rechargez la liste.",
   se_errRequired: "Un champ obligatoire est vide.",
   se_errNotAllowed: "Un champ contient une valeur non autorisée.",
+  se_errBadDate: "Cette date n'existe pas (ex. 30 février). Vérifiez la date.",
   se_errFormat: "Un champ n'a pas le bon format.",
   se_errRange: "Un nombre est hors limites.",
   se_errNotNumber: "{f} : saisissez un nombre.",

@@ -651,6 +651,7 @@ export default {
   se_errMissingRef: "A linked item no longer exists. Reload the list.",
   se_errRequired: "A required field is empty.",
   se_errNotAllowed: "A field has a value that is not allowed.",
+  se_errBadDate: "That date does not exist (e.g. 30 February). Check the date.",
   se_errFormat: "A field has the wrong format.",
   se_errRange: "A number is out of range.",
   se_errNotNumber: "{f}: enter a number.",

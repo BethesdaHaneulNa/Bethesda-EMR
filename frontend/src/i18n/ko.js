@@ -642,6 +642,7 @@ export default {
   se_errMissingRef: "연결된 항목이 없습니다. 목록을 새로 불러오세요.",
   se_errRequired: "꼭 넣어야 하는 칸이 비었습니다.",
   se_errNotAllowed: "허용되지 않는 값이 있습니다.",
+  se_errBadDate: "없는 날짜입니다 (예: 2월 30일). 날짜를 확인해 주세요.",
   se_errFormat: "형식이 맞지 않는 칸이 있습니다.",
   se_errRange: "숫자가 너무 큽니다.",
   se_errNotNumber: "{f}: 숫자를 넣으세요.",

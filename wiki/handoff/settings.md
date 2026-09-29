@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 포장 단위 두 칸 저장 (재부팅 뒤 ①)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4fde219` 위)
+- **한 일**: `admin.routes.js` `POST·PUT /drugs`가 `pack_unit`·`pack_label`(025)을 저장. 새 함수 `packFields`: 거짓 → 단위 NULL, **참인데 단위가 비면 `bottle`**(편집 창이 「병」을 미리 골라 보여 주므로 400보다 이쪽), 목록 밖 단위·참/거짓 아님 → 400(`fieldMsg.notOneOf`, 화면은 「허용되지 않는 값」). **PUT에 `pack_unit`이 없으면 두 칸 모두 그대로**(옛 화면·스크립트가 지우지 않게). `GET /admin/drugs`는 `SELECT *`라 그대로 나옴 — 확인.
+- **함께**: `utils/dbError.js`(`86fab5f`)의 새 문구 「A date field has a date that does not exist」를 `settingsMessages.js`와 `se_errBadDate`(ko·en·fr)에 — `settings.messages.mjs`가 찾아냄.
+- **위키 고침(총괄 요청)**: `modules/settings.md`의 702 → **026**(3-10절, 4절 표, 8절). 8절 「변경 기록」 줄의 커밋을 `5e91dbf`로. 아래 옛 인계 항목의 702는 그때의 기록이라 그대로 둠. `03-change-log.md`에는 702가 없었음.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/test/settings.drugs.mjs` · `frontend/src/pages/settingsMessages.js` · `wiki/modules/settings.md`(3-8, 3-10, 4절, 8절)
+- **공용 파일 변경**: i18n `se_errBadDate` 한 줄씩(ko·en·fr, `se_` 구역 안).
+- **DB 마이그레이션**: 없음(025는 약국).
+- **확인한 방법**: `node --check`, `npm run build`, 새 DB 격리 스택에서 `settings.drugs.mjs` **20개 통과**(포장 단위 11개 새로), `settings.access.mjs` 1199건 모두 표와 같음, `settings.audit.mjs`·`settings.messages.mjs`·`settings.permissions.mjs` 통과. 화면: 프랑스어 AMOX250 「Délivré à l'unité de conditionnement」 체크(Flacon) → 저장 → 목록에 「Flacon」, 한국어로 단위 바꾸기 → 저장 → 체크 해제 → 단위 NULL, 재고 30 그대로.
+- **총괄 질문에 대한 확인** (코드 변경 없음):
+  - ③ `GET /admin/doctors`는 `role = 'doctor' AND status = 'active'`만 — **관리자 역할 계정은 권한에 진료가 있어도 목록에 안 나옵니다.** 결정(의사는 의사 계정 + 필요하면 설정 체크)과 같음.
+  - ④ 8090·8080 기본값: **EMR 쪽 시드·초기 설정에는 없음.** `pacs_config`는 001·`pacs.routes.js` `ensureConfig` 모두 `emr_base_url`·`pacs_viewer_url` 기본 **빈 값**, 015도 두 칸을 건드리지 않음. 새 DB 격리 스택 확인: 4242 · 빈 값 · 빈 값. 화면 예시는 `NAS_IP:9090`·`egUrl` `:9080`(P-17 `890c64a`에서 고침), 설치 스크립트 안내도 9090. 실행 중 EMR의 8090·8080은 **누군가 옛 예시대로 적어 저장한 값**으로 보입니다(P-17 전 예시가 `NAS_IP:8090`, 피드 예시 `:8080`). **11월 복원에 중요**: 이 두 주소는 `pacs_config`에 저장되어 **백업과 함께 새 PC로 넘어갑니다** — 새 PC의 IP가 다르면 복원 뒤 설정 → 오더 연동에서 다시 적어야 함. 복원 연습(⑤) 확인 표와 2.13에 넣겠습니다.
+- **다음 할 일**: ② Journal 탭에 진료 칸(`d7cee75`) + 접수 칸 이름 ③ 자기 비밀번호 바꾸기 ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
 ## 2026-09-29 — 변경 기록(로그): 직원 계정 기록 · 읽기 API · 「Journal」 탭 · TRUNCATE 막기 (총괄 지시 3)
 
 - **상태**: 확인 요청 (a~e 모두 끝남)
