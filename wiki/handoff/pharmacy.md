@@ -2,6 +2,101 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — C 준비: 약 기본값 바로잡는 마이그레이션 초안 (파일 아님)
+
+- **상태**: 보류 — C(「용량」 = 1회량) 결정과, 데이터를 바꾸는 마이그레이션이라 **실장님 확인**(규칙 5절)을 기다립니다. **파일은 만들지 않았습니다**(`backend/sql/`에 4xx 없음). 아래는 노트 안의 초안입니다.
+- **커밋**: session/pharmacy — 인계 노트만
+- **무엇을 바꾸나**: 「약 기본값 고칠 표」의 ① 10개 약 기본 용량 → 1, 그리고 약속처방에 복사된 **같은 약·같은 옛 값** 줄(시드 세트 2줄: Malaria Workup의 PCM500, Diarrhea / GE의 METRO). 횟수·일수·경로는 그대로.
+- **무엇을 안 바꾸나**
+  - **이미 저장된 처방(`prescription`)은 건드리지 않습니다.** 기본값은 새로 처방할 때 처음 들어가는 값일 뿐입니다.
+  - 용량·횟수·일수 **셋 다** 시드 값과 같을 때만 바꿉니다. 병원이 이미 고친 약·세트는 그대로입니다.
+  - ③ 의사 확인 7개(시럽·흡입기·주사·ACT01·PRED5)는 넣지 않았습니다.
+- **세트 줄 범위 — 결정 필요**: 세트 **이름과 관계없이** 같은 약 코드 + 같은 옛 값(3개 모두)인 줄을 바꿉니다. 병원이 기본값을 불러와 만든 세트도 같은 문제를 갖기 때문입니다. 시드 세트 2줄만 바꾸려면 두 번째 UPDATE에 `AND s.name IN ('Malaria Workup','Diarrhea / GE')`를 더하면 됩니다. 제 추천은 이름과 관계없이 바꾸고, 바뀐 줄은 기록 표로 확인하는 것입니다.
+- **새로 설치하는 병원**: 파일 순서상 시드(003) 다음에 이 마이그레이션이 돌아서, 새 설치도 바른 기본값으로 시작합니다.
+- **바뀐 줄 기록**: 마이그레이션 실행기(`config/migrate.js`)는 파일마다 한 트랜잭션으로 돌리고 알림(NOTICE)을 어디에도 남기지 않습니다. 그래서 새 표 `pharmacy_dose_fix_log`에 바뀐 행마다 한 줄(대상, 행 번호, 약 코드, 세트 이름, 옛/새 용량, 시각)을 남깁니다. 반영 후에는 읽기 전용으로 이렇게 확인합니다:
+  `SELECT target, code, set_name, old_dose, new_dose, changed_at FROM pharmacy_dose_fix_log ORDER BY id;`
+
+**초안 SQL** (파일로 만들 때 이름 예: `401_pharmacy_per_dose_defaults.sql`)
+
+```sql
+-- 4xx_pharmacy_per_dose_defaults.sql  (초안 — 실장님 결정 C-1 뒤에만 파일로 만듦)
+-- 약 기본값의 「용량」을 1회량으로 바로잡는다.
+-- · 시드 값 그대로인 행만 바꾼다 (용량·횟수·일수 셋 다 같을 때). 병원이 이미 고친 약·세트는 그대로.
+-- · 이미 저장된 처방(prescription)은 건드리지 않는다. 새로 처방할 때 들어가는 값만 바뀐다.
+-- · 무엇을 바꿨는지 pharmacy_dose_fix_log 에 한 줄씩 남긴다 (되돌리기도 이 표로).
+-- · 두 번 돌려도 두 번째는 아무것도 안 바꾼다 (옛 값 조건 때문).
+
+CREATE TABLE IF NOT EXISTS pharmacy_dose_fix_log (
+    id          SERIAL PRIMARY KEY,
+    target      VARCHAR(20)  NOT NULL CHECK (target IN ('drug','order_set_item')),
+    row_id      INTEGER      NOT NULL,
+    code        VARCHAR(20),
+    set_name    VARCHAR(200),
+    old_dose    VARCHAR(20),
+    new_dose    VARCHAR(20),
+    changed_at  TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- 옛 값(시드) → 새 1회량. 횟수·일수는 바꾸지 않는다.
+DROP TABLE IF EXISTS pg_temp.dose_fix;
+CREATE TEMP TABLE dose_fix (code VARCHAR(20), old_dose VARCHAR(20), freq INTEGER, days INTEGER, new_dose VARCHAR(20)) ON COMMIT DROP;
+INSERT INTO dose_fix VALUES
+  ('PCM500',  '3.000', 3,  5, '1.000'),
+  ('BRUFEN',  '3.000', 3,  7, '1.000'),
+  ('BRUFEN4', '3.000', 3,  5, '1.000'),
+  ('DICLO',   '2.000', 2,  5, '1.000'),
+  ('AMOX500', '3.000', 3,  7, '1.000'),
+  ('METRO',   '3.000', 3,  5, '1.000'),
+  ('METF500', '2.000', 2, 30, '1.000'),
+  ('METF850', '2.000', 2, 30, '1.000'),
+  ('RECOMID', '3.000', 3,  7, '1.000'),
+  ('CHLOR',   '3.000', 3,  5, '1.000');
+
+-- 1) 약 기본값
+WITH changed AS (
+  UPDATE drug d
+     SET default_dose = f.new_dose, updated_at = NOW()
+    FROM dose_fix f
+   WHERE d.code = f.code
+     AND d.default_dose = f.old_dose AND d.default_freq = f.freq AND d.default_days = f.days
+  RETURNING d.id, d.code, f.old_dose, f.new_dose
+)
+INSERT INTO pharmacy_dose_fix_log (target, row_id, code, old_dose, new_dose)
+SELECT 'drug', id, code, old_dose, new_dose FROM changed;
+
+-- 2) 약속처방(오더 세트)에 복사된 같은 약·같은 옛 값 줄 — 세트 이름과 관계없이
+WITH changed AS (
+  UPDATE order_set_item i
+     SET dose = f.new_dose
+    FROM dose_fix f, order_set s
+   WHERE s.id = i.set_id AND i.kind = 'drug' AND i.code = f.code
+     AND i.dose = f.old_dose AND i.frequency = f.freq AND i.days = f.days
+  RETURNING i.id, i.code, s.name, f.old_dose, f.new_dose
+)
+INSERT INTO pharmacy_dose_fix_log (target, row_id, code, set_name, old_dose, new_dose)
+SELECT 'order_set_item', id, code, name, old_dose, new_dose FROM changed;
+```
+
+**되돌리는 SQL** — 이미 적용된 마이그레이션 파일은 고칠 수 없으므로(규칙 5절) 되돌릴 때는 **새 번호 파일**로 넣습니다. 이 마이그레이션이 바꾼 행만, 그 뒤 누가 다시 고치지 않은 경우에만 옛 값으로 돌립니다.
+
+```sql
+-- 되돌리기: 이 마이그레이션이 바꾼 행만, 그 뒤에 누가 또 고치지 않았을 때만 옛 값으로
+UPDATE drug d SET default_dose = l.old_dose, updated_at = NOW()
+  FROM pharmacy_dose_fix_log l
+ WHERE l.target = 'drug' AND l.row_id = d.id AND d.default_dose = l.new_dose;
+UPDATE order_set_item i SET dose = l.old_dose
+  FROM pharmacy_dose_fix_log l
+ WHERE l.target = 'order_set_item' AND l.row_id = i.id AND i.dose = l.new_dose;
+```
+
+- **시험** (격리 스택 9184의 DB에서 한 트랜잭션으로 돌리고 **ROLLBACK** — DB에 남은 변화 없음):
+  - 1회째: 약 10개 + 세트 2줄(PCM500·METRO)이 바뀜. ACT01·ORS·PCM250 등 대상이 아닌 것은 그대로
+  - 처방 기록: 용량 3인 시험 처방을 하나 넣고 전·후 `prescription` 전체의 지문(md5)과 개수(384)를 비교 → **같음**
+  - 2회째: 기록이 늘지 않음(아무것도 안 바뀜)
+  - 되돌리기: 12행 모두 옛 값(3.000 / 2.000)으로 돌아옴
+  - 처음 초안은 같은 세션에서 두 번 돌릴 때 임시 표 이름이 겹쳐 실패 → `DROP TABLE IF EXISTS pg_temp.dose_fix` 추가 후 통과
+- **확인 못 한 것**: 운영 DB에서는 돌리지 않았습니다. 운영 세트의 약 줄이 4개뿐이라는 것은 총괄의 읽기 전용 확인에 따른 것입니다.
+
 ## 2026-09-29 — 위키 2절 직원용 사용법을 프랑스어 화면 기준으로
 
 - **상태**: 확인 요청 (위키만)
