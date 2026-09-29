@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLang } from '../i18n/index.jsx';
 import { getUser, logout, api } from '../api/client.js';
 import { allowedModules, userPerms, homePath } from '../modules.js';
+// Settings session: "change my password" opens from the name below.
+import { PasswordDialog } from '../pages/settingsPassword.jsx';
 
 // Injected by Vite from package.json (see vite.config.js). Guarded so the component still
 // renders if it is ever loaded outside a Vite build.
@@ -37,6 +39,7 @@ export function TopBar() {
   var verState = useState(null); var ver = verState[0]; var setVer = verState[1];
   var showVerState = useState(false); var showVer = showVerState[0]; var setShowVer = showVerState[1];
   var canSeeUpdate = user && userPerms(user).indexOf('settings') >= 0;
+  var pwState = useState(false); var showPw = pwState[0]; var setShowPw = pwState[1];
 
   useEffect(function () {
     var i = setInterval(function () { setNow(new Date()); }, 1000);
@@ -120,7 +123,7 @@ export function TopBar() {
             })}
           </div>
           {user ? (
-            <span style={{ background: ri.color + '15', border: '1px solid ' + ri.color + '30', borderRadius: 5, padding: '3px 8px', fontSize: 14, color: ri.color, fontWeight: 600 }}>{ri.icon} {user.name}</span>
+            <span onClick={function () { setShowPw(true); }} title={t.se_pwOpen} style={{ background: ri.color + '15', border: '1px solid ' + ri.color + '30', borderRadius: 5, padding: '3px 8px', fontSize: 14, color: ri.color, fontWeight: 600, cursor: 'pointer' }}>{ri.icon} {user.name} 🔑</span>
           ) : null}
           <button onClick={logout} style={{ background: '#dc262620', color: '#f87171', border: '1px solid #dc262640', borderRadius: 5, padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{t.logOff}</button>
         </div>
@@ -140,6 +143,8 @@ export function TopBar() {
           })}
         </div>
       ) : null}
+
+      {showPw ? <PasswordDialog t={t} onClose={function () { setShowPw(false); }} /> : null}
 
       {showVer && ver ? (
         <div onClick={function () { setShowVer(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

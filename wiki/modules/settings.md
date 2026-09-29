@@ -1,6 +1,6 @@
 # 설정 (Settings)
 
-> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4(초기 1234 유지·최소 길이 없음·자기 비밀번호 바꾸기)·U2(되살리기는 관리자만) 결정됨 — 작업 차례
+> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4 자기 비밀번호 바꾸기 끝남 · U2(되살리기는 관리자만) 작업 차례
 
 ## 1. 이 모듈이 하는 일
 
@@ -28,6 +28,12 @@
 
 - 로그인 화면: **Identifiant (아이디)** · **Mot de passe (비밀번호)** → **Connexion (로그인)**. 오른쪽 위 **EN · KO · FR** 로 언어를 바꿉니다.
 - 로그아웃: 오른쪽 위 빨간 **Déconnexion (로그오프)**.
+- **내 비밀번호 바꾸기** (2026-09-29): 오른쪽 위 **내 이름 🔑** 을 누르면 **Changer mon mot de passe (내 비밀번호 바꾸기)** 창이 열립니다. **Mot de passe actuel (지금 비밀번호)** 한 번, **Nouveau mot de passe (새 비밀번호)** 와 **Confirmer… (한 번 더)** 두 번 → **Changer (바꾸기)**. 권한과 관계없이 누구나 됩니다.
+  - 길이 제한은 없습니다(한 글자 이상). 처음 비밀번호 1234를 꼭 바꿔야 하는 것도 아닙니다(결정).
+  - 지금 비밀번호가 틀리면 「Le mot de passe actuel n'est pas correct.」, 두 칸이 다르면 「Les deux nouveaux mots de passe ne sont pas identiques.」 — 창은 그대로 남습니다.
+  - 바꾼 뒤에도 **지금 열려 있는 화면들은 로그아웃되지 않습니다**. 다음 로그인부터 새 비밀번호.
+  - 잊어버리면 관리자가 **Personnel → Modifier** 에서 새로 정해 줍니다(2.5절).
+  - 「Journal」에 「Mot de passe changé」 한 줄이 남습니다 — 누가 바꿨는지만, 값은 남지 않음.
 - 한 번 로그인하면 **12시간** 유지됩니다. 그 뒤에는 아무 버튼이나 누를 때 로그인 화면으로 돌아가니, 다시 로그인하면 됩니다.
 - **관리자가 직원을 비활성으로 바꾸면 그 직원은 바로 막힙니다** — 다음에 무엇을 누르거나 화면을 다시 불러오는 순간 로그인 화면으로 가고, 로그인하면 「Ce compte est désactivé…」가 뜹니다.
 - **권한을 바꾸면 서버는 바로 따르고, 그 직원의 메뉴도 곧 바뀝니다** — 화면을 새로 고치거나, 다른 창에 갔다가 돌아오거나, 5분마다 스스로 계정을 다시 읽습니다(2026-09-29, 총괄). 권한을 **더한** 화면은 새로 고치면 메뉴에 나타나고, **뺀** 화면은 메뉴에서 사라집니다. 뺀 화면을 **지금 보고 있던** 직원은 다른 화면으로 옮길 때까지 그 화면에 남고, 목록이 비거나 「Vous n'avez pas l'autorisation…」가 뜹니다.
@@ -264,6 +270,14 @@
 
 - 비밀번호는 DB의 pgcrypto로 해시합니다: 저장 `crypt($pw, gen_salt('bf'))`, 확인 `password_hash = crypt($pw, password_hash)` (`auth.routes.js:67`). bcrypt(`$2a$`), `gen_salt('bf')` 기본 반복 인자 6. `bcryptjs` 패키지는 import만 되고 쓰이지 않습니다.
 - 첫 관리자는 6자 이상을 요구하지만(`auth.routes.js:29`), 설정 화면에서 만드는 직원 비밀번호는 **길이 제한이 없습니다**.
+- **자기 비밀번호 바꾸기** `POST /api/auth/password` `{current_password, new_password}` (2026-09-29, 결정: 1234 유지·강제 없음·최소 길이 없음). 화면은 `frontend/src/pages/settingsPassword.jsx`, 상단바(`TopBar.jsx`, 공용)의 이름을 누르면 열림.
+  - **지금 비밀번호를 묻는 이유**: 로그인한 채 둔 화면에서 다른 사람이 계정을 빼앗지 못하게.
+  - 확인과 변경이 **UPDATE 한 문장**(`WHERE id = 나 AND status = 'active' AND password_hash = crypt(지금, password_hash)`) — 사이에 끼어들 틈이 없음. 해시는 다른 곳과 같은 `crypt(새것, gen_salt('bf'))`.
+  - 틀리면 **400**(「The current password is not correct」), 401이 아님: `api/client.js`는 토큰을 보낸 401을 모두 「로그인 끝남」으로 보고 로그인 화면으로 보내므로, 401이면 창이 사라집니다. 빈 값 → 400 `password is required`. 토큰 없음·비활성 계정 → 401(인증 미들웨어).
+  - 한 트랜잭션 안에서 `settings.staff.password` 한 줄(`writeAudit`, 값 없음, 쓴 사람 = 본인). 거절되면 줄 없음.
+  - **이미 받은 토큰은 그대로 유효**(12시간). 서버는 요청마다 계정의 상태·권한을 읽지만(S1) 비밀번호 변경 시각은 보지 않습니다. 다른 PC에 로그인해 둔 화면을 끊으려면 관리자가 비활성 → 다시 활성(U2)으로.
+  - 지금 비밀번호 추측 횟수 제한은 없습니다(로그인과 같음). 이미 로그인한 사람만 부를 수 있어 로그인 화면보다 위험이 작습니다.
+  - 확인: `backend/test/settings.password.mjs` (격리 스택 전용, `SE_ADMIN_PW`) 15개.
 - 로그인 실패 횟수 제한은 없습니다.
 - 로그인 순서: 아이디 조회 → 비활성이면 「Account is inactive」 → 비밀번호 확인. 비밀번호를 몰라도 그 아이디가 있고 비활성인지 알 수 있습니다.
 - 토큰은 브라우저 `localStorage`(`medconnect_token`)에 저장. 서버가 401을 주면 `api/client.js`가 지우고 로그인 화면으로 보냅니다.
@@ -386,6 +400,7 @@
 | `GET /api/auth/setup-status` | 없음 | `{needsSetup}` — 활성 관리자가 없으면 true |
 | `POST /api/auth/setup` | 없음 (관리자 없을 때만) | 첫 관리자 생성, 토큰 반환 |
 | `POST /api/auth/login` | 없음 | `{token, user}` |
+| `POST /api/auth/password` | 로그인 (권한 필요 없음, 비활성이면 401) | 자기 비밀번호 바꾸기 `{current_password, new_password}` → `{success}`. 지금 비밀번호가 틀리면 400 (3-3절) |
 | `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29) |
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `clinic` | 로그인 | 목록 (다른 화면도 씀) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
@@ -470,7 +485,7 @@
 | S1 | ~~높음~~ **고침 (총괄)** | ~~비활성·권한을 뺀 직원이 토큰으로 12시간 계속 씀~~ → 2026-09-29 실장님 결정, 총괄이 `middleware/auth.js`에서 요청마다 DB의 상태·권한을 읽게 함. 격리 스택에서 확인: 권한을 뺀 관리자가 저장 → 403 「Vous n'avez pas l'autorisation…」, 비활성으로 바꾸자 다음 화면 요청에서 로그인 화면 → 「Ce compte est désactivé」. 화면 메뉴가 늦게 바뀌는 것은 U13 | (옛 코드) `middleware/auth.js` |
 | S2 | ~~높음~~ **고침 (각 세션)** | ~~접수·문서 API와 진료 조회 API가 로그인만 확인~~ → 2026-09-29 실장님 결정, 표대로 각 파일 주인이 적용(접수·진료·수납·약국·임상병리·통계·PACS·설정). **`settings.access.mjs`로 990칸 확인 — 모두 표와 같음**(2026-09-29). 권한과 별개로 발견: `POST /consultations/:id/diagnoses`·`/prescriptions`가 빈 입력에 400 대신 **500**(진료 세션에 전달) | 각 라우트 파일 |
 | S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
-| S4 | 보통 (**일부 고침**) | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 직원 비밀번호 길이 제한 없음 — **결정 대기**. ~~비밀번호 칸이 가려지지 않음~~ → 2026-09-29: `type=password` + **Afficher/Masquer** 버튼, `autoComplete="new-password"`(브라우저가 관리자 자신의 비밀번호를 직원 칸에 채워 넣지 않게) | `Settings.jsx` 직원 편집 창, `admin.routes.js` POST staff |
+| S4 | ~~보통~~ **결정·고침** | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 길이 제한 없음 → **2026-09-29 결정: 1234 유지, 첫 로그인 때 강제로 바꾸지 않음, 최소 길이 없음 — 대신 각자 바꿀 수 있게**: 상단바 이름 → 「Changer mon mot de passe」 (`POST /api/auth/password`, 3-3절). ~~비밀번호 칸이 가려지지 않음~~ → `type=password` + **Afficher/Masquer**, `autoComplete="new-password"` | `Settings.jsx` 직원 편집 창, `auth.routes.js`, `settingsPassword.jsx` |
 | S5 | 보통 | 로그인 실패 횟수 제한 없음 (LAN 안이라 위험은 제한적) | `auth.routes.js:49` |
 | S6 | ~~보통~~ **고침** | ~~API로 status를 빼고 직원을 저장하면 NULL~~ → 2026-09-29 빠진 status는 지금 상태 유지 (3-10절, 기록 작업 때 함께) | (옛 코드) `admin.routes.js` PUT staff |
 | S7 | 낮음 | 비밀번호 확인 전에 「Account is inactive」를 알려줘 계정 존재·상태가 드러남 | `auth.routes.js:63` |
@@ -557,4 +572,5 @@
 | 2026-09-29 | 의사 역할을 고르면 진료·**약국**이 체크됨(결정). 이미 있는 의사 계정은 그대로 | `permissions.js`·`modules.js` 한 줄씩, 권한 시험 계정 11개 | `8ba7a93` |
 | 2026-09-29 | 변경 기록: 직원 계정 기록, 읽기 API, 설정의 「Journal」 탭, TRUNCATE도 거절(026), 백업·복원 뒤에도 그대로. 빠진 status는 NULL이 아니라 지금 상태(S6) | `writeAudit` 3곳, `GET /admin/audit`, `settingsAudit.js`, `settings.audit.mjs` (3-10) | `5e91dbf` |
 | 2026-09-29 | 약에 「포장 단위로 내줌」(병·튜브·흡입기·개)이 저장됨. 서버의 「없는 날짜」 안내가 프랑스어로 | `POST·PUT /admin/drugs` `packFields`, `settings.drugs.mjs` 11개 추가 (3-8) | `8594492` |
-| 2026-09-29 | 「Journal」에서 진료 기록 줄이 말로 읽힘(무엇을 고쳤는지, 칸 이름, 상태 값), 환자 수정 줄의 칸 목록도. 프랑스어 안내의 「ni les consultations」(→ 진료가 안 남는다고 읽힘)을 「ni les simples lectures」로 | `settingsAudit.js` 칸·값·`auditEntityText`·`auditSummary`, `se_` 44개 (3-10) | (이 커밋) |
+| 2026-09-29 | 「Journal」에서 진료 기록 줄이 말로 읽힘(무엇을 고쳤는지, 칸 이름, 상태 값), 환자 수정 줄의 칸 목록도. 프랑스어 안내의 「ni les consultations」(→ 진료가 안 남는다고 읽힘)을 「ni les simples lectures」로 | `settingsAudit.js` 칸·값·`auditEntityText`·`auditSummary`, `se_` 44개 (3-10) | `139b9fc` |
+| 2026-09-29 | **누구나 자기 비밀번호를 바꿈** — 오른쪽 위 이름 → 「Changer mon mot de passe」, 지금 비밀번호 확인, 길이 제한 없음, 기록에 한 줄(값 없음) (S4 결정) | `POST /api/auth/password`, `settingsPassword.jsx`, `TopBar.jsx` 이름 한 줄, `settings.password.mjs` (2.2·3-3) | (이 커밋) |

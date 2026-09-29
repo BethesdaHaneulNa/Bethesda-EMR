@@ -773,6 +773,17 @@ export default {
   se_ent_diagnosis: "진단",
   se_ent_prescription: "처방",
   se_ent_order_item: "오더",
+  se_pwTitle: "내 비밀번호 바꾸기",
+  se_pwHint: "지금 비밀번호를 한 번, 새 비밀번호를 두 번 적습니다. 잊어버리면 관리자가 설정 → 직원에서 새로 정해 줄 수 있습니다.",
+  se_pwCurrent: "지금 비밀번호",
+  se_pwNew: "새 비밀번호",
+  se_pwAgain: "새 비밀번호 한 번 더",
+  se_pwMismatch: "새 비밀번호 두 칸이 서로 다릅니다.",
+  se_pwChange: "바꾸기",
+  se_pwClose: "닫기",
+  se_pwDone: "비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.",
+  se_pwOpen: "눌러서 내 비밀번호 바꾸기",
+  se_errCurrentPw: "지금 비밀번호가 맞지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

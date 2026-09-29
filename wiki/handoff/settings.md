@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 자기 비밀번호 바꾸기 (재부팅 뒤 ③, S4 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`139b9fc` 위)
+- **한 일**:
+  - 서버 `POST /api/auth/password` `{current_password, new_password}` (`auth.routes.js`, 로그인만 필요 — 권한 없음도 됨).
+  - 화면 `frontend/src/pages/settingsPassword.jsx`(새): 지금 비밀번호 1번, 새 비밀번호 2번(오타로 잠기지 않게), 「Afficher」, Enter로 바꾸기·Esc로 닫기. 안내는 `seMessage`로 번역.
+  - 상단바 이름에 🔑, 누르면 창.
+- **보안 관련 — 이유** (규칙: 비밀번호 변경은 이유를 자세히):
+  - **지금 비밀번호를 묻습니다** — 로그인한 채 둔 화면(접수 PC 등)에서 다른 사람이 비밀번호를 바꿔 계정을 가져가지 못하게.
+  - **확인과 변경을 UPDATE 한 문장으로**(`WHERE id = 나 AND status = 'active' AND password_hash = crypt(지금, password_hash)`) — 확인한 뒤 바꾸기 전에 다른 변경이 끼어들 수 없음. 해시는 기존과 같은 pgcrypto `crypt(…, gen_salt('bf'))`.
+  - **틀린 지금 비밀번호는 400** (401 아님) — `api/client.js`가 토큰을 보낸 401을 「로그인 끝남」으로 보고 로그인 화면으로 보내 버리기 때문.
+  - **최소 길이 없음**(한 글자 이상), **강제 변경 없음** — 결정대로. 첫 관리자 만들기의 6자 규칙은 그대로 둠(바꾸라는 결정이 없음).
+  - **이미 받은 토큰은 끊지 않습니다.** 서버는 요청마다 상태·권한을 읽지만 비밀번호 변경 시각은 보지 않아, 다른 PC의 열린 화면은 12시간까지 그대로입니다. 끊으려면 토큰에 비밀번호 버전을 넣어야 하는데(인증 미들웨어·`staff` 열 — 총괄 파일·마이그레이션) 결정 밖이라 하지 않았습니다. 필요하면 관리자가 비활성 → 되살리기(U2)로 끊을 수 있음.
+  - 지금 비밀번호 추측 횟수 제한 없음 — 로그인 화면과 같은 수준, 이미 로그인한 사람만 부를 수 있음.
+  - 변경 기록: `settings.staff.password` 한 줄(쓴 사람 = 본인, `entity_id` = 본인, 값 없음), 변경과 같은 트랜잭션. 거절되면 줄 없음.
+- **바꾼 파일**: `backend/src/routes/auth.routes.js` · `backend/src/routes/settings.messages.js`(`CURRENT_PASSWORD_WRONG`) · `frontend/src/pages/settingsPassword.jsx`(새) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.password.mjs`(새) · `backend/test/settings.access.mjs`(라우트 1개) · `wiki/modules/settings.md`(2.2, 3-3, 4절, 7절 S4, 8절)
+- **공용 파일 변경**: **`frontend/src/components/TopBar.jsx`** (총괄 허락) — import 한 줄, 상태 한 줄, 이름 `<span>`에 `onClick`·`title`·`cursor`·🔑, 창 한 줄. 다른 부분은 그대로. i18n `se_pw*` 10개 + `se_errCurrentPw`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택: `settings.password.mjs` **15개 통과**(틀린 지금 비밀번호 400·옛 비밀번호 그대로, 빈 값 400, 토큰 없음 401, 권한 없는 계정 200, 옛 비밀번호 401·새 것 200, 이전 토큰 유효, 한 글자 허용, 기록 두 줄·쓴 사람 본인·값/해시 없음, 비활성 401). `settings.access.mjs` **110 × 11 = 1210건 모두 표와 같음**, `settings.audit.mjs`·`settings.messages.mjs` 통과. 화면: 간호사 역할 시험 계정으로 프랑스어 — 틀린 지금 비밀번호 → 「Le mot de passe actuel n'est pas correct.」, 창 남음(로그아웃 안 됨); 한국어 — 두 칸 다름 → 「새 비밀번호 두 칸이 서로 다릅니다.」, 고쳐서 바꾸기 → 「비밀번호를 바꿨습니다…」, 새 비밀번호 로그인 200·옛 것 401, Journal에 「Rasoa Infirmière」가 쓴 한 줄.
+- **다음 할 일**: ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
 ## 2026-09-29 — 「Journal」 탭에 진료·접수 칸 (재부팅 뒤 ②)
 
 - **상태**: 확인 요청

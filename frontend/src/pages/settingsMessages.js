@@ -24,6 +24,7 @@ var EXACT = {
   'Not found': 'se_errNotFound',
   'login_id is required': 'se_errLoginIdRequired',
   'password is required': 'se_errPasswordRequired',
+  'The current password is not correct': 'se_errCurrentPw',
   'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.': 'se_errLastAdmin',
   'The administrator account created during setup cannot be deactivated.': 'se_errSetupAdminKept',
   // utils/dbError.js

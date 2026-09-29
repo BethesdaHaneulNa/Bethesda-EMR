@@ -159,6 +159,8 @@ const ROUTES = [
   ['GET',  '/system/status',                [ALL]],
   ['GET',  '/version',                      [ALL]],
   ['GET',  '/auth/me',                      [ALL]],
+  // empty body: 400 (nothing changed) for anyone logged in - no permission needed
+  ['POST', '/auth/password',                [ALL], {}],
 ];
 
 // One account per way the clinic hands out permissions. Single-permission accounts pin
