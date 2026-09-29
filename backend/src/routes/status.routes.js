@@ -11,15 +11,13 @@ const fs = require('fs');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { tcpCheck } = require('../utils/tcpCheck');
-const { listBackups, cfg: backupCfg } = require('../services/backup');
+const { health: backupHealth, cfg: backupCfg } = require('../services/backup');
 
 const router = express.Router();
 
 // The bridge reports every POLL_SECONDS (15 by default). Three missed reports
 // is a real outage rather than one slow cycle or a restart.
 const BRIDGE_STALE_SECONDS = 60;
-// Backups run nightly, so a day and a half of silence means one was missed.
-const BACKUP_STALE_HOURS = 36;
 const DISK_WARN_FREE_GB = 20;
 const DISK_DOWN_FREE_GB = 5;
 
@@ -57,16 +55,18 @@ async function checkDisk() {
   }
 }
 
+// Same judgement as the Backup tab (services/backup.js health()), so the two can
+// never disagree about whether last night worked.
 function checkBackup() {
-  const backups = listBackups();
-  if (!backups.length) {
+  const h = backupHealth();
+  if (h.state === 'none') {
     return { key: 'backup', state: 'warn', message: 'status.backup.none', values: {} };
   }
-  const hours = (Date.now() - new Date(backups[0].mtime).getTime()) / 3600000;
-  const values = { hours: Math.round(hours), name: backups[0].name, count: backups.length };
+  const values = { hours: h.hours == null ? null : Math.round(h.hours), name: h.newest ? h.newest.name : null, count: h.count };
   // Not urgent today, but this is the check that matters on the day the disk
   // dies -- and it is the one nobody notices has been failing for a month.
-  if (hours > BACKUP_STALE_HOURS) return { key: 'backup', state: 'warn', message: 'status.backup.stale', values };
+  if (h.state === 'failed') return { key: 'backup', state: 'warn', message: 'status.backup.failed', values: { ...values, at: h.lastAttempt.at } };
+  if (h.state === 'stale') return { key: 'backup', state: 'warn', message: 'status.backup.stale', values };
   return { key: 'backup', state: 'ok', message: 'status.backup.ok', values };
 }
 
