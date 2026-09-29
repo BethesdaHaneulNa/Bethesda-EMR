@@ -65,6 +65,20 @@ async function nextReceiptNo(client) {
   return 'R-' + dayStamp + '-' + String(seqResult.rows[0].next).padStart(4, '0');
 }
 
+// Counter fees - certificates, CD copies and the like - are added by the cashier
+// and stored as billing_item rows of type 'fee'. They belong to no clinical item
+// of the visit, so a comparison between what the visit costs now (prescriptions,
+// orders, consultation) and what was billed must leave them out; otherwise every
+// visit with a counter fee looks overbilled by exactly that fee and sits on the
+// waiting list as a refund (H6, decided 2026-09-29). A fee-type code the doctor
+// ordered (possible through an order set) is an order_item, so it is on both sides
+// of the comparison and is not a counter fee. GET /pending and buildCorrection()
+// both use this one definition.
+function counterFeeCond(itemAlias, visitRef) {
+  return itemAlias + ".item_type = 'fee' AND COALESCE(" + itemAlias + ".item_code,'') NOT IN " +
+    "(SELECT COALESCE(o.order_code,'') FROM order_item o WHERE o.visit_id = " + visitRef + ')';
+}
+
 // Prefix the client recognises: the screen was showing an older state of this
 // visit or patient, so the request is refused rather than billed twice.
 const BILL_CHANGED = 'BILL_CHANGED';
@@ -83,7 +97,9 @@ router.get('/pending', canPay, async (req, res) => {
                                AND COALESCE(p.dispense_type,'internal') <> 'external'),0)
            + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id),0)
            ) AS live_total,
-           COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0) AS billed_total,
+           COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0)
+           - COALESCE((SELECT SUM(bi.total_price) FROM billing_item bi JOIN billing b ON b.id = bi.billing_id
+                        WHERE b.visit_id=v.id AND b.payment_status<>'cancelled' AND ${counterFeeCond('bi', 'v.id')}),0) AS billed_total,
            EXISTS(SELECT 1 FROM billing b2 WHERE b2.visit_id=v.id AND b2.payment_status<>'cancelled') AS has_active_bill
          FROM visit v WHERE v.status='completed'
        )
@@ -482,10 +498,12 @@ async function buildCorrection(db, visitId) {
        FROM order_item WHERE visit_id = $1 ORDER BY id`,
     [visitId]
   );
+  // Counter fees are kept as billed; a fee-type code the doctor ordered is already
+  // in `orders` above and must not be counted twice.
   const fees = await db.query(
-    `SELECT item_code, item_name, quantity, unit_price, total_price
-       FROM billing_item WHERE billing_id = ANY($1::int[]) AND item_type = 'fee' ORDER BY id`,
-    [ids]
+    `SELECT bi.item_code, bi.item_name, bi.quantity, bi.unit_price, bi.total_price
+       FROM billing_item bi WHERE bi.billing_id = ANY($1::int[]) AND ${counterFeeCond('bi', '$2')} ORDER BY bi.id`,
+    [ids, visitId]
   );
 
   const items = [];

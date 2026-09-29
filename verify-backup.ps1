@@ -2,6 +2,8 @@
 #
 #   .\verify-backup.ps1                                            newest backup
 #   .\verify-backup.ps1 -File backups\bethesda_2026-07-15_0200.sql.gz
+#   .\verify-backup.ps1 -Strict                  right after "Back up now": exact match
+#   .\verify-backup.ps1 -DbContainer bethesda-s-settings-db       a development stack
 #
 # It restores the backup into a temporary database, compares that against the live
 # one, and drops the temporary database again. Your data is never written to: the
@@ -13,6 +15,18 @@
 
 param(
   [string]$File = '',
+  # The database container to restore into (and compare against). Development
+  # stacks have their own; never point a test at the clinic's by accident.
+  [string]$DbContainer = 'bethesda-emr-db',
+  # The app container whose /backups mount says where the backups really are.
+  # Default: the database container's name with -db replaced by -api.
+  [string]$ApiContainer = '',
+  # Where to look for the newest backup. Default: ask Docker (see ApiContainer),
+  # then fall back to the backups folder next to this script.
+  [string]$BackupDir = '',
+  # Fail on any difference from the live database. Only meaningful straight after
+  # a backup was taken, before anyone has entered anything since.
+  [switch]$Strict,
   [string]$TempDb = 'bethesda_verify_tmp'
 )
 
@@ -22,24 +36,48 @@ param(
 $ErrorActionPreference = 'Continue'
 Set-Location $PSScriptRoot
 
-$DB_CONTAINER = 'bethesda-emr-db'
+$DB_CONTAINER = $DbContainer
 $DB_USER = 'medconnect'
 $DB_NAME = 'medconnect'
+if (-not $ApiContainer) { $ApiContainer = $DbContainer -replace '-db$', '-api' }
 
 function Say([string]$m) { Write-Host "  $m" }
 function Step([string]$m) { Write-Host ""; Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok([string]$m)  { Write-Host "  [ok]   $m" -ForegroundColor Green }
 function Bad([string]$m) { Write-Host "  [FAIL] $m" -ForegroundColor Red }
+function Info([string]$m) { Write-Host "  [info] $m" -ForegroundColor Yellow }
 function Die([string]$m) { Write-Host ""; Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
 
 # ---------------------------------------------------------------- preflight
-docker inspect -f '{{.State.Running}}' $DB_CONTAINER 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) { Die "The database container ($DB_CONTAINER) is not running. Start the app first." }
+# The output, not only the exit code: inspect succeeds on a stopped container too.
+$running = docker inspect -f '{{.State.Running}}' $DB_CONTAINER 2>$null
+if ($LASTEXITCODE -ne 0 -or "$running".Trim() -ne 'true') { Die "The database container ($DB_CONTAINER) is not running. Start the app first." }
+
+# The backups are wherever BACKUP_PATH put them - often another drive - not
+# necessarily next to this script. Docker knows: it mounted that folder into the
+# app as /backups. (The status window finds it the same way.)
+if (-not $BackupDir) {
+  # Every mount as "destination=source" and pick ours here: a quoted string inside
+  # the template does not survive Windows PowerShell's native argument passing.
+  $mounts = docker inspect $ApiContainer --format '{{range .Mounts}}{{.Destination}}={{.Source}}{{println}}{{end}}' 2>$null
+  if ($LASTEXITCODE -eq 0) {
+    foreach ($l in $mounts) {
+      $pair = "$l" -split '=', 2
+      if ($pair.Count -eq 2 -and $pair[0] -eq '/backups' -and (Test-Path $pair[1])) { $BackupDir = $pair[1] }
+    }
+  }
+  if (-not $BackupDir) { $BackupDir = Join-Path $PSScriptRoot 'backups' }
+}
+Say "backups: $BackupDir"
+function Get-NewestBackup {
+  # By name: the name carries the time it was taken; a copy keeps its name but not its date.
+  return Get-ChildItem (Join-Path $BackupDir 'bethesda_*.sql.gz') -File -ErrorAction SilentlyContinue |
+         Sort-Object Name | Select-Object -Last 1
+}
 
 if (-not $File) {
-  $newest = Get-ChildItem 'backups\bethesda_*.sql.gz' -ErrorAction SilentlyContinue |
-            Sort-Object Name | Select-Object -Last 1
-  if (-not $newest) { Die "No backups found in .\backups\. Take one from Settings -> Backup first." }
+  $newest = Get-NewestBackup
+  if (-not $newest) { Die "No backups found in $BackupDir. Take one from Settings -> Backup first." }
   $File = $newest.FullName
 }
 if (-not (Test-Path $File)) { Die "No such file: $File" }
@@ -110,6 +148,7 @@ Psql 'postgres' "CREATE DATABASE $TempDb;" | Out-Null
 
 $failed = $false
 $skipCompare = $false
+$strictMismatch = $false
 try {
   # Copy the file in and unzip it inside the container rather than piping the SQL
   # through PowerShell. Reading it into a string here would re-encode it on the way
@@ -155,8 +194,7 @@ try {
   # it make sense to expect the two to match. Restoring an older one is a perfectly
   # normal thing to do -- it is what you do after losing a day -- and it must not be
   # called a broken backup just because the clinic has seen patients since.
-  $newest = Get-ChildItem 'backups\bethesda_*.sql.gz' -ErrorAction SilentlyContinue |
-            Sort-Object Name | Select-Object -Last 1
+  $newest = Get-NewestBackup
   $isNewest = $newest -and ((Split-Path $File -Leaf) -eq $newest.Name)
 
   Step "Checking the restored database"
@@ -186,54 +224,98 @@ try {
   }
 
   # ---------------------------------------------------------------- compare
+  #
+  # Two different questions, kept apart on purpose:
+  #
+  #  * Is the backup missing structure? A table the live database has and the
+  #    restore does not, or a different schema, is a fault in the backup - unless
+  #    the app was updated after the backup was taken, which adds migrations.
+  #
+  #  * Does the data match? Only if nobody has entered anything since the backup.
+  #    The nightly backup is taken at 02:00; by the time anyone runs this, the clinic
+  #    has registered patients. This used to be judged a failure - one phrase added
+  #    after the backup produced "VERIFY FAILED - Do not rely on it" and a warning
+  #    that ids would collide, about a backup that was perfectly good - which teaches
+  #    people to ignore the verdict. Now differences are listed, and only -Strict
+  #    (run straight after "Back up now") treats them as failure. Soundness on its
+  #    own is proven above: a clean single-transaction restore with ON_ERROR_STOP,
+  #    and every sequence ahead of its own data.
   if (-not $skipCompare) {
   Step "Comparing against the live database"
+
+  function TableMap($lines) {
+    $m = @{}
+    foreach ($l in $lines) { $p = $l -split '\|'; $m[$p[0]] = $p[1] }
+    return $m
+  }
+  $liveCounts = Psql $DB_NAME $COUNTS
+  $tmpCounts  = Psql $TempDb  $COUNTS
+  $liveMap = TableMap $liveCounts
+  $tmpMap  = TableMap $tmpCounts
+
+  # Updated since the backup? Each update that changes the schema adds a row here.
+  $liveMig = [int]("0" + $liveMap['schema_migrations'])
+  $tmpMig  = [int]("0" + $tmpMap['schema_migrations'])
+  $updatedSince = $liveMig -gt $tmpMig
+  if ($updatedSince) {
+    Info "the app was updated after this backup ($($liveMig - $tmpMig) newer database migration(s)), so the schema is expected to differ"
+  }
+
+  $missing = @($liveMap.Keys | Where-Object { -not $tmpMap.ContainsKey($_) } | Sort-Object)
+  if ($missing.Count -gt 0 -and -not $updatedSince) {
+    Bad "tables missing from the backup: $($missing -join ', ')"
+    $failed = $true
+  } elseif ($missing.Count -eq 0) {
+    Ok "all $($liveMap.Count) tables of the live database are in the backup"
+  }
 
   $liveShape = @(Psql $DB_NAME $SHAPE)[0]
   $tmpShape  = @(Psql $TempDb  $SHAPE)[0]
   if ($liveShape -eq $tmpShape) { Ok "schema: $liveShape" }
-  else { Bad "schema differs`n         live:    $liveShape`n         restored: $tmpShape"; $failed = $true }
+  elseif ($updatedSince) { Info "schema differs (expected after the update)`n         live:     $liveShape`n         restored: $tmpShape" }
+  else { Bad "schema differs`n         live:     $liveShape`n         restored: $tmpShape"; $failed = $true }
 
-  $liveCounts = Psql $DB_NAME $COUNTS
-  $tmpCounts  = Psql $TempDb  $COUNTS
-  $diff = Compare-Object $liveCounts $tmpCounts
-  $total = ($liveCounts | ForEach-Object { [int]($_ -split '\|')[1] } | Measure-Object -Sum).Sum
-  if (-not $diff) { Ok "$($liveCounts.Count) tables, $total rows - counts match" }
-  else {
-    Bad "row counts differ:"
-    $diff | ForEach-Object { Write-Host ("         {0} {1}" -f $_.SideIndicator, $_.InputObject) }
-    $failed = $true
-  }
+  # Tables written continuously by the system itself, not by people. They differ
+  # even straight after a backup, so even -Strict does not hold them against it.
+  $expected = @('service_heartbeat', 'document_log', 'worklist_log')
+  $expected += $expected | ForEach-Object { "${_}_id_seq" }
 
-  # A restore that loses sequence values looks perfect until the first new record
-  # collides with an existing id. This is the check people skip.
+  $changed = @()
+  $countDiff = @(Compare-Object $liveCounts $tmpCounts)
+  $countDiff | ForEach-Object { $changed += ($_.InputObject -split '\|')[0] }
   $liveSeqs = Psql $DB_NAME $SEQS
   $tmpSeqs  = Psql $TempDb  $SEQS
-  $seqDiff = Compare-Object $liveSeqs $tmpSeqs
-  if (-not $seqDiff) { Ok "$($liveSeqs.Count) sequences at the same values" }
-  else {
-    Bad "sequence values differ - new records would collide after a restore:"
-    $seqDiff | ForEach-Object { Write-Host ("         {0} {1}" -f $_.SideIndicator, $_.InputObject) }
-    $failed = $true
-  }
-
+  $seqDiff = @(Compare-Object $liveSeqs $tmpSeqs)
+  # A sequence can move with no row left to show for it (added, then deleted).
+  $seqDiff | ForEach-Object { $changed += ($_.InputObject -split '\|')[0] }
   $liveSums = Psql $DB_NAME $SUMS
   $tmpSums  = Psql $TempDb  $SUMS
-  $sumDiff  = Compare-Object $liveSums $tmpSums
-  if (-not $sumDiff) { Ok "every table's contents match" }
-  else {
-    # The live database keeps moving while the backup stands still, so tables that
-    # are written to constantly will differ. That is expected, not a fault.
-    $changed = $sumDiff | ForEach-Object { ($_.InputObject -split '\|')[0] } | Sort-Object -Unique
-    $expected = @('service_heartbeat', 'document_log', 'worklist_log')
-    $unexpected = $changed | Where-Object { $_ -notin $expected }
-    if ($unexpected) {
-      Bad "contents differ in: $($unexpected -join ', ')"
-      Say "(these tables should not have changed since the backup - look into it)"
-      $failed = $true
-    } else {
-      Ok "contents match, except $($changed -join ', ') - those are written to continuously, so they are expected to have moved on since the backup"
+  $sumDiff  = @(Compare-Object $liveSums $tmpSums)
+  $sumDiff | ForEach-Object { $changed += ($_.InputObject -split '\|')[0] }
+  $changed = @($changed | Sort-Object -Unique)
+  $byPeople = @($changed | Where-Object { $_ -notin $expected -and $_ -ne 'schema_migrations' })
+
+  if ($changed.Count -eq 0) {
+    $total = ($liveCounts | ForEach-Object { [int]($_ -split '\|')[1] } | Measure-Object -Sum).Sum
+    Ok "identical to the live database: $($liveCounts.Count) tables, $total rows, every sequence and every table's contents"
+  } elseif ($byPeople.Count -eq 0) {
+    Ok "identical to the live database, except $($changed -join ', ') - written continuously by the system, so they are expected to have moved on"
+  } elseif ($Strict) {
+    Bad "differs from the live database in: $($byPeople -join ', ')"
+    foreach ($t in $byPeople) {
+      if ($liveMap.ContainsKey($t) -and $liveMap[$t] -ne $tmpMap[$t]) {
+        Write-Host ("         {0}: live {1} rows, backup {2}" -f $t, $liveMap[$t], $tmpMap[$t])
+      }
     }
+    Say "(With -Strict nothing may have changed since the backup. If someone was working,"
+    Say " take a new backup and run this again straight after it.)"
+    $failed = $true
+    $strictMismatch = $true
+  } else {
+    $taken = (Get-Item $File).LastWriteTime.ToString('yyyy-MM-dd HH:mm')
+    Info "the live database has changed since this backup was taken ($taken), in: $($byPeople -join ', ')"
+    Say "This is normal while the clinic is working and says nothing against the backup."
+    Say "For an exact comparison: press Back up now, then run this again with -Strict."
   }
   }  # end: compare against live
 }
@@ -246,6 +328,7 @@ finally {
 Write-Host ""
 if ($failed) {
   $why = if ($skipCompare) { "this backup restores, but its contents are not sound." }
+         elseif ($strictMismatch) { "this backup restores, but does not match the live database (-Strict)." }
          else { "this backup would not restore cleanly. Do not rely on it." }
   Write-Host "VERIFY FAILED - $why" -ForegroundColor Red
   exit 1
