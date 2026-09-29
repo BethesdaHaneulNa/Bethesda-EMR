@@ -98,12 +98,57 @@ export default function RegistrationPage() {
 
   // Numbers each queue load so a slow, older response cannot overwrite a newer one.
   var queueSeq = useRef(0);
+
+  // ── Work date (decided 2026-09-29, ⑩) ──
+  // The queue shows one day, chosen at the top left like the clinic's own system, so
+  // visits left waiting or in progress on an earlier day can be found and put in
+  // order. The server says what "today" is (GET /visits/day answers with it); the
+  // PC's clock is never asked. While the screen "follows today" - the default, and
+  // again whenever staff come back to today - a refresh after midnight moves the
+  // work date to the new day by itself. Only a date staff picked stays put, and then
+  // the screen says it is showing a past day. A past day is for looking and tidying
+  // up only (cancel, complete); new registrations and edits are for today (decided).
+  // Kept in a ref as well as state: the 30-second refresh was set up once, at mount,
+  // and would otherwise keep reading the first work date forever.
+  var wds = useState(''), workDate = wds[0], setWorkDate = wds[1];
+  var tds = useState(''), serverToday = tds[0], setServerToday = tds[1];
+  var workRef = useRef({ date: '', follow: true });
+  function queueUrl() {
+    var w = workRef.current;
+    return '/visits/day' + (w.follow || !w.date ? '' : '?date=' + w.date);
+  }
+  function applyDay(d) {
+    setServerToday(d.today);
+    if (workRef.current.follow) workRef.current.date = d.date;
+    setWorkDate(workRef.current.date);
+    setVisits(Array.isArray(d.visits) ? d.visits : []);
+    return Array.isArray(d.visits) ? d.visits : [];
+  }
+  function chooseWorkDate(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+    if (serverToday && date > serverToday) date = serverToday;   // no future days: nothing is booked ahead
+    workRef.current = { date: date, follow: date === serverToday };
+    setWorkDate(date);
+    if (sel) startNewPatient();   // a visit from the other day is not left open for editing
+    loadData();
+  }
+  function shiftWorkDate(days) {
+    var d = new Date((workDate || serverToday) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    chooseWorkDate(d.toLocaleDateString('en-CA'));
+  }
+  function dayOf(v) { return v && v.visit_date ? String(v.visit_date).slice(0, 10) : ''; }
+  var viewingPast = !!(workDate && serverToday && workDate < serverToday);
+  // The chosen visit can be from an earlier day even while following today: the
+  // screen stayed open over midnight with yesterday's visit selected.
+  var selIsPast = !!(sel && serverToday && dayOf(sel) && dayOf(sel) < serverToday);
+
   async function refreshQueue() {
     var seq = ++queueSeq.current;
     try {
-      var vData = await api.get('/visits/today');
-      if (seq !== queueSeq.current || !Array.isArray(vData)) return;
-      setVisits(vData);
+      var day = await api.get(queueUrl());
+      if (seq !== queueSeq.current || !day || !Array.isArray(day.visits)) return;
+      var vData = applyDay(day);
       // Keep the selected visit's status current, so the cancel button disappears
       // once the doctor has started. Everything else about the selection stays.
       setSel(function (prev) {
@@ -129,8 +174,8 @@ export default function RegistrationPage() {
     setLoading(true);
     var seq = ++queueSeq.current;
     try {
-      var vData = await api.get('/visits/today');
-      if (seq === queueSeq.current) setVisits(vData);
+      var day = await api.get(queueUrl());
+      if (seq === queueSeq.current && day) applyDay(day);
       var dData = await api.get('/admin/departments');
       setDepts(dData);
       var sData = await api.get('/admin/doctors');
@@ -412,6 +457,9 @@ export default function RegistrationPage() {
   }
 
   function createOrUpdateVisit() {
+    // Decided: a past work date is for looking and tidying up; registering and editing
+    // visits happen on today's date. The button is disabled too; this is the backstop.
+    if (viewingPast || selIsPast) { alert(t.rc_pastDateNoNew); return; }
     var problem = formProblem();
     if (problem) { alert(problem); return; }
     return withBusy(async function () {
@@ -510,6 +558,16 @@ export default function RegistrationPage() {
 
         {/* LEFT: Search + Patient Info */}
         <div style={{ borderRight: '1px solid ' + bd, overflow: 'auto', background: pn }}>
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid ' + bd, background: viewingPast ? '#f59e0b14' : '#161a26' }}>
+            <label style={Object.assign({}, labelStyle, { color: viewingPast ? '#fbbf24' : t2 })}>{t.rc_workDate}</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={Object.assign({}, smallBtn, { background: '#1e2433', color: t2, border: '1px solid #2a3142', padding: '6px 10px' })}>◀</button>
+              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={Object.assign({}, IS, { width: 'auto', flex: 1, minWidth: 0, padding: '6px 8px', fontSize: 16, colorScheme: 'dark' })} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={Object.assign({}, smallBtn, { background: '#1e2433', color: t2, border: '1px solid #2a3142', padding: '6px 10px', opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 })}>▶</button>
+              {viewingPast ? <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={Object.assign({}, smallBtn, { background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640', padding: '6px 10px' })}>{t.rc_backToToday}</button> : null}
+            </div>
+            {viewingPast ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: 6, lineHeight: 1.4 }}>{fill(t.rc_pastDateBanner, { date: workDate })}</div> : null}
+          </div>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: tx }}>{t.patientSearchRegistration}</div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid ' + bd }}>
             <label style={labelStyle}>{t.existingPatientSearch}</label>
@@ -600,7 +658,8 @@ export default function RegistrationPage() {
             })()}
             <div><label style={labelStyle}>{t.chiefComplaint}</label><input value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} style={IS} /></div>
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={memo} onChange={function (e) { setMemo(e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
-            <button onClick={createOrUpdateVisit} disabled={busy} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 16, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
             <button onClick={savePatientOnly} disabled={busy} style={{ background: '#1e2433', color: '#cbd5e1', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
             {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: '#1e2433', color: '#ddd6fe', border: '1px solid #a855f7', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}
             {sel && (sel.status === 'waiting' || sel.status === 'registered') ? <button onClick={function () { cancelVisit(sel); }} disabled={busy} style={{ background: '#ef444420', color: '#f87171', border: '1px solid #ef444455', borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{t.cancelWaiting}</button> : null}
@@ -650,7 +709,7 @@ export default function RegistrationPage() {
 
         {/* RIGHT: Queue */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: pn }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: tx }}>{t.todayQueueCompleted}</div>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: viewingPast ? '#fbbf24' : tx }}>{viewingPast ? fill(t.rc_queueOfDate, { date: workDate }) : t.todayQueueCompleted}</div>
           <div style={{ padding: '8px 10px', display: 'flex', gap: 6, borderBottom: '1px solid ' + bd }}>
             {['waiting', 'in_progress', 'completed'].map(function (k) {
               var c = k === 'waiting' ? '#3b82f6' : (k === 'in_progress' ? '#f59e0b' : '#10b981');

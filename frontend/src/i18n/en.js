@@ -310,6 +310,13 @@ export default {
   rc_visitCancelled: "Visit cancelled",
   rc_genderRequired: "Choose the sex (Male / Female).",
   rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\" and the patient goes to the cashier.",
+  rc_workDate: "Work date",
+  rc_prevDay: "Previous day",
+  rc_nextDay: "Next day",
+  rc_backToToday: "Today",
+  rc_queueOfDate: "Waiting / Done — {date}",
+  rc_pastDateBanner: "You are looking at a past date ({date}): viewing and tidying up (cancel, complete) only. New registrations and edits are made on today’s date.",
+  rc_pastDateNoNew: "Registrations on a past date cannot be created or edited. Press \"Today\" and register on today’s date.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

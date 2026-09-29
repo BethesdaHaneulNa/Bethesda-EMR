@@ -2,6 +2,52 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑩ 작업일자 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나. 그 앞에 `develop`(`3aa3f87`)을 **병합** `1fd5c60`(ff 안 됨)
+- **한 일**:
+  - **서버** 새 `GET /api/visits/day?date=YYYY-MM-DD` (권한 registration)
+    · 답: `{ date, today, visits }`. 행 모양은 `/today`와 같음 — 둘이 쓰는 SELECT를 `QUEUE_SELECT` 하나로
+    · 날짜가 없으면 `CURRENT_DATE`(= `visit_date` 기본값의 오늘). 모양이 틀리면 400
+    · `/visits/today`는 진료용으로 그대로
+  - **화면** 왼쪽 맨 위 「Date de travail(작업일자)」: ◀ · 달력(`max`=오늘) · ▶(오늘이면 잠김) · 지난 날이면 「Aujourd’hui」
+    · 오른쪽 목록 제목이 지난 날이면 「Attente / Terminé — 날짜」
+  - **지난 날짜 = 보기와 정리만**(결정): 새 접수·접수 수정 잠김(단추 + `rc_pastDateNoNew`, 함수 첫 줄에서도 막음). 대기 취소·Terminer →는 됨. 환자 정보 저장(💾)은 날짜와 무관이라 됨
+  - **자정** — 정한 것:
+    · 오늘은 **서버 응답의 `today`로만** 앎(PC 시계 안 씀)
+    · 「오늘을 따라가는」 화면(기본)은 자정 뒤 첫 새로고침(30초 안)에 저절로 새 날로
+    · 직원이 고른 지난 날짜는 그대로 두고 노란 안내
+    · 자정 전에 골라 둔 어제 내원은 `selIsPast`로 수정 잠김
+  - 30초 새로고침은 mount 때 만든 함수라 작업일자를 ref(`workRef`)로 읽음
+  - ⑲(중복 차트 정리)는 결정대로 위키 7절에서 「하지 않음」으로 닫음
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `frontend/src/pages/Registration.jsx`, `backend/test/reception.api.mjs`(표 1줄 + ⑩ 4건)
+- **공용 파일 변경**: i18n `rc_` 블록에 7개(`rc_workDate` `rc_prevDay` `rc_nextDay` `rc_backToToday` `rc_queueOfDate` `rc_pastDateBanner` `rc_pastDateNoNew`)
+- **DB 마이그레이션**: 없음
+- **API 변화**: 새 라우트 `/visits/day`(registration). **설정 세션의 `settings.access.mjs` 표에 한 줄 추가 필요**
+- **확인한 방법**:
+  - `node --check`, `npm run build`. 격리 스택 9181, 시험 **163/163**
+    · ⑩ 4건: 날짜 없음 = 오늘, 행에 `visit_date`·`has_active_bill`, `?date=어제` = 그 날만 + 오늘을 알려 줌, 모양 틀림 400
+    · 권한표에 `/visits/day` 줄 — 접수만 통과
+  - 화면(프랑스어). 어제 날짜로 「대기」 1건·「진료중」 1건을 DB에 만들어 둠:
+    | 순서 | 결과 |
+    |---|---|
+    | 처음 | 오늘, ▶ 흐림, 어제 내원 안 보임 |
+    | ◀ | 09-28 목록, 노란 안내, 헤더 「— 2026-09-28」, 접수 단추 잠김 |
+    | 어제 대기 내원 고름 | 수정 잠김 + 안내, 대기 취소 가능 → 취소됨 |
+    | 어제 진료중 → Terminer → | 완료, 내원구분 그대로(⑳ 규칙: 진료중 → 완료는 안 바꿈) |
+    | 정리 뒤 | 09-28에 머묾 |
+    | 「Aujourd’hui」 | 오늘, 안내 없음, 접수 가능 |
+  - **자정 흉내**: 오늘 내원을 고른 채, 페이지 안에서 `/visits/day` 응답의 `today`·`date`를 09-30으로 바꿔 보이게 함 → 33초 뒤 작업일자 09-30, 헤더 「aujourd’hui」, 고른 09-29 내원은 수정 잠김 + 안내
+  - 「Aujourd’hui」가 칸 폭에 잘려서 「Date de travail」 글자를 윗줄로 올림
+- **확인 못 한 것**:
+  - 실제 자정(서버 시계)은 기다리지 않음(흉내로만)
+  - 한국어·영어 화면 안 누름(키는 넣음)
+  - 달력 칸 직접 입력은 브라우저 기본 달력에 맡김
+- **총괄 확인 요청 / 다른 세션에 부탁**:
+  - **수납** — ⚠ 수납 대기(`/billing/pending`, `billing.routes.js` 151행)는 청구 전 내원을 `visit_date = CURRENT_DATE`인 것만 보여 줌. 그래서 작업일자로 **어제 「진료중」으로 남은 내원(의사가 진료하고 완료를 빠뜨린 경우)을 오늘 완료로 정리하면 수납 목록에 안 뜸** → 청구가 빠질 수 있음. 격리 스택에서 확인함(어제 완료된 32번이 pending에 없음). 수납에서 「지난 날 완료, 청구 없음」도 보이게 할지 판단 부탁. 위키 2.5a·5절에 직원 안내와 함께 적어 둠
+  - **설정** — `settings.access.mjs`에 `['GET', '/visits/day', [REG]]`
+
 ## 2026-09-29 — ⑳ 진료 없이 「완료」 → 진료비 없음 (실장님 결정)
 
 - **상태**: 확인 요청
