@@ -25,6 +25,11 @@ export default function StatsPage(){
   var dgs = useState('month'), drugGran = dgs[0], setDrugGran = dgs[1];
   var dts = useState('all'), drugType = dts[0], setDrugType = dts[1];
   var dsts = useState('all'), drugStat = dsts[0], setDrugStat = dsts[1];
+  // The drug table's own period. Empty means the server's default for the
+  // granularity (30 days, 12 months, 5 years); picking a granularity goes back
+  // to that default. It is separate from the range at the top because a
+  // monthly or yearly table over "this month" would be a single column.
+  var drs = useState({ from:'', to:'' }), drugRange = drs[0], setDrugRange = drs[1];
   var dus = useState(null), drugUsage = dus[0], setDrugUsage = dus[1];
 
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
@@ -33,15 +38,22 @@ export default function StatsPage(){
   // The trend is always the last six months, whatever range is picked above, so
   // it loads once rather than on every change of dates.
   useEffect(function(){ api.get('/stats/monthly?months=6').then(setMonthly).catch(function(){ setMonthly([]); }); }, []);
-  useEffect(function(){ loadDrugUsage(); }, [drugGran, drugType, drugStat]);
+  useEffect(function(){ loadDrugUsage(); }, [drugGran, drugType, drugStat, drugRange.from, drugRange.to]);
   async function loadDrugUsage(){
     try {
       var q = '/stats/drug-usage?granularity='+drugGran;
       if(drugType!=='all') q += '&dispense_type='+drugType;
       if(drugStat==='dispensed') q += '&status=dispensed';
+      if(drugRange.from && drugRange.to) q += '&from='+drugRange.from+'&to='+drugRange.to;
       setDrugUsage(await api.get(q));
-    } catch(e){ setDrugUsage(null); }
+    // An empty table rather than null: null reads as "still loading" below.
+    } catch(e){ setDrugUsage({ drugs:[], periods:[], from:drugRange.from, to:drugRange.to }); }
   }
+  function pickDrugGran(g){ setDrugGran(g); setDrugRange({ from:'', to:'' }); }
+  // Editing one end keeps the other as shown, so the table never falls back to
+  // the default half-way through a change. A start after the end is ignored.
+  function setDrugFrom(v){ var to=drugRange.to||(drugUsage&&drugUsage.to)||''; if(v&&(!to||v<=to)) setDrugRange({ from:v, to:to }); }
+  function setDrugTo(v){ var from=drugRange.from||(drugUsage&&drugUsage.from)||''; if(v&&(!from||from<=v)) setDrugRange({ from:from, to:v }); }
   function fmtQty(n){ n=Number(n)||0; return Math.round(n*10)/10===Math.round(n)?String(Math.round(n)):String(Math.round(n*10)/10); }
   function exportDrugCsv(){
     if(!drugUsage) return;
@@ -242,13 +254,17 @@ export default function StatsPage(){
         <Section title={'💊 '+(t.drugUsage||'약품 사용통계')}>
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
             {[['day',t.daily||'일별'],['month',t.monthly2||'월별'],['year',t.yearly||'연별']].map(function(o){ var on=drugGran===o[0];
-              return <button key={o[0]} onClick={function(){setDrugGran(o[0])}} style={{ background:on?'#34d39918':'transparent', color:on?'#34d399':t3, border:'1px solid '+(on?'#34d39940':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
+              return <button key={o[0]} onClick={function(){pickDrugGran(o[0])}} style={{ background:on?'#34d39918':'transparent', color:on?'#34d399':t3, border:'1px solid '+(on?'#34d39940':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
             <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
             {[['all',t.allRx||'전체'],['internal',t.internalRx||'원내'],['external',t.externalRx||'원외']].map(function(o){ var on=drugType===o[0];
               return <button key={o[0]} onClick={function(){setDrugType(o[0])}} style={{ background:on?'#3b82f618':'transparent', color:on?'#60a5fa':t3, border:'1px solid '+(on?'#3b82f640':bd2), borderRadius:6, padding:'5px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>{o[1]}</button>; })}
             <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
             {[['all',t.allOrders||'처방전체'],['dispensed',t.dispensedOnly||'조제완료']].map(function(o){ var on=drugStat===o[0];
               return <button key={o[0]} onClick={function(){setDrugStat(o[0])}} style={{ background:on?'#a78bfa18':'transparent', color:on?'#a78bfa':t3, border:'1px solid '+(on?'#a78bfa40':bd2), borderRadius:6, padding:'5px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>{o[1]}</button>; })}
+            <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
+            <input type="date" value={drugRange.from||(drugUsage&&drugUsage.from)||''} max={drugRange.to||(drugUsage&&drugUsage.to)||undefined} onChange={function(e){setDrugFrom(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
+            <span style={{ color:t3 }}>~</span>
+            <input type="date" value={drugRange.to||(drugUsage&&drugUsage.to)||''} min={drugRange.from||(drugUsage&&drugUsage.from)||undefined} onChange={function(e){setDrugTo(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
             <div style={{ flex:1 }}></div>
             <button onClick={exportDrugCsv} disabled={!drugUsage||!(drugUsage.drugs||[]).length} style={{ background:'#1e2433', color:'#34d399', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>⬇ CSV</button>
           </div>
