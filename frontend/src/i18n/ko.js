@@ -419,6 +419,18 @@ export default {
   py_correctionHint: "수납한 뒤 항목이 줄었습니다. 아래 금액대로 정정합니다(돌려줄 돈이 없을 수도 있습니다).",
   py_processCorrection: "정정 처리",
   py_qtyMissingPack: "병·튜브 수가 비어 있어 금액을 계산할 수 없는 약이 있습니다: {names}. 진료실에 그 약의 개수를 넣어 달라고 한 뒤 수납하세요.",
+  py_voidTitle: "영수 취소 — {receipt}",
+  py_voidUseCorrection: "항목만 바뀌었으면 취소하지 말고 정정을 쓰세요 — 차액만 돌려줍니다.",
+  py_voidReasonLabel: "취소 사유",
+  py_voidRefundQ: "이 영수증으로 받은 {amount} Ar를 환자에게 돌려줬습니까?",
+  py_voidRefundYes: "예 — {amount} Ar 돌려줌",
+  py_voidRefundNo: "아니요 — 돈은 창구에 있음",
+  py_voidNoMoney: "이 영수증으로 받은 돈은 없습니다.",
+  py_voidConfirm: "영수 취소",
+  py_voidBack: "돌아가기",
+  py_refundedAt: "취소 때 돌려줌",
+  py_keptAt: "취소 때 돌려주지 않음",
+  py_correctionConfirm: "정정 처리하시겠습니까? 지금 영수증이 취소되고 정확한 금액으로 다시 발행됩니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

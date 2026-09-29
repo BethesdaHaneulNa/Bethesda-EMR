@@ -2,6 +2,133 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 환불 시뮬레이션 ①~④ (실장님 요청) · 정정 확인 창 문구 · 과거 내원 머리 「· ·」
+
+- **상태**: 확인 요청 — 시뮬레이션 끝의 **선택지 (가)(나)(다)는 결정 필요**
+- **커밋**: session/payment (이 항목과 같은 커밋) · M6 `f9ea726` 뒤
+
+### 한 일
+
+**시뮬레이션** — `wiki/reference/payment-refund-simulation.md`
+- 격리 스택(새 DB, `f9ea726` 판)에서 화면과 같은 요청을 실제로 보냈습니다(`sim.mjs`).
+- 경우마다 이틀(D1 수납 · D2 처리)을 따로 써서 날짜별 통계가 섞이지 않게 했습니다.
+- 각 단계마다: 화면 글자(프랑스어/한국어) · 직원 손의 현금 · 그날 통계 수납액 · 환자 미수.
+
+| 경우 | 결과 |
+|---|---|
+| ① 전액 받음 → 약 삭제 → 정정 | 돌려줄 돈 3,000 |
+| ② 일부만 받음 → 약 삭제 → 정정 | 돌려줄 돈 0, 미수 8,000 → 5,000 |
+| ③a 전체 취소 · 돌려줌 → 재수납 | 칸 비어 있음 |
+| ③b 전체 취소 · 안 돌려줌 → 재수납 | 칸 18,000 |
+| ④ 미수 수납 뒤 정정 | 두 영수에서 받은 18,000 기준으로 3,000 돌려줌 |
+
+**결론**
+- 환자·창구 사이의 돈, 미수, 돌려줄 돈은 모두 맞습니다.
+- 기간 합계도 현금 = 통계입니다.
+- 어긋나는 것은 **통계의 날짜**입니다:
+  - 정정·취소하면 D1 수납액이 0이 되고, 영수 금액 전체가 D2로 옮겨 갑니다(①의 D2: 실제 −3,000, 통계 +15,000).
+  - 그날 돌려준 돈은 통계에 나오지 않습니다.
+- 선택지:
+  - **(가) 현금 기준 통계 — 추천.** 수납이 영수마다 「이미 창구에 있던 돈」 칸을 기록하고, 통계가 그날 현금 = 순수납 − 이미 있던 돈 − 돌려준 돈으로 셈. ①~④ 모두 실제 현금과 같아짐(계산으로 확인).
+  - (나) 환불액 줄만 추가.
+  - (다) 그대로.
+
+**정정 확인 창 첫 줄**
+- 공용 `correctionConfirm`(「Traiter le remboursement ?」 / 「정정(환불) 처리하시겠습니까?」)이 돌려줄 돈이 없을 때도(②) 「환불」이라고 했습니다.
+- 수납 화면만 새 `py_correctionConfirm`(「Appliquer la correction ? Le reçu actuel est annulé et réémis au montant correct.」 / 「정정 처리하시겠습니까? 지금 영수증이 취소되고 정확한 금액으로 다시 발행됩니다.」)으로 바꿨습니다.
+
+**PatientChart 과거 내원 머리(진료 세션 부탁)**
+- 날짜 · 진료과 · 의사 중 빈 값을 빼고 잇습니다. 진료과가 없는 내원이 「📅 2026-09-29 · Payment Test」로 나옴(격리 화면 확인, 전에는 「· · Payment Test」).
+
+### 기록
+
+- **바꾼 파일**: `frontend/src/pages/Payment.jsx`, `frontend/src/components/PatientChart.jsx`(수납이 맡은 공용 부품), `wiki/reference/payment-refund-simulation.md`(새)
+- **공용 파일 변경**: `i18n` ko·en·fr — `py_correctionConfirm` 하나. `PatientChart.jsx` 머리 한 줄.
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `sim.mjs` 실행 결과(인계 폴더 밖, 수납 세션 작업 폴더), 빌드, 격리 화면(과거 내원 머리).
+- **확인 못 한 것**: 새 정정 확인 창 문구는 빌드와 키만 확인했습니다. 브라우저의 확인 창(`window.confirm`)은 자동 조작에서 눌러 보지 않았습니다.
+- **위키**: `modules/payment.md` 2.11(정정 확인 창 줄)·**2.12 돈을 돌려줘야 할 때(직원용)**·8절(`f9ea726` 채움 + 이 줄)
+- **다른 세션에 부탁**:
+  - **총괄 / 결정 세션** — 시뮬레이션 끝의 선택지 (가)(나)(다). (가)면 수납(칸 하나, 마이그레이션 3xx)과 통계(수납액 계산)가 같이 해야 합니다.
+  - **진료** — 부탁하신 「· ·」를 고쳤습니다.
+
+## 2026-09-29 — M6 (다): 영수 취소할 때 「돈을 돌려줬습니까?」
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop `a51c62e` fast-forward
+- **결정**: M6 (다) — 실장님(`coordinator.md` 「M6 결정」). 현금이라 과청구의 기본 길은 정정(차액만 돌려줌), 전체 취소는 드문 일.
+
+### 한 일
+
+**마이그레이션 303** (`billing` 칸 둘)
+- `refunded_amount`: 취소 때 돌려준 돈.
+- `replaced_by_id`: 이 영수를 대신한 정정 영수. 준비 표 5번에서 찾은 「정정 취소 / 직원 취소」 구분입니다.
+- 옛 정정은 새 영수 비고(「correction of R-…」)로 찾아 채웁니다.
+
+**서버 `PUT /:id/void`**
+- 받은 돈이 있으면 `refunded`(true/false)가 필수입니다. 없거나 글자면 400.
+- `true`면 `net_paid` 전부를, `false`면 0을 기록합니다. 받은 돈이 없으면 묻지 않고 0입니다.
+- 변경 기록: summary에 `refunded N` 또는 `not refunded (kept at the till)`, after에 `refunded_amount`를 남깁니다.
+
+**정정**
+- 대체한 영수들에 `replaced_by_id`를 기록합니다.
+
+**재수납 칸 `prior_paid`**
+- 대체되지 않은 취소 영수 **모두**의 `net_paid − 돌려준 돈` 합입니다.
+- 「대체되지 않음」 = 정정으로 대체되지 않았고, 취소 뒤에 이 내원에 새 영수도 없음.
+
+**화면**
+- 취소 창에 들어가는 것:
+  - 노란 안내 「항목만 바뀌었으면 정정」
+  - 사유 칸
+  - 「이 영수증으로 받은 N Ar를 돌려줬습니까?」 → **Oui — N Ar rendus** / **Non — l’argent reste à la caisse** / Retour
+  - 받은 돈이 없으면 질문 없이 「Annuler le reçu」 하나
+- 영수내역에 「Rendu à l’annulation: N Ar」 / 「Gardé à l’annulation: N Ar」.
+- 영수증 ANNULÉ 상자에 「Remboursé au patient : N Ar」.
+
+### 같은 데이터로 고치기 전·후
+
+전 = `a51c62e`로 옛 방식 취소·정정을 만든 뒤, 후 = 이 커밋으로 다시 빌드(303 적용). `m6make.mjs` → `m6read.mjs`.
+
+| 경우 | 전 (재수납 칸) | 후 |
+|---|---|---|
+| V1 15,000 + 추가 청구 3,000, 둘 다 취소 | 15,000 (받은 돈은 18,000) | **18,000** |
+| V2 18,000 → 정정(3,000 돌려줌) → 새 영수 취소 | 15,000 | 15,000. 옛 영수에 `replaced_by_id` = 정정 영수(303이 채움) |
+| V3 취소 → 재수납 15,000 → 또 취소 | 15,000 | 15,000 |
+| V4 두 장을 한 번에 정정(살아 있음) | 목록에 없음 | 없음. 두 옛 영수 모두 `replaced_by_id` 채움 |
+| V5 15,000 중 5,000 받고 취소 | 5,000 | 5,000 |
+
+**새 동작** (`m6new.mjs`, 틀린 항목 0):
+
+| 경우 | 결과 |
+|---|---|
+| N1 돌려줌 | `refunded_amount` 15,000, 칸 0, 영수 상세에도 |
+| N2 창구에 | `refunded_amount` 0, 칸 15,000 |
+| N3 `refunded` 없음 / 글자 `"true"` | 400, 영수 그대로 |
+| N4 미수(받은 돈 0) | 묻지 않고 200, 칸 0 |
+| N5 정정 → 새 영수 취소(돌려줌) | 옛 영수 `replaced_by_id`, 칸 0 |
+| N6 추가분 돌려줌 + 원래 것 창구에 | 칸 15,000 |
+| N7 이미 취소된 영수 | 404, 처음 기록 그대로 |
+
+- **변경 기록**: `… · paid 3000 · refunded 3000 — x`, `… · paid 15000 · not refunded (kept at the till) — x`.
+- **회귀**: H1·H2·총량 없음·취소 오더 26·미수 수납 50+11·변경 기록 8·M3 5 — 틀린 항목 0. `m2after.mjs`·`audit.mjs`의 취소 요청에 `refunded: false`(예전 전제)를 넣음 — 테스트 스크립트만.
+- **화면**: 한국어·프랑스어로 취소 창을 확인했고, 프랑스어로 「Oui — 15,000 Ar rendus」를 눌러 확인한 결과:
+  - DB `refunded_amount` 15,000
+  - 영수내역 「Rendu à l’annulation: 15,000 Ar」
+  - 재출력 「Remboursé au patient : 15 000 Ar」
+
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `frontend/src/pages/Payment.jsx`, `frontend/src/components/Receipt.jsx`, `backend/sql/303_payment_cancel_refund.sql`(새)
+- **공용 파일 변경**: `i18n` ko·en·fr — `py_voidTitle`·`py_voidUseCorrection`·`py_voidReasonLabel`·`py_voidRefundQ`·`py_voidRefundYes`·`py_voidRefundNo`·`py_voidNoMoney`·`py_voidConfirm`·`py_voidBack`·`py_refundedAt`·`py_keptAt`
+- **DB 마이그레이션**: `303_payment_cancel_refund.sql` — 칸 둘 + 값 검사 + 옛 정정 채우기. 두 번 돌려도 됩니다. 격리에서 적용을 확인했습니다. **총괄이 번호를 매겨 주세요.**
+- **확인 못 한 것**: `replaced_by_id` 채우기는 새 영수 비고 모양(「correction of R-…, R-… · refund N」)에 기댑니다. 격리의 옛 정정 3건은 모두 채워졌습니다. 실행 중 EMR에는 정정이 0건일 것입니다(영수 2건 모두 paid).
+- **위키**: `modules/payment.md` 2.7·2.9·3.5·3.11·4절(API·DB·마이그레이션 303)·5절(통계 — 환불을 세는 법)·7절(M6 닫음)·8절(`4fc72d5` 채움 + 이 줄)
+- **다른 세션에 부탁**:
+  - **통계** — 「그날 환불액」을 셀 때:
+    - 직원 취소의 환불 = `refunded_amount`(날짜 `cancelled_at`).
+    - 정정의 환불 = 정정 영수의 `change_amount`(비고가 `correction of`로 시작, 날짜 `billing_date`).
+    - `replaced_by_id`가 있는 취소 영수는 환불이 아닙니다(돈이 새 영수로 옮겨 감).
+    - 303 이전 취소는 `NULL`(모름)입니다.
+
 ## 2026-09-29 — M6 준비: 「영수 취소 = 환불」이면 수납에서 바뀌는 곳 (코드 전, 총괄 지시)
 
 - **상태**: 결정 대기 — 코드 변경 없음(결정 45, 결정 세션이 방식 확인 중)

@@ -67,7 +67,7 @@ export function PatientChart(props){
         <button onClick={function(){setPast(null)}} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'4px 10px',cursor:'pointer',fontSize:12,fontWeight:800}}>{t.backToList}</button>
         <span style={{fontSize:12,color:'#fbbf24',fontWeight:700}}>{t.pastRecordRO}</span>
       </div>
-      <div style={{fontSize:13,fontWeight:800,color:'#93c5fd',marginBottom:8}}>{'\uD83D\uDCC5 '}{c.consult_date?c.consult_date.split('T')[0]:''} · {c.dept_code||''} · {c.doctor_name||''}</div>
+      <div style={{fontSize:13,fontWeight:800,color:'#93c5fd',marginBottom:8}}>{'\uD83D\uDCC5 '}{[c.consult_date?c.consult_date.split('T')[0]:'', c.dept_code, c.doctor_name].filter(Boolean).join(' · ')}</div>
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
         {vrows.map(function(r){return <div key={r[0]} style={{background:scBg,border:'1px solid '+bd,borderRadius:5,padding:'3px 7px'}}><span style={{fontSize:11,color:t3,fontWeight:700,marginRight:4}}>{r[0]}</span><span style={{fontSize:13,color:tx,fontFamily:'monospace'}}>{r[1]}</span></div>;})}
       </div>

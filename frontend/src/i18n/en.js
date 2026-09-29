@@ -428,6 +428,18 @@ export default {
   py_correctionHint: "Items were reduced after payment. The correction follows the amounts below (there may be nothing to refund).",
   py_processCorrection: "Apply the correction",
   py_qtyMissingPack: "No number of bottles / tubes for: {names}. The amount cannot be calculated. Ask the doctor to enter the number, then bill.",
+  py_voidTitle: "Cancel receipt {receipt}",
+  py_voidUseCorrection: "If only items changed, do not cancel: use the correction — only the difference is handed back.",
+  py_voidReasonLabel: "Reason",
+  py_voidRefundQ: "Did you hand back to the patient the {amount} Ar taken on this receipt?",
+  py_voidRefundYes: "Yes — {amount} Ar handed back",
+  py_voidRefundNo: "No — the money stays at the till",
+  py_voidNoMoney: "No money was taken on this receipt.",
+  py_voidConfirm: "Cancel the receipt",
+  py_voidBack: "Back",
+  py_refundedAt: "Handed back on cancelling",
+  py_keptAt: "Kept on cancelling",
+  py_correctionConfirm: "Apply the correction? The current receipt is cancelled and issued again at the correct amount.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
