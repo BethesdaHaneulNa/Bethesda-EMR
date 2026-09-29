@@ -204,7 +204,16 @@ export default function SettingsPage() {
 
   async function deleteItem(type, id){
     // Staff are never deleted, only deactivated - say so, since that is what happens.
-    if(!confirm(type==='staff'?t.se_confirmDeactivate:t.se_confirmDelete)) return;
+    var question = type==='staff' ? t.se_confirmDeactivate : t.se_confirmDelete;
+    // A hidden drug stays in every order set that copied it (they keep their own drug id),
+    // so name those sets before the drug is hidden. A warning, not a refusal.
+    if(type==='drug'){
+      try {
+        var sets = await api.get('/admin/drugs/'+id+'/order-sets');
+        if(sets && sets.length) question = (t.se_drugInSets||'').replace('{n}', sets.length).replace('{names}', sets.map(function(x){return x.name;}).join(', '));
+      } catch(e){}
+    }
+    if(!confirm(question)) return;
     try {
       if(type==='staff') await api.del('/admin/staff/'+id);
       else if(type==='drug') await api.del('/admin/drugs/'+id);

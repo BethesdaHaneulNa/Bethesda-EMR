@@ -551,6 +551,7 @@ export default {
   se_pwKeep: "Empty = unchanged",
   se_errAccessDenied: "You do not have permission for this. If an administrator changed your permissions, log out and log in again.",
   se_errSessionEnded: "Your session has ended. Please log in again.",
+  se_drugInSets: "{n} order set(s) use this drug: {names}.\nHiding the drug does not remove it from them - they will keep prescribing it. Remove or replace it in the Order sets tab.\nHide this drug anyway?",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

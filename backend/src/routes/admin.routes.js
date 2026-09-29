@@ -144,6 +144,21 @@ router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
   }
 });
 
+// The active order sets that still prescribe this drug. An order set keeps its own copy
+// of the drug id, so hiding a drug does not take it out of the sets: the set would go on
+// prescribing a drug nobody can see or restock. The screen asks this before hiding a
+// drug and names the sets in its confirmation; it does not refuse.
+router.get('/drugs/:id/order-sets', permMiddleware('settings'), async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT DISTINCT s.id, s.name FROM order_set s JOIN order_set_item i ON i.set_id = s.id
+        WHERE i.drug_id = $1 AND s.is_active = true ORDER BY s.name`,
+      [req.params.id]
+    );
+    res.json(r.rows);
+  } catch (err) { sendDbError(res, err); }
+});
+
 router.delete('/drugs/:id', permMiddleware('settings'), async (req, res) => {
   try {
     await pool.query('UPDATE drug SET is_active = false WHERE id = $1', [req.params.id]);
