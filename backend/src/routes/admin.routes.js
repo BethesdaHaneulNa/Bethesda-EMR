@@ -168,12 +168,30 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
   } catch (err) { sendDbError(res, err); }
 });
 
+// A price change goes to the change log (the director's decision (나), 2026-09-30): who,
+// when, which item, old price -> new price - the price only, whatever else the same save
+// changed. Nothing when the price did not change: compared as numbers, so the "100.00"
+// the database returns and the 100 a screen sends are the same price. A first price on
+// an imported drug (0 -> 100) is a change and is logged; a new drug (POST) is not.
+// No patient or visit. Written for order codes the same way if that is decided
+// (field 'price' / 'price_clinic', action ACTIONS.ORDER_PRICE).
+function priceOf(v) { return v === null || v === undefined || v === '' ? null : Number(v); }
+async function auditPrice(client, req, action, entity, was, now, field) {
+  const before = priceOf(was[field]), after = priceOf(now[field]);
+  if (before === after) return;
+  await writeAudit(client, req, {
+    action, entity, entity_id: now.id, summary: [now.code, now.name].filter(Boolean).join(' '),
+    before: { [field]: before }, after: { [field]: after },
+  });
+}
+
 router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
+  const bad = badDrug(req.body);
+  if (bad) return res.status(400).json({ error: bad });
+  const pack = packFields(req.body);
+  if (pack.error) return res.status(400).json({ error: pack.error });
+  let client;
   try {
-    const bad = badDrug(req.body);
-    if (bad) return res.status(400).json({ error: bad });
-    const pack = packFields(req.body);
-    if (pack.error) return res.status(400).json({ error: pack.error });
     const f = sentDrugFields(req.body, await drugFieldsHere());
     const sets = [], vals = [];
     Object.keys(f).forEach(c => { vals.push(f[c]); sets.push(c + ' = $' + vals.length); });
@@ -184,11 +202,23 @@ router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
     }
     sets.push('updated_at = NOW()');
     vals.push(req.params.id);
-    const result = await pool.query(
+    // The price before and the save in one transaction, the row locked between them, so
+    // two saves at once cannot both log the same old price.
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const was = await client.query('SELECT id, code, name, unit_price FROM drug WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const result = await client.query(
       `UPDATE drug SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals);
-    if (sentMissing(res, result)) return;
+    if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
+    await auditPrice(client, req, ACTIONS.DRUG_PRICE, 'drug', was.rows[0], result.rows[0], 'unit_price');
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+  } catch (err) {
+    if (client) { try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ } }
+    sendDbError(res, err);
+  } finally {
+    if (client) client.release();
+  }
 });
 
 // The active order sets that still prescribe this drug. An order set keeps its own copy
