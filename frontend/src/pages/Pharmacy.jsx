@@ -272,10 +272,14 @@ export default function PharmacyPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, minHeight: '100vh', fontSize: 16 }}>
+    // The page is exactly the window and only the inner areas scroll (as in Lab.jsx).
+    // It used to be "window minus 88px" for the top bars, which are taller than that, so
+    // on a 1366x768 laptop the page scrolled by about 30px and the bottom "Terminer
+    // délivrance" button sat below the window.
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontSize: 16 }}>
       <TopBar />
 
-      <div style={{ background:'var(--panel-2)', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
+      <div style={{ flexShrink:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
         <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'var(--violet-a20)':'transparent', color:tab==='pending'?'var(--violet-text-4)':t3, border:'1px solid '+(tab==='pending'?'var(--violet-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
         <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'var(--ok-a20)':'transparent', color:tab==='completed'?'var(--ok-text-2)':t3, border:'1px solid '+(tab==='completed'?'var(--ok-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
         <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'var(--warn-a20)':'transparent', color:tab==='stock'?'var(--warn-text-2)':t3, border:'1px solid '+(tab==='stock'?'var(--warn-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
@@ -290,13 +294,13 @@ export default function PharmacyPage() {
       </div>
 
       {tab === 'stock' ? <PharmacyStock /> :
-      <div style={{ display:'grid', gridTemplateColumns:'330px 1fr 320px', height:'calc(100vh - 88px)' }}>
-        <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn }}>
+      <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) 320px', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
+        <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
           <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
             <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
           </div>
-          <div style={{ flex:1, overflow:'auto' }}>
+          <div style={{ flex:1, minHeight:0, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
             {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
             {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
@@ -312,7 +316,7 @@ export default function PharmacyPage() {
           </div>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 }}>
           {!sel ? <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:t3 }}>
             <div style={{ textAlign:'center' }}>
               <div style={{ fontSize: 49, opacity:.35, marginBottom:10 }}>💊</div>
@@ -320,7 +324,7 @@ export default function PharmacyPage() {
               <div style={{ fontSize: 16, marginTop:6 }}>{t.pharmacyOnlyCompleted}</div>
             </div>
           </div> : <>
-            <div style={{ padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
+            <div style={{ flexShrink:0, padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
                 <div>
                   <div style={{ fontSize: 22, fontWeight:900, color:'var(--text-strong-2)' }}>{patientName(sel)}</div>
@@ -337,7 +341,7 @@ export default function PharmacyPage() {
               </div>
             </div>
 
-            <div style={{ padding:16, overflow:'auto', flex:1 }}>
+            <div style={{ padding:16, overflow:'auto', flex:1, minHeight:0 }}>
               <div style={{ background:pn, border:'1px solid '+bd, borderRadius:8, overflow:'hidden' }}>
                 <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
                   {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
@@ -380,7 +384,7 @@ export default function PharmacyPage() {
               </div>
             </div>
 
-            {tab==='pending' ? <div style={{ padding:'10px 16px', borderTop:'1px solid '+bd, background:'var(--panel-2)', display:'flex', justifyContent:'flex-end' }}>
+            {tab==='pending' ? <div style={{ flexShrink:0, padding:'10px 16px', borderTop:'1px solid '+bd, background:'var(--panel-2)', display:'flex', justifyContent:'flex-end' }}>
               <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
             </div> : null}
           </>}
@@ -388,7 +392,7 @@ export default function PharmacyPage() {
 
         <div style={{ borderLeft:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, overflow:'hidden' }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.pastVisits}</div>
-          <div style={{ flex:1, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
+          <div style={{ flex:1, minHeight:0, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
       </div>}
       <PatientFinder open={phFinderOpen} onClose={function(){setPhFinderOpen(false);}} mode="patient"

@@ -173,7 +173,9 @@ export function PharmacyStock() {
   var COLS = '1.3fr .9fr .6fr .9fr .6fr .9fr 1fr 1.4fr';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', height: 'calc(100vh - 88px)' }}>
+    // Fills what the pharmacy screen leaves under its top bars; only the list, the
+    // record and the report scroll (Pharmacy.jsx is a window-high column).
+    <div style={{ display: 'grid', gridTemplateColumns: '360px minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr)', flex: 1, minHeight: 0 }}>
       <div style={{ borderRight: '1px solid ' + bd, display: 'flex', flexDirection: 'column', background: pn }}>
         <div style={{ padding: '7px 8px', borderBottom: '1px solid ' + bd, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.ph_stockSearch} style={Object.assign({}, IN, { width: '100%' })} />
@@ -184,7 +186,7 @@ export function PharmacyStock() {
             {categories.map(function (c) { return <option key={c} value={c}>{catLabel(t, c)}</option>; })}
           </select>
         </div>
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 20, textAlign: 'center', color: t3 }}>{t.loading}</div> : null}
           {shown.map(function (d) {
             var active = d.id === selId; var low = belowMin(d);
@@ -199,8 +201,8 @@ export function PharmacyStock() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {view === 'report' ? <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        {view === 'report' ? <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 0 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-strong-2)' }}>📊 {t.ph_reportTitle}</div>
             <label style={{ color: t2, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>{t.ph_month}
@@ -210,7 +212,7 @@ export function PharmacyStock() {
             <button onClick={exportCsv} disabled={!report || !report.rows.length} style={{ background: 'var(--chip)', color: report && report.rows.length ? tx : 'var(--text-4)', border: '1px solid ' + bd2, borderRadius: 5, padding: '6px 14px', cursor: report && report.rows.length ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 800 }}>⬇ CSV</button>
           </div>
           <div style={{ padding: '8px 16px', color: t3, fontSize: 13, borderBottom: '1px solid ' + bd }}>{t.ph_rFormula}</div>
-          <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
+          <div style={{ padding: 16, overflow: 'auto', flex: 1, minHeight: 0 }}>
             {reportLoading ? <div style={{ color: t3 }}>{t.loading}</div> : null}
             {!reportLoading && report && report.rows.length === 0 ? <div style={{ color: t3, fontSize: 16 }}>{t.ph_reportEmpty}</div> : null}
             {!reportLoading && report && report.rows.length ? <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
@@ -279,7 +281,7 @@ export function PharmacyStock() {
           </div> : null}
           {notice ? <div style={{ padding: '8px 16px', background: 'var(--ok-a18)', color: 'var(--ok-text-2)', fontWeight: 800, fontSize: 15, borderBottom: '1px solid ' + bd }}>✓ {notice}</div> : null}
 
-          <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
+          <div style={{ padding: 16, overflow: 'auto', flex: 1, minHeight: 0 }}>
             <div style={{ fontWeight: 800, color: t2, marginBottom: 8 }}>{t.ph_history}</div>
             <div style={{ background: pn, border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ display: 'grid', gridTemplateColumns: COLS, background: 'var(--panel-2)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 14, fontWeight: 800 }}>
