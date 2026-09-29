@@ -356,5 +356,9 @@ export default {
   px_show: "Show",
   px_hide: "Hide",
   px_tokenUnusable: "This token cannot be used. Paste the value shown when the PACS was installed (16 characters or more). Until then, imaging orders will not reach the imaging devices. Ignore this if the clinic does not use a PACS.",
+  px_imagesArrived: "{n} image(s) received",
+  px_imagesWaiting: "Waiting for images",
+  px_patientMismatch: "The images are labelled \"{id} {name}\", which does not match this patient's chart number. They may belong to another patient: check the patient details in the images first.",
+  px_patientMissing: "The images carry no patient number. Check the patient details in the images first.",
   // ── end pacs ──
 };
