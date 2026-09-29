@@ -302,6 +302,11 @@ export default {
   cs_labPending: "Awaiting result",
   cs_labDone: "Result in",
   cs_labCancelled: "Cancelled",
+  cs_wsPending: "Not sent",
+  cs_wsSent: "Sent",
+  cs_wsInProgress: "In progress",
+  cs_wsCompleted: "Done",
+  cs_wsCancelled: "Cancelled",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

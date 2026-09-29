@@ -26,6 +26,22 @@ function orderLocked(o){
   return !!o.worklist_sent_at && (o.worklist_status==='in_progress'||o.worklist_status==='completed');
 }
 
+// What the arrived images say about the patient (GET /pacs/viewer-url -> images). Same
+// look and wording as PatientCheck in RadiologyReadings.jsx (PACS session's file, not
+// exported): red when the images name another patient, amber when they name nobody.
+// Shown above the viewer, before anyone reads the study as this patient's.
+function ImagePatientCheck(props){
+  var im = props.images, t = props.t;
+  if(!im || (im.patient_check!=='mismatch' && im.patient_check!=='missing')) return null;
+  var mismatch = im.patient_check==='mismatch';
+  var text = mismatch
+    ? String(t.px_patientMismatch||'').replace('{id}', im.patient_id||'').replace('{name}', String(im.patient_name||'').replace(/\^/g,' ').trim())
+    : (t.px_patientMissing||'');
+  return <div style={{margin:'8px 14px 0',padding:'6px 9px',borderRadius:6,fontSize:13,fontWeight:700,lineHeight:1.5,
+    background:mismatch?'#7f1d1d55':'#78350f55', color:mismatch?'#fca5a5':'#fcd34d',
+    border:'1px solid '+(mismatch?'#b91c1c':'#b45309')}}>⚠ {text}</div>;
+}
+
 export default function ConsultationPage() {
   var langCtx = useLang(); var t = langCtx.t;
   var user = getUser();
@@ -71,7 +87,7 @@ export default function ConsultationPage() {
   async function openViewer(orderItemId){
     try {
       var r = await api.get('/pacs/viewer-url?order_item_id='+orderItemId);
-      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', order_name:r.order_name, accession:r.accession, reading:r.reading });
+      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null });
       setReadText(r.reading?r.reading.result_text:'');
     } catch(e){ alert('Error: '+e.message); }
   }
@@ -173,7 +189,7 @@ export default function ConsultationPage() {
             return <div key={'po-'+i} style={{display:'flex',gap:8,padding:'6px 10px',borderBottom:'1px solid #1e2433',alignItems:'baseline'}}>
               <span style={{color:'#a78bfa',fontFamily:'monospace',fontSize: 12,fontWeight:700,width:64}}>{o.order_code}</span>
               <span style={{color:tx,fontSize: 14,flex:1}}>{o.order_name}</span>
-              <span style={{color:t2,fontSize: 12}}>{o.worklist_status||''}</span>
+              <span style={{fontSize: 12}}>{orderStatus(o)}</span>
             </div>;
           })}
         </div>
@@ -297,7 +313,11 @@ export default function ConsultationPage() {
       if(o.status==='cancelled') return <span style={{color:t3}}>{t.cs_labCancelled}</span>;
       return <span style={{color:'#fbbf24'}}>{t.cs_labPending}</span>;
     }
-    if(o.worklist_sent_at) return <span style={{color:o.worklist_status==='sent'?'#34d399':t2}}>{o.worklist_status}</span>;
+    if(o.worklist_sent_at){
+      var ws = o.worklist_status || '';
+      var wsKey = { pending:'cs_wsPending', sent:'cs_wsSent', in_progress:'cs_wsInProgress', completed:'cs_wsCompleted', cancelled:'cs_wsCancelled' }[ws];
+      return <span style={{color:ws==='sent'?'#34d399':t2}}>{wsKey ? t[wsKey] : ws}</span>;
+    }
     return null;
   }
 
@@ -772,6 +792,7 @@ export default function ConsultationPage() {
               {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{marginLeft:'auto',background:'#1e2433',color:'#a78bfa',border:'1px solid #2a3142',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:<div style={{marginLeft:'auto'}}></div>}
               <button onClick={function(){setViewer(null)}} style={{background:'#374151',color:'#e2e8f0',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
+            <ImagePatientCheck images={viewer.images} t={t} />
             <div style={{flex:1,display:'flex',overflow:'hidden'}}>
               {viewer.url
                 ? <iframe src={viewer.url} title="PACS Viewer" style={{flex:1,border:0,background:'#000'}}></iframe>

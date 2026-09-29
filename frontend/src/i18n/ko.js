@@ -293,6 +293,11 @@ export default {
   cs_labPending: "결과 대기",
   cs_labDone: "결과 있음",
   cs_labCancelled: "취소됨",
+  cs_wsPending: "전송 전",
+  cs_wsSent: "전송됨",
+  cs_wsInProgress: "촬영 중",
+  cs_wsCompleted: "촬영 완료",
+  cs_wsCancelled: "취소됨",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
