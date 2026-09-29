@@ -24,6 +24,12 @@
 #     transaction that counts again before deleting - all of it or nothing.
 # There are no default container names on purpose: you say which EMR you mean.
 #
+# The PC the EMR was prepared on is protected by a file: if KEEP-TEST-DATA.txt is in this
+# folder, the script stops before it looks at anything. The checks above cannot tell that
+# PC from the new one - its database also equals its newest backup when nothing has been
+# entered since. The file is never in git and never in the offline kit, so a new PC does
+# not have it.
+#
 # ASCII only: Windows PowerShell 5.1 reads a script without a BOM in the ANSI code page.
 
 param(
@@ -44,6 +50,13 @@ function Say([string]$m)  { Write-Host "  $m" }
 function Step([string]$m) { Write-Host ""; Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok([string]$m)   { Write-Host "  [ok]   $m" -ForegroundColor Green }
 function Stop-Here([string]$m) { Write-Host ""; Write-Host "STOPPED - nothing was deleted. $m" -ForegroundColor Red; exit 1 }
+
+# ---------------------------------------------------------------- not on the PC it was prepared on
+$keep = Join-Path $PSScriptRoot 'KEEP-TEST-DATA.txt'
+if (Test-Path $keep) {
+  Stop-Here ("KEEP-TEST-DATA.txt is in this folder: this is the PC the EMR was prepared on, and its test " +
+             "records are kept. This script is for the new PC only.")
+}
 
 # ---------------------------------------------------------------- preflight
 $running = docker inspect -f '{{.State.Running}}' $DbContainer 2>$null

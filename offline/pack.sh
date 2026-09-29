@@ -138,6 +138,7 @@ copy_clean() {
     --exclude=backups --exclude=_pre-update-backups --exclude=storage \
     --exclude=worklists --exclude=logs --exclude=offline \
     --exclude=.env --exclude='.env.*' --exclude='*.env' --exclude='*.bak' --exclude='*.log' \
+    --exclude=KEEP-TEST-DATA.txt \
     -cf - . | tar -C "$dst" -xf -
   # The pattern above also drops the template the installer starts from.
   if [ -f "$src/.env.example" ]; then cp "$src/.env.example" "$dst/.env.example"; fi

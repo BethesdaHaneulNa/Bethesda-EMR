@@ -180,7 +180,9 @@ if ($restored) { Say "put $restored image name(s) back on the images this machin
 # .claude holds development worktrees: whole extra copies of the source.
 # logs: the PACS image backup's own record of this machine's runs.
 $excludeDirs  = @('.git', '.claude', 'node_modules', 'dist', 'build', 'backups', '_pre-update-backups', 'storage', 'worklists', 'logs', 'offline')
-$excludeFiles = @('.env', '.env.*', '*.env', '*.bak', '*.log')
+# KEEP-TEST-DATA.txt marks the PC the EMR was prepared on (clean-test-data.ps1 stops when it
+# sees it); the clinic's PC must not inherit it.
+$excludeFiles = @('.env', '.env.*', '*.env', '*.bak', '*.log', 'KEEP-TEST-DATA.txt')
 
 function Copy-CleanTree([string]$src, [string]$dst) {
   # Not $args - that is an automatic variable in PowerShell.
