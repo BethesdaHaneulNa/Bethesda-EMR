@@ -2,6 +2,51 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 미리 보기: ⑭ 오더 청구를 「수량 × 일수」로 바꿀 때 수납이 볼 곳 (코드 전, 총괄 예고)
+
+- **상태**: 보류 — 진료 세션 설계 메모가 오면 시작 (코드 변경 없음)
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `d83bf03`까지 받음
+- **결정(총괄)**: 오더도 약과 같은 계산 — 총량 = 수량(일총투여) × 일수, 횟수는 곱하지 않음(주사 하루 1번 5일 = 5회).
+
+### 1. 수납이 오더 수량을 읽는 곳 (지금은 모두 `quantity × unit_price`)
+
+| 곳 | 파일:줄(`d83bf03`) | 무엇에 쓰나 |
+|---|---|---|
+| 대기 목록의 지금 금액 `live_total` | `billing.routes.js:121` `COALESCE(o.quantity,1)*unit_price` | 「추가 청구 / 정정(환불)」 판정·금액 |
+| 청구할 항목 `GET /visit/:id/items` | `billing.routes.js` (`SELECT * FROM order_item …`) → 화면이 `o.quantity`를 씀 | 아래 화면 세 곳의 입력 |
+| 정정 계산 `buildCorrection()` | `billing.routes.js:577`(`COALESCE(quantity,1) AS qty`), 601 | 정정 미리보기·새 영수 항목 |
+| 화면 오더 합계 `procTotal()` | `Payment.jsx:183` `parseFloat(o.quantity)||1` | 합계 칸 |
+| 화면 청구 줄 `chargeRows()` | `Payment.jsx:204-205` | 실제로 저장되는 영수 항목·추가 청구 차액(이미 청구된 코드별 수량을 빼는 계산 포함) |
+| 화면 오더 표 | `Payment.jsx:585` | 표시 |
+| (수량 안 씀) 단가 0 표시 `noPriceLines()` · `counterFeeCond()` | `Payment.jsx:180`, `billing.routes.js` | 코드·단가만 봄 — 영향 없음 |
+
+**영향 없는 곳**: 영수증(`Receipt.jsx`)·재출력·미수(`outstanding`)·통계 매출은 **저장된 `billing_item`·`billing`만** 읽음 → 이미 발행된 영수는 계산이 바뀌어도 그대로.
+
+지금도 있는 작은 어긋남: 수량 0이면 서버는 0, 화면은 `|| 1`로 1로 셈(약의 L3와 같은 모양). 바꿀 때 같이 없앨 것.
+
+### 2. 권하는 방식 — 약과 똑같이 「저장된 총량만 읽기」
+
+- 진료 서버가 오더를 저장할 때 총량을 계산해 **`order_item`의 새 칸(예: `total_qty`)** 에 넣고, 수납은 여섯 곳 모두 **그 칸만** 읽음(`rxQty()`처럼 `orderQty()` 하나). 계산식은 진료 한 곳에만 — 약과 같은 원칙(`5e42571`).
+- 비어 있으면: 약처럼 0원으로 넘기지 않고 경고·수납 거절(`QTY_MISSING`과 같은 방식)으로 할지, 오더는 `quantity`로 대신할지 — 아래 3과 같이 정하면 됨.
+
+### 3. 이미 수납한 내원이 거짓 「정정(환불)·추가 청구」로 뜨지 않게
+
+문제: 판정은 「지금 오더로 계산한 금액」 대 「이미 청구된 금액(저장)」 비교라서, 계산식만 바뀌면 **일수가 2일 이상인 옛 오더**는 지금 금액이 달라져(예: 수량 1·5일 → 1에서 5) 다 청구된 내원이 「추가 청구」로 뜸.
+
+막는 방법(권함):
+1. **새 칸을 옛 뜻으로 채우는 마이그레이션** — 기존 `order_item` 전부 `total_qty = quantity`(지금까지 청구에 쓴 값). 새 계산은 **새로 저장하거나 고칠 때만** 적용. 그러면 옛 오더의 지금 금액 = 청구된 금액 → 표시 없음. 약에서 「예전 계산으로 저장된 총량」을 그대로 둔 것과 같은 원칙(`isLegacyTotal`).
+2. 수납은 `COALESCE(total_qty, quantity)`가 아니라 **`total_qty`만** 읽음(1이 끝나면 비어 있는 줄이 없음) — 두 계산식이 섞이지 않게.
+3. 마이그레이션 전에 실행 중 EMR에서 영향 받을 줄 수를 세 두기(읽기 전용):
+   ```sql
+   SELECT COUNT(*) AS orders_multi_day,
+          COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM billing b WHERE b.visit_id = o.visit_id AND b.payment_status <> 'cancelled')) AS already_billed
+     FROM order_item o WHERE COALESCE(o.days,1) > 1 AND COALESCE(o.status,'') <> 'cancelled';
+   ```
+4. 의사가 옛 오더를 **다시 저장**하면 새 계산으로 바뀌어 그 내원이 「추가 청구」로 뜰 수 있음 — 실제로 청구할 게 늘어난 것이므로 맞는 동작. 결과가 있는 오더는 수정이 막혀 있음(진료 `d1f473e`).
+5. 수납 확인 계획: 같은 데이터로 전후 — ① 옛 다일 오더가 있는 수납된 내원: 전후 표시 없음 ② 새 오더(수량 1·5일): 5회 청구, 영수 항목 수량 5 ③ 수납 뒤 일수 변경 → 차액만 추가 청구/정정 ④ 정정 미리보기가 같은 총량을 씀 ⑤ 영수증에 수량 5.
+
+- **다른 세션에 부탁**: 진료 — 설계 메모에 위 2·3(새 칸, 옛 줄은 옛 뜻으로 채움)을 참고로.
+
 ## 2026-09-29 — 변경 기록(로그): 영수 취소 · 정정 (실장님 결정, 수납 몫)
 
 - **상태**: 확인 요청
