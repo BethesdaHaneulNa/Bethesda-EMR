@@ -15,7 +15,7 @@ const ERR_TOO_OLD = 'Prescription too old to dispense here; the doctor must pres
 
 // How far back an undispensed prescription can still be dispensed from the
 // patient search (decision M3, 2026-09-29: "today's list + the patient's older
-// ones"). The number of days is not decided yet; this is the one place to change.
+// ones"; 7 days decided by the manager the same day). This is the one place to change it.
 // Older ones go back to the doctor: symptoms move on, and an antibiotic started a
 // fortnight late is a different treatment.
 const PAST_RX_DAYS = 7;
