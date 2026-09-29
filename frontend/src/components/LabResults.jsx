@@ -89,6 +89,13 @@ export function LabResults(props) {
   }
   function cell(r, multi) {
     if (!r) return <span style={{ color: t3 }}>·</span>;
+    // An order cancelled in the consultation room keeps its results as a record
+    // (decision 3): shown grey and struck through, without the high/low colour,
+    // the reason on hover when there is one.
+    if (r.order_status === 'cancelled') {
+      var tip = t.lb_cancelled + (r.cancel_reason ? ' — ' + r.cancel_reason : '');
+      return <span title={tip} style={{ color: t3, textDecoration: 'line-through' }}>{r.value}{multi ? <span style={{ display: 'block', fontSize: 10, textDecoration: 'none' }}>{hhmm(r.result_at)}</span> : null}</span>;
+    }
     // 'abnormal' is a text result that differs from its reference text (e.g. a
     // positive malaria test): red like high, marked "!" since it is not "above".
     var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';

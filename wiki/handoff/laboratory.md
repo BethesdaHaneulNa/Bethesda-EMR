@@ -2,11 +2,134 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 결정 3-B 임상병리 몫: 취소된 오더 저장 거절 · 결과 표 회색 표시
+
+- **상태**: 확인 요청 — **진료(취소 API·마이그레이션)·수납과 같은 배포로 합칠 것**(총괄 지시대로 세 세션 보고 뒤 한 번에)
+- **커밋**: session/laboratory `1ef0be2` (출발점 `develop` `6a96193`)
+- **한 일**: 승인된 설계(아래 항목)의 ①③.
+  - ① `POST /lab/order/:id/results`: `SELECT … FOR UPDATE`로 읽고 `status = 'cancelled'`면 **409 `Order is cancelled`**. 화면(`Lab.jsx`)은 오더 삭제(404)와 같은 방식 — `lb_orderCancelled` 안내 후 그 내원을 다시 불러옴.
+  - ③ `GET /lab/patient/:id/results`: `oi.status AS order_status`, `to_jsonb(oi)->>'cancel_reason' AS cancel_reason` 추가 — **진료 마이그레이션 전에도 깨지지 않음**(칸이 없으면 NULL). `LabResults.jsx`: 취소분은 회색·줄긋기·▲▼! 없음, 툴팁 「취소됨 — 이유」(이유 없으면 「취소됨」). 줄·칸(재검 칸 포함)은 그대로 차지.
+  - 목록(대기·완료·환자 찾기)은 원래 `cancelled` 제외 — 변경 없음.
+- **바꾼 파일**: `backend/src/routes/lab.routes.js` · `frontend/src/pages/Lab.jsx` · `frontend/src/components/LabResults.jsx` · `wiki/modules/laboratory.md`(2절 새 소절 「취소된 검사의 결과」, 5절, 7절 3, 8절)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — 임상병리 구역에 키 추가만 · **DB 마이그레이션**: 없음 · **번역 키**: `lb_cancelled` · `lb_orderCancelled`
+- **확인한 방법**: `node --check`, 빌드. 격리 스택 9185 — 진료 취소 API가 아직 없어 SQL로 `order_item.status = 'cancelled'`: 저장 시도 → 409 `Order is cancelled` · 결과 API `order_status: cancelled`, `cancel_reason: null`(칸 없을 때 깨지지 않음) · `ALTER TABLE … ADD cancel_reason` 후 이유 `Mauvais patient` 전달 · 완료 목록에서 빠짐 · 프랑스어 결과 표에서 취소 칸 회색·줄긋기(Hb 10.4가 ▼ 없이), 툴팁 「Annulé — Mauvais patient」. 스택 내림.
+- **확인 못 한 것**: 진료 화면의 실제 취소 흐름(진료 세션 몫)과 이어서 본 것은 아님. 화면에서 취소된 오더에 저장하는 경우는 목록에 안 나와 재현이 어려워 API로만 확인(동시 작업 때만 생김).
+- **다른 세션에 부탁**: 진료 — 취소 API는 설계대로 `FOR UPDATE`로 잠가 주세요(임상병리 저장과 순서가 정해지도록). 칸 이름 `cancel_reason`을 쓰면 결과 표 툴팁에 이유가 나옵니다. 진료 화면 🧪 창도 같은 표시가 됨.
+- **남은 일**: 4(나) 참고치 표(조사 결과 대기) · 4(가) 구조 설계 승인 대기(아래 항목).
+
+## 2026-09-29 — 설계: 성별·나이별 참고치 구조 (결정 4-가) — 코드 전, 승인 요청
+
+- **상태**: 확인 요청 (설계만, 마이그레이션 포함이라 승인 뒤 코드)
+- **커밋**: session/laboratory `1fcd84d` (설계만)
+- **결정**: 검사 항목마다 성별·나이대별 참고치를 둘 수 있고, 값이 없는 경우는 지금의 기본 참고치를 씀. **값은 넣지 않음**(한국 기준 표는 4-나 제안, 실장님·의사 확인 뒤 설정 화면으로 입력).
+
+### 데이터 — 마이그레이션 `501_lab_ref_ranges.sql` (추가만, 기존 값·동작 그대로)
+
+```sql
+CREATE TABLE IF NOT EXISTS lab_ref_range (
+  id               SERIAL PRIMARY KEY,
+  lab_test_item_id INTEGER NOT NULL REFERENCES lab_test_item(id) ON DELETE CASCADE,
+  sex              VARCHAR(1) CHECK (sex IN ('M','F')),   -- NULL = 남녀 모두
+  age_min_days     INTEGER,        -- NULL = 하한 없음. 이 나이 이상(포함)
+  age_max_days     INTEGER,        -- NULL = 상한 없음. 이 나이 미만(불포함)
+  ref_low          NUMERIC,
+  ref_high         NUMERIC,
+  ref_text         VARCHAR(60),
+  note             VARCHAR(200),   -- 출처 등 (예: 「대한진단검사의학회 2023, 확인 2026-10-xx」)
+  sort_order       INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_lrr_item ON lab_ref_range(lab_test_item_id);
+ALTER TABLE lab_result ADD COLUMN IF NOT EXISTS ref_label VARCHAR(40);  -- 그때 쓴 기준 이름(예: 「여 · 18세~」), 기본값이면 NULL
+```
+
+- **단위는 항목 하나에 하나** — 범위 줄에 단위 칸을 두지 않음(단위가 섞이지 않게, 문제 21 안전장치 그대로).
+- 나이는 **일(day)** 단위로 저장(신생아 0~7일·8~30일 같은 구간 때문). 설정 화면은 「일 / 개월 / 세」로 입력하고 저장 때 일로 바꿈(개월 = 30.4375일, 세 = 365.25일 — 생일 전후 하루 차이는 임상적으로 무시).
+- 옛 결과는 건드리지 않음 — `lab_result`에는 이미 **그때 쓴 참고치**(`ref_low/high/text`)가 복사돼 있고, 새 `ref_label`은 앞으로 저장되는 것부터.
+
+### 고르는 규칙 (서버 한 곳, `lab.routes.js`)
+
+환자의 **성별**과 **검사일(내원일) 기준 나이(일)** = `visit_date − date_of_birth`로:
+
+1. 후보: 그 항목의 범위 줄 중 `sex`가 비었거나 환자와 같고, 나이가 `[age_min_days, age_max_days)` 안에 드는 것.
+2. 여럿이면 **가장 구체적인 것**: 성별이 지정된 줄 우선 → 나이 구간이 좁은 줄 우선(한쪽이 비면 무한대로 봄) → `sort_order`.
+3. 없으면 **지금의 기본 참고치**(`lab_test_item.ref_low/high/text`) — 기본값 줄의 `ref_label`은 NULL.
+4. 생년월일이 없으면 나이 조건이 있는 줄은 후보에서 빠짐, 성별이 없거나 `O`면 성별 줄은 빠짐 → 결국 기본값으로 감(모르는 것을 추측하지 않음).
+
+쓰는 곳: `GET /order/:id/items`(입력 화면에 그 환자의 참고치를 보여줌), `POST /order/:id/results`(저장 때 서버가 다시 골라 판정 — 문제 15처럼 화면 값을 믿지 않음). 판정 규칙(`flagFor`)은 그대로이고 **어떤 범위를 넣느냐만** 바뀜.
+
+### 화면
+
+- **입력 화면**: Référence 칸이 그 환자 기준으로 나오고, 기본값이 아니면 옆에 작게 기준 이름(예: `F · 18–`). 새 번역 키 몇 개(`lb_sexM`/`lb_sexF`/나이 단위).
+- **결과 표**(`LabResults`): 참고치 칸은 지금처럼 저장된 값(환자별) — 나이대가 바뀐 소아는 최근 기준이 보임(기존과 같은 한계, 위키에 적음).
+- **설정 → 검사항목 탭**: 항목 줄 끝에 **「성별·나이별 (n)」** 버튼 → 그 항목 아래에 작은 표가 펼쳐짐: 성별(전체/남/여) · 나이 부터(포함)~까지(미포함) + 단위(일/개월/세) · 하한 · 상한 · 문자 · 메모(출처) · ✕. 기존 **Sauver** 한 번에 항목과 함께 저장(`POST /test-items/save`의 항목에 `ranges` 배열 추가 — 항목 id가 유지되므로 범위는 항목별로 지우고 다시 넣어도 안전, 범위 id를 참조하는 곳 없음).
+- 설정 화면 검사: 하한 > 상한이면 저장 거절, **같은 성별에서 나이 구간이 겹치면 경고**(막지는 않음 — 규칙 2로 결정적으로 골라지지만 의도와 다를 수 있으므로).
+
+### 4-b HDL 상한
+
+코드 없음 — 설정에서 HDL의 Max를 비우면 됨(2절 「참고치 고치기」). 4-나 표를 의사 선생님이 확인할 때 함께.
+
+### 확인 계획 (격리 스택)
+
+남·여·소아(생년월일로 나이 조절)·생년월일 없음·성별 없음 환자에 같은 검사 → 입력 화면 참고치·저장된 `ref_low/high/ref_label`·판정 확인. 범위 없는 항목은 지금과 똑같이 동작하는지(회귀). 설정 탭에서 범위 추가·수정·삭제·겹침 경고. 한국어·프랑스어.
+
+### 여쭐 것
+
+- 없음(구조는 결정 4의 추천안 C 그대로). 나이를 「검사일 기준」으로 계산하는 것만 확인 부탁 — 오늘 기준이 아니라 그날의 나이.
+
+- **바꾼 파일**: 이 노트만 · **공용 파일 변경**: 없음(구현 때 설정 검사항목 탭 안 + i18n 임상병리 구역) · **DB 마이그레이션**: 없음(구현 때 `501_lab_ref_ranges.sql` 1건) · **번역 키**: 없음(구현 때 몇 개)
+
+## 2026-09-29 — 설계: 결과가 있는 잘못 낸 오더를 「취소」로 표시 (결정 3-B) — 코드 전
+
+- **상태**: 승인됨(총괄, 2026-09-29) — 임상병리 몫 ①③ 구현은 맨 위 항목
+- **커밋**: session/laboratory `ca83b32`
+- **결정**: 결과는 기록으로 남기고 목록·청구에서 뺀다. 「검사 안 함」 버튼은 없음 — **진료실에서 결과 있는 오더를 지우려 할 때** 묻는다(지금은 409로 거절).
+
+### 흐름
+
+```
+진료 화면 ✕ ─▶ DELETE /api/consultations/order/:id
+                 ├ 결과 없음 → 지금처럼 삭제
+                 └ 결과 있음 → 409 ORDER_HAS_RESULT (지금 그대로)
+                        ▼ 화면이 409를 받으면
+               「결과가 있습니다. 취소로 표시할까요? (이유: ____)」 [취소로 표시] [닫기]
+                        ▼
+               POST /api/consultations/order/:id/cancel  {reason}
+                 → order_item.status = 'cancelled', cancelled_at/by/reason 기록
+                 → lab_result·판독·영상은 그대로 남음
+```
+
+### 세션별 할 일
+
+| 세션 | 파일 | 할 일 |
+|---|---|---|
+| **진료** | `consult.routes.js` · `Consultation.jsx` | ① 새 `POST /order/:orderId/cancel`(권한 consultation): `SELECT … FOR UPDATE` → 이미 `cancelled`면 그대로 200, 결과가 **없으면** 409(취소 말고 삭제하라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'` + 아래 칸. ② 삭제 409를 받으면 확인 창(이유 한 줄, 선택). ③ 취소된 줄은 회색·줄긋기 + 「취소됨 / Annulé」(키 `cs_labCancelled` 이미 있음), 수량 등 수정·✕ 막기(서버도 `PUT /order/:id`에서 `cancelled` 거절). ④ 되돌리기(취소 해제)는 **만들지 않음** — 필요하면 실장님께(아래 질문). |
+| **진료 (마이그레이션)** | `backend/sql/2xx_…` | `order_item`에 `cancelled_at TIMESTAMPTZ`, `cancelled_by INTEGER REFERENCES staff(id)`, `cancel_reason TEXT` 추가(추가만, 기존 데이터 그대로). `status` CHECK에 `cancelled`는 이미 있음(`001_schema.sql`). |
+| **임상병리** | `lab.routes.js` · `Lab.jsx` · `LabResults.jsx` | ① `POST /order/:id/results`: `FOR UPDATE`로 읽고 `status='cancelled'`면 **409 거절** — 지금은 취소된 오더에 저장하면 `completed`로 되살아남. 화면은 「이 검사는 진료실에서 취소되었습니다」 안내 후 다시 불러옴(오더 삭제 안내와 같은 방식). ② 대기·완료 목록·환자 찾기 입력 화면: 이미 `cancelled`를 빼고 있음(`/pending` `NOT IN ('completed','cancelled')`, `/completed` `= 'completed'`, `/visit/:id/orders` `<> 'cancelled'`) — 그대로. ③ 결과 표(`LabResults`, 진료 화면도): `/patient/:id/results`가 `oi.status AS order_status`를 함께 주고, 취소된 오더의 값은 **회색·줄긋기, 색(▲▼!) 없이**, 칸에 마우스를 올리면 「취소됨 — 이유」. 줄은 지우지 않음(기록). 재검 칸 나누기에는 그대로 한 칸 차지. ④ 위키 2·3·5절. 번역 키 `lb_orderCancelled` 등 2~3개. |
+| **수납** | `billing.routes.js` · `Payment.jsx` | `order_item`을 상태 없이 합산하는 곳 3곳에 `AND o.status <> 'cancelled'`: 대기 목록의 현재 합계(`live_total`, `GET /pending`), 청구할 항목(`GET /visit/:visitId/items`), 정정 계산(`buildCorrection()`). 이미 수납한 내원이면 합계가 줄어 **「정정(환불)」**으로 뜨는 기존 흐름을 탐. ⚠ `counterFeeCond()`의 `order_item` 부분(창구 수수료 판별)은 **취소된 오더도 포함한 채로** 둘지 수납 세션이 판단 필요 — 빼면, 취소된 fee 오더의 청구 줄이 「창구 수수료」로 잘못 분류되어 환불에서 빠질 수 있음. |
+| **통계** | `stats.routes.js` | 지금 검사 건수 통계는 없음(`order_item`을 읽지 않음, grep 확인). 매출은 수납 기록을 따르므로 수납이 고치면 따라옴. 나중에 검사·오더 건수를 세게 되면 `cancelled` 제외. |
+| **PACS** | `pacs.routes.js` · `worklist.routes.js` | **의견 필요**: 영상 오더도 같은 방식(촬영·판독이 있으면 취소 표시)으로 할지. 영상은 `worklist_log`·`worklist_status`(`cancelled` 값 있음)·Orthanc 영상이 따로 있어서, 취소 때 워크리스트를 `cancelled`로 보낼지, 이미 찍은 영상·판독을 어떻게 보일지 정해야 함. 진료 쪽 취소 API는 `code_type`을 가리지 않게 만들되, 영상에 대해 켤지는 PACS 의견 뒤에. |
+
+### 순서 (의존)
+
+1. 진료 마이그레이션 + 취소 API (다른 세션이 기대는 것)
+2. 임상병리 ① 저장 거절 — **1과 같은 배포에 들어가야 함**(아니면 취소된 검사가 저장으로 되살아남)
+3. 수납 3곳, 진료 화면 확인 창, 임상병리 ③ 결과 표 — 순서 무관
+4. PACS 의견 뒤 영상 적용 여부
+
+### 실장님께 여쭐 것 (결정 세션께)
+
+- 취소할 때 **이유 한 줄**을 필수로 할지(추천: 선택 — 의무기록상 있으면 좋지만 급할 때 막지 않게).
+- **취소 되돌리기**가 필요한지(추천: 만들지 않음 — 잘못 취소했으면 오더를 다시 내면 됨. 결과는 옛 오더에 남아 있음).
+- 결정 10(수정 이력 — 「로그로만」)이 공통 로그로 정해지면 취소도 그 로그에 남기기.
+
+- **바꾼 파일**: 이 노트만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음(설계상 진료 세션 몫 1건) · **번역 키**: 없음
+- **확인한 방법**: 코드 읽기 — `consult.routes.js` `DELETE /order/:orderId`(409 조건: `lab_result` 있음 · 워크리스트 진행/완료 · `result_text` 있음), `billing.routes.js` `order_item` 합산 3곳과 `counterFeeCond()`, `stats.routes.js`(order_item 없음), `lab.routes.js` 목록 조건, `Consultation.jsx`의 `cs_labCancelled` 표시.
+
 ## 2026-09-29 — 결정 8 반영: 결과 표에서 같은 날 재검 둘 다 보이기
 
 > **총괄 확인 (2026-09-29)**: 결정 8 `26b861b` 합침(`2d7f6f0`) + 실행 중 EMR 반영. 「결과 있는 오더 취소」 설계 `943909c` 확인 — 승인, 세션별 몫을 총괄이 나눠 줌.
 
-- **상태**: 확인 요청
+- **상태**: 합쳐짐(총괄 확인 완료)
 - **커밋**: session/laboratory `26b861b` (출발점 `develop` `23bde17`)
 - **한 일**: 실장님 결정 8(B). `LabResults.jsx` — 날짜·패널마다 오더를 입력 시각 순으로 1번째·2번째 칸에 배치, 재검이 있는 날짜만 「날짜 (1)」「날짜 (2)」로 나누고 값 아래에 입력 시각(HH:MM). 다른 패널은 1번 칸을 같이 써서 보통 날은 그대로 한 칸. 예전엔 나중 결과가 앞 결과를 덮어 하나만 보였음. 서버 변경 없음(`/lab/patient/:id/results`가 이미 `order_item_id`·`result_at`을 줌).
   - 총괄 요청: 위키 3.3에 `<x`·`>x` 예시 표(9줄, 코드로 판정 확인).

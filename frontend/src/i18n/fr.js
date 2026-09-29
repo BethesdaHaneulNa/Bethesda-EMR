@@ -485,6 +485,8 @@ export default {
   lb_saveAnyway: "Enregistrer quand même",
   lb_inConsultation: "En consultation",
   lb_orderRemoved: "La demande de cet examen a été supprimée en consultation. La liste est rechargée.",
+  lb_cancelled: "Annulé",
+  lb_orderCancelled: "Cet examen a été annulé en consultation. La liste est rechargée.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
