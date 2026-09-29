@@ -18,13 +18,57 @@ function readNumber(value) {
   return parseFloat(s);
 }
 
-function computeFlag(value, lo, hi) {
-  var n = readNumber(value);
-  if (isNaN(n)) return '';
-  if (lo !== null && lo !== undefined && n < parseFloat(lo)) return 'low';
-  if (hi !== null && hi !== undefined && n > parseFloat(hi)) return 'high';
-  if ((lo === null || lo === undefined) && (hi === null || hi === undefined)) return '';
-  return 'normal';
+// The flag rule. Same code as flagFor() in frontend/src/pages/Lab.jsx, which
+// colours the value while it is typed -- change both together.
+//
+// Text results (decision 12, 2026-09-29): an item with a reference text such as
+// "Negative" is flagged 'abnormal' when the result says anything else. Only
+// spellings of the same word count as the same -- language variants, never a
+// different finding. "Trace" is deliberately not listed: whether it is abnormal
+// is left to the doctors, and until they say so it is flagged like any other
+// difference. Add their exceptions to SAME_WORDS.
+var SAME_WORDS = [
+  ['negative', 'neg', 'negatif', '-', '음성'],
+];
+function normWord(v) {
+  // strip accents (Négatif -> negatif), then recompose so Korean (음성) stays whole
+  return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC')
+    .toLowerCase().replace(/[\s.()]/g, '');
+}
+function sameText(value, refText) {
+  var a = normWord(value), b = normWord(refText);
+  if (a === b) return true;
+  return SAME_WORDS.some(function (g) { return g.indexOf(a) >= 0 && g.indexOf(b) >= 0; });
+}
+function num(v) { return v === null || v === undefined || v === '' ? NaN : parseFloat(v); }
+
+// 'low' | 'high' | 'normal' | 'abnormal' (text) | '' (cannot tell / nothing to compare)
+// A value written as "<5" or ">500" is judged by its number only where the
+// answer is certain: ">500" with an upper limit of 400 is high, "<5" with no
+// lower limit and an upper limit of 40 is normal; otherwise no flag.
+function flagFor(value, lo, hi, refText) {
+  if (value === null || value === undefined || String(value).trim() === '') return '';
+  var L = num(lo), H = num(hi), hasL = !isNaN(L), hasH = !isNaN(H);
+  var cmp = String(value).trim().match(/^(<=|>=|≤|≥|<|>)\s*(.*)$/);
+  var n = readNumber(cmp ? cmp[2] : value);
+  if (!isNaN(n) && (hasL || hasH)) {
+    if (!cmp) {
+      if (hasL && n < L) return 'low';
+      if (hasH && n > H) return 'high';
+      return 'normal';
+    }
+    var op = cmp[1], below = op === '<' || op === '<=' || op === '≤', strict = op === '<' || op === '>';
+    if (below) {
+      if (hasL && (strict ? n <= L : n < L)) return 'low';
+      if (!hasL && hasH && n <= H) return 'normal';
+      return '';
+    }
+    if (hasH && (strict ? n >= H : n > H)) return 'high';
+    if (!hasH && hasL && n >= L) return 'normal';
+    return '';
+  }
+  if (refText) return sameText(value, refText) ? 'normal' : 'abnormal';
+  return '';
 }
 
 // ── PENDING lab orders (lab) — today's visits with un-resulted lab orders ──
@@ -211,7 +255,7 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
       const it = m ? Object.assign({}, sent, { lab_test_item_id: m.id, name: m.name, unit: m.unit,
                                                ref_low: m.ref_low, ref_high: m.ref_high, ref_text: m.ref_text })
                    : Object.assign({}, sent, { lab_test_item_id: null, name: sent.name || order.order_name });
-      const flag = computeFlag(it.value, it.ref_low, it.ref_high);
+      const flag = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
       await client.query(
         `INSERT INTO lab_result
            (order_item_id, lab_test_item_id, visit_id, patient_id, name, value, unit, ref_low, ref_high, ref_text, flag, comment, result_date, result_by, sort_order)

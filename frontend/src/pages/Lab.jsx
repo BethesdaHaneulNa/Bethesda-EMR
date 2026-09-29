@@ -30,12 +30,57 @@ function readNumber(v) {
 function hasEntry(it) {
   return (it.value != null && String(it.value).trim() !== '') || (it.comment != null && String(it.comment).trim() !== '');
 }
-function flagOf(v, lo, hi) {
-  var n = readNumber(v); if (isNaN(n)) return '';
-  if (lo != null && lo !== '' && n < parseFloat(lo)) return 'low';
-  if (hi != null && hi !== '' && n > parseFloat(hi)) return 'high';
-  if ((lo == null || lo === '') && (hi == null || hi === '')) return '';
-  return 'normal';
+// The flag rule. Same code as flagFor() in backend/src/routes/lab.routes.js,
+// which decides the flag that is saved -- change both together.
+//
+// Text results (decision 12, 2026-09-29): an item with a reference text such as
+// "Negative" is flagged 'abnormal' when the result says anything else. Only
+// spellings of the same word count as the same -- language variants, never a
+// different finding. "Trace" is deliberately not listed: whether it is abnormal
+// is left to the doctors, and until they say so it is flagged like any other
+// difference. Add their exceptions to SAME_WORDS.
+var SAME_WORDS = [
+  ['negative', 'neg', 'negatif', '-', '음성'],
+];
+function normWord(v) {
+  // strip accents (Négatif -> negatif), then recompose so Korean (음성) stays whole
+  return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC')
+    .toLowerCase().replace(/[\s.()]/g, '');
+}
+function sameText(value, refText) {
+  var a = normWord(value), b = normWord(refText);
+  if (a === b) return true;
+  return SAME_WORDS.some(function (g) { return g.indexOf(a) >= 0 && g.indexOf(b) >= 0; });
+}
+function num(v) { return v === null || v === undefined || v === '' ? NaN : parseFloat(v); }
+
+// 'low' | 'high' | 'normal' | 'abnormal' (text) | '' (cannot tell / nothing to compare)
+// A value written as "<5" or ">500" is judged by its number only where the
+// answer is certain: ">500" with an upper limit of 400 is high, "<5" with no
+// lower limit and an upper limit of 40 is normal; otherwise no flag.
+function flagFor(value, lo, hi, refText) {
+  if (value === null || value === undefined || String(value).trim() === '') return '';
+  var L = num(lo), H = num(hi), hasL = !isNaN(L), hasH = !isNaN(H);
+  var cmp = String(value).trim().match(/^(<=|>=|≤|≥|<|>)\s*(.*)$/);
+  var n = readNumber(cmp ? cmp[2] : value);
+  if (!isNaN(n) && (hasL || hasH)) {
+    if (!cmp) {
+      if (hasL && n < L) return 'low';
+      if (hasH && n > H) return 'high';
+      return 'normal';
+    }
+    var op = cmp[1], below = op === '<' || op === '<=' || op === '≤', strict = op === '<' || op === '>';
+    if (below) {
+      if (hasL && (strict ? n <= L : n < L)) return 'low';
+      if (!hasL && hasH && n <= H) return 'normal';
+      return '';
+    }
+    if (hasH && (strict ? n >= H : n > H)) return 'high';
+    if (!hasH && hasL && n >= L) return 'normal';
+    return '';
+  }
+  if (refText) return sameText(value, refText) ? 'normal' : 'abnormal';
+  return '';
 }
 
 export default function LabPage() {
@@ -169,15 +214,15 @@ export default function LabPage() {
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
           </div>
           {g.items.map(function (it, ii) {
-            var fl = flagOf(it.value, it.ref_low, it.ref_high);
+            var fl = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
             var ref = it.ref_text || (it.ref_low != null && it.ref_high != null ? it.ref_low + '~' + it.ref_high : it.ref_low != null ? '≥' + it.ref_low : it.ref_high != null ? '≤' + it.ref_high : '');
-            var vc = fl === 'low' ? '#60a5fa' : fl === 'high' ? '#f87171' : tx;
+            var vc = fl === 'low' ? '#60a5fa' : fl === 'high' || fl === 'abnormal' ? '#f87171' : tx;
             return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
               <div style={{ padding: '7px 10px', fontWeight: 600 }}>{it.name}</div>
               <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}</div>
               <div style={{ padding: '7px 10px', color: t2, fontSize: 13 }}>{it.unit || ''}</div>
               <div style={{ padding: '5px 8px' }}>
-                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + (fl === 'low' || fl === 'high' ? vc : bd2), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
+                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + (fl === 'low' || fl === 'high' || fl === 'abnormal' ? vc : bd2), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
               </div>
               <div style={{ padding: '5px 8px' }}>
                 <input value={it.comment || ''} onChange={function (e) { setVal(gi, ii, 'comment', e.target.value); }} placeholder="—" style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + bd2, borderRadius: 4, color: t2, fontSize: 13, padding: '5px 8px', outline: 'none' }} />
