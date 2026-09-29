@@ -434,6 +434,14 @@ export default function ConsultationPage() {
   // from the start (consult.routes.js POST /:id/orders), so a lab order read "completed"
   // before the lab had entered anything. A lab order shows the lab's own status instead,
   // and an order with neither shows nothing.
+  // Under an order's name when it is billed more than once a line (⑭: quantity x days,
+  // worked out by the server into total_qty), e.g. "facturé 5 fois". Nothing for the
+  // usual 1 x 1. total_qty is what the cashier charges.
+  function orderTotalLine(o, gone){
+    var tot = parseFloat(o.total_qty);
+    if(gone || !(tot > 0) || tot === (parseFloat(o.quantity)||0)) return null;
+    return <div style={{fontSize:11.5,color:t2,marginTop:1}}>{String(t.cs_orderTotal||'').replace('{n}', fmtAmount(tot))}</div>;
+  }
   function cancelTitle(o){ return (t.cs_labCancelled||'') + (o.cancel_reason ? ' — ' + o.cancel_reason : ''); }
   function orderStatus(o){
     // Cancelled first, whatever the type: a cancelled imaging order may still say
@@ -562,10 +570,16 @@ export default function ConsultationPage() {
 
   async function addExamOrder(oc){
     if(!consult) return;
+    // Lab and imaging orders always start 1 · 1 · 1 (director's instruction, 2026-09-29):
+    // with ⑭ the days multiply the bill, and repeating an exam on several days is a thing
+    // the doctor writes on purpose. A procedure (an injection course) starts with its
+    // order code's times and days when it has them, else 1 · 1 · 1. From an order set
+    // the set's values come in through default_freq / default_days, same rule.
+    var exam = oc.code_type==='lab' || oc.code_type==='imaging';
     try {
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
-        dose:oc.default_dose, frequency:oc.default_freq, days:oc.default_days,
+        dose:oc.default_dose, frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
         quantity:1, unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
       });
       setOrderItems(function(p){ return p.concat([item]); });
@@ -782,7 +796,9 @@ export default function ConsultationPage() {
                       <th style={{padding:'5px 6px',color:t3,fontSize: 12,width:24}}></th>
                       <th style={{padding:'5px 6px',textAlign:'left',color:t3,fontSize: 12,width:72}}>{t.code}</th>
                       <th style={{padding:'5px 6px',textAlign:'left',color:t3,fontSize: 12}}>{t.name}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:58}}>{t.qty}</th>
+                      {/* One heading for both kinds of line (decision 29): a drug's daily total,
+                          an order's quantity. Total = this column x days, for both (⑭). */}
+                      <th title={t.cs_colDailyHint} style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:58,cursor:'help'}}>{t.cs_colDaily}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.tms}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.day}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:70}}>{t.cs_colSig}</th>
@@ -833,7 +849,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:gone?t3:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700,textDecoration:gone?'line-through':'none'}}>{o.order_code}</td>
-                          <td style={{padding:'3px 5px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}</td>
+                          <td style={{padding:'3px 5px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
                             <td style={cellRO}>{o.quantity || 1}</td>
                             <td style={cellRO}>{o.frequency || 1}</td>

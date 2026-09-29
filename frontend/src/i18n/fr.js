@@ -371,6 +371,9 @@ export default {
   cs_noPackQtyCount: "{n} flacon(s)/tube(s) sans quantité",
   cs_noPackConfirm: "{n} médicament(s) sans quantité (flacons/tubes/unités) : {names}\n\nLa pharmacie s’arrêtera sur « quantité totale absente » et rien ne sera facturé. Terminer quand même la consultation ?",
   cs_packQtyWhole: "La quantité est un nombre entier d’au moins 1 (pas de demi-flacon).",
+  cs_colDaily: "Dose/j",
+  cs_colDailyHint: "Médicament : dose totale par jour. Examen / acte : quantité. Total = cette colonne × jours (les fois par jour ne sont pas multipliées). 2 jours sur un examen le facture deux fois.",
+  cs_orderTotal: "facturé {n} fois",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
