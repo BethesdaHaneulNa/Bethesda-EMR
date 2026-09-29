@@ -103,6 +103,8 @@
 
 ⚠ **기존 줄의 Unité (단위) 칸만 고치면 안 됩니다.** 예전 결과는 옛 단위의 숫자인데 새 단위 이름표가 붙어 보이고(예: 95 mg/dL 이 「95 g/L」 처럼), 다시 저장하면 새 참고치로 잘못 판정됩니다. **같은 이름으로 새 줄을 만들어도 똑같이 섞입니다.**
 
+> 이렇게 하려고 하면 **Sauver** (저장) 를 누를 때 노란 경고 창 「Ces items ont déjà des résultats」 (이미 결과가 있는 항목입니다) 이 뜹니다. 어느 항목에 결과가 몇 건 있는지와 안전한 방법이 나옵니다. **Annuler** (취소) 를 누르고 아래 순서대로 하세요. **Enregistrer quand même** (그래도 저장) 를 누르면 경고대로 저장됩니다 — 막지는 않습니다.
+
 1. **Paramètres** → **🧫 Items de test** → **Panel** 에서 검사를 고릅니다.
 2. **+ Ajouter** (항목 추가) 로 **새 줄**을 만들고 적습니다.
    - **Test** (이름): 옛 이름과 **다르게**, 뒤에 단위를 붙입니다. 예: 옛 줄이 `Glucose (FBS)` 면 새 줄은 `Glucose (FBS) g/L`.
@@ -214,8 +216,8 @@
 | `GET /order/:orderItemId/items` | lab | 한 오더의 입력 줄 — 패널 항목 정의 + 이미 넣은 값(3.6절). `{order, has_master, items}` |
 | `POST /order/:orderItemId/results` | lab | 결과 저장 + 오더 완료 (3.4절). 본문 `{results:[{lab_test_item_id,name,value,unit,ref_low,ref_high,ref_text,comment}]}` |
 | `GET /patient/:patientId/results` | consultation 또는 lab | 환자의 모든 결과 + `panel_code`·`panel_name` |
-| `GET /test-items?order_code_id=` | (로그인만) | 패널의 항목 정의. 없으면 전체 |
-| `POST /test-items/save` | settings | 패널의 항목 목록 저장. `id`가 있는 줄은 **그 자리에서 고치고**, 없는 줄은 새로 넣고, 목록에서 빠진 항목만 지움(6절). 본문 `{order_code_id, items:[{id?, name, unit, ref_low, ref_high, ref_text}]}` → 저장된 목록 |
+| `GET /test-items?order_code_id=` | (로그인만) | 패널의 항목 정의. 없으면 전체. 항목마다 `result_count` — 입력 화면이 그 항목 아래 보여줄 저장 결과 수(id로 연결된 것 + 같은 패널에서 연결이 끊긴 같은 이름의 것) |
+| `POST /test-items/save` | settings | 패널의 항목 목록 저장. `id`가 있는 줄은 **그 자리에서 고치고**, 없는 줄은 새로 넣고, 목록에서 빠진 항목만 지움(6절). 본문 `{order_code_id, items:[{id?, name, unit, ref_low, ref_high, ref_text}]}` → 저장된 목록(`result_count` 포함) |
 
 목록 API 세 개의 한 줄 모양: `consultation_id, visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, (allergies), doctor_name, lab_orders:[{order_item_id, order_code, order_name, order_code_id, status, (result_at)}]`
 
@@ -308,6 +310,7 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
   - **왜 id를 지키나**: `lab_result.lab_test_item_id`가 `ON DELETE SET NULL`이라, 예전처럼 전부 지우고 다시 넣으면 그 패널의 모든 결과가 항목과 끊어졌습니다. 검사실 화면은 이 id로 이전 값을 찾으므로 빈칸이 되고, 그대로 다시 저장하면 값이 지워졌습니다(7절 문제 1).
   - 항목을 ✕ 로 지우면 그 항목의 결과는 끊어지지만(SET NULL) 지워지지는 않고, 검사실 화면에 덧붙은 줄로 보입니다(3.6절).
   - **단위는 기존 항목에서 바꾸지 않습니다** — 이름이 다른 새 항목을 만들고 옛 항목을 지웁니다(2절 「단위 바꾸기」, 7절 문제 21). 참고치(하한·상한)는 기존 항목에서 고쳐도 됩니다.
+  - **저장 전 경고**(`labRisks()` → 확인 창, 탭 안): 불러온 목록(`labOrig`, `result_count` 포함)과 비교해 ① `result_count > 0` 인 항목의 단위가 바뀌었거나 ② 결과가 있던 항목을 지우고 **같은 이름**의 줄이 남아 있으면, 항목·옛 단위→새 단위·결과 건수와 안전한 방법을 보여주고 「그래도 저장 / 취소」를 묻습니다. 막지는 않습니다. 이름·참고치 변경, 결과 없는 항목의 단위 변경은 묻지 않습니다.
 - 성별·나이별 참고치, 단위 선택, 결과 형식(숫자/양음성/선택지) 같은 설정은 **없습니다.**
 
 ## 7. 알려진 문제 · 제약
@@ -336,7 +339,7 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 18 | 낮음 · ✅ 고침(30초) | 목록 자동 새로고침 없음 — 진료가 끝나도 ↻ 를 눌러야 보임 | `Lab.jsx:32` |
 | 19 | 보통 · ✅ 총괄이 서버에서 전 모듈 고침(`7ad4387`) | **날짜가 하루 앞당겨 보임.** DATE 값이 UTC 문자열(`…T21:00:00.000Z`)로 오는데 `T` 앞만 잘라 씀. 병원(UTC+3)에서는 검사실 목록의 내원일과 결과 표의 날짜 열이 모두 전날로 보였음(격리 스택에서 확인). **같은 코드가 `PatientFinder.jsx:69`, `Payment.jsx:12`, `RadiologyReadings.jsx:5`, `documents/shared.jsx`의 `fmtDate`에도 있음** — 환자 찾기에서 생년월일·내원일이 하루 빠르게 보이는 것을 확인. 근본 해결은 서버 `config/database.js`에서 DATE(OID 1082)를 글자 그대로 받게 하는 것(총괄 몫) | `Lab.jsx`·`LabResults.jsx`의 `ymd` |
 | 20 | 낮음 · ✅ 고침 | 검사실 화면에서 환자를 고르기 전 오른쪽 결과 칸이 「불러오는 중」에 멈춤 | `LabResults.jsx:14` |
-| 21 | 보통 (절차로 피함 — 2절 「단위 바꾸기」) | **기존 항목의 단위를 그 자리에서 바꾸면 옛 결과가 새 단위로 잘못 보임.** 항목 id가 유지되므로(문제 1 수정) 입력 화면이 옛 값을 새 항목의 단위·참고치와 함께 보여주고, 다시 저장하면 서버가 새 단위·참고치로 덮어써 판정함(문제 15 수정). 결과 표도 이름으로만 묶어 한 줄에 섞임. **같은 이름의 새 항목**을 만들어도 이름 짝짓기(3.6절 2번) 때문에 같은 일이 생김. 이름이 다른 새 항목 + 옛 항목 삭제면 안전. 코드 해결 후보: 결과 표를 이름+단위로 묶기, 이름 짝짓기에 단위 일치 조건 추가, 설정에서 기존 항목 단위 변경 시 경고 — 문제 5 결정과 함께 | `lab.routes.js` GET items·POST results · `LabResults.jsx` 묶기 |
+| 21 | 보통 (절차 + 저장 전 경고 창 — 코드 해결은 5번 결정 때) | **기존 항목의 단위를 그 자리에서 바꾸면 옛 결과가 새 단위로 잘못 보임.** 항목 id가 유지되므로(문제 1 수정) 입력 화면이 옛 값을 새 항목의 단위·참고치와 함께 보여주고, 다시 저장하면 서버가 새 단위·참고치로 덮어써 판정함(문제 15 수정). 결과 표도 이름으로만 묶어 한 줄에 섞임. **같은 이름의 새 항목**을 만들어도 이름 짝짓기(3.6절 2번) 때문에 같은 일이 생김. 이름이 다른 새 항목 + 옛 항목 삭제면 안전. ✅ 설정에서 이 두 경우 저장 전 경고 창(6절). 남은 코드 해결 후보: 결과 표를 이름+단위로 묶기, 이름 짝짓기에 단위 일치 조건 추가 — 문제 5 결정과 함께 | `lab.routes.js` GET items·POST results · `LabResults.jsx` 묶기 |
 
 ## 8. 변경 기록
 
@@ -346,3 +349,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 설정 저장 때 항목 id 유지 + 끊긴 결과를 이름으로 되찾기 · 쉼표 소수점/천 단위 띄어쓰기 판정 · 값 넣은 검사만 저장(나머지 대기) · 빠진 번역(`lb_`) · 날짜 하루 당겨짐 · 결과 칸 로딩 멈춤 | `7b5423d` |
 | 2026-09-29 | 목록 30초 자동 새로고침 · 늦은 응답 무시 · 항목 없는 검사 한 줄 입력 · 저장 때 참고치를 DB에서 다시 읽음 · 결과 표 검사명 열 고정 · 2절을 프랑스어 화면 기준으로 다시 씀 | `b29d2c2` |
 | 2026-09-29 | 2절에 「참고치 고치기」·「단위 바꾸기」 직원용 순서 추가(코드 변경 없음) · 7절 문제 21(단위를 그 자리에서 바꾸면 옛 결과가 섞임) | `e80cf28` |
+| 2026-09-29 | 설정 검사항목: 결과가 있는 항목의 단위 변경·같은 이름 새 줄을 저장 전에 경고(`lb_` 6개), `GET /test-items`에 `result_count` | (이 커밋) |

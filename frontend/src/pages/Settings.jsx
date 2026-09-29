@@ -29,6 +29,8 @@ export default function SettingsPage() {
   var clS = useState(null), clinic = clS[0], setClinic = clS[1];
   var lcS = useState(''), labCode = lcS[0], setLabCode = lcS[1];
   var liS = useState([]), labItems = liS[0], setLabItems = liS[1];
+  var loS = useState([]), labOrig = loS[0], setLabOrig = loS[1];   // item list as last loaded/saved (with result_count)
+  var lwS = useState(null), labWarn = lwS[0], setLabWarn = lwS[1]; // {changed, sameName} while asking before a save
   var npS = useState(false), newPanelOpen = npS[0], setNewPanelOpen = npS[1];
   var npfS = useState({code:'',name:'',price:''}), newPanel = npfS[0], setNewPanel = npfS[1];
   var bkS = useState(null), backup = bkS[0], setBackup = bkS[1];
@@ -87,16 +89,33 @@ export default function SettingsPage() {
 
   function loadLabItems(codeId){
     setLabCode(codeId);
-    if(!codeId){ setLabItems([]); return; }
-    api.get('/lab/test-items?order_code_id='+codeId).then(function(r){ setLabItems((r||[]).map(function(x){return Object.assign({},x);})); }).catch(function(){ setLabItems([]); });
+    if(!codeId){ setLabItems([]); setLabOrig([]); return; }
+    api.get('/lab/test-items?order_code_id='+codeId).then(function(r){ setLabOrig(r||[]); setLabItems((r||[]).map(function(x){return Object.assign({},x);})); }).catch(function(){ setLabOrig([]); setLabItems([]); });
   }
   function uli(i,k,v){ setLabItems(function(p){ var n=p.slice(); n[i]=Object.assign({},n[i]); n[i][k]=v; return n; }); }
   function addLi(){ setLabItems(function(p){ return p.concat([{name:'',unit:'',ref_low:'',ref_high:'',ref_text:''}]); }); }
   function delLi(i){ setLabItems(function(p){ var n=p.slice(); n.splice(i,1); return n; }); }
-  async function saveLabItems(){
+  // Changing the unit of an item that already has results shows the old numbers
+  // under the new unit (and re-flags them against the new range if re-saved);
+  // so does a new row named like a deleted item that had results. Ask first --
+  // the safe way is a differently named new row. It only asks; it never blocks.
+  function labRisks(){
+    function norm(u){ return String(u==null?'':u).trim(); }
+    var byId={}; labOrig.forEach(function(o){ byId[o.id]=o; });
+    var kept={}; labItems.forEach(function(it){ if(it.id) kept[it.id]=true; });
+    var changed=labItems.filter(function(it){ var o=it.id&&byId[it.id]; return o && o.result_count>0 && norm(it.unit)!==norm(o.unit); })
+      .map(function(it){ var o=byId[it.id]; return { name: it.name, from: norm(o.unit)||'—', to: norm(it.unit)||'—', n: o.result_count }; });
+    var sameName=labOrig.filter(function(o){ return !kept[o.id] && o.result_count>0 && labItems.some(function(it){ return it.id!==o.id && norm(it.name)===norm(o.name); }); })
+      .map(function(o){ return { name: o.name, n: o.result_count }; });
+    return (changed.length||sameName.length) ? { changed: changed, sameName: sameName } : null;
+  }
+  async function saveLabItems(force){
     if(!labCode) return;
+    if(force!==true){ var risk=labRisks(); if(risk){ setLabWarn(risk); return; } }
+    setLabWarn(null);
     try {
       var saved = await api.post('/lab/test-items/save', { order_code_id: labCode, items: labItems });
+      setLabOrig(saved||[]);
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
       showToast(t.lb_saved);
     } catch(err){ alert('Error: '+err.message); }
@@ -576,9 +595,27 @@ export default function SettingsPage() {
               </div>;})}
               <div style={{display:'flex',gap:8,marginTop:10}}>
                 <button onClick={addLi} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
-                <button onClick={saveLabItems} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
+                <button onClick={function(){ saveLabItems(); }} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
             </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
+            {labWarn?(<div onClick={function(){ setLabWarn(null); }} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div role="alertdialog" onClick={function(e){ e.stopPropagation(); }} style={{width:520,maxWidth:'92vw',background:scBg,border:'1px solid #f59e0b',borderRadius:8,padding:'16px 18px',color:tx}}>
+                <div style={{fontWeight:800,fontSize:15,color:'#fbbf24',marginBottom:8}}>⚠ {t.lb_unitWarnTitle}</div>
+                {labWarn.changed.length?(<div style={{marginBottom:10}}>
+                  <div style={{fontSize:13,color:t2,marginBottom:6}}>{t.lb_unitWarnBody}</div>
+                  {labWarn.changed.map(function(c,i){ return <div key={'c'+i} style={{fontSize:13,padding:'3px 0'}}>• <b>{c.name}</b>: {c.from} → {c.to} <span style={{color:t3}}>({t.lb_resultCount.replace('{n}',c.n)})</span></div>; })}
+                </div>):null}
+                {labWarn.sameName.length?(<div style={{marginBottom:10}}>
+                  <div style={{fontSize:13,color:t2,marginBottom:6}}>{t.lb_sameNameWarnBody}</div>
+                  {labWarn.sameName.map(function(c,i){ return <div key={'s'+i} style={{fontSize:13,padding:'3px 0'}}>• <b>{c.name}</b> <span style={{color:t3}}>({t.lb_resultCount.replace('{n}',c.n)})</span></div>; })}
+                </div>):null}
+                <div style={{fontSize:13,color:'#6ee7b7',marginBottom:14}}>{t.lb_unitWarnSafe}</div>
+                <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+                  <button autoFocus onClick={function(){ setLabWarn(null); }} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.cancel||'Cancel'}</button>
+                  <button onClick={function(){ saveLabItems(true); }} style={{background:'#b45309',color:'#fff',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.lb_saveAnyway}</button>
+                </div>
+              </div>
+            </div>):null}
           </div>):null}
 
           {activeTab==='backup'?(<div style={{padding:'16px 20px',maxWidth:780,overflow:'auto'}}>

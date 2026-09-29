@@ -337,6 +337,12 @@ export default {
   lb_code: "Code",
   lb_codeNameRequired: "Enter a code and a name.",
   lb_saved: "Saved",
+  lb_unitWarnTitle: "These items already have results",
+  lb_unitWarnBody: "If you change the unit of the items below, results entered earlier (numbers in the old unit) will be shown with the new unit and range, and re-saving one will flag it against the new range.",
+  lb_sameNameWarnBody: "A row has the same name as a deleted item. The deleted item's earlier results will show on that row.",
+  lb_unitWarnSafe: "Safe way: leave the existing row as it is, add a new row with a different name (e.g. the unit after the name), then delete the old row with ✕.",
+  lb_resultCount: "{n} results",
+  lb_saveAnyway: "Save anyway",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

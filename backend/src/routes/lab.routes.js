@@ -241,13 +241,28 @@ router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab'),
 });
 
 // ── master: list test items (read) ──
+// result_count: how many saved results the entry screen would show under this
+// item -- the ones linked by id, plus unlinked ones of the same panel with the
+// same name (the entry screen matches those by name). The settings tab uses it
+// to warn before an item that already has results changes unit: the old
+// numbers would then be shown, and re-flagged on a re-save, as the new unit.
+async function listTestItems(db, orderCodeId) {
+  const r = await db.query(
+    `SELECT i.*,
+            ((SELECT COUNT(*) FROM lab_result r WHERE r.lab_test_item_id = i.id)
+           + (SELECT COUNT(*) FROM lab_result r JOIN order_item oi ON oi.id = r.order_item_id
+               WHERE r.lab_test_item_id IS NULL AND oi.order_code_id = i.order_code_id
+                 AND r.name = i.name))::int AS result_count
+       FROM lab_test_item i
+      WHERE ($1::int IS NULL OR i.order_code_id = $1)
+      ORDER BY i.order_code_id, i.sort_order, i.id`,
+    [orderCodeId || null]);
+  return r.rows;
+}
+
 router.get('/test-items', async (req, res) => {
   try {
-    const { order_code_id } = req.query;
-    const r = order_code_id
-      ? await pool.query('SELECT * FROM lab_test_item WHERE order_code_id = $1 ORDER BY sort_order, id', [order_code_id])
-      : await pool.query('SELECT * FROM lab_test_item ORDER BY order_code_id, sort_order, id');
-    res.json(r.rows);
+    res.json(await listTestItems(pool, req.query.order_code_id));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -294,8 +309,7 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
     await client.query('DELETE FROM lab_test_item WHERE order_code_id = $1 AND NOT (id = ANY($2::int[]))',
       [order_code_id, keep]);
     await client.query('COMMIT');
-    const out = await pool.query('SELECT * FROM lab_test_item WHERE order_code_id = $1 ORDER BY sort_order, id', [order_code_id]);
-    res.json(out.rows);
+    res.json(await listTestItems(pool, order_code_id));
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
