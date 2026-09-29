@@ -153,5 +153,20 @@ async function prescribe(code, dose, days, label) {
   check('ledger chain intact for all ' + all.length + ' drugs', broken.length === 0, broken.slice(0, 5));
 }
 
+// ── monthly report (step 3): this month's rows add up and end at today's count ──
+{
+  const d = new Date();
+  const month = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const rep = await call('GET', '/pharmacy/stock/report?month=' + month, null, NURSE);
+  const stock = (await call('GET', '/pharmacy/stock', null, NURSE)).data;
+  check('report 200 for this month', rep.status === 200 && Array.isArray(rep.data.rows), rep.status);
+  check('every row adds up', rep.data.rows.every(r => r.ok), rep.data.rows.filter(r => !r.ok).map(r => r.code));
+  const off = rep.data.rows.filter(r => { const s = stock.find(x => x.id === r.drug_id); return s && s.stock_qty !== r.end; });
+  check('month end = current stock for every drug', off.length === 0, off.map(r => r.code));
+  check('report: stats-only 200, front desk 403', (await call('GET', '/pharmacy/stock/report?month=' + month, null, STATS)).status === 200 && (await call('GET', '/pharmacy/stock/report?month=' + month, null, DESK)).status === 403);
+  check('report: bad month 400', (await call('GET', '/pharmacy/stock/report?month=2026-13', null, NURSE)).status === 400);
+  check('report: a month long before the record is empty', (await call('GET', '/pharmacy/stock/report?month=2000-01', null, NURSE)).data.rows.length === 0);
+}
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');
 process.exitCode = fails ? 1 : 0;

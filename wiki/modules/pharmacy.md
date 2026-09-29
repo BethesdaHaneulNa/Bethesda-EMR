@@ -1,6 +1,6 @@
 # 약국 (Pharmacy)
 
-> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 재고 기록 ①(서버)·②(Stock 탭) 끝 — ③ 월말 보고서 진행 예정
+> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 재고 기록 ①②③ 끝 — 설정 약품 탭 재고 칸 읽기 전용, 105줄 가져오기(실장님 검토 중) 남음
 
 ## 1. 이 모듈이 하는 일
 
@@ -107,6 +107,11 @@
   - **Manque au registre** 에 숫자가 있으면: 조제할 때 장부에 그만큼 모자랐다는 뜻입니다(예: 장부 3개인데 8개 조제 → 5). 선반을 세어 **Inventaire** 로 맞춰 주세요.
   - Note 에 « Modifié hors registre (paramètres) » (기록 밖에서 바뀜) 가 있으면: 설정 화면에서 재고 숫자를 직접 고친 흔적입니다.
 - **처음 시작할 때**: 날을 정해 약마다 선반을 세고 **Inventaire** 로 한 줄씩 넣으세요(메모 「시작 실사」). 그 뒤의 숫자부터 믿을 수 있습니다.
+- **월말 재고 보고서**: 목록 위 **📊 Rapport mensuel de stock (월말 재고 보고서)** 를 누르고 **Mois (달)** 를 고릅니다. 약마다 한 줄로 **Stock début (월초) · Entrées (입고) · Délivré (조제 출고) · Manque au registre (장부 부족) · Ajust. inventaire (실사 조정) · Rebut (폐기) · Stock fin (월말) · Contrôle (확인)** 이 나옵니다.
+  - **⬇ CSV** 로 엑셀에서 여는 파일을 내려받습니다(화면 언어의 칸 이름, 한글·악센트 안 깨짐).
+  - **Contrôle** 가 ✓ 가 아니면 합이 안 맞는 것입니다 — 총괄(관리자)에게 알려 주세요.
+  - 「Registre commencé le …」(기록 시작) 표시가 있는 약은 그 달 중간부터 기록이 있는 약입니다. 기록을 시작하기 전 달은 비어 있습니다.
+  - 약국 권한이 있는 계정이 이 화면을 씁니다. 통계 권한만 있는 계정도 서버에서는 볼 수 있게 해 두었습니다(통계 화면 연결은 나중).
 - 의사 계정도 약국 권한이 있으면 이 탭을 쓸 수 있습니다.
 
 ### 2.7 약품 등록 — Paramètres (설정)
@@ -259,7 +264,18 @@
 - 오른쪽: 지금 재고, 버튼 세 개 → 한 줄짜리 입력(수 + 메모). 화면에서 먼저 검사(정수, 실사·폐기 메모, 폐기 > 재고)하고, 서버의 같은 검사 문구(`ERR_*`)도 알아보고 번역해 보여줍니다. 저장 뒤 목록과 기록을 다시 불러옵니다.
 - 기록 표: `GET /stock/:drugId/movements`(최근 500줄). 종류는 `ph_kind_*`로 번역, 서버가 쓰는 두 메모(기록 시작, 밖에서 바뀜)도 번역.
 - 권한: 약국 화면에 들어올 수 있는 계정(pharmacy)만 이 탭을 봅니다. API는 진료·설정 권한도 허용하지만 화면은 약국 화면 안에만 있습니다(결정: 진료 화면에 재고 창 없음).
-- 월말 보고서는 ③.
+- 월말 보고서는 3.10.
+
+### 3.10 월말 재고 보고서 (재고 2번 ③)
+
+- `GET /api/pharmacy/stock/report?month=YYYY-MM` (`pharmacy.routes.js:469`, 권한 `canReport` = pharmacy · settings · stats). **기록 표 하나로만** 계산합니다.
+  - 월초 = 그 달 1일 0시 **전** 마지막 기록(**id 순**)의 `stock_after`. 월말 = 다음 달 1일 0시 전 마지막 기록의 `stock_after`. 사이의 종류별 합: 입고 · 조제 출고(나간 양) · 장부 부족(`shortfall`) · 실사 조정(부호 있음) · 폐기.
+  - `월초 + 입고 − 조제 출고 + 장부 부족 ± 조정 − 폐기 = 월말` — 기록 줄마다 `CHECK`로 보장되므로 늘 맞아야 하고, 확인용으로 `ok`를 돌려줍니다.
+  - 그 달 안에 기록이 시작된 약은 `opening` 줄을 월초로 쓰고 `started_on`을 붙입니다. 그 달 말까지 기록이 없는 약은 빠지므로, **기록 시작 전 달은 비어 있습니다.**
+  - 날짜 경계는 **병원 시간 자정**입니다. 서버 연결이 병원 시간대로 고정되어 있어야 합니다(`config/database.js` `options: -c TimeZone`, 총괄 `03f68c7` 무렵 — 전에는 운영 DB의 기본값이 UTC라 새벽 0~3시가 전날로 잡혔음). 기록 시각은 `clock_timestamp()`로 넣어 id 순서와 같게 둡니다(3.8절).
+- 화면: 「Stock」 탭 목록 위 **📊 월말 재고 보고서** → 오른쪽에 달 고르기(이번 달까지), 표, **⬇ CSV**. CSV는 **화면에서** 만듭니다(칸 이름을 화면 언어로 쓰려고). UTF-8 BOM + CRLF라 엑셀에서 한글·악센트가 깨지지 않습니다.
+- 통계 화면에 둘지는 나중(통계 세션이 같은 API를 부르면 됨).
+- 확인(격리 스택): ZINC의 앞 기록 7줄을 8월로 옮겨(격리 DB만, 8/31 23:59:59 한 줄과 9/1 0:00 한 줄 포함) → 8월: 기록 시작 8/10 · 월초 315 · 입고 51 · 조정 −7 · 폐기 3 · 월말 356, 9월: 월초 356 · 입고 253 · 조제 2 · 조정 −28 · 폐기 11 · 월말 568 — 손 계산과 같음. 7월은 빈 보고서. 9월 월말 = 모든 약의 지금 재고. 권한: 통계 전용 200 · 창구 403 · 의사(진료만) 403 · 잘못된 달 400. CSV 첫 바이트 `EF BB BF`.
 
 ## 4. 데이터 · API
 
@@ -279,7 +295,7 @@
 | `GET /pending` · `GET /patient/:patientId/pending` · `GET /completed` · `GET /patient/:patientId/recent-rx` | `pharmacy` |
 | `PUT /consultations/:id/dispense` · `PUT /prescription/:id/dispense-type` | `pharmacy` |
 | `GET /stock` · `GET /stock/:drugId/movements` · `POST /stock/:drugId/receive` · `POST /stock/:drugId/count` · `POST /stock/:drugId/discard` | `pharmacy` · `consultation` · `settings` |
-| (③ 예정) `GET /stock/report` | `pharmacy` · `settings` · `stats` |
+| `GET /stock/report` | `pharmacy` · `settings` · `stats` |
 
 기본 권한으로 `pharmacy`를 가진 역할: 약국, 간호사, 관리자(`middleware/permissions.js`).
 
@@ -293,6 +309,7 @@
 | `GET /stock?q=&category=` | 활성 약의 지금 재고 | 약마다 `id, code, name, generic_name, category, stock_qty, min_stock, last_moved_at` |
 | `GET /stock/:drugId/movements?from=&to=` | 그 약의 재고 기록, 최근 것부터 500줄 | `id, kind, qty, stock_before, stock_after, shortfall, memo, created_at, prescription_id, consultation_id, staff_name, chart_no, patient_name` |
 | `POST /stock/:drugId/receive` `{ qty, memo }` · `/count` `{ counted, memo }` · `/discard` `{ qty, memo }` | 입고 · 실사 · 폐기 | `{ success, stock_before, stock_after, movement }`. 정수 아님 400 `ERR_WHOLE_NUMBER`, 메모 필요 400 `ERR_MEMO_REQUIRED`, 폐기가 장부보다 많음 409 `ERR_DISCARD_MORE`, 약 없음 404 |
+| `GET /stock/report?month=YYYY-MM` | 월말 재고 보고서 | `{ month, rows: [{ drug_id, code, name, category, is_active, started_on, start, received, dispensed, shortfall, adjusted, discarded, end, movements, ok }] }`. 달 형식이 틀리면 400 |
 | `PUT /prescription/:id/dispense-type` | 원내/원외 지정. 본문 `{ dispense_type: 'internal' \| 'external' }` | 바뀐 처방 줄. 줄이 없으면 404, 이미 조제된 줄이면 **409** `ERR_TYPE_LOCKED` |
 
 `prescriptions[]`의 줄: `id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo, dispense_type, status, created_at` (완료 목록은 `created_at` 대신 `dispensed_at`).
@@ -400,9 +417,7 @@ API — 설정 세션 파일 `admin.routes.js`:
 
 ### 보통
 
-- **M4. 약국 화면에 재고가 보이지 않습니다** — 조제 전에는 재고가 모자란지 알 수 없고, 조제 완료 뒤에야 경고가 뜹니다. `drug.min_stock`은 아무 데서도 쓰지 않습니다.
-- **M5. 재고 입출고 기록이 없습니다** — **진행 중**: 서버(①)와 약국 화면 「Stock」 탭(②, 입고·실사·폐기·기록 보기)은 끝남(3.8·3.9절). 월말 보고서(③)가 남음.
-- **M6. 조제 취소가 없습니다** — 잘못 누르면 되돌릴 수 없고, 재고를 손으로 고쳐야 합니다.
+- **M6. 조제 취소가 없습니다** — **2026-09-29 결정: 만들지 않음**(재고 2번에서 조제 취소는 빼기로). 잘못 조제 완료했으면 약을 돌려받고 **📦 Stock → Inventaire** 로 재고를 맞춥니다(메모에 사유). 처방 줄은 「조제됨」으로 남습니다.
 
 ### 낮음
 
@@ -424,6 +439,8 @@ API — 설정 세션 파일 `admin.routes.js`:
 - **H1. 「용량」 칸의 뜻** → 한국식 하루 총량으로 결정(2026-09-29). 약국은 저장된 총량만 읽고 1회량을 같이 보여줌(3.4절). 진료·수납 쪽 계산식은 각 세션 작업. 시드 기본값은 이 방식으로 맞음 — 단 **ACT01 4/2/3(총 12정, 표준 24정)·ORS는 의사 확인 목록(급함)**.
 - **M7. 「경로」 칸에 TID·BID** → 칸 이름을 「용법 / Posologie / Directions」로(약국 화면 `ph_colDirections`, 원외 처방전). 용법과 횟수가 다를 때 경고는 제안으로만 남김.
 - **M3. 오늘 내원만 대기 목록에 나와 지난 처방을 조제할 길이 없었습니다** → 목록은 오늘만 두고, 환자 찾기로 최근 7일 미조제 처방을 조제(3.1절). 조제 완료 목록은 조제 날짜 기준. 「조제 안 함」 버튼은 만들지 않기로 결정(안 줄 약은 진료실에서 처방을 지움).
+- **M5. 재고 입출고 기록이 없었습니다** → 재고 기록(① 서버, ② 약국 「Stock」 탭, ③ 월말 보고서, 3.8~3.10절). 남은 것: 설정 약품 탭의 재고 칸 읽기 전용(약국 화면 + 설정 서버).
+- **M4. 약국 화면에 재고가 보이지 않았습니다** → 「Stock」 탭에 약마다 지금 재고, 최소 재고 이하 빨간색. 조제 **전** 부족 경고는 지금대로 두기로 결정(조제 후 경고).
 - **L4. 약제비가 원외 약까지 더했습니다** → 원외 제외, 이름을 「약제비 (원내)」로 (`Pharmacy.jsx:202-205`, `:268`). 3.2절.
 - **L7. 조기 재처방 경고가 「⚠ 5j 7j · reste 2j」처럼 숫자만이었습니다** → 문장 하나로(`ph_refillWarn`, `Pharmacy.jsx:295`). 기준은 그대로. 3.5절.
 - **L8. 대기 목록이 저절로 새로고침되지 않았습니다** → 30초마다 조용히, 방해될 때는 건너뜀. 목록에서 사라진 환자는 안내와 함께 남김. 3.6절.
@@ -446,4 +463,5 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | 약품 분류 7가지 → 17가지(실제 약 목록에 맞춤) | `3e07b11` |
 | 2026-09-29 | 원내 줄 총량 0도 「총량 없음」으로 표시·조제 확인 창에 넣기 | `2bb89c3` |
 | 2026-09-29 | 재고 기록 ①: `stock_movement` 표(021), `moveStock`, 조제 자동 기록, 입고·실사·폐기 API, 라우트마다 권한 | `d806e14` (develop `a7c6c7b`) |
-| 2026-09-29 | 재고 기록 ②: 약국 화면 「Stock」 탭(입고·실사·폐기·재고 기록), 직원용 2.6 | (이 커밋) |
+| 2026-09-29 | 재고 기록 ②: 약국 화면 「Stock」 탭(입고·실사·폐기·재고 기록), 직원용 2.6 | `529a8f1` (develop `b795852`) |
+| 2026-09-29 | 재고 기록 ③: 월말 재고 보고서(화면 + CSV) | (이 커밋) |

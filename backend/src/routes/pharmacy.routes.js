@@ -452,4 +452,64 @@ router.post('/stock/:drugId/receive', canStock, stockWrite('receive'));
 router.post('/stock/:drugId/count', canStock, stockWrite('adjust'));
 router.post('/stock/:drugId/discard', canStock, stockWrite('discard'));
 
+// GET /api/pharmacy/stock/report?month=YYYY-MM - monthly stock report, one row per drug
+//
+// Worked out from the ledger alone. For each drug:
+//   start  = stock_after of the last row before the 1st (00:00, clinic time)
+//   end    = stock_after of the last row before the 1st of the next month
+//   in between, per kind: received, dispensed (what left), shortfall (what the
+//   record was short when dispensing stopped at 0), adjusted (signed), discarded
+// and start + received - dispensed + shortfall + adjusted - discarded = end, which
+// every ledger row guarantees on its own; `ok` says whether it held, as a check.
+// "Last row" is by id (the real order, see moveStock); created_at is stamped with
+// clock_timestamp() under the same lock, so the date boundary follows that order.
+// A drug whose record began inside the month starts from its opening row
+// (started_on is set); a drug whose record had not begun by the month's end is
+// left out, so months before the record started come back empty.
+router.get('/stock/report', canReport, async (req, res) => {
+  const month = String(req.query.month || '');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+  try {
+    const r = await pool.query(
+      `WITH b AS (SELECT $1::date AS s, ($1::date + INTERVAL '1 month')::date AS e)
+       SELECT d.id, d.code, d.name, d.category, d.is_active,
+              (SELECT m.stock_after FROM stock_movement m, b
+                WHERE m.drug_id = d.id AND m.created_at < b.s ORDER BY m.id DESC LIMIT 1) AS start_qty,
+              (SELECT m.stock_after FROM stock_movement m, b
+                WHERE m.drug_id = d.id AND m.created_at < b.e ORDER BY m.id DESC LIMIT 1) AS end_qty,
+              (SELECT TO_CHAR(MIN(m.created_at), 'YYYY-MM-DD') FROM stock_movement m, b
+                WHERE m.drug_id = d.id AND m.kind = 'opening' AND m.created_at >= b.s AND m.created_at < b.e) AS started_on,
+              COALESCE(SUM(m.qty) FILTER (WHERE m.kind = 'opening'), 0)   AS opening,
+              COALESCE(SUM(m.qty) FILTER (WHERE m.kind = 'receive'), 0)   AS received,
+              COALESCE(-SUM(m.qty) FILTER (WHERE m.kind = 'dispense'), 0) AS dispensed,
+              COALESCE(SUM(m.shortfall), 0)                                AS shortfall,
+              COALESCE(SUM(m.qty) FILTER (WHERE m.kind = 'adjust'), 0)    AS adjusted,
+              COALESCE(-SUM(m.qty) FILTER (WHERE m.kind = 'discard'), 0)  AS discarded,
+              COUNT(m.id) AS movements
+         FROM drug d
+         CROSS JOIN b
+         LEFT JOIN stock_movement m ON m.drug_id = d.id AND m.created_at >= b.s AND m.created_at < b.e
+        WHERE EXISTS (SELECT 1 FROM stock_movement x WHERE x.drug_id = d.id AND x.created_at < b.e)
+        GROUP BY d.id, b.s, b.e
+        ORDER BY d.name, d.code`,
+      [month + '-01']
+    );
+    const rows = r.rows.map(x => {
+      const n = v => Number(v) || 0;
+      // Record began this month: its opening row is the starting balance, not a movement.
+      const start = x.start_qty === null ? n(x.opening) : n(x.start_qty);
+      const end = x.end_qty === null ? start : n(x.end_qty);
+      const expected = start + n(x.received) - n(x.dispensed) + n(x.shortfall) + n(x.adjusted) - n(x.discarded);
+      return {
+        drug_id: x.id, code: x.code, name: x.name, category: x.category, is_active: x.is_active,
+        started_on: x.start_qty === null ? x.started_on : null,
+        start, received: n(x.received), dispensed: n(x.dispensed), shortfall: n(x.shortfall),
+        adjusted: n(x.adjusted), discarded: n(x.discarded), end,
+        movements: n(x.movements), ok: expected === end,
+      };
+    });
+    res.json({ month, rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;
