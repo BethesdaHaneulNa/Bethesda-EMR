@@ -5,7 +5,7 @@
 ## 2026-09-29 — 통합 시험 B: 1366×768에서 저장 버튼·결과 표가 잘리던 것 · 모두 저장 알림
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `3d9091c` (출발점 `develop` `736c788`)
 - **한 일** (보고서 `wiki/reference/integration-test-2026-09-29.md`의 임상병리 몫):
   - **B — 1366×768 잘림**: `Lab.jsx` 바깥 틀을 `minHeight: 100vh` → `height: 100vh` + 세로 flex, 본문 줄을 `calc(100vh - 86px)` → `flex: 1; minHeight: 0`, 입력 표·결과 표 칸에 `minHeight: 0`, 저장 줄 `flexShrink: 0`. 원인: 위 두 줄(TopBar + 도구 줄)이 86px보다 높아 페이지가 창보다 길었고, 저장 버튼과 결과 표 가로 스크롤 막대가 창 아래로 밀림 → 오른쪽 표의 「✕」 칸이 잘린 것처럼 보이고 옆으로 밀 수도 없었음.
   - **작은 것 — 모두 저장했을 때**: 환자가 바로 닫혀 초록 문구가 안 보이던 것 → 화면 아래 가운데 초록 알림 「✓ Enregistré et terminé: …」 4초(`toast`, `role=status`).
