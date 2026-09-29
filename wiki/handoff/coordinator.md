@@ -83,6 +83,7 @@
 | 2026-09-29 | 수납 | `7f096a0` 프랑스어 설명서·변경 내역 초안 | ✅ | — | 문서만. 실제 흐름에서 뜨지 않는 안내를 표에서 뺀 판단 좋습니다. Receipt.jsx의 refunded 중복은 「Caisse du jour」 때 같이 |
 | 2026-09-29 | 설정 | `e60ee0e` 정리 스크립트가 현금 기록도 지움·access 표에 cash-day | ✅ | — | 스크립트만(배포할 것 없음). 총괄 확인: 파서 오류 0, ASCII만, 표지 파일 가드가 그대로 있고 이 PC에서 멈춤. 옛 DB(cash_movement 없음)에서도 돌게 한 것 좋습니다 |
 | 2026-09-29 | 디자인 | `93b4649` TopBar.jsx 색을 이름표로 | ✅ | ✅ | 색 글자만 바뀐 것을 diff로 확인(색 말고 달라진 줄은 import·주석·tint 도우미뿐). 어두운 화면 증명 두 가지 접수. **단추는 맨 마지막에 — 동의. 다만 실장님이 진행을 보실 수 있게 「미리 보기」 길을 하나**: 아래 「디자인 세션에게 — 미리 보기」 |
+| 2026-09-29 | 통계 | `fdaad17` 현금 기준 통계(시안 A)·설명서·변경 내역 | ✅ | ✅ | 실행 중 EMR: `/stats/summary`의 cash = 들어옴 474,500 · 나감 0 · 순액 474,500(모두 opening) = 영수 기준 수납액 474,500 = DB의 현금 기록 합. 월별 2026-06 65,000 · 2026-07 409,500 · 그 밖 0(지금 통계와 같음 — 세션이 하지 못한 「옛 날짜 전·후 비교」를 총괄이 실행 중 EMR에서 확인). 일별 2026-07-14 409,500. 거꾸로 된 기간 400. 접수·의사 계정 403. 시뮬레이션 ①~④ 10일 모두 일치한 것이 새 동작의 근거. **Stats.jsx는 디자인 세션이 시작해도 됨.** 수납의 「Caisse du jour」가 생기면 두 화면의 숫자가 같은지 확인 |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
@@ -358,7 +359,7 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 (1) 서버 쪽은 **디자인 세션이 새 파일로** — 승인: 마이그레이션 901(`staff.theme`, 기본 'dark', 칸만 더함 — 총괄이 번호 매김), `backend/src/routes/theme.routes.js`, `backend/src/index.js`에 등록 한 줄(총괄 파일, 이 한 줄은 허락). 조건: 값은 'dark'·'light'만(그 밖은 400), 자기 계정 것만, 변경 기록에 남기지 않음, 직원 목록 API(`/admin/staff`)의 응답 모양을 바꾸지 않음, `settings.access.mjs` 표에 새 라우트(설정 세션에 전달).
 (2) `index.html`의 색 이름표 + 첫 화면 스크립트, `frontend/src/theme.js` — 승인(앞서 답한 대로).
 (3) 2단계 (가)는 시작 — 승인.
-(4) 3단계 순서(2026-09-29 밤 고침): 공용 틀(TopBar·App·Login) → `Registration.jsx` → `Lab.jsx`·`LabResults.jsx` → **`Consultation.jsx`(시작해도 됨 — 진료가 1366 잘림을 고침)** → `Payment.jsx`(시작해도 됨) → `Pharmacy.jsx`·`PharmacyStock.jsx`(시작해도 됨) → 공용 부품(PatientFinder·PatientChart·DocumentModal 틀·RadiologyReadings) → `Stats.jsx`(통계가 현금 기준 화면을 끝낸 뒤 — 표에 적힘) → `Settings.jsx`(맨 마지막, 설정 세션이 작은 고침을 끝낸 뒤).
+(4) 3단계 순서(2026-09-29 밤 고침): 공용 틀(TopBar·App·Login) → `Registration.jsx` → `Lab.jsx`·`LabResults.jsx` → **`Consultation.jsx`(시작해도 됨 — 진료가 1366 잘림을 고침)** → `Payment.jsx`(시작해도 됨) → `Pharmacy.jsx`·`PharmacyStock.jsx`(시작해도 됨) → 공용 부품(PatientFinder·PatientChart·DocumentModal 틀·RadiologyReadings) → `Stats.jsx`(**2026-09-29 밤: 통계가 현금 기준 화면을 끝냄 — 시작해도 됨**) → `Settings.jsx`(맨 마지막, 설정 세션이 작은 고침을 끝낸 뒤).
 로그인 화면은 그 PC에서 마지막에 쓴 화면, 로그인 뒤 그 계정 값 — 동의. 계정 값을 읽기 전에 화면이 한 번 깜빡이지 않게(로그인 응답이나 `/auth/me`에 theme를 실어 주는 것이 더 매끄러우면 설정 세션에 부탁할 내용으로 보고).
 
 ### 통계 세션에게 (2026-09-29 밤) — 수납의 현금 기록이 들어왔습니다
