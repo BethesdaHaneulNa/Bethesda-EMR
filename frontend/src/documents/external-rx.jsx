@@ -3,7 +3,7 @@
 // The dose column is the daily total (Korean style); under each drug a sentence
 // spells out one intake, e.g. « 1 cp × 3 fois/jour pendant 7 jours (total 21) ».
 import { A4, ClinicHeader, DocMetaRow, PatientBox, DocSection, SignatureBlock, L } from './shared.jsx';
-import { storedTotal, fmtAmount, doseSentence, isLegacyTotal } from './rx-dosing.js';
+import { storedTotal, hasTotal, fmtAmount, doseSentence, isLegacyTotal } from './rx-dosing.js';
 
 var FL = {
   destination: { ko: '수신 약국 (선택)', en: 'Pharmacy (optional)', fr: 'Pharmacie (optionnel)' },
@@ -69,7 +69,7 @@ function Layout(props) {
                   <td style={num}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : ''}</td>
                   <td style={num}>{rx.frequency || ''}</td>
                   <td style={num}>{rx.days || ''}</td>
-                  <td style={num}>{storedTotal(rx) === null ? <span style={{ color: '#b91c1c', fontSize: 10.5 }}>{L(NO_TOTAL, lang)}</span> : fmtAmount(storedTotal(rx))}
+                  <td style={num}>{!hasTotal(rx) ? <span style={{ color: '#b91c1c', fontSize: 10.5 }}>{L(NO_TOTAL, lang)}</span> : fmtAmount(storedTotal(rx))}
                     {isLegacyTotal(rx) ? <div style={{ fontSize: 9.5, color: '#666' }}>({L(LEGACY, lang)})</div> : null}</td>
                   <td style={cell}>{[rx.route, rx.memo].filter(Boolean).join(' · ')}</td>
                 </tr>;

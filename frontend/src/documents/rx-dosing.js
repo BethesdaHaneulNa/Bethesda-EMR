@@ -25,8 +25,18 @@ export function isLegacyTotal(rx) {
   var total = storedTotal(rx);
   var daily = parseFloat(rx && rx.dose);
   var days = parseInt(rx && rx.days, 10);
-  if (total === null || !(daily > 0) || !(days > 0)) return false;
+  // A zero total is "missing" (hasTotal), not an old formula.
+  if (total === null || total <= 0 || !(daily > 0) || !(days > 0)) return false;
   return Math.round(total * 1000) !== Math.round(daily * days * 1000);
+}
+
+// A total that can be dispensed and billed. Zero counts as missing: a line saved
+// with the daily total left blank comes out as 0 x days = 0 on the server, and
+// would otherwise be dispensed and charged as nothing without a word. Drugs brought
+// in from the old stock list start with no default dose, so this is common.
+export function hasTotal(rx) {
+  var q = storedTotal(rx);
+  return q !== null && q > 0;
 }
 
 // One intake = daily total / times a day. "clean" when it comes out in whole or half
@@ -72,7 +82,7 @@ export function doseSentence(rx, lang) {
   var u = unitOf(rx.drug_name);
   var unit = u ? u[l] : '';
   var total = storedTotal(rx);
-  var totalText = total === null ? '—' : fmtAmount(total);
+  var totalText = hasTotal(rx) ? fmtAmount(total) : '—';
   var p = perDose(rx);
 
   if (p && p.clean) {

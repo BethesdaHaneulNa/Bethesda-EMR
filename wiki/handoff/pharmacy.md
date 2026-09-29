@@ -2,6 +2,16 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약품 분류 17가지 · 총량 0도 「총량 없음」으로 (작은 커밋 두 개)
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy `3e07b11`(분류) · 이 커밋(총량 0)
+- **분류**: 설정 약품 탭 `DRUG_CATEGORIES` 7 → 17(Analgesic · Antibiotic · Antihistamine · Antimalarial · Antiparasitic · Cardiovascular · Corticosteroid · Dermatology · Endocrine · GI · Gynecology · Musculoskeletal · Ophthalmic · Respiratory · Urology · Vitamin · Other). 가져올 표의 대응표(`drug-import-review.js` `CATEGORY`)가 쓰는 값이 모두 들어 있는지 스크립트로 확인. `ph_cat_*` 10개 추가(ko·en·fr). 저장값은 영어 그대로.
+- **총량 0**: `rx-dosing.js`에 `hasTotal(rx)`(저장 총량 > 0). 약국 화면 수량 칸·약제비 아래·조제 확인 창, 원외 처방전 총량 칸·복용 문장이 모두 이것을 씀. 총량 0인 줄은 「예전 계산」으로 보지 않음(`isLegacyTotal`).
+- **공용 파일 변경**: i18n `ph_cat_*` 10개
+- **확인한 방법**: 빌드. 격리 스택 9184에서 하루 총량을 비운 처방 → 서버가 `total_qty = 0.000`으로 저장하는 것 확인 → 약국 화면(한국어) 「⚠ 총량 없음」, 약제비 아래 표시, 조제 확인 창에 「· Loratadine 10mg Tab」.
+- **다른 세션에 부탁**: 진료 — 하루 총량이 빈 채 저장하려 할 때 경고(총괄이 전달 예정이라고 받음)
+
 ## 2026-09-29 — 실장님께 드릴 「가져올 표」: wiki/reference/drug-import-review.csv
 
 - **상태**: 확인 요청 (표만, 데이터 변경 없음) — 총괄이 실장님께 전달

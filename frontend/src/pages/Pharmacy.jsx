@@ -5,7 +5,7 @@ import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
-import { storedTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
+import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
@@ -186,7 +186,7 @@ export default function PharmacyPage() {
     if(!sel || busy) return;
     // A line with no stored total takes nothing off the shelf (the server reads the
     // total, it does not work one out), so say so before the pharmacist confirms.
-    var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && storedTotal(rx) === null; });
+    var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
     var ask = patientName(sel) + ' '+t.dispenseComplete+'?';
     if(unquantified.length) ask = t.ph_noTotalConfirm + '\n' + unquantified.map(function(rx){ return '· ' + rx.drug_name; }).join('\n') + '\n\n' + ask;
     if(!window.confirm(ask)) return;
@@ -246,7 +246,7 @@ export default function PharmacyPage() {
     var q = storedTotal(rx);
     return isExternal(rx) || q === null ? sum : sum + q * (parseFloat(rx.unit_price) || 0);
   }, 0);
-  var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && storedTotal(rx) === null; });
+  var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
   var RX_COLS = '1.5fr .6fr .6fr .5fr .5fr .6fr .7fr 1fr';
 
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
@@ -359,8 +359,8 @@ export default function PharmacyPage() {
                     <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color: total === null ? '#fca5a5' : t2, fontWeight: total === null ? 800 : 400 }}>
-                      {total === null ? t.ph_noTotal : fmtAmount(total)}
+                    <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : '#fca5a5', fontWeight: hasTotal(rx) ? 400 : 800 }}>
+                      {hasTotal(rx) ? fmtAmount(total) : t.ph_noTotal}
                       {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'#fbbf24', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
