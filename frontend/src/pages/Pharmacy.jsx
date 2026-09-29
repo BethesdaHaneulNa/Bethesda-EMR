@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
@@ -15,6 +15,11 @@ function timeText(v, locale){
 }
 function rxQty(rx){ return parseFloat(rx.total_qty) || ((parseFloat(rx.dose)||0) * (Number(rx.frequency)||1) * (Number(rx.days)||1)); }
 function isExternal(rx){ return rx.dispense_type === 'external'; }
+// '{ago}' style placeholders in a translated sentence, so word order can differ per language.
+function fill(s, v){ return String(s || '').replace(/\{(\w+)\}/g, function(m, k){ return v[k] != null ? v[k] : m; }); }
+
+// The queue refreshes itself this often while the screen is visible.
+var AUTO_REFRESH_MS = 30000;
 
 // Exact error texts from pharmacy.routes.js. The API client passes on only the
 // message, so matching it is how a known refusal becomes a translated one.
@@ -36,6 +41,11 @@ export default function PharmacyPage() {
   var rrx = useState([]), recentRx = rrx[0], setRecentRx = rrx[1];
   var dcs = useState(false), docOpen = dcs[0], setDocOpen = dcs[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
+  // Read by the auto-refresh timer, which is set up once and would otherwise
+  // only ever see the state of the first render.
+  var live = useRef({});
+  live.current = { tab: tab, sel: sel, busy: busy, loading: loading, docOpen: docOpen, chartViewOpen: chartViewOpen, phFinderOpen: phFinderOpen };
+  var switching = useRef(0); // in-house/outside switches still on their way to the server
 
   // 처방을 원내(internal)/원외(external)로 지정
   // The list rows are updated as well as the open patient: clicking another
@@ -47,6 +57,7 @@ export default function PharmacyPage() {
       n.prescriptions = (group.prescriptions||[]).map(function(rx){ return rx.id===rxId ? Object.assign({}, rx, { dispense_type: type }) : rx; });
       return n;
     }
+    switching.current++;
     try {
       await api.put('/pharmacy/prescription/'+rxId+'/dispense-type', { dispense_type: type });
       setSel(function(prev){ return prev ? withType(prev) : prev; });
@@ -56,17 +67,50 @@ export default function PharmacyPage() {
         });
       });
     } catch(err){
-      if(err.message === ERR_TYPE_LOCKED){ alert(t.ph_typeLocked); await loadData(); return; }
+      if(err.message === ERR_TYPE_LOCKED){ alert(t.ph_typeLocked); switching.current--; await loadData(); return; }
       alert('Error: '+err.message);
     }
+    switching.current--;
   }
 
   useEffect(function(){ loadData(); }, []);
+  // Keyed on the patient, not the selection object: the auto-refresh hands back a
+  // fresh object for the same patient every 30 seconds.
+  var selPid = sel ? sel.patient_id : null;
   useEffect(function(){
-    var pid = sel ? sel.patient_id : null;
-    if(!pid){ setRecentRx([]); return; }
-    api.get('/pharmacy/patient/'+pid+'/recent-rx').then(function(r){ setRecentRx(r||[]); }).catch(function(){ setRecentRx([]); });
-  }, [sel]);
+    if(!selPid){ setRecentRx([]); return; }
+    api.get('/pharmacy/patient/'+selPid+'/recent-rx').then(function(r){ setRecentRx(r||[]); }).catch(function(){ setRecentRx([]); });
+  }, [selPid]);
+
+  // New patients reach the queue as doctors finish, and nobody thought to press
+  // Refresh. This reloads quietly - no loading text, no error pop-ups, the search
+  // box and the open patient left alone - and stands aside whenever reloading
+  // could get in the way: while a dispense or a switch is being saved, while a
+  // document, chart or patient search window is open (its fields would be reset
+  // under the pharmacist), and while the browser tab is hidden.
+  async function refreshQuiet(){
+    var s = live.current;
+    if(document.hidden || s.busy || s.loading || switching.current || s.docOpen || s.chartViewOpen || s.phFinderOpen) return;
+    try {
+      var p = await api.get('/pharmacy/pending');
+      var c = await api.get('/pharmacy/completed');
+      var now = live.current; // may have changed while we waited
+      if(now.busy || now.loading || switching.current) return;
+      setPending(p); setCompleted(c);
+      if(now.sel){
+        var next = (now.tab === 'pending' ? p : c).find(function(x){ return x.consultation_id === now.sel.consultation_id; });
+        // If the open patient has left the queue it stays on screen, with a notice,
+        // rather than vanishing mid-read; see selGone below.
+        if(next) setSel(next);
+      }
+    } catch(e){ /* quiet: the next tick or the Refresh button will say if it persists */ }
+  }
+  useEffect(function(){
+    var id = setInterval(refreshQuiet, AUTO_REFRESH_MS);
+    function onVisible(){ if(!document.hidden) refreshQuiet(); }
+    document.addEventListener('visibilitychange', onVisible);
+    return function(){ clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
 
   // 같은 약을 이전에 받았고, 그 처방분(처방일+일수)이 아직 안 끝났으면 조기 재처방 경고
   function refillWarn(drugCode){
@@ -133,6 +177,8 @@ export default function PharmacyPage() {
   }
 
   var activeList = tab === 'pending' ? pending : completed;
+  // The open patient is no longer waiting - usually someone else dispensed them.
+  var selGone = !!(sel && tab === 'pending' && !loading && !pending.some(function(g){ return g.consultation_id === sel.consultation_id; }));
   var filtered = useMemo(function(){
     if(!q) return activeList;
     var s = q.toLowerCase();
@@ -206,6 +252,7 @@ export default function PharmacyPage() {
                   <div style={{ fontSize: 22, fontWeight:900, color:'#f8fafc' }}>{patientName(sel)}</div>
                   <div style={{ marginTop:4, fontSize: 16, color:t2 }}>{t.chartNo} {sel.chart_no} · {t.doctor} {sel.doctor_name || '-'} · {timeText(sel, locale)}</div>
                   {sel.allergies ? <div style={{ marginTop:6, color:'#fca5a5', background:'#ef444420', border:'1px solid #ef444450', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
+                  {selGone ? <div style={{ marginTop:6, color:'#fde68a', background:'#f59e0b20', border:'1px solid #f59e0b60', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
@@ -232,7 +279,7 @@ export default function PharmacyPage() {
                           return <button key={o[0]} onClick={function(){ setDispenseType(rx.id,o[0]); }} style={{ background:on?c:'#1e2433', color:on?'#0f1117':t2, border:'none', padding:'3px 12px', cursor:'pointer', fontSize:13, fontWeight:800 }}>{o[1]}</button>;
                         })}
                       </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'#f59e0b20', color:'#fbbf24', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
-                      {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {warn.daysAgo}{t.daysAgoSuffix} {warn.priorDays}{t.daysSupplySuffix} · {t.refillEarlyLeft} {warn.daysLeft}{t.daysLeftSuffix}</div> : null}
+                      {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.dose || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
