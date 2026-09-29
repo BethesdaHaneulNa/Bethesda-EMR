@@ -480,4 +480,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 문제 22: 결과 표에서 취소된 결과는 번호 칸을 받지 않고 날짜 뒤 「✕」 칸으로 | `08f392c` |
 | 2026-09-29 | 문제 23: 결과 표 값마다 그 결과의 참고치 툴팁, 참고치 칸은 최근 유효 결과 기준 · 문제 25: 환자 찾기 실패 알림 번역 | `965bf56` |
 | 2026-09-29 | 문제 14: 판정·참고치 규칙을 `backend/src/utils/labFlag.js`로 옮김, 화면 복사본 일치 검사 `backend/test/lab.flag.mjs` | `5d56c2b` |
-| 2026-09-29 | 2절을 프랑스어 화면으로 따라 하며 고침(간호사 기본 권한에 접수, 기록 탭 이름 「Journal」, 여러 검사 저장 버튼 「(Tout)」) · 참고치 질문지 `reference/lab-reference-questions.md` · 변경 기록 요약에서 검사 이름 반복 없앰 | (이 커밋) |
+| 2026-09-29 | 2절을 프랑스어 화면으로 따라 하며 고침(간호사 기본 권한에 접수, 기록 탭 이름 「Journal」, 여러 검사 저장 버튼 「(Tout)」) · 참고치 질문지 `reference/lab-reference-questions.md` · 변경 기록 요약에서 검사 이름 반복 없앰 | `97af696` |

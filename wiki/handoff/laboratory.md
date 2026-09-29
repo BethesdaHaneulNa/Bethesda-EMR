@@ -5,7 +5,7 @@
 ## 2026-09-29 — 참고치 질문지 · 기록 탭 확인 · 2절 따라 하기
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `97af696` (출발점 `develop` `8e52973`)
 - **① 참고치 질문지** `wiki/reference/lab-reference-questions.md`(새): 의사 선생님이 ○ 표시만 하면 되는 한 장(한국어, A4 두 쪽 안쪽 — 인쇄해 보지는 않음). 1) 성인 참고치 14항목(지금 EMR 값 · 출처별 선택지 · 기타 칸) 2) 판정 기준선 7항목(공복혈당·HbA1c·지질 4·eGFR — 「어디서부터 빨강」) 3) 글자 결과·소아(Trace, 「Absence」 표기, 소아 참고치를 넣을지·어느 표로·어느 항목부터, 생년월일 모를 때 기본값). 값은 모두 제안표(`lab-reference-ranges-kr.md`)와 대조해 옮김.
 - **② 설정 → 기록(Journal) 탭의 검사 결과 수정 줄**(격리 스택, develop `76457c9`): 값 바꿈(Hb `12.5 → 14,0`, 판정 low → normal) · 값 지움(Platelet) · 글자 결과(Malaria RDT `Negative → Positive`)를 만들어 한국어·프랑스어로 봄. 누가·언제·환자·차트번호·「검사 결과를 고침 / Résultat d'analyse corrigé」·전 값 → 새 값이 잘 읽힘. 고칠 것:
   - (임상병리, 이 커밋에서 고침) 한 항목짜리 검사는 요약이 「Malaria RDT · Malaria RDT」로 반복 → 검사 이름과 오더 이름이 같으면 한 번만. 새 줄부터 적용(기록은 고칠 수 없으므로 옛 줄은 그대로).
