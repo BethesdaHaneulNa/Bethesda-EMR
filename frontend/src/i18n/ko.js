@@ -430,6 +430,7 @@ export default {
   py_voidBack: "돌아가기",
   py_refundedAt: "취소 때 돌려줌",
   py_keptAt: "취소 때 돌려주지 않음",
+  py_correctionConfirm: "정정 처리하시겠습니까? 지금 영수증이 취소되고 정확한 금액으로 다시 발행됩니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

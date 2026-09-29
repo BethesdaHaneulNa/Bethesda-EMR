@@ -439,6 +439,7 @@ export default {
   py_voidBack: "Back",
   py_refundedAt: "Handed back on cancelling",
   py_keptAt: "Kept on cancelling",
+  py_correctionConfirm: "Apply the correction? The current receipt is cancelled and issued again at the correct amount.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

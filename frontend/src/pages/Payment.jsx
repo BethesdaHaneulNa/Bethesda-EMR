@@ -300,7 +300,7 @@ export default function PaymentPage() {
     var line = corr.refund>0 ? t.py_refundHandBack.replace('{amount}',fmtAr(corr.refund))
              : corr.outstanding>0 ? t.py_remainsOwed.replace('{amount}',fmtAr(corr.outstanding))
              : t.py_noDifference;
-    if(!window.confirm((t.correctionConfirm||'정정(환불) 처리하시겠습니까?')+'\n\n'+line)) return;
+    if(!window.confirm(t.py_correctionConfirm+'\n\n'+line)) return;
     try {
       var result = await api.post('/billing/visit/'+sel.id+'/correct',{
         expected_active_bill_ids:corr.active_bill_ids,

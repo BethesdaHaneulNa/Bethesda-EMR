@@ -430,6 +430,7 @@ export default {
   py_voidBack: "Retour",
   py_refundedAt: "Rendu à l’annulation",
   py_keptAt: "Gardé à l’annulation",
+  py_correctionConfirm: "Appliquer la correction ? Le reçu actuel est annulé et réémis au montant correct.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

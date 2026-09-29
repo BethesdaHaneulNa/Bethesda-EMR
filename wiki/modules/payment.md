@@ -171,10 +171,24 @@
 | 「Rendez N Ar au patient.」 / 「N Ar resteront impayés.」 / 「Aucune différence…」 (정정 확인) | 정정하면 돌려줄 돈 / 남을 미수 / 차액 없음(2.6) |
 | 「Quantité totale manquante pour : …」, 금액 칸의 「⚠ Quantité manquante」, 목록의 「⚠ Quantité de médicament manquante」 | 그 약의 총량이 처방에 없어 금액을 셀 수 없습니다. 수납이 막혀 있습니다. **진료실에 그 처방을 다시 저장해 달라고** 한 뒤 **↻** 를 누르고 수납합니다 |
 | 「⊘ Cette visite a été annulée à l’accueil — rien à encaisser…」 (Trouver patient 로 고른 내원) | 접수에서 취소한 내원입니다. 수납할 것이 없어 **Impayé / Confirmer** 버튼이 나오지 않습니다. 오른쪽 영수내역과 위쪽 문서 버튼은 그대로 쓸 수 있습니다. 접수는 진료 전 내원만 취소하므로 보통 영수증은 없습니다. 예전 영수증이 보이면 **Reçus** 에서 보고 필요하면 취소합니다(2.9) |
+| 「Appliquer la correction ? Le reçu actuel est annulé et réémis au montant correct.」 + 「Rendez N Ar au patient.」 / 「N Ar resteront impayés.」 / 「Aucune différence…」 | 정정 확인. 돌려줄 돈·남을 미수를 다시 보고 확인(2.6, 2.12) |
 | 「⚠ Code de consultation C0x introuvable — la consultation compte 0 Ar…」 | 그 진료 종류의 진료비 코드가 설정에 없습니다. 진료비 없이 계산됩니다(막지는 않음). 진료비를 받아야 하면 수납 전에 설정 › 오더 코드에 그 코드를 되살리거나 만들어 달라고 합니다 |
 | 「⚠ Nombre de flacons / tubes non indiqué pour : …」 | 병·튜브로 주는 약인데 개수가 비어 있습니다. 수납이 막혀 있습니다. **진료실에 그 약의 개수를 넣어 달라고** 한 뒤 **↻** 를 누르고 수납합니다 |
 | 「Le navigateur a bloqué la fenêtre d'impression…」 | 브라우저가 인쇄 창(팝업)을 막았습니다. 주소창 오른쪽의 팝업 차단 표시를 눌러 이 사이트의 팝업을 허용하고 다시 **Imprimer Reçu** |
 | 화면 곳곳의 영어(`paid` · `partial` · `+ Outstanding` · `No items`) | 아직 번역되지 않은 글자(7절 L1). `paid` 전액 수납 · `partial` 부분 수납 · `unpaid` 미수 · `cancelled` 취소 |
+
+### 2.12 돈을 돌려줘야 할 때 (현금)
+
+격리 스택에서 실제로 돌려 본 결과: `wiki/reference/payment-refund-simulation.md`(2026-09-29).
+
+| 상황 | 할 일 | 창구 현금 |
+|---|---|---|
+| 수납한 뒤 약·검사가 **줄었다**(과청구) | **정정**(2.6) — 목록 「Correction — À rembourser: N Ar」 → 환자를 눌러 **Appliquer la correction** → 확인 창 「Rendez N Ar au patient.」 | **N만** 돌려줌. 새 영수증 한 장 |
+| 줄었는데 원래 **덜 받았던** 환자 | 똑같이 **정정** — 목록 「Reste impayé: N Ar」, 확인 창 「N Ar resteront impayés.」 | 돌려줄 돈 없음, 미수만 줄어듦 |
+| 미수를 나중에 받은(**Encaisser impayé**) 내원이 줄었다 | 똑같이 **정정** — 「Déjà encaissé」에 두 번 받은 돈이 모두 들어가 있음 | 차액만 돌려줌 |
+| 환자를 잘못 골랐다 등 **영수증 자체가 틀렸다** | **영수 취소**(2.9) → 「Avez-vous rendu … ?」에 실제로 한 대로 답함 → **Re-facturer**(2.7) | 돌려줬으면 칸이 비어 있으니 새로 받음 / 안 돌려줬으면 칸에 그 돈이 채워져 있으니 더 받지 않음 |
+
+> 통계의 날짜별 수납액은 정정·취소한 **날**로 옮겨 갑니다(처음 수납한 날은 0이 됨). 기간 합계는 맞지만 하루 마감과는 다를 수 있습니다 — 고칠지 결정 대기(시뮬레이션 문서 끝의 선택지).
 
 ## 3. 기능 상세
 
@@ -509,4 +523,5 @@
 | 2026-09-29 | 결정할 것 넷(재수납 칸 · 목록 환불 금액 · 진료비 기본값 · 부분 수납 내원의 목록)을 재현하고 선택지와 추천 정리 — 바뀐 동작 없음 | 위키·인계 노트만 (7절 M6·M8·L2·L7) | `253ee68` |
 | 2026-09-29 | 목록의 정정 줄이 실제로 돌려줄 돈·남을 미수를 보여 줌(M8) · 진료비는 설정 한 곳에서, 코드가 없으면 0과 안내(L2) · 지난 날 내원 중 아직 수납 안 된 것도 대기 목록에(접수 부탁) · 병·튜브 약의 수량 옆 단위와 개수 없음 안내 | `/pending`에 `corr`·`past_unbilled`·지난 날 조건, `consult_prices`, 화면 `FEES` 삭제, `py_` 키 (2.3·2.4·2.6·2.11·3.1·3.2·4·5·7절) | `c49dd89` |
 | 2026-09-29 | 검사·처치 오더를 **수량 × 일수**로 청구(⑭) · 일부만 받거나 미수로 끝난 오늘 내원은 대기 목록에서 빠짐(L7) · 병·튜브 약은 화면과 영수증에 「2 flacons」 | `COALESCE(total_qty, quantity, 1)` 여섯 곳, `/pending` 오늘 조건, `billing_item.pack_label`(마이그레이션 031, 세션 번호 302)·`stampPackLabels()`, `packWord()` (2.3·2.4·3.1·4·7절) | `4fc72d5` |
-| 2026-09-29 | 영수 취소 창이 「돈을 돌려줬습니까?」를 묻고 「항목만 바뀌었으면 정정」을 안내 · 돌려줬으면 영수증에 「Remboursé au patient」, 재수납 칸은 비움 · 여러 장 취소해도 칸이 맞음(M6) | `PUT /void`의 `refunded`, `billing.refunded_amount`·`replaced_by_id`(마이그레이션 303), `prior_paid` 계산, 변경 기록 (2.7·2.9·3.5·3.11·4·5·7절) | (이 커밋) |
+| 2026-09-29 | 영수 취소 창이 「돈을 돌려줬습니까?」를 묻고 「항목만 바뀌었으면 정정」을 안내 · 돌려줬으면 영수증에 「Remboursé au patient」, 재수납 칸은 비움 · 여러 장 취소해도 칸이 맞음(M6) | `PUT /void`의 `refunded`, `billing.refunded_amount`·`replaced_by_id`(마이그레이션 303), `prior_paid` 계산, 변경 기록 (2.7·2.9·3.5·3.11·4·5·7절) | `f9ea726` |
+| 2026-09-29 | 환불 시뮬레이션 ①~④(현금 기준, 실장님 요청) — 돈은 맞고 통계의 날짜만 어긋남, 선택지 정리 · 정정 확인 창 첫 줄을 「Appliquer la correction ?」로(돌려줄 돈이 없을 때도 「환불 처리?」였음) · 과거 내원 머리의 빈 「· ·」 없앰 | `wiki/reference/payment-refund-simulation.md`, 2.12, `py_correctionConfirm`, `PatientChart.jsx` (2.11·2.12) | (이 커밋) |
