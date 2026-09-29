@@ -5,7 +5,7 @@
 ## 2026-09-29 — 결정 10: 검사 결과 수정 기록(로그로만)
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `8661ec5` (출발점 `develop` `40a2a6e`)
 - **한 일**: 실장님 결정 10 — 화면에 「수정됨」 없이 공통 로그로만. `POST /lab/order/:id/results`에서 지우기 전 옛 줄을 읽고, 새로 넣은 줄(`RETURNING`)과 짝지음(같은 항목 id, 없으면 같은 이름). 짝의 `value`·`flag`·`unit`이 다르면 `writeAudit(client, req, {action: ACTIONS.LAB_RESULT_EDIT, …})` 한 줄(바뀐 칸만 — 함수가 걸러 냄), 짝 없는 옛 줄(값을 지움)은 `after: null`. 처음 입력·같은 값·재검(다른 오더)은 안 남김. `summary` = 「오더 이름 · 검사 이름」, `entity` = `lab_result`, 환자·내원 id 포함. 같은 트랜잭션 `client` 사용.
 - **바꾼 파일**: `backend/src/routes/lab.routes.js` · `wiki/modules/laboratory.md`(2절 「이미 넣은 결과 고치기」, 3.4, 7절 10, 8절)
 - **공용 파일 변경**: 없음(`utils/audit.js`는 쓰기만) · **DB 마이그레이션**: 없음(총괄의 `022_audit_log.sql`) · **번역 키**: 없음

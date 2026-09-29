@@ -432,4 +432,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 결정 8: 결과 표에서 같은 날 재검을 (1)(2) 칸으로 나눠 둘 다 보이고 입력 시각 표시 · 3.3에 `<x`·`>x` 예시 표 | `26b861b` |
 | 2026-09-29 | 결정 3-B 임상병리 몫: 취소된 오더에 결과 저장 거절(409 `Order is cancelled`, `lb_orderCancelled`), 결과 표에서 취소분 회색·줄긋기·툴팁(`order_status`·`cancel_reason`, `lb_cancelled`) | `1ef0be2` |
 | 2026-09-29 | 결정 4-가: 성별·나이별 참고치 구조 — `lab_ref_range` 테이블(마이그레이션 501), 환자 성별·검사일 나이로 서버가 골라 판정·`ref_label` 저장, 설정 검사항목 탭 입력 표(같은 성별 겹침 저장 거절), 입력 화면·결과 표에 기준 이름 표시 | `9c9bbee` |
-| 2026-09-29 | 결정 10: 결과를 고치거나 지우면 공통 변경 기록(`writeAudit`, `laboratory.result.edit`)에 한 줄 — 처음 입력·같은 값은 안 남김, 화면 표시 없음 | (이 커밋) |
+| 2026-09-29 | 결정 10: 결과를 고치거나 지우면 공통 변경 기록(`writeAudit`, `laboratory.result.edit`)에 한 줄 — 처음 입력·같은 값은 안 남김, 화면 표시 없음 | `8661ec5` |
