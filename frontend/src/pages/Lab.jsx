@@ -132,7 +132,7 @@ export default function LabPage() {
     api.get('/lab/visit/' + v.id + '/orders').then(function (g) {
       if (!g) { alert(t.labNoOrders || '이 내원에 검사 오더가 없습니다.'); return; }
       pickConsult(g);
-    }).catch(function (e) { alert('Error: ' + e.message); });
+    }).catch(function (e) { console.error('[lab] open visit', e); alert(t.lb_visitOpenFailed); });
   }
   function loadView(v, g) {
     g = g || sel;
