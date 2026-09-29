@@ -285,6 +285,10 @@ export default {
   rc_serverDown: "서버에 연결할 수 없습니다. 잠시 뒤 다시 누르세요. 계속되면 관리자에게 알리세요.",
   rc_badFormat: "입력한 값의 형식이 맞지 않습니다. 날짜와 숫자 칸을 확인하세요.",
   rc_accessDenied: "이 작업을 할 권한이 없습니다. 관리자에게 「접수」 권한을 요청하세요.",
+  rc_visitNoFee: "진료비 없음",
+  rc_visitTypeLocked: "수납이 끝난 접수라 내원구분은 수납 화면에서 바꿉니다.",
+  rc_visitTypeOther: "지금 값: {type} (수납에서 정함). 단추를 누르면 바뀝니다.",
+  rc_visitTypeSuggested: "전에 {dept}에 온 적이 있어 재진으로 골라 두었습니다. 다른 진료면 초진을 누르세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

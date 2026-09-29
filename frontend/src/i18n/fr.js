@@ -285,6 +285,10 @@ export default {
   rc_serverDown: "Impossible de joindre le serveur. Réessayez dans un instant ; si cela continue, prévenez l'administrateur.",
   rc_badFormat: "Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres.",
   rc_accessDenied: "Vous n'avez pas l'autorisation pour cette action. Demandez l'accès « Enregistrement » à l'administrateur.",
+  rc_visitNoFee: "Sans frais",
+  rc_visitTypeLocked: "Déjà encaissé : le type de visite se change à l'écran Paiement.",
+  rc_visitTypeOther: "Valeur actuelle : {type} (fixée au Paiement). Un bouton la remplace.",
+  rc_visitTypeSuggested: "Déjà venu en {dept} : Suivi présélectionné. Si c’est un autre problème, choisissez Nouvelle.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

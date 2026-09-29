@@ -294,6 +294,10 @@ export default {
   rc_serverDown: "Cannot reach the server. Try again in a moment; if it keeps happening, tell the administrator.",
   rc_badFormat: "A value has the wrong format. Check the date and number fields.",
   rc_accessDenied: "You do not have permission for this. Ask the administrator for the Registration permission.",
+  rc_visitNoFee: "No fee",
+  rc_visitTypeLocked: "Already billed: change the visit type on the Payment screen.",
+  rc_visitTypeOther: "Current value: {type} (set at Payment). Pressing a button replaces it.",
+  rc_visitTypeSuggested: "Seen in {dept} before, so Follow-up is pre-selected. For a different problem, choose New Visit.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
