@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 결정 9 · 12 · 14 적용 (이월 수납은 원래 과·의사로 · 취소 접수 처방 · 방문당 평균 청구액)
+
+- **상태**: 확인 요청
+- **커밋**: session/statistics (이 항목과 같은 커밋). `develop` `2bc7c74`(수납 M2·새 약 총량 식 포함)에서 fast-forward 한 뒤 작업
+- **한 일**:
+  - **9 (B)** — 과별·의사별 매출의 `paid` 를 `paidByVisit()` 로 계산: 영수의 `total_due` 를 「넘어온 옛 영수들의 안 받은 나머지(오래된 순, 재귀)」 + 「자기 진료분」 조각으로 나누고 `net_paid` 를 그 순서로 채워 방문별로 나눔 → 방문의 과·담당의로 묶음. 날짜는 옮기지 않음(결정 8). 청구액·진료 영수 수는 영수 자기 방문에. 두 SQL 을 한 번의 영수 조회 + `WITH RECURSIVE` 한 번 + 방문 조회로 바꿈.
+  - **12 (C)** — 약품 사용통계 조건에 `(v.status <> 'cancelled' OR rx.status = 'dispensed')`.
+  - **14 (C)** — `revenue.avg`(수납액 ÷ 영수 수) 대신 `avgBilledPerVisit`(청구액 ÷ 진료 금액이 있는 영수의 방문 수). `billCount` 는 미수 수납 영수를 빼고, `settlementCount` 따로. 미수 수납 영수 = `settlementSql()`: 진료 금액 0 + `previous_balance > 0`(note 로 거르지 않음). 화면: 카드 이름 「진료 영수」·「방문당 평균 청구액」, 진료 영수 칸 아래 「+ 미수 수납 N건」.
+- **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — **통계 표시(`st_`) 사이에만** 키 3개
+- **DB 마이그레이션**: 없음
+- **번역 키**: `st_billCount`(진료 영수 / Treatment receipts / Factures de soins), `st_settlementsSub`(+ 미수 수납 {n}건 / + {n} balance settlement(s) / + {n} règlement(s) de solde), `st_avgPerVisit`(방문당 평균 청구액 / Avg billed / visit / Moy. facturée / visite) — ko · en · fr 모두
+- **API 모양 변경**: `/summary` 의 `revenue.avg` **삭제** → `avgBilledPerVisit`, `billedVisits`, `settlementCount` 추가. `billCount` 뜻이 「진료 영수」로. `revenueByDept`·`revenueByDoctor` 의 `paid` 가 3.8 방식(모양은 같음). 이 API 를 쓰는 곳은 `Stats.jsx` 뿐(grep 확인).
+- **확인한 방법**: `node --check`, `npm install --no-package-lock` + `npm run build` 통과. 격리 스택 9186(새 DB)에서 **실제 수납 API**(`POST /billing`, `POST /billing/settle`)로 전액 이월 · 일부 이월 · 세 방문 사슬 · M2 미수 수납 · 취소 접수 처방 3건을 넣고 스크립트로 손 계산과 비교 — 9/10 · 9/11 · 9/12 · 9/10~12 네 기간 모두 수납액·청구액·진료 영수·미수 수납·평균·과별·의사별 일치, 모든 기간에 **과별 합 = 의사별 합 = 수납액**. 미수 명단 3 000 일치. 약품 처방전체 30 · 조제완료 15(취소·미조제 15 빠짐, 예전 식이면 45). 표는 `modules/statistics.md` 3.4 「4차」. 한국어·프랑스어 화면에서 카드·과별·의사별 줄 눈으로 확인.
+- **확인 못 한 것**: 영어 화면(키만 넣음). 정정(`/correct`)이 끼어든 이월 사슬 — 코드상 취소된 영수를 조각에서 빼므로 맞아야 하지만 시나리오로는 안 돌림. 처방 수량 기대값을 처음에 입력값(15·7·10)으로 잡았다가, 진료 서버가 새 식(하루 총량 × 일수)으로 다시 계산해 셋 다 15 로 저장된 것을 DB 로 확인하고 기대값을 고침 — 통계 로직 문제가 아님.
+- **위키**: `modules/statistics.md` 2절(2.3 표·2.4·2.6), 3.2 표(줄 번호 갱신), 3.4(이월·미수 수납 행, M2 반영, 4차 시험), 3.6, **3.8 새로**, 4절, 7절(9·14 고침, 12 일부, **16 새로**), 8절
+- **총괄 확인 요청**: 합치면 실행 중 EMR 통계의 「평균 단가」 카드가 「방문당 평균 청구액」으로 바뀌고 숫자 뜻이 달라집니다(실장님 결정). CHANGELOG 에 넣을 것: 과별·의사별 매출에서 이월 수납을 원래 진료로, 방문당 평균 청구액, 진료 영수 건수와 미수 수납 따로, 취소 접수 처방 제외.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: **16(새로)** 미수 명단 Depuis 가 M2 일부 수납·이월 뒤에는 받은 날짜로 보임 — 3.8 의 조각 계산으로 고칠 수 있음(낮음, 진행 여부 여쭤볼 것). 12 의 남은 부분(약품 표 기간 선택 없음). 7(총괄).
+
 ## 2026-09-29 — 14번 자료에 「미수 수납 영수를 건수에서 뺄지」 의견 · 약 총량 결정 기록
 
 - **상태**: 확인 요청 (위키만)
@@ -34,7 +54,7 @@
 
 > **총괄 확인 (2026-09-29)**: 합침(`0e9a0a5`, 위키만). 결정 자료는 결정 세션에 넘김. 12번 조회문을 실행 중 EMR에서 실행 — 아래 총괄 답장 참고.
 
-- **상태**: 보류 — 8 결정됨(A 유지, 위 항목). 9·12·14 결정 대기 (결정 세션이 여쭘)
+- **상태**: 완료 — 8 은 A 유지, 9·12·14 는 세션 추천대로 결정되어 위 항목에서 적용
 - **커밋**: session/statistics `61f90fb` (develop `0e9a0a5` 로 합쳐짐, 위키만). `develop` `b01c6a0` 에서 fast-forward 한 뒤 작업
 - **한 일**: 네 가지 결정 사항마다 「지금 숫자가 어떻게 나오는지 · 선택지별로 어떻게 달라지는지 · 세션 추천」을 표로 정리. **예시 금액은 모두 격리 스택 9186(새 DB)에 실제로 넣고 `/api/stats/summary`·`/drug-usage` 로 잰 값**입니다(날짜는 SQL 로 옮김). 코드 변경 없음.
 - **바꾼 파일**: `wiki/handoff/statistics.md`, `wiki/modules/statistics.md`(3.4 정정 행을 수납 세션의 새 규칙에 맞게, 3.6, 7절 8·9·12·14 에 이 표 안내)

@@ -172,8 +172,11 @@ export default function StatsPage(){
         <Section title={'💰 '+(t.revenueSettlement||'매출 · 정산')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
             <Card label={t.collected||'수납액'} value={fmtAr(rev.paid)} unit="Ar" color="#10b981" sub={(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'} />
-            <Card label={t.billCount||'수납 건수'} value={rev.billCount||0} unit={t.cases||'건'} small />
-            <Card label={t.avgPerBill||'평균 단가'} value={fmtAr(rev.avg)} unit="Ar" small />
+            {/* Treatment receipts only; balance settlements (payment M2) are money
+                received, not treatments, so they are shown apart (decision 14). */}
+            <Card label={t.st_billCount||'진료 영수'} value={rev.billCount||0} unit={t.cases||'건'} small
+              sub={rev.settlementCount?(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount):null} />
+            <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAr(rev.avgBilledPerVisit)} unit="Ar" small />
             <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
             <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
             <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={t.cases||'건'} color="#f59e0b" small />

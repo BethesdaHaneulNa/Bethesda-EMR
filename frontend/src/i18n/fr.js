@@ -408,6 +408,9 @@ export default {
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
   st_unassigned: "Non attribué",
+  st_billCount: "Factures de soins",
+  st_settlementsSub: "+ {n} règlement(s) de solde",
+  st_avgPerVisit: "Moy. facturée / visite",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",
