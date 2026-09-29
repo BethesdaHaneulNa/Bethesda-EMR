@@ -1,6 +1,6 @@
 # 설정 (Settings)
 
-> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). 결정 대기 — 기본 비밀번호·최소 길이(S4), 비활성 직원 되돌리기(U2)
+> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4(초기 1234 유지·최소 길이 없음·자기 비밀번호 바꾸기)·U2(되살리기는 관리자만) 결정됨 — 작업 차례
 
 ## 1. 이 모듈이 하는 일
 
@@ -268,7 +268,7 @@
 - 로그인 순서: 아이디 조회 → 비활성이면 「Account is inactive」 → 비밀번호 확인. 비밀번호를 몰라도 그 아이디가 있고 비활성인지 알 수 있습니다.
 - 토큰은 브라우저 `localStorage`(`medconnect_token`)에 저장. 서버가 401을 주면 `api/client.js`가 지우고 로그인 화면으로 보냅니다.
 - **로그인·첫 관리자 만들기는 `api/client.js`를 거치지 않습니다** (2026-09-29, `Login.jsx` `authPost`). 그 클라이언트는 401이면 무조건 「로그인이 끝났다」로 보고 로그인 화면을 다시 불러오는데, 로그인 화면에서 401은 **틀린 비밀번호·비활성 계정**의 답이라 안내가 뜨자마자 새로고침에 지워졌습니다 — 틀린 비밀번호를 넣으면 **아무 말 없이 칸만 비었습니다**(격리 스택에서 재현). 이제 안내가 남고 칸도 그대로입니다.
-- **서버 안내의 번역** (2026-09-29, U11): 로그인·설정 API가 사람에게 보여줄 문구는 영어 고정 문자열로 `backend/src/routes/settings.messages.js`(`MSG`, 필드 이름이 들어가는 것은 `fieldMsg`)에 모았고, 화면은 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)`로 **문자열을 맞춰** `se_` 문구로 바꿉니다(`api/client.js`가 상태 코드를 넘기지 않으므로 — 다른 세션들과 같은 방식, 총괄 결정). `utils/dbError.js`(총괄)의 문구와 `api/client.js`의 「API response was not JSON…」도 같은 표에 있습니다. 모르는 문구는 영어 그대로 보입니다(숨기지 않음). 로그인 화면은 받은 원문을 저장하고 **보여줄 때** 번역하므로 언어를 바꾸면 안내도 바뀝니다. **한쪽 문구를 바꾸면 다른 쪽도** — `node backend/test/settings.messages.mjs`가 어긋나면 알려줍니다(39개 항목).
+- **서버 안내의 번역** (2026-09-29, U11): 로그인·설정 API가 사람에게 보여줄 문구는 영어 고정 문자열로 `backend/src/routes/settings.messages.js`(`MSG`, 필드 이름이 들어가는 것은 `fieldMsg`)에 모았고, 화면은 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)`로 **문자열을 맞춰** `se_` 문구로 바꿉니다(`api/client.js`가 상태 코드를 넘기지 않으므로 — 다른 세션들과 같은 방식, 총괄 결정). `utils/dbError.js`(총괄)의 문구와 `api/client.js`의 「API response was not JSON…」도 같은 표에 있습니다. 모르는 문구는 영어 그대로 보입니다(숨기지 않음). 로그인 화면은 받은 원문을 저장하고 **보여줄 때** 번역하므로 언어를 바꾸면 안내도 바뀝니다. **한쪽 문구를 바꾸면 다른 쪽도** — `node backend/test/settings.messages.mjs`가 어긋나면 알려줍니다(45개 항목 — 2026-09-29 `dbError`의 「없는 날짜」 추가).
 - `JWT_SECRET`이 없으면 백엔드가 시작을 거부합니다 (`middleware/auth.js`, `docker-compose.yml`의 `:?`). 공개된 기본값으로 토큰을 위조할 수 있기 때문입니다. `setup.ps1`/`setup.sh`가 무작위 값을 `.env`에 만듭니다.
 - 로그인 후 이동: `Login.jsx`의 `ROLE_ROUTES`로 **역할** 기준 화면으로 보내고, 권한이 없으면 `App.jsx` 가드가 `homePath()`로 다시 보냅니다.
 
@@ -345,8 +345,15 @@
   - `POST /drugs`: 새 약은 **재고 0**으로 시작(요청의 `stock_qty` 무시). 최소 재고가 비면 **10**(열 기본값이 빈 값에는 적용되지 않았음).
   - `PUT /drugs/:id`: `stock_qty`·`stock_expected`가 와도 **조용히 무시**하고 나머지만 저장. 거절(400)하지 않는 이유 — 이 변경 전에 연 설정 화면이 그대로 열려 있어도 이름·단가 저장이 막히지 않게. 최소 재고 소수는 400.
   - 화면도 요청에서 재고를 뺍니다.
+- **포장 단위 약** (2026-09-29, 약국 H2-B, 마이그레이션 025): 시럽·흡입기·안약·연고처럼 병·튜브로 내주는 약. `POST·PUT /drugs`가 `pack_unit`(참/거짓)과 `pack_label`(`bottle`·`tube`·`inhaler`·`unit`)을 저장합니다. 편집 창의 체크 칸·선택 칸은 약국 세션이 만든 것.
+  - `pack_unit`이 거짓이면 `pack_label`은 **비워서**(NULL) 저장 — 무엇이 오든.
+  - 참인데 단위가 비면 **`bottle`(병)**. 400으로 거절하지 않은 이유: 편집 창이 「병」을 미리 골라 보여 주므로 사람이 본 값과 같고, 이런 약은 대부분 시럽.
+  - 목록에 없는 단위 → 400 `pack_label must be one of …`, 참/거짓이 아닌 `pack_unit` → 400 (화면에는 「허용되지 않는 값」).
+  - **`pack_unit`이 요청에 없으면 PUT은 두 칸을 그대로 둡니다** — 이 칸을 모르는 옛 화면이나 스크립트가 저장해도 지워지지 않게(재고 칸과 같은 생각). POST에서는 거짓.
+  - 처방에는 쓸 때 복사되므로(025), 약의 단위를 나중에 바꿔도 이미 쓴 처방은 그대로입니다.
+  - `GET /drugs`는 `SELECT *`라 두 칸이 그대로 나갑니다(확인).
 - **지나온 길**: 처음에는 편집 창이 연 순간의 재고를 그대로 써서, 창을 연 사이 조제된 차감이 되돌아갔습니다(약국 H4). 2026-09-29 오전에 「본 값(`stock_expected`)과 지금 값이 다르면 409로 다시 묻기」 안전장치를 넣었고(`f44ab9e`), 약국 재고 기록이 생기면서 오후에 설정에서 재고를 아예 빼고 안전장치도 지웠습니다. 번역 키 `se_stockChanged`·서버 문구 `STOCK_CHANGED`도 함께 지움.
-- **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, `SE_ADMIN_PW`) — 새 약 0 · 최소 재고 10 · 재고는 약국 입고로 0 → 30 · `stock_qty: 999`를 실은 저장 200·재고 그대로 · 옛 `stock_expected` 요청도 200 · 재고 기록에 「설정에서 바뀜(outside)」 줄이 생기지 않음. 화면: 프랑스어 약품 편집에서 단가만 4500 → 4600 저장 → 재고 50 그대로.
+- **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, `SE_ADMIN_PW`) — 새 약 0 · 최소 재고 10 · 재고는 약국 입고로 0 → 30 · `stock_qty: 999`를 실은 저장 200·재고 그대로 · 옛 `stock_expected` 요청도 200 · 재고 기록에 「설정에서 바뀜(outside)」 줄이 생기지 않음. 화면: 프랑스어 약품 편집에서 단가만 4500 → 4600 저장 → 재고 50 그대로. 포장 단위 11개 — 새 약은 거짓·NULL · 참+tube 저장 · GET에 나옴 · 두 칸 없이 저장 → 그대로 · 거짓 → 단위 NULL · 참+빈 단위 → bottle · 모르는 단위·참/거짓 아님 → 400이고 바뀐 것 없음 · 새 약 참+inhaler · 새 약 모르는 단위 → 400·만들어지지 않음. 화면(격리 스택): 프랑스어로 AMOX250 「Flacon」 체크 → 저장 → 목록에 「Flacon」 표시, 한국어로 단위 바꾸기·체크 해제 → 단위 NULL, 재고 30 그대로.
 
 ### 3-9. 상용구의 언어 (2026-09-29)
 
@@ -361,7 +368,7 @@
 - **직원 계정 기록** (`admin.routes.js`): 만들기(`settings.staff.create`, 계정 칸과 권한) · 고치기(`.edit` — 아이디·이름·역할·상태·진료과·전화·이메일 중 바뀐 칸만, **비활성화도 여기**: 상태 active → inactive) · 권한(`.permissions` — 순서만 다른 것은 바뀐 것이 아님, `ALL_PERMS` 순서로 맞춰 비교) · 비밀번호(`.password` — **값 없이** 한 줄). 세 경로(POST·PUT·DELETE `/staff`) 모두 **트랜잭션** 안에서 바꾸고 기록합니다 — 거절(마지막 관리자, 설치 관리자)되거나 실패하면 줄이 남지 않음. PUT은 바꾸기 전 행을 `FOR UPDATE`로 읽어 「전 값」으로 씁니다. 이때 함께 고친 것: **status가 빠진 요청은 지금 상태를 유지**(전에는 NULL — 7절 S6).
 - **읽기 API** `GET /api/admin/audit` (settings 권한): `from`·`to`(YYYY-MM-DD, 병원 날짜 — DB 연결이 병원 시간대), `staff_id`, `patient`(이름·차트번호 일부), `action`(전체 이름 또는 모듈 이름), `page`, `limit`(최대 200) → `{total, page, limit, rows}`, 최신순. **쓰기·고치기·지우기 라우트는 없습니다.**
 - **「Journal」 탭** (`Settings.jsx` + `frontend/src/pages/settingsAudit.js`): 종류 → 문장(`se_act_*`), 칸 이름 → 사람 말(`se_fld_*` 등), 역할·권한·상태·진료과 값 → 화면의 이름. **모르는 칸·종류는 저장된 이름 그대로** 보여서, 다른 모듈이 먼저 기록을 시작해도 읽힙니다 — 새 칸이 생기면 `settingsAudit.js`의 `FIELDS`에 한 줄 + `se_` 키. 지금 들어 있는 칸: 직원, 검사 결과(value·flag·unit), 환자 인적사항 13칸, 영수 취소·정정. 진료(오더·처방·끝난 기록)는 그 세션이 기록을 붙이면 추가.
-- **고칠 수 없음 — TRUNCATE까지** (마이그레이션 **702**, 설정): 022의 트리거는 행 단위(UPDATE·DELETE)라 **TRUNCATE(표 비우기)는 통과**했습니다 — 2026-09-29 복원한 사본에서 실제로 15줄이 비워짐. 같은 함수를 문장 단위 `BEFORE TRUNCATE` 트리거로 붙였습니다. DROP TABLE은 막지 않습니다(백업 복원이 `--clean`으로 표를 지우고 다시 만들기 때문).
+- **고칠 수 없음 — TRUNCATE까지** (마이그레이션 **026** — 세션 번호 702, 설정): 022의 트리거는 행 단위(UPDATE·DELETE)라 **TRUNCATE(표 비우기)는 통과**했습니다 — 2026-09-29 복원한 사본에서 실제로 15줄이 비워짐. 같은 함수를 문장 단위 `BEFORE TRUNCATE` 트리거로 붙였습니다. DROP TABLE은 막지 않습니다(백업 복원이 `--clean`으로 표를 지우고 다시 만들기 때문).
 - **백업·복원** (격리 스택에서 확인): 백업 파일에 `audit_log` 데이터와 두 트리거가 들어 있음. 별도 DB에 복원 → 15줄 그대로, UPDATE·DELETE·TRUNCATE 모두 「audit_log is append-only」로 거절. 백업 직후 `verify-backup.ps1 -Strict` → VERIFIED(25개 테이블 모두 같음).
 - **확인**: `backend/test/settings.audit.mjs` (격리 스택 전용, `SE_ADMIN_PW`) 20개 — 만들기 한 줄 / 바뀐 것 없는 저장·순서만 다른 권한 → 줄 없음 / 바뀐 칸만 / 권한 전→후 / 비밀번호 줄에 값 없음, 로그 어디에도 비밀번호·해시 없음 / 거절된 변경 → 줄 없음 / 비활성화 → 상태 줄 / 거르기(종류·모듈·사람·날짜)·쪽 나누기·최대 200. 권한 없는 계정 403은 `settings.access.mjs`.
 
@@ -385,7 +392,7 @@
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). 쓰기 라우트 없음 |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
-| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0 (3-8절) |
+| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로) (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
@@ -417,7 +424,7 @@
 | `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸 | 001, 009 |
 | `phrase_dictionary` | 상용구 3개 국어 | 001 |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
-| `audit_log` | 변경 기록 (총괄 설계, 설정은 직원 계정 줄을 쓰고 「Journal」 탭에서 읽음). UPDATE·DELETE·**TRUNCATE** 거절 | 022(총괄), **702**(설정 — TRUNCATE) |
+| `audit_log` | 변경 기록 (총괄 설계, 설정은 직원 계정 줄을 쓰고 「Journal」 탭에서 읽음). UPDATE·DELETE·**TRUNCATE** 거절 | 022(총괄), **026**(설정 — TRUNCATE, 세션 번호 702) |
 | `schema_migrations` | 마이그레이션 적용 기록 (`config/migrate.js`, 총괄) | — |
 
 ## 5. 다른 모듈과의 연결
@@ -548,4 +555,5 @@
 | 2026-09-29 | 권한 시험 표에 새 라우트(이전 내원 접수, 재고 6개, 같은 환자 찾기) | `settings.access.mjs` | `b5e7f4c` · `8887333` |
 | 2026-09-29 | 설정에서 약을 저장해도 재고는 바뀌지 않음 — 재고는 약국 재고 기록으로만, 새 약은 0에서 시작 | `POST·PUT /admin/drugs`가 `stock_qty` 무시, H4 안전장치 삭제 (3-8) | `73b0517` |
 | 2026-09-29 | 의사 역할을 고르면 진료·**약국**이 체크됨(결정). 이미 있는 의사 계정은 그대로 | `permissions.js`·`modules.js` 한 줄씩, 권한 시험 계정 11개 | `8ba7a93` |
-| 2026-09-29 | 변경 기록: 직원 계정 기록, 읽기 API, 설정의 「Journal」 탭, TRUNCATE도 거절(702), 백업·복원 뒤에도 그대로. 빠진 status는 NULL이 아니라 지금 상태(S6) | `writeAudit` 3곳, `GET /admin/audit`, `settingsAudit.js`, `settings.audit.mjs` (3-10) | (이 커밋) |
+| 2026-09-29 | 변경 기록: 직원 계정 기록, 읽기 API, 설정의 「Journal」 탭, TRUNCATE도 거절(026), 백업·복원 뒤에도 그대로. 빠진 status는 NULL이 아니라 지금 상태(S6) | `writeAudit` 3곳, `GET /admin/audit`, `settingsAudit.js`, `settings.audit.mjs` (3-10) | `5e91dbf` |
+| 2026-09-29 | 약에 「포장 단위로 내줌」(병·튜브·흡입기·개)이 저장됨. 서버의 「없는 날짜」 안내가 프랑스어로 | `POST·PUT /admin/drugs` `packFields`, `settings.drugs.mjs` 11개 추가 (3-8) | (이 커밋) |

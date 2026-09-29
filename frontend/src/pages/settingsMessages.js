@@ -33,6 +33,7 @@ var EXACT = {
   'A field has a value that is not allowed': 'se_errNotAllowed',
   'A field has the wrong format': 'se_errFormat',
   'A date field has the wrong format': 'se_errFormat',
+  'A date field has a date that does not exist': 'se_errBadDate',
   'A number is out of range': 'se_errRange',
   // middleware/auth.js (the coordinator's file). A 401 with a token sent never reaches a
   // screen - api/client.js returns to the login page - so these show only on login.

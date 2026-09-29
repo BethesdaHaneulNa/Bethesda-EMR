@@ -1,5 +1,6 @@
-// Saving a drug in Settings never changes its stock (2026-09-29). Stock moves only
-// through the pharmacy's stock record; POST/PUT /api/admin/drugs ignore stock_qty and a
+// Saving a drug in Settings never changes its stock (2026-09-29), and it saves the
+// pack-unit fields (pack_unit / pack_label, 025) without clearing them when left out.
+// Stock moves only through the pharmacy's stock record; POST/PUT /api/admin/drugs ignore stock_qty and a
 // new drug starts at 0. Run against an ISOLATED stack only - it creates a test drug and
 // receives stock for it:
 //
@@ -61,6 +62,34 @@ const list = Array.isArray(moves) ? moves : (moves && (moves.movements || moves.
 check('the stock record holds only the receive - no "changed outside" line from Settings',
   list.length > 0 && !list.some(m => /outside/i.test(m.memo || '')), list.map(m => m.kind + ':' + (m.memo || '')));
 check('stock still 30 at the end', (await stockNow()) === 30, await stockNow());
+
+// Pack-unit drug (025_pharmacy_pack_unit.sql): pack_unit / pack_label.
+check('a new drug is not a pack-unit drug unless asked', made.data.pack_unit === false && made.data.pack_label === null, made.data);
+const listed = async () => (await call('GET', '/admin/drugs?q=' + code, null, T)).data.find(d => d.id === id);
+r = await call('PUT', '/admin/drugs/' + id, { ...row, pack_unit: true, pack_label: 'tube' }, T);
+check('pack_unit true + tube is saved', r.status === 200 && r.data.pack_unit === true && r.data.pack_label === 'tube', r);
+const l1 = await listed();
+check('GET /admin/drugs returns both fields', l1.pack_unit === true && l1.pack_label === 'tube', l1);
+const { pack_unit: _u, pack_label: _l, ...noPack } = row;
+r = await call('PUT', '/admin/drugs/' + id, { ...noPack, name: 'Stock test drug 2' }, T);
+check('a save without the pack fields leaves them as they are', r.status === 200 && r.data.pack_unit === true && r.data.pack_label === 'tube' && r.data.name === 'Stock test drug 2', r);
+r = await call('PUT', '/admin/drugs/' + id, { ...row, pack_unit: false, pack_label: 'tube' }, T);
+check('pack_unit false -> label stored empty', r.status === 200 && r.data.pack_unit === false && r.data.pack_label === null, r);
+r = await call('PUT', '/admin/drugs/' + id, { ...row, pack_unit: true, pack_label: '' }, T);
+check('pack_unit true with no label -> bottle', r.status === 200 && r.data.pack_unit === true && r.data.pack_label === 'bottle', r);
+r = await call('PUT', '/admin/drugs/' + id, { ...row, pack_unit: true, pack_label: 'box' }, T);
+check('an unknown label -> 400 naming pack_label', r.status === 400 && /^pack_label must be one of/.test(r.data.error), r);
+r = await call('PUT', '/admin/drugs/' + id, { ...row, pack_unit: 'yes' }, T);
+check('pack_unit that is not true/false -> 400', r.status === 400 && /^pack_unit must be one of/.test(r.data.error), r);
+const l2 = await listed();
+check('the refused saves changed nothing (still bottle)', l2.pack_unit === true && l2.pack_label === 'bottle', l2);
+const code2 = code + 'P';
+const made2 = await call('POST', '/admin/drugs', { code: code2, name: 'Pack test syrup', category: 'Other', unit_price: 500, pack_unit: true, pack_label: 'inhaler' }, T);
+check('a new pack-unit drug keeps its label', made2.status === 201 && made2.data.pack_unit === true && made2.data.pack_label === 'inhaler' && made2.data.stock_qty === 0, made2);
+const made3 = await call('POST', '/admin/drugs', { code: code2 + 'X', name: 'Pack test bad', category: 'Other', unit_price: 1, pack_unit: true, pack_label: 'sachet' }, T);
+check('a new drug with an unknown label -> 400, nothing made', made3.status === 400 &&
+  !(await call('GET', '/admin/drugs?q=' + code2 + 'X', null, T)).data.length, made3);
+if (made2.data && made2.data.id) await call('DELETE', '/admin/drugs/' + made2.data.id, null, T);
 
 await call('DELETE', '/admin/drugs/' + id, null, T);    // hides the test drug
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
