@@ -178,7 +178,8 @@ if ($restored) { Say "put $restored image name(s) back on the images this machin
 # machine. .env especially - shipping our secrets to a clinic would be a real leak,
 # and so would a copy of it under another name (.env.bak, prod.env, .env.old).
 # .claude holds development worktrees: whole extra copies of the source.
-$excludeDirs  = @('.git', '.claude', 'node_modules', 'dist', 'build', 'backups', '_pre-update-backups', 'storage', 'worklists', 'offline')
+# logs: the PACS image backup's own record of this machine's runs.
+$excludeDirs  = @('.git', '.claude', 'node_modules', 'dist', 'build', 'backups', '_pre-update-backups', 'storage', 'worklists', 'logs', 'offline')
 $excludeFiles = @('.env', '.env.*', '*.env', '*.bak', '*.log')
 
 function Copy-CleanTree([string]$src, [string]$dst) {
