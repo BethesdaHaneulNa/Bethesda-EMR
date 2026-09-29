@@ -340,6 +340,10 @@ export default {
   cs_rxLegacy: "total saved under the old formula (new formula: {total})",
   // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
   cs_rxStoredTotal: "stored total {total} (old formula)",
+  cs_noDose: "Enter the daily dose",
+  cs_noDoseCount: "{n} without a daily dose",
+  cs_noDoseHint: "The daily dose (or the days) is empty, so the total is saved as 0: the pharmacy would hand out 0 and nothing would be billed.",
+  cs_noDoseConfirm: "{n} drug(s) have no daily dose: {names}\n\nThey will go to the pharmacy and the cashier with a total of 0. Complete the consultation anyway?",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

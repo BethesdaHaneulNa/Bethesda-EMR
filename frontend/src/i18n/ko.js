@@ -331,6 +331,10 @@ export default {
   cs_rxLegacy: "예전 계산으로 저장된 총량 (새 식이면 {total})",
   // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
   cs_rxStoredTotal: "저장된 총량 {total} (예전 계산)",
+  cs_noDose: "하루 총량을 넣으세요",
+  cs_noDoseCount: "하루 총량 없는 약 {n}개",
+  cs_noDoseHint: "하루 총량(또는 일수)이 비어 있어 총량이 0으로 저장됩니다. 이대로면 약국에서 0개가 나가고 0원이 청구됩니다.",
+  cs_noDoseConfirm: "하루 총량이 없는 약이 {n}개 있습니다: {names}\n\n총량 0으로 약국·수납에 넘어갑니다. 그래도 진료를 완료할까요?",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

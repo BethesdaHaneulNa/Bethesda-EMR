@@ -45,6 +45,16 @@ function orderLocked(o){
 // so it is not marked.
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
+// A prescription line with no daily dose (or no days) is stored with a total of 0
+// (consult.routes.js rxTotal), and a total of 0 goes through dispensing and billing
+// without anyone noticing - 0 tablets handed over, 0 charged. The clinic's real drug
+// list arrives with every default dose empty, so after the import every drug added
+// from search or an order set starts like this until the doctor types the dose.
+// Marked on the line, counted by the heading, and asked about once when the
+// consultation is completed. Not refused: an ointment or a bottle whose amount is
+// settled later is a real case.
+function noDose(rx){ return !(parseFloat(rx.dose) > 0) || !(parseInt(rx.days, 10) > 0); }
+
 // Stored values the screen shows, and the translation key for each. The values
 // themselves (visit.status, phrase_dictionary.category, order_code.code_type) are what
 // the database and the other screens use, so they never change - only what is shown.
@@ -276,6 +286,9 @@ export default function ConsultationPage() {
 
   async function completeConsult(){
     if(!consult) return;
+    var missing = rxList.filter(noDose);
+    if(missing.length && !window.confirm(String(t.cs_noDoseConfirm||'').replace('{n}', missing.length)
+        .replace('{names}', missing.map(function(r){ return r.drug_name; }).join(', ')))) return;
     var bpParts = (vt.bp||'').split('/');
     try {
       // 완료 전에 노트·바이탈을 먼저 저장 (저장을 안 누르고 완료해도 날아가지 않게)
@@ -406,6 +419,10 @@ export default function ConsultationPage() {
   function NoPriceBadge(){
     return <span title={t.cs_noPriceHint} style={{marginLeft:6,background:'#78350f55',color:'#fcd34d',border:'1px solid #b45309',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noPrice}</span>;
   }
+  function NoDoseBadge(){
+    return <span title={t.cs_noDoseHint} style={{marginLeft:6,background:'#7f1d1d55',color:'#fca5a5',border:'1px solid #b91c1c',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noDose}</span>;
+  }
+  var noDoseRows = rxList.filter(noDose);
   var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
                    + orderItems.filter(function(o){ return noPrice(o.unit_price); }).length;
 
@@ -626,7 +643,7 @@ export default function ConsultationPage() {
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                 <div style={{padding:'5px 10px',background:scBg,display:'flex',justifyContent:'space-between',borderBottom:'1px solid '+bd,alignItems:'center'}}>
-                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}{noPriceCount ? <span title={t.cs_noPriceHint} style={{marginLeft:8,color:'#fbbf24',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPriceCount||'').replace('{n}', noPriceCount)}</span> : null}</span>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}{noDoseRows.length ? <span title={t.cs_noDoseHint} style={{marginLeft:8,color:'#f87171',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noDoseCount||'').replace('{n}', noDoseRows.length)}</span> : null}{noPriceCount ? <span title={t.cs_noPriceHint} style={{marginLeft:8,color:'#fbbf24',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPriceCount||'').replace('{n}', noPriceCount)}</span> : null}</span>
                   <button onClick={function(){setDrugModal(true)}} style={{background:'#10b98120',color:'#34d399',border:'1px solid #10b98140',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>+ {t.drugSearch}</button>
                 </div>
                 {/* Code input */}
@@ -679,7 +696,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}</td>
+                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}</td>
                           {done ? <>
                             <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
                             <td style={cellRO}>{rx.frequency||''}</td>

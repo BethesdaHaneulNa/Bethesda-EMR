@@ -331,6 +331,10 @@ export default {
   cs_rxLegacy: "total enregistré selon l'ancien calcul (nouveau calcul : {total})",
   // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
   cs_rxStoredTotal: "total enregistré {total} (ancien calcul)",
+  cs_noDose: "Indiquez la dose par jour",
+  cs_noDoseCount: "{n} sans dose par jour",
+  cs_noDoseHint: "La dose par jour (ou le nombre de jours) est vide : le total est enregistré à 0, la pharmacie délivrerait 0 et rien ne serait facturé.",
+  cs_noDoseConfirm: "{n} médicament(s) sans dose par jour : {names}\n\nIls partiront à la pharmacie et à la caisse avec un total de 0. Terminer quand même la consultation ?",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
