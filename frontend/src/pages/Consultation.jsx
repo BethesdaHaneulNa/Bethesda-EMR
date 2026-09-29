@@ -69,6 +69,15 @@ function ymd(d){
 // the server cancels its worklist entry with it. Procedures keep the lock.
 function cancellable(o){ return (o.code_type==='lab' || o.code_type==='imaging') && o.status!=='cancelled' && orderLocked(o); }
 
+// A quantity or dose as the database returns it ("1.000", DECIMAL(10,3)) is shown without
+// the trailing zeros ("1", "1.5"); at 1366 wide "1.000" was cut to "1.00(". Only an exact
+// three-decimal value is touched, so what the doctor is typing ("1.", "0.5") is left alone.
+function showNum(v){
+  if(v == null) return '';
+  var s = String(v);
+  return /^\d+\.\d{3}$/.test(s) ? String(parseFloat(s)) : s;
+}
+
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
 // A prescription line with no daily dose (or no days) is stored with a total of 0
@@ -170,7 +179,7 @@ export default function ConsultationPage() {
     try {
       await api.put('/pacs/reading/'+viewer.order_item_id, { result_text: readText });
       setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: readText, result_by_name: (user&&user.name)||'', result_at: new Date().toISOString() }) }); });
-      alert((t.save||'저장')+' ✓');
+      alert(t.cs_readingSaved);
     } catch(e){
       // Cancelled in the consultation room while this window was open (pacs.cancel.js
       // ORDER_CANCELLED): say so, then show the order as it is now.
@@ -334,7 +343,7 @@ export default function ConsultationPage() {
         spo2: parseInt(vt.spo2)||null,
         respiratory_rate: parseInt(vt.rr)||null,
       });
-      alert(t.save + ' ✓');
+      alert(t.cs_noteSaved);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
@@ -361,7 +370,7 @@ export default function ConsultationPage() {
       await api.put('/consultations/'+consult.id+'/complete');
       await loadData();
       setSel(null); setConsult(null);
-      alert(t.completed + ' ✓');
+      alert(t.cs_consultDone);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
@@ -521,12 +530,19 @@ export default function ConsultationPage() {
 
   // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
   // clicks to read, so ask first.
-  function confirmRemove(name){
-    return window.confirm(String(t.cs_confirmRemove||'').replace('{name}', name||''));
+  // Asks before a line is removed. When its code is already on a bill in force for this
+  // visit, the question says so: the cashier will then have to refund the patient.
+  async function confirmRemove(name, code){
+    var paid = false;
+    if(consult && code){
+      try { paid = (await api.get('/consultations/'+consult.id+'/billed-codes')).indexOf(code) >= 0; } catch(e){ paid = false; }
+    }
+    var q = String(t.cs_confirmRemove||'').replace('{name}', name||'');
+    return window.confirm(paid ? q + '\n\n' + t.cs_removePaidNote : q);
   }
 
   async function removeRx(rx){
-    if(!confirmRemove(rx.drug_name)) return;
+    if(!(await confirmRemove(rx.drug_name, rx.drug_code))) return;
     try {
       await api.del('/consultations/prescription/'+rx.id);
       setRxList(function(p){ return p.filter(function(r){return r.id!==rx.id}); });
@@ -642,7 +658,7 @@ export default function ConsultationPage() {
   function toggleGroup(g){ setExpGroups(function(p){ var n=Object.assign({},p); n[g]=!n[g]; return n; }); }
 
   async function removeOrder(o){
-    if(!confirmRemove(o.order_name)) return;
+    if(!(await confirmRemove(o.order_name, o.order_code))) return;
     try {
       await api.del('/consultations/order/'+o.id);
       setOrderItems(function(p){ return p.filter(function(x){return x.id!==o.id}); });
@@ -802,25 +818,37 @@ export default function ConsultationPage() {
                           <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                           <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}{noPrice(isOrder ? (d.price_clinic || d.price) : d.unit_price) ? <NoPriceBadge/> : null}</span>
                           <span style={{fontSize: 12,color:isOrder?'var(--warn-text)':'var(--warn-ink)',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):formLabel(t, d.dosage_form)}</span>
+                          {/* Stock on hand, so two drugs of the same name (MED-0068 / 0069) can be told apart (pharmacy's request). */}
+                          {!isOrder ? <span style={{fontSize: 12,color:(parseInt(d.stock_qty,10)||0)>0?t3:'var(--danger-text)',fontWeight:600,whiteSpace:'nowrap',minWidth:64,textAlign:'right'}}>{String(t.cs_stock||'').replace('{n}', parseInt(d.stock_qty,10)||0)}</span> : null}
                         </div>;
                       })}
                     </div>
-                  ):null}
+                  ):(orderCode.trim().length>=2 ? (
+                    // Two letters typed and nothing matches: say so, instead of showing nothing
+                    // (the imported names are English - "syrup", not "sirop").
+                    <div style={{position:'absolute',left:10,right:10,top:'100%',background:'var(--panel-head)',border:'1px solid '+bd,borderRadius:6,zIndex:30,padding:'7px 10px',fontSize:13,color:t2}}>{t.cs_noResults}</div>
+                  ):null)}
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
-                  <table style={{width:'100%',borderCollapse:'collapse',fontSize: 15}}>
+                  {/* Fixed column widths (tableLayout 'fixed'): with automatic layout every
+                      character typed could resize the columns, and the box under the cursor
+                      moved - «QD» typed in Posologie once went into another box (integration
+                      test, 2026-09-29). The name column takes what is left; the other widths
+                      add up to 416px so the table fits the left panel at 1366 wide (574px)
+                      without a sideways scroll. */}
+                  <table style={{width:'100%',tableLayout:'fixed',borderCollapse:'collapse',fontSize: 15}}>
                     <thead><tr style={{background:'var(--chip)',position:'sticky',top:0}}>
-                      <th style={{padding:'5px 6px',color:t3,fontSize: 12,width:24}}></th>
-                      <th style={{padding:'5px 6px',textAlign:'left',color:t3,fontSize: 12,width:72}}>{t.code}</th>
-                      <th style={{padding:'5px 6px',textAlign:'left',color:t3,fontSize: 12}}>{t.name}</th>
+                      <th style={{padding:'5px 2px',color:t3,fontSize: 12,width:22}}></th>
+                      <th style={{padding:'5px 3px',textAlign:'left',color:t3,fontSize: 12,width:70}}>{t.code}</th>
+                      <th style={{padding:'5px 4px',textAlign:'left',color:t3,fontSize: 12}}>{t.name}</th>
                       {/* One heading for both kinds of line (decision 29): a drug's daily total,
                           an order's quantity. Total = this column x days, for both (⑭). */}
-                      <th title={t.cs_colDailyHint} style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:58,cursor:'help'}}>{t.cs_colDaily}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.cs_colTimes}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.cs_colDays}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:70}}>{t.cs_colSig}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:64}}>{t.unit}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:55}}>{t.worklist}</th>
+                      <th title={t.cs_colDailyHint} style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:50,cursor:'help'}}>{t.cs_colDaily}</th>
+                      <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:40}}>{t.cs_colTimes}</th>
+                      <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:44}}>{t.cs_colDays}</th>
+                      <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:58}}>{t.cs_colSig}</th>
+                      <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:54}}>{t.unit}</th>
+                      <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:78}}>{t.worklist}</th>
                     </tr></thead>
                     <tbody>
                       {rxList.map(function(rx){
@@ -833,8 +861,8 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 5px'}}>{done
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
-                          <td style={{padding:'3px 5px',color:'var(--accent-text)',fontFamily:'monospace',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
+                          <td style={{padding:'3px 3px',color:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={rx.drug_code}>{rx.drug_code}</td>
+                          <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
                           {done ? <>
                             <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
                             <td style={cellRO}>{rx.frequency||''}</td>
@@ -842,13 +870,13 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{rx.route||''}</td>
                             <td style={cellRO}>{rx.memo||''}</td>
                           </> : <>
-                            <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={showNum(rx.dose)} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                           </>}
-                          <td style={{padding:'3px 5px',textAlign:'center',color:'var(--ok-text)',fontSize: 12,fontWeight:700,whiteSpace:'nowrap'}}>{done ? t.cs_dispensed : ''}</td>
+                          <td style={{padding:'3px 2px',textAlign:'center',color:'var(--ok-text)',fontSize: 12,fontWeight:700}}>{done ? t.cs_dispensed : ''}</td>
                         </tr>;
                       })}
                       {orderItems.map(function(o){
@@ -865,8 +893,8 @@ export default function ConsultationPage() {
                             : orderLocked(o)
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
-                          <td style={{padding:'3px 5px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 13,fontWeight:700,textDecoration:gone?'line-through':'none'}}>{o.order_code}</td>
-                          <td style={{padding:'3px 5px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
+                          <td style={{padding:'3px 3px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,textDecoration:gone?'line-through':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={o.order_code}>{o.order_code}</td>
+                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
                             <td style={cellRO}>{o.quantity || 1}</td>
                             <td style={cellRO}>{o.frequency || 1}</td>
@@ -874,13 +902,13 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{o.dose || ''}</td>
                             <td style={cellRO}>{o.memo || o.body_part || ''}</td>
                           </> : <>
-                          <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 4px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           </>}
-                          <td style={{padding:'3px 5px',textAlign:'center',fontSize: 12,fontWeight:700,whiteSpace:'nowrap'}}>
+                          <td style={{padding:'3px 2px',textAlign:'center',fontSize: 12,fontWeight:700}}>
                             {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'var(--violet-strong-a22)',color:'var(--violet-text)',border:'1px solid var(--violet-strong-a55)',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
                             {orderStatus(o)}
                           </td>
@@ -1026,6 +1054,7 @@ export default function ConsultationPage() {
               <input value={drugQ} onChange={function(e){setDrugQ(e.target.value)}} placeholder={t.search} autoFocus style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:tx,fontSize: 14,outline:'none',width:'100%',boxSizing:'border-box'}}/>
             </div>
             <div style={{flex:1,overflow:'auto',maxHeight:300}}>
+              {drugQ && drugResults.length===0 ? <div style={{padding:'10px 14px',fontSize:13,color:t2}}>{t.cs_noResults}</div> : null}
               {drugResults.map(function(d){
                 return <div key={d.id} onClick={function(){addDrugRx(d);setDrugModal(false);setDrugQ('')}} style={{padding:'7px 14px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:8}}
                   onMouseEnter={function(e){e.currentTarget.style.background='var(--hover-row-2)'}}
@@ -1033,6 +1062,7 @@ export default function ConsultationPage() {
                   <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:600,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                   <span style={{fontSize: 14,color:tx,flex:1}}>{d.name}</span>
                   <span style={{fontSize: 12,color:'var(--warn-ink)',fontWeight:600}}>{formLabel(t, d.dosage_form)}</span>
+                  <span style={{fontSize: 12,color:(parseInt(d.stock_qty,10)||0)>0?t3:'var(--danger-text)',fontWeight:600,whiteSpace:'nowrap',minWidth:64,textAlign:'right'}}>{String(t.cs_stock||'').replace('{n}', parseInt(d.stock_qty,10)||0)}</span>
                 </div>;
               })}
             </div>

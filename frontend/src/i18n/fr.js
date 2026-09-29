@@ -376,6 +376,12 @@ export default {
   cs_orderTotal: "facturé {n} fois",
   cs_colTimes: "Fois",
   cs_colDays: "Jours",
+  cs_noteSaved: "Enregistré ✓",
+  cs_consultDone: "Consultation terminée ✓",
+  cs_readingSaved: "Compte-rendu enregistré ✓",
+  cs_noResults: "Aucun résultat. Les noms des médicaments sont en anglais (par ex. syrup).",
+  cs_removePaidNote: "Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient.",
+  cs_stock: "Stock {n}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

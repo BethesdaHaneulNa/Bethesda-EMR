@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 통합 시험 B·C 몫(처방 표 고정 폭·수납된 줄 안내 등) 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -49,7 +49,7 @@
 
 1. 입력 칸 위의 **Tout (전체) · Médicament (약품) · Examen / Imagerie (검사/영상)** 중에서 찾을 종류를 고릅니다.
 2. **Saisir médicament, code examen ou nom... (약/검사 코드 또는 이름 입력...)** 칸에 코드나 이름을 **두 글자 이상** 치면 목록이 뜹니다. ↑↓로 고르고 **Enter**를 누르거나 마우스로 누르면 추가됩니다. Enter만 누르면 목록 맨 위 항목이 들어갑니다.
-   - 목록 왼쪽의 종류 표시: 초록 **MÉD** (약), 노란 **LABO** (검사) · **ACTE** (처치) · **IMG** (영상). 영상 장비가 정해진 오더는 장비 이름(`US`, `CR` 등)이 나옵니다. 오른쪽 **WL**은 영상 장비로 바로 넘어가는 오더이고, 약은 오른쪽에 **제형**(Comprimé 정 · Gélule 캡슐 · Sirop 시럽 · Poudre / sachet 가루·포 · Usage externe 외용 · Collyre 안약 등)이 보입니다. 가져온 약 목록(2026-09-29, 약 101개)의 이름은 영어라서 `sirop`이 아니라 `syrup`으로 찾습니다.
+   - 목록 왼쪽의 종류 표시: 초록 **MÉD** (약), 노란 **LABO** (검사) · **ACTE** (처치) · **IMG** (영상). 영상 장비가 정해진 오더는 장비 이름(`US`, `CR` 등)이 나옵니다. 오른쪽 **WL**은 영상 장비로 바로 넘어가는 오더이고, 약은 오른쪽에 **제형**(Comprimé 정 · Gélule 캡슐 · Sirop 시럽 · Poudre / sachet 가루·포 · Usage externe 외용 · Collyre 안약 등)이 보입니다. 가져온 약 목록(2026-09-29, 약 101개)의 이름은 영어라서 `sirop`이 아니라 `syrup`으로 찾습니다. 약 줄 맨 오른쪽에는 **Stock n**(재고, 0이면 빨강)이 보여 이름이 같은 약(Amoxicillin MED-0068 / 0069)을 가를 수 있습니다. 두 글자 이상 쳤는데 맞는 것이 없으면 **Aucun résultat …** (찾는 항목이 없습니다)가 뜹니다.
    - 가격이 없는 항목에는 목록에서부터 노란 **Sans prix (가격 없음)**가 붙습니다.
 3. 약은 **+ Recherche médicament (약 검색)** 버튼으로 전체 목록에서 골라도 됩니다.
 4. 추가된 줄의 칸을 고치고 **다른 곳을 누르면 바로 저장**됩니다. Sauver를 누를 필요가 없습니다.
@@ -99,7 +99,7 @@
 
 **지우기와 영상 보기**
 
-- 줄 맨 앞 빨간 **✕**를 누르면 **Retirer « … » ?** (「…」을(를) 지울까요?)라고 묻습니다. **OK**를 눌러야 지워지고, 지운 줄은 되살릴 수 없습니다.
+- 줄 맨 앞 빨간 **✕**를 누르면 **Retirer « … » ?** (「…」을(를) 지울까요?)라고 묻습니다. **OK**를 눌러야 지워지고, 지운 줄은 되살릴 수 없습니다. 그 줄이 **이미 수납된 청구에 들어 있으면** « Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient. » (이미 수납된 줄 — 지우면 수납에서 돌려줘야 함)가 한 줄 더 붙습니다.
 - 영상 줄의 **🖼 (Voir image, 영상보기)**를 누르면 **Visionneuse (영상 뷰어)**와 판독 칸이 열립니다.
   - 영상 위에 **빨간 ⚠**가 뜨면 영상에 **다른 환자**의 번호·이름이 적혀 있다는 뜻이고, **노란 ⚠**는 영상에 환자번호가 **없다**는 뜻입니다. 어느 쪽이든 **영상 속 환자 정보를 먼저 확인한 뒤** 판독하세요.
   - 판독은 오른쪽 칸에 쓰고 **💾 Enregistrer (판독 저장)**을 누릅니다.
@@ -244,6 +244,7 @@
 - 처방·오더 줄은 **추가할 때 바로 서버에 INSERT**되고(`addDrugRx`, `addExamOrder`), 칸을 고치면 `onBlur`에서 PUT(`saveRx`, `saveOrder`), ✕는 `confirmRemove`(이름을 넣은 확인 창) 후 DELETE입니다. 「저장」 버튼과 무관합니다.
 - **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다.
 - **오더 진행 상태 자동 반영**(2026-09-29): 검사실이 진료 중에도 오더를 보게 되어(임상병리 `1d4c239`) 환자를 열어 둔 사이에 결과가 들어올 수 있습니다. 진료가 열려 있고 결과 없는 검사 오더나 끝나지 않은 워크리스트 오더가 있으면, **30초마다** `GET /consultations/:id/orders`를 다시 읽어 **진행 칸만**(`status`·`result_at`·`result_by`·`result_text`·`worklist_status`·`worklist_sent_at`, `ORDER_PROGRESS_FIELDS`) 화면의 줄에 덮어씁니다. 의사가 적고 있는 수량·메모는 건드리지 않고, 줄을 더하거나 빼지 않습니다. 탭이 숨겨져 있으면(`document.hidden`) 읽지 않습니다. 상태 칸과 🔒(`orderLocked`)가 이 칸들로 정해지므로 같이 바뀝니다. 검사결과 창(`LabResults.jsx`, 임상병리 부품)은 열 때 읽으므로 이것과 별개입니다.
+- **처방 표는 고정 폭**(`tableLayout:fixed`, 통합 시험 B1, 2026-09-29): ✕ 22 · 코드 70 · 이름 나머지 · Dose/j 50 · Fois 40 · Jours 44 · Posologie 58 · Unité 54 · 상태 78px(이름 밖 합 416px — 1366 폭 왼쪽 칸 574px에 가로 스크롤 없이). 자동 배치일 때는 글자를 칠 때마다 열 너비가 바뀌어 커서 밑 칸이 움직였고, Posologie에 친 «QD»가 다른 칸으로 간 적이 있음. 코드는 한 줄(넘치면 …, 마우스를 올리면 전체), 이름은 긴 낱말도 줄바꿈. 수량·용량은 DB 값 `1.000`을 `1`로 보임(`showNum`, 소수 셋째 자리까지 있는 값만 — 치는 중인 값은 그대로). 저장 알림은 끝난 말(`cs_noteSaved` «Enregistré ✓», `cs_consultDone`, `cs_readingSaved`; 공용 `save`는 단추 글자라 그대로). 약 검색에 재고(`cs_stock`)와 결과 없음(`cs_noResults`). 줄을 지울 때 `GET /:id/billed-codes`로 이미 수납된 코드인지 보고 `cs_removePaidNote`를 붙임.
 - **화면 크기**(2026-09-29): **가운데 칸이 옆으로 밀리지 않게** — 가운데 칸에 `minWidth:0`, 문장사전 머리(제목·분류 단추·검색 칸)는 좁으면 두 줄로 접힘(`flexWrap`, 검색 칸 90~160px). 전에는 한 줄이 약 546px라 1366 폭(가운데 칸 409px)에서 검색 칸에 초점이 가면 칸 전체가 135px 옆으로 밀려 바이탈·진료 기록 왼쪽이 잘렸음(디자인 세션이 찾음). 1366×768·1280×720·1920×1080, 한국어·프랑스어에서 `scrollLeft` 0 확인. 바이탈 칸은 가운데 칸이 좁으면 한 줄에 하나씩(`auto-fill`, 칸마다 최소 110px — 1280 폭에서도 두 줄, 「120/80」이 들어감) — 두 줄 고정일 때 800px 폭에서 입력 칸이 실처럼 좁아졌습니다. 처방 표의 횟수·일수 칸은 `inputMode="numeric"` 글자 칸(숫자 칸의 스핀 단추가 27px 칸의 숫자를 가렸음). 대기 목록 줄의 「차트번호 · 진료과 · 담당의」는 빈 값을 뺍니다(「26-00002 · ·」이던 것).
 - **검사·영상 오더 취소**(결정 3-B, 영상은 38-③): 파일 위쪽 `cancellable(o)` = 검사·영상(`code_type` `lab`·`imaging`) · 취소 전 · `orderLocked`. 그런 줄의 ✕는 `cancelOrder(o)` — `window.prompt`(검사 `cs_cancelPrompt`, 영상 `cs_cancelPromptImg`, 이유 선택, Annuler면 아무것도 안 함) 뒤 `POST /order/:id/cancel`, 응답 줄로 바꿈. 화면이 그린 뒤 결과가 들어온 줄은 보통 ✕ → 「Retirer ?」 → `DELETE` 409 → `removeOrder`가 검사·영상 줄이면 `cancelOrder`로 넘깁니다. 상태 칸(`orderStatus`)은 종류와 관계없이 취소를 먼저 봅니다(취소된 영상의 워크리스트가 `completed`로 남아 있어도 「취소됨」). 30초 새로 고침은 취소된 오더를 기다리지 않습니다. 취소된 줄(`status='cancelled'`)은 흐리게·줄 긋고 입력 칸 대신 글자, ✕ 자리에 ⊘(도움말 `cancelTitle` = 「취소됨 — 이유」). `orderLocked`는 취소도 잠금으로 보고, 가격 없음 개수에서는 뺍니다. `PUT` 거절 문구 `Order is cancelled`는 `LOCK_MESSAGES`로 `cs_orderIsCancelled`.
 - **잠긴 줄**(2026-09-29, 7절 ⑧⑨): 처방은 `rx.status === 'dispensed'`면 입력 칸 대신 글자로 그리고 ✕ 대신 🔒, WL 칸에 `cs_dispensed`. 오더는 파일 위쪽의 `orderLocked(o)`가 서버 규칙을 흉내 냅니다 — `o.status === 'completed'`(임상병리는 값이 하나라도 있어야 완료로 바꿈) 또는 `result_text`가 있음 또는 `worklist_sent_at`이 있고 `worklist_status`가 `in_progress`·`completed`. `worklist_sent_at`을 보는 이유: 워크리스트 없는 오더는 처음부터 `worklist_status='completed'`로 저장되기 때문. 오더는 줄 삭제만 막고 칸 수정은 그대로 둡니다(수량이 바뀌면 수납이 추가 청구/환불로 잡음).
@@ -264,6 +265,7 @@
 - **권한 (S2, 2026-09-29 실장님 결정 「서버도 화면 권한대로」)**: 쓰기(POST·PUT·DELETE)는 전부 `permMiddleware('consultation')`(`canConsult`). 읽기는 부르는 화면의 권한만 — 처방·오더 읽기(`GET /visit/:visitId/prescriptions`·`/:id/prescriptions`·`/:id/orders`)는 `canReadRx` = consultation·payment·pharmacy(진료 화면, 수납·약국의 `PatientChart`와 문서 창), 진단 읽기는 consultation. 임상병리·접수는 문서 창을 읽기 전용·내원 없이 열어서 이 라우트를 부르지 않습니다. 라우트별 표는 `wiki/handoff/settings.md` 「S2」. 서버는 요청마다 DB에서 계정 상태·권한을 읽으므로(S1) 권한을 바꾸면 바로 적용됩니다.
 - `POST /` — 진료 열기. 같은 `visit_id`의 진료가 있으면 그것을 돌려주고(완료·서명 전이면 내원을 `in_progress`로), 없으면 새로 만들며 `doctor_id = 지금 로그인한 사람`, `department_id = 내원의 과 || 로그인한 사람의 과`, `consult_date = CURRENT_DATE`. `consultation.visit_id`에 UNIQUE 인덱스가 있어 한 내원에 진료는 하나입니다. **취소된 내원**(`visit.status='cancelled'`)은 409 `Visit was cancelled`로 거절하고(내원 행을 `FOR UPDATE`로 잠가 동시 취소도 봄), 없는 내원은 404. 새 진료의 `consult_date`는 **내원 날짜**(전에는 오늘 — 지난 내원을 늦게 적으면 오늘 진료로 잡혔음). 2026-09-29, 7절 ⑫.
 - `PUT /:id` — **요청에 들어 있는 칸만** 바꿉니다(`subjective, objective, assessment, plan, note_text`, 바이탈 7개 중 몸체에 키가 있는 것). 키를 `null`로 보내면 그 칸을 비웁니다(지운 바이탈). 전에는 없는 키도 NULL로 덮어써서, 화면이 보내지 않는 S/O/A/P·체중·키가 저장할 때마다 지워졌습니다(7절 ⑬, 2026-09-29). 끝난 진료(아래 「변경 기록」)면 바뀐 칸의 전 값 → 새 값을 기록합니다. 전·후 값은 둘 다 표에서 읽은 값이라 `36.5`와 `"36.5"`가 바뀜으로 잡히지 않습니다.
+- `GET /:id/billed-codes` — 이 내원의 청구 가운데 취소되지 않은 것에 들어 있는 약·오더 코드 목록(진료비·기타 항목 제외, 권한 `consultation`). 화면이 줄을 지우기 직전에 물어 「이미 수납된 줄」 안내를 붙입니다. 수납이 하는 것처럼 코드로 맞춥니다(같은 코드가 두 줄이면 둘 다 수납된 것으로 봄).
 - `PUT /:id/complete` — 진료 `completed` + 내원 `completed`, 한 트랜잭션. **`consultation.completed_at`**(결정 L9, 2026-09-29 — 약국 목록은 진료가 끝난 순서)을 `COALESCE(completed_at, NOW())`로 둡니다: **처음 Terminé를 누른 때**이고, 다시 열어 고친 뒤 또 눌러도 바뀌지 않습니다(약국에서 기다리는 환자가 목록 끝으로 밀리지 않게). 약국 세션이 이 칸으로 정렬합니다.
 - 처방·오더 쓰기는 `badAmounts`(`utils/validate.js`)로 숫자 범위를 막습니다 — `dose` 0~1000 **숫자만**(그래서 `1/2` 같은 용량은 400), `frequency` 1~24 정수, `days` 1~365 정수, `quantity` 0~10000, `unit_price` 0~1억.
 - **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
@@ -407,6 +409,7 @@
 | `GET /api/consultations/:id/orders` | `consultation`·`payment`·`pharmacy` | 오더 목록 |
 | `POST /api/consultations/:id/orders` | `consultation` | 오더 추가(+워크리스트) |
 | `PUT /api/consultations/order/:orderId` | `consultation` | 오더 고치기. 취소된 오더는 **409** |
+| `GET /api/consultations/:id/billed-codes` | `consultation` | 이미 수납된 약·오더 코드(지울 때 안내용) |
 | `POST /api/consultations/order/:orderId/cancel` | `consultation` | 결과 있는 오더를 취소로 표시 `{reason}`. 결과가 없으면 **409**, 이미 취소면 그대로 |
 | `DELETE /api/consultations/order/:orderId` | `consultation` | 오더 지우기(시작 전 워크리스트 포함). 결과가 생긴 오더는 **409** |
 
@@ -556,7 +559,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **문서** — 현지 직원용 프랑스어 설명서 `wiki/manual-fr/consultation.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/consultation.md`. 2.8 집도의 자동 채움 글 고침 | (이 커밋) |
+| 2026-09-29 | **통합 시험 B·C 몫** — 처방 표 고정 폭(1366에서 가로 스크롤 없음, 입력 중 칸이 움직이지 않음), 저장 알림 «Enregistré ✓» 등, 수량 «1.000» → «1», 약 검색 결과 없음 안내·재고 표시, 수납된 줄을 지울 때 안내(`GET /:id/billed-codes`). 대기열 서랍(B2)은 재현 안 됨 | (이 커밋) |
+| 2026-09-29 | **문서** — 현지 직원용 프랑스어 설명서 `wiki/manual-fr/consultation.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/consultation.md`. 2.8 집도의 자동 채움 글 고침 | `0a95569` |
 | 2026-09-29 | **가운데 칸 옆으로 밀림 고침**(디자인 세션 발견) — 문장사전 머리 접힘, 가운데 칸 `minWidth:0`, 바이탈 최소 110px. 세 화면 크기·두 언어 확인. **약속처방 처치 줄은 세트 수량 그대로**(검사·영상은 1·1·1) | `959262a` |
 | 2026-09-29 | **가져온 약 기준** — 약 검색 목록·약 찾기 창 오른쪽에 제형(`formLabel`, 약국의 `drug-info.js`), 기본 용법 표시 없앰(결정 B). 8자 약 코드가 두 줄로 꺾이지 않게. 가져온 약으로 진료 → 약국 → 수납을 격리에서 확인, 위키 2절 | `aa2cb40` |
 | 2026-09-29 | **약속처방 줄의 용량·횟수·일수(서버)** — `badItems`: 약 줄 하루 총량 > 0·횟수·일수 정수·용법 10자·병 수 정수, 오더 줄 수량 > 0·횟수·일수 정수, 어기면 400. 약 줄의 빈 칸은 NULL로 저장(1로 채우지 않음). 적용하면 세트 값 그대로 → 서버가 총량 계산, 빈 세트 줄은 「총량 없음」 표시 | `7e17a6d` |

@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 진료 몫: 처방 표 고정 폭 · 저장 알림 · 수량 표시 · 결과 없음 · 수납된 줄 안내 · 재고
+
+- **상태**: 확인 요청 (B2는 재현 안 됨 — 아래)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `fd0cd02` 다음(디자인의 색 이름표 뒤, 새 색은 `var(--…)`로만 씀)
+- **한 일**:
+  - **B1 처방 표**: `tableLayout:'fixed'`, 열 너비 ✕ 22 · 코드 70 · 이름 나머지 · Dose/j 50 · Fois 40 · Jours 44 · Posologie 58 · Unité 54 · 상태 78.
+    - 코드는 한 줄(넘치면 …, title에 전체)이고, 이름은 긴 낱말도 줄바꿈합니다. 입력 칸 안쪽 여백은 4 → 2px입니다.
+    - 상태 칸(«Résultat reçu»)은 줄바꿈을 허용합니다.
+  - **B2 대기열 서랍**: `pickPatient`는 이미 첫 줄에서 서랍을 닫습니다. 격리에서 1366×768 FR로 실제 클릭(☰ → 환자)을 하니 닫혔습니다(`translateX(-290px)`, 위치 −290). **재현 안 됨** — 재현 순서(어느 계정, 어느 화면에서 여는지, 진료 중 다른 환자인지)를 알려 주시면 다시 보겠습니다. 첫 측정 때 250ms 애니메이션 중간이라 열린 것처럼 읽힌 적이 있어, 시험 도구가 같은 착시를 겪었을 수도 있습니다.
+  - **C 저장 알림**: «Sauver ✓» → «Enregistré ✓»(`cs_noteSaved`), «Terminé ✓» → «Consultation terminée ✓»(`cs_consultDone`), 판독 «Sauver ✓» → «Compte-rendu enregistré ✓»(`cs_readingSaved`). 공용 `save`는 그대로입니다.
+  - **C 수량 «1.000»**: DB 값(소수 셋째 자리까지 정확히 있는 값)만 뒤 0을 빼서 보입니다(`showNum`: 1.000 → 1, 1.500 → 1.5). 검사·처치 수량과 약 하루 총량 칸에 씁니다. 치는 중인 값은 건드리지 않습니다.
+  - **C 결과 없음**: 두 글자 이상 쳤는데 맞는 것이 없으면 « Aucun résultat. Les noms des médicaments sont en anglais (par ex. syrup). »(`cs_noResults`)를 보입니다. 약 찾기 창도 같습니다.
+  - **C 수납된 줄**: 새 `GET /api/consultations/:id/billed-codes`(권한 consultation)는 이 내원의 취소 안 된 청구에 든 약·오더 코드를 돌려줍니다. ✕를 누르면 물어보고, 들어 있으면 확인 창에 « Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient. »(`cs_removePaidNote`)를 더합니다.
+  - **약국 부탁 — 재고**: 약 검색 목록과 약 찾기 창 오른쪽에 « Stock n »(`cs_stock`, 0이면 빨강)을 보입니다. 이전에는 목록에 없었습니다(자료 `drug.stock_qty`는 이미 옴).
+  - **진료 사전 영어 문장**: 지시대로 두었습니다(의사 질문지 ④ 뒤).
+  - **PACS 설명서 대조**: `manual-fr/pacs.md` 1·4·7절과 `consultation.md` 7~9절 사이에 어긋나는 말은 없습니다(PACS 쪽이 더 자세함 — 시리즈·새 탭·세션 만료). 내 9절에 「guide PACS, section 4」 한 줄로 가리켰습니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `backend/src/routes/consult.routes.js`(읽기 라우트 하나) · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_` 6개(`cs_noteSaved`, `cs_consultDone`, `cs_readingSaved`, `cs_noResults`, `cs_removePaidNote`, `cs_stock`)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택(034~036 적용), 1366×768, FR에서 확인했습니다.
+  - **B1**: 처방 표 573px = 상자 573px(가로 스크롤 없음)입니다. Posologie에 실제로 «QD»를 치고 Tab → «cp»를 치는 동안 열 너비 `22,70,157,50,40,44,58,54,78`이 그대로였고, «QD»는 Posologie, «cp»는 Unité에 들어갔습니다.
+  - **수량**: P01 «1»(전에는 «1.000»)입니다.
+  - **수납된 줄**: 내원 26-00136(진료비 + MED-0001 + P01 수납)에서 P01 ✕를 누르니 « Retirer « Wound Dressing » ? ⏎ Cette ligne est déjà encaissée … »가 나왔습니다. `billed-codes`는 `["MED-0001","P01"]`이고, 약국 계정은 403, 수납 안 된 내원은 `[]`입니다.
+  - **알림**: Sauver → « Enregistré ✓ »
+  - **검색**: «cetirizine» → « Aucun résultat … », «amox» → « Amoxicillin 500mg · Gélule · Stock 2000 / Stock 2500 »
+  - 서버 시험: l9, ⑭, 취소, 로그, s2, t400, tlow 통과. os·blank·lock은 격리 DB에서 예시 약(PCM500)을 잠깐 다시 보이게 한 뒤 통과(가져오기가 예시 약을 감춰서 시험 자료가 없었음 — 코드 문제 아님). pack-e2e는 흡입기 SALB까지 필요해 이번에는 돌리지 않았습니다(포장 코드는 바뀌지 않음).
+- **확인 못 한 것**: B2 재현. KO·1280에서 표는 다시 재지 않았습니다(열 너비가 고정이라 언어와 무관, 1280은 왼쪽 칸 538px로 이름 칸이 약 120px).
+- **다른 세션에 부탁**: 없음(약국 부탁은 여기서 끝냄)
+- **남은 일 · 알려진 문제**: 「환자가 약을 돌려줄 때」는 결정 뒤 설명서 §8에 넣겠습니다.
+
 ## 2026-09-29 — 문서: 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
 
 - **상태**: 확인 요청

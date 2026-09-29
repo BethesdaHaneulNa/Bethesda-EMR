@@ -385,6 +385,12 @@ export default {
   cs_orderTotal: "billed {n} times",
   cs_colTimes: "Times",
   cs_colDays: "Days",
+  cs_noteSaved: "Saved ✓",
+  cs_consultDone: "Consultation finished ✓",
+  cs_readingSaved: "Reading saved ✓",
+  cs_noResults: "No match. Drug names are in English (e.g. syrup).",
+  cs_removePaidNote: "This line is already paid - removing it means the cashier refunds the patient.",
+  cs_stock: "Stock {n}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
