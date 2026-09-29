@@ -76,7 +76,9 @@ var VISIT_TYPE = {
 };
 
 function num(v) { return Number(v) || 0; }
-function money(n) { return Math.round(num(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' Ar'; }
+// French writes thousands with a space (15 000 Ar), not a comma. A no-break space so an
+// amount never wraps across two lines. Only the receipt - the screen keeps its format.
+function money(n) { return Math.round(num(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Ar'; }
 function qty(n) { var v = num(n); return (Math.round(v * 1000) / 1000).toString(); }
 function timeOf(ts) {
   if (!ts) return '';
@@ -243,7 +245,7 @@ export function ReceiptModal(props) {
         </div>
         <div style={{ padding: '10px 14px', borderTop: '1px solid #ddd', display: 'flex', gap: 8, background: '#eee' }}>
           <button onClick={props.onClose} style={{ flex: 1, background: '#fff', border: '1px solid #ccc', borderRadius: 5, padding: '8px', cursor: 'pointer', fontSize: 14 }}>{t.close}</button>
-          <button onClick={function () { printDocument(ref.current, 'Reçu ' + no); }} disabled={!data} style={{ flex: 2, background: data ? '#10b981' : '#9ca3af', border: 'none', borderRadius: 5, padding: '8px', cursor: data ? 'pointer' : 'default', fontSize: 14, fontWeight: 700, color: '#fff' }}>🖨 {t.printReceipt}</button>
+          <button onClick={function () { printDocument(ref.current, 'Reçu ' + no, RECEIPT_LANG); }} disabled={!data} style={{ flex: 2, background: data ? '#10b981' : '#9ca3af', border: 'none', borderRadius: 5, padding: '8px', cursor: data ? 'pointer' : 'default', fontSize: 14, fontWeight: 700, color: '#fff' }}>🖨 {t.printReceipt}</button>
         </div>
       </div>
     </div>
