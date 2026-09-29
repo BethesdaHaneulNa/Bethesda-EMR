@@ -33,6 +33,7 @@ export default function PaymentPage() {
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
   var sbs = useState(null), settleBill = sbs[0], setSettleBill = sbs[1];
+  var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];   // {bill, reason} - the cancel dialog (M6)
   var sams = useState(''), settleAmt = sams[0], setSettleAmt = sams[1];
   var pbs = useState({owed:0,refund:0}), patBalance = pbs[0], setPatBalance = pbs[1];
   var fos = useState(false), finderOpen = fos[0], setFinderOpen = fos[1];
@@ -310,25 +311,34 @@ export default function PaymentPage() {
     } catch(err){ showError(err); }
   }
 
-  function voidReceipt(b){ return once(function(){ return voidReceiptNow(b); }); }
-  async function voidReceiptNow(b){
+  // Cancelling a receipt (M6, decided (다) 2026-09-29): the dialog says an overcharge
+  // is a correction, asks for a reason, and asks whether the money taken was handed
+  // back - the server records it (refunded_amount) and a re-bill starts from what the
+  // till still holds.
+  function voidReceipt(b){
     // Its balance lives on a later receipt now; that one has to be voided first.
-    // Said before asking for a reason - the server refuses it anyway (BILL_CARRIED).
+    // Said before the dialog - the server refuses it anyway (BILL_CARRIED).
     if(b.carried_into_id){
       var into = (receipts||[]).filter(function(x){ return x.id===b.carried_into_id; })[0];
       alert(t.py_voidCarried.split('{receipt}').join(into ? into.receipt_no : ('#'+b.carried_into_id)));
       return;
     }
-    var reason = prompt(t.voidReason || '취소 사유 / Reason?');
-    if(reason===null) return;
+    setVoidDlg({ bill:b, reason:'' });
+  }
+  function heldOn(b){ return b.net_paid!=null ? (parseFloat(b.net_paid)||0) : (parseFloat(b.amount_paid)||0)-(parseFloat(b.change_amount)||0); }
+  function voidConfirm(refunded){ return once(function(){ return voidConfirmNow(refunded); }); }
+  async function voidConfirmNow(refunded){
+    if(!voidDlg) return;
+    var b = voidDlg.bill, reason = voidDlg.reason;
     try {
-      await api.put('/billing/'+b.id+'/void',{ reason:reason });
+      await api.put('/billing/'+b.id+'/void',{ reason:reason, refunded:refunded });
+      setVoidDlg(null);
       var pid = sel?sel.patient_id:null;
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){} }
       await loadLists();
       alert(t.voidDone || '영수 취소됨 / Cancelled');
     } catch(err){
-      if(isCarried(err)){ alert(carriedText(t.py_voidCarried, err)); var p2 = sel?sel.patient_id:null; if(p2){ try { setReceipts(await api.get('/billing/patient/'+p2+'/history')); } catch(e){} } return; }
+      if(isCarried(err)){ setVoidDlg(null); alert(carriedText(t.py_voidCarried, err)); var p2 = sel?sel.patient_id:null; if(p2){ try { setReceipts(await api.get('/billing/patient/'+p2+'/history')); } catch(e){} } return; }
       showError(err);
     }
   }
@@ -475,6 +485,7 @@ export default function PaymentPage() {
                     <span style={{color:'#34d399'}}>{t.amountPaid}: {fmtAr(b.amount_paid)}</span>
                   </div>
                   {out>0&&!cancelled?<div style={{fontSize:12,color:'#ef4444',marginTop:2,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(out)} Ar</div>:null}
+                  {cancelled&&b.refunded_amount!=null&&heldOn(b)>0.005?<div style={{fontSize:12,color:parseFloat(b.refunded_amount)>0?'#f87171':t2,marginTop:2,fontFamily:'monospace'}}>{parseFloat(b.refunded_amount)>0?t.py_refundedAt+': '+fmtAr(b.refunded_amount)+' Ar':t.py_keptAt+': '+fmtAr(heldOn(b))+' Ar'}</div>:null}
                   <div style={{marginTop:4,display:'flex',alignItems:'center',gap:6}}>
                     {cancelled? <span style={{fontSize:11,fontWeight:800,color:'#f87171',background:'#ef444418',border:'1px solid #ef444440',borderRadius:4,padding:'1px 7px'}}>{t.cancelledBadge}</span> : statusBadge(b.payment_status)}
                     <div style={{flex:1}}></div>
@@ -508,6 +519,31 @@ export default function PaymentPage() {
           </div>
         </div>
       ):null}
+
+      {voidDlg?(function(){
+        var b = voidDlg.bill, held = heldOn(b), amt = fmtAr(held);
+        var btn = {flex:1,border:'none',borderRadius:7,padding:'10px',cursor:busy?'wait':'pointer',fontSize:14,fontWeight:800,opacity:busy?0.5:1};
+        return <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={function(){setVoidDlg(null)}}>
+          <div style={{background:pn,border:'1px solid '+bd2,color:tx,borderRadius:10,width:440,padding:18}} onClick={function(e){e.stopPropagation()}}>
+            <div style={{fontWeight:900,fontSize:16,marginBottom:4,color:'#f87171'}}>{t.py_voidTitle.replace('{receipt}', b.receipt_no)}</div>
+            <div style={{fontSize:13,color:t2,marginBottom:10}}>{ymd(b.billing_date)} · {t.totalDue}: {fmtAr(b.total_due)} Ar</div>
+            <div style={{background:'#f59e0b14',border:'1px solid #f59e0b55',borderRadius:7,padding:'8px 10px',marginBottom:12,color:'#fbbf24',fontSize:13,fontWeight:700}}>⚠ {t.py_voidUseCorrection}</div>
+            <label style={{fontSize:12,color:t3,fontWeight:700}}>{t.py_voidReasonLabel}</label>
+            <input value={voidDlg.reason} onChange={function(e){ setVoidDlg({bill:b, reason:e.target.value}); }} autoFocus style={{width:'100%',boxSizing:'border-box',background:scBg,border:'1px solid '+bd2,borderRadius:7,padding:'9px 11px',color:tx,fontSize:14,marginTop:4,marginBottom:12}} />
+            {held>0.005?<>
+              <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>{t.py_voidRefundQ.replace('{amount}', amt)}</div>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={function(){voidConfirm(true)}} disabled={busy} style={Object.assign({},btn,{background:'#ef4444',color:'#fff'})}>{t.py_voidRefundYes.replace('{amount}', amt)}</button>
+                <button onClick={function(){voidConfirm(false)}} disabled={busy} style={Object.assign({},btn,{background:'#1e2433',color:tx,border:'1px solid '+bd2})}>{t.py_voidRefundNo}</button>
+              </div>
+            </>:<>
+              <div style={{fontSize:13,color:t2,marginBottom:8}}>{t.py_voidNoMoney}</div>
+              <button onClick={function(){voidConfirm(false)}} disabled={busy} style={Object.assign({},btn,{width:'100%',background:'#ef4444',color:'#fff'})}>{t.py_voidConfirm}</button>
+            </>}
+            <button onClick={function(){setVoidDlg(null)}} style={{width:'100%',marginTop:10,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:7,padding:'8px',cursor:'pointer',fontSize:13}}>{t.py_voidBack}</button>
+          </div>
+        </div>;
+      })():null}
 
       {/* One receipt for right after payment and for reprints, read from the stored bill (components/Receipt.jsx). */}
       <ReceiptModal billingId={receiptId} t={t} onClose={function(){ if(receiptQueue.length){ setReceiptId(receiptQueue[0]); setReceiptQueue(receiptQueue.slice(1)); } else setReceiptId(null); }} />

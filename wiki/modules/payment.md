@@ -122,8 +122,8 @@
 ### 2.7 Re-facturer (정정 재수납) — 영수증을 취소한 내원
 
 1. 목록에서 **Re-facturer** 환자를 누릅니다. 날짜와 상관없이 목록에 남아 있습니다.
-2. 노란 **↺ Re-facturer** 줄에 **Paiement reporté (이월 수납액)** — 취소한 영수증에서 받았던 돈 — 이 보이고, 그 금액이 **Montant Reçu** 칸에 미리 들어가 있습니다. 같은 돈을 두 번 받지 않게 하기 위해서입니다.
-3. 취소할 때 그 돈을 환자에게 **돌려줬다면** **Montant Reçu** 칸을 지우고 실제로 새로 받은 돈을 넣습니다. 그다음 **Confirmer**.
+2. 취소할 때 「돈을 돌려주지 않았다」(**Non — l’argent reste à la caisse**)고 답한 영수증이 있으면, 노란 **↺ Re-facturer** 줄에 **Paiement reporté (이월 수납액)** — 창구에 남아 있는 그 돈 — 이 보이고 그 금액이 **Montant Reçu** 칸에 미리 들어가 있습니다. 같은 돈을 두 번 받지 않게 하기 위해서입니다. 여러 장을 취소했으면 모두 더한 금액입니다.
+3. 취소할 때 돈을 **돌려줬다**(**Oui — rendus**)고 답했으면 칸은 비어 있습니다 — 환자에게 새로 받은 돈을 넣습니다. 그다음 **Confirmer**.
 
 ### 2.8 Reçus (영수내역) — 미수 받기
 
@@ -138,10 +138,17 @@
 
 ### 2.9 영수증 취소 · 재출력
 
-- **Annuler (영수취소)** — **Motif d'annulation ? (취소 사유)** 를 적으면 영수증이 **ANNULÉ** 가 됩니다. 그 내원은 **En attente** 목록에 **Re-facturer** 로 돌아옵니다(2.7).
-  - **미수 수납 영수증(「Règlement du reçu …」)을 취소하면** 「미수를 받은 것」이 취소됩니다: 오늘 매출에서 빠지고, 옛 영수증의 미수가 원래 금액으로 되살아납니다. 돈을 돌려줬는지는 기록되지 않으니 필요하면 사유에 적으세요.
+- **Annuler (영수취소)** — 창이 뜹니다(2026-09-29, 실장님 결정 M6 (다)):
+  1. 노란 안내 「Si seuls des articles ont changé, n’annulez pas : utilisez la correction」 — **항목(약·검사)만 줄었으면 취소하지 말고 정정(2.6)** 을 씁니다. 현금이므로 차액만 돌려주는 것이 기본입니다. 영수증 전체 취소는 환자를 잘못 고른 경우처럼 드문 일입니다.
+  2. **Motif de l’annulation (취소 사유)** 를 적습니다.
+  3. 「Avez-vous rendu au patient les N Ar encaissés sur ce reçu ?」 — 이 영수증으로 받은 돈을 **돌려줬는지** 고릅니다:
+     - **Oui — N Ar rendus (예 — 돌려줌)**: 환자에게 N Ar를 돌려줍니다. 환불로 기록되고(영수증 「Remboursé au patient」, 영수내역 「Rendu à l’annulation」), 다시 수납할 때 **Montant Reçu** 칸은 비어 있습니다.
+     - **Non — l’argent reste à la caisse (아니요 — 창구에 있음)**: 돈은 창구에 둡니다. 다시 수납할 때 그 돈이 칸에 채워집니다(2.7). 영수내역 「Gardé à l’annulation」.
+     - 받은 돈이 없는 영수증(미수)은 묻지 않고 **Annuler le reçu** 하나만 나옵니다.
+  4. 영수증이 **ANNULÉ** 가 되고, 그 내원은 **En attente** 목록에 **Re-facturer** 로 돌아옵니다(2.7). **Retour** 는 아무것도 하지 않고 닫습니다.
+  - **미수 수납 영수증(「Règlement du reçu …」)을 취소하면** 「미수를 받은 것」이 취소됩니다: 옛 영수증의 미수가 원래 금액으로 되살아납니다. 받은 돈을 돌려줬으면 **Oui** 를 고릅니다.
   - 「…reporté sur le reçu R-…, qui le facture maintenant. Annulez d’abord R-…」 안내가 뜨면, 이 영수증의 미수가 뒤의 영수증으로 넘어가 있는 것입니다. 안내에 나온 영수증을 **먼저** 취소한 뒤 이 영수증을 취소합니다.
-- **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
+- **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유, 돌려줬으면 **Remboursé au patient : N Ar**)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
 
 ### 2.10 Payé aujourd’hui (수납 완료) — 오늘 수납한 것 보기
 
@@ -194,7 +201,7 @@
 
 **단가 0 표시** (2026-09-29, 진료 세션 제안): 원내 약·오더 줄의 `unit_price`가 0이면 화면에 「Sans prix」와 노란 안내, 「Confirmer」 때 확인 창(`py_noPriceConfirm`) — **막지 않음**(무료로 주는 약일 수도 있음). 확인 창은 지금 청구하는 줄(`chargeRows()`)만 셈 — 추가 청구 때 이미 청구된 0원 줄을 다시 묻지 않게. 진료비 줄·창구 발급비·원외 처방은 대상 아님. 처방·오더 줄은 넣을 때의 단가를 복사해 두므로(`prescription.unit_price`, `order_item.unit_price`), 설정에서 가격을 나중에 넣어도 이미 넣은 줄은 바뀌지 않습니다.
 
-**병·튜브로 주는 약**(포장 단위, 2026-09-29 약국·설정·진료): 진료가 그 줄의 `total_qty`에 **개수**(병·튜브 수)를 넣고 `pack_unit`·`pack_label`을 줄에 복사합니다. 수납은 계산을 바꾸지 않음 — 금액 = `total_qty × unit_price`(격리 확인: 병 2 × 4,500 = 9,000, 영수 줄 수량 2). 화면과 영수증은 수량을 약국의 `packWord()`(`documents/rx-dosing.js`)로 「2 flacons」「3병」처럼 보여 줌. 개수가 빈 포장 줄은 「총량 없음」과 같이 막되 안내는 「개수를 넣어 달라」(`py_qtyMissingPack`). **영수증은 저장된 영수만 읽으므로** 영수 줄에 단위를 따로 저장: `billing_item.pack_label`(마이그레이션 302) — 수납·정정 때 서버가 그 내원의 처방에서 복사(`stampPackLabels()`, 화면이 보낸 값은 쓰지 않음). 처방이 나중에 바뀌어도 재출력은 그대로.
+**병·튜브로 주는 약**(포장 단위, 2026-09-29 약국·설정·진료): 진료가 그 줄의 `total_qty`에 **개수**(병·튜브 수)를 넣고 `pack_unit`·`pack_label`을 줄에 복사합니다. 수납은 계산을 바꾸지 않음 — 금액 = `total_qty × unit_price`(격리 확인: 병 2 × 4,500 = 9,000, 영수 줄 수량 2). 화면과 영수증은 수량을 약국의 `packWord()`(`documents/rx-dosing.js`)로 「2 flacons」「3병」처럼 보여 줌. 개수가 빈 포장 줄은 「총량 없음」과 같이 막되 안내는 「개수를 넣어 달라」(`py_qtyMissingPack`). **영수증은 저장된 영수만 읽으므로** 영수 줄에 단위를 따로 저장: `billing_item.pack_label`(마이그레이션 031, 세션 번호 302) — 수납·정정 때 서버가 그 내원의 처방에서 복사(`stampPackLabels()`, 화면이 보낸 값은 쓰지 않음). 처방이 나중에 바뀌어도 재출력은 그대로.
 
 **「그로스」(통계의 gross)** = `consult_fee + drug_total + procedure_total` — 할인·이전 미수 **전**의 이번 진료분.
 
@@ -230,10 +237,12 @@
 
 ### 3.5 취소와 재수납
 
-- `PUT /:id/void` — `payment_status='cancelled'`, `outstanding=0`, 취소 시각·사람·사유 기록, 이 영수가 흡수한 이월을 되돌림. 취소된 영수는 모든 합계에서 **없던 일**로 빠집니다.
+- `PUT /:id/void` `{reason, refunded}` — `payment_status='cancelled'`, `outstanding=0`, 취소 시각·사람·사유 기록, 이 영수가 흡수한 이월을 되돌림. 취소된 영수는 모든 합계에서 **없던 일**로 빠집니다.
+- **돌려줬는지**(2026-09-29, 실장님 결정 M6 (다), 마이그레이션 303): 받은 돈(`net_paid`)이 있는 영수는 `refunded`(`true`/`false`)가 **꼭** 있어야 합니다(없거나 글자면 400). `true` → `refunded_amount = net_paid`(전부 돌려줌 — 일부만 돌려줄 일이면 취소가 아니라 정정), `false` → `0`. 받은 돈이 없으면 묻지 않고 `0`. 303 이전에 취소된 영수와 정정으로 대체된 영수는 `NULL`(물은 적 없음).
+- **정정으로 대체된 영수**는 `replaced_by_id` = 새 영수(정정이 기록, 303이 옛 정정을 새 영수 비고 「correction of R-…」로 찾아 채움). 그 돈은 새 영수로 옮겨 갔으므로 **환불이 아닙니다** — 정정의 환불은 새 영수의 `change_amount`(3.6). 예전에는 둘을 `cancel_reason`(화면 언어 글자)로만 구분할 수 있었습니다.
 - **이월된 옛 영수는 혼자 취소하지 못합니다**(2026-09-29, M4): `carried_into_id`가 있으면 409 `BILL_CARRIED: <뒤 영수번호>`. 뒤 영수의 `total_due`가 그 빚을 아직 청구하고 있어서, 옛 영수만 취소하면 빚이 출처 없이 남기 때문입니다. 뒤 영수를 먼저 취소하면(옛 영수의 미수가 되살아남) 그다음 옛 영수를 취소할 수 있습니다. 화면은 사유를 묻기 전에 `py_voidCarried`로 먼저 취소할 영수번호를 안내합니다. `carried_into_id`는 항상 살아 있는 영수를 가리킵니다 — 그 영수를 취소하면 지워지고, 정정하면 새 영수로 옮겨지기 때문입니다.
 - 취소만 되고 살아 있는 영수가 없는 내원은 날짜와 상관없이 **수납 대기**에 「정정 재수납」(`needs_rebill`)으로 다시 뜹니다. `needs_rebill`은 「취소 영수가 있고 **살아 있는 영수가 없음**」입니다 — 정정한 내원도 취소 영수를 갖지만 새 영수가 살아 있으므로 해당하지 않습니다(2026-09-29 수정: 정정 뒤 미수가 남은 내원이 「정정 재수납」으로 잘못 뜨던 것).
-- 재수납 화면은 마지막 취소 영수의 `net_paid`(`prior_paid`)를 **받은 금액 칸에 미리 넣어** 같은 돈을 두 번 받지 않게 합니다(`selectVisit()`). 취소할 때 돈을 실제로 돌려줬는지는 기록하지 않으므로, 직원이 판단해서 지워야 합니다.
+- 재수납 화면은 **창구에 남아 있는 돈**(`prior_paid`)을 받은 금액 칸에 미리 넣어 같은 돈을 두 번 받지 않게 합니다(`selectVisit()`). `prior_paid` = 이 내원의 취소 영수 중 **대체되지 않은 것**(`replaced_by_id` 없음, 그리고 취소 뒤에 이 내원에 새 영수가 생기지 않음 — 재수납이 이미 그 돈을 옮겨 갔으므로)의 `net_paid − COALESCE(refunded_amount, 0)` 합. 예전에는 마지막 취소 영수 한 장만 봐서, 원래 영수와 추가 청구 영수를 둘 다 취소하면 모자랐습니다(M6 재현: 18,000 받았는데 칸 15,000). 303 이전 취소는 물은 적이 없으므로 예전처럼 「보관」으로 셈.
 
 ### 3.6 정정(환불) — 서버 `buildCorrection()` (2026-09-29, H2)
 
@@ -311,7 +320,7 @@
 
 | 언제 | action | 한 줄에 들어가는 것 |
 |---|---|---|
-| 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: 영수번호 · total · paid(`net_paid`) — 사유. before→after(바뀐 칸만): 상태, 미수, 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`). 금액은 취소로 바뀌지 않아 before/after에서는 빠지므로 summary에 둠 |
+| 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: 영수번호 · total · paid(`net_paid`) · `refunded N` 또는 `not refunded (kept at the till)`(받은 돈이 있을 때, M6) — 사유. after에 `refunded_amount`. before→after(바뀐 칸만): 상태, 미수, 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`). 금액은 취소로 바뀌지 않아 before/after에서는 빠지므로 summary에 둠 |
 | 정정 `POST /visit/:id/correct` (환불이든 미수가 남든) | `payment.receipt.correct` | summary: 옛 영수번호 → 새 영수번호 · 바뀐 항목(`-DRG1`, `+X`, `PARA 9→6`) · refund N 또는 owed N — 사유. before→after: 영수번호·상태, 총액, 받은 돈, 환불, 미수, 항목×수량 |
 
 - 두 줄 모두 **바꾸는 트랜잭션 안에서, COMMIT 전에** 씁니다(`writeAudit(client, …)`) — 취소·정정이 롤백되면 줄도 없음. 거절(409·404)이면 줄 없음.
@@ -337,7 +346,7 @@
 | `GET /visit/:visitId/items` | 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 진료비 `consult_prices`(`{C01: 15000, …}`, 행이 있는 코드만), 살아 있는 영수 id `active_bill_ids` |
 | `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
 | `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함) |
-| `PUT /:billingId/void` | 영수 취소 `{reason}` |
+| `PUT /:billingId/void` | 영수 취소 `{reason, refunded}` — 받은 돈이 있으면 `refunded`(true/false) 필수, 없으면 400. 이미 취소됐으면 404 (3.5) |
 | `GET /visit/:visitId/correction` | 정정하면 기록될 새 영수 미리보기 (DB는 안 바꿈). `items`, `subtotal`, `discount_amount`, `previous_balance`, `total_due`, `paid_so_far`, `refund`, `outstanding`, `payment_status`, `active_bill_ids`, `replaces`. 이월된 영수면 409 `BILL_CARRIED` |
 | `POST /visit/:visitId/correct` | 정정 실행 `{expected_active_bill_ids, expected_refund, expected_outstanding, reason}` (3.6). 201 + 새 영수(`refund` 포함) |
 | `GET /patient/:patientId/balance` | `{owed: Σ outstanding, refund: Σ max(net_paid − total_due, 0)}` (취소 제외) |
@@ -368,6 +377,8 @@
 | `note`, `cashier_id` | |
 | `cancelled_at`, `cancelled_by`, `cancel_reason` | 006 |
 | `carried_into_id` → `billing(id)` | 이 영수의 미수를 흡수한 새 영수 (016) |
+| `refunded_amount` | 직원이 취소할 때 돌려준 돈(전부 = `net_paid`, 아니면 0). NULL = 묻지 않음(303 이전 취소, 정정으로 대체) (303) |
+| `replaced_by_id` → `billing(id)` | 이 영수를 대신한 정정 영수 — 있으면 「정정으로 취소」, 없으면 「직원이 취소」 (303) |
 | 인덱스 | `patient_id`, `billing_date`, `payment_status`, `carried_into_id`. `visit_id`(`idx_bill_visit`, `027_payment_billing_visit_index.sql`) |
 
 **`billing_item`** — `billing_id`(CASCADE), `item_type`(`consultation`·`drug`·오더의 `code_type`·`fee`), `item_name`, `item_code`, `quantity`, `unit_price`, `total_price`, `pack_label`(병·튜브 약의 단위, 302 — 없으면 NULL).
@@ -385,6 +396,7 @@
 | `017_billing_net_paid.sql` | 건넨 돈(`amount_paid`)을 매출로 세던 문제 → `net_paid` |
 | `027_payment_billing_visit_index.sql` | `billing(visit_id)` 인덱스만 — 금액 규칙 변경 없음(수납 세션이 301로 만들고 총괄이 027로 바꿈) |
 | `030_consultation_order_total.sql` (진료) | `order_item.total_qty` = 수량 × 일수, 옛 줄은 `quantity`로 — 수납은 이 칸을 읽음(⑭) |
+| `303_payment_cancel_refund.sql` | `billing.refunded_amount` · `replaced_by_id` — 취소 때 돌려줬는지, 정정으로 대체됐는지(M6). 옛 정정은 새 영수 비고로 채움. 금액 변경 없음 |
 | `031_payment_item_pack_label.sql` | `billing_item.pack_label` — 영수증의 「2 flacons」. 옛 영수 줄은 처방에서 채움(실행 중 EMR은 표시된 약이 없어 0줄). 금액 변경 없음 |
 
 ## 5. 다른 모듈과의 연결
@@ -401,6 +413,7 @@
   - 미수·환불 요약과 명단 = 영수마다 미수 `GREATEST(outstanding,0)`, 환불 `GREATEST(net_paid − total_due,0)` — **수납 화면의 `/patient/:id/balance`와 같은 공식**(통계 세션 `52c4505`, develop에 합쳐짐). 예전에는 `total_due − net_paid`라 이월된 빚이 두 번 잡혔습니다(7절 H5).
   - 그래서: 이월된 돈도, 미수 수납한 돈도 **받은 날(새 영수 날짜)** 의 매출로 잡힙니다(2026-09-29부터; 그 전에 받은 미수는 원래 영수 날짜에 남음). 과·의사는 원래 방문의 것.
   - **미수 수납 영수의 모양**(진료 칸 0 + `previous_balance > 0`)을 통계가 읽어 구분합니다 — 3.4의 약속.
+  - **환불**(2026-09-29, M6): 직원이 영수를 취소하며 돌려준 돈 = `refunded_amount`(날짜는 `cancelled_at`), 정정으로 돌려준 돈 = 정정 영수의 `change_amount`(`note`가 `correction of`로 시작, 날짜는 `billing_date`). 정정으로 대체된 영수(`replaced_by_id` 있음)는 환불이 아님. 통계의 「환불액」을 이것으로 세는 것은 통계 세션 몫.
 - **설정**: 진료비(C01~C04)와 발급비는 설정 > 오더 코드에서 `code_type='fee'`로 관리합니다.
 
 ## 6. 설정 항목
@@ -439,7 +452,7 @@
 - ~~**M4 이월된 옛 영수를 취소해도 새 영수에 그 빚이 남음**~~ — **고침(2026-09-29, 3.5)**: 409 `BILL_CARRIED`, 뒤 영수번호 안내. 원래 문제: 취소(`billing.routes.js:283-306`)가 `carried_into_id`가 있는 영수를 막지 않습니다(코드).
 - ~~**M5 수납 API에 권한 검사 없음**~~ — **고침(2026-09-29, 4절)**: 의사 계정 403, 접수 전용 계정은 잔액만 200, 수납 계정 200 확인. 원래 문제: `billing.routes.js:8`은 로그인만 확인. 메뉴는 막혀 있지만 의사·검사실 계정도 API로 영수 취소·수납이 가능합니다. 접수 화면이 `balance`를 읽으므로 그 한 곳은 접수 권한도 허용해야 합니다(코드).
 - ~~**M8 목록의 「환불 예정」 금액이 실제 환불과 다를 수 있음**~~ — **고침(2026-09-29, 총괄 결정 (다))**: 목록도 `buildCorrection()` 결과를 보여 줌(3.2). 같은 데이터 전·후: 부분 수납 → 「환불 3,000」이 「남을 미수 5,000」, 미수 → 「남을 미수 15,000」, 전액·할인 → 「돌려줄 돈 3,000」 그대로, 모두 정정 화면과 같음. 원래 문제: 목록의 `refund_due`는 「줄어든 항목 금액(할인 전)」이고, 실제 환불은 정정 화면의 금액(3.6)입니다. 덜 받았던 환자는 환불이 아니라 미수가 줄어듭니다(화면 확인: 목록 「환불 예정 2,000」, 정정 화면 「미수 4,000」). 2절에 직원용 안내를 적어 둠. 선택지·추천: 인계 노트 「결정용 자료: M6 · M8 · L2 · L7」(2026-09-29).
-- **M6 재수납 금액의 근거가 약함** — **보류(2026-09-29)**: 실장님 말씀 「영수 취소 = 환불」 — 지금 코드의 전제(취소해도 돈은 보관)와 반대. 결정 세션이 방식을 확인 중. 바뀔 곳 표: 인계 노트 「M6 준비」. 원래 내용: `prior_paid`는 마지막 취소 영수 1장만 봅니다(`billing.routes.js:44`). 추가 청구 영수까지 여러 장 취소했으면 일부만 채워짐. 취소 때 돈을 돌려줬는지 기록하지 않음(코드). **재현(2026-09-29)**: 15,000 수납 + 추가 청구 3,000 수납을 둘 다 취소 → 재수납 칸 15,000(받은 돈 18,000). 선택지·추천: 인계 노트 「결정용 자료: M6 · M8 · L2 · L7」(2026-09-29).
+- ~~**M6 재수납 금액의 근거가 약함**~~ — **고침(2026-09-29, 실장님 결정 (다) 취소할 때 묻기)**: 취소 창이 「돈을 돌려줬습니까?」를 묻고(`refunded_amount`), 재수납 칸은 대체되지 않은 취소 영수 모두의 「받은 돈 − 돌려준 돈」(3.5). 정정으로 대체된 영수는 `replaced_by_id`로 구분. 같은 데이터 전·후: 원래 + 추가 청구 둘 다 취소 → 칸 15,000이 18,000, 나머지 옛 경우는 그대로. 원래 내용: `prior_paid`는 마지막 취소 영수 1장만 봅니다(`billing.routes.js:44`). 추가 청구 영수까지 여러 장 취소했으면 일부만 채워짐. 취소 때 돈을 돌려줬는지 기록하지 않음(코드). **재현(2026-09-29)**: 15,000 수납 + 추가 청구 3,000 수납을 둘 다 취소 → 재수납 칸 15,000(받은 돈 18,000). 선택지·추천: 인계 노트 「결정용 자료: M6 · M8 · L2 · L7」(2026-09-29).
 - ~~**M7 영수증이 현장에 맞지 않음**~~ — **고침(H3와 함께)**. 더 넣을 후보 넷(NIF/STAT · 로고 · 서명란 · 금액 글자)은 **넣지 않음(실장님 결정 2026-09-29)**. 병원 정보는 설정에서, 프랑스어, 항목·할인·거스름·미수, 재출력도 같은 모양. 원래 문제: 병원명·주소 하드코딩(`Payment.jsx:388`, 설정의 병원 정보를 안 씀), 글자가 영어 고정(Receipt·Date·Patient·Total·Paid·Thank you), 첫 영수증에 항목이 없음, 재출력(`:437-438`)에 할인·거스름·미수가 없음.
 
 ### 낮음
@@ -466,7 +479,7 @@
 - **영수증**: 수납 직후 영수증이 빈칸·0 Ar로 나오던 것(H3)을, 저장된 영수에서 읽는 프랑스어 A4 영수증 하나로 다시 만듦(M7 포함).
 - **매출 날짜**: 나중에 받은 미수가 처음 진료한 날 매출로 들어가던 것을, 받은 날짜의 새 영수로(M2).
 - **다른 모듈과 맞추기**: 수납 API 권한(M5) · 약 수량은 진료가 저장한 총량만 읽기(약 총량 결정) · 단가 0 표시 · 과거 내원 패널(공용 PatientChart)의 오더 상태와 처방 문장.
-- **남은 것**: M6(영수 취소 = 환불 방식 확인 중, 결정 세션), L9 화면 폭, L10 같은 결과의 다른 계산식.
+- **남은 것**: L9 화면 폭, L10 같은 결과의 다른 계산식.
 
 ### 커밋별
 
@@ -495,4 +508,5 @@
 | 2026-09-29 | 「환자 찾기」에서 접수가 취소한 내원을 고르면 「취소된 내원 — 수납할 것 없음」 안내만 뜨고 수납 버튼은 없음. 영수내역·문서는 그대로 | 화면 안내, 서버도 취소 내원의 새 수납을 409 `VISIT_CANCELLED` (2.11·3.8·5절) | `9b8c6ce` |
 | 2026-09-29 | 결정할 것 넷(재수납 칸 · 목록 환불 금액 · 진료비 기본값 · 부분 수납 내원의 목록)을 재현하고 선택지와 추천 정리 — 바뀐 동작 없음 | 위키·인계 노트만 (7절 M6·M8·L2·L7) | `253ee68` |
 | 2026-09-29 | 목록의 정정 줄이 실제로 돌려줄 돈·남을 미수를 보여 줌(M8) · 진료비는 설정 한 곳에서, 코드가 없으면 0과 안내(L2) · 지난 날 내원 중 아직 수납 안 된 것도 대기 목록에(접수 부탁) · 병·튜브 약의 수량 옆 단위와 개수 없음 안내 | `/pending`에 `corr`·`past_unbilled`·지난 날 조건, `consult_prices`, 화면 `FEES` 삭제, `py_` 키 (2.3·2.4·2.6·2.11·3.1·3.2·4·5·7절) | `c49dd89` |
-| 2026-09-29 | 검사·처치 오더를 **수량 × 일수**로 청구(⑭) · 일부만 받거나 미수로 끝난 오늘 내원은 대기 목록에서 빠짐(L7) · 병·튜브 약은 화면과 영수증에 「2 flacons」 | `COALESCE(total_qty, quantity, 1)` 여섯 곳, `/pending` 오늘 조건, `billing_item.pack_label`(마이그레이션 302)·`stampPackLabels()`, `packWord()` (2.3·2.4·3.1·4·7절) | (이 커밋) |
+| 2026-09-29 | 검사·처치 오더를 **수량 × 일수**로 청구(⑭) · 일부만 받거나 미수로 끝난 오늘 내원은 대기 목록에서 빠짐(L7) · 병·튜브 약은 화면과 영수증에 「2 flacons」 | `COALESCE(total_qty, quantity, 1)` 여섯 곳, `/pending` 오늘 조건, `billing_item.pack_label`(마이그레이션 031, 세션 번호 302)·`stampPackLabels()`, `packWord()` (2.3·2.4·3.1·4·7절) | `4fc72d5` |
+| 2026-09-29 | 영수 취소 창이 「돈을 돌려줬습니까?」를 묻고 「항목만 바뀌었으면 정정」을 안내 · 돌려줬으면 영수증에 「Remboursé au patient」, 재수납 칸은 비움 · 여러 장 취소해도 칸이 맞음(M6) | `PUT /void`의 `refunded`, `billing.refunded_amount`·`replaced_by_id`(마이그레이션 303), `prior_paid` 계산, 변경 기록 (2.7·2.9·3.5·3.11·4·5·7절) | (이 커밋) |

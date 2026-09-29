@@ -54,6 +54,7 @@ var RL = {
   status:       { ko: '상태', en: 'Status', fr: 'Statut' },
   cancelled:    { ko: '취소됨', en: 'CANCELLED', fr: 'ANNULÉ' },
   cancelledOn:  { ko: '취소', en: 'Cancelled on', fr: 'Annulé le' },
+  refunded:     { ko: '환자에게 돌려준 돈', en: 'Refunded to the patient', fr: 'Remboursé au patient' },
   by:           { ko: '·', en: 'by', fr: 'par' },
   reason:       { ko: '사유', en: 'Reason', fr: 'Motif' },
   replaces:     { ko: '대신하는 영수', en: 'Replaces receipt(s)', fr: 'Remplace le(s) reçu(s)' },
@@ -146,6 +147,7 @@ export function ReceiptDoc(props) {
             {b.cancelled_by_name ? ' ' + L(RL.by, lang) + ' ' + b.cancelled_by_name : ''}
             {b.cancel_reason ? ' — ' + L(RL.reason, lang) + ' : ' + b.cancel_reason : ''}
           </div>
+          {num(b.refunded_amount) > 0 ? <div style={{ fontSize: 13, fontWeight: 800 }}>{L(RL.refunded, lang)} : {money(b.refunded_amount)}</div> : null}
         </div>
       ) : null}
       {replaces ? <div style={{ fontSize: 12.5, marginBottom: 10 }}><b>{L(RL.replaces, lang)} :</b> {replaces}</div> : null}

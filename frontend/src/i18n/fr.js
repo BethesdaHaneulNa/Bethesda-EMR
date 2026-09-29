@@ -419,6 +419,17 @@ export default {
   py_correctionHint: "Articles réduits après paiement. La correction suit les montants ci-dessous (il peut n’y avoir rien à rembourser).",
   py_processCorrection: "Appliquer la correction",
   py_qtyMissingPack: "Nombre de flacons / tubes non indiqué pour : {names}. Le montant ne peut pas être calculé. Demandez au médecin de l’indiquer, puis encaissez.",
+  py_voidTitle: "Annuler le reçu {receipt}",
+  py_voidUseCorrection: "Si seuls des articles ont changé, n’annulez pas : utilisez la correction — seule la différence est rendue.",
+  py_voidReasonLabel: "Motif de l’annulation",
+  py_voidRefundQ: "Avez-vous rendu au patient les {amount} Ar encaissés sur ce reçu ?",
+  py_voidRefundYes: "Oui — {amount} Ar rendus",
+  py_voidRefundNo: "Non — l’argent reste à la caisse",
+  py_voidNoMoney: "Aucun montant encaissé sur ce reçu.",
+  py_voidConfirm: "Annuler le reçu",
+  py_voidBack: "Retour",
+  py_refundedAt: "Rendu à l’annulation",
+  py_keptAt: "Gardé à l’annulation",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
