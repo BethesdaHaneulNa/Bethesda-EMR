@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 역할 × 라우트 권한 시험 (S2 마지막 그물) · U13 남은 점 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4a77f97`까지 반영)
+- **한 일**: `backend/test/settings.access.mjs`(새) — 역할별 계정 10개 × API 라우트 99개 = **990건**. 계정: 설치 관리자, 의사, 접수(접수·수납), 간호사(접수·약국·임상병리), 약국만, 검사만, 수납만, 통계만, 설정만, 권한 없음. 라우트: 모든 GET과 대표 쓰기(없는 id 999999로 — 가드는 통과하고 대상은 없음). 기대 값은 **S2 표를 스크립트 안에 옮긴 것**이고 라우트 파일에서 읽지 않음(표에서 벗어난 가드를 잡으려고). 「wiki에서 표를 읽기」는 하지 않았습니다 — 인계 노트의 표는 설명·예외가 섞인 글이라 기계로 읽으면 깨지기 쉬워서, 스크립트가 표의 실행판이 되고 위키가 스크립트를 가리키게 했습니다.
+- **결과 (격리 스택 9187, develop `4a77f97`)**: **권한은 990칸 모두 표와 같음.** 권한과 별개로 2건 — `POST /api/consultations/:id/diagnoses`, `POST /api/consultations/:id/prescriptions`가 필수 칸(`diagnosis_name`, `drug_name`)이 빈 요청에 **400이 아니라 500**(DB not-null 오류가 그대로). 화면은 항상 채워서 보내므로 현장 영향은 작지만, 서버 오류로 기록됨.
+- **U13 남은 점 (총괄 `7662160`) 확인**: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아옴 → **`/registration`으로 이동**, 저장 권한 갱신. 접수 화면에서 입력 중(「Rakoto en cours」)에 **수납** 권한만 빼고 돌아옴 → **접수에 그대로, 입력 유지**, 메뉴에서 Paiement만 사라짐. (브라우저 창이 가려진 상태로 판단돼 `visibilitychange`가 동기화를 건너뛰어서, 시험 때만 `document.hidden`을 false로 두고 이벤트를 보냄 — 실제 사용에서는 사람이 창을 보고 있으면 그대로 동작)
+- **바꾼 파일**: `backend/test/settings.access.mjs`(새) · `wiki/modules/settings.md`(4절 시험 목록, 7절 S2 고침·U13) · `wiki/handoff/settings.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **실행 방법**: 격리 스택을 띄우고 `node backend/test/settings.access.mjs` (빈 DB면 관리자를 스스로 만듦, 아니면 `SE_ADMIN_PW=…`). 계정 비밀번호는 OS 임시 폴더 `bethesda-se-access-<포트>.json`에 두고 다시 씀. 표와 다르면 exit 1.
+- **확인 못 한 것**: 브리지 토큰으로만 부르는 라우트(`/pacs/worklist-feed`·`bridge-heartbeat`·`study-arrived`, 워크리스트의 토큰 경로) — 로그인 권한 표의 대상이 아님.
+- **다른 세션에 부탁**: **진료** — 위 500 두 건: 빈 `diagnosis_name`/`drug_name`(그리고 없는 진료 id)에 400/404로. **모든 세션** — 라우트를 추가하거나 권한을 바꾸면 `settings.access.mjs`의 `ROUTES` 표에 한 줄(주인이 직접 넣어도 됨).
+
 ## 2026-09-29 — U13 해결 확인 (총괄 구현)
 
 - **상태**: 확인 요청 (위키만)
