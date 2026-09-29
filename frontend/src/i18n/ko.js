@@ -940,6 +940,10 @@ export default {
   se_osErrPackQty: "{n}번째 줄: 병·튜브 수는 1 이상의 정수입니다.",
   se_osErrQuantity: "{n}번째 줄: 수량은 0보다 커야 합니다.",
   se_sys_pacsAddress_notPaired: "영상 창이 영상 서버와 짝이 맞지 않음 — 서버 PC의 PACS 폴더에서 pair-with-emr 실행",
+  se_osGone: "⚠ {n}개 약이 목록에 없음",
+  se_osGoneHint: "줄이 그어진 약은 약 목록에서 빠진 약입니다. 진료에서 이 약속처방을 불러도 처방되지 않습니다 — 지우거나 목록에 있는 약으로 바꾸세요.",
+  se_osGoneLine: "목록에 없음",
+  se_osPick: "재고 {stock} · 가격 {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

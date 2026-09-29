@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험의 설정 몫 (B1 · C 넷)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `fd0cd02` merge 위)
+- **B1 목록에서 빠진 약**: 약속처방 목록 카드와 편집 창에서, 약이 감춰졌거나(`drug_active` false) 없어진(null) 약 줄을 줄긋기 + 「⚠ N개 약이 목록에 없음」, 편집 창에는 「진료에서 불러도 처방되지 않음 — 지우거나 바꾸세요」 설명. `drug_active`는 진료의 `orderset.routes.js`가 이미 주던 값(서버 변경 없음). 자료는 고치지 않음(현지에서 다시 만듦). 편집 창에서 새로 넣은 줄은 목록에서 고른 것이라 표시 없음.
+- **B2**(Journal 영수증 정정의 영어 «refund», «paid / partial»): 수납 세션이 값 이름을 알려 오면 기록 탭 번역 표에 넣음 — 아직 안 옴.
+- **C 저장 알림**: 약속처방 저장이 `t.save+' ✓'`(«✓ Sauver ✓»)였음 → 다른 저장과 같은 `se_saved`(«✓ Enregistré»). 새 키 없음.
+- **C 편집 창**: 설정의 편집 창(직원·약·오더 코드·상용구·진료과 공용)을 제목 / 칸(스크롤) / 단추 줄로 나눔 — 1366×768에서 포장 단위 약(PROFEIN)의 창도 **Sauver**가 스크롤 없이 보임. 약 탭 편집 창은 Settings.jsx(설정 파일)라 약국에 넘기지 않음.
+- **C 약 검색 결과**: 약속처방 편집 창 오른쪽에 제형 + 「Stock N · Prix P」(포장 단위 약은 재고 뒤에 Flacon 등). Amoxicillin MED-0068/0069가 재고 2000 / 2500으로 갈림. 약 탭 쪽은 약국 몫.
+- **C 약 가격 변경 기록 — 결정 세션에 올릴 선택지(만들지 않음)**: (가) 지금처럼 남기지 않음 — 기록 범위 여섯 가지 그대로 / (나) 약 가격(`unit_price`)이 바뀔 때만 Journal에 한 줄(누가·옛 값→새 값, `admin.routes.js` PUT에서 같은 트랜잭션, 새 마이그레이션 없음 — `audit_log` 그대로) / (다) 약 저장 전체(이름·제형·최소 재고·포장 단위까지). 설정 세션 의견: (나) — 돈에 닿는 값만, 가져온 뒤 처음 가격을 넣는 101줄도 남아 「누가 0→100」이 보임.
+- **설명서** `manual-fr/settings.md`: 「À vérifier sur place」 상자(막지 않음, 약국이 Vérifié로 지움), 같은 이름 두 줄(둘 다 가격, 약국에 알림), 약속처방 검색의 재고·가격, 「absent de la liste」 줄 처리, Journal에 남지 않는 것(약 가격·약속처방·처음 입력). 옛 「à revoir」 주석은 지움. `changelog-1.5.0/settings.md` Smaller 두 줄.
+- **공용 파일 변경**: i18n `se_osGone`·`se_osGoneHint`·`se_osGoneLine`·`se_osPick` (ko·en·fr, 설정 표시 안).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · i18n 3개 · 위키 4개
+- **확인한 방법**: `npm run build`. 새 격리 스택(9187, 034 포함): login(새 스택)·messages·ordersets·drugs 시험, access 1243 요청 통과. 화면 1366×768, fr: 목록에 Malaria Workup·Diarrhea / GE만 「2 médicament(s) absent(s)」와 줄그은 코드(Basic Labs는 없음), 편집 창의 노란 상자·줄긋기·「absent de la liste」, 새로 넣은 Amoxicillin 줄은 표시 없음, 검색 「Stock 2000 · Prix 0」/「Stock 2500 · Prix 0」, 저장 알림 「✓ Enregistré」, PROFEIN 편집 창의 Sauver가 스크롤 없이 보임. ko: 목록 「⚠ 2개 약이 목록에 없음」, 편집 창 설명·「목록에 없음」, 검색 「재고 2000 · 가격 0」.
+- **남은 것**: B2(수납의 값 이름), 영상 백업의 EMR 백업 복사 보고 칸이 정해지면 상태 화면에 한 줄, `/api/theme` access.
+
 ## 2026-09-29 — 편집 창 제목·이메일·비활성 아래로 · 약속처방 문구 번역 · 영상 창(P-9) 뒤 상태 검사 (총괄 ③④⑤)
 
 - **상태**: 확인 요청
