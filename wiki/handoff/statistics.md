@@ -2,10 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 현금 기준 구현 (결정 8, 시안 A) · 설명서 · 변경 내역 갱신
+
+- **상태**: 확인 요청 · **`Stats.jsx` 는 이제 디자인 세션이 시작해도 됨**
+- **커밋**: session/statistics (이 항목과 같은 커밋). `develop` `e853799`(수납 036 `cash_movement` 포함)에서 fast-forward 한 뒤 작업
+- **한 일** (설계 메모 `a01b810` · 시안 A 그대로):
+  - 서버: `CASH_COLS`·`cashOf()` 공통 식. `/summary` 에 `cash{in,out,net,byKind}`(`cash_movement`, `move_date` 기준). **새 `GET /api/stats/cash?granularity&from&to`** — 기간마다 한 줄(빈 날 0, `generate_series`)과 합계, 기본 기간 30일 · 12개월 · 5년. `/monthly` 의 `revenue` = 그 달 현금 순액.
+  - 화면: 「수납액」 카드 자리에 **「그날 현금 / Caisse / Cash」**(순액, 아래 들어옴 · 나감). 청구액은 진료 영수 카드 밑으로. 과·의사 그래프 제목에 「— 영수 기준 · 합계」. 취소 영수 카드는 개수만(돌려준 돈은 나감에). 매출 아래 **「기간별 현금 / Caisse par période / Cash by period」** 표(일·월·연 단추, 날짜 칸, 들어옴 · 나감 · 순액 · 종류별 — 「옛 기록」 열은 `opening` 이 있을 때만, 합계 줄) + CSV. 월별 추이 수납 막대 = 현금.
+  - 영수 기준 그대로: 과·의사별(9), 청구 · 항목별 · 진료 영수 · 미수 수납 건수 · 방문당 평균(14), 미수 · 환불 예정, 미수 명단(16), 취소 영수 개수(20), 약품.
+- **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`, 위키(`modules/statistics.md`, `manual-fr/statistics.md`, `reference/changelog-1.5.0/statistics.md`)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — **통계 표시(`st_`) 사이에만** 13개
+- **DB 마이그레이션**: 없음(`cash_movement` 는 수납 036 — 읽기만)
+- **번역 키**: `st_cash`, `st_cashIn`, `st_cashOut`, `st_cashNet`, `st_byReceipt`, `st_cashTable`, `st_date`, `st_cashBasis`, `st_kind_payment`, `st_kind_settlement`, `st_kind_correction`, `st_kind_cancel`, `st_kind_opening` — ko · en · fr 모두
+- **API 모양 변경**: `/summary` 에 `cash` 추가. **새 `/cash`**. `/monthly` 의 `revenue` 뜻이 현금 순액으로. `refunded`·`refundUnknownCount` 는 API 에 남기되 화면에서는 안 씀. 쓰는 곳은 `Stats.jsx` 뿐.
+- **확인한 방법**: `node --check`, `npm install --no-package-lock` + `npm run build` 통과. 격리 스택 9186:
+  - **영수 기준 불변** — 새 DB 에서 앞선 시험 t9 · t16 · t20 을 다시 돌려 과·의사별 · 청구 · 평균 · 미수 명단 · 취소 영수 모두 전과 같음(t9report 의 FAIL 두 줄은 스크립트의 옛 기대값 — 없어진 약 합계, 명단에 t16 환자가 더해짐).
+  - **현금 = 금고** — 새 DB 에서 수납 시뮬레이션 ①~④ 를 **실제 수납 API** 로(진료비 15 000 + 약 2 × 1 500, 약을 지워 과청구 → 정정, 취소 Oui/Non → 재수납, 미수 수납). 사례마다 다른 D1 · D2 로, 각 단계가 쓴 영수 · `cash_movement` 줄을 그 날짜로 옮김(시험 DB 에서만 거절 트리거를 잠깐 끄고 — 수납 세션과 같은 방법). `/stats/cash?granularity=day` 와 `/summary` 의 `cash.net` 이 10일 모두 실제 현금과 같음: ① +18 000 / −3 000, ② +10 000 / 0, ③a +18 000 / 0(들어옴 18 000 · 나감 18 000), ③b +18 000 / 0(`held_used` 18 000), ④ +10 000 / +5 000. 영수 기준은 예전처럼 D1 0 / D2 전액. 기간 합계 순 76 000 = 영수 기준 합.
+  - `opening` 한 줄을 넣어 「옛 기록」 열과 합계 확인. 화면(ko · fr · en) 글자 전부, CSV(단추 → Blob): `date,in,out,net,payment,settlement,correction,cancel,opening` + TOTAL.
+  - **옛 날짜 = 예전 숫자**는 036 의 `opening` 규칙과 총괄의 실행 중 EMR 확인(2줄 474 500)에 기댐 — 이 세션은 036 전 데이터가 있는 DB 로 전·후를 따로 돌리지 않음.
+- **확인 못 한 것**: 위 「옛 날짜」 전·후 비교를 직접. 수납 화면 「Caisse du jour」(`/api/billing/cash-day`)와 같은 날 같은 숫자인지는 그 화면이 아직 없어 API 끼리만 같은 표를 읽는 것으로 갈음.
+- **시험 방법 변경 메모**: 접수 설정 뒤 첫 관리자 계정은 이제 항상 `admin`(설정 세션 변경) — 시험 스크립트가 다른 아이디로 만들던 것을 고침(스크립트는 작업 폴더 밖 scratchpad).
+- **위키**: `modules/statistics.md` 머리 · 2절(2.1 · 2.3 표 · **2.3b 새로** · 2.5 · 2.6) · 3.2 · 3.5 · 3.10 · **3.11 새로** · 4절(API · `cash_movement`) · 5절 · 7절(8 고침) · 8절. `manual-fr/statistics.md` — `à revoir` 셋을 모두 풀고 Recettes 표 · Caisse par période · 메시지 표를 새 화면대로. `reference/changelog-1.5.0/statistics.md` — 현금 기준을 첫 절로, 「이번 판에 없음」 문장 삭제, After updating 에 사무실 안내.
+- **총괄 확인 요청**: `Stats.jsx` 를 디자인 세션에 넘겨 주세요. 수납의 「Caisse du jour」 화면이 생기면 같은 날 통계 「그날 현금」과 숫자가 같은지 한 번 봐 주세요.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 설계 메모: 통계를 현금 기준으로 (`cash_movement`) — 코드 전
 
 - **상태**: 보류 — 설계(코드 전). ①의 시안은 실장님께 보여 드릴 것(결정 세션). 코드는 수납 구현(`cash_movement` 마이그레이션 · 네 곳 쓰기)이 develop 에 들어온 뒤, develop 을 먼저 당기고(디자인 세션의 `Stats.jsx` 색 변경) 시작.
-- **커밋**: session/statistics (이 항목과 같은 커밋, 위키만). `develop` `4dabb5f` 에서 fast-forward
+- **커밋**: session/statistics `a01b810` (develop 에 합쳐짐, 설계 승인 · 시안 A)
 - **근거**: 수납 설계 메모(`handoff/payment.md` 맨 위, 표 `cash_movement` — `move_date` · `amount`(+들어옴/−나감) · `kind` · `billing_id` · `visit_id` · `patient_id`) · 총괄 방향: **날짜별 「그날 현금」은 `cash_movement`, 과·의사별과 방문당 평균은 영수(진료) 기준 그대로.**
 
 ### 0. 숫자 둘 — 무엇이 어느 쪽인가

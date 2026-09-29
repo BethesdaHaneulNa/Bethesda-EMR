@@ -31,6 +31,11 @@ export default function StatsPage(){
   // monthly or yearly table over "this month" would be a single column.
   var drs = useState({ from:'', to:'' }), drugRange = drs[0], setDrugRange = drs[1];
   var dus = useState(null), drugUsage = dus[0], setDrugUsage = dus[1];
+  // Cash by period (the till, decided 2026-09-29): its own granularity and dates,
+  // like the drug table. Empty dates = the server's default for the granularity.
+  var cgs = useState('day'), cashGran = cgs[0], setCashGran = cgs[1];
+  var crs = useState({ from:'', to:'' }), cashRange = crs[0], setCashRange = crs[1];
+  var cds = useState(null), cashData = cds[0], setCashData = cds[1];
 
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
 
@@ -39,6 +44,30 @@ export default function StatsPage(){
   // it loads once rather than on every change of dates.
   useEffect(function(){ api.get('/stats/monthly?months=6').then(setMonthly).catch(function(){ setMonthly([]); }); }, []);
   useEffect(function(){ loadDrugUsage(); }, [drugGran, drugType, drugStat, drugRange.from, drugRange.to]);
+  useEffect(function(){
+    var q = '/stats/cash?granularity='+cashGran;
+    if(cashRange.from && cashRange.to) q += '&from='+cashRange.from+'&to='+cashRange.to;
+    api.get(q).then(setCashData).catch(function(){ setCashData({ periods:[], total:null, from:cashRange.from, to:cashRange.to }); });
+  }, [cashGran, cashRange.from, cashRange.to]);
+  function pickCashGran(g){ setCashGran(g); setCashRange({ from:'', to:'' }); }
+  function setCashFrom(v){ var to=cashRange.to||(cashData&&cashData.to)||''; if(v&&(!to||v<=to)) setCashRange({ from:v, to:to }); }
+  function setCashTo(v){ var from=cashRange.from||(cashData&&cashData.from)||''; if(v&&(!from||from<=v)) setCashRange({ from:from, to:v }); }
+  var CASH_KINDS = ['payment','settlement','correction','cancel','opening'];
+  var KIND_KO = { payment:'수납', settlement:'미수 수납', correction:'정정 환불', cancel:'취소 환불', opening:'옛 기록' };
+  function kindLabel(k){ return t['st_kind_'+k] || KIND_KO[k]; }
+  function signedAr(n){ n=Math.round(Number(n)||0); return (n>0?'+':n<0?'−':'')+fmtAr(Math.abs(n)); }
+  function exportCashCsv(){
+    if(!cashData) return;
+    var kinds = CASH_KINDS.filter(function(k){ return k!=='opening' || (cashData.total&&cashData.total.byKind.opening); });
+    var lines = [['date','in','out','net'].concat(kinds).join(',')];
+    (cashData.periods||[]).concat(cashData.total?[Object.assign({ period:'TOTAL' }, cashData.total)]:[]).forEach(function(r){
+      lines.push(['"'+r.period+'"', r.in, r.out, r.net].concat(kinds.map(function(k){ return r.byKind[k]; })).join(','));
+    });
+    var blob = new Blob(["\ufeff"+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'cash-'+cashGran+'-'+(cashData.from||'')+'_'+(cashData.to||'')+'.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  }
   async function loadDrugUsage(){
     try {
       var q = '/stats/drug-usage?granularity='+drugGran;
@@ -129,7 +158,7 @@ export default function StatsPage(){
       </div>; })}
     </div>; }
 
-  var v = data?data.visits:{}, rev = data?data.revenue:{}, out = data?data.outstanding:{};
+  var v = data?data.visits:{}, rev = data?data.revenue:{}, out = data?data.outstanding:{}, cash = (data&&data.cash)||{ in:0, out:0, net:0 };
   var unassigned = t.st_unassigned||'미지정';
   // Count words are deliberately empty in English ("15", not "15 cases"), so an
   // empty string is a real value here and must not fall back to the Korean.
@@ -190,29 +219,35 @@ export default function StatsPage(){
         {/* 매출 · 정산 */}
         <Section title={'💰 '+(t.revenueSettlement||'매출 · 정산')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
-            <Card label={t.collected||'수납액'} value={fmtAr(rev.paid)} unit="Ar" color="#10b981" sub={(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'} />
+            {/* The day's cash (design A, 2026-09-29): what came into the till minus what
+                was handed back, from cash_movement. Replaces the receipt-based figure
+                that moved to the correction day when a receipt was corrected. */}
+            <Card label={t.st_cash||'그날 현금'} value={(cash.net<0?'−':'')+fmtAr(Math.abs(cash.net||0))} unit="Ar" color={cash.net<0?'#f87171':'#10b981'}
+              sub={<><div>{(t.st_cashIn||'들어옴')+' +'+fmtAr(cash.in)+' Ar'}</div><div>{(t.st_cashOut||'나감')+' −'+fmtAr(cash.out)+' Ar'}</div></>} />
             {/* Treatment receipts only; balance settlements (payment M2) are money
-                received, not treatments, so they are shown apart (decision 14). */}
+                received, not treatments, so they are shown apart (decision 14).
+                Billed sits here with the other receipt figures. */}
             <Card label={t.st_billCount||'진료 영수'} value={rev.billCount||0} unit={cases} small
-              sub={rev.settlementCount?(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount):null} />
+              sub={<><div>{(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'}</div>{rev.settlementCount?<div>{(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount)}</div>:null}</>} />
             <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAr(rev.avgBilledPerVisit)} unit="Ar" small />
             <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
             <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
             {/* Staff cancellations only; receipts replaced by a correction are not
-                counted (item 20). Below: the cash handed back on those days. */}
-            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="#f59e0b" small
-              sub={data.voidedCount?((t.st_refundedSub||'돌려준 돈')+' '+fmtAr(data.refunded)+' Ar'):null} />
+                counted (item 20). The cash handed back is in the till figures now. */}
+            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="#f59e0b" small />
           </div>
           {/* 과별·의사별 매출. 진료 섹션의 방문수 그래프와 같은 모양으로 두어, "몇 명 봤는지"와
               "얼마가 들어왔는지"를 같은 눈높이에서 읽을 수 있게 한다. 과는 접수에서 고른 과,
               의사는 담당의 기준이라 두 표의 합계는 같아도 줄 나눔은 다를 수 있다. */}
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:14 }}>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'}</div>
+              {/* By receipt: whose treatment the money was for, not the day's till — so
+                  its total can differ from the cash card on days with corrections. */}
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {fmtAr(rev.paid)} Ar</span></div>
               <Bars money rows={(data.revenueByDept||[]).map(function(d){ return { label:deptLabel(d), value:d.paid, color:'#10b981' }; })} />
             </div>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'}</div>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {fmtAr(rev.paid)} Ar</span></div>
               <Bars money rows={(data.revenueByDoctor||[]).map(function(d){ return { label:doctorLabel(d), value:d.paid, color:'#22c55e' }; })} />
             </div>
           </div>
@@ -254,6 +289,55 @@ export default function StatsPage(){
               { label:t.issuance||'서류', value:rev.issuance, color:'#c084fc' },
             ]} />
           </div>
+        </Section>
+
+        {/* 기간별 현금 (그날 현금 by day / month / year) */}
+        <Section title={'💵 '+(t.st_cashTable||'기간별 현금')}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+            {[['day',t.daily||'일별'],['month',t.monthly2||'월별'],['year',t.yearly||'연별']].map(function(o){ var on=cashGran===o[0];
+              return <button key={o[0]} onClick={function(){pickCashGran(o[0])}} style={{ background:on?'#10b98118':'transparent', color:on?'#10b981':t3, border:'1px solid '+(on?'#10b98140':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
+            <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
+            <input type="date" value={cashRange.from||(cashData&&cashData.from)||''} max={cashRange.to||(cashData&&cashData.to)||undefined} onChange={function(e){setCashFrom(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
+            <span style={{ color:t3 }}>~</span>
+            <input type="date" value={cashRange.to||(cashData&&cashData.to)||''} min={cashRange.from||(cashData&&cashData.from)||undefined} onChange={function(e){setCashTo(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
+            <div style={{ flex:1 }}></div>
+            <button onClick={exportCashCsv} disabled={!cashData||!(cashData.periods||[]).length} style={{ background:'#1e2433', color:'#34d399', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>⬇ CSV</button>
+          </div>
+          {!cashData?<div style={{ color:t3, fontSize:13, padding:'12px 2px' }}>{t.loading||'불러오는 중...'}</div>:(function(){
+            // The "before the cash log" column only where such rows exist (receipts
+            // written before migration 036).
+            var kinds = CASH_KINDS.filter(function(k){ return k!=='opening' || (cashData.total&&cashData.total.byKind.opening); });
+            var th = { padding:'7px 10px', textAlign:'right', position:'sticky', top:0, background:scBg, borderBottom:'1px solid '+bd, whiteSpace:'nowrap' };
+            var td = { padding:'6px 10px', textAlign:'right', fontFamily:'monospace', whiteSpace:'nowrap' };
+            function cells(r, bold){ return [
+              <td key="in" style={Object.assign({}, td, { color:r.in?'#34d399':'#3a4253', fontWeight:bold?800:400 })}>{r.in?'+'+fmtAr(r.in):'·'}</td>,
+              <td key="out" style={Object.assign({}, td, { color:r.out?'#f87171':'#3a4253', fontWeight:bold?800:400 })}>{r.out?'−'+fmtAr(r.out):'·'}</td>,
+              <td key="net" style={Object.assign({}, td, { color:r.net<0?'#f87171':tx, fontWeight:800 })}>{r.net?signedAr(r.net):'0'}</td>
+            ].concat(kinds.map(function(k){ var v=r.byKind[k]; return <td key={k} style={Object.assign({}, td, { color:v?t2:'#3a4253', fontWeight:bold?800:400 })}>{v?signedAr(v):'·'}</td>; })); }
+            return <div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' }}>
+              <div style={{ fontSize:12, color:t3, padding:'8px 12px', borderBottom:'1px solid '+bd }}>
+                {cashData.from} ~ {cashData.to} · {t.st_cashBasis||'돈이 창구에 들어오고 나간 날 기준 — 영수를 나중에 정정·취소해도 지난 날 숫자는 바뀌지 않음'}
+              </div>
+              <div style={{ overflow:'auto', maxHeight:'56vh' }}>
+                <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+                  <thead><tr style={{ color:t3 }}>
+                    <th style={Object.assign({}, th, { textAlign:'left', left:0, zIndex:2 })}>{t.st_date||'날짜'}</th>
+                    <th style={th}>{t.st_cashIn||'들어옴'}</th><th style={th}>{t.st_cashOut||'나감'}</th><th style={Object.assign({}, th, { color:tx })}>{t.st_cashNet||'순액'}</th>
+                    {kinds.map(function(k){ return <th key={k} style={th}>{kindLabel(k)}</th>; })}
+                  </tr></thead>
+                  <tbody>
+                    {(cashData.periods||[]).map(function(r){ return <tr key={r.period} style={{ borderBottom:'1px solid #1a1f2e' }}>
+                      <td style={{ padding:'6px 10px', fontFamily:'monospace', color:t2, whiteSpace:'nowrap' }}>{r.period}</td>{cells(r, false)}
+                    </tr>; })}
+                  </tbody>
+                  {/* Here a total means something: every column is Ariary. */}
+                  {cashData.total?<tfoot><tr style={{ background:pn }}>
+                    <td style={{ padding:'7px 10px', color:tx, fontWeight:800, borderTop:'1px solid '+bd2 }}>{t.total||'합계'}</td>{cells(cashData.total, true)}
+                  </tr></tfoot>:null}
+                </table>
+              </div>
+            </div>;
+          })()}
         </Section>
 
         {/* 약품 사용통계 */}
@@ -317,7 +401,7 @@ export default function StatsPage(){
               <VBars color="#60a5fa" rows={(monthly||[]).map(function(m){ return { label:(m.ym||'').slice(5), value:m.visits }; })} />
             </div>
             <div style={{ flex:1, minWidth:300, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.collected||'수납액'} (Ar)</div>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.st_cash||'그날 현금'} (Ar)</div>
               <VBars money color="#34d399" rows={(monthly||[]).map(function(m){ return { label:(m.ym||'').slice(5), value:m.revenue }; })} />
             </div>
           </div>
