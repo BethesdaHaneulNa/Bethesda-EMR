@@ -49,21 +49,38 @@ export function LabResults(props) {
     var at = r.result_at ? new Date(r.result_at).getTime() : 0;
     if (firstAt[r.order_item_id] === undefined || at < firstAt[r.order_item_id]) firstAt[r.order_item_id] = at;
   });
-  var perDayPanel = {};   // date|panel -> [order_item_id...]
+  // Results of an order cancelled in the consultation room (decision 3) stay on
+  // the table as a record, but they must not take the numbered columns: a day
+  // with one cancelled test and its valid repeat showed the cancelled one as
+  // "(1)". Valid orders are numbered first; cancelled ones go into extra columns
+  // after them, headed with a cross instead of a number.
+  var cancelledOrder = {};
+  rows.forEach(function (r) { if (r.order_status === 'cancelled') cancelledOrder[r.order_item_id] = true; });
+  var perDayPanel = {};   // date|panel -> {ok: [order_item_id...], off: [...]}
   rows.forEach(function (r) {
     var k = ymd(r.result_date) + '|' + pk(r);
-    if (!perDayPanel[k]) perDayPanel[k] = [];
-    if (perDayPanel[k].indexOf(r.order_item_id) < 0) perDayPanel[k].push(r.order_item_id);
+    if (!perDayPanel[k]) perDayPanel[k] = { ok: [], off: [] };
+    var list = cancelledOrder[r.order_item_id] ? perDayPanel[k].off : perDayPanel[k].ok;
+    if (list.indexOf(r.order_item_id) < 0) list.push(r.order_item_id);
   });
-  var slotOf = {}, slots = {};   // order_item_id -> slot index; date -> number of slots
+  function byTime(a, b) { return firstAt[a] - firstAt[b] || a - b; }
+  var okSlots = {}, offSlots = {};   // date -> numbered columns / cancelled columns
   Object.keys(perDayPanel).forEach(function (k) {
     var d = k.split('|')[0];
-    perDayPanel[k].sort(function (a, b) { return firstAt[a] - firstAt[b] || a - b; });
-    perDayPanel[k].forEach(function (id, i) { slotOf[id] = i; });
-    slots[d] = Math.max(slots[d] || 1, perDayPanel[k].length);
+    okSlots[d] = Math.max(okSlots[d] || 0, perDayPanel[k].ok.length);
+    offSlots[d] = Math.max(offSlots[d] || 0, perDayPanel[k].off.length);
   });
-  var cols = [];   // [{d, s, multi}]
-  dates.forEach(function (d) { for (var i = 0; i < (slots[d] || 1); i++) cols.push({ d: d, s: i, multi: (slots[d] || 1) > 1 }); });
+  var slotOf = {};   // order_item_id -> column index within its date
+  Object.keys(perDayPanel).forEach(function (k) {
+    var d = k.split('|')[0], P = perDayPanel[k];
+    P.ok.sort(byTime).forEach(function (id, i) { slotOf[id] = i; });
+    P.off.sort(byTime).forEach(function (id, i) { slotOf[id] = (okSlots[d] || 0) + i; });
+  });
+  var cols = [];   // [{d, s, multi, n (1-based number, or 0 for a cancelled column)}]
+  dates.forEach(function (d) {
+    var ok = okSlots[d] || 0, off = offSlots[d] || 0, total = Math.max(ok + off, 1);
+    for (var i = 0; i < total; i++) cols.push({ d: d, s: i, multi: total > 1, n: i < ok ? (ok > 1 ? i + 1 : -1) : 0 });
+  });
 
   // group by panel, then item (by name) preserving order
   var panels = [];
@@ -117,7 +134,7 @@ export function LabResults(props) {
             <th style={Object.assign({}, th, { left: 0, zIndex: 2 })}>{t.testName || '검사명'}</th>
             <th style={th}>{t.unit || '단위'}</th>
             <th style={th}>{t.refRange || '참고치'}</th>
-            {cols.map(function (c) { return <th key={c.d + '#' + c.s} style={Object.assign({}, th, { textAlign: 'right' })}>{c.d}{c.multi ? ' (' + (c.s + 1) + ')' : ''}</th>; })}
+            {cols.map(function (c) { return <th key={c.d + '#' + c.s} title={c.n === 0 ? t.lb_cancelled : undefined} style={Object.assign({}, th, { textAlign: 'right' }, c.n === 0 ? { color: t3 } : null)}>{c.d}{c.n > 0 ? ' (' + c.n + ')' : c.n === 0 ? ' ✕' : ''}</th>; })}
           </tr>
         </thead>
         <tbody>
