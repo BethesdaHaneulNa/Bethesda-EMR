@@ -16,6 +16,13 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Every connection works in the clinic's time zone. The server's own default is
+  // whatever postgresql.conf was given when the database was first created - UTC on
+  // this install - so CURRENT_DATE and now()::date in our queries were the UTC date:
+  // between midnight and 03:00 in Antananarivo, "today's" queues and reports still
+  // meant yesterday, while Node (TZ) had already moved on. psql inside the database
+  // container hides this, because PGTZ there sets it for that client only.
+  options: '-c TimeZone=' + (process.env.TZ || 'UTC'),
 });
 
 pool.on('error', (err) => {
