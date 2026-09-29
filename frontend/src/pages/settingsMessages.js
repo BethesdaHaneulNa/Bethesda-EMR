@@ -45,6 +45,8 @@ var EXACT = {
   'Invalid token': 'se_errSessionEnded',
   // api/client.js
   'Request failed': 'se_errServer',
+  // orderset.routes.js (consultation session)
+  'name required': 'se_osErrName',
 };
 
 // settings.messages.js fieldMsg: "<field> must be ..." - the field is named in the screen's words.
@@ -60,9 +62,24 @@ var SHAPES = [
   [/^(\w+) must be one of .*$/, 'se_errNotAllowed'],
 ];
 
+// Order-set refusals from the consultation session's route (orderset.routes.js badItems,
+// 2026-09-29): "items[<i>].<field> <meaning>", i from 0. The screen names the line as
+// i + 1 (the order the lines are shown in). The table is theirs (wiki/handoff/
+// consultation.md); the words are ours.
+var ORDERSET_ITEM = {
+  'dose must be a number greater than 0': 'se_osErrDose',
+  'frequency must be a whole number from 1 to 24': 'se_osErrFrequency',
+  'days must be a whole number from 1 to 365': 'se_osErrDays',
+  'route (sig) must be at most 10 characters': 'se_osErrRoute',
+  'quantity must be a whole number of at least 1': 'se_osErrPackQty',
+  'quantity must be a positive number': 'se_osErrQuantity',
+};
+
 export function seMessage(t, text) {
   var s = String(text || '');
   if (EXACT[s] && t[EXACT[s]]) return t[EXACT[s]];
+  var it = s.match(/^items\[(\d+)\]\.(.+)$/);
+  if (it && ORDERSET_ITEM[it[2]] && t[ORDERSET_ITEM[it[2]]]) return t[ORDERSET_ITEM[it[2]]].replace('{n}', Number(it[1]) + 1);
   // api/client.js: the server or the proxy in front of it did not answer properly.
   if (s.indexOf('API response was not JSON') === 0) return t.se_errServer || s;
   for (var i = 0; i < SHAPES.length; i++) {
@@ -74,4 +91,5 @@ export function seMessage(t, text) {
 
 // For backend/test/settings.messages.mjs, which checks the two lists still agree.
 export var KNOWN_EXACT = Object.keys(EXACT);
+export var KNOWN_ORDERSET_ITEM = Object.keys(ORDERSET_ITEM);
 export var KNOWN_SHAPES = SHAPES.map(function (x) { return x[0]; });

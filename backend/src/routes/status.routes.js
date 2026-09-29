@@ -153,28 +153,39 @@ async function checkImageBackup() {
   return { key: 'pacs_image_backup', state: 'ok', message: 'status.imageBackup.ok', values };
 }
 
-// The addresses in Settings > order feed that still carry a port the EMR and the PACS
-// left behind (EMR 8080 -> 9080, PACS viewer 8090 -> 9090, both because Windows
-// reserves the old ones). Typed from the old instructions, they stay in pacs_config and
-// travel with every backup; the viewer then does not open. Warn only - nothing is
-// changed. The Settings screen shows the same warning under each field.
+// Settings > order feed: the imaging settings the EMR itself needs.
+//  - An address still on a port the EMR and the PACS left behind (EMR 8080 -> 9080, the
+//    image server 8090 -> 9090, both because Windows reserves the old ones). Typed from
+//    the old instructions, it stays in pacs_config and travels with every backup.
+//    Since P-9 (035, 2026-09-29) the EMR relays the viewer itself through orthanc_url;
+//    pacs_viewer_url is no longer used and no longer checked. orthanc_url is checked
+//    the same way the order-feed tab checks it.
+//  - Not paired: the viewer relay needs the image server's password, written only by
+//    the PACS folder's pair-with-emr script. Without it the viewer says so instead of
+//    showing images. Checked only where the imaging is in use (the worklist bridge has
+//    reported, or a worklist host is set) - a clinic without a PACS is not warned.
+// Warn only - nothing is changed.
 const OLD_PORTS = [
   { field: 'emr_base_url', old: '8080', now: '9080' },
-  { field: 'pacs_viewer_url', old: '8090', now: '9090' },
+  { field: 'orthanc_url', old: '8090', now: '9090' },
 ];
 function portOf(url) {
   const m = String(url || '').trim().match(/^[a-z]+:\/\/[^/:]+:(\d+)(\/|$)/i);
   return m ? m[1] : null;
 }
 async function checkPacsAddresses() {
-  const r = await pool.query('SELECT emr_base_url, pacs_viewer_url FROM pacs_config WHERE id = 1');
+  const r = await pool.query(
+    `SELECT c.emr_base_url, c.orthanc_url, c.worklist_scp_host,
+            (c.orthanc_password IS NOT NULL AND c.orthanc_password <> '') AS paired,
+            EXISTS (SELECT 1 FROM service_heartbeat h WHERE h.name = 'worklist_bridge') AS bridge_seen
+       FROM pacs_config c WHERE c.id = 1`);
   const cfg = r.rows[0] || {};
-  if (!cfg.emr_base_url && !cfg.pacs_viewer_url) {
-    return { key: 'pacs_address', state: 'off', message: 'status.pacsAddress.off', values: {} };
-  }
+  const inUse = !!(cfg.bridge_seen || cfg.worklist_scp_host);
   const old = OLD_PORTS.filter(p => portOf(cfg[p.field]) === p.old)
     .map(p => ({ field: p.field, url: cfg[p.field], port: p.old, use: p.now }));
+  if (inUse && !cfg.paired) return { key: 'pacs_address', state: 'warn', message: 'status.pacsAddress.notPaired', values: { old } };
   if (old.length) return { key: 'pacs_address', state: 'warn', message: 'status.pacsAddress.oldPort', values: { old } };
+  if (!inUse && !cfg.emr_base_url) return { key: 'pacs_address', state: 'off', message: 'status.pacsAddress.off', values: {} };
   return { key: 'pacs_address', state: 'ok', message: 'status.pacsAddress.ok', values: {} };
 }
 
