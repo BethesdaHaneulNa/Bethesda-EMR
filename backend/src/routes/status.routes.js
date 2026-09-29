@@ -83,12 +83,20 @@ async function checkBridge() {
     seconds, minutes: Math.round(seconds / 60),
     synced: detail.synced || 0, failed: detail.failed || 0,
     error: detail.error || '',
+    // PACS P-20: the bridge also asks Orthanc which studies have arrived, so that
+    // finished patients drop off the device worklist. When that question fails
+    // (wrong Orthanc password, Orthanc down) the worklist itself still syncs and
+    // everything above reads green - only the bridge log knew. Agreed field:
+    // `arrivals_error`, a message, empty when fine. Until the bridge and the
+    // heartbeat endpoint (both PACS) send it, it is simply absent.
+    arrivals_error: detail.arrivals_error || '',
   };
   // Silence is the failure we are looking for: the bridge stopped, and the
   // devices are still showing whatever worklist they had last.
   if (seconds > BRIDGE_STALE_SECONDS) return { key: 'bridge', state: 'down', message: 'status.bridge.silent', values };
   if (!row.ok) return { key: 'bridge', state: 'down', message: 'status.bridge.failing', values };
   if (values.failed > 0) return { key: 'bridge', state: 'warn', message: 'status.bridge.partial', values };
+  if (values.arrivals_error) return { key: 'bridge', state: 'warn', message: 'status.bridge.arrivals', values };
   return { key: 'bridge', state: 'ok', message: 'status.bridge.ok', values };
 }
 

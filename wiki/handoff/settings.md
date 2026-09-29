@@ -2,6 +2,75 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — S2 초안: 라우트별 허용 권한표 · PACS P-20 상태 표시
+
+- **상태**: P-20 코드 = 확인 요청 / S2 표 = 보류(막을지는 결정 세션이 실장님께 여쭙는 중. 코드 변경 없음)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `3f2198e` 이후, `1874812` 위)
+
+### PACS P-20 (코드)
+
+- `status.routes.js` `checkBridge`가 heartbeat `detail.arrivals_error`(문자열, 괜찮으면 빈 값)를 읽어, 있으면 노랑 `status.bridge.arrivals`. **이 필드 이름을 약속으로 제안합니다.** 보내는 쪽(`bridge.py`)과 받는 쪽(`pacs.routes.js` `/bridge-heartbeat`가 `detail`에 넣는 칸 — 지금은 `synced·failed·poll_seconds·error`만 남김)은 PACS 몫이라, 그쪽이 넣기 전까지는 **아무것도 바뀌지 않습니다.**
+- 확인: `node --check`, 격리 스택 9187에서 heartbeat 행을 직접 넣어 — 행 없음 → `off`, 옛 브리지(필드 없음) → `ok`, `arrivals_error: "401 Unauthorized from Orthanc"` → `warn status.bridge.arrivals`.
+- 서버 상태 창(`server-status.ps1`)은 heartbeat **파일의 시각**만 보므로 이 경우는 모릅니다. 브리지가 파일 안에 상태를 쓰게 되면 그때 맞추겠습니다.
+- **다른 세션에 부탁 — PACS**: 도착 확인이 실패하면 heartbeat 요청 본문에 `arrivals_error: "<짧은 이유>"`, 성공하면 `""`. `pacs.routes.js`의 `detail` 객체에 `arrivals_error: String(body.arrivals_error || '').slice(0, 500)` 한 줄.
+
+### S2 — 라우트별 허용 권한표 초안 (결정 전, 코드 변경 없음)
+
+조사 기준: develop 병합 후 `3f2198e`. 모든 라우트와, 그 라우트를 부르는 화면(공용 부품은 그 부품을 쓰는 화면)을 코드에서 찾았습니다. **원칙**: 쓰기는 그 일을 하는 화면의 권한만, 읽기는 부르는 화면들의 권한을 모두 허용. 부르는 곳이 없는 라우트는 주인 모듈만. 「제안」 칸의 권한 중 **하나라도** 있으면 통과(`permMiddleware`는 OR).
+
+공용 부품이 쓰이는 곳: PatientFinder — 진료·임상병리·수납(내원 모드), 약국·접수(환자 모드, 환자 검색만) / PatientChart — 수납·약국 / DocumentModal — 진료·수납·약국(편집), 임상병리·접수(읽기 전용, 발급·취소 버튼 숨김) / RadiologyReadings — 진료·수납.
+
+**patient.routes.js** (`/api/patients`, 지금 전부 로그인만) — 접수 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /` (검색) | 읽기 | 접수, PatientFinder | registration, consultation, payment, pharmacy, lab |
+| `GET /:id` | 읽기 | DocumentModal | registration, consultation, payment, pharmacy, lab |
+| `GET /:id/history` | 읽기 | 접수, 진료, PatientChart | registration, consultation, payment, pharmacy |
+| `POST /` · `PUT /:id` | 쓰기 | 접수 | **registration** |
+| `GET /chart/:chartNo` | 읽기 | 없음 | registration |
+| `GET /:id/billing-history` | 읽기 | 없음 | payment |
+
+**visit.routes.js** (`/api/visits`, 지금 전부 로그인만) — 접수 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /today` | 읽기 | 접수, 진료 | registration, consultation |
+| `GET /patient/:patientId` | 읽기 | PatientFinder(내원 모드) | consultation, lab, payment |
+| `POST /` | 쓰기 | 접수 | **registration** |
+| `PUT /:id/status` | 쓰기 | 접수(취소) | **registration** |
+| `PUT /:id` | 쓰기 | 접수, **수납**(`Payment.jsx:232`, `visit_type`만 보냄, 오류 무시) | registration, payment — ⚠ 수납은 초진/재진만 바꾸므로, 수납 권한일 때는 `visit_type`만 받게 좁히는 것을 권함 |
+
+**consult.routes.js** (`/api/consultations`) — 진료 세션 파일. 쓰기는 이미 전부 `consultation`.
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /visit/:visitId/prescriptions` | 읽기 | DocumentModal(진료·수납·약국) | consultation, payment, pharmacy |
+| `GET /:id/prescriptions` · `GET /:id/orders` | 읽기 | 진료, PatientChart | consultation, payment, pharmacy |
+| `GET /:id/diagnoses` | 읽기 | 없음 | consultation |
+
+**document.routes.js** (`/api/documents`, 지금 전부 로그인만) — 진료 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /patient/:id` | 읽기 | DocumentModal | consultation, payment, pharmacy, lab, registration |
+| `GET /:id` | 읽기 | 없음 | 위와 같음 |
+| `POST /` (발급) · `POST /:id/void` (취소) | 쓰기 | DocumentModal 편집 사본(진료·수납·약국) | consultation, payment, pharmacy — 더 좁히려면 문서 **종류**별(예: 원외 처방전은 약국·진료)로. 실장님 판단 필요 |
+
+**billing.routes.js** — 수납 세션이 이미 적용: 전부 `payment`, 미수금 조회(`GET /patient/:id/balance`)만 `payment` 또는 `registration`. 표와 맞음.
+
+**그 밖에 로그인만 확인하는 것** (기준 자료·공통 — 대부분 그대로 두기를 권함)
+- 그대로: `GET /api/admin/drugs`·`order-codes`·`departments`·`phrases`·`clinic`(여러 화면·상단바가 씀), `GET /api/version`·`/api/system/status`(누구나 — 의도), `GET /api/backup/status`(오류 문구는 이미 settings만).
+- 좁힐 후보: `GET /api/admin/doctors`(접수만 부름, 전화·이메일 포함) → registration, consultation / `GET /api/order-sets` → consultation, settings / `GET /api/lab/test-items` → lab, settings / `GET /api/pacs/test` → settings / `GET /api/pacs/viewer-url` → consultation / `GET /api/pacs/readings/patient/:id` → consultation, payment / `GET /api/worklist` → consultation.
+- **주의**: `PUT /api/worklist/:id/status`(쓰기)는 브리지 토큰 **또는 로그인만**이면 됩니다. 부르는 화면이 없으니 로그인 경로는 막거나 settings로 좁히기를 권함 (PACS 몫).
+- 부르는 곳이 없는 라우트(정리 후보): `GET /api/patients/chart/:chartNo`, `GET /api/patients/:id/billing-history`, 진단 3개(`GET/POST /consultations/:id/diagnoses`, `DELETE /consultations/diagnosis/:dxId`), `GET /api/documents/:id`, `GET /api/order-sets/:id`, `GET /api/auth/me`, 워크리스트 3개.
+
+**적용할 때 주의** (결정되면)
+- 관리자(`admin`) 역할은 권한 7개를 다 가지므로 영향 없음. 영향은 **권한을 좁게 준 직원**에게만.
+- **S1(토큰 12시간)과 묶어서 보세요**: 권한 검사를 넣어도 토큰 안의 권한을 믿으므로, 권한을 뺀 직원은 다시 로그인할 때까지 그대로입니다.
+- 화면 쪽은 바뀌는 것이 없어야 합니다 — 위 표는 **지금 부르는 화면이 모두 통과하도록** 만든 것입니다. 적용 뒤 각 화면을 그 권한만 가진 계정으로 한 번씩 눌러 보면 확인됩니다 (403이 뜨면 표가 빠뜨린 것).
+- 파일 주인: patient·visit = 접수, consult·document = 진료, worklist·pacs = PACS. 설정 세션은 표만 만들었습니다.
+
 ## 2026-09-29 — 제안: 약 저장이 재고를 덮어쓰는 문제 (약국 H4)
 
 - **상태**: 보류 — 제안만 했습니다. 코드는 바꾸지 않았습니다. **실장님 결정 + 약국과 순서 맞추기**가 필요합니다.
