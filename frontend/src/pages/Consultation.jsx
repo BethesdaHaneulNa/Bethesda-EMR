@@ -78,6 +78,16 @@ function showNum(v){
   return /^\d+\.\d{3}$/.test(s) ? String(parseFloat(s)) : s;
 }
 
+// A read-only cell of the prescription table (a dispensed drug, a cancelled order). The
+// table has fixed column widths, so a long value stays on one line and is cut with "…"
+// instead of running over the next column; the whole value is in the tooltip. Numbers
+// read "1", not "1.000".
+function roCell(value, color, title){
+  var v = showNum(value);
+  return <td style={{padding:'3px 4px',textAlign:'center',color:color,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+    title={title || (v ? String(v) : undefined)}>{v}</td>;
+}
+
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
 // A prescription line with no daily dose (or no days) is stored with a total of 0
@@ -856,7 +866,7 @@ export default function ConsultationPage() {
                         // Dispensed: the pharmacy has handed it over and the server will
                         // refuse any change, so show the values as plain text, not inputs.
                         var done = rx.status==='dispensed';
-                        var cellRO={padding:'3px 4px',textAlign:'center',color:t2,fontSize:14};
+
                         return <tr key={'rx-'+rx.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
                           <td style={{padding:'3px 5px'}}>{done
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
@@ -864,11 +874,11 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 3px',color:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={rx.drug_code}>{rx.drug_code}</td>
                           <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
                           {done ? <>
-                            <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
-                            <td style={cellRO}>{rx.frequency||''}</td>
-                            <td style={cellRO}>{rx.days||''}</td>
-                            <td style={cellRO}>{rx.route||''}</td>
-                            <td style={cellRO}>{rx.memo||''}</td>
+                            {roCell(rx.dose, t2)}
+                            {roCell(rx.frequency, t2)}
+                            {roCell(rx.days, t2)}
+                            {roCell(rx.route, t2)}
+                            {roCell(rx.memo, t2)}
                           </> : <>
                             <td style={{padding:'3px 2px'}}><input value={showNum(rx.dose)} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
@@ -884,8 +894,10 @@ export default function ConsultationPage() {
                         // A cancelled order stays as a grey, struck-through record: no inputs
                         // (the server refuses changes), no ✕, the reason on hover.
                         var gone = o.status==='cancelled';
-                        var cellRO={padding:'3px 4px',textAlign:'center',color:t3,fontSize:14};
-                        return <tr key={'oi-'+o.id} style={{borderBottom:'1px solid var(--line-soft)',opacity:gone?0.55:1}}>
+                        // No opacity on a cancelled row: it took the text below a readable contrast
+                        // (2.0 dark, 2.3 light). The faint text colour and the strike-through say
+                        // "record" well enough.
+                        return <tr key={'oi-'+o.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
                           <td style={{padding:'3px 5px'}}>{gone
                             ? <span title={cancelTitle(o)} style={{cursor:'help',fontSize: 12,color:t3}}>⊘</span>
                             : cancellable(o)
@@ -896,11 +908,11 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 3px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,textDecoration:gone?'line-through':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={o.order_code}>{o.order_code}</td>
                           <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
-                            <td style={cellRO}>{o.quantity || 1}</td>
-                            <td style={cellRO}>{o.frequency || 1}</td>
-                            <td style={cellRO}>{o.days || 1}</td>
-                            <td style={cellRO}>{o.dose || ''}</td>
-                            <td style={cellRO}>{o.memo || o.body_part || ''}</td>
+                            {roCell(o.quantity == null ? 1 : o.quantity, t3)}
+                            {roCell(o.frequency || 1, t3)}
+                            {roCell(o.days || 1, t3)}
+                            {roCell(o.dose, t3)}
+                            {roCell(o.memo || o.body_part, t3)}
                           </> : <>
                           <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>

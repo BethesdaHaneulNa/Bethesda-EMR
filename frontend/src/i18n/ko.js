@@ -634,6 +634,10 @@ export default {
   lb_errRangeLowHigh: "{item}: 하한이 상한보다 클 수 없습니다.",
   lb_errRangeEmpty: "{item}: 성별·나이별 줄마다 하한·상한·문자 참고치 중 하나는 있어야 합니다.",
   lb_visitOpenFailed: "이 내원의 검사를 열 수 없습니다. 잠시 뒤 다시 해 보세요.",
+  // the ▲ ▼ ! beside a value being typed, read out by screen readers (same words as the Log tab)
+  lb_flagHigh: "높음",
+  lb_flagLow: "낮음",
+  lb_flagAbnormal: "이상",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",

@@ -643,6 +643,10 @@ export default {
   lb_errRangeLowHigh: "{item}: the low limit cannot be above the high limit.",
   lb_errRangeEmpty: "{item}: each sex/age row needs a low, a high or a text reference.",
   lb_visitOpenFailed: "The tests of this visit could not be opened. Please try again in a moment.",
+  // the ▲ ▼ ! beside a value being typed, read out by screen readers (same words as the Log tab)
+  lb_flagHigh: "high",
+  lb_flagLow: "low",
+  lb_flagAbnormal: "abnormal",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

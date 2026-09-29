@@ -41,6 +41,7 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 - La couleur change pendant que vous écrivez :
   - **bleu** = en dessous de la **Référence** (bas) ;
   - **rouge** = au-dessus de la **Référence** (haut).
+- À droite de la case apparaît aussi le même signe que dans le tableau des résultats : **▲** haut, **▼** bas, **!** texte anormal. Vous pouvez donc lire le résultat même sans les couleurs.
 
 ### Écrire un résultat en texte
 
