@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 2절 직원용 사용법을 수납·통계 페이지 형식으로 다시 씀 — 확인 요청. 2차 후보는 결정 세션이 실장님께 여쭙는 중
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 서버 권한 검사(S2) — 확인 요청. 다음: ⑦ 내원구분(초진·재진·진료비 없음) → ④ 중복·동명이인 경고 (실장님 결정 받음)
 
 ## 1. 이 모듈이 하는 일
 
@@ -16,7 +16,7 @@
 
 > 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR** 로 바꿉니다.
 
-> **접수 창구 직원의 계정에는 「접수」 권한이 있어야 합니다.** 관리자가 **Paramètres (설정) → 👥 Staff** 에서 계정을 만들거나 고칠 때, 권한 칸의 **🏥 Enregistrement (접수)** 를 체크하세요. 역할을 **Front Desk** 로 고르면 기본으로 체크됩니다(수납 권한도 함께). 이 권한이 없으면 메뉴에 **Enregistrement** 가 보이지 않습니다.
+> **접수 창구 직원의 계정에는 「접수」 권한이 있어야 합니다.** 관리자가 **Paramètres (설정) → 👥 Staff** 에서 계정을 만들거나 고칠 때, 권한 칸의 **🏥 Enregistrement (접수)** 를 체크하세요. 역할을 **Front Desk** 로 고르면 기본으로 체크됩니다(수납 권한도 함께). **Infirmier(ère) (간호사)** 역할도 기본으로 체크됩니다(약국·검사와 함께). 이 권한이 없으면 메뉴에 **Enregistrement** 가 보이지 않고, 서버도 환자 등록·접수를 거절합니다. 관리자가 권한을 빼면 **다시 로그인하지 않아도 바로** 적용됩니다 — 열려 있던 화면에서 저장하면 「Vous n'avez pas l'autorisation…」 안내가 뜹니다(2.8).
 
 ### 2.1 화면 열기와 화면 구성
 
@@ -141,6 +141,7 @@
 | 「Dossier patient introuvable. Recherchez à nouveau.」 | 그 환자 기록을 찾지 못했습니다. 다시 검색해서 고릅니다 |
 | 「Cet enregistrement est introuvable. La liste a été actualisée.」 | 그 접수 기록을 찾지 못했습니다. 새로 고쳐진 목록에서 다시 고릅니다 |
 | 「Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres.」 | 날짜·숫자 칸의 형식이 틀렸습니다. 확인하고 다시 누릅니다 |
+| 「Vous n'avez pas l'autorisation pour cette action. Demandez l'accès « Enregistrement » à l'administrateur.」 | 이 계정에 「접수」 권한이 없습니다(관리자가 방금 뺐을 수도 있음). 관리자에게 **Paramètres → Staff** 에서 **🏥 Enregistrement** 를 체크해 달라고 합니다 |
 | 「Erreur : …」 | 위에 없는 오류입니다. 창의 글자를 그대로 적어 관리자에게 알립니다 |
 | 서버는 되는데 오른쪽 목록이 비어 있음 | 화면을 처음 열 때 서버에 닿지 못했을 수 있습니다. 30초 안에 저절로 다시 불러옵니다. 계속 비어 있으면 화면을 새로 고치고(F5), 그래도 안 되면 관리자에게 알립니다. (오늘 접수가 정말 없으면 당연히 비어 있습니다) |
 
@@ -212,7 +213,22 @@
 
 - `backend/src/routes/patient.routes.js` (`/api/patients`)
 - `backend/src/routes/visit.routes.js` (`/api/visits`)
-- 둘 다 `authMiddleware`만 씀 — 로그인만 되어 있으면 모듈 권한과 상관없이 호출 가능.
+- 로그인(`authMiddleware` — 2026-09-29 S1부터 매 요청 DB에서 계정 상태·권한을 읽음) **과 모듈 권한**(`permMiddleware`, 하나라도 있으면 통과)을 검사함 — 2026-09-29 실장님 결정 S2 「서버도 화면 권한대로 막기」. 원칙: 읽기는 **그 라우트를 부르는 화면 전부**(공용 부품을 통한 호출 포함), 쓰기는 그 일을 하는 화면만. 권한이 없으면 403 `Access denied`.
+
+| 라우트 | 통과하는 권한 | 부르는 화면 (2026-09-29 grep) |
+|---|---|---|
+| `GET /patients` | registration · consultation · payment · pharmacy · lab | 접수, PatientFinder(다섯 화면) |
+| `GET /patients/:id` | 위와 같음 | DocumentModal(다섯 화면 — 임상병리·접수는 차트뷰어) |
+| `GET /patients/:id/history` | registration · consultation · payment · pharmacy | 접수, 진료, PatientChart(수납·약국). 임상병리는 안 부름 |
+| `POST /patients` · `PUT /patients/:id` | registration | 접수 |
+| `GET /patients/chart/:chartNo` | registration | 없음 |
+| `GET /patients/:id/billing-history` | payment | 없음 |
+| `GET /visits/today` | registration · consultation | 접수, 진료 |
+| `GET /visits/patient/:patientId` | consultation · lab · payment | PatientFinder 내원 모드(진료·임상병리·수납). 약국·접수는 환자 모드라 안 부름 |
+| `POST /visits` · `PUT /visits/:id/status` | registration | 접수 |
+| `PUT /visits/:id` | registration · payment — 단 **registration 없이 payment만** 있으면 `visit_type` 말고 다른 칸을 보내는 순간 403 (조용히 빼지 않음 — 잘못된 호출이 드러나게) | 접수, 수납(`visit_type`만) |
+
+새 화면이 이 API를 부르게 되면 표와 `patient.routes.js`의 `SEARCH_READERS`·`HISTORY_READERS`, `visit.routes.js`의 각 `permMiddleware`를 같이 고치고, `backend/test/reception.api.mjs`의 `ROUTES`도 고칠 것.
 - 입력 검사: `backend/src/utils/validate.js`의 `badPatient`, `VISIT_TYPES`, `VISIT_STATUSES` (공용 파일, 총괄 소관)
 
 | 메서드 · 경로 | 하는 일 | 부르는 곳 |
@@ -299,6 +315,8 @@
 
 접수 전용 설정은 **없음**. 접수 화면이 기대는 다른 설정:
 
+- **설정 → 직원 → 권한**: 🏥 Enregistrement(`registration`)가 있어야 접수 화면과 환자 등록·접수 API를 씀. Front Desk·간호사 역할은 기본으로 있음. 다른 화면이 환자를 찾고 보는 데 필요한 권한은 4절 표.
+
 - **설정 → 직원**: 역할이 `doctor`이고 활성인 직원만 담당의사 목록에 나옴. 직원의 소속 진료과가 접수 때 진료과로 들어감 — 소속과가 없으면 진료과 없이 접수됨.
 - **설정 → 오더 코드**: 진료비 `C01`(신환) `C02`(재진) `C03`(응급) `C04`(의뢰) 가격 — 수납이 `visit_type`으로 고름.
 - **`.env`의 `TZ`**: 「오늘」의 기준. DB(`PGTZ`)와 백엔드가 같은 값을 써야 `visit_date`와 `reception_time`이 맞음. `docker-compose.yml`은 `.env`에 `TZ`가 없으면 DB는 `UTC`, 백엔드는 `Indian/Antananarivo`로 **서로 다르게** 기본값을 잡음 — 설치 스크립트가 `.env`에 `TZ`를 넣으므로 보통은 문제없음.
@@ -318,7 +336,7 @@
 | ⑤ | ✅ 고침 (보통, 잠재) | **대기 목록에서 고른 환자를 저장하면 `national_id` `mobile` `address` `city` `region`이 빈 값으로 덮인다.** `/visits/today`가 이 칸들을 안 주는데 화면은 빈 문자열로 채워 `PUT /patients`로 보냄. 지금은 이 칸들을 입력하는 화면이 없어 잃을 값이 없지만, **주소·연락처 입력 칸을 추가하는 순간 실제 데이터 손실이 됨** | `Registration.jsx:127-132,145-157,190-197` · `visit.routes.js:13` · `patient.routes.js:81` | 코드 |
 | ⑥ | 보통 | **진료과를 따로 고를 수 없다.** 의사의 소속과가 자동으로 들어감. 소속과가 없는 의사면 진료과가 비어 통계에서 「(미지정)」. `35ddb4b` 커밋은 「한 의사가 여러 과 진료를 볼 수 있으니 내원의 과는 의사 소속과와 별개」라고 설계를 밝혔는데 화면이 그걸 못 함. `/admin/departments`는 불러놓고 안 씀 | `Registration.jsx:74-75,318-327` | 코드 |
 | ⑦ | 보통 | **내원구분(신환·재진·응급·의뢰)을 고르는 칸이 없다.** 제목에만 있고 항상 `newVisit`. 수납에서 고치기 전까지 통계의 신환/재진 구분이 틀리고, 수납 직원이 매번 손으로 바꿔야 함 | `Registration.jsx:55,316` · `Payment.jsx:187` · `stats.routes.js:32-34` | 코드 |
-| ⑧ | 보통 | 환자·내원 API에 모듈 권한 검사가 없다. 약국·검사 계정으로도 API를 직접 부르면 환자 인적사항 수정, 내원 상태 변경이 됨. 단 진료·수납·약국·검사가 이 API를 읽으므로 권한을 붙이려면 범위를 나눠야 함 | `patient.routes.js:7` · `visit.routes.js:7` | 코드 |
+| ⑧ | ✅ 고침 — S2 (보통) | 환자·내원 API에 모듈 권한 검사가 없었다(로그인만 하면 약국·검사 계정도 인적사항 수정·내원 상태 변경 가능). → 2026-09-29 실장님 결정 S2로 라우트별 권한(4절 표). 수납 권한만 있는 계정은 `PUT /visits/:id`에서 `visit_type`만 | `patient.routes.js` · `visit.routes.js` | 시험 스크립트 114건 + 역할별 화면 |
 | ⑨ | ✅ 고침 (보통) | `PUT /visits/:id`는 `visit_type`·`status` 검사를 안 한다 (`POST`는 함). 잘못된 `visit_type`은 수납에서 `C01` 진료비로 조용히 계산됨. 또 `COALESCE` 때문에 담당의·진료과를 **비울 수 없음** | `visit.routes.js:103-118` vs `:68` · `billing.routes.js:28-30` | 코드 |
 | ⑩ | 보통 | 지난 날의 대기가 사라진다. `/visits/today`는 오늘 것만 보여줘서, 어제 `waiting`·`in_progress`로 남은 내원은 접수·진료 화면 어디에도 안 나오고 통계에는 「진행중」으로 계속 남음. 의도인지 **확인 필요** | `visit.routes.js:19` · `stats.routes.js:37` | 코드 |
 | ⑪ | ✅ 고침 (낮음) | 알림 문구 일부가 영어로 고정 — `' required'`, `'Error: '`, 서버 오류 원문. 1차에서 이름·생년월일·취소 불가·오류 접두어를, 이어서 ⑪ 마무리에서 완료·확인 창 문장, 생년월일 칸 `YYYY/MM/DD`(→ `AAAA/MM/JJ`), 서버 연결 실패·기록 없음·형식 오류를 번역. 남은 것: 표에 없는 드문 서버 오류는 「Erreur : 원문」 | `Registration.jsx` `errText`·`fill` | 화면 |
@@ -343,7 +361,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | 2절을 수납·통계 페이지 형식으로 — 권한 안내, 화면 구성·버튼 표, 왼쪽 칸별 뜻 표, 대기 상태 표, 환자 찾기 창, 「이런 안내가 뜰 때」 표(성공·확인 창 포함) | (이 커밋) |
+| 2026-09-29 | 서버 권한 검사(S2) — 라우트별 `permMiddleware`, 수납 전용 계정은 `visit_type`만, 권한 거절 안내 번역, 역할×라우트 시험 `backend/test/reception.api.mjs` | (이 커밋) |
+| 2026-09-29 | 2절을 수납·통계 페이지 형식으로 — 권한 안내, 화면 구성·버튼 표, 왼쪽 칸별 뜻 표, 대기 상태 표, 환자 찾기 창, 「이런 안내가 뜰 때」 표(성공·확인 창 포함) | `e467849` |
 | 2026-09-29 | 대기 목록 30초 자동 새로고침(⑰) — 탭이 보일 때만, 입력값 유지, 고른 내원의 상태만 맞춤, 실패해도 목록 유지 | `eb2d19c` |
 | 2026-09-29 | ⑪ 마무리 — 완료·확인 창을 언어별 문장으로(`fill`), 생년월일 칸 안내 글자 번역, 서버 연결 실패·기록 없음·형식 오류 안내. 읽기 경로 오류도 4xx. 2절을 프랑스어 화면 기준으로 다시 쓰고 「안내 창이 뜨면」 표 추가 | `e6ef6e8` |
 | 2026-09-29 | 1차 수정 — 대기 취소 오타(①), 접수 수정이 진료 상태를 되돌리던 것(②), 신규 환자 중복 등록(③ 화면 쪽), 안 보이는 인적사항을 빈 값으로 덮던 것(⑤), `PUT /visits/:id` 검사·칸별 저장(⑨), 오류 창 번역(⑪). 이미 진료가 시작된 내원은 취소 불가(409) | `bb4a1e6` (합침 `edd4174`) |

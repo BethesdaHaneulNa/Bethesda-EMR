@@ -217,6 +217,9 @@ export default function RegistrationPage() {
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;
+    // 403 from permMiddleware: the account lacks the reception permission. Since
+    // 2026-09-29 (S1) a permission removed in Settings applies at once, open screens included.
+    if (msg === 'Access denied') return t.rc_accessDenied;
     if (msg === 'A field has the wrong format' || msg === 'A date field has the wrong format') return t.rc_badFormat;
     // fetch() itself failing (Chrome / Firefox / Safari wording); nginx's JSON for a
     // stopped backend (frontend/nginx.conf, api_backend_down.json); or an HTML error

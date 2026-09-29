@@ -2,6 +2,42 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 권한 검사 (S2, 실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`48059dd` 위, `develop` ff 뒤)
+- **한 일**: `patient.routes.js`·`visit.routes.js`의 모든 라우트에 `permMiddleware`. 표는 설정 세션 초안(`handoff/settings.md` 「S2 — 라우트별 허용 권한표 초안」) 그대로이며, 부르는 곳을 grep으로 다시 확인해 **빠진 화면 없음**을 확인함.
+  - 확인한 것: 약국·접수는 PatientFinder를 `mode="patient"`로만 써서 `/visits/patient`를 안 부름. 임상병리는 PatientChart를 안 써서 `/patients/:id/history`를 안 부름(차트뷰어는 `/patients/:id`만).
+  - `PUT /visits/:id`: registration 또는 payment. 단 **registration 없이 payment만** 있는 계정이 `visit_type` 말고 다른 칸(`VISIT_FIELDS`)을 보내면 403 `{error:'Access denied', detail:'payment may change visit_type only, not …'}` — 무시하지 않고 거절(총괄 지시)
+  - 접수 화면: 403 `Access denied` → `rc_accessDenied` 안내(S1로 권한이 바로 빠질 수 있어서)
+  - 각 라우트 위에 「왜 이 권한인가」 주석, 파일 머리에 규칙
+- **바꾼 파일**: `backend/src/routes/patient.routes.js`, `backend/src/routes/visit.routes.js`, `frontend/src/pages/Registration.jsx`(errText 한 줄), **새** `backend/test/reception.api.mjs`
+- **공용 파일 변경**: i18n 3개 `rc_` 블록에 `rc_accessDenied` 1개. 그 밖에 없음 — `middleware/auth.js`는 이미 있는 `permMiddleware`·`effectivePerms`를 가져다 쓰기만
+- **DB 마이그레이션**: 없음
+- **번역 키**: `rc_accessDenied` 1개 (ko · en · fr)
+- **시험 스크립트**: `backend/test/reception.api.mjs` — **격리 스택 전용**(포트 9080·빈 포트는 거부).
+  - 역할 7개 + 관리자 × 라우트 14줄 = 112건, 그리고 S1 확인 2건: 수납 전용 계정이 403 → 관리자가 접수 권한 체크 → **같은 토큰**으로 201.
+  - 실행: `node backend/test/reception.api.mjs`(기본 `http://127.0.0.1:9181/api`). 새 스택이면 관리자를 만들고, 관리자가 이미 있는 스택이면 `RC_TEST_LOGIN=… RC_TEST_PASSWORD=…`. 시험 계정(`rct_*`)의 권한·비밀번호는 매번 초기화. 끝나면 만든 대기 내원을 취소함
+  - 역할 기본 권한은 `middleware/permissions.js`를 그대로 옮겨 적음. `POST /admin/staff`는 권한을 안 보내면 `[]`로 저장하므로(역할 기본값 아님) 명시해서 보냄
+- **확인한 방법**:
+  - `node --check` 두 파일, `npm run build` 통과
+  - 격리 스택 9181(develop `48059dd` 위 — 019·020 마이그레이션 적용됨)에서 시험 스크립트 3번 실행, 모두 114/114
+  - 화면(역할별 계정으로 네트워크의 400번대 응답을 기록):
+    · 간호사 → 접수: 검색·환자 선택·이력·미수·차트뷰어
+    · 의사 → 진료: 대기열·환자 찾기(내원 모드)·내원 선택·진료 열기·이력
+    · 수납 전용 → 수납: 목록·환자 선택·과거 내원·**진료비를 재진으로 바꿔 수납 확정** → `PUT /visits/20` 200, DB `followUp`, 영수증 생성
+    · 약국 전용 → 약국: 환자 찾기(환자 모드)·환자 선택·이력
+    · 검사 전용 → 임상병리: 환자 찾기(내원 모드)·내원 목록
+    · 결과: **403·400번대 0건**
+  - 간호사 계정으로 접수 화면을 연 채 관리자가 「접수」 권한을 뺌 → 저장 → 프랑스어 「Vous n'avez pas l'autorisation…」
+- **확인 못 한 것**:
+  - 통계·설정 화면은 이 두 파일을 안 불러서 따로 누르지 않음
+  - 의사 계정의 문서 발급·차트뷰어(`/patients/:id`)는 시험 스크립트로만 확인 — 문서 라우트는 진료 몫
+  - 프론트데스크 역할로 화면은 안 누름. 권한이 간호사+수납의 합이라 스크립트로만 확인
+- **위키**: `modules/reception.md` 머리, 2절 권한 안내(간호사 역할, 바로 적용, 거절 안내), 2.8 표에 권한 거절 줄, 4절 서버 — **라우트별 권한 표**, 6절 권한, 7절 ⑧ 고침, 8절
+- **총괄 확인 요청**: 표가 설정 초안과 같음. 운영 반영 후 쓰는 직원 계정 중에 역할과 **다르게 권한을 좁게 준** 계정이 있으면, 그 계정으로 쓰는 화면을 한 번 눌러 봐 주세요 — 스크립트는 역할 기본값과 수납 전용·통계 전용만 봄
+- **다른 세션에 부탁**: 없음 (수납: `Payment.jsx`가 보내는 `{visit_type}`는 그대로 통과함을 화면으로 확인)
+
 ## 2026-09-29 — 작업 계획: ⑦ 내원구분 칸 · ④ 중복·동명이인 경고 (결정 대기, 코드 변경 없음)
 
 > **총괄 확인 (2026-09-29)**: 합침(위키만). ⑦·④ 작업 계획 확인 — 결정이 오면 이 계획대로. ⑦을 하게 되면 수납 세션에 알림.

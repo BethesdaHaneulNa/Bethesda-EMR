@@ -1,11 +1,21 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { badPatient } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Who may call what (decided 2026-09-29, S2: the server enforces the same module
+// permissions as the screens). A read admits every screen that calls it - through
+// the shared parts too: PatientFinder (search) is on reception, consultation,
+// payment, pharmacy and lab; DocumentModal (GET /:id) on the same five;
+// PatientChart (/:id/history) on payment and pharmacy. Writes are reception's.
+// permMiddleware passes if the account holds ANY of the listed permissions.
+// Check the callers again (grep "/patients" in frontend/src) before narrowing one.
+const SEARCH_READERS = ['registration', 'consultation', 'payment', 'pharmacy', 'lab'];
+const HISTORY_READERS = ['registration', 'consultation', 'payment', 'pharmacy'];
 
 // Columns PUT may change. chart_no is deliberately absent: it is the patient's
 // identity in every other module and on the imaging devices (DICOM PatientID).
@@ -13,7 +23,7 @@ const PATIENT_FIELDS = ['last_name', 'first_name', 'national_id', 'date_of_birth
   'address', 'city', 'region', 'blood_type', 'allergies', 'reception_note'];
 
 // GET /api/patients - search/list
-router.get('/', async (req, res) => {
+router.get('/', permMiddleware(...SEARCH_READERS), async (req, res) => {
   try {
     const { q, limit = 50, offset = 0 } = req.query;
     let query, params;
@@ -36,7 +46,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/patients/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', permMiddleware(...SEARCH_READERS), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM patient WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
@@ -47,7 +57,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // GET /api/patients/chart/:chartNo
-router.get('/chart/:chartNo', async (req, res) => {
+// No screen calls this; kept for reception.
+router.get('/chart/:chartNo', permMiddleware('registration'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM patient WHERE chart_no = $1', [req.params.chartNo]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
@@ -58,7 +69,7 @@ router.get('/chart/:chartNo', async (req, res) => {
 });
 
 // POST /api/patients - create new patient
-router.post('/', async (req, res) => {
+router.post('/', permMiddleware('registration'), async (req, res) => {
   try {
     const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
     const invalid = badPatient(req.body);
@@ -83,7 +94,7 @@ router.post('/', async (req, res) => {
 // patient's address (the reception queue does not load it) wiped it by sending
 // an empty string. Sending a field as '' or null still clears it on purpose.
 // The name check still applies, so callers must send last_name/first_name.
-router.put('/:id', async (req, res) => {
+router.put('/:id', permMiddleware('registration'), async (req, res) => {
   try {
     const invalid = badPatient(req.body);
     if (invalid) return res.status(400).json({ error: invalid });
@@ -110,7 +121,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // GET /api/patients/:id/history - consultation history
-router.get('/:id/history', async (req, res) => {
+router.get('/:id/history', permMiddleware(...HISTORY_READERS), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.*, d.code as dept_code, d.name as dept_name, s.name as doctor_name
@@ -127,7 +138,8 @@ router.get('/:id/history', async (req, res) => {
 });
 
 // GET /api/patients/:id/billing-history - receipt history
-router.get('/:id/billing-history', async (req, res) => {
+// No screen calls this; receipts belong to payment.
+router.get('/:id/billing-history', permMiddleware('payment'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT b.*, s.name as cashier_name
