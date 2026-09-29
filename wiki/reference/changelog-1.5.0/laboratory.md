@@ -83,6 +83,8 @@ doctors in `wiki/reference/lab-reference-questions.md`.
   height that the bars above it exceed, so the save button and the results table's
   scrollbar sat below the window. Saving the last tests of a patient now shows what
   was saved for a few seconds instead of just closing the patient.
+- In Settings → Lab Test Items the list now scrolls. With a few sex and age tables open,
+  the Save button sat below a 1366×768 window, where it could not be reached.
 - The French screen no longer shows Korean text where a translation was missing.
 - Migration `024_lab_ref_ranges.sql` adds the `lab_ref_range` table and
   `lab_result.ref_label`. It only adds; nothing existing is changed.
