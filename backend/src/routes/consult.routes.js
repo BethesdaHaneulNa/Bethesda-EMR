@@ -55,7 +55,7 @@ const ORDER_NO_RESULT = 'Order has no result';
 const NOTE_FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
   'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
 const RX_LOG = ['drug_code', 'drug_name', 'dose', 'frequency', 'days', 'route', 'total_qty', 'unit_price', 'memo', 'status', 'pack_label'];
-const ORDER_LOG = ['order_code', 'order_name', 'code_type', 'dose', 'frequency', 'days', 'quantity', 'unit_price', 'memo', 'status'];
+const ORDER_LOG = ['order_code', 'order_name', 'code_type', 'dose', 'frequency', 'days', 'quantity', 'total_qty', 'unit_price', 'memo', 'status'];
 const DX_LOG = ['icd_code', 'diagnosis_name', 'diagnosis_type'];
 
 // An empty string counts as no value: the screen sends memo '' where the row had NULL,
@@ -410,6 +410,20 @@ router.delete('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (
 
 // ── Order Items (Lab, Imaging, Procedures) ──
 
+// The one place the total of an ORDER line is worked out (decision ⑭, 2026-09-29):
+// quantity (the "daily total" column on screen) x days, the same Korean rule as a
+// prescription - the times a day are not multiplied. An injection once a day for 5 days,
+// 1 · 1 · 5, is billed 5 times. Payment reads order_item.total_qty and nothing else.
+// A blank quantity counts as 1, a blank or bad number of days as 1; a quantity of 0
+// stays 0 (nothing billed - decided with payment, which used to read 0 as 1 on screen).
+// Lines saved before 201_consultation_order_total.sql were filled with their quantity.
+function orderQty(q) { return q === undefined || q === null || String(q).trim() === '' ? 1 : Number(q); }
+function orderTotal(quantity, days) {
+  const q = orderQty(quantity);
+  const n = parseInt(days) || 1;
+  return Math.round(q * n * 1000) / 1000;   // DECIMAL(10,3)
+}
+
 // POST /api/consultations/:id/orders
 router.post('/:id/orders', canConsult, async (req, res) => {
   const client = await pool.connect();
@@ -453,11 +467,14 @@ router.post('/:id/orders', canConsult, async (req, res) => {
 
     const oResult = await client.query(
       `INSERT INTO order_item (consultation_id, visit_id, patient_id, order_code_id, order_code, order_name, code_type,
-       dose, frequency, days, quantity, unit_price, pacs_modality, station_ae, body_part, ordered_by, memo,
+       dose, frequency, days, quantity, total_qty, unit_price, pacs_modality, station_ae, body_part, ordered_by, memo,
        worklist_status, scheduled_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,CURRENT_DATE) RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_DATE) RETURNING *`,
+      // Blank quantity / times / days are stored as 1, never NULL, so what the screen
+      // shows (1 · 1 · 1 for a lab order) is what is stored and billed.
       [req.params.id, visit_id, patient_id, order_code_id, order_code, order_name, code_type,
-       dose, frequency, days, quantity, unit_price, pacs_modality, station_ae, body_part, req.user.id, memo,
+       dose, parseInt(frequency) || 1, parseInt(days) || 1, orderQty(quantity), orderTotal(quantity, days),
+       unit_price, pacs_modality, station_ae, body_part, req.user.id, memo,
        worklist_enabled ? 'pending' : 'completed']
     );
 
@@ -504,11 +521,19 @@ router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client)
   const prev = await client.query('SELECT * FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
   if (prev.rows.length === 0) return [404, { error: 'Not found' }];
   if (prev.rows[0].status === 'cancelled') return [409, { error: ORDER_CANCELLED }];
+  // total_qty is worked out again only when the quantity or the days really changed
+  // (as numbers), or when it is missing - the screen saves a row on every blur, and an
+  // old line must not change its bill by being clicked through (same rule as the
+  // prescription PUT).
+  const was = prev.rows[0];
+  const q = orderQty(quantity), nDays = parseInt(days) || 1;
+  const changed = was.total_qty === null || Number(was.quantity) !== q || (parseInt(was.days) || 1) !== nDays;
   const result = await client.query(
     `UPDATE order_item
-     SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price), updated_at=NOW()
+     SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price),
+         total_qty = CASE WHEN $8::boolean THEN $9::numeric ELSE total_qty END, updated_at=NOW()
      WHERE id=$7 RETURNING *`,
-    [dose, parseInt(frequency) || 1, parseInt(days) || 1, quantity === undefined || quantity === null || quantity === '' ? 1 : quantity, memo, unit_price, req.params.orderId]
+    [dose, parseInt(frequency) || 1, nDays, q, memo, unit_price, req.params.orderId, changed, orderTotal(q, nDays)]
   );
   const o = result.rows[0];
   await recordEdit(client, req, await consultOf(client, o.consultation_id), 'order_item', o, orderLabel(o),

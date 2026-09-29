@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 포장 단위 약(H2-B) 진료 몫 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: ⑭ 오더 총량(수량 × 일수) 확인 요청 — 수납이 읽는 쪽은 수납 세션
 
 ## 1. 이 모듈이 하는 일
 
@@ -20,7 +20,7 @@
 ## 2. 화면 사용법 (직원용)
 
 > 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR**로 바꿉니다.
-> 대기 목록의 상태, 문장사전 분류, 검색 목록의 종류 표시, 바이탈 이름까지 화면 언어를 따릅니다. 약 칸의 머리(Qté · Fois · Jours)는 약·검사 표 나누기 결정에 따라 바뀔 수 있습니다.
+> 대기 목록의 상태, 문장사전 분류, 검색 목록의 종류 표시, 바이탈 이름까지 화면 언어를 따릅니다. 약·검사는 **한 표**입니다(결정 29 — 나누지 않음). 첫 숫자 칸의 머리는 **Dose/j (일총투여)** 하나입니다.
 
 ### 2.1 환자 부르기
 
@@ -58,7 +58,7 @@
 
 | 칸 (프랑스어 / 한국어) | 적는 것 | 예 |
 |---|---|---|
-| **Qté** (Qty) | **하루 총량**(일총투여). 칸에 마우스를 올리면 도움말이 나옵니다 | `3` = 하루 3정 |
+| **Dose/j** (일총투여, en Daily) | 약 줄: **하루 총량**. 검사·처치·영상 줄: **수량**. 칸 머리와 약 줄의 칸에 마우스를 올리면 도움말이 나옵니다 | `3` = 하루 3정 |
 | **Fois** (Tms) | 하루 **몇 번에 나눠** 먹는지 | `3` |
 | **Jours** (Day) | 일수 | `7` |
 | **Posologie** (용법) | TID · BID · IV 같은 용법 | `TID` |
@@ -66,7 +66,8 @@
 
 - **총량 = 하루 총량 × 일수**입니다. 위 예는 21정입니다. 횟수는 총량에 들어가지 않고, 1회량(하루 총량 ÷ 횟수)을 계산하는 데만 씁니다. 약국 조제·수납·통계는 모두 이 총량을 씁니다.
 - 약 이름 아래 작은 글씨로 **풀이**가 나옵니다: **1 cp × 3 fois/jour pendant 7 jours (total 21)** (한국어: 1회 1정 × 하루 3회, 7일 (총 21)). 약국 화면·원외처방전·의뢰서와 같은 문장입니다. 약 이름에 Tab·Cap·Sachet가 있으면 cp·gél.·sachet(정·캡슐·포)이 붙고, 반 알은 ½로 씁니다. **풀이를 읽어 보고 뜻한 양이 맞는지 확인하세요.**
-- 검사·처치 줄: **Qté (수량)** · Fois · Jours · **Posologie** (이 줄에서는 용량) · **Unité (메모·부위)**. 청구는 수량만 계산합니다(7절 ⑭). 약 줄과 검사 줄이 한 표의 머리를 같이 써서 칸 이름이 한쪽 뜻에만 맞습니다. 표를 나누는 것은 결정을 기다리는 중입니다.
+- 검사·처치·영상 줄: **Dose/j (수량)** · Fois · Jours · **Posologie** (이 줄에서는 용량) · **Unité (메모·부위)**. **청구 = 수량 × 일수**, 횟수는 곱하지 않습니다(⑭, 2026-09-29 — 약과 같은 한국식). 주사 하루 1번 5일 = 1 · 1 · 5 → **5회 청구**, 이름 아래에 « facturé 5 fois » (5회 청구)가 보입니다. **검사 줄의 일수를 2로 적으면 2회 청구됩니다.**
+- 검사·영상 오더는 넣을 때 **늘 1 · 1 · 1**로 들어갑니다(실장님 지시). 처치는 오더 코드에 기본 횟수·일수가 있으면 그 값, 없으면 1 · 1 · 1. 약속처방으로 넣어도 같은 규칙입니다.
 
 **줄에 붙는 표시**
 
@@ -263,10 +264,10 @@
 - **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
 - **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다.
 - **포장 단위 약**(H2-B, 실장님 결정 2026-09-29, 칸은 약국의 025) — `POST /:id/prescriptions`는 `drug_id`로 **약 표에서** `pack_unit`·`pack_label`을 읽어 줄에 복사합니다(화면이 보낸 값은 쓰지 않음, 단가를 복사하는 것과 같은 이유 — 나중에 약의 표시를 바꿔도 쓴 처방의 뜻은 그대로). 포장 단위 줄의 `total_qty` = 요청의 **`pack_qty`**(1 이상의 정수, 아니면 400 `pack_qty must be a whole number of at least 1` → 화면 `cs_packQtyWhole`), 없거나 비면 **NULL**(약국 「총량 없음」, 청구 없음 — 틀린 수가 나가지 않게). 하루 총량·횟수·일수는 안내로만 저장. `PUT /prescription/:rxId`: 포장 단위 줄(줄에 저장된 표시)은 **`pack_qty`가 왔을 때만** `total_qty`를 바꾸고(빈 값이면 NULL), 하루 총량·일수를 고쳐도 그대로. 보통 줄은 위 규칙에 더해 **`total_qty`가 NULL이면 다시 계산**합니다(수납 세션 부탁, 2026-09-29). 화면: `noPackQty`(수가 없는 포장 줄)는 `noDose`와 따로 — 포장 줄은 하루 총량이 없어도 `noDose`가 아님. 수량 칸 `packQtyBox(rx)`(함수로 부름 — 컴포넌트로 쓰면 글자마다 입력 칸이 다시 만들어져 포커스가 빠짐), 단위 말은 `rx-dosing.js`의 `packWord`, 저장은 다른 칸처럼 blur(`rxSnap`에 수량 포함). 약속처방 `applySet`은 약 줄의 `quantity`(없으면 1)를 `pack_qty`로 넘깁니다(보통 약에는 서버가 무시).
-- `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). `pacs_config`는 001이 만든 한 줄을 읽기만 합니다(전에는 오더마다 `CREATE TABLE IF NOT EXISTS`를 돌렸음 — 7절 ⑲, 2026-09-29 삭제). 줄이 없으면 워크리스트 자동 생성이 켜진 것으로 봅니다.
+- `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). `pacs_config`는 001이 만든 한 줄을 읽기만 합니다(전에는 오더마다 `CREATE TABLE IF NOT EXISTS`를 돌렸음 — 7절 ⑲, 2026-09-29 삭제). 줄이 없으면 워크리스트 자동 생성이 켜진 것으로 봅니다. **총량**(⑭): 수량·횟수·일수가 비면 1로 저장(NULL 없음), `total_qty` = `orderTotal(quantity, days)` = 수량 × 일수(횟수는 곱하지 않음, 수량 0은 0 — 청구 없음). 계산하는 곳은 이 함수 하나이고 수납은 `total_qty`만 읽습니다.
 - `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**, 없는 줄은 404. 한 트랜잭션 안에서 줄을 먼저 `FOR UPDATE`로 읽고(`lockRx`) 상태를 본 뒤 씁니다. 약국의 조제도 같은 줄을 UPDATE하므로 확인과 쓰기 사이에 끼어들 수 없습니다. `status`는 기본값만 있는 NULL 허용 칸이라, NULL은 「조제 안 됨」으로 봅니다(전에는 `status <> 'dispensed'`가 NULL 줄을 못 잡아 409로 거절 — 2026-09-29 고침). 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다. 삭제는 늘 기록(`PRESCRIPTION_DELETE`), 수정은 끝난 진료일 때 기록.
 - `DELETE /order/:orderId` — **결과가 생긴 오더는 409 `Order already has a result`**: `lab_result`가 있거나, `order_item.result_text`(판독)가 있거나, `worklist_log.status`가 `in_progress`·`completed`(촬영 시작). 이유: `lab_result`와 `worklist_log`가 `ON DELETE CASCADE`라 지우면 검사값·accession·판독이 소리 없이 함께 사라졌습니다. 먼저 `order_item`을 `FOR UPDATE`로 잠그므로, 동시에 저장되는 검사 결과(외래키가 이 행에 키 잠금을 요구)는 확인 전에 끝나거나 삭제 뒤 실패합니다. 시작 전 워크리스트는 오더와 함께 지워집니다. 삭제는 늘 기록합니다(`ORDER_DELETE`, 지운 줄의 코드·이름·수량·가격 등).
-- `PUT /order/:orderId` — 수량·메모 등을 고칩니다(수납이 차액으로 처리). 줄을 `FOR UPDATE`로 읽고 **취소된 오더(`status='cancelled'`)면 409 `Order is cancelled`**, 없으면 404. `status`가 NULL인 줄은 취소가 아니므로 고칠 수 있습니다(전에는 `WHERE … status <> 'cancelled'`가 NULL 줄을 못 잡아 「Order is cancelled」 409가 났음 — 2026-09-29 고침). 끝난 진료면 기록.
+- `PUT /order/:orderId` — 수량·메모 등을 고칩니다(수납이 차액으로 처리). 줄을 `FOR UPDATE`로 읽고 **취소된 오더(`status='cancelled'`)면 409 `Order is cancelled`**, 없으면 404. `status`가 NULL인 줄은 취소가 아니므로 고칠 수 있습니다(전에는 `WHERE … status <> 'cancelled'`가 NULL 줄을 못 잡아 「Order is cancelled」 409가 났음 — 2026-09-29 고침). 끝난 진료면 기록. 총량은 **수량이나 일수가 실제로 바뀌었거나 `total_qty`가 비었을 때만** 다시 계산합니다(처방 PUT과 같은 이유 — 칸을 지나가기만 해도 옛 줄의 청구가 바뀌면 안 됨). 횟수만 바꾸면 총량 그대로.
 - `POST /order/:orderId/cancel` `{reason}` — **결과가 있는 오더를 「취소됨」으로 표시**(결정 3-B, 2026-09-29). `FOR UPDATE`로 잠그고(임상병리의 결과 저장과 같은 잠금 — 순서 보장), 이미 취소면 그대로 200, 결과가 **없으면 409 `Order has no result`**(지우라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'`·`cancelled_at`·`cancelled_by`·`cancel_reason`(앞뒤 공백 빼고 500자까지, 비면 NULL). 「결과 있음」 판정은 삭제와 같은 `orderProduced()`(검사값 · 판독문 · 워크리스트 진행/완료). **영상 오더도 같은 방식**(결정 38-③, PACS 저장소를 합친 뒤 2026-09-29 켬): 같은 트랜잭션에서 PACS의 `cancelWorklistForOrder(client, id)`(`backend/src/routes/pacs.cancel.js`)를 오더 UPDATE **앞에** 불러, 아직 기다리는(`scheduled`·`in_progress`) 워크리스트 줄을 `cancelled`로 바꾸고 `order_item.worklist_status`도 `cancelled`로 둡니다(돌려주는 줄에 반영). 브리지 피드는 `scheduled`만 내보내므로 한 주기 안에 장비에서 빠집니다. 이미 촬영된(`completed`) 줄은 기록으로 그대로. 검사 오더에는 워크리스트가 없어 아무 일도 안 합니다. 처치는 화면이 취소를 내놓지 않습니다. 취소는 기록합니다(`ORDER_CANCEL`, 상태·이유·워크리스트 상태). 되돌리기 없음. 취소된 오더는 임상병리 목록·결과 저장(409)·결과 표(회색), 수납 청구(`COALESCE(status,'') <> 'cancelled'`)가 각자 처리합니다.
 - `GET /visit/:visitId/prescriptions` — 내원 단위 처방. 문서 엔진이 투약 목록을 채울 때 씁니다.
 - 진단 `GET/POST /:id/diagnoses`, `DELETE /diagnosis/:dxId` — 화면에서 안 씀(진단 화면은 만들지 않기로 결정). API로 끝난 진료에 넣거나 지우면 기록합니다.
@@ -417,14 +418,14 @@
 
 ### DB 테이블
 
-마이그레이션 `001_schema.sql`(기본), `004_order_sets.sql`, `010_document_log.sql`, `012_dispense_type.sql`, `023_consultation_order_cancel.sql`(세션 번호 201).
+마이그레이션 `001_schema.sql`(기본), `004_order_sets.sql`, `010_document_log.sql`, `012_dispense_type.sql`, `023_consultation_order_cancel.sql`, `201_consultation_order_total.sql`(⑭ — 진료 번호대, 합칠 때 총괄이 번호를 다시 매김)(세션 번호 201).
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
 | `consultation` | `visit_id`(UNIQUE), `patient_id`, `doctor_id`, `department_id`, `consult_date`, `subjective`·`objective`·`assessment`·`plan`(화면 미사용), `note_text`, `bp_systolic`·`bp_diastolic`·`temperature DECIMAL(4,1)`·`pulse`·`spo2`·`respiratory_rate`, `weight`·`height`(화면 미사용), `status` ∈ `in_progress`·`completed`·`signed` | `signed`는 쓰는 곳 없음 |
 | `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(기본 `primary`), `sort_order` | 화면 미사용 |
 | `prescription` | `consultation_id`(CASCADE), `drug_id`, `drug_code`, `drug_name`, `dose VARCHAR(20)`, `frequency`, `days`, **`route VARCHAR(10)`**, `total_qty`, `unit_price`, `memo`, `dispense_type`(`internal`·`external`, 012), **`pack_unit`·`pack_label`**(약국 025 — 처방할 때 약 표에서 복사), `status` ∈ `ordered`·`dispensed`·`cancelled`, `dispensed_by/at` | `status`·`dispense_type`은 약국이 바꿈 |
-| `order_item` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `order_code_id`, `order_code`, `order_name`, `code_type` ∈ `lab`·`imaging`·`procedure`(·`fee`), `dose`, `frequency`, `days`, `quantity`, `unit_price`, `pacs_modality`, `station_ae`, `body_part`, `worklist_status`, `worklist_sent_at`, `scheduled_date`, `result_text`·`result_by`·`result_at`(영상 판독), `ordered_by`, `status`(검사 완료 등), `memo`, **`cancelled_at`·`cancelled_by`·`cancel_reason`**(201, 결정 3-B) | |
+| `order_item` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `order_code_id`, `order_code`, `order_name`, `code_type` ∈ `lab`·`imaging`·`procedure`(·`fee`), `dose`, `frequency`, `days`, `quantity`, `unit_price`, `pacs_modality`, `station_ae`, `body_part`, `worklist_status`, `worklist_sent_at`, `scheduled_date`, `result_text`·`result_by`·`result_at`(영상 판독), `ordered_by`, `status`(검사 완료 등), `memo`, **`cancelled_at`·`cancelled_by`·`cancel_reason`**, **`total_qty`**(201, ⑭ — 수량 × 일수, 기존 줄은 `COALESCE(quantity,1)`로 채움)(201, 결정 3-B) | |
 | `worklist_log` | `order_item_id`(CASCADE, 007), `modality`, `accession_no`, `study_instance_uid`, `scheduled_date/time`, `status` | 영상 장비 워크리스트 |
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
@@ -452,7 +453,7 @@
 - **약국** — 진료가 **완료**되어야 보입니다(`pharmacy.routes.js` `/pending`: `c.status='completed' AND v.visit_date=CURRENT_DATE`). 조제하면 `prescription.status='dispensed'`와 재고 차감. 약국이 `dispense_type`을 `external`로 바꾸면 수납에서 빠지고 원외처방전(`external-rx.jsx`, 약국 담당)으로 나갑니다.
 - **임상병리** — 진료 **완료** 후 `code_type='lab'`이고 완료·취소가 아닌 오더(`lab.routes.js` `/pending`). 결과는 `lab_result`, 오더는 `status='completed'`. 진료에서 **취소된** 검사 오더는 목록에서 빠지고, 결과 저장은 409, 결과 표에는 회색으로 남습니다(임상병리 세션).
 - **PACS** — 워크리스트는 **오더를 넣는 순간** 만들어집니다(완료를 기다리지 않음). `worklist.routes.js`가 상태를 받아 `order_item.worklist_status`를 갱신. 판독은 `order_item.result_text`(PACS 세션의 `pacs.routes.js`).
-- **수납** — `visit.status='completed'`가 기준. 청구 뒤에 처방·오더가 바뀌면 `live_total`과 청구액을 비교해 **추가 청구 / 환불**로 다시 목록에 올립니다(`billing.routes.js` `/pending`). 그래서 완료 뒤 수정은 수납에 반영됩니다. 약국이 조제한 처방은 고치거나 지울 수 없게 잠겨 있어(7절 ⑧), 재고와 청구가 어긋나지 않습니다. 취소된 오더는 청구에서 빠지고, 이미 수납한 내원이면 「정정(환불)」로 다시 뜹니다(수납 세션, 2026-09-29).
+- **수납** — `visit.status='completed'`가 기준. 청구 뒤에 처방·오더가 바뀌면 `live_total`과 청구액을 비교해 **추가 청구 / 환불**로 다시 목록에 올립니다(`billing.routes.js` `/pending`). 그래서 완료 뒤 수정은 수납에 반영됩니다. 약국이 조제한 처방은 고치거나 지울 수 없게 잠겨 있어(7절 ⑧), 재고와 청구가 어긋나지 않습니다. 취소된 오더는 청구에서 빠지고, 이미 수납한 내원이면 「정정(환불)」로 다시 뜹니다(수납 세션, 2026-09-29). 오더의 청구 수량은 `order_item.total_qty`(⑭, 진료가 계산해 저장)를 읽습니다 — `COALESCE(total_qty, quantity, 1)`, 서버 `billing.routes.js` 세 곳과 화면 `Payment.jsx` 세 곳은 수납 세션이 고칩니다.
 - **통계** — 약 사용량은 `prescription`을 `consultation`과 조인. 의사별 매출은 **내원의 `doctor_id`** 기준(`consultation.doctor_id` 아님).
 - **접수** — 과거 내원 목록 `GET /patients/:id/history`는 `consultation`을 날짜순으로 줍니다.
 
@@ -502,7 +503,7 @@
 | ⑪ ✅ 09-29 | 중간 | **진료 API에 모듈 권한 검사가 없다.** 로그인만 하면 약국·수납·검사 직원 계정으로도 진료를 열고 처방을 넣고 지울 수 있다(화면 메뉴로만 막힘). 임상병리는 `permMiddleware('lab')`로 막고 있다. → **고침**: 진료 쓰기 API에 `consultation` 권한. 읽기도 S2(2026-09-29)로 화면 권한대로 막음. 문서 발급·취소는 진료·수납·약국만 | `consult.routes.js` 9 · 비교 `lab.routes.js` 18 · `document.routes.js` 62 |
 | ⑫ ✅ 결정됨 09-29 | 중간 | **「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열린다.** 그 내원에 진료가 없었으면(취소된 내원 포함) **오늘 날짜로 진료가 새로 생기고 내원이 `in_progress`로 바뀐다** — 취소된 내원이 되살아난다. 진료가 있었으면 지난 처방에 오더를 추가할 수 있고, 청구가 없던 지난 내원이면 수납 목록에도 안 올라간다 → **고친 것**: 취소된 내원은 409로 거절(되살아나지 않음), 지난 내원에 새로 만드는 진료는 내원 날짜로. **실장님 결정: 지난 기록도 지금처럼 고칠 수 있게 둠(읽기 전용으로 바꾸지 않음)** — 대신 끝난 진료·지난 날의 내원을 고치면 변경 기록에 남음(3.2 「변경 기록」) | `Consultation.jsx` 671-673 → 91-99 · `consult.routes.js` 33-47 · `billing.routes.js` 57-62 |
 | ⑬ ✅ 09-29 | 중간 | **저장할 때마다 `subjective`·`objective`·`assessment`·`plan`·`weight`·`height`가 NULL이 된다.** 서버가 몸체에 없는 칸도 덮어쓰고, 화면은 `note_text`와 바이탈만 보낸다. 과거 화면은 `note_text || subjective`로 보여 주므로 예전 S/O/A/P 칸 데이터가 있었다면 한 번 저장에 지워진다. **확인 필요**: 실제 DB에 그 칸을 쓴 기록이 있는지 → **고침**: PUT은 보낸 칸만 바꿈 | `consult.routes.js` 59-67 · `Consultation.jsx` 142·169-177·610 |
-| ⑭ | 중간 | **검사·처치 오더의 Tms·Day 칸은 청구에 안 들어간다.** 청구는 `quantity × unit_price`뿐인데 화면은 Tms·Day를 고칠 수 있게 보여 준다. 주사 3회 × 5일로 적어도 1회분만 청구될 수 있다. **확인 필요**: 수납 화면이 항목을 만드는 방식(수납 세션) | `Consultation.jsx` 517-519 · `billing.routes.js` 34 |
+| ⑭ ✅ 09-29 (진료 몫) | 중간 | **검사·처치 오더의 Tms·Day 칸은 청구에 안 들어간다.** 청구는 `quantity × unit_price`뿐인데 화면은 Tms·Day를 고칠 수 있게 보여 준다. 주사 3회 × 5일로 적어도 1회분만 청구될 수 있다 → **결정(총괄, 실장님 「의견 없음」): 약과 같은 계산 — 총량 = 수량 × 일수, 횟수는 곱하지 않음.** 진료가 `order_item.total_qty`에 계산해 저장(마이그레이션 201, 기존 줄은 옛 뜻). *남음*: 수납이 `total_qty`를 읽도록(수납 세션) | `Consultation.jsx` 517-519 · `billing.routes.js` 34 |
 | ⑮ 일부 ✅ 09-29 | 낮음 | **용법(Usage) 칸이 10자를 넘으면 저장이 500 에러**(`prescription.route VARCHAR(10)`). 약에 기본 용법이 없으면 용법에 `'TID'`(횟수 표기)를 넣는다 → 기본 용법이 없는 약에 `TID`를 넣던 것은 없앰. 10자 제한은 그대로이지만 넘으면 500 대신 400 「route (sig) must be at most 10 characters」(2026-09-29) | `001_schema.sql` prescription · `Consultation.jsx` 246·506 |
 | ⑯ ✅ 09-29 | 낮음 | **프랑스어 화면에 영어·한국어가 남는다** — 대기 상태값, 문장사전 분류 버튼, 문장 본문(`text_fr` 안 씀, 기본 문장도 영어뿐), 진료 기록 안내 글(게다가 `\n`이 줄바꿈이 안 되고 글자로 보임 — JSX 속성 문자열이라서), `DRUG`, `Error:`, 팝업 차단 안내(한국어만). 문서 기본 문장(소견·동의서 위험)도 영어뿐 — 의학 문장이라 실장님 확인 필요. → **고침**: 대기 상태·문장사전 분류/문장·종류 표시·안내 글·오류 머리·바이탈 이름·팝업 안내를 3개 국어로(3.1절). *남음*: 문서 기본 문장은 의학 문장이라 영어 그대로 | `Consultation.jsx` 428·474·566·573·584 · `shared.jsx` 179 · `003_seed_data.sql` 76- |
 | ⑰ ✅ 09-29 | 낮음 | **문서 발행일이 UTC 기준**이라 마다가스카르(UTC+3)에서 0~3시에 발급하면 전날 날짜가 찍힌다 → **고침**: 브라우저 현지 날짜 | `DocumentModal.jsx` 55 |
@@ -527,7 +528,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **영상 취소 물음 문구**(PACS 지적) — `cs_cancelPromptImg`에 「영상과 판독은 기록으로 남아 영상 창에서 계속 볼 수 있습니다」를 더함(ko·en·fr) | (이 커밋) |
+| 2026-09-29 | **⑭ 오더 총량 = 수량 × 일수** — 마이그레이션 201(`order_item.total_qty`, 기존 줄은 수량으로 채움), `orderTotal()` 한 곳, POST는 빈 값을 1로·늘 계산, PUT은 수량·일수가 바뀌었거나 비었을 때만. 화면: 검사·영상 1·1·1, 처치는 오더 코드 기본값, 칸 머리 「일총투여」(Dose/j), 두 번 이상 청구되면 이름 아래 「n회 청구」. 번역 키 `cs_` 3개 | (이 커밋) |
+| 2026-09-29 | **영상 취소 물음 문구**(PACS 지적) — `cs_cancelPromptImg`에 「영상과 판독은 기록으로 남아 영상 창에서 계속 볼 수 있습니다」를 더함(ko·en·fr) | `f15b167` |
 | 2026-09-29 | **포장 단위 약(H2-B) 진료 몫** — 처방 POST가 약 표의 `pack_unit`·`pack_label`을 복사, 포장 줄 총량 = `pack_qty`(정수 ≥ 1, 없으면 NULL), PUT은 `pack_qty`가 올 때만. 보통 줄은 총량 NULL이면 다시 계산(수납 부탁). 화면: 약 이름 아래 수량 칸 + 단위 말, 수 없음 표시·제목 개수·완료 확인, 약속처방 수량 → `pack_qty`. 번역 키 `cs_` 6개 | `f79cc79` |
 | 2026-09-29 | **영상 오더 취소 켜기**(38-③) — 취소 API가 영상이면 같은 트랜잭션에서 `cancelWorklistForOrder`, 화면에서 판독·촬영 있는 영상 줄도 ✕로 취소(`cs_cancelPromptImg`), 취소된 오더는 종류와 관계없이 「취소됨」. 영상 창: 취소 안내(`px_cancelledViewer`)·판독 읽기만, 판독 저장 409 → `px_readingOnCancelled` 후 다시 불러오기, 스터디 없음(`px_noStudy`, P-18). `cs_imagingNoCancel` 삭제 | `8e497c2` |
 | 2026-09-29 | **문서 서명 = 작성한 의사**(결정) — 의사 계정이면 자기 이름, 아니면 내원의 담당의, 없으면 빈칸. 집도의 자동 채움도 같은 이름. 발급된 문서는 그대로 | `b829e00` |
