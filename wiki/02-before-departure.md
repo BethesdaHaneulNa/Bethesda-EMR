@@ -24,6 +24,7 @@
 | ☐ | **연습**: 인터넷을 끊은 다른 PC(또는 빈 Docker)에 설치 묶음으로 설치 → 백업 복원 → 로그인·환자·약·가격·계정·변경 기록이 그대로인지 확인 |
 | ☐ | 관리자 비밀번호를 알고 감 (복원하면 초기 설정 화면이 나오지 않음) |
 | ☐ | **외장 USB 디스크 1개(1~2TB) — 영상 백업 + EMR 백업 사본**(2026-09-29 밤 결정: 현지 서버는 PC, 외장하드 1개에 둘 다)(결정 2026-09-29: 매일 밤 새로 생긴 영상만 복사, 디스크가 빠져 있으면 경고). 설치 묶음 USB와는 별개. 암호화하지 않음(결정) — **잠금 장소에 보관**(환자 영상이 그대로 들어 있음). **출발 전에 실제 USB 디스크로 한 번 해 볼 것**: `prepare-backup-disk.ps1` → `image-backup.ps1` → `restore-image-backup.ps1 -Verify`(지금까지는 시험용 폴더로만 확인). 예약 작업 등록(`install-image-backup.ps1`)은 현지 서버 PC에서 (`modules/pacs.md` 6.2) |
+| ☐ | **외장 디스크에 EMR 백업도 복사되는지** 실제 USB로 확인: `image-backup.ps1` 뒤 디스크의 `BethesdaPACS\emr-backups`에 `.sql.gz`가 있고 `restore-image-backup.ps1 -Verify`가 「EMR database backups on the disk: N … complete gzip」을 말함. (2026-09-29 총괄이 시험용 폴더와 진짜 백업 파일로 확인 — 복사본을 버리는 DB에 복원까지 됨) |
 | ☐ | 현지 PC에서도 **포트 범위 확인**: `netsh int ipv4 show dynamicport tcp` → 시작 49152 (Docker 설치·재부팅 뒤). 아니면 `DEPLOYMENT.md`의 두 줄 실행 후 재부팅 |
 | ☐ | 서버 PC의 **IP 고정**, 다른 PC에서 **9080**과 **4242**(영상 장비) 연결 확인(`Test-NetConnection`), Windows 방화벽. 9090은 서버 PC 안에서만 열림 — 직원 PC에는 필요 없음(영상은 EMR 영상 창으로) |
 | ☐ | 복원 **뒤에** PACS 폴더에서 `.\pair-with-emr.ps1` 한 번(EMR과 PACS의 브리지 토큰을 다시 맞춤, 값은 화면에 나오지 않음), 설정 → 오더 연동의 뷰어 주소·피드 주소를 서버 LAN IP로 — 두 주소는 백업과 함께 옛 PC의 값으로 넘어옴 (`modules/pacs.md` 6.1) |

@@ -286,8 +286,11 @@ router.get('/completed', canPay, async (req, res) => {
     const billDate = date || todayLocal();
     const result = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
-       v.id as visit_id, v.visit_date, d.code as dept_code, s.name as doctor_name, c.name as cashier_name
+       v.id as visit_id, v.visit_date, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
+       rb.receipt_no AS replaced_by_receipt_no, ci.receipt_no AS carried_into_receipt_no
        FROM billing b
+       LEFT JOIN billing rb ON rb.id = b.replaced_by_id
+       LEFT JOIN billing ci ON ci.id = b.carried_into_id
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
        LEFT JOIN department d ON v.department_id = d.id
@@ -309,7 +312,8 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
        v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
        COALESCE(NULLIF(d.name_fr,''), NULLIF(d.name_en,''), d.name) as dept_name_fr,
        x.name as cancelled_by_name,
-       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date
+       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date,
+       rb.receipt_no as replaced_by_receipt_no
        FROM billing b
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
@@ -318,6 +322,7 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
        LEFT JOIN staff c ON b.cashier_id = c.id
        LEFT JOIN staff x ON b.cancelled_by = x.id
        LEFT JOIN billing ci ON ci.id = b.carried_into_id
+       LEFT JOIN billing rb ON rb.id = b.replaced_by_id
        WHERE b.id = $1`,
       [req.params.billingId]
     );
@@ -572,8 +577,11 @@ router.post('/', canPay, async (req, res) => {
 router.get('/patient/:patientId/history', canPay, async (req, res) => {
   try {
     const { from, to } = req.query;
-    let query = `SELECT b.*, s.name as cashier_name, v.visit_date, d.code as dept_code
+    let query = `SELECT b.*, s.name as cashier_name, v.visit_date, d.code as dept_code,
+                 rb.receipt_no AS replaced_by_receipt_no, ci.receipt_no AS carried_into_receipt_no
                  FROM billing b
+                 LEFT JOIN billing rb ON rb.id = b.replaced_by_id
+                 LEFT JOIN billing ci ON ci.id = b.carried_into_id
                  LEFT JOIN staff s ON b.cashier_id = s.id
                  LEFT JOIN visit v ON b.visit_id = v.id
                  LEFT JOIN department d ON v.department_id = d.id
@@ -647,15 +655,15 @@ router.put('/:billingId/void', canPay, async (req, res) => {
     await writeAudit(client, req, {
       action: ACTIONS.RECEIPT_CANCEL, patient_id: gone.patient_id, visit_id: gone.visit_id,
       entity: 'billing', entity_id: gone.id,
-      // The amounts do not change on a void, so the log keeps them out of before/after
-      // (it stores changed fields only); the summary carries them instead.
-      summary: gone.receipt_no + ' · total ' + Number(was.total_due) + ' · paid ' + held +
-        (held > 0.005 ? (refundedAmount > 0 ? ' · refunded ' + refundedAmount : ' · not refunded (kept at the till)') : '') +
-        (reason ? ' — ' + reason : ''),
-      before: { payment_status: was.payment_status, total_due: Number(was.total_due), amount_paid: Number(was.amount_paid),
-                net_paid: Number(was.net_paid), outstanding: Number(was.outstanding) },
-      after:  { payment_status: 'cancelled', total_due: Number(was.total_due), amount_paid: Number(was.amount_paid),
-                net_paid: Number(was.net_paid), outstanding: 0, cancel_reason: reason || null, refunded_amount: refundedAmount,
+      // Receipt number and reason only; the rest are fields the Log tab translates
+      // (integration test 2026-09-29, B4). The log keeps changed fields only, so the
+      // receipt's total and the money it took - which a void does not change - are
+      // given on the after side alone: amount_paid is net_paid, what the clinic held.
+      // refunded_amount: handed back (M6); 0 = kept at the till.
+      summary: gone.receipt_no + (reason ? ' — ' + reason : ''),
+      before: { payment_status: was.payment_status, outstanding: Number(was.outstanding) },
+      after:  { payment_status: 'cancelled', outstanding: 0, total_due: Number(was.total_due), amount_paid: held,
+                refunded_amount: held > 0.005 ? refundedAmount : null, cancel_reason: reason || null,
                 balance_restored_to: restoring.length ? restoring : null },
     });
     await client.query('COMMIT');
@@ -734,7 +742,7 @@ async function buildCorrection(db, visitId) {
     [visit.visit_type]
   );
   const rx = await db.query(
-    `SELECT drug_code, drug_name, total_qty AS qty, COALESCE(unit_price,0) AS unit_price
+    `SELECT drug_code, drug_name, total_qty AS qty, COALESCE(unit_price,0) AS unit_price, pack_unit, pack_label
        FROM prescription
       WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1)
         AND COALESCE(dispense_type,'internal') <> 'external'
@@ -763,7 +771,8 @@ async function buildCorrection(db, visitId) {
   rx.rows.forEach(function (r) {
     const q = Number(r.qty) || 0, up = Number(r.unit_price) || 0, tot = round2(q * up);
     drugTotal += tot;
-    items.push({ item_type: 'drug', item_name: r.drug_name, item_code: r.drug_code, quantity: q, unit_price: up, total_price: tot });
+    items.push({ item_type: 'drug', item_name: r.drug_name, item_code: r.drug_code, quantity: q, unit_price: up, total_price: tot,
+                 pack_label: r.pack_unit ? (r.pack_label || 'unit') : null });
   });
   orders.rows.forEach(function (o) {
     const q = Number(o.qty) || 0, up = Number(o.unit_price) || 0, tot = round2(q * up);
@@ -785,6 +794,40 @@ async function buildCorrection(db, visitId) {
   const outstanding = round2(Math.max(0, totalDue - kept));
   const status = outstanding > 0.5 ? (kept > 0.5 ? 'partial' : 'unpaid') : 'paid';
 
+  // What the correction changes, line by line: the lines of the receipts being
+  // replaced against the lines of the new one (integration test 2026-09-29: the screen
+  // said how much went back but not why). cancelled_order: the doctor marked that
+  // order cancelled (3-B), as opposed to a line deleted or reduced.
+  const billed = await db.query(
+    `SELECT item_type, item_code, item_name, SUM(quantity) AS qty, SUM(total_price) AS amount, MAX(pack_label) AS pack_label
+       FROM billing_item WHERE billing_id = ANY($1::int[]) GROUP BY item_type, item_code, item_name`,
+    [ids]
+  );
+  const cancelledCodes = (await db.query(
+    "SELECT DISTINCT order_code FROM order_item WHERE visit_id = $1 AND status = 'cancelled' AND order_code IS NOT NULL",
+    [visitId])).rows.map(function (r) { return r.order_code; });
+  const lineKey = function (t, code, name) { return t + '|' + (code || name); };
+  const byKey = {};
+  billed.rows.forEach(function (r) {
+    const k = lineKey(r.item_type, r.item_code, r.item_name);
+    byKey[k] = { item_type: r.item_type, item_code: r.item_code || '', item_name: r.item_name, pack_label: r.pack_label || null,
+                 qty_before: round2(r.qty), amount_before: round2(r.amount), qty_after: 0, amount_after: 0 };
+  });
+  items.forEach(function (it) {
+    const k = lineKey(it.item_type, it.item_code, it.item_name);
+    const e = byKey[k] || (byKey[k] = { item_type: it.item_type, item_code: it.item_code || '', item_name: it.item_name,
+                                        pack_label: null, qty_before: 0, amount_before: 0, qty_after: 0, amount_after: 0 });
+    e.qty_after = round2(e.qty_after + (Number(it.quantity) || 0));
+    e.amount_after = round2(e.amount_after + (Number(it.total_price) || 0));
+    if (it.pack_label) e.pack_label = it.pack_label;
+  });
+  const changes = Object.keys(byKey).map(function (k) { return byKey[k]; })
+    .filter(function (e) { return Math.abs(e.qty_after - e.qty_before) > 1e-6 || Math.abs(e.amount_after - e.amount_before) > 0.005; })
+    .map(function (e) {
+      return Object.assign(e, { difference: round2(e.amount_after - e.amount_before),
+        cancelled_order: e.qty_after === 0 && !!e.item_code && cancelledCodes.indexOf(e.item_code) >= 0 });
+    });
+
   return {
     visit_id: visit.id, patient_id: visit.patient_id,
     active_bill_ids: ids, replaces: active.map(function (b) { return b.receipt_no; }),
@@ -793,6 +836,7 @@ async function buildCorrection(db, visitId) {
     subtotal: subtotal, discount_amount: discount, previous_balance: previousBalance, total_due: totalDue,
     paid_so_far: kept, amount_paid: kept, change_amount: refund, refund: refund,
     outstanding: outstanding, payment_status: status,
+    changes: changes,
   };
 }
 
@@ -812,13 +856,15 @@ function correctionAudit(c, bill, oldBills, oldItems, reason) {
   return {
     action: ACTIONS.RECEIPT_CORRECT, patient_id: c.patient_id, visit_id: c.visit_id,
     entity: 'billing', entity_id: bill.id,
+    // Receipt numbers and item codes only: the words (refund, statuses) are fields
+    // below, which the Log tab translates (integration test 2026-09-29, B4).
     summary: oldBills.map(function (b) { return b.receipt_no; }).join(', ') + ' → ' + bill.receipt_no +
       (changes.length ? ' · ' + changes.join(', ') : '') +
-      (c.refund > 0 ? ' · refund ' + c.refund : c.outstanding > 0 ? ' · owed ' + c.outstanding : '') +
       (reason ? ' — ' + reason : ''),
-    before: { receipts: oldBills.map(function (b) { return b.receipt_no + ' ' + b.payment_status; }),
+    before: { receipts: oldBills.map(function (b) { return b.receipt_no; }),
+              payment_status: oldBills.map(function (b) { return b.payment_status; }),
               total_due: sum('total_due'), amount_paid: sum('net_paid'), outstanding: sum('outstanding'), items: list(was) },
-    after:  { receipts: [bill.receipt_no + ' ' + bill.payment_status],
+    after:  { receipts: [bill.receipt_no], payment_status: [bill.payment_status],
               total_due: c.total_due, amount_paid: c.paid_so_far, refund: c.refund, outstanding: c.outstanding, items: list(now) },
   };
 }

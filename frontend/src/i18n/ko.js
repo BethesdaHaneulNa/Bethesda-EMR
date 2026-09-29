@@ -437,6 +437,17 @@ export default {
   py_refundedAt: "취소 때 돌려줌",
   py_keptAt: "취소 때 돌려주지 않음",
   py_correctionConfirm: "정정 처리하시겠습니까? 지금 영수증이 취소되고 정확한 금액으로 다시 발행됩니다.",
+  py_stReplaced: "정정으로 바뀜",
+  py_stCarried: "넘어감",
+  py_replacedBy: "{receipt}(으)로 바뀜",
+  py_carriedTo: "미수는 {receipt}에서 받음",
+  py_inactiveReceipts: "취소·바뀐 영수 ({n})",
+  py_changesTitle: "바뀌는 것",
+  py_changeCancelled: "취소됨",
+  py_cashDay: "오늘 금고",
+  py_cashIn: "들어옴",
+  py_cashOut: "나감",
+  py_cashNet: "순액",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
