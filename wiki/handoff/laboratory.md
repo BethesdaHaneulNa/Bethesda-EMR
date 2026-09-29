@@ -2,6 +2,53 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 설계: 결과가 있는 잘못 낸 오더를 「취소」로 표시 (결정 3-B) — 코드 전
+
+- **상태**: 확인 요청 (설계만, 코드 변경 없음) — 총괄이 세션별로 나눠 줄 것
+- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **결정**: 결과는 기록으로 남기고 목록·청구에서 뺀다. 「검사 안 함」 버튼은 없음 — **진료실에서 결과 있는 오더를 지우려 할 때** 묻는다(지금은 409로 거절).
+
+### 흐름
+
+```
+진료 화면 ✕ ─▶ DELETE /api/consultations/order/:id
+                 ├ 결과 없음 → 지금처럼 삭제
+                 └ 결과 있음 → 409 ORDER_HAS_RESULT (지금 그대로)
+                        ▼ 화면이 409를 받으면
+               「결과가 있습니다. 취소로 표시할까요? (이유: ____)」 [취소로 표시] [닫기]
+                        ▼
+               POST /api/consultations/order/:id/cancel  {reason}
+                 → order_item.status = 'cancelled', cancelled_at/by/reason 기록
+                 → lab_result·판독·영상은 그대로 남음
+```
+
+### 세션별 할 일
+
+| 세션 | 파일 | 할 일 |
+|---|---|---|
+| **진료** | `consult.routes.js` · `Consultation.jsx` | ① 새 `POST /order/:orderId/cancel`(권한 consultation): `SELECT … FOR UPDATE` → 이미 `cancelled`면 그대로 200, 결과가 **없으면** 409(취소 말고 삭제하라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'` + 아래 칸. ② 삭제 409를 받으면 확인 창(이유 한 줄, 선택). ③ 취소된 줄은 회색·줄긋기 + 「취소됨 / Annulé」(키 `cs_labCancelled` 이미 있음), 수량 등 수정·✕ 막기(서버도 `PUT /order/:id`에서 `cancelled` 거절). ④ 되돌리기(취소 해제)는 **만들지 않음** — 필요하면 실장님께(아래 질문). |
+| **진료 (마이그레이션)** | `backend/sql/2xx_…` | `order_item`에 `cancelled_at TIMESTAMPTZ`, `cancelled_by INTEGER REFERENCES staff(id)`, `cancel_reason TEXT` 추가(추가만, 기존 데이터 그대로). `status` CHECK에 `cancelled`는 이미 있음(`001_schema.sql`). |
+| **임상병리** | `lab.routes.js` · `Lab.jsx` · `LabResults.jsx` | ① `POST /order/:id/results`: `FOR UPDATE`로 읽고 `status='cancelled'`면 **409 거절** — 지금은 취소된 오더에 저장하면 `completed`로 되살아남. 화면은 「이 검사는 진료실에서 취소되었습니다」 안내 후 다시 불러옴(오더 삭제 안내와 같은 방식). ② 대기·완료 목록·환자 찾기 입력 화면: 이미 `cancelled`를 빼고 있음(`/pending` `NOT IN ('completed','cancelled')`, `/completed` `= 'completed'`, `/visit/:id/orders` `<> 'cancelled'`) — 그대로. ③ 결과 표(`LabResults`, 진료 화면도): `/patient/:id/results`가 `oi.status AS order_status`를 함께 주고, 취소된 오더의 값은 **회색·줄긋기, 색(▲▼!) 없이**, 칸에 마우스를 올리면 「취소됨 — 이유」. 줄은 지우지 않음(기록). 재검 칸 나누기에는 그대로 한 칸 차지. ④ 위키 2·3·5절. 번역 키 `lb_orderCancelled` 등 2~3개. |
+| **수납** | `billing.routes.js` · `Payment.jsx` | `order_item`을 상태 없이 합산하는 곳 3곳에 `AND o.status <> 'cancelled'`: 대기 목록의 현재 합계(`live_total`, `GET /pending`), 청구할 항목(`GET /visit/:visitId/items`), 정정 계산(`buildCorrection()`). 이미 수납한 내원이면 합계가 줄어 **「정정(환불)」**으로 뜨는 기존 흐름을 탐. ⚠ `counterFeeCond()`의 `order_item` 부분(창구 수수료 판별)은 **취소된 오더도 포함한 채로** 둘지 수납 세션이 판단 필요 — 빼면, 취소된 fee 오더의 청구 줄이 「창구 수수료」로 잘못 분류되어 환불에서 빠질 수 있음. |
+| **통계** | `stats.routes.js` | 지금 검사 건수 통계는 없음(`order_item`을 읽지 않음, grep 확인). 매출은 수납 기록을 따르므로 수납이 고치면 따라옴. 나중에 검사·오더 건수를 세게 되면 `cancelled` 제외. |
+| **PACS** | `pacs.routes.js` · `worklist.routes.js` | **의견 필요**: 영상 오더도 같은 방식(촬영·판독이 있으면 취소 표시)으로 할지. 영상은 `worklist_log`·`worklist_status`(`cancelled` 값 있음)·Orthanc 영상이 따로 있어서, 취소 때 워크리스트를 `cancelled`로 보낼지, 이미 찍은 영상·판독을 어떻게 보일지 정해야 함. 진료 쪽 취소 API는 `code_type`을 가리지 않게 만들되, 영상에 대해 켤지는 PACS 의견 뒤에. |
+
+### 순서 (의존)
+
+1. 진료 마이그레이션 + 취소 API (다른 세션이 기대는 것)
+2. 임상병리 ① 저장 거절 — **1과 같은 배포에 들어가야 함**(아니면 취소된 검사가 저장으로 되살아남)
+3. 수납 3곳, 진료 화면 확인 창, 임상병리 ③ 결과 표 — 순서 무관
+4. PACS 의견 뒤 영상 적용 여부
+
+### 실장님께 여쭐 것 (결정 세션께)
+
+- 취소할 때 **이유 한 줄**을 필수로 할지(추천: 선택 — 의무기록상 있으면 좋지만 급할 때 막지 않게).
+- **취소 되돌리기**가 필요한지(추천: 만들지 않음 — 잘못 취소했으면 오더를 다시 내면 됨. 결과는 옛 오더에 남아 있음).
+- 결정 10(수정 이력 — 「로그로만」)이 공통 로그로 정해지면 취소도 그 로그에 남기기.
+
+- **바꾼 파일**: 이 노트만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음(설계상 진료 세션 몫 1건) · **번역 키**: 없음
+- **확인한 방법**: 코드 읽기 — `consult.routes.js` `DELETE /order/:orderId`(409 조건: `lab_result` 있음 · 워크리스트 진행/완료 · `result_text` 있음), `billing.routes.js` `order_item` 합산 3곳과 `counterFeeCond()`, `stats.routes.js`(order_item 없음), `lab.routes.js` 목록 조건, `Consultation.jsx`의 `cs_labCancelled` 표시.
+
 ## 2026-09-29 — 결정 8 반영: 결과 표에서 같은 날 재검 둘 다 보이기
 
 > **총괄 확인 (2026-09-29)**: 결정 8 `26b861b` 합침(`2d7f6f0`) + 실행 중 EMR 반영. 「결과 있는 오더 취소」 설계 `943909c` 확인 — 승인, 세션별 몫을 총괄이 나눠 줌.
