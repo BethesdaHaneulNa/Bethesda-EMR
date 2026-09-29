@@ -58,6 +58,7 @@
 | ☐ | 「지금 백업」 직후 `verify-backup.ps1 -Strict` → VERIFIED (낮에 그냥 돌리면 [info]가 나오는 것이 정상) |
 | ☐ | **병원 밖 USB 사본**(백업 탭 내려받기)을 누가, 얼마나 자주 할지 정했는지 |
 | ☐ | `.env`의 `TZ=Indian/Antananarivo` — 백업 시각과 「오늘」 기준 |
+| ☐ | **EMR을 여는 PC마다 Windows 시간대가 마다가스카르(UTC+3)인지** — 한국 시간으로 맞춰진 PC에서는 저녁 6시 이후의 검사 결과·판독 날짜가 다음 날로 보임 |
 | ☐ | **서버 상태 창**(`server-status.bat`)을 서버 PC 시작 프로그램에 두고 7줄 모두 초록인지 — 특히 영상(Imagerie)이 「포트 막힘」이 아닌지 |
 | ☐ | `DEPLOYMENT.md` 9절 「Before you go live」(방화벽, 포트 포워딩 금지, Wi-Fi면 HTTPS, Docker 자동 시작)도 같이 확인 |
 | ☐ | 오프라인 설치 묶음으로 새 PC에 설치해 보았는지 |
