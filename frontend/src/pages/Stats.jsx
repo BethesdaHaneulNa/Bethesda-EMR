@@ -67,8 +67,6 @@ export default function StatsPage(){
         .concat([d.total_qty]);
       lines.push(row.join(','));
     });
-    var totals = ['"TOTAL"','','',''].concat(P.map(function(p){ return (drugUsage.periodTotals||{})[p]||0; })).concat([drugUsage.grandTotal||0]);
-    lines.push(totals.join(','));
     var blob = new Blob(["﻿"+lines.join('\n')], {type:'text/csv;charset=utf-8'});
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = 'drug-usage-'+drugGran+'-'+(drugUsage.from||'')+'_'+(drugUsage.to||'')+'.csv';
@@ -277,7 +275,8 @@ export default function StatsPage(){
             (!(drugUsage.drugs||[]).length?<div style={{ color:t3, fontSize:13, padding:'12px 2px' }}>{t.noData||'데이터 없음'}</div>:
             <div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' }}>
               <div style={{ fontSize:12, color:t3, padding:'8px 12px', borderBottom:'1px solid '+bd }}>
-                {drugUsage.from} ~ {drugUsage.to} · {(drugUsage.drugs||[]).length} {t.drugsUnit||'품목'} · {t.totalUsage||'총 사용'} {fmtQty(drugUsage.grandTotal)}
+                {/* Item count only: a sum across drugs would add tablets to bottles (decision 19). */}
+                {drugUsage.from} ~ {drugUsage.to} · {(drugUsage.drugs||[]).length} {t.drugsUnit||'품목'}
                 {/* Which rules the numbers follow: prescribed (visit date, quantity written)
                     or dispensed (day handed over, in-house, whole units — the stock report's). */}
                 <div style={{ marginTop:3 }}>{drugStat==='dispensed'?(t.st_rxBasisDispensed||'조제완료: 약국이 내준 날 기준 · 원내 약만 · 알약 단위로 올림 — 약국 재고 보고서의 출고와 같은 숫자'):(t.st_rxBasisAll||'처방전체: 처방한 날(내원일) 기준 · 처방한 수량 그대로')}</div>
@@ -302,11 +301,6 @@ export default function StatsPage(){
                       <td style={{ padding:'6px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#34d399', position:'sticky', right:0, background:scBg, borderLeft:'1px solid '+bd }}>{fmtQty(d.total_qty)}</td>
                     </tr>; })}
                   </tbody>
-                  <tfoot><tr style={{ background:pn, fontWeight:800 }}>
-                    <td style={{ padding:'7px 10px', position:'sticky', left:0, background:pn, color:tx, borderTop:'1px solid '+bd2 }}>{t.total||'합계'}</td>
-                    {(drugUsage.periods||[]).map(function(p){ var pt=(drugUsage.periodTotals||{})[p]||0; return <td key={p} style={{ padding:'7px 10px', textAlign:'right', fontFamily:'monospace', color:tx, borderTop:'1px solid '+bd2 }}>{fmtQty(pt)}</td>; })}
-                    <td style={{ padding:'7px 12px', textAlign:'right', fontFamily:'monospace', color:'#34d399', position:'sticky', right:0, background:pn, borderTop:'1px solid '+bd2 }}>{fmtQty(drugUsage.grandTotal)}</td>
-                  </tr></tfoot>
                 </table>
               </div>
             </div>)}
