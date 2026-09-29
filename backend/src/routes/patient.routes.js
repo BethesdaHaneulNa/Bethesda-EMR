@@ -24,17 +24,31 @@ const PATIENT_FIELDS = ['last_name', 'first_name', 'national_id', 'date_of_birth
   'address', 'city', 'region', 'blood_type', 'allergies', 'reception_note'];
 
 // GET /api/patients - search/list
+// q matches chart number, either name, national id, phones, and the full name in
+// either order ("Rakoto Jean" or "Jean Rakoto" - the desk gives them both ways).
+// % and _ in q are searched as the characters they are, not as wildcards; the
+// escape character is ! so no backslash has to survive a JS template literal.
+// limit (1-200, default 50) and offset are read as numbers; anything else falls
+// back to the default instead of reaching Postgres as text.
+function intParam(v, dflt, min, max) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return dflt;
+  return Math.min(Math.max(n, min), max);
+}
 router.get('/', permMiddleware(...SEARCH_READERS), async (req, res) => {
   try {
-    const { q, limit = 50, offset = 0 } = req.query;
+    const q = String(req.query.q || '').trim().replace(/\s+/g, ' ');
+    const limit = intParam(req.query.limit, 50, 1, 200);
+    const offset = intParam(req.query.offset, 0, 0, 1000000);
     let query, params;
     if (q) {
       query = `SELECT * FROM patient WHERE is_active = true AND (
-        chart_no ILIKE $1 OR last_name ILIKE $1 OR first_name ILIKE $1 OR national_id ILIKE $1 OR
-        phone ILIKE $1 OR mobile ILIKE $1 OR
-        CONCAT(last_name, ' ', first_name) ILIKE $1
+        chart_no ILIKE $1 ESCAPE '!' OR last_name ILIKE $1 ESCAPE '!' OR first_name ILIKE $1 ESCAPE '!' OR
+        national_id ILIKE $1 ESCAPE '!' OR phone ILIKE $1 ESCAPE '!' OR mobile ILIKE $1 ESCAPE '!' OR
+        CONCAT(last_name, ' ', first_name) ILIKE $1 ESCAPE '!' OR
+        CONCAT(first_name, ' ', last_name) ILIKE $1 ESCAPE '!'
       ) ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
-      params = [`%${q}%`, limit, offset];
+      params = ['%' + q.replace(/[!%_]/g, '!$&') + '%', limit, offset];
     } else {
       query = 'SELECT * FROM patient WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2';
       params = [limit, offset];

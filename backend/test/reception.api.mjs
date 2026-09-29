@@ -9,6 +9,7 @@
 //    route is open wider than decided.
 // 2. Duplicate warnings (decided 2026-09-29, reception ④): same-name lookup and the
 //    same-day second-visit check.
+// 3. Patient search (⑯): name order, literal % and _, limit/offset parsing.
 //
 //   node backend/test/reception.api.mjs            (default http://127.0.0.1:9181)
 //   RC_TEST_BASE=http://127.0.0.1:9181/api node backend/test/reception.api.mjs
@@ -153,6 +154,22 @@ for (const v of [d1.data, d3.data]) if (v && v.id) await call('PUT', '/visits/' 
 const d4 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
 check('④ only cancelled visits today → no warning', d4.status === 201, { status: d4.status });
 if (d4.data && d4.data.id) await call('PUT', '/visits/' + d4.data.id + '/status', { status: 'cancelled' }, A);
+
+// ── ⑯ patient search: either name order, % and _ literal, limit read as a number ──
+const byName = (await call('GET', '/patients?q=' + encodeURIComponent('Test Permission'), null, A));
+check('⑯ search "first last" order finds the patient', ids(byName).includes(P.id), { status: byName.status });
+const byName2 = (await call('GET', '/patients?q=' + encodeURIComponent('permission   test'), null, A));
+check('⑯ search "last first", case and extra spaces ignored', ids(byName2).includes(P.id));
+const under = await call('GET', '/patients?q=_', null, A);
+check('⑯ "_" is a character, not "any letter"', under.status === 200 && !ids(under).includes(P.id));
+const pct = await call('GET', '/patients?q=' + encodeURIComponent('%'), null, A);
+check('⑯ "%" is a character, not "anything"', pct.status === 200 && !ids(pct).includes(P.id));
+const badLimit = await call('GET', '/patients?q=Permission&limit=abc&offset=-5', null, A);
+check('⑯ limit/offset that are not numbers fall back to the defaults', badLimit.status === 200 && ids(badLimit).includes(P.id), { status: badLimit.status });
+const one = await call('GET', '/patients?limit=1', null, A);
+check('⑯ limit=1 returns at most one', one.status === 200 && one.data.length <= 1);
+const huge = await call('GET', '/patients?limit=100000', null, A);
+check('⑯ limit is capped at 200', huge.status === 200 && huge.data.length <= 200);
 
 // ── S1: a permission granted in Settings applies to the same token at once ──
 const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);
