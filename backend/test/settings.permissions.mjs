@@ -26,7 +26,7 @@ function check(label, a, b) {
 
 check('all permissions, in menu order', Array.from(backend.ALL_PERMS), frontend.MODULES.map(m => m.perm));
 // The roles the staff form offers (admin.routes.js ROLES and the staff CHECK constraint).
-for (const role of ['admin', 'frontdesk', 'doctor', 'pharmacy', 'lab', 'nobody']) {
+for (const role of ['admin', 'frontdesk', 'doctor', 'nurse', 'pharmacy', 'lab', 'nobody']) {
   check('default permissions for role ' + role, backend.defaultPermsForRole(role), frontend.defaultPermsForRole(role));
 }
 // Callers are allowed to change what they get back; that must not reach the shared list.

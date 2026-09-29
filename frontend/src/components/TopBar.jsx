@@ -13,6 +13,7 @@ var ROLE_INFO = {
   doctor: { icon: '🩺', color: '#10b981' },
   pharmacy: { icon: '💊', color: '#8b5cf6' },
   lab: { icon: '🧪', color: '#06b6d4' },
+  nurse: { icon: '💉', color: '#f59e0b' },
   admin: { icon: '⚙️', color: '#ef4444' },
 };
 

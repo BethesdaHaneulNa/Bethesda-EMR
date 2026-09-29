@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../i18n/index.jsx';
 import { api, saveAuth } from '../api/client.js';
+// The server answers in English ("Invalid credentials", "Account is inactive");
+// show it in the screen's language. See settingsMessages.js.
+import { seMessage } from './settingsMessages.js';
 
 var ROLE_ROUTES = {
   frontdesk: '/registration',
@@ -9,6 +12,23 @@ var ROLE_ROUTES = {
   pharmacy: '/pharmacy',
   admin: '/settings',
 };
+
+// Login and setup are sent here rather than through api/client.js. That client
+// treats every 401 as "your session ran out" and reloads the login page - right
+// everywhere else, but here a 401 is the answer to a wrong password or an inactive
+// account, and the reload wiped the message before anyone could read it: a wrong
+// password just emptied the form, with nothing said.
+// The same build-time version the top bar shows (vite.config.js define), so the login
+// page no longer says "v1.0" while the menu bar says v1.4.0.
+var APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+
+async function authPost(path, body) {
+  var res = await fetch('/api' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  var data = null;
+  try { data = await res.json(); } catch (e) { throw new Error('API response was not JSON'); }
+  if (!res.ok) throw new Error((data && data.error) || 'Request failed');
+  return data;
+}
 
 var IN = { width: '100%', background: '#0f1117', border: '1px solid #2a3142', borderRadius: 8, padding: '11px 14px', color: '#e2e8f0', fontSize: 16, outline: 'none', boxSizing: 'border-box' };
 var LB = { fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 };
@@ -41,11 +61,11 @@ export default function LoginPage() {
     if (!username || !password) { setError(t.loginError); return; }
     setLoading(true);
     try {
-      var data = await api.post('/auth/login', { login_id: username, password: password });
+      var data = await authPost('/auth/login', { login_id: username, password: password });
       saveAuth(data.token, data.user);
       navigate(ROLE_ROUTES[data.user.role] || '/');
     } catch (err) {
-      setError(err.message || t.loginError);
+      setError(err.message || t.loginError);   // translated where it is shown
     } finally { setLoading(false); }
   }
 
@@ -56,11 +76,11 @@ export default function LoginPage() {
     if (password !== sPass2) { setError(t.pwMismatch || '비밀번호가 일치하지 않습니다'); return; }
     setLoading(true);
     try {
-      var data = await api.post('/auth/setup', { login_id: username, password: password, name: sName });
+      var data = await authPost('/auth/setup', { login_id: username, password: password, name: sName });
       saveAuth(data.token, data.user);
       navigate('/settings');
     } catch (err) {
-      setError(err.message || 'Setup failed');
+      setError(err.message || t.se_errServer);
     } finally { setLoading(false); }
   }
 
@@ -125,7 +145,7 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          {error ? <div style={{ background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14, color: '#f87171', textAlign: 'center' }}>⚠ {error}</div> : null}
+          {error ? <div style={{ background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14, color: '#f87171', textAlign: 'center' }}>⚠ {seMessage(t, error)}</div> : null}
 
           <button onClick={isSetup ? handleSetup : handleLogin} disabled={loading} style={{
             width: '100%', padding: '13px', borderRadius: 10, border: 'none', cursor: loading ? 'wait' : 'pointer',
@@ -137,7 +157,7 @@ export default function LoginPage() {
         </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#334155' }}>{t.appTitle} v1.0</div>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#334155' }}>{t.appTitle}{APP_VERSION ? ' v' + APP_VERSION : ''}</div>
       </div>
     </div>
   );

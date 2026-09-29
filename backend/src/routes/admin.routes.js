@@ -2,10 +2,12 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware, ALL_PERMS } = require('../middleware/auth');
 const { sendDbError } = require('../utils/dbError');
+// Messages shown to people - translated by the screen; see settings.messages.js.
+const { MSG, fieldMsg } = require('./settings.messages');
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
 // than a 500 carrying the constraint name.
-const ROLES = ['frontdesk', 'doctor', 'pharmacy', 'lab', 'admin'];
+const ROLES = ['frontdesk', 'doctor', 'nurse', 'pharmacy', 'lab', 'admin'];   // nurse: sql/701
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure'];
 
 // Every module permission (ALL_PERMS) comes from middleware/auth.js, the backend's
@@ -33,7 +35,7 @@ async function otherSettingsAdminExists(excludeId) {
 // An UPDATE that matches no row returned `res.json(undefined)` — an empty body
 // with 200, which the caller reads as "saved". Nothing was saved.
 function sentMissing(res, result) {
-  if (result.rows.length === 0) { res.status(404).json({ error: 'Not found' }); return true; }
+  if (result.rows.length === 0) { res.status(404).json({ error: MSG.NOT_FOUND }); return true; }
   return false;
 }
 
@@ -42,8 +44,8 @@ function badPrices(body, fields) {
     const raw = body[field];
     if (raw === undefined || raw === null || raw === '') continue;
     const value = Number(raw);
-    if (!isFinite(value)) return field + ' must be a number';
-    if (value < 0) return field + ' must not be negative';
+    if (!isFinite(value)) return fieldMsg.notNumber(field);
+    if (value < 0) return fieldMsg.negative(field);
   }
   return null;
 }
@@ -82,7 +84,7 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
 
 // Sent in full (not translated) and compared by the Settings screen, which then shows
 // its own se_ text: api/client.js passes the message on but not the status code.
-const ERR_STOCK_CHANGED = 'Stock changed while this drug was open';
+const ERR_STOCK_CHANGED = MSG.STOCK_CHANGED;
 
 function blank(v) { return v === undefined || v === null || v === ''; }
 
@@ -107,13 +109,13 @@ router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
   if (invalid) return res.status(400).json({ error: invalid });
   // The column is an integer; 7.5 used to reach the database and come back as an error.
   for (const f of ['stock_qty', 'min_stock']) {
-    if (!blank(req.body[f]) && !Number.isInteger(Number(req.body[f]))) return res.status(400).json({ error: f + ' must be a whole number' });
+    if (!blank(req.body[f]) && !Number.isInteger(Number(req.body[f]))) return res.status(400).json({ error: fieldMsg.notWhole(f) });
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const cur = await client.query('SELECT stock_qty FROM drug WHERE id = $1 FOR UPDATE', [req.params.id]);
-    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
     const now = cur.rows[0].stock_qty;
     const num = v => (blank(v) ? 0 : Number(v));
 
@@ -168,7 +170,7 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
   try {
     const { code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo } = req.body;
     if (!CODE_TYPES.includes(String(code_type))) {
-      return res.status(400).json({ error: 'code_type must be one of ' + CODE_TYPES.join(', ') });
+      return res.status(400).json({ error: fieldMsg.notOneOf('code_type', CODE_TYPES) });
     }
     const invalid = badPrices(req.body, ['price', 'price_clinic']);
     if (invalid) return res.status(400).json({ error: invalid });
@@ -185,7 +187,7 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
   try {
     const { code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo } = req.body;
     if (!CODE_TYPES.includes(String(code_type))) {
-      return res.status(400).json({ error: 'code_type must be one of ' + CODE_TYPES.join(', ') });
+      return res.status(400).json({ error: fieldMsg.notOneOf('code_type', CODE_TYPES) });
     }
     const invalid = badPrices(req.body, ['price', 'price_clinic']);
     if (invalid) return res.status(400).json({ error: invalid });
@@ -237,10 +239,10 @@ router.get('/staff', permMiddleware('settings'), async (req, res) => {
 router.post('/staff', permMiddleware('settings'), async (req, res) => {
   try {
     const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
-    if (!String(login_id || '').trim()) return res.status(400).json({ error: 'login_id is required' });
-    if (!String(password || '')) return res.status(400).json({ error: 'password is required' });
+    if (!String(login_id || '').trim()) return res.status(400).json({ error: MSG.LOGIN_ID_REQUIRED });
+    if (!String(password || '')) return res.status(400).json({ error: MSG.PASSWORD_REQUIRED });
     if (!ROLES.includes(String(role))) {
-      return res.status(400).json({ error: 'role must be one of ' + ROLES.join(', ') });
+      return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
     }
     const result = await pool.query(
       `INSERT INTO staff (login_id, password_hash, name, role, permissions, department_id, phone, email, status)
@@ -255,7 +257,7 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
   try {
     const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
     if (!ROLES.includes(String(role))) {
-      return res.status(400).json({ error: 'role must be one of ' + ROLES.join(', ') });
+      return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
     }
     let perms = Array.isArray(permissions) ? permissions : [];
 
@@ -275,7 +277,7 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
       // key - the account may simply have been renamed.
       if (!(await otherSettingsAdminExists(req.params.id))) {
         return res.status(400).json({
-          error: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
+          error: MSG.LAST_ADMIN,
         });
       }
     }
@@ -301,12 +303,12 @@ router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
     const cur = await pool.query('SELECT id, login_id, role, permissions FROM staff WHERE id = $1', [req.params.id]);
     if (sentMissing(res, cur)) return;
     if (cur.rows[0].login_id === BOOTSTRAP_ADMIN_LOGIN) {
-      return res.status(400).json({ error: 'The administrator account created during setup cannot be deactivated.' });
+      return res.status(400).json({ error: MSG.SETUP_ADMIN_KEPT });
     }
     const held = cur.rows[0].role === 'admin' && (cur.rows[0].permissions || []).indexOf('settings') >= 0;
     if (held && !(await otherSettingsAdminExists(req.params.id))) {
       return res.status(400).json({
-        error: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
+        error: MSG.LAST_ADMIN,
       });
     }
     await pool.query("UPDATE staff SET status = 'inactive' WHERE id = $1", [req.params.id]);

@@ -5,6 +5,7 @@ import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
+import { storedTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
@@ -13,7 +14,6 @@ function timeText(v, locale){
   if(!raw) return '';
   try { return new Date(raw).toLocaleString(locale || 'en-GB', { hour12:false }); } catch(e){ return raw; }
 }
-function rxQty(rx){ return parseFloat(rx.total_qty) || ((parseFloat(rx.dose)||0) * (Number(rx.frequency)||1) * (Number(rx.days)||1)); }
 function isExternal(rx){ return rx.dispense_type === 'external'; }
 // '{ago}' style placeholders in a translated sentence, so word order can differ per language.
 function fill(s, v){ return String(s || '').replace(/\{(\w+)\}/g, function(m, k){ return v[k] != null ? v[k] : m; }); }
@@ -150,7 +150,12 @@ export default function PharmacyPage() {
 
   async function dispense(){
     if(!sel || busy) return;
-    if(!window.confirm(patientName(sel) + ' '+t.dispenseComplete+'?' )) return;
+    // A line with no stored total takes nothing off the shelf (the server reads the
+    // total, it does not work one out), so say so before the pharmacist confirms.
+    var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && storedTotal(rx) === null; });
+    var ask = patientName(sel) + ' '+t.dispenseComplete+'?';
+    if(unquantified.length) ask = t.ph_noTotalConfirm + '\n' + unquantified.map(function(rx){ return '· ' + rx.drug_name; }).join('\n') + '\n\n' + ask;
+    if(!window.confirm(ask)) return;
     setBusy(true);
     try {
       var r = await api.put('/pharmacy/consultations/' + sel.consultation_id + '/dispense');
@@ -192,9 +197,14 @@ export default function PharmacyPage() {
 
   // Outside-pharmacy lines are not billed here (billing.routes.js leaves them
   // out), so leaving them in made this figure disagree with the cashier's.
+  // Only stored totals count: the consultation screen works the total out (daily
+  // total x days) and that figure is what is billed and what leaves the shelf.
   var totalDrug = (sel && sel.prescriptions ? sel.prescriptions : []).reduce(function(sum, rx){
-    return isExternal(rx) ? sum : sum + rxQty(rx) * (parseFloat(rx.unit_price) || 0);
+    var q = storedTotal(rx);
+    return isExternal(rx) || q === null ? sum : sum + q * (parseFloat(rx.unit_price) || 0);
   }, 0);
+  var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && storedTotal(rx) === null; });
+  var RX_COLS = '1.5fr .6fr .6fr .5fr .5fr .6fr .7fr 1fr';
 
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
   var green='#10b981', violet='#8b5cf6';
@@ -257,18 +267,21 @@ export default function PharmacyPage() {
                 <div style={{ textAlign:'right' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
                   <div style={{ color:'#f8fafc', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug)}</div>
+                  {anyUnquantified ? <div style={{ color:'#fca5a5', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
                 </div>
               </div>
             </div>
 
             <div style={{ padding:16, overflow:'auto', flex:1 }}>
               <div style={{ background:pn, border:'1px solid '+bd, borderRadius:8, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'1.5fr .6fr .6fr .6fr .6fr .8fr 1fr', gap:0, background:'#161a26', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
-                  {[t.colDrugName,t.colDose,t.colFreq,t.colDays,t.colRoute,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
+                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'#161a26', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
+                  {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
                 </div>
                 {(sel.prescriptions||[]).map(function(rx){
                   var warn = refillWarn(rx.drug_code);
-                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:'1.5fr .6fr .6fr .6fr .6fr .8fr 1fr', borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'#ef44440d':'transparent' }}>
+                  var total = storedTotal(rx);
+                  var per = perDose(rx);
+                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:RX_COLS, borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'#ef44440d':'transparent' }}>
                     <div style={{ padding:'10px', fontWeight:800, color:tx }}>
                       <div>{rx.drug_name}</div>
                       <div style={{ color:t3, fontSize: 16, marginTop:2 }}>{rx.drug_code}</div>
@@ -281,11 +294,18 @@ export default function PharmacyPage() {
                       </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'#f59e0b20', color:'#fbbf24', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
                       {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.dose || '-'}</div>
+                    <div style={{ padding:'10px', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
+                    <div style={{ padding:'10px', color: per && per.clean ? tx : '#fbbf24', fontWeight:800 }}>
+                      {per && per.clean ? fmtAmount(per.value) : '—'}
+                      {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color:t2 }}>{rxQty(rx)}</div>
+                    <div style={{ padding:'10px', color: total === null ? '#fca5a5' : t2, fontWeight: total === null ? 800 : 400 }}>
+                      {total === null ? t.ph_noTotal : fmtAmount(total)}
+                      {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'#fbbf24', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
                   </div>;
                 })}

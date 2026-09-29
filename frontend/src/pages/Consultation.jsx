@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -26,6 +26,32 @@ function orderLocked(o){
   return !!o.worklist_sent_at && (o.worklist_status==='in_progress'||o.worklist_status==='completed');
 }
 
+// A prescription line is entered the Korean way: dose = the DAILY total, frequency =
+// how many times a day it is split into, days = how long. The server works out
+// total_qty = dose x days (consult.routes.js rxTotal); this screen never computes it.
+// What the screen does compute is the breakdown the doctor reads back:
+// one dose = dose / frequency. The pharmacy uses the same rule: a dose that does not
+// come out in half tablets (0.5 steps) is flagged, never refused.
+function num(v){ var n = parseFloat(v); return isFinite(n) ? n : 0; }
+function fmtNum(n){ return String(Math.round(n * 1000) / 1000); }
+function rxBreakdown(rx){
+  var daily = num(rx.dose), freq = parseInt(rx.frequency) || 1, days = parseInt(rx.days) || 1;
+  var per = daily / freq;
+  return { per: per, freq: freq, days: days, daily: daily,
+           total: Math.round(daily * days * 1000) / 1000,
+           even: Math.abs(per * 2 - Math.round(per * 2)) < 1e-9 };
+}
+
+// A price of 0 (or none) is almost always a price nobody has entered yet - the clinic's
+// drug list is being imported with every price empty. Billing charges each line at the
+// unit_price stored ON THE LINE when it was added (billing.routes.js), so such a line
+// goes to the cashier at 0, and entering the price in Settings afterwards does not
+// change lines already written. The screen marks them so a doctor or nurse sees it
+// before the patient reaches the cashier; it never refuses them (a free item is
+// possible). A line the pharmacy moves to an outside prescription is not billed at all,
+// so it is not marked.
+function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
+
 // Stored values the screen shows, and the translation key for each. The values
 // themselves (visit.status, phrase_dictionary.category, order_code.code_type) are what
 // the database and the other screens use, so they never change - only what is shown.
@@ -51,6 +77,13 @@ export default function ConsultationPage() {
   var qtb = useState('waiting'), qTab = qtb[0], setQTab = qtb[1];
   var dxs = useState([]), dxList = dxs[0], setDxList = dxs[1];
   var rxs = useState([]), rxList = rxs[0], setRxList = rxs[1];
+  // The editable fields of each prescription line as the server last returned them.
+  // A field losing focus saves the line (onBlur); with nothing changed there is nothing
+  // to send - and before the total formula changed, an old line re-saved for no reason
+  // was a line re-priced for no reason.
+  var savedRx = useRef({});
+  function rxSnap(r){ return [r.dose, r.frequency, r.days, r.route, r.memo].map(function(x){ return x==null ? '' : String(x); }).join('|'); }
+  function rememberRx(rows){ (rows||[]).forEach(function(r){ savedRx.current[r.id] = rxSnap(r); }); return rows; }
   var ois = useState([]), orderItems = ois[0], setOrderItems = ois[1];
   var nts = useState(''), note = nts[0], setNote = nts[1];
   var vts = useState({ bp:'',temp:'',pulse:'',spo2:'',rr:'' }), vt = vts[0], setVt = vts[1];
@@ -131,7 +164,7 @@ export default function ConsultationPage() {
       setConsult(cData);
       // Load existing data
       var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
-      setRxList(rx);
+      setRxList(rememberRx(rx));
       var oi = await api.get('/consultations/'+cData.id+'/orders');
       setOrderItems(oi);
       if(cData.note_text) setNote(cData.note_text);
@@ -178,7 +211,7 @@ export default function ConsultationPage() {
             return <div key={'prx-'+i} style={{display:'flex',gap:8,padding:'6px 10px',borderBottom:'1px solid #1e2433',alignItems:'baseline'}}>
               <span style={{color:'#60a5fa',fontFamily:'monospace',fontSize: 12,fontWeight:700,width:64}}>{rx.drug_code}</span>
               <span style={{color:tx,fontSize: 14,flex:1}}>{rx.drug_name}</span>
-              <span style={{color:t2,fontSize: 12}}>{rx.dose}×{rx.frequency}×{rx.days}d{rx.route?(' — '+rx.route):''}</span>
+              <span style={{color:t2,fontSize: 12,textAlign:'right'}}>{rxLine(rx)}{rx.route?<div>{rx.route}</div>:null}</span>
             </div>;
           })}
           {(pastView.orders||[]).map(function(o,i){
@@ -274,10 +307,12 @@ export default function ConsultationPage() {
       var rx = await api.post('/consultations/'+consult.id+'/prescriptions',{
         drug_id:drug.id, drug_code:drug.code, drug_name:drug.name,
         dose:drug.default_dose, frequency:drug.default_freq, days:drug.default_days,
-        route:drug.default_route || 'TID', unit_price:drug.unit_price,
+        // No 'TID' filled in for a drug without a default: that is a frequency, not a
+        // sig, and it went onto the pharmacy label as if the doctor had written it.
+        route:drug.default_route || '', unit_price:drug.unit_price,
         memo: drug.unit || '',
-        total_qty: (parseFloat(drug.default_dose)||1)*(drug.default_freq||1)*(drug.default_days||1),
       });
+      rememberRx([rx]);
       setRxList(function(p){ return p.concat([rx]); });
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
@@ -294,7 +329,7 @@ export default function ConsultationPage() {
   }
   async function reloadItems(){
     if(!consult) return;
-    try { setRxList(await api.get('/consultations/'+consult.id+'/prescriptions')); } catch(e){}
+    try { setRxList(rememberRx(await api.get('/consultations/'+consult.id+'/prescriptions'))); } catch(e){}
     try { setOrderItems(await api.get('/consultations/'+consult.id+'/orders')); } catch(e){}
   }
 
@@ -317,6 +352,29 @@ export default function ConsultationPage() {
     return null;
   }
 
+  // "1 per dose x 3 a day x 7 days = 21 in all" under the drug name. A dose that does
+  // not come out in half tablets gets the pharmacy's warning instead of a number. If
+  // the stored total differs from dose x days the line was saved under the old formula
+  // (before 2026-09-29) and keeps that total until its dose or days are changed; the
+  // stored figure is shown so the screen never claims a total the bill does not use.
+  function rxLine(rx){
+    var b = rxBreakdown(rx);
+    var text = b.even
+      ? String(t.cs_rxBreakdown||'').replace('{per}', fmtNum(b.per)).replace('{freq}', b.freq).replace('{days}', b.days).replace('{total}', fmtNum(b.total))
+      : String(t.cs_rxUneven||'').replace('{daily}', fmtNum(b.daily)).replace('{freq}', b.freq).replace('{days}', b.days).replace('{total}', fmtNum(b.total));
+    var stored = rx.total_qty==null ? null : num(rx.total_qty);
+    var old = stored!=null && Math.abs(stored - b.total) > 0.0005;
+    return <div style={{fontSize:11.5,lineHeight:1.35,marginTop:1,color:b.even?t2:'#fbbf24'}}>
+      {text}{old ? <span style={{color:'#fbbf24'}}>{' · '+String(t.cs_rxStoredTotal||'').replace('{total}', fmtNum(stored))}</span> : null}
+    </div>;
+  }
+
+  function NoPriceBadge(){
+    return <span title={t.cs_noPriceHint} style={{marginLeft:6,background:'#78350f55',color:'#fcd34d',border:'1px solid #b45309',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noPrice}</span>;
+  }
+  var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
+                   + orderItems.filter(function(o){ return noPrice(o.unit_price); }).length;
+
   // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
   // clicks to read, so ask first.
   function confirmRemove(name){
@@ -336,6 +394,7 @@ export default function ConsultationPage() {
   }
 
   async function saveRx(rx){
+    if(savedRx.current[rx.id] === rxSnap(rx)) return;
     try {
       var dose = rx.dose || '1';
       var freq = parseInt(rx.frequency) || 1;
@@ -346,9 +405,9 @@ export default function ConsultationPage() {
         days: days,
         route: rx.route || '',
         memo: rx.memo || '',
-        unit_price: rx.unit_price,
-        total_qty: (parseFloat(dose)||0) * freq * days
+        unit_price: rx.unit_price
       });
+      rememberRx([updated]);
       setRxList(function(list){ return list.map(function(r){ return r.id===rx.id ? updated : r; }); });
     } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
   }
@@ -533,7 +592,7 @@ export default function ConsultationPage() {
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                 <div style={{padding:'5px 10px',background:scBg,display:'flex',justifyContent:'space-between',borderBottom:'1px solid '+bd,alignItems:'center'}}>
-                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}</span>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}{noPriceCount ? <span title={t.cs_noPriceHint} style={{marginLeft:8,color:'#fbbf24',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPriceCount||'').replace('{n}', noPriceCount)}</span> : null}</span>
                   <button onClick={function(){setDrugModal(true)}} style={{background:'#10b98120',color:'#34d399',border:'1px solid #10b98140',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>+ {t.drugSearch}</button>
                 </div>
                 {/* Code input */}
@@ -554,7 +613,7 @@ export default function ConsultationPage() {
                           onMouseEnter={function(){setOSelIdx(i)}}>
                           <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||label(CODE_TYPE_KEY, d.code_type)||'ORD'):t.cs_badgeDrug}</span>
                           <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:55}}>{d.code}</span>
-                          <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}</span>
+                          <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}{noPrice(isOrder ? (d.price_clinic || d.price) : d.unit_price) ? <NoPriceBadge/> : null}</span>
                           <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):(d.default_route||'')}</span>
                         </div>;
                       })}
@@ -570,7 +629,7 @@ export default function ConsultationPage() {
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:58}}>{t.qty}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.tms}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:52}}>{t.day}</th>
-                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:70}}>{t.usage}</th>
+                      <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:70}}>{t.cs_colSig}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:64}}>{t.unit}</th>
                       <th style={{padding:'5px 6px',textAlign:'center',color:t3,fontSize: 12,width:55}}>{t.worklist}</th>
                     </tr></thead>
@@ -586,15 +645,15 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}</td>
+                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}</td>
                           {done ? <>
-                            <td style={cellRO}>{rx.dose||''}</td>
+                            <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
                             <td style={cellRO}>{rx.frequency||''}</td>
                             <td style={cellRO}>{rx.days||''}</td>
                             <td style={cellRO}>{rx.route||''}</td>
                             <td style={cellRO}>{rx.memo||''}</td>
                           </> : <>
-                            <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input type="number" min="1" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
@@ -610,7 +669,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{o.order_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}</td>
+                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}{noPrice(o.unit_price) ? <NoPriceBadge/> : null}</td>
                           <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
