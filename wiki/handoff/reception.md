@@ -2,6 +2,47 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑦ 내원구분: 초진 · 재진 · 진료비 없음 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`a42550a` 위, `develop` ff 뒤)
+- **한 일**: `decisions.md` 2026-09-29 결정 그대로.
+  - 단추는 **Nouvelle(초진) · Suivi(재진) · Sans frais(진료비 없음)** 세 개. 응급·의뢰 단추는 없음. 서버 `VISIT_TYPES`는 그대로 — 옛 값이면 단추 아래에 지금 값을 보여 줌
+  - **제안 규칙**(`suggestedVisitType`): 이번 접수의 진료과(없으면 담당의 소속과, 그것도 없으면 초진)에 **취소 아닌 이전 내원**이 있으면 재진, 아니면 초진. 기간 제한 없음. 진료비 없음은 제안하지 않음. 재진을 골라 두면 「Déjà venu en SUR : Suivi présélectionné…」 안내
+  - 담당의를 바꾸면 다시 계산. **직원이 누른 값은 덮지 않음**(`visitTypeSource` = auto / manual / loaded)
+  - 계획 노트의 두 주의 그대로:
+    · 청구가 있는 내원은 단추 잠금 — `/visits/today`에 `has_active_bill`
+    · 접수 수정 때는 단추를 눌렀거나 의사를 바꿨을 때만 `visit_type`을 보냄
+  - 30초 새로고침이 고른 내원의 `has_active_bill`·`visit_type`도 맞춤
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `backend/src/routes/visit.routes.js`(`/today` 칸 1개, `/patient/:patientId` 권한에 `registration`), `backend/test/reception.api.mjs`(표 1줄)
+- **⚠ S2 표 변경**: `GET /visits/patient/:patientId`에 **registration 추가**. 접수가 이제 이전 내원을 읽어 제안하기 때문(S2 때는 접수가 부르지 않았음). 시험 스크립트도 고침 → 다시 114/114
+- **공용 파일 변경**: i18n `rc_` 블록에 키 4개. 공용 키 `newVisit`·`followUp`은 읽기만(값 그대로)
+- **DB 마이그레이션**: 없음
+- **번역 키**: `rc_visitNoFee` `rc_visitTypeLocked` `rc_visitTypeOther` `rc_visitTypeSuggested` (ko · en · fr)
+- **확인한 방법**:
+  - `node --check`, `npm run build` 통과. 격리 스택 9181(develop `a42550a` 위). 다른 과 비교용으로 FM 의사를 1명 더 만듦
+  - 화면(프랑스어) 1~5:
+    1. 빈 화면 → Nouvelle
+    2. SUR에 완료된 내원이 있는 환자 + SUR 의사 → Suivi와 안내
+    3. 같은 환자 + FM 의사 → Nouvelle
+    4. Nouvelle을 손으로 누른 뒤 FM→SUR로 바꿔도 Nouvelle 유지
+    5. Sans frais로 등록 → DB `none`
+  - 화면 6~9:
+    6. 대기 내원을 고르고 메모만 고치는 사이 DB에서 `followUp`으로 바꿔 둠 → 저장 뒤에도 `followUp`(덮지 않음). 한국어로 바꿔 「초진」을 누르고 저장 → `newVisit`
+    7. SUR에 **취소된** 내원만 있는 환자 + SUR → Nouvelle
+    8. 수납 끝난 내원 → 단추 3개 잠김, 한국어·프랑스어 안내
+    9. 옛 `emergency` 내원 → 「지금 값: 응급 (수납에서 정함)…」
+  - API: `visit_type='none'` 내원 → `/billing/visit/:id/items`가 `none`, `/billing/pending`에 추가 청구 0
+  - 권한 시험 114/114
+- **확인 못 한 것**:
+  - 수납 화면 자체에서 `none` 내원을 눌러 보지 않음(API로만). 수납 세션이 응급·의뢰를 빼는 작업과 겹치지 않는지는 합칠 때 확인 필요
+  - 영어 화면은 안 누름
+- **위키**: `modules/reception.md` 머리, 2.1(내원구분 이름)·2.2·2.4(**Type de Visite** 줄)·2.6·2.8(단추 아래 안내 3줄), 3절(내원구분 흐름·제안 규칙·잠금), 4절(권한표·`/today`·`/patient`), 5절(수납·통계), 6절(오더 코드·소속과), 7절(⑥ 하지 않음, ⑦ 고침), 8절
+- **총괄 확인 요청**:
+  - S2 표에서 `/visits/patient`에 registration이 늘어난 것 — 설정 세션 표·decisions 기록과 맞춰 주세요
+  - 수납 화면의 선택 칸에서 응급·의뢰를 빼면, 수납의 `noConsult`(「진료 없음 (0원)」)와 접수의 `rc_visitNoFee`(「진료비 없음」)가 같은 값인데 글자가 다름. 실장님 말씀은 「진료비 없음」 — 공용 키 `noConsult`를 맞출지 판단 부탁(총괄 소관)
+- **다른 세션에 부탁**: **수납** — 이제 접수가 고른 초진/재진/진료비 없음이 진료비 칸의 처음 값으로 뜹니다(수납 코드 변경 불필요). 수납이 청구하면 접수 쪽 단추는 잠깁니다
+
 ## 2026-09-29 — 서버 권한 검사 (S2, 실장님 결정)
 
 > **총괄 확인 (2026-09-29)**: S2 `3e03fa4` 합침(`33b5e81`) + 실행 중 EMR 반영. 실행 중 EMR에서 역할별(관리자·의사·접수·약국·검사) × 13개 라우트를 읽기만으로 확인 — 표와 일치. 의사·약국·검사 계정의 환자 등록(POST)은 403, 환자 수 2명 그대로. `backend/test/reception.api.mjs`는 격리 스택 전용이라 운영에서는 돌리지 않음.

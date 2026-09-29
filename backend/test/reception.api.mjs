@@ -103,7 +103,7 @@ const ROUTES = [
   ['POST', '/patients', { last_name: 'Permission', first_name: 'Created' }, ['registration']],
   ['PUT', '/patients/' + P.id, { last_name: 'Permission', first_name: 'Test' }, ['registration']],
   ['GET', '/visits/today', null, ['registration', 'consultation']],
-  ['GET', '/visits/patient/' + P.id, null, ['consultation', 'lab', 'payment']],
+  ['GET', '/visits/patient/' + P.id, null, ['registration', 'consultation', 'lab', 'payment']],
   ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, ['registration']],
   ['PUT', '/visits/' + V.id + '/status', { status: 'waiting' }, ['registration']],
   // what the payment screen sends (Payment.jsx): visit_type alone

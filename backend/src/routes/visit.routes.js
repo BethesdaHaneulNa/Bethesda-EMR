@@ -9,8 +9,9 @@ router.use(authMiddleware);
 
 // Who may call what (decided 2026-09-29, S2), from the screens that call each route:
 // /today - reception and consultation's queues; /patient/:id - PatientFinder in
-// visit mode (consultation, lab, payment; pharmacy and reception use it in patient
-// mode, which never lists visits). Registering, cancelling and editing a visit are
+// visit mode (consultation, lab, payment; pharmacy uses it in patient mode, which
+// never lists visits) and reception, which reads the past visits to suggest first
+// visit or follow-up (Registration.jsx suggestedVisitType). Registering, cancelling and editing a visit are
 // reception's; payment may also PUT /:id, but only to change visit_type (below).
 
 // GET /api/visits/today - today's queue
@@ -18,7 +19,11 @@ router.get('/today', permMiddleware('registration', 'consultation'), async (req,
   try {
     const { status, doctor_id, department_id } = req.query;
     let query = `SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.blood_type, p.allergies, p.reception_note, p.phone as patient_phone,
-                 d.code as dept_code, d.name as dept_name, s.name as doctor_name
+                 d.code as dept_code, d.name as dept_name, s.name as doctor_name,
+                 -- Reception locks the fee-type buttons once a bill exists: changing
+                 -- visit_type then would put the visit back on the payment list as an
+                 -- extra charge or a refund. Payment itself changes it there instead.
+                 EXISTS (SELECT 1 FROM billing b WHERE b.visit_id = v.id AND b.payment_status <> 'cancelled') AS has_active_bill
                  FROM visit v
                  JOIN patient p ON v.patient_id = p.id
                  LEFT JOIN department d ON v.department_id = d.id
@@ -38,7 +43,7 @@ router.get('/today', permMiddleware('registration', 'consultation'), async (req,
 });
 
 // GET /api/visits/patient/:patientId - 환자의 전체 내원 이력 (외래 내역)
-router.get('/patient/:patientId', permMiddleware('consultation', 'lab', 'payment'), async (req, res) => {
+router.get('/patient/:patientId', permMiddleware('registration', 'consultation', 'lab', 'payment'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT v.id, v.patient_id, v.visit_date, v.reception_time, v.visit_type, v.status,

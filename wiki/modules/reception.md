@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 서버 권한 검사(S2) — 확인 요청. 다음: ⑦ 내원구분(초진·재진·진료비 없음) → ④ 중복·동명이인 경고 (실장님 결정 받음)
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑦ 내원구분(초진·재진·진료비 없음, 같은 과면 재진 제안) — 확인 요청. 다음: ④ 중복·동명이인 경고
 
 ## 1. 이 모듈이 하는 일
 
@@ -22,7 +22,7 @@
 
 맨 위 메뉴 줄에서 **Enregistrement (접수)** 를 누릅니다. 화면은 세 칸입니다.
 
-- **왼쪽 — Recherche / Enregistrement (환자 검색 / 접수)**: 환자 찾기, 환자 정보, 그 아래 **Service / Type de Visite (진료과 / 진환구분)** 에서 오늘 접수 내용.
+- **왼쪽 — Recherche / Enregistrement (환자 검색 / 접수)**: 환자 찾기, 환자 정보, 그 아래 **Service / Type de Visite (진료과 / 내원구분)** 에서 오늘 접수 내용.
 - **가운데 — Consultations précédentes (이전 진료 기록)**: 고른 환자의 지난 진료 기록(읽기만). 맨 위에 이름·차트번호와, 돈 문제가 있으면 **Dû (미수)** · **Rembours. (환불예정)** 상자.
 - **오른쪽 — Attente / Terminé aujourd'hui (오늘 대기 / 완료)**: 오늘 접수한 환자 목록. **30초마다 저절로** 새로 고쳐집니다(2.5).
 
@@ -44,7 +44,7 @@
 1. 먼저 이미 등록된 환자가 아닌지 확인합니다. 왼쪽 위 **Rechercher patient (기존 환자 검색)** 칸에 이름·차트번호·전화번호를 넣고 **Enter**.
 2. 목록에 없으면 **+ Nouveau patient** 를 누릅니다.
 3. 2.4의 칸을 채웁니다. 꼭 필요한 것은 **Nom** 과 **Prénom** 둘뿐입니다.
-4. **Service / Médecin** 에서 의사를 고르고, **Motif** 와 **Mémo Réception** 을 적습니다.
+4. **Service / Médecin** 에서 의사를 고르고, **Type de Visite** 가 맞는지 봅니다(2.4). **Motif** 와 **Mémo Réception** 을 적습니다.
 5. 파란 **Enregistrer / Mettre en attente** 를 누릅니다.
    - 저장하는 동안 버튼이 흐려지고 **Enregistrement…** 로 바뀌며 더 눌리지 않습니다.
    - 「Patient mis en attente — *이름* (N° dossier *차트번호*)」 창이 뜨면 끝입니다. 환자가 오른쪽 **En Attente** 목록에 나타납니다.
@@ -80,10 +80,11 @@
 | 칸 | 뜻 |
 |---|---|
 | **Service / Médecin (진료과 / 담당의사)** | 의사를 고르면 진료과는 그 의사의 소속과로 **자동으로** 정해집니다(목록에 `SUR – Dr …` 처럼 과 약자가 앞에 붙음). 모르면 **—** 로 두어도 접수됩니다 |
+| **Type de Visite (내원구분)** | **Nouvelle (초진)** · **Suivi (재진)** · **Sans frais (진료비 없음)** 중 하나. 수납할 때 진료비가 이것으로 정해집니다(초진 C01, 재진 C02, 진료비 없음 0). **재진은 「같은 진료를 이어서 받는 것」** 입니다 — 두 번째 방문이라도 다른 병이면 초진입니다.<br>EMR이 먼저 골라 둡니다: 고른 의사의 진료과에 **전에 온 적이 있으면 Suivi**(아래에 「Déjà venu en GS : Suivi présélectionné…」 안내), 처음이거나 다른 과면 **Nouvelle**. 취소된 접수는 안 셉니다. **Sans frais** 는 저절로 골라지지 않습니다.<br>맞지 않으면 **단추를 눌러 바꾸세요.** 한 번 누른 값은 의사를 바꿔도 그대로 남습니다.<br>수납이 끝난 접수는 단추가 잠기고 「Déjà encaissé…」가 보입니다 — 수납 화면에서 바꿉니다 |
 | **Motif (주호소)** | 환자가 온 이유. 의사 화면과 대기 목록에 보입니다 |
 | **Mémo Réception (접수 메모)** | 오늘 접수에만 붙는 메모. 늘 필요한 내용은 위의 **Note d'accueil** 에 적습니다 |
 
-> 진료비 종류(신환·재진 등)는 지금 접수 화면에서 고르지 않습니다. 모두 **신환**으로 들어가고, 수납 창구에서 바꿉니다.
+> 응급·의뢰는 따로 고르지 않습니다(실장님 결정 2026-09-29). 예전 접수에 응급·의뢰가 들어 있으면 단추 아래에 「Valeur actuelle : Urgence…」처럼 지금 값이 보이고, 단추를 누르면 그 값으로 바뀝니다.
 
 **가운데 위 상자**
 
@@ -110,9 +111,10 @@
 ### 2.6 접수 내용 고치기 · 대기 취소
 
 1. 오른쪽 목록에서 환자를 누르면 왼쪽에 그 접수 내용이 채워지고, 파란 버튼이 **Modifier l'enregistrement** 로 바뀝니다.
-2. 담당의사·주호소·접수 메모를 고친 뒤 그 버튼을 누릅니다. 「Enregistrement modifié — *이름*」 창이 뜹니다.
+2. 담당의사·**내원구분**·주호소·접수 메모를 고친 뒤 그 버튼을 누릅니다. 「Enregistrement modifié — *이름*」 창이 뜹니다.
    - 의사를 **—** 로 바꾸면 담당의사가 비워집니다.
    - 진료 상태(En Attente · En cours · Terminé)는 이 버튼으로 바뀌지 않습니다.
+   - 내원구분은 **단추를 눌렀거나 의사를 바꿨을 때만** 저장됩니다. 그냥 메모만 고치면 수납 창구가 그 사이 바꿔 둔 값이 그대로 남습니다.
 3. 아직 **En Attente** 인 환자는 빨간 **Annuler l'attente / Retirer** 버튼이 보입니다. 누르면 「Annuler l'attente de *이름* et le retirer de la liste ?」라고 묻고, 확인하면 목록에서 빠집니다.
    - 의사가 진료를 시작하면 이 버튼은 30초 안에 저절로 사라집니다. 그 사이에 눌렀다면 취소되지 않고 안내 창이 뜹니다(2.8).
 
@@ -142,6 +144,9 @@
 | 「Cet enregistrement est introuvable. La liste a été actualisée.」 | 그 접수 기록을 찾지 못했습니다. 새로 고쳐진 목록에서 다시 고릅니다 |
 | 「Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres.」 | 날짜·숫자 칸의 형식이 틀렸습니다. 확인하고 다시 누릅니다 |
 | 「Vous n'avez pas l'autorisation pour cette action. Demandez l'accès « Enregistrement » à l'administrateur.」 | 이 계정에 「접수」 권한이 없습니다(관리자가 방금 뺐을 수도 있음). 관리자에게 **Paramètres → Staff** 에서 **🏥 Enregistrement** 를 체크해 달라고 합니다 |
+| 내원구분 단추 아래 「Déjà venu en *과* : Suivi présélectionné. Si c’est un autre problème, choisissez Nouvelle.」 | 그 과에 전에 온 적이 있어 재진을 골라 두었습니다. 다른 병으로 왔으면 **Nouvelle** 을 누릅니다 |
+| 내원구분 단추 아래 「Déjà encaissé : le type de visite se change à l'écran Paiement.」 (단추가 흐림) | 이미 수납한 접수입니다. 진료비 종류는 수납 창구에서 바꿉니다 |
+| 내원구분 단추 아래 「Valeur actuelle : Urgence (fixée au Paiement)…」 | 예전 방식(응급·의뢰)으로 저장된 접수입니다. 그대로 두거나, 맞는 단추를 누릅니다 |
 | 「Erreur : …」 | 위에 없는 오류입니다. 창의 글자를 그대로 적어 관리자에게 알립니다 |
 | 서버는 되는데 오른쪽 목록이 비어 있음 | 화면을 처음 열 때 서버에 닿지 못했을 수 있습니다. 30초 안에 저절로 다시 불러옵니다. 계속 비어 있으면 화면을 새로 고치고(F5), 그래도 안 되면 관리자에게 알립니다. (오늘 접수가 정말 없으면 당연히 비어 있습니다) |
 
@@ -161,7 +166,7 @@
 
 ### 흐름
 
-- **대기 목록 자동 새로고침** — 화면이 열려 있는 동안 30초마다, `document.hidden`이 아닐 때만 `refreshQueue()`가 `/visits/today`를 다시 받음 (임상병리 화면과 같은 규칙). 바꾸는 것은 `visits`와, 고른 내원(`sel`)의 **`status` 하나**뿐 — 그래야 진료가 시작된 내원에서 「대기 취소」 버튼이 사라짐. `form`·`visitForm`·`memo`·`selectedPatient`는 건드리지 않아 쓰던 내용이 남음. 실패하면 조용히 기존 목록 유지(알림 없음). `queueSeq`(ref)가 요청마다 번호를 매겨, 느리게 온 옛 응답이 새 목록을 덮지 못하게 함 — `loadData()`도 같은 번호를 씀. 진료과·의사 목록은 자동으로 다시 받지 않음(바뀔 일이 드묾).
+- **대기 목록 자동 새로고침** — 화면이 열려 있는 동안 30초마다, `document.hidden`이 아닐 때만 `refreshQueue()`가 `/visits/today`를 다시 받음 (임상병리 화면과 같은 규칙). 바꾸는 것은 `visits`와, 고른 내원(`sel`)의 **`status`·`has_active_bill`·`visit_type`** 뿐 — 그래야 진료가 시작된 내원에서 「대기 취소」 버튼이 사라지고, 그 사이 수납된 내원의 내원구분 단추가 잠김. `form`·`visitForm`·`memo`·`selectedPatient`는 건드리지 않아 쓰던 내용이 남음. 실패하면 조용히 기존 목록 유지(알림 없음). `queueSeq`(ref)가 요청마다 번호를 매겨, 느리게 온 옛 응답이 새 목록을 덮지 못하게 함 — `loadData()`도 같은 번호를 씀. 진료과·의사 목록은 자동으로 다시 받지 않음(바뀔 일이 드묾).
 - **환자 고르기** — 검색 결과나 환자 찾기 창에서 고르면 `fillPatient(p)`: 환자 행으로 `form`을 채우고 `sel`을 비우고 `/patients/:id/history`로 이전 진료를 불러옴.
 - **대기 목록에서 고르기** — `selectVisit(v)`: `/visits/today` 행으로 `form`·`visitForm`을 채움.
 - **보내는 환자 필드** — `patientBody()`가 화면에 있는 칸만 보냄: `last_name` `first_name`(앞뒤 공백 제거) `date_of_birth` `gender` `phone` `blood_type` `allergies` `reception_note`. `national_id` `mobile` `address` `city` `region`은 **보내지 않으므로 서버가 그대로 둠** (2026-09-29 전에는 대기 목록에서 고른 환자를 저장하면 이 칸들을 빈 값으로 덮었음 — 7절 ⑤). 나중에 이 칸들의 입력을 추가하면 `form`·`fillPatient`·`selectVisit`·`patientBody`에 같이 넣되, `selectVisit`은 `/visits/today` 행에 이 값이 없으니 `/patients/:id`로 받아 채워야 함.
@@ -172,12 +177,16 @@
 - **💾 환자 정보 저장** — `savePatientOnly()`: `selectedPatient.id`가 있으면 `PUT /patients/:id`, 없으면 `POST /patients`.
 - **접수 / 대기 등록 · 접수 정보 수정** — `createOrUpdateVisit()`:
   1. 신규면 `POST /patients` (차트번호 생성) 후 **바로 `selectedPatient`에 기억**. 뒤의 내원 생성이 실패해 다시 눌러도 새 환자를 또 만들지 않음 (7절 ③). 기존이면 `PUT /patients/:id` — **실패하면 여기서 멈추고 오류를 보여줌** (예전에는 `catch (e) {}`로 삼키고 접수를 진행해 수정 내용이 조용히 사라졌음).
-  2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint` `reception_memo`**만** 보냄. `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`도 안 보냄 — 이 화면에 입력 칸이 없고, 수납이 그 사이 바꿨을 수 있음. `sel`이 없으면 `POST /visits`.
+  2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint` `reception_memo`**만** 보냄. `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`은 `visitTypeSource`가 `'loaded'`가 아닐 때(단추를 눌렀거나 의사를 바꿔 제안이 다시 계산됐을 때)만, 그리고 `has_active_bill`이 아닐 때만 보냄 — 수납이 그 사이 바꾼 값을 덮지 않으려고. `sel`이 없으면 `POST /visits`(늘 `visit_type` 포함).
   3. 목록 다시 불러오고 입력칸을 비움 (`startNewPatient()`).
 - **상태 버튼** — `changeStatus()` → `PUT /visits/:id/status`. 화면에서 허용하는 이동: 대기→완료, 진료중→대기, 진료중→완료, 완료→대기.
 - **대기 취소** — `cancelVisit()` → `PUT /visits/:id/status` `{status:'cancelled'}`. 서버가 409로 거절하면(이미 진료 시작) 안내하고 목록을 새로 불러옴. (2026-09-29 전에는 `'canceled'` 오타로 늘 실패 — 7절 ①)
 - **진료과** — 의사를 고르면 `doctors` 목록에서 그 의사의 `department_id`를 찾아 `visitForm.department`에 넣음. 진료과만 따로 고르는 칸은 없음. `depts`(`/admin/departments`)는 불러오지만 쓰지 않음.
-- **내원구분** — 제목에는 「진료과 / 내원구분」이라고 되어 있지만 **고르는 칸이 없음**. 새 접수는 항상 `newVisit`. 첫 커밋(`e553fef`)부터 이랬음. 진료비 종류는 수납 화면에서 바꾸고 그 값이 `PUT /visits/:id`로 내원에 다시 저장됨 (`Payment.jsx` 187·220행).
+- **내원구분** — 단추 세 개 `newVisit`(초진) · `followUp`(재진) · `none`(진료비 없음). 2026-09-29 실장님 결정: 응급·의뢰 단추는 없음(서버 `VISIT_TYPES`·오더 코드 C03·C04·옛 기록은 그대로 — 예전 값이면 단추 아래 `rc_visitTypeOther`로 보여 줌). 글자는 공용 키 `newVisit`·`followUp`과 `rc_visitNoFee`.
+  - **값의 출처** `visitTypeSource`: `'auto'`(제안 — 의사·이전 내원이 바뀌면 다시 계산), `'manual'`(직원이 누름 — 덮지 않음), `'loaded'`(대기 목록에서 고른 내원의 저장된 값 — 그대로 보여 주고 보내지 않음). 새 환자·환자 고르기 → `'auto'`, 대기 목록에서 고르기 → `'loaded'`, 그 상태에서 의사를 바꾸면(청구 없을 때) → `'auto'`.
+  - **제안 규칙** `suggestedVisitType(deptId, doctorId, past, excludeVisitId)` — 실장님 결정: 이번 접수의 진료과(없으면 담당의의 소속과, 그것도 없으면 초진)에 **취소 아닌 이전 내원**이 있으면 재진, 아니면 초진. 기간 제한 없음. 이전 내원의 과도 `department_id`가 없으면 그 내원 담당의의 **지금** 소속과로 봄(비활성 의사는 목록에 없어 과를 모름 → 그 내원은 안 셈). 수정 중인 내원 자신은 뺌. `none`은 제안하지 않음. **규칙을 바꿀 때는 이 함수만.**
+  - 이전 내원은 `loadPastVisits()`가 `GET /visits/patient/:id`로 받음(실패하면 빈 목록 → 초진 제안). 이 때문에 그 라우트 권한에 `registration`을 더함(4절).
+  - **잠금**: `sel.has_active_bill`이면 단추 `disabled` + `rc_visitTypeLocked`. 청구 뒤에 바꾸면 `/billing/pending`이 추가청구·환불로 다시 올리기 때문. 서버는 막지 않음 — 수납 자신이 추가 청구 전에 `PUT /visits/:id {visit_type}`을 부름.
 
 ### 대기 탭과 내원 상태
 
@@ -224,7 +233,7 @@
 | `GET /patients/chart/:chartNo` | registration | 없음 |
 | `GET /patients/:id/billing-history` | payment | 없음 |
 | `GET /visits/today` | registration · consultation | 접수, 진료 |
-| `GET /visits/patient/:patientId` | consultation · lab · payment | PatientFinder 내원 모드(진료·임상병리·수납). 약국·접수는 환자 모드라 안 부름 |
+| `GET /visits/patient/:patientId` | registration · consultation · lab · payment | PatientFinder 내원 모드(진료·임상병리·수납), **접수의 초진/재진 제안**(`loadPastVisits`). 약국은 환자 모드라 안 부름 |
 | `POST /visits` · `PUT /visits/:id/status` | registration | 접수 |
 | `PUT /visits/:id` | registration · payment — 단 **registration 없이 payment만** 있으면 `visit_type` 말고 다른 칸을 보내는 순간 403 (조용히 빼지 않음 — 잘못된 호출이 드러나게) | 접수, 수납(`visit_type`만) |
 
@@ -240,8 +249,8 @@
 | `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함 | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
-| `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사. 접수시각순 | 접수, 진료(15초마다) |
-| `GET /api/visits/patient/:patientId` | 그 환자의 모든 내원 + 대표 청구 1건 | PatientFinder |
+| `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사 + `has_active_bill`(취소 안 된 청구가 있는지). 접수시각순 | 접수(30초마다), 진료(15초마다) |
+| `GET /api/visits/patient/:patientId` | 그 환자의 모든 내원 + 대표 청구 1건 | 접수(초진/재진 제안), PatientFinder |
 | `POST /api/visits` | 접수. `visit_type` 검사함. `status='waiting'`, `reception_time`은 서버 시각 `HH:MM`, `registered_by`는 로그인 직원 | 접수 |
 | `PUT /api/visits/:id/status` | 상태만 변경. `VISIT_STATUSES` 검사. **`cancelled`로는 `registered`·`waiting`인 내원만** 바꿀 수 있고, 아니면 409 `{error:'Only a waiting visit can be cancelled', status:<지금 상태>}` — 진료·처방·청구가 붙은 내원을 취소하면 다른 화면이 모두 무시하는 내원에 그것들이 매달려 버리기 때문 | 접수 |
 | `PUT /api/visits/:id` | 수정. **본문에 있는 칸만** 씀 (`VISIT_FIELDS`: `visit_type` `department_id` `doctor_id` `chief_complaint` `reception_memo` `status`). `department_id`·`doctor_id`는 `null`/`''`로 **비울 수 있음**. `visit_type`·`status`는 `null`이면 무시, 값이 있으면 POST와 같은 목록으로 검사(400). 빈 본문은 400 | 접수, 수납(`visit_type`만) |
@@ -304,10 +313,10 @@
 ## 5. 다른 모듈과의 연결
 
 - **진료** — `/visits/today`를 15초마다 읽어 대기 환자를 보여줌. 환자를 열면 내원이 `in_progress`, 완료하면 `completed`. 진료 화면의 알레르기 경고는 접수에서 넣은 `patient.allergies`. `consultation.visit_id`로 내원에 매달림 (내원 하나에 진료 하나 — `idx_consult_visit_unique`).
-- **수납** — `status='completed'`인 내원이 수납 대기에 뜸. 진료비는 `visit.visit_type`으로 정해지고, 수납 화면에서 바꾸면 `PUT /visits/:id`로 내원에 다시 씀. 접수 화면의 미수·환불예정 배지는 `/billing/patient/:id/balance`.
+- **수납** — `status='completed'`인 내원이 수납 대기에 뜸. 진료비는 `visit.visit_type`으로 정해짐(`newVisit` C01, `followUp` C02, `none` 0). **접수가 고른 값이 수납 화면 진료비 칸의 처음 값**(`Payment.jsx`가 `bi.visit_type`을 읽음 — 수납 코드 변경 없이). 수납 화면에서 바꾸면 `PUT /visits/:id`로 내원에 다시 씀. 청구가 생기면 접수 쪽 단추는 잠김. 접수 화면의 미수·환불예정 배지는 `/billing/patient/:id/balance`.
 - **약국 · 임상병리** — 환자 찾기 창(`PatientFinder`)과 `chart_no`로 환자를 찾음. 검사 결과는 `lab_result.visit_id`로 내원에 붙음.
 - **PACS** — 워크리스트가 `patient.chart_no`를 DICOM **PatientID**로, `date_of_birth`·`gender`를 그대로 장비에 보냄 (`worklist.routes.js` 70·85행, `pacs.routes.js` 159행). 차트번호가 바뀌면 영상과 환자의 연결이 끊어집니다.
-- **통계** — `visit`를 날짜 범위로 세서 총 내원, 신환(`newVisit`)/재진(`followUp`)/기타, 상태별, 진료과별, 의사별, 월별 추이를 냄 (`stats.routes.js` 28~55·146행). 접수에서 내원구분을 못 고르므로 **수납 전까지는 전부 신환으로 잡힘** (7절 ⑦).
+- **통계** — `visit`를 날짜 범위로 세서 총 내원, 초진(`newVisit`)/재진(`followUp`)/기타, 상태별, 진료과별, 의사별, 월별 추이를 냄 (`stats.routes.js` 28~55·146행). 2026-09-29부터 접수에서 초진/재진을 고르므로 수납 전에도 맞게 잡힘(그 전 기록은 수납 전까지 모두 `newVisit`이었음).
 - **문서** — `DocumentModal`이 `/patients/:id`로 환자 정보를 받아 인쇄 양식 머리에 넣음 (주소·전화 포함).
 - **설정** — 담당의사 목록은 `/admin/doctors`(`role='doctor'`이고 `active`인 직원), 진료과는 직원의 소속과(`staff.department_id`). 설정 화면 직원 탭에서 정합니다.
 
@@ -318,7 +327,8 @@
 - **설정 → 직원 → 권한**: 🏥 Enregistrement(`registration`)가 있어야 접수 화면과 환자 등록·접수 API를 씀. Front Desk·간호사 역할은 기본으로 있음. 다른 화면이 환자를 찾고 보는 데 필요한 권한은 4절 표.
 
 - **설정 → 직원**: 역할이 `doctor`이고 활성인 직원만 담당의사 목록에 나옴. 직원의 소속 진료과가 접수 때 진료과로 들어감 — 소속과가 없으면 진료과 없이 접수됨.
-- **설정 → 오더 코드**: 진료비 `C01`(신환) `C02`(재진) `C03`(응급) `C04`(의뢰) 가격 — 수납이 `visit_type`으로 고름.
+- **설정 → 오더 코드**: 진료비 `C01`(초진) `C02`(재진) 가격 — 수납이 `visit_type`으로 고름. `C03`(응급)·`C04`(의뢰)는 옛 기록용으로 남아 있고 접수에서는 고르지 않음. 「진료비 없음」은 코드 없이 0.
+- **설정 → 직원 → 소속 진료과**: 초진/재진 제안이 의사의 소속과로 「같은 과」를 판단함. 소속과가 없는 의사를 고르면 늘 초진 제안.
 - **`.env`의 `TZ`**: 「오늘」의 기준. DB(`PGTZ`)와 백엔드가 같은 값을 써야 `visit_date`와 `reception_time`이 맞음. `docker-compose.yml`은 `.env`에 `TZ`가 없으면 DB는 `UTC`, 백엔드는 `Indian/Antananarivo`로 **서로 다르게** 기본값을 잡음 — 설치 스크립트가 `.env`에 `TZ`를 넣으므로 보통은 문제없음.
 
 ## 7. 알려진 문제 · 제약
@@ -334,8 +344,8 @@
 | ③ | ✅ 고침 — 일부 (보통) | **같은 신규 환자가 두 번 등록될 수 있다.** 버튼 연타를 막지 않음. 또 환자 생성은 됐는데 내원 생성이 실패하면, 만든 환자를 기억하지 않아 다시 누를 때 새 환자를 또 만듦. 서버에도 같은 이름·생년월일 확인이 없음 | `Registration.jsx:179-187,331` · `patient.routes.js:55-72` | 코드 |
 | ④ | 보통 | 같은 환자를 같은 날 두 번 접수해도 경고가 없다 (진료·청구도 두 건이 됨) | `visit.routes.js:62-82` | 코드 |
 | ⑤ | ✅ 고침 (보통, 잠재) | **대기 목록에서 고른 환자를 저장하면 `national_id` `mobile` `address` `city` `region`이 빈 값으로 덮인다.** `/visits/today`가 이 칸들을 안 주는데 화면은 빈 문자열로 채워 `PUT /patients`로 보냄. 지금은 이 칸들을 입력하는 화면이 없어 잃을 값이 없지만, **주소·연락처 입력 칸을 추가하는 순간 실제 데이터 손실이 됨** | `Registration.jsx:127-132,145-157,190-197` · `visit.routes.js:13` · `patient.routes.js:81` | 코드 |
-| ⑥ | 보통 | **진료과를 따로 고를 수 없다.** 의사의 소속과가 자동으로 들어감. 소속과가 없는 의사면 진료과가 비어 통계에서 「(미지정)」. `35ddb4b` 커밋은 「한 의사가 여러 과 진료를 볼 수 있으니 내원의 과는 의사 소속과와 별개」라고 설계를 밝혔는데 화면이 그걸 못 함. `/admin/departments`는 불러놓고 안 씀 | `Registration.jsx:74-75,318-327` | 코드 |
-| ⑦ | 보통 | **내원구분(신환·재진·응급·의뢰)을 고르는 칸이 없다.** 제목에만 있고 항상 `newVisit`. 수납에서 고치기 전까지 통계의 신환/재진 구분이 틀리고, 수납 직원이 매번 손으로 바꿔야 함 | `Registration.jsx:55,316` · `Payment.jsx:187` · `stats.routes.js:32-34` | 코드 |
+| ⑥ | 하지 않음 (실장님 결정) | 진료과를 의사와 따로 고르는 칸 — 2026-09-29 실장님 결정으로 **만들지 않음**. 「진료과 + 원장님 이름」이 한 줄(`GS – 이름`)로 붙어 나오는 지금 방식이 병원의 방식. 소속과가 없는 의사로 접수하면 진료과가 비는 점은 그대로(설정에서 소속과를 넣어 해결) | `Registration.jsx` 담당의 선택 | — |
+| ⑦ | ✅ 고침 (보통) | 내원구분을 고르는 칸이 없어 모든 접수가 `newVisit`였다. → 단추 **초진 · 재진 · 진료비 없음**(실장님 결정 — 응급·의뢰 없음), 같은 과에 온 적 있으면 재진 제안, 청구 뒤 잠금, 수정 때는 바꿨을 때만 저장 | `Registration.jsx` `suggestedVisitType` · `visit.routes.js` `/today` | 화면 9가지(3절 흐름대로) |
 | ⑧ | ✅ 고침 — S2 (보통) | 환자·내원 API에 모듈 권한 검사가 없었다(로그인만 하면 약국·검사 계정도 인적사항 수정·내원 상태 변경 가능). → 2026-09-29 실장님 결정 S2로 라우트별 권한(4절 표). 수납 권한만 있는 계정은 `PUT /visits/:id`에서 `visit_type`만 | `patient.routes.js` · `visit.routes.js` | 시험 스크립트 114건 + 역할별 화면 |
 | ⑨ | ✅ 고침 (보통) | `PUT /visits/:id`는 `visit_type`·`status` 검사를 안 한다 (`POST`는 함). 잘못된 `visit_type`은 수납에서 `C01` 진료비로 조용히 계산됨. 또 `COALESCE` 때문에 담당의·진료과를 **비울 수 없음** | `visit.routes.js:103-118` vs `:68` · `billing.routes.js:28-30` | 코드 |
 | ⑩ | 보통 | 지난 날의 대기가 사라진다. `/visits/today`는 오늘 것만 보여줘서, 어제 `waiting`·`in_progress`로 남은 내원은 접수·진료 화면 어디에도 안 나오고 통계에는 「진행중」으로 계속 남음. 의도인지 **확인 필요** | `visit.routes.js:19` · `stats.routes.js:37` | 코드 |
@@ -361,7 +371,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | 서버 권한 검사(S2) — 라우트별 `permMiddleware`, 수납 전용 계정은 `visit_type`만, 권한 거절 안내 번역, 역할×라우트 시험 `backend/test/reception.api.mjs` | (이 커밋) |
+| 2026-09-29 | ⑦ 내원구분 단추(초진·재진·진료비 없음), 같은 과 재진 제안, 청구 뒤 잠금, `/visits/today`에 `has_active_bill`, `/visits/patient`에 접수 권한 | (이 커밋) |
+| 2026-09-29 | 서버 권한 검사(S2) — 라우트별 `permMiddleware`, 수납 전용 계정은 `visit_type`만, 권한 거절 안내 번역, 역할×라우트 시험 `backend/test/reception.api.mjs` | `3e03fa4` |
 | 2026-09-29 | 2절을 수납·통계 페이지 형식으로 — 권한 안내, 화면 구성·버튼 표, 왼쪽 칸별 뜻 표, 대기 상태 표, 환자 찾기 창, 「이런 안내가 뜰 때」 표(성공·확인 창 포함) | `e467849` |
 | 2026-09-29 | 대기 목록 30초 자동 새로고침(⑰) — 탭이 보일 때만, 입력값 유지, 고른 내원의 상태만 맞춤, 실패해도 목록 유지 | `eb2d19c` |
 | 2026-09-29 | ⑪ 마무리 — 완료·확인 창을 언어별 문장으로(`fill`), 생년월일 칸 안내 글자 번역, 서버 연결 실패·기록 없음·형식 오류 안내. 읽기 경로 오류도 4xx. 2절을 프랑스어 화면 기준으로 다시 쓰고 「안내 창이 뜨면」 표 추가 | `e6ef6e8` |

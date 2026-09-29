@@ -62,6 +62,16 @@ export default function RegistrationPage() {
 
   var vfs = useState({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
   var visitForm = vfs[0], setVisitForm = vfs[1];
+  // Where the visit type on screen came from:
+  //   'auto'   - suggested by suggestedVisitType(); recalculated when the doctor or
+  //              the patient's past visits change
+  //   'manual' - staff pressed a button; never overwritten
+  //   'loaded' - the stored value of a queued visit being edited; shown as stored
+  // Editing a queued visit sends visit_type only when it is not 'loaded', so a fee
+  // type payment set in the meantime is not overwritten with a value loaded minutes ago.
+  var vts = useState('auto'), visitTypeSource = vts[0], setVisitTypeSource = vts[1];
+  // The patient's earlier visits (GET /visits/patient/:id), for the suggestion.
+  var pvs = useState([]), pastVisits = pvs[0], setPastVisits = pvs[1];
 
   var ms = useState(''), memo = ms[0], setMemo = ms[1];
   var hs = useState([]), history = hs[0], setHistory = hs[1];
@@ -90,7 +100,10 @@ export default function RegistrationPage() {
       setSel(function (prev) {
         if (!prev) return prev;
         var fresh = vData.filter(function (v) { return v.id === prev.id; })[0];
-        return fresh && fresh.status !== prev.status ? Object.assign({}, prev, { status: fresh.status }) : prev;
+        // Also the bill flag and fee type, so the visit-type buttons lock once payment
+        // has billed the visit and show the type payment chose.
+        if (!fresh || (fresh.status === prev.status && fresh.has_active_bill === prev.has_active_bill && fresh.visit_type === prev.visit_type)) return prev;
+        return Object.assign({}, prev, { status: fresh.status, has_active_bill: fresh.has_active_bill, visit_type: fresh.visit_type });
       });
     } catch (err) {
       // A failed background refresh keeps the list it had rather than emptying it.
@@ -117,9 +130,47 @@ export default function RegistrationPage() {
     setLoading(false);
   }
 
+  // The office manager's rule (decisions.md, 2026-09-29): follow-up means continuing
+  // the same care, so the EMR suggests follow-up when the patient has been seen in
+  // the same department before and first visit otherwise - no time limit, cancelled
+  // visits do not count, and staff can always change it (a new problem in the same
+  // department is a first visit). A visit without a department counts as its
+  // doctor's department; with neither, it is a first visit. "No fee" is never
+  // suggested. Change the rule here only.
+  function deptOfDoctor(doctorId) {
+    var d = doctors.filter(function (x) { return String(x.id) === String(doctorId); })[0];
+    return d && d.department_id ? d.department_id : null;
+  }
+  function suggestedVisitType(deptId, doctorId, past, excludeVisitId) {
+    var dept = deptId || deptOfDoctor(doctorId);
+    if (!dept) return 'newVisit';
+    var seen = (past || []).some(function (v) {
+      if (v.id === excludeVisitId || v.status === 'cancelled') return false;
+      return String(v.department_id || deptOfDoctor(v.doctor_id) || '') === String(dept);
+    });
+    return seen ? 'followUp' : 'newVisit';
+  }
+  function loadPastVisits(patientId) {
+    setPastVisits([]);
+    if (!patientId) return;
+    api.get('/visits/patient/' + patientId)
+      .then(function (rows) { setPastVisits(Array.isArray(rows) ? rows : []); })
+      // No history to go on: the suggestion falls back to first visit.
+      .catch(function () { setPastVisits([]); });
+  }
+  // Recalculate the suggestion whenever what it depends on changes - but only while
+  // the value is the suggestion; a button staff pressed, or a stored type, stays.
+  useEffect(function () {
+    if (visitTypeSource !== 'auto') return;
+    var next = suggestedVisitType(visitForm.department, visitForm.doctor, pastVisits, sel ? sel.id : null);
+    if (next !== visitForm.visitType) uv('visitType', next);
+  }, [visitTypeSource, visitForm.department, visitForm.doctor, pastVisits, doctors]);
+
   function fillPatient(p) {
     setSelectedPatient(p);
     setSel(null);
+    setVisitTypeSource('auto');
+    loadPastVisits(p.id);
     setForm({
       chartNo: p.chart_no || '', lastName: p.last_name || '', firstName: p.first_name || '',
       dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
@@ -150,6 +201,8 @@ export default function RegistrationPage() {
     setMemo('');
     setForm(emptyForm);
     setVisitForm({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
+    setVisitTypeSource('auto');
+    setPastVisits([]);
   }
 
   async function loadHistory(patientId) {
@@ -174,6 +227,8 @@ export default function RegistrationPage() {
       receptionMemo: v.reception_memo || '',
     });
     setMemo(v.reception_memo || '');
+    setVisitTypeSource('loaded');
+    loadPastVisits(v.patient_id);
     loadHistory(v.patient_id);
   }
 
@@ -286,14 +341,16 @@ export default function RegistrationPage() {
         if (sel && sel.id) {
           // Only what this form edits. status is not sent: the list may be minutes
           // old, and sending it back put visits the doctor had completed back into
-          // the queue - and off the payment list. visit_type is not sent either:
-          // there is no input for it here, and payment may have changed it since.
-          await api.put('/visits/' + sel.id, {
+          // the queue - and off the payment list. visit_type goes only if staff
+          // pressed a type button here, and never once the visit is billed.
+          var vbody = {
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
             chief_complaint: visitForm.chiefComplaint,
             reception_memo: memo,
-          });
+          };
+          if (visitTypeSource !== 'loaded' && !sel.has_active_bill) vbody.visit_type = visitForm.visitType;
+          await api.put('/visits/' + sel.id, vbody);
           alert(fill(t.rc_visitUpdated, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }) }));
         } else {
           await api.post('/visits', {
@@ -418,11 +475,36 @@ export default function RegistrationPage() {
                 var doc = doctors.filter(function (x) { return String(x.id) === String(did); })[0];
                 var deptId = doc ? (doc.department_id || '') : '';
                 setVisitForm(function (f) { var n = Object.assign({}, f); n.doctor = did; n.department = deptId; return n; });
+                // A new doctor can mean a new department: re-suggest, unless staff chose
+                // the type by hand or the visit is already billed.
+                if (visitTypeSource === 'loaded' && !(sel && sel.has_active_bill)) setVisitTypeSource('auto');
               }} style={IS}>
                 <option value="">—</option>
                 {doctors.map(function (d) { return <option key={d.id} value={d.id}>{(d.dept_code ? d.dept_code + ' – ' : '')}{d.name}</option>; })}
               </select>
             </div>
+            {(function () {
+              // First visit / follow-up / no fee - the three the office manager kept.
+              // emergency and referral stay valid in the API for old visits and the
+              // payment screen, but reception does not offer them.
+              var TYPES = [['newVisit', t.newVisit], ['followUp', t.followUp], ['none', t.rc_visitNoFee]];
+              var locked = !!(sel && sel.has_active_bill);
+              var shown = (sel && visitTypeSource === 'loaded') ? (sel.visit_type || 'newVisit') : visitForm.visitType;
+              var deptRow = depts.filter(function (d) { return String(d.id) === String(visitForm.department || deptOfDoctor(visitForm.doctor)); })[0];
+              var known = TYPES.some(function (x) { return x[0] === shown; });
+              return <div><label style={labelStyle}>{t.visitType}</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {TYPES.map(function (x) {
+                    var on = shown === x[0];
+                    return <button key={x[0]} type="button" disabled={locked} onClick={function () { uv('visitType', x[0]); setVisitTypeSource('manual'); }}
+                      style={{ flex: 1, cursor: locked ? 'not-allowed' : 'pointer', background: on ? '#3b82f620' : '#1e2433', border: on ? '1px solid #3b82f660' : '1px solid #2a3142', borderRadius: 7, padding: '8px 6px', fontSize: 15, color: on ? '#60a5fa' : t2, fontWeight: 700, opacity: locked && !on ? 0.45 : 1 }}>{x[1]}</button>;
+                  })}
+                </div>
+                {locked ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: 5 }}>{t.rc_visitTypeLocked}</div> : null}
+                {!locked && visitTypeSource === 'auto' && shown === 'followUp' ? <div style={{ fontSize: 13, color: t2, marginTop: 5 }}>{fill(t.rc_visitTypeSuggested, { dept: deptRow ? deptRow.code : '' })}</div> : null}
+                {!locked && !known ? <div style={{ fontSize: 13, color: t2, marginTop: 5 }}>{fill(t.rc_visitTypeOther, { type: t[shown] || shown })}</div> : null}
+              </div>;
+            })()}
             <div><label style={labelStyle}>{t.chiefComplaint}</label><input value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} style={IS} /></div>
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={memo} onChange={function (e) { setMemo(e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
             <button onClick={createOrUpdateVisit} disabled={busy} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 16, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
