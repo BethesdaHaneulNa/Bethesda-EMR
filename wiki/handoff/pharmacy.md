@@ -2,6 +2,80 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — H2 「포장 단위 약」(B) 설계 메모 + 검토표에 포장 단위 열
+
+- **상태**: 보류 — 총괄 설계 확인 대기(코드 전). 검토표 갱신은 확인 요청.
+- **결정**(실장님, 2026-09-29): 병·개로 주는 약은 약에 「포장 단위 약」 표시를 해 두고, 표시한 약은 총량을 계산하지 않고 **의사가 병·개 수를 직접** 적는다.
+
+### 1. 무엇이 바뀌나 (한 줄 요약)
+
+포장 단위 약의 처방 줄은 `total_qty` = **의사가 적은 병·개 수**(정수 ≥ 1)입니다. 하루 총량·횟수·일수는 **복용 안내**로만 남고 총량 계산에 쓰지 않습니다. 수납·재고·통계는 이미 저장된 `total_qty`만 읽으므로, 그대로 병·개 수로 청구·차감·집계됩니다.
+
+### 2. 데이터 — 마이그레이션(약국 번호대, 예: `402_pharmacy_pack_unit.sql`)
+
+```sql
+ALTER TABLE drug         ADD COLUMN IF NOT EXISTS pack_unit  BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE drug         ADD COLUMN IF NOT EXISTS pack_label VARCHAR(10)
+                         CHECK (pack_label IS NULL OR pack_label IN ('bottle','tube','inhaler','unit'));
+ALTER TABLE prescription ADD COLUMN IF NOT EXISTS pack_unit  BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE prescription ADD COLUMN IF NOT EXISTS pack_label VARCHAR(10);
+```
+- `drug.pack_unit` / `pack_label`: 약의 표시와 종이에 찍을 단위(병 flacon · 튜브 tube · 흡입기 inhalateur · 개 unité).
+- **처방 줄에도 복사**(`prescription.pack_unit`, `pack_label`) — 단가를 처방할 때 복사하는 것과 같은 이유입니다. 나중에 약의 표시를 바꿔도 이미 쓴 처방의 뜻이 바뀌지 않게 합니다.
+- **옛 처방**: 새 칸의 기본값이 `false`라 **그대로**입니다(예전 계산 총량, 다시 계산하지 않음). 실행 중 EMR은 시험 데이터뿐이고, 흡입기 SALB 같은 줄은 「예전 계산」 표시만 붙습니다.
+- **시드 약 4개 표시**(PCM250·AMOX250·CODAEP 시럽 → bottle, SALB → inhaler): 데이터를 바꾸는 일이라 **실장님 확인이 필요**합니다. 예시 25개는 어차피 105줄 가져올 때 숨길 예정이므로, 이 표시는 **안 해도 됩니다**(추천: 안 함).
+- 105줄 가져오기 때는 검토표의 「포장 단위 약」 열대로 채웁니다.
+
+### 3. 누가 무엇을
+
+| 부분 | 파일 | 세션 | 할 일 |
+|---|---|---|---|
+| 마이그레이션 | `backend/sql/4xx_pharmacy_pack_unit.sql` | **약국** | 위 2절 |
+| 약 등록 API | `admin.routes.js` POST·PUT `/drugs` | **설정** | `pack_unit`(불린), `pack_label`(목록 중 하나 또는 비움) 받아 저장. `pack_unit`이 참인데 `pack_label`이 비면 `'unit'` |
+| 약품 편집 창 | `Settings.jsx` **약품 탭 안** | **약국** | 「포장 단위 약」 체크 + 단위 고르기(병/튜브/흡입기/개), 목록에 표시 |
+| 처방 줄 저장 규칙 | `consult.routes.js` POST·PUT `/prescriptions`, `rxTotal()` | **진료** | ① POST: `drug_id`로 **약 표에서** `pack_unit`·`pack_label`을 읽어 줄에 복사(화면이 보낸 값은 믿지 않음). ② 포장 단위 줄이면 `total_qty` = 요청의 `pack_qty`(정수 ≥ 1, 없거나 비면 **NULL**), 하루 총량·횟수·일수는 계산에 쓰지 않음. ③ PUT: 포장 단위 줄은 `pack_qty`가 왔을 때만 `total_qty`를 바꿈(하루 총량·일수를 고쳐도 총량 그대로). 조제된 줄은 지금처럼 409 |
+| 처방 줄 화면 | `Consultation.jsx` | **진료** | 포장 단위 약이면 **수량 칸(병·개)**을 보이고 필수로 표시. 하루 총량·횟수·일수 칸은 **복용 안내**로 남김(비워도 됨). 풀이 줄은 `doseSentence`가 알아서 바꿈 |
+| 약속처방 | `order_set_item.quantity`(이미 있음) → `applySet` | **진료** (+ 설정의 약속처방 탭 편집 칸) | 포장 단위 약이면 세트의 `quantity`를 `pack_qty`로 넘김(기본 1) |
+| 처방 줄 읽는 규칙 | `documents/rx-dosing.js` | **약국** | `perDose` → 포장 단위 줄은 `null`(1회량을 계산하지 않음, ⚠도 없음). `isLegacyTotal` → 포장 단위 줄은 늘 거짓. `doseSentence` → 아래 4절. `packWord(rx, lang)` 새로 |
+| 약국 조제 화면 | `Pharmacy.jsx` | **약국** | 1회량 칸 「—」(경고 없이), 수량 칸 「2 병 / 2 flacons」 |
+| 원외 처방전 | `external-rx.jsx` | **약국** | 총량 칸 「2 flacons」, 1일량 칸은 안내 그대로 |
+| 수납 | `billing.routes.js`, `Payment.jsx` | **수납** | **코드 변경 없음**(`total_qty × unit_price`). 대신 이런 약의 **단가는 병·개당**이어야 함 — 설정 편집 창에 안내 한 줄(약국이 함) |
+| 환자 차트 기록 | `PatientChart.jsx` | 수납 | 변경 없음(`doseSentence`를 이미 씀) |
+| 재고·월말 보고서 | `pharmacy.routes.js` | 약국 | 변경 없음 — 조제 때 `Math.ceil(total_qty)` = 병·개 수. 입고·실사도 병·개로 셈 |
+| 통계 약품 사용량 | `stats.routes.js` | 통계 | 변경 없음(약마다 합). 포장 단위 약은 「병」 단위로 합쳐짐 — 원하면 통계 화면에 단위 표시(선택) |
+
+**합치는 순서**: 마이그레이션 + 설정 API + 약품 편집 창(약국) → 진료 서버·화면 → 약국 표시. **같은 날 함께** 합치는 것을 권합니다. 진료가 먼저 들어가면 포장 단위 줄의 총량이 NULL로 저장되고, 약국·수납은 「총량 없음」을 띄웁니다 — 틀린 숫자는 나가지 않습니다.
+
+### 4. 종이·화면 문장 (`doseSentence`, 포장 단위 줄)
+
+- 하루 총량·횟수·일수가 있으면 안내 + 병·개 수: 한국어 「하루 15, 3회로 나눠 7일 — 2병」, 프랑스어 « 15 par jour en 3 prises, pendant 7 jours — 2 flacons », 영어 « 15 a day in 3 doses for 7 days — 2 bottles »
+- 안내가 없으면 병·개 수만: 「2병」 « 2 flacons »
+- **하루 총량의 단위(mL, 번 뿌림, 방울)는 약 표에 없어서** 숫자만 찍힙니다. 단위가 필요하면 의사가 메모 칸에 적고(메모는 원외 처방전 「용법/비고」에 찍힘), 나중에 약 표에 「복용 단위」 칸을 더할 수 있습니다(이번 범위 밖).
+- 병·개 단어: bottle 병/flacon(s)/bottle(s), tube 튜브/tube(s), inhaler 흡입기/inhalateur(s), unit 개/unité(s).
+- 1회량: 계산하지 않고 「—」(⚠ 없음). 1회 5 mL 같은 안내는 문장의 「하루 15, 3회로 나눠」로 읽힘.
+
+### 5. 빈틈과 규칙
+
+- 포장 단위 약인데 병·개 수를 안 적으면 `total_qty` NULL → 약국 「총량 없음」, 조제 확인 창에 이름, 수납은 이미 「수량 없는 줄」로 표시. **0으로 청구·조제되지 않음.**
+- 병·개 수는 **정수**만(재고가 정수). 반 병 처방은 안 됨.
+- 처방한 뒤 약의 표시를 바꿔도 그 줄은 그대로(복사했으므로).
+
+### 6. 작업 크기
+
+| 세션 | 크기 |
+|---|---|
+| 약국(마이그레이션, 약품 탭, rx-dosing, 약국 화면, 원외 처방전) | 약 반나절 |
+| 설정(API 두 칸) | 작음 |
+| 진료(서버 규칙 + 처방 줄 수량 칸 + 세트) | 반나절 |
+| 수납·통계 | 없음(확인만) |
+
+### 7. 검토표에 포장 단위 열
+
+- `wiki/reference/drug-import-review.csv`에 **「포장 단위 약 (H2-B)」**(병/튜브/개/확인)과 **「포장 단위 근거」**(제형·단위·원래 수량 표기) 두 열을 넣었습니다. 옛 「병·개 단위 약?」 열 자리입니다. 스크립트 `drug-import-review.js`도 함께 고침.
+- **확실한 12줄**: 시럽 4(병) · 질 겔 1(튜브) · 크림·연고 2(Hydrocortisone, Neodex 안연고 — 튜브) · 점안액 3(병) · Vaseline·Sulfadiazine 2(「개」 — 통인지 병인지 확인).
+- **「확인」 4줄**: Hemorex, Madecassol ×3 — 제형은 「정」인데 세부 분류가 외용(Topical wound/skin)이고, Madecassol 한 줄은 neomycin이 들어 있어 연고일 수 있습니다. 확인할 점 칸에도 적었습니다.
+- 총괄이 말씀하신 「약 21줄」은 옛 프로그램의 제형 칸을 그대로 센 수입니다. 그 칸의 「안약 12」에 알약 8개가 섞여 있어서, 고친 제형으로 세면 **12 + 확인 4**입니다.
+
 ## 2026-09-29 — 설정 약품 탭: 재고 칸 읽기 전용 (약국 화면 쪽 먼저)
 
 - **상태**: 확인 요청 — 설정 세션의 서버 작업(`admin.routes.js` POST·PUT이 재고를 안 씀)과 같이 합치기로 받음
