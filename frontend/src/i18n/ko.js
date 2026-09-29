@@ -307,6 +307,7 @@ export default {
   rc_queueOfDate: "대기 / 완료 — {date}",
   rc_pastDateBanner: "지난 날짜({date})를 보는 중입니다. 보기와 정리(대기 취소·완료로)만 되고, 새 접수와 접수 수정은 오늘 날짜에서 합니다.",
   rc_pastDateNoNew: "지난 날짜의 접수는 새로 만들거나 고칠 수 없습니다. 「오늘로」를 눌러 오늘 날짜에서 접수하세요.",
+  rc_noPatientFound: "「{q}」 환자를 찾지 못했습니다 — 「+ {btn}」을 누르세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

@@ -47,7 +47,7 @@
 ### 2.2 처음 온 환자 접수하기
 
 1. 먼저 이미 등록된 환자가 아닌지 확인합니다. 왼쪽 위 **Rechercher patient (기존 환자 검색)** 칸에 이름·차트번호·전화번호를 넣고 **Enter**. 이름은 「성 이름」이든 「이름 성」이든 찾습니다. 일부만 쳐도 됩니다.
-2. 목록에 없으면 **+ Nouveau patient** 를 누릅니다.
+2. 목록에 없으면 칸 아래에 「Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient »」(찾는 환자가 없습니다)가 나옵니다. **+ Nouveau patient** 를 누릅니다.
 3. 2.4의 칸을 채웁니다. 꼭 필요한 것은 **Nom** 과 **Prénom** 둘뿐입니다.
 4. **Service / Médecin** 에서 의사를 고르고, **Type de Visite** 가 맞는지 봅니다(2.4). **Motif** 와 **Mémo Réception** 을 적습니다.
 5. 파란 **Enregistrer / Mettre en attente** 를 누릅니다.
@@ -86,7 +86,7 @@
 | **📌 Note d'accueil (접수과 메모)** 노란 상자 | 늘 기억해야 할 사항(예: 보호자 동반 필요, 통역 필요). 오늘만이 아니라 **환자에게 계속** 붙어 다니며, 다음에 이 환자를 고르면 다시 보입니다 |
 | **N° dossier (차트번호)** | `26-00001` 처럼 연도 두 자리 + 그 해의 번호. **해가 바뀌면 1번부터**(2027년 첫 환자는 `27-00001`). **처음 저장할 때 자동으로** 생기고 고칠 수 없습니다. 진료·수납·약국·검사·영상 장비가 모두 이 번호로 환자를 찾습니다 |
 | **Nom (성)** · **Prénom (이름)** | 둘 다 있어야 저장됩니다 |
-| **Date de Naissance (생년월일)** | **AAAA (연도 4자리) · MM (월 2자리) · JJ (일 2자리)**. 칸이 차면 다음 칸으로 넘어갑니다. 예: `1990` `05` `03`. **모르면 세 칸 모두 비워 둡니다** — 일부만 쓰면 저장되지 않습니다 |
+| **Date de Naissance (생년월일)** | **AAAA (연도 4자리) · MM (월 2자리) · JJ (일 2자리)**. 칸이 차면 다음 칸으로 넘어갑니다. 예: `1990` `05` `03`. 날짜 전체를 **붙여넣어도** 세 칸으로 나뉩니다 — `19900503`, `1990-05-03`, `03/05/1990`(일/월/연 — 현지 쓰는 순서). **모르면 세 칸 모두 비워 둡니다** — 일부만 쓰면 저장되지 않습니다 |
 | **Sexe (성별)** | **Masculin (남)** / **Féminin (여)**. 처음에는 **아무것도 골라져 있지 않습니다** — 꼭 하나를 누르세요. 안 누르면 저장할 때 「Choisissez le sexe (Masculin / Féminin).」가 뜹니다. 성별은 문서와 영상 장비로 그대로 나갑니다 |
 | **Téléphone (전화번호)** | 연락처. 미수 연락 등에 씁니다 |
 | **Groupe Sanguin (혈액형)** | 모르면 **—** 그대로 |
@@ -218,6 +218,8 @@
 - **오류 문구** — `errText(err)`: API는 영어로 답하므로, 직원이 할 일이 있는 메시지는 여기서 맞춰 보고 `rc_` 번역으로 바꿈. 맞추는 문구: `Patient name is required` → `rc_nameRequired`, `date_of_birth…`로 시작 → `rc_dobInvalid`, `A date field has a date that does not exist`(`dbError.js` 22008) → `rc_dobInvalid`, `Only a waiting visit can be cancelled` → `rc_cancelNotWaiting`, `Patient not found` → `rc_patientNotFound`, `Visit not found` → `rc_visitNotFound`, `A field has the wrong format`·`A date field has the wrong format`(`sendDbError`) → `rc_badFormat`, 서버 연결 실패(`Failed to fetch`·`NetworkError…`·`Load failed` — 브라우저별 fetch 실패 문구, `API backend is not reachable…` — `frontend/nginx.conf`의 백엔드 중지 응답, `API response was not JSON…` — `api/client.js`) → `rc_serverDown`. 나머지는 `rc_errorWith`(「Erreur : {msg}」)로 원문을 붙임. **서버·nginx·client.js의 문구가 바뀌면 여기 대응도 같이 바꿔야 함.** 저장·상태 변경이 실패하면 대기 목록을 다시 불러옴(오래된 줄을 치우려고).
 - **안내 문구 조립** — `fill(s, {name, chart, msg})`로 번역 문자열의 `{name}` 같은 자리에 값을 넣음. 언어마다 값 위치와 문장부호가 달라서(프랑스어는 `?`·`:` 앞에 띄어쓰기) 버튼 이름에 `' ✓'`를 이어 붙이던 방식을 버림. 성공 창: `rc_registered`·`rc_visitUpdated`·`rc_patientSaved`, 취소 확인: `rc_cancelConfirm`.
 - **생년월일 칸 안내 글자** — `DobInput`의 `rc_phYear`·`rc_phMonth`·`rc_phDay`(프랑스어 `AAAA`·`MM`·`JJ`).
+- **생년월일 붙여넣기** — 세 칸 모두 `onPaste`: `parsePastedDob(text)`가 `YYYYMMDD`, `YYYY-MM-DD`(구분자 `-` `/` `.` 공백, 월·일 한 자리도), `DD/MM/YYYY`(일 먼저 — 마다가스카르·프랑스 순서; 월/일 순 `MM/DD`는 받지 않음)를 `[연, 월, 일]`로 나눠 `emit`, 일 칸으로 커서. 그 밖의 글은 보통 붙여넣기. 달력 검사는 여기서 안 함 — 저장 때 `formProblem()`. 이전에는 연도 칸(maxLength 4)이 `19900503`의 `1990`만 남기고 나머지를 버렸음(2026-09-29 통합 시험).
+- **검색 결과 없음** — `searchPatients()`가 0건이면 `notFoundFor`에 검색어를 두고 칸 아래 한 줄 `rc_noPatientFound`(`{q}` 검색어, `{btn}` = `newPatientInput`)를 보임. 검색어를 고치거나 **+ 신규 환자**를 누르면 사라짐. `searchSeq`(ref)로 늦게 온 옛 검색 답은 버림. 이전에는 결과가 없으면 아무 일도 안 일어난 것처럼 보였음(통합 시험).
 - **💾 환자 정보 저장** — `savePatientOnly()`: `selectedPatient.id`가 있으면 `PUT /patients/:id`, 없으면 `confirmNewPatient()` 뒤 `POST /patients`.
 - **동명이인 경고** (2026-09-29 실장님 결정 ④ — **경고만**, 같은 사람 판단은 **이름만**) — `confirmNewPatient()`: 새 차트를 만들기 직전(`savePatientOnly`·`createOrUpdateVisit` 둘 다) `GET /patients/similar`로 같은 이름 환자를 받음. 있으면 `askSimilar(list)`가 화면 안 창(`similarAsk` 상태, Promise로 답을 기다림)을 띄움. 답: `use` → `/patients/:id`로 전체 행을 받아 `patientToForm`으로 채우고(**`visitForm`·`memo`는 그대로**) 멈춤 — 직원이 확인 뒤 다시 누름. 바로 접수하지 않는 이유: 새 환자로 적던 알레르기·전화 등이 표시 없이 버려지기 때문. `new` → 계속 만듦. `cancel` → 멈춤. 조회가 실패하면 경고 없이 진행(경고는 도움일 뿐 등록을 막지 않음).
 - **같은 날 중복 접수 경고** — `postVisit(body, name)`: 화면의 오늘 목록(`visits`, 30초마다 갱신)에서 같은 `patient_id`의 취소 아닌 내원을 찾아 `confirm(rc_dupVisit)`; 확인하면 `allow_duplicate: true`를 붙여 보냄. 목록이 오래돼 서버가 409 `Patient already registered today`를 주면 `confirm(rc_dupVisitOther)` 뒤 `allow_duplicate`로 다시 보냄. 취소하면 아무것도 안 만듦.
@@ -253,7 +255,7 @@
 - **해가 바뀌는 순간** = `CURRENT_DATE` = DB 시간대(`Indian/Antananarivo`, DB 컨테이너 `TZ`) — `visit_date`의 「오늘」과 같은 기준. `.env`에 `TZ`가 없으면 DB가 UTC가 되어 새해가 3시간 늦게 옴(6절).
 - 옛 방식(2026-09-29 전): 시퀀스 `chart_no_seq` 하나가 해를 넘어 이어졌고(26-00350 → 27-00351), `LPAD(…, 5)`가 10만 번째부터 번호를 잘라 겹쳤음. **이미 발급된 번호는 그대로**이고 올해는 그 다음 번호부터 이어짐. `chart_no_seq`는 지우지 않고 남겨 둠(쓰는 곳 없음 — 되돌리기 쉽게).
 - 번호는 화면에서 고칠 수 없음 (읽기 전용 칸). `PUT /patients/:id`도 `chart_no`를 바꾸지 않음. 번호 모양(`YY-00000`)은 영상 장비(DICOM PatientID)·문서·영수증에 그대로 나감.
-- 시험: `backend/test/reception.api.mjs`(동시 20명 — 모두 다르고 이어짐, 다음 번호), `backend/test/reception.chartno.sql`(다음 해 `-00001`, 12월 31일은 올해, 99,999 → 100000 → 100001, 모양이 다른 번호는 안 셈 — 모두 ROLLBACK).
+- 시험: `backend/test/reception.api.mjs`(동시 20명 — 모두 다르고 이어짐, 다음 번호. 새 스택이면 `/auth/setup`으로 관리자를 만들고 **서버가 돌려준 `login_id`**(늘 `admin`, S3)를 OS 임시 폴더에 바로 저장), `backend/test/reception.chartno.sql`(다음 해 `-00001`, 12월 31일은 올해, 99,999 → 100000 → 100001, 모양이 다른 번호는 안 셈 — 모두 ROLLBACK).
 
 ### 환자 찾기 창 (`PatientFinder.jsx`, 공용)
 
@@ -493,3 +495,4 @@
 | 2026-09-29 | 환자 찾기 창에서 취소된 내원이 흐리게, 「Visite annulée」 딱지와 함께 (진료·수납·임상병리 모두) (⑮) | 공용 `PatientFinder.jsx` — 표시만, 동작 그대로 | `6c13b33` |
 | 2026-09-29 | 환자 인적사항을 고치면 뒤에서 기록(누가·무엇을·전→후). 화면은 그대로, 안 고친 접수는 기록 없음 | `PUT /patients/:id` 트랜잭션 + `writeAudit(PATIENT_EDIT)`, `auditView()` (4절 변경 기록) | `f0b3e3b` |
 | 2026-09-29 | 2절에 내원구분·중복 경고 사용법 정리, 7절 남은 것을 결정 필요 / 결정 없이 가능으로, 이 변경 기록 정리 | 위키만 | `ac5209e` |
+| 2026-09-29 | (통합 시험 뒤) 환자 검색에 결과가 없으면 칸 아래 안내 한 줄, 생년월일에 날짜 전체를 붙여넣으면 세 칸으로 나뉨, 「N° dossier」 빈 칸이 밝은 화면에서 덜 흐림(투명도 0.6 → 0.7, 디자인 세션 부탁), 시험 스크립트가 새 스택에서도 로그인 | `notFoundFor`·`rc_noPatientFound`, `parsePastedDob()`, `reception.api.mjs` 설정 로그인 (3절) | (이 커밋) |
