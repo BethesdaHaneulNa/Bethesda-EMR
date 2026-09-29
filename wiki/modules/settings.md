@@ -183,7 +183,7 @@
    - **INACCESSIBLE** 옆에 「port 4242 bloque par Windows」 같은 글이 있으면 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용: `DEPLOYMENT.md` Windows 절).
    - **Sauvegarde des images (disque)** (영상 백업, 2026-09-29): 영상 백업을 설치한 PC에만 나오는 줄. 노란 **A CORRIGER** 와 「disque de sauvegarde absent (백업 디스크가 꽂혀 있지 않음)」·「echec : … (실패)」·「disque presque plein (거의 참)」·「aucun compte rendu depuis N h (N시간째 보고 없음)」 — 디스크를 꽂거나, 가득 찼으면 바꾸고, 그래도 안 되면 담당자에게(PACS 위키 6.2).
    - **Sauvegarde** 줄이 노란 **A CORRIGER** 에 「plus ancienne que l'application (N mise(s) a jour …)」이면 가장 새 백업이 EMR 업데이트 전 것입니다(2.7의 같은 노란 띠). EMR에서 **Paramètres → Sauvegarde → Sauvegarder** (2026-09-29).
-   - 노란 **A CORRIGER (고칠 것)** 줄 **Adresses de l'imagerie (Parametres)** (영상 주소, 2026-09-29): 설정 → **Flux d'ordres** 의 주소에 옛 포트(EMR **8080**, PACS 뷰어 **8090**)가 남아 있을 때만 나타납니다. 이대로면 진료실에서 영상이 열리지 않습니다. **Paramètres → Flux d'ordres** 에서 8080 → **9080**, 8090 → **9090** 으로 고치고 **Save** — 15초 안에 줄이 사라집니다. 값을 자동으로 바꾸지는 않습니다.
+   - 노란 **A CORRIGER (고칠 것)** 줄 **Adresses de l'imagerie (Parametres)** (영상 주소, 2026-09-29): 설정 → **Flux d'ordres** 의 주소에 옛 포트(EMR 주소 **8080**, 영상 서버 주소 **8090**)가 남아 있거나, 영상을 쓰는데 **영상 창 짝 맞추기가 안 되어 있을 때**(「visionneuse non appairee」 — PACS 폴더에서 `pair-with-emr`, P-9·035 뒤)만 나타납니다. 쓰지 않게 된 옛 「PACS 웹/뷰어 주소」 칸은 보지 않습니다. 이대로면 진료실에서 영상이 열리지 않습니다. **Paramètres → Flux d'ordres** 에서 8080 → **9080**, 8090 → **9090** 으로 고치고 **Save** — 15초 안에 줄이 사라집니다. 값을 자동으로 바꾸지는 않습니다.
 5. 아래 버튼으로 언어를 바꿉니다 (Français → English → 한국어).
 
 ### 2.11 백업 검사 (담당자용, 서버 PC에서)
@@ -670,4 +670,5 @@
 | 2026-09-29 | **상단바의 상태 점** — 설정 권한이 있는 사람에게 초록·노랑·빨강(확인 못 하면 회색), 누르면 일곱 항목을 말로 (U3) | `settingsStatus.jsx`(새), `TopBar.jsx` 두 줄, `se_sys*` 46개, `settings.status.mjs`(새) (2.15·3-6) | `0d362a5` |
 | 2026-09-29 | 약 저장이 **보낸 칸만** 바꿈 — 약품 화면에서 기본 용량·횟수·일수·용법 칸이 빠져도 지워지지 않음(결정 B). 제형 칸을 받을 준비. 상태 점의 직원용 한 줄 | `admin.routes.js` `DRUG_FIELDS`·`sentDrugFields`, `settings.drugs.mjs` 10개 추가 (2.15·3-8) | `9192536` |
 | 2026-09-29 | **약속처방에서 줄마다 일총투여·횟수·일수·용법을 정함**(실장님 지적), 새 약 줄은 빈 칸, 비어 있으면 저장을 막음, 검사 줄은 수량·횟수·일수 | `Settings.jsx` 약속처방 편집 창 `osItem`·`osLineProblem`·`osNum` (2.9) | (이 커밋) |
-| 2026-09-29 | 정리 스크립트가 **현금 기록(cash_movement)**의 시험 줄도 지움 — 정리 뒤 통계 수납액 0, 그날 현금 목록 비어 있음. 권한 시험에 `GET /billing/cash-day` | `clean-test-data.ps1`, `settings.access.mjs` (3-11) | (이 커밋) |
+| 2026-09-29 | 정리 스크립트가 **현금 기록(cash_movement)**의 시험 줄도 지움 — 정리 뒤 통계 수납액 0, 그날 현금 목록 비어 있음. 권한 시험에 `GET /billing/cash-day` | `clean-test-data.ps1`, `settings.access.mjs` (3-11) | `e60ee0e` |
+| 2026-09-29 | 편집 창 제목이 탭마다(「Nouveau membre du personnel」·「Modifier le médicament」…), 직원 창에 이메일 칸, 비활성 직원은 목록 아래로. 진료의 약속처방 거절 문구 7개가 「Ligne n : …」로 번역. 영상 창 변경(P-9) 뒤 상태 검사: 쓰지 않는 뷰어 주소 대신 영상 서버 주소, **짝 맞추기 안 됨** 안내 | `Settings.jsx`, `settingsMessages.js`, `status.routes.js`, `server-status.ps1`, 설명서·변경 내역 (2.10·3-6) | (이 커밋) |

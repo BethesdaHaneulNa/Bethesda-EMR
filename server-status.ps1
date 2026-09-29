@@ -78,6 +78,8 @@ $T = @{
     portReserved = 'port {0} bloque par Windows'
     advicePort = 'Windows bloque un port (ligne en rouge). Prevenez le responsable : DEPLOYMENT.md, partie Windows.'
     pacsAddr = 'Adresses de l''imagerie (Parametres)'
+    notPaired = 'visionneuse non appairee'
+    advicePair = 'La visionneuse n''est pas appairee au serveur d''images : lancez pair-with-emr dans le dossier PACS (guide PACS 6.1).'
     stFix = 'A CORRIGER'
     oldPort = 'ancien port {0} -> {1}'
     adviceAddr = 'Ancienne adresse dans Parametres > Flux d''ordres : remplacez 8090 par 9090 et 8080 par 9080, puis enregistrez.'
@@ -128,6 +130,8 @@ $T = @{
     portReserved = 'port {0} held by Windows'
     advicePort = 'Windows is holding a port (red line). Tell the person in charge: DEPLOYMENT.md, Windows section.'
     pacsAddr = 'Imaging addresses (Settings)'
+    notPaired = 'viewer not paired'
+    advicePair = 'The viewer is not paired with the image server: run pair-with-emr in the PACS folder (PACS guide 6.1).'
     stFix = 'TO FIX'
     oldPort = 'old port {0} -> {1}'
     adviceAddr = 'Old address in Settings > Order feed: change 8090 to 9090 and 8080 to 9080, then save.'
@@ -178,6 +182,8 @@ $T = @{
     portReserved = '{0} 포트를 Windows가 막음'
     advicePort = 'Windows가 포트를 막고 있습니다(빨간 줄). 관리자에게 알리세요: DEPLOYMENT.md의 Windows 절.'
     pacsAddr = '영상 주소 (설정)'
+    notPaired = '영상 창 짝 맞추기 안 됨'
+    advicePair = '영상 창이 영상 서버와 짝이 맞지 않습니다: PACS 폴더에서 pair-with-emr를 실행하세요 (PACS 위키 6.1).'
     stFix = '고칠 것'
     oldPort = '옛 포트 {0} → {1}'
     adviceAddr = '설정 → 오더 연동의 주소가 옛 포트입니다. 8090은 9090으로, 8080은 9080으로 고쳐 저장하세요.'
@@ -263,17 +269,30 @@ function Get-UrlPort {
   if ($Url -match '^[a-z]+://[^/:]+:(\d+)(/|$)') { return $Matches[1] }
   return $null
 }
+# Since P-9 (035, 2026-09-29) the EMR relays the viewer itself through orthanc_url, with
+# the image server's password that only the PACS folder's pair-with-emr writes;
+# pacs_viewer_url is no longer used and no longer checked. Not paired is reported only
+# where the imaging is in use (the worklist bridge has reported, or a worklist host is
+# set). Same judgement as the EMR's own status check (status.routes.js).
 function Get-PacsAddressCheck {
   param($Strings)
-  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|',
-    '-c', 'SELECT coalesce(emr_base_url, ''''), coalesce(pacs_viewer_url, '''') FROM pacs_config WHERE id = 1')
+  $sql = 'SELECT coalesce(c.emr_base_url, ''''), coalesce(c.orthanc_url, ''''), ' +
+         '(coalesce(c.orthanc_password, '''') <> '''')::text, ' +
+         '(EXISTS (SELECT 1 FROM service_heartbeat h WHERE h.name = ''worklist_bridge'') OR coalesce(c.worklist_scp_host, '''') <> '''')::text ' +
+         'FROM pacs_config c WHERE c.id = 1'
+  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|', '-c', $sql)
   if (-not $line) { return $null }
-  $parts = ([string]($line | Select-Object -First 1)) -split '\|', 2
+  $parts = ([string]($line | Select-Object -First 1)) -split '\|'
+  if ($parts.Count -lt 4) { return $null }
   $found = @()
+  $notPaired = ($parts[3] -eq 'true' -and $parts[2] -ne 'true')
+  if ($notPaired) { $found += $Strings.notPaired }
   if ((Get-UrlPort $parts[0].Trim()) -eq '8080') { $found += ($Strings.oldPort -f '8080', '9080') }
-  if ($parts.Count -gt 1 -and (Get-UrlPort $parts[1].Trim()) -eq '8090') { $found += ($Strings.oldPort -f '8090', '9090') }
+  if ((Get-UrlPort $parts[1].Trim()) -eq '8090') { $found += ($Strings.oldPort -f '8090', '9090') }
   if ($found.Count -eq 0) { return $null }
-  return New-Check 'pacsAddr' 'warn' ($found -join ', ') $false $true
+  $c = New-Check 'pacsAddr' 'warn' ($found -join ', ') $false $true
+  $c | Add-Member -NotePropertyName Pair -NotePropertyValue $notPaired
+  return $c
 }
 
 # ------------------------------------------------------------ host ports
@@ -565,6 +584,7 @@ function Get-Advice {
       if ($c.Key -eq 'disk') { return $Strings.adviceDisk }
       if ($c.Key -eq 'backup' -and $c.Wide) { return $Strings.adviceBackupOld }
       if ($c.Key -eq 'backup') { return $Strings.adviceBackup }
+      if ($c.Key -eq 'pacsAddr' -and $c.Pair) { return $Strings.advicePair }
       if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
       if ($c.Key -eq 'imgBackup') { return $Strings.adviceImg }
       return $Strings.adviceDown

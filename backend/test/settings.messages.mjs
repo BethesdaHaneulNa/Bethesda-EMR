@@ -69,6 +69,20 @@ for (const text of dbMsgs) {
   const bad = translatesEverywhere(text);
   check('dbError: ' + text, !bad, bad);
 }
+// orderset.routes.js (the consultation session's file): 'name required' and every
+// "items[i].<field> ..." refusal it can build. A new one there fails here.
+const osSrc = fs.readFileSync(path.join(root, 'backend/src/routes/orderset.routes.js'), 'utf8');
+const osItem = [...new Set([...osSrc.matchAll(/return at \+ '([^']+)'/g)].map(m => m[1]))];
+check('found orderset.routes.js item messages', osItem.length >= 6, osItem.length + ' found');
+for (const tail of osItem) {
+  const text = 'items[2].' + tail;
+  const bad = translatesEverywhere(text) || (/\b3\b/.test(screen.seMessage(langs.fr, text)) ? null : 'fr: no line number 3');
+  check('orderset: ' + tail, !bad, bad);
+}
+for (const text of [...new Set([...osSrc.matchAll(/error:\s*'([^']+)'/g)].map(m => m[1]))].filter(x => x !== 'Not found')) {
+  const bad = translatesEverywhere(text);
+  check('orderset: ' + text, !bad, bad);
+}
 
 console.log(failed ? `\n${failed} check(s) failed - update frontend/src/pages/settingsMessages.js (and the se_ keys)` : '\nevery server message is translated on screen');
 process.exit(failed ? 1 : 0);

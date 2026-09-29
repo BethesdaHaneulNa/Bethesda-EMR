@@ -124,6 +124,26 @@ async function paidByVisit(bills) {
   return total;
 }
 
+// The day's cash (decided 2026-09-29: statistics count the money that actually
+// came in and went out). Payment writes one cash_movement row per movement of
+// money, in the transaction that moves it, and never edits it (migration 036):
+// + cash taken, - cash handed back. So a day's sum is that day's till, and a
+// past day never changes when a receipt is later corrected or cancelled.
+// Receipts written before 036 are there as 'opening' rows on their own date,
+// equal to what these statistics showed for them.
+// What stays on receipts: department and doctor revenue (whose treatment the
+// money was for), billed amounts, the average per visit, balances.
+const CASH_KINDS = ['payment', 'settlement', 'correction', 'cancel', 'opening'];
+const CASH_COLS = `COALESCE(SUM(amount) FILTER (WHERE amount > 0), 0)::numeric AS cash_in,
+       COALESCE(-SUM(amount) FILTER (WHERE amount < 0), 0)::numeric AS cash_out,
+       ${CASH_KINDS.map(function (k) { return `COALESCE(SUM(amount) FILTER (WHERE kind = '${k}'), 0)::numeric AS k_${k}`; }).join(',\n       ')}`;
+function cashOf(row) {
+  const n = function (x) { return Math.round(Number(x) || 0); };
+  const byKind = {};
+  CASH_KINDS.forEach(function (k) { byKind[k] = n(row['k_' + k]); });
+  return { in: n(row.cash_in), out: n(row.cash_out), net: n(row.cash_in) - n(row.cash_out), byKind: byKind };
+}
+
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
@@ -251,6 +271,9 @@ router.get('/summary', async (req, res) => {
        FROM billing_item bi JOIN billing b ON bi.billing_id=b.id
        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled' AND bi.item_type='fee'`, P);
 
+    // 4d) 그날 현금 (cash_movement, move_date 기준).
+    const cash = await pool.query(`SELECT ${CASH_COLS} FROM cash_movement WHERE move_date BETWEEN $1 AND $2`, P);
+
     // 5) 미수 / 환불 (실시간 잔액, 기간 무관). 계산식은 OWED_SQL / REFUND_SQL 참고.
     const bal = await pool.query(
       `SELECT COALESCE(SUM(${OWED_SQL}),0)::numeric AS owed,
@@ -279,6 +302,9 @@ router.get('/summary', async (req, res) => {
         billedVisits: r.billed_visits,
         avgBilledPerVisit: r.billed_visits > 0 ? num(r.gross / r.billed_visits) : 0,
       },
+      // The period's cash: in, out (handed back: corrections, cancellations, change
+      // on a re-bill), net = in - out, and by kind.
+      cash: cashOf(cash.rows[0]),
       voidedCount: voided.rows[0].cnt,
       refunded: num(voided.rows[0].refunded),
       refundUnknownCount: voided.rows[0].refund_unknown,
@@ -305,15 +331,50 @@ router.get('/monthly', async (req, res) => {
             AND visit_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
           GROUP BY 1
        ), b AS (
-         SELECT to_char(billing_date, 'YYYY-MM') AS ym, SUM(net_paid) AS revenue
-           FROM billing WHERE payment_status <> 'cancelled'
-            AND billing_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
+         -- The month's cash (net of what was handed back), not receipts: a
+         -- correction no longer moves money out of the month it was taken in.
+         SELECT to_char(move_date, 'YYYY-MM') AS ym, SUM(amount) AS revenue
+           FROM cash_movement
+          WHERE move_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
           GROUP BY 1
        )
        SELECT m.ym, COALESCE(v.visits, 0) AS visits, COALESCE(b.revenue, 0)::numeric AS revenue
          FROM m LEFT JOIN v ON v.ym = m.ym LEFT JOIN b ON b.ym = m.ym
         ORDER BY m.ym`, [months - 1]);
     res.json(r.rows.map(function (x) { return { ym: x.ym, visits: x.visits, revenue: Math.round(Number(x.revenue) || 0) }; }));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/stats/cash?granularity=day|month|year&from&to — the till by day, month
+// or year: in, out, net and by kind, one row for every period in the range (zero
+// or not), and the range total. Same default ranges as the drug table.
+router.get('/cash', async (req, res) => {
+  try {
+    const gran = ['day', 'month', 'year'].includes(req.query.granularity) ? req.query.granularity : 'day';
+    const fmt = gran === 'day' ? 'YYYY-MM-DD' : (gran === 'year' ? 'YYYY' : 'YYYY-MM');
+    let { from, to } = req.query;
+    const badRange = badDateRange(from, to);
+    if (badRange) return res.status(400).json({ error: badRange });
+    if (!from || !to) {
+      const span = gran === 'day' ? "interval '29 days'" : (gran === 'year' ? "interval '4 years'" : "interval '11 months'");
+      const r = await pool.query(`SELECT ${ymd(`date_trunc('${gran}', CURRENT_DATE) - ${span}`)} AS f, ${ymd('CURRENT_DATE')} AS t`);
+      from = from || r.rows[0].f;
+      to = to || r.rows[0].t;
+    }
+    const rows = (await pool.query(
+      `WITH p AS (
+         SELECT DISTINCT to_char(g, '${fmt}') AS period
+           FROM generate_series($1::date, $2::date, interval '1 day') g
+       ), c AS (
+         SELECT to_char(move_date, '${fmt}') AS period, ${CASH_COLS}
+           FROM cash_movement WHERE move_date BETWEEN $1 AND $2
+          GROUP BY 1
+       )
+       SELECT p.period AS slot, c.* FROM p LEFT JOIN c ON c.period = p.period ORDER BY p.period`,
+      [from, to])).rows;
+    const periods = rows.map(function (r) { return Object.assign({ period: r.slot }, cashOf(r)); });
+    const total = (await pool.query(`SELECT ${CASH_COLS} FROM cash_movement WHERE move_date BETWEEN $1 AND $2`, [from, to])).rows[0];
+    res.json({ granularity: gran, from, to, periods, total: cashOf(total) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

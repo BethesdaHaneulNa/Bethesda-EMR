@@ -2,6 +2,18 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 편집 창 제목·이메일·비활성 아래로 · 약속처방 문구 번역 · 영상 창(P-9) 뒤 상태 검사 (총괄 ③④⑤)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`e60ee0e` 위)
+- **③** `Settings.jsx`: 편집 창 제목을 탭마다(`se_newTitle_<탭>`·`se_editTitle_<탭>` — 직원·약·오더 코드·상용구·진료과, 없으면 옛 공용 제목). 직원 창에 **E-mail**(API는 전부터 받음). 직원 목록은 활성 먼저·비활성 아래(각각 이름순). 설정 화면의 기록 탭 직원 거르기 목록 순서는 그대로.
+- **④** `settingsMessages.js`: 진료 `orderset.routes.js`의 거절 문구 7개(`name required`, `items[i].…` 6) — `items[i]`에서 번호를 떼어 **i + 1**을 줄 번호로(「Ligne 3 : …」). `settings.messages.mjs`가 그 파일의 문구를 읽어 모두 번역되는지·줄 번호가 맞는지 확인(새 문구가 생기면 걸림).
+- **⑤** 영상 창이 EMR을 거치게 된 뒤(PACS P-9, 035): `status.routes.js` `checkPacsAddresses`·`server-status.ps1` `Get-PacsAddressCheck`가 쓰지 않게 된 `pacs_viewer_url` 대신 `orthanc_url`(8090이면 옛 포트 — 오더 연동 탭과 같은 판정)과 `emr_base_url`(8080)을 보고, 영상을 쓰는 설치(`worklist_bridge` 보고가 있거나 워크리스트 호스트가 적힘)인데 비밀번호가 없으면 **`status.pacsAddress.notPaired`**(「PACS 폴더에서 pair-with-emr」, 상태 창도 같은 안내). 영상을 쓰지 않는 설치는 경고하지 않음. 총괄 메시지는 「옛 포트는 emr_base_url에만」이었지만 `orthanc_url`도 넣었습니다 — 오더 연동 탭(PACS)이 이미 그 칸의 8090을 경고하고, 틀리면 영상 창이 안 열리므로. 빼야 하면 한 줄.
+- **문서**: `manual-fr/settings.md`(상태 점에 짝 맞추기·옛 포트 설명, 메시지 표 두 줄, 창 이름 「Nouveau membre du personnel」·E-mail), `changelog-1.5.0/settings.md`(After updating의 영상 설정·pair-with-emr, Smaller 한 줄).
+- **공용 파일 변경**: i18n `se_newTitle_*`·`se_editTitle_*` 10개, `se_osErr*` 7개, `se_sys_pacsAddress_notPaired`.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `frontend/src/pages/settingsMessages.js` · `backend/src/routes/status.routes.js` · `server-status.ps1`(BOM·CRLF 유지) · `backend/test/settings.messages.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`, messages(약속처방 7개 포함)·status 시험. 격리(복원·정리한 DB): 상태 API 8가지(영상 안 씀 off / 옛 뷰어 주소는 경고 아님 / 워크리스트 호스트·브리지 보고인데 짝 없음 → notPaired / 짝 있고 포트 맞음 ok / EMR 8080·영상 서버 8090 → oldPort / 둘 다면 notPaired가 먼저·옛 포트 목록 함께) 통과. 상태 창 사본 fr·en(짝 없음+8080 → 한 줄에 둘, 안내는 짝 맞추기), 짝 있음 → 옛 포트 안내. 화면 fr: 상태 점 목록의 짝 맞추기 안내, 직원 창 「Modifier le membre du personnel」·E-mail 저장 → API에 남음, 비활성 계정이 목록 맨 아래. ko: 새 약 창 「새 약」.
+
 ## 2026-09-29 — 정리 스크립트에 cash_movement · 권한 시험에 cash-day (총괄 ①②)
 
 - **상태**: 확인 요청

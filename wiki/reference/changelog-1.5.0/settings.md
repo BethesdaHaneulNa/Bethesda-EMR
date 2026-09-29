@@ -60,6 +60,8 @@ imaging addresses still on the old ports 8080/8090, and the database's drive as 
 - The Settings screen, its messages and the server's messages are in French.
 - Saving a drug in Settings never changes its stock; stock moves only through the pharmacy's record.
 - Settings checks its inputs: unknown permissions, spaces around login ids, empty names, whole numbers.
+- The edit windows say what they edit ("New staff member", "Edit drug"...), the staff form has an
+  e-mail field, and deactivated staff are listed below the active ones.
 
 Migrations: 020 (nurse role), 022 (change log — coordinator), 026 (change log refuses TRUNCATE).
 Details: `wiki/modules/settings.md` section 8.
@@ -69,8 +71,10 @@ Details: `wiki/modules/settings.md` section 8.
 - **Take a backup and verify it**: Settings → Backup → **Sauvegarder**, then `.\verify-backup.ps1 -Strict`.
   The update scripts do the backup themselves now; after an update made by hand, do it yourself —
   until then every backup is from the older version.
-- **Check the imaging addresses** in Settings → **Flux d'ordres**: 9080 for the EMR, 9090 for the PACS
-  viewer. A yellow line under a field (and in the status window) means an old port.
+- **Check the imaging settings** in Settings → **Flux d'ordres**: the EMR address on 9080 and the image
+  server address on 9090 (a yellow line under a field, and in the status window, means an old port).
+  The viewer is now relayed by the EMR and needs pairing: if the status says the viewer is not paired,
+  run `pair-with-emr` in the PACS folder. The old viewer address field is no longer used.
 - **Existing doctor accounts** keep their permissions: tick **Pharmacie** by hand if the doctor should
   have it.
 - `clean-test-data.ps1` is for a **new PC right after restoring**, once. The PC the EMR was prepared on

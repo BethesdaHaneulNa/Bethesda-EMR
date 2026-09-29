@@ -18,13 +18,13 @@ Une partie de ce guide concerne **tout le personnel** : changer son propre mot d
 
 ### Créer un compte pour un membre du personnel
 
-1. **Paramètres** → **Personnel** → **+ Ajouter**. La fenêtre **Nouvel élément** s'ouvre.
+1. **Paramètres** → **Personnel** → **+ Ajouter**. La fenêtre **Nouveau membre du personnel** s'ouvre.
 2. **Nom** : le nom de la personne (RAKOTO Jean).
 3. **Identifiant** : le nom qu'elle tapera pour se connecter (par exemple `jrakoto`). Pas d'espace.
 4. **Mot de passe** : un mot de passe initial est déjà rempli. Vous pouvez le garder ou en taper un autre. Cliquez sur **Afficher** pour le voir. Donnez-le à la personne ; elle pourra le changer elle-même.
 5. **Rôle (étiquette)** : **Accueil**, **Médecin**, **Infirmier(ère)**, **Pharmacie**, **Laboratoire** ou **Administrateur**. Le rôle coche des permissions habituelles.
 6. **Permissions (écrans accessibles)** : vérifiez les cases. Ce sont les cases qui décident ce que la personne peut ouvrir : **Enregistrement**, **Consultation**, **Paiement**, **Pharmacie**, **Laboratoire**, **Statistiques**, **Paramètres**.
-7. Pour un médecin, choisissez son **Service** si besoin.
+7. **E-mail** si la personne en a un. Pour un médecin, choisissez son **Service** si besoin.
 8. **Sauver**.
 
 ### Changer les permissions d'un compte
@@ -106,6 +106,7 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
    - vert **Tout fonctionne** ; jaune **À surveiller** ; rouge **Problème** ; gris **État inconnu** (le serveur ne répond pas, l'EMR reste utilisable).
 2. **S'il est jaune ou rouge, cliquez dessus** : la liste dit ce qui ne va pas (base, disque, sauvegarde, appareils, imagerie…). Faites ce qui est écrit, ou prévenez le responsable.
 3. Une ligne grise « Non utilisé » n'est pas un problème.
+4. **Adresses de l'imagerie** en jaune « La visionneuse n'est pas appairée au serveur d'images … » : les images ne s'ouvrent pas depuis le dossier. Sur le PC serveur, dans le dossier PACS, il faut lancer **pair-with-emr** — prévenez le responsable. « Ancien port … » : dans **Flux d'ordres**, remplacez 8080 par 9080 (adresse de l'EMR) ou 8090 par 9090 (serveur d'images), puis **Sauver**.
 
 ### Lire le Journal
 
@@ -122,7 +123,7 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Message à l'écran | Ce que cela veut dire | Que faire |
 |---|---|---|
 | Cet identifiant existe déjà. Choisissez-en un autre. | Un autre compte a cet identifiant | Prenez un autre identifiant |
-| Saisissez un identifiant. / Saisissez un mot de passe. | Case vide dans **Nouvel élément** | Remplissez-la, puis **Sauver** |
+| Saisissez un identifiant. / Saisissez un mot de passe. | Case vide dans **Nouveau membre du personnel** | Remplissez-la, puis **Sauver** |
 | Vous n'avez pas l'autorisation pour cela… | Le compte n'a pas la permission | Demandez à un administrateur de cocher la permission |
 | C'est le dernier administrateur actif pouvant ouvrir les Paramètres… | On retirerait le dernier accès aux Paramètres | Donnez d'abord le rôle **Administrateur** et **Paramètres** à un autre compte |
 | Le compte administrateur créé à l'installation ne peut pas être désactivé. | Ce compte (identifiant admin) est protégé | Normal — ne rien faire |
@@ -131,6 +132,8 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Les deux nouveaux mots de passe ne sont pas identiques. | Les deux cases diffèrent | Retapez le même mot de passe deux fois |
 | Indiquez la dose par jour et le nombre de jours… | Une ligne de médicament d'une ordonnance type est incomplète | Remplissez **Dose/j** et **Jours** sur la ligne nommée |
 | Vérifiez les nombres… | Un nombre est hors limites | Corrigez (Fois 1–24, Jours 1–365…) |
+| La visionneuse n'est pas appairée au serveur d'images — lancez pair-with-emr… | Les images ne s'ouvrent pas depuis le dossier | Prévenez le responsable (dossier PACS du PC serveur) |
+| Ligne 2 : la dose par jour doit être supérieure à 0. (et autres « Ligne n : … ») | Une ligne d'ordonnance type a un nombre refusé | Corrigez la ligne indiquée |
 | Le serveur ne répond pas… | Le serveur est arrêté ou lent | Regardez la fenêtre d'état sur le PC serveur ; prévenez le responsable |
 
 ## À ne pas faire
