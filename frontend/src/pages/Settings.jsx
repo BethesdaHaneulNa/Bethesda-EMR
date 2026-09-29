@@ -6,7 +6,7 @@ import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
-import { AUDIT_ACTIONS, auditActionText, auditChanges } from './settingsAudit.js';
+import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -810,7 +810,7 @@ export default function SettingsPage() {
                   return <tr key={r.id} style={{borderBottom:'1px solid #1e2433',verticalAlign:'top'}}>
                     <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>
-                    <td style={{padding:'6px 10px',color:tx}}>{auditActionText(t, r.action)}{r.summary?<div style={{fontSize:12,color:t2}}>{r.summary}</div>:null}</td>
+                    <td style={{padding:'6px 10px',color:tx}}>{auditActionText(t, r.action)}{auditEntityText(t, r)?' — '+auditEntityText(t, r):''}{auditSummary(t, r)?<div style={{fontSize:12,color:t2}}>{auditSummary(t, r)}</div>:null}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.patient_name||'—'}{r.chart_no?<div style={{fontSize:11,color:'#60a5fa',fontFamily:'monospace'}}>{r.chart_no}</div>:null}</td>
                     <td style={{padding:'6px 10px',fontSize:12,color:t2}}>
                       {r.action==='settings.staff.password'?<span style={{fontStyle:'italic',color:t3}}>{t.se_logNoValue}</span>:null}
