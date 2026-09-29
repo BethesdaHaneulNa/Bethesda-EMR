@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 3단계: 공용 부품 넷 (PatientFinder · PatientChart · DocumentModal 틀 · RadiologyReadings)
+
+- **상태**: 확인 요청
+- **커밋**: session/design (이 항목과 같은 커밋)
+- **한 일**: 여러 화면이 같이 쓰는 창 넷의 색을 `var(--…)` 로. 색만.
+  - `DocumentModal.jsx` 는 **틀만**(제목 줄, 문서 목록, 입력 칸, 단추). 종이 미리보기는 그대로 — 흰 종이 `#fff`, 종이 뒤 회색 `#4b5563`, 「무효」 도장 글자 `rgba(220,38,38,0.32)` 는 이름표로 바꾸지 않음. `documents/*` · `Receipt.jsx` 는 열어 보지도 않음.
+  - `PatientFinder.jsx`: 수납 상태 꼬리표 다섯(받음 초록 / 일부 · 미수 노랑 / 면제 회색 / 취소 빨강)의 글자색 · 옅은 바탕, 목록 줄에 마우스를 올렸을 때 넣던 색.
+  - `RadiologyReadings.jsx`: 판독 목록. 환자 확인 띠(PACS 세션의 `PatientCheck`)의 경고 바탕은 `--warn-chip` · `--danger-chip`.
+- **바꾼 파일**: `frontend/src/components/PatientFinder.jsx`(접수 주관) · `PatientChart.jsx`(수납 주관) · `DocumentModal.jsx`(진료 주관) · `RadiologyReadings.jsx`(PACS)
+- **공용 파일 변경**: 위 넷이 모두 공용 파일(총괄이 정한 순서 3). 색만
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `check-dark.mjs`(PatientFinder 158줄 중 157, PatientChart 116줄 모두, DocumentModal 336줄 중 333, RadiologyReadings 97줄 모두 같음 — 다른 줄은 입력 칸 테두리) · 격리 스택 9189 에서 접수 · 진료 · 수납 · 약국 · 임상병리의 34가지 상태(창을 연 상태 포함, 요소 6,712개)의 계산된 색 고치기 전 · 후 **모두 같음**(그 가운데 창을 연 상태 19장) · 밝은 화면 `__audit()` — 창을 연 상태 모두 기준 미달 없음 · 빌드 통과
+- **확인 못 한 것**: 환자 찾기 창(「환자 찾기」 단추로 여는 것)은 둘러보기에서 열지 않았음 — `check-dark.mjs` 가 근거. 문서 창에서 문서를 새로 쓰는 화면(수술기록지 입력)과 무효 처리 단추. 영상이 있는 판독 줄(격리 스택에 PACS 없음)
+- **위키**: `modules/design.md` 3.4 · 3.6 · 8
+- **총괄 확인 요청**: 남은 화면은 `Stats.jsx`(통계 세션이 끝내면) · `Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx`(설정 세션이 끝내면) 와 맨 마지막의 바꾸는 단추 · 901 · `theme.routes.js`. **표에 「시작해도 됨」이 적히면 이어서 합니다.** 그동안 단추와 서버 쪽을 미리 만들어 둘 수 있습니다(화면에는 붙이지 않고) — 해도 되는지 알려 주세요
+- **다른 세션에 부탁**: 접수 · 수납 · 진료 · PACS 세션 — 이 파일들에 색을 넣을 때는 `var(--…)` 로
+- **남은 일 · 알려진 문제**: 위
+
 ## 2026-09-29 — 3단계: Pharmacy.jsx · PharmacyStock.jsx 색을 이름표로
 
 - **상태**: 확인 요청

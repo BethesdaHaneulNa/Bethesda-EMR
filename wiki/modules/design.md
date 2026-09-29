@@ -137,6 +137,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇을 고친 뒤 | 비교한 화면 | 결과 |
 |---|---|---|---|
+| 2026-09-29 | 3단계 공용 부품 넷 | 진료 · 수납 · 약국 · 임상병리에서 연 창 19장을 포함한 34장. `check-dark.mjs`: PatientFinder 158줄 중 157, PatientChart 116줄 모두, DocumentModal 336줄 중 333, RadiologyReadings 97줄 모두 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Pharmacy.jsx` · `PharmacyStock.jsx` | 약국 5장(빈 화면 / 환자 둘 / 차트 창)을 포함한 34장. 재고 탭은 고치기 전 기록이 없어 `check-dark.mjs` 가 근거. `check-dark.mjs`: Pharmacy 402줄 중 401, PharmacyStock 308줄 중 307줄 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Payment.jsx` | 수납 9장(빈 화면 / 환자 둘 / 판독 · 문서 · 차트 창)을 포함한 34장. `check-dark.mjs`: 740줄 중 729줄 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Consultation.jsx` | 진료 14장(빈 화면 / 대기 목록 / 환자 고름 / 검사결과 · 판독 · 문서 · 차트 · 외래 내역 창을 연 상태)을 포함한 20장. `check-dark.mjs`: 1,109줄 중 1,097줄 같음, 나머지(import, 상태 색 계열, 입력 칸 테두리 · 바탕 7곳, 환자 띠 주석)는 눈으로 | **모두 같음** |
@@ -176,9 +177,9 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 | `pages/Registration.jsx` | 끝 (2026-09-29) | 97 | 상태 색: 대기 = 파랑(`accent`), 진료 중 = 노랑(`warn`), 완료 = 초록(`ok`) — 꼬리표 글자와 함께 쓰임. `mb()` 와 탭 단추는 색 대신 계열 이름을 받음. 날짜 칸의 `colorScheme` 은 `var(--scheme)`. 대기 목록 검색 칸은 `--field-3`(어두운 화면에서는 제목 줄 색 그대로) |
 | `pages/Lab.jsx` · `components/LabResults.jsx` | 끝 (2026-09-29) | 47 · 12 | 검사실의 청록 단추는 어두운 화면에서 밝은 청록 + 검은 글자, 밝은 화면에서 짙은 청록 + 흰 글자(`--on-cyan`). 낮음 = 파랑 ▼, 높음 · 이상 = 빨강 ▲ — 색과 기호가 같이 있음(그대로). 결과 입력 칸은 칸 전용 이름표 |
 | `pages/Consultation.jsx` | 끝 (2026-09-29) | 189 | **환자 띠(진한 파랑 줄)는 밝은 화면에서도 그대로** — 시안 A 대로. 그 블록의 색 24가지는 일부러 이름표로 바꾸지 않고 주석을 닮. 영상 창의 검은 바탕과 그 위 안내 글자도 그대로. 상태 색은 계열 이름(`SC`)으로. 마우스를 올린 줄의 색은 `--hover-row` |
-| `components/PatientFinder.jsx` · `PatientChart.jsx` · `DocumentModal.jsx`(틀만) · `RadiologyReadings.jsx` | | | |
+| `components/PatientFinder.jsx` · `PatientChart.jsx` · `DocumentModal.jsx`(틀만) · `RadiologyReadings.jsx` | 끝 (2026-09-29) | 34 · 25 · 38 · 22 | 문서 창은 **틀만** — 종이 미리보기의 흰 종이(`#fff`), 그 뒤의 회색 책상(`#4b5563`), 「무효」 도장 글자는 그대로. 환자 찾기의 수납 상태 꼬리표(받음 · 일부 · 미수 · 면제 · 취소)는 글자와 함께. 목록 줄에 마우스를 올렸을 때의 색은 이름표 |
 | `pages/Payment.jsx` | 끝 (2026-09-29) | 218 | 상태 색의 뜻 그대로: 빨강 = 취소 · 미수, 초록 = 받음, 보라 = 정정, 노랑 = 안내 — 모두 글자와 함께. 위쪽 큰 단추 넷(문서 · 원외처방 · 차트 · 판독)은 짙은 색 바탕 + 옅은 글자로 두 화면에서 같음. 「대기 / 수납 완료」 탭은 고르지 않은 쪽 글자가 밝은 화면에서 검정 |
-| `pages/Stats.jsx` | 통계 세션의 현금 기준 작업 뒤 | | |
+| `pages/Stats.jsx` | 통계 세션의 현금 기준 작업 뒤(총괄 표를 기다림) | | |
 | `pages/Pharmacy.jsx` · `PharmacyStock.jsx` | 끝 (2026-09-29) | 80 · 61 | 원내 = 초록, 원외 = 노랑 단추: 어두운 화면에서 밝은 색 + 검은 글자, 밝은 화면에서 짙은 색 + 흰 글자(`--on-bright`). 재고의 입고 = 초록, 실사 = 노랑, 폐기 = 빨강 단추도 같음 — 모두 글자가 같이 있음. 재고 기록의 종류 글자색(`KIND_COLOR`)은 글자용 이름표 |
 | `pages/Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx` | 맨 마지막 | | |
 
@@ -214,6 +215,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇 |
 |---|---|
+| 2026-09-29 | **3단계 공용 부품** `PatientFinder` · `PatientChart` · `DocumentModal`(틀) · `RadiologyReadings` 색 34 · 25 · 38 · 22곳 |
 | 2026-09-29 | **3단계 `Pharmacy.jsx` · `PharmacyStock.jsx`** 색 80 · 61곳 |
 | 2026-09-29 | **3단계 `Payment.jsx`** 색 218곳. 이름표 더함: 짙은 단추 `--accent-deep` · `--teal-deep` · `--cyan-deep` · `--violet-deep`(두 화면에서 같은 값), 그 위 옅은 글자 `--on-fill-*` 9개(같은 값), `--on-bright`, `--bg-col-2` · `--accent-chip` · `--danger-box` · `--line-soft-2` · `--field-4`, 글자 `--accent-text-3` · `--danger-text-3` · `--text-soft-2` · `--violet-text-4` · `--warn-text-3` |
 | 2026-09-29 | **3단계 `Consultation.jsx`** 색 189곳. 환자 띠와 영상 창 바탕은 주제와 관계없이 그대로 |
