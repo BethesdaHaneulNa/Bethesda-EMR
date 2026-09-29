@@ -5,7 +5,7 @@
 ## 2026-09-29 — P-9 C 만듦: EMR이 영상을 중계 (총괄 조건 ①~⑧)
 
 - **상태**: 확인 요청
-- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `9a57b6a`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` — 같은 날 커밋(보고에 해시)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `9a57b6a`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `4e84b0b`
 - **한 일**
   - 새 `backend/src/routes/pacs.viewer.js` — `/api/pacs/viewer/*` 중계. 서명 쿠키(`px_viewer`, 30분, 스터디 5개까지), 경로 정규화 + 허용 목록(Stone 파일·`/system`·스터디 UID로 거른 DICOMweb만), 요청마다 계정 활성·진료 권한 확인(30초 캐시), Orthanc에 `admin`으로 붙여 스트림 전달, Orthanc의 `Set-Cookie`·`WWW-Authenticate` 버림, 안내 쪽(짝 안 맞음 / 응답 없음 / 시간 끝) fr·ko·en, 중계 응답에만 Stone용 CSP. 자세히는 모듈 위키 4절.
   - `pacs.routes.js` — `viewer-url`이 상대 주소 `/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`를 주고 쿠키를 붙임, **`?study=`로 여는 길 없앰**(오더로만), `has_viewer` 늘 참. `GET/PUT /config`는 `publicConfig`로 `orthanc_password`를 빼고 `orthanc_password_set`만. `orthanc_url` 저장.
