@@ -395,4 +395,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 4절: 화면 메뉴는 화면을 열 때와 5분마다 권한에 맞춰짐(총괄 `c4d4d67`) — 「확인 필요」 문장 고침, 위키만 | `92a9212` |
 | 2026-09-29 | 결정 12: 글자 결과를 참고 글자와 비교해 다르면 `abnormal`(빨강 `!`), 같은 말 묶음(`Négatif`·`Neg`·`-`·`음성`), `<x`·`>x` 판정 — `computeFlag`/`flagOf` → `flagFor` | `2a24cc3` |
 | 2026-09-29 | 결정 8: 결과 표에서 같은 날 재검을 (1)(2) 칸으로 나눠 둘 다 보이고 입력 시각 표시 · 3.3에 `<x`·`>x` 예시 표 | `26b861b` |
-| 2026-09-29 | 결정 3-B 임상병리 몫: 취소된 오더에 결과 저장 거절(409 `Order is cancelled`, `lb_orderCancelled`), 결과 표에서 취소분 회색·줄긋기·툴팁(`order_status`·`cancel_reason`, `lb_cancelled`) | (이 커밋) |
+| 2026-09-29 | 결정 3-B 임상병리 몫: 취소된 오더에 결과 저장 거절(409 `Order is cancelled`, `lb_orderCancelled`), 결과 표에서 취소분 회색·줄긋기·툴팁(`order_status`·`cancel_reason`, `lb_cancelled`) | `1ef0be2` |

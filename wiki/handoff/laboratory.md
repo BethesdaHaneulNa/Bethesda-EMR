@@ -5,7 +5,7 @@
 ## 2026-09-29 — 결정 3-B 임상병리 몫: 취소된 오더 저장 거절 · 결과 표 회색 표시
 
 - **상태**: 확인 요청 — **진료(취소 API·마이그레이션)·수납과 같은 배포로 합칠 것**(총괄 지시대로 세 세션 보고 뒤 한 번에)
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `1ef0be2` (출발점 `develop` `6a96193`)
 - **한 일**: 승인된 설계(아래 항목)의 ①③.
   - ① `POST /lab/order/:id/results`: `SELECT … FOR UPDATE`로 읽고 `status = 'cancelled'`면 **409 `Order is cancelled`**. 화면(`Lab.jsx`)은 오더 삭제(404)와 같은 방식 — `lb_orderCancelled` 안내 후 그 내원을 다시 불러옴.
   - ③ `GET /lab/patient/:id/results`: `oi.status AS order_status`, `to_jsonb(oi)->>'cancel_reason' AS cancel_reason` 추가 — **진료 마이그레이션 전에도 깨지지 않음**(칸이 없으면 NULL). `LabResults.jsx`: 취소분은 회색·줄긋기·▲▼! 없음, 툴팁 「취소됨 — 이유」(이유 없으면 「취소됨」). 줄·칸(재검 칸 포함)은 그대로 차지.
