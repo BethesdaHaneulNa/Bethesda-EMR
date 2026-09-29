@@ -18,9 +18,9 @@ const D = dark();
 const canon = h => { h = h.toLowerCase(); return h.length === 4 ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; };
 
 // by role. A colour missing from a table is left as it is and reported.
-const SURFACE = { '#0f1117': 'bg', '#11141c': 'bg-col', '#0c0f16': 'bg-deep', '#13161f': 'panel', '#161a26': 'panel-2', '#1a1f2e': 'panel-head', '#141824': 'panel-head-2', '#1e2433': 'chip', '#334155': 'btn-neutral', '#374151': 'btn-neutral-2' };
+const SURFACE = { '#151a28': 'panel-head-3', '#0f1117': 'bg', '#11141c': 'bg-col', '#0c0f16': 'bg-deep', '#13161f': 'panel', '#161a26': 'panel-2', '#1a1f2e': 'panel-head', '#141824': 'panel-head-2', '#1e2433': 'chip', '#334155': 'btn-neutral', '#374151': 'btn-neutral-2' };
 const LINE = { '#1e2433': 'line-soft', '#232838': 'border', '#2a3142': 'border-2' };
-const TEXT = { '#ffffff': 'text-max', '#f8fafc': 'text-strong-2', '#f1f5f9': 'text-strong', '#e2e8f0': 'text', '#cbd5e1': 'text-soft', '#94a3b8': 'text-2', '#64748b': 'text-3', '#475569': 'text-4' };
+const TEXT = { '#334155': 'text-5', '#ffffff': 'text-max', '#f8fafc': 'text-strong-2', '#f1f5f9': 'text-strong', '#e2e8f0': 'text', '#cbd5e1': 'text-soft', '#94a3b8': 'text-2', '#64748b': 'text-3', '#475569': 'text-4' };
 const FILL = {}, INK = {}, TINT = {};
 for (const n in D) {
   const v = D[n]; if (!/^#/.test(v)) continue;
@@ -37,19 +37,25 @@ let src = fs.readFileSync(path.join(root, file), 'utf8');
 const left = {}; let n = 0;
 const out = src.split('\n').map((line, li) => {
   if (/^\s*(\/\/|\*|\/\*)/.test(line)) return line;
-  return line.replace(/#[0-9a-fA-F]{8}\b|#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba\(0,\s*0,\s*0,\s*0?\.6\)/g, (m, off) => {
+  return line.replace(/#[0-9a-fA-F]{8}\b|#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba\(0,\s*0,\s*0,\s*0?\.\d+\)/g, (m, off) => {
     const before = line.slice(0, off);
     // the style property this colour belongs to: the nearest one before it
     let prop = null, pm; PROP.lastIndex = 0; while ((pm = PROP.exec(before))) prop = pm;
     const miss = why => { left[m.toLowerCase() + ' (' + why + ')'] = (left[m.toLowerCase() + ' (' + why + ')'] || []).concat(li + 1); return m; };
     if (!prop) return miss('no style property on the line before it');
     const kind = kindOf(prop[1]);
-    if (/^rgba/.test(m)) { if (kind === 'bg') { n++; return 'var(--scrim)'; } return miss('shadow'); }
+    if (/^rgba/.test(m)) { // black with an alpha: behind a dialog, or a box shadow
+      const a = Math.round(parseFloat(m.replace(/\s/g, '').split(',')[3]) * 100);
+      const tk = kind === 'bg' ? (a === 60 ? 'scrim' : 'scrim-' + a) : kind === 'sh' ? 'shadow-' + a : null;
+      if (!tk || !(tk in D)) return miss(kind + ', no token for black at this alpha');
+      n++; return 'var(--' + tk + ')';
+    }
     const h = canon(m);
     // the style object this colour sits in, to see what else is set there
     const open = before.lastIndexOf('{'), close = line.indexOf('}', off); const obj = line.slice(open < 0 ? 0 : open, close < 0 ? line.length : close);
     const tag = (before.match(/<([a-zA-Z]+)\b[^<]*$/) || [])[1] || '';
-    const isField = /^(input|textarea|select)$/.test(tag);
+    // an input: the tag itself, or a style constant named like one (var IS = {...}, var IN = {...})
+    const isField = /^(input|textarea|select)$/.test(tag) || /^\s*(var|const|let)\s+(IS|IN|INP|inp\w*|input\w*|\w*Input\w*|field\w*)\s*=/.test(line);
     let t = null;
     if (h.length === 9) t = TINT[h];
     else if (kind === 'bg') t = isField && h === '#0f1117' ? 'field' : (SURFACE[h] || FILL[h]);

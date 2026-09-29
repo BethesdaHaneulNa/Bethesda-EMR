@@ -18,14 +18,18 @@ export const NEUTRAL = [
   ['panel-2',      '#161a26', '#f3f5f9', 's'],   // menu row, sub-headers
   ['panel-head',   '#1a1f2e', '#e8ecf2', 's'],   // scBg: section headers, top bar start
   ['panel-head-2', '#141824', '#dfe5ee', 's'],   // top bar gradient end
+  ['panel-head-3', '#151a28', '#e1e6ee', 's'],   // login card gradient end
   ['chip',         '#1e2433', '#e3e8ef', 's'],   // neutral buttons, tags
-  ['field',        '#0f1117', '#ffffff', 's'],   // input background (same as --bg when dark)
+  ['field',        '#0f1117', '#ffffff', 's'],
+  ['field-2',      '#11151f', '#ffffff', 's'],
+  ['field-3',      '#1a1f2e', '#ffffff', 's'],   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
+  ['bg-row',       '#111827', '#f8fafc', 's'],   // a row of search results   // input background (same as --bg when dark)
   ['btn-neutral',  '#334155', '#d5dbe4', 's'],
   ['btn-neutral-2','#374151', '#d5dbe4', 's'],
   ['line-soft',    '#1e2433', '#e1e6ee', 'l'],   // table row separators
   ['border',       '#232838', '#d5dbe4', 'l'],   // bd
   ['border-2',     '#2a3142', '#c3cbd7', 'l'],   // bd2 on boxes
-  ['field-border', '#2a3142', '#8793a6', 'f'],   // bd2 on inputs: 3:1 against the field
+  ['field-border', '#2a3142', '#77839a', 'f'],   // bd2 on inputs: 3:1 against the field and against the panel around it
   ['text-max',     '#ffffff', '#0b1220', 't'],   // #fff used as text on a panel (not on a coloured button)
   ['text-strong',  '#f1f5f9', '#0b1220', 't'],
   ['text-strong-2','#f8fafc', '#0b1220', 't'],
@@ -34,6 +38,7 @@ export const NEUTRAL = [
   ['text-2',       '#94a3b8', '#4a5668', 't'],   // t2
   ['text-3',       '#64748b', '#566274', 't'],   // t3
   ['text-4',       '#475569', '#5b6779', 't'],
+  ['text-5',       '#334155', '#5b6779', 't'],   // barely visible when dark; it is still text, so readable when light
   ['on-fill',      '#ffffff', '#ffffff', 'x'],   // text on a coloured button: white in both
 ];
 
@@ -69,6 +74,7 @@ export const COLOR = [
   ['violet-ink',    '#8b5cf6', '#6c23eb', 't'],
   ['violet-text',   '#a78bfa', '#6c23eb', 't'],
   ['violet-text-2', '#c084fc', '#6b21a8', 't'],
+  ['violet-text-3', '#ddd6fe', '#5b21b6', 't'],
   ['cyan',          '#06b6d4', '#0e7490', 'c'],
   ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
   ['cyan-text',     '#67e8f9', '#0b6279', 't'],
@@ -92,7 +98,16 @@ export const TINT = [...new Set(TINTS_USED.split(/\s+/))].sort().map(k => {
 
 // ── other values that differ by theme ──
 export const OTHER = [
-  ['scrim',        'rgba(0,0,0,0.6)', 'rgba(15,23,42,0.45)'],
+  ['scrim',        'rgba(0,0,0,0.6)', 'rgba(15,23,42,0.45)'],   // behind a dialog
+  ['scrim-30',     'rgba(0,0,0,0.3)', 'rgba(15,23,42,0.2)'],
+  ['scrim-40',     'rgba(0,0,0,0.4)', 'rgba(15,23,42,0.3)'],
+  ['scrim-50',     'rgba(0,0,0,0.5)', 'rgba(15,23,42,0.4)'],
+  ['scrim-70',     'rgba(0,0,0,0.7)', 'rgba(15,23,42,0.5)'],
+  ['shadow-30',    'rgba(0,0,0,0.3)', 'rgba(15,23,42,0.10)'],  // box shadows: much lighter on white
+  ['shadow-40',    'rgba(0,0,0,0.4)', 'rgba(15,23,42,0.12)'],
+  ['shadow-50',    'rgba(0,0,0,0.5)', 'rgba(15,23,42,0.15)'],
+  ['shadow-60',    'rgba(0,0,0,0.6)', 'rgba(15,23,42,0.18)'],
+  ['shadow-70',    'rgba(0,0,0,0.7)', 'rgba(15,23,42,0.20)'],
   ['hover-filter', 'brightness(1.12)', 'brightness(0.95)'],
   ['scheme',       'dark', 'light'],
 ];
@@ -125,10 +140,11 @@ export function check() {
     if (lo) add(t[0], lo[0], 4.5, 'on --' + lo[1]);
   }
   const fb = NEUTRAL.find(t => t[0] === 'field-border'); add('field-border', contrast(rgb(fb[2].slice(1)), rgb(byName.field[2].slice(1))), 3, 'against --field');
+  { const w = worst(rgb(fb[2].slice(1)), surf.filter(s => ['bg', 'bg-col', 'panel', 'panel-2', 'panel-head'].indexOf(s[0]) >= 0)); add('field-border', w[0], 3, 'against --' + w[1] + ' around the field'); }
   return { out, bad };
 }
 
-if (process.argv[1].endsWith('tokens.mjs')) {
+if ((process.argv[1] || '').endsWith('tokens.mjs')) {
   const r = check();
   const wi = process.argv.indexOf('--write');
   if (wi >= 0) { // replace the block in index.html

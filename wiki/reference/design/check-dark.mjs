@@ -22,7 +22,7 @@ const D = dark(); const unknown = new Set(); let tokens = 0;
 const newText = newRaw.replace(/var\(--([a-z0-9-]+)\)/g, (m, n) => { if (!(n in D)) { unknown.add(n); return m; } tokens++; return D[n]; });
 if (unknown.size) { console.log('UNKNOWN TOKENS: ' + [...unknown].join(', ')); process.exit(1); }
 // colours compare without regard to case; #fff and #ffffff are the same colour
-const canon = s => s.replace(/#[0-9a-fA-F]{3,8}\b/g, h => { h = h.toLowerCase(); return h.length === 4 ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; });
+const canon = s => s.replace(/rgba?\([^)]*\)/g, m => m.replace(/\s+/g, '').replace(/,\.(\d+)\)/, ',0.$1)')).replace(/#[0-9a-fA-F]{3,8}\b/g, h => { h = h.toLowerCase(); return h.length === 4 ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; });
 const a = canon(oldText).split('\n'), b = canon(newText).split('\n');
 let same = 0, i = 0, j = 0; const diff = [];
 while (i < a.length || j < b.length) {

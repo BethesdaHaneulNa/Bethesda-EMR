@@ -4,6 +4,8 @@ import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
+// Design session: colours are tokens (index.html). tint() names a colour with an alpha.
+import { tint } from '../theme.js';
 
 
 function DobInput(props) {
@@ -24,12 +26,12 @@ function DobInput(props) {
     onChange(y || m || d ? y + '-' + m + '-' + d : '');
   }
   var box = Object.assign({}, style, { display:'flex', alignItems:'center', gap:6, padding:'6px 8px' });
-  var partStyle = { background:'transparent', border:0, outline:'none', color:style.color || '#e2e8f0', fontSize:style.fontSize || 17, fontFamily:'monospace', textAlign:'center' };
+  var partStyle = { background:'transparent', border:0, outline:'none', color:style.color || 'var(--text)', fontSize:style.fontSize || 17, fontFamily:'monospace', textAlign:'center' };
   return <div style={box}>
     <input inputMode="numeric" value={year} placeholder={t.rc_phYear} maxLength={4} onChange={function(e){var v=digits(e.target.value,4); emit(v,month,day); if(v.length===4 && mRef.current)mRef.current.focus();}} style={Object.assign({}, partStyle, {width:58})}/>
-    <span style={{color:'#64748b'}}>-</span>
+    <span style={{color:'var(--text-3)'}}>-</span>
     <input ref={mRef} inputMode="numeric" value={month} placeholder={t.rc_phMonth} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,v,day); if(v.length===2 && dRef.current)dRef.current.focus();}} style={Object.assign({}, partStyle, {width:34})}/>
-    <span style={{color:'#64748b'}}>-</span>
+    <span style={{color:'var(--text-3)'}}>-</span>
     <input ref={dRef} inputMode="numeric" value={day} placeholder={t.rc_phDay} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,month,v);}} style={Object.assign({}, partStyle, {width:34})}/>
   </div>;
 }
@@ -439,7 +441,7 @@ export default function RegistrationPage() {
     });
   }
 
-  function mb(c) { return { background: c + '18', color: c, border: '1px solid ' + c + '40', borderRadius: 5, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }; }
+  function mb(c) { return { background: tint(c, '18'), color: 'var(--' + c + '-ink)', border: '1px solid ' + tint(c, '40'), borderRadius: 5, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }; }
   // "Terminer →" on a patient still waiting: no consultation took place, so the server
   // turns the visit into "no fee" (decided 2026-09-29, ⑳). Ask first - it changes
   // what the cashier will charge.
@@ -546,51 +548,51 @@ export default function RegistrationPage() {
   function uf(k, v) { setForm(function (p) { var n = {}; for (var x in p) n[x] = p[x]; n[k] = v; return n; }); }
   function uv(k, v) { setVisitForm(function (p) { var n = {}; for (var x in p) n[x] = p[x]; n[k] = v; return n; }); }
 
-  var bd = '#232838', scBg = '#1a1f2e', pn = '#13161f', tx = '#e2e8f0', t2 = '#94a3b8', t3 = '#64748b';
-  var IS = { width: '100%', background: '#0f1117', border: '1px solid #2a3142', borderRadius: 7, padding: '9px 11px', color: tx, fontSize: 17, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
+  var bd = 'var(--border)', scBg = 'var(--panel-head)', pn = 'var(--panel)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)';
+  var IS = { width: '100%', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 7, padding: '9px 11px', color: tx, fontSize: 17, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
   var labelStyle = { fontSize: 14, fontWeight: 700, color: t3, display: 'block', marginBottom: 4 };
   var smallBtn = { borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 16, fontWeight: 700, whiteSpace: 'nowrap' };
 
   return (
-    <div style={{ fontFamily: 'system-ui,-apple-system,sans-serif', background: '#0f1117', color: tx, minHeight: '100vh', fontSize: 16 }}>
+    <div style={{ fontFamily: 'system-ui,-apple-system,sans-serif', background: 'var(--bg)', color: tx, minHeight: '100vh', fontSize: 16 }}>
       <TopBar />
       <div style={{ display: 'grid', gridTemplateColumns: '440px 1fr 440px', height: 'calc(100vh - 82px)' }}>
 
         {/* LEFT: Search + Patient Info */}
         <div style={{ borderRight: '1px solid ' + bd, overflow: 'auto', background: pn }}>
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid ' + bd, background: viewingPast ? '#f59e0b14' : '#161a26' }}>
-            <label style={Object.assign({}, labelStyle, { color: viewingPast ? '#fbbf24' : t2 })}>{t.rc_workDate}</label>
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid ' + bd, background: viewingPast ? 'var(--warn-a14)' : 'var(--panel-2)' }}>
+            <label style={Object.assign({}, labelStyle, { color: viewingPast ? 'var(--warn-text)' : t2 })}>{t.rc_workDate}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={Object.assign({}, smallBtn, { background: '#1e2433', color: t2, border: '1px solid #2a3142', padding: '6px 10px' })}>◀</button>
-              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={Object.assign({}, IS, { width: 'auto', flex: 1, minWidth: 0, padding: '6px 8px', fontSize: 16, colorScheme: 'dark' })} />
-              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={Object.assign({}, smallBtn, { background: '#1e2433', color: t2, border: '1px solid #2a3142', padding: '6px 10px', opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 })}>▶</button>
-              {viewingPast ? <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={Object.assign({}, smallBtn, { background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640', padding: '6px 10px' })}>{t.rc_backToToday}</button> : null}
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={Object.assign({}, smallBtn, { background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', padding: '6px 10px' })}>◀</button>
+              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={Object.assign({}, IS, { width: 'auto', flex: 1, minWidth: 0, padding: '6px 8px', fontSize: 16, colorScheme: 'var(--scheme)' })} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={Object.assign({}, smallBtn, { background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', padding: '6px 10px', opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 })}>▶</button>
+              {viewingPast ? <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={Object.assign({}, smallBtn, { background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', padding: '6px 10px' })}>{t.rc_backToToday}</button> : null}
             </div>
-            {viewingPast ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: 6, lineHeight: 1.4 }}>{fill(t.rc_pastDateBanner, { date: workDate })}</div> : null}
+            {viewingPast ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 6, lineHeight: 1.4 }}>{fill(t.rc_pastDateBanner, { date: workDate })}</div> : null}
           </div>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: tx }}>{t.patientSearchRegistration}</div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid ' + bd }}>
             <label style={labelStyle}>{t.existingPatientSearch}</label>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={patientQuery} onChange={function (e) { setPatientQuery(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') searchPatients(); }} placeholder={t.searchNameChartPhone} style={Object.assign({}, IS, { flex: 1 })} />
-              <button onClick={function(){ setRegFinderOpen(true); }} style={Object.assign({}, smallBtn, { background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640', whiteSpace:'nowrap' })}>🔍 {t.findPatient}</button>
+              <button onClick={function(){ setRegFinderOpen(true); }} style={Object.assign({}, smallBtn, { background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', whiteSpace:'nowrap' })}>🔍 {t.findPatient}</button>
             </div>
             {patientLoading ? <div style={{ color: t3, fontSize: 15 }}>{t.searching}</div> : null}
             {patientResults.length > 0 ? <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden', maxHeight: 170, overflowY: 'auto' }}>
               {patientResults.map(function (p) {
-                return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid #1e2433', background: selectedPatient && selectedPatient.id === p.id ? '#3b82f618' : '#111827' }}>
+                return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: selectedPatient && selectedPatient.id === p.id ? 'var(--accent-a18)' : 'var(--bg-row)' }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{p.last_name} {p.first_name}</div>
                   <div style={{ fontSize: 13, color: t2 }}>{p.chart_no} · {p.phone || p.mobile || ''} · {p.date_of_birth ? p.date_of_birth.split('T')[0] : ''}</div>
                 </div>;
               })}
             </div> : null}
-            <button onClick={startNewPatient} style={Object.assign({}, smallBtn, { background: '#10b98118', color: '#34d399', border: '1px solid #10b98140' })}>+ {t.newPatientInput}</button>
+            <button onClick={startNewPatient} style={Object.assign({}, smallBtn, { background: 'var(--ok-a18)', color: 'var(--ok-text)', border: '1px solid var(--ok-a40)' })}>+ {t.newPatientInput}</button>
           </div>
 
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ background: '#f59e0b12', border: '1px solid #f59e0b45', borderRadius: 8, padding: '10px 12px' }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#fbbf24', marginBottom: 5 }}>📌 {t.receptionDeskNote}</label>
-              <textarea value={form.receptionNote} onChange={function (e) { uf('receptionNote', e.target.value); }} rows={2} placeholder={t.receptionDeskNoteHint} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5, background: '#11151f' })} />
+            <div style={{ background: 'var(--warn-a12)', border: '1px solid var(--warn-a45)', borderRadius: 8, padding: '10px 12px' }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--warn-text)', marginBottom: 5 }}>📌 {t.receptionDeskNote}</label>
+              <textarea value={form.receptionNote} onChange={function (e) { uf('receptionNote', e.target.value); }} rows={2} placeholder={t.receptionDeskNoteHint} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5, background: 'var(--field-2)' })} />
             </div>
             <div><label style={labelStyle}>{t.chartNo}</label><input value={form.chartNo} readOnly style={Object.assign({}, IS, { opacity: form.chartNo ? 1 : 0.6 })} placeholder={t.newPatientAutoChart} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -602,7 +604,7 @@ export default function RegistrationPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {['M', 'F'].map(function (g) {
                   var label = g === 'M' ? t.male : t.female;
-                  return <div key={g} className="pressable" onClick={function () { uf('gender', g); }} style={{ cursor: 'pointer', background: form.gender === g ? '#3b82f620' : '#1e2433', border: form.gender === g ? '1px solid #3b82f660' : '1px solid #2a3142', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: form.gender === g ? '#60a5fa' : t2, flex: 1, textAlign: 'center', fontWeight: 700 }}>{label}</div>;
+                  return <div key={g} className="pressable" onClick={function () { uf('gender', g); }} style={{ cursor: 'pointer', background: form.gender === g ? 'var(--accent-a20)' : 'var(--chip)', border: form.gender === g ? '1px solid var(--accent-a60)' : '1px solid var(--border-2)', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: form.gender === g ? 'var(--accent-text)' : t2, flex: 1, textAlign: 'center', fontWeight: 700 }}>{label}</div>;
                 })}
               </div>
             </div>
@@ -648,38 +650,38 @@ export default function RegistrationPage() {
                   {TYPES.map(function (x) {
                     var on = shown === x[0];
                     return <button key={x[0]} type="button" disabled={locked} onClick={function () { uv('visitType', x[0]); setVisitTypeSource('manual'); }}
-                      style={{ flex: 1, cursor: locked ? 'not-allowed' : 'pointer', background: on ? '#3b82f620' : '#1e2433', border: on ? '1px solid #3b82f660' : '1px solid #2a3142', borderRadius: 7, padding: '8px 6px', fontSize: 15, color: on ? '#60a5fa' : t2, fontWeight: 700, opacity: locked && !on ? 0.45 : 1 }}>{x[1]}</button>;
+                      style={{ flex: 1, cursor: locked ? 'not-allowed' : 'pointer', background: on ? 'var(--accent-a20)' : 'var(--chip)', border: on ? '1px solid var(--accent-a60)' : '1px solid var(--border-2)', borderRadius: 7, padding: '8px 6px', fontSize: 15, color: on ? 'var(--accent-text)' : t2, fontWeight: 700, opacity: locked && !on ? 0.45 : 1 }}>{x[1]}</button>;
                   })}
                 </div>
-                {locked ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: 5 }}>{t.rc_visitTypeLocked}</div> : null}
+                {locked ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 5 }}>{t.rc_visitTypeLocked}</div> : null}
                 {!locked && visitTypeSource === 'auto' && shown === 'followUp' ? <div style={{ fontSize: 13, color: t2, marginTop: 5 }}>{fill(t.rc_visitTypeSuggested, { dept: deptRow ? deptRow.code : '' })}</div> : null}
                 {!locked && !known ? <div style={{ fontSize: 13, color: t2, marginTop: 5 }}>{fill(t.rc_visitTypeOther, { type: t[shown] || shown })}</div> : null}
               </div>;
             })()}
             <div><label style={labelStyle}>{t.chiefComplaint}</label><input value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} style={IS} /></div>
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={memo} onChange={function (e) { setMemo(e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
-            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
-            {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: '#fbbf24', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
-            <button onClick={savePatientOnly} disabled={busy} style={{ background: '#1e2433', color: '#cbd5e1', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
-            {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: '#1e2433', color: '#ddd6fe', border: '1px solid #a855f7', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}
-            {sel && (sel.status === 'waiting' || sel.status === 'registered') ? <button onClick={function () { cancelVisit(sel); }} disabled={busy} style={{ background: '#ef444420', color: '#f87171', border: '1px solid #ef444455', borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{t.cancelWaiting}</button> : null}
+            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
+            <button onClick={savePatientOnly} disabled={busy} style={{ background: 'var(--chip)', color: 'var(--text-soft)', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
+            {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: 'var(--chip)', color: 'var(--violet-text-3)', border: '1px solid var(--violet-2)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}
+            {sel && (sel.status === 'waiting' || sel.status === 'registered') ? <button onClick={function () { cancelVisit(sel); }} disabled={busy} style={{ background: 'var(--danger-a20)', color: 'var(--danger-text)', border: '1px solid var(--danger-a55)', borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{t.cancelWaiting}</button> : null}
           </div>
         </div>
 
         {/* CENTER: Memo + History */}
-        <div style={{ borderRight: '1px solid ' + bd, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#11141c' }}>
+        <div style={{ borderRight: '1px solid ' + bd, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-col)' }}>
           {(sel || selectedPatient) ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ padding: '13px 16px', background: scBg, borderBottom: '1px solid ' + bd, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: '#3b82f620', borderRadius: 8, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, fontWeight: 800, color: '#60a5fa' }}>{(form.firstName || '?')[0]}</div>
+                <div style={{ background: 'var(--accent-a20)', borderRadius: 8, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, fontWeight: 800, color: 'var(--accent-text)' }}>{(form.firstName || '?')[0]}</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: '#f1f5f9' }}>{form.lastName} {form.firstName}</div>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text-strong)' }}>{form.lastName} {form.firstName}</div>
                   <div style={{ fontSize: 14, color: t2 }}>{form.chartNo || t.newPatientInput} {sel ? '· ' + (sel.dept_code || '') + ' · ' + (sel.doctor_name || '') : ''}</div>
                 </div>
                 {(patBal.owed>0||patBal.refund>0)?
                   <div style={{ marginLeft:'auto', textAlign:'right' }}>
-                    {patBal.owed>0?<div style={{ background:'#ef444418', border:'1px solid #ef444450', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'#f87171', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'#f87171' }}>{Math.round(patBal.owed).toLocaleString()} Ar</span></div>:null}
-                    {patBal.refund>0?<div style={{ background:'#3b82f618', border:'1px solid #3b82f650', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'#60a5fa', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'#60a5fa' }}>{Math.round(patBal.refund).toLocaleString()} Ar</span></div>:null}
+                    {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)' }}>{Math.round(patBal.owed).toLocaleString()} Ar</span></div>:null}
+                    {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)' }}>{Math.round(patBal.refund).toLocaleString()} Ar</span></div>:null}
                   </div>
                 :null}
               </div>
@@ -688,17 +690,17 @@ export default function RegistrationPage() {
                 {history.length > 0 ? history.map(function (h, i) {
                   return <div key={i} style={{ background: scBg, borderRadius: 8, padding: '12px 14px', marginBottom: 9, border: '1px solid ' + bd }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: 14, color: '#60a5fa' }}>{h.consult_date ? h.consult_date.split('T')[0] : ''}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent-text)' }}>{h.consult_date ? h.consult_date.split('T')[0] : ''}</span>
                       <span style={{ fontSize: 13, color: t2 }}>{h.dept_code}</span>
                       <span style={{ fontSize: 13, color: t2 }}>{h.doctor_name}</span>
                     </div>
-                    <div style={{ fontSize: 15, color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{h.note_text || h.subjective || '—'}</div>
+                    <div style={{ fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{h.note_text || h.subjective || '—'}</div>
                   </div>;
-                }) : <div style={{ padding: 24, textAlign: 'center', color: '#64748b', fontSize: 15, fontStyle: 'italic' }}>{t.noPreviousVisits}</div>}
+                }) : <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 15, fontStyle: 'italic' }}>{t.noPreviousVisits}</div>}
               </div>
             </div>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 40, marginBottom: 8, opacity: 0.35 }}>🔎</div>
                 <div style={{ fontStyle: 'italic', fontSize: 17 }}>{t.selectPatientLeft}</div>
@@ -709,48 +711,48 @@ export default function RegistrationPage() {
 
         {/* RIGHT: Queue */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: pn }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: viewingPast ? '#fbbf24' : tx }}>{viewingPast ? fill(t.rc_queueOfDate, { date: workDate }) : t.todayQueueCompleted}</div>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 16, color: viewingPast ? 'var(--warn-text)' : tx }}>{viewingPast ? fill(t.rc_queueOfDate, { date: workDate }) : t.todayQueueCompleted}</div>
           <div style={{ padding: '8px 10px', display: 'flex', gap: 6, borderBottom: '1px solid ' + bd }}>
             {['waiting', 'in_progress', 'completed'].map(function (k) {
-              var c = k === 'waiting' ? '#3b82f6' : (k === 'in_progress' ? '#f59e0b' : '#10b981');
+              var c = k === 'waiting' ? 'accent' : (k === 'in_progress' ? 'warn' : 'ok');
               var n = visits.filter(function (v) { return k === 'waiting' ? (v.status === 'waiting' || v.status === 'registered') : (k === 'in_progress' ? v.status === 'in_progress' : v.status === 'completed'); }).length;
-              return <button key={k} onClick={function () { setTab(k); }} style={{ background: tab === k ? c + '18' : 'transparent', color: tab === k ? c : t3, border: tab === k ? '1px solid ' + c + '40' : '1px solid transparent', borderRadius: 7, padding: '8px 10px', cursor: 'pointer', fontSize: 14, fontWeight: 800, flex: 1 }}>{t[k]} ({n})</button>;
+              return <button key={k} onClick={function () { setTab(k); }} style={{ background: tab === k ? tint(c, '18') : 'transparent', color: tab === k ? 'var(--' + c + '-ink)' : t3, border: tab === k ? '1px solid ' + tint(c, '40') : '1px solid transparent', borderRadius: 7, padding: '8px 10px', cursor: 'pointer', fontSize: 14, fontWeight: 800, flex: 1 }}>{t[k]} ({n})</button>;
             })}
           </div>
           <div style={{ padding: '8px 10px', borderBottom: '1px solid ' + bd }}>
-            <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.queueSearch} style={{ background: scBg, border: '1px solid #2a3142', borderRadius: 7, padding: '8px 10px', color: tx, fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.queueSearch} style={{ background: 'var(--field-3)', border: '1px solid var(--field-border)', borderRadius: 7, padding: '8px 10px', color: tx, fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
             {loading ? <div style={{ padding: 24, textAlign: 'center', color: t3 }}>{t.loading}</div> :
               filteredVisits.map(function (v) {
                 var isSel = sel && sel.id === v.id;
-                return <div key={v.id} onClick={function () { selectVisit(v); }} style={{ padding: '12px 13px', cursor: 'pointer', borderBottom: '1px solid #1e2433', background: isSel ? '#3b82f612' : 'transparent' }}>
+                return <div key={v.id} onClick={function () { selectVisit(v); }} style={{ padding: '12px 13px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: isSel ? 'var(--accent-a12)' : 'transparent' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: 16, color: '#f1f5f9' }}>{v.last_name} {v.first_name}</span>
-                    <span style={{ background: (v.status === 'completed' ? '#10b981' : (v.status === 'in_progress' ? '#f59e0b' : '#3b82f6')) + '18', color: v.status === 'completed' ? '#10b981' : (v.status === 'in_progress' ? '#f59e0b' : '#3b82f6'), borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 800 }}>{v.status === 'completed' ? t.completed : (v.status === 'in_progress' ? t.in_progress : t.waiting)}</span>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-strong)' }}>{v.last_name} {v.first_name}</span>
+                    <span style={{ background: tint(v.status === 'completed' ? 'ok' : (v.status === 'in_progress' ? 'warn' : 'accent'), '18'), color: v.status === 'completed' ? 'var(--ok-ink)' : (v.status === 'in_progress' ? 'var(--warn-ink)' : 'var(--accent-ink)'), borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 800 }}>{v.status === 'completed' ? t.completed : (v.status === 'in_progress' ? t.in_progress : t.waiting)}</span>
                   </div>
                   <div style={{ fontSize: 14, color: t2 }}>{v.chart_no} · {v.dept_code || ''} · {v.doctor_name || ''}</div>
                   <div style={{ fontSize: 13, color: t3, marginTop: 3 }}>{v.chief_complaint || ''}</div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }} onClick={function (e) { e.stopPropagation(); }}>
-                    {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { completeWithoutConsult(v, e); }} style={mb('#10b981')}>{t.toCompleted}</button> : null}
-                    {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('#3b82f6')}>{t.toWaiting}</button> : null}
-                    {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'completed', e); }} style={mb('#10b981')}>{t.toCompleted}</button> : null}
-                    {v.status === 'completed' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('#3b82f6')}>{t.toWaiting}</button> : null}
+                    {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { completeWithoutConsult(v, e); }} style={mb('ok')}>{t.toCompleted}</button> : null}
+                    {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('accent')}>{t.toWaiting}</button> : null}
+                    {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'completed', e); }} style={mb('ok')}>{t.toCompleted}</button> : null}
+                    {v.status === 'completed' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('accent')}>{t.toWaiting}</button> : null}
                   </div>
                 </div>;
               })}
           </div>
-          <div style={{ padding: '8px 14px', borderTop: '1px solid ' + bd, background: '#161a26', fontSize: 14, color: t3 }}>{t.total} <strong style={{ color: tx }}>{filteredVisits.length}</strong> {t.countPatients}</div>
+          <div style={{ padding: '8px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', fontSize: 14, color: t3 }}>{t.total} <strong style={{ color: tx }}>{filteredVisits.length}</strong> {t.countPatients}</div>
         </div>
       </div>
       <DocumentModal open={chartViewOpen} onClose={function(){ setChartViewOpen(false); }} category="chart" readOnly={true}
         patient={selectedPatient ? { id: selectedPatient.id, chart_no: selectedPatient.chart_no, last_name: selectedPatient.last_name, first_name: selectedPatient.first_name, gender: form.gender, date_of_birth: form.dob } : null}
         context={{}} />
       {similarAsk ? (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
-          <div role="dialog" aria-modal="true" style={{ background: pn, border: '1px solid #2a3142', borderRadius: 12, width: 760, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
+          <div role="dialog" aria-modal="true" style={{ background: pn, border: '1px solid var(--border-2)', borderRadius: 12, width: 760, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid ' + bd, background: scBg }}>
-              <div style={{ fontWeight: 800, fontSize: 17, color: '#fbbf24' }}>⚠ {t.rc_similarTitle}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--warn-text)' }}>⚠ {t.rc_similarTitle}</div>
               <div style={{ fontSize: 14, color: t2, marginTop: 4 }}>{t.rc_similarHint}</div>
             </div>
             <div style={{ overflow: 'auto', flex: 1 }}>
@@ -760,21 +762,21 @@ export default function RegistrationPage() {
                 </tr></thead>
                 <tbody>
                   {similarAsk.list.map(function (p) {
-                    return <tr key={p.id} style={{ borderTop: '1px solid #1e2433' }}>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: '#60a5fa' }}>{p.chart_no}</td>
+                    return <tr key={p.id} style={{ borderTop: '1px solid var(--line-soft)' }}>
+                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)' }}>{p.chart_no}</td>
                       <td style={{ padding: '9px 12px', color: tx, fontWeight: 700 }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
                       <td style={{ padding: '9px 12px', color: t2 }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
                       <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{p.mobile || p.phone || '—'}</td>
                       <td style={{ padding: '9px 12px', color: t2 }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
-                      <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f660', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
+                      <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a60)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
                     </tr>;
                   })}
                 </tbody>
               </table>
             </div>
             <div style={{ padding: '12px 18px', borderTop: '1px solid ' + bd, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={function () { answerSimilar({ action: 'cancel' }); }} style={{ background: '#1e2433', color: t2, border: '1px solid #2a3142', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.rc_cancel}</button>
-              <button type="button" onClick={function () { answerSimilar({ action: 'new' }); }} style={{ background: '#10b98118', color: '#34d399', border: '1px solid #10b98140', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>{t.rc_similarCreate}</button>
+              <button type="button" onClick={function () { answerSimilar({ action: 'cancel' }); }} style={{ background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.rc_cancel}</button>
+              <button type="button" onClick={function () { answerSimilar({ action: 'new' }); }} style={{ background: 'var(--ok-a18)', color: 'var(--ok-text)', border: '1px solid var(--ok-a40)', borderRadius: 7, padding: '9px 16px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>{t.rc_similarCreate}</button>
             </div>
           </div>
         </div>
