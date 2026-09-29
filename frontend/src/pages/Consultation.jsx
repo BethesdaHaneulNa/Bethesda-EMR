@@ -16,7 +16,6 @@ var LOCK_MESSAGES = {
   'Order already has a result': 'cs_orderLocked',
   'Visit was cancelled': 'cs_visitCancelled',
   'Order is cancelled': 'cs_orderIsCancelled',
-  'Imaging order cannot be cancelled yet': 'cs_imagingNoCancel',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -58,11 +57,11 @@ function ymd(d){
   return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
 }
 
-// Decision 3-B (2026-09-29): a lab order that already has a result is not deleted but can
-// be marked cancelled - the ✕ on it asks for that instead of showing a lock. Lab orders
-// only for now; an imaging order keeps its lock until the PACS side (cancelling the
-// worklist) is in place.
-function cancellable(o){ return o.code_type==='lab' && o.status!=='cancelled' && orderLocked(o); }
+// Decision 3-B (2026-09-29): a lab or imaging order that already has a result (values,
+// a reading, a study taken) is not deleted but can be marked cancelled - the ✕ on it
+// asks for that instead of showing a lock. Imaging since the PACS merge (decision 38-3):
+// the server cancels its worklist entry with it. Procedures keep the lock.
+function cancellable(o){ return (o.code_type==='lab' || o.code_type==='imaging') && o.status!=='cancelled' && orderLocked(o); }
 
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
@@ -141,7 +140,11 @@ export default function ConsultationPage() {
   async function openViewer(orderItemId){
     try {
       var r = await api.get('/pacs/viewer-url?order_item_id='+orderItemId);
-      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null });
+      // no_study: an order that never went to the worklist has nothing to show (P-18;
+      // the server leaves url empty). cancelled: the order was cancelled - its images and
+      // reading stay as the record, but no new reading is taken.
+      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', no_study:!!r.no_study,
+        cancelled:!!r.cancelled, cancel_reason:r.cancel_reason||'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null });
       setReadText(r.reading?r.reading.result_text:'');
     } catch(e){ alert(t.cs_errorPrefix+e.message); }
   }
@@ -151,7 +154,12 @@ export default function ConsultationPage() {
       await api.put('/pacs/reading/'+viewer.order_item_id, { result_text: readText });
       setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: readText, result_by_name: (user&&user.name)||'', result_at: new Date().toISOString() }) }); });
       alert((t.save||'저장')+' ✓');
-    } catch(e){ alert(t.cs_errorPrefix+e.message); }
+    } catch(e){
+      // Cancelled in the consultation room while this window was open (pacs.cancel.js
+      // ORDER_CANCELLED): say so, then show the order as it is now.
+      if(e && e.message==='Imaging order was cancelled'){ alert(t.px_readingOnCancelled); openViewer(viewer.order_item_id); reloadItems(); return; }
+      alert(t.cs_errorPrefix+e.message);
+    }
   }
 
   useEffect(function(){ loadData(); },[]);
@@ -172,7 +180,7 @@ export default function ConsultationPage() {
       if(document.hidden) return;
       var waiting = orderItemsRef.current.some(function(o){
         if(o.code_type==='lab') return o.status!=='completed' && o.status!=='cancelled';
-        return !!o.worklist_sent_at && o.worklist_status!=='completed' && o.worklist_status!=='cancelled';
+        return o.status!=='cancelled' && !!o.worklist_sent_at && o.worklist_status!=='completed' && o.worklist_status!=='cancelled';
       });
       if(!waiting) return;
       api.get('/consultations/'+cid+'/orders').then(function(fresh){
@@ -413,9 +421,11 @@ export default function ConsultationPage() {
   // and an order with neither shows nothing.
   function cancelTitle(o){ return (t.cs_labCancelled||'') + (o.cancel_reason ? ' — ' + o.cancel_reason : ''); }
   function orderStatus(o){
+    // Cancelled first, whatever the type: a cancelled imaging order may still say
+    // 'completed' on its worklist (the study was taken), but it is cancelled.
+    if(o.status==='cancelled') return <span title={cancelTitle(o)} style={{color:t3,cursor:'help'}}>{t.cs_labCancelled}</span>;
     if(o.code_type==='lab'){
       if(o.status==='completed') return <span style={{color:'#34d399'}}>{t.cs_labDone}</span>;
-      if(o.status==='cancelled') return <span title={cancelTitle(o)} style={{color:t3,cursor:'help'}}>{t.cs_labCancelled}</span>;
       return <span style={{color:'#fbbf24'}}>{t.cs_labPending}</span>;
     }
     if(o.worklist_sent_at){
@@ -568,17 +578,20 @@ export default function ConsultationPage() {
       await api.del('/consultations/order/'+o.id);
       setOrderItems(function(p){ return p.filter(function(x){return x.id!==o.id}); });
     } catch(err){
-      // A lab result arrived after the row was drawn: offer to cancel instead.
-      if(err && err.message==='Order already has a result' && o.code_type==='lab'){ cancelOrder(o); return; }
+      // A result (or a reading, a study taken) arrived after the row was drawn: offer to
+      // cancel instead.
+      if(err && err.message==='Order already has a result' && (o.code_type==='lab' || o.code_type==='imaging')){ cancelOrder(o); return; }
       if(!lockAlert(err)) alert(err.message);
     }
   }
 
-  // Mark a lab order that already has a result as cancelled (POST /order/:id/cancel).
-  // window.prompt: OK with or without a reason cancels, Cancel/Esc does nothing. The
-  // text says what happens to the result and to a bill already paid.
+  // Mark a lab or imaging order that already has a result as cancelled
+  // (POST /order/:id/cancel). window.prompt: OK with or without a reason cancels,
+  // Cancel/Esc does nothing. The text says what happens to the result (for imaging: the
+  // images, the reading and the device worklist) and to a bill already paid.
   async function cancelOrder(o){
-    var reason = window.prompt(String(t.cs_cancelPrompt||'').replace('{name}', o.order_name||''), '');
+    var promptText = o.code_type==='imaging' ? t.cs_cancelPromptImg : t.cs_cancelPrompt;
+    var reason = window.prompt(String(promptText||'').replace('{name}', o.order_name||''), '');
     if(reason === null) return;
     try {
       var updated = await api.post('/consultations/order/'+o.id+'/cancel', { reason: reason });
@@ -981,14 +994,17 @@ export default function ConsultationPage() {
             {/* What the arrived images say about the patient (viewer-url -> images): red when
                 they name another patient, amber when they name nobody. PACS's component. */}
             <PatientCheck images={viewer.images} t={t} style={{margin:'8px 14px 0'}} />
+            {viewer.cancelled ? <div style={{margin:'8px 14px 0',padding:'7px 12px',borderRadius:6,background:'#1f2937',border:'1px solid #4b5563',color:'#cbd5e1',fontSize:13,fontWeight:700}}>
+              ⊘ {t.px_cancelledViewer}{viewer.cancel_reason ? <span style={{fontWeight:400,color:t2}}>{' — '+(t.px_cancelReason||'')+' : '+viewer.cancel_reason}</span> : null}
+            </div> : null}
             <div style={{flex:1,display:'flex',overflow:'hidden'}}>
               {viewer.url
                 ? <iframe src={viewer.url} title="PACS Viewer" style={{flex:1,border:0,background:'#000'}}></iframe>
-                : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.'}</div>}
+                : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{viewer.has_viewer && viewer.no_study ? t.px_noStudy : (t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.')}</div>}
               <div style={{width:380,borderLeft:'1px solid #2a3142',background:'#11141c',display:'flex',flexDirection:'column',padding:12,boxSizing:'border-box'}}>
                 <div style={{fontWeight:800,fontSize:15,color:'#a78bfa',marginBottom:6}}>🩻 {t.reading||'판독소견'}</div>
                 {viewer.reading&&viewer.reading.result_at?<div style={{fontSize:12,color:'#64748b',marginBottom:8}}>{t.lastReadBy||'판독'}: {viewer.reading.result_by_name||''} · {ymd(viewer.reading.result_at)}</div>:null}
-                {canRead ? <>
+                {canRead && !viewer.cancelled ? <>
                   <textarea value={readText} onChange={function(e){setReadText(e.target.value)}} placeholder={t.readingPlaceholder||'판독 소견을 입력하세요...'} style={{flex:1,background:'#0f1117',border:'1px solid #2a3142',borderRadius:6,color:'#e2e8f0',fontSize:14,padding:10,outline:'none',resize:'none',fontFamily:'inherit',lineHeight:1.6}}/>
                   <button onClick={saveReading} style={{marginTop:10,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'9px',cursor:'pointer',fontSize:14,fontWeight:800}}>💾 {t.saveReading||'판독 저장'}</button>
                 </> : <div style={{flex:1,whiteSpace:'pre-wrap',fontSize:14,color:'#cbd5e1',lineHeight:1.6,overflow:'auto'}}>{readText||<span style={{color:'#475569'}}>{t.noReading||'판독 소견 없음'}</span>}</div>}

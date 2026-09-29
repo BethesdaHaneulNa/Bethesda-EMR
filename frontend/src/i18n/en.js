@@ -364,7 +364,7 @@ export default {
   cs_cancelPrompt: "\"{name}\" already has a result and cannot be removed.\nMark it as cancelled instead? The result stays on record; the order leaves the lab list and the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
   cs_cancelHint: "Has a result - click to mark it as cancelled",
   cs_orderIsCancelled: "A cancelled order cannot be changed.",
-  cs_imagingNoCancel: "An imaging order cannot be marked cancelled yet (possible once PACS is connected).",
+  cs_cancelPromptImg: "\"{name}\" already has a reading or a study taken and cannot be removed.\nMark it as cancelled instead? The images and the reading stay on record; if the study was not taken yet it leaves the device worklist; the order leaves the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
