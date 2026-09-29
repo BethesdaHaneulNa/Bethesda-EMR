@@ -171,6 +171,14 @@ export default function PaymentPage() {
   // billing is refused (never counted as 0 without anyone noticing).
   function rxQty(r){ return (r.total_qty==null || r.total_qty==='') ? null : (parseFloat(r.total_qty)||0); }
   function missingQtyRx(){ return (billItems?.prescriptions||[]).filter(function(r){ return rxQty(r)==null; }); }
+  // Drug and order lines billed at unit price 0. Pointed out, not refused: a free
+  // line can be deliberate, but drugs imported without a price are 0 on every line
+  // prescribed before the price was set (the line keeps the price it was given).
+  // Outside prescriptions are not billed at all and the consultation line is left out.
+  function noPriceLines(){
+    return (billItems?.prescriptions||[]).filter(function(r){ return rxQty(r)!=null && !(parseFloat(r.unit_price)>0); }).map(function(r){ return r.drug_name; })
+      .concat((billItems?.orders||[]).filter(function(o){ return !(parseFloat(o.unit_price)>0); }).map(function(o){ return o.order_name; }));
+  }
   function drugTotal(){ return (billItems?.prescriptions||[]).reduce(function(s,r){ return s + (rxQty(r)||0) * (parseFloat(r.unit_price)||0); },0); }
   function procTotal(){ return (billItems?.orders||[]).reduce(function(s,o){ return s + (parseFloat(o.quantity)||1) * (parseFloat(o.unit_price)||0); },0); }
   function extraTotal(){ return extraItems.reduce(function(s,it){ return s + (parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1); },0); }
@@ -225,6 +233,9 @@ export default function PaymentPage() {
   async function doConfirmNow(status, viaConfirm){
     var mq = missingQtyRx();
     if(mq.length){ alert(t.py_qtyMissingBlock.replace('{names}', mq.map(function(r){ return r.drug_name; }).join(', '))); return; }
+    // only lines charged now: an additional charge does not ask again about lines already billed
+    var zero = chargeRows().filter(function(r){ return r.item_type!=='consultation' && r.item_type!=='fee' && !(r.unit_price>0); }).map(function(r){ return r.item_name; });
+    if(zero.length && !window.confirm(t.py_noPriceConfirm.replace('{n}', zero.length).replace('{names}', zero.join(', ')))) return;
     if(status==='paid' && amtPaidNum()<totalDue()){ alert('Amount insufficient'); return; }
     // "Unpaid" means nothing was received, so the whole total stays owed. It used to
     // subtract whatever sat in the cash box from the debt while recording 0 received.
@@ -548,9 +559,10 @@ export default function PaymentPage() {
         </div>
       </div>;
     }
-    var mqRows = missingQtyRx();
+    var mqRows = missingQtyRx(), npLines = noPriceLines();
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <PatientHeader p={sel} />
+      {npLines.length?<div style={{background:'#f59e0b14',border:'1px solid #f59e0b55',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fbbf24',fontSize:13,fontWeight:700}}>⚠ {t.py_noPriceBanner.replace('{n}', npLines.length)}: {npLines.join(', ')}</div>:null}
       {mqRows.length?<div style={{background:'#ef444418',border:'1px solid #ef444460',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fca5a5',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingBlock.replace('{names}', mqRows.map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {isAdditional()&&subtotal()>0.0001?<div style={{background:'#3b82f615',border:'1px solid #3b82f640',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#60a5fa'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'#f59e0b12',border:'1px solid #f59e0b40',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#f59e0b'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'#fbbf24',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
@@ -567,8 +579,8 @@ export default function PaymentPage() {
             </select>
             <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
           </div>
-          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null};})} />
-          <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=parseFloat(o.quantity)||1;return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0)};})} />
+          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
+          <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=parseFloat(o.quantity)||1;return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}>
             <div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8}}>
               <span>🧾 {t.adminCharges}</span>
@@ -643,7 +655,7 @@ export default function PaymentPage() {
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'#3b82f620',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'#60a5fa'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'#f1f5f9'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{p.chart_no} · {p.dept_code} · {p.doctor_name}</div></div></div>; }
   function Section(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',justifyContent:'space-between'}}><span style={{fontWeight:900,fontSize:16,color:'#60a5fa'}}>{p.title}</span><span style={{fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span></div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right')}>{fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>No items</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>No items</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'#bfdbfe',fontSize:13,borderBottom:'1px solid '+bd}; }

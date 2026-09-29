@@ -346,6 +346,9 @@ export default {
   py_qtyMissingList: "처방 총량 없는 약 있음",
   py_qtyMissingBlock: "처방 총량이 비어 있어 금액을 계산할 수 없는 약이 있습니다: {names}. 진료실에 그 처방을 다시 저장해 달라고 한 뒤 수납하세요.",
   py_settleAllReceipts: "방문마다 영수증이 한 장씩, 모두 {n}장 발행됩니다(오늘 날짜).",
+  py_noPrice: "가격 없음",
+  py_noPriceBanner: "단가가 0인 항목 {n}개 — 가격을 확인하세요",
+  py_noPriceConfirm: "단가가 0인 항목이 {n}개 있습니다: {names}.\n설정에서 가격을 넣어도 이미 넣은 처방·오더는 0원 그대로입니다(진료실에서 지우고 다시 넣어야 함).\n그래도 이대로 수납할까요?",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

@@ -68,6 +68,7 @@
 | **Solde antérieur dû (이전 미수)** | 이 환자가 전에 덜 낸 돈. 빨갛게 보이고 **Total** 에 자동으로 더해집니다. 이번에 받으면 옛 영수증의 미수는 이 영수증으로 넘어옵니다 |
 | **Remboursement dû (환불 예정)** 파란 상자 | 이 환자에게 돌려줄 돈이 남아 있다는 안내. 총액에서 빼지는 않습니다 |
 | **Total (총 수납액)** | 소계 − 할인 + 이전 미수. 이번에 받을 돈 |
+| **Sans prix (가격 없음)** 단가 칸 · 노란 「N article(s) sans prix」 | 단가가 0인 약·오더. 수납은 되지만 **Confirmer** 때 한 번 묻습니다. 설정에서 가격을 나중에 넣어도 **이미 넣은 처방·오더는 0원 그대로**입니다 — 가격이 빠진 것이면 진료실에 그 줄을 지우고 다시 넣어 달라고 하세요 |
 | **Montant Reçu (받은 금액)** | 환자가 건넨 돈(1만 원짜리로 3천 원을 내면 10,000) |
 | **Monnaie (거스름돈)** | 받은 금액 − 총액. 돌려줄 돈 |
 | **Impayé (미수금)** | 총액 − 받은 금액. 미수로 남을 돈 |
@@ -172,6 +173,8 @@
 | 상태 | `payment_status` | `paid`(받은 금액 ≥ 총액) · `partial`(조금 받음) · `unpaid`(한 푼도 안 받음 — 미수 처리, 또는 받은 금액 칸이 빈 채 확정) · `cancelled`(취소). `waiting`·`waived`는 제약에는 있으나 화면이 만들지 않음 | 확정 버튼, `006_billing_void.sql` |
 
 **약 수량은 진료 한 곳에서만 계산** (2026-09-29, 실장님 결정: 총량 = 하루 총량 × 일수, 계산은 진료 서버): 수납(`/pending`의 `live_total`, `buildCorrection()`, 화면 `rxQty()`)은 `total_qty`만 읽습니다. 예전에는 비어 있으면 `dose × frequency × days`로 대신 셌는데 — 약국·통계에는 없는 두 번째 계산식이었고, 비어 있는 처방을 수납은 청구하고 약국·통계는 0으로 세는 어긋남이 있었습니다. **`total_qty`가 비어 있는 처방은 0원으로 넘어가지 않습니다**: 대기 목록에 `missing_qty`(「⚠ Quantité de médicament manquante」), 수납 화면에 빨간 안내와 금액 칸 「⚠ Quantité manquante」, 「Confirmer」 거절, 서버도 `POST /api/billing`·정정을 409 `QTY_MISSING: <약 이름>`으로 거절 — 진료실이 그 처방을 다시 저장하면(수정 저장은 서버가 총량을 계산해 넣음) 풀립니다. 화면으로 만든 처방은 늘 `total_qty`가 들어가서(첫 커밋부터) API를 직접 부른 경우에만 생깁니다. `total_qty = 0`은 0으로 셉니다(화면과 서버가 같음).
+
+**단가 0 표시** (2026-09-29, 진료 세션 제안): 원내 약·오더 줄의 `unit_price`가 0이면 화면에 「Sans prix」와 노란 안내, 「Confirmer」 때 확인 창(`py_noPriceConfirm`) — **막지 않음**(무료로 주는 약일 수도 있음). 확인 창은 지금 청구하는 줄(`chargeRows()`)만 셈 — 추가 청구 때 이미 청구된 0원 줄을 다시 묻지 않게. 진료비 줄·창구 발급비·원외 처방은 대상 아님. 처방·오더 줄은 넣을 때의 단가를 복사해 두므로(`prescription.unit_price`, `order_item.unit_price`), 설정에서 가격을 나중에 넣어도 이미 넣은 줄은 바뀌지 않습니다.
 
 **「그로스」(통계의 gross)** = `consult_fee + drug_total + procedure_total` — 할인·이전 미수 **전**의 이번 진료분.
 
@@ -311,7 +314,7 @@
 
 ### 공용 부품
 
-- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음 — 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
+- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음. 처방 줄은 약국 소유의 `documents/rx-dosing.js` `doseSentence()`로 약국·진료 화면과 같은 문장(「1 cp × 3 fois/jour pendant 7 jours (total 21)」, 1회량이 나눠지지 않으면 「… par jour en N prises …」), 예전 계산식으로 저장된 줄은 노랗게 「total enregistré N (ancien calcul)」(`isLegacyTotal`, 진료 `cs_rxStoredTotal` 키) — dose가 2026-09-29부터 하루 총량이라 예전 「용량×횟수×일수d」 표시는 뜻이 틀려짐(진료 부탁). 오더 상태: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
@@ -428,4 +431,6 @@
 | 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | `dee58dc` |
 | 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | `768eaa9` |
 | 2026-09-29 | 약 수량은 `total_qty`만 읽음(대체 계산 다섯 곳 삭제), 비어 있으면 경고·수납 거절(`QTY_MISSING`). 영수증 금액 `15 000 Ar`, 인쇄 팝업 차단 안내 프랑스어 | `5e42571` |
-| 2026-09-29 | M2 미수 수납은 받은 날짜의 새 영수(`POST /settle`, `/:id/pay` 삭제, 전체 미수 수납은 방문마다 한 장), 정정이 같은 방문 안의 이월을 받아들임, 영수증에 「Règlement du reçu …」 | (이 커밋) |
+| 2026-09-29 | M2 미수 수납은 받은 날짜의 새 영수(`POST /settle`, `/:id/pay` 삭제, 전체 미수 수납은 방문마다 한 장), 정정이 같은 방문 안의 이월을 받아들임, 영수증에 「Règlement du reçu …」 | `43c0e78` |
+| 2026-09-29 | 단가 0인 약·오더 줄에 「Sans prix」 표시와 수납 전 확인(막지 않음) | `a9d9492` |
+| 2026-09-29 | PatientChart 처방 줄을 하루 총량 기준 문장으로(`rx-dosing.js`), 예전 계산 줄 표시 | (이 커밋) |
