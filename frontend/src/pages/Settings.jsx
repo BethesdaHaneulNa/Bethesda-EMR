@@ -276,7 +276,7 @@ export default function SettingsPage() {
   // other admin is still allowed - the API refuses only the change that would leave
   // nobody able to open Settings.
   var lockedAdmin = !!(editItem && editItem.id && editItem.login_id === 'admin');
-  var RC={frontdesk:'#3b82f6',doctor:'#10b981',pharmacy:'#8b5cf6',admin:'#ef4444'};
+  var RC={frontdesk:'#3b82f6',doctor:'#10b981',nurse:'#14b8a6',pharmacy:'#8b5cf6',lab:'#06b6d4',admin:'#ef4444'};
   var TC={fee:'#3b82f6',lab:'#f59e0b',imaging:'#8b5cf6',procedure:'#10b981'};
 
   var TABS = [
@@ -764,7 +764,7 @@ export default function SettingsPage() {
                 🔒 {t.adminLocked||'설정 때 만든 관리자 계정입니다. 이름·비밀번호·연락처는 바꿀 수 있지만, 아이디와 역할·권한은 고정입니다 — 여기서 설정 권한을 빼면 아무도 설정 화면에 들어올 수 없게 됩니다.'}
               </div>:null}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.se_fRole}><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}>{['frontdesk','doctor','pharmacy','lab','admin'].map(function(r){return <option key={r} value={r}>{t['se_role_'+r]}</option>;})}</select></Fld>
+                <Fld label={t.se_fRole}><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}>{['frontdesk','doctor','nurse','pharmacy','lab','admin'].map(function(r){return <option key={r} value={r}>{t['se_role_'+r]}</option>;})}</select></Fld>
                 <Fld label={t.se_fPhone}><input value={editItem.phone||''} onChange={function(e){ue('phone',e.target.value)}} style={IS}/></Fld>
               </div>
               {/* The staff list has always shown a Dept column and the API has always accepted

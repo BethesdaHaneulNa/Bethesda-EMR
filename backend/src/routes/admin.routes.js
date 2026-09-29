@@ -7,7 +7,7 @@ const { MSG, fieldMsg } = require('./settings.messages');
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
 // than a 500 carrying the constraint name.
-const ROLES = ['frontdesk', 'doctor', 'pharmacy', 'lab', 'admin'];
+const ROLES = ['frontdesk', 'doctor', 'nurse', 'pharmacy', 'lab', 'admin'];   // nurse: sql/701
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure'];
 
 // Every module permission (ALL_PERMS) comes from middleware/auth.js, the backend's

@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 간호사(nurse) 역할 · 로그인 화면 버전
+
+> **총괄 확인 (2026-09-29)**: `47043f4` 합침 + 실행 중 EMR 반영. 마이그레이션은 `701` → **`020_settings_nurse_role.sql`** 로 번호를 바꿔 합침(내용 그대로). 실장님 결정으로 간호사 기본 권한을 **접수 · 약국 · 임상병리**로 바꿈(`modules.js`·`permissions.js` 한 줄씩, 총괄이 고침) — 실장님 말씀: 접수를 넣는 이유는 환자 차트를 보기 위해서. `TopBar.jsx`에 간호사 아이콘 추가. `settings.permissions.mjs` 통과.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `20e68ce` 이후)
+- **한 일**: 현장(약사 없음, 간호사가 간호·약국·임상병리)에 맞춰 역할 **`nurse`** — 화면 「간호사 / Nurse / Infirmier(ère)」, 기본 권한 **pharmacy + lab**. 기존 `pharmacy`·`lab` 역할은 그대로. 기본값이 결정으로 바뀌면 `permissions.js`와 `modules.js`의 `nurse` 한 줄씩만 바꾸면 되고, `settings.permissions.mjs`가 둘이 같은지 봅니다. 로그인 화면 아래 「Bethesda EMR v1.0」을 상단바와 같은 빌드 버전(`__APP_VERSION__`)으로.
+- **바꾼 파일**: `backend/sql/701_settings_nurse_role.sql`(새) · `backend/src/routes/admin.routes.js`(`ROLES`) · `frontend/src/pages/Settings.jsx`(역할 선택·색 — `lab`에 없던 색도 넣음) · `frontend/src/pages/Login.jsx`(버전) · `backend/test/settings.permissions.mjs`(nurse 비교) · `wiki/modules/settings.md`
+- **공용 파일 변경**:
+  - **`frontend/src/modules.js`(총괄)** — `defaultPermsForRole`에 `case 'nurse': return ['pharmacy', 'lab'];` 한 줄 (총괄 허락).
+  - `backend/src/middleware/permissions.js` — `ROLE_DEFAULT_PERMS.nurse` 한 줄.
+  - `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_role_nurse` 1개.
+- **DB 마이그레이션**: `backend/sql/701_settings_nurse_role.sql` — `staff_role_check`를 지우고 `nurse`를 더해 다시 만듦. **허용 값만 넓힘, 기존 행은 안 바뀜.** 여러 번 돌려도 됨. 총괄이 번호를 다시 매길 때 `013` 뒤면 됩니다(`013`이 같은 제약을 만듦).
+- **번역 키**: `se_role_nurse` (ko 간호사 · en Nurse · fr Infirmier(ère))
+- **확인한 방법**: `node --check`, `npm run build`, `settings.permissions.mjs`(nurse 포함) · `settings.messages.mjs` 통과. 격리 스택 9187: 마이그레이션 로그 「applying 701… applied 1」, 제약에 `nurse` 들어간 것 확인. 프랑스어 화면에서 관리자가 **+ Ajouter → Rôle: Infirmier(ère)** 고르자 **Pharmacie·Laboratoire가 자동 체크** → 저장 → 목록에 「Infirmier(ère)」 배지와 💊🧪 아이콘. 그 계정으로 로그인 → **Pharmacie**로 들어가고 메뉴는 Pharmacie·Laboratoire뿐. 주소창에 `/registration`·`/payment`·`/settings`를 치면 모두 `/pharmacy`로 돌아감. `/lab` 열림. 한국어 화면도 약국·임상병리만. 서버: 간호사 토큰으로 `/pharmacy/pending`·`/lab/pending` 200, `/billing/pending`·`/admin/staff`·`/stats/summary` 403. 로그인 화면 아래 「Bethesda EMR v1.4.0」.
+- **확인 못 한 것**: 간호사로 실제 조제·검사 결과 입력(각 화면은 권한으로 열리는 것까지만). 영어 화면.
+- **위키**: `modules/settings.md` 2.4 역할 표(간호사 줄), 3-1절, 4절 staff 테이블, 7절 U6, 8절
+- **총괄 확인 요청**: `modules.js` 한 줄(위). 상단바 `TopBar.jsx`의 `ROLE_INFO`에 `nurse`가 없어 간호사 이름 옆 아이콘이 기본 👤입니다 — 원하시면 한 줄.
+- **다른 세션에 부탁**: **약국·임상병리** — 위키 2절의 「누가 이 화면을 쓰나」에 간호사(역할 `nurse`, 기본으로 두 화면 모두)를 적어 두면 좋겠습니다.
+
 ## 2026-09-29 — 서버 안내를 화면 언어로 (U11) · 틀린 비밀번호 안내 (U12) · 비밀번호 칸 가리기
 
 > **총괄 확인 (2026-09-29)**: `e2f794b` 합침 + 실행 중 EMR 반영. `settings.messages.mjs` 39개 통과. U12는 실행 중 EMR 로그인 화면에서 직접 확인(아래 총괄 답장). 뿌리 쪽도 고침: `api/client.js`가 **토큰을 보낸 요청의 401만** 로그인 화면으로 보냄 — 토큰 없는 401(틀린 비밀번호 등)은 안내 문구를 그대로 돌려줌. `Login.jsx`의 직접 호출은 그대로 둬도 됨.
