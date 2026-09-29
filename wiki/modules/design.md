@@ -137,6 +137,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇을 고친 뒤 | 비교한 화면 | 결과 |
 |---|---|---|---|
+| 2026-09-29 | 3단계 `Lab.jsx` · `LabResults.jsx` | 임상병리 5장(빈 화면 / 환자 둘 / 차트 창 둘)과 진료 · 접수 15장 — 모두 20장. `check-dark.mjs`: Lab 314줄 중 309, LabResults 167줄 모두 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Registration.jsx` | 접수 2장(빈 화면 / 환자 고름, 요소 323개). `check-dark.mjs`: 787줄 중 778줄 같음, 나머지(import, `mb()`, 탭 · 꼬리표 색, 검색 칸 바탕)는 눈으로 | **같음** |
 | 2026-09-29 | 3단계 `Login.jsx` | 로그인 1장(요소 26개). `check-dark.mjs`: 167줄 중 166줄 같음, 1줄(단추 글자색 갈래)은 눈으로 | **같음** |
 | 2026-09-29 | 3단계 `TopBar.jsx` | 접수 2 · 진료 2 · 수납 · 약국 · 임상병리 2 · 통계 · 설정 — 10장(상단바는 모든 화면에 있음), 요소 1,269개. `check-dark.mjs`: 185줄 중 177줄이 바꿔 넣은 뒤 옛 파일과 같고, 나머지는 import · 역할 꼬리표 8줄(눈으로 읽음) | **모두 같음** |
@@ -156,11 +157,12 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 | `compare-in-browser.js` | 고치기 전 · 후 계산된 색을 뽑는 도구(3.4) |
 | `retoken.mjs` | 화면 파일의 박힌 색을 자리에 맞는 이름표로 바꾸는 첫 단계 도구(3.6 ②) |
 | `check-dark.mjs` | 이름표를 어두운 값으로 되돌려 넣어 옛 파일과 글자로 비교(3.6 ④) |
+| `fields.mjs` | 입력 칸(`<input>` · `<textarea>` · `<select>` 와 입력 칸 스타일 상수)의 바탕 · 테두리를 칸 전용 이름표로 바꾸는 둘째 단계 도구(3.6 ③) |
 | `audit-in-browser.js` | 밝은 화면에서 보이는 모든 글자 · 안내 글자 · 입력 칸 테두리의 대비를 실제 놓인 바탕 기준으로 재서 기준 미달만 나열(3.6 ⑥). 빈 목록이면 통과 |
 
 ### 3.6 화면별 진행 (3단계)
 
-한 화면을 바꾸는 순서: ① `git merge --ff-only develop` ② `node wiki/reference/design/retoken.mjs <파일>` — 색이 놓인 자리(스타일 속성 · 입력 칸인지 · 색 단추 위인지)를 보고 이름표를 고름 ③ 도구가 남긴 것과 색을 이어 붙이는 곳을 손으로 ④ `check-dark.mjs develop <파일>` — 이름표를 어두운 값으로 되돌려 넣으면 옛 파일과 같아야 함(닫힌 창 · 드문 갈래까지) ⑤ 격리 스택에서 고치기 전 · 후 계산된 색 비교(3.4) ⑥ 밝은 화면으로 켜서 `audit-in-browser.js` 의 `__audit()` 가 빈 목록인지(눌리지 않는 단추는 예외), 눈으로도 봄 ⑦ 커밋 · 보고.
+한 화면을 바꾸는 순서: ① `git merge --ff-only develop` ② `node wiki/reference/design/retoken.mjs <파일>` — 색이 놓인 자리(스타일 속성 · 입력 칸인지 · 색 단추 위인지)를 보고 이름표를 고름 ③ `fields.mjs <파일>` 로 입력 칸을 칸 전용 이름표로, 그다음 도구가 남긴 것과 색을 이어 붙이는 곳을 손으로 ④ `check-dark.mjs develop <파일>` — 이름표를 어두운 값으로 되돌려 넣으면 옛 파일과 같아야 함(닫힌 창 · 드문 갈래까지) ⑤ 격리 스택에서 고치기 전 · 후 계산된 색 비교(3.4) ⑥ 밝은 화면으로 켜서 `audit-in-browser.js` 의 `__audit()` 가 빈 목록인지(눌리지 않는 단추는 예외), 눈으로도 봄 ⑦ 커밋 · 보고.
 
 **바꾸는 단추는 맨 마지막에 넣습니다.** 화면이 하나씩 바뀌는 동안 단추가 있으면 직원이 눌렀을 때 반은 밝고 반은 어두운 화면을 보게 됩니다. 그동안 밝은 화면은 격리 스택에서 콘솔로만 켭니다(`document.documentElement.setAttribute('data-theme','light')`).
 
@@ -169,7 +171,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 | `components/TopBar.jsx` | 끝 (2026-09-29) | 55 | 역할 꼬리표(이름 옆 색 띠)는 `ROLE_INFO` 에 `tint`(색 계열 이름)을 더해 `tint(ri.tint,'15')` 로. 상태 점(`pages/settingsStatus.jsx`, 설정 세션)은 아직 어두운 색 그대로 |
 | `pages/Login.jsx` | 끝 (2026-09-29) | 39 | 입력 칸 스타일 `IN` 은 `--field` · `--field-border`. 「로그인 중」일 때 단추가 회색이 되므로 글자색을 `loading ? --text-max : --on-fill` 로(어두운 화면에서는 둘 다 흰색) |
 | `pages/Registration.jsx` | 끝 (2026-09-29) | 97 | 상태 색: 대기 = 파랑(`accent`), 진료 중 = 노랑(`warn`), 완료 = 초록(`ok`) — 꼬리표 글자와 함께 쓰임. `mb()` 와 탭 단추는 색 대신 계열 이름을 받음. 날짜 칸의 `colorScheme` 은 `var(--scheme)`. 대기 목록 검색 칸은 `--field-3`(어두운 화면에서는 제목 줄 색 그대로) |
-| `pages/Lab.jsx` · `components/LabResults.jsx` | | | |
+| `pages/Lab.jsx` · `components/LabResults.jsx` | 끝 (2026-09-29) | 47 · 12 | 검사실의 청록 단추는 어두운 화면에서 밝은 청록 + 검은 글자, 밝은 화면에서 짙은 청록 + 흰 글자(`--on-cyan`). 낮음 = 파랑 ▼, 높음 · 이상 = 빨강 ▲ — 색과 기호가 같이 있음(그대로). 결과 입력 칸은 칸 전용 이름표 |
 | `pages/Consultation.jsx` | | | |
 | `components/PatientFinder.jsx` · `PatientChart.jsx` · `DocumentModal.jsx`(틀만) · `RadiologyReadings.jsx` | | | |
 | `pages/Payment.jsx` | 시작해도 됨(총괄) | | 상태 색의 뜻을 지킴 |
@@ -206,6 +208,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇 |
 |---|---|
+| 2026-09-29 | **3단계 `Lab.jsx` · `LabResults.jsx`** 색 47 · 12곳. 이름표 더함: `--on-cyan` · `--cyan-strong` · `--cyan-text-2` · `--bg-group` · `--notice` · `--notice-line` · `--hover-row` · `--hover-row-2` · `--warn-chip` · `--danger-chip`, 옅은 청록 3개 |
 | 2026-09-29 | **3단계 `Registration.jsx`** 색 97곳 |
 | 2026-09-29 | **3단계 `Login.jsx`** 색 39곳. 이름표 더함: `--panel-head-3` · `--text-5` · `--field-2` · `--field-3` · `--bg-row` · `--violet-text-3` · 가림막 `--scrim-30~70` · 그림자 `--shadow-30~70`. 입력 칸 테두리(밝은 화면) `#8793a6` → `#77839a`(칸 둘레의 회색 판에 대해서도 3 이상) |
 | 2026-09-29 | **3단계 `TopBar.jsx`** 색 55곳을 이름표로. 이름표 1개(`--ok-2-strong`) · 옅은 색 7개 더함, 청록 글자색을 조금 어둡게(밝은 화면 대비 4.3 → 통과) |

@@ -20,7 +20,9 @@ const oldText = norm(execSync('git show ' + ref + ':' + file, { cwd: root, encod
 const newRaw = norm(fs.readFileSync(path.join(root, file), 'utf8'));
 const D = dark(); const unknown = new Set(); let tokens = 0;
 const newText = newRaw.replace(/var\(--([a-z0-9-]+)\)/g, (m, n) => { if (!(n in D)) { unknown.add(n); return m; } tokens++; return D[n]; });
-if (unknown.size) { console.log('UNKNOWN TOKENS: ' + [...unknown].join(', ')); process.exit(1); }
+// a var() the old file already had (the motion variables) is not ours; any other unknown name is a mistake
+const mine = [...unknown].filter(n => oldText.indexOf('var(--' + n + ')') < 0);
+if (mine.length) { console.log('UNKNOWN TOKENS: ' + mine.join(', ')); process.exit(1); }
 // colours compare without regard to case; #fff and #ffffff are the same colour
 const canon = s => s.replace(/rgba?\([^)]*\)/g, m => m.replace(/\s+/g, '').replace(/,\.(\d+)\)/, ',0.$1)')).replace(/#[0-9a-fA-F]{3,8}\b/g, h => { h = h.toLowerCase(); return h.length === 4 ? '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3] : h; });
 const a = canon(oldText).split('\n'), b = canon(newText).split('\n');
@@ -29,8 +31,15 @@ while (i < a.length || j < b.length) {
   if (i < a.length && j < b.length && a[i] === b[j]) { same++; i++; j++; continue; }
   const k = i < a.length ? b.indexOf(a[i], j) : -1;
   if (k >= 0 && k - j < 40) { while (j < k) diff.push('+ ' + (j + 1) + ': ' + b[j++].trim()); continue; }
-  if (i < a.length) diff.push('- ' + (i + 1) + ': ' + a[i].trim());
-  if (j < b.length) diff.push('+ ' + (j + 1) + ': ' + b[j].trim());
+  if (i < a.length && j < b.length) { // a changed line: show only the part that differs
+    const x = a[i], y = b[j]; let p = 0; while (p < x.length && p < y.length && x[p] === y[p]) p++;
+    let q = 0; while (q < x.length - p && q < y.length - p && x[x.length - 1 - q] === y[y.length - 1 - q]) q++;
+    const from = Math.max(0, p - 30);
+    diff.push('- ' + (i + 1) + ': …' + x.slice(from, x.length - q + 12)); diff.push('+ ' + (j + 1) + ': …' + y.slice(from, y.length - q + 12));
+  } else {
+    if (i < a.length) diff.push('- ' + (i + 1) + ': ' + a[i].trim());
+    if (j < b.length) diff.push('+ ' + (j + 1) + ': ' + b[j].trim());
+  }
   i++; j++;
 }
 const left = (newRaw.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g) || []);
