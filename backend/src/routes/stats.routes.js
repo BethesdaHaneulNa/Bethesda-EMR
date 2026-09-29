@@ -11,6 +11,16 @@ router.use(authMiddleware);
 // phone numbers included, straight from the API.
 router.use(permMiddleware('stats'));
 
+// What a bill still owes, and what the clinic owes back on it — the same two
+// expressions as the payment screen's patient balance (billing.routes.js,
+// /patient/:id/balance), so both screens name the same people and amounts.
+// Owed comes from the `outstanding` column, not total_due - net_paid: when an
+// old debt is carried into a newer bill (migration 016) the old bill's
+// outstanding drops to 0 but its total_due - net_paid does not, so the latter
+// kept listing debts that had already been paid on the newer bill.
+const OWED_SQL = 'GREATEST(outstanding, 0)';
+const REFUND_SQL = 'GREATEST(net_paid - total_due, 0)';
+
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
@@ -103,12 +113,11 @@ router.get('/summary', async (req, res) => {
        FROM billing_item bi JOIN billing b ON bi.billing_id=b.id
        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled' AND bi.item_type='fee'`, P);
 
-    // 5) 미수 / 환불 (실시간 잔액, 기간 무관)
+    // 5) 미수 / 환불 (실시간 잔액, 기간 무관). 계산식은 OWED_SQL / REFUND_SQL 참고.
     const bal = await pool.query(
-      `SELECT
-         COALESCE(SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid > 0),0)::numeric AS owed,
-         COALESCE(-SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid < 0),0)::numeric AS refund
-       FROM billing WHERE payment_status <> 'cancelled'`);
+      `SELECT COALESCE(SUM(${OWED_SQL}),0)::numeric AS owed,
+              COALESCE(SUM(${REFUND_SQL}),0)::numeric AS refund
+         FROM billing WHERE payment_status <> 'cancelled'`);
 
     const r = rev.rows[0];
     const num = function (x) { return Math.round(Number(x) || 0); };
@@ -160,27 +169,39 @@ router.get('/monthly', async (req, res) => {
 // GET /api/stats/outstanding — 미수/환불 명단 (환자별: 누가·얼마·언제·연락처)
 router.get('/outstanding', async (req, res) => {
   try {
+    // Owed and refund are summed separately per patient, not netted against each
+    // other, so each list adds up to its card on the summary and matches the
+    // payment screen, which also shows the two side by side. per_bill spells out
+    // OWED_SQL / REFUND_SQL with the b. qualifier.
     const rows = await pool.query(
-      `WITH bal AS (
-         SELECT p.id, p.chart_no, p.last_name, p.first_name,
-                COALESCE(NULLIF(p.mobile,''), p.phone) AS contact,
-                SUM(b.total_due - b.net_paid) AS net,
-                MIN(b.billing_date) FILTER (WHERE b.total_due - b.net_paid > 0) AS owed_since,
-                MAX(b.billing_date) AS last_date,
-                COUNT(*) FILTER (WHERE (b.total_due - b.net_paid) <> 0) AS open_bills
-         FROM billing b JOIN patient p ON b.patient_id = p.id
-         WHERE b.payment_status <> 'cancelled'
-         GROUP BY p.id, p.chart_no, p.last_name, p.first_name, p.mobile, p.phone
+      `WITH per_bill AS (
+         SELECT b.patient_id, b.billing_date,
+                GREATEST(b.outstanding, 0) AS owed,
+                GREATEST(b.net_paid - b.total_due, 0) AS refund
+           FROM billing b
+          WHERE b.payment_status <> 'cancelled'
+       ), bal AS (
+         SELECT patient_id,
+                SUM(owed) AS owed, SUM(refund) AS refund,
+                MIN(billing_date) FILTER (WHERE owed > 0) AS owed_since,
+                MAX(billing_date) AS last_date,
+                COUNT(*) FILTER (WHERE owed > 0) AS owed_bills,
+                COUNT(*) FILTER (WHERE refund > 0) AS refund_bills
+           FROM per_bill GROUP BY patient_id
        )
-       SELECT * FROM bal WHERE ABS(net) > 0.5 ORDER BY net DESC`);
+       SELECT p.id, p.chart_no, p.last_name, p.first_name,
+              COALESCE(NULLIF(p.mobile,''), p.phone) AS contact, bal.*
+         FROM bal JOIN patient p ON p.id = bal.patient_id
+        WHERE bal.owed > 0.5 OR bal.refund > 0.5`);
     const owed = [], refund = [];
     rows.rows.forEach(function (r) {
-      const net = Math.round(Number(r.net) || 0);
       const base = { patient_id: r.id, chart_no: r.chart_no, name: (r.last_name || '') + ' ' + (r.first_name || ''),
-        contact: r.contact || '', last_date: r.last_date, open_bills: r.open_bills };
-      if (net > 0) owed.push(Object.assign({ amount: net, since: r.owed_since }, base));
-      else if (net < 0) refund.push(Object.assign({ amount: -net }, base));
+        contact: r.contact || '', last_date: r.last_date };
+      const o = Math.round(Number(r.owed) || 0), f = Math.round(Number(r.refund) || 0);
+      if (Number(r.owed) > 0.5) owed.push(Object.assign({ amount: o, since: r.owed_since, open_bills: r.owed_bills }, base));
+      if (Number(r.refund) > 0.5) refund.push(Object.assign({ amount: f, open_bills: r.refund_bills }, base));
     });
+    owed.sort(function (a, b) { return b.amount - a.amount; });
     refund.sort(function (a, b) { return b.amount - a.amount; });
     res.json({
       owed: owed, refund: refund,
