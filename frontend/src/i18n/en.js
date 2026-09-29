@@ -44,7 +44,6 @@ export default {
   subtotal: "Subtotal", discount: "Discount", totalDue: "Total Due",
   amountPaid: "Amount Received", change: "Change", outstanding: "Outstanding",
   confirmPayment: "Confirm Payment", printReceipt: "Print Receipt",
-  receiptHistory: "Receipt History",
   all: "All", drug: "Drug", examImaging: "Exam / Imaging", drugSearch: "Drug Search",
   typeOrderPlaceholder: "Type medicine, exam code, or name...", code: "Code", name: "Name",
   qty: "Qty", tms: "Tms", day: "Day", usage: "Usage", unit: "Unit", worklist: "WL",

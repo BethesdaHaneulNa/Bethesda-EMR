@@ -35,7 +35,6 @@ export default {
   subtotal: "소계", discount: "할인", totalDue: "총 수납액",
   amountPaid: "받은 금액", change: "거스름돈", outstanding: "미수금",
   confirmPayment: "수납 확정", printReceipt: "영수증 출력",
-  receiptHistory: "영수내역",
   all: "전체", drug: "약", examImaging: "검사/영상", drugSearch: "약 검색",
   typeOrderPlaceholder: "약/검사 코드 또는 이름 입력...", code: "코드", name: "이름",
   qty: "Qty", tms: "Tms", day: "Day", usage: "Usage", unit: "Unit", worklist: "WL",

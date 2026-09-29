@@ -35,7 +35,6 @@ export default {
   subtotal: "Sous-total", discount: "Remise", totalDue: "Total",
   amountPaid: "Montant Reçu", change: "Monnaie", outstanding: "Impayé",
   confirmPayment: "Confirmer", printReceipt: "Imprimer Reçu",
-  receiptHistory: "Historique Reçus",
   all: "Tout", drug: "Médicament", examImaging: "Examen / Imagerie", drugSearch: "Recherche médicament",
   typeOrderPlaceholder: "Saisir médicament, code examen ou nom...", code: "Code", name: "Nom",
   qty: "Qté", tms: "Fois", day: "Jours", usage: "Usage", unit: "Unité", worklist: "WL",
