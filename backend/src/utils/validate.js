@@ -3,7 +3,10 @@
 // name or a birth date in the future is worth refusing at the API rather than
 // storing and discovering later.
 
-const GENDERS = ['M', 'F', 'O'];
+// Must stay in step with the patient gender CHECK in 001_schema.sql (M, F). 'O' was
+// accepted here but refused by the database, so it came back as an error instead of
+// a clear 400; no screen offers it.
+const GENDERS = ['M', 'F'];
 const VISIT_TYPES = ['newVisit', 'followUp', 'emergency', 'referral', 'none'];
 // Must stay in step with the visit_status_check constraint in 001_schema.sql.
 const VISIT_STATUSES = ['registered', 'waiting', 'in_progress', 'completed', 'cancelled'];
@@ -15,13 +18,20 @@ function badPatient({ last_name, first_name, date_of_birth, gender }) {
     return 'Patient name is required';
   }
   if (date_of_birth) {
-    const dob = new Date(date_of_birth);
-    if (isNaN(dob.getTime())) return 'date_of_birth is not a valid date';
+    // YYYY-MM-DD and a day that is on the calendar. new Date() alone let 2020-02-30
+    // through (it rolls over to 1 March) and Postgres then refused it.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date_of_birth));
+    if (!m) return 'date_of_birth is not a valid date';
+    const y = +m[1], mo = +m[2], d = +m[3];
+    const dob = new Date(y, mo - 1, d);
+    if (dob.getFullYear() !== y || dob.getMonth() !== mo - 1 || dob.getDate() !== d) {
+      return 'date_of_birth is not a valid date';
+    }
     // Compare against the end of today so a birth registered the same day passes.
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
     if (dob > endOfToday) return 'date_of_birth cannot be in the future';
-    if (dob.getFullYear() < 1875) return 'date_of_birth is implausibly old';
+    if (y < 1875) return 'date_of_birth is implausibly old';
   }
   if (gender != null && String(gender) !== '' && !GENDERS.includes(String(gender))) {
     return 'gender must be one of ' + GENDERS.join(', ');

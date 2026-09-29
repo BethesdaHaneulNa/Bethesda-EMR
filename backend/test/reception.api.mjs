@@ -10,6 +10,7 @@
 // 2. Duplicate warnings (decided 2026-09-29, reception ④): same-name lookup and the
 //    same-day second-visit check.
 // 3. Patient search (⑯): name order, literal % and _, limit/offset parsing.
+// 4. Patient field checks (⑬): gender M/F only, birth date YYYY-MM-DD on the calendar.
 //
 //   node backend/test/reception.api.mjs            (default http://127.0.0.1:9181)
 //   RC_TEST_BASE=http://127.0.0.1:9181/api node backend/test/reception.api.mjs
@@ -61,7 +62,7 @@ const A = adminLogin.data.token;
 // accounts the office manager can make by unticking boxes.
 const ACCOUNTS = {
   frontdesk: { role: 'frontdesk', permissions: ['registration', 'payment'] },
-  doctor: { role: 'doctor', permissions: ['consultation'] },
+  doctor: { role: 'doctor', permissions: ['consultation', 'pharmacy'] },   // pharmacy added by decision 2026-09-29
   nurse: { role: 'nurse', permissions: ['registration', 'pharmacy', 'lab'] },
   pharmacy: { role: 'pharmacy', permissions: ['pharmacy'] },
   lab: { role: 'lab', permissions: ['lab'] },
@@ -170,6 +171,20 @@ const one = await call('GET', '/patients?limit=1', null, A);
 check('⑯ limit=1 returns at most one', one.status === 200 && one.data.length <= 1);
 const huge = await call('GET', '/patients?limit=100000', null, A);
 check('⑯ limit is capped at 200', huge.status === 200 && huge.data.length <= 200);
+
+// ── ⑬ gender and birth date are refused with a clear 400, not a database error ──
+const put = body => call('PUT', '/patients/' + P.id, Object.assign({ last_name: 'Permission', first_name: 'Test' }, body), A);
+const g = await put({ gender: 'O' });
+check('⑬ gender O → 400 "gender must be one of M, F"', g.status === 400 && g.data.error === 'gender must be one of M, F', { status: g.status, data: g.data });
+for (const bad of ['2020-02-30', '1990-5-3', '1990-13-01', 'yesterday']) {
+  const r = await put({ date_of_birth: bad });
+  check('⑬ birth date ' + bad + ' → 400 date_of_birth…', r.status === 400 && String(r.data.error).indexOf('date_of_birth') === 0, { status: r.status, data: r.data });
+}
+const leap = await put({ date_of_birth: '2024-02-29' });
+check('⑬ 2024-02-29 (a leap day) is accepted', leap.status === 200 && leap.data.date_of_birth === '2024-02-29', { status: leap.status });
+const newO = await call('POST', '/patients', { last_name: 'Gender', first_name: 'Other', gender: 'O' }, A);
+check('⑬ POST with gender O → 400', newO.status === 400, { status: newO.status });
+await put({ date_of_birth: null, gender: 'F' });
 
 // ── S1: a permission granted in Settings applies to the same token at once ──
 const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);

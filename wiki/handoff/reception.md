@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑬ 성별 M/F · 생년월일 엄격 검사 (총괄 파일, 허락받음)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나. 그 앞에 `develop`(`e29af7a`)을 **병합**함 — 제 커밋 `6c13b33`·`8dd267a`가 아직 develop에 없어 ff가 안 돼서(총괄 지시대로 merge)
+- **한 일**:
+  - `utils/validate.js`
+    · `GENDERS`를 `['M','F']`로 — DB CHECK와 맞춤. `O`는 서버를 통과해 DB가 거절했었음
+    · `badPatient`의 생년월일을 **`YYYY-MM-DD`이고 달력에 있는 날**만 받게. `new Date()`만으로는 `2020-02-30`이 3월 1일로 넘어가 통과했었음. 미래·1875년 이전 검사는 그대로
+  - 접수 화면 `errText`: 총괄이 `dbError.js`에 넣은 22008 문구(`A date field has a date that does not exist`) → `rc_dobInvalid`
+  - 시험 스크립트의 의사 계정 권한을 결정(의사 기본 권한에 약국 추가)에 맞춤 — 기대값은 권한에서 계산하므로 결과 같음
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`(한 줄), `backend/test/reception.api.mjs`
+- **공용 파일 변경**: **`backend/src/utils/validate.js`**(총괄 파일, 이 두 가지만 허락받음) — `GENDERS`와 `badPatient`의 생년월일 부분. `badPatient`를 쓰는 곳은 `patient.routes.js`(POST·PUT)뿐, `GENDERS`는 `validate.js` 안에서만(grep 확인)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **다른 영향**: 다른 세션 시험(`pharmacy.api.mjs`·`pharmacy.stock.mjs`)은 성별 `F`/`M`, 생년월일 `1990-01-01`만 보내서 영향 없음(grep). 화면은 원래 저장 전에 `YYYY-MM-DD`와 달력 검사를 하므로 직원이 보는 동작은 그대로
+- **확인한 방법**:
+  - `node --check`, `npm run build`. 격리 스택 9181(병합 뒤 `024_lab_ref_ranges` 적용). `reception.api.mjs` **145/145**
+  - ⑬ 7건: 성별 `O` → 400 `gender must be one of M, F`(PUT·POST). `2020-02-30`·`1990-5-3`·`1990-13-01`·`yesterday` → 400 `date_of_birth is not a valid date`. `2024-02-29`(윤일) → 200
+- **확인 못 한 것**: 22008 문구를 화면에서 띄워 보지는 않음 — 이제 `badPatient`가 먼저 400을 주므로 접수 경로에서는 22008까지 가지 않음(방어용 매핑)
+- **위키**: `modules/reception.md` 머리, 3절 오류 문구 표, 4절 `POST /api/patients` 줄·`gender` 칸, 7절 ⑬ 고침(「날짜 검사」 줄 합침)·남은 것에서 뺌, 8절
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — ⑯ 환자 검색: 이름 순서, % _ 글자 그대로, limit 검사
 
 - **상태**: 확인 요청
