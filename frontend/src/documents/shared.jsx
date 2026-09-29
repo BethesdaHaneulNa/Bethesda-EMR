@@ -172,11 +172,18 @@ export function A4(props) {
 }
 
 // ── print: open the A4 node in a clean print window ─────────────
-export function printDocument(node, title) {
+// `lang` picks the language of the one message this shows (popup blocked); it was
+// Korean only, which a French-speaking desk could not read.
+var POPUP_BLOCKED = {
+  ko: '팝업이 차단되어 인쇄할 수 없습니다. 브라우저에서 팝업을 허용해 주세요.',
+  en: 'The browser blocked the print window. Allow pop-ups for this site and try again.',
+  fr: "Le navigateur a bloqué la fenêtre d'impression. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
+};
+export function printDocument(node, title, lang) {
   if (!node) return;
   var html = node.outerHTML;
   var w = window.open('', '_blank', 'width=900,height=1000');
-  if (!w) { alert('팝업이 차단되어 인쇄할 수 없습니다. 브라우저에서 팝업을 허용해 주세요.'); return; }
+  if (!w) { alert(L(POPUP_BLOCKED, lang || 'ko')); return; }
   w.document.open();
   w.document.write(
     '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (title || 'Document') + '</title>' +

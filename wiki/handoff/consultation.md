@@ -2,6 +2,45 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑯ 진료 화면 3개 국어 + 영상 경고를 PACS 부품으로 + 체크 칸 결정 기록
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `881328e`
+- **한 일**:
+  - ⑯ 진료 화면에서 영어·한국어로 고정돼 있던 글자를 화면 언어로 바꿨습니다. 저장값은 그대로 두고 보여 줄 때만 `cs_` 키로 바꿉니다.
+    - 대기 목록 상태(`waiting` → En attente 등), 문장사전 분류 버튼과 문장 옆 표시, 검색 목록의 종류 표시(DRUG → MÉD, lab → LABO, procedure → ACTE)
+    - 진료 기록 안내 글: 전에는 `\n`이 글자로 보였습니다. 이제 실제 줄바꿈이고 3개 국어입니다.
+    - 오류 알림 머리(`Error:`), 환자를 고르기 전 안내(접수 화면 문구였음)
+    - 바이탈 이름: 프랑스어는 TA · T° · FC · FR · SpO2, 한국어·영어는 BP · BT · PR · RR 그대로
+  - 문장사전: 설정에 `text_fr`/`text_en`이 있으면 그 화면에서 그 문장을 보여 주고 그대로 끼워 넣습니다(검색도 같은 글자). 설정에서 새로 만든 분류도 버튼이 생깁니다(전에는 All에서만 보였음).
+  - 공용 인쇄 도우미의 팝업 차단 안내를 문서 언어로 보여 줍니다(전에는 한국어만).
+  - 총괄 전달(PACS): 영상 뷰어의 환자 확인 경고를 제 복제본 `ImagePatientCheck`에서 PACS가 export한 `PatientCheck`로 바꾸고, 복제본은 지웠습니다.
+  - 총괄 전달(실장님 결정): 위키 3.6절 표에 적었습니다.
+    - 탈장 유형은 「여러 개 유지」
+    - 충수 위치·삼출액 성상·연부조직 병변 위치/종류는 「의사 확인 대기, 여러 개 유지」
+  - **약 처방 칸 이름(Qté · Fois · Jours · Usage · Unité)과 도움말은 지시대로 손대지 않았습니다.**
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**:
+  - `frontend/src/documents/shared.jsx` — `printDocument(node, title, lang)`에 세 번째 인자 추가, 팝업 차단 안내를 ko·en·fr로. `lang`이 없으면 예전처럼 한국어.
+  - `frontend/src/components/DocumentModal.jsx` — `printDocument`에 문서 언어를 넘김(한 줄).
+  - `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 진료 표시 사이에 `cs_` 키 23개 추가. **기존 키 한 줄 수정**: `fr.js`의 `noViewerUrl`이 악센트와 따옴표가 빠진 채(`non definie (Parametres -> Flux d ordres)`)였던 것을 `non définie (Paramètres → Flux d'ordres)`로 고쳤습니다.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_vsRegistered`·`cs_vsWaiting`·`cs_vsInProgress`·`cs_vsCompleted`·`cs_vsCancelled`, `cs_pcAll`·`cs_pcGeneral`·`cs_pcInternal`·`cs_pcSurgery`·`cs_pcPeds`·`cs_pcObgyn`, `cs_badgeDrug`·`cs_badgeLab`·`cs_badgeProc`·`cs_badgeImg`, `cs_notePlaceholder`, `cs_errorPrefix`, `cs_selectPatient`, `cs_vBP`·`cs_vBT`·`cs_vPR`·`cs_vRR`·`cs_vSpO2` (ko · en · fr 모두)
+- **확인한 방법**:
+  - `npm run build` 통과.
+  - 격리 스택 9182(`:dev`, develop `881328e` 코드)에서 확인. 시험 DB에 분류 「Dental」과 `text_fr`이 있는 문장을 API로 하나 넣었습니다.
+    - 프랑스어: 대기 목록 「En attente」, 빈 화면 안내 「Choisissez un patient dans « ☰ File d'Attente »…」, 바이탈 「TA | T° | FC | FR | SpO2」
+    - 프랑스어: 분류 「Tout | Général | Médecine | Chirurgie | Pédiatrie | Gynéco-obst. | Dental」. Dental을 누르면 그 문장만 남고, 누르면 진료 기록에 「Phrase dentaire de test」가 들어감
+    - 프랑스어: 안내 글이 네 줄 「S : Motif de consultation…」, 검색 표시 「LABO」·「MÉD」
+    - 한국어: 「진료 중, 대기」, 「BP | BT | PR | RR | SpO2」, 「전체 | 일반 | 내과 | 외과 | 소아 | 산부인과 | Dental」, 「S: 주호소...」, 「처치」
+    - 영상 뷰어: PACS의 `PatientCheck`로 프랑스어 빨간 경고, 여백 `8px 14px 0` 그대로.
+- **확인 못 한 것**: 팝업 차단 안내는 팝업을 실제로 막아 보지 않았습니다(코드만). 영어 화면은 따로 눌러 보지 않았습니다(키는 넣음).
+- **위키**: `modules/consultation.md` 머리 상태, 2절(2.2 바이탈·문장사전, 2.3 종류 표시, 머리말), 3.1(화면 글자 번역, 영상 환자 확인), 3.5(`printDocument`), 3.6(결정 상태), 6절(문장사전), 7.2(⑯ ✅, ⑳ 일부), 8절. 7.2 ⑯ 줄이 이전 커밋에서 줄바꿈 하나로 두 줄로 갈라져 있던 것도 바로잡았습니다.
+- **총괄 확인 요청**: 바이탈의 프랑스어 이름(TA · T° · FC · FR)은 프랑스어 진료 기록의 흔한 약어로 골랐습니다. 현지 의사 용어 확인 목록에 같이 넣어 주시면 좋겠습니다.
+- **다른 세션에 부탁**:
+  - **설정** — 문장사전 탭에서 `text_fr`·`text_en`을 입력할 수 있는지 확인 부탁드립니다. 진료 화면은 이제 그 칸을 씁니다. 시드 문장은 `text`(영어)만 있어서, 프랑스어 문장을 채워야 현장에서 효과가 납니다.
+- **남은 일 · 알려진 문제**: ⑳ 약속처방 진료과 구분, 약 처방 칸 이름·도움말(약국 C 결정 대기).
+
 ## 2026-09-29 — 위키 2절(직원용 사용법)을 프랑스어 화면 기준으로
 
 - **상태**: 확인 요청
