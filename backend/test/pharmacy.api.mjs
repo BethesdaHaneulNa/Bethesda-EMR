@@ -15,6 +15,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { ensureTestDrugs } from './pharmacy.testdrugs.mjs';
 const BASE = process.env.PH_TEST_BASE || 'http://127.0.0.1:9184/api';
 // 9080 is the clinic's running EMR: this script dispenses and moves real stock there.
 if (new URL(BASE).port === '9080' || new URL(BASE).port === '') {
@@ -52,9 +53,9 @@ if (p2.status !== 200) {
 }
 const B = p2.data.token;
 
-const drugs = (await call('GET', '/admin/drugs', null, A)).data;
-const byCode = Object.fromEntries(drugs.map(d => [d.code, d]));
-async function stock(code) { return (await call('GET', '/admin/drugs?q=' + code, null, A)).data.find(d => d.code === code).stock_qty; }
+// Own test drugs (TST-<name>), not the seed examples that the real list will hide.
+const byCode = await ensureTestDrugs(call, A, ['PCM500', 'AMOX500', 'METRO', 'OMEP20', 'LORAT', 'ZINC', 'FOLIC', 'SALB']);
+async function stock(name) { const code = byCode[name].code; return (await call('GET', '/admin/drugs?q=' + code, null, A)).data.find(d => d.code === code).stock_qty; }
 
 // patient → visit → consultation → rx lines → complete
 async function scenario(label, lines) {

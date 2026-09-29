@@ -14,6 +14,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { ensureTestDrugs } from './pharmacy.testdrugs.mjs';
 
 const BASE = process.env.PH_TEST_BASE || 'http://127.0.0.1:9184/api';
 if (new URL(BASE).port === '9080' || new URL(BASE).port === '') {
@@ -55,8 +56,9 @@ const STATS = await account('stats', 'admin', ['stats']);
 
 const drugs = (await call('GET', '/pharmacy/stock', null, NURSE)).data;
 check('stock list (nurse) 200 with drugs', Array.isArray(drugs) && drugs.length > 0, drugs.length);
-const D = Object.fromEntries(drugs.map(d => [d.code, d]));
-const stockOf = async code => (await call('GET', '/pharmacy/stock?q=' + code, null, NURSE)).data.find(d => d.code === code).stock_qty;
+// Own test drugs (TST-<name>), not the seed examples that the real list will hide.
+const D = await ensureTestDrugs(call, A, ['ZINC', 'FOLIC', 'IRON', 'LORAT']);
+const stockOf = async name => { const code = D[name].code; return (await call('GET', '/pharmacy/stock?q=' + code, null, NURSE)).data.find(d => d.code === code).stock_qty; };
 const moves = async id => (await call('GET', '/pharmacy/stock/' + id + '/movements', null, NURSE)).data;
 
 // ── permissions ──
@@ -127,7 +129,7 @@ async function prescribe(code, dose, days, label) {
 
 // ── stock changed outside the ledger (settings screen) ──
 {
-  const id = D.LORAT.id; const d = (await call('GET', '/admin/drugs?q=LORAT', null, A)).data.find(x => x.code === 'LORAT');
+  const id = D.LORAT.id; const d = (await call('GET', '/admin/drugs?q=' + D.LORAT.code, null, A)).data.find(x => x.code === D.LORAT.code);
   const before = d.stock_qty;
   // Settings no longer writes stock (settings 73b0517): a drug save with a different
   // stock_qty leaves the count alone, so no bridging row is ever needed.
