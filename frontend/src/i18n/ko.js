@@ -351,6 +351,9 @@ export default {
   cs_setSkippedHidden: "목록에서 감춘 약이라 넣지 않았습니다: {names}\n필요하면 약을 직접 찾아 처방하세요.",
   cs_setHiddenDrug: "목록에서 감춘 약 — 이 세트를 적용해도 넣지 않습니다",
   cs_visitCancelled: "접수에서 취소된 내원입니다. 진료를 열 수 없습니다.",
+  cs_cancelPrompt: "「{name}」에는 이미 결과가 있어 지울 수 없습니다.\n대신 「취소됨」으로 표시할까요? 결과는 기록으로 남고, 검사 목록과 청구에서 빠집니다.\n이미 수납된 검사면 수납에서 환불(정정) 처리가 필요합니다.\n\n취소 이유 (선택):",
+  cs_cancelHint: "결과가 있는 검사 — 누르면 「취소됨」으로 표시할지 묻습니다",
+  cs_orderIsCancelled: "취소된 오더는 고칠 수 없습니다.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
