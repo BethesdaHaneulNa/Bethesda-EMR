@@ -329,6 +329,14 @@ from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-
 That backup is from the version before the update, so use the commands under "If the
 backup is older than the app" there.
 
+**Staff PCs after an update:** nothing to do. The page is checked with the server each time
+it is opened, so a browser gets the new version by itself. A screen that was already open
+during the update keeps the old version until it is reloaded - ask staff to press **F5**
+once (or close and reopen the browser). Updating *from v1.4.0 or older* is the one
+exception: those versions did not tell the browser to check, and a PC may go on showing
+the old page for some days. On each staff PC press **Ctrl + F5** once after that update;
+if the screen is blank, that is the same thing - Ctrl + F5.
+
 **Moving to another machine:** update the old machine first, take a backup *after* the
 update, and restore that on the new machine, installed from the same version. Then the
 ordinary restore commands work as written.
