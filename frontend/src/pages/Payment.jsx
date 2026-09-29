@@ -69,6 +69,7 @@ export default function PaymentPage() {
       alert(t.py_correctionCarried.split('{receipt}').join(String(err.message).replace(/^BILL_CARRIED:\s*/,'')));
       return;
     }
+    if(String(err && err.message).indexOf('VISIT_CANCELLED')===0){ alert(t.py_visitCancelled); return; }
     if(String(err && err.message).indexOf('QTY_MISSING')===0){
       alert(t.py_qtyMissingBlock.replace('{names}', String(err.message).replace(/^QTY_MISSING:\s*/,'')));
       return;
@@ -387,7 +388,7 @@ export default function PaymentPage() {
         <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'#7c3aed':'#1e2433',color:sel?'#ede9fe':'#475569',border:'1px solid '+(sel?'#a855f7':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
         <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'#5b21b6':'#1e2433',color:sel?'#ede9fe':'#475569',border:'1px solid '+(sel?'#8b5cf6':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.reading||'판독소견'}</button>
         <div style={{flex:1}}></div>
-        {tab==='waiting'&&sel&&billItems&&!sel.needs_refund?(nothingToCharge()?(
+        {tab==='waiting'&&sel&&billItems&&!sel.needs_refund&&sel.status!=='cancelled'?(nothingToCharge()?(
           <span style={{color:'#34d399',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
         ):(<>
           <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'#ef444420',color:'#f87171',border:'1px solid #ef444440',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
@@ -521,6 +522,12 @@ export default function PaymentPage() {
 
   function renderWaiting(){
     if(!(sel&&billItems)) return <Empty icon="💰" text={L.selectWaiting} />;
+    // Picked from the find-patient window: a visit cancelled at reception is shown, not
+    // billed (the server refuses it too). Receipts and documents stay available.
+    if(sel.status==='cancelled') return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
+      <PatientHeader p={sel} />
+      <div style={{background:'#64748b18',border:'1px solid #64748b55',borderRadius:8,padding:'12px 14px',color:'#cbd5e1',fontSize:14,fontWeight:700}}>⊘ {t.py_visitCancelled}</div>
+    </div>;
     if(sel.needs_refund){
       var head = <><PatientHeader p={sel} />
         <div style={{background:'#a855f714',border:'1px solid #a855f750',borderRadius:8,padding:'12px 14px',marginBottom:12}}>

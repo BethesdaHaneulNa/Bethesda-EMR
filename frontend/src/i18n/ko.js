@@ -388,6 +388,7 @@ export default {
   py_stCancelled: "취소",
   py_stWaived: "면제",
   py_stWaiting: "대기",
+  py_visitCancelled: "접수에서 취소된 내원입니다 — 수납할 것이 없습니다. 영수내역과 문서는 볼 수 있습니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
