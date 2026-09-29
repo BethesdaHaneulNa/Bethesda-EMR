@@ -22,6 +22,7 @@
 | 통계 | 내원·매출·미수·약품 사용 (일·월·연) | [statistics](modules/statistics.md) | [기록](handoff/statistics.md) |
 | 설정 | 직원·권한, 약품, 오더 코드, 검사 패널, 진료과, 병원 정보, 백업 | [settings](modules/settings.md) | [기록](handoff/settings.md) |
 | PACS | 영상 촬영 워크리스트, 영상 보기, 판독 | [pacs](modules/pacs.md) | [기록](handoff/pacs.md) |
+| 디자인 | 화면 색·주제(밝은 화면 / 어두운 화면) | modules/design.md (디자인 세션이 만듦) | handoff/design.md |
 
 ## 실장님 결정 기록
 
