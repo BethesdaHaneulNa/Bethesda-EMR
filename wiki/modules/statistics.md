@@ -1,6 +1,6 @@
 # 통계 (Statistics)
 
-> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 처음 찾은 문제 17건 모두 처리 · **18(약품 사용통계 「조제완료」와 약국 재고 보고서의 「출고」 기준 차이) 여쭘**
+> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 처음 찾은 문제 17건 + 18 모두 처리 · 열린 항목 없음
 
 ## 1. 이 모듈이 하는 일
 
@@ -66,7 +66,9 @@
    - 다른 기간을 보려면 날짜 칸 두 개에 시작일과 끝일을 넣습니다. 시작일이 끝일보다 늦으면 바뀌지 않습니다.
    - Jour · Mois · Année 를 다시 누르면 날짜 칸이 그 단위의 처음 기간으로 돌아갑니다.
 2. **Tous (전체)** · **Interne (원내)** · **Externe (원외)** — 병원 약국에서 내준 약만, 또는 밖에서 사도록 처방한 약만 볼 수 있습니다.
-3. **Toutes Rx (처방전체)** · **Dispensé (조제완료)** — 처방만 된 것까지 셀지, 약국에서 조제를 마친 것만 셀지 고릅니다.
+3. **Toutes Rx (처방전체)** · **Dispensé (조제완료)** — 둘은 세는 기준이 다릅니다. 표 위 작은 글씨에 지금 기준이 한 줄로 나옵니다.
+   - **Toutes Rx** — 의사가 **처방한 날**(내원일) 기준, 처방한 수량 그대로. 「의사가 무엇을 얼마나 처방했나」.
+   - **Dispensé** — 약국이 **약을 내준 날** 기준, **병원 약국의 약만**(원외 처방은 빠짐), 알약 단위로 올림(2.5정 → 3정). **약국 화면의 월말 재고 보고서 「출고」와 같은 숫자**입니다. 그래서 Dispensé 에서 **Externe (원외)** 를 누르면 비어 있습니다.
 4. 표는 약품별 수량이고, 많이 쓴 약이 위에 옵니다. 맨 아래 **Total** 줄이 기간별 합계입니다.
 5. **⬇ CSV** 를 누르면 표를 엑셀에서 열 수 있는 파일로 내려받습니다.
 
@@ -197,7 +199,11 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 ### 3.6 `GET /api/stats/drug-usage?granularity&from&to&status&dispense_type`
 
 - `prescription JOIN consultation JOIN visit` 에서 **`visit.visit_date`** 로 기간을 자르고 묶습니다(조제일 `dispensed_at` 이 아님)(`stats.routes.js:372`).
-- `status=dispensed` 면 조제 완료만, 아니면 `rx.status <> 'cancelled'` 전체. `dispense_type` 으로 원내·원외 필터.
+- **두 모드는 기준이 다름**(결정 18, 2026-09-29, `stats.routes.js:398-406`):
+  - **처방전체**(기본): `rx.status <> 'cancelled'`, 날짜 = `visit.visit_date`, 수량 = `total_qty` 그대로, 처방 줄의 `drug_code`·`drug_name` 으로 묶음(`drug_id` 없는 자유 입력 약도 셈). `dispense_type` 필터로 원내·원외.
+  - **조제완료**(`status=dispensed`): `rx.status = 'dispensed'`, 날짜 = `rx.dispensed_at::date`(병원 시간), 수량 = `CEIL(total_qty)`, `drug_id` 있고 원외가 아닌 줄만, 약 기록(`drug.code`·`drug.name`)으로 묶음 — **약국 재고 보고서의 「출고」와 같은 규칙**(조제 때 `Math.ceil(total_qty)` 만큼 `stock_movement` 에 `dispense` 로 기록). 원외 처방도 조제 단추를 누르면 `dispensed` 가 되지만 나간 것은 종이뿐이라 뺌 → 「원외」 필터 + 조제완료 는 늘 빈 표.
+  - 응답에 `basis: 'prescribed' | 'dispensed'`. 화면은 표 머리 아래에 기준을 한 줄로(`st_rxBasisAll` / `st_rxBasisDispensed`).
+  - 조제 기록(`stock_movement.created_at`, `clock_timestamp()`)과 `dispensed_at`(`NOW()`)은 같은 트랜잭션이라 자정을 사이에 두고 갈릴 일은 사실상 없음. 재고 기록(마이그레이션 021) 전에 조제된 처방도 `dispensed_at` 이 있으면 조제완료에 셈 — 그 달은 재고 보고서가 비어 있으므로 두 화면이 다를 수 있음.
 - **취소된 접수의 처방**(결정 12, C): 조건 `(v.status <> 'cancelled' OR rx.status = 'dispensed')`(396) — 처방전체에서는 빼되, 약국이 이미 내준 약은 선반을 떠났으므로 두 모드 모두에서 셉니다. 조제완료 ⊆ 처방전체가 유지됩니다.
 - 수량은 `SUM(COALESCE(total_qty,0))`. `total_qty` 가 비어 있는 처방은 0으로 셉니다.
 - **약 총량 계산식 (실장님 결정 2026-09-29, `wiki/decisions.md`)**: 처방 첫 칸은 **하루 총량(일총투여)**, 총량 `total_qty` = 하루 총량 × 일수. 계산·저장은 진료 쪽(처방 저장) 한 곳이고, 통계는 **저장된 `total_qty` 만 읽으므로 코드 변경 없음**. 옛 처방: 식이 바뀌기 전에 저장된 처방은 옛 식(용량 × 횟수 × 일수)의 값을 가집니다. 실행 중 EMR 의 처방 6건(2026-09-29)은 **현장 사용 전의 시험 데이터라 다시 계산하지 않고 그대로 둡니다**(총괄 판단) — 실제 진료 기록이 쌓이기 전이므로 약품 사용통계에 옛 식 수량이 섞일 일은 없습니다. 약국 재고 차감은 `Math.ceil(total_qty)`(`pharmacy.routes.js:151`)라 소수 수량이면 통계와 재고 차감량이 조금 다를 수 있습니다.
@@ -207,20 +213,17 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 
 #### 약국 월말 재고 보고서와의 관계 (`GET /api/pharmacy/stock/report?month=`, 약국 · 마이그레이션 021 `stock_movement`)
 
-두 숫자는 **세는 것이 다릅니다** — 같은 달이라도 맞지 않는 것이 정상입니다(문제 18, 기준을 맞출지 여쭘).
+**조제완료는 재고 보고서의 「출고」와 같은 숫자입니다**(결정 18). 처음 비교했을 때는 기준이 달라 같은 달에도 맞지 않았습니다 — 조제완료가 내원일 · 저장 수량 그대로 · 원외 포함(「전체」일 때)이었고, 재고는 내준 날 · 올림 · 원내만. 「같은 달에 두 화면 숫자가 다르면 현장에서 어느 쪽도 믿지 못한다」는 이유로 조제완료를 재고 기준에 맞췄고, 처방전체는 처방(내원일) 기준으로 남겼습니다.
 
-| | 약품 사용통계 「조제완료 · 원내」 | 재고 보고서 「출고(dispensed)」 |
-|---|---|---|
-| 날짜 | **처방한 날**(내원일 `visit_date`) | **내준 날**(`stock_movement.created_at`, 병원 시간) |
-| 수량 | 저장된 `total_qty` 그대로(소수 가능) | `Math.ceil(total_qty)` — 알약 단위로 올림(`pharmacy.routes.js` 조제) |
-| 무엇을 | 처방 줄(`drug_code`·`drug_name` 으로 묶음, `drug_id` 없는 자유 입력 약도) | 재고가 있는 약(`drug_id`)만 |
-| 원외 처방 | 「원내」 필터로 빠짐. 「전체」로 두면 **원외도 「조제완료」에 들어감**(조제 단추가 원외 줄도 `dispensed` 로 바꿈 — 실제로는 처방전만 줌) | 안 셈(선반에서 안 나감) |
-| 기록 시작 전 | 처방이 있으면 셈 | 재고 기록이 시작되기 전 달은 비어 있음 |
+격리 확인(새 DB, 실제 진료·조제·재고 API, PCM500 재고 100 · BRUFEN 50 입고 뒤): PCM500 ① 15 원내 조제 ② 2.5 원내 조제 ③ 10 원외 ④ 7 원내 — 내원일 8/30, 9월에 조제(옛 처방 조제) ⑤ 4 원내 미조제 / BRUFEN ⑥ 4.5 원내 조제 ⑦ 6 원외.
 
-격리 확인(PCM500, 재고 100 입고 뒤): 9월 처방 ① 15 원내 조제 ② 2.5 원내 조제 ③ 10 원외 ④ 7 원내 — 내원일 8/30, 9월에 조제(옛 처방 조제) ⑤ 4 원내 미조제.
-- 통계 「조제완료 · 원내」: 8월 7 · 9월 **17.5**(15 + 2.5). 「전체 · 처방전체」: 8월 7 · 9월 31.5.
-- 재고 보고서 9월 출고 **25**(15 + 3 + 7), 8월 행 없음(기록 시작 전). 재고 식 `시작 + 입고 − 출고 … = 끝` 은 맞음(`ok`).
-- 차이 7.5 = 올림 0.5(2.5 → 3) + 달이 다른 옛 처방 7.
+| | 바꾸기 전 | **바꾼 뒤** | 재고 보고서 2026-09 출고 |
+|---|---|---|---|
+| 조제완료 · PCM500 | 8월 7 · 9월 17.5 | 8월 0 · 9월 **25** (15 + 3 + 7) | **25** ✅ |
+| 조제완료 · BRUFEN | 9월 4.5 | 9월 **5** | **5** ✅ |
+| 조제완료 · 다른 약 23개 | 0 | 0 | 0 ✅ |
+| 조제완료 · 원외 | 원외 줄이 들어감 | 빈 표 | — |
+| 처방전체 · PCM500 | 8월 7 · 9월 31.5 | 같음 | — |
 
 ### 3.7 날짜 경계 · 시간대
 
@@ -258,7 +261,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount(진료 영수),settlementCount(미수 수납),billedVisits,avgBilledPerVisit}, voidedCount, outstanding{owed,refund}`. 과·의사 없음은 `code`/`name` 이 `null`. 과·의사별 `paid` 는 3.8 방식. 예전 `revenue.avg` 는 없어짐(`avgBilledPerVisit` 로) |
 | `GET /monthly` | `months` (1~24, 기본 6) | `[{ym, visits, revenue}]` |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
-| `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, from, to, periods, drugs[{drug_code,drug_name,category,total_qty,total_count,by_period}], periodTotals, grandTotal}` |
+| `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods, drugs[{drug_code,drug_name,category,total_qty,total_count,by_period}], periodTotals, grandTotal}` — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
 
 ### 공용 부품
 
@@ -316,7 +319,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 15 | ~~낮음~~ **고침** | 기간을 바꿀 때마다 기간과 무관한 `/outstanding`·`/monthly` 를 다시 불렀음 → 월별은 화면 열 때 한 번, 명단은 열 때마다. 항상 0 이던 `revenue.cancelled_count` 삭제 (2026-09-29) | `Stats.jsx:35`, `:74-78`, `stats.routes.js:116` |
 | 16 | ~~낮음~~ **고침** (총괄 승인) | **미수 명단의 언제부터(Depuis)가 빚이 생긴 날이 아니었음.** 미수 수납(M2)을 일부만 받거나 이월된 뒤에는 남은 빚이 받은 날짜의 새 영수에 있어 그 날로 보였음. 이제 3.8 의 조각으로 「아직 못 받은 진료 중 가장 오래된 진료일」 (2026-09-29, 5차 시험) | `stats.routes.js:337-352` |
 | 17 | ~~낮음~~ **고침** (총괄 판단, 실장님께는 결정 세션이 알림) | **총 내원 ≠ 초진 + 재진이었음.** 「진료비 없음」과 옛 응급·의뢰가 `other_visits` 로 세졌지만 화면 칸이 없었음 → 재진 옆에 「진료비 없음·기타 / Sans frais / autres / No fee / other」 칸 (2026-09-29) | `Stats.jsx` 운영 현황 카드, `st_otherVisits` |
-| 18 | 낮음 (여쭐 것 — 숫자 뜻이 바뀜) | **약품 사용통계 「조제완료」와 약국 재고 보고서 「출고」가 같은 달에도 다름.** 통계는 내원일·저장 수량 그대로·원외 포함(「전체」일 때), 재고는 내준 날·올림·원내만(3.6 표). 격리 예시 9월 17.5 대 25. 제안: 「조제완료」 모드를 **내준 날(`dispensed_at`) 기준 · 원내만 · 올림**으로 바꿔 재고 「출고」와 같게 하고, 「처방전체」는 지금처럼 처방(내원일) 기준으로 두기 | `stats.routes.js:372-396`, `pharmacy.routes.js` 조제·`/stock/report` |
+| 18 | ~~낮음~~ **고침** (총괄 결정) | **약품 사용통계 「조제완료」와 약국 재고 보고서 「출고」가 같은 달에도 달랐음.** 조제완료를 재고와 같은 기준(내준 날 `dispensed_at` · 원내 · `drug_id` 있는 것 · 올림)으로. 처방전체는 처방(내원일) 기준 그대로. 화면에 기준 한 줄 (2026-09-29, 3.6) | `stats.routes.js:398-428`, `Stats.jsx:278` |
 
 ## 8. 변경 기록
 
@@ -337,4 +340,5 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 2026-09-29 | 문제 12 남은 부분: 약품 사용통계에 자기 기간(날짜 칸 두 개), 단위 단추로 기본 기간 복귀, 실패 시 빈 표 | `d15068d` |
 | 2026-09-29 | 문제 7 확인 결과 기록 — **틀린 기록**(「문제없음」), 아래 줄에서 바로잡음 | `aaf3c97` |
 | 2026-09-29 | 문제 7 정정: 실행 중 EMR 의 연결 시간대는 UTC 였고 총괄이 `config/database.js` 로 고침. 3.7·머리 상태를 바로잡고, 서버 기본값 UTC 인 격리 DB 에서 날짜 경계(취소 영수 자정 전후, 기본 기간) 확인 | `8acdc6d` |
-| 2026-09-29 | 새로 들어온 것 점검(코드 변경 없음): 검사 오더 취소 → 정정으로만 나타남(3.4), 약국 재고 보고서와 기준 차이(3.6, 문제 18 여쭘), 날짜 = `todayLocal()`(3.7) | (이 커밋) |
+| 2026-09-29 | 새로 들어온 것 점검(코드 변경 없음): 검사 오더 취소 → 정정으로만 나타남(3.4), 약국 재고 보고서와 기준 차이(3.6, 문제 18 여쭘), 날짜 = `todayLocal()`(3.7) | `9d4ebf8` |
+| 2026-09-29 | 문제 18: 약품 사용통계 「조제완료」를 재고 보고서 「출고」와 같은 기준으로(내준 날 · 원내 · 올림), 기준을 화면에 한 줄로 | (이 커밋) |

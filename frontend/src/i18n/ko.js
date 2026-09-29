@@ -527,6 +527,8 @@ export default {
   st_settlementsSub: "+ 미수 수납 {n}건",
   st_avgPerVisit: "방문당 평균 청구액",
   st_otherVisits: "진료비 없음·기타",
+  st_rxBasisAll: "처방전체: 처방한 날(내원일) 기준 · 처방한 수량 그대로",
+  st_rxBasisDispensed: "조제완료: 약국이 내준 날 기준 · 원내 약만 · 알약 단위로 올림 — 약국 재고 보고서의 출고와 같은 숫자",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",

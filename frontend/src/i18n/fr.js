@@ -527,6 +527,8 @@ export default {
   st_settlementsSub: "+ {n} règlement(s) de solde",
   st_avgPerVisit: "Moy. facturée / visite",
   st_otherVisits: "Sans frais / autres",
+  st_rxBasisAll: "Toutes Rx : selon le jour de prescription (date de visite), quantité prescrite",
+  st_rxBasisDispensed: "Dispensé : selon le jour de remise par la pharmacie, médicaments internes uniquement, arrondi à l’unité — même chiffre que les sorties du rapport de stock",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",

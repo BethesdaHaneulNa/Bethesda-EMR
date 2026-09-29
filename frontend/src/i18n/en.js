@@ -536,6 +536,8 @@ export default {
   st_settlementsSub: "+ {n} balance settlement(s)",
   st_avgPerVisit: "Avg billed / visit",
   st_otherVisits: "No fee / other",
+  st_rxBasisAll: "All prescriptions: by the day prescribed (visit date), quantity as written",
+  st_rxBasisDispensed: "Dispensed: by the day the pharmacy handed it over, in-house drugs only, rounded up to whole units — the same figure as the stock report’s outgoing",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",
