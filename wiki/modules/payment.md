@@ -297,6 +297,18 @@
 - **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 미수 수납 영수(진료 칸 0 + 이전 미수 > 0, 3.4의 모양)는 항목 대신 옛 영수마다 「Règlement du reçu R-… du …」 한 줄, 연결이 없어진 취소 영수는 비고의 영수번호로; Sous-total·Solde antérieur 줄은 생략) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
 - **넣지 않는 것**(실장님 결정 2026-09-29): NIF/STAT 번호, 로고, 서명란, 금액 글자 표기 — 지금 영수증 그대로. 숫자는 **프랑스어 표기 `15 000 Ar`**(줄바꿈 없는 공백, 영수증 안에서만 — 화면은 `15,000`), 날짜는 다른 문서와 같은 `YYYY-MM-DD`. 인쇄 창을 브라우저가 막으면 `printDocument(…, 'fr')`로 **프랑스어** 안내가 뜹니다(진료 세션이 `printDocument`에 언어 인자를 추가, 2026-09-29).
 
+### 3.11 변경 기록(로그) — 영수 취소 · 정정 (2026-09-29, 실장님 결정)
+
+공통 로그(`audit_log`, `wiki/03-change-log.md`)에 수납은 **두 가지만** 남깁니다. 화면에는 아무 표시도 없고, 설정 → 「기록」에서 관리자만 읽습니다. 보통 수납·추가 청구·미수 수납(새 영수)은 평소 일이라 남기지 않습니다.
+
+| 언제 | action | 한 줄에 들어가는 것 |
+|---|---|---|
+| 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: 영수번호 · total · paid(`net_paid`) — 사유. before→after(바뀐 칸만): 상태, 미수, 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`). 금액은 취소로 바뀌지 않아 before/after에서는 빠지므로 summary에 둠 |
+| 정정 `POST /visit/:id/correct` (환불이든 미수가 남든) | `payment.receipt.correct` | summary: 옛 영수번호 → 새 영수번호 · 바뀐 항목(`-DRG1`, `+X`, `PARA 9→6`) · refund N 또는 owed N — 사유. before→after: 영수번호·상태, 총액, 받은 돈, 환불, 미수, 항목×수량 |
+
+- 두 줄 모두 **바꾸는 트랜잭션 안에서, COMMIT 전에** 씁니다(`writeAudit(client, …)`) — 취소·정정이 롤백되면 줄도 없음. 거절(409·404)이면 줄 없음.
+- 격리 스택 확인(2026-09-29): 보통 수납·미수 수납 → 0줄 / 영수 취소 → 1줄 / 이미 취소된 영수 다시(404) → 0줄 / 이월된 옛 영수 취소(409) → 0줄 / 미수 수납 영수 취소 → 1줄(`balance_restored_to` 옛 영수) / 정정 환불 2,000 → 1줄(`-DRG1 · refund 2000`) / 화면이 본 환불액과 다름(409) → 0줄 / 정정 뒤 미수 → 1줄(`owed 10000`).
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -464,4 +476,5 @@
 | 2026-09-29 | 진료비 선택지가 초진 · 재진 · 진료비 없음 셋(실장님 결정). 옛 응급·의뢰 내원은 「(옛 값)」으로 보이고 금액 그대로 | 화면 선택지만, 서버·코드표·옛 기록 그대로 (3.1) | `71df1e6` |
 | 2026-09-29 | 「진료비 없음」 표기 통일(Sans frais, 총괄의 공용 키 변경)에 맞춰 2.2 고침, 진료비 없음 내원의 영수증 모양 확인 기록 | 위키만 (3.4) | `4374be4` |
 | 2026-09-29 | 진료실이 취소로 표시한 오더(결정 3-B)는 청구·목록·정정에서 빠짐. 수납 뒤 취소되면 「정정(환불)」로 뜸 | `order_item` 합산 3곳에 `status <> 'cancelled'`, `counterFeeCond()`는 취소된 오더 포함 유지 (3.2) | `2fa4d16` |
-| 2026-09-29 | 영수증에 NIF/STAT·로고·서명란·금액 글자는 넣지 않기로(실장님 결정) — 후보 닫음 | 위키만 (3.10·6·7절) | (이 커밋) |
+| 2026-09-29 | 영수증에 NIF/STAT·로고·서명란·금액 글자는 넣지 않기로(실장님 결정) — 후보 닫음 | 위키만 (3.10·6·7절) | `65208bb` |
+| 2026-09-29 | 영수 취소·정정이 변경 기록(관리자만 보는 로그)에 한 줄씩 남음 — 보통 수납·미수 수납은 남기지 않음 | `writeAudit` 두 곳, 트랜잭션 안 (3.11) | (이 커밋) |
