@@ -27,5 +27,21 @@ export function checkOpen(d) {
 }
 export function checkText(t, c) {
   var label = t['ph_chk_' + c.k] || c.k;
-  return c.d ? label + ' — ' + c.d : label;
+  return c.d ? label + ' — ' + detailText(t, c) : label;
+}
+
+// The details are the old program's own notes, which count in Korean words
+// ("60캡슐*66", "79병"). The staff read French, so on screen those five words are
+// shown in the screen's language (ph_u_*; the Korean screen keeps them) and the
+// quantity note reads as a sentence. The stored list is not changed.
+var KO_UNITS = { '캡슐': 'ph_u_cap', '정': 'ph_u_tab', '병': 'ph_u_bottle', '개': 'ph_u_unit', '포': 'ph_u_sachet' };
+function units(t, s) {
+  return String(s).replace(/(\d)\s*(캡슐|정|병|개|포)/g, function (m, d, w) { return d + ' ' + (t[KO_UNITS[w]] || w); })
+    .replace(/\s*\*\s*/g, ' × ');
+}
+function detailText(t, c) {
+  // qty: "<old note> ≈ <what it comes to> ≠ <quantity imported>"
+  var m = c.k === 'qty' && String(c.d).match(/^(.*) ≈ (\S+) ≠ (\S+)$/);
+  if (m && t.ph_chkQtyDetail) return t.ph_chkQtyDetail.replace('{note}', units(t, m[1])).replace('{n}', m[2]).replace('{qty}', m[3]);
+  return units(t, c.d);
 }

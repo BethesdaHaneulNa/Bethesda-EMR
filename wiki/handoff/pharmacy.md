@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 B(가져온 메모의 한국어, 같은 이름 두 줄) · C2(단위 말을 제형에서)
+
+- **상태**: 확인 요청(화면 파일 Pharmacy.jsx·PharmacyStock.jsx는 건드리지 않음 — 디자인 작업과 안 부딪힘). C1(확인 창 어순)과 금액의 프랑스어 자릿수(«12,300» → «12 300»)는 **Pharmacy.jsx라 디자인 커밋이 들어온 뒤**에 합니다.
+- **한 일**:
+  - B 메모: 가져온 확인할 점의 자료(옛 프로그램의 원래 표기 「60캡슐*66」, 「79병」)를 **화면에서** 화면 언어로 — 한국어 단위 다섯 개(정·캡슐·병·개·포)를 cp · gél. · fl. · u. · sachet로, `*`를 ×로, 수량 항목은 « 60 gél. × 66 ≈ 3960 ; quantité importée : 90 ». 저장된 값은 그대로라 **마이그레이션 없음**(실행 중 DB 값 안 바꿈). 가져온 93개 항목 전부 FR 화면에 한국어 0 확인(node로 전부 그려 봄).
+  - C2: `rx-dosing.js`가 단위 말을 `rx.dosage_form`에서 먼저 정함(Tablet cp · Capsule gél. · Powder / Sachet sachet · Suppository suppo.), 없으면 전처럼 이름에서. 옛 처방(예시 약, 제형 없음)의 문장은 그대로.
+- **바꾼 파일**: `frontend/src/documents/drug-info.js`, `frontend/src/documents/rx-dosing.js`, i18n `ph_chkQtyDetail`·`ph_u_*` 5개(ko·en·fr), `wiki/modules/pharmacy.md` 3.4·3.11.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **다른 세션에 부탁**(총괄 전달):
+  - **진료** — C2가 화면에 나오려면: `consult.routes.js`의 `GET /visit/:visitId/prescriptions`와 `GET /:id/prescriptions`에 `(SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form` 한 칸(진료 화면 문장·원외 처방전이 이 둘을 읽음). 처방을 막 추가한 줄은 검색 결과의 `dosage_form`을 같이 넣어 두면 다시 불러오기 전에도 맞게 나옴. 제형은 읽을 때 약 표에서 가져오므로, 나중에 약의 제형을 고치면 그 약의 옛 문장 단위도 바뀜(처방 줄에 복사하는 마이그레이션이 필요하면 말씀 주세요 — 지금은 가져온 약만 제형이 있어 영향이 작다고 봄).
+  - **진료** — B: 약 검색 목록에 **재고와 가격**을 같이(같은 이름 Amoxicillin 500mg Gélule: MED-0068 재고 2000 / MED-0069 재고 2500). `/admin/drugs`가 이미 `stock_qty`·`unit_price`·`dosage_form`을 줌. 예: 이름 옆 작게 « gél. · stock 2000 · 0 Ar ».
+  - **설정** — B: 약속처방 편집 창의 약 검색 결과·약 줄에 같은 것(재고·가격, 그리고 코드).
+- **확인한 방법**: `npm run build`. node로 `checkText`(fr·ko, 93개)와 `doseSentence`(이름만 / Capsule / Tab 이름 / Syrup — « 1 gél. × 3 fois/jour… », 「1회 1캡슐 × 하루 3회…」, 시럽은 단위 없음).
+- **확인 못 한 것**: 진료 쪽 칸이 들어오기 전이라 진료 화면·원외 처방전에서 실제로 « gél. »가 나오는 것은 못 봄.
+
 ## 2026-09-29 — 통합 시험 A: 원외로 지정된 약이 없으면 원외 처방전을 발급하지 않음
 
 - **상태**: 확인 요청 (디자인이 Pharmacy.jsx를 시작하기 전에 합쳐 달라는 건). develop `fd0cd02` 위.
