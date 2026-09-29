@@ -373,7 +373,7 @@ export default {
   cs_cancelPrompt: "\"{name}\" already has a result and cannot be removed.\nMark it as cancelled instead? The result stays on record; the order leaves the lab list and the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
   cs_cancelHint: "Has a result - click to mark it as cancelled",
   cs_orderIsCancelled: "A cancelled order cannot be changed.",
-  cs_cancelPromptImg: "\"{name}\" already has a reading or a study taken and cannot be removed.\nMark it as cancelled instead? The images and the reading stay on record; if the study was not taken yet it leaves the device worklist; the order leaves the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
+  cs_cancelPromptImg: "\"{name}\" already has a reading or a study taken and cannot be removed.\nMark it as cancelled instead? The images and the reading stay on record and can still be viewed in the image window. If the study was not taken yet, it leaves the device worklist; the order also leaves the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
   cs_packQty: "Quantity",
   cs_packQtyHint: "Pack-unit drug (syrup, cream, inhaler...). No total is worked out: the number of bottles/tubes/pieces written here is what is dispensed and billed. Daily dose, times and days are printed as instructions only.",
   cs_noPackQty: "Enter the quantity",

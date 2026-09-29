@@ -364,7 +364,7 @@ export default {
   cs_cancelPrompt: "« {name} » a déjà un résultat et ne peut pas être retiré.\nLe marquer comme annulé ? Le résultat reste au dossier ; la demande sort de la liste du laboratoire et de la facture.\nSi elle a déjà été payée, la caisse devra la rembourser.\n\nMotif (facultatif) :",
   cs_cancelHint: "A un résultat - cliquer pour le marquer comme annulé",
   cs_orderIsCancelled: "Une demande annulée ne peut pas être modifiée.",
-  cs_cancelPromptImg: "« {name} » a déjà un compte-rendu ou un examen réalisé et ne peut pas être retiré.\nLe marquer comme annulé ? Les images et le compte-rendu restent au dossier ; si l'examen n'a pas encore été fait, il sort de la liste de travail des appareils ; la demande sort de la facture.\nSi elle a déjà été payée, la caisse devra la rembourser.\n\nMotif (facultatif) :",
+  cs_cancelPromptImg: "« {name} » a déjà un compte-rendu ou un examen réalisé et ne peut pas être retiré.\nLe marquer comme annulé ? Les images et le compte-rendu restent au dossier et restent consultables dans la visionneuse. Si l'examen n'a pas encore été fait, il sort de la liste de travail des appareils ; la demande sort aussi de la facture.\nSi elle a déjà été payée, la caisse devra la rembourser.\n\nMotif (facultatif) :",
   cs_packQty: "Quantité",
   cs_packQtyHint: "Médicament à l’unité de conditionnement (sirop, crème, inhalateur…). Aucun total n’est calculé : le nombre de flacons/tubes/unités saisi ici est délivré et facturé. Dose par jour, fois et jours ne servent que de posologie.",
   cs_noPackQty: "Indiquez la quantité",

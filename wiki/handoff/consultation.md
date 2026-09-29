@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영상 취소 물음 문구 (PACS 지적)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — `f79cc79` 다음
+- **한 일**: 영상 줄의 취소 물음은 `8e497c2`부터 검사용 `cs_cancelPrompt`(「검사 목록」)가 아닌 영상용 `cs_cancelPromptImg`를 씁니다. 여기에 「영상은 계속 볼 수 있다」는 말을 더했습니다. 새 문구(PACS 위키 2.1 ④·2.4·2.6 ⑤를 맞출 때 쓰기):
+  - ko 「「{name}」에는 이미 판독이나 촬영이 있어 지울 수 없습니다. 대신 「취소됨」으로 표시할까요? 영상과 판독은 기록으로 남아 영상 창에서 계속 볼 수 있습니다. 아직 촬영 전이면 장비의 촬영 목록(워크리스트)에서 빠지고, 청구에서도 빠집니다. 이미 수납된 검사면 수납에서 환불(정정) 처리가 필요합니다. 취소 이유 (선택):」
+  - fr « « {name} » a déjà un compte-rendu ou un examen réalisé et ne peut pas être retiré. Le marquer comme annulé ? Les images et le compte-rendu restent au dossier et restent consultables dans la visionneuse. Si l'examen n'a pas encore été fait, il sort de la liste de travail des appareils ; la demande sort aussi de la facture. Si elle a déjà été payée, la caisse devra la rembourser. Motif (facultatif) : »
+  - en « "{name}" already has a reading or a study taken and cannot be removed. Mark it as cancelled instead? The images and the reading stay on record and can still be viewed in the image window. If the study was not taken yet, it leaves the device worklist; the order also leaves the bill. If it was already paid, the cashier will need to refund it. Reason (optional): »
+- **바꾼 파일**: `wiki/modules/consultation.md`(8절)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_cancelPromptImg` 문구만
+- **DB 마이그레이션**: 없음 · **번역 키**: 새 키 없음(문구만)
+- **확인한 방법**: `npm run build` 통과. fr.js를 불러 문자열이 줄바꿈·따옴표까지 그대로인지 확인했습니다. 화면에서 이 키를 쓰는 곳은 `8e497c2` 때 프랑스어로 확인한 그 물음 하나입니다.
+- **확인 못 한 것**: 새 문구를 화면에서 다시 띄워 보지는 않았습니다(문구만 바뀜).
+- **다른 세션에 부탁**: PACS — 위 새 문구로 직원 안내를 맞춰 주세요.
+- **남은 일 · 알려진 문제**: ⑭ 설계 메모는 총괄 확인을 기다립니다.
+
 ## 2026-09-29 — 포장 단위 약 (H2-B) 진료 몫 + 수납 부탁(총량 NULL 다시 계산) · 29 표 순서 확인
 
 - **상태**: 확인 요청
