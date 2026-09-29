@@ -2,6 +2,47 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑥ 수술기록지 프랑스어 표시 + ㉒ 검사 오더 상태 칸 (임상병리 부탁)
+
+> **총괄 확인 (2026-09-29)**: 합침(`4b5d01c`) + 실행 중 EMR 반영. 총괄 렌더 도구에 프랑스어 전 양식·빽빽한 경우를 추가해 688px로 찍음: 12개 양식 630~899px, 빽빽한 경우 탈장 952 · 충수 990 · 유방 929 · 치질 917 · 치루(유형 3개) 973 — 모두 한 장, 그림 밖으로 나간 글자 0. 시계 D/G, 선택값·그림 글자 프랑스어 확인. 프랑스어 의학 용어 확인은 결정 세션 목록에 넣음(현지 의사 확인, 그때까지 지금 번역 유지).
+
+- **상태**: 확인 요청 (프랑스어 의학 용어는 현지 의사 확인이 필요합니다 — 아래 「총괄 확인 요청」)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `b01c6a0`
+- **한 일**:
+  - ⑥ 수술기록지를 FR로 고르면 체크 칸 글자, 인쇄되는 선택값, 그림 글자가 프랑스어로 나옵니다. 시계와 유방 그림의 R/L은 D/G로 바뀝니다. **저장값은 영어 그대로**이고 보여 줄 때만 바꿉니다. 그림을 무엇으로 그릴지가 이 영어 문자열로 정해지고, 옛 문서도 같은 값을 갖고 있기 때문입니다. 그래서 옛 문서도 FR로 재출력하면 프랑스어로 나옵니다. 사전은 새 파일 `documents/op-terms.js` 하나에 모았고 표는 위키 3.6절에 있습니다. 한국어·영어 표시는 바꾸지 않았습니다.
+  - 충수 그림은 프랑스어 단어가 길어 그림 끝에서 잘렸습니다(Rétro-iléale, Rétrocæcale, Pelvienne). 그래서 프랑스어일 때만 틀을 넓혔습니다. 치루 단면의 「releveur de l'anus」는 두 줄로 나눴습니다.
+  - ㉒ 임상병리 부탁: 진료 화면에서 검사 오더의 상태 칸이 결과 전부터 「completed」로 보이던 것을 고쳤습니다. 이제 검사 오더는 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」으로 보여 줍니다. 워크리스트로 간 오더는 예전 그대로이고, 그 밖의 오더(처치 등, 역시 처음부터 `completed`로 저장됨)는 칸을 비웁니다.
+- **바꾼 파일**: `frontend/src/documents/op-terms.js`(새 파일) · `surgical-records.jsx` · `op-figures.jsx` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**:
+  - `frontend/src/components/DocumentModal.jsx` — 체크 옆 글자를 `f.optionLabel(opt, lang)`로 보여 줍니다. 필드에 `optionLabel`이 없으면 예전처럼 `opt`를 그대로 보여 줍니다. `optionLabel`은 수술기록지만 답니다.
+  - `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 진료 표시 사이에 키 3개만 추가했습니다.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_labPending` · `cs_labDone` · `cs_labCancelled` (ko · en · fr 모두)
+- **확인한 방법**:
+  - `npm run build` 통과.
+  - 인쇄 폭 렌더링(688px): **한국어·영어 출력 HTML이 이 작업 전(HEAD)과 바이트까지 같습니다**(`cmp` 비교: 그림 모음, 전 양식 ko, 경계 사례, 빽빽한 경우). 프랑스어로는 12개 양식, 빽빽한 경우 5종(탈장 952, 충수 990, 유방 929, 치질 917, 치루 964), 긴 단어 경우(연부조직 877, 충수 1008)가 모두 1017px 이하 한 장입니다. 그림 밖으로 나간 글자 없음, 고른 위치의 테두리가 글자를 모두 감싸는 것을 `getBBox`로 확인했습니다.
+  - 격리 스택 9182(이미지 `bethesda-s-consultation-*:dev`인 것을 `config | grep image`로 확인 후 띄움):
+    - 한국어: 결과 있는 검사 「결과 있음」, 새 검사 L02 「결과 대기」, 처치 P01 빈칸.
+    - 프랑스어: 같은 줄이 「Résultat reçu / En attente」.
+    - 치질 기록(프랑스어): 체크 칸 `1 h … 12 h`, `Marisque, Fissure anale, Papille anale, Néant`, `Oui, Non`. 미리보기는 「Position (cadran horaire) 3 h, 7 h」, 「Lésion associée Marisque」, 「Position des paquets (vue en position gynécologique)」.
+    - 발급(`D26-00002`) 후 API로 본 저장값은 `3 o’clock, 7 o’clock` / `Skin tag` / `Yes`로 영어 그대로였고, 같은 문서를 EN으로 바꾸면 영어로 보입니다.
+- **확인 못 한 것**: 실제 프린터 인쇄 창은 띄우지 않았습니다. 프랑스어 용어가 의학적으로 맞는지는 제가 판단할 수 없습니다.
+- **위키**: `modules/consultation.md` 머리 상태, 2절(문서 발급), 3.1(상태 칸), 3.6(프랑스어 표시·용어 표), 7.1 ⑥ ✅, 7.2 ㉒ 추가, 8절
+- **총괄 확인 요청**:
+  - **프랑스어 용어 확인은 결정 세션 경유로 부탁드립니다.** 위키 3.6절 표를 현지 프랑스어 의사가 한 번 봐 주셔야 합니다. 특히 확신이 낮은 것은 다음입니다:
+    - `None` → `Néant`(Aucun/Aucune 대신)
+    - `Femoral` → `Crurale`(또는 Fémorale)
+    - `Postileal` → `Rétro-iléale`(또는 Post-iléale)
+    - `Anal papilla` → `Papille anale`(또는 Papille hypertrophique)
+    - `Pile position (lithotomy view)` → `Position des paquets (vue en position gynécologique)`
+    - `IAS/EAS` → `SAI/SAE`
+    - 충수 상태 `Suppurée`(또는 Phlegmoneuse)
+    - 추천: 지금 번역으로 두고 현지 의견이 오면 `op-terms.js`의 오른쪽 값만 바꿉니다(저장값·그림 동작은 영향 없음).
+  - ㉒로 처치 오더(워크리스트 없는 것)의 상태 칸이 「completed」에서 빈칸으로 바뀝니다.
+- **다른 세션에 부탁**:
+  - **임상병리** — 부탁하신 7절 9를 처리했습니다(검사 오더는 `o.status` 표시). 위키 쪽 표시를 갱신해 주세요.
+- **남은 일 · 알려진 문제**: ⑯(진료 화면 자체에 남은 영어 — 대기 상태값, 문장사전 분류 등)은 이번 범위 밖입니다.
+
 ## 2026-09-29 — 수술기록지 ③④⑤⑦: 체크 규칙, 빈 크기 칸, 치루 유형 여러 개, [괄호] 경고
 
 > **총괄 확인 (2026-09-29)**: 합침(`8240038`) + 실행 중 EMR(9080) 반영(새 번들에 경고 문구 들어간 것 확인). 총괄 렌더 도구로 합친 코드를 688px 폭에서 다시 찍음: 12개 양식 630~917px, 빽빽한 경우 탈장 952 · 충수 1008 · 유방 929 · 치질 917 · 치루 942 — 모두 1017px 이하 한 장. 손대지 않은 크기 칸은 인쇄 안 됨, 치루 유형 2개는 실선·점선 + 범례로 한 그림에, 예전 값 `Yes, No`는 저장된 대로 인쇄. 공용 `DocumentModal.jsx` 변경 확인 — `checks`는 수술기록지만 쓰고, 발급 확인 창은 막지 않고 묻기만 함. 실행 중 EMR 화면에서 직접 눌러 보지는 않음(세션의 격리 스택 확인을 믿음). 탈장 유형 「여러 개」와 나머지 확인 후보는 실장님께 여쭘.
