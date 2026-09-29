@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 환자 찾기에서 취소된 내원을 골랐을 때 (총괄 ③-A, 접수 `6c13b33`)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop `2a76b5f` merge(fast-forward)
+- **판단**: 접수가 취소한 내원은 청구할 것이 없음 → 수납은 **안내만 보이고 수납 버튼을 숨김**, 서버도 새 수납을 거절. 보기(영수내역·문서·차트)는 그대로. 기존 영수의 취소·미수 수납·정정은 막지 않음(돈을 돌려주거나 받을 길을 막지 않도록). 접수는 대기 중 내원만 취소하므로(`visit.routes.js`) 보통 영수는 없음.
+- **한 일**:
+  - 화면 `Payment.jsx`: 고른 내원이 `status='cancelled'`이면 가운데 칸에 「⊘ `py_visitCancelled`」만, 위쪽 Impayé/Confirmer 없음. 서버가 409 `VISIT_CANCELLED`를 주면 같은 안내(다른 창에서 막 취소된 경우).
+  - 서버 `POST /api/billing`: 내원이 취소 상태면 409 `VISIT_CANCELLED: this visit was cancelled at reception`(트랜잭션 ROLLBACK). 금액 계산은 바뀌지 않음.
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `frontend/src/pages/Payment.jsx`
+- **공용 파일 변경**: `i18n` ko·en·fr — `py_visitCancelled` 하나
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, 빌드. 격리 스택 9183(새 DB):
+  - API: 취소된 내원에 수납 → 409 `VISIT_CANCELLED`, 보통 내원 → 201 `R-20260929-0001`.
+  - 화면(프랑스어·한국어): Trouver patient → VISITEANNULEE → 「Visite annulée」 내원 선택 → 안내 한 줄, 수납 버튼 없음, 문서 버튼·오른쪽 패널은 그대로.
+- **확인 못 한 것**: 예전 자료처럼 영수가 있는 취소 내원은 API로 만들 수 없어 화면으로는 보지 않음(서버 코드상 취소·정정 경로는 내원 상태를 보지 않음).
+- **위키**: `modules/payment.md` 2.11(안내 표), 3.8, 4절 DB(인덱스 027), 5절(접수 — 취소된 내원), 8절(`95b090a` 해시 채움 + 이 줄)
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 7절 중 결정 없이 되는 것 정리 (M3 · L1 · L4 · L5 · L6 · L8)
 
 - **상태**: 확인 요청

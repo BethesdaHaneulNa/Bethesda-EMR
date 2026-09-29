@@ -398,6 +398,7 @@ export default {
   py_stCancelled: "cancelled",
   py_stWaived: "waived",
   py_stWaiting: "waiting",
+  py_visitCancelled: "This visit was cancelled at reception — there is nothing to bill. Receipts and documents can still be viewed.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

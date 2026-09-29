@@ -160,6 +160,7 @@
 | 「N article(s) sans prix : … Encaisser quand même ?」 | 단가 0인 약·오더를 그대로 수납할지 묻습니다. 무료로 주는 것이면 확인, 가격이 빠진 것이면 취소하고 진료실·약국에 확인(가격을 나중에 넣어도 이미 넣은 줄은 0원 그대로) |
 | 「Rendez N Ar au patient.」 / 「N Ar resteront impayés.」 / 「Aucune différence…」 (정정 확인) | 정정하면 돌려줄 돈 / 남을 미수 / 차액 없음(2.6) |
 | 「Quantité totale manquante pour : …」, 금액 칸의 「⚠ Quantité manquante」, 목록의 「⚠ Quantité de médicament manquante」 | 그 약의 총량이 처방에 없어 금액을 셀 수 없습니다. 수납이 막혀 있습니다. **진료실에 그 처방을 다시 저장해 달라고** 한 뒤 **↻** 를 누르고 수납합니다 |
+| 「⊘ Cette visite a été annulée à l’accueil — rien à encaisser…」 (Trouver patient 로 고른 내원) | 접수에서 취소한 내원입니다. 수납할 것이 없어 **Impayé / Confirmer** 버튼이 나오지 않습니다. 오른쪽 영수내역과 위쪽 문서 버튼은 그대로 쓸 수 있습니다. 접수는 진료 전 내원만 취소하므로 보통 영수증은 없습니다. 예전 영수증이 보이면 **Reçus** 에서 보고 필요하면 취소합니다(2.9) |
 | 「Le navigateur a bloqué la fenêtre d'impression…」 | 브라우저가 인쇄 창(팝업)을 막았습니다. 주소창 오른쪽의 팝업 차단 표시를 눌러 이 사이트의 팝업을 허용하고 다시 **Imprimer Reçu** |
 | 화면 곳곳의 영어(`paid` · `partial` · `+ Outstanding` · `No items`) | 아직 번역되지 않은 글자(7절 L1). `paid` 전액 수납 · `partial` 부분 수납 · `unpaid` 미수 · `cancelled` 취소 |
 
@@ -267,7 +268,7 @@
 
 ### 3.8 서버의 입력 검사 (`POST /api/billing`)
 
-음수 금액, 소계보다 큰 할인, 받은 돈보다 큰 거스름, 모르는 상태값을 400으로 거절합니다. `visit_id`가 `patient_id`의 내원이 아니면 400.
+음수 금액, 소계보다 큰 할인, 받은 돈보다 큰 거스름, 모르는 상태값을 400으로 거절합니다. `visit_id`가 `patient_id`의 내원이 아니면 400. **접수가 취소한 내원(`visit.status='cancelled'`)이면 409 `VISIT_CANCELLED`** (2026-09-29) — 공용 환자 찾기가 취소된 내원도 보여 주게 되어서(접수 `6c13b33`). 그 내원의 기존 영수는 취소·미수 수납·정정이 그대로 됩니다(돈을 돌려주거나 받을 길을 막지 않기 위해).
 
 **금액끼리 맞아야 합니다** (2026-09-29, H4) — 0.5 Ar까지 허용:
 - `change_amount = max(0, amount_paid − total_due)`
@@ -360,7 +361,7 @@
 | `note`, `cashier_id` | |
 | `cancelled_at`, `cancelled_by`, `cancel_reason` | 006 |
 | `carried_into_id` → `billing(id)` | 이 영수의 미수를 흡수한 새 영수 (016) |
-| 인덱스 | `patient_id`, `billing_date`, `payment_status`, `carried_into_id`. **`visit_id` 인덱스 없음** |
+| 인덱스 | `patient_id`, `billing_date`, `payment_status`, `carried_into_id`. `visit_id`(`idx_bill_visit`, `027_payment_billing_visit_index.sql`) |
 
 **`billing_item`** — `billing_id`(CASCADE), `item_type`(`consultation`·`drug`·오더의 `code_type`·`fee`), `item_name`, `item_code`, `quantity`, `unit_price`, `total_price`.
 
@@ -375,11 +376,13 @@
 | `009_unify_price.sql` | `price`와 `price_clinic`을 같은 값으로 맞춤(단일 가격). 코드는 여전히 `price_clinic` 우선 |
 | `016_billing_carryover.sql` | 이월된 미수가 두 번 청구되던 문제 → `carried_into_id` |
 | `017_billing_net_paid.sql` | 건넨 돈(`amount_paid`)을 매출로 세던 문제 → `net_paid` |
+| `027_payment_billing_visit_index.sql` | `billing(visit_id)` 인덱스만 — 금액 규칙 변경 없음(수납 세션이 301로 만들고 총괄이 027로 바꿈) |
 
 ## 5. 다른 모듈과의 연결
 
 - **진료 → 수납**: 진료 완료(`PUT /api/consultations/:id/complete`)가 `visit.status='completed'`로 바꾸면 수납 대기에 뜹니다. 수납 뒤 진료실이 처방·오더를 고치면 추가 청구/정정 표시로 나타납니다(진료실의 처방·오더 삭제는 행을 지웁니다 — `consult.routes.js:187,302`). 결과가 있는 오더는 지우지 않고 **취소로 표시**(`order_item.status='cancelled'`, 진료 세션의 취소 API) — 수납은 취소된 오더를 청구·목록·정정에서 뺍니다. 결과·판독은 기록으로 남습니다(임상병리·PACS 쪽).
 - **약국**: 원외 처방(`dispense_type='external'`)은 수납에서 청구하지 않습니다. 약국 서버(`pharmacy.routes.js`)는 `billing`을 읽지 않으므로 수납 전에도 조제할 수 있습니다 — 그래야 하는지는 확인 필요.
+- **접수 — 취소된 내원**: 접수가 내원을 취소하면(`visit.status='cancelled'`) 수납 대기에 뜨지 않고, 「환자 찾기」로 고르면 안내만 보입니다(2.11). 새 수납은 서버가 409로 막음(3.8). 접수는 대기 중(`registered`·`waiting`)인 내원만 취소할 수 있으므로(`visit.routes.js` 상태 변경, 그 밖은 409) 보통 취소된 내원에는 영수가 없습니다. 예전 자료에 영수가 있더라도 수납은 그 영수를 건드리지 않고 취소·미수 수납·정정은 그대로 됩니다.
 - **접수**: `Registration.jsx:66`이 `GET /api/billing/patient/:id/balance`로 환자의 미수/환불 예정을 보여줍니다. `visit.routes.js`의 `GET /api/visits/patient/:id`가 내원마다 최신 영수 상태·번호·총액을 붙여 줍니다. `patient.routes.js`의 `GET /api/patients/:id/billing-history`도 있으나 화면에서 쓰는 곳은 없습니다.
 - **통계** (`stats.routes.js`, 모두 `payment_status <> 'cancelled'`):
   - 매출 합계·진료과별·의사별·월별 = `SUM(net_paid)`, 날짜는 `billing_date` (`stats.routes.js:57-93,148-152`). 과는 `visit.department_id`, 의사는 `visit.doctor_id`.
@@ -478,4 +481,5 @@
 | 2026-09-29 | 진료실이 취소로 표시한 오더(결정 3-B)는 청구·목록·정정에서 빠짐. 수납 뒤 취소되면 「정정(환불)」로 뜸 | `order_item` 합산 3곳에 `status <> 'cancelled'`, `counterFeeCond()`는 취소된 오더 포함 유지 (3.2) | `2fa4d16` |
 | 2026-09-29 | 영수증에 NIF/STAT·로고·서명란·금액 글자는 넣지 않기로(실장님 결정) — 후보 닫음 | 위키만 (3.10·6·7절) | `65208bb` |
 | 2026-09-29 | 영수 취소·정정이 변경 기록(관리자만 보는 로그)에 한 줄씩 남음 — 보통 수납·미수 수납은 남기지 않음 | `writeAudit` 두 곳, 트랜잭션 안 (3.11) | `c242e8c` |
-| 2026-09-29 | 결정 없이 가능한 정리: 화면의 남은 영어 번역, 상태 배지 번역, 「수납 완료」 건수에서 취소 제외, 수납이 저장된 뒤에 내원 종류 저장, 합계가 안 맞는 수납 거절 | M3·L1·L4·L5(인덱스 마이그레이션 301)·L6·L8 (3.8·7절) | (이 커밋) |
+| 2026-09-29 | 결정 없이 가능한 정리: 화면의 남은 영어 번역, 상태 배지 번역, 「수납 완료」 건수에서 취소 제외, 수납이 저장된 뒤에 내원 종류 저장, 합계가 안 맞는 수납 거절 | M3·L1·L4·L5(인덱스 마이그레이션 027)·L6·L8 (3.8·7절) | `95b090a` |
+| 2026-09-29 | 「환자 찾기」에서 접수가 취소한 내원을 고르면 「취소된 내원 — 수납할 것 없음」 안내만 뜨고 수납 버튼은 없음. 영수내역·문서는 그대로 | 화면 안내, 서버도 취소 내원의 새 수납을 409 `VISIT_CANCELLED` (2.11·3.8·5절) | (이 커밋) |
