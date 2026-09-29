@@ -1,6 +1,6 @@
 # 약국 (Pharmacy)
 
-> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 한국식 용량 전환·M3(지난 처방 조제) 끝 — 재고 기록(B-2) 설계 중
+> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 재고 기록 ①(서버) 끝 — ② 화면, ③ 월말 보고서 진행 예정
 
 ## 1. 이 모듈이 하는 일
 
@@ -145,19 +145,19 @@
 
 ### 3.3 조제 완료와 재고 차감
 
-`PUT /api/pharmacy/consultations/:id/dispense` (`pharmacy.routes.js:141`). **진료 하나의 대기 줄 전부를 한 번에** 조제 완료합니다(한 줄씩, 일부만은 불가).
+`PUT /api/pharmacy/consultations/:id/dispense` (`pharmacy.routes.js:264`). **진료 하나의 대기 줄 전부를 한 번에** 조제 완료합니다(한 줄씩, 일부만은 불가).
 
 한 트랜잭션 안에서:
 
-1. 그 진료의 `status='ordered'` 처방 줄을 `FOR UPDATE`로 잠급니다 (`:146-152`). 없으면 404 (`ERR_NOTHING_PENDING`).
-2. 재고를 뺄 약(원내이고 `drug_id`가 있는 줄의 약)의 행을 **`drug.id` 오름차순으로 한꺼번에** 잠급니다 (`:166-178`).
+1. 그 진료의 `status='ordered'` 처방 줄을 `FOR UPDATE`로 잠급니다 (`:269-276`). 없으면 404 (`ERR_NOTHING_PENDING`). 내원이 7일보다 오래됐으면 409 (`ERR_TOO_OLD`, 3.1절).
+2. 재고를 뺄 약(원내이고 `drug_id`가 있는 줄의 약)의 행을 **`drug.id` 오름차순으로 한꺼번에** 잠급니다 (`:300-313`).
    처방 순서대로 하나씩 잠그면, 같은 두 약을 반대 순서로 가진 두 환자가 동시에 조제될 때 서로 상대의 잠금을 기다리다 Postgres가 한쪽을 「deadlock detected」로 실패시킵니다. 모두가 같은 순서로 잠그면 이런 순환이 생기지 않습니다.
 3. 줄마다 — `drug_id`가 있고 원내이면:
-   - 차감량 = `Math.ceil(total_qty)` (`:183`). 재고 칸(`drug.stock_qty`)이 정수라서 올림합니다. 청구는 소수 그대로 합니다(예: 7.5 → 재고 8 차감, 청구 7.5개분).
-   - 현재 재고를 읽고(이미 잠근 행이라 기다리지 않음) `stock_qty = GREATEST(stock_qty - 차감량, 0)` (`:188-196`). **0 아래로 내려가지 않습니다.**
-   - 재고가 모자랐으면 `shortages`에 모자란 양을 담습니다 (`:198`). 화면은 이를 경고 창으로 보여줍니다 (`Pharmacy.jsx:165`).
+   - 차감량 = `Math.ceil(total_qty)` (`:318`). 재고 칸(`drug.stock_qty`)이 정수라서 올림합니다. 청구는 소수 그대로 합니다(예: 7.5 → 재고 8 차감, 청구 7.5개분).
+   - `moveStock(kind: 'dispense')`(`:322`, 3.8절)가 재고를 빼고 **재고 기록 한 줄**(처방·진료 번호, 조제한 사람)을 같은 트랜잭션에 남깁니다. **0 아래로 내려가지 않습니다.**
+   - 재고가 모자랐으면 기록 줄의 `shortfall`에 모자란 양이 남고, 응답 `shortages`에도 담습니다 (`:327`). 화면은 이를 경고 창으로 보여줍니다 (`Pharmacy.jsx:165`).
      0에서 멈추면 모자란 만큼이 흔적 없이 사라지기 때문에, 선반과 장부가 어긋났다는 사실을 알리려는 것입니다.
-4. 대기 줄 전부를 `status='dispensed'`, `dispensed_by`, `dispensed_at=NOW()`로 바꿉니다 (`:207-212`).
+4. 대기 줄 전부를 `status='dispensed'`, `dispensed_by`, `dispensed_at=NOW()`로 바꿉니다 (`:336-341`).
 
 **재고 차감은 이 순간 한 번뿐입니다.** 처방할 때, 수납할 때는 재고가 바뀌지 않습니다. 조제 취소(재고 되돌리기)는 없습니다.
 
@@ -166,7 +166,7 @@
 - 두 사람이 **같은 환자**를 동시에 조제 완료: 두 번째 요청은 1단계 잠금에서 기다렸다가, 첫 번째가 끝난 뒤 조건(`status='ordered'`)을 다시 보고 0줄을 얻어 404가 됩니다. **재고는 한 번만 빠집니다.**
   화면은 이 404를 알아보고 「다른 사람이 먼저 조제 완료했습니다」를 번역해서 보여준 뒤 목록을 다시 불러옵니다(`Pharmacy.jsx:172`).
 - **다른 환자**가 같은 약을 동시에: 약 행 잠금으로 차감이 차례로 일어나 재고가 맞습니다. 약 순서가 반대인 환자 12쌍(24건)을 동시에 조제해서, 고치기 전에는 24건 중 3건이 deadlock으로 실패했고 고친 뒤에는 세 번 돌려 모두 성공, 재고도 정확히 24씩 줄었습니다.
-- **오류 문구 번역**: API 클라이언트(`api/client.js`, 총괄 파일)는 화면에 상태 코드 없이 오류 문구만 넘깁니다. 그래서 서버가 정해진 영어 문구(`ERR_NOTHING_PENDING`, `ERR_TYPE_LOCKED`, `pharmacy.routes.js:12-13`)를 보내고 화면이 **같은 문구**(`Pharmacy.jsx:26-27`)를 비교해 번역 키로 바꿉니다. **한쪽 문구를 바꾸면 다른 쪽도 같이 바꿔야 합니다.**
+- **오류 문구 번역**: API 클라이언트(`api/client.js`, 총괄 파일)는 화면에 상태 코드 없이 오류 문구만 넘깁니다. 그래서 서버가 정해진 영어 문구(`ERR_*`, `pharmacy.routes.js:23-28`)를 보내고 화면이 **같은 문구**(`Pharmacy.jsx:26-28`)를 비교해 번역 키로 바꿉니다. **한쪽 문구를 바꾸면 다른 쪽도 같이 바꿔야 합니다.**
 - **설정 화면에서 재고를 고치는 것**과 조제: 설정 세션이 고쳤습니다(`f44ab9e`, 7절 H4 해결됨). 설정의 약 저장(`PUT /api/admin/drugs/:id`)도 같은 약 행을 `FOR UPDATE`로 잠그고, 재고 칸을 고치지 않았으면 재고를 쓰지 않으며, 고쳤는데 그 사이 재고가 바뀌었으면(`stock_expected` 비교) 409로 거절합니다.
 - **의사가 처방을 고치는 것**: 조제된 줄은 진료 쪽 API가 수정·삭제를 409로 거절합니다(`consult.routes.js:199`, `:212` — `status <> 'dispensed'` 조건). 조제와 동시에 고치면 수정이 조제의 줄 잠금을 기다렸다가 조건을 다시 보고 거절됩니다(코드로 확인, 동시 시험은 안 함).
 
@@ -210,6 +210,24 @@
 - 약국 화면과 수납 화면에서 인쇄합니다. 약국에서는 **💊 원외 처방전** 버튼이 `DocumentModal`을 `category="prescription"`으로 엽니다(`Pharmacy.jsx:325`). 수납 화면도 같은 방식으로 엽니다(`Payment.jsx:454`, 수납 세션 파일).
 - 환자 칸(이름·생년월일·성별·주소)은 엔진이 `GET /api/patients/:id`로 **다시 읽어** 채웁니다(`DocumentModal.jsx:75`). 생년월일이 하루 앞당겨 찍히던 문제(7절 H5)는 이 경로에서 생겼습니다.
 
+### 3.8 재고 기록 (2026-09-29, 재고 2번 ① — 서버)
+
+결정(`wiki/decisions.md`): EMR 안에서 **기록을 남기는 재고**, 유통기한 관리 안 함, 조제 취소 안 함, 월말 재고 보고서. 입고·실사·폐기는 약국·진료·간호·관리자 모두. 설계와 그 근거는 인계 노트 「재고 2번 설계」.
+
+- **표** `stock_movement` (`401_pharmacy_stock_movement.sql`): 약마다 재고가 바뀐 **모든 일**을 한 줄씩. 종류 `opening`(기록 시작) · `receive`(입고) · `dispense`(조제) · `adjust`(실사 조정) · `discard`(폐기). 칸: `qty`(부호 있는 변화) · `stock_before` · `stock_after` · `shortfall` · 처방·진료·직원 · 메모 · 시각.
+  - `CHECK (stock_after = stock_before + qty + shortfall)`, `stock_after >= 0` — 앞뒤가 안 맞는 줄은 저장 자체가 안 됩니다.
+  - **부족분**: 조제 때 장부 재고가 모자라면 0에서 멈추고, 모자란 양을 `shortfall`로 남깁니다(예: 3개 있는데 8개 조제 → `qty -8, 3 → 0, shortfall 5`). 선반과 장부가 어긋난 사실이 기록에 남습니다.
+  - 마이그레이션이 **그때 재고로 약마다 `opening` 한 줄**을 넣습니다. 기존 값(`drug.stock_qty`)은 바꾸지 않습니다.
+- **`drug.stock_qty`는 지금 재고**로 그대로 쓰고(빨리 읽기용), 늘 **그 약의 마지막 기록의 `stock_after`**와 같습니다.
+- **모든 변화는 `moveStock()` 하나**(`pharmacy.routes.js:61`): 약 행 `FOR UPDATE` → 재고 바꿈 → 기록 한 줄, 부른 쪽 트랜잭션 안에서. 조제(3.3), 입고·실사·폐기 API가 모두 이것을 씁니다.
+  - 입고: 정수 > 0, 메모 선택. 실사: **센 숫자**(정수 ≥ 0)를 받아 차이를 계산, 차이 0도 「실사 확인」으로 남김, **메모 필수**. 폐기: 정수 > 0, **사유 필수**, 장부 재고보다 많으면 409 `ERR_DISCARD_MORE`(실사 먼저).
+- **기록 밖에서 바뀐 재고**: 설정 화면의 약 저장은 아직 재고를 직접 씁니다(설정 세션이 재고 코드 합친 뒤 읽기 전용으로 바꿀 예정). 그래서 `moveStock`은 지금 재고가 마지막 기록과 다르면 먼저 `adjust` 한 줄(직원 없음, 메모 `MEMO_OUTSIDE` 「Changed outside the stock record (settings screen)」)로 그 차이를 메웁니다 — 기록의 앞뒤가 끊기지 않고, 밖에서 바뀐 사실이 남습니다.
+- **순서는 `id`로** 봅니다. 기록은 약 행 잠금을 쥔 채 넣으므로 `id`가 실제 순서입니다. `NOW()`는 트랜잭션이 시작된 시각이라, 잠금을 기다린 조제가 먼저 끝난 것보다 이른 시각을 갖습니다. 처음에 시각으로 「마지막 기록」을 찾았더니, 동시 조제+입고 시험에서 **있지도 않은 「기록 밖 변경」 줄이 생겼습니다**(재고 숫자는 맞았음). 그래서 순서는 `id`로 보고, `created_at`은 넣는 순간의 `clock_timestamp()`로 기록합니다. 월말 보고서(③)의 날짜 경계도 이 순서를 따릅니다.
+- **권한**: 파일 전체에 걸던 `permMiddleware('pharmacy')`를 **줄마다**로 바꿨습니다(`:16-18` `canDispense` · `canStock` · `canReport`). 표는 4절. 새 라우트를 더할 때는 반드시 권한을 붙이세요 — 붙이지 않으면 로그인한 누구나 부를 수 있습니다.
+- **의사**는 API로는 재고를 만질 수 있지만 약국 화면(`/pharmacy`)에 들어가려면 계정에 **약국 권한도** 있어야 합니다(결정: 진료 화면에 재고 창을 만들지 않음). 의사 계정 기본 권한에 약국을 넣을지는 결정 대기.
+- 화면(② 입고·실사·폐기, ③ 월말 보고서)은 다음 단계입니다.
+- **시험**: `node backend/test/pharmacy.stock.mjs`(격리 스택 전용). 권한(간호사·의사 가능, 창구·통계 전용 불가, 의사는 조제 목록 403) · 입고/실사(0 포함)/폐기(많으면 409, 사유 없으면 400) · 부족분 · **조제 10건 + 입고 10건 동시**(재고 220 정확, 가짜 「밖 변경」 줄 0) · 설정 화면 변경 뒤 이어 쓰기 · **모든 약의 기록 사슬이 끊김 없이 `stock_qty`로 끝남**.
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -221,7 +239,16 @@
 
 ### 서버
 
-`backend/src/routes/pharmacy.routes.js` — `/api/pharmacy`. 모든 요청에 로그인 + `pharmacy` 권한이 필요합니다(`:6-7`). 기본 권한으로는 `pharmacy`, `admin` 역할이 가집니다(`middleware/auth.js:41-44`).
+`backend/src/routes/pharmacy.routes.js` — `/api/pharmacy`. 모든 요청에 로그인이 필요하고, 권한은 **라우트마다** 붙입니다(3.8절).
+
+| 라우트 | 권한 (하나라도) |
+|---|---|
+| `GET /pending` · `GET /patient/:patientId/pending` · `GET /completed` · `GET /patient/:patientId/recent-rx` | `pharmacy` |
+| `PUT /consultations/:id/dispense` · `PUT /prescription/:id/dispense-type` | `pharmacy` |
+| `GET /stock` · `GET /stock/:drugId/movements` · `POST /stock/:drugId/receive` · `POST /stock/:drugId/count` · `POST /stock/:drugId/discard` | `pharmacy` · `consultation` · `settings` |
+| (③ 예정) `GET /stock/report` | `pharmacy` · `settings` · `stats` |
+
+기본 권한으로 `pharmacy`를 가진 역할: 약국, 간호사, 관리자(`middleware/permissions.js`).
 
 | 메서드 · 경로 | 하는 일 | 응답 |
 |---|---|---|
@@ -230,6 +257,9 @@
 | `GET /completed` | **오늘 조제한** 처방(내원 날짜와 무관), 최근 조제 순 50개 | 진료마다 한 줄 `consultation_id, dispensed_at(가장 늦은 것), visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, allergies, doctor_name, dispensed_by_name(여러 명이면 쉼표로), rx_count, prescriptions[]` |
 | `GET /patient/:patientId/recent-rx` | 최근 120일 처방 (조기 재처방 경고용) | `drug_code, drug_name, days, status, consult_date, consultation_id` |
 | `PUT /consultations/:id/dispense` | 대기 줄 전부 조제 완료 + 원내 재고 차감 | `success, dispensed_count, prescriptions[], shortages[]` (`shortages`: `prescription_id, drug_id, drug_name, requested, available, missing`). 대기 줄이 없으면(다른 사람이 먼저 조제 포함) **404** `ERR_NOTHING_PENDING`. 내원이 7일보다 오래됐으면 **409** `ERR_TOO_OLD` |
+| `GET /stock?q=&category=` | 활성 약의 지금 재고 | 약마다 `id, code, name, generic_name, category, stock_qty, min_stock, last_moved_at` |
+| `GET /stock/:drugId/movements?from=&to=` | 그 약의 재고 기록, 최근 것부터 500줄 | `id, kind, qty, stock_before, stock_after, shortfall, memo, created_at, prescription_id, consultation_id, staff_name, chart_no, patient_name` |
+| `POST /stock/:drugId/receive` `{ qty, memo }` · `/count` `{ counted, memo }` · `/discard` `{ qty, memo }` | 입고 · 실사 · 폐기 | `{ success, stock_before, stock_after, movement }`. 정수 아님 400 `ERR_WHOLE_NUMBER`, 메모 필요 400 `ERR_MEMO_REQUIRED`, 폐기가 장부보다 많음 409 `ERR_DISCARD_MORE`, 약 없음 404 |
 | `PUT /prescription/:id/dispense-type` | 원내/원외 지정. 본문 `{ dispense_type: 'internal' \| 'external' }` | 바뀐 처방 줄. 줄이 없으면 404, 이미 조제된 줄이면 **409** `ERR_TYPE_LOCKED` |
 
 `prescriptions[]`의 줄: `id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo, dispense_type, status, created_at` (완료 목록은 `created_at` 대신 `dispensed_at`).
@@ -244,6 +274,8 @@
 - `components/PatientFinder.jsx` (접수 주관) — 환자 찾기
 
 ### DB 테이블
+
+**`stock_movement`** (`401_pharmacy_stock_movement.sql`) — 재고 기록. 칸과 규칙은 3.8절.
 
 **`drug`** (`001_schema.sql:138`)
 
@@ -336,7 +368,7 @@ API — 설정 세션 파일 `admin.routes.js`:
 ### 보통
 
 - **M4. 약국 화면에 재고가 보이지 않습니다** — 조제 전에는 재고가 모자란지 알 수 없고, 조제 완료 뒤에야 경고가 뜹니다. `drug.min_stock`은 아무 데서도 쓰지 않습니다.
-- **M5. 재고 입출고 기록이 없습니다** — 재고는 숫자 하나뿐이고, 설정에서 고치면 누가 언제 왜 바꿨는지 남지 않습니다. 입고(약이 들어옴) 기능도 없습니다. H4와 함께 풀면 좋습니다.
+- **M5. 재고 입출고 기록이 없습니다** — **진행 중**: 서버(기록 표·조제 자동 기록·입고/실사/폐기 API)는 끝남(3.8절). 약국 화면의 「Stock」 탭과 월말 보고서가 다음 단계.
 - **M6. 조제 취소가 없습니다** — 잘못 누르면 되돌릴 수 없고, 재고를 손으로 고쳐야 합니다.
 
 ### 낮음
@@ -379,4 +411,5 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | 예전 식으로 저장된 줄에 「예전 계산」 표시(약국 화면·원외 처방전) | `f9489cf` |
 | 2026-09-29 | M3: 환자 찾기로 최근 7일 미조제 처방 조제, 조제 완료 목록은 조제 날짜 기준, 간호사 계정 안내 | `442b75f` |
 | 2026-09-29 | 약품 분류 7가지 → 17가지(실제 약 목록에 맞춤) | `3e07b11` |
-| 2026-09-29 | 원내 줄 총량 0도 「총량 없음」으로 표시·조제 확인 창에 넣기 | (이 커밋) |
+| 2026-09-29 | 원내 줄 총량 0도 「총량 없음」으로 표시·조제 확인 창에 넣기 | `2bb89c3` |
+| 2026-09-29 | 재고 기록 ①: `stock_movement` 표(401), `moveStock`, 조제 자동 기록, 입고·실사·폐기 API, 라우트마다 권한 | (이 커밋) |

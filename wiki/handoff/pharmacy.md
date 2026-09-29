@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 재고 기록 ①: 기록 표 · moveStock · 조제 자동 기록 · 입고/실사/폐기 API · 라우트마다 권한
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — `2bb89c3` 위 커밋 하나
+- **DB 마이그레이션**: `backend/sql/401_pharmacy_stock_movement.sql` — 새 표 `stock_movement` + 약마다 `opening` 한 줄. **기존 값은 바꾸지 않음**(`drug.stock_qty` 그대로). 번호는 총괄이 매김.
+- **한 일** (승인된 설계 그대로, 달라진 점은 굵게)
+  - `moveStock()` 하나로 모든 재고 변화: 약 행 `FOR UPDATE` → `drug.stock_qty` → 기록 한 줄, 부른 쪽 트랜잭션 안. 조제는 지금 트랜잭션 안에서 줄마다 `dispense` 기록(처방·진료·조제한 사람), 부족분은 `shortfall`로. 약 행 잠금 순서(`drug.id` 오름차순)는 그대로.
+  - API: `GET /stock`, `GET /stock/:drugId/movements`, `POST /stock/:drugId/receive|count|discard`. 정수만, 실사·폐기는 메모 필수, 폐기가 장부보다 많으면 409.
+  - 권한을 **라우트마다**로: 기존 6개 라우트 모두 `canDispense`(pharmacy) — 빠진 것 없음(위키 4절 표). 재고 5개는 `canStock`(pharmacy·consultation·settings). `canReport`(pharmacy·settings·stats)는 ③에서 씀.
+  - **설계에 더한 것**: 설정 화면이 아직 재고를 직접 쓰므로, `moveStock`은 지금 재고가 마지막 기록과 다르면 먼저 `adjust` 한 줄(직원 없음, 메모 「Changed outside the stock record (settings screen)」)로 메움 → 기록 사슬이 끊기지 않고 밖에서 바뀐 사실이 남음. 설정 세션이 재고 칸을 읽기 전용으로 바꾸면 더는 생기지 않음.
+- **시험에서 찾아 고친 것 두 가지**
+  1. **순서를 시각으로 보면 틀림**: 처음에 「마지막 기록」을 `created_at`(=`NOW()`, 트랜잭션 **시작** 시각) 순으로 찾았더니, 조제 10건 + 입고 10건 동시 시험에서 **있지도 않은 「밖에서 바뀜」 줄이 여러 개** 생김(재고 숫자는 맞았음). → 순서는 `id`(잠금 쥔 채 넣으므로 실제 순서)로, `created_at`은 넣는 순간의 `clock_timestamp()`로(마이그레이션 기본값도). 고친 뒤 세 번 돌려 0줄.
+  2. 파일을 만드는 스크립트의 따옴표 문제로 SQL 자리표시자의 `$`가 빠진 줄 4개(검색·분류 거르기·기록 날짜 범위)를 시험이 잡아냄 → 고침. 코드에 `${params.length}` 앞에 `$`가 모두 있는지 grep으로 확인.
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `backend/sql/401_pharmacy_stock_movement.sql`(새), `backend/test/pharmacy.stock.mjs`(새), `wiki/modules/pharmacy.md`(3.3·**3.8 새로**·4절 라우트×권한 표·API·DB·7절 M5·8절)
+- **공용 파일 변경 · 번역 키**: 없음(화면은 ②에서)
+- **확인한 방법**
+  - `node --check`. 격리 스택 9184에서 마이그레이션 적용(약 25 · opening 25 · 재고와 기록이 다른 약 0).
+  - `node backend/test/pharmacy.stock.mjs` **전부 통과, 세 번**: 권한(간호사 계정·의사 계정 재고 가능, 창구·통계 전용 불가, 의사는 조제 목록 403, 간호사 조제 목록 200) · 입고 +50 · 0/2.5 거절 · 실사(같은 숫자 → 0 기록, 적은 숫자 → −7) · 메모 없는 실사·폐기 거절 · 장부보다 많은 폐기 409 · 없는 약 404 · 부족분(3개에 8개 조제 → shortage 보고, 기록 `-8, 3→0, shortfall 5`, 환자 차트번호 연결) · **조제 10 + 입고 10 동시** → 모두 200, 재고 200−30+50=220, 가짜 줄 0 · 설정 화면에서 재고 +11 뒤 입고 → 메움 줄 +11 뒤 입고가 이어짐 · **모든 약 기록 사슬 끊김 없음, 마지막 = stock_qty**.
+  - `node backend/test/pharmacy.api.mjs` 전부 통과(동시 조제·교착·원내/원외 잠금 등 기존 시험).
+- **확인 못 한 것**: 화면이 아직 없음(②). 자정 경계는 ③에서.
+- **다른 세션에 부탁**: 설정 — 이것이 합쳐진 뒤 약품 탭 재고 칸 읽기 전용, `admin.routes.js` POST/PUT이 재고를 쓰지 않게(총괄이 전달 예정이라고 받음). 약품 탭 화면 쪽은 약국이 함.
+
 ## 2026-09-29 — 약품 분류 17가지 · 총량 0도 「총량 없음」으로 (작은 커밋 두 개)
 
 > **총괄 확인 (2026-09-29)**: 분류 17가지 `3e07b11`·총량 0 표시 `2bb89c3` 합침(`4575c34`) + 실행 중 EMR 반영. 화면은 세션의 격리 스택 확인.
