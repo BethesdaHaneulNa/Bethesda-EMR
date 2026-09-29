@@ -2,6 +2,68 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑬ 성별 M/F · 생년월일 엄격 검사 (총괄 파일, 허락받음)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나. 그 앞에 `develop`(`e29af7a`)을 **병합**함 — 제 커밋 `6c13b33`·`8dd267a`가 아직 develop에 없어 ff가 안 돼서(총괄 지시대로 merge)
+- **한 일**:
+  - `utils/validate.js`
+    · `GENDERS`를 `['M','F']`로 — DB CHECK와 맞춤. `O`는 서버를 통과해 DB가 거절했었음
+    · `badPatient`의 생년월일을 **`YYYY-MM-DD`이고 달력에 있는 날**만 받게. `new Date()`만으로는 `2020-02-30`이 3월 1일로 넘어가 통과했었음. 미래·1875년 이전 검사는 그대로
+  - 접수 화면 `errText`: 총괄이 `dbError.js`에 넣은 22008 문구(`A date field has a date that does not exist`) → `rc_dobInvalid`
+  - 시험 스크립트의 의사 계정 권한을 결정(의사 기본 권한에 약국 추가)에 맞춤 — 기대값은 권한에서 계산하므로 결과 같음
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`(한 줄), `backend/test/reception.api.mjs`
+- **공용 파일 변경**: **`backend/src/utils/validate.js`**(총괄 파일, 이 두 가지만 허락받음) — `GENDERS`와 `badPatient`의 생년월일 부분. `badPatient`를 쓰는 곳은 `patient.routes.js`(POST·PUT)뿐, `GENDERS`는 `validate.js` 안에서만(grep 확인)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **다른 영향**: 다른 세션 시험(`pharmacy.api.mjs`·`pharmacy.stock.mjs`)은 성별 `F`/`M`, 생년월일 `1990-01-01`만 보내서 영향 없음(grep). 화면은 원래 저장 전에 `YYYY-MM-DD`와 달력 검사를 하므로 직원이 보는 동작은 그대로
+- **확인한 방법**:
+  - `node --check`, `npm run build`. 격리 스택 9181(병합 뒤 `024_lab_ref_ranges` 적용). `reception.api.mjs` **145/145**
+  - ⑬ 7건: 성별 `O` → 400 `gender must be one of M, F`(PUT·POST). `2020-02-30`·`1990-5-3`·`1990-13-01`·`yesterday` → 400 `date_of_birth is not a valid date`. `2024-02-29`(윤일) → 200
+- **확인 못 한 것**: 22008 문구를 화면에서 띄워 보지는 않음 — 이제 `badPatient`가 먼저 400을 주므로 접수 경로에서는 22008까지 가지 않음(방어용 매핑)
+- **위키**: `modules/reception.md` 머리, 3절 오류 문구 표, 4절 `POST /api/patients` 줄·`gender` 칸, 7절 ⑬ 고침(「날짜 검사」 줄 합침)·남은 것에서 뺌, 8절
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — ⑯ 환자 검색: 이름 순서, % _ 글자 그대로, limit 검사
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`6c13b33` 위)
+- **한 일**: `GET /api/patients`
+  - 전체 이름을 **「성 이름」과 「이름 성」 둘 다**로 비교
+  - 검색어의 `%` `_`를 글자 그대로 찾음(`ESCAPE '!'`). 역슬래시 대신 `!`를 쓴 것은 ④ 때 JS 템플릿 안에서 `\` 가 사라졌던 문제를 피하려는 것
+  - 검색어의 앞뒤·겹친 공백 정리
+  - `limit` 1~200(기본 50)·`offset` ≥0은 숫자로 읽고, 아니면 기본값(예전엔 500)
+- **바꾼 파일**: `backend/src/routes/patient.routes.js`, `backend/test/reception.api.mjs`(⑯ 7건)
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **다른 모듈 영향**: 환자 검색을 쓰는 다섯 화면(접수·PatientFinder) 모두 「이름 성」 순서로도 찾게 됨 — 결과가 조금 넓어질 뿐 줄어드는 경우는 없음(`%` `_`를 일부러 와일드카드로 쓰던 경우만 빼고)
+- **확인한 방법**:
+  - 격리 스택 9181, `reception.api.mjs` **138/138**. ⑯ 7건: 이름 성 순서, 대소문자·겹친 공백, `_`·`%` 한 글자만 쳐도 모든 환자가 걸리지 않음, `limit=abc&offset=-5` → 200, `limit=1` → 1명 이하, `limit=100000` → 200명 이하
+  - API로 `Rakoto!`·`!`·`O'Brien` → 200(오류 없음), `Jean Rakoto` → 26-00001·26-00034
+- **확인 못 한 것**: 화면에서 다시 누르지는 않음(화면 코드 변경 없음, 같은 API)
+- **위키**: `modules/reception.md` 머리, 2.2(검색 순서 안내 한 줄), 4절 `GET /api/patients` 줄, 7절 ⑯ 고침·남은 것에서 뺌, 8절
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — ⑮ 환자 찾기 창: 취소된 내원 표시
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`f0b3e3b` 위)
+- **한 일**: 공용 `PatientFinder.jsx`의 외래 내역 표에서 `status='cancelled'`인 내원을 흐리게(`opacity 0.55`), 날짜에 취소선, 빨간 딱지 `rc_visitCancelled`(「접수 취소 / Visite annulée / Visit cancelled」). **숨기거나 막지는 않음** — 환자 이력의 일부이고, 취소된 내원으로 무엇을 할지는 각 화면이 정할 일(진료는 이미 서버가 409로 거절하고 안내함).
+- **바꾼 파일**: 없음(자기 파일은 안 바꿈)
+- **공용 파일 변경**:
+  - `frontend/src/components/PatientFinder.jsx`(접수 주관, 총괄 허락) — 내원 모드 표의 줄 모양만. `onPickVisit`·검색·props는 그대로
+  - i18n `rc_` 블록 `rc_visitCancelled` 1개
+  - **보이는 곳**: 진료(환자 찾기·과거 내원), 수납(환자 찾기), 임상병리(환자 찾기). 약국·접수는 환자 모드라 내원 표가 없음
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `npm run build`. 격리 스택 9181에서 취소된 내원 1건 + 정상 4건이 있는 환자(Rakoto Jean)로 확인.
+  | 화면 | 결과 |
+  |---|---|
+  | 진료(프랑스어) | 취소 줄만 흐리게 + 「Visite annulée」. 그 줄을 누르면 진료 쪽 기존 안내 「Cette visite a été annulée à l'accueil…」 그대로 |
+  | 수납(프랑스어) | 같은 표시 |
+  | 임상병리(한국어) | 「접수 취소」 딱지, 정상 줄 4개는 그대로 |
+- **확인 못 한 것**: 수납·임상병리에서 **취소된 줄을 눌렀을 때** 각 화면이 어떻게 하는지는 보지 않음(이번 변경은 표시만이라 동작은 전과 같음)
+- **위키**: `modules/reception.md` 2.7(직원용 — 수납상태의 ANNULÉ와 다른 것이라는 설명), 3절 환자 찾기 창, 7절 ⑮ 고침·남은 것 표에서 뺌, 8절
+- **다른 세션에 부탁**: **수납·임상병리** — 참고: 환자 찾기 창에서 취소된 내원이 이제 표시됩니다. 취소된 내원을 골랐을 때 막거나 안내할지는 각 화면이 판단해 주세요(진료는 이미 막음)
+
 ## 2026-09-29 — 환자 인적사항 수정 기록 (변경 로그, 실장님 결정)
 
 - **상태**: 확인 요청

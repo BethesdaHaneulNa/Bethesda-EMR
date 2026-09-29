@@ -341,6 +341,8 @@ export default function RegistrationPage() {
     var msg = (err && err.message) || '';
     if (msg === 'Patient name is required') return t.rc_nameRequired;
     if (msg.indexOf('date_of_birth') === 0) return t.rc_dobInvalid;
+    // utils/dbError.js (22008). The only date this screen sends is the birth date.
+    if (msg === 'A date field has a date that does not exist') return t.rc_dobInvalid;
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;

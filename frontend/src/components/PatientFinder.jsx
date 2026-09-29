@@ -129,9 +129,15 @@ export function PatientFinder(props){
                 </tr></thead>
                 <tbody>
                   {visits.map(function(v){
-                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid #1e2433',cursor:'pointer'}}
+                    // A visit reception cancelled is marked and dimmed, not hidden or blocked:
+                    // it is still part of the patient's history, and what may be done with it
+                    // is each screen's call (consultation's server already refuses it).
+                    var cancelled = v.status === 'cancelled';
+                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid #1e2433',cursor:'pointer',opacity:cancelled?0.55:1}}
                       onMouseEnter={function(e){e.currentTarget.style.background='#10b98112'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'#34d399',fontWeight:700}}>{ymd(v.visit_date)}</td>
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'#34d399',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(v.visit_date)}
+                        {cancelled?<span style={{marginLeft:8,fontFamily:'system-ui,sans-serif',fontSize:11,fontWeight:800,color:'#f87171',background:'#ef444418',borderRadius:4,padding:'1px 7px',display:'inline-block',textDecoration:'none'}}>{t.rc_visitCancelled}</span>:null}
+                      </td>
                       <td style={{padding:'9px 12px',color:t2,fontFamily:'monospace'}}>{hm(v.reception_time)}</td>
                       <td style={{padding:'9px 12px',color:tx}}>{v.dept_code||''}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{v.doctor_name||''}</td>

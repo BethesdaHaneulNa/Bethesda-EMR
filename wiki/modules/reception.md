@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 환자 인적사항 수정 기록(변경 로그) — 확인 요청. 다음: ⑮ → ⑯ → ⑬ → ⑭·악센트 (총괄이 정한 순서, 결정 불필요)
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑬ 성별 M/F · 생년월일 엄격 검사 — 확인 요청. 다음: ⑭ 생년월일 칸 · 동명이인 악센트
 
 ## 1. 이 모듈이 하는 일
 
@@ -45,7 +45,7 @@
 
 ### 2.2 처음 온 환자 접수하기
 
-1. 먼저 이미 등록된 환자가 아닌지 확인합니다. 왼쪽 위 **Rechercher patient (기존 환자 검색)** 칸에 이름·차트번호·전화번호를 넣고 **Enter**.
+1. 먼저 이미 등록된 환자가 아닌지 확인합니다. 왼쪽 위 **Rechercher patient (기존 환자 검색)** 칸에 이름·차트번호·전화번호를 넣고 **Enter**. 이름은 「성 이름」이든 「이름 성」이든 찾습니다. 일부만 쳐도 됩니다.
 2. 목록에 없으면 **+ Nouveau patient** 를 누릅니다.
 3. 2.4의 칸을 채웁니다. 꼭 필요한 것은 **Nom** 과 **Prénom** 둘뿐입니다.
 4. **Service / Médecin** 에서 의사를 고르고, **Type de Visite** 가 맞는지 봅니다(2.4). **Motif** 와 **Mémo Réception** 을 적습니다.
@@ -140,7 +140,7 @@
 
 1. 이름이나 차트번호를 넣고 **Rechercher** 또는 **Enter**. 아무것도 안 넣고 누르면 최근 등록한 환자 50명이 나옵니다.
 2. 표의 칸: **N° Dossier (차트번호)** · **Nom (이름)** · **Téléphone (전화)** · **Naissance (생년월일)** · **Sexe (성별)**. 환자를 누르면 고릅니다.
-3. 접수 화면에서는 여기서 끝납니다. 다른 화면에서는 이어서 **Sélection visite (외래 내역 선택)** 이 나와 그 환자의 내원을 고릅니다 — 칸은 **Date visite (날짜)** · **Heure (접수 시각)** · **Service (과)** · **Médecin (의사)** · **Paiement (수납상태)**. 수납상태는 **Payé (완납)** · **Partiel (부분)** · **Impayé (미수)** · **Exonéré (면제)** · **ANNULÉ (취소)** · **Non facturé (미수납)** 입니다. **← Recherche (← 검색으로)** 로 돌아갑니다.
+3. 접수 화면에서는 여기서 끝납니다. 다른 화면에서는 이어서 **Sélection visite (외래 내역 선택)** 이 나와 그 환자의 내원을 고릅니다 — 칸은 **Date visite (날짜)** · **Heure (접수 시각)** · **Service (과)** · **Médecin (의사)** · **Paiement (수납상태)**. 수납상태는 **Payé (완납)** · **Partiel (부분)** · **Impayé (미수)** · **Exonéré (면제)** · **ANNULÉ (취소)** · **Non facturé (미수납)** 입니다. 접수에서 **취소된 내원**은 줄이 흐리고 날짜에 줄이 그어지며 빨간 **Visite annulée (접수 취소)** 딱지가 붙습니다 — 수납상태 칸의 「ANNULÉ」(영수증 취소)와는 다른 것입니다. 취소된 내원은 보통 고르지 않습니다(진료 화면은 열지 않고 안내를 띄웁니다). **← Recherche (← 검색으로)** 로 돌아갑니다.
 4. 창을 닫으려면 **✕ Fermer (닫기)** 또는 창 바깥을 누릅니다.
 
 ### 2.8 이런 안내가 뜰 때
@@ -191,7 +191,7 @@
 - **대기 목록에서 고르기** — `selectVisit(v)`: `/visits/today` 행으로 `form`·`visitForm`을 채움.
 - **보내는 환자 필드** — `patientBody()`가 화면에 있는 칸만 보냄: `last_name` `first_name`(앞뒤 공백 제거) `date_of_birth` `gender` `phone` `blood_type` `allergies` `reception_note`. `national_id` `mobile` `address` `city` `region`은 **보내지 않으므로 서버가 그대로 둠** (2026-09-29 전에는 대기 목록에서 고른 환자를 저장하면 이 칸들을 빈 값으로 덮었음 — 7절 ⑤). 나중에 이 칸들의 입력을 추가하면 `form`·`fillPatient`·`selectVisit`·`patientBody`에 같이 넣되, `selectVisit`은 `/visits/today` 행에 이 값이 없으니 `/patients/:id`로 받아 채워야 함.
 - **입력 검사** — `formProblem()`: 성·이름 둘 다(공백만은 안 됨), 생년월일은 비었거나 `YYYY-MM-DD`로 완전하고 실제 있는 날짜이고 미래가 아니고 1875년 이후. 서버(`badPatient`)도 같은 검사를 하지만 영어라서, 화면 언어로 먼저 알려주려고 둠.
-- **오류 문구** — `errText(err)`: API는 영어로 답하므로, 직원이 할 일이 있는 메시지는 여기서 맞춰 보고 `rc_` 번역으로 바꿈. 맞추는 문구: `Patient name is required` → `rc_nameRequired`, `date_of_birth…`로 시작 → `rc_dobInvalid`, `Only a waiting visit can be cancelled` → `rc_cancelNotWaiting`, `Patient not found` → `rc_patientNotFound`, `Visit not found` → `rc_visitNotFound`, `A field has the wrong format`·`A date field has the wrong format`(`sendDbError`) → `rc_badFormat`, 서버 연결 실패(`Failed to fetch`·`NetworkError…`·`Load failed` — 브라우저별 fetch 실패 문구, `API backend is not reachable…` — `frontend/nginx.conf`의 백엔드 중지 응답, `API response was not JSON…` — `api/client.js`) → `rc_serverDown`. 나머지는 `rc_errorWith`(「Erreur : {msg}」)로 원문을 붙임. **서버·nginx·client.js의 문구가 바뀌면 여기 대응도 같이 바꿔야 함.** 저장·상태 변경이 실패하면 대기 목록을 다시 불러옴(오래된 줄을 치우려고).
+- **오류 문구** — `errText(err)`: API는 영어로 답하므로, 직원이 할 일이 있는 메시지는 여기서 맞춰 보고 `rc_` 번역으로 바꿈. 맞추는 문구: `Patient name is required` → `rc_nameRequired`, `date_of_birth…`로 시작 → `rc_dobInvalid`, `A date field has a date that does not exist`(`dbError.js` 22008) → `rc_dobInvalid`, `Only a waiting visit can be cancelled` → `rc_cancelNotWaiting`, `Patient not found` → `rc_patientNotFound`, `Visit not found` → `rc_visitNotFound`, `A field has the wrong format`·`A date field has the wrong format`(`sendDbError`) → `rc_badFormat`, 서버 연결 실패(`Failed to fetch`·`NetworkError…`·`Load failed` — 브라우저별 fetch 실패 문구, `API backend is not reachable…` — `frontend/nginx.conf`의 백엔드 중지 응답, `API response was not JSON…` — `api/client.js`) → `rc_serverDown`. 나머지는 `rc_errorWith`(「Erreur : {msg}」)로 원문을 붙임. **서버·nginx·client.js의 문구가 바뀌면 여기 대응도 같이 바꿔야 함.** 저장·상태 변경이 실패하면 대기 목록을 다시 불러옴(오래된 줄을 치우려고).
 - **안내 문구 조립** — `fill(s, {name, chart, msg})`로 번역 문자열의 `{name}` 같은 자리에 값을 넣음. 언어마다 값 위치와 문장부호가 달라서(프랑스어는 `?`·`:` 앞에 띄어쓰기) 버튼 이름에 `' ✓'`를 이어 붙이던 방식을 버림. 성공 창: `rc_registered`·`rc_visitUpdated`·`rc_patientSaved`, 취소 확인: `rc_cancelConfirm`.
 - **생년월일 칸 안내 글자** — `DobInput`의 `rc_phYear`·`rc_phMonth`·`rc_phDay`(프랑스어 `AAAA`·`MM`·`JJ`).
 - **💾 환자 정보 저장** — `savePatientOnly()`: `selectedPatient.id`가 있으면 `PUT /patients/:id`, 없으면 `confirmNewPatient()` 뒤 `POST /patients`.
@@ -233,6 +233,7 @@
 - `initialPatient`를 주면 검색을 건너뛰고 바로 그 환자의 내원 목록을 엶 (진료 화면의 이력 보기).
 - 내원 목록의 수납 상태 표시: `paid` `partial` `unpaid` `waived` `cancelled`, 청구가 없으면 「미수납」. 한 내원에 청구가 여러 개면 취소 안 된 최신 것 하나(`visit.routes.js` 46~50행).
 - 검색어 없이 **검색**을 누르면 최근 등록 환자 50명이 나옴.
+- **취소된 내원**(`status='cancelled'`)은 줄을 흐리게(`opacity 0.55`), 날짜에 취소선, `rc_visitCancelled` 딱지. 숨기거나 막지는 않음 — 환자 이력의 일부이고, 취소된 내원으로 무엇을 할지는 각 화면이 정함(진료는 서버가 409로 거절하고 안내 — 진료 세션 작업). 2026-09-29 전에는 구분 없이 나왔음(7절 ⑮).
 
 ## 4. 데이터 · API
 
@@ -265,11 +266,11 @@
 
 | 메서드 · 경로 | 하는 일 | 부르는 곳 |
 |---|---|---|
-| `GET /api/patients?q=&limit=&offset=` | 검색. `chart_no` `last_name` `first_name` `national_id` `phone` `mobile` `CONCAT(last_name,' ',first_name)`에 `ILIKE %q%`. `is_active=true`만. 최근 등록순. 기본 50건 | 접수, PatientFinder |
+| `GET /api/patients?q=&limit=&offset=` | 검색. `chart_no` `last_name` `first_name` `national_id` `phone` `mobile`, 그리고 **성 이름 · 이름 성** 두 순서의 전체 이름에 `ILIKE %q% ESCAPE '!'` — 검색어의 `%` `_`는 글자 그대로(이스케이프 문자를 `!`로 한 것은 JS 템플릿 안에서 역슬래시가 사라지는 문제를 피하려고). 검색어의 앞뒤·겹친 공백 정리. `is_active=true`만. 최근 등록순. `limit` 1~200(기본 50)·`offset`은 숫자로 읽고, 숫자가 아니면 기본값 | 접수, PatientFinder |
 | `GET /api/patients/:id` | 환자 한 명 | DocumentModal |
 | `GET /api/patients/chart/:chartNo` | 차트번호로 찾기 | 프론트에서 부르는 곳 없음 (확인함) |
 | `GET /api/patients/similar?last_name=&first_name=` | 성·이름이 같은 환자(최대 10명, 최근 등록순): `id` `chart_no` `last_name` `first_name` `date_of_birth` `gender` `phone` `mobile` `last_visit_date`(취소 아닌 마지막 내원일). 대소문자·앞뒤·겹친 공백 무시, **성·이름 뒤바뀜도 같은 것으로**. 악센트는 적힌 그대로 비교. 둘 중 하나가 비면 `[]`. `/:id`보다 **먼저** 선언(아니면 `similar`를 id로 받음). SQL 정규식은 `[[:space:]]+` — JS 템플릿 안의 `\s`는 역슬래시가 빠져 Postgres가 글자 s를 바꾸므로 | 접수 |
-| `POST /api/patients` | 등록. 차트번호 자동. `badPatient` 검사 (성·이름 **둘 중 하나**만 있으면 통과) | 접수 |
+| `POST /api/patients` | 등록. 차트번호 자동. `badPatient` 검사 — 성·이름 **둘 중 하나**만 있으면 통과, 생년월일은 `YYYY-MM-DD`이고 달력에 있는 날·미래 아님·1875년 이후, 성별은 `M`·`F`·빈 값 | 접수 |
 | `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함. **트랜잭션**: 행을 `FOR UPDATE`로 읽고 → 고치고 → **변경 기록** `reception.patient.edit`을 같은 트랜잭션에(아래) | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
@@ -306,7 +307,7 @@
 | `last_name` / `first_name` | VARCHAR(100) NOT NULL | 빈 문자열은 들어갈 수 있음 |
 | `national_id` | VARCHAR(50) | 화면 입력 칸 없음 |
 | `date_of_birth` | DATE | 미래·1875년 이전은 서버가 거절 |
-| `gender` | VARCHAR(1) CHECK `M`,`F` | `validate.js`는 `O`도 허용 → DB가 거절 (7절 ⑬) |
+| `gender` | VARCHAR(1) CHECK `M`,`F` | `validate.js`의 `GENDERS`도 `M`·`F`(2026-09-29 맞춤 — 예전엔 `O`도 받아 DB가 거절) |
 | `phone` / `mobile` | VARCHAR(50) | 화면은 `phone`만 입력 |
 | `address` / `city` / `region` | TEXT / VARCHAR(100) | 화면 입력 칸 없음. 문서 양식은 `address`를 인쇄함 |
 | `blood_type` | VARCHAR(5) | 화면: A± B± AB± O± |
@@ -384,10 +385,10 @@
 | ⑩ | 보통 | 지난 날의 대기가 사라진다. `/visits/today`는 오늘 것만 보여줘서, 어제 `waiting`·`in_progress`로 남은 내원은 접수·진료 화면 어디에도 안 나오고 통계에는 「진행중」으로 계속 남음. 의도인지 **확인 필요** | `visit.routes.js:19` · `stats.routes.js:37` | 코드 |
 | ⑪ | ✅ 고침 (낮음) | 알림 문구 일부가 영어로 고정 — `' required'`, `'Error: '`, 서버 오류 원문. 1차에서 이름·생년월일·취소 불가·오류 접두어를, 이어서 ⑪ 마무리에서 완료·확인 창 문장, 생년월일 칸 `YYYY/MM/DD`(→ `AAAA/MM/JJ`), 서버 연결 실패·기록 없음·형식 오류를 번역. 남은 것: 표에 없는 드문 서버 오류는 「Erreur : 원문」 | `Registration.jsx` `errText`·`fill` | 화면 |
 | ⑫ | 낮음 | 성별 기본값이 「남(Masculin)」. 안 누르고 넘어가면 여자 환자가 남자로 저장됨. 성별은 문서와 영상 장비(DICOM)로 나감 | `Registration.jsx` `emptyForm` · `patientToForm`(`gender: p.gender \|\| 'M'`) | 코드 |
-| ⑬ | 낮음 | 서버 검사는 성별 `O`를 허용하는데 DB는 `M`/`F`만 → `O`를 보내면 500. 화면엔 M/F만 있어서 지금 영향은 없음 | `validate.js:6` · `001_schema.sql:59` | 코드 |
+| ⑬ | ✅ 고침 (낮음) | 서버 검사는 성별 `O`를 허용하는데 DB는 `M`/`F`만이라 DB 오류가 났다. 같이: API로 `2020-02-30` 같은 없는 날짜를 보내면 `new Date()`가 3월 1일로 넘겨 통과시켜 500. → `GENDERS = ['M','F']`, 생년월일은 `YYYY-MM-DD`이고 달력에 있는 날이어야 함(총괄 허락, 총괄 파일 `utils/validate.js`). 총괄이 `dbError.js`에 22008도 넣음 | `validate.js` `badPatient` | 시험 스크립트 7건 |
 | ⑭ | 낮음 | 생년월일을 덜 쓰고 저장하면(예: 연도만) 반쪽 값이 서버로 가고 오류 원문이 뜸 → **1차에서 저장 전에 화면 언어로 막음** (`formProblem`). 남은 것: 연도 칸이 비었는데 월부터 치면 값이 연도 칸으로 옮겨감 | `Registration.jsx` `DobInput` | 화면 (저장 막힘 확인) |
-| ⑮ | 낮음 | 환자 찾기 창의 외래 내역에 **취소된 내원도 구분 없이** 나옴 → 진료·수납·검사에서 취소된 내원을 고를 수 있음 (`status`는 받아오지만 표시 안 함) | `PatientFinder.jsx:131-139` | 코드 |
-| ⑯ | 낮음 | 검색은 「성 이름」 순서로만 이어서 찾음 — 「이름 성」으로 치면 안 나옴. 검색어의 `%` `_`가 와일드카드로 먹힘. `limit`에 숫자가 아니면 500 | `patient.routes.js:15-20` | 코드 |
+| ⑮ | ✅ 고침 (낮음) | 환자 찾기 창의 외래 내역에 취소된 내원이 구분 없이 나왔다 → 흐리게 + 취소선 + 「접수 취소」 딱지(동작은 그대로) | `PatientFinder.jsx` 내원 표 | 화면 — 진료·수납·임상병리에서 |
+| ⑯ | ✅ 고침 (낮음) | 검색이 「성 이름」 순서로만 찾았고, 검색어의 `%` `_`가 와일드카드로 먹혔고, `limit`에 숫자가 아니면 500이었다 → 두 순서 모두, `%` `_`는 글자 그대로(ESCAPE `!`), `limit` 1~200·`offset`은 숫자로 읽고 아니면 기본값, 검색어의 겹친 공백 정리 | `patient.routes.js` `GET /` | 시험 스크립트 7건 + API |
 | ⑰ | ✅ 고침 (낮음) | 접수 대기 목록에 자동 새로고침이 없었다 (진료 화면은 15초마다). ②의 원인이기도 했음. → 30초마다, 탭이 보일 때만, 입력값 유지, 실패해도 목록 유지 | `Registration.jsx` `refreshQueue` | 화면 — 뒤에서 `in_progress`로 바꾸고 30초 뒤 탭 이동·취소 버튼 사라짐·쓰던 메모 유지, API 멈춤 중 502에도 목록 유지·알림 없음, 가려진 63초 동안 요청 0건 |
 | ⑱ | 낮음 | 차트번호 99,999번을 넘으면 등록이 대부분 실패한다. PostgreSQL `LPAD`는 긴 문자열을 **잘라서** `100000`→`10000`이 되어 같은 해 번호와 겹침. 작은 병원에서는 먼 이야기 | `001_schema.sql:336` | 코드 |
 | ⑲ | 낮음 | 환자 비활성화·중복 환자 합치기 기능이 없다. ③으로 생긴 중복 차트를 정리할 방법이 DB 직접 수정뿐 | `patient.is_active` 쓰는 곳 없음 | 코드 |
@@ -418,11 +419,7 @@
 
 | # | 무엇 | 크기 · 영향 |
 |---|---|---|
-| ⑮ | 환자 찾기 창의 외래 내역에서 **취소된 내원에 「ANNULÉ」 표시**(지금은 구분 없이 나와 진료·수납·검사에서 고를 수 있음) | 작음. 공용 `PatientFinder.jsx`(접수 주관) — 다섯 화면에 보임, 인계 노트에 알림 |
-| ⑯ | 기존 환자 검색이 「이름 성」 순서로도 찾게, 검색어의 `%` `_`를 글자로, `limit`에 숫자 검사 | 작음. `patient.routes.js` `GET /` — 모든 화면의 환자 검색이 조금 넓어짐 |
 | ⑭ 나머지 | 생년월일 칸에서 연도 없이 월부터 치면 값이 연도 칸으로 옮겨가는 것 | 작음. 접수 화면 `DobInput`만 |
-| 날짜 검사 | API로 `2020-02-30` 같은 없는 날짜를 보내면 400이 아니라 500(`badPatient`의 `new Date()`가 3월 1일로 넘겨 통과시키고, DB 오류 22008은 `sendDbError` 표에 없음). 화면은 저장 전에 막아서 직원에게는 안 보임 | 한두 줄. `utils/validate.js`·`utils/dbError.js` — **총괄 파일**. ⑬과 같이 고치면 됨 |
-| ⑬ | 서버 검사의 성별 `O`와 DB의 `M`/`F`가 어긋남 → 화면과 DB처럼 `M`/`F`로 | 한 줄. `utils/validate.js`는 **총괄 파일** — 총괄에 부탁 |
 | 동명이인 | 악센트만 다른 이름(é/e)도 같은 이름으로 보기 | 작음. `GET /patients/similar` — 「이름만」 결정 안에서 비교를 넓히는 것 |
 
 
@@ -456,5 +453,8 @@
 | 2026-09-29 | 접수 권한이 없는 계정은 환자 등록·접수 불가, 수납 계정은 진료비 종류만, 권한이 빠지면 안내 (⑧ · S2) | 라우트별 `permMiddleware`, 시험 `backend/test/reception.api.mjs` (4절 권한 표) | `3e03fa4` |
 | 2026-09-29 | 내원구분 단추 초진·재진·진료비 없음, 같은 과면 재진을 골라 둠, 수납 뒤 잠김, 수정 때 수납이 바꾼 값을 덮지 않음 (⑦) | `suggestedVisitType()`, `visitTypeSource`, `/visits/today`의 `has_active_bill`, `/visits/patient`에 접수 권한 (3절) | `520706d` |
 | 2026-09-29 | 같은 이름 환자가 있으면 새 차트 전에 묻기(이 환자로 / 그래도 새로 / 취소), 오늘 이미 접수된 환자면 두 번째 접수 전에 묻기 (③ ④) | `GET /patients/similar`, `confirmNewPatient()`, `postVisit()`, `POST /visits` 409·`allow_duplicate` (3·4절) | `25a7fac` |
-| 2026-09-29 | 환자 인적사항을 고치면 뒤에서 기록(누가·무엇을·전→후). 화면은 그대로, 안 고친 접수는 기록 없음 | `PUT /patients/:id` 트랜잭션 + `writeAudit(PATIENT_EDIT)`, `auditView()` (4절 변경 기록) | (이 커밋) |
+| 2026-09-29 | API가 성별 `O`·없는 날짜(2월 30일)·`1990-5-3` 같은 모양을 분명한 400으로 거절. 화면 동작은 그대로(원래 저장 전에 막음) (⑬) | 총괄 파일 `utils/validate.js` `GENDERS`·`badPatient`(허락), 화면 `errText`에 22008 문구 | (이 커밋) |
+| 2026-09-29 | 환자 검색이 「이름 성」 순서로도 찾음, `%` `_`를 쳐도 아무 환자나 나오지 않음 (⑯) | `GET /patients` ESCAPE `!`, `intParam()` (4절) | `8dd267a` |
+| 2026-09-29 | 환자 찾기 창에서 취소된 내원이 흐리게, 「Visite annulée」 딱지와 함께 (진료·수납·임상병리 모두) (⑮) | 공용 `PatientFinder.jsx` — 표시만, 동작 그대로 | `6c13b33` |
+| 2026-09-29 | 환자 인적사항을 고치면 뒤에서 기록(누가·무엇을·전→후). 화면은 그대로, 안 고친 접수는 기록 없음 | `PUT /patients/:id` 트랜잭션 + `writeAudit(PATIENT_EDIT)`, `auditView()` (4절 변경 기록) | `f0b3e3b` |
 | 2026-09-29 | 2절에 내원구분·중복 경고 사용법 정리, 7절 남은 것을 결정 필요 / 결정 없이 가능으로, 이 변경 기록 정리 | 위키만 | `ac5209e` |
