@@ -346,7 +346,10 @@ router.get('/phrases', async (req, res) => {
     let query = 'SELECT * FROM phrase_dictionary WHERE is_active = true';
     const params = [];
     if (category) { query += ' AND category = $1'; params.push(category); }
-    query += ' ORDER BY category, sort_order';
+    // id breaks ties: every seeded phrase shares sort_order 0, so without it a phrase
+    // jumped to another place in its group - here and in the consultation screen's
+    // list - each time it was saved.
+    query += ' ORDER BY category, sort_order, id';
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }

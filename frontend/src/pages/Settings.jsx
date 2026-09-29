@@ -398,7 +398,9 @@ export default function SettingsPage() {
             <div style={{flex:1,overflow:'auto'}}>
               {phrases.map(function(p){ return <div key={p.id} style={{padding:'7px 14px',borderBottom:'1px solid #1e2433',display:'flex',gap:8}}>
                 <span style={{background:'#f59e0b20',color:'#fbbf24',borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
-                <span style={{flex:1,fontSize: 14,color:'#cbd5e1'}}>{p.text}</span>
+                {/* The same choice the consultation screen makes, so the list shows what doctors will see. */}
+                <span style={{flex:1,fontSize: 14,color:'#cbd5e1'}}>{(langCtx.lang==='fr'&&p.text_fr)||(langCtx.lang==='en'&&p.text_en)||p.text}
+                  {' '}{p.text_fr?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px'}}>FR</span>:null}{p.text_en?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px',marginLeft:3}}>EN</span>:null}</span>
                 <button onClick={function(){openEdit('phrase',p)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
                 <button onClick={function(){deleteItem('phrase',p.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
               </div>; })}
@@ -828,7 +830,14 @@ export default function SettingsPage() {
 
             {editType==='phrase'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label={t.se_fCategory}><select value={editItem.category||'General'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{'General,Internal,Surgery,Peds,OBGYN,Custom'.split(',').map(function(c){return <option key={c}>{c}</option>})}</select></Fld>
-              <Fld label={t.se_fText}><textarea value={editItem.text||''} onChange={function(e){ue('text',e.target.value)}} rows={4} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              {/* The consultation screen shows text_fr on a French screen and text_en on an
+                  English one, falling back to text (Consultation.jsx phraseText). The API
+                  has always stored all three; only text had a field here, so a phrase could
+                  never be given its French wording from the clinic. */}
+              <Fld label={t.se_fTextDefault}><textarea value={editItem.text||''} onChange={function(e){ue('text',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <Fld label={t.se_fTextFr}><textarea value={editItem.text_fr||''} onChange={function(e){ue('text_fr',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <Fld label={t.se_fTextEn}><textarea value={editItem.text_en||''} onChange={function(e){ue('text_en',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <div style={{fontSize:12,color:t3,lineHeight:1.5}}>{t.se_phraseLangHint}</div>
             </div>):null}
 
             {editType==='dept'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
