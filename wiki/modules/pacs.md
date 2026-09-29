@@ -340,7 +340,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
 - **P-17 [낮음] ✅ 고침 (2026-09-29)** — 피드 주소 예시 `:9080`, `bridge.py` 기본값 9080, 설정 화면 예시 `http://NAS_IP:9090`, 번역 `pacsServerHint`(ko·en·fr, 기존 키 한 줄씩)와 그 한국어 기본 문구도 9090.
 - **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
-- **P-19 [낮음] 🟡 일부 고침** — 진료 화면은 번역됨(진료 세션 `9dfcedc`, `cs_ws*` 키: Envoyé/전송됨, Réalisé/촬영 완료 …). **남은 것**: `PatientChart.jsx:70`(수납 소유 공용 — 수납·약국 화면의 차트)은 아직 `sent`/`completed` 영어 그대로.
+- **P-19 [낮음] ✅ 고침 (2026-09-29, 다른 세션)** — 진료 화면(진료 세션 `9dfcedc`)과 수납·약국 화면의 차트 `PatientChart.jsx`(수납 세션 `768eaa9`)가 같은 규칙·같은 `cs_ws*` 키로 보여 줌: Envoyé/전송됨, Réalisé/촬영 완료 …. 워크리스트로 가지 않는 오더에는 상태를 안 보임.
 - **P-20 [낮음] ✅ 고침 (2026-09-29)** — 브리지가 heartbeat에 `arrivals_error`를 싣고(PACS `6c135aa`), `/bridge-heartbeat`가 detail에 저장, 설정 세션의 `status.routes.js`(`9d7e380`)가 노랑 `status.bridge.arrivals`로 표시. 격리 스택에서 비밀번호 없음·Orthanc 없음 → 노랑, 정상 → 초록 확인. **원래 문제**: 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
 - **격리 스택 없음** — PACS 저장소에서 `docker compose up`을 하면 실행 중인 PACS를 덮어씁니다(프로젝트 이름·컨테이너 이름·포트·`./storage` 폴더 고정). 격리 스택은 실장님 허락 후 만듭니다.
