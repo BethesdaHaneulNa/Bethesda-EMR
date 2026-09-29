@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { sendDbError } = require('../utils/dbError');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -25,7 +26,7 @@ router.get('/patient/:id', canReadDocs, async (req, res) => {
       [req.params.id]
     );
     res.json(r.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // GET /api/documents/:id  — 단건 (재출력)
@@ -40,7 +41,7 @@ router.get('/:id', canReadDocs, async (req, res) => {
     );
     if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // POST /api/documents  — 발급(저장). 발급번호 자동 부여.
@@ -63,7 +64,7 @@ router.post('/', canIssueDocs, async (req, res) => {
        JSON.stringify(payload || {}), req.user.id]
     );
     res.status(201).json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // POST /api/documents/:id/void  — 발급 취소 (이력은 남기고 무효 표시)
@@ -79,7 +80,7 @@ router.post('/:id/void', canIssueDocs, async (req, res) => {
     );
     if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 module.exports = router;

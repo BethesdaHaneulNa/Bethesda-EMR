@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 2절(직원용 사용법) 정리 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 빈 입력 400(설정 세션 권한 시험에서 나온 500) 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -247,6 +247,7 @@
 - `PUT /:id` — `subjective, objective, assessment, plan, note_text`, 바이탈 7개를 **몸체에 있는 그대로** UPDATE. 화면은 S/O/A/P·체중·키를 안 보내므로 **매번 NULL로 덮어씁니다**(7절 ⑬).
 - `PUT /:id/complete` — 진료 `completed` + 내원 `completed`, 한 트랜잭션.
 - 처방·오더 쓰기는 `badAmounts`(`utils/validate.js`)로 숫자 범위를 막습니다 — `dose` 0~1000 **숫자만**(그래서 `1/2` 같은 용량은 400), `frequency` 1~24 정수, `days` 1~365 정수, `quantity` 0~10000, `unit_price` 0~1억.
+- **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(없는 진료 id에 쓰면 400 「Referenced record does not exist」). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
 - **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다.
 - `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). 이 경로 안에 `pacs_config`를 `CREATE TABLE IF NOT EXISTS`하는 옛 코드가 남아 있습니다(7절 ⑲).
 - `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**. 조건을 UPDATE/DELETE의 `WHERE ... AND status <> 'dispensed'`에 넣어, 확인과 쓰기 사이에 조제가 끼어들 수 없게 했습니다. 0행이면 `rxRefusal`이 없는 줄(404)인지 조제된 줄(409)인지 가립니다. 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다.
@@ -479,7 +480,7 @@
 | ⑫ | 중간 | **「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열린다.** 그 내원에 진료가 없었으면(취소된 내원 포함) **오늘 날짜로 진료가 새로 생기고 내원이 `in_progress`로 바뀐다** — 취소된 내원이 되살아난다. 진료가 있었으면 지난 처방에 오더를 추가할 수 있고, 청구가 없던 지난 내원이면 수납 목록에도 안 올라간다 | `Consultation.jsx` 671-673 → 91-99 · `consult.routes.js` 33-47 · `billing.routes.js` 57-62 |
 | ⑬ | 중간 | **저장할 때마다 `subjective`·`objective`·`assessment`·`plan`·`weight`·`height`가 NULL이 된다.** 서버가 몸체에 없는 칸도 덮어쓰고, 화면은 `note_text`와 바이탈만 보낸다. 과거 화면은 `note_text || subjective`로 보여 주므로 예전 S/O/A/P 칸 데이터가 있었다면 한 번 저장에 지워진다. **확인 필요**: 실제 DB에 그 칸을 쓴 기록이 있는지 | `consult.routes.js` 59-67 · `Consultation.jsx` 142·169-177·610 |
 | ⑭ | 중간 | **검사·처치 오더의 Tms·Day 칸은 청구에 안 들어간다.** 청구는 `quantity × unit_price`뿐인데 화면은 Tms·Day를 고칠 수 있게 보여 준다. 주사 3회 × 5일로 적어도 1회분만 청구될 수 있다. **확인 필요**: 수납 화면이 항목을 만드는 방식(수납 세션) | `Consultation.jsx` 517-519 · `billing.routes.js` 34 |
-| ⑮ 일부 ✅ 09-29 | 낮음 | **용법(Usage) 칸이 10자를 넘으면 저장이 500 에러**(`prescription.route VARCHAR(10)`). 약에 기본 용법이 없으면 용법에 `'TID'`(횟수 표기)를 넣는다 → 기본 용법이 없는 약에 `TID`를 넣던 것은 없앰. 10자 제한은 그대로 | `001_schema.sql` prescription · `Consultation.jsx` 246·506 |
+| ⑮ 일부 ✅ 09-29 | 낮음 | **용법(Usage) 칸이 10자를 넘으면 저장이 500 에러**(`prescription.route VARCHAR(10)`). 약에 기본 용법이 없으면 용법에 `'TID'`(횟수 표기)를 넣는다 → 기본 용법이 없는 약에 `TID`를 넣던 것은 없앰. 10자 제한은 그대로이지만 넘으면 500 대신 400 「route (sig) must be at most 10 characters」(2026-09-29) | `001_schema.sql` prescription · `Consultation.jsx` 246·506 |
 | ⑯ ✅ 09-29 | 낮음 | **프랑스어 화면에 영어·한국어가 남는다** — 대기 상태값, 문장사전 분류 버튼, 문장 본문(`text_fr` 안 씀, 기본 문장도 영어뿐), 진료 기록 안내 글(게다가 `\n`이 줄바꿈이 안 되고 글자로 보임 — JSX 속성 문자열이라서), `DRUG`, `Error:`, 팝업 차단 안내(한국어만). 문서 기본 문장(소견·동의서 위험)도 영어뿐 — 의학 문장이라 실장님 확인 필요. → **고침**: 대기 상태·문장사전 분류/문장·종류 표시·안내 글·오류 머리·바이탈 이름·팝업 안내를 3개 국어로(3.1절). *남음*: 문서 기본 문장은 의학 문장이라 영어 그대로 | `Consultation.jsx` 428·474·566·573·584 · `shared.jsx` 179 · `003_seed_data.sql` 76- |
 | ⑰ | 낮음 | **문서 발행일이 UTC 기준**이라 마다가스카르(UTC+3)에서 0~3시에 발급하면 전날 날짜가 찍힌다 | `DocumentModal.jsx` 55 |
 | ⑱ | 낮음 | **진료의 담당 의사가 「처음 연 사람」으로 기록된다.** 관리자·간호사가 먼저 열면 그 사람이 과거 내원·약국·검사 목록에 의사로 나온다. 문서 서명은 반대로 **내원의 담당의** 이름 | `consult.routes.js` 46 · `DocumentModal.jsx` 56 |
@@ -503,7 +504,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **2절 정리**(총괄 지시, 코드 변경 없음) — 2.3을 넣기 · 한국식 약 칸 표 · 줄에 붙는 표시 표 · 상태 칸 · 결과 자동 반영으로 다시 씀, 2.6에 검사실은 완료 전에도 본다는 것, 2.12를 「이런 안내가 뜰 때」 표로, 환자 찾기 창은 접수 위키 2.7로 안내 | (이 커밋) |
+| 2026-09-29 | **빈 입력·긴 용법에 400** — 진단 이름·약 이름·오더 이름 필수 검사, 용법 10자 검사, 세 라우트 파일의 오류를 `sendDbError`로(원래 500) | (이 커밋) |
+| 2026-09-29 | **2절 정리**(총괄 지시, 코드 변경 없음) — 2.3을 넣기 · 한국식 약 칸 표 · 줄에 붙는 표시 표 · 상태 칸 · 결과 자동 반영으로 다시 씀, 2.6에 검사실은 완료 전에도 본다는 것, 2.12를 「이런 안내가 뜰 때」 표로, 환자 찾기 창은 접수 위키 2.7로 안내 | `b7571a7` |
 | 2026-09-29 | **약속처방의 감춘 약 빼기(㉕ 가안)** — `attachItems`가 `drug_active`를 돌려주고, 적용할 때 감춘 약은 넣지 않고 이름을 알림, 세트 카드에 줄 그음. 번역 키 `cs_` 2개 | `32896df` |
 | 2026-09-29 | **문서의 빈 주소·전화 줄 숨김**(공용 `PatientBox`) — 접수가 주소를 받지 않기로 해서(실장님 결정) 늘 빈칸이던 줄. 값이 있으면 예전처럼 인쇄. 렌더: 기존 12개 수술기록지·동의서 등 출력 HTML이 전과 바이트까지 같음 | `4e9a2d5` |
 | 2026-09-29 | **하루 총량 없는 처방 표시** — 줄 표시·제목 옆 개수·완료할 때 한 번 확인(막지 않음). 감춘 예시 약이 약속처방으로 처방되는 것을 확인해 7.2 ㉕로 기록. 번역 키 `cs_` 4개 | `40ccd6c` |

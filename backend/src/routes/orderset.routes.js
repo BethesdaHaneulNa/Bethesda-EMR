@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { sendDbError } = require('../utils/dbError');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -63,7 +64,7 @@ router.get('/', canReadSets, async (req, res) => {
     const sets = await pool.query(q, params);
     await attachItems(sets.rows);
     res.json(sets.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // GET /api/order-sets/:id
@@ -76,7 +77,7 @@ router.get('/:id', canReadSets, async (req, res) => {
     if (s.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     await attachItems(s.rows);
     res.json(s.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // POST /api/order-sets   (admin)  body {name, department_id, description, items:[...]}
@@ -95,7 +96,7 @@ router.post('/', permMiddleware('settings'), async (req, res) => {
     res.status(201).json(s.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally { client.release(); }
 });
 
@@ -119,7 +120,7 @@ router.put('/:id', permMiddleware('settings'), async (req, res) => {
     res.json(out.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   } finally { client.release(); }
 });
 
@@ -128,7 +129,7 @@ router.delete('/:id', permMiddleware('settings'), async (req, res) => {
   try {
     await pool.query('DELETE FROM order_set WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 module.exports = router;
