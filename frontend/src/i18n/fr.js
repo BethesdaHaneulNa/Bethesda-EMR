@@ -267,6 +267,12 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "Saisissez le nom et le prénom.",
+  rc_dobIncomplete: "Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue.",
+  rc_dobInvalid: "La date de naissance n'est pas valide. Elle ne peut pas être dans le futur.",
+  rc_cancelNotWaiting: "La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. La liste a été actualisée.",
+  rc_error: "Erreur",
+  rc_saving: "Enregistrement…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   // ── end consultation ──

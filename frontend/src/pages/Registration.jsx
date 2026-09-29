@@ -48,8 +48,15 @@ export default function RegistrationPage() {
   var pbs2 = useState({owed:0,refund:0}), patBal = pbs2[0], setPatBal = pbs2[1];
   var rfo = useState(false), regFinderOpen = rfo[0], setRegFinderOpen = rfo[1];
   var pls = useState(false), patientLoading = pls[0], setPatientLoading = pls[1];
+  // A save in flight. The ref guards against a double click landing before the
+  // re-render that disables the buttons; the state is what disables them.
+  var bss = useState(false), busy = bss[0], setBusy = bss[1];
+  var busyRef = useRef(false);
 
-  var emptyForm = { chartNo: '', lastName: '', firstName: '', nationalId: '', dob: '', gender: 'M', phone: '', mobile: '', address: '', city: '', region: '', bloodType: '', allergies: '', receptionNote: '' };
+  // Only the fields this screen shows. national_id, mobile, address, city and
+  // region exist on the patient but have no input here; the API keeps any field
+  // the body leaves out, so they are never touched from this screen.
+  var emptyForm = { chartNo: '', lastName: '', firstName: '', dob: '', gender: 'M', phone: '', bloodType: '', allergies: '', receptionNote: '' };
   var fs = useState(emptyForm), form = fs[0], setForm = fs[1];
 
   var vfs = useState({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
@@ -84,8 +91,8 @@ export default function RegistrationPage() {
     setSel(null);
     setForm({
       chartNo: p.chart_no || '', lastName: p.last_name || '', firstName: p.first_name || '',
-      nationalId: p.national_id || '', dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
-      phone: p.phone || '', mobile: p.mobile || '', address: p.address || '', city: p.city || '', region: p.region || '',
+      dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
+      phone: p.phone || '',
       bloodType: p.blood_type || '', allergies: p.allergies || '', receptionNote: p.reception_note || '',
     });
     setMemo('');
@@ -99,7 +106,7 @@ export default function RegistrationPage() {
     try {
       var data = await api.get('/patients?q=' + encodeURIComponent(s) + '&limit=20');
       setPatientResults(data || []);
-    } catch (err) { alert(t.search + ' Error: ' + err.message); }
+    } catch (err) { alert(errText(err)); }
     setPatientLoading(false);
   }
 
@@ -126,8 +133,8 @@ export default function RegistrationPage() {
     setSelectedPatient({ id: v.patient_id, chart_no: v.chart_no, last_name: v.last_name, first_name: v.first_name });
     setForm({
       chartNo: v.chart_no, lastName: v.last_name, firstName: v.first_name,
-      nationalId: '', dob: v.date_of_birth ? v.date_of_birth.split('T')[0] : '', gender: v.gender || 'M',
-      phone: v.patient_phone || '', mobile: '', address: '', city: '', region: '',
+      dob: v.date_of_birth ? v.date_of_birth.split('T')[0] : '', gender: v.gender || 'M',
+      phone: v.patient_phone || '',
       bloodType: v.blood_type || '', allergies: v.allergies || '', receptionNote: v.reception_note || '',
     });
     setVisitForm({
@@ -139,29 +146,65 @@ export default function RegistrationPage() {
     loadHistory(v.patient_id);
   }
 
-  async function savePatientOnly() {
-    try {
-      if (!form.lastName || !form.firstName) { alert(t.lastName + ' / ' + t.firstName + ' required'); return; }
-      var body = {
-        last_name: form.lastName, first_name: form.firstName,
-        national_id: form.nationalId, date_of_birth: form.dob || null,
-        gender: form.gender, phone: form.phone, mobile: form.mobile,
-        address: form.address, city: form.city, region: form.region,
-        blood_type: form.bloodType, allergies: form.allergies, reception_note: form.receptionNote,
-      };
-      var saved;
-      if (selectedPatient && selectedPatient.id) {
-        saved = await api.put('/patients/' + selectedPatient.id, body);
-      } else {
-        saved = await api.post('/patients', body);
+  // The patient fields this screen owns. Anything not listed is left as it is.
+  function patientBody() {
+    return {
+      last_name: form.lastName.trim(), first_name: form.firstName.trim(),
+      date_of_birth: form.dob || null, gender: form.gender, phone: form.phone,
+      blood_type: form.bloodType, allergies: form.allergies, reception_note: form.receptionNote,
+    };
+  }
+
+  // Checked here so the message is in the screen's language; the API repeats
+  // the name and birth-date checks in English.
+  function formProblem() {
+    if (!form.lastName.trim() || !form.firstName.trim()) return t.rc_nameRequired;
+    if (!form.dob) return null;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(form.dob);
+    if (!m) return t.rc_dobIncomplete;
+    var y = +m[1], mo = +m[2], d = +m[3];
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return t.rc_dobInvalid;
+    if (dt > new Date() || y < 1875) return t.rc_dobInvalid;
+    return null;
+  }
+
+  // Server messages the staff can act on, in their language. Anything else is
+  // shown as it came, after a translated prefix.
+  function errText(err) {
+    var msg = (err && err.message) || '';
+    if (msg === 'Patient name is required') return t.rc_nameRequired;
+    if (msg.indexOf('date_of_birth') === 0) return t.rc_dobInvalid;
+    if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
+    return t.rc_error + ': ' + msg;
+  }
+
+  async function withBusy(fn) {
+    if (busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    try { await fn(); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
+
+  function savePatientOnly() {
+    var problem = formProblem();
+    if (problem) { alert(problem); return; }
+    return withBusy(async function () {
+      try {
+        var saved;
+        if (selectedPatient && selectedPatient.id) {
+          saved = await api.put('/patients/' + selectedPatient.id, patientBody());
+        } else {
+          saved = await api.post('/patients', patientBody());
+        }
+        setSelectedPatient(saved);
+        setForm(function (f) { return Object.assign({}, f, { chartNo: saved.chart_no || f.chartNo }); });
+        await loadData();
+        alert(t.savePatientDone + (saved.chart_no ? ': ' + saved.chart_no : ''));
+      } catch (err) {
+        alert(errText(err));
       }
-      setSelectedPatient(saved);
-      setForm(function (f) { return Object.assign({}, f, { chartNo: saved.chart_no || f.chartNo }); });
-      await loadData();
-      alert((t.savePatientDone || 'Saved') + (saved.chart_no ? ': ' + saved.chart_no : ''));
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+    });
   }
 
   function mb(c) { return { background: c + '18', color: c, border: '1px solid ' + c + '40', borderRadius: 5, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }; }
@@ -170,70 +213,73 @@ export default function RegistrationPage() {
     try {
       await api.put('/visits/' + v.id + '/status', { status: newStatus });
       await loadData();
-    } catch (err) { alert('Error: ' + err.message); }
+    } catch (err) { alert(errText(err)); }
   }
 
-  async function createOrUpdateVisit() {
-    try {
-      var patient = selectedPatient;
-      if (!patient || !patient.id) {
-        if (!form.lastName || !form.firstName) { alert(t.lastName + ' / ' + t.firstName + ' required'); return; }
-        patient = await api.post('/patients', {
-          last_name: form.lastName, first_name: form.firstName,
-          national_id: form.nationalId, date_of_birth: form.dob || null,
-          gender: form.gender, phone: form.phone, mobile: form.mobile,
-          address: form.address, city: form.city, region: form.region,
-          blood_type: form.bloodType, allergies: form.allergies, reception_note: form.receptionNote,
-        });
-      } else {
-        // 기존 환자도 수정된 인적사항을 저장
-        try {
-          await api.put('/patients/' + patient.id, {
-            last_name: form.lastName, first_name: form.firstName,
-            national_id: form.nationalId, date_of_birth: form.dob || null,
-            gender: form.gender, phone: form.phone, mobile: form.mobile,
-            address: form.address, city: form.city, region: form.region,
-            blood_type: form.bloodType, allergies: form.allergies, reception_note: form.receptionNote,
+  function createOrUpdateVisit() {
+    var problem = formProblem();
+    if (problem) { alert(problem); return; }
+    return withBusy(async function () {
+      try {
+        var patient = selectedPatient;
+        if (!patient || !patient.id) {
+          patient = await api.post('/patients', patientBody());
+          // Remember the new patient at once. If the visit below fails, pressing
+          // the button again must register this patient, not create a second one.
+          setSelectedPatient(patient);
+          setForm(function (f) { return Object.assign({}, f, { chartNo: patient.chart_no || f.chartNo }); });
+        } else {
+          // Save edited details first. A failure stops here rather than registering
+          // the visit and silently dropping the edit, as it used to.
+          await api.put('/patients/' + patient.id, patientBody());
+        }
+
+        if (sel && sel.id) {
+          // Only what this form edits. status is not sent: the list may be minutes
+          // old, and sending it back put visits the doctor had completed back into
+          // the queue - and off the payment list. visit_type is not sent either:
+          // there is no input for it here, and payment may have changed it since.
+          await api.put('/visits/' + sel.id, {
+            department_id: visitForm.department || null,
+            doctor_id: visitForm.doctor || null,
+            chief_complaint: visitForm.chiefComplaint,
+            reception_memo: memo,
           });
-        } catch (e) {}
+          alert(t.updateVisit + ' ✓');
+        } else {
+          await api.post('/visits', {
+            patient_id: patient.id,
+            visit_type: visitForm.visitType,
+            department_id: visitForm.department || null,
+            doctor_id: visitForm.doctor || null,
+            chief_complaint: visitForm.chiefComplaint,
+            reception_memo: memo,
+          });
+          alert(t.registerWaiting + ' ✓: ' + (patient.chart_no || form.chartNo));
+        }
+        await loadData();
+        startNewPatient();
+      } catch (err) {
+        alert(errText(err));
       }
-
-      if (sel && sel.id) {
-        await api.put('/visits/' + sel.id, {
-          visit_type: visitForm.visitType,
-          department_id: visitForm.department || null,
-          doctor_id: visitForm.doctor || null,
-          chief_complaint: visitForm.chiefComplaint,
-          reception_memo: memo,
-          status: sel.status,
-        });
-        alert(t.updateVisit + ' ✓');
-      } else {
-        await api.post('/visits', {
-          patient_id: patient.id,
-          visit_type: visitForm.visitType,
-          department_id: visitForm.department || null,
-          doctor_id: visitForm.doctor || null,
-          chief_complaint: visitForm.chiefComplaint,
-          reception_memo: memo,
-        });
-        alert(t.registerWaiting + ' ✓: ' + (patient.chart_no || form.chartNo));
-      }
-      await loadData();
-      startNewPatient();
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+    });
   }
 
-  async function cancelVisit(v) {
+  function cancelVisit(v) {
     if (!v || !v.id) return;
     if (!confirm(t.cancelWaiting + '? ' + v.last_name + ' ' + v.first_name)) return;
-    try {
-      await api.put('/visits/' + v.id + '/status', { status: 'canceled' });
-      await loadData();
-      startNewPatient();
-    } catch (err) { alert(t.cancelWaiting + ' Error: ' + err.message); }
+    return withBusy(async function () {
+      try {
+        await api.put('/visits/' + v.id + '/status', { status: 'cancelled' });
+        await loadData();
+        startNewPatient();
+      } catch (err) {
+        alert(errText(err));
+        // Most likely the doctor has opened the visit; show the real status.
+        await loadData();
+        startNewPatient();
+      }
+    });
   }
 
   var filteredVisits = useMemo(function () {
@@ -328,10 +374,10 @@ export default function RegistrationPage() {
             </div>
             <div><label style={labelStyle}>{t.chiefComplaint}</label><input value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} style={IS} /></div>
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={memo} onChange={function (e) { setMemo(e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
-            <button onClick={createOrUpdateVisit} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: 'pointer', fontSize: 16, fontWeight: 800 }}>{sel ? t.updateVisit : t.registerWaiting}</button>
-            <button onClick={savePatientOnly} style={{ background: '#1e2433', color: '#cbd5e1', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>💾 {t.savePatientOnly}</button>
+            <button onClick={createOrUpdateVisit} disabled={busy} style={{ background: '#2563eb', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 16, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            <button onClick={savePatientOnly} disabled={busy} style={{ background: '#1e2433', color: '#cbd5e1', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
             {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: '#1e2433', color: '#ddd6fe', border: '1px solid #a855f7', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}
-            {sel && (sel.status === 'waiting' || sel.status === 'registered') ? <button onClick={function () { cancelVisit(sel); }} style={{ background: '#ef444420', color: '#f87171', border: '1px solid #ef444455', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>{t.cancelWaiting}</button> : null}
+            {sel && (sel.status === 'waiting' || sel.status === 'registered') ? <button onClick={function () { cancelVisit(sel); }} disabled={busy} style={{ background: '#ef444420', color: '#f87171', border: '1px solid #ef444455', borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>{t.cancelWaiting}</button> : null}
           </div>
         </div>
 
