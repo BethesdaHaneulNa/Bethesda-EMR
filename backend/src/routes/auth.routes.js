@@ -4,6 +4,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, generateToken, effectivePerms, ALL_PERMS } = require('../middleware/auth');
 // Messages shown to people - translated by the screen; see settings.messages.js.
 const { MSG } = require('./settings.messages');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 const router = express.Router();
 
@@ -104,6 +105,49 @@ router.get('/me', authMiddleware, async (req, res) => {
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: MSG.SERVER_ERROR });
+  }
+});
+
+// POST /api/auth/password - a member of staff changes their own password.
+// Decided 2026-09-29: the initial password stays 1234 and is not forced to change,
+// there is no minimum length (only not empty), and each person can change their own.
+// The current password is asked for so that a screen left logged in cannot be used by
+// someone else to take the account over.
+//
+// A wrong current password is 400, not 401: api/client.js treats any 401 as "the
+// session ended" and returns to the login page, which would throw away the form.
+// The check and the change are one UPDATE (WHERE the hash matches), so nothing can
+// change in between. The change log gets one settings.staff.password line with no
+// value, as when an admin sets it. Tokens already issued stay valid until they expire
+// (the server checks the account's status and permissions on every request, not the
+// password), so other screens where this person is logged in are not thrown out.
+router.post('/password', authMiddleware, async (req, res) => {
+  const current = String((req.body && req.body.current_password) || '');
+  const next = String((req.body && req.body.new_password) || '');
+  if (!current || !next) return res.status(400).json({ error: MSG.PASSWORD_REQUIRED });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const r = await client.query(
+      `UPDATE staff SET password_hash = crypt($1, gen_salt('bf')), updated_at = NOW()
+        WHERE id = $2 AND status = 'active' AND password_hash = crypt($3, password_hash)
+        RETURNING id, login_id, name`,
+      [next, req.user.id, current]);
+    if (r.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: MSG.CURRENT_PASSWORD_WRONG });
+    }
+    const me = r.rows[0];
+    await writeAudit(client, req, { action: ACTIONS.STAFF_PASSWORD, entity: 'staff', entity_id: me.id,
+      summary: me.name ? me.name + ' (' + me.login_id + ')' : me.login_id });
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* connection already out of the transaction */ }
+    console.error('Password change error:', err.message);
+    res.status(500).json({ error: MSG.SERVER_ERROR });
+  } finally {
+    client.release();
   }
 });
 

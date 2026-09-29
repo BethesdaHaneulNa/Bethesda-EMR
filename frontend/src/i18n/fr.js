@@ -753,6 +753,17 @@ export default {
   se_ent_diagnosis: "diagnostic",
   se_ent_prescription: "prescription",
   se_ent_order_item: "demande",
+  se_pwTitle: "Changer mon mot de passe",
+  se_pwHint: "Saisissez le mot de passe actuel une fois et le nouveau deux fois. En cas d'oubli, un administrateur peut en définir un nouveau dans Paramètres → Personnel.",
+  se_pwCurrent: "Mot de passe actuel",
+  se_pwNew: "Nouveau mot de passe",
+  se_pwAgain: "Confirmer le nouveau mot de passe",
+  se_pwMismatch: "Les deux nouveaux mots de passe ne sont pas identiques.",
+  se_pwChange: "Changer",
+  se_pwClose: "Fermer",
+  se_pwDone: "Mot de passe changé. Utilisez le nouveau à la prochaine connexion.",
+  se_pwOpen: "Cliquer pour changer mon mot de passe",
+  se_errCurrentPw: "Le mot de passe actuel n'est pas correct.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

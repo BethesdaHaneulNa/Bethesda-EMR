@@ -762,6 +762,17 @@ export default {
   se_ent_diagnosis: "diagnosis",
   se_ent_prescription: "prescription",
   se_ent_order_item: "order",
+  se_pwTitle: "Change my password",
+  se_pwHint: "Type your current password once and the new one twice. If you forget it, an administrator can set a new one in Settings → Staff.",
+  se_pwCurrent: "Current password",
+  se_pwNew: "New password",
+  se_pwAgain: "New password again",
+  se_pwMismatch: "The two new passwords are not the same.",
+  se_pwChange: "Change",
+  se_pwClose: "Close",
+  se_pwDone: "Password changed. Use the new one next time you log in.",
+  se_pwOpen: "Click to change my password",
+  se_errCurrentPw: "The current password is not correct.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
