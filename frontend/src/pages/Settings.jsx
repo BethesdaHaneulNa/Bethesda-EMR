@@ -416,7 +416,8 @@ export default function SettingsPage() {
               <thead><tr style={{background:'#1e2433'}}>
                 {[t.se_colName,t.se_colLoginId,t.se_colRole,t.se_colDept,t.se_colPhone,t.se_colStatus,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
-              <tbody>{staff.map(function(s){
+              {/* Active accounts first, the deactivated ones below; name order within each. */}
+              <tbody>{staff.slice().sort(function(a,b){ return (a.status==='inactive'?1:0)-(b.status==='inactive'?1:0); }).map(function(s){
                 var rc=RC[s.role]||t2;
                 return <tr key={s.id} style={{borderBottom:'1px solid #1e2433'}}>
                   <td style={{padding:'6px 10px',fontWeight:600,color:tx}}>{s.name}</td>
@@ -980,7 +981,7 @@ export default function SettingsPage() {
       {editItem?(
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div style={{background:'#1a1f2e',borderRadius:10,border:'1px solid '+bd,width:editType==='order'?540:420,maxHeight:'85vh',overflow:'auto',padding:'18px',boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
-            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:14}}>{editItem.id?t.edit:t.se_newTitle}</div>
+            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:14}}>{/* The window says what it is for (was "New item" / "Edit" on every tab). */}{editItem.id?(t['se_editTitle_'+editType]||t.edit):(t['se_newTitle_'+editType]||t.se_newTitle)}</div>
 
             {editType==='staff'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label={t.se_fName}><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
@@ -1004,6 +1005,8 @@ export default function SettingsPage() {
                 <Fld label={t.se_fRole}><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}>{['frontdesk','doctor','nurse','pharmacy','lab','admin'].map(function(r){return <option key={r} value={r}>{t['se_role_'+r]}</option>;})}</select></Fld>
                 <Fld label={t.se_fPhone}><input value={editItem.phone||''} onChange={function(e){ue('phone',e.target.value)}} style={IS}/></Fld>
               </div>
+              {/* The API has always kept an e-mail; the form had no field for it. */}
+              <Fld label={t.se_fEmail}><input type="email" autoComplete="off" value={editItem.email||''} onChange={function(e){ue('email',e.target.value)}} style={IS}/></Fld>
               {/* The staff list has always shown a Dept column and the API has always accepted
                   department_id - there was simply no way to set it, so the column read "-" for
                   everyone. This is the doctor's own department, which is separate from the
