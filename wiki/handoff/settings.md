@@ -2,6 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — B7 디스크 검사에 DB(Docker) 드라이브도
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`a95891a` 위)
+- **상태 창** `Get-DiskCheck`: 백업 드라이브 + Docker 데이터 드라이브(`Get-DockerDataDrive`: Docker Desktop 설정 파일의 `CustomWslDistroDir`/`DataFolder`, 없으면 `%LOCALAPPDATA%`의 드라이브). 같으면 전과 같은 한 줄, 다르면 「C: … - D: …」, 더 찬 쪽이 색을 정함.
+- **상태 API** `checkDisk`: `/backups`와 컨테이너 `/`를 둘 다, 더 찬 쪽. 값에 `backup_free_gb`·`docker_free_gb`.
+- **한계(솔직히)**: Windows Docker Desktop에서는 컨테이너 `/`가 가상 디스크의 한도를 보여 줌(시험 PC: `docker_free_gb` 1016, 실제 C: 여유는 102GB) — 그래서 **Windows의 실제 C:는 상태 창이 맡음**. 거짓 경고는 내지 않음(더 넉넉하게 보일 뿐). Linux·NAS 설치에서는 실제 값.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0. 상태 창 사본(콘솔): 이 PC는 백업·Docker 모두 C: → 「102 Go libres sur 931 Go」 한 줄(전과 같음). Docker 드라이브를 E:로 흉내 → 「C: 102 … - E: 292 …」. 노랑 기준을 150GB로 올려 → C:만 걸려 **warn** + 「Le disque est presque plein」. 이 PC에서 `Get-DockerDataDrive` → C:. API: `free_gb` 109, `backup_free_gb` 109, `docker_free_gb` 1016.
+- **바꾼 파일**: `server-status.ps1` · `backend/src/routes/status.routes.js` · `wiki/modules/settings.md`(3-6 표, 7절 B7, 8절)
+- **다음 할 일**: 7절에서 남은 것은 U3(결정 세션 대기)뿐 — 나머지는 고침·결정(S5 넣지 않음, B8 하지 않음).
+
 ## 2026-09-29 — 7절 작은 것: U8 · S10 · S7 · S9 · S3 · U5 · U6 (총괄 허락·결정)
 
 - **상태**: 확인 요청

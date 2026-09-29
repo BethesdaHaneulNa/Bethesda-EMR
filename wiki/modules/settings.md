@@ -367,7 +367,7 @@
 | 어디서 | 서버 PC의 Windows 창 (또는 `-Console` 한 번 출력, 종료 코드 0/1/2) | 백엔드. 로그인한 누구나 |
 | 어떻게 | **EMR을 거치지 않고** Docker·디스크·파일을 직접 봄. EMR이 죽어도 답하게 하려고 | 백엔드 안에서 DB·파일 확인 |
 | DB·서버·화면 | 컨테이너 `bethesda-emr-db/-api/-web`의 상태와 Docker healthcheck | DB에 `SELECT 1` |
-| 디스크 | 백업 폴더가 있는 드라이브의 남은 공간 (20GB 미만 노랑, 5GB 미만 빨강) | `/backups`의 `statfs` (같은 기준) |
+| 디스크 | 백업 폴더가 있는 드라이브 **와 Docker 데이터 드라이브**(DB — Docker Desktop 설정의 사용자 폴더, 없으면 `%LOCALAPPDATA%`의 드라이브)의 남은 공간 (20GB 미만 노랑, 5GB 미만 빨강). 같은 드라이브면 한 줄, 다르면 「C: … - D: …」로 둘 다, 더 찬 쪽이 색을 정함 (2026-09-29, B7) | `/backups`의 `statfs` **와 컨테이너의 `/`**(같은 기준, 더 찬 쪽). 값: `free_gb`(더 찬 쪽), `backup_free_gb`, `docker_free_gb`. **한계**: Windows의 Docker Desktop에서는 `/`가 가상 디스크의 한도(시험 PC 1016GB)를 보여 실제 C: 여유(102GB)가 아님 — Windows의 실제 C:는 상태 창이 봄. Linux·NAS에서는 실제 값 |
 | 백업 | 백업 폴더(= `docker inspect`로 찾은 `/backups` 마운트 원본)의 가장 새 `*.sql.gz`가 36시간 넘으면 노랑 | `services/backup.js` `health()` — 36시간 넘음·없음·**마지막 시도 실패**(`status.backup.failed`)면 노랑 |
 | PACS | 컨테이너 `bethesda-pacs` (없으면 「미설치」) + **호스트 포트** (아래) | `pacs_config.worklist_scp_host`로 TCP 연결 |
 | 호스트 포트 (2026-09-29) | `bethesda-emr-web`·`bethesda-pacs`가 **게시하도록 설정된** 포트(`HostConfig.PortBindings` — 9080, 9090, 4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨」으로 바꾸고, `netsh interface ipv4 show excludedportrange protocol=tcp`의 예약 구간 안이면 「Windows가 막음」, 아니면 「닫힘」 | — (컨테이너 안에서는 알 수 없음) |
@@ -572,7 +572,7 @@
 | B11 | ~~높음~~ **고침** | ~~서버 상태 창이 **호스트 포트가 막힌 것**을 모름 — 컨테이너가 healthy면 「정상」~~ → 2026-09-29: 게시 포트마다 호스트에서 연결 확인, Windows 예약이면 그렇게 표시 (3-6절). 이 PC에서 실제로 PACS 4242·9090이 막혀 있었음 | (옛 코드) `server-status.ps1` `Get-ContainerCheck` |
 | B12 | ~~보통~~ **고침** | ~~서버 상태 창의 색 띠가 첫 두 줄(DB·앱 서버)을 가림~~ → 2026-09-29 (3-6절) | (옛 코드) `server-status.ps1` 컨트롤 추가 순서 |
 | B6 | ~~낮음~~ **고침** | ~~백업 목록·「최근」의 시각이 UTC로 나옴~~ → 2026-09-29: 브라우저 PC의 현지 시각으로 표시(`fmtLocal`) | (옛 코드) `String(mtime).slice(0,16)` — ISO(UTC) 문자열 |
-| B7 | 낮음 | 디스크 검사가 백업 드라이브만 봄. 백업을 D:로 옮기면 DB가 있는 드라이브가 차도 모름 | `status.routes.js:261`, `server-status.ps1:216` |
+| B7 | ~~낮음~~ **고침** | ~~디스크 검사가 백업 드라이브만 봄~~ → 2026-09-29: 상태 창은 백업 드라이브와 Docker 데이터 드라이브 둘 다, 상태 API는 `/backups`와 `/` 둘 다 (API의 `/`는 Windows Docker Desktop에서 가상 디스크 값 — 3-6절 표) | `server-status.ps1` `Get-DiskCheck`·`Get-DockerDataDrive`, `status.routes.js` `checkDisk` |
 | B8 | 낮음 → **하지 않음 (결정)** | 내려받기가 파일 전체를 브라우저 메모리에 올림 — 2026-09-29 총괄: 지금 크기(수십 KB)에서는 필요 없음 | `Settings.jsx` `downloadBackup` |
 | B9 | ~~낮음~~ **고침 (총괄)** | ~~`.env.example`이 「BACKUP_PATH를 비우면 백업이 꺼진다」고 설명~~ → 「항상 켜져 있음, 비우면 앱 폴더」 | `.env.example` |
 | B10 | ~~낮음~~ **고침 (총괄)** | ~~5b 복원 명령을 Git Bash에서 치면 `/tmp` 경로가 바뀜~~ → `DEPLOYMENT.md` 5b에 「PowerShell이나 cmd에서」 | `DEPLOYMENT.md` |
@@ -651,4 +651,5 @@
 | 2026-09-29 | 새 PC에서 복원 뒤 시험 환자·영수 등을 지우는 **`clean-test-data.ps1`** (결정 C) — 백업과 똑같을 때만, 목록 확인·`DELETE n` 입력, 먼저 백업, 한 트랜잭션, 드라이런. `backup-cli.js`가 작업 폴더를 지움 | `clean-test-data.ps1`(새), `backup-cli.js` (2.13·3-11) | `4336d19` · `a69f713` |
 | 2026-09-29 | 서버 상태 창·상태 API에 **영상 백업** 줄(디스크 없음·실패·오래됨·거의 참). 「Journal」에서 검사 판정(정상→높음)과 처방의 포장 단위가 말로 | `status.routes.js` `checkImageBackup`, `server-status.ps1` `Get-ImageBackupCheck`·창 높이 640, `settingsAudit.js` (2.10·3-6·3-10) | `a0c0496` |
 | 2026-09-29 | 정리 스크립트: 준비한 PC의 표지 파일 `KEEP-TEST-DATA.txt`(총괄 `6d93954`) 설명, 기록 탭의 시험 줄 차트번호가 새 환자와 겹쳐 보일 수 있다는 안내 | 위키(2.13·2.14·3-11), 스크립트 끝 안내 세 줄 | `a446512` |
-| 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | (이 커밋) |
+| 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | `a95891a` |
+| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | (이 커밋) |
