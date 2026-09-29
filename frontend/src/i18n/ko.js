@@ -49,7 +49,7 @@ export default {
   pharmacyOnlyCompleted: "진료 완료된 약 오더만 약국 대기 목록에 표시됩니다.",
   stockShortWarn: "재고가 조제량보다 적게 기록되어 있었습니다 — 실제 재고를 확인하세요:",
   refresh: "새로고침", pharmacy: "약국", noRxToShow: "표시할 처방이 없습니다",
-  rxUnit: "처방", chartNo: "차트번호", doctor: "의사",
+  rxUnit: "처방", doctor: "의사",
   colDrugName: "약품명", colDose: "용량", colFreq: "횟수", colDays: "일수", colRoute: "경로", colQty: "수량", colMemo: "메모",
   orderFeedSaved: "오더 연동 설정 저장됨",
   orderFeedTab: "오더 연동",

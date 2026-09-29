@@ -58,7 +58,7 @@ export default {
   pharmacyOnlyCompleted: "Only medication orders from completed consultations are shown.",
   stockShortWarn: "Recorded stock was lower than the quantity dispensed — check the shelf count:",
   refresh: "Refresh", pharmacy: "Pharmacy", noRxToShow: "No prescriptions to show",
-  rxUnit: "Rx", chartNo: "Chart No.", doctor: "Doctor",
+  rxUnit: "Rx", doctor: "Doctor",
   colDrugName: "Drug", colDose: "Dose", colFreq: "Freq", colDays: "Days", colRoute: "Route", colQty: "Qty", colMemo: "Memo",
   orderFeedSaved: "Order feed settings saved",
   orderFeedTab: "Order Feed",
