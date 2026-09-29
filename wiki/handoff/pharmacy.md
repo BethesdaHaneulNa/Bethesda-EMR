@@ -2,6 +2,42 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 C1(확인 창 어순, 금액 자릿수)
+
+- **상태**: 확인 요청. 디자인 커밋(`a7d6c2b`, 약국 화면 색)이 develop에 들어온 뒤 그 위에서.
+- **한 일**: 조제 완료 확인 창을 언어마다 한 문장으로(`ph_dispenseConfirm`): FR « Terminer la délivrance pour RAKOTO Jean ? », KO 「RAKOTO Jean 환자의 조제를 완료할까요?」, EN « Finish dispensing for RAKOTO Jean? ». 총량 없는 약 안내가 앞에 붙는 것은 그대로. **Médicaments (interne)** 금액을 프랑스어에서 « 13 500 »(나눔 없는 빈칸)으로, ko·en은 쉼표 그대로.
+- **바꾼 파일**: `Pharmacy.jsx`(`fmt`, `dispense`의 확인 문장), i18n `ph_dispenseConfirm`(ko·en·fr), `wiki/modules/pharmacy.md` 2.2.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **확인한 방법**: 격리 9184 FR — 확인 창 « Terminer la délivrance pour TEST RAKOTO ? », 금액 « 13 500 ». `npm run build`.
+
+## 2026-09-29 — 통합 시험 B(가져온 메모의 한국어, 같은 이름 두 줄) · C2(단위 말을 제형에서)
+
+- **상태**: 확인 요청(화면 파일 Pharmacy.jsx·PharmacyStock.jsx는 건드리지 않음 — 디자인 작업과 안 부딪힘). 커밋 `4ce5ed7`.
+- **한 일**:
+  - B 메모: 가져온 확인할 점의 자료(옛 프로그램의 원래 표기 「60캡슐*66」, 「79병」)를 **화면에서** 화면 언어로 — 한국어 단위 다섯 개(정·캡슐·병·개·포)를 cp · gél. · fl. · u. · sachet로, `*`를 ×로, 수량 항목은 « 60 gél. × 66 ≈ 3960 ; quantité importée : 90 ». 저장된 값은 그대로라 **마이그레이션 없음**(실행 중 DB 값 안 바꿈). 가져온 93개 항목 전부 FR 화면에 한국어 0 확인(node로 전부 그려 봄).
+  - C2: `rx-dosing.js`가 단위 말을 `rx.dosage_form`에서 먼저 정함(Tablet cp · Capsule gél. · Powder / Sachet sachet · Suppository suppo.), 없으면 전처럼 이름에서. 옛 처방(예시 약, 제형 없음)의 문장은 그대로.
+- **바꾼 파일**: `frontend/src/documents/drug-info.js`, `frontend/src/documents/rx-dosing.js`, i18n `ph_chkQtyDetail`·`ph_u_*` 5개(ko·en·fr), `wiki/modules/pharmacy.md` 3.4·3.11.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **다른 세션에 부탁**(총괄 전달):
+  - **진료** — C2가 화면에 나오려면: `consult.routes.js`의 `GET /visit/:visitId/prescriptions`와 `GET /:id/prescriptions`에 `(SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form` 한 칸(진료 화면 문장·원외 처방전이 이 둘을 읽음). 처방을 막 추가한 줄은 검색 결과의 `dosage_form`을 같이 넣어 두면 다시 불러오기 전에도 맞게 나옴. 제형은 읽을 때 약 표에서 가져오므로, 나중에 약의 제형을 고치면 그 약의 옛 문장 단위도 바뀜(처방 줄에 복사하는 마이그레이션이 필요하면 말씀 주세요 — 지금은 가져온 약만 제형이 있어 영향이 작다고 봄).
+  - **진료** — B: 약 검색 목록에 **재고와 가격**을 같이(같은 이름 Amoxicillin 500mg Gélule: MED-0068 재고 2000 / MED-0069 재고 2500). `/admin/drugs`가 이미 `stock_qty`·`unit_price`·`dosage_form`을 줌. 예: 이름 옆 작게 « gél. · stock 2000 · 0 Ar ».
+  - **설정** — B: 약속처방 편집 창의 약 검색 결과·약 줄에 같은 것(재고·가격, 그리고 코드).
+- **확인한 방법**: `npm run build`. node로 `checkText`(fr·ko, 93개)와 `doseSentence`(이름만 / Capsule / Tab 이름 / Syrup — « 1 gél. × 3 fois/jour… », 「1회 1캡슐 × 하루 3회…」, 시럽은 단위 없음).
+- **확인 못 한 것**: 진료 쪽 칸이 들어오기 전이라 진료 화면·원외 처방전에서 실제로 « gél. »가 나오는 것은 못 봄.
+
+## 2026-09-29 — 통합 시험 A: 원외로 지정된 약이 없으면 원외 처방전을 발급하지 않음
+
+- **상태**: 확인 요청 (디자인이 Pharmacy.jsx를 시작하기 전에 합쳐 달라는 건). develop `fd0cd02` 위.
+- **한 일**: 약이 모두 Interne인데 💊 Ordonnance ext. → Émettre를 누르면 빈 처방전이 번호(D26-…)를 받아 발급되던 것. 서버가 그 방문(또는 진료)에 `dispense_type = 'external'` 줄이 하나도 없으면 **번호를 뽑기 전에** 400으로 막고, 화면은 Émettre를 끄고 이유를 보임(« ⚠ Aucun médicament n'est marqué « Externe » : rien à émettre… »). 🖨 Imprimer(초안)는 그대로 됨.
+- **바꾼 파일**: `frontend/src/documents/external-rx.jsx`(템플릿에 `issueBlocked(meds)` — 이유 {ko,en,fr} 또는 null), `wiki/modules/pharmacy.md` 2.3, `wiki/manual-fr/pharmacy.md`(한 줄).
+- **공용 파일 변경**:
+  - `backend/src/routes/document.routes.js`(진료 세션 파일) · POST `/documents`에서 `template_code === 'external-rx'`일 때만 외부 줄 수를 세어 0이면 400 `No prescription marked external: nothing to issue` · 번호가 헛되이 쓰이지 않게. 다른 문서 종류는 그대로.
+  - `frontend/src/components/DocumentModal.jsx`(진료 세션 파일) · 템플릿이 `issueBlocked`를 가지면 Émettre를 끄고 그 이유를 발 아래에 보임(세 줄: 계산 한 줄, `doIssue` 첫 줄 막기, 단추 옆 안내·흐린 단추). 다른 템플릿은 `issueBlocked`가 없어 그대로.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(문구는 템플릿 안 {ko,en,fr}, 문서 쪽 관례대로)
+- **확인한 방법**(격리 9184): 모두 Interne인 환자 → API로 발급 요청 400, `document_log` 0줄 그대로 · 화면 FR: Émettre 꺼짐 + 안내 · 한 줄을 Externe로 바꾸고 다시 열기 → Émettre 켜짐, 발급 번호 **D26-00001**(막힌 시도가 번호를 쓰지 않았음) · `npm run build`, `node --check`.
+- **확인 못 한 것**: 진료 화면에서 여는 원외 처방전도 같은 규칙(외부 줄이 없으면 발급 안 됨) — 전에도 빈 종이였으므로 잃는 것은 없지만 진료 화면에서 직접 눌러 보지는 않음. 실행 중 DB에 이미 있는 빈 원외 처방전(총괄 확인 예정)은 건드리지 않음.
+- **위키**: `modules/pharmacy.md` 2.3, `manual-fr/pharmacy.md` 「Imprimer l'ordonnance…」.
+
 ## 2026-09-29 — 빈 값 처리(진료 6e11f56 뒤) + 포장 단위를 바꿀 때 알림 셋
 
 - **상태**: 확인 요청. develop `18c52cd` 위(ff). **Pharmacy.jsx · PharmacyStock.jsx 디자인 시작해도 됨**(이 커밋이 합쳐진 뒤).

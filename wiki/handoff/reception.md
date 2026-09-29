@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 뒤 접수 몫: 검색 결과 없음 안내, 생년월일 붙여넣기, 시험 스크립트 로그인
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `fd0cd02` ff 뒤 — 디자인 세션 색 작업 `92510ac` 포함)
+- **한 일** (총괄 지시 1·2):
+  - **시험 스크립트** `backend/test/reception.api.mjs`: 새 스택에서 `/auth/setup`이 로그인 ID를 늘 `admin`으로 정하는데(S3) 스크립트는 `rctest`로 로그인하려다 실패. → 비밀번호·이름만 보내고 **돌려받은 `user.login_id`**를 저장. 설정 직후 바로 임시 폴더에 저장(뒤에서 멈춰도 다음 실행이 로그인)
+  - **검색 결과 없음**: 0건이면 칸 아래 한 줄 `rc_noPatientFound` — FR «Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient ».», KO 「「…」 환자를 찾지 못했습니다 — 「+ 신규 환자 입력」을 누르세요.」. 검색어를 고치거나 신규 환자를 누르면 사라짐. 늦게 온 옛 검색 답은 버림(`searchSeq`)
+  - **생년월일 붙여넣기**: 세 칸 어디에 붙여도 `19900503`·`1990-05-03`(`/` `.` 공백, 한 자리 월·일)·`03/05/1990`(일 먼저)을 연·월·일로 나눔, 커서는 일 칸. 다른 글은 보통 붙여넣기. `MM/DD/YYYY`(미국식)는 받지 않음 — 현지는 일 먼저
+  - **디자인 세션 부탁**: 「N° dossier」 빈 칸 투명도 0.6 → 0.7. 새 색은 넣지 않음
+- **확인**:
+  - `npm install --no-package-lock` + `npm run build` 통과, `node --check` 통과
+  - 날짜 해석 13가지 경우를 node로 따로 돌려 봄
+  - 격리 스택 **새 DB**에서 `reception.api.mjs` 168 통과 · 0 실패, 두 번째 실행(저장된 로그인 재사용)도 168/0
+  - 화면(FR): 없는 이름 → 안내 줄, 한 글자 더 치면 사라짐. 붙여넣기 세 형식 → 1990 | 05 | 03. 붙여넣은 날짜로 저장 → DB `1990-05-03`
+  - 화면(KO): 안내 줄 한국어, 결과 있는 검색은 전처럼 목록
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `frontend/src/i18n/{ko,en,fr}.js`(`rc_` 구역에 `rc_noPatientFound` 하나), `backend/test/reception.api.mjs`, `wiki/modules/reception.md`(2·3절·변경 기록), `wiki/manual-fr/reception.md`(En bref 3, 생년월일, 메시지 표), `wiki/reference/changelog-1.5.0/reception.md`, 이 노트
+- **공용 파일 변경**: i18n 세 파일의 `rc_` 구역만
+- **다음**: 총괄이 coordinator.md에 「고친 것 모두 합침」을 적으면 통합 시험 다시(고친 곳 + 지난 날 방문 📅, 서류 한 장, 한국어 한 바퀴)
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 통합 시험(배포 전 점검) `wiki/reference/integration-test-2026-09-29.md`
 
 - **상태**: 확인 요청

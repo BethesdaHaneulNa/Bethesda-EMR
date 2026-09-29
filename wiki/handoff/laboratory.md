@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 B: 1366×768에서 저장 버튼·결과 표가 잘리던 것 · 모두 저장 알림
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `3d9091c` (출발점 `develop` `736c788`)
+- **한 일** (보고서 `wiki/reference/integration-test-2026-09-29.md`의 임상병리 몫):
+  - **B — 1366×768 잘림**: `Lab.jsx` 바깥 틀을 `minHeight: 100vh` → `height: 100vh` + 세로 flex, 본문 줄을 `calc(100vh - 86px)` → `flex: 1; minHeight: 0`, 입력 표·결과 표 칸에 `minHeight: 0`, 저장 줄 `flexShrink: 0`. 원인: 위 두 줄(TopBar + 도구 줄)이 86px보다 높아 페이지가 창보다 길었고, 저장 버튼과 결과 표 가로 스크롤 막대가 창 아래로 밀림 → 오른쪽 표의 「✕」 칸이 잘린 것처럼 보이고 옆으로 밀 수도 없었음.
+  - **작은 것 — 모두 저장했을 때**: 환자가 바로 닫혀 초록 문구가 안 보이던 것 → 화면 아래 가운데 초록 알림 「✓ Enregistré et terminé: …」 4초(`toast`, `role=status`).
+  - 색은 디자인 세션의 이름표 그대로(`var(--panel-2)`·`var(--ok-text-2)`·`var(--ok-a50)`) — 새 `#…` 없음.
+- **바꾼 파일**: `frontend/src/pages/Lab.jsx` · `wiki/modules/laboratory.md`(2절, 3.1, 7절 24, 8절) · `wiki/manual-fr/laboratory.md`(Pas à pas 6) · `wiki/reference/changelog-1.5.0/laboratory.md`(Less visible 한 줄)
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음(`lb_savedTests` 재사용)
+- **확인한 방법**: 빌드. 격리 스택(develop `fd0cd02`), 창 1366×768(프랑스어): 문서 높이 768(페이지 스크롤 없음), 「✓ Enregistrer · Terminer (Tout)」 위 718·아래 758(창 안), 결과 표 영역 아래 768(창 안), 머리 「2026-09-29 (1) · (2) · ✕」 여섯 칸이 459px 안에 모두 보임(가로 스크롤 필요 없음), 화면 사진으로도 확인. 한 검사 환자에서 값 입력 → 저장 → 알림 「✓ Enregistré et terminé: CBC」 + 가운데 「Sélectionnez un patient à gauche」, 4초 뒤 사라짐. 스택 내림.
+- **확인 못 한 것**: 밝은 화면(디자인 세션 전환 단추)에서의 알림 색 — 이름표만 써서 따라갈 것으로 봄. 폭 1024px 이하 입력 표 눌림(7절 24)은 그대로.
+- **기록 탭 판정 값 번역**: 설정 세션 몫(총괄 전달됨) — 할 일 없음.
+
 ## 2026-09-29 — 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
 
 - **상태**: 확인 요청 (문서만, 코드 변경 없음)

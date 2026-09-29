@@ -79,6 +79,9 @@ export function DocumentModal(props) {
   var previewRef = useRef(null);
 
   var template = getTemplate(code) || visible[0] || TEMPLATES[0];
+  // A template may say it has nothing to issue (the outside prescription with no drug
+  // marked external): { ko, en, fr } reason, or null. Pharmacy session, 2026-09-29.
+  var issueBlocked = template && template.issueBlocked ? template.issueBlocked(meds) : null;
   // The issue date in the clinic's own time. toISOString() is UTC, which in Madagascar
   // (UTC+3) dated anything issued between midnight and 03:00 the day before.
   var now = new Date();
@@ -144,7 +147,7 @@ export function DocumentModal(props) {
   }
 
   async function doIssue() {
-    if (!props.patient) return;
+    if (!props.patient || issueBlocked) return;
     // Issuing is what makes the text a record, so this is the point to stop an
     // unfinished "[anesthesia]" - a draft print is marked DRAFT and is left alone.
     var left = [];
@@ -209,7 +212,7 @@ export function DocumentModal(props) {
     pv = <Tpl.Layout values={P.values || {}} patient={P.patient || {}} clinic={P.clinic || clinic}
                      doctor={P.doctor || doctor} meds={P.meds || []} lang={lang} docNo={viewed.doc_no} dateStr={P.dateStr || ''} />;
   } else if (props.readOnly) {
-    pv = <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8', fontFamily: 'system-ui,sans-serif' }}>{L(UI.noHistory, lang)}</div>;
+    pv = <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-2)', fontFamily: 'system-ui,sans-serif' }}>{L(UI.noHistory, lang)}</div>;
   } else {
     pv = <template.Layout values={values} patient={fullPatient || props.patient} clinic={clinic}
                           doctor={doctor} meds={meds} lang={lang} docNo={'(' + L(UI.draft, lang) + ')'} dateStr={today} />;
@@ -224,12 +227,12 @@ export function DocumentModal(props) {
   var catIcon = category === 'prescription' ? '💊' : category === 'chart' ? '📋' : '📄';
   var histList = history.filter(function (d) { return visibleCodes.indexOf(d.template_code) >= 0; });
 
-  var dk = '#1a1f2e', bd = '#2a3142', tx = '#e2e8f0', t2 = '#94a3b8';
+  var dk = 'var(--panel-head)', bd = 'var(--border-2)', tx = 'var(--text)', t2 = 'var(--text-2)';
   var btn = { border: 'none', borderRadius: 5, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700 };
 
   return (
-    <div onClick={props.onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '96vw', height: '94vh', background: '#0f1117', border: '1px solid ' + bd, borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', color: tx }}>
+    <div onClick={props.onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={function (e) { e.stopPropagation(); }} style={{ width: '96vw', height: '94vh', background: 'var(--bg)', border: '1px solid ' + bd, borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', color: tx }}>
 
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', borderBottom: '1px solid ' + bd, background: dk }}>
@@ -238,9 +241,9 @@ export function DocumentModal(props) {
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 12, color: t2 }}>{L(UI.lang, lang)}</span>
             {['fr', 'en', 'ko'].map(function (l) {
-              return <button key={l} onClick={function () { setLang(l); }} style={Object.assign({}, btn, { padding: '4px 9px', background: lang === l ? '#2563eb' : '#1e2433', color: lang === l ? '#fff' : t2 })}>{l.toUpperCase()}</button>;
+              return <button key={l} onClick={function () { setLang(l); }} style={Object.assign({}, btn, { padding: '4px 9px', background: lang === l ? 'var(--accent-strong)' : 'var(--chip)', color: lang === l ? 'var(--on-fill)' : t2 })}>{l.toUpperCase()}</button>;
             })}
-            <button onClick={props.onClose} style={Object.assign({}, btn, { background: '#374151', color: tx })}>{L(UI.close, lang)} ✕</button>
+            <button onClick={props.onClose} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: tx })}>{L(UI.close, lang)} ✕</button>
           </div>
         </div>
 
@@ -248,11 +251,11 @@ export function DocumentModal(props) {
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
           {/* templates */}
-          {!props.readOnly ? <div style={{ width: 160, borderRight: '1px solid ' + bd, background: '#0c0f16', overflow: 'auto', flexShrink: 0 }}>
+          {!props.readOnly ? <div style={{ width: 160, borderRight: '1px solid ' + bd, background: 'var(--bg-deep)', overflow: 'auto', flexShrink: 0 }}>
             <div style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, color: t2, textTransform: 'uppercase' }}>{L(UI.templates, lang)}</div>
             {visible.map(function (tp) {
               var on = tp.code === code && mode === 'new';
-              return <div key={tp.code} className="pressable" onClick={function () { selectTemplate(tp.code); }} style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, borderLeft: on ? '3px solid #3b82f6' : '3px solid transparent', background: on ? '#3b82f612' : 'transparent', color: on ? '#93c5fd' : tx }}>{L(tp.name, lang)}</div>;
+              return <div key={tp.code} className="pressable" onClick={function () { selectTemplate(tp.code); }} style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, borderLeft: on ? '3px solid var(--accent-ink)' : '3px solid transparent', background: on ? 'var(--accent-a12)' : 'transparent', color: on ? 'var(--accent-text-2)' : tx }}>{L(tp.name, lang)}</div>;
             })}
           </div> : null}
 
@@ -264,14 +267,14 @@ export function DocumentModal(props) {
                 return <div key={f.key} style={{ marginBottom: 10 }}>
                   <label style={{ display: 'block', fontSize: 12, color: t2, marginBottom: 3 }}>{L(f.label, lang)}</label>
                   {f.type === 'textarea'
-                    ? <textarea value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} rows={f.rows || 3} style={{ width: '100%', boxSizing: 'border-box', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+                    ? <textarea value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} rows={f.rows || 3} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field-4)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
                     : f.type === 'checks'
                     /* Operation notes are mostly a fixed set of findings the surgeon picks from
                        (hernia type, appendicitis type, drain site). Typing those out every time is
                        slower and spells them differently each time, which makes them useless to
                        count later. Selections are stored as one comma-joined string so the saved
                        document, the print layout and the history list all keep working unchanged. */
-                    ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, padding: '7px 9px' }}>
+                    ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', background: 'var(--field-4)', border: '1px solid var(--field-border)', borderRadius: 4, padding: '7px 9px' }}>
                         {(f.options || []).map(function (opt) {
                           var cur = String(values[f.key] || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                           var on = cur.indexOf(opt) >= 0;
@@ -283,9 +286,9 @@ export function DocumentModal(props) {
                           </label>;
                         })}
                       </div>
-                    : <input value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0c0f16', border: '1px solid ' + bd, borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
+                    : <input value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field-4)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
                   {f.type !== 'checks' && openBrackets(values[f.key]).length
-                    ? <div style={{ marginTop: 3, fontSize: 11.5, color: '#fbbf24', lineHeight: 1.4 }}>⚠ {L(UI.bracketHint, lang)}: {openBrackets(values[f.key]).join('  ')}</div>
+                    ? <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--warn-text)', lineHeight: 1.4 }}>⚠ {L(UI.bracketHint, lang)}: {openBrackets(values[f.key]).join('  ')}</div>
                     : null}
                 </div>;
               })}
@@ -303,19 +306,19 @@ export function DocumentModal(props) {
           </div>
 
           {/* history */}
-          <div style={{ width: 230, borderLeft: '1px solid ' + bd, background: '#0c0f16', overflow: 'auto', flexShrink: 0 }}>
+          <div style={{ width: 230, borderLeft: '1px solid ' + bd, background: 'var(--bg-deep)', overflow: 'auto', flexShrink: 0 }}>
             <div style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, color: t2, textTransform: 'uppercase' }}>{L(UI.history, lang)}</div>
-            {histList.length === 0 ? <div style={{ padding: 12, color: '#475569', fontSize: 12 }}>{L(UI.noHistory, lang)}</div> : null}
+            {histList.length === 0 ? <div style={{ padding: 12, color: 'var(--text-4)', fontSize: 12 }}>{L(UI.noHistory, lang)}</div> : null}
             {histList.map(function (d) {
               var on = viewed && viewed.id === d.id;
               var tn = (getTemplate(d.template_code) && L(getTemplate(d.template_code).name, lang)) || d.template_name || d.template_code;
-              return <div key={d.id} onClick={function () { openSaved(d); }} style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #161b27', background: on ? '#3b82f612' : 'transparent' }}>
+              return <div key={d.id} onClick={function () { openSaved(d); }} style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft-2)', background: on ? 'var(--accent-a12)' : 'transparent' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: 12, color: d.voided ? '#ef4444' : '#cbd5e1', textDecoration: d.voided ? 'line-through' : 'none' }}>{d.doc_no}</span>
-                  {d.voided ? <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 700 }}>{L(UI.voided, lang)}</span> : null}
+                  <span style={{ fontWeight: 700, fontSize: 12, color: d.voided ? 'var(--danger-ink)' : 'var(--text-soft)', textDecoration: d.voided ? 'line-through' : 'none' }}>{d.doc_no}</span>
+                  {d.voided ? <span style={{ fontSize: 10, color: 'var(--danger-ink)', fontWeight: 700 }}>{L(UI.voided, lang)}</span> : null}
                 </div>
                 <div style={{ fontSize: 12, color: t2 }}>{tn}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>{fmtDate(d.issued_at)} · {d.issued_by_name || ''}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtDate(d.issued_at)} · {d.issued_by_name || ''}</div>
               </div>;
             })}
           </div>
@@ -323,11 +326,12 @@ export function DocumentModal(props) {
 
         {/* footer */}
         <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderTop: '1px solid ' + bd, background: dk, justifyContent: 'flex-end' }}>
-          {mode === 'view' && !props.readOnly ? <button onClick={newDoc} style={Object.assign({}, btn, { background: '#1e2433', color: t2 })}>{L(UI.newDoc, lang)}</button> : null}
-          {mode === 'view' && viewed && !viewed.voided && !props.readOnly ? <button onClick={doVoid} style={Object.assign({}, btn, { background: '#7f1d1d', color: '#fecaca' })}>{L(UI.voidBtn, lang)}</button> : null}
-          {mode === 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: '#374151', color: tx })}>🖨 {L(UI.reprint, lang)}</button> : null}
-          {!props.readOnly && mode !== 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: '#374151', color: tx })}>🖨 {L(UI.print, lang)}</button> : null}
-          {mode === 'new' && !props.readOnly ? <button onClick={doIssue} disabled={saving} style={Object.assign({}, btn, { background: saving ? '#1e3a5f' : '#16a34a', color: '#fff' })}>{saving ? '…' : L(UI.issue, lang)}</button> : null}
+          {mode === 'view' && !props.readOnly ? <button onClick={newDoc} style={Object.assign({}, btn, { background: 'var(--chip)', color: t2 })}>{L(UI.newDoc, lang)}</button> : null}
+          {mode === 'view' && viewed && !viewed.voided && !props.readOnly ? <button onClick={doVoid} style={Object.assign({}, btn, { background: 'var(--danger-box)', color: 'var(--danger-text-3)' })}>{L(UI.voidBtn, lang)}</button> : null}
+          {mode === 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: tx })}>🖨 {L(UI.reprint, lang)}</button> : null}
+          {!props.readOnly && mode !== 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: tx })}>🖨 {L(UI.print, lang)}</button> : null}
+          {mode === 'new' && !props.readOnly && issueBlocked ? <div style={{ flex: 1, alignSelf: 'center', color: 'var(--warn-text)', fontSize: 13, fontWeight: 700 }}>⚠ {L(issueBlocked, lang)}</div> : null}
+          {mode === 'new' && !props.readOnly ? <button onClick={doIssue} disabled={saving || !!issueBlocked} style={Object.assign({}, btn, { background: saving ? 'var(--accent-chip)' : issueBlocked ? 'var(--btn-neutral)' : 'var(--ok-2)', color: issueBlocked ? 'var(--text-2)' : 'var(--on-fill)', cursor: issueBlocked ? 'not-allowed' : btn.cursor })}>{saving ? '…' : L(UI.issue, lang)}</button> : null}
         </div>
       </div>
     </div>

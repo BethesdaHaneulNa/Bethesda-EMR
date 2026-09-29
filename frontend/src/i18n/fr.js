@@ -42,7 +42,7 @@ export default {
   searchNameChartPhone: "Nom / N° dossier / téléphone", searching: "Recherche...", newPatientInput: "Nouveau patient",
   newPatientAutoChart: "Généré automatiquement", updateVisit: "Modifier l'enregistrement", registerWaiting: "Enregistrer / Mettre en attente",
   cancelWaiting: "Annuler l'attente / Retirer", previousVisits: "Consultations précédentes", noPreviousVisits: "Aucun antécédent.",
-  selectPatientLeft: "Recherchez un patient ou saisissez un nouveau patient à gauche.", todayQueueCompleted: "Attente / Terminé aujourd'hui", queueSearch: "Rechercher dans la file", countPatients: "patients",
+  selectPatientLeft: "Recherchez un patient ou saisissez un nouveau patient à gauche.", selectPatientInList: "Choisissez un patient dans la liste à gauche.", todayQueueCompleted: "Attente / Terminé aujourd'hui", queueSearch: "Rechercher dans la file", countPatients: "patients",
   dispensingPending: "En attente", dispensingCompleted: "Délivré", dispenseComplete: "Terminer délivrance",
   pharmacySearchPlaceholder: "Patient / N° dossier / Médicament", selectRxPatient: "Sélectionnez une ordonnance à gauche.",
   pharmacyOnlyCompleted: "Seules les ordonnances des consultations terminées sont affichées.",
@@ -307,6 +307,7 @@ export default {
   rc_queueOfDate: "Attente / Terminé — {date}",
   rc_pastDateBanner: "Vous consultez une date passée ({date}) : consultation et mise en ordre (annuler, terminer) seulement. Les nouveaux enregistrements et les modifications se font à la date du jour.",
   rc_pastDateNoNew: "À une date passée, on ne peut ni créer ni modifier un enregistrement. Appuyez sur « Aujourd’hui » et enregistrez à la date du jour.",
+  rc_noPatientFound: "Aucun patient trouvé pour « {q} » — cliquez sur « + {btn} ».",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
@@ -560,6 +561,13 @@ export default {
   ph_chk_malaria: "Antipaludique — à vérifier par le médecin",
   ph_chk_topical: "Classé comprimé mais peut-être à usage externe (pommade, crème) — unité de conditionnement aussi",
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
+  ph_chkQtyDetail: "{note} ≈ {n} ; quantité importée : {qty}",
+  ph_dispenseConfirm: "Terminer la délivrance pour {name} ?",
+  ph_u_cap: "gél.",
+  ph_u_tab: "cp",
+  ph_u_bottle: "fl.",
+  ph_u_unit: "u.",
+  ph_u_sachet: "sachet",
   ph_packChangeWarn: "Le stock ({n}) n'a pas d'unité : après l'enregistrement, le même nombre est lu dans la nouvelle unité. Ensuite, recomptez dans Pharmacie → 📦 Stock avec « Inventaire ».",
   ph_rMixed: "⚠ Unités mélangées",
   ph_rMixedHint: "Ce mois-ci, des délivrances à l'unité de prise et d'autres au flacon ou au tube (conditionnement changé). « Délivré » additionne les deux unités.",
@@ -940,6 +948,10 @@ export default {
   se_osErrPackQty: "Ligne {n} : le nombre de flacons/tubes est un entier d'au moins 1.",
   se_osErrQuantity: "Ligne {n} : la quantité doit être supérieure à 0.",
   se_sys_pacsAddress_notPaired: "La visionneuse n'est pas appairée au serveur d'images — lancez pair-with-emr dans le dossier PACS du PC serveur",
+  se_osGone: "⚠ {n} médicament(s) absent(s) de la liste",
+  se_osGoneHint: "Les médicaments barrés ont été retirés de la liste. Ils ne sont pas prescrits quand l'ordonnance type est appliquée en consultation — supprimez-les ou remplacez-les par un médicament de la liste.",
+  se_osGoneLine: "absent de la liste",
+  se_osPick: "Stock {stock} · Prix {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

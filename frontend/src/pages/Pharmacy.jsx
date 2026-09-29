@@ -8,7 +8,8 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord, missingTimes } from '../documents/rx-dosing.js';
 import { PharmacyStock } from './PharmacyStock.jsx';
 
-function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Thousands: 12,300 in Korean and English, 12 300 in French (integration test C).
+function fmt(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
 function timeText(v, locale){
   var raw = v.consultation_time || v.dispensed_at || v.visit_date;
@@ -188,7 +189,9 @@ export default function PharmacyPage() {
     // A line with no stored total takes nothing off the shelf (the server reads the
     // total, it does not work one out), so say so before the pharmacist confirms.
     var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
-    var ask = patientName(sel) + ' '+t.dispenseComplete+'?';
+    // A whole sentence per language, so the word order is right (« Terminer la
+    // délivrance pour RAKOTO Jean ? », integration test C).
+    var ask = fill(t.ph_dispenseConfirm, { name: patientName(sel) });
     if(unquantified.length) ask = t.ph_noTotalConfirm + '\n' + unquantified.map(function(rx){ return '· ' + rx.drug_name; }).join('\n') + '\n\n' + ask;
     if(!window.confirm(ask)) return;
     setBusy(true);
@@ -250,40 +253,40 @@ export default function PharmacyPage() {
   var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
   var RX_COLS = '1.5fr .6fr .6fr .5fr .5fr .6fr .7fr 1fr';
 
-  var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
-  var green='#10b981', violet='#8b5cf6';
+  var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
+  var green='var(--ok)', violet='var(--violet)';
 
   function rxCard(v, where){
     var active = sel && sel.consultation_id === v.consultation_id;
     var badge = pastBadge(v);
-    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'#8b5cf615':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
+    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
       <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
         <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
-        <div style={{ fontSize: 16, color:tab==='pending'?'#fbbf24':'#6ee7b7', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
+        <div style={{ fontSize: 16, color:tab==='pending'?'var(--warn-text)':'var(--ok-text-2)', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
       </div>
       <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
-      {badge ? <div style={{ display:'inline-block', marginTop:4, color:'#fbbf24', background:'#f59e0b20', border:'1px solid #f59e0b50', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
+      {badge ? <div style={{ display:'inline-block', marginTop:4, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a50)', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
       <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
       <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
     </div>;
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#0f1117', color: tx, minHeight: '100vh', fontSize: 16 }}>
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, minHeight: '100vh', fontSize: 16 }}>
       <TopBar />
 
-      <div style={{ background:'#161a26', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
-        <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'#8b5cf620':'transparent', color:tab==='pending'?'#c4b5fd':t3, border:'1px solid '+(tab==='pending'?'#8b5cf650':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
-        <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'#10b98120':'transparent', color:tab==='completed'?'#6ee7b7':t3, border:'1px solid '+(tab==='completed'?'#10b98150':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
-        <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'#f59e0b20':'transparent', color:tab==='stock'?'#fcd34d':t3, border:'1px solid '+(tab==='stock'?'#f59e0b50':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
+      <div style={{ background:'var(--panel-2)', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
+        <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'var(--violet-a20)':'transparent', color:tab==='pending'?'var(--violet-text-4)':t3, border:'1px solid '+(tab==='pending'?'var(--violet-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
+        <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'var(--ok-a20)':'transparent', color:tab==='completed'?'var(--ok-text-2)':t3, border:'1px solid '+(tab==='completed'?'var(--ok-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
+        <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'var(--warn-a20)':'transparent', color:tab==='stock'?'var(--warn-text-2)':t3, border:'1px solid '+(tab==='stock'?'var(--warn-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
         {tab !== 'stock' ? <>
-        <button onClick={loadData} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
-        <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'#b45309':'#1e2433', color:sel?'#fde68a':'#475569', border:'1px solid '+(sel?'#f59e0b':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'#1e2433':'#1e2433', color:sel?'#ddd6fe':'#475569', border:'1px solid '+(sel?'#a855f7':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
+        <button onClick={loadData} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
+        <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'var(--warn-strong)':'var(--chip)', color:sel?'var(--on-fill-amber)':'var(--text-4)', border:'1px solid '+(sel?'var(--warn-ink)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
         </> : null}
         <div style={{ flex:1 }}></div>
-        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
+        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
       {tab === 'stock' ? <PharmacyStock /> :
@@ -291,19 +294,19 @@ export default function PharmacyPage() {
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
           <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
-            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:scBg, border:'1px solid '+bd2, borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
+            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
           </div>
           <div style={{ flex:1, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
             {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
-            {tab==='pending' && past ? <div style={{ borderBottom:'2px solid #f59e0b60', background:'#f59e0b0d' }}>
+            {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
-                <div style={{ flex:1, fontWeight:800, fontSize: 14, color:'#fbbf24' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
-                <button onClick={function(){ setPast(null); }} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
+                <div style={{ flex:1, fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
+                <button onClick={function(){ setPast(null); }} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
               </div>
               {past.groups.length === 0 ? <div style={{ padding:'8px 12px', color:t3, fontSize: 14 }}>{t.ph_noPastRx}</div> : null}
               {past.groups.map(function(v){ return rxCard(v, 'past'); })}
-              {past.older > 0 ? <div style={{ padding:'8px 12px', color:'#fca5a5', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_olderRx, { count: past.older, n: past.days })}</div> : null}
+              {past.older > 0 ? <div style={{ padding:'8px 12px', color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_olderRx, { count: past.older, n: past.days })}</div> : null}
             </div> : null}
             {!loading && filtered.map(function(v){ return rxCard(v, 'queue'); })}
           </div>
@@ -320,56 +323,56 @@ export default function PharmacyPage() {
             <div style={{ padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight:900, color:'#f8fafc' }}>{patientName(sel)}</div>
+                  <div style={{ fontSize: 22, fontWeight:900, color:'var(--text-strong-2)' }}>{patientName(sel)}</div>
                   <div style={{ marginTop:4, fontSize: 16, color:t2 }}>{t.chartNo} {sel.chart_no} · {t.doctor} {sel.doctor_name || '-'} · {timeText(sel, locale)}</div>
-                  {sel.allergies ? <div style={{ marginTop:6, color:'#fca5a5', background:'#ef444420', border:'1px solid #ef444450', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
-                  {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'#fbbf24', background:'#f59e0b20', border:'1px solid #f59e0b60', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
-                  {selGone ? <div style={{ marginTop:6, color:'#fde68a', background:'#f59e0b20', border:'1px solid #f59e0b60', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
+                  {sel.allergies ? <div style={{ marginTop:6, color:'var(--danger-text-2)', background:'var(--danger-a20)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
+                  {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
+                  {selGone ? <div style={{ marginTop:6, color:'var(--warn-text-3)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
-                  <div style={{ color:'#f8fafc', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug)}</div>
-                  {anyUnquantified ? <div style={{ color:'#fca5a5', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
+                  <div style={{ color:'var(--text-strong-2)', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug, lc.lang)}</div>
+                  {anyUnquantified ? <div style={{ color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
                 </div>
               </div>
             </div>
 
             <div style={{ padding:16, overflow:'auto', flex:1 }}>
               <div style={{ background:pn, border:'1px solid '+bd, borderRadius:8, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'#161a26', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
+                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
                   {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
                 </div>
                 {(sel.prescriptions||[]).map(function(rx){
                   var warn = refillWarn(rx.drug_code);
                   var total = storedTotal(rx);
                   var per = perDose(rx);
-                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:RX_COLS, borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'#ef44440d':'transparent' }}>
+                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:RX_COLS, borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'var(--danger-a0d)':'transparent' }}>
                     <div style={{ padding:'10px', fontWeight:800, color:tx }}>
                       <div>{rx.drug_name}</div>
                       <div style={{ color:t3, fontSize: 16, marginTop:2 }}>{rx.drug_code}</div>
                       {tab==='pending' ? <div style={{ display:'inline-flex', marginTop:5, borderRadius:5, overflow:'hidden', border:'1px solid '+bd2 }}>
                         {[['internal',t.internalRx||'원내'],['external',t.externalRx||'원외']].map(function(o){
                           var on=(rx.dispense_type||'internal')===o[0];
-                          var c=o[0]==='external'?'#f59e0b':'#10b981';
-                          return <button key={o[0]} onClick={function(){ setDispenseType(rx.id,o[0]); }} style={{ background:on?c:'#1e2433', color:on?'#0f1117':t2, border:'none', padding:'3px 12px', cursor:'pointer', fontSize:13, fontWeight:800 }}>{o[1]}</button>;
+                          var c=o[0]==='external'?'var(--warn)':'var(--ok)';
+                          return <button key={o[0]} onClick={function(){ setDispenseType(rx.id,o[0]); }} style={{ background:on?c:'var(--chip)', color:on?'var(--on-bright)':t2, border:'none', padding:'3px 12px', cursor:'pointer', fontSize:13, fontWeight:800 }}>{o[1]}</button>;
                         })}
-                      </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'#f59e0b20', color:'#fbbf24', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
-                      {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
+                      </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'var(--warn-a20)', color:'var(--warn-text)', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
+                      {warn? <div style={{ marginTop:4, color:'var(--danger-text-2)', background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
-                    <div style={{ padding:'10px', color: per && per.clean ? tx : isPack(rx) ? t3 : '#fbbf24', fontWeight:800 }}>
+                    <div style={{ padding:'10px', color: per && per.clean ? tx : isPack(rx) ? t3 : 'var(--warn-text)', fontWeight:800 }}>
                       {per && per.clean ? fmtAmount(per.value) : '—'}
                       {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color: missingTimes(rx) ? '#fbbf24' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
+                    <div style={{ padding:'10px', color: missingTimes(rx) ? 'var(--warn-text)' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
                       {rx.frequency || '-'}
                       {missingTimes(rx) ? <div style={{ fontSize: 12, marginTop:2 }}>{t.ph_timesCheck}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : '#fca5a5', fontWeight: hasTotal(rx) ? 400 : 800 }}>
+                    <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : 'var(--danger-text-2)', fontWeight: hasTotal(rx) ? 400 : 800 }}>
                       {hasTotal(rx) ? (isPack(rx) ? packWord(rx, lc.lang, total) : fmtAmount(total)) : t.ph_noTotal}
-                      {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'#fbbf24', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
+                      {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'var(--warn-text)', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
                   </div>;
@@ -377,14 +380,14 @@ export default function PharmacyPage() {
               </div>
             </div>
 
-            {tab==='pending' ? <div style={{ padding:'10px 16px', borderTop:'1px solid '+bd, background:'#161a26', display:'flex', justifyContent:'flex-end' }}>
-              <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
+            {tab==='pending' ? <div style={{ padding:'10px 16px', borderTop:'1px solid '+bd, background:'var(--panel-2)', display:'flex', justifyContent:'flex-end' }}>
+              <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
             </div> : null}
           </>}
         </div>
 
         <div style={{ borderLeft:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, overflow:'hidden' }}>
-          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'#60a5fa' }}>{t.pastVisits}</div>
+          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.pastVisits}</div>
           <div style={{ flex:1, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
       </div>}

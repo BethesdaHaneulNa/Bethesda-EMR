@@ -51,7 +51,7 @@ export default {
   searchNameChartPhone: "Name / Chart No. / Phone", searching: "Searching...", newPatientInput: "New Patient",
   newPatientAutoChart: "Auto generated for new patient", updateVisit: "Update Registration", registerWaiting: "Register / Add to Queue",
   cancelWaiting: "Cancel Waiting / Remove", previousVisits: "Previous Visits", noPreviousVisits: "No previous visits.",
-  selectPatientLeft: "Search an existing patient or enter a new patient on the left.", todayQueueCompleted: "Today Queue / Completed", queueSearch: "Search queue", countPatients: "patients",
+  selectPatientLeft: "Search an existing patient or enter a new patient on the left.", selectPatientInList: "Choose a patient from the list on the left.", todayQueueCompleted: "Today Queue / Completed", queueSearch: "Search queue", countPatients: "patients",
   dispensingPending: "Dispensing Pending", dispensingCompleted: "Dispensed", dispenseComplete: "Dispense Complete",
   pharmacySearchPlaceholder: "Patient / Chart No. / Medicine", selectRxPatient: "Select a prescription patient on the left.",
   pharmacyOnlyCompleted: "Only medication orders from completed consultations are shown.",
@@ -316,6 +316,7 @@ export default {
   rc_queueOfDate: "Waiting / Done — {date}",
   rc_pastDateBanner: "You are looking at a past date ({date}): viewing and tidying up (cancel, complete) only. New registrations and edits are made on today’s date.",
   rc_pastDateNoNew: "Registrations on a past date cannot be created or edited. Press \"Today\" and register on today’s date.",
+  rc_noPatientFound: "No patient found for \"{q}\" — press \"+ {btn}\".",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
@@ -569,6 +570,13 @@ export default {
   ph_chk_malaria: "Antimalarial - for the doctor to check",
   ph_chk_topical: "Filed as a tablet but may be topical (ointment, cream) - pack unit too",
   ph_chk_packlabel: "Pack word (jar? bottle?)",
+  ph_chkQtyDetail: "{note} ≈ {n}; imported quantity: {qty}",
+  ph_dispenseConfirm: "Finish dispensing for {name}?",
+  ph_u_cap: "caps",
+  ph_u_tab: "tab",
+  ph_u_bottle: "bottle",
+  ph_u_unit: "unit",
+  ph_u_sachet: "sachet",
   ph_packChangeWarn: "The stock number ({n}) has no unit: once saved, the same number is read in the new unit. After saving, recount it in Pharmacy → 📦 Stock with Count.",
   ph_rMixed: "⚠ Units mixed",
   ph_rMixedHint: "This month has lines dispensed by the dose and lines dispensed by the bottle or tube (pack unit changed). Dispensed adds both units.",
@@ -949,6 +957,10 @@ export default {
   se_osErrPackQty: "Line {n}: the bottle/tube count is a whole number of at least 1.",
   se_osErrQuantity: "Line {n}: the quantity must be greater than 0.",
   se_sys_pacsAddress_notPaired: "The viewer is not paired with the image server — run pair-with-emr in the PACS folder on the server PC",
+  se_osGone: "⚠ {n} drug(s) no longer in the list",
+  se_osGoneHint: "Struck-through drugs have been removed from the drug list. They are not prescribed when this set is applied in a consultation — remove them or replace them with a drug from the list.",
+  se_osGoneLine: "not in the list",
+  se_osPick: "Stock {stock} · Price {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

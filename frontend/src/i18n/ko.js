@@ -42,7 +42,7 @@ export default {
   searchNameChartPhone: "이름 / 차트번호 / 연락처", searching: "검색 중...", newPatientInput: "신규 환자 입력",
   newPatientAutoChart: "신규 환자는 자동 생성", updateVisit: "접수 정보 수정", registerWaiting: "접수 / 대기 등록",
   cancelWaiting: "대기 취소 / 목록에서 빼기", previousVisits: "이전 진료 기록", noPreviousVisits: "이전 진료 기록이 없습니다.",
-  selectPatientLeft: "왼쪽에서 기존 환자를 검색하거나 신규 환자를 입력하세요.", todayQueueCompleted: "오늘 대기 / 완료", queueSearch: "대기목록 검색", countPatients: "명",
+  selectPatientLeft: "왼쪽에서 기존 환자를 검색하거나 신규 환자를 입력하세요.", selectPatientInList: "왼쪽 목록에서 환자를 고르세요.", todayQueueCompleted: "오늘 대기 / 완료", queueSearch: "대기목록 검색", countPatients: "명",
   dispensingPending: "조제 대기", dispensingCompleted: "조제 완료", dispenseComplete: "조제 완료",
   pharmacySearchPlaceholder: "환자명 / 차트번호 / 약명 검색", selectRxPatient: "왼쪽에서 처방 환자를 선택하세요.",
   pharmacyOnlyCompleted: "진료 완료된 약 오더만 약국 대기 목록에 표시됩니다.",
@@ -307,6 +307,7 @@ export default {
   rc_queueOfDate: "대기 / 완료 — {date}",
   rc_pastDateBanner: "지난 날짜({date})를 보는 중입니다. 보기와 정리(대기 취소·완료로)만 되고, 새 접수와 접수 수정은 오늘 날짜에서 합니다.",
   rc_pastDateNoNew: "지난 날짜의 접수는 새로 만들거나 고칠 수 없습니다. 「오늘로」를 눌러 오늘 날짜에서 접수하세요.",
+  rc_noPatientFound: "「{q}」 환자를 찾지 못했습니다 — 「+ {btn}」을 누르세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",
@@ -560,6 +561,13 @@ export default {
   ph_chk_malaria: "말라리아약 — 의사 확인",
   ph_chk_topical: "정으로 되어 있으나 외용약(연고·크림)일 수 있음 — 포장 단위도",
   ph_chk_packlabel: "포장 단위 말(통? 병?)",
+  ph_chkQtyDetail: "{note} ≈ {n}, 가져온 수량 {qty}",
+  ph_dispenseConfirm: "{name} 환자의 조제를 완료할까요?",
+  ph_u_cap: "캡슐",
+  ph_u_tab: "정",
+  ph_u_bottle: "병",
+  ph_u_unit: "개",
+  ph_u_sachet: "포",
   ph_packChangeWarn: "재고 숫자({n})에는 단위가 없어서, 저장하면 같은 숫자를 새 단위로 읽습니다. 저장한 뒤 약국 → 📦 재고 탭에서 「실사」로 새 단위로 세어 넣으세요.",
   ph_rMixed: "⚠ 단위 섞임",
   ph_rMixedHint: "이 달에 알·정 단위 조제와 병·튜브 단위 조제가 함께 있습니다(포장 단위를 바꾼 약). 조제 출고는 두 단위를 더한 값입니다.",
@@ -940,6 +948,10 @@ export default {
   se_osErrPackQty: "{n}번째 줄: 병·튜브 수는 1 이상의 정수입니다.",
   se_osErrQuantity: "{n}번째 줄: 수량은 0보다 커야 합니다.",
   se_sys_pacsAddress_notPaired: "영상 창이 영상 서버와 짝이 맞지 않음 — 서버 PC의 PACS 폴더에서 pair-with-emr 실행",
+  se_osGone: "⚠ {n}개 약이 목록에 없음",
+  se_osGoneHint: "줄이 그어진 약은 약 목록에서 빠진 약입니다. 진료에서 이 약속처방을 불러도 처방되지 않습니다 — 지우거나 목록에 있는 약으로 바꾸세요.",
+  se_osGoneLine: "목록에 없음",
+  se_osPick: "재고 {stock} · 가격 {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

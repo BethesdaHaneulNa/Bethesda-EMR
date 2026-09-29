@@ -58,10 +58,12 @@ Une partie de ce guide concerne **tout le personnel** : changer son propre mot d
 1. **Paramètres** → **Médicaments**. Utilisez **Rechercher** pour trouver le médicament.
 2. **Modifier** sur sa ligne.
 3. **Prix unitaire** : le prix d'une unité (un comprimé, ou un flacon si la case « Délivré à l'unité de conditionnement » est cochée).
-4. **Sauver**.
+4. **Sauver** (en bas de la fenêtre ; sur un petit écran, seules les cases défilent, les boutons restent visibles). Le message **✓ Enregistré** confirme.
 5. Le **Stock** ne se change pas ici : il se change dans **Pharmacie** → **Stock**.
 
-<!-- à revoir : l'onglet Médicaments appartient à la session Pharmacie et a changé le 2026-09-29 (liste importée, colonnes Forme, « À vérifier sur place ») ; relire avec la fenêtre finale. -->
+**Le cadre jaune « À vérifier sur place (liste importée) »** : la liste des médicaments vient de l'ancien inventaire. Le cadre dit ce qui reste à contrôler sur ce médicament (par exemple une quantité différente de la note d'origine). Il ne bloque pas : vous pouvez mettre le prix. Le cadre disparaît quand la pharmacie marque le médicament « Vérifié » dans **Pharmacie** → **Stock**.
+
+**Deux lignes avec le même nom** (par exemple deux « Amoxicillin 500mg Gélule », MED-0068 et MED-0069) : ce sont deux codes de l'ancien inventaire. La fenêtre l'indique (« Même nom sous un autre code — MED-0069 »). Mettez le prix sur **les deux**, et signalez-le à la pharmacie, qui décidera s'il faut n'en garder qu'un.
 
 ### Créer une ordonnance type
 
@@ -69,7 +71,7 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 
 1. **Paramètres** → **Ordonnances types** → **Nouvel ensemble**.
 2. **Nom de l'ensemble** (par exemple « Paludisme adulte »). **Groupe (dossier)** si vous voulez les ranger.
-3. À droite, choisissez **Médicament** ou **Examen / Imagerie**, tapez le nom, **Rechercher**, puis cliquez sur le résultat. La ligne apparaît dans **Éléments**.
+3. À droite, choisissez **Médicament** ou **Examen / Imagerie**, tapez le nom, **Rechercher**, puis cliquez sur le résultat. La ligne apparaît dans **Éléments**. Sous chaque médicament trouvé : son **Stock** et son **Prix** — utile quand deux médicaments ont le même nom.
 4. Pour un médicament, remplissez sur la ligne :
    - **Dose/j** : la quantité totale par jour (par exemple 4 comprimés par jour).
    - **Fois** : en combien de prises par jour (par exemple 2).
@@ -79,6 +81,8 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 5. Pour un médicament délivré par flacon ou tube, une case de plus apparaît (**Flacon**, **Tube**…) : le nombre de flacons.
 6. Pour un examen : **Qté**, **Fois**, **Jours** (1, 1, 1 en général).
 7. **Sauver**. Si **Dose/j** ou **Jours** manque sur une ligne de médicament, la case devient rouge et l'enregistrement est refusé : complétez-la.
+
+**« ⚠ 2 médicament(s) absent(s) de la liste »** sur une ordonnance type : ces médicaments (barrés) ont été retirés de la liste des médicaments. Ils ne sont **pas prescrits** quand on applique l'ordonnance type en consultation. **Modifier** → ✕ sur la ligne barrée, ajoutez le bon médicament de la liste, **Sauver**.
 
 ### Régler les valeurs de référence des analyses
 
@@ -117,6 +121,7 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 3. Les colonnes : **Quand**, **Qui**, **Quoi**, **Patient**, **Modification** (ancienne valeur barrée → nouvelle valeur).
 4. **◀ Précédent** / **Suivant ▶** pour les pages.
 5. Personne ne peut modifier ni effacer ce journal. Un mot de passe changé est noté, jamais sa valeur.
+6. Ne sont **pas** notés : le prix d'un médicament, les ordonnances types, une première saisie.
 
 ## Si ce message apparaît
 

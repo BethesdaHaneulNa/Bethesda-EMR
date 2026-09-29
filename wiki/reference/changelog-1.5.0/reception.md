@@ -78,9 +78,13 @@ year carries on from the highest. Past 99,999 a sixth digit is added.
   birth date, the server being unreachable, a record that no longer exists. Confirmations
   are sentences ("Patient mis en attente — RAKOTO Jean (N° dossier 26-00001)") instead of
   a button label with a tick. The birth-date boxes read AAAA / MM / JJ in French, and
-  typing the month first no longer moves it into the year box.
+  typing the month first no longer moves it into the year box. A whole date pasted into
+  them (19900503, 1990-05-03, or 03/05/1990 day first) is split into the three boxes;
+  before, the year box kept "1990" and dropped the rest.
 - Patient search finds a name typed first-name-first, and `%` or `_` in the box are
-  searched as characters instead of matching everyone.
+  searched as characters instead of matching everyone. A search that finds nobody now
+  says so under the box ("Aucun patient trouvé pour « … »") — before, nothing happened
+  and staff could not tell whether the search had run.
 - In the find-patient window used by consultation, payment and the lab, a visit
   cancelled at reception is greyed out and labelled.
 

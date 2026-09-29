@@ -51,9 +51,13 @@ const pw = () => crypto.randomBytes(9).toString('base64url');
 let creds = fs.existsSync(CREDS) ? JSON.parse(fs.readFileSync(CREDS)) : { staff: {} };
 if (process.env.RC_TEST_LOGIN) creds.admin = { login_id: process.env.RC_TEST_LOGIN, password: process.env.RC_TEST_PASSWORD };
 if (!creds.admin) {
-  creds.admin = { login_id: 'rctest', password: pw() };
-  const s = await call('POST', '/auth/setup', { ...creds.admin, name: 'RC Test Admin' });
+  // Setup picks the login id itself (always 'admin' since S3), so keep the one it returns,
+  // and save at once: if a later step throws, the next run can still log in.
+  const password = pw();
+  const s = await call('POST', '/auth/setup', { password, name: 'RC Test Admin' });
   if (s.status !== 200) throw new Error('setup failed (stack already has an admin? set RC_TEST_LOGIN/RC_TEST_PASSWORD) ' + JSON.stringify(s));
+  creds.admin = { login_id: s.data.user.login_id, password };
+  fs.writeFileSync(CREDS, JSON.stringify(creds));
 }
 const adminLogin = await call('POST', '/auth/login', creds.admin);
 if (adminLogin.status !== 200) throw new Error('admin login failed ' + JSON.stringify(adminLogin));
