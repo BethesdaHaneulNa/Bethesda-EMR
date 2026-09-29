@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 합쳐짐(현황 파악 · 1차 수정 · 자동 새로고침 · 서버 권한 S2 · ⑦ 내원구분 · ④ 중복 경고). 남은 항목은 7절 끝 「남은 것」 — 결정 필요 / 결정 없이 가능
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 환자 인적사항 수정 기록(변경 로그) — 확인 요청. 다음: ⑮ → ⑯ → ⑬ → ⑭·악센트 (총괄이 정한 순서, 결정 불필요)
 
 ## 1. 이 모듈이 하는 일
 
@@ -40,6 +40,8 @@
 | **Terminer → (완료로 →)** · **← En attente (← 대기로)** | 오른쪽 목록 각 환자 아래. 상태를 손으로 옮김(2.5) |
 | **Nouvelle (초진)** · **Suivi (재진)** · **Sans frais (진료비 없음)** | 내원구분 — 진료비 종류. EMR이 먼저 골라 두고, 맞지 않으면 누름(2.4) |
 | 창 안의 **Choisir ce patient (이 환자로)** · **Nouveau dossier quand même (그래도 새로 등록)** · **Annuler (취소)** | 같은 이름 환자가 있을 때 뜨는 창의 단추(2.2) |
+
+> 환자 인적사항(이름·생년월일·성별·전화·알레르기·접수과 메모 등)을 **고치면** 누가 무엇을 무엇으로 바꿨는지 뒤에서 기록됩니다(관리자만 설정 → 기록에서 봄). 화면에는 아무 표시가 없고, 처음 등록할 때나 고친 것이 없을 때는 기록되지 않습니다.
 
 ### 2.2 처음 온 환자 접수하기
 
@@ -268,7 +270,7 @@
 | `GET /api/patients/chart/:chartNo` | 차트번호로 찾기 | 프론트에서 부르는 곳 없음 (확인함) |
 | `GET /api/patients/similar?last_name=&first_name=` | 성·이름이 같은 환자(최대 10명, 최근 등록순): `id` `chart_no` `last_name` `first_name` `date_of_birth` `gender` `phone` `mobile` `last_visit_date`(취소 아닌 마지막 내원일). 대소문자·앞뒤·겹친 공백 무시, **성·이름 뒤바뀜도 같은 것으로**. 악센트는 적힌 그대로 비교. 둘 중 하나가 비면 `[]`. `/:id`보다 **먼저** 선언(아니면 `similar`를 id로 받음). SQL 정규식은 `[[:space:]]+` — JS 템플릿 안의 `\s`는 역슬래시가 빠져 Postgres가 글자 s를 바꾸므로 | 접수 |
 | `POST /api/patients` | 등록. 차트번호 자동. `badPatient` 검사 (성·이름 **둘 중 하나**만 있으면 통과) | 접수 |
-| `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함 | 접수 |
+| `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함. **트랜잭션**: 행을 `FOR UPDATE`로 읽고 → 고치고 → **변경 기록** `reception.patient.edit`을 같은 트랜잭션에(아래) | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
 | `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사 + `has_active_bill`(취소 안 된 청구가 있는지). 접수시각순 | 접수(30초마다), 진료(15초마다) |
@@ -278,6 +280,13 @@
 | `PUT /api/visits/:id` | 수정. **본문에 있는 칸만** 씀 (`VISIT_FIELDS`: `visit_type` `department_id` `doctor_id` `chief_complaint` `reception_memo` `status`). `department_id`·`doctor_id`는 `null`/`''`로 **비울 수 있음**. `visit_type`·`status`는 `null`이면 무시, 값이 있으면 POST와 같은 목록으로 검사(400). 빈 본문은 400 | 접수, 수납(`visit_type`만) |
 
 두 라우트 파일의 모든 경로(읽기 포함)는 DB 오류를 공용 `utils/dbError.js`의 `sendDbError`로 4xx(형식 오류 400 — 예: `/patients/abc`, `limit=x` — 없는 참조 400, 중복 409 등)로 돌려줌. 예전에는 전부 500에 DB 원문이었음.
+
+**변경 기록** (2026-09-29 실장님 결정, `wiki/03-change-log.md`) — `PUT /patients/:id`만 남김. 새 환자 등록(`POST`)은 남기지 않음.
+- `writeAudit(client, req, { action: ACTIONS.PATIENT_EDIT, patient_id, entity: 'patient', entity_id, summary, before, after })` — 같은 트랜잭션의 `client`라 저장이 롤백되면 기록도 없음. 기록이 실패해도 저장은 됨(함수 규칙).
+- `before`·`after`는 `auditView()`: `PATIENT_FIELDS` 13칸(성·이름·신분증 번호·생년월일·성별·전화·휴대폰·주소·도시·지역·혈액형·알레르기·접수과 메모). 함수가 **다른 칸만** 남김. `summary`는 바뀐 칸 이름들(예: `phone, allergies`).
+- **빈 칸은 `null`과 `''`를 같은 것으로 봄**(`date_of_birth`만 `null`). 접수는 기존 환자로 접수할 때마다 인적사항을 같이 저장하고, 빈 칸을 `''`로 보냄 — 이 처리가 없으면 아무것도 안 고친 접수마다 「전화 null → ''」 같은 줄이 쌓임.
+- 환자 이름·차트번호는 함수가 `patient_id`로 채우는데, 같은 트랜잭션 안에서 읽으므로 **고친 뒤의 이름**이 들어감(이름을 고친 줄이면 새 이름. 옛 이름은 `before_value`에 있음).
+- 환자 비활성(숨기기)은 아직 없음(7절 ⑲ — 결정 대기). 생기면 `is_active`를 `auditView`에 더할 것.
 
 **날짜 형식**: `date_of_birth`·`visit_date` 같은 DATE 칸은 `'YYYY-MM-DD'` 문자열로 나감 — 총괄 `7ad4387`이 `config/database.js`에서 node-postgres의 DATE 파서를 바꿈. 그 전에는 UTC 타임스탬프로 나가 하루 이르게 보였음 (7절 ㉑).
 
@@ -340,7 +349,7 @@
 - **PACS** — 워크리스트가 `patient.chart_no`를 DICOM **PatientID**로, `date_of_birth`·`gender`를 그대로 장비에 보냄 (`worklist.routes.js` 70·85행, `pacs.routes.js` 159행). 차트번호가 바뀌면 영상과 환자의 연결이 끊어집니다.
 - **통계** — `visit`를 날짜 범위로 세서 총 내원, 초진(`newVisit`)/재진(`followUp`)/기타, 상태별, 진료과별, 의사별, 월별 추이를 냄 (`stats.routes.js` 28~55·146행). 2026-09-29부터 접수에서 초진/재진을 고르므로 수납 전에도 맞게 잡힘(그 전 기록은 수납 전까지 모두 `newVisit`이었음).
 - **문서** — `DocumentModal`이 `/patients/:id`로 환자 정보를 받아 인쇄 양식 머리에 넣음 (주소·전화 포함).
-- **설정** — 담당의사 목록은 `/admin/doctors`(`role='doctor'`이고 `active`인 직원), 진료과는 직원의 소속과(`staff.department_id`). 설정 화면 직원 탭에서 정합니다.
+- **설정** — 담당의사 목록은 `/admin/doctors`(`role='doctor'`이고 `active`인 직원), 진료과는 직원의 소속과(`staff.department_id`). 설정 화면 직원 탭에서 정합니다. 환자 인적사항 수정 기록은 설정 → 「기록」 탭(설정 권한, 설정 세션이 만드는 중)에서 읽음 — 표 `audit_log`, action `reception.patient.edit`.
 
 ## 6. 설정 항목
 
@@ -412,6 +421,7 @@
 | ⑮ | 환자 찾기 창의 외래 내역에서 **취소된 내원에 「ANNULÉ」 표시**(지금은 구분 없이 나와 진료·수납·검사에서 고를 수 있음) | 작음. 공용 `PatientFinder.jsx`(접수 주관) — 다섯 화면에 보임, 인계 노트에 알림 |
 | ⑯ | 기존 환자 검색이 「이름 성」 순서로도 찾게, 검색어의 `%` `_`를 글자로, `limit`에 숫자 검사 | 작음. `patient.routes.js` `GET /` — 모든 화면의 환자 검색이 조금 넓어짐 |
 | ⑭ 나머지 | 생년월일 칸에서 연도 없이 월부터 치면 값이 연도 칸으로 옮겨가는 것 | 작음. 접수 화면 `DobInput`만 |
+| 날짜 검사 | API로 `2020-02-30` 같은 없는 날짜를 보내면 400이 아니라 500(`badPatient`의 `new Date()`가 3월 1일로 넘겨 통과시키고, DB 오류 22008은 `sendDbError` 표에 없음). 화면은 저장 전에 막아서 직원에게는 안 보임 | 한두 줄. `utils/validate.js`·`utils/dbError.js` — **총괄 파일**. ⑬과 같이 고치면 됨 |
 | ⑬ | 서버 검사의 성별 `O`와 DB의 `M`/`F`가 어긋남 → 화면과 DB처럼 `M`/`F`로 | 한 줄. `utils/validate.js`는 **총괄 파일** — 총괄에 부탁 |
 | 동명이인 | 악센트만 다른 이름(é/e)도 같은 이름으로 보기 | 작음. `GET /patients/similar` — 「이름만」 결정 안에서 비교를 넓히는 것 |
 
@@ -446,4 +456,5 @@
 | 2026-09-29 | 접수 권한이 없는 계정은 환자 등록·접수 불가, 수납 계정은 진료비 종류만, 권한이 빠지면 안내 (⑧ · S2) | 라우트별 `permMiddleware`, 시험 `backend/test/reception.api.mjs` (4절 권한 표) | `3e03fa4` |
 | 2026-09-29 | 내원구분 단추 초진·재진·진료비 없음, 같은 과면 재진을 골라 둠, 수납 뒤 잠김, 수정 때 수납이 바꾼 값을 덮지 않음 (⑦) | `suggestedVisitType()`, `visitTypeSource`, `/visits/today`의 `has_active_bill`, `/visits/patient`에 접수 권한 (3절) | `520706d` |
 | 2026-09-29 | 같은 이름 환자가 있으면 새 차트 전에 묻기(이 환자로 / 그래도 새로 / 취소), 오늘 이미 접수된 환자면 두 번째 접수 전에 묻기 (③ ④) | `GET /patients/similar`, `confirmNewPatient()`, `postVisit()`, `POST /visits` 409·`allow_duplicate` (3·4절) | `25a7fac` |
-| 2026-09-29 | 2절에 내원구분·중복 경고 사용법 정리, 7절 남은 것을 결정 필요 / 결정 없이 가능으로, 이 변경 기록 정리 | 위키만 | (이 커밋) |
+| 2026-09-29 | 환자 인적사항을 고치면 뒤에서 기록(누가·무엇을·전→후). 화면은 그대로, 안 고친 접수는 기록 없음 | `PUT /patients/:id` 트랜잭션 + `writeAudit(PATIENT_EDIT)`, `auditView()` (4절 변경 기록) | (이 커밋) |
+| 2026-09-29 | 2절에 내원구분·중복 경고 사용법 정리, 7절 남은 것을 결정 필요 / 결정 없이 가능으로, 이 변경 기록 정리 | 위키만 | `ac5209e` |
