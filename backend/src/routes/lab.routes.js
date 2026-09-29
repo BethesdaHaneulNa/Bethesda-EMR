@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -350,6 +351,11 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
     const pt = await patientForOrder(client, req.params.orderItemId);
     const ranges = await rangesFor(client, master.rows.map(function (m) { return m.id; }));
 
+    // What was there before, for the change log (decision 10: a changed or
+    // cleared result is logged, a first entry is not; nothing shows on screen).
+    const before = await client.query('SELECT * FROM lab_result WHERE order_item_id = $1 ORDER BY sort_order, id', [req.params.orderItemId]);
+    const saved = [];
+
     await client.query('DELETE FROM lab_result WHERE order_item_id = $1', [req.params.orderItemId]);
     for (let i = 0; i < filled.length; i++) {
       const sent = filled[i] || {};
@@ -359,10 +365,10 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
                    : Object.assign({}, sent, { lab_test_item_id: null, name: sent.name || order.order_name,
                                                ref_label: sent.ref_label || null });
       const flag = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
-      await client.query(
+      const ins = await client.query(
         `INSERT INTO lab_result
            (order_item_id, lab_test_item_id, visit_id, patient_id, name, value, unit, ref_low, ref_high, ref_text, flag, comment, result_date, result_by, sort_order, ref_label)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id, lab_test_item_id, name, value, unit, flag`,
         [req.params.orderItemId, it.lab_test_item_id || null, order.visit_id, order.patient_id,
          it.name, it.value != null ? String(it.value) : null, it.unit || null,
          it.ref_low != null && it.ref_low !== '' ? it.ref_low : null,
@@ -370,6 +376,29 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
          it.ref_text || null, flag, it.comment || null, rdate, req.user.id, i,
          it.ref_label ? String(it.ref_label).slice(0, 40) : null]
       );
+      saved.push(ins.rows[0]);
+    }
+
+    // Pair each earlier row with the row that replaces it (same item, else same
+    // name). A pair whose value, flag or unit differs is one log line; an earlier
+    // row with no successor was cleared (after: null). Rows with no earlier row are
+    // first entries and are not logged; a repeat test is a new order and never
+    // pairs with this one. writeAudit writes nothing when the fields are the same
+    // and never fails the save.
+    function shown(r) { return { value: r.value == null ? null : String(r.value), flag: r.flag || '', unit: r.unit || '' }; }
+    const taken = new Set();
+    for (const old of before.rows) {
+      const next = saved.find(function (n) { return !taken.has(n.id) && old.lab_test_item_id && n.lab_test_item_id === old.lab_test_item_id; })
+                || saved.find(function (n) { return !taken.has(n.id) && n.name === old.name; });
+      if (next) taken.add(next.id);
+      await writeAudit(client, req, {
+        action: ACTIONS.LAB_RESULT_EDIT,
+        patient_id: order.patient_id, visit_id: order.visit_id,
+        entity: 'lab_result', entity_id: next ? next.id : old.id,
+        summary: order.order_name + ' · ' + old.name,
+        before: shown(old),
+        after: next ? shown(next) : null,
+      });
     }
     await client.query(
       `UPDATE order_item SET status = 'completed', result_at = NOW(), result_by = $1 WHERE id = $2`,
