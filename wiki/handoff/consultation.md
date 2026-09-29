@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약 표기를 공용 rx-dosing.js로 + 검사·영상 진행 상태 자동 반영
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `2bc7c74`
+- **한 일**:
+  - ① 진료 화면 풀이 줄(`rxLine`)과 의뢰서 「현재 투약」 글(`registry.js` `meds`)이 약국 세션의 `documents/rx-dosing.js`(`doseSentence`·`perDose`·`fmtAmount`·`isLegacyTotal`)를 씁니다. 이제 진료 화면·약국·원외처방전·의뢰서·환자 차트가 같은 문장입니다. 예: 「1회 1정 × 하루 3회, 7일 (총 21)」, « 1 cp × 3 fois/jour pendant 7 jours (total 21) ».
+    - 진료 쪽 자체 계산(`rxBreakdown`·`fmtNum`·`MED_FMT`)과 키 `cs_rxBreakdown`·`cs_rxUneven`은 지웠습니다.
+    - **`cs_rxStoredTotal`은 수납 `PatientChart.jsx`가 쓰므로 남겼습니다**(총괄 알림대로). 한때 작업본에서 지웠다가, 알림을 받고 되살린 뒤 커밋했습니다.
+  - ② 임상병리 부탁: 진료가 열려 있고 결과 없는 검사나 끝나지 않은 워크리스트 오더가 있으면 **30초마다** 오더를 다시 읽습니다. 진행 칸(`status`·`result_*`·`worklist_status`·`worklist_sent_at`)만 화면 줄에 덮어써서, 상태 칸과 🔒가 새로고침 없이 바뀝니다. 적고 있던 수량·메모는 건드리지 않고, 탭이 숨겨져 있으면 읽지 않습니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**:
+  - `frontend/src/documents/registry.js` — `meds`를 `doseSentence`로 바꾸고, 예전 계산 줄에 `(예전 계산 / old calculation / ancien calcul)`을 붙임
+  - `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 진료 표시 안에서 `cs_rxUnevenFlag`·`cs_rxLegacy`를 추가하고 `cs_rxBreakdown`·`cs_rxUneven`을 삭제. 다른 파일에서 이 두 키를 쓰는 곳이 없는 것을 grep으로 확인했습니다.
+  - `rx-dosing.js`(약국 파일)는 고치지 않았습니다.
+- **DB 마이그레이션**: 없음
+- **번역 키**: 추가 `cs_rxUnevenFlag` · `cs_rxLegacy`, 삭제 `cs_rxBreakdown` · `cs_rxUneven` (ko · en · fr)
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9182(develop `2bc7c74` + 이 변경)에 시험 환자 26-00005를 만들어 확인했습니다.
+  - 처방 줄(ko): PCM500 3/3/7 「1회 1정 × 하루 3회, 7일 (총 21)」, ORS 1/3/3 「⚠ 1회량이 나눠지지 않음 — 하루 1포, 3회로 나눠 3일 (총 3)」, AMOX500 1.5/3/5 「1회 ½캡슐 × 하루 3회, 5일 (총 7½)」, 옛 식 BRUFEN(총 63, DB에 직접 넣음) 「… (총 63) · 예전 계산으로 저장된 총량 (새 식이면 21)」
+  - 처방 줄(fr): 같은 줄이 « 1 cp × 3 fois/jour… », « ⚠ dose par prise non divisible — 1 sachet par jour en 3 prises… », « ½ gél. … », « total enregistré selon l'ancien calcul (nouveau calcul : 21) »
+  - 의뢰서(fr): 같은 문장이고, BRUFEN 끝에 « (ancien calcul) »
+  - 자동 반영:
+    - 결과 없는 검사 L01이 있는 상태에서 처치 줄 메모에 글자를 적어 둔 채(포커스 유지) API로 L01 결과를 넣었습니다. 28초 만에 L01이 「Résultat reçu」 + 🔒로 바뀌었고, 메모 글자와 포커스는 그대로였습니다.
+    - 처음 시험에서는 브라우저 창이 숨김 상태(`document.hidden`)라 설계대로 읽지 않았습니다. 두 번째 시험은 `document.hidden`을 시험용으로 false로 바꿔 끼워서 했습니다.
+- **확인 못 한 것**: 영상 워크리스트 상태가 바뀌는 경우는 같은 코드 경로라 따로 시험하지 않았습니다. 영어 화면도 보지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 상태, 2.3(풀이 문장, ⚠, 예전 계산, 결과 자동 반영), 3.1(`rx-dosing.js`, 자동 반영), 3.5(`registry.js`), 8절
+- **총괄 확인 요청**: 30초마다 읽는 것은 진료가 열려 있고 기다리는 오더가 있을 때만입니다(한 환자 화면에 1회/30초). 서버 부담은 작다고 봅니다.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 처방 표 나누기는 결정 대기입니다.
+
 ## 2026-09-29 — 가격이 0인 약·오더를 처방할 때 표시
 
 > **총괄 확인 (2026-09-29)**: 계산식 `7d16518`·표 `0192506`·가격 없음 표시 `f9924b7` 합침(`9f744dd`) + 실행 중 EMR 반영(실장님 결정 「지금 올리기」, 반영 전 DB 백업). 실행 중 EMR에서 확인: 옛 처방(BRUFEN 3/3/7, 총 63)을 같은 값으로 PUT → 총량 63 그대로, 수납 대기 0 그대로(환불 안 뜸) · 새 처방 3/3/7(화면이 999를 보내도) → 21 · 1.5/3/7 → 10.5 · 시험 줄을 지운 뒤 처방 6건의 지문이 반영 전과 같음. 화면은 세션의 격리 스택 확인. 말라리아약·ORS 기본값은 `wiki/02-before-departure.md`에 출발 전 확인 항목으로.
