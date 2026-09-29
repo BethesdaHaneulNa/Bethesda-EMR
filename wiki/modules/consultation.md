@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 수술기록지 ③④⑤⑦ 확인 요청 (⑧⑨⑪은 develop에 합쳐짐) · 다음 후보 ⑥ 프랑스어
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: ⑥ 수술기록지 프랑스어 표시 + 검사 오더 상태 칸 확인 요청 (③④⑤⑦·⑧⑨⑪은 develop에 합쳐짐)
 
 ## 1. 이 모듈이 하는 일
 
@@ -91,6 +91,7 @@
    - 수술기록지의 「집도의」는 담당 의사 이름이 미리 채워집니다. 체크 칸을 고르면 인쇄되는 그림에 표시됩니다.
    - **하나만 고르는 칸**(예/아니오, 부위, 충수 상태, 삼출액 양)은 다른 것을 고르면 앞의 체크가 저절로 풀립니다. **「None」(없음)**을 고르면 같은 칸의 다른 체크가 풀리고, 다른 것을 고르면 None이 풀립니다(JP 배액관, 동반 병변).
    - 크기 칸(`×  ×  cm`)은 숫자를 안 적으면 인쇄되지 않습니다.
+   - 언어를 **FR**로 고르면 체크 칸 이름·인쇄되는 선택값·그림 글자가 프랑스어로 나옵니다(예: `3 h`, `Oui`, `Marisque`, 시계의 `D`/`G`). 손으로 적은 글자는 적은 그대로 인쇄됩니다.
    - 소견의 **`[anesthesia]` 같은 대괄호**는 고쳐 써야 할 자리입니다. 남아 있으면 칸 아래에 노란 **「⚠ 아직 고치지 않은 칸」**이 뜨고, 「발급 (저장)」을 누르면 한 번 더 물어봅니다. 그대로 발급하면 괄호째 인쇄됩니다.
 3. 위쪽 **FR / EN / KO**로 인쇄 언어를 고릅니다.
 4. **「발급 (저장)」**을 누르면 발급번호(`D26-00001` 형식)가 붙어 저장됩니다. 그 다음 **「🖨 재출력」**으로 인쇄합니다.
@@ -119,6 +120,7 @@
 - `pickPatient(v)` (91-112): `POST /consultations`로 진료를 **열거나 새로 만들고**, 처방·오더·환자 이력을 받습니다. 바이탈은 `bp_systolic`이 있을 때만 채웁니다(수축기 혈압이 비었으면 체온 등도 화면에 안 나옴 — 작은 흠).
 - `saveNote()` (165-180) · `completeConsult()` (182-201): `note_text`와 바이탈만 보냅니다. 완료는 저장 → `PUT /:id/complete` → `loadData()` 순서입니다. *저장을 안 누르고 완료해도 기록이 날아가지 않게* 완료가 먼저 저장합니다.
 - 처방·오더 줄은 **추가할 때 바로 서버에 INSERT**되고(`addDrugRx`, `addExamOrder`), 칸을 고치면 `onBlur`에서 PUT(`saveRx`, `saveOrder`), ✕는 `confirmRemove`(이름을 넣은 확인 창) 후 DELETE입니다. 「저장」 버튼과 무관합니다.
+- **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29).
 - **잠긴 줄**(2026-09-29, 7절 ⑧⑨): 처방은 `rx.status === 'dispensed'`면 입력 칸 대신 글자로 그리고 ✕ 대신 🔒, WL 칸에 `cs_dispensed`. 오더는 파일 위쪽의 `orderLocked(o)`가 서버 규칙을 흉내 냅니다 — `o.status === 'completed'`(임상병리는 값이 하나라도 있어야 완료로 바꿈) 또는 `result_text`가 있음 또는 `worklist_sent_at`이 있고 `worklist_status`가 `in_progress`·`completed`. `worklist_sent_at`을 보는 이유: 워크리스트 없는 오더는 처음부터 `worklist_status='completed'`로 저장되기 때문. 오더는 줄 삭제만 막고 칸 수정은 그대로 둡니다(수량이 바뀌면 수납이 추가 청구/환불로 잡음).
 - 서버가 거절하면(화면이 열린 사이 약국·검사가 진행한 경우) `lockAlert`가 서버의 영어 문구를 `LOCK_MESSAGES`로 번역 키에 맞춰 알리고 `reloadItems()`로 처방·오더를 다시 읽습니다. **이 문구는 `consult.routes.js`의 `RX_DISPENSED`·`ORDER_HAS_RESULT`와 글자까지 같아야 합니다** — `api/client.js`가 오류 본문 중 `error` 문자열만 넘겨주기 때문(공용 파일이라 고치지 않음).
 - 약 추가 시 `total_qty = 용량 × 횟수 × 일수`를 화면이 계산해 보냅니다(248, 278). 약에 기본 용법이 없으면 **`route`에 `'TID'`**를 넣습니다(246, 7절 ⑮).
@@ -198,6 +200,41 @@
 | 치루 | Seton 유치 `seton` | 하나만 (Yes/No) |
 
 「하나만」일 수도 있지만 결정 범위 밖이라 **여러 개로 둔 것**(실장님 확인 후보): 충수 위치, 삼출액 성상, 연부조직 병변 위치·종류.
+
+**프랑스어 표시** (⑥, 2026-09-29) — `documents/op-terms.js`
+
+- **저장값은 영어 그대로**(`Yes`, `3 o’clock`, `Transsphincteric`)이고 프랑스어는 **보여 줄 때만** 바꿉니다. 그림을 무엇으로 그릴지(`op-figures.jsx`)가 이 영어 문자열로 정해지고, 이미 발급한 문서도 같은 값을 갖고 있기 때문입니다. 그래서 예전에 발급한 문서도 FR로 재출력하면 프랑스어로 나옵니다.
+- `tr(s, lang)` — 한 단어, `showSel(v, lang)` — 쉼표로 이은 체크 값. `fr`에서만 바꾸고 한국어·영어는 예전 그대로(한국 종이 양식도 영어 용어를 썼음). 사전에 없는 단어는 저장된 그대로.
+- 입력 칸: `makeOp`가 모든 `checks` 필드에 `optionLabel: tr`을 달고, `DocumentModal`이 체크 옆 글자를 `f.optionLabel(opt, lang)`로 보여 줍니다(저장은 `opt`).
+- 인쇄: `OpNoteLayout`의 `show(key)` — 체크 필드는 `showSel`, 손으로 적는 칸은 적은 그대로.
+- 그림: 모든 그림 부품이 `lang`을 받습니다. 시계·유방의 R/L → D/G, 치루 단면의 IAS/EAS/levator ani/dentate → SAI/SAE/「releveur / de l'anus」(두 줄 — 한 줄이면 그림 오른쪽 끝을 넘음)/ligne pectinée, 탈장 패널 이름, 충수 위치 이름. 충수 그림은 프랑스어 단어가 길어 `appyFrame(lang)`이 **프랑스어일 때만** 틀을 넓힙니다(글자 폭은 `appyEm` — 넓은 글자 æ·m, 좁은 글자 i·l·-, 굵게 10%). 영어 그림은 틀·글자 모두 예전과 같습니다.
+- 렌더 확인(2026-09-29): 한국어·영어 출력 HTML이 고치기 전과 **바이트까지 같음**. 프랑스어 12개 양식 + 빽빽한 경우 5종 + 긴 단어 경우 모두 A4 한 장(가장 빽빽한 충수 1008px). 그림 밖으로 나간 글자 없음, 고른 위치의 테두리가 글자를 모두 감쌈.
+
+**프랑스어 용어** — 의학 용어라 **현지 프랑스어 의사의 확인 필요**. 바꿀 때는 `op-terms.js`의 번역만 바꾸고 왼쪽(저장 키)은 그대로 둡니다.
+
+| 영어(저장값) | 프랑스어 표시 |
+|---|---|
+| Yes · No · None · Other | Oui · Non · Néant · Autre |
+| Right · Left · Bilateral | Droit · Gauche · Bilatéral |
+| 1 o’clock … 12 o’clock | 1 h … 12 h |
+| Skin · Soft tissue (subcutaneous) | Peau · Tissus mous (sous-cutané) |
+| Epidermal cyst · Granuloma · Lipoma · Hemangioma · Fibroma · Giant cell tumor · Myositis ossificans · Sarcoma | Kyste épidermoïde · Granulome · Lipome · Hémangiome · Fibrome · Tumeur à cellules géantes · Myosite ossifiante · Sarcome |
+| Indirect/Direct - small/medium/large · Combined · Femoral | Indirecte/Directe - petite/moyenne/grande · Mixte · Crurale |
+| Retrocecal · Preileal · Postileal · Subcecal · Pelvic | Rétrocæcale · Pré-iléale · Rétro-iléale · Sous-cæcale · Pelvienne |
+| Free taenia · Ileum · Cecum (그림의 해부 이름) | Bandelette libre · Iléon · Cæcum |
+| Perforation · Gangrenous · Suppurative · Congestive | Perforée · Gangréneuse · Suppurée · Congestive |
+| Pus · Turbid · Serous | Pus · Trouble · Séreux |
+| RLQ · LLQ · Umbilicus | FID · FIG · Ombilic |
+| Fascia: Vicryl 2-0 · Skin: Nylon 3-0 / 4-0 | Fascia : Vicryl 2-0 · Peau : Nylon 3-0 / 4-0 |
+| Upper outer · Upper inner · Lower outer · Lower inner · Central / subareolar · Axillary | Supéro-externe · Supéro-interne · Inféro-externe · Inféro-interne · Central / rétro-aréolaire · Axillaire |
+| Skin tag · Anal fissure · Anal papilla | Marisque · Fissure anale · Papille anale |
+| Submucosal · Intersphincteric · Transsphincteric · Suprasphincteric · Extrasphincteric | Sous-muqueuse · Intersphinctérienne · Transsphinctérienne · Suprasphinctérienne · Extrasphinctérienne |
+| IAS · EAS · levator ani · dentate | SAI · SAE · releveur de l'anus · ligne pectinée |
+| Pile position (lithotomy view) · pre-op · post-op / additional | Position des paquets (vue en position gynécologique) · pré-op · post-op / supplémentaire |
+| Openings (lithotomy view) and tract · ● internal ○ external · tract type not selected | Orifices (position gynécologique) et trajet · ● interne ○ externe · type de trajet non précisé |
+| R · L (그림의 좌우) | D · G |
+
+그대로 두는 것: 봉합사 이름(Nylon 3-0 등), 기구 이름(Glove port, Ligasure, Endo-loop, Clip), 부피(`> 100 mL`), `int.`·`ext.`(프랑스어도 같은 약자), 시계의 A·P(antérieur·postérieur).
 
 ### 3.7 의뢰서 — `documents/referral.jsx`
 
@@ -313,7 +350,7 @@
 | ③ ✅ 09-29 | 중간 | **예/아니오를 둘 다 체크할 수 있다.** `checks` 입력이 전부 복수 선택이라 `거즈 카운트: Yes, No`가 그대로 인쇄된다. 부위(Right·Left·Bilateral), JP 배액관(None + RLQ), 동반 병변(None + Skin tag), 삼출액 양처럼 서로 배타적인 그룹 전부 해당. → **고침**: 필드별 `single`·`noneOption` 규칙(3.6절 표) | `DocumentModal.jsx` 219-238 · `surgical-records.jsx` 옵션 정의 | 렌더링 · 코드 |
 | ④ ✅ 09-29 | 중간 | **크기 칸을 안 적어도 인쇄된다.** 기본값 `' ×  ×  cm'`이 `trim()` 후에도 빈 문자열이 아니라 「채워진 칸」으로 잡힌다. 연부조직 `massSize` · 유방 `lesionSize` · 충수 `appySize`. → **고침**: 기본값 그대로인 칸은 빈 칸으로 봄 | `surgical-records.jsx` 52(필터), 197·230·257(기본값) · `DocumentModal.jsx` 61(기본값 채우기) | 렌더링 · 코드 |
 | ⑤ ✅ 09-29 | 중간 | **치루 유형을 두 개 고르면 표와 그림이 다르다.** 표에는 두 개, 단면도는 `FIS_ORDER`상 첫 번째 하나만. → **고침**: 한 그림에 모든 유형을 무늬별로 + 범례 | `op-figures.jsx` 225-226 `FistulaSection` | 렌더링 · 코드 |
-| ⑥ | 중간 | **프랑스어 화면에서 그림과 선택값이 영어다.** 선택값(`Yes`·`No`·`3 o'clock`·`Skin tag`)과 그림 글자(`Pile position (lithotomy view)`·`pre-op`·`● internal ○ external`·`tract type not selected`·`IAS/EAS/levator ani/dentate`)가 영어. 시계의 `R`·`L`은 프랑스어 관례로 `D`·`G`. **저장값을 바꾸지 말고 인쇄할 때 번역해야 함**(3.5절) | `op-figures.jsx` 77-81·114·239-254·348-359 · `surgical-records.jsx` 옵션 | 렌더링 · 코드 |
+| ⑥ ✅ 09-29 | 중간 | **프랑스어 화면에서 그림과 선택값이 영어다.** 선택값(`Yes`·`No`·`3 o'clock`·`Skin tag`)과 그림 글자(`Pile position (lithotomy view)`·`pre-op`·`● internal ○ external`·`tract type not selected`·`IAS/EAS/levator ani/dentate`)가 영어. 시계의 `R`·`L`은 프랑스어 관례로 `D`·`G`. **저장값을 바꾸지 말고 인쇄할 때 번역해야 함**(3.5절)  → **고침**: 저장값은 영어 그대로, FR에서만 표시를 번역(`op-terms.js`, 3.6절). 용어는 현지 의사 확인 필요 | `op-figures.jsx` 77-81·114·239-254·348-359 · `surgical-records.jsx` 옵션 | 렌더링 · 코드 |
 | ⑦ ✅ 09-29 | 중간 | **소견 기본 문장의 `[anesthesia]` `[lithotomy/jackknife]` 같은 괄호**를 안 고치면 서명 기록에 그대로 인쇄된다. 열상·제왕절개·포경의 `[N]`·`[7-10]`·`[male/female]`도 같음. → **고침**: 칸 아래 경고 + 발급 때 확인 창 (기본 문장 자체는 의학 문장이라 그대로) | `surgical-records.jsx` 174-175·206·221·250·265·280·295·306·314 | 코드 |
 
 **인쇄 여유**: 모든 수술기록지가 A4 한 장에 들어가지만, 충수절제술은 상세 10줄 + 소견 4줄 + 술후 계획을 다 채우면 여유가 **9px**뿐이다. 그림을 더 줄이면 위치 이름 글자가 8px 밑으로 내려가서 여기서 멈췄다.
@@ -339,6 +376,7 @@
 | ⑲ | 낮음 | 오더를 넣을 때마다 `pacs_config`를 `CREATE TABLE IF NOT EXISTS` — 001이 이미 만든 테이블이라 효과 없는 옛 코드이며, 옛 병원 기본값(`Yonsei Shintong Clinic`, `192.168.0.222`)이 남아 있다 | `consult.routes.js` 224-230 |
 | ⑳ | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) | `Consultation.jsx` 86·533 |
 | ㉑ ✅ 09-29 | **높음** · 총괄 | **날짜가 하루 앞당겨 보인다 (시스템 전체).** _총괄이 고침(`7ad4387`): `backend/src/config/database.js`에서 DATE(1082)를 받은 문자열 그대로 넘김. 실행 중인 EMR에서도 재현됐었음(DB `2023-05-05` → API `2023-05-04T21:00:00.000Z`), 고친 뒤 API·접수 화면 모두 `2023-05-05`._ DB의 `DATE`(생년월일·내원일·진료일)를 `pg`가 JS `Date`(현지 자정)로 바꾸고, JSON은 UTC로 내보내 `1990-01-01` → `1989-12-31T21:00:00.000Z`가 되고, 화면은 `split('T')[0]`로 자른다 — **생년월일·과거 진료일·인쇄 문서의 생년월일이 모두 하루 이르다.** 격리 스택(TZ=`Indian/Antananarivo`, 실행 중인 EMR과 같은 `.env`)에서 재현. 실행 중인 EMR은 건드리지 않아 직접 확인하지 못했지만 같은 설정이다. 고칠 곳은 `backend/src/config/`의 `pg` 타입 파서(1082 = DATE를 문자열로) — 총괄 파일 | API 응답 `GET /patients/1` · `docker-compose.yml` 49 · `Consultation.jsx` 401 · `shared.jsx` `fmtDate` |
+| ㉒ ✅ 09-29 | 중간 · 임상병리 부탁 | **검사 오더가 결과 전부터 「completed」로 보였다.** 상태 칸이 영상용 `worklist_status`를 보여 주는데, 워크리스트 없는 오더는 처음부터 `completed`로 저장된다. → **고침**: 검사 오더는 `o.status`(결과 대기/결과 있음/취소됨), 워크리스트 오더는 그대로, 그 밖은 비움(3.1절) | `Consultation.jsx` `orderStatus` · `consult.routes.js` POST /:id/orders · 임상병리 위키 7절 9 |
 
 ### 7.3 제약 (버그는 아니지만 고칠 때 알아야 할 것)
 
@@ -351,7 +389,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **수술기록지 ③④⑤⑦** — 체크 칸 하나만/None 배타 규칙(공용 `DocumentModal`의 `checks` 입력), 손대지 않은 크기 칸 인쇄 안 함, 치루 단면도에 고른 유형 전부(무늬+범례), 소견의 `[괄호]` 경고·발급 확인. 모든 수술기록지 한 장 유지(충수 빡빡한 경우 1008px 그대로, 치루 유형 5개 최악 991px) | (이 커밋) |
+| 2026-09-29 | **수술기록지 프랑스어 표시(⑥)** — 체크 칸·인쇄 선택값·그림 글자를 FR에서만 번역(`op-terms.js`, 저장값은 영어 그대로), 시계·유방 D/G, 충수 그림 틀을 프랑스어 단어에 맞게. **검사 오더 상태 칸(㉒)** — 결과 전 「completed」 대신 「결과 대기」. 번역 키 `cs_labPending`·`cs_labDone`·`cs_labCancelled` | (이 커밋) |
+| 2026-09-29 | **수술기록지 ③④⑤⑦** — 체크 칸 하나만/None 배타 규칙(공용 `DocumentModal`의 `checks` 입력), 손대지 않은 크기 칸 인쇄 안 함, 치루 단면도에 고른 유형 전부(무늬+범례), 소견의 `[괄호]` 경고·발급 확인. 모든 수술기록지 한 장 유지(충수 빡빡한 경우 1008px 그대로, 치루 유형 5개 최악 991px) | `a6ee24e` |
 | 2026-09-29 | **날짜 하루 앞당김(㉑) 고침** — 총괄. 생년월일·진료일이 API에서 UTC로 바뀌어 하루 이르게 보이고, 접수 화면에서 환자 정보를 저장하면 그 이른 날짜가 다시 저장되던 문제 | `7ad4387` |
 | 2026-09-29 | **기록 보호(⑧⑨⑪)** — 조제된 처방 수정·삭제 거절, 결과·판독·촬영이 생긴 오더 삭제 거절(409), 진료 쓰기 API에 `consultation` 권한, ✕에 확인 창, 잠긴 줄에 🔒·「조제됨」. 번역 키 `cs_confirmRemove`·`cs_dispensed`·`cs_rxLocked`·`cs_orderLocked` | `d1f473e` |
 | 2026-09-29 | 위키를 코드 기준으로 작성 — 화면 사용법, 기능 상세, API·테이블, 다른 모듈 연결, 새로 찾은 문제 ⑧~⑳ (코드 변경 없음) | `38116c7` |
