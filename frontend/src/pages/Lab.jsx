@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
+// Design session: colours are tokens (index.html). tint() names a colour with an alpha.
+import { tint } from '../theme.js';
 import { api } from '../api/client.js';
 import { LabResults } from '../components/LabResults.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
@@ -202,32 +204,32 @@ export default function LabPage() {
     setBusy(false);
   }
 
-  var bd = '#232838', bd2 = '#2a3142', pn = '#13161f', scBg = '#1a1f2e', tx = '#e2e8f0', t2 = '#94a3b8', t3 = '#64748b', cyan = '#06b6d4';
+  var bd = 'var(--border)', bd2 = 'var(--border-2)', pn = 'var(--panel)', scBg = 'var(--panel-head)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--cyan)';
   var list = tab === 'pending' ? pending : completed;
   var totalItems = groups.reduce(function (a, g) { return a + g.items.length; }, 0);
 
   function itemGrid(gi, g, showHeader) {
     return <div key={g.order_item_id} style={{ marginBottom: 14 }}>
-      {showHeader ? <div style={{ fontWeight: 800, fontSize: 14, color: '#67e8f9', marginBottom: 5 }}>{g.order_name}</div> : null}
-      {!g.has_master && g.items.length ? <div style={{ color: '#fbbf24', fontSize: 13, padding: '0 2px 5px' }}>{t.lb_noItemsDefined}</div> : null}
+      {showHeader ? <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--cyan-text)', marginBottom: 5 }}>{g.order_name}</div> : null}
+      {!g.has_master && g.items.length ? <div style={{ color: 'var(--warn-text)', fontSize: 13, padding: '0 2px 5px' }}>{t.lb_noItemsDefined}</div> : null}
       {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItems}</div> : (
         <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', background: '#161a26', color: t3, fontSize: 13, fontWeight: 800 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', background: 'var(--panel-2)', color: t3, fontSize: 13, fontWeight: 800 }}>
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
           </div>
           {g.items.map(function (it, ii) {
             var fl = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
             var ref = it.ref_text || (it.ref_low != null && it.ref_high != null ? it.ref_low + '~' + it.ref_high : it.ref_low != null ? '≥' + it.ref_low : it.ref_high != null ? '≤' + it.ref_high : '');
-            var vc = fl === 'low' ? '#60a5fa' : fl === 'high' || fl === 'abnormal' ? '#f87171' : tx;
+            var vc = fl === 'low' ? 'var(--accent-text)' : fl === 'high' || fl === 'abnormal' ? 'var(--danger-text)' : tx;
             return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
               <div style={{ padding: '7px 10px', fontWeight: 600 }}>{it.name}</div>
-              <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: '#67e8f9' }}>{it.ref_label}</span> : null}</div>
+              <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</div>
               <div style={{ padding: '7px 10px', color: t2, fontSize: 13 }}>{it.unit || ''}</div>
               <div style={{ padding: '5px 8px' }}>
-                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + (fl === 'low' || fl === 'high' || fl === 'abnormal' ? vc : bd2), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
+                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (fl === 'low' || fl === 'high' || fl === 'abnormal' ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
               </div>
               <div style={{ padding: '5px 8px' }}>
-                <input value={it.comment || ''} onChange={function (e) { setVal(gi, ii, 'comment', e.target.value); }} placeholder="—" style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + bd2, borderRadius: 4, color: t2, fontSize: 13, padding: '5px 8px', outline: 'none' }} />
+                <input value={it.comment || ''} onChange={function (e) { setVal(gi, ii, 'comment', e.target.value); }} placeholder="—" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 4, color: t2, fontSize: 13, padding: '5px 8px', outline: 'none' }} />
               </div>
             </div>;
           })}
@@ -237,14 +239,14 @@ export default function LabPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#0f1117', color: tx, minHeight: '100vh', fontSize: 15 }}>
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, minHeight: '100vh', fontSize: 15 }}>
       <TopBar />
-      <div style={{ background: '#161a26', borderBottom: '1px solid ' + bd, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={function () { setTab('pending'); setSel(null); }} style={{ background: tab === 'pending' ? cyan + '20' : 'transparent', color: tab === 'pending' ? '#67e8f9' : t3, border: '1px solid ' + (tab === 'pending' ? cyan + '50' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labPending || '결과 대기'} {pending.length}</button>
-        <button onClick={function () { setTab('completed'); setSel(null); }} style={{ background: tab === 'completed' ? '#10b98120' : 'transparent', color: tab === 'completed' ? '#6ee7b7' : t3, border: '1px solid ' + (tab === 'completed' ? '#10b98150' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labCompleted || '입력 완료'} {completed.length}</button>
-        <button onClick={function () { loadData(); }} style={{ background: '#1e2433', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 15 }}>↻</button>
-        <button onClick={function () { setFinderOpen(true); }} style={{ background: '#1e2433', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>🔍 {t.findPatient}</button>
-        <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: '#1e2433', color: sel ? '#ddd6fe' : '#475569', border: '1px solid ' + (sel ? '#a855f7' : bd2), borderRadius: 5, padding: '5px 12px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
+      <div style={{ background: 'var(--panel-2)', borderBottom: '1px solid ' + bd, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={function () { setTab('pending'); setSel(null); }} style={{ background: tab === 'pending' ? tint('cyan', '20') : 'transparent', color: tab === 'pending' ? 'var(--cyan-text)' : t3, border: '1px solid ' + (tab === 'pending' ? tint('cyan', '50') : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labPending || '결과 대기'} {pending.length}</button>
+        <button onClick={function () { setTab('completed'); setSel(null); }} style={{ background: tab === 'completed' ? 'var(--ok-a20)' : 'transparent', color: tab === 'completed' ? 'var(--ok-text-2)' : t3, border: '1px solid ' + (tab === 'completed' ? 'var(--ok-a50)' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labCompleted || '입력 완료'} {completed.length}</button>
+        <button onClick={function () { loadData(); }} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 15 }}>↻</button>
+        <button onClick={function () { setFinderOpen(true); }} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>🔍 {t.findPatient}</button>
+        <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: 'var(--chip)', color: sel ? 'var(--violet-text-3)' : 'var(--text-4)', border: '1px solid ' + (sel ? 'var(--violet-2)' : bd2), borderRadius: 5, padding: '5px 12px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
       </div>
 
       <div style={{ display: 'flex', height: 'calc(100vh - 86px)' }}>
@@ -254,12 +256,12 @@ export default function LabPage() {
           {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? t.lb_noPending : t.lb_noCompleted}</div> : null}
           {list.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
-            return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? cyan + '12' : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
+            return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{nm(g)}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-strong)' }}>{nm(g)}</span>
                 <span style={{ color: t3, fontSize: 12 }}>{ymd(g.visit_date)}</span>
               </div>
-              <div style={{ fontSize: 12, color: t2 }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: '#fbbf24', fontWeight: 700 }}>· {t.lb_inConsultation}</span> : null}</div>
+              <div style={{ fontSize: 12, color: t2 }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: 'var(--warn-text)', fontWeight: 700 }}>· {t.lb_inConsultation}</span> : null}</div>
               <div style={{ fontSize: 12, color: cyan, marginTop: 2 }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
             </div>;
           })}
@@ -270,18 +272,18 @@ export default function LabPage() {
           {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
-                <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: '#fbbf24', border: '1px solid #f59e0b66', borderRadius: 4, padding: '1px 6px' }}>{t.lb_inConsultation}</span> : null}</div>
-                {sel.allergies ? <div style={{ marginTop: 4, color: '#fca5a5', fontSize: 13 }}>⚠ {sel.allergies}</div> : null}
+                <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: 'var(--warn-text)', border: '1px solid var(--warn-a66)', borderRadius: 4, padding: '1px 6px' }}>{t.lb_inConsultation}</span> : null}</div>
+                {sel.allergies ? <div style={{ marginTop: 4, color: 'var(--danger-text-2)', fontSize: 13 }}>⚠ {sel.allergies}</div> : null}
               </div>
               {/* panel tabs: All + each panel */}
               <div style={{ padding: '8px 14px', borderBottom: '1px solid ' + bd, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {(sel.lab_orders || []).length > 1 ? (function () {
                   var on = view === 'all';
-                  return <button onClick={function () { loadView('all'); }} style={{ background: on ? cyan : '#1e2433', color: on ? '#08161a' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>{t.labAll || '전체'}</button>;
+                  return <button onClick={function () { loadView('all'); }} style={{ background: on ? cyan : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>{t.labAll || '전체'}</button>;
                 })() : null}
                 {(sel.lab_orders || []).map(function (o) {
                   var on = view === o.order_item_id;
-                  return <button key={o.order_item_id} onClick={function () { loadView(o.order_item_id); }} style={{ background: on ? cyan : '#1e2433', color: on ? '#08161a' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>{o.order_name}{o.status === 'completed' ? ' ✓' : ''}</button>;
+                  return <button key={o.order_item_id} onClick={function () { loadView(o.order_item_id); }} style={{ background: on ? cyan : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>{o.order_name}{o.status === 'completed' ? ' ✓' : ''}</button>;
                 })}
               </div>
               {/* item grid(s) */}
@@ -289,9 +291,9 @@ export default function LabPage() {
                 {groups.length === 0 ? <div style={{ color: t3, fontSize: 14, padding: 10 }}>{t.lb_noItems}</div>
                   : groups.map(function (g, gi) { return itemGrid(gi, g, view === 'all'); })}
               </div>
-              <div style={{ padding: '10px 14px', borderTop: '1px solid ' + bd, background: '#161a26', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
-                {notice ? <div style={{ flex: 1, color: '#6ee7b7', fontSize: 13 }}>{notice}</div> : null}
-                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,#06b6d4,#0891b2)' : '#1e2433', color: '#fff', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
+                {notice ? <div style={{ flex: 1, color: 'var(--ok-text-2)', fontSize: 13 }}>{notice}</div> : null}
+                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan),var(--cyan-strong))' : 'var(--chip)', color: totalItems ? 'var(--on-fill)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
               </div>
             </>
           )}
@@ -299,7 +301,7 @@ export default function LabPage() {
 
         {/* RIGHT: history matrix */}
         <div style={{ width: 460, borderLeft: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 14, color: '#67e8f9' }}>🧪 {t.labResultsTitle || '검사결과'}</div>
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 14, color: 'var(--cyan-text)' }}>🧪 {t.labResultsTitle || '검사결과'}</div>
           <div style={{ flex: 1, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
         </div>
       </div>
