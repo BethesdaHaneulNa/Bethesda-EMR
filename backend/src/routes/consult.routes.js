@@ -54,7 +54,7 @@ const ORDER_NO_RESULT = 'Order has no result';
 // The many saves of a consultation still open today are ordinary work and are not logged.
 const NOTE_FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
   'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
-const RX_LOG = ['drug_code', 'drug_name', 'dose', 'frequency', 'days', 'route', 'total_qty', 'unit_price', 'memo', 'status'];
+const RX_LOG = ['drug_code', 'drug_name', 'dose', 'frequency', 'days', 'route', 'total_qty', 'unit_price', 'memo', 'status', 'pack_label'];
 const ORDER_LOG = ['order_code', 'order_name', 'code_type', 'dose', 'frequency', 'days', 'quantity', 'unit_price', 'memo', 'status'];
 const DX_LOG = ['icd_code', 'diagnosis_name', 'diagnosis_type'];
 
@@ -288,19 +288,51 @@ function rxTotal(dose, days) {
   return Math.round(d * n * 1000) / 1000;   // DECIMAL(10,3)
 }
 
+// Pack-unit drugs (H2-B, decided 2026-09-29; columns from the pharmacy's 025): a syrup,
+// a cream, an inhaler is handed out by the bottle, tube or piece, so its line's
+// total_qty is the COUNT the doctor writes (pack_qty), not dose x days. The daily
+// dose, times and days stay on the line as the intake instructions only.
+// The flag and the unit word are copied from the drug table when the line is written
+// (as the price is), so marking the drug later does not change an existing line; what
+// the screen sends for them is not used.
+// pack_qty: a whole number of at least 1 (stock is counted in whole bottles); missing
+// or blank is stored as NULL - the pharmacy then stops on "no total" and the bill has
+// nothing to charge, rather than a wrong number going through.
+const PACK_QTY_BAD = 'pack_qty must be a whole number of at least 1';
+function packQty(v) {
+  if (v === undefined || v === null || String(v).trim() === '') return { qty: null };
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1) return { bad: PACK_QTY_BAD };
+  return { qty: n };
+}
+
 // POST /api/consultations/:id/prescriptions
 router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (client) => {
-  // total_qty from the client is ignored: the server works it out (rxTotal).
+  // total_qty from the client is ignored: the server works it out (rxTotal), or for a
+  // pack-unit drug takes the count the doctor wrote (pack_qty).
   const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
   if (blank(drug_name)) return [400, { error: 'drug_name is required' }];
   const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
   if (invalid) return [400, { error: invalid }];
   const c = await consultOf(client, req.params.id);
   if (!c) return [404, { error: 'Consultation not found' }];
+  let pack = { pack_unit: false, pack_label: null };
+  if (drug_id) {
+    const d = await client.query('SELECT pack_unit, pack_label FROM drug WHERE id = $1', [drug_id]);
+    if (d.rows[0] && d.rows[0].pack_unit) pack = { pack_unit: true, pack_label: d.rows[0].pack_label || 'unit' };
+  }
+  let total = rxTotal(dose, days);
+  if (pack.pack_unit) {
+    const pq = packQty(req.body.pack_qty);
+    if (pq.bad) return [400, { error: pq.bad }];
+    total = pq.qty;
+  }
   const result = await client.query(
-    `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-    [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, rxTotal(dose, days), unit_price, memo]
+    `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo,
+                               pack_unit, pack_label)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+    [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, total, unit_price, memo,
+     pack.pack_unit, pack.pack_label]
   );
   const rx = result.rows[0];
   await recordEdit(client, req, c, 'prescription', rx, rx.drug_name, null, pick(rx, RX_LOG));
@@ -321,30 +353,40 @@ async function lockRx(client, rxId) {
 
 // PUT /api/consultations/prescription/:rxId - update prescription details
 router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (client) => {
-  // total_qty from the client is ignored: the server works it out (rxTotal).
+  // total_qty from the client is ignored: the server works it out (rxTotal), or for a
+  // pack-unit line takes pack_qty.
   const { dose, frequency, days, route, memo, unit_price } = req.body;
   const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
   if (invalid) return [400, { error: invalid }];
   const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
   const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
+  const packSent = Object.prototype.hasOwnProperty.call(req.body, 'pack_qty');
+  const pq = packSent ? packQty(req.body.pack_qty) : { qty: null };
+  if (pq.bad) return [400, { error: pq.bad }];
   const got = await lockRx(client, req.params.rxId);
   if (got.refuse) return got.refuse;
-  // total_qty is recomputed only when the dose, the times a day or the days really
-  // changed (compared as numbers: "3" and "3.000" are the same dose). The screen
-  // saves a row whenever a field loses focus, so without this an old visit opened
-  // after the formula change would have its totals cut to a third just by clicking
-  // through them - and a visit already paid for would show up for a refund.
-  // In the comparison the columns are the row's values before this UPDATE.
+  // A pack-unit line (the flag stored on the line): total_qty changes only when
+  // pack_qty is sent; a new daily dose or number of days is instructions, not a count.
+  // Any other line: total_qty is recomputed only when the dose, the times a day or the
+  // days really changed (compared as numbers: "3" and "3.000" are the same dose), or
+  // when it is empty (a line saved with no total gets one when it is saved again - the
+  // payment session's request). The screen saves a row whenever a field loses focus,
+  // so without this an old visit opened after the formula change would have its
+  // totals cut to a third just by clicking through them - and a visit already paid for
+  // would show up for a refund. In the comparison the columns are the row's values
+  // before this UPDATE.
   const result = await client.query(
     `UPDATE prescription
      SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, unit_price=COALESCE($7, unit_price),
          total_qty = CASE
+           WHEN pack_unit THEN (CASE WHEN $10::boolean THEN $11::numeric ELSE total_qty END)
            WHEN (CASE WHEN dose ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$' THEN dose::numeric END) IS DISTINCT FROM $9::numeric
              OR frequency IS DISTINCT FROM $2
              OR days IS DISTINCT FROM $3
+             OR total_qty IS NULL
            THEN $6 ELSE total_qty END
      WHERE id=$8 RETURNING *`,
-    [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose]
+    [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose, packSent, pq.qty]
   );
   const rx = result.rows[0];
   await recordEdit(client, req, await consultOf(client, rx.consultation_id), 'prescription', rx, rx.drug_name,

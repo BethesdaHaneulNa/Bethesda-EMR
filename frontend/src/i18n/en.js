@@ -374,6 +374,12 @@ export default {
   cs_cancelHint: "Has a result - click to mark it as cancelled",
   cs_orderIsCancelled: "A cancelled order cannot be changed.",
   cs_cancelPromptImg: "\"{name}\" already has a reading or a study taken and cannot be removed.\nMark it as cancelled instead? The images and the reading stay on record; if the study was not taken yet it leaves the device worklist; the order leaves the bill.\nIf it was already paid, the cashier will need to refund it.\n\nReason (optional):",
+  cs_packQty: "Quantity",
+  cs_packQtyHint: "Pack-unit drug (syrup, cream, inhaler...). No total is worked out: the number of bottles/tubes/pieces written here is what is dispensed and billed. Daily dose, times and days are printed as instructions only.",
+  cs_noPackQty: "Enter the quantity",
+  cs_noPackQtyCount: "{n} pack item(s) without a quantity",
+  cs_noPackConfirm: "{n} pack item(s) without a quantity (bottles/tubes/pieces): {names}\n\nThe pharmacy will stop on \"no total\" and nothing will be billed. Finish the consultation anyway?",
+  cs_packQtyWhole: "The quantity is a whole number of at least 1 (no half bottles).",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

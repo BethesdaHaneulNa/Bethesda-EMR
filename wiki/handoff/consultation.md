@@ -2,6 +2,52 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 포장 단위 약 (H2-B) 진료 몫 + 수납 부탁(총량 NULL 다시 계산) · 29 표 순서 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `227d19c` 다음(설정·임상병리·접수 합친 뒤로 rebase, 시험 다시 돌림)
+- **한 일** (약국 설계 메모 「3. 누가 무엇을」의 진료 줄 그대로):
+  - **서버** `POST /:id/prescriptions`
+    - `drug_id`로 약 표에서 `pack_unit`·`pack_label`을 읽어 줄에 복사합니다. 화면이 보낸 값은 쓰지 않고, 단위가 비었으면 `unit`입니다.
+    - 포장 줄의 `total_qty`는 요청의 `pack_qty`입니다. 1 이상의 정수가 아니면 400, 없거나 비면 NULL입니다.
+  - **서버** `PUT /prescription/:rxId`
+    - 포장 줄(줄에 저장된 표시)은 `pack_qty`가 왔을 때만 총량을 바꿉니다. 하루 총량·일수를 고쳐도 그대로입니다.
+    - 보통 줄은 **`total_qty IS NULL`이면 다시 계산**합니다(수납 부탁).
+    - 변경 기록의 처방 칸에 `pack_label`을 더했습니다.
+  - **화면** `Consultation.jsx`
+    - 포장 줄의 약 이름 아래에 「Quantité [ ] flacons / 수량 [ ] 병」 칸이 있습니다. 비면 빨간 테두리와 「Indiquez la quantité」 표시가 붙습니다.
+    - 제목 옆에 「⚠ n flacon(s)/tube(s) sans quantité」가 나오고, 진료를 끝낼 때 한 번 묻습니다(`cs_noPackConfirm`).
+    - 포장 줄은 하루 총량이 비어도 「하루 총량 없음」 표시가 붙지 않습니다.
+    - 단위 말은 약국의 `packWord`이고, 수에 맞춰 단·복수로 씁니다.
+    - 약속처방 `applySet`은 약 줄의 `quantity`(없으면 1)를 `pack_qty`로 넘깁니다.
+  - **29 표 순서**: 한 표 안에서 처방(약) 줄이 먼저, 오더(검사·처치·영상) 줄이 아래에 그려집니다(`rxList` 다음 `orderItems`). 코드 변경 없이 화면에서 확인했습니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_` 6개(`cs_packQty`, `cs_packQtyHint`, `cs_noPackQty`, `cs_noPackQtyCount`, `cs_noPackConfirm`, `cs_packQtyWhole`)를 진료 구역 안에 넣었습니다. `rx-dosing.js`(약국)는 쓰기만 했습니다.
+- **DB 마이그레이션**: 없음(칸은 약국의 025)
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택 9182에서 확인했습니다. 약 표시는 **격리 DB에서만** SQL로 했습니다: CODAEP은 병, SALB는 흡입기.
+  - **포장 시험 16개 전부 통과**:
+    - 수가 없으면 표시·단위가 복사되고 총량은 NULL입니다. `pack_qty` 2이면 총량 2입니다(15×7이 아님).
+    - `pack_qty`가 1.5나 0이면 400입니다. 흡입기 줄은 inhaler 1입니다.
+    - PUT에서 용량·일수만 바꾸면 총량 그대로, `pack_qty` 3이면 3, 빈 값이면 NULL, 2.5이면 400입니다. 빈 줄에 수를 넣으면 채워집니다.
+    - 보통 약에 화면이 포장이라고 보내도 무시되고 3×5=15입니다.
+    - 보통 줄의 총량을 NULL로 두고 같은 값으로 저장하면 15로 다시 계산되고, 그 뒤 저장해서는 그대로입니다.
+    - 약의 표시를 나중에 꺼도 이미 쓴 줄은 포장 줄 그대로입니다.
+    - 수납 항목은 병 수(2, 2)를 읽습니다.
+  - 약국 대기 목록(`/pharmacy/pending`)이 진료가 쓴 줄을 `[CODAEP, true, bottle, 2]`처럼 받습니다.
+  - 기존 시험도 모두 통과했습니다: 영상 취소 19, 취소 25, 로그 34, lock, total, s2, t400, tlow.
+  - **화면**:
+    - KO: 검색으로 Codaep을 넣으니 「수량을 넣으세요」, 제목 「수량 없는 포장 약 1개」, 풀이 「… — 병 수 확인 필요」, 빈 「수량 [ ] 병」 칸이 나왔습니다. 2를 넣고 칸을 벗어나니 「하루 3, 3회로 나눠 7일 — 2병」이 되고 표시가 사라졌습니다.
+    - FR: 시험 세트(Codaep ×2, 파라세타몰, CBC)를 넣으니 「15 par jour en 3 prises, pendant 7 jours — 2 flacons」, 「Quantité [2] flacons」가 나오고 CBC는 약 아래였습니다.
+    - FR: 수를 지우니 「Indiquez la quantité」, 「nombre de flacons à vérifier」가 나왔습니다. Terminé를 누르니 « 1 médicament(s) sans quantité … Terminer quand même ? »라고 묻고, 아니오면 진료가 열린 채로 남았습니다.
+- **확인 못 한 것**:
+  - 설정 **화면**에서 표시를 켜는 것은 눌러 보지 않았습니다. 대신 rebase 뒤 합쳐진 설정 **API**로 PCM250에 bottle을 켜고 처방하니 `true bottle 1`로 복사됐고, 끈 뒤에는 `false null`이었습니다.
+  - 설정의 약속처방 편집에서 약 줄의 수량 칸(설계 메모의 「+ 설정의 약속처방 탭 편집 칸」 — 설정 세션 몫).
+  - 실행 중 EMR은 건드리지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 · 2.3(수량 칸·수 없음 줄) · 2.4(세트 수량) · 3.2(포장 규칙) · 4(prescription 칸) · 8절
+- **총괄 확인 요청**: 포장 단위 진료 몫. 약국 표시(`3f9a2de`)가 develop에 있으므로 이 커밋을 합치면 진료 → 약국 → 수납이 이어집니다.
+- **다른 세션에 부탁**: 설정 — 약속처방 편집 창의 약 줄 수량 칸(포장 단위 약일 때 병·개 수). 이미 있으면 필요 없습니다.
+- **남은 일 · 알려진 문제**: 다음은 4) ⑭ 설계 메모(오더 총량 칸, 기존 줄은 옛 뜻, 검사 1·1·1 자동)입니다. 보고한 뒤 구현하겠습니다.
+
 ## 2026-09-29 — 영상 오더 취소 켜기 (결정 38-③) · 영상 창 안내 · 서명 남은 확인
 
 - **상태**: 확인 요청
