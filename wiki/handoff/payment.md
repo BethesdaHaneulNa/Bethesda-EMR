@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 위키 2절에 오늘 바뀐 안내 반영, 8절 변경 기록 정리 (총괄 요청, 위키만)
+
+- **상태**: 확인 요청 (코드 변경 없음)
+- **커밋**: session/payment (이 항목과 같은 커밋, develop `2bc7c74` 위 — ff 가능)
+- **한 일**:
+  - 2절(프랑스어 화면 기준): 보통 수납에 「Sans prix」 확인 창과 총량 없음 거절, 2.3 표에 「⚠ Quantité manquante」, 2.4 목록 표에 「⚠ Quantité de médicament manquante」 줄과 「Remboursement」 판정에서 창구 발급비가 빠진다는 설명, 2.6에 미수 수납 뒤에도 정정된다는 설명. (미수 수납 영수·새 영수증은 앞 단위에서 이미 2.2·2.8·2.9에 반영돼 있어 문구만 확인)
+  - 2.11 「이런 안내가 뜰 때」: `BILL_CARRIED` 세 가지를 **실제 프랑스어 문구**로 따로(정정 화면 · 미수 수납 · 영수 취소), 「Un reçu par visite sera émis…」, 「Ne peut dépasser l'impayé」, 「… sans prix … Encaisser quand même ?」, 정정 확인 문구 세 가지. 문구는 `fr.js`에서 뽑아 대조.
+  - 8절: 맨 위에 처음 읽는 사람용 요약(무엇이 틀렸고 무엇을 고쳤나, 남은 것), 커밋별 표를 「현장 눈으로 · 코드 쪽 · 커밋」 세 칸으로.
+- **바꾼 파일**: `wiki/modules/payment.md`, `wiki/handoff/payment.md`
+- **확인한 방법**: 문구를 `frontend/src/i18n/fr.js` 값과 대조, 7절 미해결 목록과 8절 요약의 「남은 것」 대조(M3·M6·M8, L1·L2·L4~L10).
+- **다른 세션에 부탁**: 없음
+- **남은 일**: 실장님 결정이 새로 올 때까지 대기.
+
 ## 2026-09-29 — PatientChart 처방 줄을 하루 총량 기준으로 (진료 부탁)
 
 - **상태**: 확인 요청
