@@ -354,7 +354,7 @@ export default function SettingsPage() {
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'#1e2433'}}>
-                {[t.code,t.colDrugName,t.ph_category,t.colDose,t.colFreq,t.colDays,t.colRoute,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i>=7?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
+                {[t.code,t.colDrugName,t.ph_category,t.colDose,t.colFreq,t.colDays,t.ph_colDirections,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i>=7?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               <tbody>{filteredDrugs.map(function(d){
                 return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
@@ -819,12 +819,18 @@ export default function SettingsPage() {
                 <Fld label={t.colDose}><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.colFreq}><input type="number" value={editItem.default_freq||1} onChange={function(e){ue('default_freq',Number(e.target.value))}} style={IS}/></Fld>
                 <Fld label={t.colDays}><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label={t.colRoute}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
+                <Fld label={t.ph_colDirections}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
                 <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
                 <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label={t.ph_stock}><input type="number" value={editItem.stock_qty||0} onChange={function(e){ue('stock_qty',Number(e.target.value))}} style={IS}/></Fld>
+                {/* Read-only: stock moves only through the pharmacy's Stock tab, where each
+                    change is written to the stock record (receive / count / discard).
+                    Unchanged here, saveEdit leaves stock_qty out of the request. A new
+                    drug starts at 0 and is received there. */}
+                <Fld label={t.ph_stock}><input type="number" value={editItem.id ? (editItem.stock_qty||0) : 0} readOnly disabled title={t.ph_stockReadOnlyHint} style={Object.assign({},IS,{opacity:.6,cursor:'not-allowed'})}/></Fld>
+              </div>
+              <div style={{fontSize: 12,color:'#94a3b8'}}>📦 {t.ph_stockReadOnlyHint}
               </div>
             </div>):null}
 

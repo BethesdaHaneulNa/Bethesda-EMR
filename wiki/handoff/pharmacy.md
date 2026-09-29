@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 설정 약품 탭: 재고 칸 읽기 전용 (약국 화면 쪽 먼저)
+
+- **상태**: 확인 요청 — 설정 세션의 서버 작업(`admin.routes.js` POST·PUT이 재고를 안 씀)과 같이 합치기로 받음
+- **커밋**: session/pharmacy — `d21e1d5` 위 커밋 하나
+- **한 일**: 약품 편집 창의 재고 칸을 **읽기 전용·흐리게**, 새 약은 **0 고정**, 칸 아래 안내 「재고는 약국 → 📦 재고 탭에서…」(`ph_stockReadOnlyHint`). 같은 탭의 「경로 / Voie」 칸 이름(목록 머리·편집 칸)을 결정대로 「용법 / Posologie」(`ph_colDirections`)로.
+  - `saveEdit`(설정 세션 코드)는 **고치지 않았음** — 재고가 바뀌지 않으면 요청에서 재고를 빼고 보내므로, 읽기 전용이면 서버를 바꾸기 전에도 설정 저장이 재고를 건드리지 않음.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx`(약품 편집 창의 재고 칸·용법 칸 이름, 약품 목록 머리 — 약품 탭 안), `wiki/modules/pharmacy.md`(2.7, 6절, 7절 M5, 8절), 이 노트
+- **공용 파일 변경**: i18n `ph_stockReadOnlyHint` 1개(ko·en·fr)
+- **확인한 방법**: 빌드. 격리 스택 9184, 관리자 계정, 프랑스어:
+  - Amlodipine 10mg 편집 → 재고 칸 disabled(400), 안내 « 📦 Le stock se modifie dans Pharmacie → 📦 Stock … », 칸 이름에 « Posologie ». 단가만 120 → 125 저장 → 단가 125, **재고 400 그대로, 기록은 opening 한 줄뿐**(밖에서 바뀜 줄 없음).
+  - + Ajouter로 새 약 TESTNEW → 편집 창 재고 0, 등록 후 재고 0. 간호사 계정으로 Stock 탭 입고 10 → 0 → 10, 이번 달 보고서 「월초 0 · 입고 10 · 월말 10 · ✓」.
+- **다른 세션에 부탁**: 설정 — `admin.routes.js` POST/PUT이 `stock_qty`를 쓰지 않게(새 약은 0). 그러면 `stock_expected` 안전장치와 `moveStock`의 「밖에서 바뀜」 메움 줄은 더 생기지 않음(메움 코드는 남겨 둬도 무해).
+
 ## 2026-09-29 — 재고 기록 ③: 월말 재고 보고서 (화면 + CSV)
 
 - **상태**: 확인 요청

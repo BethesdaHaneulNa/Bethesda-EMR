@@ -451,6 +451,7 @@ export default {
   ph_rStarted: "기록 시작 {date}",
   ph_reportEmpty: "이 달에는 재고 기록이 없습니다 (기록을 시작하기 전).",
   ph_rFormula: "월초 + 입고 − 조제 출고 + 장부 부족 ± 실사 조정 − 폐기 = 월말. 날짜는 병원 시간 기준.",
+  ph_stockReadOnlyHint: "재고는 약국 → 📦 재고 탭에서 입고·실사·폐기로 바꿉니다(바뀔 때마다 기록이 남음). 새 약은 0에서 시작합니다.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
