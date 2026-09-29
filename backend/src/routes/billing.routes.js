@@ -19,6 +19,31 @@ async function restoreCarried(client, billingId) {
   );
 }
 
+// One patient's bills are written one transaction at a time. Creating, voiding
+// and settling all move money between a patient's bills (carry-over reads every
+// open balance), so two cashiers - or one cashier clicking twice - must not
+// interleave. The lock is held until COMMIT/ROLLBACK.
+async function lockPatient(client, patientId) {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1), $2)', ['billing_patient', parseInt(patientId, 10) || 0]);
+}
+
+async function lockPatientOfBill(client, billingId) {
+  const r = await client.query('SELECT patient_id FROM billing WHERE id = $1', [billingId]);
+  if (r.rows.length) await lockPatient(client, r.rows[0].patient_id);
+}
+
+async function activeBillIds(client, visitId) {
+  const r = await client.query(
+    `SELECT id FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' ORDER BY id`,
+    [visitId]
+  );
+  return r.rows.map(function (x) { return x.id; });
+}
+
+// Prefix the client recognises: the screen was showing an older state of this
+// visit or patient, so the request is refused rather than billed twice.
+const BILL_CHANGED = 'BILL_CHANGED';
+
 // GET /api/billing/pending - visits awaiting payment
 router.get('/pending', async (req, res) => {
   try {
@@ -138,7 +163,9 @@ router.get('/visit/:visitId/items', async (req, res) => {
       prescriptions: rxResult.rows,
       orders: orderResult.rows,
       billed_items: billedRes.rows,
-      billed_consult: billedConsult
+      billed_consult: billedConsult,
+      // what the screen is billing against; POST / refuses if this has changed
+      active_bill_ids: await activeBillIds(pool, req.params.visitId)
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -150,7 +177,8 @@ router.post('/', async (req, res) => {
     await client.query('BEGIN');
     const { visit_id, patient_id, consult_fee, drug_total, procedure_total, subtotal,
             discount_amount, discount_type, discount_value, previous_balance, total_due,
-            amount_paid, change_amount, outstanding, payment_status, note, items } = req.body;
+            amount_paid, change_amount, outstanding, payment_status, note, items,
+            expected_active_bill_ids } = req.body;
 
     // A receipt is a financial record, so refuse impossible figures here rather
     // than storing them. The payment screen already clamps these, but a stale
@@ -181,6 +209,43 @@ router.post('/', async (req, res) => {
     if (payment_status != null && payment_status !== '' && !PAYMENT_STATUSES.includes(String(payment_status))) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'payment_status must be one of ' + PAYMENT_STATUSES.join(', ') });
+    }
+
+    const visitRes = await client.query('SELECT patient_id FROM visit WHERE id = $1', [visit_id]);
+    if (!visitRes.rows.length || String(visitRes.rows[0].patient_id) !== String(patient_id)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'visit_id does not belong to patient_id' });
+    }
+
+    // Duplicate guard. The screen sends the active bills it was billing against;
+    // if another request billed this visit in the meantime (a second click, a
+    // second cashier, a tab left open) the sets differ and nothing is written.
+    // Without this, a double click stored two receipts for the same visit.
+    if (!Array.isArray(expected_active_bill_ids)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': reload the payment screen and try again' });
+    }
+    await lockPatient(client, patient_id);
+    const nowActive = await activeBillIds(client, visit_id);
+    const expected = expected_active_bill_ids.map(function (x) { return parseInt(x, 10); }).sort(function (a, b) { return a - b; });
+    if (nowActive.join(',') !== expected.join(',')) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': this visit was billed while the screen was open' });
+    }
+    // The previous balance must still be there to carry. If another bill already
+    // absorbed it, adding it again would charge the same debt twice.
+    const carriedIn = parseFloat(previous_balance) || 0;
+    if (carriedIn > 0.5) {
+      const avail = await client.query(
+        `SELECT COALESCE(SUM(outstanding),0) AS amt FROM billing
+          WHERE patient_id = $1 AND payment_status <> 'cancelled'
+            AND carried_into_id IS NULL AND outstanding > 0`,
+        [patient_id]
+      );
+      if (carriedIn > (parseFloat(avail.rows[0].amt) || 0) + 0.5) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: BILL_CHANGED + ': the previous balance has already been settled' });
+      }
     }
 
     // Receipt number: R-YYYYMMDD-NNNN, sequential per day.
@@ -285,6 +350,7 @@ router.put('/:billingId/void', async (req, res) => {
   try {
     await client.query('BEGIN');
     const { reason } = req.body;
+    await lockPatientOfBill(client, req.params.billingId);
     // 취소된 영수는 잔액 계산에서 제외되므로 outstanding=0 (크레딧 누적 방지)
     const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
@@ -312,6 +378,8 @@ router.put('/visit/:visitId/void-active', async (req, res) => {
   try {
     await client.query('BEGIN');
     const { reason } = req.body;
+    const vp = await client.query('SELECT patient_id FROM visit WHERE id = $1', [req.params.visitId]);
+    if (vp.rows.length) await lockPatient(client, vp.rows[0].patient_id);
     const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
               cancelled_at=NOW(), cancelled_by=$2, cancel_reason=$3, updated_at=NOW()
@@ -353,6 +421,7 @@ router.post('/:id/pay', async (req, res) => {
     const amount = parseFloat(req.body.amount);
     if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'amount must be > 0' });
     await client.query('BEGIN');
+    await lockPatientOfBill(client, req.params.id);
     // FOR UPDATE: read-modify-write on money. Without the row lock two cashiers
     // settling the same bill at once both read the old amount_paid and the second
     // UPDATE overwrites the first — both get a success response but only one

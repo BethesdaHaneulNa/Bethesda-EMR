@@ -271,6 +271,7 @@ export default {
   // ── begin consultation (cs_) ──
   // ── end consultation ──
   // ── begin payment (py_) ──
+  py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──

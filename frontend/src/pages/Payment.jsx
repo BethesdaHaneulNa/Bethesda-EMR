@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -41,6 +41,25 @@ export default function PaymentPage() {
   var chs2 = useState(false), chartOpen = chs2[0], setChartOpen = chs2[1];
   var rdo2 = useState(false), readingsOpen = rdo2[0], setReadingsOpen = rdo2[1];
   var cps2 = useState({}), consultPrices = cps2[0], setConsultPrices = cps2[1];
+  // Every button that writes money goes through once(): while one request is in
+  // flight the others are refused and shown disabled. A second click used to store
+  // a second receipt. The ref, not the state, is the real guard - state updates
+  // are not visible to a click handled before the next render.
+  var busyRef = useRef(false);
+  var bzs = useState(false), busy = bzs[0], setBusy = bzs[1];
+  async function once(fn){
+    if(busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    try { await fn(); } finally { busyRef.current = false; setBusy(false); }
+  }
+  function showError(err){
+    if(String(err && err.message).indexOf('BILL_CHANGED')===0){
+      alert(t.py_billChanged);
+      setSel(null); setBillItems(null); loadLists();
+      return;
+    }
+    alert('Error: '+err.message);
+  }
   var CONSULT_FEE_CODES = ['C01','C02','C03','C04'];
   var VTYPE_CODE = { newVisit:'C01', followUp:'C02', emergency:'C03', referral:'C04' };
 
@@ -175,7 +194,8 @@ export default function PaymentPage() {
   }
   function removeFeeItem(idx){ setExtraItems(function(p){ return p.filter(function(_,i){ return i!==idx; }); }); }
 
-  async function doConfirm(status){
+  function doConfirm(status){ return once(function(){ return doConfirmNow(status); }); }
+  async function doConfirmNow(status){
     if(status==='paid' && amtPaidNum()<totalDue()){ alert('Amount insufficient'); return; }
     try {
       var rows = chargeRows();
@@ -193,9 +213,10 @@ export default function PaymentPage() {
         amount_paid:status==='unpaid'?0:amtPaidNum(), change_amount:changeAmt(),
         outstanding:status==='paid'?0:outstandingAmt(), payment_status:status,
         note:payNote, items:items,
+        expected_active_bill_ids:(billItems && billItems.active_bill_ids) || [],
       });
       setReceiptNo(result.receipt_no); setShowReceipt(true); await loadLists(); setTab('completed');
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ showError(err); }
   }
 
   function fullCurrentItems(){
@@ -208,7 +229,8 @@ export default function PaymentPage() {
   function fullCurrentTotal(){ return consultFee()+drugTotal()+procTotal()+extraTotal(); }
 
   // 정정(환불): 활성 영수 취소 후, 현재 정확한 금액으로 재청구(정산 완료). 차액은 환불로 기록.
-  async function confirmCorrection(){
+  function confirmCorrection(){ return once(confirmCorrectionNow); }
+  async function confirmCorrectionNow(){
     if(!sel || !sel.active_bill_id){ alert('No active bill'); return; }
     var paid = parseFloat(sel.active_paid)||0;
     var total = fullCurrentTotal();
@@ -227,12 +249,14 @@ export default function PaymentPage() {
         amount_paid:total, change_amount:refund,
         outstanding:0, payment_status:'paid',
         note:(t.correctionBadge||'정정')+' refund '+refund, items:items,
+        expected_active_bill_ids:[],
       });
       setReceiptNo(result.receipt_no); setShowReceipt(true); await loadLists(); setTab('completed');
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ showError(err); }
   }
 
-  async function voidReceipt(b){
+  function voidReceipt(b){ return once(function(){ return voidReceiptNow(b); }); }
+  async function voidReceiptNow(b){
     var reason = prompt(t.voidReason || '취소 사유 / Reason?');
     if(reason===null) return;
     try {
@@ -241,7 +265,7 @@ export default function PaymentPage() {
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){} }
       await loadLists();
       alert(t.voidDone || '영수 취소됨 / Cancelled');
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ showError(err); }
   }
 
   async function reprint(b){
@@ -249,7 +273,8 @@ export default function PaymentPage() {
     catch(err){ alert('Error: '+err.message); }
   }
 
-  async function settleConfirm(){
+  function settleConfirm(){ return once(settleConfirmNow); }
+  async function settleConfirmNow(){
     if(!settleBill) return;
     var amt = parseFloat(settleAmt)||0;
     var out = parseFloat(settleBill.outstanding)||0;
@@ -262,10 +287,11 @@ export default function PaymentPage() {
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
                try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){} }
       await loadLists();
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ showError(err); }
   }
 
-  async function settleAll(){
+  function settleAll(){ return once(settleAllNow); }
+  async function settleAllNow(){
     var pid = sel?sel.patient_id:null; if(!pid) return;
     var bills = (receipts||[]).filter(function(b){ return b.payment_status!=='cancelled' && (parseFloat(b.outstanding)||0) > 0; });
     if(!bills.length) return;
@@ -276,7 +302,7 @@ export default function PaymentPage() {
       try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
       try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){}
       await loadLists();
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){ showError(err); }
   }
 
   function statusBadge(s){
@@ -301,8 +327,8 @@ export default function PaymentPage() {
         {tab==='waiting'&&sel&&billItems&&!sel.needs_refund?(nothingToCharge()?(
           <span style={{color:'#34d399',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
         ):(<>
-          <button onClick={function(){doConfirm('unpaid')}} style={{background:'#ef444420',color:'#f87171',border:'1px solid #ef444440',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
-          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':'partial')}} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',cursor:'pointer',fontSize:15,fontWeight:800}}>{t.confirmPayment}</button>
+          <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'#ef444420',color:'#f87171',border:'1px solid #ef444440',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
+          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':'partial')}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
         </>)):null}
         <button onClick={loadLists} style={{background:'#1e2433',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
@@ -351,7 +377,7 @@ export default function PaymentPage() {
               receipts.length>0 ? <div style={{padding:'6px 8px'}}>
               {patBalance.owed>0?<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#ef444412',border:'1px solid #ef444430',borderRadius:6,padding:'7px 10px',marginBottom:8}}>
                 <span style={{fontSize:13,color:'#f87171',fontWeight:800,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(patBalance.owed)} Ar</span>
-                <button onClick={settleAll} style={{background:'#10b981',color:'#fff',border:'none',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13,fontWeight:800}}>💵 {t.settleAll||'전체 미수 수납'}</button>
+                <button onClick={settleAll} disabled={busy} style={{opacity:busy?0.5:1,background:'#10b981',color:'#fff',border:'none',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13,fontWeight:800}}>💵 {t.settleAll||'전체 미수 수납'}</button>
               </div>:null}
               {receipts.map(function(b,i){
                 var out=parseFloat(b.outstanding)||0;
@@ -372,7 +398,7 @@ export default function PaymentPage() {
                     <div style={{flex:1}}></div>
                     {out>0&&!cancelled?<button onClick={function(){ setSettleBill(b); setSettleAmt(String(Math.round(out))); }} style={{background:'#10b98118',color:'#34d399',border:'1px solid #10b98140',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12,fontWeight:700}}>💵 {t.settleOutstanding}</button>:null}
                     <button onClick={function(){reprint(b)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12}}>🖨 {t.reprint}</button>
-                    {!cancelled?<button onClick={function(){voidReceipt(b)}} style={{background:'#ef444418',color:'#f87171',border:'1px solid #ef444440',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12}}>{t.voidReceipt}</button>:null}
+                    {!cancelled?<button onClick={function(){voidReceipt(b)}} disabled={busy} style={{opacity:busy?0.5:1,background:'#ef444418',color:'#f87171',border:'1px solid #ef444440',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12}}>{t.voidReceipt}</button>:null}
                   </div>
                 </div>;
               })}</div> : <div style={{padding:20,textAlign:'center',color:'#334155',fontSize:14,fontStyle:'italic'}}>{t.noReceipts}</div>
@@ -409,7 +435,7 @@ export default function PaymentPage() {
             </div>
             <div style={{display:'flex',gap:8,marginTop:14}}>
               <button onClick={function(){setSettleBill(null)}} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:7,padding:'10px',cursor:'pointer',fontSize:14}}>{t.cancel||'취소'}</button>
-              <button onClick={settleConfirm} style={{flex:2,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:7,padding:'10px',cursor:'pointer',fontSize:15,fontWeight:800}}>{t.confirmPayment||'수납 확정'}</button>
+              <button onClick={settleConfirm} disabled={busy} style={{opacity:busy?0.5:1,flex:2,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:7,padding:'10px',cursor:'pointer',fontSize:15,fontWeight:800}}>{t.confirmPayment||'수납 확정'}</button>
             </div>
           </div>
         </div>
@@ -500,7 +526,7 @@ export default function PaymentPage() {
               <div style={{fontSize:13,color:'#c084fc',fontWeight:800}}>{t.refundDue}</div>
               <div style={{fontSize:28,fontWeight:900,color:'#c084fc',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(refundAmt)} Ar</div>
             </div>
-            <button onClick={confirmCorrection} style={{marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:'pointer'}}>↩ {t.processCorrection||'정정(환불) 처리'}</button>
+            <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:'pointer'}}>↩ {t.processCorrection||'정정(환불) 처리'}</button>
           </div>
         </div>
       </div>;

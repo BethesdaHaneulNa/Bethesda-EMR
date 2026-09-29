@@ -271,6 +271,7 @@ export default {
   // ── begin consultation (cs_) ──
   // ── end consultation ──
   // ── begin payment (py_) ──
+  py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──

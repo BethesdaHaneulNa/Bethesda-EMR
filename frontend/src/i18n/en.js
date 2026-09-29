@@ -280,6 +280,7 @@ export default {
   // ── begin consultation (cs_) ──
   // ── end consultation ──
   // ── begin payment (py_) ──
+  py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──
