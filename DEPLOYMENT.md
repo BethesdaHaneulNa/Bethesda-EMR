@@ -104,7 +104,8 @@ docker compose stop backend frontend    # leave the database running
 ```
 
 **Restore.** Copy the backup into the database container and unpack it *there*. These three
-commands are the same on Windows, Linux and a NAS — replace the filename with the backup
+commands are the same on Windows, Linux and a NAS (on Windows run them from PowerShell or
+cmd, not Git Bash — Git Bash rewrites the `/tmp/...` path into a Windows one) — replace the filename with the backup
 you want (they are in `backups/`, newest last):
 
 ```
@@ -216,6 +217,18 @@ netsh interface ipv4 show excludedportrange protocol=tcp
 ```
 If a port you need appears in that list, pick a different one in `docker-compose.yml` rather
 than fighting Windows for it. On Linux hosts this problem does not exist.
+
+9080 and 9090 are only safe while Windows picks its blocks from the default dynamic range
+(49152–65535). Some installers change that range; on one host it had become 1024–15000, and
+then 4242 (DICOM) and 9090 were silently reserved. Check with
+```
+netsh int ipv4 show dynamicport tcp
+```
+If `Start Port` is not 49152, put it back from an administrator prompt and reboot:
+```
+netsh int ipv4 set dynamicport tcp start=49152 num=16384
+netsh int ipv6 set dynamicport tcp start=49152 num=16384
+```
 
 ### HTTPS (optional, recommended on Wi-Fi)
 By default the app is served over plain HTTP. On a trusted **wired** LAN the risk is low. On

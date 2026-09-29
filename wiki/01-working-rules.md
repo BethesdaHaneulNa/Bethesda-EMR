@@ -108,6 +108,7 @@
       -f docker-compose.yml -f docker-compose.session.yml up -d --build
   # → http://localhost:9181   처음 접속하면 관리자 계정을 새로 만듭니다
   ```
+- 격리 스택은 `bethesda-s-<코드>-backend:dev` · `-frontend:dev` 이름으로 이미지를 빌드합니다(2026-09-29 `657ba2c`부터). 그 전에는 실행 중인 EMR의 이미지 이름표(`bethesda-emr-*:latest`)를 세션 코드로 덮어썼습니다 — 옛 명령으로 띄운 스택이 있으면 `down` 하고 다시 띄우세요.
 - 다 쓰면 **내립니다.** 8개 세션이 다 띄워 두면 PC가 무거워집니다.
 
   ```bash
@@ -118,7 +119,7 @@
 
 ## 8. 확인 — 「됐다」고 말하기 전에
 
-- **프론트엔드 빌드가 통과해야 합니다.** `frontend`에서 `npm ci` 후 `npm run build`
+- **프론트엔드 빌드가 통과해야 합니다.** `frontend`에서 `npm install --no-package-lock` 후 `npm run build` (저장소에 `package-lock.json`이 없어 `npm ci`는 안 됩니다. Dockerfile과 같은 방식입니다. 잠금 파일이 생겼으면 커밋하지 마세요)
 - 고친 백엔드 파일은 `node --check <파일>`
 - 화면이 바뀌었으면 격리 스택에서 **직접 눌러 봅니다.** 한국어·프랑스어 둘 다 확인합니다.
 - 인쇄 문서를 고쳤으면 **실제 인쇄 폭**으로 확인합니다. 인쇄 여백이 14mm라 본문 폭은 약 **688px**, 한 장 높이는 약 **1017px**입니다.
