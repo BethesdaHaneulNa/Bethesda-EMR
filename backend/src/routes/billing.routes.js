@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { todayLocal } = require('../utils/localDate');
 const { PAYMENT_STATUSES } = require('../utils/validate');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -456,6 +457,12 @@ router.put('/:billingId/void', canPay, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'BILL_CARRIED: ' + carried.rows[0].receipt_no });
     }
+    // For the change log (decision 2026-09-29): the bill as it was, and the older
+    // receipts whose balance this void hands back.
+    const was = (await client.query(
+      'SELECT payment_status, total_due, amount_paid, net_paid, outstanding FROM billing WHERE id = $1', [req.params.billingId])).rows[0];
+    const restoring = (await client.query(
+      'SELECT receipt_no FROM billing WHERE carried_into_id = $1 ORDER BY id', [req.params.billingId])).rows.map(function (r) { return r.receipt_no; });
     // 취소된 영수는 잔액 계산에서 제외되므로 outstanding=0 (크레딧 누적 방지)
     const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
@@ -468,6 +475,19 @@ router.put('/:billingId/void', canPay, async (req, res) => {
       return res.status(404).json({ error: 'Not found or already cancelled' });
     }
     await restoreCarried(client, req.params.billingId);
+    const gone = result.rows[0];
+    await writeAudit(client, req, {
+      action: ACTIONS.RECEIPT_CANCEL, patient_id: gone.patient_id, visit_id: gone.visit_id,
+      entity: 'billing', entity_id: gone.id,
+      // The amounts do not change on a void, so the log keeps them out of before/after
+      // (it stores changed fields only); the summary carries them instead.
+      summary: gone.receipt_no + ' · total ' + Number(was.total_due) + ' · paid ' + Number(was.net_paid) + (reason ? ' — ' + reason : ''),
+      before: { payment_status: was.payment_status, total_due: Number(was.total_due), amount_paid: Number(was.amount_paid),
+                net_paid: Number(was.net_paid), outstanding: Number(was.outstanding) },
+      after:  { payment_status: 'cancelled', total_due: Number(was.total_due), amount_paid: Number(was.amount_paid),
+                net_paid: Number(was.net_paid), outstanding: 0, cancel_reason: reason || null,
+                balance_restored_to: restoring.length ? restoring : null },
+    });
     await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
@@ -606,6 +626,33 @@ async function buildCorrection(db, visitId) {
   };
 }
 
+// One change-log line for a correction (payment.receipt.correct), whichever way it
+// went - money handed back, or a balance left owing. The summary names the
+// receipts and what changed in the items; before/after keep the totals and item
+// quantities (only what differs is stored).
+function correctionAudit(c, bill, oldBills, oldItems, reason) {
+  const key = function (it) { return it.item_code || it.item_name; };
+  const was = {}; oldItems.forEach(function (r) { was[r.k] = Number(r.q) || 0; });
+  const now = {}; c.items.forEach(function (it) { now[key(it)] = (now[key(it)] || 0) + (Number(it.quantity) || 0); });
+  const changes = [];
+  Object.keys(was).forEach(function (k) { if (!(k in now)) changes.push('-' + k); else if (Math.abs(now[k] - was[k]) > 1e-6) changes.push(k + ' ' + was[k] + '→' + now[k]); });
+  Object.keys(now).forEach(function (k) { if (!(k in was)) changes.push('+' + k); });
+  const list = function (m) { return Object.keys(m).sort().map(function (k) { return k + '×' + m[k]; }); };
+  const sum = function (f) { return round2(oldBills.reduce(function (a, b) { return a + (Number(b[f]) || 0); }, 0)); };
+  return {
+    action: ACTIONS.RECEIPT_CORRECT, patient_id: c.patient_id, visit_id: c.visit_id,
+    entity: 'billing', entity_id: bill.id,
+    summary: oldBills.map(function (b) { return b.receipt_no; }).join(', ') + ' → ' + bill.receipt_no +
+      (changes.length ? ' · ' + changes.join(', ') : '') +
+      (c.refund > 0 ? ' · refund ' + c.refund : c.outstanding > 0 ? ' · owed ' + c.outstanding : '') +
+      (reason ? ' — ' + reason : ''),
+    before: { receipts: oldBills.map(function (b) { return b.receipt_no + ' ' + b.payment_status; }),
+              total_due: sum('total_due'), amount_paid: sum('net_paid'), outstanding: sum('outstanding'), items: list(was) },
+    after:  { receipts: [bill.receipt_no + ' ' + bill.payment_status],
+              total_due: c.total_due, amount_paid: c.paid_so_far, refund: c.refund, outstanding: c.outstanding, items: list(now) },
+  };
+}
+
 // GET /api/billing/visit/:visitId/correction - what a correction would record (no changes)
 router.get('/visit/:visitId/correction', canPay, async (req, res) => {
   try {
@@ -637,6 +684,14 @@ router.post('/visit/:visitId/correct', canPay, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: BILL_CHANGED + ': the bill changed while the screen was open' });
     }
+
+    // For the change log: the receipts being replaced and what they charged.
+    const oldBills = (await client.query(
+      'SELECT receipt_no, total_due, net_paid, outstanding, payment_status FROM billing WHERE id = ANY($1::int[]) ORDER BY id',
+      [c.active_bill_ids])).rows;
+    const oldItems = (await client.query(
+      `SELECT COALESCE(NULLIF(item_code,''), item_name) AS k, SUM(quantity) AS q FROM billing_item
+        WHERE billing_id = ANY($1::int[]) GROUP BY 1 ORDER BY 1`, [c.active_bill_ids])).rows;
 
     // Replace, do not restore: balances the old bills absorbed move to the new
     // bill (below) instead of reappearing as debt, because the new bill charges them.
@@ -673,6 +728,7 @@ router.post('/visit/:visitId/correct', canPay, async (req, res) => {
       [bill.id, c.active_bill_ids]
     );
     await client.query('UPDATE billing SET carried_into_id = NULL WHERE id = ANY($1::int[])', [c.active_bill_ids]);
+    await writeAudit(client, req, correctionAudit(c, bill, oldBills, oldItems, req.body.reason));
     await client.query('COMMIT');
     res.status(201).json(Object.assign({}, bill, { refund: c.refund }));
   } catch (err) {

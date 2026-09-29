@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 변경 기록(로그): 영수 취소 · 정정 (실장님 결정, 수납 몫)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop `a7b40e8` merge
+- **한 일**: `wiki/03-change-log.md`대로 `billing.routes.js`에 `writeAudit` 두 곳 — 둘 다 **트랜잭션 client로, COMMIT 전에**.
+  - 영수 취소 `PUT /:id/void` → `ACTIONS.RECEIPT_CANCEL`. before는 UPDATE 전에 읽음. summary `R-… · total N · paid N — 사유`(금액은 취소로 바뀌지 않아 함수가 before/after에서 걸러 내므로 summary에 둠). before/after: 상태·미수·취소 사유·`balance_restored_to`(미수 수납 영수를 취소하면 되살아나는 옛 영수번호).
+  - 정정 `POST /visit/:id/correct` → `ACTIONS.RECEIPT_CORRECT`, 환불이든 미수가 남든 한 줄. 새 함수 `correctionAudit()`: summary `옛 → 새 영수번호 · 바뀐 항목(-DRG1, +X, PARA 9→6) · refund N / owed N — 사유`, before/after: 영수번호·상태, 총액, 받은 돈, 환불, 미수, 항목×수량.
+  - 「추가 수납」 해석: 정정 결과가 환불이 아니라 더 받을 돈(미수)으로 끝나는 경우로 보고 같은 action으로 남김. 보통의 「추가 청구」(`POST /`)와 미수 수납(`/settle`)은 평소 일이라 남기지 않음(지시대로).
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`
+- **공용 파일 변경**: 없음(`utils/audit.js`는 require만) · **DB 마이그레이션·번역 키**: 없음
+- **확인한 방법**: `node --check`, 빌드. 격리 스택(마이그레이션 022·023 적용), `audit_log`를 격리 DB에서 직접 읽음, 틀린 항목 0:
+  - 보통 수납 + 미수 수납 → 0줄
+  - 영수 취소 → 1줄 `R-…0214 · total 15000 · paid 15000 — Erreur de saisie`, 상태 paid→cancelled, 직원·환자·차트번호 채워짐 / 같은 영수 다시 취소(404) → 0줄
+  - 이월된 옛 영수 취소(409) → 0줄 / 미수 수납 영수 취소 → 1줄, `balance_restored_to: [옛 영수]`, 미수 9000→0
+  - 정정(약 2,000 삭제, 환불) → 1줄 `R-…0208 → R-…0209 · -DRG1 · refund 2000 — Médicament retiré`, 항목 before/after / 화면이 본 환불액과 다름(409) → 0줄
+  - 정정 결과 미수 → 1줄 `· owed 10000`
+- **확인 못 한 것**: 설정 → 「기록」 화면에서 보기(설정 세션이 만드는 중).
+- **위키**: `modules/payment.md` 3.11 새로, 8절
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 영수증 추가 후보 닫음 (실장님 결정: 넣지 않음, 위키만)
 
 - **상태**: 확인 요청 (코드 변경 없음)
