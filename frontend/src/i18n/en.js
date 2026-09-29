@@ -460,6 +460,7 @@ export default {
   ph_colPerDose: "Per intake",
   ph_colDirections: "Directions",
   ph_perDoseCheck: "⚠ Check with doctor (not whole or half tablets)",
+  ph_timesCheck: "⚠ Times a day missing - check with doctor",
   ph_noTotal: "⚠ No total",
   ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
   ph_legacyTotal: "Old calculation (dose×times×days)",
@@ -568,6 +569,9 @@ export default {
   ph_chk_malaria: "Antimalarial - for the doctor to check",
   ph_chk_topical: "Filed as a tablet but may be topical (ointment, cream) - pack unit too",
   ph_chk_packlabel: "Pack word (jar? bottle?)",
+  ph_packChangeWarn: "The stock number ({n}) has no unit: once saved, the same number is read in the new unit. After saving, recount it in Pharmacy → 📦 Stock with Count.",
+  ph_rMixed: "⚠ Units mixed",
+  ph_rMixedHint: "This month has lines dispensed by the dose and lines dispensed by the bottle or tube (pack unit changed). Dispensed adds both units.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

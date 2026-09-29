@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
+import { packWord } from '../documents/rx-dosing.js';
 
 // Exact texts from pharmacy.routes.js; the API client passes on only the message.
 var ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
@@ -16,7 +17,7 @@ var ERR_NOTHING_TO_CHECK = 'Nothing left to check on this drug';
 // Memos the server writes itself, shown translated.
 var MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 var MEMO_OPENING = 'Start of the stock record';
-// Written by the import of the old stock program's list (migration 403).
+// Written by the import of the old stock program's list (migration 034).
 var MEMO_IMPORT = 'Imported from the old stock program (count of 2026-05-15)';
 // Value of the category filter that shows the imported drugs still to check.
 var TO_CHECK = '__to_check';
@@ -26,6 +27,14 @@ var KIND_COLOR = { opening: '#94a3b8', receive: '#34d399', dispense: '#60a5fa', 
 function belowMin(d) {
   var min = Number(d.min_stock);
   return min > 0 && Number(d.stock_qty) <= min;
+}
+// The unit of a pack-unit drug's count ("flacons", "병"), shown after the number;
+// empty for a drug counted in doses. The stock number itself has no unit (H2).
+function stockUnit(d, lang) {
+  if (!d || !d.pack_unit) return '';
+  if (lang === 'ko') return packWord(d, 'ko');
+  var n = Number(d.stock_qty);
+  return packWord(d, lang, n === 1 ? 1 : 2).replace(/^[\d½.]+\s*/, '');
 }
 function catLabel(t, c) { return (c && t['ph_cat_' + c]) || c || ''; }
 function thisMonth() {
@@ -75,7 +84,7 @@ export function PharmacyStock() {
     if (!report) return;
     var rows = report.rows.map(function (r) {
       return [r.code, r.name, catLabel(t, r.category), r.start, r.received, r.dispensed, r.shortfall, r.adjusted, r.discarded, r.end,
-        (r.ok ? 'OK' : t.ph_rMismatch) + (r.started_on ? ' · ' + fill(t.ph_rStarted, r.started_on) : '')];
+        (r.ok ? 'OK' : t.ph_rMismatch) + (r.started_on ? ' · ' + fill(t.ph_rStarted, r.started_on) : '') + (r.mixed_units ? ' · ' + t.ph_rMixed : '')];
     });
     downloadCsv('stock-' + report.month + '.csv', REPORT_HEAD, rows);
   }
@@ -184,7 +193,7 @@ export function PharmacyStock() {
                 <div style={{ fontWeight: 800, color: tx, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{checkOpen(d) ? <span title={t.ph_toCheck} style={{ color: '#fbbf24' }}>⚠ </span> : null}{d.name}</div>
                 <div style={{ color: t3, fontSize: 13 }}>{d.code} · {catLabel(t, d.category)}{d.dosage_form ? ' · ' + formLabel(t, d.dosage_form) : ''}</div>
               </div>
-              <div style={{ fontWeight: 900, fontSize: 17, color: low ? '#f87171' : '#34d399', whiteSpace: 'nowrap' }}>{d.stock_qty}</div>
+              <div style={{ fontWeight: 900, fontSize: 17, color: low ? '#f87171' : '#34d399', whiteSpace: 'nowrap' }}>{d.stock_qty}{d.pack_unit ? <span style={{ fontSize: 12, fontWeight: 700, marginLeft: 3 }}>{stockUnit(d, lc.lang)}</span> : null}</div>
             </div>;
           })}
         </div>
@@ -216,7 +225,7 @@ export function PharmacyStock() {
                   <td style={{ padding: '6px 8px', color: t2, borderBottom: '1px solid ' + bd }}>{catLabel(t, r.category)}</td>
                   <td style={num}>{r.start}</td>
                   <td style={Object.assign({}, num, { color: r.received ? '#34d399' : t3 })}>{r.received ? '+' + r.received : 0}</td>
-                  <td style={Object.assign({}, num, { color: r.dispensed ? '#60a5fa' : t3 })}>{r.dispensed ? '−' + r.dispensed : 0}</td>
+                  <td style={Object.assign({}, num, { color: r.dispensed ? '#60a5fa' : t3 })}>{r.dispensed ? '−' + r.dispensed : 0}{r.mixed_units ? <div title={t.ph_rMixedHint} style={{ color: '#fbbf24', fontSize: 12, fontWeight: 800, whiteSpace: 'normal' }}>{t.ph_rMixed}</div> : null}</td>
                   <td style={Object.assign({}, num, { color: r.shortfall ? '#f87171' : t3, fontWeight: r.shortfall ? 800 : 400 })}>{r.shortfall || 0}</td>
                   <td style={Object.assign({}, num, { color: r.adjusted ? '#fbbf24' : t3 })}>{r.adjusted > 0 ? '+' : ''}{r.adjusted}</td>
                   <td style={Object.assign({}, num, { color: r.discarded ? '#f87171' : t3 })}>{r.discarded ? '−' + r.discarded : 0}</td>
@@ -240,7 +249,7 @@ export function PharmacyStock() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: t3, fontSize: 14 }}>{t.ph_stockNow}</div>
-              <div style={{ fontSize: 30, fontWeight: 900, color: belowMin(sel) ? '#f87171' : '#f8fafc' }}>{sel.stock_qty}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: belowMin(sel) ? '#f87171' : '#f8fafc' }}>{sel.stock_qty}{sel.pack_unit ? <span style={{ fontSize: 16, fontWeight: 800, marginLeft: 5 }}>{stockUnit(sel, lc.lang)}</span> : null}</div>
               {Number(sel.min_stock) > 0 ? <div style={{ color: belowMin(sel) ? '#f87171' : t3, fontSize: 13, fontWeight: belowMin(sel) ? 800 : 400 }}>{t.ph_minStock} {sel.min_stock}{belowMin(sel) ? ' — ' + t.ph_belowMin : ''}</div> : null}
             </div>
           </div>

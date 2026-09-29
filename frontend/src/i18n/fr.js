@@ -451,6 +451,7 @@ export default {
   ph_colPerDose: "Dose/prise",
   ph_colDirections: "Posologie",
   ph_perDoseCheck: "⚠ À vérifier avec le médecin (pas en demi-comprimés)",
+  ph_timesCheck: "⚠ Nombre de prises absent — voir le médecin",
   ph_noTotal: "⚠ Quantité totale absente",
   ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
   ph_legacyTotal: "Ancien calcul (dose×fois×jours)",
@@ -559,6 +560,9 @@ export default {
   ph_chk_malaria: "Antipaludique — à vérifier par le médecin",
   ph_chk_topical: "Classé comprimé mais peut-être à usage externe (pommade, crème) — unité de conditionnement aussi",
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
+  ph_packChangeWarn: "Le stock ({n}) n'a pas d'unité : après l'enregistrement, le même nombre est lu dans la nouvelle unité. Ensuite, recomptez dans Pharmacie → 📦 Stock avec « Inventaire ».",
+  ph_rMixed: "⚠ Unités mélangées",
+  ph_rMixedHint: "Ce mois-ci, des délivrances à l'unité de prise et d'autres au flacon ou au tube (conditionnement changé). « Délivré » additionne les deux unités.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

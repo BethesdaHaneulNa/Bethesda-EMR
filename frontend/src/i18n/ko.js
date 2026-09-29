@@ -451,6 +451,7 @@ export default {
   ph_colPerDose: "1회량",
   ph_colDirections: "용법",
   ph_perDoseCheck: "⚠ 의사 확인 (반 알 단위로 안 나눠짐)",
+  ph_timesCheck: "⚠ 하루 횟수 없음 — 의사 확인",
   ph_noTotal: "⚠ 총량 없음",
   ph_noTotalConfirm: "총량이 비어 있는 약이 있습니다. 이 약은 재고에서 빠지지 않습니다. 의사에게 확인하세요:",
   ph_legacyTotal: "예전 계산 (용량×횟수×일수)",
@@ -559,6 +560,9 @@ export default {
   ph_chk_malaria: "말라리아약 — 의사 확인",
   ph_chk_topical: "정으로 되어 있으나 외용약(연고·크림)일 수 있음 — 포장 단위도",
   ph_chk_packlabel: "포장 단위 말(통? 병?)",
+  ph_packChangeWarn: "재고 숫자({n})에는 단위가 없어서, 저장하면 같은 숫자를 새 단위로 읽습니다. 저장한 뒤 약국 → 📦 재고 탭에서 「실사」로 새 단위로 세어 넣으세요.",
+  ph_rMixed: "⚠ 단위 섞임",
+  ph_rMixedHint: "이 달에 알·정 단위 조제와 병·튜브 단위 조제가 함께 있습니다(포장 단위를 바꾼 약). 조제 출고는 두 단위를 더한 값입니다.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

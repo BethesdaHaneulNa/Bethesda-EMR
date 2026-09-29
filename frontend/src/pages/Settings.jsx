@@ -1038,7 +1038,7 @@ export default function SettingsPage() {
                 <Fld label={t.ph_genericName}><input value={editItem.generic_name||''} onChange={function(e){ue('generic_name',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.ph_nameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
               </div>
-              {/* The "to check" list comes with the imported drug list (403) and is only
+              {/* The "to check" list comes with the imported drug list (034) and is only
                   shown here; the points are marked checked in the pharmacy Stock tab. */}
               {checkList(editItem).length ? <div style={{fontSize: 13,color:checkOpen(editItem)?'#fbbf24':'#64748b',border:'1px solid '+(checkOpen(editItem)?'#f59e0b60':bd2),borderRadius:4,padding:'5px 8px'}}>
                 <div style={{fontWeight:700}}>{checkOpen(editItem)?'⚠ ':'✓ '}{t.ph_checkTitle}</div>
@@ -1080,6 +1080,16 @@ export default function SettingsPage() {
                   {PACK_LABELS.map(function(k){ return <option key={k} value={k}>{t['ph_pack_'+k]}</option>; })}
                 </select>
                 <div style={{fontSize: 12,color:'#94a3b8',flexBasis:'100%'}}>{editItem.pack_unit ? t.ph_packUnitHintOn : t.ph_packUnitHint}</div>
+                {/* Only tells, does not stop (decision): the stock number has no unit, so
+                    switching an existing drug makes the same number read in the other unit. */}
+                {(function(){
+                  if(!editItem.id) return null;
+                  var was = drugs.filter(function(x){return x.id===editItem.id;})[0];
+                  if(!was) return null;
+                  var changed = !!was.pack_unit !== !!editItem.pack_unit || (editItem.pack_unit && (was.pack_label||'bottle') !== (editItem.pack_label||'bottle'));
+                  if(!changed || !(Number(was.stock_qty) > 0)) return null;
+                  return <div style={{fontSize: 13,color:'#fbbf24',fontWeight:700,flexBasis:'100%',border:'1px solid #f59e0b60',borderRadius:4,padding:'5px 8px'}}>⚠ {String(t.ph_packChangeWarn||'').replace('{n}', was.stock_qty)}</div>;
+                })()}
               </div>
             </div>):null}
 
