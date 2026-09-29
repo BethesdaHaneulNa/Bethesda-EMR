@@ -281,6 +281,15 @@ export default {
   cs_orderLocked: "결과가 이미 있는 오더(검사 결과 · 판독 · 촬영 시작)는 지울 수 없습니다.",
   // ── end consultation ──
   // ── begin payment (py_) ──
+  py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
+  py_paidSoFar: "이미 받은 금액",
+  py_noDifference: "차액 없음 — 영수만 새로 발행합니다",
+  py_correctionOwedHint: "받은 돈이 새 금액보다 적어서, 차액은 미수로 남습니다.",
+  py_correctionCarried: "이 내원의 미수는 영수 {receipt}(으)로 이월되었습니다. 먼저 영수내역에서 {receipt}를 취소한 뒤 정정하세요.",
+  py_unpaidIgnoresAmount: "받은 금액 칸의 {paid} Ar는 기록되지 않고, 전액 {total} Ar가 미수로 남습니다. 계속할까요?",
+  py_unpaidConfirm: "받은 금액이 없습니다. 전액 {total} Ar를 미수로 남길까요?",
+  py_refundHandBack: "환자에게 {amount} Ar를 돌려주세요.",
+  py_remainsOwed: "{amount} Ar가 미수로 남습니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
