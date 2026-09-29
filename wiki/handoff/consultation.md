@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 7.4 F1: 과거 기록 화면 확인 + 머리의 빈 「· ·」
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — `2f8a57d` 다음
+- **한 일**:
+  - 7.4 F1을 격리 스택에서 확인했습니다. 환자 26-00085: 어제(09-28) 완료한 진료(Codaep 포장 2병, 결과 뒤 취소한 CBC, 상처 드레싱 5일)와 오늘 내원이 있습니다.
+  - 「Visites passées」에서 09-28을 누르니 다음이 나왔습니다:
+    - 「Dossier passé · lecture seule」와 「← Retour à l'actuel」
+    - T° 38.1, 기록 「Toux depuis 3 jours」
+    - Codaep 「15 par jour en 3 prises, pendant 7 jours — 2 flacons」
+    - CBC 회색·줄 긋기 「Annulé」
+    - Wound Dressing 「facturé 5 fois」
+  - 과거 보기의 머리가 진료과가 없으면 「2026-09-28 · · S2 doctor」로 나오던 것을, 빈 값을 빼 「2026-09-28 · S2 doctor」로 고쳤습니다(대기 줄과 같게).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`(7.4 F1 ✅, 8절)
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 화면 FR로 위 내용을 확인했고, 머리 고친 것은 빌드 뒤 다시 확인했습니다.
+- **다른 세션에 부탁**: 수납 — `PatientChart.jsx` 70행의 같은 머리(「날짜 · 진료과 · 의사」)도 진료과가 비면 「· ·」가 됩니다(수납 파일이라 손대지 않음, 급하지 않음).
+- **남은 일 · 알려진 문제**: 7.4 F2(문서 인쇄 폭 다시 렌더링)는 총괄 순서를 기다립니다.
+
 ## 2026-09-29 — 위키 2절 따라 하기 · 작은 화면 고침 · 7절 남은 일 분류
 
 - **상태**: 확인 요청

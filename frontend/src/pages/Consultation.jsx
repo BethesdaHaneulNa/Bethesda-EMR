@@ -281,7 +281,7 @@ export default function ConsultationPage() {
     ];
     return <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
       <div style={{padding:'8px 12px',background:'#3b82f618',borderBottom:'1px solid #3b82f650',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-        <span style={{fontSize: 14,fontWeight:800,color:'#93c5fd'}}>{'\uD83D\uDCC5 '}{c.consult_date?c.consult_date.split('T')[0]:''} · {c.dept_code||''} · {c.doctor_name||''}</span>
+        <span style={{fontSize: 14,fontWeight:800,color:'#93c5fd'}}>{'\uD83D\uDCC5 '}{[c.consult_date?c.consult_date.split('T')[0]:'', c.dept_code, c.doctor_name].filter(Boolean).join(' · ')}</span>
         <span style={{fontSize: 12,color:'#fbbf24',fontWeight:700}}>{t.pastRecordRO}</span>
         <button onClick={closePast} style={{marginLeft:'auto',background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize: 13,fontWeight:800}}>{t.backToCurrent}</button>
       </div>
