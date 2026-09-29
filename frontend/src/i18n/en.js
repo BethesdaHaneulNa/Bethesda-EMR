@@ -628,5 +628,9 @@ export default {
   px_imagesWaiting: "Waiting for images",
   px_patientMismatch: "The images are labelled \"{id} {name}\", which does not match this patient's chart number. They may belong to another patient: check the patient details in the images first.",
   px_patientMissing: "The images carry no patient number. Check the patient details in the images first.",
+  px_orderCancelled: "Cancelled",
+  px_cancelReason: "Reason",
+  px_cancelledViewer: "These images belong to a cancelled order. They are kept as a record; no new reading can be saved.",
+  px_readingOnCancelled: "This imaging order was cancelled in the consultation room, so the reading cannot be saved.",
   // ── end pacs ──
 };

@@ -2,7 +2,18 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
 
-function ymd(d) { return d ? String(d).split('T')[0] : ''; }
+// A timestamp (result_at, cancelled_at) reaches the browser in UTC, so cutting
+// at 'T' dated a reading written between local midnight and 03:00 the day
+// before (P-22). Read it back as the clinic's local date; a plain DATE
+// ("YYYY-MM-DD", visit_date) is already a date and is kept. Same rule as
+// LabResults.jsx.
+function ymd(d) {
+  if (!d) return '';
+  var s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var x = new Date(s);
+  return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
+}
 
 // What the images say about the patient, next to the order it was taken for.
 // Only the worklist bridge fills this in (POST /api/pacs/study-arrived); a
@@ -53,16 +64,23 @@ export function RadiologyReadings(props) {
   return (
     <div style={{ overflow: 'auto', height: '100%', padding: 12 }}>
       {rows.map(function (r) {
-        return <div key={r.id} style={{ background: '#161a26', border: '1px solid ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
+        // A cancelled order (decision 3-B) stays in the list, greyed: its images
+        // and reading are part of the record, including why it was cancelled.
+        var cancelled = r.order_status === 'cancelled';
+        return <div key={r.id} style={{ background: '#161a26', border: '1px solid ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10, opacity: cancelled ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span style={{ fontFamily: 'monospace', color: '#34d399', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
             <span style={{ background: '#1e3a5f', color: '#93c5fd', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
-            <span style={{ color: tx, fontSize: 15, fontWeight: 700 }}>{r.order_name}</span>
+            <span style={{ color: cancelled ? t2 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
+            {cancelled ? <span title={r.cancel_reason || ''} style={{ background: '#374151', color: '#e5e7eb', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
             {r.images_received_at
               ? <span style={{ color: '#34d399', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
-              : (r.study_instance_uid ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
+              : (r.study_instance_uid && !cancelled ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
             {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: '#7c3aed22', color: cyan, border: '1px solid #7c3aed55', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
           </div>
+          {cancelled && (r.cancel_reason || r.cancelled_at)
+            ? <div style={{ fontSize: 12, color: t2, margin: '2px 0 6px' }}>{t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
+            : null}
           <PatientCheck images={imagesOfRow(r)} t={t} />
           <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#0f1117', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
             {r.result_text || (t.noReading || '판독 소견 없음')}

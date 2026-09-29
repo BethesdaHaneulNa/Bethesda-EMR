@@ -4,6 +4,7 @@ const { todayLocal, dicomDate } = require('../utils/localDate');
 const { tcpCheck } = require('../utils/tcpCheck');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
+const { ORDER_CANCELLED } = require('./pacs.cancel');
 
 const router = express.Router();
 
@@ -83,6 +84,13 @@ router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res)
 // "nothing arrived yet" is a different answer from "arrived, and it matches".
 const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_count,
                     image_patient_id, image_patient_name, patient_check`;
+// Whether the imaging order was cancelled after it had a result (decision 3-B).
+// cancelled_at / cancel_reason are added by the consultation session's
+// migration; to_jsonb reads them without failing on a database that does not
+// have them yet, so this can ship before that migration.
+const ORDER_CANCEL_COLUMNS = `oi.status AS order_status,
+       to_jsonb(oi)->>'cancelled_at' AS cancelled_at, to_jsonb(oi)->>'cancel_reason' AS cancel_reason`;
+
 function imagesOf(w) {
   if (!w || !w.images_received_at) return null;
   return {
@@ -102,6 +110,7 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     const cfg = await ensureConfig();
     const base = cfg.pacs_viewer_url ? String(cfg.pacs_viewer_url).replace(/\/+$/, '') : '';
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
+    let order_status = '', cancelled_at = null, cancel_reason = '';
     if (req.query.order_item_id) {
       const oid = req.query.order_item_id;
       const w = await pool.query(
@@ -111,25 +120,37 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         images = imagesOf(w.rows[0]);
       }
       const o = await pool.query(
-        'SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1', [oid]);
+        `SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, ${ORDER_CANCEL_COLUMNS}
+           FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1`, [oid]);
       if (o.rows[0]) {
         order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || '';
+        order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
     } else if (req.query.study) { study = req.query.study; }
     const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : base;
-    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading, images });
+    // A cancelled order's images stay viewable: they are part of the record.
+    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
+               order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Save a radiology reading for an imaging order (doctors only).
+// A cancelled order takes no new reading -- the laboratory refuses results for a
+// cancelled test the same way. The condition sits in the UPDATE itself, so a
+// cancel that lands at the same moment cannot be overwritten.
 router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const r = await pool.query(
-      'UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW() WHERE id = $3 AND code_type = $4 RETURNING id',
-      [req.body.result_text || '', req.user.id, req.params.orderItemId, 'imaging']
+      `UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW()
+        WHERE id = $3 AND code_type = 'imaging' AND status IS DISTINCT FROM 'cancelled' RETURNING id`,
+      [req.body.result_text || '', req.user.id, req.params.orderItemId]
     );
-    if (!r.rows.length) return res.status(404).json({ error: 'Imaging order not found' });
+    if (!r.rows.length) {
+      const o = await pool.query(`SELECT status FROM order_item WHERE id = $1 AND code_type = 'imaging'`, [req.params.orderItemId]);
+      if (o.rows[0] && o.rows[0].status === 'cancelled') return res.status(409).json({ error: ORDER_CANCELLED });
+      return res.status(404).json({ error: 'Imaging order not found' });
+    }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -141,7 +162,8 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
               wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,
-              wl.image_patient_id, wl.image_patient_name, wl.patient_check
+              wl.image_patient_id, wl.image_patient_name, wl.patient_check,
+              ${ORDER_CANCEL_COLUMNS}
          FROM order_item oi
          JOIN visit v ON v.id = oi.visit_id
          LEFT JOIN staff s ON s.id = oi.result_by

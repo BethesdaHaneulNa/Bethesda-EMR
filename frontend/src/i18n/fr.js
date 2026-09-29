@@ -619,5 +619,9 @@ export default {
   px_imagesWaiting: "Images en attente",
   px_patientMismatch: "Les images sont au nom de « {id} {name} », qui ne correspond pas au numéro de dossier de ce patient. Elles peuvent appartenir à un autre patient : vérifiez d'abord l'identité dans les images.",
   px_patientMissing: "Les images ne portent aucun numéro de patient. Vérifiez d'abord l'identité dans les images.",
+  px_orderCancelled: "Annulé",
+  px_cancelReason: "Motif",
+  px_cancelledViewer: "Images d'une demande annulée. Elles restent au dossier ; aucun nouveau compte-rendu ne peut être enregistré.",
+  px_readingOnCancelled: "Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.",
   // ── end pacs ──
 };
