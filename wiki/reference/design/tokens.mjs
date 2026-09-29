@@ -4,6 +4,7 @@
 // light values against WCAG AA.   Run: node tokens.mjs            (prints CSS + report)
 //                                       node tokens.mjs --check    (report only, exit 1 on a miss)
 // (design session - tooling only, not part of the app)
+import fs from 'fs';
 import { rgb, hex, contrast } from './themes.mjs';
 
 const over = (top, a, base) => top.map((v, i) => v * a + base[i] * (1 - a));
@@ -47,6 +48,7 @@ export const COLOR = [
   ['ok',            '#10b981', '#047857', 'c'],
   ['ok-strong',     '#059669', '#046c4e', 'c'],
   ['ok-2',          '#16a34a', '#15803d', 'c'],
+  ['ok-2-strong',   '#15803d', '#166534', 'c'],
   ['ok-ink',        '#10b981', '#04694c', 't'],
   ['ok-text',       '#34d399', '#04694c', 't'],
   ['ok-text-2',     '#6ee7b7', '#065f46', 't'],
@@ -68,16 +70,17 @@ export const COLOR = [
   ['violet-text',   '#a78bfa', '#6c23eb', 't'],
   ['violet-text-2', '#c084fc', '#6b21a8', 't'],
   ['cyan',          '#06b6d4', '#0e7490', 'c'],
-  ['cyan-ink',      '#06b6d4', '#0d6e89', 't'],
-  ['cyan-text',     '#67e8f9', '#0d6e89', 't'],
+  ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
+  ['cyan-text',     '#67e8f9', '#0b6279', 't'],
   ['teal',          '#14b8a6', '#0f766e', 'c'],
   ['teal-ink',      '#14b8a6', '#0e716a', 't'],
 ];
 
 // ── tints: family + two hex digits of alpha, as the screens write them (#3b82f640 → --accent-a40) ──
 const TINT_BASE = { '3b82f6': 'accent', 'ef4444': 'danger', 'dc2626': 'danger-strong', 'f59e0b': 'warn', '10b981': 'ok', '16a34a': 'ok-2', '059669': 'ok-strong', '34d399': 'ok-text', '8b5cf6': 'violet', 'a855f7': 'violet-2', '7c3aed': 'violet-strong', 'a78bfa': 'violet-text', '06b6d4': 'cyan', '94a3b8': 'text-2', '64748b': 'text-3' };
-const TINTS_USED = '3b82f640 3b82f620 ef444418 f59e0b20 10b98118 ef444440 3b82f618 10b98140 3b82f612 f59e0b60 dc262630 dc262610 f59e0b18 f59e0b14 10b98120 8b5cf620 3b82f615 f59e0b55 f59e0b40 ef444450 ef444420 ef444412 3b82f660 3b82f650 f59e0b50 f59e0b12 ef444460 ef444430 a855f750 a855f718 8b5cf615 7c3aed55 7c3aed22 10b98150 f59e0b66 f59e0b45 f59e0b30 f59e0b0d ef444455 ef444415 ef44440d dc262640 dc262620 a855f714 a78bfa40 a78bfa18 94a3b818 8b5cf650 8b5cf640 64748b55 64748b22 64748b18 3b82f680 3b82f630 3b82f608 34d39940 34d39918 16a34a40 16a34a15 10b98115 10b98112 10b98108 06b6d455 05966915';
-// Tints the screens build by joining a colour and an alpha ("c + '18'") are added screen by screen in stage 3.
+const TINTS_USED = '3b82f640 3b82f620 ef444418 f59e0b20 10b98118 ef444440 3b82f618 10b98140 3b82f612 f59e0b60 dc262630 dc262610 f59e0b18 f59e0b14 10b98120 8b5cf620 3b82f615 f59e0b55 f59e0b40 ef444450 ef444420 ef444412 3b82f660 3b82f650 f59e0b50 f59e0b12 ef444460 ef444430 a855f750 a855f718 8b5cf615 7c3aed55 7c3aed22 10b98150 f59e0b66 f59e0b45 f59e0b30 f59e0b0d ef444455 ef444415 ef44440d dc262640 dc262620 a855f714 a78bfa40 a78bfa18 94a3b818 8b5cf650 8b5cf640 64748b55 64748b22 64748b18 3b82f680 3b82f630 3b82f608 34d39940 34d39918 16a34a40 16a34a15 10b98115 10b98112 10b98108 06b6d455 05966915'
+  // tints the screens build by joining a colour and an alpha ("c + '18'") - added screen by screen in stage 3
+  + ' 10b98130 8b5cf630 06b6d415 06b6d430 f59e0b15 94a3b815 94a3b830';   // TopBar: the role chip
 const all = [...NEUTRAL, ...COLOR];
 const byName = Object.fromEntries(all.map(t => [t[0], t]));
 const lightAlpha = a => Math.min(1, a * 1.25);   // a tint needs more ink on white than on near-black
@@ -93,6 +96,8 @@ export const OTHER = [
   ['hover-filter', 'brightness(1.12)', 'brightness(0.95)'],
   ['scheme',       'dark', 'light'],
 ];
+
+export const dark = () => Object.fromEntries([...all, ...TINT, ...OTHER].map(t => [t[0], t[1]]));
 
 export function css() {
   const line = (list, i) => list.map(t => '      --' + t[0] + ': ' + t[i] + ';').join('\n');
@@ -125,7 +130,13 @@ export function check() {
 
 if (process.argv[1].endsWith('tokens.mjs')) {
   const r = check();
-  if (process.argv.indexOf('--check') < 0) console.log(css() + '\n');
+  const wi = process.argv.indexOf('--write');
+  if (wi >= 0) { // replace the block in index.html
+    const f = process.argv[wi + 1]; let h = fs.readFileSync(f, 'utf8'); const crlf = h.includes('\r\n'); if (crlf) h = h.replace(/\r\n/g, '\n');
+    const a = h.indexOf('<style id="bethesda-theme">'), b = h.indexOf('</style>', a); if (a < 0 || b < 0) throw new Error('no bethesda-theme block in ' + f);
+    h = h.slice(0, a) + '<style id="bethesda-theme">\n' + css() + '\n  ' + h.slice(b); fs.writeFileSync(f, crlf ? h.replace(/\n/g, '\r\n') : h); console.log('wrote ' + f);
+  }
+  if (process.argv.indexOf('--check') < 0 && wi < 0) console.log(css() + '\n');
   console.log(r.out.join('\n')); console.log(r.bad ? r.bad + ' below the line' : 'all light values pass');
   console.log(all.length + ' colours, ' + TINT.length + ' tints');
   process.exit(r.bad ? 1 : 0);
