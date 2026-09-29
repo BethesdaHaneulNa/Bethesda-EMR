@@ -591,7 +591,10 @@ export default function ConsultationPage() {
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
         dose:exam ? '' : oc.default_dose, frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
-        quantity:1, unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
+        // Quantity: 1 for a lab / imaging order; a procedure from an order set brings the
+        // set's quantity (editable in Settings since 6a0ef41), otherwise 1.
+        quantity:exam ? 1 : (parseFloat(oc.default_qty) > 0 ? parseFloat(oc.default_qty) : 1),
+        unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
       });
       setOrderItems(function(p){ return p.concat([item]); });
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
@@ -613,7 +616,7 @@ export default function ConsultationPage() {
       if(it.kind!=='order' && it.drug_active===false){ skipped.push(it.name||it.code); continue; }
       if(it.kind==='order'){
         await addExamOrder({ id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
-          default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
+          default_dose:it.dose, default_freq:it.frequency, default_days:it.days, default_qty:it.quantity,
           price_clinic:it.unit_price, price:it.unit_price, memo:'' });
       } else {
         await addDrugRx({ fromSet:true, id:it.drug_id, code:it.code, name:it.name,
@@ -889,14 +892,17 @@ export default function ConsultationPage() {
         </div>
 
         {/* CENTER: Vitals + Note + Phrases */}
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'#11141c',borderRight:'1px solid '+bd}}>
+        {/* minWidth 0: a flex item otherwise grows to its content, and anything too wide
+            in here pushed the column sideways (design session, 2026-09-29). */}
+        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',overflow:'hidden',background:'#11141c',borderRight:'1px solid '+bd}}>
           {pastView?renderPast():consult?(
             <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
               {/* Vitals */}
               <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:10,alignItems:'stretch',background:scBg}}>
                 {/* Two columns when there is room, one when the middle column is narrow (a
-                    small screen): fixed at two, the boxes shrank to a sliver at 800px wide. */}
-                <div style={{flex:1,minWidth:0,display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(118px, 1fr))',gap:'6px 8px'}}>
+                    small screen): fixed at two, the boxes shrank to a sliver at 800px wide. 110px keeps two
+                    columns at 1280 wide (a 383px middle column) and still fits "120/80". */}
+                <div style={{flex:1,minWidth:0,display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(110px, 1fr))',gap:'6px 8px'}}>
                   {[
                     ['bp',t.cs_vBP,'??/??'],
                     ['temp',t.cs_vBT,'??.?'],
@@ -906,7 +912,7 @@ export default function ConsultationPage() {
                   ].map(function(item){
                     return <div key={item[0]} style={{display:'grid',gridTemplateColumns:'40px minmax(0, 1fr)',alignItems:'center',gap:5}}>
                       <span style={{fontSize: 13,color:item[0]==='bp'?'#f59e0b':t3,fontWeight:800}}>{item[1]}</span>
-                      <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'5px 7px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
+                      <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'5px 4px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
                     </div>;
                   })}
                 </div>
@@ -925,12 +931,16 @@ export default function ConsultationPage() {
               </div>
               {/* Phrase dict */}
               <div style={{borderTop:'1px solid '+bd,height:'30%',minHeight:100,display:'flex',flexDirection:'column'}}>
-                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:4}}>
-                  <span style={{fontWeight:700,fontSize: 13,color:'#f59e0b'}}>{t.phraseDict}</span>
+                {/* The title, the category buttons and the search box wrap onto a second line
+                    when the column is narrow. On one line they were ~546px in a 409px column
+                    at 1366 wide (French): focusing the search box scrolled the whole middle
+                    column sideways and cut the vital signs and the note on the left. */}
+                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',flexWrap:'wrap',alignItems:'center',gap:'3px 4px'}}>
+                  <span style={{fontWeight:700,fontSize: 13,color:'#f59e0b',whiteSpace:'nowrap'}}>{t.phraseDict}</span>
                   {phraseCats.map(function(c){
-                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'#f59e0b20':'transparent',color:phraseCat===c?'#fbbf24':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{label(PHRASE_CAT_KEY, c)}</button>;
+                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'#f59e0b20':'transparent',color:phraseCat===c?'#fbbf24':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{label(PHRASE_CAT_KEY, c)}</button>;
                   })}
-                  <input value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',width:120,boxSizing:'border-box'}}/>
+                  <input value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',flex:'1 1 100px',minWidth:90,maxWidth:160,boxSizing:'border-box'}}/>
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
                   {filteredPhrases.map(function(p){
