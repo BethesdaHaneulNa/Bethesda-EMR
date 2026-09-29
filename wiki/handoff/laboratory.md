@@ -15,7 +15,7 @@
 
 > **총괄 확인 (2026-09-29)**: `1d4c239` 합침(`5bb7514`) + 실행 중 EMR 반영. `/completed`를 「오늘 결과 입력」 기준으로 한 판단에 동의 — 「오늘만」 결정은 대기 목록에 대한 것이고, 오늘 한 일이 오늘 완료 목록에 나오는 것이 맞음. 실행 중 EMR에서 `/lab/pending`·`/lab/completed` 200 확인.
 
-- **상태**: 확인 요청
+- **상태**: 합쳐짐(총괄 확인 완료, `5bb7514`)
 - **커밋**: session/laboratory `1d4c239` (출발점 `develop` `f4df9bc`)
 - **한 일**: 실장님 결정(`decisions.md`) — ① 오더를 내는 즉시 검사 목록에 · ② 목록은 **오늘만**(세션 추천 7일과 다름) · 「검사 안 함」 버튼 없음. 계획 노트의 ①만 구현, ②는 하지 않음.
   - `GET /pending`: `c.status = 'completed'` 조건 제거, `consultation_status` 추가, 접수 취소 내원(`v.status <> 'cancelled'`) 제외, 순서는 첫 검사 오더 시각(`MIN(o.created_at)`) — 진료 중 진료의 `updated_at`은 기록을 고칠 때마다 바뀌어 목록이 뒤섞이므로.
