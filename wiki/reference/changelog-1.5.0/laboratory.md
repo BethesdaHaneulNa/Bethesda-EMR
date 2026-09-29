@@ -79,6 +79,10 @@ doctors in `wiki/reference/lab-reference-questions.md`.
   lab route.
 - The flag and reference-range rules live in `backend/src/utils/labFlag.js`;
   `node backend/test/lab.flag.mjs` checks that the screen's copies agree with it.
+- The lab screen fits a 1366×768 laptop: it was sized as the window minus a fixed
+  height that the bars above it exceed, so the save button and the results table's
+  scrollbar sat below the window. Saving the last tests of a patient now shows what
+  was saved for a few seconds instead of just closing the patient.
 - The French screen no longer shows Korean text where a translation was missing.
 - Migration `024_lab_ref_ranges.sql` adds the `lab_ref_range` table and
   `lab_result.ref_label`. It only adds; nothing existing is changed.

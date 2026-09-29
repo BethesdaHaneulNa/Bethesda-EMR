@@ -98,6 +98,7 @@ export default function LabPage() {
   var fs = useState(false), finderOpen = fs[0], setFinderOpen = fs[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
   var nts = useState(''), notice = nts[0], setNotice = nts[1];   // what the last save did
+  var tos = useState(''), toast = tos[0], setToast = tos[1];     // same, when the patient is closed after saving
   var rks = useState(0), resultsKey = rks[0], setResultsKey = rks[1]; // remounts LabResults after a save
 
   var viewSeq = useRef(0);   // numbers each loadView, so only the latest one may fill the grid
@@ -183,7 +184,11 @@ export default function LabPage() {
     }
     loadData(); setResultsKey(function (k) { return k + 1; });
     if (!failed && !skipped.length) {
+      // Everything was saved, so the patient is closed -- and with it the green line
+      // that says what was saved. Show it for a few seconds on its own instead.
       setSel(null); setView(null); setGroups([]);
+      setToast(t.lb_savedTests + ': ' + done.join(', '));
+      setTimeout(function () { setToast(''); }, 4000);
     } else {
       // stay on this patient and reload, so the ✓ marks show what was saved
       var v = view;
@@ -239,7 +244,11 @@ export default function LabPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, minHeight: '100vh', fontSize: 15 }}>
+    // The page is exactly the window and only the inner areas scroll. It used to be
+    // "window minus 86px" for the top bars, which are taller than that, so on a
+    // 1366x768 laptop the save button and the results table's bottom scrollbar sat
+    // below the window.
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontSize: 15 }}>
       <TopBar />
       <div style={{ background: 'var(--panel-2)', borderBottom: '1px solid ' + bd, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button onClick={function () { setTab('pending'); setSel(null); }} style={{ background: tab === 'pending' ? tint('cyan', '20') : 'transparent', color: tab === 'pending' ? 'var(--cyan-text)' : t3, border: '1px solid ' + (tab === 'pending' ? tint('cyan', '50') : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labPending || '결과 대기'} {pending.length}</button>
@@ -249,7 +258,7 @@ export default function LabPage() {
         <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: 'var(--chip)', color: sel ? 'var(--violet-text-3)' : 'var(--text-4)', border: '1px solid ' + (sel ? 'var(--violet-2)' : bd2), borderRadius: 5, padding: '5px 12px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
       </div>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 86px)' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* LEFT: pending consultations */}
         <div style={{ width: 300, borderRight: '1px solid ' + bd, background: pn, overflow: 'auto', flexShrink: 0 }}>
           {loading ? <div style={{ padding: 16, color: t3 }}>{t.loading || 'Loading…'}</div> : null}
@@ -268,7 +277,7 @@ export default function LabPage() {
         </div>
 
         {/* CENTER: entry */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
@@ -287,11 +296,11 @@ export default function LabPage() {
                 })}
               </div>
               {/* item grid(s) */}
-              <div style={{ flex: 1, overflow: 'auto', padding: 14 }}>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 14 }}>
                 {groups.length === 0 ? <div style={{ color: t3, fontSize: 14, padding: 10 }}>{t.lb_noItems}</div>
                   : groups.map(function (g, gi) { return itemGrid(gi, g, view === 'all'); })}
               </div>
-              <div style={{ padding: '10px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
+              <div style={{ flexShrink: 0, padding: '10px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
                 {notice ? <div style={{ flex: 1, color: 'var(--ok-text-2)', fontSize: 13 }}>{notice}</div> : null}
                 <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan),var(--cyan-strong))' : 'var(--chip)', color: totalItems ? 'var(--on-fill)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
               </div>
@@ -302,9 +311,10 @@ export default function LabPage() {
         {/* RIGHT: history matrix */}
         <div style={{ width: 460, borderLeft: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 14, color: 'var(--cyan-text)' }}>🧪 {t.labResultsTitle || '검사결과'}</div>
-          <div style={{ flex: 1, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
         </div>
       </div>
+      {toast ? <div role="status" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', background: 'var(--panel-2)', color: 'var(--ok-text-2)', border: '1px solid var(--ok-a50)', borderRadius: 6, padding: '10px 18px', fontSize: 14, fontWeight: 700, zIndex: 900 }}>✓ {toast}</div> : null}
       <PatientFinder open={finderOpen} onClose={function () { setFinderOpen(false); }} mode="visit"
         onPickVisit={function (v) { pickVisit(v); }} />
       <DocumentModal open={chartViewOpen} onClose={function () { setChartViewOpen(false); }} category="chart" readOnly={true}
