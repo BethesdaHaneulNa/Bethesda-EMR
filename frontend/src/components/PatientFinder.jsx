@@ -37,7 +37,7 @@ export function PatientFinder(props){
 
   if(!open) return null;
 
-  var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
+  var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
   async function runSearch(){
     setLoading(true); setDidSearch(true);
@@ -56,11 +56,11 @@ export function PatientFinder(props){
 
   function billBadge(s){
     var map = {
-      paid:[t.billPaid||'PAID','#34d399','#10b98118'],
-      partial:[t.billPartial||'PARTIAL','#f59e0b','#f59e0b18'],
-      unpaid:[t.billUnpaid||'UNPAID','#f59e0b','#f59e0b18'],
-      waived:[t.billWaived||'WAIVED','#94a3b8','#94a3b818'],
-      cancelled:[t.cancelledBadge||'CANCELLED','#f87171','#ef444418']
+      paid:[t.billPaid||'PAID','var(--ok-text)','var(--ok-a18)'],
+      partial:[t.billPartial||'PARTIAL','var(--warn-ink)','var(--warn-a18)'],
+      unpaid:[t.billUnpaid||'UNPAID','var(--warn-ink)','var(--warn-a18)'],
+      waived:[t.billWaived||'WAIVED','var(--text-2)','var(--text-2-a18)'],
+      cancelled:[t.cancelledBadge||'CANCELLED','var(--danger-text)','var(--danger-a18)']
     };
     var m = s?map[s]:null;
     if(!m) return <span style={{fontSize:11,color:t3,fontStyle:'italic'}}>{t.notBilled||'미수납'}</span>;
@@ -70,21 +70,21 @@ export function PatientFinder(props){
   function hm(s){ if(!s) return ''; return String(s).substring(0,5); }
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}} onClick={function(e){ if(e.target===e.currentTarget && props.onClose) props.onClose(); }}>
+    <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}} onClick={function(e){ if(e.target===e.currentTarget && props.onClose) props.onClose(); }}>
       <div style={{background:pn,border:'1px solid '+bd2,borderRadius:12,width:760,maxWidth:'94vw',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{padding:'12px 16px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',alignItems:'center',gap:10}}>
           <span style={{fontWeight:800,fontSize:16,color:tx}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
           {selPatient?<span style={{fontSize:13,color:t2}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
           <div style={{flex:1}}></div>
-          <button onClick={props.onClose} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>✕ {t.close}</button>
+          <button onClick={props.onClose} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>✕ {t.close}</button>
         </div>
 
         {!selPatient ? (
           <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
             <div style={{padding:'12px 16px',display:'flex',gap:8,borderBottom:'1px solid '+bd}}>
               <input ref={inputRef} value={q} onChange={function(e){setQ(e.target.value)}} onKeyDown={function(e){ if(e.key==='Enter') runSearch(); }}
-                placeholder={t.searchPatientPh} style={{flex:1,background:'#0f1117',border:'1px solid '+bd2,borderRadius:6,padding:'9px 12px',color:tx,fontSize:15}} />
-              <button onClick={runSearch} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:6,padding:'0 18px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.search}</button>
+                placeholder={t.searchPatientPh} style={{flex:1,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:6,padding:'9px 12px',color:tx,fontSize:15}} />
+              <button onClick={runSearch} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:6,padding:'0 18px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.search}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
@@ -97,11 +97,11 @@ export function PatientFinder(props){
                 </tr></thead>
                 <tbody>
                   {results.map(function(p){
-                    return <tr key={p.id} onClick={function(){pickPatient(p)}} style={{borderTop:'1px solid #1e2433',cursor:'pointer'}}
-                      onMouseEnter={function(e){e.currentTarget.style.background='#3b82f612'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'#60a5fa'}}>{p.chart_no}</td>
+                    return <tr key={p.id} onClick={function(){pickPatient(p)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer'}}
+                      onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)'}}>{p.chart_no}</td>
                       <td style={{padding:'9px 12px',color:tx,fontWeight:700}}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'#cbd5e1',fontFamily:'monospace'}}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{p.mobile || p.phone || '—'}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;
@@ -116,7 +116,7 @@ export function PatientFinder(props){
         ) : (
           <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
             <div style={{padding:'8px 16px',borderBottom:'1px solid '+bd}}>
-              <button onClick={function(){setSelPatient(null);setVisits([])}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>{t.backToSearch}</button>
+              <button onClick={function(){setSelPatient(null);setVisits([])}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>{t.backToSearch}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
@@ -133,10 +133,10 @@ export function PatientFinder(props){
                     // it is still part of the patient's history, and what may be done with it
                     // is each screen's call (consultation's server already refuses it).
                     var cancelled = v.status === 'cancelled';
-                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid #1e2433',cursor:'pointer',opacity:cancelled?0.55:1}}
-                      onMouseEnter={function(e){e.currentTarget.style.background='#10b98112'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'#34d399',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(v.visit_date)}
-                        {cancelled?<span style={{marginLeft:8,fontFamily:'system-ui,sans-serif',fontSize:11,fontWeight:800,color:'#f87171',background:'#ef444418',borderRadius:4,padding:'1px 7px',display:'inline-block',textDecoration:'none'}}>{t.rc_visitCancelled}</span>:null}
+                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer',opacity:cancelled?0.55:1}}
+                      onMouseEnter={function(e){e.currentTarget.style.background='var(--ok-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(v.visit_date)}
+                        {cancelled?<span style={{marginLeft:8,fontFamily:'system-ui,sans-serif',fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',borderRadius:4,padding:'1px 7px',display:'inline-block',textDecoration:'none'}}>{t.rc_visitCancelled}</span>:null}
                       </td>
                       <td style={{padding:'9px 12px',color:t2,fontFamily:'monospace'}}>{hm(v.reception_time)}</td>
                       <td style={{padding:'9px 12px',color:tx}}>{v.dept_code||''}</td>

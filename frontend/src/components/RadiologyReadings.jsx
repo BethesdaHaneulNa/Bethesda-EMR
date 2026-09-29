@@ -38,8 +38,8 @@ export function PatientCheck(props) {
     ? String(t.px_patientMismatch || '').replace('{id}', im.patient_id || '').replace('{name}', String(im.patient_name || '').replace(/\^/g, ' ').trim())
     : (t.px_patientMissing || '');
   return <div style={Object.assign({ margin: '4px 0 6px', padding: '6px 9px', borderRadius: 6, fontSize: 13, fontWeight: 700, lineHeight: 1.5,
-    background: mismatch ? '#7f1d1d55' : '#78350f55', color: mismatch ? '#fca5a5' : '#fcd34d',
-    border: '1px solid ' + (mismatch ? '#b91c1c' : '#b45309') }, props.style)}>⚠ {text}</div>;
+    background: mismatch ? 'var(--danger-chip)' : 'var(--warn-chip)', color: mismatch ? 'var(--danger-text-2)' : 'var(--warn-text-2)',
+    border: '1px solid ' + (mismatch ? 'var(--danger-deep)' : 'var(--warn-strong)') }, props.style)}>⚠ {text}</div>;
 }
 
 // Read-only list of a patient's imaging orders + radiology readings.
@@ -56,7 +56,7 @@ export function RadiologyReadings(props) {
       .then(function () { setLoading(false); });
   }, [props.patientId]);
 
-  var bd = '#232838', tx = '#e2e8f0', t2 = '#94a3b8', t3 = '#64748b', cyan = '#a78bfa';
+  var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--violet-text)';
 
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
   if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
@@ -67,25 +67,25 @@ export function RadiologyReadings(props) {
         // A cancelled order (decision 3-B) stays in the list, greyed: its images
         // and reading are part of the record, including why it was cancelled.
         var cancelled = r.order_status === 'cancelled';
-        return <div key={r.id} style={{ background: '#161a26', border: '1px solid ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10, opacity: cancelled ? 0.6 : 1 }}>
+        return <div key={r.id} style={{ background: 'var(--panel-2)', border: '1px solid ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10, opacity: cancelled ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: 'monospace', color: '#34d399', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
-            <span style={{ background: '#1e3a5f', color: '#93c5fd', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
+            <span style={{ fontFamily: 'monospace', color: 'var(--ok-text)', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
+            <span style={{ background: 'var(--accent-chip)', color: 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
             <span style={{ color: cancelled ? t2 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
-            {cancelled ? <span title={r.cancel_reason || ''} style={{ background: '#374151', color: '#e5e7eb', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
+            {cancelled ? <span title={r.cancel_reason || ''} style={{ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
             {r.images_received_at
-              ? <span style={{ color: '#34d399', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
+              ? <span style={{ color: 'var(--ok-text)', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
               : (r.study_instance_uid && !cancelled ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
-            {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: '#7c3aed22', color: cyan, border: '1px solid #7c3aed55', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
+            {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
           </div>
           {cancelled && (r.cancel_reason || r.cancelled_at)
             ? <div style={{ fontSize: 12, color: t2, margin: '2px 0 6px' }}>{t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
             : null}
           <PatientCheck images={imagesOfRow(r)} t={t} />
           {r.image_study_uid && r.image_study_uid !== r.study_instance_uid
-            ? <div style={{ fontSize: 12, color: '#fbbf24', margin: '0 0 6px' }}>{t.px_linkedByAccession}</div>
+            ? <div style={{ fontSize: 12, color: 'var(--warn-text)', margin: '0 0 6px' }}>{t.px_linkedByAccession}</div>
             : null}
-          <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#0f1117', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
+          <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: 'var(--bg)', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
             {r.result_text || (t.noReading || '판독 소견 없음')}
           </div>
           {r.result_at ? <div style={{ fontSize: 12, color: t3, marginTop: 4 }}>{t.lastReadBy || '판독'}: {r.result_by_name || ''} · {ymd(r.result_at)}</div> : null}
