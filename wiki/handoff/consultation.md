@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — ㉓ 영상 뷰어 환자 확인 경고 + 상태 칸 3개 국어 (PACS 부탁)
 
+> **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토 문제없음(`orderStatus`는 두 곳 모두 `ConsultationPage` 안에서 부름). 경고 표시는 실제 브리지 값으로는 아직 못 봄 — PACS 저장소를 합친 뒤(재부팅 후) 실제 영상으로 확인 예정. `PatientCheck` export는 PACS 세션에 전달.
+
 - **상태**: 확인 요청
 - **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `076bd3e`. `f48cec9` 뒤에 develop이 앞서 나가 fast-forward가 안 돼서, 처음엔 develop을 한 번 merge(`0bfa6ab`)했습니다. 총괄이 `f48cec9`를 합친 뒤 그 merge 커밋은 버리고 develop 위로 다시 올렸으므로, 이 브랜치는 다시 develop + 커밋 1개입니다.
 - **한 일**:
