@@ -379,6 +379,11 @@ export default {
   ph_noTotal: "⚠ No total",
   ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
   ph_legacyTotal: "Old calculation (dose×times×days)",
+  ph_pastRx: "Prescribed {n} days ago ({date})",
+  ph_pastListTitle: "waiting prescriptions (last {n} days)",
+  ph_noPastRx: "No waiting prescriptions. Only the chart is shown on the right.",
+  ph_olderRx: "{count} waiting prescription(s) older than {n} days — cannot be dispensed here. The doctor must prescribe again.",
+  ph_tooOld: "Prescriptions older than {n} days cannot be dispensed. The doctor must prescribe again.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

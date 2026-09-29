@@ -370,6 +370,11 @@ export default {
   ph_noTotal: "⚠ 총량 없음",
   ph_noTotalConfirm: "총량이 비어 있는 약이 있습니다. 이 약은 재고에서 빠지지 않습니다. 의사에게 확인하세요:",
   ph_legacyTotal: "예전 계산 (용량×횟수×일수)",
+  ph_pastRx: "{n}일 전 처방 ({date})",
+  ph_pastListTitle: "조제 대기 처방 (최근 {n}일)",
+  ph_noPastRx: "조제 대기 처방이 없습니다. 오른쪽에 차트만 보입니다.",
+  ph_olderRx: "{n}일보다 오래된 조제 대기 처방 {count}건 — 여기서 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
+  ph_tooOld: "{n}일보다 오래된 처방은 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
