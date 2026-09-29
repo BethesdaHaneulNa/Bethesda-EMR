@@ -323,12 +323,13 @@ export default {
   cs_vSpO2: "SpO2",
   cs_colSig: "용법",
   cs_doseHint: "하루 총량(일총투여)을 적습니다. 총량 = 하루 총량 × 일수. 횟수는 하루 총량을 몇 번에 나눠 먹는지입니다.",
-  cs_rxBreakdown: "1회 {per} × {freq}회 × {days}일 = 총 {total}",
-  cs_rxUneven: "⚠ 1회량이 나눠지지 않음 — 하루 {daily} ÷ {freq}회 · {days}일 = 총 {total}",
-  cs_rxStoredTotal: "저장된 총량 {total} (예전 계산)",
   cs_noPrice: "가격 없음",
   cs_noPriceCount: "가격 없는 항목 {n}개",
   cs_noPriceHint: "단가가 0입니다. 이대로면 수납에서 0으로 청구됩니다. 설정에서 가격을 넣어도 이미 넣은 줄은 바뀌지 않으니, 가격을 넣은 뒤 이 줄을 지우고 다시 넣으세요.",
+  cs_rxUnevenFlag: "1회량이 나눠지지 않음",
+  cs_rxLegacy: "예전 계산으로 저장된 총량 (새 식이면 {total})",
+  // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
+  cs_rxStoredTotal: "저장된 총량 {total} (예전 계산)",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
@@ -346,6 +347,9 @@ export default {
   py_qtyMissingList: "처방 총량 없는 약 있음",
   py_qtyMissingBlock: "처방 총량이 비어 있어 금액을 계산할 수 없는 약이 있습니다: {names}. 진료실에 그 처방을 다시 저장해 달라고 한 뒤 수납하세요.",
   py_settleAllReceipts: "방문마다 영수증이 한 장씩, 모두 {n}장 발행됩니다(오늘 날짜).",
+  py_noPrice: "가격 없음",
+  py_noPriceBanner: "단가가 0인 항목 {n}개 — 가격을 확인하세요",
+  py_noPriceConfirm: "단가가 0인 항목이 {n}개 있습니다: {names}.\n설정에서 가격을 넣어도 이미 넣은 처방·오더는 0원 그대로입니다(진료실에서 지우고 다시 넣어야 함).\n그래도 이대로 수납할까요?",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
@@ -370,6 +374,11 @@ export default {
   ph_noTotal: "⚠ 총량 없음",
   ph_noTotalConfirm: "총량이 비어 있는 약이 있습니다. 이 약은 재고에서 빠지지 않습니다. 의사에게 확인하세요:",
   ph_legacyTotal: "예전 계산 (용량×횟수×일수)",
+  ph_pastRx: "{n}일 전 처방 ({date})",
+  ph_pastListTitle: "조제 대기 처방 (최근 {n}일)",
+  ph_noPastRx: "조제 대기 처방이 없습니다. 오른쪽에 차트만 보입니다.",
+  ph_olderRx: "{n}일보다 오래된 조제 대기 처방 {count}건 — 여기서 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
+  ph_tooOld: "{n}일보다 오래된 처방은 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

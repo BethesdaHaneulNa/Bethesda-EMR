@@ -332,12 +332,13 @@ export default {
   cs_vSpO2: "SpO2",
   cs_colSig: "Sig.",
   cs_doseHint: "Enter the DAILY total. Total = daily total × days. Times = how many doses the day is split into.",
-  cs_rxBreakdown: "{per} per dose × {freq}/day × {days} days = {total} in all",
-  cs_rxUneven: "⚠ Dose per intake does not divide — {daily}/day in {freq} doses · {days} days = {total} in all",
-  cs_rxStoredTotal: "stored total {total} (old formula)",
   cs_noPrice: "No price",
   cs_noPriceCount: "{n} without a price",
   cs_noPriceHint: "The unit price is 0, so this line will be billed at 0. Entering the price in Settings does not change lines already added: enter it there, then remove this line and add it again.",
+  cs_rxUnevenFlag: "dose per intake does not divide",
+  cs_rxLegacy: "total saved under the old formula (new formula: {total})",
+  // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
+  cs_rxStoredTotal: "stored total {total} (old formula)",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
@@ -355,6 +356,9 @@ export default {
   py_qtyMissingList: "Drug quantity missing",
   py_qtyMissingBlock: "The total quantity is missing for: {names}, so the amount cannot be calculated. Ask the doctor to save the prescription again, then bill.",
   py_settleAllReceipts: "One receipt per visit will be issued, {n} in all (dated today).",
+  py_noPrice: "No price",
+  py_noPriceBanner: "{n} line(s) with no price — check the prices",
+  py_noPriceConfirm: "{n} line(s) have no price: {names}.\nSetting the price later does not change lines already prescribed (the doctor must remove and add them again).\nBill as it is?",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
@@ -379,6 +383,11 @@ export default {
   ph_noTotal: "⚠ No total",
   ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
   ph_legacyTotal: "Old calculation (dose×times×days)",
+  ph_pastRx: "Prescribed {n} days ago ({date})",
+  ph_pastListTitle: "waiting prescriptions (last {n} days)",
+  ph_noPastRx: "No waiting prescriptions. Only the chart is shown on the right.",
+  ph_olderRx: "{count} waiting prescription(s) older than {n} days — cannot be dispensed here. The doctor must prescribe again.",
+  ph_tooOld: "Prescriptions older than {n} days cannot be dispensed. The doctor must prescribe again.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

@@ -6,6 +6,7 @@ import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
 import { RadiologyReadings, PatientCheck } from '../components/RadiologyReadings.jsx';
+import { perDose, doseSentence, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
 
 // The server refuses to change a dispensed prescription or delete an order that already
 // has a result (consult.routes.js). Its English refusal strings are matched here so the
@@ -29,18 +30,10 @@ function orderLocked(o){
 // A prescription line is entered the Korean way: dose = the DAILY total, frequency =
 // how many times a day it is split into, days = how long. The server works out
 // total_qty = dose x days (consult.routes.js rxTotal); this screen never computes it.
-// What the screen does compute is the breakdown the doctor reads back:
-// one dose = dose / frequency. The pharmacy uses the same rule: a dose that does not
-// come out in half tablets (0.5 steps) is flagged, never refused.
-function num(v){ var n = parseFloat(v); return isFinite(n) ? n : 0; }
-function fmtNum(n){ return String(Math.round(n * 1000) / 1000); }
-function rxBreakdown(rx){
-  var daily = num(rx.dose), freq = parseInt(rx.frequency) || 1, days = parseInt(rx.days) || 1;
-  var per = daily / freq;
-  return { per: per, freq: freq, days: days, daily: daily,
-           total: Math.round(daily * days * 1000) / 1000,
-           even: Math.abs(per * 2 - Math.round(per * 2)) < 1e-9 };
-}
+// How a line reads back ("1 tab x 3 times a day, 7 days (total 21)"), whether one
+// intake comes out in half tablets, and whether a total predates the formula change
+// all come from documents/rx-dosing.js - the pharmacy's file - so this screen, the
+// pharmacy screen and the outside prescription say the same thing in the same words.
 
 // A price of 0 (or none) is almost always a price nobody has entered yet - the clinic's
 // drug list is being imported with every price empty. Billing charges each line at the
@@ -85,6 +78,7 @@ export default function ConsultationPage() {
   function rxSnap(r){ return [r.dose, r.frequency, r.days, r.route, r.memo].map(function(x){ return x==null ? '' : String(x); }).join('|'); }
   function rememberRx(rows){ (rows||[]).forEach(function(r){ savedRx.current[r.id] = rxSnap(r); }); return rows; }
   var ois = useState([]), orderItems = ois[0], setOrderItems = ois[1];
+  var orderItemsRef = useRef([]); orderItemsRef.current = orderItems;
   var nts = useState(''), note = nts[0], setNote = nts[1];
   var vts = useState({ bp:'',temp:'',pulse:'',spo2:'',rr:'' }), vt = vts[0], setVt = vts[1];
   var ocs = useState(''), orderCode = ocs[0], setOrderCode = ocs[1];
@@ -130,6 +124,43 @@ export default function ConsultationPage() {
   }
 
   useEffect(function(){ loadData(); },[]);
+
+  // The lab now sees an order as soon as it is written, while the consultation is
+  // still open, and the imaging room works from the worklist the same way. So a result
+  // can come in while the doctor still has the patient on screen. Every 30 s, while
+  // this consultation has a lab order without a result or an imaging order not yet
+  // done, re-read the orders and copy across only what the lab and PACS change -
+  // status, result, worklist state - onto the rows already shown. Quantities or notes
+  // the doctor is typing are left alone, and nothing is added or removed. A hidden
+  // tab does not poll.
+  var ORDER_PROGRESS_FIELDS = ['status','result_at','result_by','result_text','worklist_status','worklist_sent_at'];
+  useEffect(function(){
+    if(!consult) return;
+    var cid = consult.id;
+    var timer = setInterval(function(){
+      if(document.hidden) return;
+      var waiting = orderItemsRef.current.some(function(o){
+        if(o.code_type==='lab') return o.status!=='completed' && o.status!=='cancelled';
+        return !!o.worklist_sent_at && o.worklist_status!=='completed' && o.worklist_status!=='cancelled';
+      });
+      if(!waiting) return;
+      api.get('/consultations/'+cid+'/orders').then(function(fresh){
+        var byId = {}; (fresh||[]).forEach(function(f){ byId[f.id] = f; });
+        setOrderItems(function(cur){
+          var changed = false;
+          var next = cur.map(function(o){
+            var f = byId[o.id]; if(!f) return o;
+            var diff = ORDER_PROGRESS_FIELDS.some(function(k){ return String(o[k]==null?'':o[k]) !== String(f[k]==null?'':f[k]); });
+            if(!diff) return o;
+            changed = true;
+            var n = Object.assign({}, o); ORDER_PROGRESS_FIELDS.forEach(function(k){ n[k] = f[k]; }); return n;
+          });
+          return changed ? next : cur;
+        });
+      }).catch(function(){});
+    }, 30000);
+    return function(){ clearInterval(timer); };
+  },[consult && consult.id]);
 
   useEffect(function(){
     var id=setInterval(function(){ api.get('/visits/today').then(function(v){ setVisits(v); }).catch(function(){}); }, 15000);
@@ -352,22 +383,25 @@ export default function ConsultationPage() {
     return null;
   }
 
-  // "1 per dose x 3 a day x 7 days = 21 in all" under the drug name. A dose that does
-  // not come out in half tablets gets the pharmacy's warning instead of a number. If
-  // the stored total differs from dose x days the line was saved under the old formula
-  // (before 2026-09-29) and keeps that total until its dose or days are changed; the
-  // stored figure is shown so the screen never claims a total the bill does not use.
+  // The line under the drug name: doseSentence() from rx-dosing.js, e.g.
+  // "1회 1정 × 하루 3회, 7일 (총 21)". When one intake does not come out in half tablets
+  // it is amber with a warning in front (the pharmacy flags the same lines). A total
+  // saved before 2026-09-29 was dose x times x days, so the sentence would contradict
+  // itself; isLegacyTotal() spots it and the line says what the new formula gives.
+  // That total stays until the dose, times or days are changed (consult.routes.js PUT).
   function rxLine(rx){
-    var b = rxBreakdown(rx);
-    var text = b.even
-      ? String(t.cs_rxBreakdown||'').replace('{per}', fmtNum(b.per)).replace('{freq}', b.freq).replace('{days}', b.days).replace('{total}', fmtNum(b.total))
-      : String(t.cs_rxUneven||'').replace('{daily}', fmtNum(b.daily)).replace('{freq}', b.freq).replace('{days}', b.days).replace('{total}', fmtNum(b.total));
-    var stored = rx.total_qty==null ? null : num(rx.total_qty);
-    var old = stored!=null && Math.abs(stored - b.total) > 0.0005;
-    return <div style={{fontSize:11.5,lineHeight:1.35,marginTop:1,color:b.even?t2:'#fbbf24'}}>
-      {text}{old ? <span style={{color:'#fbbf24'}}>{' · '+String(t.cs_rxStoredTotal||'').replace('{total}', fmtNum(stored))}</span> : null}
+    var text = doseSentence(rx, lang);
+    if(!text) return null;
+    var p = perDose(rx);
+    var uneven = !!(p && !p.clean);
+    var legacy = isLegacyTotal(rx);
+    var fresh = Math.round((parseFloat(rx.dose)||0) * (parseInt(rx.days,10)||1) * 1000) / 1000;
+    return <div style={{fontSize:11.5,lineHeight:1.35,marginTop:1,color:uneven?'#fbbf24':t2}}>
+      {uneven ? '⚠ '+t.cs_rxUnevenFlag+' — ' : ''}{text}
+      {legacy ? <span style={{color:'#fbbf24'}}>{' · '+String(t.cs_rxLegacy||'').replace('{total}', fmtAmount(fresh))}</span> : null}
     </div>;
   }
+
 
   function NoPriceBadge(){
     return <span title={t.cs_noPriceHint} style={{marginLeft:6,background:'#78350f55',color:'#fcd34d',border:'1px solid #b45309',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noPrice}</span>;

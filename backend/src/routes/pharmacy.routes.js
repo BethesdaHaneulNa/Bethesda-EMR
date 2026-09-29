@@ -11,16 +11,24 @@ router.use(permMiddleware('pharmacy'));
 // message instead of raw English. Change them together.
 const ERR_NOTHING_PENDING = 'No pending prescriptions for this consultation';
 const ERR_TYPE_LOCKED = 'Prescription already dispensed; dispense type can no longer change';
+const ERR_TOO_OLD = 'Prescription too old to dispense here; the doctor must prescribe again';
 
-// GET /api/pharmacy/pending - completed consultations with undispensed prescriptions
-router.get('/pending', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT
+// How far back an undispensed prescription can still be dispensed from the
+// patient search (decision M3, 2026-09-29: "today's list + the patient's older
+// ones"; 7 days decided by the manager the same day). This is the one place to change it.
+// Older ones go back to the doctor: symptoms move on, and an antibiotic started a
+// fortnight late is a different treatment.
+const PAST_RX_DAYS = 7;
+
+// One row per consultation with its waiting lines. Shared by the day's queue and
+// by the per-patient lookup so both hand the screen the same shape.
+function pendingQuery(where) {
+  return `SELECT
          c.id AS consultation_id,
          c.updated_at AS consultation_time,
          v.id AS visit_id,
          v.visit_date,
+         (CURRENT_DATE - v.visit_date) AS days_ago,
          p.id AS patient_id,
          p.chart_no,
          p.last_name,
@@ -54,9 +62,15 @@ router.get('/pending', async (req, res) => {
        JOIN patient p ON p.id = c.patient_id
        LEFT JOIN staff s ON s.id = c.doctor_id
        JOIN prescription rx ON rx.consultation_id = c.id AND rx.status = 'ordered'
-       WHERE c.status = 'completed' AND v.visit_date = CURRENT_DATE
-       GROUP BY c.id, v.id, p.id, s.name
-       ORDER BY c.updated_at ASC, c.id ASC`
+       WHERE c.status = 'completed' AND ${where}
+       GROUP BY c.id, v.id, p.id, s.name`;
+}
+
+// GET /api/pharmacy/pending - completed consultations with undispensed prescriptions
+router.get('/pending', async (req, res) => {
+  try {
+    const result = await pool.query(
+      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.updated_at ASC, c.id ASC'
     );
     res.json(result.rows);
   } catch (err) {
@@ -64,7 +78,34 @@ router.get('/pending', async (req, res) => {
   }
 });
 
-// GET /api/pharmacy/completed - recent dispensed prescription groups
+// GET /api/pharmacy/patient/:patientId/pending - this patient's waiting prescriptions
+// from today back PAST_RX_DAYS days, for the patient search: the day's queue shows
+// today only, so a prescription not collected on the day is reached this way.
+// Anything older is only counted, so the screen can say it exists and send the
+// patient back to the doctor.
+router.get('/patient/:patientId/pending', async (req, res) => {
+  const pid = parseInt(req.params.patientId, 10);
+  if (!Number.isInteger(pid) || pid <= 0) return res.status(400).json({ error: 'patientId must be a number' });
+  try {
+    const groups = await pool.query(
+      pendingQuery('c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - $2::int') + ' ORDER BY v.visit_date DESC, c.id DESC',
+      [pid, PAST_RX_DAYS]
+    );
+    const older = await pool.query(
+      `SELECT COUNT(DISTINCT c.id)::int AS n
+         FROM consultation c
+         JOIN visit v ON v.id = c.visit_id
+         JOIN prescription rx ON rx.consultation_id = c.id AND rx.status = 'ordered'
+        WHERE c.status = 'completed' AND c.patient_id = $1 AND v.visit_date < CURRENT_DATE - $2::int`,
+      [pid, PAST_RX_DAYS]
+    );
+    res.json({ days: PAST_RX_DAYS, groups: groups.rows, older: older.rows[0].n });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/pharmacy/completed - prescription groups dispensed today
 router.get('/completed', async (req, res) => {
   try {
     const result = await pool.query(
@@ -73,6 +114,7 @@ router.get('/completed', async (req, res) => {
          MAX(rx.dispensed_at) AS dispensed_at,
          v.id AS visit_id,
          v.visit_date,
+         (CURRENT_DATE - v.visit_date) AS days_ago,
          p.id AS patient_id,
          p.chart_no,
          p.last_name,
@@ -110,7 +152,9 @@ router.get('/completed', async (req, res) => {
        LEFT JOIN staff s ON s.id = c.doctor_id
        JOIN prescription rx ON rx.consultation_id = c.id AND rx.status = 'dispensed'
        LEFT JOIN staff ds ON ds.id = rx.dispensed_by
-       WHERE v.visit_date = CURRENT_DATE
+       -- Dispensed today, whatever day the visit was: a prescription from three
+       -- days ago handed out this morning belongs on today's list.
+       WHERE rx.dispensed_at >= CURRENT_DATE
        GROUP BY c.id, v.id, p.id, s.name
        ORDER BY MAX(rx.dispensed_at) DESC NULLS LAST
        LIMIT 50`
@@ -157,6 +201,18 @@ router.put('/consultations/:id/dispense', async (req, res) => {
       // gets: the lock above waits for the first, then finds nothing 'ordered'.
       await client.query('ROLLBACK');
       return res.status(404).json({ error: ERR_NOTHING_PENDING });
+    }
+
+    // The screen only offers prescriptions within PAST_RX_DAYS, but it is not the
+    // only way to call this.
+    const age = await client.query(
+      `SELECT (CURRENT_DATE - v.visit_date) AS days_ago
+         FROM consultation c JOIN visit v ON v.id = c.visit_id WHERE c.id = $1`,
+      [req.params.id]
+    );
+    if (age.rows.length && Number(age.rows[0].days_ago) > PAST_RX_DAYS) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: ERR_TOO_OLD, days: PAST_RX_DAYS });
     }
 
     // An "external" line is a paper prescription the patient fills at an outside

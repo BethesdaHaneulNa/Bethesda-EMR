@@ -323,12 +323,13 @@ export default {
   cs_vSpO2: "SpO2",
   cs_colSig: "Posologie",
   cs_doseHint: "Saisir la dose TOTALE par jour. Total = dose par jour × jours. Fois = en combien de prises la journée est répartie.",
-  cs_rxBreakdown: "{per} par prise × {freq}/j × {days} j = total {total}",
-  cs_rxUneven: "⚠ Dose par prise non divisible — {daily}/j en {freq} prises · {days} j = total {total}",
-  cs_rxStoredTotal: "total enregistré {total} (ancien calcul)",
   cs_noPrice: "Sans prix",
   cs_noPriceCount: "{n} sans prix",
   cs_noPriceHint: "Le prix unitaire est 0 : cette ligne sera facturée 0. Saisir le prix dans les Paramètres ne change pas les lignes déjà ajoutées : saisissez-le, puis retirez cette ligne et ajoutez-la de nouveau.",
+  cs_rxUnevenFlag: "dose par prise non divisible",
+  cs_rxLegacy: "total enregistré selon l'ancien calcul (nouveau calcul : {total})",
+  // Used by PatientChart.jsx (payment session) for old-formula lines - keep.
+  cs_rxStoredTotal: "total enregistré {total} (ancien calcul)",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
@@ -346,6 +347,9 @@ export default {
   py_qtyMissingList: "Quantité de médicament manquante",
   py_qtyMissingBlock: "Quantité totale manquante pour : {names}. Le montant ne peut pas être calculé. Demandez au médecin d’enregistrer à nouveau la prescription, puis encaissez.",
   py_settleAllReceipts: "Un reçu par visite sera émis, {n} au total (daté d’aujourd’hui).",
+  py_noPrice: "Sans prix",
+  py_noPriceBanner: "{n} article(s) sans prix — vérifiez les prix",
+  py_noPriceConfirm: "{n} article(s) sans prix : {names}.\nFixer le prix plus tard ne modifie pas les lignes déjà prescrites (le médecin doit les supprimer et les ajouter à nouveau).\nEncaisser quand même ?",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
@@ -370,6 +374,11 @@ export default {
   ph_noTotal: "⚠ Quantité totale absente",
   ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
   ph_legacyTotal: "Ancien calcul (dose×fois×jours)",
+  ph_pastRx: "Prescrit il y a {n} j ({date})",
+  ph_pastListTitle: "ordonnances en attente ({n} derniers jours)",
+  ph_noPastRx: "Aucune ordonnance en attente. Seul le dossier est affiché à droite.",
+  ph_olderRx: "{count} ordonnance(s) en attente de plus de {n} jours — impossible à délivrer ici. Le médecin doit represcrire.",
+  ph_tooOld: "Une ordonnance de plus de {n} jours ne peut pas être délivrée. Le médecin doit represcrire.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

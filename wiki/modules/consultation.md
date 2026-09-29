@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 가격 0인 약·오더 표시 확인 요청 · 약 총량 계산식(7d16518)은 합치기 대기
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 약 표기를 공용 rx-dosing.js로 맞춤 + 검사 결과 자동 반영 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -51,10 +51,11 @@
 4. 추가된 줄의 칸을 고치고 **다른 곳을 누르면 바로 저장**됩니다. Sauver를 누를 필요가 없습니다.
    - 약은 **한국식**으로 적습니다: **Qté (Qty) = 하루 총량**(일총투여) · **Fois (Tms) = 하루 몇 번에 나눠 먹는지** · **Jours (Day) = 일수** · **Posologie (용법)** (TID·IV 같은 용법) · **Unité (단위)** (메모). 예: 파라세타몰 `3 / 3 / 7 / TID` = 하루 3정을 3번에 나눠 7일.
      - **총량 = 하루 총량 × 일수**입니다. 위 예는 21정. 횟수는 총량에 들어가지 않고, 1회량(하루 총량 ÷ 횟수)을 계산하는 데만 씁니다. 총량은 서버가 계산하며, 약국 조제·수납·통계가 모두 이 값을 씁니다.
-     - 약 이름 아래 작은 글씨로 풀이가 나옵니다: **1회 1 × 3회 × 7일 = 총 21** (프랑스어 화면: « 1 par prise × 3/j × 7 j = total 21 »).
-     - 1회량이 반 알(0.5) 단위로 나눠지지 않으면(예: 하루 2정을 3번) 풀이 대신 노란 **⚠ 1회량이 나눠지지 않음**이 나옵니다. 막지는 않습니다. 맞는지 한 번 더 보세요.
+     - 약 이름 아래 작은 글씨로 풀이가 나옵니다: **1회 1정 × 하루 3회, 7일 (총 21)** (프랑스어 화면: « 1 cp × 3 fois/jour pendant 7 jours (total 21) »). 약국 화면·원외처방전·의뢰서와 **같은 문장**입니다. 약 이름에 Tab·Cap·Sachet가 있으면 정·캡슐·포(cp·gél.·sachet)가 붙고, 반 알은 ½로 씁니다.
+     - 1회량이 반 알(0.5) 단위로 나눠지지 않으면(예: 하루 1포를 3번) 노란 **⚠ 1회량이 나눠지지 않음 — 하루 1포, 3회로 나눠 3일 (총 3)**처럼 하루 양으로 적힙니다. 막지는 않습니다. 맞는지 한 번 더 보세요.
      - 하루 총량 칸에 마우스를 올리면 「하루 총량을 적습니다…」 도움말이 나옵니다.
-     - 2026-09-29 전에 저장된 처방은 예전 방식(용량 × 횟수 × 일수)으로 총량이 저장되어 있습니다. 그런 줄에는 풀이 옆에 노란 **저장된 총량 45 (예전 계산)**이 붙습니다. 칸을 눌렀다 나오기만 해서는 바뀌지 않고, 하루 총량·횟수·일수를 실제로 고치면 새 방식으로 다시 계산됩니다.
+     - 2026-09-29 전에 저장된 처방은 예전 방식(용량 × 횟수 × 일수)으로 총량이 저장되어 있습니다. 그런 줄에는 풀이 뒤에 노란 **· 예전 계산으로 저장된 총량 (새 식이면 21)**이 붙습니다. 칸을 눌렀다 나오기만 해서는 바뀌지 않고, 하루 총량·횟수·일수를 실제로 고치면 새 방식으로 다시 계산됩니다.
+   - **검사·영상 결과는 저절로 반영됩니다.** 환자를 열어 둔 채로 있어도, 검사실이 결과를 넣거나 촬영이 끝나면 30초 안에 상태 칸이 「결과 있음」 등으로 바뀌고 🔒가 붙습니다. 적고 있던 칸은 지워지지 않습니다.
    - 검사·처치: **Qté (수량)** · Fois · Jours · **Posologie** (이 줄에서는 용량 칸) · **Unité (메모·부위)**. *청구 금액은 수량만 계산합니다(7절 ⑭).* 약 줄과 검사 줄이 한 표의 머리를 같이 써서 이름이 한쪽 뜻에만 맞습니다 — 표를 나누는 것은 실장님 확인 대기.
 5. 줄 맨 앞 빨간 **✕**를 누르면 **Retirer « … » ? (「…」을(를) 지울까요?)**라고 묻습니다. **OK**를 눌러야 지워지고, 지운 줄은 되살릴 수 없습니다.
    - **가격이 0인 약·오더**에는 이름 옆에 노란 **Sans prix (가격 없음)**가 붙고, 위 **Prescriptions** 제목 옆에 **⚠ N sans prix (가격 없는 항목 N개)**가 나옵니다. 약·검사를 찾을 때 목록에도 같은 표시가 보입니다. 막지는 않습니다.
@@ -193,9 +194,10 @@
 - `saveNote()` (165-180) · `completeConsult()` (182-201): `note_text`와 바이탈만 보냅니다. 완료는 저장 → `PUT /:id/complete` → `loadData()` 순서입니다. *저장을 안 누르고 완료해도 기록이 날아가지 않게* 완료가 먼저 저장합니다.
 - 처방·오더 줄은 **추가할 때 바로 서버에 INSERT**되고(`addDrugRx`, `addExamOrder`), 칸을 고치면 `onBlur`에서 PUT(`saveRx`, `saveOrder`), ✕는 `confirmRemove`(이름을 넣은 확인 창) 후 DELETE입니다. 「저장」 버튼과 무관합니다.
 - **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다.
+- **오더 진행 상태 자동 반영**(2026-09-29): 검사실이 진료 중에도 오더를 보게 되어(임상병리 `1d4c239`) 환자를 열어 둔 사이에 결과가 들어올 수 있습니다. 진료가 열려 있고 결과 없는 검사 오더나 끝나지 않은 워크리스트 오더가 있으면, **30초마다** `GET /consultations/:id/orders`를 다시 읽어 **진행 칸만**(`status`·`result_at`·`result_by`·`result_text`·`worklist_status`·`worklist_sent_at`, `ORDER_PROGRESS_FIELDS`) 화면의 줄에 덮어씁니다. 의사가 적고 있는 수량·메모는 건드리지 않고, 줄을 더하거나 빼지 않습니다. 탭이 숨겨져 있으면(`document.hidden`) 읽지 않습니다. 상태 칸과 🔒(`orderLocked`)가 이 칸들로 정해지므로 같이 바뀝니다. 검사결과 창(`LabResults.jsx`, 임상병리 부품)은 열 때 읽으므로 이것과 별개입니다.
 - **잠긴 줄**(2026-09-29, 7절 ⑧⑨): 처방은 `rx.status === 'dispensed'`면 입력 칸 대신 글자로 그리고 ✕ 대신 🔒, WL 칸에 `cs_dispensed`. 오더는 파일 위쪽의 `orderLocked(o)`가 서버 규칙을 흉내 냅니다 — `o.status === 'completed'`(임상병리는 값이 하나라도 있어야 완료로 바꿈) 또는 `result_text`가 있음 또는 `worklist_sent_at`이 있고 `worklist_status`가 `in_progress`·`completed`. `worklist_sent_at`을 보는 이유: 워크리스트 없는 오더는 처음부터 `worklist_status='completed'`로 저장되기 때문. 오더는 줄 삭제만 막고 칸 수정은 그대로 둡니다(수량이 바뀌면 수납이 추가 청구/환불로 잡음).
 - 서버가 거절하면(화면이 열린 사이 약국·검사가 진행한 경우) `lockAlert`가 서버의 영어 문구를 `LOCK_MESSAGES`로 번역 키에 맞춰 알리고 `reloadItems()`로 처방·오더를 다시 읽습니다. **이 문구는 `consult.routes.js`의 `RX_DISPENSED`·`ORDER_HAS_RESULT`와 글자까지 같아야 합니다** — `api/client.js`가 오류 본문 중 `error` 문자열만 넘겨주기 때문(공용 파일이라 고치지 않음).
-- **약 총량**(2026-09-29 실장님 결정, 7절 ㉔): 입력은 한국식 — `dose` = 하루 총량, `frequency` = 하루 몇 번에 나누는지, `days` = 일수. **총량은 화면이 계산하지 않고 서버가 계산합니다**(`consult.routes.js` `rxTotal` = 하루 총량 × 일수). 화면은 `total_qty`를 보내지 않고 응답 줄을 그대로 씁니다. 화면이 계산하는 것은 풀이뿐입니다 — 파일 위쪽 `rxBreakdown(rx)`(1회량 = 하루 총량 ÷ 횟수, 0.5 단위로 떨어지는지 `even`)와 컴포넌트 안 `rxLine(rx)`(`cs_rxBreakdown`, 안 떨어지면 `cs_rxUneven` 노랑, 저장된 총량이 하루 총량 × 일수와 다르면 `cs_rxStoredTotal`). 0.5 규칙은 약국 세션과 같습니다. 하루 총량 칸의 `title`은 `cs_doseHint`, 머리 「Usage」는 `cs_colSig`(용법 / Sig. / Posologie). 과거 보기(`renderPast`)도 같은 풀이를 씁니다.
+- **약 총량**(2026-09-29 실장님 결정, 7절 ㉔): 입력은 한국식 — `dose` = 하루 총량, `frequency` = 하루 몇 번에 나누는지, `days` = 일수. **총량은 화면이 계산하지 않고 서버가 계산합니다**(`consult.routes.js` `rxTotal` = 하루 총량 × 일수). 화면은 `total_qty`를 보내지 않고 응답 줄을 그대로 씁니다. 풀이 줄은 **약국 세션의 공용 파일 `documents/rx-dosing.js`**를 씁니다(2026-09-29 정리). 컴포넌트 안 `rxLine(rx)`는 `doseSentence(rx, lang)`(저장된 총량으로 쓴 문장)을 보여 주고, `perDose(rx).clean`이 거짓이면 앞에 ⚠ `cs_rxUnevenFlag`, `isLegacyTotal(rx)`이면 뒤에 `cs_rxLegacy`(새 식 총량)를 붙입니다. 그래서 진료 화면·약국 화면·원외처방전·의뢰서·수납의 환자 차트(`PatientChart.jsx`)가 같은 문장을 씁니다. 0.5 규칙과 「예전 계산」 판정(저장된 총량 ≠ 하루 총량 × 일수, 소수 셋째 자리)도 그 파일 하나에 있습니다. 진료 쪽의 옛 키 `cs_rxBreakdown`·`cs_rxUneven`은 지웠고, **`cs_rxStoredTotal`은 수납의 `PatientChart.jsx`가 쓰므로 남겨 둡니다.** 하루 총량 칸의 `title`은 `cs_doseHint`, 머리 「Usage」는 `cs_colSig`(용법 / Sig. / Posologie). 과거 보기(`renderPast`)도 같은 풀이를 씁니다.
 - **스치기만 한 저장은 보내지 않음**: `savedRx`(useRef)에 줄마다 서버가 마지막으로 돌려준 `dose·frequency·days·route·memo`를 기억하고(`rememberRx` — 불러올 때·추가·저장 응답), `saveRx`는 값이 그대로면 요청하지 않습니다. 이유: 칸이 포커스를 잃을 때마다 저장하므로, 예전 식으로 저장된 줄이 눌렀다 나오기만 해도 다시 계산되어 이미 수납한 내원에 환불이 뜨게 됩니다. 서버도 같은 이유로 바뀐 줄만 다시 계산합니다(3.2). 기본 용법이 없는 약에 `'TID'`를 넣던 코드는 없앴습니다(7절 ⑮).
 - **가격 0 표시**(2026-09-29): 파일 위쪽 `noPrice(v)`(`parseFloat(v) > 0`이 아니면 참). 처방 줄은 `rx.unit_price`(단, 약국이 원외로 돌린 `dispense_type='external'` 줄은 청구되지 않으니 빼고), 오더 줄은 `o.unit_price`, 검색 목록은 넣을 때 쓸 가격(약 `unit_price`, 오더 `price_clinic || price` — `addExamOrder`와 같은 값)을 봅니다. 컴포넌트 안 `NoPriceBadge`(`cs_noPrice`, 도움말 `cs_noPriceHint`)와 제목 옆 개수 `noPriceCount`(`cs_noPriceCount`). 이유: 실제 약 목록 105줄을 가격 없이 가져오기로 해서, 가져온 직후엔 모든 약이 0원입니다. 막지 않는 이유: 무료 항목이 있을 수 있음.
 - `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다.
@@ -235,7 +237,7 @@
 
 ### 3.5 공용 문서 엔진 (진료 주관)
 
-- `documents/registry.js` — `TEMPLATES = [referral, externalRx, ...CHART_TEMPLATES]`. `templatesByCategory('document'|'prescription'|'chart')`로 화면마다 보이는 양식을 거릅니다. `autofillValue`는 `doctor`·`note`·`meds` 세 가지.
+- `documents/registry.js` — `TEMPLATES = [referral, externalRx, ...CHART_TEMPLATES]`. `templatesByCategory('document'|'prescription'|'chart')`로 화면마다 보이는 양식을 거릅니다. `autofillValue(src, ctx, lang)`는 `doctor`·`note`·`meds` 세 가지. `meds`(의뢰서 「현재 투약」)는 줄마다 `· 약 이름 — ` + `rx-dosing.js`의 `doseSentence`이고, 예전 계산 줄에는 `(예전 계산 / old calculation / ancien calcul)`을 붙입니다.
 - `components/DocumentModal.jsx` — 양식 목록 / 입력 칸 / 미리보기 / 발급 이력의 네 칸. 입력 종류는 `text`, `textarea`, `checks`(체크 여러 개를 `", "`로 이어 한 문자열로 저장). `checks`의 다음 값은 파일 위쪽 `nextChecks(f, cur, opt, on)`이 정합니다 — 필드에 `single: true`면 한 개만(새 체크가 앞의 것을 바꿈), `noneOption: 'None'`이면 None과 나머지가 서로 배타, 둘 다 없으면 아무 조합(옵션 순서로 정렬). 저장 형식은 그대로라 예전에 두 개 저장된 문서도 그대로 열리고 인쇄됩니다(데이터는 고치지 않음). `text`·`textarea` 칸에 `[...]`(60자 이내, 줄바꿈 없음 — `openBrackets`)가 남아 있으면 칸 아래 경고를 보이고, **발급할 때만** `window.confirm`으로 묻습니다(초안 출력은 「미발급(초안)」 표시가 있어 묻지 않음). 문구는 이 파일의 `UI` 사전(`bracketHint`·`bracketConfirm`) — 문서 언어를 따릅니다. `readOnly`면 입력 칸을 숨기고 가장 최근 발급 문서를 엽니다(수납·약국·임상병리·접수의 「차트뷰어」).
 - **저장된 문서는 값만 가지고, 인쇄할 때 지금 코드의 `Layout`으로 다시 그립니다**(157-161). 그래서
   - 양식 코드를 고치면 **이미 발급한 문서의 재출력 모양도 바뀝니다.**
@@ -467,7 +469,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **가격 0인 약·오더 표시** — 처방 줄·검색 목록에 「가격 없음 / Sans prix」, 제목 옆 개수, 도움말(설정에서 가격을 넣어도 기존 줄은 그대로 → 지우고 다시 넣기). 막지 않음. 번역 키 `cs_` 3개 | (이 커밋) |
+| 2026-09-29 | **약 표기를 공용 `rx-dosing.js`로** — 진료 화면 풀이 줄·의뢰서 투약 글이 약국과 같은 문장(단위 정/cp, ½). 진료 쪽 계산·키 정리(`cs_rxStoredTotal`은 수납이 써서 유지). **검사·영상 진행 상태 30초 자동 반영**(임상병리 부탁) — 적던 칸은 그대로. 번역 키 `cs_rxUnevenFlag`·`cs_rxLegacy` 추가, `cs_rxBreakdown`·`cs_rxUneven` 삭제 | (이 커밋) |
+| 2026-09-29 | **가격 0인 약·오더 표시** — 처방 줄·검색 목록에 「가격 없음 / Sans prix」, 제목 옆 개수, 도움말(설정에서 가격을 넣어도 기존 줄은 그대로 → 지우고 다시 넣기). 막지 않음. 번역 키 `cs_` 3개 | `f9924b7` |
 | 2026-09-29 | **약 총량 = 하루 총량 × 일수(㉔, 실장님 결정)** — 서버 `rxTotal`에서만 계산, 용량·횟수·일수가 바뀐 줄만 재계산(옛 줄은 스쳐도 그대로), 풀이 줄 「1회 1 × 3회 × 7일 = 총 21」과 0.5 단위 ⚠, 하루 총량 도움말, 「용법」 머리, 의뢰서 투약 글, 기본 용법 `TID` 끼워 넣기 없앰. 번역 키 `cs_` 5개 | `7d16518` |
 | 2026-09-29 | **진료 화면 3개 국어(⑯)** — 대기 상태, 문장사전 분류·문장(`text_fr`/`text_en`), 새 분류 버튼, 검색 종류 표시, 진료 기록 안내 글, 오류 머리, 빈 화면 안내, 바이탈 이름(fr: TA · T° · FC · FR), 인쇄 팝업 안내. 영상 경고를 PACS의 `PatientCheck`로 교체. 번역 키 `cs_` 23개 | `5f8f8f1` |
 | 2026-09-29 | **2절(직원용 사용법)을 프랑스어 화면 기준으로 다시 씀** — 버튼·칸 이름은 프랑스어 화면 그대로 + 괄호에 한국어. 「수술기록지 쓰는 순서」(2.8), 「발급 전 [괄호] 경고가 뜨면」(2.9), 의뢰서·발급 이력·막힐 때 표 추가 (코드 변경 없음) | `ab402f3` |
