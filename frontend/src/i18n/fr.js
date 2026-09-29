@@ -461,6 +461,7 @@ export default {
   ph_rStarted: "Registre commencé le {date}",
   ph_reportEmpty: "Aucun registre de stock pour ce mois (avant le début du registre).",
   ph_rFormula: "Début + entrées − délivré + manque au registre ± ajustements − rebut = fin. Dates à l'heure de l'hôpital.",
+  ph_stockReadOnlyHint: "Le stock se modifie dans Pharmacie → 📦 Stock (entrée, inventaire, rebut), où chaque mouvement est enregistré. Un nouveau médicament commence à 0.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

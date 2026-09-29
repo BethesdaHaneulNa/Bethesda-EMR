@@ -470,6 +470,7 @@ export default {
   ph_rStarted: "Record began {date}",
   ph_reportEmpty: "No stock record for this month (before the record began).",
   ph_rFormula: "Start + received − dispensed + short on record ± count adjustments − discarded = end. Dates in clinic time.",
+  ph_stockReadOnlyHint: "Stock is changed in Pharmacy → 📦 Stock (receive, count, discard), where every change is recorded. A new drug starts at 0.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",
