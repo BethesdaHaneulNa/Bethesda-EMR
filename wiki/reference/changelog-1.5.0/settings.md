@@ -61,7 +61,11 @@ imaging addresses still on the old ports 8080/8090, and the database's drive as 
 - Saving a drug in Settings never changes its stock; stock moves only through the pharmacy's record.
 - Settings checks its inputs: unknown permissions, spaces around login ids, empty names, whole numbers.
 - The edit windows say what they edit ("New staff member", "Edit drug"...), the staff form has an
-  e-mail field, and deactivated staff are listed below the active ones.
+  e-mail field, and deactivated staff are listed below the active ones. On a 1366×768 laptop only the
+  fields scroll; Save stays in view.
+- An order set that holds drugs removed from the list says so ("⚠ 2 drug(s) no longer in the list",
+  the lines struck through): the consultation screen leaves them out. The drug search in the order-set
+  editor shows stock and price, so two drugs with the same name can be told apart.
 
 Migrations: 020 (nurse role), 022 (change log — coordinator), 026 (change log refuses TRUNCATE).
 Details: `wiki/modules/settings.md` section 8.

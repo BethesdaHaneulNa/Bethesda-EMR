@@ -940,6 +940,10 @@ export default {
   se_osErrPackQty: "Ligne {n} : le nombre de flacons/tubes est un entier d'au moins 1.",
   se_osErrQuantity: "Ligne {n} : la quantité doit être supérieure à 0.",
   se_sys_pacsAddress_notPaired: "La visionneuse n'est pas appairée au serveur d'images — lancez pair-with-emr dans le dossier PACS du PC serveur",
+  se_osGone: "⚠ {n} médicament(s) absent(s) de la liste",
+  se_osGoneHint: "Les médicaments barrés ont été retirés de la liste. Ils ne sont pas prescrits quand l'ordonnance type est appliquée en consultation — supprimez-les ou remplacez-les par un médicament de la liste.",
+  se_osGoneLine: "absent de la liste",
+  se_osPick: "Stock {stock} · Prix {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

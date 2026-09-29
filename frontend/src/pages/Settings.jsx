@@ -301,10 +301,16 @@ export default function SettingsPage() {
   function osNew(){ setOsEdit({name:'',group_name:'',department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
   // A stored number as the field shows it: '3.000' -> '3'; empty stays empty.
   function osNum(v){ if(v==null || String(v).trim()==='') return ''; var n=Number(v); return isFinite(n) ? String(n) : String(v); }
+  // A drug line whose drug was hidden from the list (drug_active false) or no longer exists
+  // (null). The consultation screen leaves such lines out when the set is applied, so the
+  // set says so here (integration test: two sets held only hidden drugs, and only the
+  // consultation screen showed it). Lines added in this editor come from the list.
+  function osGone(it){ return it.kind==='drug' && it.drug_active!==undefined && it.drug_active!==true; }
+  function osGoneCount(items){ return (items||[]).filter(osGone).length; }
   function osOpen(s){
     setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
       items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
-        dose:osNum(it.dose), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity))}; }) });
+        dose:osNum(it.dose), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity)), drug_active:it.drug_active}; }) });
     setOsQ(''); setOsResults([]); setOsKind('drug');
   }
   function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; return n; }); }
@@ -320,7 +326,7 @@ export default function SettingsPage() {
       // A drug line starts empty (2026-09-29, the director: the dose, times and days are
       // decided here, in the set - not copied from the drug, which no longer has them).
       // An exam / procedure line starts 1 x 1 x 1.
-      if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:'', frequency:'', days:'', route:'', quantity:1});
+      if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:'', frequency:'', days:'', route:'', quantity:1, drug_active:true});
       else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, code_type:r.code_type, dose:'', frequency:'1', days:'1', quantity:1});
       n.items=items; return n;
     });
@@ -371,7 +377,7 @@ export default function SettingsPage() {
       var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:items };
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
       else await api.post('/order-sets', body);
-      setOsEdit(null); await osReload(); showToast(t.save+' ✓');
+      setOsEdit(null); await osReload(); showToast(t.se_saved);
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
   async function osDelete(s){
@@ -589,11 +595,12 @@ export default function SettingsPage() {
                             <span style={{fontWeight:800,fontSize: 14,color:'#34d399'}}>{s.name}</span>
                             {s.dept_code?<span style={{fontSize: 12,color:t2,background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'1px 6px'}}>{s.dept_code}</span>:null}
                             <span style={{fontSize: 12,color:t3}}>{(s.items||[]).length} {t.itemsUnit}</span>
+                            {osGoneCount(s.items) ? <span title={t.se_osGoneHint} style={{fontSize: 12,color:'#fbbf24'}}>{String(t.se_osGone||'').replace('{n}', osGoneCount(s.items))}</span> : null}
                             <div style={{flex:1}}></div>
                             <button onClick={function(){osOpen(s)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.edit}</button>
                             <button onClick={function(){osDelete(s)}} style={{background:'#ef444418',color:'#f87171',border:'1px solid #ef444440',borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.delete}</button>
                           </div>
-                          <div style={{fontSize: 12,color:'#94a3b8'}}>{(s.items||[]).map(function(it){return it.code;}).join(' · ')||'—'}</div>
+                          <div style={{fontSize: 12,color:'#94a3b8'}}>{(s.items||[]).length ? (s.items||[]).map(function(it,i){ return <span key={i}>{i ? ' · ' : ''}<span title={osGone(it) ? t.se_osGoneLine : undefined} style={osGone(it) ? {textDecoration:'line-through',color:'#64748b'} : undefined}>{it.code}</span></span>; }) : '—'}</div>
                         </div>;
                       })}
                     </div>;
@@ -622,6 +629,7 @@ export default function SettingsPage() {
                     </Fld>
                     <Fld label={t.description||'Description'}><input value={osEdit.description||''} onChange={function(e){osField('description',e.target.value)}} style={IS}/></Fld>
                     <div style={{marginTop:10,fontSize: 13,fontWeight:700,color:'#34d399'}}>{t.setItems} ({(osEdit.items||[]).length})</div>
+                    {osGoneCount(osEdit.items) ? <div style={{marginTop:6,padding:'6px 8px',border:'1px solid #f59e0b60',background:'#f59e0b12',borderRadius:5,fontSize: 12,color:'#fbbf24',lineHeight:1.5}}><b>{String(t.se_osGone||'').replace('{n}', osGoneCount(osEdit.items))}</b><div style={{color:'#cbd5e1'}}>{t.se_osGoneHint}</div></div> : null}
                     <div style={{marginTop:6,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
                       {(osEdit.items||[]).length>0?(osEdit.items||[]).map(function(it,idx){
                         // Each line is edited here, in the set (2026-09-29, the director): a drug
@@ -640,7 +648,8 @@ export default function SettingsPage() {
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
                             <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'#60a5fa':'#a78bfa',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
                             <span style={{fontFamily:'monospace',fontSize: 12,color:t2,width:56}}>{it.code}</span>
-                            <span style={{fontSize: 13,color:tx,flex:1}}>{it.name}</span>
+                            <span style={{fontSize: 13,color:osGone(it)?'#64748b':tx,flex:1,textDecoration:osGone(it)?'line-through':'none'}}>{it.name}</span>
+                            {osGone(it) ? <span style={{fontSize: 11,color:'#fbbf24',whiteSpace:'nowrap'}}>⚠ {t.se_osGoneLine}</span> : null}
                             <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'#f87171',cursor:'pointer',fontSize: 14}}>✕</button>
                           </div>
                           <div style={{display:'flex',flexWrap:'wrap',alignItems:'flex-end',gap:8,marginTop:4,paddingLeft:44}}>
@@ -677,7 +686,14 @@ export default function SettingsPage() {
                       {osResults.map(function(r){
                         return <div key={r.id} onClick={function(){osAdd(r)}} style={{display:'flex',gap:8,padding:'6px 8px',borderBottom:'1px solid #1e2433',cursor:'pointer'}}>
                           <span style={{fontFamily:'monospace',fontSize: 12,color:'#60a5fa',width:56}}>{r.code}</span>
-                          <span style={{fontSize: 13,color:tx,flex:1}}>{r.name}</span>
+                          {osKind==='drug' ? (
+                            // Stock and price under the name (integration test: the imported list has
+                            // two "Amoxicillin 500mg Gélule", told apart only by the code).
+                            <span style={{flex:1,minWidth:0}}>
+                              <span style={{fontSize: 13,color:tx}}>{r.name}</span>{r.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,r.dosage_form)}</span> : null}
+                              <span style={{display:'block',fontSize: 11,color:t3}}>{String(t.se_osPick||'').replace('{stock}', (osNum(r.stock_qty)||'0')+(r.pack_unit ? ' '+t['ph_pack_'+(r.pack_label||'unit')] : '')).replace('{price}', osNum(r.unit_price)||'0')}</span>
+                            </span>
+                          ) : <span style={{fontSize: 13,color:tx,flex:1}}>{r.name}</span>}
                           <span style={{fontSize: 13,color:'#34d399',fontWeight:800}}>+</span>
                         </div>;
                       })}
@@ -1007,8 +1023,11 @@ export default function SettingsPage() {
       {/* EDIT MODAL */}
       {editItem?(
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#1a1f2e',borderRadius:10,border:'1px solid '+bd,width:editType==='order'?540:420,maxHeight:'85vh',overflow:'auto',padding:'18px',boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
-            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:14}}>{/* The window says what it is for (was "New item" / "Edit" on every tab). */}{editItem.id?(t['se_editTitle_'+editType]||t.edit):(t['se_newTitle_'+editType]||t.se_newTitle)}</div>
+          <div style={{background:'#1a1f2e',borderRadius:10,border:'1px solid '+bd,width:editType==='order'?540:420,maxHeight:'85vh',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+            <div style={{fontWeight:700,fontSize: 15,color:tx,padding:'18px 18px 14px'}}>{/* The window says what it is for (was "New item" / "Edit" on every tab). */}{editItem.id?(t['se_editTitle_'+editType]||t.edit):(t['se_newTitle_'+editType]||t.se_newTitle)}</div>
+            {/* Only the fields scroll: on a 1366x768 laptop the drug window is taller than the
+                screen, and Save had to be scrolled to (integration test). The buttons stay put. */}
+            <div style={{flex:1,minHeight:0,overflowY:'auto',padding:'0 18px'}}>
 
             {editType==='staff'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label={t.se_fName}><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
@@ -1185,8 +1204,9 @@ export default function SettingsPage() {
                 </select>
               </Fld>
             </div>):null}
+            </div>
 
-            <div style={{display:'flex',gap:8,marginTop:14}}>
+            <div style={{display:'flex',gap:8,padding:'14px 18px 18px',borderTop:'1px solid '+bd}}>
               <button onClick={closeEdit} style={{flex:1,background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14}}>{t.cancel}</button>
               <button onClick={saveEdit} style={{flex:2,background:'linear-gradient(135deg,#3b82f6,#2563eb)',color:'#fff',border:'none',borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14,fontWeight:600}}>{t.save}</button>
             </div>

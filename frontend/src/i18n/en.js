@@ -949,6 +949,10 @@ export default {
   se_osErrPackQty: "Line {n}: the bottle/tube count is a whole number of at least 1.",
   se_osErrQuantity: "Line {n}: the quantity must be greater than 0.",
   se_sys_pacsAddress_notPaired: "The viewer is not paired with the image server — run pair-with-emr in the PACS folder on the server PC",
+  se_osGone: "⚠ {n} drug(s) no longer in the list",
+  se_osGoneHint: "Struck-through drugs have been removed from the drug list. They are not prescribed when this set is applied in a consultation — remove them or replace them with a drug from the list.",
+  se_osGoneLine: "not in the list",
+  se_osPick: "Stock {stock} · Price {price}",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
