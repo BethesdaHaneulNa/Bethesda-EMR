@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 설정 화면 영어 고정 글자를 세 언어로 (U1, 약국 부탁 포함)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`2a40e84` 위)
+- **한 일**: 약국 세션이 부탁한 세 곳(공용 삭제 확인 「Delete?」, 탭 이름 「💊 Drugs」, 편집 창 제목 「+ Add」)과, 같은 종류의 영어 고정 글자를 설정 세션 몫 전체에서 `se_` 키로 옮겼습니다 — 탭 이름 6개, 직원·오더 코드·상용구·진료과·병원 정보 탭의 머리글·표 제목·「+ Add」 버튼·편집 창 입력 칸, 오류(`Error:`)·저장 알림, 오더 코드 종류 필터. 역할(`admin`→관리자/Administrateur)·오더 종류(`fee`→진료비/Frais)·상태(`active`→활성/actif)는 **표시만** 번역하고 저장 값은 그대로입니다. 직원 「삭제」는 실제로 비활성화라서 확인 창을 「이 직원을 비활성으로 바꿀까요? 로그인할 수 없게 됩니다. 기록은 남습니다.」로 바꿨습니다. 위키 2절에 **역할별 기본 권한 표**(총괄 부탁 — 수납 창구 계정용)를 넣었습니다.
+- **일부러 안 한 것**: 약품 탭 **안쪽**(표 머리글·편집 창 칸 — 약국 몫, 약국이 부탁한 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·Laboratory…, General·Internal… — DB에 저장되는 값이라 번역하면 데이터가 바뀜).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 표시 사이에 키 66개 추가 (지금 `se_` 79개씩). 기존 키는 안 건드림. `Settings.jsx`의 **약품 탭**(약국 몫)은 탭 이름 한 줄과 공용 삭제 확인·편집 창 제목만 바뀜.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_tab*` 6 · `se_col*` 14 · `se_f*` 22 · `se_role_*` 5 · `se_type_*` 4 · `se_status*` 2 · `se_addBtn` `se_newTitle` `se_confirmDelete` `se_confirmDeactivate` `se_error` `se_saved` `se_all` `se_none` `se_on` `se_off` `se_clinicTitle` `se_clinicIntro` `se_clinicNote` — ko·en·fr 모두 (node로 세 파일 79개씩 확인)
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9187에서 프랑스어: 탭 목록·직원 표·「+ Ajouter」 편집 창(Nouvel élément, Identifiant, Mot de passe, Rôle (étiquette), Accueil…)·오더 코드(Tous/Frais/Laboratoire/Imagerie/Acte, 종류 배지)·병원 정보 탭. 한국어: 직원 탭(관리자·활성·+ 추가). 삭제 확인 문구는 `window.confirm`을 「취소」로 답하는 가짜로 바꿔 문구만 확인(실제 비활성화 안 함).
+- **확인 못 한 것**: 영어 화면, 상용구·진료과 편집 창 화면(코드로만), 삭제 확인 창의 실제 모양.
+- **위키**: `modules/settings.md` 2절(버튼 이름 한국어/Français로, 역할별 기본 권한 표), 7절(U1 대부분·U7 고침), 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: **약국** — 약품 탭 안쪽(표 머리글 Code·Name·Cat·Dose·Freq·Days·Route·Price·Stock, 편집 창 칸, 탭 머리의 「💊 Drugs」·「+ Add」)은 그대로입니다. 같은 방식으로 옮기려면 공용 키 `se_addBtn`·`se_colCode`·`se_colName`·`se_colPrice`·`se_fCode`·`se_fName`을 써도 됩니다. **PACS** — 오더 연동 탭의 「Save」「Loading...」「Bridge Token」「Host / IP」「AE Title」.
+- **남은 일**: H4 제안, U9, S2 권한표 초안.
+
 ## 2026-09-29 — 서버 상태 창 포트 검사 · 백업 검사 스크립트 (총괄 부탁)
 
 - **상태**: 확인 요청
