@@ -346,6 +346,7 @@ export default {
   py_qtyMissing: "⚠ Quantity missing",
   py_qtyMissingList: "Drug quantity missing",
   py_qtyMissingBlock: "The total quantity is missing for: {names}, so the amount cannot be calculated. Ask the doctor to save the prescription again, then bill.",
+  py_settleAllReceipts: "One receipt per visit will be issued, {n} in all (dated today).",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

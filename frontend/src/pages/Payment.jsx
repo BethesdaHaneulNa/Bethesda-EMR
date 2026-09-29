@@ -23,6 +23,7 @@ export default function PaymentPage() {
   var ds = useState({type:'amount',value:0}), discount = ds[0], setDiscount = ds[1];
   var ns = useState(''), payNote = ns[0], setPayNote = ns[1];
   var rids = useState(null), receiptId = rids[0], setReceiptId = rids[1];   // bill whose receipt is open
+  var rqs = useState([]), receiptQueue = rqs[0], setReceiptQueue = rqs[1];   // more receipts to show after it (settle all)
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var ts = useState('waiting'), tab = ts[0], setTab = ts[1];
   var qs = useState(''), q = qs[0], setQ = qs[1];
@@ -314,8 +315,10 @@ export default function PaymentPage() {
     if(amt<=0){ alert(t.enterAmount||'금액을 입력하세요'); return; }
     if(amt>out+0.5){ alert((t.maxOutstanding||'미수액보다 클 수 없습니다')+': '+fmtAr(out)+' Ar'); return; }
     try {
-      await api.post('/billing/'+settleBill.id+'/pay', { amount: amt });
+      // M2: the payment goes on a new receipt dated today (POST /settle), not onto the old bill.
+      var settled = await api.post('/billing/settle', { bill_ids:[settleBill.id], amount: amt, expected_outstanding: out });
       setSettleBill(null); setSettleAmt('');
+      setReceiptId(settled.id);
       var pid = sel?sel.patient_id:null;
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
                try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){} }
@@ -329,13 +332,25 @@ export default function PaymentPage() {
     var bills = (receipts||[]).filter(function(b){ return b.payment_status!=='cancelled' && (parseFloat(b.outstanding)||0) > 0; });
     if(!bills.length) return;
     var total = bills.reduce(function(a,b){ return a+(parseFloat(b.outstanding)||0); },0);
-    if(!window.confirm((t.settleAllConfirm||'전체 미수를 일괄 수납합니다')+'\n'+(t.outstanding||'미수')+': '+fmtAr(total)+' Ar')) return;
+    // One settlement receipt per visit, so each visit's department and doctor keep
+    // their own share of the money (statistics asked for this).
+    var byVisit = {}, order = [];
+    bills.forEach(function(b){ var k=String(b.visit_id); if(!byVisit[k]){ byVisit[k]=[]; order.push(k); } byVisit[k].push(b); });
+    if(!window.confirm((t.settleAllConfirm||'전체 미수를 일괄 수납합니다')+'\n'+(t.outstanding||'미수')+': '+fmtAr(total)+' Ar\n'+t.py_settleAllReceipts.replace('{n}', order.length))) return;
+    var made = [];
     try {
-      for(var i=0;i<bills.length;i++){ await api.post('/billing/'+bills[i].id+'/pay', { amount: Math.round(parseFloat(bills[i].outstanding)||0) }); }
+      for(var i=0;i<order.length;i++){
+        var group = byVisit[order[i]];
+        var owe = group.reduce(function(a,b){ return a+(parseFloat(b.outstanding)||0); },0);
+        var s1 = await api.post('/billing/settle', { bill_ids: group.map(function(b){ return b.id; }), amount: owe, expected_outstanding: owe });
+        made.push(s1.id);
+      }
       try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
       try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){}
       await loadLists();
     } catch(err){ if(isCarried(err)) await payRefused(err); else showError(err); }
+    // show every receipt that was made, one after another (also those made before an error)
+    if(made.length){ setReceiptId(made[0]); setReceiptQueue(made.slice(1)); }
   }
 
   function statusBadge(s){
@@ -462,7 +477,7 @@ export default function PaymentPage() {
       ):null}
 
       {/* One receipt for right after payment and for reprints, read from the stored bill (components/Receipt.jsx). */}
-      <ReceiptModal billingId={receiptId} t={t} onClose={function(){ setReceiptId(null); }} />
+      <ReceiptModal billingId={receiptId} t={t} onClose={function(){ if(receiptQueue.length){ setReceiptId(receiptQueue[0]); setReceiptQueue(receiptQueue.slice(1)); } else setReceiptId(null); }} />
       <PatientFinder open={finderOpen} onClose={function(){setFinderOpen(false)}} mode="visit"
         onPickVisit={function(v){ setTab('waiting'); selectVisit(v); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"

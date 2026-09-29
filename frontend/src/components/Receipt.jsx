@@ -38,6 +38,7 @@ var RL = {
   colAmount:    { ko: '금액', en: 'Amount', fr: 'Montant' },
   noItems:      { ko: '항목 없음', en: 'No items', fr: 'Aucun article' },
   settlement:   { ko: '이전 미수 정산', en: 'Settlement of previous balance', fr: 'Règlement du solde antérieur' },
+  settleOf:     { ko: '미수 수납 — 영수', en: 'Settlement of receipt', fr: 'Règlement du reçu' },
   subtotal:     { ko: '소계', en: 'Subtotal', fr: 'Sous-total' },
   discount:     { ko: '할인', en: 'Discount', fr: 'Remise' },
   prevBalance:  { ko: '이전 미수', en: 'Previous balance', fr: 'Solde antérieur' },
@@ -91,6 +92,12 @@ function replacedReceipts(note) {
   return m ? m[1].trim() : '';
 }
 
+// A settlement bill's note is written by the server: "settlement of R-..., R-...".
+function settledNote(note) {
+  var m = /^settlement of (.+)$/.exec(String(note || ''));
+  return m ? m[1].trim() : '';
+}
+
 // The printable page. `data` is the GET /api/billing/:id/detail response.
 export function ReceiptDoc(props) {
   var lang = props.lang || RECEIPT_LANG;
@@ -103,6 +110,9 @@ export function ReceiptDoc(props) {
   var handed = num(b.amount_paid), change = num(b.change_amount), kept = num(b.net_paid);
   // A carried bill stays 'unpaid' in the data, but its debt is now on the later receipt.
   var statusKey = !cancelled && b.carried_into_receipt_no ? 'carried' : b.payment_status;
+  // A settlement receipt (M2): no clinical amount, only an older balance. Same shape
+  // the statistics use to tell it apart (billing.routes.js, POST /settle).
+  var settlement = !items.length && num(b.consult_fee) + num(b.drug_total) + num(b.procedure_total) === 0 && num(b.previous_balance) > 0;
   var service = (b.dept_name_fr || b.dept_code || '') + (b.doctor_name ? ((b.dept_name_fr || b.dept_code) ? ' — ' : '') + L(RL.doctor, lang) + ' : ' + b.doctor_name : '');
 
   var cell = { border: '1px solid #999', padding: '4px 8px', fontSize: 12, verticalAlign: 'top' };
@@ -175,7 +185,22 @@ export function ReceiptDoc(props) {
               <td style={Object.assign({}, td, right)}>{money(it.unit_price)}</td>
               <td style={Object.assign({}, td, right)}>{money(it.total_price)}</td>
             </tr>;
-          }) : <tr><td colSpan={5} style={Object.assign({}, td, { fontStyle: 'italic' })}>{num(b.previous_balance) > 0 ? L(RL.settlement, lang) : L(RL.noItems, lang)}</td></tr>}
+          }) : settlement && from.length ? from.map(function (f, i) {
+            return <tr key={'f' + i} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <td style={td} colSpan={2}>{L(RL.settleOf, lang)} {f.receipt_no} {L(RL.of, lang)} {fmtDate(f.billing_date)}</td>
+              <td style={Object.assign({}, td, right)}>1</td>
+              <td style={Object.assign({}, td, right)}>{money(f.amount)}</td>
+              <td style={Object.assign({}, td, right)}>{money(f.amount)}</td>
+            </tr>;
+          }) : settlement && settledNote(b.note) ? (
+            // A cancelled or replaced settlement has lost its carry link; its note still names the receipt.
+            <tr style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <td style={td} colSpan={2}>{L(RL.settleOf, lang)} {settledNote(b.note)}</td>
+              <td style={Object.assign({}, td, right)}>1</td>
+              <td style={Object.assign({}, td, right)}>{money(b.previous_balance)}</td>
+              <td style={Object.assign({}, td, right)}>{money(b.previous_balance)}</td>
+            </tr>
+          ) : <tr><td colSpan={5} style={Object.assign({}, td, { fontStyle: 'italic' })}>{num(b.previous_balance) > 0 ? L(RL.settlement, lang) : L(RL.noItems, lang)}</td></tr>}
         </tbody>
       </table>
 
@@ -185,9 +210,9 @@ export function ReceiptDoc(props) {
           <tbody>
             {/* Names the receipt when this block is pushed alone onto a second page. */}
             <tr><td colSpan={2} style={{ fontSize: 10.5, color: '#666', paddingBottom: 4, textAlign: 'right' }}>{b.receipt_no} · {(b.last_name || '') + ' ' + (b.first_name || '')}</td></tr>
-            <Row label={L(RL.subtotal, lang)} value={money(b.subtotal)} />
+            {settlement ? null : <Row label={L(RL.subtotal, lang)} value={money(b.subtotal)} />}
             {num(b.discount_amount) > 0 ? <Row label={L(RL.discount, lang)} value={'− ' + money(b.discount_amount)} /> : null}
-            {num(b.previous_balance) > 0 ? <Row label={L(RL.prevBalance, lang) + (from.length ? ' (' + from.map(function (f) { return L(RL.receiptOf, lang) + ' ' + f.receipt_no + ' ' + L(RL.of, lang) + ' ' + fmtDate(f.billing_date); }).join(', ') + ')' : '')} value={money(b.previous_balance)} /> : null}
+            {num(b.previous_balance) > 0 && !settlement ? <Row label={L(RL.prevBalance, lang) + (from.length ? ' (' + from.map(function (f) { return L(RL.receiptOf, lang) + ' ' + f.receipt_no + ' ' + L(RL.of, lang) + ' ' + fmtDate(f.billing_date); }).join(', ') + ')' : '')} value={money(b.previous_balance)} /> : null}
             <tr><td colSpan={2} style={{ borderTop: '1.5px solid #111', padding: 0 }}></td></tr>
             <Row label={L(RL.total, lang)} value={money(b.total_due)} bold />
             {handed !== kept ? <Row label={L(replaces ? RL.paidBefore : RL.handed, lang)} value={money(handed)} /> : null}
