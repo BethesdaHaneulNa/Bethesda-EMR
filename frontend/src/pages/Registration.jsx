@@ -66,7 +66,36 @@ export default function RegistrationPage() {
   var ms = useState(''), memo = ms[0], setMemo = ms[1];
   var hs = useState([]), history = hs[0], setHistory = hs[1];
 
-  useEffect(function () { loadData(); }, []);
+  // The queue refreshes itself every 30 s while the tab is visible (same rule as
+  // the lab screen), so a patient the doctor has opened or finished moves tabs
+  // without anyone pressing anything. Only the queue is reloaded: the form on the
+  // left, the memo and the chosen doctor are never touched. A stale list is what
+  // let reception act on visits that had already moved on (7절 ②, ①).
+  useEffect(function () {
+    loadData();
+    var timer = setInterval(function () { if (!document.hidden) refreshQueue(); }, 30000);
+    return function () { clearInterval(timer); };
+  }, []);
+
+  // Numbers each queue load so a slow, older response cannot overwrite a newer one.
+  var queueSeq = useRef(0);
+  async function refreshQueue() {
+    var seq = ++queueSeq.current;
+    try {
+      var vData = await api.get('/visits/today');
+      if (seq !== queueSeq.current || !Array.isArray(vData)) return;
+      setVisits(vData);
+      // Keep the selected visit's status current, so the cancel button disappears
+      // once the doctor has started. Everything else about the selection stays.
+      setSel(function (prev) {
+        if (!prev) return prev;
+        var fresh = vData.filter(function (v) { return v.id === prev.id; })[0];
+        return fresh && fresh.status !== prev.status ? Object.assign({}, prev, { status: fresh.status }) : prev;
+      });
+    } catch (err) {
+      // A failed background refresh keeps the list it had rather than emptying it.
+    }
+  }
 
   useEffect(function () {
     var pid = selectedPatient ? selectedPatient.id : null;
@@ -76,9 +105,10 @@ export default function RegistrationPage() {
 
   async function loadData() {
     setLoading(true);
+    var seq = ++queueSeq.current;
     try {
       var vData = await api.get('/visits/today');
-      setVisits(vData);
+      if (seq === queueSeq.current) setVisits(vData);
       var dData = await api.get('/admin/departments');
       setDepts(dData);
       var sData = await api.get('/admin/doctors');
