@@ -1,27 +1,33 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { dicomDate } = require('../utils/localDate');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { presentedToken, bridgeTokenMatches } = require('./pacs.token');
 
 const router = express.Router();
 
-// allow a machine bridge to read the worklist feed with the shared bridge_token
-// (X-Bridge-Token header, or ?token=); otherwise require a normal JWT. The
+// allow a machine bridge in with the shared bridge_token (X-Bridge-Token header,
+// or ?token=); otherwise require a normal JWT that holds one of `perms`. The
 // placeholder token never counts -- see pacs.token.js.
-async function bridgeOrAuth(req, res, next) {
-  const token = presentedToken(req);
-  if (token) {
-    try {
-      const r = await pool.query('SELECT bridge_token FROM pacs_config WHERE id = 1');
-      if (r.rows[0] && bridgeTokenMatches(r.rows[0].bridge_token, token)) return next();
-    } catch (e) { /* fall through to JWT */ }
-  }
-  return authMiddleware(req, res, next);
+// The login path is narrowed to settings (decision S2): no screen calls these
+// routes, and they hand out or change patient worklist data.
+function bridgeOrAuth(...perms) {
+  const allowed = permMiddleware(...perms);
+  return async function (req, res, next) {
+    const token = presentedToken(req);
+    if (token) {
+      try {
+        const r = await pool.query('SELECT bridge_token FROM pacs_config WHERE id = 1');
+        if (r.rows[0] && bridgeTokenMatches(r.rows[0].bridge_token, token)) return next();
+      } catch (e) { /* fall through to JWT */ }
+    }
+    return authMiddleware(req, res, () => allowed(req, res, next));
+  };
 }
 
 // GET /api/worklist - query worklist entries (for equipment integration)
-router.get('/', authMiddleware, async (req, res) => {
+// No screen calls this today; consultation is the module that owns imaging orders (S2).
+router.get('/', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const { modality, station_ae, date, status } = req.query;
     let query = `SELECT wl.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
@@ -51,7 +57,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // POST /api/pacs/study-arrived.
 const WL_TO_ORDER_STATUS = { scheduled: 'sent', in_progress: 'in_progress', completed: 'completed', cancelled: 'cancelled' };
 
-router.put('/:id/status', bridgeOrAuth, async (req, res) => {
+router.put('/:id/status', bridgeOrAuth('settings'), async (req, res) => {
   const status = String((req.body || {}).status || '');
   if (!WL_TO_ORDER_STATUS[status]) {
     return res.status(400).json({ error: 'status must be one of ' + Object.keys(WL_TO_ORDER_STATUS).join(', ') });
@@ -80,7 +86,7 @@ router.put('/:id/status', bridgeOrAuth, async (req, res) => {
 
 // GET /api/worklist/dicom-mwl - DICOM C-FIND MWL compatible response (simplified JSON)
 // This endpoint would be consumed by a DICOM MWL SCP bridge
-router.get('/dicom-mwl', bridgeOrAuth, async (req, res) => {
+router.get('/dicom-mwl', bridgeOrAuth('settings'), async (req, res) => {
   try {
     const { modality, station_ae } = req.query;
     let query = `SELECT wl.accession_no, wl.study_instance_uid, wl.modality, wl.station_ae, wl.body_part,

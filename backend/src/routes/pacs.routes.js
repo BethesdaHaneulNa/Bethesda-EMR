@@ -67,7 +67,9 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/test', authMiddleware, async (req, res) => {
+// Route permissions follow the screens that call them (decision S2, 2026-09-29):
+// the connection test lives in Settings only.
+router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const host = cfg.worklist_scp_host;
@@ -93,7 +95,9 @@ function imagesOf(w) {
 }
 
 // Resolve the PACS viewer URL + reading for an imaging order (Stone Web Viewer by StudyInstanceUID).
-router.get('/viewer-url', authMiddleware, async (req, res) => {
+// Only the consultation screen opens the viewer; the payment screen's readings
+// list shows text and has no image button.
+router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const base = cfg.pacs_viewer_url ? String(cfg.pacs_viewer_url).replace(/\/+$/, '') : '';
@@ -130,8 +134,8 @@ router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// All imaging readings for a patient (read-only view for any staff).
-router.get('/readings/patient/:patientId', authMiddleware, async (req, res) => {
+// All imaging readings for a patient (read-only; consultation and payment screens).
+router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consultation', 'payment'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
