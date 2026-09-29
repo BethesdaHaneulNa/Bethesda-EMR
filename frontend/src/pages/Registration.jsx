@@ -8,6 +8,17 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { tint } from '../theme.js';
 
 
+// [year, month, day] as two-digit strings, or null when the text is not a whole date.
+function parsePastedDob(text) {
+  var s = String(text || '').trim();
+  var pad = function (x) { return x.length === 1 ? '0' + x : x; };
+  var m = /^(\d{4})(\d{2})(\d{2})$/.exec(s) || /^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/.exec(s);
+  if (m) return [m[1], pad(m[2]), pad(m[3])];
+  m = /^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/.exec(s);
+  if (m) return [m[3], pad(m[2]), pad(m[1])];
+  return null;
+}
+
 function DobInput(props) {
   var value = props.value || '';
   var onChange = props.onChange;
@@ -25,14 +36,26 @@ function DobInput(props) {
   function emit(y,m,d){
     onChange(y || m || d ? y + '-' + m + '-' + d : '');
   }
+  // A whole date pasted into any of the three boxes is split into year, month and day.
+  // Without this the year box (maxLength 4) kept "1990" of "19900503" and dropped the rest.
+  // Accepted: 19900503, 1990-05-03 (also / . or space), and 03/05/1990 - day first, as
+  // written in Madagascar and France. Anything else is pasted as usual. The date is not
+  // checked here: formProblem() refuses an impossible one when saving.
+  function onPaste(e){
+    var d = parsePastedDob((e.clipboardData || window.clipboardData).getData('text'));
+    if (!d) return;
+    e.preventDefault();
+    emit(d[0], d[1], d[2]);
+    if (dRef.current) dRef.current.focus();
+  }
   var box = Object.assign({}, style, { display:'flex', alignItems:'center', gap:6, padding:'6px 8px' });
   var partStyle = { background:'transparent', border:0, outline:'none', color:style.color || 'var(--text)', fontSize:style.fontSize || 17, fontFamily:'monospace', textAlign:'center' };
   return <div style={box}>
-    <input inputMode="numeric" value={year} placeholder={t.rc_phYear} maxLength={4} onChange={function(e){var v=digits(e.target.value,4); emit(v,month,day); if(v.length===4 && mRef.current)mRef.current.focus();}} style={Object.assign({}, partStyle, {width:58})}/>
+    <input inputMode="numeric" value={year} placeholder={t.rc_phYear} maxLength={4} onPaste={onPaste} onChange={function(e){var v=digits(e.target.value,4); emit(v,month,day); if(v.length===4 && mRef.current)mRef.current.focus();}} style={Object.assign({}, partStyle, {width:58})}/>
     <span style={{color:'var(--text-3)'}}>-</span>
-    <input ref={mRef} inputMode="numeric" value={month} placeholder={t.rc_phMonth} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,v,day); if(v.length===2 && dRef.current)dRef.current.focus();}} style={Object.assign({}, partStyle, {width:34})}/>
+    <input ref={mRef} inputMode="numeric" value={month} placeholder={t.rc_phMonth} maxLength={2} onPaste={onPaste} onChange={function(e){var v=digits(e.target.value,2); emit(year,v,day); if(v.length===2 && dRef.current)dRef.current.focus();}} style={Object.assign({}, partStyle, {width:34})}/>
     <span style={{color:'var(--text-3)'}}>-</span>
-    <input ref={dRef} inputMode="numeric" value={day} placeholder={t.rc_phDay} maxLength={2} onChange={function(e){var v=digits(e.target.value,2); emit(year,month,v);}} style={Object.assign({}, partStyle, {width:34})}/>
+    <input ref={dRef} inputMode="numeric" value={day} placeholder={t.rc_phDay} maxLength={2} onPaste={onPaste} onChange={function(e){var v=digits(e.target.value,2); emit(year,month,v);}} style={Object.assign({}, partStyle, {width:34})}/>
   </div>;
 }
 
@@ -50,6 +73,11 @@ export default function RegistrationPage() {
 
   var pqs = useState(''), patientQuery = pqs[0], setPatientQuery = pqs[1];
   var prs = useState([]), patientResults = prs[0], setPatientResults = prs[1];
+  // The text of the last search that found nobody ('' otherwise): the line under the
+  // search box says so, instead of nothing happening at all.
+  var nfs = useState(''), notFoundFor = nfs[0], setNotFoundFor = nfs[1];
+  // Bumped by each search and each keystroke: a slow answer to an older search is dropped.
+  var searchSeq = useRef(0);
   var sps = useState(null), selectedPatient = sps[0], setSelectedPatient = sps[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
   var pbs2 = useState({owed:0,refund:0}), patBal = pbs2[0], setPatBal = pbs2[1];
@@ -309,11 +337,14 @@ export default function RegistrationPage() {
 
   async function searchPatients() {
     var s = (patientQuery || '').trim();
+    var my = ++searchSeq.current;
+    setNotFoundFor('');
     if (!s) { setPatientResults([]); return; }
     setPatientLoading(true);
     try {
       var data = await api.get('/patients?q=' + encodeURIComponent(s) + '&limit=20');
       setPatientResults(data || []);
+      if ((!data || !data.length) && my === searchSeq.current) setNotFoundFor(s);
     } catch (err) { alert(errText(err)); }
     setPatientLoading(false);
   }
@@ -324,6 +355,7 @@ export default function RegistrationPage() {
     setHistory([]);
     setPatientResults([]);
     setPatientQuery('');
+    setNotFoundFor('');
     setMemo('');
     setForm(emptyForm);
     setVisitForm({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
@@ -574,10 +606,11 @@ export default function RegistrationPage() {
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid ' + bd }}>
             <label style={labelStyle}>{t.existingPatientSearch}</label>
             <div style={{ display: 'flex', gap: 6 }}>
-              <input value={patientQuery} onChange={function (e) { setPatientQuery(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') searchPatients(); }} placeholder={t.searchNameChartPhone} style={Object.assign({}, IS, { flex: 1 })} />
+              <input value={patientQuery} onChange={function (e) { setPatientQuery(e.target.value); setNotFoundFor(''); searchSeq.current++; }} onKeyDown={function (e) { if (e.key === 'Enter') searchPatients(); }} placeholder={t.searchNameChartPhone} style={Object.assign({}, IS, { flex: 1 })} />
               <button onClick={function(){ setRegFinderOpen(true); }} style={Object.assign({}, smallBtn, { background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', whiteSpace:'nowrap' })}>🔍 {t.findPatient}</button>
             </div>
             {patientLoading ? <div style={{ color: t3, fontSize: 15 }}>{t.searching}</div> : null}
+            {!patientLoading && notFoundFor ? <div role="status" style={{ color: t2, fontSize: 14, lineHeight: 1.4 }}>{fill(t.rc_noPatientFound, { q: notFoundFor, btn: t.newPatientInput })}</div> : null}
             {patientResults.length > 0 ? <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden', maxHeight: 170, overflowY: 'auto' }}>
               {patientResults.map(function (p) {
                 return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: selectedPatient && selectedPatient.id === p.id ? 'var(--accent-a18)' : 'var(--bg-row)' }}>
@@ -594,7 +627,7 @@ export default function RegistrationPage() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--warn-text)', marginBottom: 5 }}>📌 {t.receptionDeskNote}</label>
               <textarea value={form.receptionNote} onChange={function (e) { uf('receptionNote', e.target.value); }} rows={2} placeholder={t.receptionDeskNoteHint} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5, background: 'var(--field-2)' })} />
             </div>
-            <div><label style={labelStyle}>{t.chartNo}</label><input value={form.chartNo} readOnly style={Object.assign({}, IS, { opacity: form.chartNo ? 1 : 0.6 })} placeholder={t.newPatientAutoChart} /></div>
+            <div><label style={labelStyle}>{t.chartNo}</label><input value={form.chartNo} readOnly style={Object.assign({}, IS, { opacity: form.chartNo ? 1 : 0.7 })} placeholder={t.newPatientAutoChart} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div><label style={labelStyle}>{t.lastName}</label><input value={form.lastName} onChange={function (e) { uf('lastName', e.target.value); }} style={IS} /></div>
               <div><label style={labelStyle}>{t.firstName}</label><input value={form.firstName} onChange={function (e) { uf('firstName', e.target.value); }} style={IS} /></div>

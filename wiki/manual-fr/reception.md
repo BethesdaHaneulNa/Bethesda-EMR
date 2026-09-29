@@ -10,7 +10,7 @@ Enregistrer un patient qui arrive :
 
 1. En haut à gauche, vérifiez que la **Date de travail** est celle d'aujourd'hui.
 2. Dans **Rechercher patient**, tapez le nom, le N° dossier ou le téléphone, puis appuyez sur Entrée.
-3. Si le patient apparaît, cliquez sur son nom. Sinon, cliquez sur **+ Nouveau patient** et remplissez au moins **Nom**, **Prénom** et **Sexe**.
+3. Si le patient apparaît, cliquez sur son nom. Sinon, le message « Aucun patient trouvé pour « … » » s'affiche sous la case : cliquez sur **+ Nouveau patient** et remplissez au moins **Nom**, **Prénom** et **Sexe**.
 4. Dans **Service / Médecin**, choisissez le médecin.
 5. Vérifiez le **Type de Visite** : **Nouvelle**, **Suivi** ou **Sans frais**.
 6. Écrivez le **Motif** (la raison de la visite).
@@ -33,7 +33,7 @@ L'écran a trois parties :
 2. S'il n'existe pas, cliquez sur **+ Nouveau patient**.
 3. Saisissez **Nom** et **Prénom**. Les deux sont obligatoires.
 4. **Sexe** : cliquez sur **Masculin** ou **Féminin**. Au départ, aucun n'est choisi : il faut cliquer, sinon l'enregistrement est refusé.
-5. **Date de Naissance** : tapez l'année (**AAAA**, 4 chiffres), puis le mois (**MM**, 2 chiffres), puis le jour (**JJ**, 2 chiffres), par exemple `1990` `05` `03`. Le curseur passe tout seul à la case suivante. Si la date est inconnue, laissez les trois cases vides.
+5. **Date de Naissance** : tapez l'année (**AAAA**, 4 chiffres), puis le mois (**MM**, 2 chiffres), puis le jour (**JJ**, 2 chiffres), par exemple `1990` `05` `03`. Le curseur passe tout seul à la case suivante. Vous pouvez aussi coller une date entière (`19900503`, `1990-05-03` ou `03/05/1990`, jour d'abord) : elle se range toute seule dans les trois cases. Si la date est inconnue, laissez les trois cases vides.
 6. Remplissez si possible **Téléphone**, **Groupe Sanguin** et **Allergies** (les allergies s'affichent en rouge chez le médecin).
 7. Dans **📌 Note d'accueil**, écrivez ce qu'il faut toujours savoir sur ce patient (par exemple : « vient avec un accompagnant »). Cette note reste attachée au patient pour toutes ses visites.
 8. Continuez à l'étape 4 de « En bref ». Le **N° dossier** est créé automatiquement quand vous enregistrez.
@@ -140,6 +140,7 @@ Quand un patient est choisi, **📋 Dossier (vue)** montre les documents déjà 
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
 |---|---|---|
+| Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient ». | La recherche ne trouve personne | Vérifiez l'orthographe, essayez le N° dossier ou le téléphone. Sinon, **+ Nouveau patient** |
 | Saisissez le nom et le prénom. | Nom ou Prénom vide | Remplissez les deux |
 | Choisissez le sexe (Masculin / Féminin). | Aucun sexe choisi | Cliquez sur **Masculin** ou **Féminin** |
 | Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue. | Date de naissance incomplète | Remplissez les trois cases, ou videz-les |

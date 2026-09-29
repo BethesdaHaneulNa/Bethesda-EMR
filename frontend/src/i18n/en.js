@@ -316,6 +316,7 @@ export default {
   rc_queueOfDate: "Waiting / Done — {date}",
   rc_pastDateBanner: "You are looking at a past date ({date}): viewing and tidying up (cancel, complete) only. New registrations and edits are made on today’s date.",
   rc_pastDateNoNew: "Registrations on a past date cannot be created or edited. Press \"Today\" and register on today’s date.",
+  rc_noPatientFound: "No patient found for \"{q}\" — press \"+ {btn}\".",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

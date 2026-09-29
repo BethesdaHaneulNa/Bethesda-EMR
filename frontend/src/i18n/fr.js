@@ -307,6 +307,7 @@ export default {
   rc_queueOfDate: "Attente / Terminé — {date}",
   rc_pastDateBanner: "Vous consultez une date passée ({date}) : consultation et mise en ordre (annuler, terminer) seulement. Les nouveaux enregistrements et les modifications se font à la date du jour.",
   rc_pastDateNoNew: "À une date passée, on ne peut ni créer ni modifier un enregistrement. Appuyez sur « Aujourd’hui » et enregistrez à la date du jour.",
+  rc_noPatientFound: "Aucun patient trouvé pour « {q} » — cliquez sur « + {btn} ».",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
