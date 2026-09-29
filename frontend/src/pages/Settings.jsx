@@ -897,7 +897,9 @@ export default function SettingsPage() {
 
 // Drug tab (pharmacy session). The stored category stays the English word the
 // seed data and the statistics grouping use; only what is shown is translated.
-var DRUG_CATEGORIES = ['Antibiotic','Analgesic','Antimalarial','Cardiovascular','GI','Vitamin','Other'];
+// Widened 2026-09-29 for the clinic's real stock list (old program's classes, see
+// wiki/reference/drug-import-review.csv); 'Other' stays last.
+var DRUG_CATEGORIES = ['Analgesic','Antibiotic','Antihistamine','Antimalarial','Antiparasitic','Cardiovascular','Corticosteroid','Dermatology','Endocrine','GI','Gynecology','Musculoskeletal','Ophthalmic','Respiratory','Urology','Vitamin','Other'];
 function drugCatLabel(t, c){ return (c && t['ph_cat_' + c]) || c || ''; }
 
 function Fld(p){return <div><label style={{fontSize: 12,fontWeight:600,color:'#64748b',display:'block',marginBottom:3}}>{p.label}</label>{p.children}</div>}

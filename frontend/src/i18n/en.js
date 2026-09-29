@@ -388,6 +388,16 @@ export default {
   ph_noPastRx: "No waiting prescriptions. Only the chart is shown on the right.",
   ph_olderRx: "{count} waiting prescription(s) older than {n} days — cannot be dispensed here. The doctor must prescribe again.",
   ph_tooOld: "Prescriptions older than {n} days cannot be dispensed. The doctor must prescribe again.",
+  ph_cat_Respiratory: "Respiratory",
+  ph_cat_Dermatology: "Dermatology",
+  ph_cat_Antihistamine: "Antihistamine",
+  ph_cat_Gynecology: "Gynecology",
+  ph_cat_Antiparasitic: "Antiparasitic",
+  ph_cat_Ophthalmic: "Ophthalmic",
+  ph_cat_Musculoskeletal: "Musculoskeletal",
+  ph_cat_Corticosteroid: "Corticosteroid",
+  ph_cat_Urology: "Urology",
+  ph_cat_Endocrine: "Endocrine",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",
