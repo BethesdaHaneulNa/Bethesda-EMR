@@ -164,7 +164,7 @@ DB 확인: Amoxicillin 1985, Amlodipine 770 — 네 약 모두 정확히 빠짐.
 | B | 설정 | 기존 약속처방 «Malaria Workup», «Diarrhea / GE»가 비활성 약만 담음 — 설정 목록에 표시 없음(진료에서만 줄긋기) | ① |
 | B | 검사실 | 1366×768에서 «✓ Enregistrer · Terminer» 단추가 화면 아래로 잘림, 결과 표 ✕ 열도 잘림 | ④⑦ |
 | B | 진료 | 처방 표 열 너비가 입력할 때마다 바뀌어 칸 위치가 움직임(입력이 다른 칸으로 감), 1366폭에서 가로 스크롤 | ③ |
-| B | 진료 | 대기열 서랍이 환자를 연 뒤에도 처방 위에 남음 | ③ |
+| B | 진료 | 대기열 서랍이 환자를 연 뒤에도 처방 위에 남음 — **2026-09-30 정정: 재현 안 됨.** DOM으로 보면 0.3초 안에 닫힘. 시험 도구(브라우저 창)의 캡처가 늦게 찍힌 것으로 보임([다시 통합 시험 시나리오](integration-test-2-scenario.md) 2부 F) | ③ |
 | C | 설정 · 진료 | 저장 알림이 «✓ Sauver ✓» / «Sauver ✓» / «Terminé ✓»(동사) — «Enregistré»로 | ①③ |
 | C | 약국 | 확인 창 «RAKOTO Jean Terminer délivrance?» 프랑스어 어순 | ⑤ |
 | C | 총괄(공용 `PatientChart.jsx`) | 약국·수납 오른쪽 빈 패널에 접수 문구 «…ou saisissez un nouveau patient…»(`selectPatientLeft`) | ⑤⑥ |
