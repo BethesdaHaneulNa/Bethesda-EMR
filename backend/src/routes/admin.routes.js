@@ -68,80 +68,47 @@ router.get('/drugs', async (req, res) => {
   } catch (err) { sendDbError(res, err); }
 });
 
+// Stock is not set here. It moves only through the pharmacy's stock record
+// (/api/pharmacy/stock/:id/receive|count|discard), where every change is a line in
+// stock_movement; the Settings form shows it read-only (pharmacy, 2026-09-29). A
+// stock_qty in the request is ignored rather than refused, so a Settings screen
+// loaded before this change and still open can save a drug's name or price without
+// an error - its stock value simply does not count. A new drug starts at 0.
+//
+// This replaces the H4 safeguard (stock_expected + 409), which only existed because
+// this form used to write stock.
+function wholeOrBlank(v) { return v === undefined || v === null || v === '' || Number.isInteger(Number(v)); }
+
 router.post('/drugs', permMiddleware('settings'), async (req, res) => {
   try {
-    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock } = req.body;
-    const invalid = badPrices(req.body, ['unit_price', 'stock_qty', 'min_stock']);
+    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock } = req.body;
+    const invalid = badPrices(req.body, ['unit_price', 'min_stock']);
     if (invalid) return res.status(400).json({ error: invalid });
+    if (!wholeOrBlank(min_stock)) return res.status(400).json({ error: fieldMsg.notWhole('min_stock') });
+    // min_stock: the column's default (10) did not apply when the form sent it empty.
     const result = await pool.query(
       `INSERT INTO drug (code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock]
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,COALESCE($11,10)) RETURNING *`,
+      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock === '' ? null : min_stock]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
 });
 
-// Sent in full (not translated) and compared by the Settings screen, which then shows
-// its own se_ text: api/client.js passes the message on but not the status code.
-const ERR_STOCK_CHANGED = MSG.STOCK_CHANGED;
-
-function blank(v) { return v === undefined || v === null || v === ''; }
-
-// The edit window used to send back the whole row it loaded, and this wrote its
-// stock_qty over whatever the drug held by then. Open a drug in the morning (100),
-// dispense 30 over the day (70), fix only its price in the afternoon: stock was back
-// to 100, silently (pharmacy H4). Adding the difference instead is no fix, because
-// "20 arrived" and "I counted 45" need opposite arithmetic and the server cannot
-// tell which was meant. So stock is written only when it was actually edited, and
-// only if nobody changed it in the meantime; otherwise the person is asked again.
-//
-//   no stock_qty sent, or stock_qty == stock_expected  -> stock left as it is now
-//   stock edited, current stock still == stock_expected -> the edit is saved
-//   stock edited, current stock != stock_expected     -> 409, nothing saved
-//   no stock_expected at all (a screen loaded before this change) -> written as sent
-//
-// The row is locked FOR UPDATE for the check and the write, the same lock dispensing
-// takes (pharmacy.routes.js), so a dispense cannot slip in between the two.
 router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
-  const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock, stock_expected } = req.body;
-  const invalid = badPrices(req.body, ['unit_price', 'stock_qty', 'min_stock']);
-  if (invalid) return res.status(400).json({ error: invalid });
-  // The column is an integer; 7.5 used to reach the database and come back as an error.
-  for (const f of ['stock_qty', 'min_stock']) {
-    if (!blank(req.body[f]) && !Number.isInteger(Number(req.body[f]))) return res.status(400).json({ error: fieldMsg.notWhole(f) });
-  }
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    const cur = await client.query('SELECT stock_qty FROM drug WHERE id = $1 FOR UPDATE', [req.params.id]);
-    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
-    const now = cur.rows[0].stock_qty;
-    const num = v => (blank(v) ? 0 : Number(v));
-
-    let newStock = now;
-    const edited = !blank(stock_qty) && (!('stock_expected' in req.body) || num(stock_qty) !== num(stock_expected));
-    if (edited) {
-      if ('stock_expected' in req.body && num(now) !== num(stock_expected)) {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ error: ERR_STOCK_CHANGED, current: now });
-      }
-      newStock = stock_qty;
-    }
-
-    const result = await client.query(
+    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock } = req.body;
+    const invalid = badPrices(req.body, ['unit_price', 'min_stock']);
+    if (invalid) return res.status(400).json({ error: invalid });
+    if (!wholeOrBlank(min_stock)) return res.status(400).json({ error: fieldMsg.notWhole('min_stock') });
+    const result = await pool.query(
       `UPDATE drug SET code=$1, name=$2, name_en=$3, generic_name=$4, category=$5, default_dose=$6, default_freq=$7,
-       default_days=$8, default_route=$9, unit_price=$10, stock_qty=$11, min_stock=$12, updated_at=NOW() WHERE id=$13 RETURNING *`,
-      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, newStock, min_stock, req.params.id]
+       default_days=$8, default_route=$9, unit_price=$10, min_stock=$11, updated_at=NOW() WHERE id=$12 RETURNING *`,
+      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock === '' ? null : min_stock, req.params.id]
     );
-    await client.query('COMMIT');
+    if (sentMissing(res, result)) return;
     res.json(result.rows[0]);
-  } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (e) {}
-    sendDbError(res, err);
-  } finally {
-    client.release();
-  }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // The active order sets that still prescribe this drug. An order set keeps its own copy

@@ -194,7 +194,6 @@
 | **Erreur: Un élément avec ce code ou cet identifiant existe déjà.** | 저장할 때 | 같은 **Identifiant** 나 **Code** 가 이미 있음 | 다른 아이디·코드로 |
 | **Erreur: Saisissez un identifiant.** · **Saisissez un mot de passe.** | Personnel 새로 추가 | 아이디·비밀번호 칸이 빔 | 채워서 저장 |
 | **Erreur: Prix : saisissez un nombre.** · **… ne peut pas être négatif.** · **Stock : saisissez un nombre entier.** | 가격·재고 칸 | 숫자가 아니거나 음수, 재고에 소수 | 고쳐서 저장 |
-| **Le stock de ce médicament a changé pendant la modification…** | Médicaments 저장 | 창을 열어 둔 사이 그 약의 재고가 바뀜(조제 등). **아무것도 저장 안 됨**. 재고 칸은 지금 값으로 바뀌어 있음 | 재고 칸의 새 숫자를 보고 다시 맞춰 **Sauver**. 다른 칸의 입력은 그대로 있음 |
 | **Supprimer ?** | 목록의 Supprimer | 지울지 확인 (목록에서 숨겨지고 기록은 남음) | 맞으면 확인 |
 | **N ordonnance(s) type(s) utilisent ce médicament : …** | Médicaments의 Supprimer | 이 약을 쓰는 약속처방이 있음. 약을 감춰도 약속처방에는 남아 **계속 처방됨** | 먼저 **Ordonnances types** 에서 그 줄을 빼거나 다른 약으로 바꾼 뒤 감춤. 그래도 감추려면 확인 |
 | **Désactiver ce membre du personnel ? …** | Personnel의 Supprimer | 직원을 비활성으로 바꿀지 확인 | 맞으면 확인 (2.5) |
@@ -319,26 +318,16 @@
 - 현재 버전은 `backend/package.json`, 최신은 GitHub `UPDATE_REPO`의 latest release. 6시간 캐시, 5초 타임아웃, 인터넷이 없으면 마지막 결과나 오류를 돌려줌. `?force=1`로 즉시 다시 확인.
 - 로그인만 확인합니다. 업데이트 알림은 `TopBar.jsx`가 `settings` 권한이 있을 때만 보여줍니다. (CHANGELOG 1.3.3은 「settings 권한으로 막혀 있다」고 썼지만 코드는 로그인만 봅니다.)
 
-### 3-8. 약 저장과 재고 (약국 H4 안전장치, 2026-09-29)
+### 3-8. 약 저장과 재고 (2026-09-29)
 
-약품 **탭 화면**은 약국 세션 몫이고, 그 저장 함수(`Settings.jsx` `saveEdit`의 약 부분)와 API(`PUT /api/admin/drugs/:id`)는 설정 몫입니다.
+약품 **탭 화면**은 약국 세션 몫이고, 그 저장 함수(`Settings.jsx` `saveEdit`의 약 부분)와 API(`POST·PUT /api/admin/drugs`)는 설정 몫입니다.
 
-- **문제였던 것**: 편집 창은 열 때의 행을 통째로 들고 있다가 저장할 때 재고까지 그대로 보냈고, 서버는 그 값으로 덮어썼습니다. 창을 연 사이에 조제된 차감이 사라졌습니다(아침 100 → 조제 30 → 오후에 단가만 고쳐 저장 → 100).
-- **왜 차이만 더해 주지 않나**: 「20개 들어왔다」(더하기)와 「세어 보니 45개」(맞추기)는 계산 방향이 반대인데 서버는 어느 쪽인지 모릅니다. 그래서 조용히 계산하지 않고 **다시 묻습니다.**
-- **화면**: 저장할 때 창을 연 순간의 재고(`stock_expected` — 창을 연 목록의 그 행 값, 창이 화면을 덮고 있는 동안 목록은 바뀌지 않음)를 같이 보냅니다. 재고 칸을 **안 고쳤으면 재고를 보내지 않습니다.**
-- **서버** (트랜잭션, 그 약 행을 `SELECT … FOR UPDATE` — 조제와 같은 잠금):
-
-  | 요청 | 결과 |
-  |---|---|
-  | 재고 없음, 또는 재고 = `stock_expected` | 재고는 **지금 값 그대로**, 나머지만 저장 |
-  | 재고 고침, 지금 재고 = `stock_expected` | 고친 값으로 저장 |
-  | 재고 고침, 지금 재고 ≠ `stock_expected` | **409** `Stock changed while this drug was open` + `current`, **아무것도 저장 안 함** |
-  | `stock_expected` 자체가 없음 (이 변경 전 화면을 새로고침 안 한 브라우저) | 전처럼 보낸 값을 씀 |
-  | 재고·최소 재고에 소수 | 400 (전에는 DB 오류) |
-
-- **409일 때 화면**: 편집 창과 다른 칸의 입력은 그대로 두고, 목록을 다시 불러 **재고 칸을 지금 값으로** 바꾼 뒤 `se_stockChanged` 안내(「그 사이 재고가 바뀌었습니다… 지금 재고는 {n}…」). 다시 저장하면 지금 값을 기준으로 판단합니다. 오류 문구는 서버·화면에 **똑같이** 있어야 번역됩니다(`api/client.js`가 상태 코드를 안 넘김 — 약국과 같은 방식).
-- **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, 9080이면 거부, `SE_ADMIN_PW` 필요) 11개 항목 통과. 화면(9187): 한국어 — 창을 연 뒤 DB에서 30 차감 → 단가만 고쳐 저장 → 재고 170 유지(전에는 200으로 돌아감). 프랑스어 — 창을 연 뒤 20 차감 → 재고 300으로 고쳐 저장 → 프랑스어 안내, 창 유지, 재고 칸 150 → 다시 300 저장 → 성공.
-- **길게는**: 재고를 움직임(입고·실사·조제)으로만 바꾸는 방안(약국 결정 「2번 재고」)이 정해지면, 이 PUT에서 재고를 아예 빼면 됩니다. 위 규칙은 그때까지의 안전장치입니다.
+- **지금**: 설정의 약 저장은 **재고를 바꾸지 않습니다.** 재고는 약국의 재고 기록(`/api/pharmacy/stock/:id/receive|count|discard` — 입고·실사·폐기, 한 번마다 `stock_movement` 한 줄)으로만 움직이고, 약품 편집 창의 재고 칸은 읽기 전용입니다(약국 `14ff4be`).
+  - `POST /drugs`: 새 약은 **재고 0**으로 시작(요청의 `stock_qty` 무시). 최소 재고가 비면 **10**(열 기본값이 빈 값에는 적용되지 않았음).
+  - `PUT /drugs/:id`: `stock_qty`·`stock_expected`가 와도 **조용히 무시**하고 나머지만 저장. 거절(400)하지 않는 이유 — 이 변경 전에 연 설정 화면이 그대로 열려 있어도 이름·단가 저장이 막히지 않게. 최소 재고 소수는 400.
+  - 화면도 요청에서 재고를 뺍니다.
+- **지나온 길**: 처음에는 편집 창이 연 순간의 재고를 그대로 써서, 창을 연 사이 조제된 차감이 되돌아갔습니다(약국 H4). 2026-09-29 오전에 「본 값(`stock_expected`)과 지금 값이 다르면 409로 다시 묻기」 안전장치를 넣었고(`f44ab9e`), 약국 재고 기록이 생기면서 오후에 설정에서 재고를 아예 빼고 안전장치도 지웠습니다. 번역 키 `se_stockChanged`·서버 문구 `STOCK_CHANGED`도 함께 지움.
+- **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, `SE_ADMIN_PW`) — 새 약 0 · 최소 재고 10 · 재고는 약국 입고로 0 → 30 · `stock_qty: 999`를 실은 저장 200·재고 그대로 · 옛 `stock_expected` 요청도 200 · 재고 기록에 「설정에서 바뀜(outside)」 줄이 생기지 않음. 화면: 프랑스어 약품 편집에서 단가만 4500 → 4600 저장 → 재고 50 그대로.
 
 ### 3-9. 상용구의 언어 (2026-09-29)
 
@@ -365,7 +354,7 @@
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
-| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **`PUT /drugs/:id`** 는 `stock_expected`를 받고 재고 규칙이 따로 있음(3-8절, 409 가능) |
+| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0 (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
@@ -480,7 +469,7 @@
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
-| U10 | ~~높음~~ **고침(안전장치)** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 제안 A 적용: 재고를 안 고쳤으면 안 건드림, 고쳤는데 그 사이 바뀌었으면 409로 다시 물음 (3-8절). 재고를 움직임으로만 바꾸는 것(B)은 약국 결정 대기 | (옛 코드) `admin.routes.js` DRUGS `stock_qty=$11` |
+| U10 | ~~높음~~ **고침** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 설정의 약 저장은 재고를 아예 쓰지 않음, 재고는 약국 재고 기록으로만 (3-8절). 오전의 409 안전장치는 필요 없어져 지움 | (옛 코드) `admin.routes.js` DRUGS |
 | U11 | ~~보통~~ **고침** | ~~로그인·설정 서버 안내가 영어로 뜸~~ → 2026-09-29: 서버 문구를 `settings.messages.js` 상수로, 화면이 `settingsMessages.js`로 맞춰 번역 (3-3절). 오더 연동·검사항목 탭 함수의 오류 표시는 각 세션 몫이라 그대로 | (옛 코드) `auth.routes.js`, `admin.routes.js` |
 | U12 | ~~높음~~ **고침** | ~~틀린 비밀번호·비활성 계정으로 로그인하면 **아무 안내 없이 칸만 비움**~~ — `api/client.js`의 401 새로고침이 안내를 지움. → 2026-09-29: 로그인·첫 설정은 `Login.jsx`가 직접 보냄 (3-3절) | (옛 코드) `Login.jsx`가 `api.post` 사용 |
 
@@ -522,4 +511,6 @@
 | 2026-09-29 | 권한을 바꾸면 새로 고칠 때 메뉴가 맞게 바뀜 확인(총괄 구현, U13) | 위키만 | `8ea4d78` |
 | 2026-09-29 | (화면 변화 없음) 역할 10개 × 라우트 99개 권한 시험 — 모두 표와 같음 | `settings.access.mjs` (4절) | `f3b8f01` |
 | 2026-09-29 | 약을 감출 때 그 약을 쓰는 약속처방 이름을 확인 창에(막지 않음) | `GET /admin/drugs/:id/order-sets`, `deleteItem` (4절) | `1f0f24d` |
-| 2026-09-29 | 이 변경 기록 정리, 다른 곳에서 고쳐진 S8·B9·B10 표시 | 위키만 | (이 커밋) |
+| 2026-09-29 | 이 변경 기록 정리, 다른 곳에서 고쳐진 S8·B9·B10 표시 | 위키만 | `4f9f84d` |
+| 2026-09-29 | 권한 시험 표에 새 라우트(이전 내원 접수, 재고 6개, 같은 환자 찾기) | `settings.access.mjs` | `b5e7f4c` · `8887333` |
+| 2026-09-29 | 설정에서 약을 저장해도 재고는 바뀌지 않음 — 재고는 약국 재고 기록으로만, 새 약은 0에서 시작 | `POST·PUT /admin/drugs`가 `stock_qty` 무시, H4 안전장치 삭제 (3-8) | (이 커밋) |

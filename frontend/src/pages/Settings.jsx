@@ -5,8 +5,6 @@ import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
-// Must match MSG.STOCK_CHANGED in backend/src/routes/settings.messages.js.
-var STOCK_CHANGED = 'Stock changed while this drug was open';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -161,28 +159,11 @@ export default function SettingsPage() {
         else await api.post('/admin/staff', item);
         setStaff(await api.get('/admin/staff'));
       } else if(editType==='drug'){
-        if(item.id){
-          // Pharmacy H4: sending the stock the window loaded wrote it back over anything
-          // dispensed since. Send stock only if it was edited, together with the value
-          // the window opened with - the list row it was opened from, which cannot
-          // change while this dialog covers the screen - and let the server refuse
-          // (409) if the drug's stock moved meanwhile. See admin.routes.js PUT /drugs.
-          var opened=(drugs.find(function(d){return d.id===item.id;})||{}).stock_qty;
-          var body=Object.assign({},item,{stock_expected:opened});
-          if(Number(body.stock_qty||0)===Number(opened||0)) delete body.stock_qty;
-          try { await api.put('/admin/drugs/'+item.id, body); }
-          catch(e){
-            if(e.message!==STOCK_CHANGED) throw e;
-            // Keep the dialog and whatever else was typed; show the stock as it is now
-            // so the person decides again with the real number in front of them.
-            var fresh=await api.get('/admin/drugs'); setDrugs(fresh);
-            var now=(fresh.find(function(d){return d.id===item.id;})||{}).stock_qty;
-            setEditItem(Object.assign({},item,{stock_qty:now}));
-            alert((t.se_stockChanged||'').replace('{n}',now==null?0:now));
-            return;
-          }
-        }
-        else await api.post('/admin/drugs', item);
+        // Stock is not saved from here any more - it moves only through the pharmacy's
+        // Stock tab - so it is left out of the request (the server ignores it anyway).
+        var dbody=Object.assign({},item); delete dbody.stock_qty; delete dbody.stock_expected;
+        if(item.id) await api.put('/admin/drugs/'+item.id, dbody);
+        else await api.post('/admin/drugs', dbody);
         setDrugs(await api.get('/admin/drugs'));
       } else if(editType==='order'){
         if(item.id) await api.put('/admin/order-codes/'+item.id, item);
