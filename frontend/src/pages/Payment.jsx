@@ -35,7 +35,9 @@ export default function PaymentPage() {
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
   var sbs = useState(null), settleBill = sbs[0], setSettleBill = sbs[1];
-  var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];   // {bill, reason} - the cancel dialog (M6)
+  var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];
+  var cds = useState(null), cashDay = cds[0], setCashDay = cds[1];          // GET /cash-day (M9)
+  var sis = useState(false), showInactive = sis[0], setShowInactive = sis[1]; // cancelled / replaced receipts folded   // {bill, reason} - the cancel dialog (M6)
   var sams = useState(''), settleAmt = sams[0], setSettleAmt = sams[1];
   var pbs = useState({owed:0,refund:0}), patBalance = pbs[0], setPatBalance = pbs[1];
   var fos = useState(false), finderOpen = fos[0], setFinderOpen = fos[1];
@@ -123,6 +125,7 @@ export default function PaymentPage() {
       setPending(data);
       var done = await api.get('/billing/completed');
       setCompleted(done);
+      try { setCashDay(await api.get('/billing/cash-day')); } catch(e){ setCashDay(null); }
       try {
         var fc = await api.get('/admin/order-codes?code_type=fee');
         setFeeCodes((fc||[]).filter(function(c){ return CONSULT_FEE_CODES.indexOf(c.code)<0; }));
@@ -402,42 +405,74 @@ export default function PaymentPage() {
     return <span style={{background:paid?'var(--ok-a18)':unpaid?'var(--danger-a18)':'var(--warn-a18)',color:paid?'var(--ok-text)':unpaid?'var(--danger-ink)':'var(--warn-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{statusLabel(s)}</span>;
   }
 
+  // A receipt's badge, and the line under it: a correction replaced it (not a staff
+  // cancellation), or its balance was taken on a later receipt (a settlement or a
+  // carry) - then its own "partial" and balance are history, not what is owed.
+  function billBadge(b){
+    var chip = function(bg, fg, text){ return <span style={{background:bg,color:fg,borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{text}</span>; };
+    if(b.payment_status==='cancelled' && b.replaced_by_receipt_no) return chip('var(--violet-2-a18)','var(--violet-text-2)',t.py_stReplaced);
+    if(b.payment_status!=='cancelled' && b.carried_into_receipt_no) return chip('var(--text-3-a22)','var(--text-2)',t.py_stCarried);
+    return statusBadge(b.payment_status);
+  }
+  function billNote(b){
+    if(b.payment_status==='cancelled' && b.replaced_by_receipt_no) return t.py_replacedBy.replace('{receipt}', b.replaced_by_receipt_no);
+    if(b.payment_status!=='cancelled' && b.carried_into_receipt_no) return t.py_carriedTo.replace('{receipt}', b.carried_into_receipt_no);
+    return null;
+  }
+
   function listData(){ return (tab==='waiting'?pending:completed).filter(matches); }
+  // The paid-today list: receipts in force first (their number is the tab's count),
+  // cancelled and replaced ones folded underneath.
+  function listRows(){
+    var all = listData();
+    if(tab!=='completed') return all;
+    var live = all.filter(function(b){ return b.payment_status!=='cancelled'; });
+    return showInactive ? live.concat(all.filter(function(b){ return b.payment_status==='cancelled'; })) : live;
+  }
+  function inactiveCount(){ return tab==='completed' ? listData().filter(function(b){ return b.payment_status==='cancelled'; }).length : 0; }
 
   return(
-    <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,minHeight:'100vh',fontSize:16}}>
+    <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,height:'100vh',display:'flex',flexDirection:'column',fontSize:16}}>
       <TopBar />
-      <div style={{background:'var(--panel-2)',borderBottom:'1px solid '+bd,padding:'6px 12px',display:'flex',alignItems:'center',gap:8}}>
-        <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'var(--accent)':'var(--chip)',color:tab==='waiting'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='waiting'?'var(--accent-text)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({pending.length})</button>
-        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'var(--ok)':'var(--chip)',color:tab==='completed'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='completed'?'var(--ok-text)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>{L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
-        <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:'var(--text-soft)',border:'1px solid '+bd2,borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
-        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
-        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.reading||'판독소견'}</button>
+      <div style={{background:'var(--panel-2)',borderBottom:'1px solid '+bd,padding:'6px 8px',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
+        <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'var(--accent)':'var(--chip)',color:tab==='waiting'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='waiting'?'var(--accent-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({pending.length})</button>
+        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'var(--ok)':'var(--chip)',color:tab==='completed'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='completed'?'var(--ok-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
+        <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:'var(--text-soft)',border:'1px solid '+bd2,borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>🔍 {t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
+        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
+        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.reading||'판독소견'}</button>
         <div style={{flex:1}}></div>
         {tab==='waiting'&&sel&&billItems&&!sel.needs_refund&&sel.status!=='cancelled'?(nothingToCharge()?(
           <span style={{color:'var(--ok-text)',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
         ):(<>
-          <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--danger-a20)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
-          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':(amtPaidNum()>0?'partial':'unpaid'), true)}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'8px 20px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
+          <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--danger-a20)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:6,padding:'6px 10px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
+          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':(amtPaidNum()>0?'partial':'unpaid'), true)}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'7px 16px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
         </>)):null}
         <button onClick={loadLists} style={{background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'340px 1fr 340px',height:'calc(100vh - 122px)'}}>
+      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',flex:1,minHeight:0}}>
         <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn}}>
           <div style={{padding:'9px 12px',borderBottom:'1px solid '+bd,background:scBg,fontWeight:800,fontSize:16,color:tx}}>💰 {tab==='waiting'?L.waitingPay:L.todayPaid}</div>
+          {tab==='completed'&&cashDay?<div style={{padding:'8px 12px',borderBottom:'1px solid '+bd,background:'var(--ok-a12)',fontSize:13}}>
+            <div style={{fontWeight:800,color:'var(--ok-text)',marginBottom:3}}>💵 {t.py_cashDay}</div>
+            <div style={{display:'flex',justifyContent:'space-between',gap:6,fontFamily:'monospace',flexWrap:'wrap'}}>
+              <span style={{color:t2}}>{t.py_cashIn} <strong style={{color:'var(--ok-text)'}}>+{fmtAr(cashDay.cash_in)}</strong></span>
+              <span style={{color:t2}}>{t.py_cashOut} <strong style={{color:'var(--danger-text)'}}>−{fmtAr(cashDay.cash_out)}</strong></span>
+              <span style={{color:t2}}>{t.py_cashNet} <strong style={{color:tx}}>{fmtAr(cashDay.net)} Ar</strong></span>
+            </div>
+          </div>:null}
           <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd}}>
             <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 9px',color:tx,fontSize:15,outline:'none',width:'100%',boxSizing:'border-box'}}/>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
-            {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listData().map(function(v){
+            {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
               var isSel=sel&&sel.id===v.id;
-              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent'}}>
+              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',opacity:tab==='completed'&&v.payment_status==='cancelled'?0.6:1}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
-                  {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):statusBadge(v.payment_status)}
+                  {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
                 </div>
                 <div style={{fontSize:13,color:t2}}>{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}</div>
                 {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
@@ -447,11 +482,13 @@ export default function PaymentPage() {
                 {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
                 {tab==='completed'?<>
                   <div style={{fontSize:12,color:'var(--accent-text)',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
+                  {billNote(v)?<div style={{fontSize:12,color:t3,marginTop:2}}>→ {billNote(v)}</div>:null}
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'var(--ok-text)',fontFamily:'monospace'}}>{fmtAr(v.total_due)} Ar</strong></div>
                 </>:null}
                 {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:3}}>+ {t.prevOutstanding}: {fmtAr(v.previous_balance)} Ar</div>:null}
               </div>;
             })}
+            {!loading&&inactiveCount()>0?<div onClick={function(){setShowInactive(!showInactive)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,color:t3,borderBottom:'1px solid var(--line-soft)'}}>{showInactive?'▾':'▸'} {t.py_inactiveReceipts.replace('{n}', inactiveCount())}</div>:null}
             {!loading&&tab==='completed'&&listData().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{L.noCompleted}</div>:null}
           </div>
         </div>
@@ -487,9 +524,10 @@ export default function PaymentPage() {
                     <span style={{color:'var(--ok-text)'}}>{t.amountPaid}: {fmtAr(b.amount_paid)}</span>
                   </div>
                   {out>0&&!cancelled?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:2,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(out)} Ar</div>:null}
+                  {billNote(b)?<div style={{fontSize:12,color:t3,marginTop:2}}>→ {billNote(b)}</div>:null}
                   {cancelled&&b.refunded_amount!=null&&heldOn(b)>0.005?<div style={{fontSize:12,color:parseFloat(b.refunded_amount)>0?'var(--danger-text)':t2,marginTop:2,fontFamily:'monospace'}}>{parseFloat(b.refunded_amount)>0?t.py_refundedAt+': '+fmtAr(b.refunded_amount)+' Ar':t.py_keptAt+': '+fmtAr(heldOn(b))+' Ar'}</div>:null}
                   <div style={{marginTop:4,display:'flex',alignItems:'center',gap:6}}>
-                    {cancelled? <span style={{fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',border:'1px solid var(--danger-a40)',borderRadius:4,padding:'1px 7px'}}>{t.cancelledBadge}</span> : statusBadge(b.payment_status)}
+                    {cancelled&&!b.replaced_by_receipt_no? <span style={{fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',border:'1px solid var(--danger-a40)',borderRadius:4,padding:'1px 7px'}}>{t.cancelledBadge}</span> : billBadge(b)}
                     <div style={{flex:1}}></div>
                     {out>0&&!cancelled?<button onClick={function(){ setSettleBill(b); setSettleAmt(String(Math.round(out))); }} style={{background:'var(--ok-a18)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12,fontWeight:700}}>💵 {t.settleOutstanding}</button>:null}
                     <button onClick={function(){reprint(b)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:12}}>🖨 {t.reprint}</button>
@@ -598,12 +636,22 @@ export default function PaymentPage() {
       }
       return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
         {head}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:16}}>
+        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
           <div>
             <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,overflow:'hidden'}}>
               <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:t2}}>{t.currentItems||'현재 항목'}</div>
-              {corr.items.map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid var(--line-soft)':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.quantity>1?' ×'+fmtAr(it.quantity):''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
+              {corr.items.map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid var(--line-soft)':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.pack_label?' · '+packWord(it, langCtx.lang, it.quantity):it.quantity>1?' ×'+fmtAr(it.quantity):''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
             </div>
+            {(corr.changes||[]).length?<div style={{background:scBg,border:'1px solid var(--violet-2-a50)',borderRadius:7,overflow:'hidden',marginTop:10}}>
+              <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:'var(--violet-text-2)'}}>{t.py_changesTitle}</div>
+              {corr.changes.map(function(ch,i){
+                var qtyText = function(n){ return ch.pack_label ? packWord(ch, langCtx.lang, n) : fmtAr(n); };
+                return <div key={i} style={{display:'flex',justifyContent:'space-between',gap:8,padding:'7px 12px',borderTop:i?'1px solid var(--line-soft)':'none',fontSize:14}}>
+                  <span style={{color:tx}}>{ch.item_name}{ch.cancelled_order?' ('+t.py_changeCancelled+')':''} <span style={{color:t3,fontFamily:'monospace'}}>{qtyText(ch.qty_before)} → {qtyText(ch.qty_after)}</span></span>
+                  <span style={{color:ch.difference<0?'var(--violet-text-2)':'var(--danger-ink)',fontFamily:'monospace',fontWeight:800,whiteSpace:'nowrap'}}>{ch.difference<0?'−':'+'}{fmtAr(Math.abs(ch.difference))}</span>
+                </div>;
+              })}
+            </div>:null}
           </div>
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:14,height:'fit-content'}}>
             <SumRow label={t.correctTotal||'정확한 금액'} amount={corr.subtotal} />
@@ -634,7 +682,7 @@ export default function PaymentPage() {
       {mqRows.filter(function(r){ return r.pack_unit; }).length?<div style={{background:'var(--danger-a18)',border:'1px solid var(--danger-a60)',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'var(--danger-text-2)',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingPack.replace('{names}', mqRows.filter(function(r){ return r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {isAdditional()&&subtotal()>0.0001?<div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--accent-text)'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'var(--warn-a12)',border:'1px solid var(--warn-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--warn-ink)'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'var(--warn-text)',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
+      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
         <div>
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontWeight:900,fontSize:16,color:'var(--accent-text)'}}>🏥 {t.consultFee}</span>
@@ -686,9 +734,9 @@ export default function PaymentPage() {
           {patBalance.refund>0?
             <div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:6,padding:'8px 10px',margin:'8px 0',fontSize:13}}><span style={{color:'var(--accent-text)',fontWeight:800}}>{t.refundDue}: </span><span style={{color:'var(--accent-text)',fontFamily:'monospace',fontWeight:800}}>{fmtAr(patBalance.refund)} Ar</span><div style={{color:t3,fontSize:11,marginTop:2}}>{t.refundHint}</div></div>
             :null}
-          <div style={{background:'linear-gradient(135deg,var(--ok-a15),var(--ok-strong-a15))',border:'2px solid var(--ok-a40)',borderRadius:6,padding:12,marginTop:10}}><div style={{fontSize:13,color:'var(--ok-text)',fontWeight:800}}>{t.totalDue}</div><div style={{fontSize:28,fontWeight:900,color:'var(--ok-ink)',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(totalDue())} Ar</div></div>
+          <div style={{background:'linear-gradient(135deg,var(--ok-a15),var(--ok-strong-a15))',border:'2px solid var(--ok-a40)',borderRadius:6,padding:12,marginTop:10}}><div style={{fontSize:13,color:'var(--ok-text)',fontWeight:800}}>{t.totalDue}</div><div style={{fontSize:26,fontWeight:900,color:'var(--ok-ink)',fontFamily:'monospace',textAlign:'right',whiteSpace:'nowrap'}}>{fmtAr(totalDue())} Ar</div></div>
           <div style={{marginTop:12}}><div style={{fontSize:13,color:t2,marginBottom:4}}>💵 {t.amountPaid}</div><input type="number" value={amountPaid} onChange={function(e){setAmountPaid(e.target.value)}} style={{...inputStyle(),fontSize:20,color:'var(--ok-ink)',fontWeight:800,padding:9}} /></div>
-          <div style={{display:'flex',gap:4,marginTop:6}}>{[totalDue(),5000,10000,20000,50000].map(function(a,i){return <button key={i} onClick={function(){setAmountPaid(String(a))}} style={{flex:1,background:'var(--chip)',border:'1px solid '+bd2,borderRadius:4,padding:'5px 2px',color:t2,cursor:'pointer',fontSize:12}}>{i===0?L.exact:fmtAr(a)}</button>;})}</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>{[totalDue(),5000,10000,20000,50000].map(function(a,i){return <button key={i} onClick={function(){setAmountPaid(String(a))}} style={{flex:'1 0 48px',background:'var(--chip)',border:'1px solid '+bd2,borderRadius:4,padding:'5px 2px',color:t2,cursor:'pointer',fontSize:12}}>{i===0?L.exact:fmtAr(a)}</button>;})}</div>
           {amtPaidNum()>=totalDue()&&amtPaidNum()>0?<InfoLine label={t.change} amount={changeAmt()} color="var(--accent-text)" tint="accent-text" />:null}
           {amtPaidNum()>0&&amtPaidNum()<totalDue()?<InfoLine label={t.outstanding} amount={outstandingAmt()} color="var(--danger-ink)" tint="danger" />:null}
         </div>
@@ -701,17 +749,18 @@ export default function PaymentPage() {
     var b=doneBill.bill, items=doneBill.items||[];
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <div style={{padding:'11px 15px',background:scBg,border:'1px solid '+bd,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}>
-        <div style={{fontSize:30}}>✅</div><div style={{flex:1}}><div style={{fontSize:19,fontWeight:900,color:'var(--ok-text)'}}>{L.billDetail}</div><div style={{fontSize:14,color:t2}}>{b.chart_no} · {b.last_name} {b.first_name} · {ymd(b.billing_date)}</div></div>{statusBadge(b.payment_status)}
+        <div style={{fontSize:30}}>✅</div><div style={{flex:1}}><div style={{fontSize:19,fontWeight:900,color:'var(--ok-text)'}}>{L.billDetail}</div><div style={{fontSize:14,color:t2}}>{b.chart_no} · {b.last_name} {b.first_name} · {ymd(b.billing_date)}</div></div>{billBadge(b)}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
+      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
           <div style={{padding:'10px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>🧾 {L.item}</div>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'var(--bg-col-2)'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid var(--line-soft)'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','var(--ok-text)',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
         </div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,height:'fit-content'}}>
           <div style={{display:'grid',gap:5,fontSize:15}}>
-            <Pair k={L.receiptNo} v={b.receipt_no}/><Pair k={L.cashier} v={b.cashier_name||''}/><Pair k={t.py_date} v={ymd(b.billing_date)}/><Pair k={t.py_status} v={statusLabel(b.payment_status)}/>
+            <Pair k={L.receiptNo} v={b.receipt_no}/><Pair k={L.cashier} v={b.cashier_name||''}/><Pair k={t.py_date} v={ymd(b.billing_date)}/><Pair k={t.py_status} v={b.payment_status==='cancelled'&&b.replaced_by_receipt_no?t.py_stReplaced:b.payment_status!=='cancelled'&&b.carried_into_receipt_no?t.py_stCarried:statusLabel(b.payment_status)}/>
           </div>
+          {billNote(b)?<div style={{fontSize:13,color:t2,marginTop:6}}>→ {billNote(b)}</div>:null}
           <div style={{height:1,background:bd,margin:'10px 0'}}></div>
           <SumRow label={t.subtotal} amount={b.subtotal} />
           <SumRow label={t.discount} amount={b.discount_amount} />

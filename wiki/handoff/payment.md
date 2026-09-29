@@ -2,6 +2,56 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험의 수납 몫: A · B1 · B2 · B3 화면 쪽 · 「Caisse du jour」 · L9
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop merge(`56da96c`, 디자인의 `Payment.jsx` 색 이름표 `fdd6080` 포함 — 디자인 인계 노트 「3단계: Payment.jsx 색을 이름표로」에서 끝난 것 확인)
+- **색**: 새로 넣은 색은 모두 `var(--…)`(디자인 세션 부탁). 새 이름표는 만들지 않았고, 쓴 것은 모두 `index.html`에 있습니다.
+
+### 한 일
+
+**A · L9 — 1366×768**
+- 세 칸 `340px | 1fr | 340px` → `minmax(230px,300px) | minmax(0,1fr) | minmax(240px,300px)`. 가운데가 옆으로 밀리던 것은 `1fr`의 최소 폭 때문이었습니다.
+- 가운데 안의 합계 칸 `330px` → `minmax(240px,300px)`.
+- 받은 금액 빠른 단추는 줄바꿈되게 했습니다.
+- 윗줄 단추는 여백 `7px 14px` → `6px 9px`, 글자 15 → 14로 줄이고 한 줄로 둡니다.
+- 화면 높이는 `calc(100vh − 122px)` 대신 flex로 채웁니다(위 두 줄의 실제 높이가 125px이라 세로로 넘쳤음).
+- **확인**: 1366×768에서 `scrollWidth` 1366 = 창 폭, `scrollHeight` 768 = 창 높이.
+  - 합계 「51,300 Ar」, 50,000 단추(오른쪽 끝 1037px), ↻가 모두 보이고, 받은 금액 60,000 → 「Monnaie 8,700 Ar」.
+  - 프랑스어·한국어, 어두운 화면·밝은 화면 모두 확인했습니다.
+
+**B1 — 미수를 나중에 받은 원래 영수증**
+- 목록·상세·영수내역에 **Reporté (넘어감)** 배지와 「→ solde réglé sur le reçu R-…」을 보여 줍니다. 상세의 Statut도 Reporté, Impayé는 0입니다(서버 값).
+- 격리에서 통합 시험과 같은 흐름(34,500 중 20,000 → 미수 수납 14,500)으로 확인했습니다: R-0001 「Statut Reporté · → solde réglé sur le reçu R-0002 · Impayé 0 Ar」.
+
+**B2 — 정정으로 바뀐 영수증**
+- **Remplacé (정정으로 바뀜)** 배지(보라)와 「→ remplacé par R-…」. 직원이 취소한 **ANNULÉ**(빨강)와 나뉩니다. 목록, 상세(서버 `/:id/detail`에 `replaced_by_receipt_no` 추가), 오른쪽 영수내역 모두 같습니다.
+- 「Payé aujourd’hui (N)」: 숫자는 살아 있는 영수만 세고, 목록도 그것만 보여 줍니다. 취소·바뀐 영수는 맨 아래 「▸ Annulés / remplacés (N)」을 누르면 흐리게 펼쳐집니다.
+- 격리 확인: 숫자 (3) = 보이는 줄 3.
+
+**B3 — 정정 화면**
+- 「Articles actuels」 아래에 보라 칸 **Ce qui change**를 둡니다. 서버의 `changes`로, 줄마다 수량 전 → 후와 금액 차이, 진료실이 취소한 검사는 「(annulé)」입니다.
+- 항목과 수량은 `packWord`를 씁니다: 「Amlodipine 5mg · 2 flacons」.
+- 격리 확인: 「Amoxicilline 3 → 0 −1,500」, 「CBC (annulé) 1 → 0 −12,000」, Remboursement dû 13,500.
+
+**「Caisse du jour」**
+- 수납 완료 탭 목록 위에 「💵 Caisse du jour — Encaissé +52,500 · Rendu −3,000 · Net 49,500 Ar」(`GET /cash-day`). 격리의 오늘 흐름과 같은 숫자입니다.
+
+**기타**
+- `Receipt.jsx`: 글자 표의 중복 `refunded`를 지웠습니다(영수증은 늘 프랑스어라 보이는 것은 같음).
+- 설명서 `manual-fr/payment.md`: §1(Caisse du jour), §4(6. Reporté), §7(Remplacé · Ce qui change).
+
+### 기록
+
+- **새 키**: `py_stReplaced` · `py_stCarried` · `py_replacedBy` · `py_carriedTo` · `py_inactiveReceipts` · `py_changesTitle` · `py_changeCancelled` · `py_cashDay` · `py_cashIn` · `py_cashOut` · `py_cashNet` (ko·en·fr)
+- **회귀**: `it-b` 10 · 현금 23 · 변경 기록 8 · M6 20 · 미수 수납 50 — 틀린 항목 0, 현금 식 환자 37명 틀림 0. `node --check`, 빌드 통과.
+- **바꾼 파일**: `frontend/src/pages/Payment.jsx`, `frontend/src/components/Receipt.jsx`, `backend/src/routes/billing.routes.js`(detail 한 칸), `wiki/manual-fr/payment.md`
+- **공용 파일 변경**: `i18n` ko·en·fr — 위 11개
+- **DB 마이그레이션**: 없음
+- **확인 못 한 것**: 정정 확인 창(`window.confirm`)을 자동 조작으로 눌러 보지 않았습니다. 정정 뒤의 목록은 API로 만든 정정으로 확인했습니다.
+- **위키**: `modules/payment.md` 2.6(Ce qui change · Remplacé)·2.10(Caisse du jour · 접힌 목록 · Reporté)·4절(detail)·7절(L9 닫음)·8절(`ada48fa` 채움 + 이 줄)
+- **다른 세션에 부탁**: 없음(설정 세션에 보낸 기록 탭 번역 부탁은 앞 항목 그대로)
+
 ## 2026-09-29 — 통합 시험의 수납 몫: B2 · B3 · B4 서버 쪽 (화면 쪽은 디자인 세션 뒤)
 
 - **상태**: 확인 요청(서버 몫) · **남은 것 — `Payment.jsx` 디자인 커밋이 develop에 들어온 뒤**: A(1366×768), B1, B2·B3의 화면, 「Caisse du jour」, `Receipt.jsx`의 중복 `refunded`, L9

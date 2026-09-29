@@ -431,6 +431,17 @@ export default {
   py_refundedAt: "Rendu à l’annulation",
   py_keptAt: "Gardé à l’annulation",
   py_correctionConfirm: "Appliquer la correction ? Le reçu actuel est annulé et réémis au montant correct.",
+  py_stReplaced: "Remplacé",
+  py_stCarried: "Reporté",
+  py_replacedBy: "remplacé par {receipt}",
+  py_carriedTo: "solde réglé sur le reçu {receipt}",
+  py_inactiveReceipts: "Annulés / remplacés ({n})",
+  py_changesTitle: "Ce qui change",
+  py_changeCancelled: "annulé",
+  py_cashDay: "Caisse du jour",
+  py_cashIn: "Encaissé",
+  py_cashOut: "Rendu",
+  py_cashNet: "Net",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

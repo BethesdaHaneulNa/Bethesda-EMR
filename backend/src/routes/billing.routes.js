@@ -312,7 +312,8 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
        v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
        COALESCE(NULLIF(d.name_fr,''), NULLIF(d.name_en,''), d.name) as dept_name_fr,
        x.name as cancelled_by_name,
-       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date
+       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date,
+       rb.receipt_no as replaced_by_receipt_no
        FROM billing b
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
@@ -321,6 +322,7 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
        LEFT JOIN staff c ON b.cashier_id = c.id
        LEFT JOIN staff x ON b.cancelled_by = x.id
        LEFT JOIN billing ci ON ci.id = b.carried_into_id
+       LEFT JOIN billing rb ON rb.id = b.replaced_by_id
        WHERE b.id = $1`,
       [req.params.billingId]
     );
