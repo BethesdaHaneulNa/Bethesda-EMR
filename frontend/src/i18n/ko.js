@@ -321,6 +321,11 @@ export default {
   cs_vPR: "PR",
   cs_vRR: "RR",
   cs_vSpO2: "SpO2",
+  cs_colSig: "용법",
+  cs_doseHint: "하루 총량(일총투여)을 적습니다. 총량 = 하루 총량 × 일수. 횟수는 하루 총량을 몇 번에 나눠 먹는지입니다.",
+  cs_rxBreakdown: "1회 {per} × {freq}회 × {days}일 = 총 {total}",
+  cs_rxUneven: "⚠ 1회량이 나눠지지 않음 — 하루 {daily} ÷ {freq}회 · {days}일 = 총 {total}",
+  cs_rxStoredTotal: "저장된 총량 {total} (예전 계산)",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

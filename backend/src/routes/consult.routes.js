@@ -157,16 +157,32 @@ router.get('/:id/prescriptions', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// The one place the total of a prescription line is worked out. The clinic prescribes
+// the Korean way: `dose` is the DAILY total (일총투여), `frequency` how many times a day
+// it is split into, `days` how long. So 3.000 / 3 / 7 is three tablets a day, one at a
+// time, for a week: 21. Frequency only divides the day's amount for the label (one
+// dose = dose / frequency, shown on screen); it does not change the total.
+// Until 2026-09-29 the screen sent dose x frequency x days, three times too much on a
+// TID line; rows saved then keep their total (see the PUT below).
+// Everything else - the pharmacy's stock deduction, the bill, the drug statistics -
+// reads total_qty as stored, so the formula lives here and nowhere else.
+function rxTotal(dose, days) {
+  const d = parseFloat(dose) || 0;
+  const n = parseInt(days) || 1;
+  return Math.round(d * n * 1000) / 1000;   // DECIMAL(10,3)
+}
+
 // POST /api/consultations/:id/prescriptions
 router.post('/:id/prescriptions', canConsult, async (req, res) => {
   try {
-    const { drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
+    // total_qty from the client is ignored: the server works it out (rxTotal).
+    const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']);
     if (invalid) return res.status(400).json({ error: invalid });
     const result = await pool.query(
       `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo]
+      [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, rxTotal(dose, days), unit_price, memo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -183,21 +199,33 @@ async function rxRefusal(res, rxId) {
 // PUT /api/consultations/prescription/:rxId - update prescription details
 router.put('/prescription/:rxId', canConsult, async (req, res) => {
   try {
-    const { dose, frequency, days, route, memo, total_qty, unit_price } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'total_qty', 'unit_price']);
+    // total_qty from the client is ignored: the server works it out (rxTotal).
+    const { dose, frequency, days, route, memo, unit_price } = req.body;
+    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']);
     if (invalid) return res.status(400).json({ error: invalid });
-    const calcQty = total_qty !== undefined && total_qty !== null && total_qty !== ''
-      ? total_qty
-      : ((parseFloat(dose) || 0) * (parseInt(frequency) || 1) * (parseInt(days) || 1));
+    const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
+    const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
     // Once the pharmacy has handed the drug over, its stock is already deducted.
     // Changing the line afterwards would move the bill but not the shelf, so the two
     // would disagree for good. The status test sits in the UPDATE itself so a
     // dispense landing at the same moment cannot slip between a check and the write.
+    //
+    // total_qty is recomputed only when the dose, the times a day or the days really
+    // changed (compared as numbers: "3" and "3.000" are the same dose). The screen
+    // saves a row whenever a field loses focus, so without this an old visit opened
+    // after the formula change would have its totals cut to a third just by clicking
+    // through them - and a visit already paid for would show up for a refund.
+    // In the comparison the columns are the row's values before this UPDATE.
     const result = await pool.query(
       `UPDATE prescription
-       SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, total_qty=$6, unit_price=COALESCE($7, unit_price)
+       SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, unit_price=COALESCE($7, unit_price),
+           total_qty = CASE
+             WHEN (CASE WHEN dose ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$' THEN dose::numeric END) IS DISTINCT FROM $9::numeric
+               OR frequency IS DISTINCT FROM $2
+               OR days IS DISTINCT FROM $3
+             THEN $6 ELSE total_qty END
        WHERE id=$8 AND status <> 'dispensed' RETURNING *`,
-      [dose, parseInt(frequency) || 1, parseInt(days) || 1, route, memo, calcQty, unit_price, req.params.rxId]
+      [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose]
     );
     if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
     res.json(result.rows[0]);
