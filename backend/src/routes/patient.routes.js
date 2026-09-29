@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { badPatient } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
+const { writeAudit, ACTIONS, changedOnly } = require('../utils/audit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -126,29 +127,66 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
 // patient's address (the reception queue does not load it) wiped it by sending
 // an empty string. Sending a field as '' or null still clears it on purpose.
 // The name check still applies, so callers must send last_name/first_name.
+//
+// Every change is written to the change log (decided 2026-09-29, wiki/03-change-log.md):
+// reception.patient.edit with the fields that differ, old and new. Registering a new
+// patient is ordinary work and is not logged. Reception saves the patient's details
+// on every registration, so a save that changes nothing must write nothing: an empty
+// box arrives as '' where the row holds NULL, and those count as the same here.
+function auditView(row) {
+  const v = {};
+  PATIENT_FIELDS.forEach(function (f) {
+    const x = row[f];
+    v[f] = (x === null || x === undefined) ? (f === 'date_of_birth' ? null : '') : x;
+  });
+  return v;
+}
 router.put('/:id', permMiddleware('registration'), async (req, res) => {
+  const invalid = badPatient(req.body);
+  if (invalid) return res.status(400).json({ error: invalid });
+  const sets = [];
+  const params = [];
+  for (const field of PATIENT_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(req.body, field)) continue;
+    let value = req.body[field];
+    // DATE and the gender CHECK reject '', which only ever means "not known".
+    if ((field === 'date_of_birth' || field === 'gender') && value === '') value = null;
+    params.push(value);
+    sets.push(field + '=$' + params.length);
+  }
+  params.push(req.params.id);
+  let client;
   try {
-    const invalid = badPatient(req.body);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const sets = [];
-    const params = [];
-    for (const field of PATIENT_FIELDS) {
-      if (!Object.prototype.hasOwnProperty.call(req.body, field)) continue;
-      let value = req.body[field];
-      // DATE and the gender CHECK reject '', which only ever means "not known".
-      if ((field === 'date_of_birth' || field === 'gender') && value === '') value = null;
-      params.push(value);
-      sets.push(field + '=$' + params.length);
+    client = await pool.connect();
+    await client.query('BEGIN');
+    // The row as it was, locked so the "before" in the log is what this save replaced.
+    const old = await client.query('SELECT * FROM patient WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (old.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Patient not found' });
     }
-    params.push(req.params.id);
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE patient SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,
       params
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
+    const before = auditView(old.rows[0]);
+    const after = auditView(result.rows[0]);
+    const cut = changedOnly(before, after);
+    // Never blocks the save: writeAudit logs its own failure and returns false.
+    await writeAudit(client, req, {
+      action: ACTIONS.PATIENT_EDIT,
+      patient_id: result.rows[0].id,
+      entity: 'patient', entity_id: result.rows[0].id,
+      summary: Object.keys(cut.after || {}).join(', '),   // which fields, for the reader scanning the list
+      before: before, after: after,
+    });
+    await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
+    if (client) { try { await client.query('ROLLBACK'); } catch (e) { /* connection already gone */ } }
     sendDbError(res, err);
+  } finally {
+    if (client) client.release();
   }
 });
 
