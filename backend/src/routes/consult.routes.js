@@ -205,7 +205,12 @@ router.put('/:id/complete', canConsult, async (req, res) => {
     await client.query('BEGIN');
     const consult = await client.query('SELECT visit_id FROM consultation WHERE id = $1', [req.params.id]);
     if (consult.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    await client.query("UPDATE consultation SET status = 'completed', updated_at = NOW() WHERE id = $1", [req.params.id]);
+    // completed_at (decision L9: the pharmacy lists patients in the order their
+    // consultations were finished) is the FIRST time Terminé was pressed: finishing
+    // again after reopening and editing keeps it, so the patient keeps their place.
+    await client.query(
+      "UPDATE consultation SET status = 'completed', completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() WHERE id = $1",
+      [req.params.id]);
     await client.query("UPDATE visit SET status = 'completed', updated_at = NOW() WHERE id = $1", [consult.rows[0].visit_id]);
     await client.query('COMMIT');
     res.json({ success: true });
