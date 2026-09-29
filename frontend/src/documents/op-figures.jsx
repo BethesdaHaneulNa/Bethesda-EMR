@@ -221,15 +221,26 @@ function FistulaAnatomy() {
   );
 }
 
+/* Several types selected = several tracts in one patient. They are all drawn on this one
+   section, each in its own line pattern with a legend underneath. Separate sections side
+   by side were tried first: they no longer fit beside the detail table, dropped onto a
+   line of their own, and pushed a note with ordinary-length findings onto a second page.
+   Patterns rather than colours, so a mono printer keeps them apart. */
+var FIS_DASH = [null, '7 3.5', '2.4 2.6', '10 3 2.4 3', '4 2'];
+var FIS_LEG = 12;                               // legend row height, viewBox units
+
 export function FistulaSection(props) {
   var picks = sel(props.tractType).filter(function (k) { return !!FIS_TRACT[k]; });
-  var t = FIS_ORDER.filter(function (k) { return picks.indexOf(k) >= 0; })[0] || null;
+  var ts = FIS_ORDER.filter(function (k) { return picks.indexOf(k) >= 0; });
+  var t = ts[0] || null;
   var tr = t ? FIS_TRACT[t] : null;
+  var multi = ts.length > 1;
+  var H = FIS_H + (multi ? 4 + FIS_LEG * ts.length : 0);
   var dw = props.width || 200;
   var lab = { fontSize: 10.5, fill: '#666' };   // ~8 px at the 200 px it prints at
   return (
-    <svg width={FIS_W} height={FIS_H} viewBox={'0 0 ' + FIS_W + ' ' + FIS_H}
-         style={{ flex: 'none', width: dw, height: Math.round(dw * FIS_H / FIS_W) }}>
+    <svg width={FIS_W} height={H} viewBox={'0 0 ' + FIS_W + ' ' + H}
+         style={{ flex: 'none', width: dw, height: Math.round(dw * H / FIS_W) }}>
       <FistulaAnatomy />
       <g transform={'matrix(-1 0 0 1 ' + FIS_W + ' 0)'}><FistulaAnatomy /></g>
       <line x1={114} y1={118} x2={146} y2={118} stroke={FAINT} strokeWidth="1" strokeDasharray="3 2" />
@@ -243,16 +254,33 @@ export function FistulaSection(props) {
       <line x1={146} y1={118} x2={196} y2={120} stroke="#999" strokeWidth="0.6" />
       <text x={198} y={123} {...lab}>dentate</text>
 
+      {ts.map(function (k, i) {
+        var r = FIS_TRACT[k], dash = FIS_DASH[i % FIS_DASH.length];
+        return <g key={k}>
+          <path d={r[0]} fill="none" stroke={MARK} strokeWidth="2.4"
+                strokeLinecap={dash ? 'butt' : 'round'} strokeDasharray={dash || undefined} />
+          <circle cx={r[1][0]} cy={r[1][1]} r="3.6" fill={MARK} />
+          <circle cx={r[2][0]} cy={r[2][1]} r="3.6" fill={MARK} />
+        </g>;
+      })}
+      {/* int./ext. once, on the first tract: enough to say what the dots are, and the
+          external openings of two tracts can sit a few units apart. */}
       {tr ? <g>
-        <path d={tr[0]} fill="none" stroke={MARK} strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx={tr[1][0]} cy={tr[1][1]} r="3.6" fill={MARK} />
-        <circle cx={tr[2][0]} cy={tr[2][1]} r="3.6" fill={MARK} />
         <text x={tr[1][0] + 5} y={tr[1][1] + 12} fontSize="9.5" fontWeight="700" fill={MARK}>int.</text>
         <text x={tr[2][0]} y={FIS_H - 4} textAnchor="middle" fontSize="9.5" fontWeight="700" fill={MARK}>ext.</text>
       </g> : null}
-      <text x={FIS_W - 4} y={13} textAnchor="end" fontSize="10.5" fontWeight={t ? 700 : 400} fill={t ? MARK : '#999'}>
-        {t || 'tract type not selected'}
-      </text>
+      {multi ? ts.map(function (k, i) {
+        var y = FIS_H + 4 + FIS_LEG * i + 8, dash = FIS_DASH[i % FIS_DASH.length];
+        return <g key={'leg' + k}>
+          <line x1={8} y1={y - 3.5} x2={34} y2={y - 3.5} stroke={MARK} strokeWidth="2.4"
+                strokeLinecap={dash ? 'butt' : 'round'} strokeDasharray={dash || undefined} />
+          <text x={40} y={y} fontSize="10.5" fontWeight="700" fill={MARK}>{k}</text>
+        </g>;
+      }) : (
+        <text x={FIS_W - 4} y={13} textAnchor="end" fontSize="10.5" fontWeight={t ? 700 : 400} fill={t ? MARK : '#999'}>
+          {t || 'tract type not selected'}
+        </text>
+      )}
     </svg>
   );
 }
@@ -356,6 +384,8 @@ export function OpFigures(props) {
     var openings = sel(v.extOpening).length || sel(v.intOpening).length;
     var tract = sel(v.tractType).length;
     if (!openings && !tract) return null;
+    // Every selected type is drawn in the one section (see FistulaSection) - drawing
+    // only the first left the table saying two types beside a figure showing one.
     return <FigBox caption="Openings (lithotomy view) and tract">
       {openings ? <FistulaClock internal={v.intOpening} external={v.extOpening} width={124} /> : null}
       {tract ? <FistulaSection tractType={v.tractType} width={200} /> : null}
