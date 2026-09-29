@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 격리 스택 빌드가 실행 중인 EMR의 이미지 이름을 덮어씀 (알림)
+
+- **상태**: 확인 요청 (코드 변경 없음, 총괄 파일 관련)
+- **한 일**: 없음 — 발견한 것을 알림.
+- **내용**: `docker-compose.yml`은 이미지 이름을 `bethesda-emr-backend:latest` · `bethesda-emr-frontend:latest`로 고정하고, `docker-compose.session.yml`은 컨테이너 이름·포트만 바꾸고 **`image:`는 바꾸지 않습니다.** 그래서 규칙 7절대로 `up -d --build`를 하면 **실행 중인 EMR이 쓰는 이미지 태그가 세션 코드로 바뀝니다.** 실행 중인 컨테이너는 그대로지만, 그 뒤 누가 본체 폴더에서 `--build` 없이 `docker compose up -d`를 하면 세션 코드가 현장 EMR로 올라갑니다.
+- **확인한 것**: 수납 세션은 07:44·07:54·07:57(UTC) 무렵 이 태그로 빌드했습니다. 16:57 KST에 본체 폴더(`C:\Bethesda-EMR-main`)의 compose가 실행 중인 EMR을 새로 만들었고(총괄 배포로 보임), 그 이미지 안에는 수납 세션 코드가 **없음**을 확인했습니다(`buildCorrection`·`expected_active_bill_ids`·`py_billChanged` 0건, 옛 `void-active` 있음). **현장에 영향 없음.**
+- **수납 세션의 조치**: 이제부터 저장소 밖의 덮어쓰기 파일로 이미지 이름을 `bethesda-s-payment-backend:dev` / `-frontend:dev`로 바꿔 빌드합니다(`docker compose … config`로 확인). 다른 세션 일부(`bethesda-s-pharmacy-*:dev`, `bethesda-s-reception-*`)는 이미 따로 이름을 쓰고 있습니다.
+- **총괄 확인 요청**: `docker-compose.session.yml`의 `backend`·`frontend`에 `image: bethesda-s-${SESSION}-backend:dev` 같은 줄을 넣어 주세요(규칙 7절도). 그리고 실행 중인 EMR을 올릴 때는 항상 `--build`로.
+
 ## 2026-09-29 — H2 정정(환불) 금액 바로잡기 · H4 미수 처리
 
 - **상태**: 확인 요청
