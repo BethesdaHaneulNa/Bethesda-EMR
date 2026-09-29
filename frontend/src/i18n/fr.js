@@ -634,6 +634,10 @@ export default {
   lb_errRangeLowHigh: "{item} : le Min ne peut pas dépasser le Max.",
   lb_errRangeEmpty: "{item} : chaque ligne par sexe et âge doit avoir un Min, un Max ou une référence texte.",
   lb_visitOpenFailed: "Impossible d'ouvrir les examens de cette visite. Réessayez dans un instant.",
+  // the ▲ ▼ ! beside a value being typed, read out by screen readers (same words as the Log tab)
+  lb_flagHigh: "élevé",
+  lb_flagLow: "bas",
+  lb_flagAbnormal: "anormal",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
