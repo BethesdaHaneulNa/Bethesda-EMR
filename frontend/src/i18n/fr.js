@@ -300,7 +300,7 @@ export default {
   lb_selectHint: "Sélectionnez un patient à gauche",
   lb_noPending: "Aucune analyse en attente de résultat",
   lb_noCompleted: "Aucune analyse terminée aujourd'hui",
-  lb_noItemsDefined: "Aucun item défini pour cette analyse (à définir dans Paramètres → Items de test)",
+  lb_noItemsDefined: "Aucun item défini pour cette analyse : saisie sur une seule ligne (items à définir dans Paramètres → Items de test)",
   lb_noItems: "Aucun item",
   lb_nothingToSave: "Rien n'a été saisi. Saisissez au moins une valeur ou une note.",
   lb_savedTests: "Enregistré et terminé",

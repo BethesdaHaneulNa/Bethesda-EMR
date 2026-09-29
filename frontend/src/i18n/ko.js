@@ -300,7 +300,7 @@ export default {
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
   lb_noPending: "결과 대기 검사가 없습니다",
   lb_noCompleted: "오늘 입력을 마친 검사가 없습니다",
-  lb_noItemsDefined: "이 검사는 항목이 정의되지 않았습니다 (설정 → 검사항목에서 정의)",
+  lb_noItemsDefined: "이 검사는 항목이 정의되지 않아 한 줄로 입력합니다 (항목은 설정 → 검사항목에서 정의)",
   lb_noItems: "항목이 없습니다",
   lb_nothingToSave: "입력한 결과가 없습니다. 결과값이나 비고를 하나 이상 넣으세요.",
   lb_savedTests: "저장·완료",
