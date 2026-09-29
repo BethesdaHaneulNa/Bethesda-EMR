@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영상 오더 취소를 실제 브리지로 끝까지 확인 · 위키 문구 맞춤 (총괄 표의 PACS 1·2·3)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만, develop `c7d8939`로 ff한 뒤). **PACS 저장소** — 없음
+- **1) 실제 브리지에서 빠지는지** — 격리 스택(EMR 9188 develop 최신 + PACS 9198/11298, 브리지 `d3d001c`), 의사 계정·`POST /api/consultations/order/:id/cancel`:
+  - 촬영 전 영상 오더에 판독 → 취소: 오더·`worklist_status`·워크리스트 모두 `cancelled`, **브리지 한 바퀴 뒤 `.wl` 삭제**(`260929-11.wl` 사라짐).
+  - 촬영 끝난(completed) 오더 취소: 오더 `cancelled`, **워크리스트 줄 `completed` 그대로**, `worklist_status` `completed` 그대로.
+  - 취소 뒤 영상이 늦게 도착: 브리지 로그에 그 accession이 **0줄**(피드에 없어 안 물음) → 「도착」 기록 없음, 워크리스트 `cancelled` 그대로. `viewer-url`은 `cancelled:true`·UID가 든 주소 → 영상은 볼 수 있음. 판독 저장은 409 `Imaging order was cancelled`.
+- **2) 위키 문구**: 2.1 ④ ②의 물음을 영상 전용 키 `cs_cancelPromptImg`(fr·ko) 그대로, ③을 실제 화면(오더 줄이 회색·줄긋기)대로. 7절 P-23 ✅.
+- **3) P-25 포트**: 앞 항목(영상 백업 메모) 끝에 답 — PACS 저장소는 README의 「예전에 8090」 설명만(의도), EMR 예시는 이미 9090·9080(`890c64a`).
+- **바꾼 파일**: `wiki/modules/pacs.md`, `wiki/handoff/pacs.md` · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **격리 스택**: 시험 뒤 내림.
+
 ## 2026-09-29 — 설계 메모: 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크, 새 영상만, 디스크 없으면 경고) · P-25 포트
 
 - **상태**: 보류 — 설계만(코드 없음). 총괄 확인 뒤 만듦
