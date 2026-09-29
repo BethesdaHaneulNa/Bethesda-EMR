@@ -53,6 +53,29 @@ function normalizeConfig(body) {
   return out;
 }
 
+// What the order-feed tab can be told, as fixed English strings that Settings.jsx
+// (pxMessage) puts in the screen's language -- CHANGE ONE HERE, CHANGE IT THERE TOO.
+// The raw driver text used to reach the screen ("value too long for type character
+// varying(50)"), and a port like 70000 was stored and then broke the connection test.
+const CONFIG_MAX = {
+  worklist_scp_host: 100, worklist_scp_ae: 50, bridge_token: 100, emr_base_url: 200,
+  pacs_viewer_url: 200, facility_name: 100, orthanc_url: 200,
+};
+const CONFIG_MSG = {
+  port: 'DICOM port must be a whole number from 1 to 65535',
+  saveFailed: 'Could not save the order feed settings',
+  noHost: 'No PACS host set',
+  server: 'Server error',
+};
+function configProblem(cfg) {
+  for (const k of Object.keys(CONFIG_MAX)) {
+    if (cfg[k] !== undefined && cfg[k].length > CONFIG_MAX[k]) return `${k} is too long (at most ${CONFIG_MAX[k]} characters)`;
+  }
+  const p = cfg.worklist_scp_port;
+  if (p !== undefined && !(Number.isInteger(p) && p >= 1 && p <= 65535)) return CONFIG_MSG.port;
+  return null;
+}
+
 // The viewer relay: its own auth (the cookie above), not the JWT.
 router.use('/viewer', viewer.router);
 
@@ -60,12 +83,14 @@ router.use('/viewer', viewer.router);
 // it is for the settings permission only -- not every member of staff.
 router.get('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try { res.json(publicConfig(await ensureConfig())); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { console.error('[pacs] read config:', err.message); res.status(500).json({ error: CONFIG_MSG.server }); }
 });
 
 router.put('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
+  const cfg = normalizeConfig(req.body || {});
+  const problem = configProblem(cfg);
+  if (problem) return res.status(400).json({ error: problem });
   try {
-    const cfg = normalizeConfig(req.body || {});
     // A field left out of the request keeps its value. Writing it as NULL instead
     // would, for bridge_token, silently unpair the PACS on a partial save.
     const result = await pool.query(
@@ -81,7 +106,7 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
        cfg.orthanc_url]
     );
     res.json(publicConfig(result.rows[0]));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('[pacs] save config:', err.message); res.status(500).json({ error: CONFIG_MSG.saveFailed }); }
 });
 
 // Route permissions follow the screens that call them (decision S2, 2026-09-29):
@@ -91,8 +116,10 @@ router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res)
     const cfg = await ensureConfig();
     const host = cfg.worklist_scp_host;
     const port = cfg.worklist_scp_port;
+    // An empty host would quietly test the EMR container itself.
+    if (!String(host || '').trim()) return res.json({ ok: false, host: '', port, message: CONFIG_MSG.noHost });
     res.json(await tcpCheck(host, port));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('[pacs] connection test:', err.message); res.status(500).json({ error: CONFIG_MSG.server }); }
 });
 
 // worklist_log columns the screens need, and how they are handed out. `images`

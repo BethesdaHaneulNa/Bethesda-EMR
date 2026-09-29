@@ -959,5 +959,14 @@ export default {
   px_orthancPasswordSet: "영상 서버 비밀번호 설정됨 — 영상 창이 로그인 없이 열립니다",
   px_orthancPasswordMissing: "영상 서버 비밀번호가 아직 없습니다. 서버 PC의 PACS 폴더에서 pair-with-emr.ps1을 실행하세요.",
   px_viewerUrlUnused: "이제 쓰지 않음(영상은 EMR이 보여 줌)",
+  px_errTooLong: "{f}: 너무 깁니다({n}자까지).",
+  px_errPort: "DICOM 포트는 1~65535 사이의 정수여야 합니다.",
+  px_errSave: "오더 연동 설정을 저장하지 못했습니다. 다시 시도하고, 계속되면 서버 상태 창을 보세요.",
+  px_testing: "확인 중...",
+  px_testOk: "PACS의 DICOM 포트에 연결됩니다.",
+  px_testTimeout: "응답이 없습니다: PACS 서버가 꺼졌거나 주소가 틀렸습니다.",
+  px_testRefused: "그 주소에서 PACS가 받지 않습니다: 포트 번호가 맞는지, PACS가 켜져 있는지 보세요.",
+  px_testUnknownHost: "그런 주소를 찾을 수 없습니다: Host / IP 칸의 철자를 보세요.",
+  px_testNoHost: "Host / IP 칸이 비어 있습니다. 같은 PC면 host.docker.internal을 적으세요.",
   // ── end pacs ──
 };
