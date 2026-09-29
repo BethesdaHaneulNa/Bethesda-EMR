@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — 약품 분류 17가지 · 총량 0도 「총량 없음」으로 (작은 커밋 두 개)
 
+> **총괄 확인 (2026-09-29)**: 분류 17가지 `3e07b11`·총량 0 표시 `2bb89c3` 합침(`4575c34`) + 실행 중 EMR 반영. 화면은 세션의 격리 스택 확인.
+
 - **상태**: 확인 요청
 - **커밋**: session/pharmacy `3e07b11`(분류) · 이 커밋(총량 0)
 - **분류**: 설정 약품 탭 `DRUG_CATEGORIES` 7 → 17(Analgesic · Antibiotic · Antihistamine · Antimalarial · Antiparasitic · Cardiovascular · Corticosteroid · Dermatology · Endocrine · GI · Gynecology · Musculoskeletal · Ophthalmic · Respiratory · Urology · Vitamin · Other). 가져올 표의 대응표(`drug-import-review.js` `CATEGORY`)가 쓰는 값이 모두 들어 있는지 스크립트로 확인. `ph_cat_*` 10개 추가(ko·en·fr). 저장값은 영어 그대로.
