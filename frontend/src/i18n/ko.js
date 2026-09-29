@@ -298,6 +298,7 @@ export default {
   rc_similarLoaded: "기존 환자를 불러왔습니다. 정보를 확인한 뒤 버튼을 다시 누르세요.",
   rc_dupVisit: "{name} 환자는 오늘 이미 접수되어 있습니다 ({status}{doctor}). 한 번 더 접수할까요?",
   rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
+  rc_visitCancelled: "접수 취소",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

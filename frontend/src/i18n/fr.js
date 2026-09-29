@@ -298,6 +298,7 @@ export default {
   rc_similarLoaded: "Dossier existant chargé. Vérifiez les informations, puis appuyez de nouveau sur le bouton.",
   rc_dupVisit: "{name} est déjà enregistré(e) aujourd’hui ({status}{doctor}). Enregistrer une seconde visite ?",
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
+  rc_visitCancelled: "Visite annulée",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
