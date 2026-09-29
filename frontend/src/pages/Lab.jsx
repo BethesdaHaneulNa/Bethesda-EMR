@@ -221,7 +221,7 @@ export default function LabPage() {
             var vc = fl === 'low' ? '#60a5fa' : fl === 'high' || fl === 'abnormal' ? '#f87171' : tx;
             return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
               <div style={{ padding: '7px 10px', fontWeight: 600 }}>{it.name}</div>
-              <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}</div>
+              <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: '#67e8f9' }}>{it.ref_label}</span> : null}</div>
               <div style={{ padding: '7px 10px', color: t2, fontSize: 13 }}>{it.unit || ''}</div>
               <div style={{ padding: '5px 8px' }}>
                 <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid ' + (fl === 'low' || fl === 'high' || fl === 'abnormal' ? vc : bd2), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />

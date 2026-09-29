@@ -73,7 +73,7 @@ export function LabResults(props) {
     if (!pmap[pname]) { pmap[pname] = { name: pname, items: [], imap: {} }; panels.push(pmap[pname]); }
     var P = pmap[pname];
     if (!P.imap[r.name]) {
-      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, byCol: {} };
+      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, byCol: {} };
       P.items.push(P.imap[r.name]);
     }
     P.imap[r.name].byCol[ymd(r.result_date) + '#' + (slotOf[r.order_item_id] || 0)] = r;
@@ -128,7 +128,7 @@ export function LabResults(props) {
               return <tr key={P.name + '-' + it.name}>
                 <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
-                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}</td>
+                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}{it.ref_label ? <span style={{ display: 'block', fontSize: 10, color: '#67e8f9' }}>{it.ref_label}</span> : null}</td>
                 {cols.map(function (c) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
               </tr>;
             }));

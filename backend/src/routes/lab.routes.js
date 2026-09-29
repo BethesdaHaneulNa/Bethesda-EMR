@@ -71,6 +71,91 @@ function flagFor(value, lo, hi, refText) {
   return '';
 }
 
+// ── Reference ranges by sex and age (decision 4, 2026-09-29; table lab_ref_range) ──
+// Same checks as rangeError() in the Settings lab items tab -- change both together.
+var AGE_DAYS = { d: 1, m: 30.4375, y: 365.25 };   // only to compare bands written in different units
+function dateParts(v) { var s = String(v).slice(0, 10).split('-'); return [+s[0], +s[1], +s[2]]; }
+// Completed days / months / years between birth and the test day, by the calendar:
+// a child is 1 y on its first birthday, so a band edge falls on the birthday itself.
+function ageIn(unit, dob, on) {
+  var b = dateParts(dob), o = dateParts(on);
+  if (unit === 'd') return Math.round((Date.UTC(o[0], o[1] - 1, o[2]) - Date.UTC(b[0], b[1] - 1, b[2])) / 86400000);
+  var months = (o[0] - b[0]) * 12 + (o[1] - b[1]) - (o[2] < b[2] ? 1 : 0);
+  return unit === 'm' ? months : Math.floor(months / 12);
+}
+function nullInt(v) { return v === null || v === undefined || v === '' ? null : parseInt(v, 10); }
+// Does the row apply to this patient? Unknown sex or birth date never matches a row
+// that needs it -- the item's default range is used instead of a guess.
+function rangeApplies(r, sex, dob, onDate) {
+  if (r.sex && r.sex !== sex) return false;
+  var lo = nullInt(r.age_min), hi = nullInt(r.age_max);
+  if (lo === null && hi === null) return true;
+  if (!dob || !onDate) return false;
+  var a = ageIn(r.age_unit || 'y', dob, onDate);
+  if (a < 0) return false;
+  if (lo !== null && a < lo) return false;
+  if (hi !== null && a >= hi) return false;
+  return true;
+}
+function rangeLabel(r) {
+  var u = r.age_unit || 'y', lo = nullInt(r.age_min), hi = nullInt(r.age_max), age = '';
+  if (lo !== null && hi !== null) age = lo + '–' + hi + u;
+  else if (lo !== null) age = '≥' + lo + u;
+  else if (hi !== null) age = '<' + hi + u;
+  return [r.sex || '', age].filter(Boolean).join(' · ') || '*';
+}
+// The reference to judge a result by: a matching sex-specific row, else a matching
+// both-sexes row, else the item's own range (ref_label null).
+function refFor(item, ranges, sex, dob, onDate) {
+  var mine = (ranges || []).filter(function (r) { return rangeApplies(r, sex, dob, onDate); });
+  var r = mine.filter(function (x) { return x.sex; })[0] || mine.filter(function (x) { return !x.sex; })[0];
+  if (!r) return { ref_low: item.ref_low, ref_high: item.ref_high, ref_text: item.ref_text, ref_label: null };
+  return { ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: rangeLabel(r) };
+}
+// null if the rows of one item are usable, else an English message naming the item.
+// Rows of the same sex (or both-sexes rows) may not overlap in age: with two
+// candidates nobody could tell which one a result was judged by.
+function rangeError(itemName, ranges) {
+  var list = ranges || [];
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i], lo = nullInt(r.age_min), hi = nullInt(r.age_max);
+    if (r.sex && r.sex !== 'M' && r.sex !== 'F') return 'Reference range sex must be M or F: ' + itemName;
+    if (r.age_unit && !AGE_DAYS[r.age_unit]) return 'Reference range age unit must be d, m or y: ' + itemName;
+    if ((lo !== null && (isNaN(lo) || lo < 0)) || (hi !== null && (isNaN(hi) || hi <= 0))) return 'Reference range age is not valid: ' + itemName;
+    if (lo !== null && hi !== null && lo >= hi) return 'Reference range age "from" must be below "to": ' + itemName;
+    var L = num(r.ref_low), H = num(r.ref_high);
+    if (isNaN(L) && isNaN(H) && !String(r.ref_text || '').trim()) return 'Reference range needs a low, a high or a text: ' + itemName;
+    if (!isNaN(L) && !isNaN(H) && L > H) return 'Reference range low is above high: ' + itemName;
+  }
+  function span(r) {
+    var f = AGE_DAYS[r.age_unit || 'y'], lo = nullInt(r.age_min), hi = nullInt(r.age_max);
+    return [lo === null ? -Infinity : lo * f, hi === null ? Infinity : hi * f];
+  }
+  for (var a = 0; a < list.length; a++) {
+    for (var b = a + 1; b < list.length; b++) {
+      if ((list[a].sex || '') !== (list[b].sex || '')) continue;
+      var x = span(list[a]), y = span(list[b]);
+      if (x[0] < y[1] - 0.5 && y[0] < x[1] - 0.5) return 'Reference ranges overlap: ' + itemName;   // half a day of slack for d/m/y rounding
+    }
+  }
+  return null;
+}
+async function rangesFor(db, itemIds) {
+  if (!itemIds.length) return {};
+  const r = await db.query('SELECT * FROM lab_ref_range WHERE lab_test_item_id = ANY($1::int[]) ORDER BY sort_order, id', [itemIds]);
+  const by = {};
+  r.rows.forEach(function (x) { (by[x.lab_test_item_id] = by[x.lab_test_item_id] || []).push(x); });
+  return by;
+}
+// sex, birth date and test day of the patient an order belongs to
+async function patientForOrder(db, orderItemId) {
+  const r = await db.query(
+    `SELECT p.gender, p.date_of_birth, v.visit_date
+       FROM order_item o JOIN patient p ON p.id = o.patient_id JOIN visit v ON v.id = o.visit_id
+      WHERE o.id = $1`, [orderItemId]);
+  return r.rows[0] || {};
+}
+
 // ── PENDING lab orders (lab) — today's visits with un-resulted lab orders ──
 // An order shows up as soon as the doctor places it, not when the consultation
 // is completed: the patient usually goes to the lab mid-consultation and comes
@@ -181,17 +266,21 @@ router.get('/order/:orderItemId/items', permMiddleware('lab'), async (req, res) 
     }
     function fromSaved(e, i) {
       return { lab_test_item_id: e.lab_test_item_id, name: e.name, unit: e.unit,
-               ref_low: e.ref_low, ref_high: e.ref_high, ref_text: e.ref_text,
+               ref_low: e.ref_low, ref_high: e.ref_high, ref_text: e.ref_text, ref_label: e.ref_label || null,
                value: e.value != null ? e.value : '', comment: e.comment || '', flag: e.flag || '', sort_order: i };
     }
+    // the reference shown is this patient's (sex, age on the visit day), as saving will use
+    const pt = await patientForOrder(pool, req.params.orderItemId);
+    const ranges = await rangesFor(pool, master.rows.map(function (m) { return m.id; }));
 
     var items = master.rows.map(function (m, i) {
       var prev = take(function (r) { return r.lab_test_item_id === m.id; })
               || take(function (r) { return r.name === m.name && !master.rows.some(function (x) { return x.id === r.lab_test_item_id; }); })
               || {};
+      var ref = refFor(m, ranges[m.id], pt.gender, pt.date_of_birth, pt.visit_date);
       return {
         lab_test_item_id: m.id, name: m.name, unit: m.unit,
-        ref_low: m.ref_low, ref_high: m.ref_high, ref_text: m.ref_text,
+        ref_low: ref.ref_low, ref_high: ref.ref_high, ref_text: ref.ref_text, ref_label: ref.ref_label,
         value: prev.value != null ? prev.value : '', comment: prev.comment || '', flag: prev.flag || '', sort_order: i,
       };
     });
@@ -256,24 +345,30 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
     const master = await client.query('SELECT * FROM lab_test_item WHERE order_code_id = $1', [order.order_code_id]);
     const byId = {};
     master.rows.forEach(function (m) { byId[m.id] = m; });
+    // ...and the range is the one for this patient's sex and age on the visit day
+    // (decision 4). Birth date or sex unknown -> the item's default range.
+    const pt = await patientForOrder(client, req.params.orderItemId);
+    const ranges = await rangesFor(client, master.rows.map(function (m) { return m.id; }));
 
     await client.query('DELETE FROM lab_result WHERE order_item_id = $1', [req.params.orderItemId]);
     for (let i = 0; i < filled.length; i++) {
       const sent = filled[i] || {};
       const m = byId[parseInt(sent.lab_test_item_id, 10)];
-      const it = m ? Object.assign({}, sent, { lab_test_item_id: m.id, name: m.name, unit: m.unit,
-                                               ref_low: m.ref_low, ref_high: m.ref_high, ref_text: m.ref_text })
-                   : Object.assign({}, sent, { lab_test_item_id: null, name: sent.name || order.order_name });
+      const it = m ? Object.assign({}, sent, { lab_test_item_id: m.id, name: m.name, unit: m.unit },
+                                   refFor(m, ranges[m.id], pt.gender, pt.date_of_birth, pt.visit_date))
+                   : Object.assign({}, sent, { lab_test_item_id: null, name: sent.name || order.order_name,
+                                               ref_label: sent.ref_label || null });
       const flag = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
       await client.query(
         `INSERT INTO lab_result
-           (order_item_id, lab_test_item_id, visit_id, patient_id, name, value, unit, ref_low, ref_high, ref_text, flag, comment, result_date, result_by, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+           (order_item_id, lab_test_item_id, visit_id, patient_id, name, value, unit, ref_low, ref_high, ref_text, flag, comment, result_date, result_by, sort_order, ref_label)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
         [req.params.orderItemId, it.lab_test_item_id || null, order.visit_id, order.patient_id,
          it.name, it.value != null ? String(it.value) : null, it.unit || null,
          it.ref_low != null && it.ref_low !== '' ? it.ref_low : null,
          it.ref_high != null && it.ref_high !== '' ? it.ref_high : null,
-         it.ref_text || null, flag, it.comment || null, rdate, req.user.id, i]
+         it.ref_text || null, flag, it.comment || null, rdate, req.user.id, i,
+         it.ref_label ? String(it.ref_label).slice(0, 40) : null]
       );
     }
     await client.query(
@@ -322,7 +417,9 @@ async function listTestItems(db, orderCodeId) {
             ((SELECT COUNT(*) FROM lab_result r WHERE r.lab_test_item_id = i.id)
            + (SELECT COUNT(*) FROM lab_result r JOIN order_item oi ON oi.id = r.order_item_id
                WHERE r.lab_test_item_id IS NULL AND oi.order_code_id = i.order_code_id
-                 AND r.name = i.name))::int AS result_count
+                 AND r.name = i.name))::int AS result_count,
+            COALESCE((SELECT json_agg(rr ORDER BY rr.sort_order, rr.id) FROM lab_ref_range rr
+                       WHERE rr.lab_test_item_id = i.id), '[]'::json) AS ranges
        FROM lab_test_item i
       WHERE ($1::int IS NULL OR i.order_code_id = $1)
       ORDER BY i.order_code_id, i.sort_order, i.id`,
@@ -351,8 +448,13 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
   try {
     const { order_code_id, items } = req.body;
     if (!order_code_id) return res.status(400).json({ error: 'order_code_id required' });
-    await client.query('BEGIN');
     const arr = (Array.isArray(items) ? items : []).filter(function (it) { return it && it.name; });
+    // every item's sex/age rows are checked before anything is written
+    for (let i = 0; i < arr.length; i++) {
+      const bad = rangeError(arr[i].name, arr[i].ranges);
+      if (bad) return res.status(400).json({ error: bad });
+    }
+    await client.query('BEGIN');
     const keep = [];
     for (let i = 0; i < arr.length; i++) {
       const it = arr[i];
@@ -378,6 +480,20 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
         row = n.rows[0];
       }
       keep.push(row.id);
+      // the item keeps its id, so its rows can simply be replaced: nothing refers
+      // to a row's id (a saved result keeps a copy of the range and its label)
+      await client.query('DELETE FROM lab_ref_range WHERE lab_test_item_id = $1', [row.id]);
+      const rs = Array.isArray(it.ranges) ? it.ranges : [];
+      for (let j = 0; j < rs.length; j++) {
+        const r = rs[j];
+        await client.query(
+          `INSERT INTO lab_ref_range (lab_test_item_id, sex, age_min, age_max, age_unit, ref_low, ref_high, ref_text, note, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [row.id, r.sex || null, nullInt(r.age_min), nullInt(r.age_max), r.age_unit || 'y',
+           r.ref_low != null && r.ref_low !== '' ? r.ref_low : null,
+           r.ref_high != null && r.ref_high !== '' ? r.ref_high : null,
+           r.ref_text || null, r.note ? String(r.note).slice(0, 200) : null, j]);
+      }
     }
     await client.query('DELETE FROM lab_test_item WHERE order_code_id = $1 AND NOT (id = ANY($2::int[]))',
       [order_code_id, keep]);
