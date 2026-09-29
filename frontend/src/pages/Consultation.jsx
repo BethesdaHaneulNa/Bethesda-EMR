@@ -74,7 +74,10 @@ function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 // Marked on the line, counted by the heading, and asked about once when the
 // consultation is completed. Not refused: an ointment or a bottle whose amount is
 // settled later is a real case.
-function noDose(rx){ return !isPack(rx) && (!(parseFloat(rx.dose) > 0) || !(parseInt(rx.days, 10) > 0)); }
+// Since decision B (2026-09-29) a drug from the search starts with every field empty,
+// so the times a day count too: they are not in the total, but the label's sentence
+// ("1 cp x 3 fois/jour") cannot be written without them.
+function noDose(rx){ return !isPack(rx) && (!(parseFloat(rx.dose) > 0) || !(parseInt(rx.frequency, 10) > 0) || !(parseInt(rx.days, 10) > 0)); }
 
 // A pack-unit drug (a syrup, a cream, an inhaler - marked in Settings, copied onto the
 // line by the server) is handed out by the bottle/tube/piece: its total is the count
@@ -397,12 +400,14 @@ export default function ConsultationPage() {
   async function addDrugRx(drug){
     if(!consult) return;
     try {
+      // Decision B (2026-09-29): a drug has a price, not a default dose. From the search
+      // the daily dose, times, days and sig start EMPTY for the doctor to write; only an
+      // order set brings its own (fromSet). The drug's old default_* columns are not read.
+      var set = drug.fromSet ? drug : {};
       var rx = await api.post('/consultations/'+consult.id+'/prescriptions',{
         drug_id:drug.id, drug_code:drug.code, drug_name:drug.name,
-        dose:drug.default_dose, frequency:drug.default_freq, days:drug.default_days,
-        // No 'TID' filled in for a drug without a default: that is a frequency, not a
-        // sig, and it went onto the pharmacy label as if the doctor had written it.
-        route:drug.default_route || '', unit_price:drug.unit_price,
+        dose:set.default_dose || '', frequency:set.default_freq || '', days:set.default_days || '',
+        route:set.default_route || '', unit_price:drug.unit_price,
         memo: drug.unit || '',
         // Only used when the drug is a pack-unit one (the server looks that up): the
         // count from an order set. From the search it is empty and the doctor types it.
@@ -530,9 +535,10 @@ export default function ConsultationPage() {
   async function saveRx(rx){
     if(savedRx.current[rx.id] === rxSnap(rx)) return;
     try {
-      var dose = rx.dose || '1';
-      var freq = parseInt(rx.frequency) || 1;
-      var days = parseInt(rx.days) || 1;
+      // Sent as written: an empty field stays empty on the server (no silent 1).
+      var dose = rx.dose == null ? '' : rx.dose;
+      var freq = rx.frequency == null ? '' : rx.frequency;
+      var days = rx.days == null ? '' : rx.days;
       var updated = await api.put('/consultations/prescription/'+rx.id, {
         dose: dose,
         frequency: freq,
@@ -607,7 +613,7 @@ export default function ConsultationPage() {
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
           price_clinic:it.unit_price, price:it.unit_price, memo:'' });
       } else {
-        await addDrugRx({ id:it.drug_id, code:it.code, name:it.name,
+        await addDrugRx({ fromSet:true, id:it.drug_id, code:it.code, name:it.name,
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
           default_route:it.route, unit_price:it.unit_price, unit:'',
           pack_qty: it.quantity || 1 });
@@ -828,8 +834,8 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{rx.memo||''}</td>
                           </> : <>
                             <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                           </>}

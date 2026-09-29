@@ -2,6 +2,44 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약 기본 용량 안 씀 (결정 B) 진료 몫: 빈 칸으로 시작, 빈 칸은 조용히 1이 되지 않음
+
+- **상태**: 확인 요청 (제형 표시는 약국 가져오기가 develop에 들어온 뒤 — 아직 `drug-info.js` 없음)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop 최신 다음
+- **한 일** (총괄에 보낸 제안 그대로):
+  - **검색으로 넣는 약은 하루 총량·횟수·일수·용법이 빈 칸**입니다.
+    - `addDrugRx`가 `drug.default_*`를 읽지 않습니다. 약속처방 줄(`fromSet`)만 세트 값을 씁니다.
+    - 메모 칸의 단위(`drug.unit`)는 그대로입니다.
+  - **빈 칸은 끝까지 NULL**입니다. 전에는 칸 하나만 건드려도 빈 일수가 조용히 1일, 빈 하루 총량이 1이 됐습니다.
+    - 화면 `saveRx`의 `dose||'1'`·`||1`을 없앴고, 입력 칸도 NULL을 「1」이 아니라 빈 칸으로 보입니다.
+    - 서버 POST·PUT은 빈 `dose`·`frequency`·`days`를 NULL로 저장합니다(`blankNull`·`intOrNull`).
+  - **`rxTotal`: 하루 총량이나 일수가 비면 총량 NULL**입니다(0도, 「1일」도 아님).
+    - 약국은 이미 「총량 없음」으로 멈추고, 수납 대기 목록은 `missing_qty`로 표시합니다.
+    - 옛 줄은 값을 바꾸지 않는 한 총량이 그대로입니다.
+  - **경고**: `noDose`를 「하루 총량·횟수·일수 가운데 하나라도 빔」으로 넓혔습니다(포장 약 제외). 문구 `cs_noDose`·`cs_noDoseCount`·`cs_noDoseHint`·`cs_noDoseConfirm`을 ko·en·fr로 바꿨습니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_noDose*` 4개의 문구만
+- **DB 마이그레이션**: 없음 · **번역 키**: 새 키 없음
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택 9182에서 확인했습니다.
+  - **시험 10개 전부 통과**:
+    - 검색처럼 빈 값으로 넣으면 넷 다 NULL입니다.
+    - 하루 총량 3만 적으면 일수 NULL, 총량 NULL입니다(1일치가 아님).
+    - 일수 5를 적으면 15이고 횟수는 여전히 NULL입니다. 횟수 3을 적어도 15 그대로입니다.
+    - 일수를 지우면 NULL/NULL, 하루 총량을 지우면 NULL입니다.
+    - 약속처방 3·3·5는 15입니다. 옛 총량 45는 아무것도 안 바꾸면 그대로입니다.
+    - 완료하면 수납 대기 목록 `missing_qty`가 true이고, 약국 대기 목록에 총량 없는 줄로 옵니다.
+  - 기존 시험도 모두 통과했습니다(L9, ⑭, 포장, 영상 취소, 취소, 로그, lock, total, s2, t400, tlow).
+  - **화면 FR**:
+    - PCM500을 검색해 넣으니 칸 넷이 비어 있고, « Indiquez dose/jour, fois et jours »와 제목 « 1 sans dose/jour, fois ou jours »가 나왔습니다.
+    - Dose/j에 3만 넣고 칸을 벗어나니 Fois·Jours가 빈 칸 그대로였습니다(전에는 1).
+    - Terminé를 누르니 « 1 médicament(s) avec dose/jour, fois ou jours vides … »라고 묻고, 아니오면 진료가 열린 채로 남았습니다.
+    - Fois 3, Jours 5를 넣으니 « 1 cp × 3 fois/jour pendant 5 jours (total 15) »가 나오고 표시가 사라졌습니다.
+- **확인 못 한 것**: 제형(`dosage_form`) 표시 — 약국 가져오기 커밋이 develop에 들어온 뒤 하겠습니다. 실행 중 EMR은 건드리지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 · 2.3(넣기 5번·표시 줄·제목 개수) · 2.12 · 3.2(rxTotal) · 4(마이그레이션 이름 032) · 8절
+- **총괄 확인 요청**: 이 동작(빈 칸 → 총량 NULL → 약국·수납에서 멈춤)
+- **다른 세션에 부탁**: 약국 — 설정 약품 탭에서 기본 용량 칸을 없앨 때, 진료는 이제 그 칸을 읽지 않습니다(값이 남아 있어도 영향 없음).
+- **남은 일 · 알려진 문제**: 제형 표시(가져오기 뒤), F3, R1~R5
+
 ## 2026-09-29 — 진료 완료 시각(L9) · 약속처방 수량 서버 검사 · 감춘 예시 약과 약속처방 · F2
 
 - **상태**: 확인 요청

@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 진료 완료 시각(L9)·약속처방 수량 검사·감춘 약 확인·F2 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 약 기본 용량 안 씀(결정 B) — 검색한 약은 빈 칸으로 시작 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -53,6 +53,7 @@
    - 가격이 없는 항목에는 목록에서부터 노란 **Sans prix (가격 없음)**가 붙습니다.
 3. 약은 **+ Recherche médicament (약 검색)** 버튼으로 전체 목록에서 골라도 됩니다.
 4. 추가된 줄의 칸을 고치고 **다른 곳을 누르면 바로 저장**됩니다. Sauver를 누를 필요가 없습니다.
+5. **검색으로 넣은 약은 하루 총량·횟수·일수·용법이 빈 칸으로 들어갑니다**(결정 B, 2026-09-29 — 약에는 가격만 정해 두고 용량은 정하지 않음). 의사가 모두 적습니다. 약속처방으로 넣은 약은 세트에 적힌 값이 들어갑니다. 빈 칸은 저장해도 빈 칸 그대로입니다(1로 채워지지 않음).
 
 **약 칸 — 한국식으로 적습니다** (2026-09-29부터)
 
@@ -73,7 +74,7 @@
 
 | 표시 (프랑스어 / 한국어) | 뜻 | 할 일 |
 |---|---|---|
-| 빨간 **Indiquez la dose par jour** (하루 총량을 넣으세요) | 하루 총량이 비어 있음. 이대로면 총량 0 — 약국에서 0개, 수납에서 0원 | **Dose/j** 칸에 하루 총량을 적습니다. 실제 약 목록은 기본 용량이 비어 들어오므로, 검색이나 약속처방으로 넣은 약마다 확인하세요 |
+| 빨간 **Indiquez dose/jour, fois et jours** (하루 총량·횟수·일수를 넣으세요) | 하루 총량·횟수·일수 가운데 빈 칸이 있음. 하루 총량이나 일수가 비면 **총량이 없음** — 약국은 「Quantité totale absente」로 멈추고 수납 대기 목록에도 표시됨(0개·0원이나 「1일치」로 나가지 않음). 횟수가 비면 약 봉투 문장을 못 만듦 | **Dose/j · Fois · Jours**를 모두 적습니다. 검색으로 넣은 약은 늘 빈 칸으로 시작합니다 |
 | **Quantité [ ] flacons** (수량 [ ] 병) — 약 이름 아래 | **포장 단위 약**(시럽·크림·흡입기 등, 설정의 약품 탭에서 표시한 약 — H2-B, 2026-09-29) | 병·튜브·개 **수**를 적습니다(1 이상의 정수). 이 수가 조제·청구되는 총량입니다. Dose/j(하루 총량)·Fois·Jours는 **복용 안내**로만 찍히고 총량 계산에 쓰지 않습니다(비워도 됨). 풀이 줄은 「15 par jour en 3 prises, pendant 7 jours — 2 flacons」 (하루 15, 3회로 나눠 7일 — 2병)처럼 보입니다 |
 | 빨간 **Indiquez la quantité** (수량을 넣으세요) · 칸 빨간 테두리 | 포장 단위 약인데 병·개 수가 비어 있음. 이대로면 약국에서 「총량 없음」으로 멈추고 청구되지 않음 | 수량 칸에 수를 적습니다. 제목 옆에 「⚠ n flacon(s)/tube(s) sans quantité」, 진료를 끝낼 때도 한 번 묻습니다 |
 | 노란 **Sans prix** (가격 없음) | 단가가 0 — 수납에서 0원으로 청구 | 설정에서 가격을 넣은 뒤 **그 줄을 ✕로 지우고 다시 넣습니다.** 이미 넣은 줄의 가격은 저절로 바뀌지 않습니다 |
@@ -83,7 +84,7 @@
 | 회색·줄 그음·**⊘** · 상태 **Annulé** (취소됨) | 취소된 검사·영상 오더 | 고치거나 지울 수 없습니다. ⊘에 마우스를 올리면 이유가 보입니다 |
 | **🔒** (✕ 자리) | 고치거나 지울 수 없는 줄. 마우스를 올리면 이유가 나옴 | 약: 약국이 이미 내준 약입니다. 오른쪽 끝에 **Délivré (조제됨)**가 보이고 칸이 글자로 바뀝니다. 바꿔야 하면 약국에 알리고 새 줄로 처방합니다. 처치: 결과가 적혀 있습니다. 수량·메모는 고칠 수 있지만 줄은 못 지웁니다(검사·영상은 위의 ✕로 취소) |
 
-제목 **Prescriptions** 옆에는 **⚠ N sans dose par jour** (하루 총량 없는 약 N개), **⚠ N flacon(s)/tube(s) sans quantité** (수량 없는 포장 약 N개), **⚠ N sans prix** (가격 없는 항목 N개)가 개수로 나옵니다.
+제목 **Prescriptions** 옆에는 **⚠ N sans dose/jour, fois ou jours** (하루 총량·횟수·일수가 빈 약 N개), **⚠ N flacon(s)/tube(s) sans quantité** (수량 없는 포장 약 N개), **⚠ N sans prix** (가격 없는 항목 N개)가 개수로 나옵니다.
 
 **줄 오른쪽 끝 상태 칸**
 
@@ -202,7 +203,7 @@
 | **Cette demande a déjà un résultat…** (결과가 이미 있는 오더는 지울 수 없습니다) | 결과가 적힌 처치 줄을 지우려 할 때 | 지울 수 없습니다 |
 | **Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.** (진료실에서 취소되어 판독을 저장할 수 없습니다) | 영상 창을 열어 둔 사이에 그 오더가 취소되었을 때 판독 저장 | 확인을 누르면 창이 취소된 모습으로 다시 열립니다 |
 | **Une demande annulée ne peut pas être modifiée.** (취소된 오더는 고칠 수 없습니다.) | 다른 곳에서 취소된 오더를 고치려 했을 때 | 표가 새로 고쳐집니다 |
-| **N médicament(s) sans dose par jour : … Terminer quand même la consultation ?** (하루 총량이 없는 약이 N개 있습니다 … 그래도 진료를 완료할까요?) | 하루 총량이 빈 약이 있는데 Terminé를 눌렀을 때 | 보통은 **Annuler**를 누르고 Dose/j 칸에 하루 총량을 적습니다. 외용제처럼 총량을 나중에 정하는 약이면 OK |
+| **N médicament(s) avec dose/jour, fois ou jours vides : … Terminer quand même la consultation ?** (하루 총량·횟수·일수가 빈 약이 N개 있습니다 … 그래도 진료를 완료할까요?) | 빈 칸이 있는 약이 있는데 Terminé를 눌렀을 때 | 보통은 **Annuler**를 누르고 빈 칸을 채웁니다. 그대로 끝내면 총량이 없는 약은 약국에서 조제되지 않고 수납에서도 멈춥니다 |
 | **N médicament(s) sans quantité (flacons/tubes/unités) : … Terminer quand même la consultation ?** (수량이 없는 포장 약이 N개 있습니다 … 그래도 진료를 완료할까요?) | 병·튜브 수가 빈 포장 약이 있는데 Terminé를 눌렀을 때 | **Annuler**를 누르고 약 이름 아래 Quantité 칸에 수를 적습니다. 그대로 끝내면 약국에서 「총량 없음」으로 멈춥니다 |
 | **La quantité est un nombre entier d'au moins 1 (pas de demi-flacon).** (수량은 1 이상의 정수로 적습니다) | 포장 약의 수량에 0이나 1.5를 적었을 때 | 표가 새로 고쳐집니다. 1, 2, 3처럼 적습니다 |
 | **Non ajouté(s) - retiré(s) de la liste des médicaments : …** (목록에서 감춘 약이라 넣지 않았습니다: …) | 약속처방을 눌렀는데 그 안에 목록에서 감춘 약이 있을 때 | 그 약은 들어가지 않았습니다. 필요하면 다른 약을 직접 찾아 넣습니다. 세트 카드에서 그 약은 줄이 그어져 있습니다 |
@@ -265,7 +266,7 @@
 - `PUT /:id/complete` — 진료 `completed` + 내원 `completed`, 한 트랜잭션. **`consultation.completed_at`**(결정 L9, 2026-09-29 — 약국 목록은 진료가 끝난 순서)을 `COALESCE(completed_at, NOW())`로 둡니다: **처음 Terminé를 누른 때**이고, 다시 열어 고친 뒤 또 눌러도 바뀌지 않습니다(약국에서 기다리는 환자가 목록 끝으로 밀리지 않게). 약국 세션이 이 칸으로 정렬합니다.
 - 처방·오더 쓰기는 `badAmounts`(`utils/validate.js`)로 숫자 범위를 막습니다 — `dose` 0~1000 **숫자만**(그래서 `1/2` 같은 용량은 400), `frequency` 1~24 정수, `days` 1~365 정수, `quantity` 0~10000, `unit_price` 0~1억.
 - **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
-- **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다.
+- **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다. **하루 총량이나 일수가 비면(또는 0 이하) 총량은 NULL**입니다(결정 B, 2026-09-29) — 0도 「1일」도 아님. 서버는 빈 `dose`·`frequency`·`days`를 NULL로 저장합니다(`blankNull`·`intOrNull`; 전에는 PUT이 `parseInt||1`로 채우고 화면도 `dose||'1'`을 보내서, 칸 하나만 건드려도 빈 일수가 조용히 1일이 됐음). 화면의 `addDrugRx`는 검색으로 넣을 때 `drug.default_*`를 읽지 않고 빈 칸으로, 약속처방(`fromSet`)만 세트 값으로 넣습니다. `noDose`는 하루 총량·횟수·일수 셋 중 하나라도 비면 참(포장 약 제외).
 - **포장 단위 약**(H2-B, 실장님 결정 2026-09-29, 칸은 약국의 025) — `POST /:id/prescriptions`는 `drug_id`로 **약 표에서** `pack_unit`·`pack_label`을 읽어 줄에 복사합니다(화면이 보낸 값은 쓰지 않음, 단가를 복사하는 것과 같은 이유 — 나중에 약의 표시를 바꿔도 쓴 처방의 뜻은 그대로). 포장 단위 줄의 `total_qty` = 요청의 **`pack_qty`**(1 이상의 정수, 아니면 400 `pack_qty must be a whole number of at least 1` → 화면 `cs_packQtyWhole`), 없거나 비면 **NULL**(약국 「총량 없음」, 청구 없음 — 틀린 수가 나가지 않게). 하루 총량·횟수·일수는 안내로만 저장. `PUT /prescription/:rxId`: 포장 단위 줄(줄에 저장된 표시)은 **`pack_qty`가 왔을 때만** `total_qty`를 바꾸고(빈 값이면 NULL), 하루 총량·일수를 고쳐도 그대로. 보통 줄은 위 규칙에 더해 **`total_qty`가 NULL이면 다시 계산**합니다(수납 세션 부탁, 2026-09-29). 화면: `noPackQty`(수가 없는 포장 줄)는 `noDose`와 따로 — 포장 줄은 하루 총량이 없어도 `noDose`가 아님. 수량 칸 `packQtyBox(rx)`(함수로 부름 — 컴포넌트로 쓰면 글자마다 입력 칸이 다시 만들어져 포커스가 빠짐), 단위 말은 `rx-dosing.js`의 `packWord`, 저장은 다른 칸처럼 blur(`rxSnap`에 수량 포함). 약속처방 `applySet`은 약 줄의 `quantity`(없으면 1)를 `pack_qty`로 넘깁니다(보통 약에는 서버가 무시).
 - `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). `pacs_config`는 001이 만든 한 줄을 읽기만 합니다(전에는 오더마다 `CREATE TABLE IF NOT EXISTS`를 돌렸음 — 7절 ⑲, 2026-09-29 삭제). 줄이 없으면 워크리스트 자동 생성이 켜진 것으로 봅니다. **총량**(⑭): 수량·횟수·일수가 비면 1로 저장(NULL 없음), `total_qty` = `orderTotal(quantity, days)` = 수량 × 일수(횟수는 곱하지 않음, 수량 0은 0 — 청구 없음). 계산하는 곳은 이 함수 하나이고 수납은 `total_qty`만 읽습니다.
 - `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**, 없는 줄은 404. 한 트랜잭션 안에서 줄을 먼저 `FOR UPDATE`로 읽고(`lockRx`) 상태를 본 뒤 씁니다. 약국의 조제도 같은 줄을 UPDATE하므로 확인과 쓰기 사이에 끼어들 수 없습니다. `status`는 기본값만 있는 NULL 허용 칸이라, NULL은 「조제 안 됨」으로 봅니다(전에는 `status <> 'dispensed'`가 NULL 줄을 못 잡아 409로 거절 — 2026-09-29 고침). 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다. 삭제는 늘 기록(`PRESCRIPTION_DELETE`), 수정은 끝난 진료일 때 기록.
@@ -426,7 +427,7 @@
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `consultation` | **`completed_at`**(201, L9 — 처음 완료한 때; 옛 완료 진료는 `updated_at`으로 채움), `visit_id`(UNIQUE), `patient_id`, `doctor_id`, `department_id`, `consult_date`, `subjective`·`objective`·`assessment`·`plan`(화면 미사용), `note_text`, `bp_systolic`·`bp_diastolic`·`temperature DECIMAL(4,1)`·`pulse`·`spo2`·`respiratory_rate`, `weight`·`height`(화면 미사용), `status` ∈ `in_progress`·`completed`·`signed` | `signed`는 쓰는 곳 없음 |
+| `consultation` | **`completed_at`**(032, L9 — 처음 완료한 때; 옛 완료 진료는 `updated_at`으로 채움), `visit_id`(UNIQUE), `patient_id`, `doctor_id`, `department_id`, `consult_date`, `subjective`·`objective`·`assessment`·`plan`(화면 미사용), `note_text`, `bp_systolic`·`bp_diastolic`·`temperature DECIMAL(4,1)`·`pulse`·`spo2`·`respiratory_rate`, `weight`·`height`(화면 미사용), `status` ∈ `in_progress`·`completed`·`signed` | `signed`는 쓰는 곳 없음 |
 | `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(기본 `primary`), `sort_order` | 화면 미사용 |
 | `prescription` | `consultation_id`(CASCADE), `drug_id`, `drug_code`, `drug_name`, `dose VARCHAR(20)`, `frequency`, `days`, **`route VARCHAR(10)`**, `total_qty`, `unit_price`, `memo`, `dispense_type`(`internal`·`external`, 012), **`pack_unit`·`pack_label`**(약국 025 — 처방할 때 약 표에서 복사), `status` ∈ `ordered`·`dispensed`·`cancelled`, `dispensed_by/at` | `status`·`dispense_type`은 약국이 바꿈 |
 | `order_item` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `order_code_id`, `order_code`, `order_name`, `code_type` ∈ `lab`·`imaging`·`procedure`(·`fee`), `dose`, `frequency`, `days`, `quantity`, `unit_price`, `pacs_modality`, `station_ae`, `body_part`, `worklist_status`, `worklist_sent_at`, `scheduled_date`, `result_text`·`result_by`·`result_at`(영상 판독), `ordered_by`, `status`(검사 완료 등), `memo`, **`cancelled_at`·`cancelled_by`·`cancel_reason`**, **`total_qty`**(201, ⑭ — 수량 × 일수, 기존 줄은 `COALESCE(quantity,1)`로 채움)(201, 결정 3-B) | |
@@ -554,7 +555,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **진료 완료 시각(L9)** — 마이그레이션 201(`consultation.completed_at`, 옛 완료 진료는 `updated_at`), 처음 완료한 때만 저장. **약속처방 항목 수량 서버 검사**(약 줄 정수 ≥ 1, 오더 줄 > 0). 감춘 예시 약과 약속처방 적용을 격리에서 확인. 7.4 F2(인쇄 폭 다시 렌더링 — 바뀐 곳 없음) | (이 커밋) |
+| 2026-09-29 | **약 기본 용량 안 씀(결정 B)** — 검색으로 넣는 약은 빈 칸, 빈 칸은 끝까지 NULL(화면 `||1`·서버 `parseInt||1` 없앰), 하루 총량·일수가 비면 총량 NULL(0 아님). 「하루 총량 없음」 표시·개수·완료 확인을 횟수까지 넓힘(문구 4개) | (이 커밋) |
+| 2026-09-29 | **진료 완료 시각(L9)** — 마이그레이션 201(`consultation.completed_at`, 옛 완료 진료는 `updated_at`), 처음 완료한 때만 저장. **약속처방 항목 수량 서버 검사**(약 줄 정수 ≥ 1, 오더 줄 > 0). 감춘 예시 약과 약속처방 적용을 격리에서 확인. 7.4 F2(인쇄 폭 다시 렌더링 — 바뀐 곳 없음) | `afc29db` |
 | 2026-09-29 | **7.4 F1 과거 기록 확인** — 포장 줄·취소된 오더·「n회 청구」가 과거 보기에 맞게 나옴. 과거 보기 머리의 빈 「· ·」 없앰 | `cbe9eb9` |
 | 2026-09-29 | **위키 2절 따라 하기** — 2절의 옛 글(Qté, 취소는 검사만, 「🔒가 붙습니다」, 7절 ⑫ 주의, 포장 약 표시·확인 빠짐, 영상 상태 「Annulé」 빠짐, 약 목록 오른쪽 기본 용법)을 고침. 화면: 횟수·일수 칸 숫자가 보이게, 검사·영상 줄 Posologie 비움, 한국어 칸 머리 「횟수·일수」(`cs_colTimes`·`cs_colDays`), 좁은 화면의 바이탈 한 줄 배치, 대기 줄의 빈 「· ·」 없앰, 과거 보기의 취소된 오더 회색·「n회 청구」. 7.4 남은 일 분류 | `2f8a57d` |
 | 2026-09-29 | **⑭ 오더 총량 = 수량 × 일수** — 마이그레이션 201(`order_item.total_qty`, 기존 줄은 수량으로 채움), `orderTotal()` 한 곳, POST는 빈 값을 1로·늘 계산, PUT은 수량·일수가 바뀌었거나 비었을 때만. 화면: 검사·영상 1·1·1, 처치는 오더 코드 기본값, 칸 머리 「일총투여」(Dose/j), 두 번 이상 청구되면 이름 아래 「n회 청구」. 번역 키 `cs_` 3개 | `33e70a5` |
