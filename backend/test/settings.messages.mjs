@@ -58,6 +58,14 @@ for (const [f, allowed] of [['role', ['frontdesk', 'admin']], ['code_type', ['fe
   const bad = translatesEverywhere(fieldMsg.notOneOf(f, allowed));
   check(`fieldMsg.notOneOf('${f}')`, !bad, bad);
 }
+// middleware/auth.js (the coordinator's file): every error: '...' it sends.
+const mwSrc = fs.readFileSync(path.join(root, 'backend/src/middleware/auth.js'), 'utf8');
+const mwMsgs = [...new Set([...mwSrc.matchAll(/error:\s*'([^']+)'/g)].map(m => m[1]))];
+check('found middleware/auth.js messages', mwMsgs.length >= 4, mwMsgs.length + ' found');
+for (const text of mwMsgs) {
+  const bad = translatesEverywhere(text);
+  check('middleware: ' + text, !bad, bad);
+}
 // utils/dbError.js (the coordinator's file) does not export its messages; read them.
 const dbSrc = fs.readFileSync(path.join(root, 'backend/src/utils/dbError.js'), 'utf8');
 const block = dbSrc.slice(dbSrc.indexOf('MESSAGE_BY_PG_CODE'));

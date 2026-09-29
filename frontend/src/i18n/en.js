@@ -527,6 +527,8 @@ export default {
   se_hidePw: "Hide",
   se_role_nurse: "Nurse",
   se_pwKeep: "Empty = unchanged",
+  se_errAccessDenied: "You do not have permission for this. If an administrator changed your permissions, log out and log in again.",
+  se_errSessionEnded: "Your session has ended. Please log in again.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

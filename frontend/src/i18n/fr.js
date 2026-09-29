@@ -518,6 +518,8 @@ export default {
   se_hidePw: "Masquer",
   se_role_nurse: "Infirmier(ère)",
   se_pwKeep: "Vide = inchangé",
+  se_errAccessDenied: "Vous n'avez pas l'autorisation pour cela. Si un administrateur a modifié vos permissions, déconnectez-vous puis reconnectez-vous.",
+  se_errSessionEnded: "Votre session est terminée. Reconnectez-vous.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

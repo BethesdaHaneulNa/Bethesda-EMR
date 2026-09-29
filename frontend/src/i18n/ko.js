@@ -518,6 +518,8 @@ export default {
   se_hidePw: "숨기기",
   se_role_nurse: "간호사",
   se_pwKeep: "비우면 그대로",
+  se_errAccessDenied: "이 작업을 할 권한이 없습니다. 관리자가 권한을 바꿨다면 로그아웃한 뒤 다시 로그인하세요.",
+  se_errSessionEnded: "로그인이 끝났습니다. 다시 로그인하세요.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",
