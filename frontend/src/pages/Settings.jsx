@@ -370,7 +370,7 @@ export default function SettingsPage() {
               <tbody>{filteredDrugs.map(function(d){
                 return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
                   <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
-                  <td style={{padding:'4px 6px',color:tx}}>{d.name}</td>
+                  <td style={{padding:'4px 6px',color:tx}}>{d.name}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'#fbbf24',border:'1px solid #f59e0b60',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
                   <td style={{padding:'4px 6px',color:t2,fontFamily:'monospace',fontSize: 12}}>{d.default_dose}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_freq}</td>
@@ -863,6 +863,19 @@ export default function SettingsPage() {
               </div>
               <div style={{fontSize: 12,color:'#94a3b8'}}>📦 {t.ph_stockReadOnlyHint}
               </div>
+              {/* Pack-unit drug (H2-B): handed out by the bottle/tube, so the doctor writes
+                  how many and no total is computed. Copied onto each prescription line
+                  when it is written (402_pharmacy_pack_unit.sql). */}
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'8px 10px',border:'1px solid #2a3142',borderRadius:6}}>
+                <label style={{display:'flex',alignItems:'center',gap:6,fontSize: 13,fontWeight:700,color:'#e2e8f0',cursor:'pointer'}}>
+                  <input type="checkbox" checked={!!editItem.pack_unit} onChange={function(e){ var on=e.target.checked; setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n.pack_unit=on; n.pack_label=on?(p.pack_label||'bottle'):null; return n; }); }}/>
+                  {t.ph_packUnit}
+                </label>
+                <select value={editItem.pack_label||'bottle'} disabled={!editItem.pack_unit} onChange={function(e){ue('pack_label',e.target.value)}} style={Object.assign({},IS,{width:'auto',opacity:editItem.pack_unit?1:.5})}>
+                  {PACK_LABELS.map(function(k){ return <option key={k} value={k}>{t['ph_pack_'+k]}</option>; })}
+                </select>
+                <div style={{fontSize: 12,color:'#94a3b8',flexBasis:'100%'}}>{editItem.pack_unit ? t.ph_packUnitHintOn : t.ph_packUnitHint}</div>
+              </div>
             </div>):null}
 
             {editType==='order'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -945,6 +958,8 @@ export default function SettingsPage() {
 // seed data and the statistics grouping use; only what is shown is translated.
 // Widened 2026-09-29 for the clinic's real stock list (old program's classes, see
 // wiki/reference/drug-import-review.csv); 'Other' stays last.
+// Units a pack-unit drug is handed out in; must match drug_pack_label_check.
+var PACK_LABELS = ['bottle','tube','inhaler','unit'];
 var DRUG_CATEGORIES = ['Analgesic','Antibiotic','Antihistamine','Antimalarial','Antiparasitic','Cardiovascular','Corticosteroid','Dermatology','Endocrine','GI','Gynecology','Musculoskeletal','Ophthalmic','Respiratory','Urology','Vitamin','Other'];
 function drugCatLabel(t, c){ return (c && t['ph_cat_' + c]) || c || ''; }
 

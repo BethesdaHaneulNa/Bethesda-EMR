@@ -465,6 +465,13 @@ export default {
   ph_reportEmpty: "이 달에는 재고 기록이 없습니다 (기록을 시작하기 전).",
   ph_rFormula: "월초 + 입고 − 조제 출고 + 장부 부족 ± 실사 조정 − 폐기 = 월말. 날짜는 병원 시간 기준.",
   ph_stockReadOnlyHint: "재고는 약국 → 📦 재고 탭에서 입고·실사·폐기로 바꿉니다(바뀔 때마다 기록이 남음). 새 약은 0에서 시작합니다.",
+  ph_packUnit: "포장 단위 약 (병·튜브 등으로 줌)",
+  ph_pack_bottle: "병",
+  ph_pack_tube: "튜브",
+  ph_pack_inhaler: "흡입기",
+  ph_pack_unit: "개",
+  ph_packUnitHint: "시럽·흡입기·안약·연고처럼 병·튜브로 주는 약이면 체크하세요. 의사가 처방할 때 병·개 수를 직접 적게 됩니다.",
+  ph_packUnitHintOn: "의사가 병·개 수를 직접 적습니다(총량을 계산하지 않음). 단가는 병·개당 값으로 넣으세요.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

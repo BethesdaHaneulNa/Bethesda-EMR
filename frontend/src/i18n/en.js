@@ -474,6 +474,13 @@ export default {
   ph_reportEmpty: "No stock record for this month (before the record began).",
   ph_rFormula: "Start + received − dispensed + short on record ± count adjustments − discarded = end. Dates in clinic time.",
   ph_stockReadOnlyHint: "Stock is changed in Pharmacy → 📦 Stock (receive, count, discard), where every change is recorded. A new drug starts at 0.",
+  ph_packUnit: "Pack-unit drug (given by the bottle, tube…)",
+  ph_pack_bottle: "Bottle",
+  ph_pack_tube: "Tube",
+  ph_pack_inhaler: "Inhaler",
+  ph_pack_unit: "Unit",
+  ph_packUnitHint: "Tick for syrups, inhalers, eye drops, creams… handed out by the bottle or tube. The doctor then writes how many.",
+  ph_packUnitHintOn: "The doctor writes how many bottles/tubes (no total is computed). Enter the unit price per bottle/tube.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

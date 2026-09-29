@@ -129,12 +129,13 @@ async function prescribe(code, dose, days, label) {
 {
   const id = D.LORAT.id; const d = (await call('GET', '/admin/drugs?q=LORAT', null, A)).data.find(x => x.code === 'LORAT');
   const before = d.stock_qty;
+  // Settings no longer writes stock (settings 73b0517): a drug save with a different
+  // stock_qty leaves the count alone, so no bridging row is ever needed.
   const put = await call('PUT', '/admin/drugs/' + id, { ...d, stock_qty: before + 11, stock_expected: before }, A);
-  check('settings saves stock directly (until settings stops writing it)', put.status === 200 && put.data.stock_qty === before + 11, put.status);
+  check('settings drug save does not change stock', put.status === 200 && Number(put.data.stock_qty) === before, { status: put.status, stock: put.data.stock_qty, before });
   await call('POST', '/pharmacy/stock/' + id + '/receive', { qty: 2, memo: 'after settings edit' }, NURSE);
-  const [rcv, bridge] = await moves(id);
-  check('outside change bridged by an adjust row first', bridge.kind === 'adjust' && bridge.qty === 11 && bridge.stock_after === before + 11 && /outside/i.test(bridge.memo || ''), bridge);
-  check('then the receive continues from it', rcv.kind === 'receive' && rcv.stock_before === before + 11 && rcv.stock_after === before + 13, rcv);
+  const [rcv, prev] = await moves(id);
+  check('receive continues straight from the record, no outside-change row', rcv.kind === 'receive' && rcv.stock_before === before && rcv.stock_after === before + 2 && !/outside/i.test((prev && prev.memo) || ''), { rcv, prev });
 }
 
 // ── every drug: chain unbroken and ends at stock_qty ──
