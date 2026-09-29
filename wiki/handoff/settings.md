@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 안내를 화면 언어로 (U11) · 틀린 비밀번호 안내 (U12) · 비밀번호 칸 가리기
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `58e62f2`을 ff로 당긴 뒤)
+- **한 일**:
+  1. **U11** (총괄 결정: 화면에서 고정 문구 비교): 로그인·설정 API의 사람용 문구를 새 파일 `backend/src/routes/settings.messages.js`(`MSG`·`fieldMsg`)로 모으고 `auth.routes.js`·`admin.routes.js`가 가져다 씀(문구 자체는 그대로). 화면 쪽 비교 표는 새 파일 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)` — `utils/dbError.js`(총괄)와 `api/client.js`의 문구도 포함. 두 파일에 「함께 고칠 것」 주석. `Settings.jsx`의 설정 몫 오류 표시(병원 정보·공통 저장/삭제·약속처방·백업)와 `Login.jsx`에 적용. **오더 연동·검사항목 탭 함수의 오류 표시는 각 세션 몫이라 안 건드림.**
+  2. **U12 (새로 찾아 고침, 높음)**: 틀린 비밀번호나 비활성 계정으로 로그인하면 **아무 안내 없이 칸만 비었습니다.** `api/client.js`가 401을 받으면 로그인 화면을 다시 불러오는데, 로그인 화면의 401은 「비밀번호 틀림」이라 안내가 새로고침에 지워짐(격리 스택에서 재현). 공용 파일은 안 건드리고, `Login.jsx`가 로그인·첫 설정 요청만 직접 보내게 함(`authPost`). 로그인 안내는 원문을 저장하고 보여줄 때 번역 → 언어를 바꾸면 안내도 바뀜.
+  3. **비밀번호 칸 가리기** (S4 중 결정 없이 되는 것): 직원 편집 창 `type=password` + **Afficher/Masquer** 버튼(직원에게 불러 줘야 하므로), `autoComplete="new-password"`(브라우저가 관리자 자신의 저장된 비밀번호를 직원 칸에 채우지 않게), 아이디 칸 `autoComplete="off"`. `1234` 기본값·최소 길이는 **결정 대기라 그대로**.
+- **바꾼 파일**: `backend/src/routes/settings.messages.js`(새) · `auth.routes.js` · `admin.routes.js` · `frontend/src/pages/settingsMessages.js`(새) · `Settings.jsx` · `Login.jsx` · `backend/test/settings.messages.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 블록에 22개. `api/client.js`·`utils/dbError.js`는 **안 건드림**(문구만 읽어 비교).
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_err*` 18개(`Inactive`·`Server`·`SetupDone`·`LoginExists`·`NotFound`·`LoginIdRequired`·`PasswordRequired`·`LastAdmin`·`SetupAdminKept`·`Duplicate`·`MissingRef`·`Required`·`NotAllowed`·`Format`·`Range`·`NotNumber`·`Negative`·`NotWhole`), `se_fStock`·`se_fMinStock`·`se_showPw`·`se_hidePw` — ko·en·fr
+- **확인한 방법**: `node --check` 3개, `npm run build`, `node backend/test/settings.messages.mjs` → 39개 통과(서버의 모든 문구가 한국어·프랑스어로 바뀌고 키가 다 있는지, dbError 문구 포함). `settings.permissions.mjs`도 통과. 격리 스택 9187: **고치기 전** 틀린 비밀번호 → 안내 없이 빈 칸(재현) / **고친 뒤** 프랑스어 「Identifiant ou mot de passe incorrect」, 칸 유지 / 비활성 계정 → 「Ce compte est désactivé…」 / 정상 로그인 됨 / 직원 추가 창 비밀번호 ••••, Afficher → 1234 / 같은 아이디 저장 → 「Erreur: Un élément avec ce code ou cet identifiant existe déjà.」 / 설치 관리자 Supprimer → 「Erreur: Le compte administrateur créé à l'installation ne peut pas être désactivé.」(확인 창·알림은 기록용 가짜로 받아 문구 확인).
+- **확인 못 한 것**: 영어 화면. 첫 관리자 만들기 화면의 오류(빈 DB가 필요 — 코드와 검사 스크립트로만).
+- **위키**: `modules/settings.md` 2.4·2.12(표를 실제 프랑스어 문구로), 3-3절, 4절, 7절(S4 일부·U11·U12), 8절
+- **총괄 확인 요청**: U12는 `api/client.js`의 401 처리 때문입니다. 로그인 화면은 우회했지만, 다른 화면에서도 **401을 「로그인 끝남」 말고 다른 뜻으로 쓰는 API**가 있다면 같은 일이 생깁니다(지금 설정 쪽에는 없음).
+- **다른 세션에 부탁**: **PACS·임상병리** — 설정 화면 안의 각자 탭 함수(`savePacs`, `saveLabItems`·`createPanel`)의 `alert('…'+err.message)`는 영어 서버 문구가 그대로 나옵니다. 원하면 같은 `seMessage`를 쓰거나 각자 방식으로.
+
 ## 2026-09-29 — 위키 2절을 프랑스어 화면 기준으로 (총괄 지시)
 
 - **상태**: 확인 요청

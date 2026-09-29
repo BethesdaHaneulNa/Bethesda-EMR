@@ -3,6 +3,10 @@ import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
+// Server messages (English) -> the screen's language. See settingsMessages.js.
+import { seMessage } from './settingsMessages.js';
+// Must match MSG.STOCK_CHANGED in backend/src/routes/settings.messages.js.
+var STOCK_CHANGED = 'Stock changed while this drug was open';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -15,6 +19,7 @@ export default function SettingsPage() {
   var dpS = useState([]), depts = dpS[0], setDepts = dpS[1];
   var edS = useState(null), editItem = edS[0], setEditItem = edS[1];
   var edT = useState(''), editType = edT[0], setEditType = edT[1];
+  var spS = useState(false), showPw = spS[0], setShowPw = spS[1];
   var toS = useState(''), toast = toS[0], setToast = toS[1];
   var dcS = useState('All'), drugCat = dcS[0], setDrugCat = dcS[1];
   var ocF = useState('All'), ocFilter = ocF[0], setOcFilter = ocF[1];
@@ -44,7 +49,7 @@ export default function SettingsPage() {
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
   async function loadBackup(){ try { setBackup(await api.get('/backup/status')); } catch(e){ setBackup(null); } }
   // Reload whatever happened: a failure is now shown on the tab itself, not only in the alert.
-  async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); } catch(e){ alert((t.backupFail||'백업 실패')+': '+(e.message||'')); } await loadBackup(); setBackupBusy(false); }
+  async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); } catch(e){ alert((t.backupFail||'백업 실패')+': '+seMessage(t,e.message||'')); } await loadBackup(); setBackupBusy(false); }
   async function downloadBackup(name){ try { var token=localStorage.getItem('medconnect_token'); var res=await fetch('/api/backup/download/'+encodeURIComponent(name),{headers:token?{Authorization:'Bearer '+token}:{}}); if(!res.ok){ alert((t.backupFail||'다운로드 실패')+' ('+res.status+')'); return; } var blob=await res.blob(); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); } catch(e){ alert((t.backupFail||'다운로드 실패')+': '+e.message); } }
 
   async function loadAll(){
@@ -62,7 +67,7 @@ export default function SettingsPage() {
 
   function showToast(msg){ setToast(msg); setTimeout(function(){ setToast(''); },2000); }
   function openEdit(type, item){ setEditType(type); setEditItem(item ? JSON.parse(JSON.stringify(item)) : {}); }
-  function closeEdit(){ setEditItem(null); setEditType(''); }
+  function closeEdit(){ setEditItem(null); setEditType(''); setShowPw(false); }
   function ue(k,v){ setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n[k]=v; return n; }); }
   function up(k,v){ setPacsConfig(function(p){ var n=Object.assign({},p||{}); n[k]=v; return n; }); }
   // Same rule the server enforces (backend/src/routes/pacs.token.js) -- shown here
@@ -84,7 +89,7 @@ export default function SettingsPage() {
       var saved = await api.put('/admin/clinic', clinic||{});
       setClinic(saved);
       showToast(t.se_saved);
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
   function loadLabItems(codeId){
@@ -160,7 +165,7 @@ export default function SettingsPage() {
           if(Number(body.stock_qty||0)===Number(opened||0)) delete body.stock_qty;
           try { await api.put('/admin/drugs/'+item.id, body); }
           catch(e){
-            if(e.message!=='Stock changed while this drug was open') throw e;
+            if(e.message!==STOCK_CHANGED) throw e;
             // Keep the dialog and whatever else was typed; show the stock as it is now
             // so the person decides again with the real number in front of them.
             var fresh=await api.get('/admin/drugs'); setDrugs(fresh);
@@ -187,7 +192,7 @@ export default function SettingsPage() {
       setPacsConfig(await api.get('/pacs/config'));
       }
       closeEdit(); showToast(t.se_saved);
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
   async function deleteItem(type, id){
@@ -199,7 +204,7 @@ export default function SettingsPage() {
       else if(type==='order') await api.del('/admin/order-codes/'+id);
       else if(type==='phrase') await api.del('/admin/phrases/'+id);
       await loadAll();
-    } catch(err){ alert(err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
   // ── 약속처방(Order Sets) ──
@@ -234,11 +239,11 @@ export default function SettingsPage() {
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
       else await api.post('/order-sets', body);
       setOsEdit(null); await osReload(); showToast(t.save+' ✓');
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
   async function osDelete(s){
     if(!confirm(t.se_confirmDelete+' '+s.name)) return;
-    try { await api.del('/order-sets/'+s.id); await osReload(); } catch(err){ alert(err.message); }
+    try { await api.del('/order-sets/'+s.id); await osReload(); } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
   function osGrouped(){
     var groups={}, order=[];
@@ -745,8 +750,15 @@ export default function SettingsPage() {
             {editType==='staff'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label={t.se_fName}><input value={editItem.name||''} onChange={function(e){ue('name',e.target.value)}} style={IS}/></Fld>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.se_fLoginId}><input value={editItem.login_id||''} onChange={function(e){ue('login_id',e.target.value)}} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}/></Fld>
-                <Fld label={t.se_fPassword}><input value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder="••••" style={IS}/></Fld>
+                <Fld label={t.se_fLoginId}><input autoComplete="off" value={editItem.login_id||''} onChange={function(e){ue('login_id',e.target.value)}} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}/></Fld>
+                {/* Hidden by default: the password was on screen for anyone standing behind the
+                    admin. Show/Hide is there because the admin has to read out the new
+                    password to the employee. new-password stops the browser filling in the
+                    admin's own saved password here - and saving it over the employee's. */}
+                <Fld label={t.se_fPassword}><div style={{display:'flex',gap:4}}>
+                  <input type={showPw?'text':'password'} autoComplete="new-password" value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder="••••" style={Object.assign({},IS,{flex:1,minWidth:0})}/>
+                  <button type="button" onClick={function(){setShowPw(!showPw)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'0 8px',cursor:'pointer',fontSize:12,flexShrink:0}}>{showPw?t.se_hidePw:t.se_showPw}</button>
+                </div></Fld>
               </div>
               {lockedAdmin?<div style={{fontSize:12,color:'#fbbf24',background:'#f59e0b18',border:'1px solid #f59e0b40',borderRadius:5,padding:'7px 9px',lineHeight:1.5}}>
                 🔒 {t.adminLocked||'설정 때 만든 관리자 계정입니다. 이름·비밀번호·연락처는 바꿀 수 있지만, 아이디와 역할·권한은 고정입니다 — 여기서 설정 권한을 빼면 아무도 설정 화면에 들어올 수 없게 됩니다.'}
