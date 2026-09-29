@@ -3,7 +3,9 @@ import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 
-function fmtAr(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+// Thousands: a no-break space in French (« 39 300 »), a comma in Korean and English -
+// the same rule as the pharmacy's fmt(n, lang). CSV exports keep plain numbers.
+function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
 function ymd(d){ var y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), da=('0'+d.getDate()).slice(-2); return y+'-'+m+'-'+da; }
 function rangeFor(p){
   var now=new Date(), to=ymd(now), from=to;
@@ -15,6 +17,7 @@ function rangeFor(p){
 
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
+  function fmtAr(n){ return fmtAmount(n, lang); }
   var ps = useState('month'), period = ps[0], setPeriod = ps[1];
   var rs = useState(rangeFor('month')), range = rs[0], setRange = rs[1];
   var ds = useState(null), data = ds[0], setData = ds[1];
@@ -125,7 +128,7 @@ export default function StatsPage(){
 
   function Card(props){ return <div onClick={props.onClick} className={props.onClick?'pressable':undefined} style={{ background:scBg, border:'1px solid '+(props.active?'var(--accent-a80)':bd), borderRadius:10, padding:'14px 16px', flex:1, minWidth:140, cursor:props.onClick?'pointer':'default' }}>
     <div style={{ fontSize:13, color:t3, fontWeight:700 }}>{props.label}{props.onClick?<span style={{marginLeft:5,color:t3,fontSize:11}}>{props.active?'▲':'▼'}</span>:null}</div>
-    <div style={{ fontSize:props.small?20:26, fontWeight:900, color:props.color||tx, fontFamily:'monospace', marginTop:4 }}>{props.value}<span style={{fontSize:13,color:t3,fontWeight:600,marginLeft:4}}>{props.unit||''}</span></div>
+    <div style={{ fontSize:props.small?20:26, fontWeight:900, color:props.color||tx, fontFamily:'monospace', marginTop:4 }}>{props.value}{props.unit?<span style={{fontSize:13,color:t3,fontWeight:600}}>{'\u00a0'+props.unit}</span>:null}</div>
     {props.sub?<div style={{ fontSize:12, color:t3, marginTop:3 }}>{props.sub}</div>:null}
   </div>; }
 
@@ -134,7 +137,7 @@ export default function StatsPage(){
     return <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       {rows.length===0?<div style={{color:t3,fontSize:13,padding:'8px 0'}}>{t.noData||'데이터 없음'}</div>:null}
       {rows.map(function(r,i){ return <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <div style={{ width:110, fontSize:13, color:t2, textAlign:'right', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.label}</div>
+        <div title={r.label} style={{ width:160, fontSize:13, color:t2, textAlign:'right', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.label}</div>
         <div style={{ flex:1, background:pn, borderRadius:5, height:22, position:'relative', overflow:'hidden' }}>
           <div data-motion="bar" style={{ width:((r.value||0)/max*100)+'%', background:(r.color||'var(--accent)'), height:'100%', borderRadius:5, minWidth:r.value?3:0, transition:'width 250ms var(--ease-out)' }}></div>
         </div>

@@ -48,6 +48,7 @@ The Voided card counted both receipts cancelled by staff and receipts replaced b
 ### Smaller changes
 
 - The monthly trend shows quiet months as zero instead of skipping them.
+- On the French screen amounts use a space between thousands (39 300 Ar), as elsewhere in French; Korean and English keep the comma. A count and its unit are now separated (« 3 cas »). Department and doctor names in the charts are no longer cut short. CSV files keep plain numbers.
 - The French and English screens no longer show Korean text: the Cancelled label, the "unassigned" text, and the unit after counts. Department names follow the screen language.
 - The debtor list is loaded when it is opened, and the trend when the page opens, instead of on every change of dates.
 
