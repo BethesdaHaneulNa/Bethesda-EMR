@@ -15,8 +15,14 @@
 const path = require('path');
 const { dumpOnce } = require('./backup');
 
+const fs = require('fs');
+
 const trigger = process.argv[2] || 'cli';
-dumpOnce(trigger, path.join('/backups', '.inprogress-' + trigger)).then((r) => {
+const workDir = path.join('/backups', '.inprogress-' + trigger);
+dumpOnce(trigger, workDir).then((r) => {
+  // The work folder is ours alone and empty once the file has been moved (or removed on
+  // failure); rmdir refuses a folder that is not empty, so nothing else can go with it.
+  try { fs.rmdirSync(workDir); } catch (e) { /* already gone, or not empty */ }
   if (r.ok) { console.log(r.file); process.exit(0); }
   console.error('backup failed: ' + r.error);
   process.exit(1);
