@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 1차 수정 합쳐짐(`edd4174`). ⑪ 나머지 영어 문구·2절 프랑스어 기준 정리 — 확인 요청. 다음은 2차 후보 순서를 실장님께 여쭤볼 차례
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: 대기 목록 자동 새로고침 — 확인 요청. 2차 후보(⑥ ⑦ ④ 주소·휴대폰 칸) 순서는 결정 세션을 통해 실장님 결정 대기 (인계 노트에 선택지 표)
 
 ## 1. 이 모듈이 하는 일
 
@@ -54,7 +54,8 @@
 - 각 환자 아래 작은 버튼으로 상태를 옮깁니다: **Terminer →**(완료로 →), **← En attente**(← 대기로).
   - 의사가 진료를 시작하면 「En cours」로, 진료를 마치면 「Terminé」로 **저절로** 바뀝니다. 손으로 옮기는 것은 예외적인 경우에만 쓰세요.
   - 「Terminé」가 된 환자는 수납(Paiement) 화면의 수납 대기 목록에 나타납니다.
-- 이 목록은 저절로 새로고침되지 않습니다. 다른 버튼을 누르거나 화면을 새로 열어야 최신 상태가 됩니다.
+- 이 목록은 **30초마다 저절로** 새로고침됩니다. 의사가 진료를 시작하거나 끝내면 30초 안에 탭이 옮겨집니다. 왼쪽에 쓰고 있던 내용은 그대로 남습니다. 다른 창을 보고 있는 동안에는 새로고침을 쉬었다가, 돌아오면 30초 안에 다시 맞춰집니다.
+  - 서버가 잠깐 멈춰도 목록은 지워지지 않고 마지막 모습 그대로 남습니다.
 
 ### 접수 내용 고치기 / 대기 취소
 
@@ -77,7 +78,7 @@
 | Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue. | 생년월일을 끝까지 입력하세요 (연-월-일)… | 세 칸을 다 채우거나, 모르면 세 칸 모두 지웁니다 |
 | La date de naissance n'est pas valide. Elle ne peut pas être dans le futur. | 생년월일이 올바른 날짜가 아닙니다… | 월·일을 확인합니다 (2월 30일, 13월, 미래 날짜 불가) |
 | La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. La liste a été actualisée. | 이미 진료가 시작되었거나 끝난 환자라 대기를 취소할 수 없습니다… | 취소가 필요하면 담당 의사와 이야기합니다 |
-| Impossible de joindre le serveur. Réessayez dans un instant ; si cela continue, prévenez l'administrateur. | 서버에 연결할 수 없습니다… | 잠시 뒤 다시 누릅니다. 서버가 멈춘 경우 버튼이 **최대 1분쯤** 「Enregistrement…」로 멈춰 있다가 이 창이 뜰 수 있습니다. 계속되면 관리자에게 알립니다 |
+| Impossible de joindre le serveur. Réessayez dans un instant ; si cela continue, prévenez l'administrateur. | 서버에 연결할 수 없습니다… | 잠시 뒤 다시 누릅니다. 서버가 멈춘 경우 버튼이 **몇 초** 「Enregistrement…」로 멈춰 있다가 이 창이 뜰 수 있습니다. 계속되면 관리자에게 알립니다 |
 | Dossier patient introuvable. Recherchez à nouveau. | 환자 기록을 찾을 수 없습니다… | 환자를 다시 검색해서 고릅니다 |
 | Cet enregistrement est introuvable. La liste a été actualisée. | 이 접수 기록을 찾을 수 없습니다… | 새로 불러온 목록에서 다시 고릅니다 |
 | Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres. | 입력한 값의 형식이 맞지 않습니다… | 날짜·숫자 칸을 확인합니다 |
@@ -99,6 +100,7 @@
 
 ### 흐름
 
+- **대기 목록 자동 새로고침** — 화면이 열려 있는 동안 30초마다, `document.hidden`이 아닐 때만 `refreshQueue()`가 `/visits/today`를 다시 받음 (임상병리 화면과 같은 규칙). 바꾸는 것은 `visits`와, 고른 내원(`sel`)의 **`status` 하나**뿐 — 그래야 진료가 시작된 내원에서 「대기 취소」 버튼이 사라짐. `form`·`visitForm`·`memo`·`selectedPatient`는 건드리지 않아 쓰던 내용이 남음. 실패하면 조용히 기존 목록 유지(알림 없음). `queueSeq`(ref)가 요청마다 번호를 매겨, 느리게 온 옛 응답이 새 목록을 덮지 못하게 함 — `loadData()`도 같은 번호를 씀. 진료과·의사 목록은 자동으로 다시 받지 않음(바뀔 일이 드묾).
 - **환자 고르기** — 검색 결과나 환자 찾기 창에서 고르면 `fillPatient(p)`: 환자 행으로 `form`을 채우고 `sel`을 비우고 `/patients/:id/history`로 이전 진료를 불러옴.
 - **대기 목록에서 고르기** — `selectVisit(v)`: `/visits/today` 행으로 `form`·`visitForm`을 채움.
 - **보내는 환자 필드** — `patientBody()`가 화면에 있는 칸만 보냄: `last_name` `first_name`(앞뒤 공백 제거) `date_of_birth` `gender` `phone` `blood_type` `allergies` `reception_note`. `national_id` `mobile` `address` `city` `region`은 **보내지 않으므로 서버가 그대로 둠** (2026-09-29 전에는 대기 목록에서 고른 환자를 저장하면 이 칸들을 빈 값으로 덮었음 — 7절 ⑤). 나중에 이 칸들의 입력을 추가하면 `form`·`fillPatient`·`selectVisit`·`patientBody`에 같이 넣되, `selectVisit`은 `/visits/today` 행에 이 값이 없으니 `/patients/:id`로 받아 채워야 함.
@@ -265,12 +267,12 @@
 | ⑭ | 낮음 | 생년월일을 덜 쓰고 저장하면(예: 연도만) 반쪽 값이 서버로 가고 오류 원문이 뜸 → **1차에서 저장 전에 화면 언어로 막음** (`formProblem`). 남은 것: 연도 칸이 비었는데 월부터 치면 값이 연도 칸으로 옮겨감 | `Registration.jsx` `DobInput` | 화면 (저장 막힘 확인) |
 | ⑮ | 낮음 | 환자 찾기 창의 외래 내역에 **취소된 내원도 구분 없이** 나옴 → 진료·수납·검사에서 취소된 내원을 고를 수 있음 (`status`는 받아오지만 표시 안 함) | `PatientFinder.jsx:131-139` | 코드 |
 | ⑯ | 낮음 | 검색은 「성 이름」 순서로만 이어서 찾음 — 「이름 성」으로 치면 안 나옴. 검색어의 `%` `_`가 와일드카드로 먹힘. `limit`에 숫자가 아니면 500 | `patient.routes.js:15-20` | 코드 |
-| ⑰ | 낮음 | 접수 대기 목록은 자동 새로고침이 없다 (진료 화면은 15초마다). ②의 원인이기도 함 | `Registration.jsx:61` · `Consultation.jsx:71` | 코드 |
+| ⑰ | ✅ 고침 (낮음) | 접수 대기 목록에 자동 새로고침이 없었다 (진료 화면은 15초마다). ②의 원인이기도 했음. → 30초마다, 탭이 보일 때만, 입력값 유지, 실패해도 목록 유지 | `Registration.jsx` `refreshQueue` | 화면 — 뒤에서 `in_progress`로 바꾸고 30초 뒤 탭 이동·취소 버튼 사라짐·쓰던 메모 유지, API 멈춤 중 502에도 목록 유지·알림 없음, 가려진 63초 동안 요청 0건 |
 | ⑱ | 낮음 | 차트번호 99,999번을 넘으면 등록이 대부분 실패한다. PostgreSQL `LPAD`는 긴 문자열을 **잘라서** `100000`→`10000`이 되어 같은 해 번호와 겹침. 작은 병원에서는 먼 이야기 | `001_schema.sql:336` | 코드 |
 | ⑲ | 낮음 | 환자 비활성화·중복 환자 합치기 기능이 없다. ③으로 생긴 중복 차트를 정리할 방법이 DB 직접 수정뿐 | `patient.is_active` 쓰는 곳 없음 | 코드 |
 | ⑳ | 확인 필요 | 대기 중 환자의 「완료로 →」는 진료 없이 내원을 완료시켜 수납 대기로 보냄(진료비 `C01`). 서류만 떼러 온 경우 등을 위한 것으로 보이나 의도 확인 필요. 「완료 → 대기로」는 이미 수납한 내원에도 가능 | `Registration.jsx:404-407` | 코드 |
 | ㉑ | ✅ 고침 — 총괄 `7ad4387` (높음) | **날짜가 하루 이르게 나오고, 접수에서 저장하면 생년월일이 실제로 하루 당겨진다.** node-postgres가 DATE를 서버 시간대(`Indian/Antananarivo`, UTC+3) 자정의 `Date`로 읽고, JSON으로 내보낼 때 UTC로 바뀌어 `1990-05-03` → `"1990-05-02T21:00:00.000Z"`가 됨. 화면들은 `split('T')[0]`으로 앞부분만 써서 **5월 2일**로 표시. 접수 화면은 이 값을 그대로 입력칸에 넣으므로 환자를 불러 저장할 때마다 DB의 생년월일이 하루씩 앞으로 감. 같은 이유로 환자 찾기 창의 내원 날짜, 진료 화면 머리의 생년월일, **인쇄 문서의 생년월일·나이**(`shared.jsx` `fmtDate`·`calcAge`)도 하루 이름. 워크리스트는 `dicomDate`로 이미 고쳐져 있음(CHANGELOG 276행) | `config/database.js`(DATE 파서 없음) · `Registration.jsx` `fillPatient`·`selectVisit`의 `split('T')` · `PatientFinder.jsx:69` · `shared.jsx:12-21` | **화면** — DB `1990-05-03` → 화면 `1990-05-02` → 「환자 정보 저장」 → DB `1990-05-02`. 시간대가 UTC보다 동쪽인 모든 설치에서 일어남 |
-| ㉒ | 낮음 | 서버(백엔드)가 멈춘 채 nginx가 예전 주소를 기억하고 있으면, 저장 버튼이 **1분 가까이** 「Enregistrement…」로 멈춰 있다가 「Impossible de joindre le serveur」가 뜸 (nginx 기본 연결 대기 60초). nginx를 백엔드가 멈춘 뒤 새로 띄운 경우엔 바로 뜸. 버튼 잠금이 풀리니 데이터 문제는 없음. 줄이려면 `frontend/nginx.conf`에 `proxy_connect_timeout`(총괄 소관) | `frontend/nginx.conf` `location /api/` | 화면 — 격리 스택에서 API 컨테이너만 멈추고 저장 |
+| ㉒ | ✅ 고침 — 총괄 `b01c6a0`, `proxy_connect_timeout 5s` (낮음) | 서버(백엔드)가 멈춘 채 nginx가 예전 주소를 기억하고 있으면, 저장 버튼이 **1분 가까이** 「Enregistrement…」로 멈춰 있다가 「Impossible de joindre le serveur」가 뜸 (nginx 기본 연결 대기 60초). nginx를 백엔드가 멈춘 뒤 새로 띄운 경우엔 바로 뜸. 버튼 잠금이 풀리니 데이터 문제는 없음. 줄이려면 `frontend/nginx.conf`에 `proxy_connect_timeout`(총괄 소관) | `frontend/nginx.conf` `location /api/` | 화면 — 격리 스택에서 API 컨테이너만 멈추고 저장 |
 
 **제약**
 
@@ -281,6 +283,7 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | ⑪ 마무리 — 완료·확인 창을 언어별 문장으로(`fill`), 생년월일 칸 안내 글자 번역, 서버 연결 실패·기록 없음·형식 오류 안내. 읽기 경로 오류도 4xx. 2절을 프랑스어 화면 기준으로 다시 쓰고 「안내 창이 뜨면」 표 추가 | (이 커밋) |
+| 2026-09-29 | 대기 목록 30초 자동 새로고침(⑰) — 탭이 보일 때만, 입력값 유지, 고른 내원의 상태만 맞춤, 실패해도 목록 유지 | (이 커밋) |
+| 2026-09-29 | ⑪ 마무리 — 완료·확인 창을 언어별 문장으로(`fill`), 생년월일 칸 안내 글자 번역, 서버 연결 실패·기록 없음·형식 오류 안내. 읽기 경로 오류도 4xx. 2절을 프랑스어 화면 기준으로 다시 쓰고 「안내 창이 뜨면」 표 추가 | `e6ef6e8` |
 | 2026-09-29 | 1차 수정 — 대기 취소 오타(①), 접수 수정이 진료 상태를 되돌리던 것(②), 신규 환자 중복 등록(③ 화면 쪽), 안 보이는 인적사항을 빈 값으로 덮던 것(⑤), `PUT /visits/:id` 검사·칸별 저장(⑨), 오류 창 번역(⑪). 이미 진료가 시작된 내원은 취소 불가(409) | `bb4a1e6` (합침 `edd4174`) |
 | 2026-09-29 | 접수 세션 첫 현황 파악 — 위키 1~7절을 실제 코드 기준으로 채움. 코드 변경 없음 | `1ee97ce` |
