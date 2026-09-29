@@ -233,7 +233,7 @@ export default {
   settleAll: "전체 미수 수납",
   settleAllConfirm: "전체 미수를 일괄 수납합니다",
   pacsServer: "PACS 서버 (Orthanc)",
-  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
+  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적습니다. 영상 창은 EMR이 대신 보여 주므로 진료실 PC가 9090에 닿을 필요는 없습니다.",
   pacsViewerUrl: "PACS 웹/뷰어 주소",
   dicomPort: "DICOM 포트",
   testPacsBtn: "PACS 연결 테스트 (DICOM)",
@@ -920,5 +920,9 @@ export default {
   px_readingOnCancelled: "이 영상 검사는 진료실에서 취소되어 판독을 저장할 수 없습니다.",
   px_noStudy: "이 영상 검사는 촬영 목록(워크리스트)으로 보내지 않아 연결된 영상이 없습니다. 판독만 쓸 수 있습니다.",
   px_linkedByAccession: "장비가 영상 번호를 새로 만들어, 검사 번호(Accession)로 이 오더에 연결했습니다. 영상 속 환자 정보를 한 번 확인하세요.",
+  px_orthancUrl: "EMR이 영상 서버에 닿는 주소 (보통 그대로)",
+  px_orthancPasswordSet: "영상 서버 비밀번호 설정됨 — 영상 창이 로그인 없이 열립니다",
+  px_orthancPasswordMissing: "영상 서버 비밀번호가 아직 없습니다. 서버 PC의 PACS 폴더에서 pair-with-emr.ps1을 실행하세요.",
+  px_viewerUrlUnused: "이제 쓰지 않음(영상은 EMR이 보여 줌)",
   // ── end pacs ──
 };

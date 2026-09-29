@@ -5,6 +5,7 @@ const { tcpCheck } = require('../utils/tcpCheck');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
 const { ORDER_CANCELLED } = require('./pacs.cancel');
+const viewer = require('./pacs.viewer');
 
 const router = express.Router();
 
@@ -30,10 +31,21 @@ async function ensureConfig() {
   return r.rows[0];
 }
 
+// pacs_config as the settings screen may see it. The image server's password
+// (orthanc_password, written only by pair-with-emr) never leaves the server:
+// the screen learns only whether it is set.
+function publicConfig(row) {
+  const out = Object.assign({}, row || {});
+  out.orthanc_password_set = !!out.orthanc_password;
+  delete out.orthanc_password;
+  return out;
+}
+
 function normalizeConfig(body) {
   const fields = [
-    'worklist_scp_host','worklist_scp_ae','bridge_token','emr_base_url','pacs_viewer_url','facility_name','notes'
+    'worklist_scp_host','worklist_scp_ae','bridge_token','emr_base_url','pacs_viewer_url','facility_name','notes','orthanc_url'
   ];
+  // orthanc_password is deliberately not here: only pair-with-emr sets it.
   const out = {};
   fields.forEach(k => { if (body[k] !== undefined) out[k] = String(body[k] || '').trim(); });
   if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 4242;
@@ -41,10 +53,13 @@ function normalizeConfig(body) {
   return out;
 }
 
+// The viewer relay: its own auth (the cookie above), not the JWT.
+router.use('/viewer', viewer.router);
+
 // Settings UI. This carries the bridge token, which opens the patient feed, so
 // it is for the settings permission only -- not every member of staff.
 router.get('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
-  try { res.json(await ensureConfig()); }
+  try { res.json(publicConfig(await ensureConfig())); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -59,12 +74,13 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
        worklist_scp_ae=COALESCE($3, worklist_scp_ae), bridge_token=COALESCE($4, bridge_token),
        emr_base_url=COALESCE($5, emr_base_url), pacs_viewer_url=COALESCE($6, pacs_viewer_url),
        auto_create_worklist=COALESCE($7, auto_create_worklist), facility_name=COALESCE($8, facility_name),
-       notes=COALESCE($9, notes), updated_by=$10, updated_at=NOW()
+       notes=COALESCE($9, notes), orthanc_url=COALESCE(NULLIF($11, ''), orthanc_url), updated_by=$10, updated_at=NOW()
        WHERE id=1 RETURNING *`,
       [cfg.worklist_scp_host, cfg.worklist_scp_port, cfg.worklist_scp_ae,
-       cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id]
+       cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id,
+       cfg.orthanc_url]
     );
-    res.json(result.rows[0]);
+    res.json(publicConfig(result.rows[0]));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -110,8 +126,11 @@ function imagesOf(w) {
 // list shows text and has no image button.
 router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
-    const cfg = await ensureConfig();
-    const base = cfg.pacs_viewer_url ? String(cfg.pacs_viewer_url).replace(/\/+$/, '') : '';
+    // The viewer is served by the EMR itself (pacs.viewer.js, P-9): the image
+    // window opens a relative address and this response grants the short cookie
+    // for this order's study. pacs_viewer_url (the old direct address) is kept in
+    // the table but no longer used.
+    const base = '/api/pacs/viewer';
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     let order_status = '', cancelled_at = null, cancel_reason = '';
     if (req.query.order_item_id) {
@@ -132,15 +151,18 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
-    } else if (req.query.study) { study = req.query.study; }
+    }
+    // (A bare ?study=<UID> used to be accepted too. Nothing calls it, and with the
+    // viewer cookie it would open any study number - only an order grants now.)
     // No study to show (an imaging order that never went to the worklist): no URL
     // at all. Falling back to `base` opened the viewer's front page -- the list of
     // every patient in the PACS -- inside one patient's chart (P-18). has_viewer
-    // still says whether a viewer address is set, so the screen can tell "no
-    // viewer configured" from "nothing to show for this order".
-    const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : '';
+    // is always true now (the EMR is the viewer), so the screen shows "nothing to
+    // show for this order" rather than the old "no viewer address set".
+    const url = study ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : '';
+    if (study) viewer.grantViewerCookie(req, res, [study]);
     // A cancelled order's images stay viewable: they are part of the record.
-    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
+    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
                no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
