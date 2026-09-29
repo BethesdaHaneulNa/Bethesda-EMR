@@ -351,6 +351,12 @@ export default {
   ph_cat_GI: "Gastro-intestinal",
   ph_cat_Vitamin: "Vitamine",
   ph_cat_Other: "Autre",
+  ph_colDaily: "Dose/jour",
+  ph_colPerDose: "Dose/prise",
+  ph_colDirections: "Posologie",
+  ph_perDoseCheck: "⚠ À vérifier avec le médecin (pas en demi-comprimés)",
+  ph_noTotal: "⚠ Quantité totale absente",
+  ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

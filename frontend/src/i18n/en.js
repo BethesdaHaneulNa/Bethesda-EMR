@@ -360,6 +360,12 @@ export default {
   ph_cat_GI: "Gastro-intestinal",
   ph_cat_Vitamin: "Vitamin",
   ph_cat_Other: "Other",
+  ph_colDaily: "Daily total",
+  ph_colPerDose: "Per intake",
+  ph_colDirections: "Directions",
+  ph_perDoseCheck: "⚠ Check with doctor (not whole or half tablets)",
+  ph_noTotal: "⚠ No total",
+  ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",
