@@ -29,6 +29,25 @@ export function PatientChart(props){
 
   var bd='#232838', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
 
+  // Same rule and wording as the consultation screen (orderStatus in Consultation.jsx).
+  // worklist_status only means something for an order sent to an imaging worklist:
+  // every other order is stored with 'completed' there from the start, so showing it
+  // raw put "completed" on lab orders with no result yet - in English on every screen.
+  // Lab orders show the lab's own status; an order with neither shows nothing.
+  function orderStatus(o){
+    if(o.code_type==='lab'){
+      if(o.status==='completed') return <span style={{color:'#34d399'}}>{t.cs_labDone}</span>;
+      if(o.status==='cancelled') return t.cs_labCancelled;
+      return <span style={{color:'#fbbf24'}}>{t.cs_labPending}</span>;
+    }
+    if(o.worklist_sent_at){
+      var ws = o.worklist_status || '';
+      var wsKey = { pending:'cs_wsPending', sent:'cs_wsSent', in_progress:'cs_wsInProgress', completed:'cs_wsCompleted', cancelled:'cs_wsCancelled' }[ws];
+      return wsKey ? t[wsKey] : ws;
+    }
+    return '';
+  }
+
   if(!patientId){
     return <div style={{padding:20,textAlign:'center',color:'#334155',fontSize:14,fontStyle:'italic'}}>{t.selectPatientLeft}</div>;
   }
@@ -67,7 +86,7 @@ export function PatientChart(props){
           return <div key={'o'+i} style={{display:'flex',gap:6,padding:'5px 8px',borderBottom:'1px solid #1e2433',alignItems:'baseline'}}>
             <span style={{color:'#a78bfa',fontFamily:'monospace',fontSize:11,fontWeight:700,width:52}}>{o.order_code}</span>
             <span style={{color:tx,fontSize:13,flex:1}}>{o.order_name}</span>
-            <span style={{color:t2,fontSize:11}}>{o.worklist_status||''}</span>
+            <span style={{color:t2,fontSize:11}}>{orderStatus(o)}</span>
           </div>;
         })}
       </div>

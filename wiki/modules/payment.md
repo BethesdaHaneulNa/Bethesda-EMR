@@ -295,7 +295,7 @@
 
 ### 공용 부품
 
-- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음.
+- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음 — 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
@@ -408,4 +408,5 @@
 | 2026-09-29 | M5 수납 API 권한 검사, M1 이월된 영수에 수납 거절, M4 이월된 옛 영수 취소 거절 | `55ef4ef` |
 | 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀(버튼·칸 이름 프랑스어 + 한국어, 칸별 뜻 표, 안내 문구 표), 2절·6절에 「수납 창구 계정에는 수납 권한」(총괄 요청). develop `9ded00f` 합침 | `3342e97` · `c5ff3a9` |
 | 2026-09-29 | H6 창구 발급비를 「정정(환불)·추가 청구」 판정에서 뺌, 정정의 발급비 유지도 같은 기준(`counterFeeCond()`) | `bf54e5b` |
-| 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | (이 커밋) |
+| 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | `dee58dc` |
+| 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | (이 커밋) |
