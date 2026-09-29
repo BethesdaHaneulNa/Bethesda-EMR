@@ -2,6 +2,51 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 가져온 약 기준: 검색의 제형 · 설정용 400 문구 목록 · 처음부터 끝까지 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `b148c65` 다음
+- **한 일**:
+  - **① 약 검색에 제형**: 검색 목록과 「+ Recherche médicament」 창의 약 줄 오른쪽에 `formLabel(t, d.dosage_form)`(약국의 `drug-info.js`, 번역 `ph_form_*`)을 보입니다 — 「Comprimé」 「Sirop」 등. 그 자리에 있던 기본 용법(`default_route`)은 결정 B로 쓰지 않으므로 뺐습니다. 새 약 코드(`MED-0001`, 8자)가 두 줄로 꺾이던 것도 고쳤습니다(nowrap, 칸 76px).
+  - **② 설정 세션용 — 약속처방 서버 400 문구** (`orderset.routes.js` `badItems`; 모양은 `items[<번호>].<칸> <뜻>`, 번호는 0부터):
+
+    | 서버 문구 (`error`) | ko | fr | en |
+    |---|---|---|---|
+    | `name required` | 세트 이름을 적으세요 | Indiquez le nom de l'ordonnance type | Enter the set name |
+    | `items[i].dose must be a number greater than 0` | {n}번째 줄: 하루 총량은 0보다 큰 수 | Ligne {n} : la dose par jour doit être supérieure à 0 | Line {n}: the daily dose must be greater than 0 |
+    | `items[i].frequency must be a whole number from 1 to 24` | {n}번째 줄: 횟수는 1~24의 정수 | Ligne {n} : les fois par jour sont un nombre entier de 1 à 24 | Line {n}: times a day must be a whole number from 1 to 24 |
+    | `items[i].days must be a whole number from 1 to 365` | {n}번째 줄: 일수는 1~365의 정수 | Ligne {n} : les jours sont un nombre entier de 1 à 365 | Line {n}: days must be a whole number from 1 to 365 |
+    | `items[i].route (sig) must be at most 10 characters` | {n}번째 줄: 용법은 10자까지 | Ligne {n} : la posologie fait au plus 10 caractères | Line {n}: the sig is at most 10 characters |
+    | `items[i].quantity must be a whole number of at least 1` | {n}번째 줄: 병·튜브 수는 1 이상의 정수 | Ligne {n} : le nombre de flacons/tubes est un entier d'au moins 1 | Line {n}: the bottle/tube count is a whole number of at least 1 |
+    | `items[i].quantity must be a positive number` | {n}번째 줄: 수량은 0보다 큰 수 | Ligne {n} : la quantité doit être supérieure à 0 | Line {n}: the quantity must be greater than 0 |
+
+    읽는 법: `/^items\[(\d+)\]\.(\w+) /`로 번호와 칸을 떼어 내고, {n} = 번호 + 1(화면의 줄 순서)로 둡니다. 나머지 글은 위 표의 뜻으로 옮기면 됩니다.
+  - **③ 가져온 약으로 처음부터 끝까지** (격리 스택, 034 적용: 활성 101 · 감춤 25 · 가격 모두 0 · 포장 12):
+    - **진료**:
+      - `amlo`를 치니 « MÉD MED-0001 Amlodipine 5mg · Sans prix · Comprimé »가 나왔습니다.
+      - 넣으니 빈 칸이고 « Indiquez dose/jour, fois et jours »가 붙었습니다. IBUPROFENE SYRUP(포장)은 « Indiquez la quantité »와 « nombre de flacons à vérifier »였습니다.
+      - 1·1·30을 적으니 « 1 × 1 fois/jour pendant 30 jours (total 30) »가 됐습니다. 시럽 1병은 « 1 flacon »입니다.
+      - 제목에는 « ⚠ 2 sans prix »만 남았고, Terminé는 확인 창 없이 끝났습니다.
+    - **약국**(관리자 계정):
+      - 목록 맨 아래(끝난 순서)에 « IMPORT Parcours — Amlodipine 5mg, IBUPROFENE SYRUP »가 있습니다.
+      - 상세는 Amlodipine 1 · 1 · 1 · 30 · 수량 30, 시럽 « 1 flacon »이고, « Médicaments (interne) 0 »입니다. 가격 경고는 약국 화면에 없습니다.
+    - **수납**:
+      - 위에 « ⚠ 2 article(s) sans prix — vérifiez les prix : IBUPROFENE SYRUP, Amlodipine 5mg »가 뜹니다.
+      - 약 줄은 « Sans prix · 0 »이고, 진료비 15,000 Ar만 합계입니다.
+      - **가격 0인 약만 있는 내원**: 진료비를 « Sans frais »로 하면 합계 0 Ar입니다. Confirmer를 누르면 « 2 article(s) sans prix … Fixer le prix plus tard ne modifie pas les lignes déjà prescrites (le médecin doit les supprimer et les ajouter à nouveau). Encaisser quand même ? »라고 묻습니다(시험에서는 아니오 — 수납하지 않음).
+  - **④ 위키 2절**: 약 목록 오른쪽 제형, 영어 이름으로 찾기, 단위 없는 문장, 가져온 약의 가격 0을 적었습니다(결정 B 몫은 `6e11f56`·`7e17a6d` 때 이미 고침).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: 없음(약국의 `drug-info.js`·`ph_form_*`를 읽기만 함) · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9182, 화면은 FR 1366px와 800px로 확인했습니다. 기존 시험은 결정 B·약속처방 때와 같은 서버 코드라 다시 돌리지 않았습니다(화면만 바뀜).
+- **총괄 판단이 필요한 것**:
+  - **가격 0으로 처방된 줄은 나중에 가격을 넣어도 0 그대로**입니다(줄에 가격을 복사하는 규칙, 7.3). 가져온 약은 모두 0이라 **가격을 넣기 전의 모든 처방이 0원으로 남습니다.** 수납에서 묻기는 하지만, 고치려면 의사가 줄을 지우고 다시 넣어야 합니다.
+    - 선택지: (가) 지금처럼(현지에서 가격을 먼저 넣고 쓰기 시작 — 운영 순서로 막음), (나) 「줄 가격이 0이고, 아직 청구 안 됐고, 약에 가격이 생겼으면」 진료 서버가 저장할 때 새 가격을 가져오기.
+    - 추천은 (가)입니다. 쓰기 시작 전에 가격을 넣는 것이 가장 단순하고, (나)는 가격 복사 규칙에 예외를 만듭니다. 결정 세션에 넘길지 판단 부탁드립니다.
+- **다른 세션에 부탁**:
+  - 약국: `rx-dosing.js`의 단위(cp·gél.·sachet)를 이름 대신 `drug.dosage_form`으로도 정해 주세요. 가져온 약은 이름에 Tab·Cap이 없어 « 1 × 1 fois/jour »로 단위 없이 나옵니다. 처방 줄에는 `dosage_form`이 없으니 약 표에서 읽거나 처방할 때 복사하는 방법은 세션 판단입니다.
+  - 설정: 위 ② 표.
+- **남은 일 · 알려진 문제**: F3, R1~R5
+
 ## 2026-09-29 — 약속처방 줄의 용량·횟수·일수 (서버 몫, 설정 화면과 같이 합침)
 
 - **상태**: 확인 요청 — 설정 세션의 편집 창 커밋과 같이 합칩니다

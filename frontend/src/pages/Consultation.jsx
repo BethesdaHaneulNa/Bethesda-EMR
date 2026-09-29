@@ -7,6 +7,9 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
 import { RadiologyReadings, PatientCheck } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
+// The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
+// in the search lists where the default sig used to be (decision B retired default doses).
+import { formLabel } from '../documents/drug-info.js';
 
 // The server refuses to change a dispensed prescription or delete an order that already
 // has a result (consult.routes.js). Its English refusal strings are matched here so the
@@ -790,9 +793,9 @@ export default function ConsultationPage() {
                         return <div key={d.kind+'-'+d.id} onClick={function(){isOrder?addExamOrder(d):addDrugRx(d)}} style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:6,background:i===oSelIdx?'#3b82f620':'transparent',borderBottom:'1px solid #232838'}}
                           onMouseEnter={function(){setOSelIdx(i)}}>
                           <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||label(CODE_TYPE_KEY, d.code_type)||'ORD'):t.cs_badgeDrug}</span>
-                          <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:55}}>{d.code}</span>
+                          <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                           <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}{noPrice(isOrder ? (d.price_clinic || d.price) : d.unit_price) ? <NoPriceBadge/> : null}</span>
-                          <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):(d.default_route||'')}</span>
+                          <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):formLabel(t, d.dosage_form)}</span>
                         </div>;
                       })}
                     </div>
@@ -824,7 +827,7 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 5px'}}>{done
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
-                          <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
+                          <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>{rx.drug_code}</td>
                           <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
                           {done ? <>
                             <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
@@ -1014,9 +1017,9 @@ export default function ConsultationPage() {
                 return <div key={d.id} onClick={function(){addDrugRx(d);setDrugModal(false);setDrugQ('')}} style={{padding:'7px 14px',cursor:'pointer',borderBottom:'1px solid #1e2433',display:'flex',gap:8}}
                   onMouseEnter={function(e){e.currentTarget.style.background='#ffffff08'}}
                   onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                  <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:600,width:60}}>{d.code}</span>
+                  <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:600,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                   <span style={{fontSize: 14,color:tx,flex:1}}>{d.name}</span>
-                  <span style={{fontSize: 12,color:'#f59e0b',fontWeight:600}}>{d.default_route}</span>
+                  <span style={{fontSize: 12,color:'#f59e0b',fontWeight:600}}>{formLabel(t, d.dosage_form)}</span>
                 </div>;
               })}
             </div>
