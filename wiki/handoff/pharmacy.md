@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — 실장님께 드릴 「가져올 표」: wiki/reference/drug-import-review.csv
 
+> **총괄 확인 (2026-09-29)**: 검토표 `106e38f` 합침. 실장님께 파일로 전달(「베데스다_가져올약_검토표.csv」, 101줄). 실장님 확인 전에는 가져오기를 실행하지 않음.
+
 - **상태**: 확인 요청 (표만, 데이터 변경 없음) — 총괄이 실장님께 전달
 - **커밋**: session/pharmacy — 표와 만드는 스크립트
 - **파일**: `wiki/reference/drug-import-review.csv`(UTF-8 BOM, 엑셀용 CRLF, 머리글 한국어) · 다시 만들기 `node wiki/reference/drug-import-review.js`(패키지 필요 없음, 원본 CSV는 읽기만)

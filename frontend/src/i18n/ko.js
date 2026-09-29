@@ -19,7 +19,7 @@ export default {
   age: "나이", gender: "성별", male: "남", female: "여",
   phone: "전화번호", mobile: "휴대전화", address: "주소", city: "도시", region: "지역",
   bloodType: "혈액형", allergies: "알레르기", yrs: "세",
-  department: "진료과", visitType: "진환구분", newVisit: "초진",
+  department: "진료과", visitType: "내원구분", newVisit: "초진",
   followUp: "재진", referral: "의뢰", emergency: "응급",
   receptionTime: "접수시간", assignedDoctor: "담당의사",
   chiefComplaint: "주호소", receptionMemo: "접수 메모",

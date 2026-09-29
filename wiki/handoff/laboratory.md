@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — 서버 권한(S2): 검사 API 권한 정리, 간호사 계정 확인
 
+> **총괄 확인 (2026-09-29)**: S2 `20ace07` 합침(`f89b3d7`) + 실행 중 EMR 반영. 검사 전용 계정으로 확인. 메뉴가 재로그인 없이 바뀌지 않던 것은 총괄이 `TopBar.jsx`에서 고침(`c4d4d67`).
+
 - **상태**: 확인 요청
 - **커밋**: session/laboratory `20ace07` (출발점 `develop` `e54a1b2`)
 - **한 일**: 실장님 결정 S2(서버도 화면 권한대로 막기). `GET /lab/test-items`가 로그인만 확인하던 것을 `permMiddleware('lab', 'settings')`로. **진료 화면은 이 API를 읽지 않음**(프론트 전체 grep: `/lab/test-items`는 `Settings.jsx`만) → consultation은 넣지 않음. 나머지 lab 라우트는 이미 권한이 붙어 있었음. 위키 4절 API 표 권한 칸 정리 + S1(매 요청 DB에서 권한 읽음) 설명. 총괄 요청으로 5절에 진료 화면의 결과 도착 표시(`bdd14bf`) 한 줄.
