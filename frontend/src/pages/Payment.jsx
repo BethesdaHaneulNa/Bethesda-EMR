@@ -8,7 +8,6 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
 import { ReceiptModal } from '../components/Receipt.jsx';
 
-var FEES = { newVisit:15000, followUp:10000, emergency:25000, referral:12000, none:0 };
 function fmtAr(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); }
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 
@@ -123,9 +122,6 @@ export default function PaymentPage() {
       try {
         var fc = await api.get('/admin/order-codes?code_type=fee');
         setFeeCodes((fc||[]).filter(function(c){ return CONSULT_FEE_CODES.indexOf(c.code)<0; }));
-        var cp = {};
-        (fc||[]).forEach(function(c){ if(CONSULT_FEE_CODES.indexOf(c.code)>=0){ cp[c.code] = parseFloat(c.price_clinic != null ? c.price_clinic : c.price) || 0; } });
-        setConsultPrices(cp);
       } catch(e){ setFeeCodes([]); }
     } catch(err){ console.error(err); }
     setLoading(false);
@@ -147,6 +143,7 @@ export default function PaymentPage() {
     try {
       var bi = await api.get('/billing/visit/'+v.id+'/items');
       setBillItems(bi);
+      setConsultPrices((bi && bi.consult_prices) || {});
       if(v && v.needs_refund) loadCorrection(v.id); else setCorr(null);
       setVType((bi && bi.visit_type) || v.visit_type || 'newVisit');
     }
@@ -159,14 +156,26 @@ export default function PaymentPage() {
     catch(err){ console.error(err); setDoneBill({bill:b,items:[]}); }
   }
 
+  // The fee comes from the server with the visit's items - the same stored price the
+  // waiting list and the correction use (L2). No price of its own on the screen: a
+  // code the server cannot find counts as 0 and is pointed out (consultFeeMissing).
+  // The waiting list's line for a visit flagged for correction: what the correction
+  // will do (server, buildCorrection) - not "charged before minus charges now".
+  function corrLine(v){
+    var c = v.corr;
+    if(!c || c.error) return t.py_listSeeCorrection;
+    if(c.refund > 0.5) return t.py_listRefund+': '+fmtAr(c.refund)+' Ar';
+    if(c.outstanding > 0.5) return t.py_listOwed+': '+fmtAr(c.outstanding)+' Ar';
+    return t.py_listNoDiff;
+  }
+  function consultCode(){ return VTYPE_CODE[vType] || 'C01'; }
   function consultFee(){
     if(!sel) return 0;
     if(vType==='none') return 0;
-    var code = VTYPE_CODE[vType];
-    var dbp = code ? consultPrices[code] : null;
-    if(dbp != null) return dbp;
-    return FEES[vType] != null ? FEES[vType] : FEES.newVisit;
+    var p = consultPrices[consultCode()];
+    return p != null ? p : 0;
   }
+  function consultFeeMissing(){ return !!(sel && billItems && vType!=='none' && consultPrices[consultCode()]==null); }
   // A prescription line's quantity is total_qty as consultation saved it - billing
   // keeps no formula of its own. null means it is missing: shown as a warning and
   // billing is refused (never counted as 0 without anyone noticing).
@@ -409,13 +418,14 @@ export default function PaymentPage() {
               return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid #1e2433',background:isSel?'#3b82f612':'transparent'}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'#f1f5f9'}}>{v.last_name} {v.first_name}</span>
-                  {tab==='waiting'?(v.needs_additional?<span style={{background:'#3b82f618',color:'#60a5fa',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'#a855f718',color:'#c084fc',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.correctionBadge}</span>:v.needs_rebill?<span style={{background:'#ef444418',color:'#f87171',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'#f59e0b18',color:'#f59e0b',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):statusBadge(v.payment_status)}
+                  {tab==='waiting'?(v.needs_additional?<span style={{background:'#3b82f618',color:'#60a5fa',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'#a855f718',color:'#c084fc',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'#ef444418',color:'#f87171',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'#f59e0b18',color:'#f59e0b',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):statusBadge(v.payment_status)}
                 </div>
                 <div style={{fontSize:13,color:t2}}>{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}</div>
                 {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'#f87171',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'#f87171',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
                 {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'#60a5fa',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
-                {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'#c084fc',marginTop:2,fontFamily:'monospace'}}>↩ {t.refundDue}: {fmtAr(v.refund_due)} Ar</div>:null}
+                {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'#c084fc',marginTop:2,fontFamily:'monospace'}}>↩ {corrLine(v)}</div>:null}
+                {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'#fbbf24',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
                 {tab==='completed'?<>
                   <div style={{fontSize:12,color:'#60a5fa',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'#34d399',fontFamily:'monospace'}}>{fmtAr(v.total_due)} Ar</strong></div>
@@ -531,8 +541,8 @@ export default function PaymentPage() {
     if(sel.needs_refund){
       var head = <><PatientHeader p={sel} />
         <div style={{background:'#a855f714',border:'1px solid #a855f750',borderRadius:8,padding:'12px 14px',marginBottom:12}}>
-          <div style={{fontWeight:900,color:'#c084fc',fontSize:15,marginBottom:4}}>↩ {t.correctionBadge}</div>
-          <div style={{color:t2,fontSize:13}}>{t.correctionHint}</div>
+          <div style={{fontWeight:900,color:'#c084fc',fontSize:15,marginBottom:4}}>↩ {t.py_correction}</div>
+          <div style={{color:t2,fontSize:13}}>{t.py_correctionHint}</div>
         </div></>;
       if(!corr) return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>{head}<div style={{color:t3,padding:12}}>{t.loading}</div></div>;
       if(corr.error){
@@ -565,7 +575,7 @@ export default function PaymentPage() {
               <div style={{fontSize:28,fontWeight:900,color:'#f87171',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(corr.outstanding)} Ar</div>
               <div style={{fontSize:12,color:t2,marginTop:4}}>{t.py_correctionOwedHint}</div>
             </div>:<div style={{fontSize:13,color:t2,padding:'6px 0'}}>{t.py_noDifference}</div>}
-            <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:busy?'wait':'pointer'}}>↩ {t.processCorrection||'정정(환불) 처리'}</button>
+            <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:busy?'wait':'pointer'}}>↩ {t.py_processCorrection}</button>
           </div>
         </div>
       </div>;
@@ -573,8 +583,10 @@ export default function PaymentPage() {
     var mqRows = missingQtyRx(), npLines = noPriceLines();
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <PatientHeader p={sel} />
+      {consultFeeMissing()?<div style={{background:'#f59e0b14',border:'1px solid #f59e0b55',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fbbf24',fontSize:13,fontWeight:700}}>⚠ {t.py_consultFeeMissing.replace('{code}', consultCode())}</div>:null}
       {npLines.length?<div style={{background:'#f59e0b14',border:'1px solid #f59e0b55',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fbbf24',fontSize:13,fontWeight:700}}>⚠ {t.py_noPriceBanner.replace('{n}', npLines.length)}: {npLines.join(', ')}</div>:null}
-      {mqRows.length?<div style={{background:'#ef444418',border:'1px solid #ef444460',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fca5a5',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingBlock.replace('{names}', mqRows.map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
+      {mqRows.filter(function(r){ return !r.pack_unit; }).length?<div style={{background:'#ef444418',border:'1px solid #ef444460',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fca5a5',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingBlock.replace('{names}', mqRows.filter(function(r){ return !r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
+      {mqRows.filter(function(r){ return r.pack_unit; }).length?<div style={{background:'#ef444418',border:'1px solid #ef444460',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'#fca5a5',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingPack.replace('{names}', mqRows.filter(function(r){ return r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {isAdditional()&&subtotal()>0.0001?<div style={{background:'#3b82f615',border:'1px solid #3b82f640',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#60a5fa'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'#f59e0b12',border:'1px solid #f59e0b40',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'#f59e0b'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'#fbbf24',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
       <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
@@ -592,7 +604,7 @@ export default function PaymentPage() {
             </select>
             <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
           </div>
-          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
+          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,qtyWord:rx.pack_unit?(t['ph_pack_'+(rx.pack_label||'unit')]||''):'',unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
           <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=parseFloat(o.quantity)||1;return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}>
             <div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8}}>
@@ -667,7 +679,7 @@ export default function PaymentPage() {
   }
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'#3b82f620',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'#60a5fa'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'#f1f5f9'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{p.chart_no} · {p.dept_code} · {p.doctor_name}</div></div></div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)+(r.qtyWord?' '+r.qtyWord:'')}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'#bfdbfe',fontSize:13,borderBottom:'1px solid '+bd}; }

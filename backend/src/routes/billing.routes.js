@@ -106,6 +106,28 @@ function MISSING_QTY_SQL(visitRef) {
 // visit or patient, so the request is refused rather than billed twice.
 const BILL_CHANGED = 'BILL_CHANGED';
 
+// Consultation fee codes per visit type (L2, 2026-09-29). The waiting list, the
+// correction and the screen all take the fee from the stored price here - also when
+// the code was deleted (made inactive) in settings - so the three never disagree.
+// The screen used to fall back to its own constants when it could not see a code.
+// A code with no row at all counts as 0 and the screen says so.
+const CONSULT_CODES = ['C01', 'C02', 'C03', 'C04'];
+async function consultPrices(db) {
+  const r = await db.query('SELECT code, price_clinic FROM order_code WHERE code = ANY($1::text[])', [CONSULT_CODES]);
+  const out = {};
+  r.rows.forEach(function (x) { out[x.code] = Number(x.price_clinic) || 0; });
+  return out;
+}
+
+// Something to bill on a visit: a consultation fee, a drug given here or an order.
+// A visit reception closed without a consultation ('none', no lines) has nothing.
+function HAS_CHARGES_SQL(visitRef) {
+  return "(COALESCE(" + visitRef + ".visit_type,'newVisit') <> 'none'" +
+    " OR EXISTS (SELECT 1 FROM prescription hp WHERE hp.consultation_id IN (SELECT id FROM consultation WHERE visit_id = " + visitRef + ".id)" +
+    " AND COALESCE(hp.dispense_type,'internal') <> 'external')" +
+    " OR EXISTS (SELECT 1 FROM order_item ho WHERE ho.visit_id = " + visitRef + ".id AND COALESCE(ho.status,'') <> 'cancelled'))";
+}
+
 // GET /api/billing/pending - visits awaiting payment
 router.get('/pending', canPay, async (req, res) => {
   try {
@@ -135,6 +157,7 @@ router.get('/pending', canPay, async (req, res) => {
         AND NOT l.has_active_bill) as needs_rebill,
        COALESCE((SELECT net_paid FROM billing WHERE visit_id = v.id AND payment_status = 'cancelled' ORDER BY cancelled_at DESC NULLS LAST, id DESC LIMIT 1),0) as prior_paid,
        ${MISSING_QTY_SQL('v.id')} as missing_qty,
+       (v.visit_date < CURRENT_DATE AND NOT EXISTS (SELECT 1 FROM billing bp WHERE bp.visit_id = v.id)) as past_unbilled,
        (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
        (l.has_active_bill AND (l.billed_total - l.live_total) > 0.01) as needs_refund,
        GREATEST(l.live_total - l.billed_total, 0) as extra_due,
@@ -150,12 +173,32 @@ router.get('/pending', canPay, async (req, res) => {
        AND (
          ( v.visit_date = CURRENT_DATE
            AND v.id NOT IN (SELECT visit_id FROM billing WHERE payment_status IN ('paid','waived')) )
+         -- An earlier day's visit that was never billed: reception can now close
+         -- yesterday's leftovers with the working date, and they must still reach the
+         -- till. Only when there is something to bill.
+         OR ( v.visit_date < CURRENT_DATE
+              AND NOT EXISTS (SELECT 1 FROM billing bn WHERE bn.visit_id = v.id)
+              AND ${HAS_CHARGES_SQL('v')} )
          OR ( EXISTS (SELECT 1 FROM billing bc WHERE bc.visit_id = v.id AND bc.payment_status = 'cancelled')
               AND NOT EXISTS (SELECT 1 FROM billing ba WHERE ba.visit_id = v.id AND ba.payment_status <> 'cancelled') )
          OR ( l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01 )
        )
        ORDER BY (l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01) DESC, needs_rebill DESC, v.visit_date DESC, v.updated_at DESC`
     );
+    // M8 (2026-09-29): a visit flagged for correction shows what the correction will
+    // actually do - money back, balance left, or no money difference - worked out by
+    // the same buildCorrection() as the correction screen and the correction itself.
+    // refund_due above is only "charged before minus charges now" and stays for the
+    // flag. Usually only a few rows are flagged.
+    for (const row of result.rows) {
+      if (!row.needs_refund) continue;
+      try {
+        const c = await buildCorrection(pool, row.id);
+        row.corr = { refund: c.refund, outstanding: c.outstanding, total_due: c.total_due };
+      } catch (e) {
+        row.corr = { error: (e && e.error) || (e && e.message) || String(e) };
+      }
+    }
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -245,6 +288,8 @@ router.get('/visit/:visitId/items', canPay, async (req, res) => {
       orders: orderResult.rows,
       billed_items: billedRes.rows,
       billed_consult: billedConsult,
+      // consultation fee per code, from the one place the list and the correction read (L2)
+      consult_prices: await consultPrices(pool),
       // what the screen is billing against; POST / refuses if this has changed
       active_bill_ids: await activeBillIds(pool, req.params.visitId)
     });
