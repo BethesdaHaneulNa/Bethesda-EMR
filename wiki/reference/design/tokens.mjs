@@ -12,6 +12,7 @@ const over = (top, a, base) => top.map((v, i) => v * a + base[i] * (1 - a));
 // ── neutrals: [name, dark, light, kind] ── kind: s surface · t text · l line · x other
 export const NEUTRAL = [
   ['bg',           '#0f1117', '#eff2f7', 's'],   // page background
+  ['bg-2',         '#0d0f16', '#eff2f7', 's'],   // page background of the statistics screen
   ['bg-col',       '#11141c', '#f8fafc', 's'],   // consultation columns, sunken boxes
   ['bg-deep',      '#0c0f16', '#e3e8ef', 's'],
   ['panel',        '#13161f', '#ffffff', 's'],   // pn
@@ -23,7 +24,8 @@ export const NEUTRAL = [
   ['field',        '#0f1117', '#ffffff', 's'],
   ['field-2',      '#11151f', '#ffffff', 's'],
   ['field-3',      '#1a1f2e', '#ffffff', 's'],
-  ['field-4',      '#0c0f16', '#ffffff', 's'],   // fields of the document window   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
+  ['field-4',      '#0c0f16', '#ffffff', 's'],   // fields of the document window
+  ['field-5',      '#13161f', '#ffffff', 's'],   // date fields of the statistics screen   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
   ['bg-row',       '#111827', '#f8fafc', 's'],   // a row of search results
   ['bg-group',     '#0f1622', '#eaf3f8', 's'],
   ['bg-col-2',     '#101521', '#f8fafc', 's'],
@@ -31,7 +33,8 @@ export const NEUTRAL = [
   ['danger-box',   '#7f1d1d', '#fee2e2', 's'],   // a red warning box on a panel
   ['notice',       '#1f2937', '#eef1f5', 's'],   // a grey notice box (a cancelled imaging order)
   ['notice-line',  '#4b5563', '#aab2be', 'l'],
-  ['line-soft-2',  '#161b27', '#e6eaf0', 'l'],   // a group heading row inside a results table   // input background (same as --bg when dark)
+  ['line-soft-2',  '#161b27', '#e6eaf0', 'l'],
+  ['line-soft-3',  '#1a1f2e', '#e6eaf0', 'l'],   // table rows of the statistics screen   // a group heading row inside a results table   // input background (same as --bg when dark)
   ['btn-neutral',  '#334155', '#d5dbe4', 's'],
   ['btn-neutral-2','#374151', '#d5dbe4', 's'],
   ['line-soft',    '#1e2433', '#e1e6ee', 'l'],   // table row separators
@@ -47,7 +50,8 @@ export const NEUTRAL = [
   ['text-2',       '#94a3b8', '#4a5668', 't'],   // t2
   ['text-3',       '#64748b', '#566274', 't'],   // t3
   ['text-4',       '#475569', '#5b6779', 't'],
-  ['text-5',       '#334155', '#5b6779', 't'],   // barely visible when dark; it is still text, so readable when light
+  ['text-5',       '#334155', '#5b6779', 't'],
+  ['text-faint',   '#3a4253', '#5b6779', 't'],   // the dot in an empty table cell   // barely visible when dark; it is still text, so readable when light
   ['on-fill',      '#ffffff', '#ffffff', 'x'],   // text on a coloured button: white in both
   ['on-bright',    '#0f1117', '#ffffff', 'x'],   // text on a bright green / amber / red button: near-black when dark (the colour is bright), white when light (the colour is deep)
   ['on-fill-blue', '#dbeafe', '#dbeafe', 'x'],   // pale text on a deep coloured button: the same on both screens
@@ -75,6 +79,9 @@ export const COLOR = [
   ['ok-strong',     '#059669', '#046c4e', 'c'],
   ['ok-2',          '#16a34a', '#15803d', 'c'],
   ['ok-2-strong',   '#15803d', '#166534', 'c'],
+  ['ok-3',          '#22c55e', '#15803d', 'c'],
+  ['ok-bar',        '#34d399', '#047857', 'c'],   // bars of a chart
+  ['accent-bar',    '#60a5fa', '#2563eb', 'c'],
   ['ok-ink',        '#10b981', '#04694c', 't'],
   ['ok-text',       '#34d399', '#04694c', 't'],
   ['ok-text-2',     '#6ee7b7', '#065f46', 't'],
