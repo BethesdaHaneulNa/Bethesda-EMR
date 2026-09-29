@@ -782,7 +782,9 @@ export default function SettingsPage() {
           </div>):null}
 
           {/* CLINIC */}
-          {activeTab==='labitems'?(<div style={{padding:'16px 20px'}}>
+          {/* Scrolls on its own: the content column clips (overflow hidden), so with a few
+              ranges open the save button went below a 1366x768 window, out of reach. */}
+          {activeTab==='labitems'?(<div style={{padding:'16px 20px',overflow:'auto'}}>
             <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:6}}>🧫 {t.labItems||'Lab Test Items'}</div>
             <div style={{fontSize: 13,color:t3,marginBottom:12}}>{t.lb_itemsHint}</div>
             <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:12}}>
