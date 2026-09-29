@@ -264,7 +264,8 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
         action: ACTIONS.LAB_RESULT_EDIT,
         patient_id: order.patient_id, visit_id: order.visit_id,
         entity: 'lab_result', entity_id: next ? next.id : old.id,
-        summary: order.order_name + ' · ' + old.name,
+        // "CBC · Hb"; a one-item test named like its order (Malaria RDT) just once
+        summary: old.name === order.order_name ? old.name : order.order_name + ' · ' + old.name,
         before: shown(old),
         after: next ? shown(next) : null,
       });
