@@ -25,6 +25,7 @@ var AUTO_REFRESH_MS = 30000;
 // message, so matching it is how a known refusal becomes a translated one.
 var ERR_NOTHING_PENDING = 'No pending prescriptions for this consultation';
 var ERR_TYPE_LOCKED = 'Prescription already dispensed; dispense type can no longer change';
+var ERR_TOO_OLD = 'Prescription too old to dispense here; the doctor must prescribe again';
 
 export default function PharmacyPage() {
   var lc = useLang(); var t = lc.t;
@@ -41,10 +42,14 @@ export default function PharmacyPage() {
   var rrx = useState([]), recentRx = rrx[0], setRecentRx = rrx[1];
   var dcs = useState(false), docOpen = dcs[0], setDocOpen = dcs[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
+  // The day's queue shows today only (decision M3). A patient found through the
+  // search brings their own waiting prescriptions from the last few days with them:
+  // { pid, name, days, groups, older } - see GET /pharmacy/patient/:id/pending.
+  var pps = useState(null), past = pps[0], setPast = pps[1];
   // Read by the auto-refresh timer, which is set up once and would otherwise
   // only ever see the state of the first render.
   var live = useRef({});
-  live.current = { tab: tab, sel: sel, busy: busy, loading: loading, docOpen: docOpen, chartViewOpen: chartViewOpen, phFinderOpen: phFinderOpen };
+  live.current = { tab: tab, sel: sel, busy: busy, loading: loading, docOpen: docOpen, chartViewOpen: chartViewOpen, phFinderOpen: phFinderOpen, past: past };
   var switching = useRef(0); // in-house/outside switches still on their way to the server
 
   // 처방을 원내(internal)/원외(external)로 지정
@@ -61,11 +66,13 @@ export default function PharmacyPage() {
     try {
       await api.put('/pharmacy/prescription/'+rxId+'/dispense-type', { dispense_type: type });
       setSel(function(prev){ return prev ? withType(prev) : prev; });
-      setPending(function(list){
+      function inGroups(list){
         return list.map(function(g){
           return (g.prescriptions||[]).some(function(rx){ return rx.id===rxId; }) ? withType(g) : g;
         });
-      });
+      }
+      setPending(inGroups);
+      setPast(function(prev){ return prev ? Object.assign({}, prev, { groups: inGroups(prev.groups) }) : prev; });
     } catch(err){
       if(err.message === ERR_TYPE_LOCKED){ alert(t.ph_typeLocked); switching.current--; await loadData(); return; }
       alert('Error: '+err.message);
@@ -74,6 +81,26 @@ export default function PharmacyPage() {
   }
 
   useEffect(function(){ loadData(); }, []);
+
+  async function fetchPast(pid){
+    var r = await api.get('/pharmacy/patient/' + pid + '/pending');
+    return { groups: (r && r.groups) || [], older: (r && r.older) || 0, days: (r && r.days) || 0 };
+  }
+
+  // Patient search: open their waiting prescription straight away when there is
+  // one, list them when there are several, and fall back to the chart alone.
+  async function pickPatient(p){
+    setViewPid(p.id);
+    setTab('pending');
+    try {
+      var r = await fetchPast(p.id);
+      setPast({ pid: p.id, name: patientName(p), days: r.days, groups: r.groups, older: r.older });
+      setSel(r.groups.length === 1 ? r.groups[0] : null);
+    } catch(err){
+      setPast(null); setSel(null);
+      alert('Error: ' + err.message);
+    }
+  }
   // Keyed on the patient, not the selection object: the auto-refresh hands back a
   // fresh object for the same patient every 30 seconds.
   var selPid = sel ? sel.patient_id : null;
@@ -94,11 +121,14 @@ export default function PharmacyPage() {
     try {
       var p = await api.get('/pharmacy/pending');
       var c = await api.get('/pharmacy/completed');
+      var pastNow = s.past ? await fetchPast(s.past.pid) : null;
       var now = live.current; // may have changed while we waited
       if(now.busy || now.loading || switching.current) return;
       setPending(p); setCompleted(c);
+      if(pastNow && now.past && now.past.pid === s.past.pid) setPast(Object.assign({}, now.past, pastNow));
       if(now.sel){
-        var next = (now.tab === 'pending' ? p : c).find(function(x){ return x.consultation_id === now.sel.consultation_id; });
+        var pool = now.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
+        var next = pool.find(function(x){ return x.consultation_id === now.sel.consultation_id; });
         // If the open patient has left the queue it stays on screen, with a notice,
         // rather than vanishing mid-read; see selGone below.
         if(next) setSel(next);
@@ -139,9 +169,13 @@ export default function PharmacyPage() {
     try {
       var p = await api.get('/pharmacy/pending');
       var c = await api.get('/pharmacy/completed');
+      var cur = live.current;
+      var pastNow = cur.past ? await fetchPast(cur.past.pid) : null;
       setPending(p); setCompleted(c);
-      if(sel){
-        var next = (tab === 'pending' ? p : c).find(function(x){ return x.consultation_id === sel.consultation_id; });
+      if(pastNow) setPast(Object.assign({}, cur.past, pastNow));
+      if(cur.sel){
+        var pool = cur.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
+        var next = pool.find(function(x){ return x.consultation_id === cur.sel.consultation_id; });
         setSel(next || null);
       }
     } catch(err){ alert('Error: ' + err.message); }
@@ -169,7 +203,11 @@ export default function PharmacyPage() {
       await loadData();
       setSel(null);
     } catch(err){
-      if(err.message === ERR_NOTHING_PENDING){
+      if(err.message === ERR_TOO_OLD){
+        alert(fill(t.ph_tooOld, { n: past ? past.days : '' }));
+        await loadData();
+        setSel(null);
+      } else if(err.message === ERR_NOTHING_PENDING){
         // Someone else finished this patient first. Stock was taken once, by them.
         alert(t.ph_alreadyDispensed);
         await loadData();
@@ -183,7 +221,12 @@ export default function PharmacyPage() {
 
   var activeList = tab === 'pending' ? pending : completed;
   // The open patient is no longer waiting - usually someone else dispensed them.
-  var selGone = !!(sel && tab === 'pending' && !loading && !pending.some(function(g){ return g.consultation_id === sel.consultation_id; }));
+  var selGone = !!(sel && tab === 'pending' && !loading
+    && !pending.some(function(g){ return g.consultation_id === sel.consultation_id; })
+    && !(past && past.groups.some(function(g){ return g.consultation_id === sel.consultation_id; })));
+  function pastBadge(v){
+    return v && Number(v.days_ago) > 0 ? fill(t.ph_pastRx, { n: v.days_ago, date: v.visit_date }) : '';
+  }
   var filtered = useMemo(function(){
     if(!q) return activeList;
     var s = q.toLowerCase();
@@ -209,6 +252,21 @@ export default function PharmacyPage() {
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
   var green='#10b981', violet='#8b5cf6';
 
+  function rxCard(v, where){
+    var active = sel && sel.consultation_id === v.consultation_id;
+    var badge = pastBadge(v);
+    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'#8b5cf615':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
+        <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
+        <div style={{ fontSize: 16, color:tab==='pending'?'#fbbf24':'#6ee7b7', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
+      </div>
+      <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
+      {badge ? <div style={{ display:'inline-block', marginTop:4, color:'#fbbf24', background:'#f59e0b20', border:'1px solid #f59e0b50', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
+      <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
+      <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
+    </div>;
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui,sans-serif', background: '#0f1117', color: tx, minHeight: '100vh', fontSize: 16 }}>
       <TopBar />
@@ -233,18 +291,16 @@ export default function PharmacyPage() {
           <div style={{ flex:1, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
             {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
-            {!loading && filtered.map(function(v){
-              var active = sel && sel.consultation_id === v.consultation_id;
-              return <div key={v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'#8b5cf615':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
-                  <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
-                  <div style={{ fontSize: 16, color:tab==='pending'?'#fbbf24':'#6ee7b7', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
-                </div>
-                <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
-                <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
-                <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
-              </div>;
-            })}
+            {tab==='pending' && past ? <div style={{ borderBottom:'2px solid #f59e0b60', background:'#f59e0b0d' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
+                <div style={{ flex:1, fontWeight:800, fontSize: 14, color:'#fbbf24' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
+                <button onClick={function(){ setPast(null); }} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
+              </div>
+              {past.groups.length === 0 ? <div style={{ padding:'8px 12px', color:t3, fontSize: 14 }}>{t.ph_noPastRx}</div> : null}
+              {past.groups.map(function(v){ return rxCard(v, 'past'); })}
+              {past.older > 0 ? <div style={{ padding:'8px 12px', color:'#fca5a5', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_olderRx, { count: past.older, n: past.days })}</div> : null}
+            </div> : null}
+            {!loading && filtered.map(function(v){ return rxCard(v, 'queue'); })}
           </div>
         </div>
 
@@ -262,6 +318,7 @@ export default function PharmacyPage() {
                   <div style={{ fontSize: 22, fontWeight:900, color:'#f8fafc' }}>{patientName(sel)}</div>
                   <div style={{ marginTop:4, fontSize: 16, color:t2 }}>{t.chartNo} {sel.chart_no} · {t.doctor} {sel.doctor_name || '-'} · {timeText(sel, locale)}</div>
                   {sel.allergies ? <div style={{ marginTop:6, color:'#fca5a5', background:'#ef444420', border:'1px solid #ef444450', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
+                  {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'#fbbf24', background:'#f59e0b20', border:'1px solid #f59e0b60', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
                   {selGone ? <div style={{ marginTop:6, color:'#fde68a', background:'#f59e0b20', border:'1px solid #f59e0b60', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
                 </div>
                 <div style={{ textAlign:'right' }}>
@@ -324,7 +381,7 @@ export default function PharmacyPage() {
         </div>
       </div>
       <PatientFinder open={phFinderOpen} onClose={function(){setPhFinderOpen(false);}} mode="patient"
-        onPickPatient={function(p){ setSel(null); setViewPid(p.id); }} />
+        onPickPatient={function(p){ pickPatient(p); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false);}} category="prescription"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.visit_id:null, consultation_id: sel?sel.consultation_id:null, doctor_name: sel?sel.doctor_name:'', dept_code: '' }} />

@@ -370,6 +370,11 @@ export default {
   ph_noTotal: "⚠ Quantité totale absente",
   ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
   ph_legacyTotal: "Ancien calcul (dose×fois×jours)",
+  ph_pastRx: "Prescrit il y a {n} j ({date})",
+  ph_pastListTitle: "ordonnances en attente ({n} derniers jours)",
+  ph_noPastRx: "Aucune ordonnance en attente. Seul le dossier est affiché à droite.",
+  ph_olderRx: "{count} ordonnance(s) en attente de plus de {n} jours — impossible à délivrer ici. Le médecin doit represcrire.",
+  ph_tooOld: "Une ordonnance de plus de {n} jours ne peut pas être délivrée. Le médecin doit represcrire.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",
