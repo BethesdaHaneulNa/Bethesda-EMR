@@ -526,6 +526,7 @@ export default {
   se_showPw: "Show",
   se_hidePw: "Hide",
   se_role_nurse: "Nurse",
+  se_pwKeep: "Empty = unchanged",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

@@ -517,6 +517,7 @@ export default {
   se_showPw: "보기",
   se_hidePw: "숨기기",
   se_role_nurse: "간호사",
+  se_pwKeep: "비우면 그대로",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

@@ -754,9 +754,11 @@ export default function SettingsPage() {
                 {/* Hidden by default: the password was on screen for anyone standing behind the
                     admin. Show/Hide is there because the admin has to read out the new
                     password to the employee. new-password stops the browser filling in the
-                    admin's own saved password here - and saving it over the employee's. */}
+                    admin's own saved password here - and saving it over the employee's. The hint on
+                    an existing account says "leave empty to keep": a placeholder of dots in a
+                    password box looked exactly like a password already filled in. */}
                 <Fld label={t.se_fPassword}><div style={{display:'flex',gap:4}}>
-                  <input type={showPw?'text':'password'} autoComplete="new-password" value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder="••••" style={Object.assign({},IS,{flex:1,minWidth:0})}/>
+                  <input type={showPw?'text':'password'} autoComplete="new-password" value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder={editItem.id?t.se_pwKeep:''} style={Object.assign({},IS,{flex:1,minWidth:0})}/>
                   <button type="button" onClick={function(){setShowPw(!showPw)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'0 8px',cursor:'pointer',fontSize:12,flexShrink:0}}>{showPw?t.se_hidePw:t.se_showPw}</button>
                 </div></Fld>
               </div>
