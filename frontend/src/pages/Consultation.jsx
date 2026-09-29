@@ -7,6 +7,9 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
 import { RadiologyReadings, PatientCheck } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
+// The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
+// in the search lists where the default sig used to be (decision B retired default doses).
+import { formLabel } from '../documents/drug-info.js';
 
 // The server refuses to change a dispensed prescription or delete an order that already
 // has a result (consult.routes.js). Its English refusal strings are matched here so the
@@ -74,7 +77,10 @@ function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 // Marked on the line, counted by the heading, and asked about once when the
 // consultation is completed. Not refused: an ointment or a bottle whose amount is
 // settled later is a real case.
-function noDose(rx){ return !isPack(rx) && (!(parseFloat(rx.dose) > 0) || !(parseInt(rx.days, 10) > 0)); }
+// Since decision B (2026-09-29) a drug from the search starts with every field empty,
+// so the times a day count too: they are not in the total, but the label's sentence
+// ("1 cp x 3 fois/jour") cannot be written without them.
+function noDose(rx){ return !isPack(rx) && (!(parseFloat(rx.dose) > 0) || !(parseInt(rx.frequency, 10) > 0) || !(parseInt(rx.days, 10) > 0)); }
 
 // A pack-unit drug (a syrup, a cream, an inhaler - marked in Settings, copied onto the
 // line by the server) is handed out by the bottle/tube/piece: its total is the count
@@ -397,12 +403,14 @@ export default function ConsultationPage() {
   async function addDrugRx(drug){
     if(!consult) return;
     try {
+      // Decision B (2026-09-29): a drug has a price, not a default dose. From the search
+      // the daily dose, times, days and sig start EMPTY for the doctor to write; only an
+      // order set brings its own (fromSet). The drug's old default_* columns are not read.
+      var set = drug.fromSet ? drug : {};
       var rx = await api.post('/consultations/'+consult.id+'/prescriptions',{
         drug_id:drug.id, drug_code:drug.code, drug_name:drug.name,
-        dose:drug.default_dose, frequency:drug.default_freq, days:drug.default_days,
-        // No 'TID' filled in for a drug without a default: that is a frequency, not a
-        // sig, and it went onto the pharmacy label as if the doctor had written it.
-        route:drug.default_route || '', unit_price:drug.unit_price,
+        dose:set.default_dose || '', frequency:set.default_freq || '', days:set.default_days || '',
+        route:set.default_route || '', unit_price:drug.unit_price,
         memo: drug.unit || '',
         // Only used when the drug is a pack-unit one (the server looks that up): the
         // count from an order set. From the search it is empty and the doctor types it.
@@ -530,9 +538,10 @@ export default function ConsultationPage() {
   async function saveRx(rx){
     if(savedRx.current[rx.id] === rxSnap(rx)) return;
     try {
-      var dose = rx.dose || '1';
-      var freq = parseInt(rx.frequency) || 1;
-      var days = parseInt(rx.days) || 1;
+      // Sent as written: an empty field stays empty on the server (no silent 1).
+      var dose = rx.dose == null ? '' : rx.dose;
+      var freq = rx.frequency == null ? '' : rx.frequency;
+      var days = rx.days == null ? '' : rx.days;
       var updated = await api.put('/consultations/prescription/'+rx.id, {
         dose: dose,
         frequency: freq,
@@ -607,7 +616,7 @@ export default function ConsultationPage() {
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
           price_clinic:it.unit_price, price:it.unit_price, memo:'' });
       } else {
-        await addDrugRx({ id:it.drug_id, code:it.code, name:it.name,
+        await addDrugRx({ fromSet:true, id:it.drug_id, code:it.code, name:it.name,
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
           default_route:it.route, unit_price:it.unit_price, unit:'',
           pack_qty: it.quantity || 1 });
@@ -784,9 +793,9 @@ export default function ConsultationPage() {
                         return <div key={d.kind+'-'+d.id} onClick={function(){isOrder?addExamOrder(d):addDrugRx(d)}} style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:6,background:i===oSelIdx?'#3b82f620':'transparent',borderBottom:'1px solid #232838'}}
                           onMouseEnter={function(){setOSelIdx(i)}}>
                           <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||label(CODE_TYPE_KEY, d.code_type)||'ORD'):t.cs_badgeDrug}</span>
-                          <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:55}}>{d.code}</span>
+                          <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                           <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}{noPrice(isOrder ? (d.price_clinic || d.price) : d.unit_price) ? <NoPriceBadge/> : null}</span>
-                          <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):(d.default_route||'')}</span>
+                          <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):formLabel(t, d.dosage_form)}</span>
                         </div>;
                       })}
                     </div>
@@ -818,7 +827,7 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 5px'}}>{done
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
-                          <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
+                          <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>{rx.drug_code}</td>
                           <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
                           {done ? <>
                             <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
@@ -828,8 +837,8 @@ export default function ConsultationPage() {
                             <td style={cellRO}>{rx.memo||''}</td>
                           </> : <>
                             <td style={{padding:'3px 4px'}}><input value={rx.dose || ''} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency || 1} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days || 1} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 4px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                             <td style={{padding:'3px 4px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
                           </>}
@@ -1008,9 +1017,9 @@ export default function ConsultationPage() {
                 return <div key={d.id} onClick={function(){addDrugRx(d);setDrugModal(false);setDrugQ('')}} style={{padding:'7px 14px',cursor:'pointer',borderBottom:'1px solid #1e2433',display:'flex',gap:8}}
                   onMouseEnter={function(e){e.currentTarget.style.background='#ffffff08'}}
                   onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                  <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:600,width:60}}>{d.code}</span>
+                  <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:600,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
                   <span style={{fontSize: 14,color:tx,flex:1}}>{d.name}</span>
-                  <span style={{fontSize: 12,color:'#f59e0b',fontWeight:600}}>{d.default_route}</span>
+                  <span style={{fontSize: 12,color:'#f59e0b',fontWeight:600}}>{formLabel(t, d.dosage_form)}</span>
                 </div>;
               })}
             </div>

@@ -2,6 +2,63 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약국 가져오기(034) 뒤 다시 확인 (코드 변경 없음)
+
+- **상태**: 보고
+- **확인**: develop `e6b68c1`(약국 가져오기 034 `dosage_form`, 진료 `7e17a6d` 약속처방 서버 검사 포함)로 ff, 새 DB 격리 스택. 가져온 약 101개 모두 활성·제형 있음. `settings.drugs.mjs` — **실제 `dosage_form` 칸으로** 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL 통과(흉내가 아니라 034의 칸). `settings.ordersets.mjs`(진료 서버 검사와 함께), access 1232건, messages, status, permissions 모두 통과.
+- **남은 것(예고)**: 수납의 `cash_movement`가 develop에 들어오면 `clean-test-data.ps1`(지우는 목록 맨 앞, 트랜잭션 안 `SET LOCAL bethesda.cleanup='on'`, id 비교 대상) + `settings.access.mjs`에 `GET /api/billing/cash-day`.
+
+## 2026-09-29 — 약속처방 줄마다 일총투여·횟수·일수·용법 (실장님 지적, 가장 먼저)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`9192536` 위 — `9192536`은 결정 B의 약 저장 「보낸 칸만」, develop `7d8334d` 위로 rebase)
+- **한 일** (`Settings.jsx` 약속처방 편집 창만, 서버 변경 없음):
+  - 약 줄: 고칠 수 있는 **Dose/j · Fois · Jours · Posologie** 칸(진료의 `cs_colDaily`·`cs_colTimes`·`cs_colDays`·`cs_colSig` 그대로 — 같은 이름·순서). 「3.000×3×7」 글자 대신.
+  - 새로 넣은 약 줄은 **빈 칸**(약품 기본값을 복사하지 않음). 검사·처치 줄은 **Qté · Fois · Jours**, 1·1·1로 시작.
+  - 포장 단위 약: 네 칸(복용 안내, 비워도 됨) + 병·튜브 수(c891715 그대로).
+  - 저장 전 확인(`osLineProblem`): 약 줄(포장 아님)의 일총투여·일수가 비면 칸이 빨갛고 「⚠ dose/j, jours」, 저장하면 이름을 들어 막음. 숫자는 진료 서버 `utils/validate.js` LIMITS와 같게(일총투여 0–1000·세트 약 줄은 0보다 커야, 횟수 1–24·일수 1–365 정수, 용법 10자, 병 수 1 이상 정수, 검사 수량 0보다 큼). 검사 줄의 빈 칸은 1로 보냄.
+  - 이미 있는 세트를 열면 저장된 값이 칸에(`osNum`: '3.000' → '3').
+- **서버**: 칸 이름은 `order_set_item` 그대로(dose·frequency·days·route·quantity). 약 줄의 빈 횟수·일수는 지금 서버가 `|| 1`로 1을 넣음 — 일수는 화면이 필수로 막으므로 포장 약에서만 해당.
+- **진료 세션에 알릴 것 (내 몫 아님)**: 진료의 `applySet`은 **검사·처치 줄의 수량을 늘 1**로 보내고(`addExamOrder`의 `quantity:1`), **검사·영상 줄의 횟수·일수도 1·1·1**(실장님의 앞선 지시)로 넣습니다. 그래서 설정에서 검사 줄의 수량·횟수·일수를 바꿔도 지금은 **처치 줄의 횟수·일수만** 진료에 들어갑니다. 수량까지 쓰려면 진료의 `applySet`/`addExamOrder` 차례.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`(2.9, 8절)
+- **공용 파일 변경**: i18n `se_setColQty`·`se_setNeedDose`·`se_setNeedDoseShort`·`se_setBadNumber`·`se_setBadNumberShort`(진료의 `cs_col*` 키는 읽기만).
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`. 새 DB 격리 스택, 화면(프랑스어): 새 약속처방 → Artemether 추가 → 칸이 빈 채·빨간 테두리 → 저장 → 「Indiquez la dose par jour … : Artemether-Lumefantrine Tab」로 막힘 → 4·2·3·BID + CBC(1·1·1) → 저장 → DB `ACT01 4/2/3/BID`, `L01 1/1` → 한국어로 다시 열어 같은 값(「일총투여·횟수·일수·용법」, 「수량」) → **진료에서 세트 적용** → 처방 줄 4·2·3·BID 「2 cp × 2 fois/jour pendant 3 jours (total 12)」, CBC 1·1·1 → 진료 완료 → 처방 `total_qty 12`·800 → **수납** Artemether 12 × 800 = 9,600, CBC 12,000 → **약국** 일총투여 4·한 번 2·2회·3일·BID, 9,600. 포장 단위 시럽 줄: 네 칸 비어도 빨갛지 않고 Flacon 1 칸. `settings.ordersets.mjs`·messages 통과. 프랑스어에서 칸 이름이 잘리지 않음(칸 위 작은 이름).
+- **다음 할 일**: 앞서 받은 admin API(결정 B)는 `9192536`으로 이미 끝남 — 보고함.
+
+## 2026-09-29 — 약 저장은 보낸 칸만 (결정 B) · 제형 칸 준비 · 상태 점 직원용 한 줄
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `efed392` 위)
+- **확인한 것**: 전의 `PUT /admin/drugs/:id`는 모든 칸을 요청 값으로 썼음 → 기본 용량·횟수·일수·용법을 보내지 않는 화면으로 저장하면 **NULL로 덮였을 것**(격리에서 새 시험으로 확인할 수 있는 동작).
+- **한 일** (`admin.routes.js`):
+  - `PUT`: 고정 목록 `DRUG_FIELDS` 가운데 **요청에 온 칸만** SET(열 이름은 목록에서만 — SQL에 요청 값이 이름으로 들어가지 않음). 빈 값은 NULL, 코드·이름을 비우면 NOT NULL로 400 「A required field is missing」(전에는 빈 이름 `''`가 저장됐음). 포장 칸은 전처럼 `pack_unit`이 올 때만.
+  - `POST`: 보낸 칸만 넣고 나머지는 열 기본값. 재고 0, 최소 재고 비면 10은 그대로.
+  - **`dosage_form`**: 약국 가져오기(`6bc5c6d`, 아직 약국 브랜치)가 만드는 칸. 서버가 처음 쓸 때 `information_schema`로 약 표의 칸을 한 번 읽고, **그 칸이 있을 때만** 받음 — 가져오기가 develop에 들어오기 전에도 뒤에도 코드를 다시 고칠 필요 없음. 들어오기 전에 보내면 무시(오류 아님).
+- **위키**: 2.15 맨 위에 **직원용 한 줄**(프랑스어·한국어, 출발 전 확인 목록용 — 「점이 노랑·빨강이면 눌러서 보고, 적힌 대로 하거나 담당자에게」). 3-8 「보낸 칸만 저장」, 4절 표.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/test/settings.drugs.mjs`(10개 추가) · `backend/test/settings.ordersets.mjs` · `wiki/modules/settings.md`(2.15, 3-8, 4절, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`. 새 DB 격리 스택: `settings.drugs.mjs` — 네 기본값만 보낸 PUT → 그 넷만 바뀌고 이름·가격·재고 그대로 / 기본값 없이 저장 → 그대로 / 비운 값 → NULL / 이름 비우기 → 400 / 새 약은 열 기본값 / 제형 칸 없음 → 보낸 제형 무시·200. 이어서 **가져오기 마이그레이션을 흉내**(`ALTER TABLE drug ADD COLUMN dosage_form VARCHAR(30)`, API 재시작) → 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL. 모두 통과. access 1232건, audit, messages 통과.
+- **`settings.ordersets.mjs` 고침**: 진료의 `afc29db`가 약속처방 약 줄 수량 0을 400으로 바꿔 내 시험의 「0은 1」이 틀려짐 → 「0은 400, 빈 값은 1」로. **진료 세션 참고**: 그 400 문구 `items[i].quantity must be …`는 화면 번역표에 없음 — 설정 편집 창이 저장 전에 막으므로 보통은 안 보이지만, 보이면 영어로 나옴.
+- **다음 할 일**: 약국 가져오기가 develop에 들어오면 `settings.drugs.mjs`를 실제 칸으로 한 번 더(흉내가 아니라).
+
+## 2026-09-29 — 상단바의 상태 점 (U3 결정 가)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `94457d7` 위)
+- **한 일**: `frontend/src/pages/settingsStatus.jsx`(새) `StatusDot` — `/api/system/status`를 읽어 점(초록·노랑·빨강, 확인 못 하면 회색), 누르면 항목마다 점·이름·한 줄 설명(`{값}` 채움), 확인 시각, ↻.
+- **총괄 조건과 대응**:
+  - 느리거나 실패해도 멈추지 않게 → `api/client.js`를 거치지 않는 `fetch` + AbortController **8초**. 실패·시간 초과·401은 회색 점과 「상태를 확인하지 못함 — EMR은 그대로 쓸 수 있음」, 로그인 화면으로 보내지 않음.
+  - 박자 → 처음, 5분마다(창이 보일 때만), 창으로 돌아올 때 — `TopBar`의 `/auth/me` 동기와 같은 박자(따로 돌지만 같은 규칙). 목록을 열 때와 ↻에서도.
+  - 「꺼짐」은 경고가 아님 → 색은 서버의 `overall`(off를 ok와 같게 셈), 목록에서 off는 회색 줄.
+  - 설정 권한만 → `TopBar.jsx`의 기존 `canSeeUpdate`(settings 권한)일 때만 붙임.
+  - ko·en·fr → `se_sys_*` 31개 문구 + 항목 7 + 전체 4 + 그 밖 4. **`backend/test/settings.status.mjs`**(새, 스택 없이): `status.routes.js`의 모든 `status.*` 문구와 항목에 세 언어 번역이 있는지 — 다른 세션이 항목을 더하면 여기서 걸림.
+- **공용 파일 변경**: **`frontend/src/components/TopBar.jsx`** (총괄 허락) — import 한 줄, 시계 앞에 `{canSeeUpdate ? <StatusDot t={t} /> : null}` 한 줄. i18n `se_sys*` 46개.
+- **바꾼 파일**: `frontend/src/pages/settingsStatus.jsx`(새) · `TopBar.jsx` · `backend/test/settings.status.mjs`(새) · `wiki/modules/settings.md`(2.15 새, 3-6 표, 7절 U3, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`, `settings.status.mjs`(세 언어 42키 모두). 새 DB 격리 스택: 관리자 — 노란 점(백업 없음), 목록 fr(「Aucune sauvegarde — Paramètres → Sauvegarde → Sauvegarder」, 쓰지 않는 네 항목 회색 「Non utilisé」). **API 컨테이너를 일시 정지**해 느린 응답을 흉내 → ↻ 뒤 약 10초 안에 회색 점과 「Impossible de vérifier l'état」, 그동안 상단바 시계는 계속 감. 풀고 백업 → 한국어 초록 점·「모두 정상」·목록. 간호사 계정 → 점 없음. 이어서 `settings.login.mjs` 19개·access 1232건 통과.
+- **다음 할 일**: 없음 — 7절은 모두 고침·결정됨. 새 지시 대기.
+
 ## 2026-09-29 — B7 디스크 검사에 DB(Docker) 드라이브도
 
 - **상태**: 확인 요청

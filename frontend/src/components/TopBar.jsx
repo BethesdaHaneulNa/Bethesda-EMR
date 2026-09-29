@@ -5,6 +5,8 @@ import { getUser, logout, api } from '../api/client.js';
 import { allowedModules, userPerms, homePath } from '../modules.js';
 // Settings session: "change my password" opens from the name below.
 import { PasswordDialog } from '../pages/settingsPassword.jsx';
+// Settings session: the status dot (U3), for accounts with the settings permission.
+import { StatusDot } from '../pages/settingsStatus.jsx';
 
 // Injected by Vite from package.json (see vite.config.js). Guarded so the component still
 // renders if it is ever loaded outside a Vite build.
@@ -116,6 +118,7 @@ export function TopBar() {
               🔔 {t.updateAvailable || '새 버전'} {ver.latest}
             </button>
           ) : null}
+          {canSeeUpdate ? <StatusDot t={t} /> : null}
           <span style={{ background: '#1e2433', borderRadius: 5, padding: '3px 8px', fontSize: 13, color: '#94a3b8', fontFamily: 'monospace' }}>{now.toLocaleDateString('en-CA')} {now.toLocaleTimeString('en-GB')}</span>
           <div style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid #2a3142' }}>
             {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].map(function (i) {

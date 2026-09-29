@@ -162,7 +162,9 @@
   **Supprimer** 하면 목록에서 숨겨지고, 이미 들어간 오더·청구 기록은 남습니다.
 - **🏥 Services (진료과)** — **+ Ajouter**: **Code**, **Nom (par défaut)** (이름 · 기본), **Nom en anglais**, **Nom en français** (**꼭 넣으세요** — 비면 프랑스어 화면에 기본 이름이 나옴), **Médecin-chef** (과장, 의사만 고를 수 있음). 수정만 있고 삭제는 없습니다.
 - **🧪 Ordonnances types (약속처방)** — **+ Nouvel ensemble (새 약속처방)** → **Nom de l'ensemble (이름)**, **Groupe (dossier) (그룹·폴더)**, **Service**, **Description** → 오른쪽에서 **Médicament (약)** 또는 **Examen / Imagerie (검사/영상)** 를 고르고 **Rechercher** → 결과를 눌러 추가 → **Sauver**. 진료 화면에서 한 번에 불러옵니다.
-  - **포장 단위 약**(시럽·흡입기 등, 약품 편집 창에서 표시한 약)의 줄에는 **수 칸**과 단위(Flacon·Tube…)가 보입니다 — 세트를 쓰면 그 수만큼 병·튜브가 처방됩니다. 한 병 이상, 정수만(아니면 「Quantité : saisissez un nombre entier.」). 보통 약 줄은 전처럼 용량×횟수×일수만 보이고 수는 1. (2026-09-29)
+  - **줄마다 용량·횟수·일수를 여기서 정합니다** (2026-09-29, 실장님 지적 — 결정 B와 한 묶음: 용량·횟수·일수를 정하는 곳은 **약속처방 하나**). 약 줄: **Dose/j (일총투여) · Fois (횟수) · Jours (일수) · Posologie (용법)** — 진료 화면의 처방 줄과 같은 이름·순서, 총량 = 일총투여 × 일수. 새로 넣은 약 줄은 **빈 칸으로 시작**(약품의 기본값을 복사하지 않음). 검사·처치 줄: **Qté (수량) · Fois · Jours**, 1 · 1 · 1로 시작.
+  - **저장 전에 확인**: 약 줄의 일총투여나 일수가 비어 있으면 그 칸이 빨갛게 되고 「⚠ dose/j, jours」, 저장하면 「Indiquez la dose par jour et le nombre de jours … : 약 이름」으로 **막힘** — 비워 두면 세트로 넣은 처방이 「총량 없음」으로 들어가기 때문. 숫자는 진료와 같은 규칙(일총투여 0–1000, 횟수 1–24·일수 1–365 정수, 용법 10자까지). 이미 있는 약속처방을 열면 저장된 값이 칸에 들어 있음.
+  - **포장 단위 약**(시럽·흡입기 등, 약품 편집 창에서 표시한 약)의 줄에는 네 칸(복용 안내 — 비워도 됨) 옆에 **병·튜브 수** 칸과 단위(Flacon·Tube…) — 세트를 쓰면 그 수만큼 병·튜브가 처방됩니다. 한 병 이상, 정수만.
 - **📝 Phrases types (상용구)** — **Modifier** 창에 **Texte (par défaut / écran coréen) (문장 · 기본)**, **Texte en français (프랑스어 문장)**, **Texte en anglais (영어 문장)** 세 칸이 있습니다. 진료 화면은 프랑스어 화면이면 프랑스어 문장을 쓰고, 비어 있으면 기본 문장을 씁니다 — **현장에서 쓰는 상용구는 프랑스어 문장을 넣어 주세요.** 목록에서 프랑스어·영어 문장이 있는 줄에는 작은 **FR**·**EN** 표시가 붙습니다. **Catégorie** (General 등)는 저장되는 값이라 번역하지 않습니다.
 
 ### 2.10 서버 상태 창 (서버 PC에서)
@@ -274,6 +276,16 @@
    - **새 PC에서 시험 자료를 지운 뒤**(2.13 6단계): 시험 때의 줄은 그대로 남고, 그 줄의 **차트번호(26-00001 …)는 이제 새 환자의 번호와 같을 수 있습니다.** 날짜가 정리한 날보다 앞선 줄은 시험 환자의 것이지, 같은 번호의 새 환자가 아닙니다. 환자 이름으로 구분하세요.
 7. 한 쪽에 50줄, 아래 **◀ Précédent / Suivant ▶** 로 넘깁니다.
 
+### 2.15 상단바의 상태 점 (설정 권한이 있는 사람만)
+
+> **직원용 한 줄 (출발 전 확인 목록)** — 🇫🇷 « Si le petit point en haut de l'écran, à côté de l'heure, est **jaune** ou **rouge**, cliquez dessus pour voir ce qui ne va pas, puis faites ce qui est écrit ou prévenez le responsable. » · 🇰🇷 「화면 맨 위 시계 옆 작은 점이 **노랑**이나 **빨강**이면 눌러서 무엇인지 보고, 적힌 대로 하거나 담당자에게 알리세요.」
+
+1. **Paramètres** 권한이 있는 계정은 화면 맨 위, 시계 왼쪽에 **작은 점**이 보입니다(2026-09-29, U3 결정). 다른 직원에게는 없습니다.
+2. 색: **초록** 모두 정상 · **노랑** 확인 필요(백업이 오래됨·옛 버전, 디스크가 참, 영상 백업 디스크 없음 등) · **빨강** 문제(DB 연결 안 됨, 워크리스트가 멈춤 등) · **회색** 상태를 확인하지 못함(서버가 늦거나 끊김 — EMR은 그대로 쓸 수 있음).
+3. 누르면 목록: **Dossiers patients · Espace disque · Sauvegarde · Liste de travail des appareils · Imagerie (PACS) · Sauvegarde des images · Adresses de l'imagerie** 마다 점과 한 줄 설명. 「Non utilisé (사용 안 함)」 같은 회색 줄은 이 병원에서 쓰지 않는 것이라 경고가 아닙니다. 아래 **↻** 로 다시 확인.
+4. 5분마다, 그리고 다른 창에 갔다가 돌아올 때 스스로 다시 확인합니다.
+5. 서버 PC의 **상태 창**(2.10)과 같은 것을 봅니다. 노랑·빨강이면 목록의 설명대로 하거나 담당자에게.
+
 ## 3. 기능 상세
 
 ### 3-1. 권한 체계
@@ -374,7 +386,7 @@
 | 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행. 60초 넘게 조용 → 빨강, `ok=false` → 빨강, `failed>0` → 노랑, **`detail.arrivals_error`가 있으면 노랑 `status.bridge.arrivals`** (2026-09-29, PACS P-20 — 아래) |
 | 영상 백업 (2026-09-29, PACS 결정 41) | PACS 폴더(`bethesda-pacs`의 compose 폴더) `logs\image-backup-status.json`(`at`·`ok`·`disk_found`·`error`·`free_gb`·`total_gb`)을 읽음 — EMR이 멈춰도 보이게. 파일이 없으면 줄 없음. `at`이 36시간 넘음 / 디스크 없음 / 실패(오류 글자) / 여유 10% 미만 → 노란 **A CORRIGER** | `pacs_image_backup`: `service_heartbeat`의 같은 이름 줄(PACS `POST /api/pacs/image-backup-report`). 보고 없음 off, `last_seen` 36시간 넘음 `silent`, `disk_found` false `noDisk`, `ok` false `failed`(`error`), `last_success` 없음·36시간 넘음 `stale`, 여유 10% 미만 `nearlyFull` — 모두 warn |
 | 영상 주소 (2026-09-29) | `docker exec bethesda-emr-db psql …`로 `pacs_config`의 두 주소를 읽어, 옛 포트면 노란 **A CORRIGER** 줄(없으면 줄 자체가 없음). DB가 OK일 때만 | `pacs_address`: 두 칸 모두 비면 off, `emr_base_url`의 포트가 8080이거나 `pacs_viewer_url`이 8090이면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok. 포트는 `스킴://호스트:포트` 모양에서만 읽음(`:80800`·`my8090host`는 해당 없음) |
-| 화면 연결 | — | **아직 EMR 화면 어디에서도 부르지 않음**. 돌려주는 `status.*` 번역 키도 i18n에 없음. 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
+| 화면 연결 | — | **상단바의 상태 점**(2026-09-29, U3 결정 가 — 2.15): `frontend/src/pages/settingsStatus.jsx` `StatusDot`, `TopBar.jsx`(공용, 허락)가 설정 권한일 때만 붙임. `api/client.js`를 거치지 않는 `fetch` + **8초 시간 제한**(AbortController) — 실패·느림은 회색 점, 로그인 화면으로 보내지 않음. 처음·5분마다(창이 보일 때)·창으로 돌아올 때(`/auth/me` 동기와 같은 박자). 색은 서버의 `overall`(off는 ok와 같게 셈). 문구: `status.a.b` → `se_sys_a_b`, 항목 → `se_sysItem_<key>`, `{값}` 채움(`missing`은 개수, `old`는 「8080 → 9080」). 빠진 번역은 `backend/test/settings.status.mjs`가 알려 줌(스택 없이). 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
 
 - 2026-09-29, 이 PC의 실행 중 EMR에 대해 `server-status.ps1 -Console -Lang ko`를 **읽기만** 해서 돌려 봄: 7줄 모두 정상, 종료 코드 0. `/backups` 마운트 원본이 Windows 경로(`C:\Bethesda-EMR-main\backups`)로 잡히는 것 확인.
 - 디스크 검사는 **백업 드라이브**를 봅니다. `BACKUP_PATH`를 D:로 옮기면 DB가 있는 C:(Docker 디스크)는 보지 않습니다.
@@ -397,6 +409,8 @@
   - `POST /drugs`: 새 약은 **재고 0**으로 시작(요청의 `stock_qty` 무시). 최소 재고가 비면 **10**(열 기본값이 빈 값에는 적용되지 않았음).
   - `PUT /drugs/:id`: `stock_qty`·`stock_expected`가 와도 **조용히 무시**하고 나머지만 저장. 거절(400)하지 않는 이유 — 이 변경 전에 연 설정 화면이 그대로 열려 있어도 이름·단가 저장이 막히지 않게. 최소 재고 소수는 400.
   - 화면도 요청에서 재고를 뺍니다.
+- **보낸 칸만 저장** (2026-09-29, 실장님 결정 **B** — 약품의 기본 용량·횟수·일수·용법 칸은 약품 화면에서 없앰, 화면은 약국·읽기는 진료 몫): `PUT /drugs/:id`는 **요청에 온 칸만** 바꿉니다. 전에는 모든 칸을 썼기 때문에 빠진 칸이 NULL로 덮였습니다 — 칸이 없는 화면으로 저장하면 기본값이 지워졌을 것. 빈 값(`''`)은 NULL(비움), 코드·이름을 비우면 400 「A required field is missing」. `POST`는 보내지 않은 칸을 열 기본값에 맡김. 쓸 수 있는 칸은 고정 목록(`DRUG_FIELDS`)뿐 — 재고(3-8 위)와 포장 칸(아래)은 따로.
+  - **제형 `dosage_form`** (약국 가져오기 `6bc5c6d`가 만드는 칸, 약국 부탁): DB에 그 칸이 **있을 때만** 받음(시작할 때 한 번 `information_schema`로 확인) — 가져오기 마이그레이션이 들어오기 전에도 뒤에도 같은 코드. 앞뒤 공백 제거, 빈 값은 NULL, 보내지 않으면 그대로.
 - **포장 단위 약** (2026-09-29, 약국 H2-B, 마이그레이션 025): 시럽·흡입기·안약·연고처럼 병·튜브로 내주는 약. `POST·PUT /drugs`가 `pack_unit`(참/거짓)과 `pack_label`(`bottle`·`tube`·`inhaler`·`unit`)을 저장합니다. 편집 창의 체크 칸·선택 칸은 약국 세션이 만든 것.
   - `pack_unit`이 거짓이면 `pack_label`은 **비워서**(NULL) 저장 — 무엇이 오든.
   - 참인데 단위가 비면 **`bottle`(병)**. 400으로 거절하지 않은 이유: 편집 창이 「병」을 미리 골라 보여 주므로 사람이 본 값과 같고, 이런 약은 대부분 시럽.
@@ -474,7 +488,7 @@
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). 쓰기 라우트 없음 |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙. PUT으로 비활성 → 활성은 **admin 역할만**(아니면 403) |
 | `POST /api/admin/staff/:id/reactivate` | settings **+ admin 역할** (2026-09-29, U2) | 비활성 → 활성, 다른 것은 그대로. 이미 활성이면 `{success, unchanged}`·기록 없음. 기록 `settings.staff.edit` status |
-| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로) (3-8절) |
+| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로). **PUT은 보낸 칸만**(결정 B), 제형 `dosage_form`은 칸이 있을 때만 (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
@@ -583,7 +597,7 @@
 |---|---|---|---|
 | U1 | ~~보통~~ **대부분 고침** | ~~설정 화면 글자 상당수가 영어로 고정~~ → 2026-09-29: 틀(탭 이름·공용 삭제 확인·편집 창 제목·오류·저장 알림)과 직원·오더 코드·상용구·진료과·병원 정보 탭, 그 편집 창을 `se_` 키로. 역할·오더 종류·상태도 번역해서 표시(저장 값은 그대로). **남은 것**: 약품 탭 안쪽(약국 몫 — 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·General 등 — DB에 저장되는 값이라 번역하지 않음) | (옛 코드) `Settings.jsx` |
 | U2 | ~~보통~~ **고침** | ~~비활성으로 만든 직원을 다시 활성으로 되돌릴 방법이 화면에 없음~~ → 2026-09-29 결정(관리자만, 기록): 비활성 줄의 **Réactiver**, `POST /admin/staff/:id/reactivate`. 「관리자」= admin 역할 + 설정 권한 — 설정 권한만 받은 다른 역할은 버튼이 없고 서버가 403. 편집 창의 PUT으로 돌아가는 길도 같은 규칙. 확인 `settings.reactivate.mjs` 12개 (2.5절) | `admin.routes.js`, `Settings.jsx` 직원 줄 |
-| U3 | 보통 → **결정 대기 (결정 세션)** | `/api/system/status`를 화면 어디에서도 부르지 않음 — 추천 (가) 상단바의 작은 상태 점, 설정 권한만 눌러 목록 | `status.routes.js`, 프론트엔드에 호출 없음 |
+| U3 | ~~보통~~ **고침** | ~~`/api/system/status`를 화면 어디에서도 부르지 않음~~ → 2026-09-29 결정 (가): 상단바의 작은 상태 점, 설정 권한만, 누르면 목록 (2.15, 3-6절) | `settingsStatus.jsx`, `TopBar.jsx` |
 | U4 | ~~낮음~~ **고침** | ~~첫 화면 목록 하나가 실패하면 뒤의 것이 안 불러와지고 조용함~~ → 2026-09-29: 목록을 따로따로 불러오고, 실패하면 Paramètres 맨 위에 빨간 줄로 이유(권한 없음 등)를 보여줌. 권한을 뺀 관리자에게 직원 목록이 **빈 채로** 보여 「직원이 없다」로 읽히던 것 | (옛 코드) `Settings.jsx` `loadAll` |
 | U13 | ~~보통~~ **고침 (총괄)** | ~~권한을 바꾼 직원의 메뉴는 다시 로그인해야 바뀜~~ → 2026-09-29 `TopBar.jsx`가 `/auth/me`로 주기적으로 다시 읽음. 격리 스택에서 확인: 통계 권한을 더하고 새로 고치자 메뉴에 Statistiques, `/stats` 열림 / 빼고 새로 고치자 메뉴에서 사라짐. 남은 점(권한을 뺀 화면을 보고 있던 사람이 그 화면에 남음)도 총괄이 고침(`7662160`) — 격리 스택에서 확인: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아오자 **접수로 이동**, 접수 화면에서 입력 중에 **다른** 권한(수납)을 빼자 **그대로 남고 입력도 유지**, 메뉴에서 Paiement만 사라짐 | `TopBar.jsx`(총괄) |
 | U5 | ~~낮음~~ **고침** | ~~앱 제목을 비워서 저장할 수 없음~~ → 2026-09-29: 비우면 기본값 「Bethesda EMR」, 칸을 보내지 않은 저장은 그대로 | `admin.routes.js` `PUT /clinic` |
@@ -652,4 +666,7 @@
 | 2026-09-29 | 서버 상태 창·상태 API에 **영상 백업** 줄(디스크 없음·실패·오래됨·거의 참). 「Journal」에서 검사 판정(정상→높음)과 처방의 포장 단위가 말로 | `status.routes.js` `checkImageBackup`, `server-status.ps1` `Get-ImageBackupCheck`·창 높이 640, `settingsAudit.js` (2.10·3-6·3-10) | `a0c0496` |
 | 2026-09-29 | 정리 스크립트: 준비한 PC의 표지 파일 `KEEP-TEST-DATA.txt`(총괄 `6d93954`) 설명, 기록 탭의 시험 줄 차트번호가 새 환자와 겹쳐 보일 수 있다는 안내 | 위키(2.13·2.14·3-11), 스크립트 끝 안내 세 줄 | `a446512` |
 | 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | `a95891a` |
-| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | (이 커밋) |
+| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | `8087fce` |
+| 2026-09-29 | **상단바의 상태 점** — 설정 권한이 있는 사람에게 초록·노랑·빨강(확인 못 하면 회색), 누르면 일곱 항목을 말로 (U3) | `settingsStatus.jsx`(새), `TopBar.jsx` 두 줄, `se_sys*` 46개, `settings.status.mjs`(새) (2.15·3-6) | `0d362a5` |
+| 2026-09-29 | 약 저장이 **보낸 칸만** 바꿈 — 약품 화면에서 기본 용량·횟수·일수·용법 칸이 빠져도 지워지지 않음(결정 B). 제형 칸을 받을 준비. 상태 점의 직원용 한 줄 | `admin.routes.js` `DRUG_FIELDS`·`sentDrugFields`, `settings.drugs.mjs` 10개 추가 (2.15·3-8) | `9192536` |
+| 2026-09-29 | **약속처방에서 줄마다 일총투여·횟수·일수·용법을 정함**(실장님 지적), 새 약 줄은 빈 칸, 비어 있으면 저장을 막음, 검사 줄은 수량·횟수·일수 | `Settings.jsx` 약속처방 편집 창 `osItem`·`osLineProblem`·`osNum` (2.9) | (이 커밋) |

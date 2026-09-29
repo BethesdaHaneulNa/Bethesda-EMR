@@ -198,7 +198,10 @@ export default function StatsPage(){
             <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAr(rev.avgBilledPerVisit)} unit="Ar" small />
             <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
             <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
-            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="#f59e0b" small />
+            {/* Staff cancellations only; receipts replaced by a correction are not
+                counted (item 20). Below: the cash handed back on those days. */}
+            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="#f59e0b" small
+              sub={data.voidedCount?((t.st_refundedSub||'돌려준 돈')+' '+fmtAr(data.refunded)+' Ar'):null} />
           </div>
           {/* 과별·의사별 매출. 진료 섹션의 방문수 그래프와 같은 모양으로 두어, "몇 명 봤는지"와
               "얼마가 들어왔는지"를 같은 눈높이에서 읽을 수 있게 한다. 과는 접수에서 고른 과,

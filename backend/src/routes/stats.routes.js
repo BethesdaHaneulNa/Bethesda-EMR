@@ -226,9 +226,21 @@ router.get('/summary', async (req, res) => {
        WHERE billing_date BETWEEN $1 AND $2 AND payment_status <> 'cancelled'`, P);
 
     // 4b) 취소 영수 건수 (취소건은 위 WHERE에서 빠지므로 별도 집계)
+    //     Only receipts staff cancelled. A receipt a correction replaced
+    //     (replaced_by_id, migration 033) is not a cancellation in that sense: its
+    //     money moved to the new receipt, whose change is what went back - and that
+    //     is already out of the correction receipt's net_paid, so it is not counted
+    //     as a refund here either (item 20).
+    //     Refunded: the cash handed back when staff cancelled (refunded_amount),
+    //     on the day it was cancelled. NULL means nobody was asked - receipts
+    //     cancelled before 033 - so those are counted apart, not guessed.
     const voided = await pool.query(
-      `SELECT COUNT(*)::int AS cnt FROM billing
-       WHERE payment_status='cancelled' AND COALESCE(cancelled_at::date, billing_date) BETWEEN $1 AND $2`, P);
+      `SELECT COUNT(*)::int AS cnt,
+              COALESCE(SUM(refunded_amount), 0)::numeric AS refunded,
+              COUNT(*) FILTER (WHERE refunded_amount IS NULL AND net_paid > 0)::int AS refund_unknown
+         FROM billing
+        WHERE payment_status='cancelled' AND replaced_by_id IS NULL
+          AND COALESCE(cancelled_at::date, billing_date) BETWEEN $1 AND $2`, P);
 
     // 4c) 서류/행정 수가 매출 (item_type='fee'). The payment screen files these
     //     under procedure_total (everything that is neither consultation nor
@@ -268,6 +280,8 @@ router.get('/summary', async (req, res) => {
         avgBilledPerVisit: r.billed_visits > 0 ? num(r.gross / r.billed_visits) : 0,
       },
       voidedCount: voided.rows[0].cnt,
+      refunded: num(voided.rows[0].refunded),
+      refundUnknownCount: voided.rows[0].refund_unknown,
       outstanding: { owed: num(bal.rows[0].owed), refund: num(bal.rows[0].refund) },
     });
   } catch (err) { res.status(500).json({ error: err.message }); }

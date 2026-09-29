@@ -2,6 +2,120 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 가져온 약 기준: 검색의 제형 · 설정용 400 문구 목록 · 처음부터 끝까지 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `b148c65` 다음
+- **한 일**:
+  - **① 약 검색에 제형**: 검색 목록과 「+ Recherche médicament」 창의 약 줄 오른쪽에 `formLabel(t, d.dosage_form)`(약국의 `drug-info.js`, 번역 `ph_form_*`)을 보입니다 — 「Comprimé」 「Sirop」 등. 그 자리에 있던 기본 용법(`default_route`)은 결정 B로 쓰지 않으므로 뺐습니다. 새 약 코드(`MED-0001`, 8자)가 두 줄로 꺾이던 것도 고쳤습니다(nowrap, 칸 76px).
+  - **② 설정 세션용 — 약속처방 서버 400 문구** (`orderset.routes.js` `badItems`; 모양은 `items[<번호>].<칸> <뜻>`, 번호는 0부터):
+
+    | 서버 문구 (`error`) | ko | fr | en |
+    |---|---|---|---|
+    | `name required` | 세트 이름을 적으세요 | Indiquez le nom de l'ordonnance type | Enter the set name |
+    | `items[i].dose must be a number greater than 0` | {n}번째 줄: 하루 총량은 0보다 큰 수 | Ligne {n} : la dose par jour doit être supérieure à 0 | Line {n}: the daily dose must be greater than 0 |
+    | `items[i].frequency must be a whole number from 1 to 24` | {n}번째 줄: 횟수는 1~24의 정수 | Ligne {n} : les fois par jour sont un nombre entier de 1 à 24 | Line {n}: times a day must be a whole number from 1 to 24 |
+    | `items[i].days must be a whole number from 1 to 365` | {n}번째 줄: 일수는 1~365의 정수 | Ligne {n} : les jours sont un nombre entier de 1 à 365 | Line {n}: days must be a whole number from 1 to 365 |
+    | `items[i].route (sig) must be at most 10 characters` | {n}번째 줄: 용법은 10자까지 | Ligne {n} : la posologie fait au plus 10 caractères | Line {n}: the sig is at most 10 characters |
+    | `items[i].quantity must be a whole number of at least 1` | {n}번째 줄: 병·튜브 수는 1 이상의 정수 | Ligne {n} : le nombre de flacons/tubes est un entier d'au moins 1 | Line {n}: the bottle/tube count is a whole number of at least 1 |
+    | `items[i].quantity must be a positive number` | {n}번째 줄: 수량은 0보다 큰 수 | Ligne {n} : la quantité doit être supérieure à 0 | Line {n}: the quantity must be greater than 0 |
+
+    읽는 법: `/^items\[(\d+)\]\.(\w+) /`로 번호와 칸을 떼어 내고, {n} = 번호 + 1(화면의 줄 순서)로 둡니다. 나머지 글은 위 표의 뜻으로 옮기면 됩니다.
+  - **③ 가져온 약으로 처음부터 끝까지** (격리 스택, 034 적용: 활성 101 · 감춤 25 · 가격 모두 0 · 포장 12):
+    - **진료**:
+      - `amlo`를 치니 « MÉD MED-0001 Amlodipine 5mg · Sans prix · Comprimé »가 나왔습니다.
+      - 넣으니 빈 칸이고 « Indiquez dose/jour, fois et jours »가 붙었습니다. IBUPROFENE SYRUP(포장)은 « Indiquez la quantité »와 « nombre de flacons à vérifier »였습니다.
+      - 1·1·30을 적으니 « 1 × 1 fois/jour pendant 30 jours (total 30) »가 됐습니다. 시럽 1병은 « 1 flacon »입니다.
+      - 제목에는 « ⚠ 2 sans prix »만 남았고, Terminé는 확인 창 없이 끝났습니다.
+    - **약국**(관리자 계정):
+      - 목록 맨 아래(끝난 순서)에 « IMPORT Parcours — Amlodipine 5mg, IBUPROFENE SYRUP »가 있습니다.
+      - 상세는 Amlodipine 1 · 1 · 1 · 30 · 수량 30, 시럽 « 1 flacon »이고, « Médicaments (interne) 0 »입니다. 가격 경고는 약국 화면에 없습니다.
+    - **수납**:
+      - 위에 « ⚠ 2 article(s) sans prix — vérifiez les prix : IBUPROFENE SYRUP, Amlodipine 5mg »가 뜹니다.
+      - 약 줄은 « Sans prix · 0 »이고, 진료비 15,000 Ar만 합계입니다.
+      - **가격 0인 약만 있는 내원**: 진료비를 « Sans frais »로 하면 합계 0 Ar입니다. Confirmer를 누르면 « 2 article(s) sans prix … Fixer le prix plus tard ne modifie pas les lignes déjà prescrites (le médecin doit les supprimer et les ajouter à nouveau). Encaisser quand même ? »라고 묻습니다(시험에서는 아니오 — 수납하지 않음).
+  - **④ 위키 2절**: 약 목록 오른쪽 제형, 영어 이름으로 찾기, 단위 없는 문장, 가져온 약의 가격 0을 적었습니다(결정 B 몫은 `6e11f56`·`7e17a6d` 때 이미 고침).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: 없음(약국의 `drug-info.js`·`ph_form_*`를 읽기만 함) · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9182, 화면은 FR 1366px와 800px로 확인했습니다. 기존 시험은 결정 B·약속처방 때와 같은 서버 코드라 다시 돌리지 않았습니다(화면만 바뀜).
+- **총괄 판단이 필요한 것**:
+  - **가격 0으로 처방된 줄은 나중에 가격을 넣어도 0 그대로**입니다(줄에 가격을 복사하는 규칙, 7.3). 가져온 약은 모두 0이라 **가격을 넣기 전의 모든 처방이 0원으로 남습니다.** 수납에서 묻기는 하지만, 고치려면 의사가 줄을 지우고 다시 넣어야 합니다.
+    - 선택지: (가) 지금처럼(현지에서 가격을 먼저 넣고 쓰기 시작 — 운영 순서로 막음), (나) 「줄 가격이 0이고, 아직 청구 안 됐고, 약에 가격이 생겼으면」 진료 서버가 저장할 때 새 가격을 가져오기.
+    - 추천은 (가)입니다. 쓰기 시작 전에 가격을 넣는 것이 가장 단순하고, (나)는 가격 복사 규칙에 예외를 만듭니다. 결정 세션에 넘길지 판단 부탁드립니다.
+- **다른 세션에 부탁**:
+  - 약국: `rx-dosing.js`의 단위(cp·gél.·sachet)를 이름 대신 `drug.dosage_form`으로도 정해 주세요. 가져온 약은 이름에 Tab·Cap이 없어 « 1 × 1 fois/jour »로 단위 없이 나옵니다. 처방 줄에는 `dosage_form`이 없으니 약 표에서 읽거나 처방할 때 복사하는 방법은 세션 판단입니다.
+  - 설정: 위 ② 표.
+- **남은 일 · 알려진 문제**: F3, R1~R5
+
+## 2026-09-29 — 약속처방 줄의 용량·횟수·일수 (서버 몫, 설정 화면과 같이 합침)
+
+- **상태**: 확인 요청 — 설정 세션의 편집 창 커밋과 같이 합칩니다
+- **커밋**: session/consultation (이 항목과 같은 커밋) — `6e11f56`(결정 B) 다음. 그 커밋을 검토 중일 수 있어 develop으로 rebase하지 않았습니다.
+- **한 일** (`backend/src/routes/orderset.routes.js`):
+  - `badItems`: POST·PUT이 쓰기 전에 항목마다 검사합니다. 어기면 400 `items[i].… must be …`이고 아무것도 바뀌지 않습니다.
+    - 약 줄: `dose` 0보다 큰 수(≤ 1000), `frequency` 1~24 정수, `days` 1~365 정수, `route` 10자 이하(처방 `route VARCHAR(10)`), `quantity`(포장 병·튜브 수) 1 이상 정수.
+    - 오더 줄: `quantity` 0보다 큰 수, `frequency`·`days` 정수.
+    - 전의 `badItemQty`는 이것으로 바뀌었습니다.
+  - `insertItems`: 약 줄의 빈 `dose`·`frequency`·`days`·`route`는 **NULL**로 저장합니다.
+    - 전에는 횟수·일수를 1로 채워서, 세트를 적용하면 아무도 적지 않은 「1일」이 처방됐습니다.
+    - 오더 줄의 빈 횟수·일수는 1(검사·영상 1·1·1), 빈 수량은 1입니다.
+  - 옛 세트는 그대로 읽힙니다(읽는 쪽은 바꾸지 않음).
+- **적용 확인**: 진료 화면 `applySet`은 이미 세트 값을 `fromSet`으로 그대로 넣고(결정 B 커밋), 총량은 서버 `rxTotal`이 계산합니다. 화면 코드 변경은 없습니다.
+- **바꾼 파일**: `backend/src/routes/orderset.routes.js` · `wiki/modules/consultation.md`(2.4·3.3·8절)
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음(설정 화면이 400 문구를 보여 줄 때는 설정 세션 몫)
+- **확인한 방법**: `node --check` 통과. 격리 스택 9182에서 확인했습니다.
+  - **약속처방 시험 19개 전부 통과**:
+    - 채운 세트는 약 3|3|7|PO|1, 오더 1·1·5로 저장됩니다.
+    - 빈 세트는 약 NULL|NULL|NULL|NULL|1(1로 채우지 않음), 오더 1·1·1입니다.
+    - 거절 9가지(하루 총량 0·「abc」, 횟수 0·1.5, 일수 400, 용법 11자, 병 수 1.5, 오더 수량 0, 두 번째 줄 일수 0)가 모두 400이고, 거절된 세트는 아무것도 쓰지 않습니다.
+    - PUT 일수 0은 400이고 항목이 그대로입니다. 바른 값은 저장됩니다.
+    - 옛 시드 세트(Malaria Workup ACT01 4·2·3)는 그대로 읽힙니다.
+  - **화면 FR — 적용**:
+    - 「Set rempli」(PCM500 2·2·5 BID)를 누르니 « 1 cp × 2 fois/jour pendant 5 jours (total 10) »가 나오고, DB `total_qty` 10.000입니다.
+    - 「Set vide」(빈 PCM500 + P01)를 누르니 PCM500이 빈 칸이고 « Indiquez dose/jour, fois et jours »가 붙었습니다. 제목은 « 1 sans dose/jour, fois ou jours », DB는 dose·횟수·일수·총량이 NULL입니다. P01은 1·1·1입니다.
+  - 기존 시험도 모두 통과했습니다(결정 B 10, L9, 포장, 취소, 로그, lock, total, s2, t400, tlow).
+- **확인 못 한 것**: 설정 세션의 편집 창(아직 develop에 없음)에서 저장해 보는 것 — 그 커밋과 같이 합칠 때 총괄이 봐 주세요.
+- **다른 세션에 부탁**: 설정 — 편집 창의 칸 제한을 위와 같게 해 주세요(하루 총량 > 0, 횟수 1~24, 일수 1~365, 용법 10자, 포장 병 수 정수). 서버 400 문구는 영어이니 화면에서 번역해 주세요. 빈 칸은 허용합니다(처방에서 의사가 채움).
+- **남은 일 · 알려진 문제**: 제형 표시(가져오기 뒤), F3, R1~R5
+
+## 2026-09-29 — 약 기본 용량 안 씀 (결정 B) 진료 몫: 빈 칸으로 시작, 빈 칸은 조용히 1이 되지 않음
+
+- **상태**: 확인 요청 (제형 표시는 약국 가져오기가 develop에 들어온 뒤 — 아직 `drug-info.js` 없음)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop 최신 다음
+- **한 일** (총괄에 보낸 제안 그대로):
+  - **검색으로 넣는 약은 하루 총량·횟수·일수·용법이 빈 칸**입니다.
+    - `addDrugRx`가 `drug.default_*`를 읽지 않습니다. 약속처방 줄(`fromSet`)만 세트 값을 씁니다.
+    - 메모 칸의 단위(`drug.unit`)는 그대로입니다.
+  - **빈 칸은 끝까지 NULL**입니다. 전에는 칸 하나만 건드려도 빈 일수가 조용히 1일, 빈 하루 총량이 1이 됐습니다.
+    - 화면 `saveRx`의 `dose||'1'`·`||1`을 없앴고, 입력 칸도 NULL을 「1」이 아니라 빈 칸으로 보입니다.
+    - 서버 POST·PUT은 빈 `dose`·`frequency`·`days`를 NULL로 저장합니다(`blankNull`·`intOrNull`).
+  - **`rxTotal`: 하루 총량이나 일수가 비면 총량 NULL**입니다(0도, 「1일」도 아님).
+    - 약국은 이미 「총량 없음」으로 멈추고, 수납 대기 목록은 `missing_qty`로 표시합니다.
+    - 옛 줄은 값을 바꾸지 않는 한 총량이 그대로입니다.
+  - **경고**: `noDose`를 「하루 총량·횟수·일수 가운데 하나라도 빔」으로 넓혔습니다(포장 약 제외). 문구 `cs_noDose`·`cs_noDoseCount`·`cs_noDoseHint`·`cs_noDoseConfirm`을 ko·en·fr로 바꿨습니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_noDose*` 4개의 문구만
+- **DB 마이그레이션**: 없음 · **번역 키**: 새 키 없음
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택 9182에서 확인했습니다.
+  - **시험 10개 전부 통과**:
+    - 검색처럼 빈 값으로 넣으면 넷 다 NULL입니다.
+    - 하루 총량 3만 적으면 일수 NULL, 총량 NULL입니다(1일치가 아님).
+    - 일수 5를 적으면 15이고 횟수는 여전히 NULL입니다. 횟수 3을 적어도 15 그대로입니다.
+    - 일수를 지우면 NULL/NULL, 하루 총량을 지우면 NULL입니다.
+    - 약속처방 3·3·5는 15입니다. 옛 총량 45는 아무것도 안 바꾸면 그대로입니다.
+    - 완료하면 수납 대기 목록 `missing_qty`가 true이고, 약국 대기 목록에 총량 없는 줄로 옵니다.
+  - 기존 시험도 모두 통과했습니다(L9, ⑭, 포장, 영상 취소, 취소, 로그, lock, total, s2, t400, tlow).
+  - **화면 FR**:
+    - PCM500을 검색해 넣으니 칸 넷이 비어 있고, « Indiquez dose/jour, fois et jours »와 제목 « 1 sans dose/jour, fois ou jours »가 나왔습니다.
+    - Dose/j에 3만 넣고 칸을 벗어나니 Fois·Jours가 빈 칸 그대로였습니다(전에는 1).
+    - Terminé를 누르니 « 1 médicament(s) avec dose/jour, fois ou jours vides … »라고 묻고, 아니오면 진료가 열린 채로 남았습니다.
+    - Fois 3, Jours 5를 넣으니 « 1 cp × 3 fois/jour pendant 5 jours (total 15) »가 나오고 표시가 사라졌습니다.
+- **확인 못 한 것**: 제형(`dosage_form`) 표시 — 약국 가져오기 커밋이 develop에 들어온 뒤 하겠습니다. 실행 중 EMR은 건드리지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 · 2.3(넣기 5번·표시 줄·제목 개수) · 2.12 · 3.2(rxTotal) · 4(마이그레이션 이름 032) · 8절
+- **총괄 확인 요청**: 이 동작(빈 칸 → 총량 NULL → 약국·수납에서 멈춤)
+- **다른 세션에 부탁**: 약국 — 설정 약품 탭에서 기본 용량 칸을 없앨 때, 진료는 이제 그 칸을 읽지 않습니다(값이 남아 있어도 영향 없음).
+- **남은 일 · 알려진 문제**: 제형 표시(가져오기 뒤), F3, R1~R5
+
 ## 2026-09-29 — 진료 완료 시각(L9) · 약속처방 수량 서버 검사 · 감춘 예시 약과 약속처방 · F2
 
 - **상태**: 확인 요청
