@@ -283,6 +283,38 @@ router.post('/bridge-heartbeat', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// The nightly image backup (PACS image-backup.ps1, decision 41) reports here
+// after every run: counts and disk space only, never patient data. Stored as the
+// 'pacs_image_backup' heartbeat so the status screen can warn when the disk was
+// missing, the run failed, the disk is nearly full, or no run has succeeded for
+// too long (settings session's status.routes.js reads it). last_success is kept
+// across failed runs, because "when did it last work" is the question.
+router.post('/image-backup-report', async (req, res) => {
+  try {
+    const cfg = await ensureConfig();
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
+    const b = req.body || {};
+    const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const ok = b.ok === true;
+    const prev = await pool.query(`SELECT detail FROM service_heartbeat WHERE name = 'pacs_image_backup'`);
+    const prevSuccess = prev.rows[0] && prev.rows[0].detail ? prev.rows[0].detail.last_success : null;
+    const detail = {
+      disk_found: b.disk_found === true,
+      copied: num(b.copied), failed: num(b.failed), total_files: num(b.total_files),
+      free_gb: num(b.free_gb), total_gb: num(b.total_gb),
+      error: String(b.error || '').slice(0, 300),
+      last_success: ok ? new Date().toISOString() : (prevSuccess || null),
+    };
+    await pool.query(
+      `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
+            VALUES ('pacs_image_backup', NOW(), $1, $2)
+       ON CONFLICT (name) DO UPDATE SET last_seen = NOW(), ok = EXCLUDED.ok, detail = EXCLUDED.detail`,
+      [ok, JSON.stringify(detail)]);
+    res.json({ received: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // The bridge found this entry's study in Orthanc and it has stopped growing.
 // Mark the entry done -- which takes it off the device worklist on the next
 // cycle and locks the order against deletion (Consultation.jsx orderLocked) --

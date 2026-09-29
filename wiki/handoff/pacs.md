@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영상 백업 만듦 (결정 41) · 위키 6.1 다시 · 2.6 한 줄 · 오프라인 키트 검토
+
+- **상태**: 확인 요청
+- **커밋**: **PACS 저장소** `session/pacs` **`8fcf65f`** (`main` `d3d001c` 위 한 개). **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋
+- **한 일** (설계 메모 그대로, 총괄 조건 모두):
+  - PACS 새 파일 5개: `image-backup-common.ps1`(공용), `prepare-backup-disk.ps1`, `image-backup.ps1`, `install-image-backup.ps1`, `restore-image-backup.ps1`. `.gitignore`에 `logs/`, README에 「Image backup」.
+  - EMR `POST /api/pacs/image-backup-report`(브리지 토큰, **헤더**) → `service_heartbeat` `pacs_image_backup`, `last_success`는 실패한 날에도 이어 둠. 본문에 환자 정보 없음(개수·공간·오류 글자).
+  - 조건: 임시 이름(`.part`) → 크기 확인 → 이름 바꿈 / seq는 한 묶음(200건) 다 받은 뒤에만 / 디스크 가득 → 멈춤·실패 보고, 끝에 10% 미만이면 경고 / 복원 끝에 「EMR 오더 중 영상 기록 있는데 Orthanc에 없는 수」.
+  - 위키: **6.1을 새 도구 기준 설치 순서로 다시 씀**(키트 → 설치(포트 확인·자동 짝) → EMR 복원 → **다시 pair-with-emr** → 뷰어 주소 → **영상 복원** → 영상 백업 켜기 → 확인), **6.2 영상 백업** 새로, **2.6**에 「취소한 검사에 나중에 영상이 들어와도 도착 표시 없음 — 영상 창으로 확인」, **2.7** 영상 백업 경고가 떴을 때(직원용), 4절 API, 7절 P-24 🟡.
+- **시험** (격리 스택 EMR 9188 + PACS 9198, 시험용 폴더를 디스크로 — 실행 중 PACS 9090엔 아무것도 안 함, **예약 작업 등록 안 함**: `-WhatIf`만, 등록 안 된 것 확인):
+  - 디스크 준비: 비어 있지 않은 폴더 거절 → `-Force` 준비 → 다시 하면 「이미 준비됨」.
+  - 백업: 첫 실행 9장 → 다시 0장 → 새 검사 2장만 → 받기 전에 지운 검사 건너뜀(실패 아님) → 남은 `.part` 지움 → 디스크 가득(여유를 일부러 크게) 멈춤·seq 그대로 → 디스크 없음 exit 2·`disk_found:false` → 디스크 둘 멈춤 → 정상. 각 결과가 EMR 줄에, `last_success`는 실패 뒤에도 유지. 파일 경로는 UID뿐.
+  - 복원: 격리 Orthanc에서 검사 하나(3장) 지움 → `-Verify` VERIFIED(디스크 11 ≥ Orthanc 8) → 복원 3 새로·8 이미 → 다시 0 새로 → 「missing from Orthanc」 4→3(남은 3은 가짜 Orthanc 시절 시험 오더 — 정상).
+  - **시험 중 찾아 고친 것 셋**: ① 디스크가 하나일 때 PowerShell이 목록을 풀어 `$disks[0]`가 「C」 한 글자가 됨 → 첫 시험 파일이 PACS 작업 폴더 안 `C\`에 써짐(시험 사본 9장 + state — 지움, 커밋 안 됨) ② `File.Replace`에 `$null`을 넘기면 PowerShell이 빈 글자로 바꿔 거절 → `[NullString]::Value` ③ 디스크 없음·둘일 때 목록이 한 겹 더 싸임 → 반환 방식 고침.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인 못 한 것**: 실제 USB 디스크(드라이브 글자로 찾기 — 시험은 폴더를 `-SearchRoots`로), 작업 스케줄러 실제 실행, 대용량(수천 장) 속도. 리눅스·NAS `.sh`는 아직.
+- **설정 세션에 부탁** (총괄 전달): `status.routes.js`에 `pacs_image_backup` 줄 — 보고 없음(꺼짐) / `disk_found=false` / `ok=false` / `last_success`가 36시간 넘음 / `free_gb/total_gb` 10% 미만 → 노랑·빨강, `error` 글자 보여 주기. `server-status.ps1`은 PACS 폴더 `logs\image-backup-status.json`(`at`, `ok`, `disk_found`, `error`, `free_gb`, `total_gb`)을 읽기 — EMR이 멈춰도 보이게.
+- **오프라인 키트 검토 (총괄 `11fbf03`)**: F-1~F-5 모두 들어감(PACS `.env` 없을 때 자리값, MANIFEST에 두 저장소 커밋·고친 파일 경고, 이미지 이름표 되돌리기, `.env*`·`*.env`·`*.bak` 제외 + `.claude`까지 뺀 것 좋음, PACS 실패 경고, 설치 끝 안내에 짝 맞춤·뷰어 주소·포트·방화벽·고정 IP·「영상은 EMR 백업에 없음」). **빠진 것 둘**: ① 제외 목록에 **`logs`**(PACS 폴더의 `logs\image-backup.log`·`image-backup-status.json` — 환자 정보는 없지만 그 PC의 기록) — `pack.ps1`의 `$excludeDirs`와 `pack.sh` `--exclude=logs` ② 설치 끝 안내의 「Plan a copy of …\storage to a second disk」 → 「`prepare-backup-disk.ps1` + `install-image-backup.ps1` (EMR 위키 PACS 6.2)」로.
+
 ## 2026-09-29 — 영상 오더 취소를 실제 브리지로 끝까지 확인 · 위키 문구 맞춤 (총괄 표의 PACS 1·2·3)
 
 - **상태**: 확인 요청
