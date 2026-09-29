@@ -46,7 +46,8 @@ const ROUTES = [
   ['PUT',  '/patients/' + X,                [REG], {}],
   // visit.routes.js (reception)
   ['GET',  '/visits/today',                 [REG, CONS]],
-  ['GET',  '/visits/patient/' + X,          [CONS, LAB, PAY]],
+  // registration added 2026-09-29 (coordinator): reception reads past visits to suggest new/follow-up
+  ['GET',  '/visits/patient/' + X,          [REG, CONS, LAB, PAY]],
   ['POST', '/visits',                       [REG], {}],
   ['PUT',  '/visits/' + X + '/status',      [REG], { status: 'cancelled' }],
   ['PUT',  '/visits/' + X,                  [REG, PAY], {}],
@@ -96,6 +97,12 @@ const ROUTES = [
   ['GET',  '/pharmacy/patient/' + X + '/recent-rx', [PHARM]],
   ['PUT',  '/pharmacy/consultations/' + X + '/dispense', [PHARM], {}],
   ['PUT',  '/pharmacy/prescription/' + X + '/dispense-type', [PHARM], { dispense_type: 'internal' }],
+  // stock ledger (pharmacy stock (1), 2026-09-29): doctors and Settings may look and adjust too
+  ['GET',  '/pharmacy/stock',               [PHARM, CONS, SET]],
+  ['GET',  '/pharmacy/stock/' + X + '/movements', [PHARM, CONS, SET]],
+  ['POST', '/pharmacy/stock/' + X + '/receive', [PHARM, CONS, SET], { qty: 1 }],
+  ['POST', '/pharmacy/stock/' + X + '/count',   [PHARM, CONS, SET], { counted: 1, memo: 'access test' }],
+  ['POST', '/pharmacy/stock/' + X + '/discard', [PHARM, CONS, SET], { qty: 1, memo: 'access test' }],
   // lab.routes.js
   ['GET',  '/lab/pending',                  [LAB]],
   ['GET',  '/lab/completed',                [LAB]],
