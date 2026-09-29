@@ -6,6 +6,12 @@ const router = express.Router();
 router.use(authMiddleware);
 router.use(permMiddleware('pharmacy'));
 
+// The API client hands the screen only the error text, not the status code, so
+// these exact strings are what Pharmacy.jsx recognises to show a translated
+// message instead of raw English. Change them together.
+const ERR_NOTHING_PENDING = 'No pending prescriptions for this consultation';
+const ERR_TYPE_LOCKED = 'Prescription already dispensed; dispense type can no longer change';
+
 // GET /api/pharmacy/pending - completed consultations with undispensed prescriptions
 router.get('/pending', async (req, res) => {
   try {
@@ -71,12 +77,19 @@ router.get('/completed', async (req, res) => {
          p.chart_no,
          p.last_name,
          p.first_name,
+         p.gender,
+         p.date_of_birth,
+         p.allergies,
          s.name AS doctor_name,
-         ds.name AS dispensed_by_name,
+         -- One row per consultation even when lines added after the first
+         -- dispense were handed out by someone else; grouping by the dispenser
+         -- used to list the same consultation twice.
+         STRING_AGG(DISTINCT ds.name, ', ') AS dispensed_by_name,
          COUNT(rx.id) AS rx_count,
          JSON_AGG(
            JSON_BUILD_OBJECT(
              'id', rx.id,
+             'drug_id', rx.drug_id,
              'drug_code', rx.drug_code,
              'drug_name', rx.drug_name,
              'dose', rx.dose,
@@ -84,7 +97,9 @@ router.get('/completed', async (req, res) => {
              'days', rx.days,
              'route', rx.route,
              'total_qty', rx.total_qty,
+             'unit_price', rx.unit_price,
              'memo', rx.memo,
+             'dispense_type', rx.dispense_type,
              'status', rx.status,
              'dispensed_at', rx.dispensed_at
            ) ORDER BY rx.sort_order, rx.id
@@ -96,7 +111,7 @@ router.get('/completed', async (req, res) => {
        JOIN prescription rx ON rx.consultation_id = c.id AND rx.status = 'dispensed'
        LEFT JOIN staff ds ON ds.id = rx.dispensed_by
        WHERE v.visit_date = CURRENT_DATE
-       GROUP BY c.id, v.id, p.id, s.name, ds.name
+       GROUP BY c.id, v.id, p.id, s.name
        ORDER BY MAX(rx.dispensed_at) DESC NULLS LAST
        LIMIT 50`
     );
@@ -138,13 +153,30 @@ router.put('/consultations/:id/dispense', async (req, res) => {
     );
 
     if (rxResult.rows.length === 0) {
+      // Also what the second of two people dispensing the same patient at once
+      // gets: the lock above waits for the first, then finds nothing 'ordered'.
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'No pending prescriptions for this consultation' });
+      return res.status(404).json({ error: ERR_NOTHING_PENDING });
     }
 
     // An "external" line is a paper prescription the patient fills at an outside
     // pharmacy — the clinic never hands the drug over (billing skips it for the
     // same reason), so its quantity must not leave our shelf count.
+    const stockDrugIds = [...new Set(
+      rxResult.rows
+        .filter(rx => rx.drug_id && rx.dispense_type !== 'external')
+        .map(rx => rx.drug_id)
+    )].sort((a, b) => a - b);
+
+    // Take every drug row lock up front, lowest id first. Locking them line by
+    // line in prescription order let two patients with the same two drugs in
+    // opposite order each hold one and wait for the other - Postgres then kills
+    // one dispense with "deadlock detected". The loop below re-locks rows this
+    // transaction already holds, which does not wait.
+    if (stockDrugIds.length) {
+      await client.query('SELECT id FROM drug WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [stockDrugIds]);
+    }
+
     const shortages = [];
     for (const rx of rxResult.rows) {
       if (rx.drug_id && rx.dispense_type !== 'external') {
@@ -194,14 +226,23 @@ router.put('/consultations/:id/dispense', async (req, res) => {
 });
 
 // PUT /api/pharmacy/prescription/:id/dispense-type  — 원내(internal)/원외(external) 지정
+// Only while the line is still waiting. Once dispensed, the stock has already
+// been taken (or not) on the strength of this value; flipping an internal line
+// to external afterwards would drop it from the bill while the drug stays off
+// the shelf count. The screen hides the switch on dispensed lines, but the
+// screen is not the only way to call this.
 router.put('/prescription/:id/dispense-type', async (req, res) => {
   try {
     const dt = req.body.dispense_type === 'external' ? 'external' : 'internal';
     const r = await pool.query(
-      `UPDATE prescription SET dispense_type = $1 WHERE id = $2 RETURNING *`,
+      `UPDATE prescription SET dispense_type = $1 WHERE id = $2 AND status = 'ordered' RETURNING *`,
       [dt, req.params.id]
     );
-    if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    if (r.rows.length === 0) {
+      const exists = await pool.query('SELECT status FROM prescription WHERE id = $1', [req.params.id]);
+      if (exists.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      return res.status(409).json({ error: ERR_TYPE_LOCKED });
+    }
     res.json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

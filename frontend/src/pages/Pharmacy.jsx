@@ -14,6 +14,12 @@ function timeText(v, locale){
   try { return new Date(raw).toLocaleString(locale || 'en-GB', { hour12:false }); } catch(e){ return raw; }
 }
 function rxQty(rx){ return parseFloat(rx.total_qty) || ((parseFloat(rx.dose)||0) * (Number(rx.frequency)||1) * (Number(rx.days)||1)); }
+function isExternal(rx){ return rx.dispense_type === 'external'; }
+
+// Exact error texts from pharmacy.routes.js. The API client passes on only the
+// message, so matching it is how a known refusal becomes a translated one.
+var ERR_NOTHING_PENDING = 'No pending prescriptions for this consultation';
+var ERR_TYPE_LOCKED = 'Prescription already dispensed; dispense type can no longer change';
 
 export default function PharmacyPage() {
   var lc = useLang(); var t = lc.t;
@@ -32,16 +38,27 @@ export default function PharmacyPage() {
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
 
   // 처방을 원내(internal)/원외(external)로 지정
+  // The list rows are updated as well as the open patient: clicking another
+  // patient and back re-selects from the list, which otherwise still held the
+  // old value and showed the switch as if it had not been pressed.
   async function setDispenseType(rxId, type){
+    function withType(group){
+      var n = Object.assign({}, group);
+      n.prescriptions = (group.prescriptions||[]).map(function(rx){ return rx.id===rxId ? Object.assign({}, rx, { dispense_type: type }) : rx; });
+      return n;
+    }
     try {
       await api.put('/pharmacy/prescription/'+rxId+'/dispense-type', { dispense_type: type });
-      setSel(function(prev){
-        if(!prev) return prev;
-        var n = Object.assign({}, prev);
-        n.prescriptions = (prev.prescriptions||[]).map(function(rx){ return rx.id===rxId ? Object.assign({}, rx, { dispense_type: type }) : rx; });
-        return n;
+      setSel(function(prev){ return prev ? withType(prev) : prev; });
+      setPending(function(list){
+        return list.map(function(g){
+          return (g.prescriptions||[]).some(function(rx){ return rx.id===rxId; }) ? withType(g) : g;
+        });
       });
-    } catch(err){ alert('Error: '+err.message); }
+    } catch(err){
+      if(err.message === ERR_TYPE_LOCKED){ alert(t.ph_typeLocked); await loadData(); return; }
+      alert('Error: '+err.message);
+    }
   }
 
   useEffect(function(){ loadData(); }, []);
@@ -102,7 +119,16 @@ export default function PharmacyPage() {
       }
       await loadData();
       setSel(null);
-    } catch(err){ alert('Error: ' + err.message); }
+    } catch(err){
+      if(err.message === ERR_NOTHING_PENDING){
+        // Someone else finished this patient first. Stock was taken once, by them.
+        alert(t.ph_alreadyDispensed);
+        await loadData();
+        setSel(null);
+      } else {
+        alert('Error: ' + err.message);
+      }
+    }
     setBusy(false);
   }
 
@@ -118,8 +144,10 @@ export default function PharmacyPage() {
     });
   }, [activeList, q]);
 
+  // Outside-pharmacy lines are not billed here (billing.routes.js leaves them
+  // out), so leaving them in made this figure disagree with the cashier's.
   var totalDrug = (sel && sel.prescriptions ? sel.prescriptions : []).reduce(function(sum, rx){
-    return sum + rxQty(rx) * (parseFloat(rx.unit_price) || 0);
+    return isExternal(rx) ? sum : sum + rxQty(rx) * (parseFloat(rx.unit_price) || 0);
   }, 0);
 
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
@@ -180,7 +208,7 @@ export default function PharmacyPage() {
                   {sel.allergies ? <div style={{ marginTop:6, color:'#fca5a5', background:'#ef444420', border:'1px solid #ef444450', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ color:t3, fontSize: 16 }}>{t.drugCost}</div>
+                  <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
                   <div style={{ color:'#f8fafc', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug)}</div>
                 </div>
               </div>
