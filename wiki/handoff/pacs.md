@@ -2,6 +2,53 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 의견: 영상 오더에도 「결과 있는 오더 취소」(결정 3-B)를 켤지 · DB 시간대 확인
+
+- **상태**: 보류 — 의견만(코드 변경 없음). 켤지는 총괄·실장님 결정, 켜면 아래 PACS 몫을 만들겠음
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `5f4fded`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **바탕** (임상병리 설계 `943909c`): 진료 화면에서 결과 있는 오더를 지우려 하면 409 → 「취소로 표시」 → `POST /api/consultations/order/:id/cancel` → `order_item.status='cancelled'`(+ `cancelled_at/by/reason`). 결과는 남기고 목록·청구에서 뺌.
+
+### 추천: **켠다** — 영상도 같은 방식으로. 단, 아래 규칙으로
+
+영상 오더가 「결과 있음」이 되는 경우는 지금 코드상 둘입니다(`consult.routes.js` DELETE의 409 조건): **영상이 도착함**(`worklist_log.status`가 `completed` — `/study-arrived`가 바꿈, 또는 `in_progress`) · **판독이 있음**(`order_item.result_text`). 이런 오더는 지금 지울 수 없어서, 잘못 낸 경우 계속 청구·목록에 남습니다. 검사와 같은 문제이고 같은 해법이 맞습니다.
+
+| 질문 | 추천 | 이유 |
+|---|---|---|
+| **① `worklist_log`·`worklist_status`와 맞추기** | 취소 API가 같은 트랜잭션에서 `UPDATE worklist_log SET status='cancelled' WHERE order_item_id=$1 AND status IN ('scheduled','in_progress')` 와 `order_item.worklist_status='cancelled'`(워크리스트 항목을 취소한 경우만). **이미 `completed`(영상 도착)인 워크리스트 줄은 그대로 `completed`** | `worklist_log.status`는 「장비 워크리스트 항목의 상태」라는 사실 기록입니다. 이미 찍힌 검사를 「취소」로 고쳐 쓰면 「찍었다」는 사실이 사라짐. 오더가 취소됐다는 것은 `order_item.status`가 말함 |
+| **② 이미 들어온 영상·판독이 어떻게 보일지** | 지우지 않음. 「🩻 판독소견」 목록에 **회색 + 「Annulé (취소됨)」 + 이유**, 영상 도착 표시·환자번호 경고는 그대로, 「Voir image」로 계속 볼 수 있음. 영상 창 머리에도 「취소된 오더의 영상」 한 줄. Orthanc 영상은 손대지 않음 | 기록(의무기록)이므로 남김 — 검사 결과를 회색으로 남기는 것과 같음. 영상을 지우는 것은 되돌릴 수 없고 EMR 밖(Orthanc) 일이라 이 기능에 넣지 않음 |
+| **③ 판독 저장** | 취소된 오더에는 **판독 저장 거절(409)**, 화면은 「이 영상 검사는 진료실에서 취소되었습니다」 | 임상병리가 취소된 검사에 결과 저장을 거절하는 것과 같게. 설명은 취소 이유 칸에 |
+| **④ 브리지가 장비 워크리스트에서 빼는지** | **코드 변경 없이 빠짐** — 피드가 `wl.status='scheduled'`만 주므로(`pacs.routes.js` worklist-feed) ①로 `cancelled`가 되면 다음 바퀴(15초 안)에 `.wl` 삭제 | 확인함(코드). 오더 삭제 때와 같은 길 |
+| **⑤ 취소된 항목에 영상이 도착하면** | 두 경우. (가) 취소 **전에** 영상이 이미 Stable → 이미 `completed`라 ①에서 안 바뀜. (나) 취소 **뒤** 도착(방사선사가 장비에서 이미 골라 두고 찍음) → 브리지는 피드에 있는 줄만 묻으므로 **보고하지 않음**. 영상은 Orthanc에 그 UID로 들어가 있어서 판독 목록의 「Voir image」로는 **보임**(뷰어는 UID만 씀), 「도착」 표시만 없음. `/study-arrived`의 `cancelled`는 덮지 않는 조건은 그대로 둠(방어용) | (나)는 드물고 해가 없음 — 영상은 남고 취소된 오더에 붙어 보임. 보고까지 하게 하려면 피드 범위를 넓혀야 해서(P-6과 같은 일) 지금은 안 함 |
+| **⑥ 청구** | 수납이 `o.status <> 'cancelled'`를 넣으면 영상 오더도 같이 빠짐 — PACS 쪽 할 일 없음 | 같은 `order_item` |
+| **⑦ 아직 안 찍은 오더** | **지금처럼 삭제** (`scheduled`이고 판독 없음 → 409 아님) | 가장 흔한 「잘못 냄」. 취소 줄이 목록에 남지 않게 |
+
+**⑦의 남는 위험** — 「찍었지만 EMR이 아직 모름」: 영상은 Orthanc에 들어왔는데 Stable 전(약 60~75초)이거나 브리지가 도착 확인을 못 하는 동안에는 워크리스트가 `scheduled`라 **오더를 지울 수 있고**, 그 영상은 어느 오더에도 안 붙습니다(Orthanc에는 남음 — P-4의 「연결 안 된 영상」과 같은 처지). 특히 **PACS 브리지를 합치기 전(과도기)에는 도착 확인이 아예 없어** 영상이 있어도 늘 지워집니다. 그래서 **영상 오더에 이 기능을 켜는 것은 PACS 저장소를 합친 뒤(재부팅 절차서 ②)** 로 하기를 권합니다. 더 막고 싶으면 「워크리스트로 보낸 영상 오더는 삭제 대신 늘 취소」로 할 수 있지만, 잘못 낸 오더마다 회색 줄이 남아 목록이 지저분해져서 추천하지 않음.
+
+**⑧ 환자번호가 틀린 영상(`patient_check` mismatch)을 바로잡는 절차와의 관계**
+
+- **이 환자의 영상이 맞음**(번호만 오기) → 취소할 일 없음. 판독 쓰고 한 줄 남김(위키 2.6 ④).
+- **다른 환자의 영상임** → 이 기능이 **첫 단계**가 됩니다: ① 이 환자(A)의 영상 오더를 **취소**(이유: 「영상이 다른 환자 26-xxxxx의 것」) → A의 청구에서 빠지고, 잘못 붙은 영상은 회색 줄에 경고와 함께 기록으로 남음 ② A에게 필요하면 **새 영상 오더** → 다시 촬영(의사 판단) ③ 그 영상을 실제 주인(B)의 오더에 옮겨 붙이는 것은 **이 기능 밖** — EMR에 영상 옮기기 기능이 없고, Orthanc에서 환자 정보를 고치면(`/modify`) 기본으로 UID가 새로 만들어져 링크가 끊김. P-4 2단계(「연결 안 된 영상」을 오더에 붙이기)와 함께 설계할 일.
+- 위키 2.6 ⑤(「관리자에게 알림, 다시 촬영은 의사 판단」)는 이 기능이 들어가면 「오더를 취소로 표시(이유에 적기) → 필요하면 다시 오더」로 바꿀 수 있음.
+- 주의: 취소된 A의 기록에 B의 영상이 계속 보입니다(회색·경고). 개인정보 면에서 거슬리면 「취소된 오더의 영상은 버튼을 숨김」도 가능 — 추천은 **보이게 둠**(무엇이 잘못 붙었는지가 기록의 요점이라서).
+
+**작업 크기**
+
+| 세션 | 할 일 | 크기 |
+|---|---|---|
+| **진료** | 취소 API가 `code_type='imaging'`이면 ①의 UPDATE 두 줄을 같은 트랜잭션에서(또는 PACS가 내보내는 함수 `cancelWorklistForOrder(client, orderItemId)`를 부름 — 원하면 PACS가 만듦). 영상 창 머리에 취소 표시(`viewer-url`이 줄 `order_status` 사용). 판독 저장 409 처리(안내 후 다시 불러오기) | 작음 |
+| **PACS** | `readings/patient`·`viewer-url`에 `order_status`·`cancelled_at`·`cancel_reason` 추가, `PUT /reading` 취소된 오더 409, `RadiologyReadings` 회색·「Annulé」·이유(번역 키 1~2개, `cs_wsCancelled`/`cs_labCancelled` 재사용 가능), (선택) `cancelWorklistForOrder` 함수, 위키 2.4·2.6·3절. **브리지·마이그레이션 변경 없음** | 작음 (반나절, 격리 스택 + 가짜 Orthanc로 확인 가능 — PACS 격리 스택 불필요) |
+| 순서 | 진료 마이그레이션·취소 API 뒤, **PACS 저장소 합친 뒤** 영상에 켬 | |
+
+### DB 연결 시간대 (총괄 `23bde17`) — 코드로 확인
+
+- 워크리스트 날짜: 오더 저장 때 `worklist_log.scheduled_date = CURRENT_DATE`(`consult.routes.js`), 피드 기본값 `todayLocal()`(Node, `TZ`), `/api/worklist`·`dicom-mwl`의 `CURRENT_DATE` — **이제 모두 현지(Indian/Antananarivo)** 로 같은 날을 가리킴 ✓.
+- `scheduled_time = CURRENT_TIME`: 이제 현지 시각 ✓. **바뀐 점**: 전에는 연결이 UTC라 `.wl`의 예정 시각이 3시간 이르게 들어갔을 것(장비는 보통 날짜로 거르므로 영향 작음). 전에 만든 줄은 UTC 시각 그대로.
+- AccessionNumber·UID의 날짜는 JS `todayLocal()` ✓. `dicomDate('YYYY-MM-DD')`(DATE는 이제 문자열)는 UTC 자정으로 읽고 현지(+3)로 적으므로 같은 날 ✓ — 시간대가 UTC보다 늦은 곳(음수)이면 하루 당겨지는 구조이므로 다른 병원에 쓸 때 주의.
+- **새로 찾은 작은 문제 (P-22 [낮음])**: 판독 날짜 표시 — `result_at`(TIMESTAMPTZ)은 JSON에서 UTC 시각(`…Z`)으로 나가는데 `RadiologyReadings.jsx`의 `ymd()`와 진료 영상 창이 `T` 앞을 잘라 씀 → **현지 자정~03:00에 쓴 판독은 전날 날짜로 보임**. DB 연결 시간대와 무관(JSON 직렬화 문제). 고치는 법: 화면에서 `new Date(v).toLocaleDateString('en-CA')`. PACS 쪽 한 줄 + 진료 영상 창 한 줄 — 원하시면 바로 고치겠음.
+- **바꾼 파일**: `wiki/handoff/pacs.md`만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: 코드 읽기 — `laboratory.md` 설계(`943909c`), `consult.routes.js` DELETE 409 조건·오더 저장 INSERT, `pacs.routes.js` 피드 WHERE·`/study-arrived`의 `cancelled` 조건·`viewer-url`, `database.js` `options: -c TimeZone`, `RadiologyReadings.jsx` `ymd()`.
+- **다른 세션에 부탁**: (켜기로 하면) 진료 — 위 표의 진료 몫.
+
 ## 2026-09-29 — 서버 권한 S2를 PACS 라우트에 적용 (P-21)
 
 > **총괄 확인 (2026-09-29)**: S2 `17e3404` 합침(`b9d35a4`) + 실행 중 EMR 반영. 합친 뒤 실행 중 브리지 heartbeat·피드 200 계속. 역할별 확인 결과 표와 일치.
