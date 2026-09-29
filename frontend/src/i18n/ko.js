@@ -984,6 +984,7 @@ export default {
   se_backupIntro: "데이터베이스를 자동·수동으로 백업합니다. 백업은 앱 폴더에 저장되고, 각 백업을 ⬇로 USB 등에 내려받을 수 있어요.",
   se_backupSafetyTip: "💾 밤마다 외장 디스크로도 복사됩니다(영상 백업과 함께). 디스크가 꽂혀 있는지는 상태 창(상단의 점 또는 서버 PC의 상태 창)에서 확인하세요. 필요하면 아래 ⬇로 USB에도 내려받을 수 있어요.",
   se_fld_refundedAmount: "돌려준 돈",
+  se_act_drugPrice: "약 가격을 바꿈",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

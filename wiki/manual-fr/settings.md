@@ -58,7 +58,7 @@ Une partie de ce guide concerne **tout le personnel** : changer son propre mot d
 1. **Paramètres** → **Médicaments**. Utilisez **Rechercher** pour trouver le médicament.
 2. **Modifier** sur sa ligne.
 3. **Prix unitaire** : le prix d'une unité (un comprimé, ou un flacon si la case « Délivré à l'unité de conditionnement » est cochée).
-4. **Sauver** (en bas de la fenêtre ; sur un petit écran, seules les cases défilent, les boutons restent visibles). Le message **✓ Enregistré** confirme.
+4. **Sauver** (en bas de la fenêtre ; sur un petit écran, seules les cases défilent, les boutons restent visibles). Le message **✓ Enregistré** confirme. Le changement de prix est noté dans le **Journal**.
 5. Le **Stock** ne se change pas ici : il se change dans **Pharmacie** → **Stock**.
 
 **Le cadre jaune « À vérifier sur place (liste importée) »** : la liste des médicaments vient de l'ancien inventaire. Le cadre dit ce qui reste à contrôler sur ce médicament (par exemple une quantité différente de la note d'origine). Il ne bloque pas : vous pouvez mettre le prix. Le cadre disparaît quand la pharmacie marque le médicament « Vérifié » dans **Pharmacie** → **Stock**.
@@ -90,7 +90,9 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 2. **Panel** : choisissez l'analyse (par exemple L01 · CBC).
 3. Sur chaque ligne : **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »).
 4. Pour des valeurs selon le sexe ou l'âge : **▸ Par sexe et âge** → **+ Ajouter une ligne**.
-5. **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
+5. **Sauver**. Si plusieurs tableaux **Par sexe et âge** sont ouverts, faites défiler vers le bas pour voir **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
+
+Les résultats déjà enregistrés gardent leur couleur et leur référence. Seuls les résultats enregistrés ensuite — ou enregistrés à nouveau — suivent les nouvelles valeurs.
 
 <!-- à revoir : onglet de la session Laboratoire ; les valeurs de référence sont en cours de validation par les médecins. -->
 
@@ -116,14 +118,15 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, comptes du personnel).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, comptes du personnel, prix des médicaments).
 
 1. **Paramètres** → **Journal**. Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.
 3. Les colonnes : **Quand**, **Qui**, **Quoi**, **Patient**, **Modification** (ancienne valeur barrée → nouvelle valeur).
 4. **◀ Précédent** / **Suivant ▶** pour les pages.
 5. Personne ne peut modifier ni effacer ce journal. Un mot de passe changé est noté, jamais sa valeur.
-6. Ne sont **pas** notés : le prix d'un médicament, les ordonnances types, une première saisie.
+6. Le **prix d'un médicament** est noté quand il change (« Prix d'un médicament modifié », ancien prix → nouveau prix), même le premier prix d'un médicament importé (0 → 100). Un médicament ajouté avec **+ Ajouter** ne l'est pas.
+7. Ne sont **pas** notés : les ordonnances types, le prix des actes (codes d'actes), une première saisie.
 
 ## Si ce message apparaît
 

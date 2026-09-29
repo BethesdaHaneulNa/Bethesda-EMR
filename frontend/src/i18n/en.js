@@ -993,6 +993,7 @@ export default {
   se_backupIntro: "Back up the database automatically and manually. Backups are saved in the app's folder; download any backup (⬇) to a USB stick.",
   se_backupSafetyTip: "💾 Every night they are also copied to the external disk (with the image backup). Check that the disk is plugged in on the status (the dot at the top, or the status window on the server PC). You can also download one to a USB stick with ⬇ below.",
   se_fld_refundedAmount: "Refunded to the patient",
+  se_act_drugPrice: "Drug price changed",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

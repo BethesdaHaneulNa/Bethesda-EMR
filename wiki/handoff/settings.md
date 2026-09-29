@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 약 가격 변경을 기록에 (실장님 결정 (나)) · 검사 항목 설명 두 문장
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5077d8e` merge 위)
+- **1** `admin.routes.js` `PUT /drugs/:id`: 한 트랜잭션 — `SELECT id, code, name, unit_price … FOR UPDATE` → UPDATE → `auditPrice` → COMMIT. 가격을 `Number()`로 비교해 다를 때만 `ACTIONS.DRUG_PRICE` 한 줄(`entity 'drug'`, `summary` = 코드 + 이름, `before`/`after` = `{ unit_price }`만, 환자·내원 없음). 없는 약은 ROLLBACK 뒤 404. 검사(400)는 트랜잭션 전.
+- **2** 새 약(POST)은 남기지 않음. 가져온 약의 첫 가격(0 → 3000)은 남음 — 화면에서 PROFEIN으로 확인.
+- **3 다른 길**: 없음. 약국(`pharmacy.routes.js`)은 `stock_qty`·가져오기 확인 칸만, 진료(`consult.routes.js`)·수납(`billing.routes.js`)의 `unit_price`는 처방·영수 줄의 그때 가격, 034 가져오기는 한 번. 화면에서 약을 저장하는 곳도 Settings.jsx뿐.
+- **4 기록 탭**: `settings.drug.price` → 「Prix d'un médicament modifié / 약 가격을 바꿈 / Drug price changed」(`se_act_drugPrice`), 칸 `unit_price`는 있던 「Prix unitaire / 단가」. 종류 거르기 목록에도 나옴. 환자 칸은 직원 줄처럼 「—」.
+- **5 시험** `backend/test/settings.drugprice.mjs` 14개: 새 약 0줄 / 가격만 1줄(100 → 150, 코드·이름·누가, 환자 없음) / 이름만 0 / 같은 가격(150, "150.00") 0 / 가격 칸 없는 저장 0 / 가격 + 이름 1줄(가격만, 150 → 200) / 권한 없음 403·0 / 없는 약 404·0 / 음수 400·0.
+- **6 오더 코드**: 만들지 않음. `auditPrice(client, req, action, entity, was, now, field)`로 떼어 두어 `PUT /order-codes/:id`에 `price`·`price_clinic` 두 번 부르면 됨(그 라우트도 트랜잭션으로 바꿔야 함).
+- **임상병리 부탁**: `manual-fr/settings.md` 「Régler les valeurs de référence」 5단계에 「plusieurs tableaux … défiler vers le bas pour voir Sauver」, 그 아래 「Les résultats déjà enregistrés gardent …」 — 보내 준 문장 그대로. Journal 절도 고침(약 가격은 기록됨, 오더 코드 가격은 아님).
+- **실수 하나(고침)**: 처음 넣을 때 스크립트의 `String.replace`가 `$$`를 `$`로 바꿔 UPDATE의 `$n`이 깨짐 → 500 — 시험이 잡음, 고친 뒤 통과. 앞으로 문서·코드 넣기는 split/join으로.
+- **공용 파일 변경**: i18n `se_act_drugPrice`(설정 표시 안).
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/settingsAudit.js` · i18n 3개 · `backend/test/settings.drugprice.mjs`(새) · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): drugprice 14 · drugs · audit · access(1265) 통과. 화면: 약 창에서 PROFEIN 0 → 3000 저장 → 기록 탭 첫 줄 fr 「Prix d'un médicament modifié · MED-0009 PROFEIN · — · Prix unitaire: 0 → 3000」, ko 「약 가격을 바꿈 … 단가: 0 → 3000」, 종류 목록에 「약 가격을 바꿈」.
+
 ## 2026-09-30 — EMR 백업 복사 상태 줄 · 백업 화면 안내 · 기록 탭 영수 칸 · 로그인 답의 theme (총괄 1~4)
 
 - **상태**: 확인 요청

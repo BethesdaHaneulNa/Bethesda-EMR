@@ -23,6 +23,8 @@ export var AUDIT_ACTIONS = {
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
   'settings.staff.password': 'se_act_staffPassword',
+  // price only, before -> after (decision 2026-09-30 (나)); no patient
+  'settings.drug.price': 'se_act_drugPrice',
 };
 
 // field name -> se_ key of its label
