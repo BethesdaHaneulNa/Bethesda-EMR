@@ -2,6 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
+
+- **상태**: 확인 요청 (문서만, 코드 변경 없음)
+- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **① `wiki/manual-fr/laboratory.md`**(새, 간호사용, 프랑스어만): `manual-fr/README.md` 구성 그대로 — En bref(6단계) → Pas à pas(오늘 결과 넣기 · 숫자 쓰는 법(12,5 · 12 000 · <5) · 글자 결과(Négatif/Neg/- 정상, Positive/Trace/1+ 빨강) · 이미 넣은 결과 고치기(Journal에 남음) · 다른 날 검사 열기 · 결과 표 읽기(▲▼!, 재검 (1)(2)·시각, 취소분 회색 줄긋기 「날짜 ✕」, 참고치 툴팁·기준 이름)) → Si ce message apparaît(8가지 — 단위 경고는 「관리자만」으로) → À ne pas faire(5) → Qui appeler. 화면 글자는 `fr.js` 그대로 굵게, 가짜 환자 RAKOTO Jean · 26-00001. 오늘 격리 스택 프랑스어 화면에서 본 글자와 대조. 주석: `terme à vérifier sur place`(NFS·test rapide du paludisme), `à revoir`(Trace가 정상으로 바뀔 수 있음). 그림 없음. 인쇄 쪽수는 확인 못 함(A4 3쪽 안팎으로 추정).
+- **② `wiki/reference/changelog-1.5.0/laboratory.md`**(새, 영어): v1.4.0과 같은 목소리로 여섯 덩어리 — 프랑스식 숫자 판정 · 설정 저장이 결과를 비우던 것(+단위 경고) · 오더 즉시 검사실에(오늘만·30초·완료=오늘 입력·「전체」 저장) · 글자 결과·재검·취소 표시·참고치 툴팁 · 성별·나이별 참고치(값 없음 — 제안표·질문지 안내) · Less visible(취소 오더 저장 거절, 서버가 DB 참고치 사용, 변경 기록, test-items 권한, labFlag.js+검사, 번역, 마이그레이션 024). **After updating**: 참고치는 입력 전까지 그대로, 업데이트 전 쉼표로 적은 결과는 다시 저장하면 판정이 다시 계산됨.
+- **설정 세션께 (관리자 설명서용, 프랑스어 — 그대로 옮겨 써도 됨)**:
+  > **Valeurs de référence (Paramètres → Items de test).** Choisissez l'analyse dans **Panel**. **Min** et **Max** sur la ligne de l'item sont la référence par défaut. Pour des valeurs selon le sexe ou l'âge, cliquez sur **▸ Par sexe et âge (0)**, puis **+ Ajouter une ligne** : **Sexe** (**Tous**, **Homme**, **Femme**), **Âge de** (inclus) **à** (exclu) en **jours**, **mois** ou **ans**, **Min**, **Max**, **Note (source)**. Cliquez sur **Sauver**. Pour un même sexe, les tranches d'âge ne doivent pas se chevaucher ; sinon l'enregistrement est refusé. N'entrez que des valeurs validées par le médecin. Ne changez pas l'**Unité** d'une ligne qui a déjà des résultats : ajoutez une nouvelle ligne avec un nom différent, puis supprimez l'ancienne avec **✕**.
+- **바꾼 파일**: `wiki/manual-fr/laboratory.md`(새) · `wiki/reference/changelog-1.5.0/laboratory.md`(새) · 이 노트 · **공용 파일 변경**: 위 두 폴더에 새 파일 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **디자인 세션 관련**: `Lab.jsx`·`LabResults.jsx`는 건드리지 않음. 배치 문제로 남은 것 — 7절 24(브라우저 폭 ≈1024px 이하에서 가운데 입력 표가 눌려 머리 글자가 세로로 꺾임, 입력 칸 좁아짐).
+
 ## 2026-09-29 — 참고치 질문지 · 기록 탭 확인 · 2절 따라 하기
 
 - **상태**: 확인 요청
