@@ -288,6 +288,19 @@ export default {
   // ── begin statistics (st_) ──
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "Backups are working",
+  se_bkStale: "The latest backup is too old",
+  se_bkNone: "There are no backups at all",
+  se_bkFailed: "The last backup failed",
+  se_bkStaleHint: "Last night's backup did not happen. Press \"Back up now\"; if it fails, tell the person in charge.",
+  se_bkNoneHint: "Press \"Back up now\" to make the first backup.",
+  se_bkFailedHint: "Tell the person in charge what the error below says. Automatic backups retry every 30 minutes.",
+  se_bkHoursAgo: "{n} h ago",
+  se_bkRunning: "Backup in progress",
+  se_bkLastTry: "Last attempt",
+  se_bkTriggerAuto: "automatic",
+  se_bkTriggerManual: "manual",
+  se_bkMinKeep: "The {n} most recent backups are never deleted, however old they are.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   // ── end pacs ──

@@ -33,11 +33,15 @@ export default function SettingsPage() {
   var bkS = useState(null), backup = bkS[0], setBackup = bkS[1];
   var bkbS = useState(false), backupBusy = bkbS[0], setBackupBusy = bkbS[1];
   function fmtBytes(n){ n=Number(n)||0; if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(1)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+  // The server sends UTC. Slicing that string showed times three hours early in
+  // Madagascar, next to file names stamped in local time - read it in the PC's own zone.
+  function fmtLocal(iso){ var d=new Date(iso); if(isNaN(d.getTime())) return ''; var p=function(n){return String(n).padStart(2,'0')}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 
   useEffect(function(){ loadAll(); },[]);
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
   async function loadBackup(){ try { setBackup(await api.get('/backup/status')); } catch(e){ setBackup(null); } }
-  async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); await loadBackup(); } catch(e){ alert((t.backupFail||'백업 실패')+': '+(e.message||'')); } setBackupBusy(false); }
+  // Reload whatever happened: a failure is now shown on the tab itself, not only in the alert.
+  async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); } catch(e){ alert((t.backupFail||'백업 실패')+': '+(e.message||'')); } await loadBackup(); setBackupBusy(false); }
   async function downloadBackup(name){ try { var token=localStorage.getItem('medconnect_token'); var res=await fetch('/api/backup/download/'+encodeURIComponent(name),{headers:token?{Authorization:'Bearer '+token}:{}}); if(!res.ok){ alert((t.backupFail||'다운로드 실패')+' ('+res.status+')'); return; } var blob=await res.blob(); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); } catch(e){ alert((t.backupFail||'다운로드 실패')+': '+e.message); } }
 
   async function loadAll(){
@@ -570,21 +574,44 @@ export default function SettingsPage() {
 
           {activeTab==='backup'?(<div style={{padding:'16px 20px',maxWidth:780,overflow:'auto'}}>
             <div style={{fontWeight:700,fontSize:15,color:tx,marginBottom:5}}>💾 {t.backupTab||'백업'}</div>
-            <div style={{fontSize:13,color:t3,marginBottom:16,lineHeight:1.6}}>{t.backupIntro||'데이터베이스를 정기/수동으로 백업합니다. 백업 경로는 설치 시 .env의 BACKUP_PATH로 지정해요(앱은 C, 백업은 D 식). 경로가 없으면 백업은 꺼집니다.'}</div>
+            <div style={{fontSize:13,color:t3,marginBottom:16,lineHeight:1.6}}>{t.backupIntro}</div>
             {!backup?(<div style={{color:t3}}>{t.loading||'Loading…'}</div>):(<>
+              {/* This used to read "automatic backup on" in green whatever had happened.
+                  The state comes from services/backup.js health(), the same judgement the
+                  status check uses, so a failing night is visible where people look. */}
+              {(function(){
+                var st=backup.state||'ok';
+                var C={ok:'#34d399',stale:'#fbbf24',none:'#fbbf24',failed:'#f87171'}[st]||'#fbbf24';
+                var title={ok:t.se_bkOk,stale:t.se_bkStale,none:t.se_bkNone,failed:t.se_bkFailed}[st];
+                var hint={stale:t.se_bkStaleHint,none:t.se_bkNoneHint,failed:t.se_bkFailedHint}[st];
+                var la=backup.lastAttempt;
+                return <div style={{background:C+'14',border:'1px solid '+C+'55',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+                  <div style={{display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
+                    <span style={{fontSize:16,fontWeight:800,color:C}}>{st==='ok'?'✓':'⚠'} {title}</span>
+                    {backup.newestAgeHours!=null?<span style={{fontSize:13,color:t2}}>{t.backupLast||'최근'}: {fmtLocal(backup.last.mtime)} · {(t.se_bkHoursAgo||'{n}h').replace('{n}',backup.newestAgeHours)}</span>:null}
+                    {backup.running?<span style={{fontSize:13,color:'#60a5fa',fontWeight:700}}>⏳ {t.se_bkRunning}</span>:null}
+                  </div>
+                  {hint?<div style={{fontSize:13,color:tx,marginTop:6,lineHeight:1.5}}>{hint}</div>:null}
+                  {la&&!la.ok?<div style={{fontSize:12,color:t2,marginTop:8,lineHeight:1.5}}>
+                    {t.se_bkLastTry}: {fmtLocal(la.at)} ({la.trigger==='scheduled'?t.se_bkTriggerAuto:t.se_bkTriggerManual})
+                    {la.error?<div style={{fontFamily:'monospace',fontSize:12,color:'#fca5a5',marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{la.error}</div>:null}
+                  </div>:null}
+                </div>;
+              })()}
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:14,marginBottom:14}}>
                 <div style={{display:'flex',gap:24,flexWrap:'wrap'}}>
-                  <div><div style={{fontSize:12,color:t3}}>{t.backupStatus||'상태'}</div><div style={{fontSize:14,fontWeight:800,color:'#34d399'}}>✓ {t.backupOnAuto||'자동 백업 켜짐'}</div></div>
+                  <div><div style={{fontSize:12,color:t3}}>{t.backupStatus||'상태'}</div><div style={{fontSize:14,color:tx}}>{t.backupOnAuto||'자동 백업 켜짐'}</div></div>
                   <div><div style={{fontSize:12,color:t3}}>{t.backupPath||'저장 위치'}</div><div style={{fontSize:14,color:tx,fontFamily:'monospace'}}>{backup.custom?backup.hostPath:(t.backupAppFolder||'앱 폴더 (backups)')}</div></div>
                   <div><div style={{fontSize:12,color:t3}}>{t.backupSchedule||'자동'}</div><div style={{fontSize:14,color:tx}}>{t.backupDaily||'매일'} {backup.time}</div></div>
                   <div><div style={{fontSize:12,color:t3}}>{t.backupRetention||'보관'}</div><div style={{fontSize:14,color:tx}}>{backup.retentionDays}{t.days||'일'}</div></div>
                 </div>
+                {backup.minKeep?<div style={{fontSize:12,color:t3,marginTop:8}}>{(t.se_bkMinKeep||'').replace('{n}',backup.minKeep)}</div>:null}
                 {!backup.custom?<div style={{fontSize:12,color:'#fbbf24',marginTop:10,lineHeight:1.5}}>{t.backupSafetyTip||'⚠ 같은 디스크에 저장돼요. 고장·도난 대비해 아래 ⬇로 USB 등 다른 곳에 복사하거나, 다른 드라이브 자동저장은 .env의 BACKUP_PATH로 지정하세요.'}</div>:null}
               </div>
               <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:14}}>
                 <button onClick={runBackup} disabled={backupBusy} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:6,padding:'9px 18px',cursor:backupBusy?'wait':'pointer',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
                 <button onClick={loadBackup} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'9px 14px',cursor:'pointer',fontSize:14}}>↻ {t.refresh||'새로고침'}</button>
-                {backup.last?<span style={{fontSize:13,color:t3}}>{t.backupLast||'최근'}: {String(backup.last.mtime).replace('T',' ').slice(0,16)} ({fmtBytes(backup.last.size)})</span>:null}
+                {backup.last?<span style={{fontSize:13,color:t3}}>{t.backupLast||'최근'}: {fmtLocal(backup.last.mtime)} ({fmtBytes(backup.last.size)})</span>:null}
               </div>
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
                 <div style={{fontSize:13,fontWeight:700,color:t2,padding:'8px 12px',borderBottom:'1px solid '+bd}}>{t.backupList||'백업 목록'} ({backup.count})</div>
@@ -595,7 +622,7 @@ export default function SettingsPage() {
                         {(backup.backups||[]).map(function(b,i){ return <tr key={i} style={{borderBottom:'1px solid #1a1f2e'}}>
                           <td style={{padding:'7px 12px',color:tx,fontFamily:'monospace'}}>{b.name}</td>
                           <td style={{padding:'7px 12px',color:t2,textAlign:'right',whiteSpace:'nowrap'}}>{fmtBytes(b.size)}</td>
-                          <td style={{padding:'7px 12px',color:t3,textAlign:'right',whiteSpace:'nowrap'}}>{String(b.mtime).replace('T',' ').slice(0,16)}</td>
+                          <td style={{padding:'7px 12px',color:t3,textAlign:'right',whiteSpace:'nowrap'}}>{fmtLocal(b.mtime)}</td>
                           <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={function(){downloadBackup(b.name)}} title={t.download||'다운로드'} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'3px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}>⬇ {t.download||'다운로드'}</button></td>
                         </tr>; })}
                       </tbody>

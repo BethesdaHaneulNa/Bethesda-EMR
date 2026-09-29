@@ -279,6 +279,19 @@ export default {
   // ── begin statistics (st_) ──
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "백업 정상",
+  se_bkStale: "최근 백업이 오래됐습니다",
+  se_bkNone: "백업이 하나도 없습니다",
+  se_bkFailed: "마지막 백업이 실패했습니다",
+  se_bkStaleHint: "어젯밤 백업이 되지 않았습니다. 「지금 백업」을 눌러 보고, 실패하면 담당자에게 알리세요.",
+  se_bkNoneHint: "「지금 백업」을 눌러 첫 백업을 만드세요.",
+  se_bkFailedHint: "아래 오류를 담당자에게 알리세요. 자동 백업은 30분마다 다시 시도합니다.",
+  se_bkHoursAgo: "{n}시간 전",
+  se_bkRunning: "백업 진행 중",
+  se_bkLastTry: "마지막 시도",
+  se_bkTriggerAuto: "자동",
+  se_bkTriggerManual: "수동",
+  se_bkMinKeep: "보관 기간이 지나도 가장 최근 백업 {n}개는 지우지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   // ── end pacs ──

@@ -279,6 +279,19 @@ export default {
   // ── begin statistics (st_) ──
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "Sauvegardes en ordre",
+  se_bkStale: "La dernière sauvegarde est trop ancienne",
+  se_bkNone: "Aucune sauvegarde",
+  se_bkFailed: "La dernière sauvegarde a échoué",
+  se_bkStaleHint: "La sauvegarde de cette nuit n'a pas eu lieu. Appuyez sur « Sauvegarder » ; si cela échoue, prévenez le responsable.",
+  se_bkNoneHint: "Appuyez sur « Sauvegarder » pour faire la première sauvegarde.",
+  se_bkFailedHint: "Communiquez l'erreur ci-dessous au responsable. La sauvegarde automatique réessaie toutes les 30 minutes.",
+  se_bkHoursAgo: "il y a {n} h",
+  se_bkRunning: "Sauvegarde en cours",
+  se_bkLastTry: "Dernière tentative",
+  se_bkTriggerAuto: "automatique",
+  se_bkTriggerManual: "manuelle",
+  se_bkMinKeep: "Les {n} sauvegardes les plus récentes ne sont jamais supprimées, quel que soit leur âge.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   // ── end pacs ──
