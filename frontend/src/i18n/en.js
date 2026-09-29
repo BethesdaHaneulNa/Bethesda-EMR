@@ -386,6 +386,8 @@ export default {
   lb_unitWarnSafe: "Safe way: leave the existing row as it is, add a new row with a different name (e.g. the unit after the name), then delete the old row with ✕.",
   lb_resultCount: "{n} results",
   lb_saveAnyway: "Save anyway",
+  lb_inConsultation: "In consultation",
+  lb_orderRemoved: "This test's order was removed in the consultation room. The list is reloaded.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

@@ -27,11 +27,19 @@ function computeFlag(value, lo, hi) {
   return 'normal';
 }
 
-// ── PENDING lab orders (lab) — completed consultations w/ un-resulted lab orders ──
+// ── PENDING lab orders (lab) — today's visits with un-resulted lab orders ──
+// An order shows up as soon as the doctor places it, not when the consultation
+// is completed: the patient usually goes to the lab mid-consultation and comes
+// back with the result (director's decision 2026-09-29, decisions.md). The
+// screen marks a consultation still open as "in consultation". Only today's
+// visits, also by decision -- an earlier day's test is found through patient
+// search. A visit cancelled at reception is left out: cancelling is limited to
+// queued visits, but a visit can be set back to waiting and then cancelled,
+// and older data predates that limit.
 router.get('/pending', permMiddleware('lab'), async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT c.id AS consultation_id, c.updated_at AS consultation_time,
+      `SELECT c.id AS consultation_id, c.updated_at AS consultation_time, c.status AS consultation_status,
               v.id AS visit_id, v.visit_date,
               p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth, p.allergies,
               s.name AS doctor_name,
@@ -45,19 +53,23 @@ router.get('/pending', permMiddleware('lab'), async (req, res) => {
          LEFT JOIN staff s ON s.id = c.doctor_id
          JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab'
               AND o.status NOT IN ('completed','cancelled')
-        WHERE c.status = 'completed' AND v.visit_date = CURRENT_DATE
+        WHERE v.visit_date = CURRENT_DATE AND v.status <> 'cancelled'
         GROUP BY c.id, v.id, p.id, s.name
-        ORDER BY c.updated_at ASC`
+        ORDER BY MIN(o.created_at) ASC, c.id ASC`
     );
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── recently completed lab orders (lab) ──
+// ── lab orders resulted today (lab) ──
+// "Today" here is the day the result was entered, not the visit day: a sample
+// from yesterday that is finished today through patient search belongs to
+// today's finished work, and the pending list (today's visits only) never
+// shows it. For today's visits the two are the same.
 router.get('/completed', permMiddleware('lab'), async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT c.id AS consultation_id, v.id AS visit_id, v.visit_date,
+      `SELECT c.id AS consultation_id, c.status AS consultation_status, v.id AS visit_id, v.visit_date,
               p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth,
               s.name AS doctor_name,
               JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code,
@@ -68,7 +80,8 @@ router.get('/completed', permMiddleware('lab'), async (req, res) => {
          JOIN patient p ON p.id = c.patient_id
          LEFT JOIN staff s ON s.id = c.doctor_id
          JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab' AND o.status = 'completed'
-        WHERE v.visit_date = CURRENT_DATE
+              AND o.result_at >= CURRENT_DATE AND o.result_at < CURRENT_DATE + 1
+        WHERE v.status <> 'cancelled'
         GROUP BY c.id, v.id, p.id, s.name
         ORDER BY MAX(o.result_at) DESC NULLS LAST`
     );
@@ -80,7 +93,7 @@ router.get('/completed', permMiddleware('lab'), async (req, res) => {
 router.get('/visit/:visitId/orders', permMiddleware('lab'), async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT c.id AS consultation_id, v.id AS visit_id, v.visit_date,
+      `SELECT c.id AS consultation_id, c.status AS consultation_status, v.id AS visit_id, v.visit_date,
               p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth, p.allergies,
               s.name AS doctor_name,
               JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code,

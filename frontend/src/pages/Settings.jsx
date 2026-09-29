@@ -123,7 +123,7 @@ export default function SettingsPage() {
       setLabOrig(saved||[]);
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
       showToast(t.lb_saved);
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
   function unp(k,v){ setNewPanel(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
   async function createPanel(){
@@ -134,7 +134,7 @@ export default function SettingsPage() {
       setNewPanelOpen(false); setNewPanel({code:'',name:'',price:''});
       loadLabItems(String(p.id));
       showToast(t.lb_saved);
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
   async function testPacs(target){

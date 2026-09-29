@@ -377,6 +377,8 @@ export default {
   lb_unitWarnSafe: "안전한 방법: 기존 줄은 그대로 두고, 이름이 다른 새 줄(예: 이름 뒤에 단위)을 추가한 뒤 옛 줄을 ✕ 로 지우세요.",
   lb_resultCount: "결과 {n}건",
   lb_saveAnyway: "그래도 저장",
+  lb_inConsultation: "진료 중",
+  lb_orderRemoved: "이 검사는 진료실에서 오더가 지워졌습니다. 목록을 새로 불러옵니다.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
