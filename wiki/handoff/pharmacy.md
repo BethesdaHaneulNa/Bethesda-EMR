@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 재고 기록 ③: 월말 재고 보고서 (화면 + CSV)
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — develop 위 커밋 하나(rebase 뒤 해시는 보고 메시지에)
+- **한 일**: `GET /api/pharmacy/stock/report?month=YYYY-MM`(권한 pharmacy·settings·stats) — 기록 표에서만 계산(월초·입고·조제 출고·장부 부족·실사 조정·폐기·월말·ok), 그 달 안에 기록이 시작된 약은 opening을 월초로 하고 `started_on`, 기록 시작 전 달은 빈 목록. 「Stock」 탭 목록 위 **📊 월말 재고 보고서** 버튼 → 달 고르기, 표, **⬇ CSV**(화면에서 만듦 — 칸 이름이 화면 언어, UTF-8 BOM + CRLF).
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `frontend/src/pages/PharmacyStock.jsx`, `backend/test/pharmacy.stock.mjs`(보고서 검사 추가), `wiki/modules/pharmacy.md`(2.6 보고서 사용법, **3.10 새로**, 4절, 7절 M4·M5 해결됨·M6 결정, 8절)
+- **공용 파일 변경**: i18n `ph_` 키 13개(`ph_reportTitle`, `ph_month`, `ph_r*`, `ph_reportEmpty`, ko·en·fr)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**
+  - `node --check`, 빌드. `pharmacy.stock.mjs` 전부 통과(보고서: 이번 달 모든 줄 합 맞음 · 월말 = 지금 재고 · 통계 전용 200 · 창구 403 · 잘못된 달 400 · 기록 전 달 빈 목록), `pharmacy.api.mjs` 통과.
+  - **달 경계**: 격리 DB에서 ZINC 기록 7줄을 8월로 옮김(8/31 23:59:59 한 줄, 9/1 00:00 한 줄 포함) → 8월 「기록 시작 8/10 · 315 +51 −7(조정) −3(폐기) = 356」, 9월 「356 +253 −2 −28 −11 = 568」 손 계산과 같음, 7월 빈 목록. 의사(진료만) 403.
+  - 화면(간호사, 프랑스어): Rapport mensuel de stock, 9월 표, CSV 첫 바이트 `EF BB BF`, 머리글 « Code,Médicament,Catégorie,Stock début,… », ZINC 줄 « ZINC,Zinc 20mg Tab,Vitamine,356,253,2,0,-28,11,568,OK ».
+  - develop의 DB 연결 시간대 고정 뒤 경계 재확인 — 보고 메시지에 결과.
+- **확인 못 한 것**: 엑셀에서 직접 열어 보지는 못함(바이트로 BOM 확인). 실제 자정을 넘기며 쓴 기록은 없음(시각을 옮겨 확인).
+- **다른 세션에 부탁**: 통계 — 원하면 같은 API로 통계 화면에 연결(나중)
+
 ## 2026-09-29 — 재고 기록 ②: 약국 화면 「📦 Stock」 탭 (입고 · 실사 · 폐기 · 재고 기록)
 
 > **총괄 확인 (2026-09-29)**: 재고 ② `529a8f1` 합침(`b795852`) + 실행 중 EMR 반영. **실행 중 EMR 화면에서 직접 확인**(한국어, 관리자): 약국 → 📦 재고 탭 → 약 25개와 지금 재고, 약을 고르면 입고·실사·폐기 단추와 재고 기록(기록 시작 +300, 0 → 300). 콘솔 오류 없음. 입고·실사·폐기를 실제로 눌러 보지는 않음(운영 재고를 바꾸지 않으려고) — 그 부분은 세션의 격리 스택 확인.
