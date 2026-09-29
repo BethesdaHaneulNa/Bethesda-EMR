@@ -229,7 +229,10 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 ### 지금 돌아가는 PACS
 
-- **P-1 [높음] 실행 중인 PACS에 호스트에서 연결이 안 됨 (2026-09-29 확인).** `docker inspect bethesda-pacs`에서 PortBindings는 `9090`·`4242`인데 실제 `NetworkSettings.Ports`가 비어 있고, 호스트에서 `127.0.0.1:9090`·`:4242` TCP 연결이 모두 실패합니다. 컨테이너는 「healthy」 — healthcheck가 컨테이너 **안**에서만 묻기 때문. 이 PC의 Windows 예약 포트 대역에 **`4204–4303`이 있어 4242가 그 안에 들어갑니다**(`netsh interface ipv4 show excludedportrange protocol=tcp`). 9090은 예약 대역 밖인데도 안 잡혀 있음 — 원인 확인 필요. 결과: 지금 장비가 워크리스트를 못 받고 영상을 못 보내며, EMR에서 영상이 안 열립니다. 브리지 자체는 정상(`synced 0 worklist entries` 반복). 근거: README의 8090→9090 이전과 같은 종류의 문제. 해결은 실장님 결정 필요(인계 노트 참고).
+- **P-1 [높음] 실행 중인 PACS에 호스트에서 연결이 안 됨 (2026-09-29 확인).** `docker inspect bethesda-pacs`에서 PortBindings는 `9090`·`4242`인데 실제 `NetworkSettings.Ports`가 비어 있고, 호스트에서 `127.0.0.1:9090`·`:4242` TCP 연결이 모두 실패합니다. 컨테이너는 「healthy」 — healthcheck가 컨테이너 **안**에서만 묻기 때문. 이 PC의 Windows 예약 포트 대역에 **`4204–4303`이 있어 4242가 그 안에 들어갑니다**(`netsh interface ipv4 show excludedportrange protocol=tcp`). 9090은 예약 대역 밖인데도 안 잡혀 있음 — 원인 확인 필요. 결과: 장비가 워크리스트를 못 받고 영상을 못 보내며, EMR에서 영상이 안 열립니다. 브리지 자체는 정상(`synced 0 worklist entries` 반복). 근거: README의 8090→9090 이전과 같은 종류의 문제.
+  - **근본 원인 (2026-09-29 확인)**: 이 PC의 Windows **동적 포트 범위가 `1024`부터 13977개(1024–15000)** 로 바뀌어 있습니다(`netsh int ipv4 show dynamicport tcp`, ipv6도 같음. Windows 기본은 49152–65535). 그래서 Hyper-V/WinNAT가 재부팅할 때마다 1024–15000 사이 아무 곳이나 예약할 수 있고, **4242·9090은 물론 EMR의 9080도 언젠가 걸릴 수 있습니다.** 포트 번호를 다른 값(예: 11112)으로 옮겨도 같은 범위 안이라 해결되지 않습니다.
+  - 해결: 동적 포트 범위를 Windows 기본값으로 되돌리고(관리자 권한, 재부팅 필요 — 시스템 설정이라 실장님이 직접), PACS 컨테이너를 다시 만들기(총괄). 포트 번호는 4242·9090 그대로 둡니다.
+  - 2026-09-29 현재 **현장 장비는 아직 하나도 설정하지 않았음**(실장님 확인) — 지금 멈춘 장비 연동은 없습니다. 장비를 설정하기 전에 해결해야 합니다.
 - `server-status.ps1`(설정 세션 파일)은 PACS를 컨테이너 health로만 봐서 P-1 상태에서도 초록으로 보일 것으로 보입니다 — 확인 필요.
 
 ### 환자 식별 (영상이 다른 환자·다른 오더에 붙는 경우)
