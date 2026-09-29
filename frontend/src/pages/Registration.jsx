@@ -632,7 +632,7 @@ export default function RegistrationPage() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--warn-text)', marginBottom: 5 }}>📌 {t.receptionDeskNote}</label>
               <textarea value={form.receptionNote} onChange={function (e) { uf('receptionNote', e.target.value); }} rows={2} placeholder={t.receptionDeskNoteHint} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5, background: 'var(--field-2)' })} />
             </div>
-            <div><label style={labelStyle}>{t.chartNo}</label><input value={form.chartNo} readOnly style={Object.assign({}, IS, { opacity: form.chartNo ? 1 : 0.7 })} placeholder={t.newPatientAutoChart} /></div>
+            <div><label style={labelStyle}>{t.chartNo}</label><input value={form.chartNo} readOnly style={Object.assign({}, IS, { background: 'var(--field-locked)', color: 'var(--text-locked)', cursor: 'default' })} placeholder={t.newPatientAutoChart} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div><label style={labelStyle}>{t.lastName}</label><input value={form.lastName} onChange={function (e) { uf('lastName', e.target.value); }} style={IS} /></div>
               <div><label style={labelStyle}>{t.firstName}</label><input value={form.firstName} onChange={function (e) { uf('firstName', e.target.value); }} style={IS} /></div>

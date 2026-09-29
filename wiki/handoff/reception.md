@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 「N° dossier」 칸을 잠긴 칸 이름표로, 시나리오 항목 더함
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `5077d8e` ff 뒤)
+- **한 일** (총괄 답):
+  1. 「N° dossier」 칸: `opacity`(빈 칸 0.7)를 빼고 바탕 `var(--field-locked)`, 글자 `var(--text-locked)` — 설정 화면 잠긴 칸(`LOCKED_IS`)과 같은 이름표. 안내 글자 색은 손대지 않음(디자인 `::placeholder` 몫). 새 색 없음
+  2. 시나리오 `integration-test-2-scenario.md`에 더함: B7b 설정 Items de test 1366 저장 단추(`66ae1f9`), B7c 약국 환자 고른 상태의 «Terminer délivrance»·재고 탭(`8e45fb3`), C6 « gél. »(`49575a2`+`a60788f`), C9 « Stock n », D1 바뀐·넘어간 영수 표시, D2 «Ce qui change», D3 «Caisse du jour»(`e80ebd8`), D4 약 가격 변경 기록(설정 — 들어온 뒤), 2부 E5 밝은 화면 저장 알림, E6 이 칸 다시 재기
+- **대비**(부모 투명도까지 곱함, 격리 스택 새 DB, 1366×768, 테마는 상단 단추로 실제 전환):
+
+  | 화면 | 칸 바탕 | 번호 글자 | 안내 글자 «Généré automatiquement» | 칸 테두리 | 칸 바탕 vs 둘레 |
+  |---|---|---|---|---|---|
+  | ☀ 밝은 | #EEF1F5 | **5.46** ✅ | 4.07 ❌(4.5) | 3.82 ✅ | 1.13 |
+  | 🌙 어두운 | #15181F | **5.87** ✅ | 3.85 ❌(4.5) | 1.39 ❌(3) | 1.02 |
+
+  - 안내 글자: 투명도를 뺀 뒤에도 브라우저 기본색(#757575)이 잠긴 바탕 위라 4.5에 조금 모자람 → 디자인 `::placeholder` 규칙 뒤 다시 잼(시나리오 E6)
+  - 어두운 테두리 1.39는 다른 입력칸과 같은 값(디자인의 어두운 화면 대비 표에 있는 것) — 이 칸만의 문제 아님
+- **확인**: `npm run build`, 새 DB `reception.api.mjs` 168/0, 화면(FR·밝은/어두운) 빈 칸·번호 있는 칸
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `wiki/modules/reception.md`(3절·변경 기록), `wiki/reference/integration-test-2-scenario.md`, 이 노트
+- **공용 파일 변경**: 없음
+- **다른 세션에 부탁**: 디자인 — `::placeholder` 규칙이 들어오면 알려 주세요(이 칸 다시 잼)
+
 ## 2026-09-30 — 금액 표기, 밝은 화면·1366×768 점검, 다시 통합 시험 시나리오
 
 - **상태**: 확인 요청
