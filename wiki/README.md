@@ -32,6 +32,7 @@
 
 - [변경 기록(로그)](03-change-log.md) — 누가 무엇을 고쳤는지 남기는 공통 기록. 무엇을 남기고 어떻게 붙이는지
 - [한국 검사실 참고치 제안표](reference/lab-reference-ranges-kr.md) — 의사 선생님 검토용. EMR에는 들어가 있지 않음
+- [시놀로지 NAS 시험 기록](reference/synology-nas.md) — 지금 묶음은 NAS에서 그대로는 안 됨, host 방식은 됨 (2026-09-29)
 
 ## 운영 문서 (저장소 최상위)
 

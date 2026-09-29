@@ -79,6 +79,9 @@ export function DocumentModal(props) {
   var previewRef = useRef(null);
 
   var template = getTemplate(code) || visible[0] || TEMPLATES[0];
+  // A template may say it has nothing to issue (the outside prescription with no drug
+  // marked external): { ko, en, fr } reason, or null. Pharmacy session, 2026-09-29.
+  var issueBlocked = template && template.issueBlocked ? template.issueBlocked(meds) : null;
   // The issue date in the clinic's own time. toISOString() is UTC, which in Madagascar
   // (UTC+3) dated anything issued between midnight and 03:00 the day before.
   var now = new Date();
@@ -144,7 +147,7 @@ export function DocumentModal(props) {
   }
 
   async function doIssue() {
-    if (!props.patient) return;
+    if (!props.patient || issueBlocked) return;
     // Issuing is what makes the text a record, so this is the point to stop an
     // unfinished "[anesthesia]" - a draft print is marked DRAFT and is left alone.
     var left = [];
@@ -327,7 +330,8 @@ export function DocumentModal(props) {
           {mode === 'view' && viewed && !viewed.voided && !props.readOnly ? <button onClick={doVoid} style={Object.assign({}, btn, { background: 'var(--danger-box)', color: 'var(--danger-text-3)' })}>{L(UI.voidBtn, lang)}</button> : null}
           {mode === 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: tx })}>🖨 {L(UI.reprint, lang)}</button> : null}
           {!props.readOnly && mode !== 'view' ? <button onClick={doPrint} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: tx })}>🖨 {L(UI.print, lang)}</button> : null}
-          {mode === 'new' && !props.readOnly ? <button onClick={doIssue} disabled={saving} style={Object.assign({}, btn, { background: saving ? 'var(--accent-chip)' : 'var(--ok-2)', color: 'var(--on-fill)' })}>{saving ? '…' : L(UI.issue, lang)}</button> : null}
+          {mode === 'new' && !props.readOnly && issueBlocked ? <div style={{ flex: 1, alignSelf: 'center', color: 'var(--warn-text)', fontSize: 13, fontWeight: 700 }}>⚠ {L(issueBlocked, lang)}</div> : null}
+          {mode === 'new' && !props.readOnly ? <button onClick={doIssue} disabled={saving || !!issueBlocked} style={Object.assign({}, btn, { background: saving ? 'var(--accent-chip)' : issueBlocked ? 'var(--btn-neutral)' : 'var(--ok-2)', color: issueBlocked ? 'var(--text-2)' : 'var(--on-fill)', cursor: issueBlocked ? 'not-allowed' : btn.cursor })}>{saving ? '…' : L(UI.issue, lang)}</button> : null}
         </div>
       </div>
     </div>

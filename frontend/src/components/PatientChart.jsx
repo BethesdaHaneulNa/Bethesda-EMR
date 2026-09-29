@@ -50,7 +50,7 @@ export function PatientChart(props){
   }
 
   if(!patientId){
-    return <div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{t.selectPatientLeft}</div>;
+    return <div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{t.selectPatientInList || t.selectPatientLeft}</div>;
   }
 
   if(past){

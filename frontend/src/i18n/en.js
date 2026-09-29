@@ -51,7 +51,7 @@ export default {
   searchNameChartPhone: "Name / Chart No. / Phone", searching: "Searching...", newPatientInput: "New Patient",
   newPatientAutoChart: "Auto generated for new patient", updateVisit: "Update Registration", registerWaiting: "Register / Add to Queue",
   cancelWaiting: "Cancel Waiting / Remove", previousVisits: "Previous Visits", noPreviousVisits: "No previous visits.",
-  selectPatientLeft: "Search an existing patient or enter a new patient on the left.", todayQueueCompleted: "Today Queue / Completed", queueSearch: "Search queue", countPatients: "patients",
+  selectPatientLeft: "Search an existing patient or enter a new patient on the left.", selectPatientInList: "Choose a patient from the list on the left.", todayQueueCompleted: "Today Queue / Completed", queueSearch: "Search queue", countPatients: "patients",
   dispensingPending: "Dispensing Pending", dispensingCompleted: "Dispensed", dispenseComplete: "Dispense Complete",
   pharmacySearchPlaceholder: "Patient / Chart No. / Medicine", selectRxPatient: "Select a prescription patient on the left.",
   pharmacyOnlyCompleted: "Only medication orders from completed consultations are shown.",
