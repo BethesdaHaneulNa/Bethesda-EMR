@@ -379,6 +379,16 @@ export default {
   ph_noPastRx: "Aucune ordonnance en attente. Seul le dossier est affiché à droite.",
   ph_olderRx: "{count} ordonnance(s) en attente de plus de {n} jours — impossible à délivrer ici. Le médecin doit represcrire.",
   ph_tooOld: "Une ordonnance de plus de {n} jours ne peut pas être délivrée. Le médecin doit represcrire.",
+  ph_cat_Respiratory: "Respiratoire",
+  ph_cat_Dermatology: "Dermatologie",
+  ph_cat_Antihistamine: "Antihistaminique",
+  ph_cat_Gynecology: "Gynécologie",
+  ph_cat_Antiparasitic: "Antiparasitaire",
+  ph_cat_Ophthalmic: "Ophtalmologie",
+  ph_cat_Musculoskeletal: "Musculo-squelettique",
+  ph_cat_Corticosteroid: "Corticoïde",
+  ph_cat_Urology: "Urologie",
+  ph_cat_Endocrine: "Endocrinologie",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

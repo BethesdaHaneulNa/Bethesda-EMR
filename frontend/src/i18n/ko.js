@@ -379,6 +379,16 @@ export default {
   ph_noPastRx: "조제 대기 처방이 없습니다. 오른쪽에 차트만 보입니다.",
   ph_olderRx: "{n}일보다 오래된 조제 대기 처방 {count}건 — 여기서 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
   ph_tooOld: "{n}일보다 오래된 처방은 조제할 수 없습니다. 진료실에서 다시 처방해 주세요.",
+  ph_cat_Respiratory: "호흡기",
+  ph_cat_Dermatology: "피부",
+  ph_cat_Antihistamine: "항히스타민",
+  ph_cat_Gynecology: "산부인과",
+  ph_cat_Antiparasitic: "구충·항기생충",
+  ph_cat_Ophthalmic: "안과",
+  ph_cat_Musculoskeletal: "근골격",
+  ph_cat_Corticosteroid: "스테로이드",
+  ph_cat_Urology: "비뇨기",
+  ph_cat_Endocrine: "내분비",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",

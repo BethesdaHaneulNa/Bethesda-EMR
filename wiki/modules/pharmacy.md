@@ -310,7 +310,7 @@
 - 목록: 코드 · 약품명 · 분류 · 용량 · 횟수 · 일수 · 경로 · 단가 · 재고 (Code · Médicament · Catégorie · Dose · Fréq. · Jours · Voie · Prix unitaire · Stock). 재고가 20 미만이면 빨간색. 검색 칸은 이름·코드.
 - **+ 추가** (+ Ajouter) / **수정** (Modifier): 위와 같은 칸.
   - 새 약 기본값: 분류 기타(Other), 용량 1.000, 1회, 7일, QD, 단가 0, 재고 0
-  - **분류는 영어 단어로 저장됩니다**(Antibiotic, Analgesic, Antimalarial, Cardiovascular, GI, Vitamin, Other — `DRUG_CATEGORIES`, `Settings.jsx:811`). 화면에만 번역(`ph_cat_*`)해서 보여줍니다. 시드 데이터와 통계의 분류별 묶음이 이 영어 값을 쓰기 때문입니다. 목록에 없는 값이 DB에 있으면 그대로 보입니다.
+  - **분류는 영어 단어로 저장됩니다** — 17가지: Analgesic · Antibiotic · Antihistamine · Antimalarial · Antiparasitic · Cardiovascular · Corticosteroid · Dermatology · Endocrine · GI · Gynecology · Musculoskeletal · Ophthalmic · Respiratory · Urology · Vitamin · Other (`DRUG_CATEGORIES`, `Settings.jsx` 아래쪽). 2026-09-29에 7가지에서 늘렸습니다 — 병원의 실제 약 목록(옛 재고 프로그램 105줄)이 위장관·호흡기·피부 등으로 나뉘어 있어서입니다(대응표: `wiki/reference/drug-import-review.js` `CATEGORY`). 화면에만 번역(`ph_cat_*`)해서 보여줍니다. 시드 데이터와 통계의 분류별 묶음이 이 영어 값을 쓰기 때문입니다. 목록에 없는 값이 DB에 있으면 그대로 보입니다.
 - **삭제** (Supprimer): 실제로는 비활성화. 목록에서 사라지고, 되살리는 화면은 없습니다.
 - 탭 밖의 글자(왼쪽 탭 이름, 편집 창 제목, 삭제 확인)는 설정 세션이 번역했습니다(`se_tabDrugs`, `se_newTitle`, `se_confirmDelete`).
 - 재고: 재고 칸을 **고쳤을 때만** 저장되고, 그 사이 재고가 바뀌었으면 다시 묻습니다(설정 세션 `f44ab9e`, `admin.routes.js` `PUT /drugs/:id`). 정수만 받습니다. 입고·조정 **기록**은 여전히 남지 않습니다(M5).
@@ -377,4 +377,5 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | H4 해결됨 반영(설정 세션 `f44ab9e`) — 2.6 「재고가 바뀌었습니다」 안내 때 할 일, 3.3·6·7절 | `e9c134f` |
 | 2026-09-29 | 한국식 일총투여: 저장된 총량만 읽기, 1회량·복용 문장 표시, 용법 칸 이름, 「약사」 직함 빼기 | `f464095` |
 | 2026-09-29 | 예전 식으로 저장된 줄에 「예전 계산」 표시(약국 화면·원외 처방전) | `f9489cf` |
-| 2026-09-29 | M3: 환자 찾기로 최근 7일 미조제 처방 조제, 조제 완료 목록은 조제 날짜 기준, 간호사 계정 안내 | (이 커밋) |
+| 2026-09-29 | M3: 환자 찾기로 최근 7일 미조제 처방 조제, 조제 완료 목록은 조제 날짜 기준, 간호사 계정 안내 | `442b75f` |
+| 2026-09-29 | 약품 분류 7가지 → 17가지(실제 약 목록에 맞춤) | (이 커밋) |
