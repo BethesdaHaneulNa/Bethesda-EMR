@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — H2-B ②: 포장 단위 줄 표시 (rx-dosing · 약국 화면 · 원외 처방전)
+
+- **상태**: 확인 요청 — 실장님 PC 재시작 전 저장. 코드는 끝났고 시험도 통과.
+- **커밋**: session/pharmacy — develop `ce5d938` 위 커밋 하나
+- **한 일**
+  - `rx-dosing.js`: `isPack`, `packWord`(2병 · 흡입기 1개 · 2 flacons · 1 inhalateur), 포장 줄은 `perDose` null · `isLegacyTotal` 거짓 · `doseSentence` = 안내 + 「— 2병」(수가 없으면 「병 수 확인 필요」 « nombre de flacons à vérifier »). 수납의 PatientChart도 이 함수를 쓰므로 같이 바뀜.
+  - `Pharmacy.jsx`: 포장 줄의 1회량 「—」(⚠ 없음), 수량 칸 병·개 단어. `external-rx.jsx`: 총량 칸 병·개 단어.
+  - `pharmacy.routes.js`: **대기·완료 목록의 처방 줄에 `pack_unit`, `pack_label` 추가** — 처음 시험에서 이것이 빠져 약국 화면이 포장 줄을 보통 줄로(「예전 계산」까지) 보이는 것을 찾아 고침. 원외 처방전은 처방 줄 전체를 읽어 처음부터 맞았음.
+  - 주석의 마이그레이션 이름 402 → 025.
+- **바꾼 파일**: `frontend/src/documents/rx-dosing.js`, `frontend/src/pages/Pharmacy.jsx`, `frontend/src/documents/external-rx.jsx`, `backend/src/routes/pharmacy.routes.js`, `backend/test/pharmacy.api.mjs`, `wiki/modules/pharmacy.md`(2.2, 3.4, 7절 H2, 8절), 이 노트
+- **공용 파일 변경 · 번역 키 · 마이그레이션**: 없음
+- **시험 고침**: `backend/test/pharmacy.api.mjs` T2 — 여러 번 돌리면 METRO 재고가 0이 되어 조제가 부족분으로 멈추고 「−24」가 안 맞았음(코드 문제 아님). 시작 전에 두 약을 실사로 500에 맞추게 함.
+- **확인한 방법**: `rx-dosing` 단독 시험(시럽 15/3/7 총 2 → 「하루 15, 3회로 나눠 7일 — 2병」, 흡입기 → 「하루 3회, 30일 — 흡입기 1개」, 크림 안내 없음 → 「1튜브」, 수 없음 → 「병 수 확인 필요」, 보통 정 줄은 그대로). 빌드, `node --check`, `pharmacy.api.mjs`·`pharmacy.stock.mjs` 통과. 격리 스택(포장 표시는 진료 쪽이 아직 안 붙이므로 **격리 DB에서 줄 3개에 직접 표시**): 프랑스어 약국 화면 「2 flacons」「1 inhalateur」, 1회량 「—」, 수 없는 줄 « Quantité totale absente » + 조제 확인 창에 이름, 원외 처방전 « 3 fois/jour pendant 30 jours — 1 inhalateur », 약제비 9,000(= 2병 × 4,500), **조제 후 Codaep 재고 40 → 38**.
+- **확인 못 한 것**: 한국어 화면 눈으로(함수 출력으로만 확인), 진료가 실제로 붙인 줄(진료 작업 뒤).
+- **다른 세션에 부탁**: 없음(설정·진료 몫은 설계 메모대로 총괄이 전달함)
+
 ## 2026-09-29 — H2-B ①: 포장 단위 약 칸(마이그레이션 402) + 약품 탭 체크·단위
 
 - **상태**: 확인 요청 — **이것이 develop에 들어가야 설정(API 두 칸)·진료가 칸 이름을 보고 시작**(총괄 지시대로 먼저 한 커밋)

@@ -87,6 +87,11 @@ async function scenario(label, lines) {
 
 // T2 — opposite drug order, many pairs at once (deadlock check)
 {
+  // Enough on the record first: earlier runs can leave these at 0, and then the
+  // dispenses stop at zero with a shortfall and the -24 below no longer holds.
+  for (const code of ['AMOX500', 'METRO']) {
+    await call('POST', '/pharmacy/stock/' + byCode[code].id + '/count', { counted: 500, memo: 'test T2 start' }, A);
+  }
   const bA = await stock('AMOX500'), bM = await stock('METRO');
   const pairs = [];
   for (let i = 0; i < 12; i++) {

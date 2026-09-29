@@ -5,7 +5,7 @@ import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
-import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
+import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
 import { PharmacyStock } from './PharmacyStock.jsx';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -357,7 +357,7 @@ export default function PharmacyPage() {
                       {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
-                    <div style={{ padding:'10px', color: per && per.clean ? tx : '#fbbf24', fontWeight:800 }}>
+                    <div style={{ padding:'10px', color: per && per.clean ? tx : isPack(rx) ? t3 : '#fbbf24', fontWeight:800 }}>
                       {per && per.clean ? fmtAmount(per.value) : '—'}
                       {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
                     </div>
@@ -365,7 +365,7 @@ export default function PharmacyPage() {
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
                     <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : '#fca5a5', fontWeight: hasTotal(rx) ? 400 : 800 }}>
-                      {hasTotal(rx) ? fmtAmount(total) : t.ph_noTotal}
+                      {hasTotal(rx) ? (isPack(rx) ? packWord(rx, lc.lang, total) : fmtAmount(total)) : t.ph_noTotal}
                       {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'#fbbf24', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
                     </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>

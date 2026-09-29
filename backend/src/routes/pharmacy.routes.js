@@ -132,6 +132,8 @@ function pendingQuery(where) {
              'unit_price', rx.unit_price,
              'memo', rx.memo,
              'dispense_type', rx.dispense_type,
+             'pack_unit', rx.pack_unit,
+             'pack_label', rx.pack_label,
              'status', rx.status,
              'created_at', rx.created_at
            ) ORDER BY rx.sort_order, rx.id
@@ -221,6 +223,8 @@ router.get('/completed', canDispense, async (req, res) => {
              'unit_price', rx.unit_price,
              'memo', rx.memo,
              'dispense_type', rx.dispense_type,
+             'pack_unit', rx.pack_unit,
+             'pack_label', rx.pack_label,
              'status', rx.status,
              'dispensed_at', rx.dispensed_at
            ) ORDER BY rx.sort_order, rx.id
