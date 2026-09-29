@@ -395,7 +395,7 @@ router.get('/stock', canStock, async (req, res) => {
     if (req.query.category) { params.push(req.query.category); where += ` AND d.category = $${params.length}`; }
     if (req.query.q) { params.push('%' + req.query.q + '%'); where += ` AND (d.code ILIKE $${params.length} OR d.name ILIKE $${params.length} OR d.generic_name ILIKE $${params.length})`; }
     // import_check: what is still to check on a drug brought in from the old stock
-    // program (403); import_check_done_at set = someone on site marked it checked.
+    // program (034); import_check_done_at set = someone on site marked it checked.
     const r = await pool.query(
       `SELECT d.id, d.code, d.name, d.generic_name, d.category, d.dosage_form, d.pack_unit, d.pack_label,
               COALESCE(d.stock_qty,0) AS stock_qty, d.min_stock,
@@ -515,10 +515,15 @@ router.get('/stock/report', canReport, async (req, res) => {
               COALESCE(SUM(m.shortfall), 0)                                AS shortfall,
               COALESCE(SUM(m.qty) FILTER (WHERE m.kind = 'adjust'), 0)    AS adjusted,
               COALESCE(-SUM(m.qty) FILTER (WHERE m.kind = 'discard'), 0)  AS discarded,
-              COUNT(m.id) AS movements
+              COUNT(m.id) AS movements,
+              -- Dispensed both by the dose and by the bottle this month: the drug was
+              -- switched to (or from) pack units, and "dispensed" adds two units.
+              (BOOL_OR(p.pack_unit) FILTER (WHERE m.kind = 'dispense')
+               AND BOOL_OR(NOT p.pack_unit) FILTER (WHERE m.kind = 'dispense')) IS TRUE AS mixed_units
          FROM drug d
          CROSS JOIN b
          LEFT JOIN stock_movement m ON m.drug_id = d.id AND m.created_at >= b.s AND m.created_at < b.e
+         LEFT JOIN prescription p ON p.id = m.prescription_id
         WHERE EXISTS (SELECT 1 FROM stock_movement x WHERE x.drug_id = d.id AND x.created_at < b.e)
           -- A hidden drug (is_active false, e.g. the example drugs once the real list
           -- is imported) is listed only in a month it actually moved, rather than in
@@ -540,7 +545,7 @@ router.get('/stock/report', canReport, async (req, res) => {
         started_on: x.start_qty === null ? x.started_on : null,
         start, received: n(x.received), dispensed: n(x.dispensed), shortfall: n(x.shortfall),
         adjusted: n(x.adjusted), discarded: n(x.discarded), end,
-        movements: n(x.movements), ok: expected === end,
+        movements: n(x.movements), ok: expected === end, mixed_units: x.mixed_units === true,
       };
     });
     res.json({ month, rows });

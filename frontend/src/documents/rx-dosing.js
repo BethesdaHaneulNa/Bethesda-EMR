@@ -75,6 +75,14 @@ export function perDose(rx) {
   return { value: per, clean: Math.abs(halves - Math.round(halves)) < 1e-6 };
 }
 
+// An ordinary line whose times a day are empty (0 or blank). Its total can still be
+// there (daily x days), so the pharmacy can dispense, but the label lacks how often.
+// Pack-unit lines are left out: their times are instructions only, often "as needed".
+export function missingTimes(rx) {
+  if (!rx || isPack(rx)) return false;
+  return !(parseInt(rx.frequency, 10) > 0);
+}
+
 // 3 -> "3", 0.5 -> "½", 1.5 -> "1½", 0.667 -> "0.67"
 export function fmtAmount(n) {
   if (n === null || n === undefined || !isFinite(n)) return '';
@@ -104,11 +112,20 @@ export function doseSentence(rx, lang) {
   var daily = parseFloat(rx && rx.dose);
   var freq = parseInt(rx && rx.frequency, 10);
   var days = parseInt(rx && rx.days, 10);
-  if (!(daily > 0) || !(freq > 0) || !(days > 0)) return '';
-  var u = unitOf(rx.drug_name);
+  var u = unitOf(rx && rx.drug_name);
   var unit = u ? u[l] : '';
   var total = storedTotal(rx);
   var totalText = hasTotal(rx) ? fmtAmount(total) : '—';
+  // Times a day left empty (the consultation keeps an empty field empty since
+  // 6e11f56): the daily amount and the days still make a total, so say what is known
+  // and that the times are to be checked, rather than dropping the sentence.
+  if (daily > 0 && days > 0 && !(freq > 0)) {
+    var dd = fmtAmount(daily), dw = days === 1;
+    if (l === 'ko') return '하루 ' + dd + unit + ', ' + days + '일 (총 ' + totalText + ') — 하루 횟수 확인 필요';
+    if (l === 'fr') return dd + (unit ? ' ' + unit : '') + ' par jour pendant ' + days + (dw ? ' jour' : ' jours') + ' (total ' + totalText + ') — nombre de prises à vérifier';
+    return dd + (unit ? ' ' + unit : '') + ' a day for ' + days + (dw ? ' day' : ' days') + ' (total ' + totalText + ') — times a day to check';
+  }
+  if (!(daily > 0) || !(freq > 0) || !(days > 0)) return '';
   var p = perDose(rx);
 
   if (p && p.clean) {
