@@ -298,6 +298,15 @@ export default {
   rc_visitTypeLocked: "Already billed: change the visit type on the Payment screen.",
   rc_visitTypeOther: "Current value: {type} (set at Payment). Pressing a button replaces it.",
   rc_visitTypeSuggested: "Seen in {dept} before, so Follow-up is pre-selected. For a different problem, choose New Visit.",
+  rc_similarTitle: "A patient with this name already exists",
+  rc_similarHint: "If it is the same person, press \"Use this patient\". If it is someone else with the same name, press \"Create a new record anyway\".",
+  rc_similarUse: "Use this patient",
+  rc_similarCreate: "Create a new record anyway",
+  rc_cancel: "Cancel",
+  rc_lastVisit: "Last visit",
+  rc_similarLoaded: "The existing patient has been loaded. Check the details, then press the button again.",
+  rc_dupVisit: "{name} is already registered today ({status}{doctor}). Register a second visit?",
+  rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

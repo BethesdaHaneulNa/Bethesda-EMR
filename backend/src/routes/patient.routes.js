@@ -45,6 +45,38 @@ router.get('/', permMiddleware(...SEARCH_READERS), async (req, res) => {
   }
 });
 
+// GET /api/patients/similar?last_name=&first_name= - same-name patients, for the
+// warning before a new chart is created (decided 2026-09-29, reception ④: warn only,
+// and the same person is judged by name alone). Case, surrounding and repeated
+// spaces are ignored, and a swapped order also matches, since first and last name
+// are often given the other way round at the desk. Accents are compared as typed.
+// Declared before /:id, which would otherwise take "similar" for an id.
+router.get('/similar', permMiddleware('registration'), async (req, res) => {
+  try {
+    const norm = function (v) { return String(v || '').trim().replace(/\s+/g, ' ').toLowerCase(); };
+    const last = norm(req.query.last_name);
+    const first = norm(req.query.first_name);
+    if (!last || !first) return res.json([]);
+    // [[:space:]] rather than \s: inside a JS template literal "\s" loses its
+    // backslash and Postgres would replace the letter s instead.
+    const LAST = "lower(regexp_replace(trim(p.last_name), '[[:space:]]+', ' ', 'g'))";
+    const FIRST = "lower(regexp_replace(trim(p.first_name), '[[:space:]]+', ' ', 'g'))";
+    const result = await pool.query(
+      `SELECT p.id, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.phone, p.mobile,
+              (SELECT MAX(v.visit_date) FROM visit v WHERE v.patient_id = p.id AND v.status <> 'cancelled') AS last_visit_date
+         FROM patient p
+        WHERE p.is_active = true
+          AND ( (${LAST} = $1 AND ${FIRST} = $2) OR (${LAST} = $2 AND ${FIRST} = $1) )
+        ORDER BY p.created_at DESC
+        LIMIT 10`,
+      [last, first]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    sendDbError(res, err);
+  }
+});
+
 // GET /api/patients/:id
 router.get('/:id', permMiddleware(...SEARCH_READERS), async (req, res) => {
   try {

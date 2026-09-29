@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ④ 중복·동명이인 경고 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`31c584a` 위, `develop` ff 뒤)
+- **한 일**: `decisions.md` 결정 그대로 — **경고만**(확인하면 진행), 같은 사람 판단은 **이름만**, 같은 날 두 번 접수도 경고만.
+  - **동명이인**: 새 차트를 만들기 직전(접수 버튼·환자 정보 저장 버튼 둘 다) 새 API `GET /patients/similar`로 같은 이름을 찾음.
+    · 대소문자·공백 무시, 성·이름 순서가 뒤바뀌어도 찾음.
+    · 있으면 화면 안 창에 차트번호·생년월일·전화·마지막 내원(+성별)을 보여 주고 **이 환자로 / 그래도 새로 등록 / 취소**.
+  - **「이 환자로」는 기존 환자를 불러오기만 함**(계획 노트의 「불러오고 바로 접수」에서 바꿈). 새 환자로 적던 알레르기·전화가 표시 없이 버려지지 않게 하려는 것. 의사·주호소·메모는 남기고, 직원이 확인 뒤 다시 누름.
+  - **같은 날 두 번**: 화면의 오늘 목록으로 먼저 확인 창을 띄움(상태·의사 표시). 다른 창구가 먼저 접수해 목록에 없으면 서버 `POST /visits`가 409 `Patient already registered today`를 주고, 화면이 「다른 창구에서 방금…」으로 한 번 더 물은 뒤 `allow_duplicate: true`로 다시 보냄.
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `backend/src/routes/patient.routes.js`(새 `GET /similar` — `/:id`보다 앞), `backend/src/routes/visit.routes.js`(`POST /` 같은 날 확인), `backend/test/reception.api.mjs`
+- **API 변화**:
+  - 새 `GET /api/patients/similar?last_name=&first_name=` — 권한 registration
+  - `POST /api/visits`: 오늘 취소 아닌 내원이 있으면 409. 본문 `allow_duplicate: true`면 통과. **다른 곳에서 `POST /visits`를 부르는 화면은 없음**(grep 확인)
+- **공용 파일 변경**: i18n `rc_` 블록에 키 9개. 표 머리는 공용 키 `chartNo`·`name`·`dob`·`phone`을 읽기만
+- **DB 마이그레이션**: 없음 (색인 불필요 — 작은 병원)
+- **번역 키**: `rc_similarTitle` `rc_similarHint` `rc_similarUse` `rc_similarCreate` `rc_cancel` `rc_lastVisit` `rc_similarLoaded` `rc_dupVisit` `rc_dupVisitOther` (ko · en · fr)
+- **시험 스크립트**: `reception.api.mjs`에 ④ 9건 추가.
+  - 같은 이름 조회(대소문자·공백, 순서 뒤바뀜, 다른 이름 제외, 한쪽 빈 값 → 빈 목록, 돌려주는 칸)
+  - 같은 날(첫 접수 201, 확인 없이 두 번째 409, `allow_duplicate` 201, 취소된 내원만 있으면 경고 없음)
+  - 권한표에 `/patients/similar` 줄. 표의 `POST /visits`는 같은 환자를 거듭 접수하므로 `allow_duplicate` 붙임 → 총 **131/131**
+- **버그 하나 잡고 감**: 처음 쓴 SQL `regexp_replace(…, '\s+', …)`가 JS 템플릿 문자열 안에서 역슬래시를 잃어 **글자 s를 공백으로** 바꿨음(「Rasoa」·「Permission」이 안 찾아짐 — 시험 스크립트가 잡음). `[[:space:]]+`로 바꾸고 주석을 남김
+- **확인한 방법**:
+  - `node --check`, `npm run build`. 격리 스택 9181(develop `31c584a` 위), 시험 스크립트 131/131
+  - 화면(프랑스어):
+    · 새 환자 「Rakoto」「Jean」 + 의사·메모 → 접수 → 창에 26-00001(생년월일·전화·마지막 내원) → 「Choisir ce patient」 → 26-00001이 불려 오고 의사·메모 그대로, 안내 문구, **새 차트 0**
+    · 다시 누름 → 「…déjà enregistré(e) aujourd’hui (Terminé)…」 → 아니오: 내원 그대로 4건 / 예: 5건(재진 제안까지 정상)
+  - 화면(한국어):
+    · 「 jean 」「RAKOTO」 + 환자 정보 저장 → 창 뜸 → 취소: 아무것도 안 생기고 버튼 잠금 풀림
+    · 다시 → 「그래도 새로 등록」 → 26-00034 생김
+    · 다른 창구 흉내 — 환자를 고른 뒤 API로 먼저 접수, 곧바로 화면에서 접수 → 「다른 창구에서 방금…」 → 확인 → 두 번째 내원 생김
+- **확인 못 한 것**:
+  - 두 창구가 **정확히 동시에** 누르는 경우 — 서버 확인에 잠금이 없어 둘 다 통과할 수 있음(경고일 뿐이라 둠)
+  - 악센트만 다른 이름(é/e)은 다른 이름으로 봄
+  - 영어 화면은 안 누름
+- **위키**: `modules/reception.md` 머리, 2.2(동명이인 창·같은 날 확인 사용법), 2.8(안내 4줄), 3절(`confirmNewPatient`·`postVisit`), 4절(권한표·API 표 — `similar`, `POST /visits` 409), 7절(③·④ 고침), 8절
+- **총괄 확인 요청**: 실장님이 고르신 2차 작업(⑦ ④)이 이것으로 끝. 주소·신분증 칸은 「넣지 않음」 결정이라 손대지 않았음
+- **다른 세션에 부탁**:
+  - **설정** — `backend/test/settings.access.mjs` 표에 두 가지 반영 부탁:
+    · `['GET', '/patients/similar?last_name=a&first_name=b', [REG]]` 추가
+    · `/visits/patient` 줄에 REG 추가(⑦ 때 총괄 승인)
+    · 그 시험의 `POST /visits`는 빈 본문이라 400이 나서 새 409와는 부딪히지 않음
+
 ## 2026-09-29 — ⑦ 내원구분: 초진 · 재진 · 진료비 없음 (실장님 결정)
 
 > **총괄 확인 (2026-09-29)**: ⑦ `520706d` 합침 + 실행 중 EMR 반영. S2 표 변경(`GET /visits/patient/:patientId`에 registration 추가) 승인 — 접수가 이전 내원을 읽어 초진/재진을 제안하기 때문. 설정 세션의 전체 시험 표도 맞추게 함. 「진료비 없음」 표기: 실장님 말씀대로 수납의 공용 키 `noConsult`도 접수와 같은 글자로 맞춤(총괄이 고침). 실행 중 EMR에서 접수 계정의 `/visits/patient/1` 200, `/visits/today`에 `has_active_bill` 칸 확인.

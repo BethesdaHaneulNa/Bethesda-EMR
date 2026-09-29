@@ -289,6 +289,15 @@ export default {
   rc_visitTypeLocked: "수납이 끝난 접수라 내원구분은 수납 화면에서 바꿉니다.",
   rc_visitTypeOther: "지금 값: {type} (수납에서 정함). 단추를 누르면 바뀝니다.",
   rc_visitTypeSuggested: "전에 {dept}에 온 적이 있어 재진으로 골라 두었습니다. 다른 진료면 초진을 누르세요.",
+  rc_similarTitle: "같은 이름의 환자가 이미 있습니다",
+  rc_similarHint: "같은 사람이면 「이 환자로」를 누르세요. 이름만 같은 다른 사람이면 「그래도 새로 등록」을 누르세요.",
+  rc_similarUse: "이 환자로",
+  rc_similarCreate: "그래도 새로 등록",
+  rc_cancel: "취소",
+  rc_lastVisit: "마지막 내원",
+  rc_similarLoaded: "기존 환자를 불러왔습니다. 정보를 확인한 뒤 버튼을 다시 누르세요.",
+  rc_dupVisit: "{name} 환자는 오늘 이미 접수되어 있습니다 ({status}{doctor}). 한 번 더 접수할까요?",
+  rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

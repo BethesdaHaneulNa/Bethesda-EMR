@@ -1,11 +1,14 @@
 // ⚠ 격리 스택 전용 — 운영 EMR(9080)·운영 DB에 절대 돌리지 마세요. 시험 직원·환자·내원을 만듭니다.
 //   ISOLATED SESSION STACK ONLY — never against the clinic's EMR or database.
 //
-// Reception API permission checks (decided 2026-09-29, S2): every route in
-// patient.routes.js and visit.routes.js, called by one account per role, must pass
-// exactly for the screens that call it and answer 403 for everyone else. A 403
-// where "allowed" is expected means a screen would break; a pass where "denied" is
-// expected means the route is open wider than decided.
+// Reception API checks.
+// 1. Permissions (decided 2026-09-29, S2): every route in patient.routes.js and
+//    visit.routes.js, called by one account per role, must pass exactly for the
+//    screens that call it and answer 403 for everyone else. A 403 where "allowed" is
+//    expected means a screen would break; a pass where "denied" is expected means the
+//    route is open wider than decided.
+// 2. Duplicate warnings (decided 2026-09-29, reception ④): same-name lookup and the
+//    same-day second-visit check.
 //
 //   node backend/test/reception.api.mjs            (default http://127.0.0.1:9181)
 //   RC_TEST_BASE=http://127.0.0.1:9181/api node backend/test/reception.api.mjs
@@ -99,12 +102,14 @@ const ROUTES = [
   ['GET', '/patients/' + P.id, null, SEARCH],
   ['GET', '/patients/' + P.id + '/history', null, HISTORY],
   ['GET', '/patients/chart/' + P.chart_no, null, ['registration']],
+  ['GET', '/patients/similar?last_name=Permission&first_name=Test', null, ['registration']],
   ['GET', '/patients/' + P.id + '/billing-history', null, ['payment']],
   ['POST', '/patients', { last_name: 'Permission', first_name: 'Created' }, ['registration']],
   ['PUT', '/patients/' + P.id, { last_name: 'Permission', first_name: 'Test' }, ['registration']],
   ['GET', '/visits/today', null, ['registration', 'consultation']],
   ['GET', '/visits/patient/' + P.id, null, ['registration', 'consultation', 'lab', 'payment']],
-  ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, ['registration']],
+  // allow_duplicate: the test patient is registered again and again today
+  ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, ['registration']],
   ['PUT', '/visits/' + V.id + '/status', { status: 'waiting' }, ['registration']],
   // what the payment screen sends (Payment.jsx): visit_type alone
   ['PUT', '/visits/' + V.id, { visit_type: 'newVisit' }, ['registration', 'payment']],
@@ -124,11 +129,36 @@ for (const who of Object.keys(T)) {
   }
 }
 
+// ── ④ same-name lookup: name only, case / spaces / order ignored ──
+const ids = r => Array.isArray(r.data) ? r.data.map(x => x.id) : [];
+const sim1 = await call('GET', '/patients/similar?last_name=' + encodeURIComponent('  permission ') + '&first_name=TEST', null, A);
+check('④ similar: case and spaces ignored', sim1.status === 200 && ids(sim1).includes(P.id), { status: sim1.status });
+const sim2 = await call('GET', '/patients/similar?last_name=Test&first_name=Permission', null, A);
+check('④ similar: swapped order matches', ids(sim2).includes(P.id));
+const sim3 = await call('GET', '/patients/similar?last_name=Permission&first_name=Other', null, A);
+check('④ similar: a different first name does not match', !ids(sim3).includes(P.id));
+const sim4 = await call('GET', '/patients/similar?last_name=Permission', null, A);
+check('④ similar: one name missing gives an empty list', sim4.status === 200 && ids(sim4).length === 0);
+check('④ similar: rows carry chart, birth date, phone, last visit', sim1.data[0] && ['chart_no', 'date_of_birth', 'phone', 'last_visit_date'].every(k => k in sim1.data[0]));
+
+// ── ④ same-day second visit: warn (409) unless confirmed ──
+const P2 = (await call('POST', '/patients', { last_name: 'Duplicate', first_name: 'Day' + Date.now() }, A)).data;
+const d1 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
+const d2 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
+const d3 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', allow_duplicate: true }, A);
+check('④ first visit today is registered', d1.status === 201, { status: d1.status });
+check('④ second visit without confirmation → 409', d2.status === 409 && d2.data.error === 'Patient already registered today', { status: d2.status, data: d2.data });
+check('④ second visit confirmed (allow_duplicate) → 201', d3.status === 201, { status: d3.status });
+for (const v of [d1.data, d3.data]) if (v && v.id) await call('PUT', '/visits/' + v.id + '/status', { status: 'cancelled' }, A);
+const d4 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
+check('④ only cancelled visits today → no warning', d4.status === 201, { status: d4.status });
+if (d4.data && d4.data.id) await call('PUT', '/visits/' + d4.data.id + '/status', { status: 'cancelled' }, A);
+
 // ── S1: a permission granted in Settings applies to the same token at once ──
-const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, T.paymentOnly);
+const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);
 const staffRow = (await call('GET', '/admin/staff', null, A)).data.find(s => s.id === ID.paymentOnly);
 await call('PUT', '/admin/staff/' + ID.paymentOnly, { ...staffRow, permissions: ['payment', 'registration'] }, A);
-const after = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, T.paymentOnly);
+const after = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);
 check('S1 payment-only 403 before registration is ticked', before.status === 403, { status: before.status });
 check('S1 same token allowed right after ticking registration', after.status === 201, { status: after.status });
 await call('PUT', '/admin/staff/' + ID.paymentOnly, { ...staffRow, permissions: ['payment'] }, A);

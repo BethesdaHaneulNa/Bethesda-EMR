@@ -80,6 +80,17 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
     if (!VISIT_TYPES.includes(String(visit_type))) {
       return res.status(400).json({ error: 'visit_type must be one of ' + VISIT_TYPES.join(', ') });
     }
+    // The same patient already registered today (decided 2026-09-29, reception ④:
+    // warn, do not block - a patient can come back the same day for something else).
+    // The screen asks first from its own queue; this catches a second desk whose
+    // queue is older. Once staff have confirmed, the screen sends allow_duplicate.
+    if (req.body.allow_duplicate !== true) {
+      const dup = await pool.query(
+        `SELECT 1 FROM visit WHERE patient_id = $1 AND visit_date = CURRENT_DATE AND status <> 'cancelled' LIMIT 1`,
+        [patient_id]
+      );
+      if (dup.rows.length) return res.status(409).json({ error: 'Patient already registered today' });
+    }
     const now = new Date();
     const reception_time = now.toTimeString().split(' ')[0].substring(0,5);
     const result = await pool.query(

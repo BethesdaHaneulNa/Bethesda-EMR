@@ -1,6 +1,6 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑦ 내원구분(초진·재진·진료비 없음, 같은 과면 재진 제안) — 확인 요청. 다음: ④ 중복·동명이인 경고
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ④ 중복·동명이인 경고 — 확인 요청. 실장님 결정으로 정한 2차 작업(⑦ ④)은 이것으로 끝
 
 ## 1. 이 모듈이 하는 일
 
@@ -50,6 +50,13 @@
    - 「Patient mis en attente — *이름* (N° dossier *차트번호*)」 창이 뜨면 끝입니다. 환자가 오른쪽 **En Attente** 목록에 나타납니다.
 
 > 오류 창이 뜨면 내용을 고치고 **같은 버튼을 다시 누르면 됩니다.** 환자가 이미 만들어진 뒤에 오류가 났다면 왼쪽 **N° Dossier** 칸에 번호가 채워져 있고, 다시 눌러도 같은 환자로 접수됩니다(새 환자가 또 생기지 않습니다).
+
+**같은 이름의 환자가 이미 있으면** 저장하기 전에 창이 뜹니다 — 「⚠ Un patient portant ce nom existe déjà (같은 이름의 환자가 이미 있습니다)」. 같은 이름 환자들의 **N° Dossier · Naissance · Téléphone · Dernière visite** (차트번호·생년월일·전화·마지막 내원)가 보입니다. 성과 이름을 뒤바꿔 적었거나 대소문자·띄어쓰기만 달라도 찾아 줍니다.
+- 같은 사람이면 그 줄의 **Choisir ce patient (이 환자로)** 를 누릅니다. 새 차트는 만들어지지 않고 **그 환자의 기록이 왼쪽에 불려 옵니다** — 고른 의사·주호소·메모는 그대로 남습니다. 생년월일·전화를 확인하고 필요하면 고친 뒤 **버튼을 다시 누릅니다.** (바로 접수하지 않는 것은, 새 환자로 적던 알레르기 같은 내용이 모르는 사이에 사라지지 않게 하려는 것입니다.)
+- 이름만 같은 다른 사람이면 **Nouveau dossier quand même (그래도 새로 등록)** 를 누릅니다.
+- 아무것도 안 하려면 **Annuler (취소)**.
+
+**오늘 이미 접수된 환자면** 「*이름* est déjà enregistré(e) aujourd’hui (En Attente, Dr …). Enregistrer une seconde visite ? (오늘 이미 접수되어 있습니다… 한 번 더 접수할까요?)」가 뜹니다. 같은 날 다른 일로 다시 왔으면 **확인**, 실수로 두 번 누른 것이면 **취소**. 다른 창구에서 방금 접수한 것을 이 화면이 아직 모를 때는 「(peut-être à l’autre guichet)」가 붙어 뜹니다.
 
 ### 2.3 다시 온 환자 접수하기
 
@@ -147,6 +154,10 @@
 | 내원구분 단추 아래 「Déjà venu en *과* : Suivi présélectionné. Si c’est un autre problème, choisissez Nouvelle.」 | 그 과에 전에 온 적이 있어 재진을 골라 두었습니다. 다른 병으로 왔으면 **Nouvelle** 을 누릅니다 |
 | 내원구분 단추 아래 「Déjà encaissé : le type de visite se change à l'écran Paiement.」 (단추가 흐림) | 이미 수납한 접수입니다. 진료비 종류는 수납 창구에서 바꿉니다 |
 | 내원구분 단추 아래 「Valeur actuelle : Urgence (fixée au Paiement)…」 | 예전 방식(응급·의뢰)으로 저장된 접수입니다. 그대로 두거나, 맞는 단추를 누릅니다 |
+| 창 「⚠ Un patient portant ce nom existe déjà」 | 같은 이름 환자가 있습니다. 같은 사람이면 **Choisir ce patient**, 다른 사람이면 **Nouveau dossier quand même**, 그만두려면 **Annuler** (2.2) |
+| 「Dossier existant chargé. Vérifiez les informations, puis appuyez de nouveau sur le bouton.」 | 고른 기존 환자를 불러왔습니다. 정보를 확인하고 버튼을 **다시** 누릅니다 — 아직 접수되지 않았습니다 |
+| 「*이름* est déjà enregistré(e) aujourd’hui (…). Enregistrer une seconde visite ?」 | 오늘 이미 접수된 환자입니다. 같은 날 다른 일로 다시 왔으면 확인, 실수면 취소 |
+| 「… (peut-être à l’autre guichet). Enregistrer une seconde visite ?」 | 다른 창구에서 방금 접수한 것 같습니다. 대기 목록을 보고, 이미 있으면 취소 |
 | 「Erreur : …」 | 위에 없는 오류입니다. 창의 글자를 그대로 적어 관리자에게 알립니다 |
 | 서버는 되는데 오른쪽 목록이 비어 있음 | 화면을 처음 열 때 서버에 닿지 못했을 수 있습니다. 30초 안에 저절로 다시 불러옵니다. 계속 비어 있으면 화면을 새로 고치고(F5), 그래도 안 되면 관리자에게 알립니다. (오늘 접수가 정말 없으면 당연히 비어 있습니다) |
 
@@ -174,9 +185,11 @@
 - **오류 문구** — `errText(err)`: API는 영어로 답하므로, 직원이 할 일이 있는 메시지는 여기서 맞춰 보고 `rc_` 번역으로 바꿈. 맞추는 문구: `Patient name is required` → `rc_nameRequired`, `date_of_birth…`로 시작 → `rc_dobInvalid`, `Only a waiting visit can be cancelled` → `rc_cancelNotWaiting`, `Patient not found` → `rc_patientNotFound`, `Visit not found` → `rc_visitNotFound`, `A field has the wrong format`·`A date field has the wrong format`(`sendDbError`) → `rc_badFormat`, 서버 연결 실패(`Failed to fetch`·`NetworkError…`·`Load failed` — 브라우저별 fetch 실패 문구, `API backend is not reachable…` — `frontend/nginx.conf`의 백엔드 중지 응답, `API response was not JSON…` — `api/client.js`) → `rc_serverDown`. 나머지는 `rc_errorWith`(「Erreur : {msg}」)로 원문을 붙임. **서버·nginx·client.js의 문구가 바뀌면 여기 대응도 같이 바꿔야 함.** 저장·상태 변경이 실패하면 대기 목록을 다시 불러옴(오래된 줄을 치우려고).
 - **안내 문구 조립** — `fill(s, {name, chart, msg})`로 번역 문자열의 `{name}` 같은 자리에 값을 넣음. 언어마다 값 위치와 문장부호가 달라서(프랑스어는 `?`·`:` 앞에 띄어쓰기) 버튼 이름에 `' ✓'`를 이어 붙이던 방식을 버림. 성공 창: `rc_registered`·`rc_visitUpdated`·`rc_patientSaved`, 취소 확인: `rc_cancelConfirm`.
 - **생년월일 칸 안내 글자** — `DobInput`의 `rc_phYear`·`rc_phMonth`·`rc_phDay`(프랑스어 `AAAA`·`MM`·`JJ`).
-- **💾 환자 정보 저장** — `savePatientOnly()`: `selectedPatient.id`가 있으면 `PUT /patients/:id`, 없으면 `POST /patients`.
+- **💾 환자 정보 저장** — `savePatientOnly()`: `selectedPatient.id`가 있으면 `PUT /patients/:id`, 없으면 `confirmNewPatient()` 뒤 `POST /patients`.
+- **동명이인 경고** (2026-09-29 실장님 결정 ④ — **경고만**, 같은 사람 판단은 **이름만**) — `confirmNewPatient()`: 새 차트를 만들기 직전(`savePatientOnly`·`createOrUpdateVisit` 둘 다) `GET /patients/similar`로 같은 이름 환자를 받음. 있으면 `askSimilar(list)`가 화면 안 창(`similarAsk` 상태, Promise로 답을 기다림)을 띄움. 답: `use` → `/patients/:id`로 전체 행을 받아 `patientToForm`으로 채우고(**`visitForm`·`memo`는 그대로**) 멈춤 — 직원이 확인 뒤 다시 누름. 바로 접수하지 않는 이유: 새 환자로 적던 알레르기·전화 등이 표시 없이 버려지기 때문. `new` → 계속 만듦. `cancel` → 멈춤. 조회가 실패하면 경고 없이 진행(경고는 도움일 뿐 등록을 막지 않음).
+- **같은 날 중복 접수 경고** — `postVisit(body, name)`: 화면의 오늘 목록(`visits`, 30초마다 갱신)에서 같은 `patient_id`의 취소 아닌 내원을 찾아 `confirm(rc_dupVisit)`; 확인하면 `allow_duplicate: true`를 붙여 보냄. 목록이 오래돼 서버가 409 `Patient already registered today`를 주면 `confirm(rc_dupVisitOther)` 뒤 `allow_duplicate`로 다시 보냄. 취소하면 아무것도 안 만듦.
 - **접수 / 대기 등록 · 접수 정보 수정** — `createOrUpdateVisit()`:
-  1. 신규면 `POST /patients` (차트번호 생성) 후 **바로 `selectedPatient`에 기억**. 뒤의 내원 생성이 실패해 다시 눌러도 새 환자를 또 만들지 않음 (7절 ③). 기존이면 `PUT /patients/:id` — **실패하면 여기서 멈추고 오류를 보여줌** (예전에는 `catch (e) {}`로 삼키고 접수를 진행해 수정 내용이 조용히 사라졌음).
+  1. 신규면 `confirmNewPatient()`(동명이인 경고) → `POST /patients` (차트번호 생성) 후 **바로 `selectedPatient`에 기억**. 뒤의 내원 생성이 실패해 다시 눌러도 새 환자를 또 만들지 않음 (7절 ③). 기존이면 `PUT /patients/:id` — **실패하면 여기서 멈추고 오류를 보여줌** (예전에는 `catch (e) {}`로 삼키고 접수를 진행해 수정 내용이 조용히 사라졌음).
   2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint` `reception_memo`**만** 보냄. `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`은 `visitTypeSource`가 `'loaded'`가 아닐 때(단추를 눌렀거나 의사를 바꿔 제안이 다시 계산됐을 때)만, 그리고 `has_active_bill`이 아닐 때만 보냄 — 수납이 그 사이 바꾼 값을 덮지 않으려고. `sel`이 없으면 `POST /visits`(늘 `visit_type` 포함).
   3. 목록 다시 불러오고 입력칸을 비움 (`startNewPatient()`).
 - **상태 버튼** — `changeStatus()` → `PUT /visits/:id/status`. 화면에서 허용하는 이동: 대기→완료, 진료중→대기, 진료중→완료, 완료→대기.
@@ -230,6 +243,7 @@
 | `GET /patients/:id` | 위와 같음 | DocumentModal(다섯 화면 — 임상병리·접수는 차트뷰어) |
 | `GET /patients/:id/history` | registration · consultation · payment · pharmacy | 접수, 진료, PatientChart(수납·약국). 임상병리는 안 부름 |
 | `POST /patients` · `PUT /patients/:id` | registration | 접수 |
+| `GET /patients/similar` | registration | 접수(동명이인 경고) |
 | `GET /patients/chart/:chartNo` | registration | 없음 |
 | `GET /patients/:id/billing-history` | payment | 없음 |
 | `GET /visits/today` | registration · consultation | 접수, 진료 |
@@ -245,13 +259,14 @@
 | `GET /api/patients?q=&limit=&offset=` | 검색. `chart_no` `last_name` `first_name` `national_id` `phone` `mobile` `CONCAT(last_name,' ',first_name)`에 `ILIKE %q%`. `is_active=true`만. 최근 등록순. 기본 50건 | 접수, PatientFinder |
 | `GET /api/patients/:id` | 환자 한 명 | DocumentModal |
 | `GET /api/patients/chart/:chartNo` | 차트번호로 찾기 | 프론트에서 부르는 곳 없음 (확인함) |
+| `GET /api/patients/similar?last_name=&first_name=` | 성·이름이 같은 환자(최대 10명, 최근 등록순): `id` `chart_no` `last_name` `first_name` `date_of_birth` `gender` `phone` `mobile` `last_visit_date`(취소 아닌 마지막 내원일). 대소문자·앞뒤·겹친 공백 무시, **성·이름 뒤바뀜도 같은 것으로**. 악센트는 적힌 그대로 비교. 둘 중 하나가 비면 `[]`. `/:id`보다 **먼저** 선언(아니면 `similar`를 id로 받음). SQL 정규식은 `[[:space:]]+` — JS 템플릿 안의 `\s`는 역슬래시가 빠져 Postgres가 글자 s를 바꾸므로 | 접수 |
 | `POST /api/patients` | 등록. 차트번호 자동. `badPatient` 검사 (성·이름 **둘 중 하나**만 있으면 통과) | 접수 |
 | `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함 | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
 | `GET /api/visits/today?status=&doctor_id=&department_id=` | 오늘(`visit_date = CURRENT_DATE`) 내원 + 환자·과·의사 + `has_active_bill`(취소 안 된 청구가 있는지). 접수시각순 | 접수(30초마다), 진료(15초마다) |
 | `GET /api/visits/patient/:patientId` | 그 환자의 모든 내원 + 대표 청구 1건 | 접수(초진/재진 제안), PatientFinder |
-| `POST /api/visits` | 접수. `visit_type` 검사함. `status='waiting'`, `reception_time`은 서버 시각 `HH:MM`, `registered_by`는 로그인 직원 | 접수 |
+| `POST /api/visits` | 접수. `visit_type` 검사함. `status='waiting'`, `reception_time`은 서버 시각 `HH:MM`, `registered_by`는 로그인 직원. **오늘 같은 환자의 취소 아닌 내원이 있으면 409 `Patient already registered today`** — 본문에 `allow_duplicate: true`가 있으면 통과(직원이 확인한 뒤 화면이 붙임). 두 요청이 동시에 오면 둘 다 통과할 수 있음(잠금 없음 — 경고일 뿐이라) | 접수 |
 | `PUT /api/visits/:id/status` | 상태만 변경. `VISIT_STATUSES` 검사. **`cancelled`로는 `registered`·`waiting`인 내원만** 바꿀 수 있고, 아니면 409 `{error:'Only a waiting visit can be cancelled', status:<지금 상태>}` — 진료·처방·청구가 붙은 내원을 취소하면 다른 화면이 모두 무시하는 내원에 그것들이 매달려 버리기 때문 | 접수 |
 | `PUT /api/visits/:id` | 수정. **본문에 있는 칸만** 씀 (`VISIT_FIELDS`: `visit_type` `department_id` `doctor_id` `chief_complaint` `reception_memo` `status`). `department_id`·`doctor_id`는 `null`/`''`로 **비울 수 있음**. `visit_type`·`status`는 `null`이면 무시, 값이 있으면 POST와 같은 목록으로 검사(400). 빈 본문은 400 | 접수, 수납(`visit_type`만) |
 
@@ -341,8 +356,8 @@
 |---|---|---|---|---|
 | ① | ✅ 고침 (높음) | **대기 취소 버튼이 항상 실패한다.** 화면이 `'canceled'`(l 하나)를 보내는데 서버·DB는 `'cancelled'`만 받음 → 400 오류 창. 대기 취소를 화면에서 할 방법이 없음 | `Registration.jsx:233` · `validate.js` `VISIT_STATUSES` · `001_schema.sql:87` | 코드 |
 | ② | ✅ 고침 (높음) | **「접수 정보 수정」이 옛 상태값으로 덮어쓴다.** 대기 목록에서 고른 순간의 `sel.status`를 같이 보냄. 그 사이 의사가 진료를 끝냈으면(`completed`) 다시 `waiting`으로 돌아가 **수납 대기 목록에서 빠지고** 진료 대기에 다시 뜸. 접수 화면은 자동 새로고침이 없어 이런 틈이 김 | `Registration.jsx:208` · `visit.routes.js:109` · `billing.routes.js:56` | 코드 |
-| ③ | ✅ 고침 — 일부 (보통) | **같은 신규 환자가 두 번 등록될 수 있다.** 버튼 연타를 막지 않음. 또 환자 생성은 됐는데 내원 생성이 실패하면, 만든 환자를 기억하지 않아 다시 누를 때 새 환자를 또 만듦. 서버에도 같은 이름·생년월일 확인이 없음 | `Registration.jsx:179-187,331` · `patient.routes.js:55-72` | 코드 |
-| ④ | 보통 | 같은 환자를 같은 날 두 번 접수해도 경고가 없다 (진료·청구도 두 건이 됨) | `visit.routes.js:62-82` | 코드 |
+| ③ | ✅ 고침 (보통) | 같은 신규 환자가 두 번 등록될 수 있었다 — 버튼 연타·재시도(1차에서 고침), 그리고 다른 날 같은 사람을 새 차트로 또 등록(2026-09-29 ④로 동명이인 경고) | `Registration.jsx` `withBusy` · `confirmNewPatient` | 화면 |
+| ④ | ✅ 고침 (보통) | 같은 환자를 같은 날 두 번 접수해도 경고가 없었다. → 화면 목록으로 먼저 묻고, 다른 창구 몫은 서버 409로 한 번 더 물음. 실장님 결정대로 **경고만**(막지 않음) | `Registration.jsx` `postVisit` · `visit.routes.js` `POST /` | 화면 + 시험 스크립트 |
 | ⑤ | ✅ 고침 (보통, 잠재) | **대기 목록에서 고른 환자를 저장하면 `national_id` `mobile` `address` `city` `region`이 빈 값으로 덮인다.** `/visits/today`가 이 칸들을 안 주는데 화면은 빈 문자열로 채워 `PUT /patients`로 보냄. 지금은 이 칸들을 입력하는 화면이 없어 잃을 값이 없지만, **주소·연락처 입력 칸을 추가하는 순간 실제 데이터 손실이 됨** | `Registration.jsx:127-132,145-157,190-197` · `visit.routes.js:13` · `patient.routes.js:81` | 코드 |
 | ⑥ | 하지 않음 (실장님 결정) | 진료과를 의사와 따로 고르는 칸 — 2026-09-29 실장님 결정으로 **만들지 않음**. 「진료과 + 원장님 이름」이 한 줄(`GS – 이름`)로 붙어 나오는 지금 방식이 병원의 방식. 소속과가 없는 의사로 접수하면 진료과가 비는 점은 그대로(설정에서 소속과를 넣어 해결) | `Registration.jsx` 담당의 선택 | — |
 | ⑦ | ✅ 고침 (보통) | 내원구분을 고르는 칸이 없어 모든 접수가 `newVisit`였다. → 단추 **초진 · 재진 · 진료비 없음**(실장님 결정 — 응급·의뢰 없음), 같은 과에 온 적 있으면 재진 제안, 청구 뒤 잠금, 수정 때는 바꿨을 때만 저장 | `Registration.jsx` `suggestedVisitType` · `visit.routes.js` `/today` | 화면 9가지(3절 흐름대로) |
@@ -371,7 +386,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | ⑦ 내원구분 단추(초진·재진·진료비 없음), 같은 과 재진 제안, 청구 뒤 잠금, `/visits/today`에 `has_active_bill`, `/visits/patient`에 접수 권한 | (이 커밋) |
+| 2026-09-29 | ④ 동명이인 경고(이름만, 순서·대소문자·공백 무시, 이 환자로 / 그래도 새로 / 취소), 같은 날 두 번 접수 경고(화면 목록 + 서버 409·`allow_duplicate`), 새 라우트 `GET /patients/similar` | (이 커밋) |
+| 2026-09-29 | ⑦ 내원구분 단추(초진·재진·진료비 없음), 같은 과 재진 제안, 청구 뒤 잠금, `/visits/today`에 `has_active_bill`, `/visits/patient`에 접수 권한 | `520706d` |
 | 2026-09-29 | 서버 권한 검사(S2) — 라우트별 `permMiddleware`, 수납 전용 계정은 `visit_type`만, 권한 거절 안내 번역, 역할×라우트 시험 `backend/test/reception.api.mjs` | `3e03fa4` |
 | 2026-09-29 | 2절을 수납·통계 페이지 형식으로 — 권한 안내, 화면 구성·버튼 표, 왼쪽 칸별 뜻 표, 대기 상태 표, 환자 찾기 창, 「이런 안내가 뜰 때」 표(성공·확인 창 포함) | `e467849` |
 | 2026-09-29 | 대기 목록 30초 자동 새로고침(⑰) — 탭이 보일 때만, 입력값 유지, 고른 내원의 상태만 맞춤, 실패해도 목록 유지 | `eb2d19c` |

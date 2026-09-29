@@ -289,6 +289,15 @@ export default {
   rc_visitTypeLocked: "Déjà encaissé : le type de visite se change à l'écran Paiement.",
   rc_visitTypeOther: "Valeur actuelle : {type} (fixée au Paiement). Un bouton la remplace.",
   rc_visitTypeSuggested: "Déjà venu en {dept} : Suivi présélectionné. Si c’est un autre problème, choisissez Nouvelle.",
+  rc_similarTitle: "Un patient portant ce nom existe déjà",
+  rc_similarHint: "Si c’est la même personne, appuyez sur « Choisir ce patient ». Si c’est un homonyme, appuyez sur « Nouveau dossier quand même ».",
+  rc_similarUse: "Choisir ce patient",
+  rc_similarCreate: "Nouveau dossier quand même",
+  rc_cancel: "Annuler",
+  rc_lastVisit: "Dernière visite",
+  rc_similarLoaded: "Dossier existant chargé. Vérifiez les informations, puis appuyez de nouveau sur le bouton.",
+  rc_dupVisit: "{name} est déjà enregistré(e) aujourd’hui ({status}{doctor}). Enregistrer une seconde visite ?",
+  rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
