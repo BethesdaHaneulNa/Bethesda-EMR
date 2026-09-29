@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-13 조사: 새 PC 설치(결정 35)에서 PACS에 일어나는 일 · 고칠 것 목록
+
+- **상태**: 보류 — 읽고 적기만 함(아무것도 실행하지 않음, 코드 변경 없음). 고칠 것은 총괄과 같이 정함
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (위키만, develop `132daea`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **읽은 것**: EMR `offline/pack.ps1`·`pack.sh`·`install-offline.ps1`·`install-offline.sh`·`OFFLINE-INSTALL.md`·`DEPLOYMENT.md` 5b(복원)·`backend/src/services/backup.js`(pg_dump), PACS `setup.ps1`·`setup.sh`·`start.bat`·`docker-compose.yml`.
+- **결과**: `modules/pacs.md` **6.1 「새 PC에 설치할 때 (PACS)」** — ① 키트 만들기 ② 설치·토큰이 생기는 때와 짝 맞추는 길 ③ 현지 PC 확인(동적 포트 범위·방화벽·고정 IP·영상 백업) ④ 백업 복원 뒤 어긋나는 것 표. 7절에 **P-24 [보통] 영상 백업 없음**.
+
+### 질문별 답 (요약)
+
+1. **토큰·비밀번호가 생기는 때** — 현지 PC에서 `install-offline.ps1`이 부르는 PACS `setup.ps1 -Offline`이 `.env`가 없을 때 `ORTHANC_PASSWORD`(32자)·`BRIDGE_TOKEN`(48자)을 새로 만들고 **토큰을 화면에 찍음**. EMR 쪽은 사람이 **설정 → Flux d'ordres**에 붙여넣는 것이 유일한 길. 키트에는 `.env`가 안 들어가므로 이 PC 값은 따라가지 않음. 포트 9090·4242는 compose 고정. **동적 포트 범위는 현지 PC에서도 반드시 확인**(이 PC가 왜 1024부터였는지 모름 — Docker·WSL 설치 + 재부팅 뒤 `netsh`). **방화벽은 스크립트가 안 건드림** — 다른 PC에서 `Test-NetConnection`으로 9080·9090·4242 확인.
+2. **백업 복원 뒤** — `pacs_config`(이 PC 토큰·주소)가 덮여 **브리지 401** → 복원 **뒤에** 짝 맞추기(`rotate-token.ps1`가 그대로 쓰임) + 뷰어 주소·Host를 새 LAN IP로. `worklist_log`의 지난 날 `scheduled` 시험 오더는 피드가 오늘만 주므로 장비에 안 감(복원한 날 만든 것만 주의). 「영상 도착」 기록이 있는데 새 Orthanc에 영상이 없으면 목록은 「N장 도착」·영상 창은 빈 화면 → `storage` 폴더를 옮기거나(이 PC엔 실제 영상이 없을 것) 시험 기록 정리(실장님 결정).
+3. **새 브리지가 키트에 들어가려면** — `pack`은 git이 아니라 **`C:\Bethesda-PACS-main` 폴더의 지금 파일**을 복사·빌드함 → **절차서 ②로 PACS `main`에 `6c135aa`를 합친 뒤**, 그 폴더가 `main`이고 `git status`가 빈 상태에서 pack. **MANIFEST에는 EMR 버전만 찍히고 PACS 버전은 안 찍힘.**
+
+### 고칠 것 목록 (고치지 않음 — `offline/`은 총괄 파일, PACS 파일은 합의 뒤)
+
+| # | 파일 (주인) | 무엇 | 왜 |
+|---|---|---|---|
+| F-1 | `offline/pack.ps1`·`pack.sh` (총괄) | PACS 폴더에 `.env`가 없으면 `ORTHANC_PASSWORD`에 임시 값(JWT_SECRET처럼) | **P-13**(`${ORTHANC_PASSWORD:?}`)을 켜면 pack의 `docker compose build`·`config`가 실패함 — F-1과 G-2는 같이 |
+| F-2 | `offline/pack.*` (총괄) | MANIFEST에 **PACS 커밋·브랜치**(`git -C <PACS> describe --always --dirty`, `rev-parse --abbrev-ref HEAD`)와 EMR 커밋. `--dirty`면 경고 또는 중단 | 지금은 어떤 브리지가 들어갔는지 키트만 봐서 모름. 합치지 않은 파일이 섞여도 모름 |
+| F-3 | `offline/pack.*` (총괄) | 「Nothing here touches the running stack」는 틀림 — `docker compose build`가 **이 PC의 실행용 이미지 이름표**(`bethesda-emr-*:latest`, `bethesda-pacs-worklist-bridge:latest`)를 덮어씀. 다음에 이 PC에서 `up`하면 pack한 코드가 돎 | 격리 스택 이름표 문제(`657ba2c`)와 같은 종류. 적어도 주석·설명서에 「합친 뒤에만」, 가능하면 키트용 이름표로 빌드 후 `docker tag` |
+| F-4 | `offline/pack.*` (총괄) | 제외를 `.env`에서 **`.env*`**(그리고 `*.env`)로 | 지금은 이름이 정확히 `.env`인 것만 빠짐 — `.env.bak`, `test.env` 같은 비밀값 사본이 키트에 들어갈 수 있음 |
+| F-5 | `offline/install-offline.ps1:117`·`.sh:83` (총괄) | PACS `setup` 실패를 확인하지 않음 → 실패해도 「Installed」 | EMR은 확인하는데 PACS는 안 함 |
+| F-6 | `offline/install-offline.*` 마지막 안내, `OFFLINE-INSTALL.md` (총괄) | 「paste the bridge token printed above」 대신 G-1의 자동 짝 맞추기, 뷰어 주소 = **서버 LAN IP**, 동적 포트 확인, 방화벽 확인, 고정 IP, **영상은 EMR 백업에 없음** | 6.1 ②③ |
+| G-1 | PACS `setup.ps1`·`setup.sh` (PACS) | EMR DB 컨테이너(`bethesda-emr-db`)가 같은 PC에 있으면 새 토큰을 **stdin으로 `pacs_config`에 직접** 넣고 「짝 맞춤 완료」만 찍기(`rotate-token.ps1`와 같은 방식). EMR이 없을 때만 지금처럼 찍기 | 토큰이 화면·클립보드·설치 창 기록에 남지 않게, 붙여넣기 실수 없음 |
+| G-2 | PACS `docker-compose.yml` (PACS) | **P-13**: `${ORTHANC_PASSWORD:?…}` | F-1 뒤 |
+| G-3 | PACS `setup.ps1` (PACS) | 시작 전 동적 포트 범위·예약 구간을 읽기만 해서 9090·4242가 걸리면 경고 | P-1이 새 PC에서 되풀이되지 않게 — 고치는 명령(관리자)은 안내만 |
+| G-4 | PACS `start.bat` (PACS) | 끝 안내 「viewer URL http://localhost:9090」 → 「이 PC의 LAN IP:9090」 | 다른 PC 브라우저 기준 |
+| G-5 | (결정) | **P-24 영상 백업** — `storage`를 두 번째 디스크로 복사하는 방식·주기 | 디스크 고장 시 영상 전부 잃음 |
+
+### 출발 전 확인 목록에 넣을 줄 (제안)
+
+- [ ] PACS `main`에 `session/pacs`(`6c135aa` 이상) 합쳤고 `C:\Bethesda-PACS-main`이 `main`·`git status` 빈 상태에서 pack 함 — MANIFEST의 PACS 커밋 확인(F-2 뒤)
+- [ ] 키트 `Bethesda-PACS\`에 `.env`·`*.env*`·`storage\`가 없음
+- [ ] (영상을 옮긴다면) 이 PC Orthanc를 멈추고 `storage` 폴더를 따로 복사 — 장비가 붙은 적이 없으면 필요 없음
+- [ ] 현지: Docker·WSL 설치 + 재부팅 뒤 `netsh int ipv4 show dynamicport tcp`가 49152/16384, `excludedportrange`에 9080·9090·4242 없음
+- [ ] 현지: 설치 → **EMR 백업 복원 → 그 다음에** 브리지 짝 맞추기(`rotate-token.ps1` 또는 설정 화면), 뷰어 주소·Host를 서버 LAN IP로, `docker compose up -d --force-recreate worklist-bridge`
+- [ ] 현지: 다른 PC에서 `Test-NetConnection <서버IP> -Port 9080/9090/4242` 모두 True, 서버 IP 고정(DHCP 예약)
+- [ ] 현지: 상태 화면 브리지 초록, 복원한 날의 `scheduled` 시험 오더 0건
+- [ ] 영상 백업 방법 정함(P-24)
+
+- **바꾼 파일**: `wiki/modules/pacs.md`(6.1 새로, 7절 P-24, 8절), `wiki/handoff/pacs.md` · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인 못 한 것**: 아무것도 실행하지 않음(지시대로). Docker Desktop이 방화벽 허용을 묻는지, 새 PC 동적 포트 범위 — 현지 확인.
+
 ## 2026-09-29 — 위키 2.2: 찍기 직전마다 워크리스트 새로 불러오기 (결정 38-③)
 
 - **상태**: 확인 요청

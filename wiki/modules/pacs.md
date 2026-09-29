@@ -309,6 +309,47 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 **장비 쪽** — PACS Host = 서버 IP, 포트 4242, Called AE = `MEDCONNECT`, 워크리스트도 같은 주소. 장비 자기 AE는 아무거나.
 
+### 6.1 새 PC에 설치할 때 (PACS)
+
+> 실장님 결정 35 (2026-09-29): 11월에 **현지의 다른 PC에 새로 설치**하고, 자료는 EMR 백업 파일로 옮깁니다. 아래는 오프라인 키트(EMR `offline/`)와 PACS `setup` 스크립트를 **읽고** 정리한 것입니다 — 실제로 돌려 보지는 않았습니다(`pack`은 두 스택을 빌드해 이 PC의 이미지 이름표를 바꾸므로).
+
+**① 키트 만들기 (출발 전, 인터넷 되는 이 PC)** — `offline/pack.ps1`
+
+- PACS는 **EMR 옆 폴더 `C:\Bethesda-PACS-main`의 지금 파일 그대로**를 씁니다(`-PacsPath`로 바꿀 수 있음). git 브랜치를 보지 않고 **폴더에 있는 파일**을 복사·빌드하므로, `session/pacs`의 새 판(`6c135aa`까지 — 토큰 헤더, 영상 도착 확인, `arrivals_error`)을 넣으려면 **재부팅 절차서 ②(PACS `main`에 합치기)를 먼저** 하고 그 폴더가 `main`이며 고친 파일이 없는지(`git status`가 비어 있음) 확인한 뒤 pack.
+- 빌드: `docker compose build`(브리지 이미지 `bethesda-pacs-worklist-bridge:latest`) → `docker compose config --images`로 Orthanc `orthancteam/orthanc:26.6.1` 이름을 얻어 없으면 받음 → `images\bethesda-pacs-images.tar`로 저장.
+- 복사에서 빠지는 것: `.git`, `storage`(영상), `worklists`, `.env`, `*.log` 등. **`.env`가 키트에 안 들어가므로 이 PC의 Orthanc 비밀번호·토큰은 따라가지 않음** — 현지 PC에서 새로 만들어짐.
+- `MANIFEST.txt`에는 **EMR 버전(`backend/package.json`)만** 찍히고 **PACS 버전·커밋은 안 찍힘** → 어떤 브리지가 들어갔는지 키트만 봐서는 모름(아래 고칠 것 F-2).
+
+**② 현지 PC에 설치** — `install-offline.ps1` (키트 폴더에서)
+
+1. 이미지 두 묶음 `docker load`.
+2. `C:\Bethesda-PACS`로 복사(이미 `.env`가 있으면 건드리지 않음 — 다시 돌려도 비밀값 유지).
+3. EMR `setup.ps1 -Offline` 뒤 **PACS `setup.ps1 -Offline`**:
+   - `.env`가 없으면 새로 만듦: **`ORTHANC_PASSWORD`**(무작위 32자), **`BRIDGE_TOKEN`**(무작위 48자). **토큰은 이 순간 PACS PC에서 처음 생기고, 화면에 한 번 찍힙니다.**
+   - `docker compose up -d --no-build` → Orthanc(9090·4242)와 브리지가 뜸. 브리지는 바로 EMR(`host.docker.internal:9080`)에 묻기 시작하지만, EMR에는 아직 토큰이 없어서 **401 「Bridge token is not set in the EMR」** — 짝을 맞출 때까지 정상.
+4. **짝 맞추기 (지금은 사람이 함)**: 화면에 찍힌 토큰을 EMR **Paramètres → Flux d'ordres → Bridge Token**에 붙여넣고 저장. → EMR `pacs_config.bridge_token`과 PACS `.env`가 같아지는 **유일한 길**. 토큰이 화면·클립보드에 남는 방식이라, 재부팅 절차서의 `rotate-token.ps1`처럼 **두 쪽에 직접 넣는 방식**을 권함(고칠 것 G-1). 설치 뒤 한 번 `rotate-token.ps1`을 돌려도 같은 결과.
+5. EMR 설정에서 **PACS 웹/뷰어 주소 = `http://<서버 LAN IP>:9090`**(`localhost` 아님 — 진료실 다른 PC의 브라우저가 여는 주소), **Host / IP = `host.docker.internal`** 또는 서버 LAN IP.
+
+**③ 현지 PC에서 따로 확인할 것**
+
+- **Windows 동적 포트 범위** (P-1과 같은 원인): `netsh int ipv4 show dynamicport tcp` → 시작 49152·개수 16384인지, `netsh interface ipv4 show excludedportrange protocol=tcp`에 **9080·9090·4242**가 걸리지 않는지. Docker·WSL을 다 설치하고 **한 번 재부팅한 뒤** 봅니다(예약 구간은 부팅 때 바뀜). 이 PC가 왜 1024부터였는지는 모르므로 새 PC도 반드시 확인.
+- **방화벽**: 스크립트는 방화벽을 건드리지 않습니다. Docker Desktop이 처음 뜰 때 Windows가 허용을 물을 수 있음(확인 필요). 네트워크 종류는 **개인(Private)**. 확인은 **다른 PC에서**: `Test-NetConnection <서버IP> -Port 9080` / `9090` / `4242` 가 모두 `True`.
+- **서버 IP 고정**: 장비와 진료실 PC가 IP로 찾아오므로 공유기에서 **고정 IP(DHCP 예약)**.
+- **영상 백업이 없음**: EMR 자동 백업(`pg_dump`)은 **DB만** — Orthanc 영상(`C:\Bethesda-PACS\storage`)은 어디에도 백업되지 않습니다(7절 P-24).
+
+**④ EMR 백업을 복원하면 PACS와 어긋나는 것** (백업은 DB 전체 — `pacs_config`·`worklist_log`·`service_heartbeat` 포함)
+
+| 복원된 것 | 새 PC에서 생기는 일 | 할 일 |
+|---|---|---|
+| `pacs_config.bridge_token` = **이 PC의 토큰** | 새 PACS `.env`의 토큰과 다름 → 브리지 401, 상태 화면 「보고 없음」 | 복원 **뒤에** 짝 맞추기(②-4 또는 `rotate-token.ps1`) 후 `docker compose up -d --force-recreate worklist-bridge` |
+| `pacs_viewer_url`, `worklist_scp_host` = 이 PC 기준 | 영상 창이 엉뚱한 주소를 엶, 연결 시험 실패 | ②-5대로 새 서버 LAN IP로 |
+| `service_heartbeat` = 이 PC 브리지의 마지막 보고 | 짝을 맞추기 전까지 「보고 없음」 | 짝 맞추면 저절로 갱신 |
+| `worklist_log`의 `scheduled` 줄(시험 오더) | 피드는 **오늘 날짜만** 주므로 지난 날 줄은 장비에 안 감. **복원한 날 만든 시험 오더**가 있으면 현지 장비 목록에 뜸 | 복원 뒤 `SELECT count(*) FROM worklist_log WHERE status='scheduled' AND scheduled_date=CURRENT_DATE` 가 0인지 |
+| `worklist_log`의 **영상 도착 기록**(`images_received_at`) | 새 Orthanc에는 영상이 없는데 판독 목록은 「N image(s) reçue(s)」, 영상 창은 빈 화면 | 영상을 옮기려면 이 PC Orthanc를 멈추고 `storage` 폴더를 통째로 새 PC `C:\Bethesda-PACS\storage`로(첫 실행 전). 이 PC에는 장비가 붙은 적이 없어 **실제 영상은 없을 것** — 시험 기록 정리 여부는 실장님 결정(데이터 변경) |
+| `order_item`·순번 | 이어서 늘어남 → 새 AccessionNumber·UID가 옛것과 안 겹침 | 없음 |
+
+그 밖에: 키트의 EMR 판이 백업을 만든 EMR 판보다 **같거나 새것**이어야 합니다(마이그레이션 번호) — 총괄 몫.
+
 ## 7. 알려진 문제 · 제약
 
 2026-09-29 코드 읽기로 찾은 것. **심각도**: 높음 / 보통 / 낮음. 고친 것은 ✅, 일부 고친 것은 🟡.
@@ -353,6 +394,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-23 [보통] 🟡 준비만 (2026-09-29)** — 결과 있는 영상 오더 「취소」(결정 3-B)의 PACS 몫: `readings`·`viewer-url`에 취소 정보, 취소된 오더 판독 저장 409, 판독 목록에 회색·줄긋기·「Annulé (취소됨)」·이유·날짜(「영상 대기 중」은 숨김), `cancelWorklistForOrder`. 취소된 영상 오더가 생기기 전에는 아무것도 달라지지 않음. **켜는 것**: 진료 세션 취소 API·마이그레이션 + PACS 저장소 합친 뒤(총괄 결정).
 - **P-20 [낮음] ✅ 고침 (2026-09-29)** — 브리지가 heartbeat에 `arrivals_error`를 싣고(PACS `6c135aa`), `/bridge-heartbeat`가 detail에 저장, 설정 세션의 `status.routes.js`(`9d7e380`)가 노랑 `status.bridge.arrivals`로 표시. 격리 스택에서 비밀번호 없음·Orthanc 없음 → 노랑, 정상 → 초록 확인. **원래 문제**: 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
+- **P-24 [보통] 영상 백업이 없음.** EMR 자동 백업은 `pg_dump`(DB)만 — Orthanc 영상과 색인(`storage` 폴더, 바인드 마운트)은 어디에도 백업되지 않습니다. 디스크가 죽으면 영상은 사라지고 EMR에는 「영상 도착」 기록과 판독만 남음. 방법(두 번째 디스크로 `storage` 복사 — Orthanc를 잠깐 멈추거나 Orthanc 백업 기능, 보관 기간, 용량)은 실장님 결정. 6.1 참고.
 - **격리 스택 없음** — PACS 저장소에서 `docker compose up`을 하면 실행 중인 PACS를 덮어씁니다(프로젝트 이름·컨테이너 이름·포트·`./storage` 폴더 고정). 격리 스택은 실장님 허락 후 만듭니다.
 - 브리지는 장비별로 워크리스트를 나누지 않습니다(모든 장비가 모든 오더를 봄). Modality로만 장비가 거를 수 있음.
 
@@ -370,3 +412,4 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | P-22 판독 날짜 현지로, P-23 영상 오더 취소 준비(`pacs.cancel.js`, 취소 정보·409·회색 표시) | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | P-18: UID 없는 오더에서 뷰어 첫 화면 대신 `no_study` + `px_noStudy` | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 2.2 방사선사: 찍기 직전마다 워크리스트를 새로 불러오기 (결정 38-③, 영상 오더 취소와 짝) | EMR `session/pacs` |
+| 2026-09-29 | 6.1 「새 PC에 설치할 때(PACS)」(결정 35) — 키트·설치·짝 맞추기·백업 복원 뒤 어긋나는 것, 7절 P-24 영상 백업 없음 | EMR `session/pacs` (인계 노트 참고) |
