@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLang } from '../i18n/index.jsx';
-import { api } from '../api/client.js';
+import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
@@ -251,6 +251,16 @@ export default function SettingsPage() {
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
+  // Bring a deactivated account back (U2): administrators only - the server checks the
+  // role too (POST /admin/staff/:id/reactivate). Login, password and permissions come
+  // back as they were.
+  var meIsAdmin = (getUser()||{}).role === 'admin';
+  async function reactivateStaff(s){
+    if(!confirm((t.se_confirmReactivate||'').replace('{name}', s.name+' ('+s.login_id+')'))) return;
+    try { await api.post('/admin/staff/'+s.id+'/reactivate', {}); await loadAll(); }
+    catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
+
   // ── 약속처방(Order Sets) ──
   async function osReload(){ try { setOrderSets(await api.get('/order-sets')); } catch(e){} }
   function osNew(){ setOsEdit({name:'',group_name:'',department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
@@ -366,7 +376,9 @@ export default function SettingsPage() {
                   <td style={{padding:'6px 10px',color:s.status==='active'?'#34d399':'#f87171',fontSize: 13,fontWeight:600}}>{s.status==='active'?t.se_statusActive:t.se_statusInactive}</td>
                   <td style={{padding:'6px 10px',display:'flex',gap:3}}>
                     <button onClick={function(){openEdit('staff',s)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
-                    <button onClick={function(){deleteItem('staff',s.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
+                    {s.status==='inactive'
+                      ? (meIsAdmin ? <button onClick={function(){reactivateStaff(s)}} style={{background:'#16a34a15',color:'#34d399',border:'1px solid #16a34a40',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.se_reactivate}</button> : null)
+                      : <button onClick={function(){deleteItem('staff',s.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>}
                   </td>
                 </tr>;
               })}</tbody>

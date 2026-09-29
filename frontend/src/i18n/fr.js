@@ -784,6 +784,9 @@ export default {
   se_pwDone: "Mot de passe changé. Utilisez le nouveau à la prochaine connexion.",
   se_pwOpen: "Cliquer pour changer mon mot de passe",
   se_errCurrentPw: "Le mot de passe actuel n'est pas correct.",
+  se_reactivate: "Réactiver",
+  se_confirmReactivate: "Réactiver {name} ? Ce compte pourra de nouveau se connecter, avec le même identifiant, mot de passe et les mêmes permissions qu'avant.",
+  se_errReactivateAdmin: "Seul un administrateur peut réactiver un compte du personnel.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

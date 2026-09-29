@@ -23,6 +23,7 @@ const MSG = Object.freeze({
   PASSWORD_REQUIRED: 'password is required',
   CURRENT_PASSWORD_WRONG: 'The current password is not correct',
   LAST_ADMIN: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
+  REACTIVATE_ADMIN_ONLY: 'Only an administrator can reactivate a staff account.',
   SETUP_ADMIN_KEPT: 'The administrator account created during setup cannot be deactivated.',
 });
 

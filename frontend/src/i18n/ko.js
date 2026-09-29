@@ -784,6 +784,9 @@ export default {
   se_pwDone: "비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.",
   se_pwOpen: "눌러서 내 비밀번호 바꾸기",
   se_errCurrentPw: "지금 비밀번호가 맞지 않습니다.",
+  se_reactivate: "다시 활성",
+  se_confirmReactivate: "{name} 계정을 다시 활성으로 바꿀까요? 전과 같은 아이디·비밀번호·권한으로 다시 로그인할 수 있습니다.",
+  se_errReactivateAdmin: "비활성 직원을 다시 활성으로 바꾸는 것은 관리자만 할 수 있습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

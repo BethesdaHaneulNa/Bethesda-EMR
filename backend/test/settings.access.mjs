@@ -153,6 +153,8 @@ const ROUTES = [
   ['POST', '/admin/phrases',                [SET], {}],
   ['PUT',  '/admin/phrases/' + X,           [SET], {}],
   ['DELETE', '/admin/phrases/' + X,         [SET]],
+  // settings, and the admin role on top (U2); every account holding settings here is an admin
+  ['POST', '/admin/staff/' + X + '/reactivate', [SET], {}],
   // backup / status / version / auth (settings)
   ['GET',  '/backup/status',                [ALL]],
   ['GET',  '/backup/download/bethesda_does-not-exist.sql.gz', [SET]],

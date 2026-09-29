@@ -1,6 +1,6 @@
 # 설정 (Settings)
 
-> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4 자기 비밀번호 바꾸기 끝남 · U2(되살리기는 관리자만) 작업 차례
+> **담당**: 설정 세션 · 브랜치 `session/settings` · **마지막 갱신**: 2026-09-29 · **상태**: 2026-09-29 작업 모두 develop에 합쳐짐(8절 요약). S4 자기 비밀번호 바꾸기·U2 다시 활성 끝남 · 다음은 11월 대비 복원 연습
 
 ## 1. 이 모듈이 하는 일
 
@@ -94,7 +94,9 @@
 - **비밀번호 초기화**: **Modifier** 창의 **Mot de passe** 칸은 비어 있습니다. **비워 두면 그대로**, 새로 적으면 그 비밀번호로 바뀝니다. 새 비밀번호를 직원에게 알려 주세요.
 - **권한을 바꾸면** 서버는 바로 따르고, 그 직원의 메뉴는 화면을 새로 고치면(늦어도 5분 안에) 바뀝니다 (2.2). 다시 로그인할 필요는 없습니다.
 - **그만둔 직원**: 그 줄의 **Supprimer (삭제)** → 「Désactiver ce membre du personnel ? … (이 직원을 비활성으로 바꿀까요?)」 → 확인. 지워지지 않고 **inactif** 가 되어 로그인이 막힙니다. 진료·수납 기록은 그대로 남습니다.
-  - **주의**: 비활성 직원을 다시 **actif** 로 되돌리는 버튼이 아직 없습니다 (7절 U2).
+  - **다시 일하게 된 직원 — Réactiver (다시 활성)** (2026-09-29, U2): 비활성 줄에는 **Supprimer** 대신 초록 **Réactiver** 가 보입니다 → 「Réactiver … ? (다시 활성으로 바꿀까요?)」 → 확인 → **actif**. **전과 같은 아이디·비밀번호·권한**으로 바로 로그인할 수 있습니다(비밀번호를 새로 알려 주려면 **Modifier** 에서 적으세요).
+  - **Réactiver 는 관리자(역할 Administrateur)만** 보이고 할 수 있습니다(결정). 설정 권한만 받은 다른 역할의 계정에는 버튼이 없고, 서버도 거절합니다(「Seul un administrateur peut réactiver…」).
+  - 「Journal」에 「Compte du personnel modifié · Statut: inactif → actif」 한 줄이 남습니다.
   - 비활성으로 바꾸면 **바로** 막힙니다 — 이미 로그인해 있던 화면도 다음 동작에서 로그인 화면으로 갑니다 (2026-09-29부터, S1).
 
 ### 2.6 관리자 계정 보호
@@ -406,7 +408,8 @@
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). 쓰기 라우트 없음 |
-| `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
+| `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙. PUT으로 비활성 → 활성은 **admin 역할만**(아니면 403) |
+| `POST /api/admin/staff/:id/reactivate` | settings **+ admin 역할** (2026-09-29, U2) | 비활성 → 활성, 다른 것은 그대로. 이미 활성이면 `{success, unchanged}`·기록 없음. 기록 `settings.staff.edit` status |
 | `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로) (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
@@ -515,7 +518,7 @@
 | # | 심각도 | 문제 | 근거 |
 |---|---|---|---|
 | U1 | ~~보통~~ **대부분 고침** | ~~설정 화면 글자 상당수가 영어로 고정~~ → 2026-09-29: 틀(탭 이름·공용 삭제 확인·편집 창 제목·오류·저장 알림)과 직원·오더 코드·상용구·진료과·병원 정보 탭, 그 편집 창을 `se_` 키로. 역할·오더 종류·상태도 번역해서 표시(저장 값은 그대로). **남은 것**: 약품 탭 안쪽(약국 몫 — 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·General 등 — DB에 저장되는 값이라 번역하지 않음) | (옛 코드) `Settings.jsx` |
-| U2 | 보통 | 비활성으로 만든 직원을 **다시 활성으로 되돌릴 방법이 화면에 없음** (상태 칸 없음) | `Settings.jsx:649-684` |
+| U2 | ~~보통~~ **고침** | ~~비활성으로 만든 직원을 다시 활성으로 되돌릴 방법이 화면에 없음~~ → 2026-09-29 결정(관리자만, 기록): 비활성 줄의 **Réactiver**, `POST /admin/staff/:id/reactivate`. 「관리자」= admin 역할 + 설정 권한 — 설정 권한만 받은 다른 역할은 버튼이 없고 서버가 403. 편집 창의 PUT으로 돌아가는 길도 같은 규칙. 확인 `settings.reactivate.mjs` 12개 (2.5절) | `admin.routes.js`, `Settings.jsx` 직원 줄 |
 | U3 | 보통 | `/api/system/status`를 화면 어디에서도 부르지 않음. 상태 창은 서버 PC에서만 보임 | `status.routes.js`, 프론트엔드에 호출 없음 |
 | U4 | ~~낮음~~ **고침** | ~~첫 화면 목록 하나가 실패하면 뒤의 것이 안 불러와지고 조용함~~ → 2026-09-29: 목록을 따로따로 불러오고, 실패하면 Paramètres 맨 위에 빨간 줄로 이유(권한 없음 등)를 보여줌. 권한을 뺀 관리자에게 직원 목록이 **빈 채로** 보여 「직원이 없다」로 읽히던 것 | (옛 코드) `Settings.jsx` `loadAll` |
 | U13 | ~~보통~~ **고침 (총괄)** | ~~권한을 바꾼 직원의 메뉴는 다시 로그인해야 바뀜~~ → 2026-09-29 `TopBar.jsx`가 `/auth/me`로 주기적으로 다시 읽음. 격리 스택에서 확인: 통계 권한을 더하고 새로 고치자 메뉴에 Statistiques, `/stats` 열림 / 빼고 새로 고치자 메뉴에서 사라짐. 남은 점(권한을 뺀 화면을 보고 있던 사람이 그 화면에 남음)도 총괄이 고침(`7662160`) — 격리 스택에서 확인: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아오자 **접수로 이동**, 접수 화면에서 입력 중에 **다른** 권한(수납)을 빼자 **그대로 남고 입력도 유지**, 메뉴에서 Paiement만 사라짐 | `TopBar.jsx`(총괄) |
@@ -573,4 +576,5 @@
 | 2026-09-29 | 변경 기록: 직원 계정 기록, 읽기 API, 설정의 「Journal」 탭, TRUNCATE도 거절(026), 백업·복원 뒤에도 그대로. 빠진 status는 NULL이 아니라 지금 상태(S6) | `writeAudit` 3곳, `GET /admin/audit`, `settingsAudit.js`, `settings.audit.mjs` (3-10) | `5e91dbf` |
 | 2026-09-29 | 약에 「포장 단위로 내줌」(병·튜브·흡입기·개)이 저장됨. 서버의 「없는 날짜」 안내가 프랑스어로 | `POST·PUT /admin/drugs` `packFields`, `settings.drugs.mjs` 11개 추가 (3-8) | `8594492` |
 | 2026-09-29 | 「Journal」에서 진료 기록 줄이 말로 읽힘(무엇을 고쳤는지, 칸 이름, 상태 값), 환자 수정 줄의 칸 목록도. 프랑스어 안내의 「ni les consultations」(→ 진료가 안 남는다고 읽힘)을 「ni les simples lectures」로 | `settingsAudit.js` 칸·값·`auditEntityText`·`auditSummary`, `se_` 44개 (3-10) | `139b9fc` |
-| 2026-09-29 | **누구나 자기 비밀번호를 바꿈** — 오른쪽 위 이름 → 「Changer mon mot de passe」, 지금 비밀번호 확인, 길이 제한 없음, 기록에 한 줄(값 없음) (S4 결정) | `POST /api/auth/password`, `settingsPassword.jsx`, `TopBar.jsx` 이름 한 줄, `settings.password.mjs` (2.2·3-3) | (이 커밋) |
+| 2026-09-29 | **누구나 자기 비밀번호를 바꿈** — 오른쪽 위 이름 → 「Changer mon mot de passe」, 지금 비밀번호 확인, 길이 제한 없음, 기록에 한 줄(값 없음) (S4 결정) | `POST /api/auth/password`, `settingsPassword.jsx`, `TopBar.jsx` 이름 한 줄, `settings.password.mjs` (2.2·3-3) | `34e8bc2` |
+| 2026-09-29 | 비활성 직원을 **Réactiver** 로 다시 활성 — 관리자만, 전과 같은 아이디·비밀번호·권한, 기록에 한 줄 (U2 결정) | `POST /admin/staff/:id/reactivate`, PUT 같은 규칙, `settings.reactivate.mjs` (2.5·4절) | (이 커밋) |
