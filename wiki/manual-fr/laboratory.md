@@ -31,7 +31,7 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 5. Lisez le message en vert à côté du bouton :
    - **Enregistré et terminé: CBC** — l'analyse est terminée.
    - **Rien de saisi, reste en attente: Malaria RDT** — rien n'a été écrit pour cette analyse ; elle reste dans **En attente**. Revenez sur le patient quand le résultat est prêt.
-6. Quand toutes les analyses du patient sont enregistrées, le centre affiche **Sélectionnez un patient à gauche**.
+6. Quand toutes les analyses du patient sont enregistrées, un message vert **✓ Enregistré et terminé: …** s'affiche quelques secondes en bas de l'écran, puis le centre affiche **Sélectionnez un patient à gauche**.
 
 ### Écrire les chiffres
 
