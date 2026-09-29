@@ -542,6 +542,7 @@ export default {
   lb_errRangeAge: "{item}: age 'from' must be a number of 0 or more, below 'to'.",
   lb_errRangeLowHigh: "{item}: the low limit cannot be above the high limit.",
   lb_errRangeEmpty: "{item}: each sex/age row needs a low, a high or a text reference.",
+  lb_visitOpenFailed: "The tests of this visit could not be opened. Please try again in a moment.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

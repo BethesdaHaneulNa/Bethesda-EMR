@@ -533,6 +533,7 @@ export default {
   lb_errRangeAge: "{item} : l'âge « de » doit être un nombre positif ou nul, inférieur à l'âge « à ».",
   lb_errRangeLowHigh: "{item} : le Min ne peut pas dépasser le Max.",
   lb_errRangeEmpty: "{item} : chaque ligne par sexe et âge doit avoir un Min, un Max ou une référence texte.",
+  lb_visitOpenFailed: "Impossible d'ouvrir les examens de cette visite. Réessayez dans un instant.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

@@ -90,8 +90,12 @@ export function LabResults(props) {
     if (!pmap[pname]) { pmap[pname] = { name: pname, items: [], imap: {} }; panels.push(pmap[pname]); }
     var P = pmap[pname];
     if (!P.imap[r.name]) {
-      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, byCol: {} };
+      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, byCol: {},
+                         fromCancelled: r.order_status === 'cancelled' };
       P.items.push(P.imap[r.name]);
+    } else if (P.imap[r.name].fromCancelled && r.order_status !== 'cancelled') {
+      // the reference column shows the latest *valid* result's range, not a cancelled one's
+      Object.assign(P.imap[r.name], { unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, fromCancelled: false });
     }
     P.imap[r.name].byCol[ymd(r.result_date) + '#' + (slotOf[r.order_item_id] || 0)] = r;
   });
@@ -118,7 +122,12 @@ export function LabResults(props) {
     var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';
     var color = r.flag === 'low' ? '#60a5fa' : odd ? '#f87171' : tx;
     var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : r.flag === 'abnormal' ? '! ' : '';
-    var v = <span style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
+    // The reference column shows one range per row (the latest), but each result
+    // was judged by the range saved with it -- an older band for a child who has
+    // since grown, or a range edited in Settings since. Hovering shows that one.
+    var ref = refText(r);
+    var tip = ref ? (t.refRange || 'Ref') + ': ' + ref + (r.unit ? ' ' + r.unit : '') + (r.ref_label ? ' · ' + r.ref_label : '') : undefined;
+    var v = <span title={tip} style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
     if (!multi) return v;
     return <span>{v}<span style={{ display: 'block', color: t3, fontSize: 10 }}>{hhmm(r.result_at)}</span></span>;
   }

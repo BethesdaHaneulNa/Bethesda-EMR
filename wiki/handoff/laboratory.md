@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 문제 23 결과 표 참고치 툴팁 · 문제 25 환자 찾기 실패 알림 번역
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `965bf56` (출발점 `develop` `3aa3f87`)
+- **한 일**:
+  - 23 (`LabResults.jsx`): 값마다 **그 결과에 저장된 참고치** 툴팁 — `Référence: 하한~상한 단위 · 기준 이름`(취소분은 기존 「Annulé — 이유」 그대로). 참고치 칸은 항목의 **가장 최근 유효한** 결과 것(예전엔 가장 최근 줄이 취소분이면 그 참고치가 칸에 나왔음).
+  - 25 (`Lab.jsx` `pickVisit`): 실패 시 `Error: <영어 서버 문구>` → `lb_visitOpenFailed`(ko·en·fr), 상세는 브라우저 콘솔(`[lab] open visit`).
+- **바꾼 파일**: `frontend/src/components/LabResults.jsx` · `frontend/src/pages/Lab.jsx` · `wiki/modules/laboratory.md`(2절, 3.5, 7절 23·25, 8절)
+- **공용 파일 변경**: `i18n` 세 파일 임상병리 구역에 키 1개 추가 · **DB 마이그레이션**: 없음 · **번역 키**: `lb_visitOpenFailed`
+- **확인한 방법**: 빌드. 격리 스택 9185 — 취소분+유효 재검이 있는 환자에서 유효 결과의 Hb 참고치를 DB로 13.0~16·`F · ≥18y`로 바꿔(옛 기준 흉내) → 참고치 칸 「13.0~16 F · ≥18y」(취소분 것 아님), 값 툴팁 「Référence: 13.0~16 g/dL · F · ≥18y」, 취소분 툴팁 「Annulé — Mauvais patient」. 25: 화면에서 `/lab/visit/` 요청을 500으로 바꿔 환자 찾기로 내원 선택 → 「Impossible d'ouvrir les examens de cette visite. Réessayez dans un instant.」(프랑스어).
+- **다른 세션에 부탁**: 진료 — 🧪 결과 창의 값에 마우스를 올리면 참고치 툴팁(알림만).
+- **남은 일**: 영어 화면 확인 → 14 `utils/labFlag.js`.
+
 ## 2026-09-29 — 문제 22: 취소된 결과는 재검 칸 번호를 받지 않음
 
 - **상태**: 확인 요청

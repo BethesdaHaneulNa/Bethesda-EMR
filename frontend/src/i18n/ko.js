@@ -533,6 +533,7 @@ export default {
   lb_errRangeAge: "{item}: 나이 「부터」는 「까지」보다 작은 0 이상의 수여야 합니다.",
   lb_errRangeLowHigh: "{item}: 하한이 상한보다 클 수 없습니다.",
   lb_errRangeEmpty: "{item}: 성별·나이별 줄마다 하한·상한·문자 참고치 중 하나는 있어야 합니다.",
+  lb_visitOpenFailed: "이 내원의 검사를 열 수 없습니다. 잠시 뒤 다시 해 보세요.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
