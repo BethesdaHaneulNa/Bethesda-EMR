@@ -789,6 +789,7 @@ export default {
   se_errReactivateAdmin: "비활성 직원을 다시 활성으로 바꾸는 것은 관리자만 할 수 있습니다.",
   se_oldEmrPort: "옛 주소입니다(포트 8080). EMR은 이제 9080입니다 — 주소의 8080을 9080으로 바꾸고 저장하세요.",
   se_oldViewerPort: "옛 주소입니다(포트 8090). PACS 뷰어는 이제 9090입니다 — 주소의 8090을 9090으로 바꾸고 저장하세요. 이대로면 진료실에서 영상이 열리지 않습니다.",
+  se_setPackQtyHint: "포장 단위 약: 이 세트를 쓰면 이 수만큼(병·튜브) 처방됩니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

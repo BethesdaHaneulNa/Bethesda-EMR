@@ -161,6 +161,7 @@
   **Supprimer** 하면 목록에서 숨겨지고, 이미 들어간 오더·청구 기록은 남습니다.
 - **🏥 Services (진료과)** — **+ Ajouter**: **Code**, **Nom (par défaut)** (이름 · 기본), **Nom en anglais**, **Nom en français** (**꼭 넣으세요** — 비면 프랑스어 화면에 기본 이름이 나옴), **Médecin-chef** (과장, 의사만 고를 수 있음). 수정만 있고 삭제는 없습니다.
 - **🧪 Ordonnances types (약속처방)** — **+ Nouvel ensemble (새 약속처방)** → **Nom de l'ensemble (이름)**, **Groupe (dossier) (그룹·폴더)**, **Service**, **Description** → 오른쪽에서 **Médicament (약)** 또는 **Examen / Imagerie (검사/영상)** 를 고르고 **Rechercher** → 결과를 눌러 추가 → **Sauver**. 진료 화면에서 한 번에 불러옵니다.
+  - **포장 단위 약**(시럽·흡입기 등, 약품 편집 창에서 표시한 약)의 줄에는 **수 칸**과 단위(Flacon·Tube…)가 보입니다 — 세트를 쓰면 그 수만큼 병·튜브가 처방됩니다. 한 병 이상, 정수만(아니면 「Quantité : saisissez un nombre entier.」). 보통 약 줄은 전처럼 용량×횟수×일수만 보이고 수는 1. (2026-09-29)
 - **📝 Phrases types (상용구)** — **Modifier** 창에 **Texte (par défaut / écran coréen) (문장 · 기본)**, **Texte en français (프랑스어 문장)**, **Texte en anglais (영어 문장)** 세 칸이 있습니다. 진료 화면은 프랑스어 화면이면 프랑스어 문장을 쓰고, 비어 있으면 기본 문장을 씁니다 — **현장에서 쓰는 상용구는 프랑스어 문장을 넣어 주세요.** 목록에서 프랑스어·영어 문장이 있는 줄에는 작은 **FR**·**EN** 표시가 붙습니다. **Catégorie** (General 등)는 저장되는 값이라 번역하지 않습니다.
 
 ### 2.10 서버 상태 창 (서버 PC에서)
@@ -596,4 +597,5 @@
 | 2026-09-29 | **누구나 자기 비밀번호를 바꿈** — 오른쪽 위 이름 → 「Changer mon mot de passe」, 지금 비밀번호 확인, 길이 제한 없음, 기록에 한 줄(값 없음) (S4 결정) | `POST /api/auth/password`, `settingsPassword.jsx`, `TopBar.jsx` 이름 한 줄, `settings.password.mjs` (2.2·3-3) | `34e8bc2` |
 | 2026-09-29 | 비활성 직원을 **Réactiver** 로 다시 활성 — 관리자만, 전과 같은 아이디·비밀번호·권한, 기록에 한 줄 (U2 결정) | `POST /admin/staff/:id/reactivate`, PUT 같은 규칙, `settings.reactivate.mjs` (2.5·4절) | `a6e0de8` |
 | 2026-09-29 | 11월 대비 복원 연습 2차: **옛 버전 백업은 문서 명령으로 복원되지 않음**(안전하게 멈춤) — 같은 버전으로 맞춰 가져가기, 빈 DB에 복원하는 길은 확인 대기. 영상 주소 두 칸이 백업과 함께 넘어감. 시험 데이터 선택지 A~D | 위키만(2.13·3-4) | `d23067a` |
-| 2026-09-29 | 오더 연동 주소가 옛 포트(8080·8090)면 **설정 화면 두 칸 아래**와 **서버 상태 창**에 노란 경고(값은 바꾸지 않음) | `Settings.jsx` `oldPort`, `status.routes.js` `checkPacsAddresses`, `server-status.ps1` `Get-PacsAddressCheck` (2.10·3-6) | (이 커밋) |
+| 2026-09-29 | 오더 연동 주소가 옛 포트(8080·8090)면 **설정 화면 두 칸 아래**와 **서버 상태 창**에 노란 경고(값은 바꾸지 않음) | `Settings.jsx` `oldPort`, `status.routes.js` `checkPacsAddresses`, `server-status.ps1` `Get-PacsAddressCheck` (2.10·3-6) | `2ee2339` |
+| 2026-09-29 | 약속처방 편집 창: 포장 단위 약 줄에 **병·튜브 수** 칸 | `Settings.jsx` `drugPack`·`osQty`·저장 전 정수 확인(라우트는 진료 세션 것이라 그대로), `settings.ordersets.mjs` (2.9) | (이 커밋) |

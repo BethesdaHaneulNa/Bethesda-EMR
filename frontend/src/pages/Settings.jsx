@@ -271,7 +271,7 @@ export default function SettingsPage() {
   function osNew(){ setOsEdit({name:'',group_name:'',department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
   function osOpen(s){
     setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
-      items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, dose:it.dose, frequency:it.frequency, days:it.days, route:it.route, quantity:it.quantity}; }) });
+      items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, dose:it.dose, frequency:it.frequency, days:it.days, route:it.route, quantity:(it.quantity==null?1:Number(it.quantity))}; }) });
     setOsQ(''); setOsResults([]); setOsKind('drug');
   }
   function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; return n; }); }
@@ -289,10 +289,19 @@ export default function SettingsPage() {
       n.items=items; return n;
     });
   }
+  // Bottles/tubes for a pack-unit drug line (quantity; the consultation screen prescribes
+  // that many when the set is applied). Other lines keep 1 and show no field. Whether a
+  // drug is pack-unit is read from the drug list as it is now (a hidden drug is not in it
+  // and shows as an ordinary line); the order-set route is the consultation session's.
+  function drugPack(id){ var d=drugs.filter(function(x){return x.id===id;})[0]; return d && d.pack_unit ? (d.pack_label||'unit') : null; }
+  function osQty(idx, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ return i===idx ? Object.assign({},it,{quantity:v}) : it; }); return n; }); }
   function osRemove(idx){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).filter(function(_,i){return i!==idx;}); return n; }); }
   async function osSave(){
     if(!osEdit) return;
     if(!osEdit.name){ alert(t.setName+' ?'); return; }
+    // A pack line holds a whole number of bottles, at least 1 (the server takes any number).
+    var badQty=(osEdit.items||[]).some(function(it){ if(it.kind!=='drug'||!drugPack(it.drug_id)) return false; var n=Number(it.quantity); return !(Number.isInteger(n)&&n>=1); });
+    if(badQty){ alert((t.se_error)+': '+String(t.se_errNotWhole||'').replace('{f}', t.se_fld_quantity)); return; }
     try {
       var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:osEdit.items||[] };
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
@@ -555,7 +564,10 @@ export default function SettingsPage() {
                           <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'#60a5fa':'#a78bfa',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
                           <span style={{fontFamily:'monospace',fontSize: 12,color:t2,width:56}}>{it.code}</span>
                           <span style={{fontSize: 13,color:tx,flex:1}}>{it.name}</span>
-                          {it.kind==='drug'?<span style={{fontSize: 11,color:t3}}>{it.dose}×{it.frequency}×{it.days}</span>:null}
+                          {it.kind==='drug'&&drugPack(it.drug_id)?<span style={{display:'flex',alignItems:'center',gap:4}} title={t.se_setPackQtyHint}>
+                            <input type="number" min="1" step="1" value={it.quantity==null?1:it.quantity} onChange={function(e){osQty(idx,e.target.value)}} style={Object.assign({},IS,{width:56,padding:'3px 5px'})}/>
+                            <span style={{fontSize: 12,color:'#fbbf24'}}>{t['ph_pack_'+drugPack(it.drug_id)]}</span></span>
+                           :it.kind==='drug'?<span style={{fontSize: 11,color:t3}}>{it.dose}×{it.frequency}×{it.days}</span>:null}
                           <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'#f87171',cursor:'pointer',fontSize: 14}}>✕</button>
                         </div>;
                       }):<div style={{padding:14,textAlign:'center',color:t3,fontSize: 12}}>{t.setItemsEmpty}</div>}
