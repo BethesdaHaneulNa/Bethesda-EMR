@@ -373,4 +373,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 5절·7절 문제 9를 해결됨으로(진료 세션 `f48cec9`) — 위키만 | `28ea7f8` |
 | 2026-09-29 | 서버 권한(S2): `GET /test-items`에 lab·settings 권한 — 4절 API 표 권한 칸 정리, 간호사 계정으로 검사 화면 전체 확인 · 5절에 진료 화면의 결과 도착 표시(`bdd14bf`) | `20ace07` |
 | 2026-09-29 | 4절: 화면 메뉴는 화면을 열 때와 5분마다 권한에 맞춰짐(총괄 `c4d4d67`) — 「확인 필요」 문장 고침, 위키만 | `92a9212` |
-| 2026-09-29 | 결정 12: 글자 결과를 참고 글자와 비교해 다르면 `abnormal`(빨강 `!`), 같은 말 묶음(`Négatif`·`Neg`·`-`·`음성`), `<x`·`>x` 판정 — `computeFlag`/`flagOf` → `flagFor` | (이 커밋) |
+| 2026-09-29 | 결정 12: 글자 결과를 참고 글자와 비교해 다르면 `abnormal`(빨강 `!`), 같은 말 묶음(`Négatif`·`Neg`·`-`·`음성`), `<x`·`>x` 판정 — `computeFlag`/`flagOf` → `flagFor` | `2a24cc3` |
