@@ -388,7 +388,21 @@
   <script>
     // Runs before the first paint so a light screen does not flash dark first. The value
     // is only this PC's last choice; storage can be blocked, and then the screen is dark.
+    //
+    // Preview (coordinator, 2026-09-29): until the switch is in the top bar, opening the
+    // EMR with ?theme=light or ?theme=dark at the end of the address sets this PC's choice.
+    // The part is then taken out of the address, so a reload or a bookmark does not set it
+    // again. Staff who do not know of it cannot meet it; it does no harm once the switch
+    // exists.
     (function () {
+      try {
+        var m = /[?&]theme=(light|dark)(?:&|$)/.exec(location.search);
+        if (m) {
+          localStorage.setItem('medconnect_theme', m[1]);
+          var rest = location.search.replace(/([?&])theme=(?:light|dark)(&|$)/, function (all, lead, tail) { return tail ? lead : ''; });
+          history.replaceState(null, '', location.pathname + rest + location.hash);
+        }
+      } catch (e) {}
       try {
         var t = localStorage.getItem('medconnect_theme');
         if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
