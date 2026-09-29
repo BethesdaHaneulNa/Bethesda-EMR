@@ -216,7 +216,6 @@ export default function PaymentPage() {
   function prevBal(){ return parseFloat(sel?.previous_balance)||0; }
   function discountAmt(){ if(discount.type==='percent') return Math.round(subtotal()*(Number(discount.value)||0)/100); return Number(discount.value)||0; }
   function totalDue(){ return Math.max(0,subtotal()-discountAmt()+prevBal()); }
-  function refundDue(){ return Math.max(0,-(subtotal()-discountAmt()+prevBal())); }
   function amtPaidNum(){ return Number(amountPaid)||0; }
   function changeAmt(){ return Math.max(0,amtPaidNum()-totalDue()); }
   function outstandingAmt(){ return Math.max(0,totalDue()-amtPaidNum()); }
@@ -236,7 +235,7 @@ export default function PaymentPage() {
     // only lines charged now: an additional charge does not ask again about lines already billed
     var zero = chargeRows().filter(function(r){ return r.item_type!=='consultation' && r.item_type!=='fee' && !(r.unit_price>0); }).map(function(r){ return r.item_name; });
     if(zero.length && !window.confirm(t.py_noPriceConfirm.replace('{n}', zero.length).replace('{names}', zero.join(', ')))) return;
-    if(status==='paid' && amtPaidNum()<totalDue()){ alert('Amount insufficient'); return; }
+    if(status==='paid' && amtPaidNum()<totalDue()){ alert(t.py_amountInsufficient); return; }
     // "Unpaid" means nothing was received, so the whole total stays owed. It used to
     // subtract whatever sat in the cash box from the debt while recording 0 received.
     if(status==='unpaid' && totalDue()>0){
@@ -250,8 +249,6 @@ export default function PaymentPage() {
       var cFee = rows.filter(function(r){return r.item_type==='consultation';}).reduce(function(s,r){return s+r.total_price;},0);
       var dTot = rows.filter(function(r){return r.item_type==='drug';}).reduce(function(s,r){return s+r.total_price;},0);
       var pTot = rows.filter(function(r){return r.item_type!=='consultation'&&r.item_type!=='drug';}).reduce(function(s,r){return s+r.total_price;},0);
-      // 수납에서 바꾼 진료비 종류를 내원 기록에도 반영
-      if(sel && sel.id){ try { await api.put('/visits/'+sel.id, { visit_type:vType }); } catch(e){} }
       var result = await api.post('/billing',{
         visit_id:sel.id, patient_id:sel.patient_id,
         consult_fee:cFee, drug_total:dTot, procedure_total:pTot,
@@ -262,6 +259,9 @@ export default function PaymentPage() {
         note:payNote, items:items,
         expected_active_bill_ids:(billItems && billItems.active_bill_ids) || [],
       });
+      // 수납에서 바꾼 진료비 종류를 내원 기록에도 반영 — only once the bill is saved, so a
+      // refused payment does not leave the visit's type changed (L4).
+      if(sel && sel.id){ try { await api.put('/visits/'+sel.id, { visit_type:vType }); } catch(e){} }
       setReceiptId(result.id); await loadLists(); setTab('completed');
     } catch(err){ showError(err); }
   }
@@ -364,9 +364,13 @@ export default function PaymentPage() {
     if(made.length){ setReceiptId(made[0]); setReceiptQueue(made.slice(1)); }
   }
 
+  // Status words in the screen language, not the stored code (L1). cancelled gets its
+  // own grey look rather than falling into the orange of "partial".
+  function statusLabel(s){ var k={paid:'py_stPaid',partial:'py_stPartial',unpaid:'py_stUnpaid',cancelled:'py_stCancelled',waived:'py_stWaived',waiting:'py_stWaiting'}[s]; return k&&t[k]?t[k]:s; }
   function statusBadge(s){
+    if(s==='cancelled') return <span style={{background:'#64748b22',color:'#94a3b8',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{statusLabel(s)}</span>;
     var paid=s==='paid', unpaid=s==='unpaid';
-    return <span style={{background:paid?'#10b98118':unpaid?'#ef444418':'#f59e0b18',color:paid?'#34d399':unpaid?'#ef4444':'#fbbf24',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{s}</span>;
+    return <span style={{background:paid?'#10b98118':unpaid?'#ef444418':'#f59e0b18',color:paid?'#34d399':unpaid?'#ef4444':'#fbbf24',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{statusLabel(s)}</span>;
   }
 
   function listData(){ return (tab==='waiting'?pending:completed).filter(matches); }
@@ -376,7 +380,7 @@ export default function PaymentPage() {
       <TopBar />
       <div style={{background:'#161a26',borderBottom:'1px solid '+bd,padding:'6px 12px',display:'flex',alignItems:'center',gap:8}}>
         <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'#3b82f6':'#1e2433',color:'#fff',border:'1px solid '+(tab==='waiting'?'#60a5fa':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({pending.length})</button>
-        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'#10b981':'#1e2433',color:'#fff',border:'1px solid '+(tab==='completed'?'#34d399':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>{L.completedPay} ({completed.length})</button>
+        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'#10b981':'#1e2433',color:'#fff',border:'1px solid '+(tab==='completed'?'#34d399':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>{L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
         <button onClick={function(){setFinderOpen(true)}} style={{background:'#1e2433',color:'#cbd5e1',border:'1px solid '+bd2,borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:'pointer'}}>🔍 {t.findPatient}</button>
         <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'#0f766e':'#1e2433',color:sel?'#ccfbf1':'#475569',border:'1px solid '+(sel?'#14b8a6':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
         <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'#b45309':'#1e2433',color:sel?'#fde68a':'#475569',border:'1px solid '+(sel?'#f59e0b':bd2),borderRadius:6,padding:'7px 14px',fontSize:15,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
@@ -415,7 +419,7 @@ export default function PaymentPage() {
                   <div style={{fontSize:12,color:'#60a5fa',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'#34d399',fontFamily:'monospace'}}>{fmtAr(v.total_due)} Ar</strong></div>
                 </>:null}
-                {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'#ef4444',marginTop:3}}>+ Outstanding: {fmtAr(v.previous_balance)} Ar</div>:null}
+                {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'#ef4444',marginTop:3}}>+ {t.prevOutstanding}: {fmtAr(v.previous_balance)} Ar</div>:null}
               </div>;
             })}
             {!loading&&tab==='completed'&&listData().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{L.noCompleted}</div>:null}
@@ -638,11 +642,11 @@ export default function PaymentPage() {
       <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
           <div style={{padding:'10px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>🧾 {L.item}</div>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'#101521'}}><th style={th()}>Code</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid #1e2433'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','#34d399',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'#101521'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid #1e2433'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','#34d399',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
         </div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,height:'fit-content'}}>
           <div style={{display:'grid',gap:5,fontSize:15}}>
-            <Pair k={L.receiptNo} v={b.receipt_no}/><Pair k={L.cashier} v={b.cashier_name||''}/><Pair k="Date" v={ymd(b.billing_date)}/><Pair k="Status" v={b.payment_status}/>
+            <Pair k={L.receiptNo} v={b.receipt_no}/><Pair k={L.cashier} v={b.cashier_name||''}/><Pair k={t.py_date} v={ymd(b.billing_date)}/><Pair k={t.py_status} v={statusLabel(b.payment_status)}/>
           </div>
           <div style={{height:1,background:bd,margin:'10px 0'}}></div>
           <SumRow label={t.subtotal} amount={b.subtotal} />
@@ -656,8 +660,7 @@ export default function PaymentPage() {
   }
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'#3b82f620',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'#60a5fa'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'#f1f5f9'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{p.chart_no} · {p.dept_code} · {p.doctor_name}</div></div></div>; }
-  function Section(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',justifyContent:'space-between'}}><span style={{fontWeight:900,fontSize:16,color:'#60a5fa'}}>{p.title}</span><span style={{fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span></div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>No items</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'#bfdbfe',fontSize:13,borderBottom:'1px solid '+bd}; }

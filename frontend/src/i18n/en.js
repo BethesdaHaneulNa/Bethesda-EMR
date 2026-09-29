@@ -384,6 +384,17 @@ export default {
   py_noPriceBanner: "{n} line(s) with no price — check the prices",
   py_noPriceConfirm: "{n} line(s) have no price: {names}.\nSetting the price later does not change lines already prescribed (the doctor must remove and add them again).\nBill as it is?",
   py_legacyValue: "(old value)",
+  py_amountInsufficient: "The amount received is less than the total.",
+  py_noItems: "No items",
+  py_code: "Code",
+  py_date: "Date",
+  py_status: "Status",
+  py_stPaid: "paid",
+  py_stPartial: "partial",
+  py_stUnpaid: "unpaid",
+  py_stCancelled: "cancelled",
+  py_stWaived: "waived",
+  py_stWaiting: "waiting",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

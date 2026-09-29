@@ -375,6 +375,17 @@ export default {
   py_noPriceBanner: "{n} article(s) sans prix — vérifiez les prix",
   py_noPriceConfirm: "{n} article(s) sans prix : {names}.\nFixer le prix plus tard ne modifie pas les lignes déjà prescrites (le médecin doit les supprimer et les ajouter à nouveau).\nEncaisser quand même ?",
   py_legacyValue: "(ancienne valeur)",
+  py_amountInsufficient: "Le montant reçu est inférieur au total.",
+  py_noItems: "Aucun article",
+  py_code: "Code",
+  py_date: "Date",
+  py_status: "Statut",
+  py_stPaid: "payé",
+  py_stPartial: "partiel",
+  py_stUnpaid: "impayé",
+  py_stCancelled: "annulé",
+  py_stWaived: "exonéré",
+  py_stWaiting: "en attente",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
