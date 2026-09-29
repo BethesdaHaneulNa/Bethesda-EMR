@@ -300,6 +300,7 @@ export default {
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   rc_visitCancelled: "Visite annulée",
   rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
+  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » et le patient part à la caisse.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

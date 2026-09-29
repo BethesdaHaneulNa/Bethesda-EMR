@@ -115,8 +115,21 @@ router.put('/:id/status', permMiddleware('registration'), async (req, res) => {
     // not refresh by itself, so the button can be pressed on a visit the doctor
     // has since opened; cancelling that would orphan its consultation, orders and
     // bill under a visit every other screen ignores.
+    //
+    // Sending a visit that is still waiting straight to "completed" means no
+    // consultation happened (the "Terminer →" button on the queue). The office manager
+    // decided (2026-09-29, ⑳) that such a visit carries no consultation fee, so its
+    // visit_type becomes 'none' in the same UPDATE - unless it has already been
+    // billed, where changing the type would put it back on the payment list.
+    // "in progress → completed" keeps its type: the doctor did see the patient.
+    // In SET, "status" is still the old value.
     const result = await pool.query(
-      `UPDATE visit SET status = $1::varchar, updated_at = NOW()
+      `UPDATE visit SET status = $1::varchar,
+              visit_type = CASE
+                WHEN $1::varchar = 'completed' AND status IN ('registered', 'waiting')
+                     AND NOT EXISTS (SELECT 1 FROM billing b WHERE b.visit_id = visit.id AND b.payment_status <> 'cancelled')
+                THEN 'none' ELSE visit_type END,
+              updated_at = NOW()
         WHERE id = $2 AND ($1::varchar <> 'cancelled' OR status IN ('registered', 'waiting'))
         RETURNING *`,
       [status, req.params.id]

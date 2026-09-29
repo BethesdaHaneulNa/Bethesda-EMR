@@ -183,6 +183,19 @@ check('⑯ limit=1 returns at most one', one.status === 200 && one.data.length <
 const huge = await call('GET', '/patients?limit=100000', null, A);
 check('⑯ limit is capped at 200', huge.status === 200 && huge.data.length <= 200);
 
+// ── ⑳ waiting → completed without a consultation becomes "no fee"; in progress → completed keeps its type ──
+const P20 = (await call('POST', '/patients', { last_name: 'Complete', first_name: 'Direct' + Date.now(), gender: 'F' }, A)).data;
+const W = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp' }, A)).data;
+const w2 = await call('PUT', '/visits/' + W.id + '/status', { status: 'completed' }, A);
+check('⑳ waiting → completed sets visit_type none', w2.status === 200 && w2.data.visit_type === 'none', { status: w2.status, visit_type: w2.data && w2.data.visit_type });
+const I = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp', allow_duplicate: true }, A)).data;
+await call('PUT', '/visits/' + I.id + '/status', { status: 'in_progress' }, A);
+const i2 = await call('PUT', '/visits/' + I.id + '/status', { status: 'completed' }, A);
+check('⑳ in progress → completed keeps its visit type', i2.status === 200 && i2.data.visit_type === 'followUp', { visit_type: i2.data && i2.data.visit_type });
+const back = await call('PUT', '/visits/' + W.id + '/status', { status: 'waiting' }, A);
+check('⑳ completed → waiting does not change the type again', back.status === 200 && back.data.visit_type === 'none');
+await call('PUT', '/visits/' + W.id + '/status', { status: 'cancelled' }, A);
+
 // ── ⑬ gender and birth date are refused with a clear 400, not a database error ──
 const put = body => call('PUT', '/patients/' + P.id, Object.assign({ last_name: 'Permission', first_name: 'Test' }, body), A);
 const g = await put({ gender: 'O' });

@@ -395,6 +395,14 @@ export default function RegistrationPage() {
   }
 
   function mb(c) { return { background: c + '18', color: c, border: '1px solid ' + c + '40', borderRadius: 5, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }; }
+  // "Terminer →" on a patient still waiting: no consultation took place, so the server
+  // turns the visit into "no fee" (decided 2026-09-29, ⑳). Ask first - it changes
+  // what the cashier will charge.
+  function completeWithoutConsult(v, e) {
+    if (e) e.stopPropagation();
+    if (!confirm(fill(t.rc_completeNoConsult, { name: nameOf(v) }))) return;
+    changeStatus(v, 'completed');
+  }
   async function changeStatus(v, newStatus, e) {
     if (e) e.stopPropagation();
     try {
@@ -665,7 +673,7 @@ export default function RegistrationPage() {
                   <div style={{ fontSize: 14, color: t2 }}>{v.chart_no} · {v.dept_code || ''} · {v.doctor_name || ''}</div>
                   <div style={{ fontSize: 13, color: t3, marginTop: 3 }}>{v.chief_complaint || ''}</div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }} onClick={function (e) { e.stopPropagation(); }}>
-                    {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { changeStatus(v, 'completed', e); }} style={mb('#10b981')}>{t.toCompleted}</button> : null}
+                    {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { completeWithoutConsult(v, e); }} style={mb('#10b981')}>{t.toCompleted}</button> : null}
                     {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('#3b82f6')}>{t.toWaiting}</button> : null}
                     {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'completed', e); }} style={mb('#10b981')}>{t.toCompleted}</button> : null}
                     {v.status === 'completed' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('#3b82f6')}>{t.toWaiting}</button> : null}
