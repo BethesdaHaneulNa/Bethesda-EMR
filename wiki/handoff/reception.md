@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — ⑦ 내원구분: 초진 · 재진 · 진료비 없음 (실장님 결정)
 
+> **총괄 확인 (2026-09-29)**: ⑦ `520706d` 합침 + 실행 중 EMR 반영. S2 표 변경(`GET /visits/patient/:patientId`에 registration 추가) 승인 — 접수가 이전 내원을 읽어 초진/재진을 제안하기 때문. 설정 세션의 전체 시험 표도 맞추게 함. 「진료비 없음」 표기: 실장님 말씀대로 수납의 공용 키 `noConsult`도 접수와 같은 글자로 맞춤(총괄이 고침). 실행 중 EMR에서 접수 계정의 `/visits/patient/1` 200, `/visits/today`에 `has_active_bill` 칸 확인.
+
 - **상태**: 확인 요청
 - **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`a42550a` 위, `develop` ff 뒤)
 - **한 일**: `decisions.md` 2026-09-29 결정 그대로.

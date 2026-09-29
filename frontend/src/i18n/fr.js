@@ -164,7 +164,7 @@ export default {
   receptionDeskNoteHint: "Note permanente du patient",
   toWaiting: "← En attente",
   toCompleted: "Terminer →",
-  noConsult: "Sans consultation (0)",
+  noConsult: "Sans frais",
   price: "Prix",
   stats: "Statistiques",
   today: "Aujourd'hui",

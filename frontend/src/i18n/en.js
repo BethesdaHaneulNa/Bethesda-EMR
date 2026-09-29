@@ -173,7 +173,7 @@ export default {
   receptionDeskNoteHint: "Permanent note for this patient (e.g. needs interpreter)",
   toWaiting: "← To waiting",
   toCompleted: "Complete →",
-  noConsult: "No consult (0)",
+  noConsult: "No fee",
   price: "Price",
   stats: "Statistics",
   today: "Today",

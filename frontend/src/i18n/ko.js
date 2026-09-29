@@ -164,7 +164,7 @@ export default {
   receptionDeskNoteHint: "환자에게 계속 남는 메모 (예: 한국말 못함, 보호자 동반)",
   toWaiting: "← 대기로",
   toCompleted: "완료로 →",
-  noConsult: "진료 없음 (0원)",
+  noConsult: "진료비 없음",
   price: "가격",
   stats: "통계",
   today: "오늘",
