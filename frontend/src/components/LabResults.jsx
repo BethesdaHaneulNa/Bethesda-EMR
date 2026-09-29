@@ -38,19 +38,47 @@ export function LabResults(props) {
   rows.forEach(function (r) { var d = ymd(r.result_date); if (d && dates.indexOf(d) < 0) dates.push(d); });
   dates.sort().reverse();
 
+  // A test done twice on one day (a repeat) used to show only the later result:
+  // a cell was one date. Now each order of a panel on a date gets a slot --
+  // first of the day, second, ... by entry time -- and a date with repeats has
+  // one column per slot, each value with its entry time (decision 8,
+  // 2026-09-29). Different panels share slot 1, so an ordinary day stays one column.
+  function pk(r) { return r.panel_name || r.panel_code || '—'; }
+  var firstAt = {};   // order_item_id -> earliest result_at
+  rows.forEach(function (r) {
+    var at = r.result_at ? new Date(r.result_at).getTime() : 0;
+    if (firstAt[r.order_item_id] === undefined || at < firstAt[r.order_item_id]) firstAt[r.order_item_id] = at;
+  });
+  var perDayPanel = {};   // date|panel -> [order_item_id...]
+  rows.forEach(function (r) {
+    var k = ymd(r.result_date) + '|' + pk(r);
+    if (!perDayPanel[k]) perDayPanel[k] = [];
+    if (perDayPanel[k].indexOf(r.order_item_id) < 0) perDayPanel[k].push(r.order_item_id);
+  });
+  var slotOf = {}, slots = {};   // order_item_id -> slot index; date -> number of slots
+  Object.keys(perDayPanel).forEach(function (k) {
+    var d = k.split('|')[0];
+    perDayPanel[k].sort(function (a, b) { return firstAt[a] - firstAt[b] || a - b; });
+    perDayPanel[k].forEach(function (id, i) { slotOf[id] = i; });
+    slots[d] = Math.max(slots[d] || 1, perDayPanel[k].length);
+  });
+  var cols = [];   // [{d, s, multi}]
+  dates.forEach(function (d) { for (var i = 0; i < (slots[d] || 1); i++) cols.push({ d: d, s: i, multi: (slots[d] || 1) > 1 }); });
+
   // group by panel, then item (by name) preserving order
   var panels = [];
   var pmap = {};
   rows.forEach(function (r) {
-    var pk = r.panel_name || r.panel_code || '—';
-    if (!pmap[pk]) { pmap[pk] = { name: pk, items: [], imap: {} }; panels.push(pmap[pk]); }
-    var P = pmap[pk];
+    var pname = pk(r);
+    if (!pmap[pname]) { pmap[pname] = { name: pname, items: [], imap: {} }; panels.push(pmap[pname]); }
+    var P = pmap[pname];
     if (!P.imap[r.name]) {
-      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, byDate: {} };
+      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, byCol: {} };
       P.items.push(P.imap[r.name]);
     }
-    P.imap[r.name].byDate[ymd(r.result_date)] = r;
+    P.imap[r.name].byCol[ymd(r.result_date) + '#' + (slotOf[r.order_item_id] || 0)] = r;
   });
+  function hhmm(v) { if (!v) return ''; var x = new Date(v); return isNaN(x.getTime()) ? '' : x.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
   function refText(it) {
     if (it.ref_text) return it.ref_text;
@@ -59,14 +87,16 @@ export function LabResults(props) {
     if (it.ref_high != null) return '≤' + it.ref_high;
     return '';
   }
-  function cell(r) {
+  function cell(r, multi) {
     if (!r) return <span style={{ color: t3 }}>·</span>;
     // 'abnormal' is a text result that differs from its reference text (e.g. a
     // positive malaria test): red like high, marked "!" since it is not "above".
     var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';
     var color = r.flag === 'low' ? '#60a5fa' : odd ? '#f87171' : tx;
     var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : r.flag === 'abnormal' ? '! ' : '';
-    return <span style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
+    var v = <span style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
+    if (!multi) return v;
+    return <span>{v}<span style={{ display: 'block', color: t3, fontSize: 10 }}>{hhmm(r.result_at)}</span></span>;
   }
 
   var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: '#161a26', whiteSpace: 'nowrap' };
@@ -80,19 +110,19 @@ export function LabResults(props) {
             <th style={Object.assign({}, th, { left: 0, zIndex: 2 })}>{t.testName || '검사명'}</th>
             <th style={th}>{t.unit || '단위'}</th>
             <th style={th}>{t.refRange || '참고치'}</th>
-            {dates.map(function (d) { return <th key={d} style={Object.assign({}, th, { textAlign: 'right' })}>{d}</th>; })}
+            {cols.map(function (c) { return <th key={c.d + '#' + c.s} style={Object.assign({}, th, { textAlign: 'right' })}>{c.d}{c.multi ? ' (' + (c.s + 1) + ')' : ''}</th>; })}
           </tr>
         </thead>
         <tbody>
           {panels.map(function (P) {
             return [
-              <tr key={'p-' + P.name}><td colSpan={3 + dates.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
+              <tr key={'p-' + P.name}><td colSpan={3 + cols.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
             ].concat(P.items.map(function (it) {
               return <tr key={P.name + '-' + it.name}>
                 <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
                 <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}</td>
-                {dates.map(function (d) { return <td key={d} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byDate[d])}</td>; })}
+                {cols.map(function (c) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
               </tr>;
             }));
           })}
