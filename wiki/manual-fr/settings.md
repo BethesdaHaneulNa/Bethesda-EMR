@@ -103,6 +103,7 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 2. **Sauvegarder** fait une sauvegarde tout de suite (« Sauvegarde faite »).
 3. De temps en temps, **Télécharger** la plus récente sur une clé USB.
 4. Une sauvegarde automatique se fait chaque nuit.
+5. Chaque nuit, les sauvegardes sont aussi **copiées sur le disque externe**, avec la sauvegarde des images. Le disque doit rester branché : le petit point d'état le dit (ligne **Copie des sauvegardes de l'EMR**).
 
 ### Le petit point d'état
 
@@ -110,7 +111,8 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
    - vert **Tout fonctionne** ; jaune **À surveiller** ; rouge **Problème** ; gris **État inconnu** (le serveur ne répond pas, l'EMR reste utilisable).
 2. **S'il est jaune ou rouge, cliquez dessus** : la liste dit ce qui ne va pas (base, disque, sauvegarde, appareils, imagerie…). Faites ce qui est écrit, ou prévenez le responsable.
 3. Une ligne grise « Non utilisé » n'est pas un problème.
-4. **Adresses de l'imagerie** en jaune « La visionneuse n'est pas appairée au serveur d'images … » : les images ne s'ouvrent pas depuis le dossier. Sur le PC serveur, dans le dossier PACS, il faut lancer **pair-with-emr** — prévenez le responsable. « Ancien port … » : dans **Flux d'ordres**, remplacez 8080 par 9080 (adresse de l'EMR) ou 8090 par 9090 (serveur d'images), puis **Sauver**.
+4. **Copie des sauvegardes de l'EMR (disque externe)** en jaune (« Disque externe absent », « Pas de copie depuis … h », « Échec de la copie … ») : branchez le disque externe (le même que pour les images). Si la ligne reste jaune le lendemain, prévenez le responsable.
+5. **Adresses de l'imagerie** en jaune « La visionneuse n'est pas appairée au serveur d'images … » : les images ne s'ouvrent pas depuis le dossier. Sur le PC serveur, dans le dossier PACS, il faut lancer **pair-with-emr** — prévenez le responsable. « Ancien port … » : dans **Flux d'ordres**, remplacez 8080 par 9080 (adresse de l'EMR) ou 8090 par 9090 (serveur d'images), puis **Sauver**.
 
 ### Lire le Journal
 

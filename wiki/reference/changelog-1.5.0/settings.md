@@ -52,6 +52,9 @@ have a small dot next to the clock — green, yellow, red, or grey when the serv
 click lists each check in words. The server status window also learned to see ports Windows had
 reserved (the PACS was "healthy" and unreachable on this PC), the image backup to an external disk,
 imaging addresses still on the old ports 8080/8090, and the database's drive as well as the backups'.
+Since the night image backup also copies the EMR's backups to the same external disk (the director's
+decision), both the dot and the window have a line for that copy: disk missing, copy failed, or no
+copy for 36 hours. The Backup tab says so instead of asking for another drive in `.env`.
 
 ### Smaller
 

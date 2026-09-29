@@ -167,6 +167,10 @@ const ROUTES = [
   ['GET',  '/auth/me',                      [ALL]],
   // empty body: 400 (nothing changed) for anyone logged in - no permission needed
   ['POST', '/auth/password',                [ALL], {}],
+  // each account's own screen, dark / light (design, 037): signed in is enough; the empty
+  // body is a 400 and changes nothing
+  ['GET',  '/theme',                        [ALL]],
+  ['PUT',  '/theme',                        [ALL], {}],
 ];
 
 // One account per way the clinic hands out permissions. Single-permission accounts pin

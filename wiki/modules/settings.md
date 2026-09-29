@@ -123,7 +123,7 @@
    | 칸 | 뜻 |
    |---|---|
    | **État** (상태) | 「Sauvegardes auto activées (자동 백업 켜짐)」 — 자동 백업은 끌 수 없습니다 |
-   | **Chemin** (경로) | 백업이 저장되는 곳. 「Dossier de l'app (backups) (앱 폴더)」면 EMR과 같은 디스크 → 노란 경고 문구가 함께 나옴 |
+   | **Chemin** (경로) | 백업이 저장되는 곳. 그 아래에 늘 「💾 Chaque nuit, elles sont aussi copiées sur le disque externe (avec la sauvegarde des images) … (밤마다 외장 디스크로도 복사 — 디스크는 상태에서 확인, ⬇로 USB도)」(2026-09-30, 실장님 결정: 외장하드 하나에 영상·EMR 백업). 전의 「같은 디스크… `.env`의 `BACKUP_PATH`로 지정」 안내는 없앰(`se_backupSafetyTip`·`se_backupIntro` — 공용 `backupSafetyTip`·`backupIntro`는 그대로 둠) |
    | **Auto** (자동) | 「chaque jour 02:00 (매일 02:00)」 — 자동 백업 시각. 그 시각에 서버가 꺼져 있었으면 켜진 뒤 한 번 합니다 |
    | **Garder** (보관) | 보관 일수(기본 30 j). **가장 최근 7개는 보관 기간이 지나도 지우지 않습니다** |
    | **Sauvegardes (N)** (백업 목록) | 파일 이름 · 크기 · 시각(**이 PC의 시각**) · **⬇ Télécharger (다운로드)** |
@@ -182,6 +182,7 @@
 4. 줄의 상태 글자: **OK** 정상 · **ARRETE** 멈춤 · **DEMARRAGE** 시작 중 · **NE REPOND PAS** 응답 없음 · **ABSENT** 없음 · **INACCESSIBLE** 접속 안 됨.
    - **INACCESSIBLE** 옆에 「port 4242 bloque par Windows」 같은 글이 있으면 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용: `DEPLOYMENT.md` Windows 절).
    - **Sauvegarde des images (disque)** (영상 백업, 2026-09-29): 영상 백업을 설치한 PC에만 나오는 줄. 노란 **A CORRIGER** 와 「disque de sauvegarde absent (백업 디스크가 꽂혀 있지 않음)」·「echec : … (실패)」·「disque presque plein (거의 참)」·「aucun compte rendu depuis N h (N시간째 보고 없음)」 — 디스크를 꽂거나, 가득 찼으면 바꾸고, 그래도 안 되면 담당자에게(PACS 위키 6.2).
+   - **Copie des sauvegardes EMR (disque)** (EMR 백업 복사, 2026-09-30): 밤 영상 백업이 EMR 백업도 같은 외장 디스크로 복사한 결과. 새 PACS 스크립트(`a2e0c10`·`cfc434c`)의 보고가 있을 때만 나오는 줄(옛 스크립트면 줄 없음). 노란 **A CORRIGER** 와 「echec de la copie : … (복사 실패)」·「dossier de l'EMR introuvable (EMR 폴더를 못 찾음)」·「aucune sauvegarde EMR a copier (복사할 백업 없음)」·「pas de copie depuis N h (N시간째 복사 안 됨)」, 또는 노란 글자 「disque externe absent (디스크 없음)」 — 디스크를 꽂고, 그래도 안 되면 담당자에게.
    - **Sauvegarde** 줄이 노란 **A CORRIGER** 에 「plus ancienne que l'application (N mise(s) a jour …)」이면 가장 새 백업이 EMR 업데이트 전 것입니다(2.7의 같은 노란 띠). EMR에서 **Paramètres → Sauvegarde → Sauvegarder** (2026-09-29).
    - 노란 **A CORRIGER (고칠 것)** 줄 **Adresses de l'imagerie (Parametres)** (영상 주소, 2026-09-29): 설정 → **Flux d'ordres** 의 주소에 옛 포트(EMR 주소 **8080**, 영상 서버 주소 **8090**)가 남아 있거나, 영상을 쓰는데 **영상 창 짝 맞추기가 안 되어 있을 때**(「visionneuse non appairee」 — PACS 폴더에서 `pair-with-emr`, P-9·035 뒤)만 나타납니다. 쓰지 않게 된 옛 「PACS 웹/뷰어 주소」 칸은 보지 않습니다. 이대로면 진료실에서 영상이 열리지 않습니다. **Paramètres → Flux d'ordres** 에서 8080 → **9080**, 8090 → **9090** 으로 고치고 **Save** — 15초 안에 줄이 사라집니다. 값을 자동으로 바꾸지는 않습니다.
 5. 아래 버튼으로 언어를 바꿉니다 (Français → English → 한국어).
@@ -282,7 +283,7 @@
 
 1. **Paramètres** 권한이 있는 계정은 화면 맨 위, 시계 왼쪽에 **작은 점**이 보입니다(2026-09-29, U3 결정). 다른 직원에게는 없습니다.
 2. 색: **초록** 모두 정상 · **노랑** 확인 필요(백업이 오래됨·옛 버전, 디스크가 참, 영상 백업 디스크 없음 등) · **빨강** 문제(DB 연결 안 됨, 워크리스트가 멈춤 등) · **회색** 상태를 확인하지 못함(서버가 늦거나 끊김 — EMR은 그대로 쓸 수 있음).
-3. 누르면 목록: **Dossiers patients · Espace disque · Sauvegarde · Liste de travail des appareils · Imagerie (PACS) · Sauvegarde des images · Adresses de l'imagerie** 마다 점과 한 줄 설명. 「Non utilisé (사용 안 함)」 같은 회색 줄은 이 병원에서 쓰지 않는 것이라 경고가 아닙니다. 아래 **↻** 로 다시 확인.
+3. 누르면 목록: **Dossiers patients · Espace disque · Sauvegarde · Liste de travail des appareils · Imagerie (PACS) · Sauvegarde des images · Copie des sauvegardes de l'EMR (disque externe) · Adresses de l'imagerie** 마다 점과 한 줄 설명. 「Non utilisé (사용 안 함)」 같은 회색 줄은 이 병원에서 쓰지 않는 것이라 경고가 아닙니다. 아래 **↻** 로 다시 확인.
 4. 5분마다, 그리고 다른 창에 갔다가 돌아올 때 스스로 다시 확인합니다.
 5. 서버 PC의 **상태 창**(2.10)과 같은 것을 봅니다. 노랑·빨강이면 목록의 설명대로 하거나 담당자에게.
 
@@ -385,6 +386,7 @@
 | 호스트 포트 (2026-09-29) | `bethesda-emr-web`·`bethesda-pacs`가 **게시하도록 설정된** 포트(`HostConfig.PortBindings` — 9080, 9090, 4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨」으로 바꾸고, `netsh interface ipv4 show excludedportrange protocol=tcp`의 예약 구간 안이면 「Windows가 막음」, 아니면 「닫힘」 | — (컨테이너 안에서는 알 수 없음) |
 | 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행. 60초 넘게 조용 → 빨강, `ok=false` → 빨강, `failed>0` → 노랑, **`detail.arrivals_error`가 있으면 노랑 `status.bridge.arrivals`** (2026-09-29, PACS P-20 — 아래) |
 | 영상 백업 (2026-09-29, PACS 결정 41) | PACS 폴더(`bethesda-pacs`의 compose 폴더) `logs\image-backup-status.json`(`at`·`ok`·`disk_found`·`error`·`free_gb`·`total_gb`)을 읽음 — EMR이 멈춰도 보이게. 파일이 없으면 줄 없음. `at`이 36시간 넘음 / 디스크 없음 / 실패(오류 글자) / 여유 10% 미만 → 노란 **A CORRIGER** | `pacs_image_backup`: `service_heartbeat`의 같은 이름 줄(PACS `POST /api/pacs/image-backup-report`). 보고 없음 off, `last_seen` 36시간 넘음 `silent`, `disk_found` false `noDisk`, `ok` false `failed`(`error`), `last_success` 없음·36시간 넘음 `stale`, 여유 10% 미만 `nearlyFull` — 모두 warn |
+| EMR 백업 복사 (2026-09-30, 실장님 결정 — 외장하드 하나에 영상·EMR 백업) | `docker exec bethesda-emr-db psql …`로 `service_heartbeat`(`pacs_image_backup`)의 `detail`을 읽음 — `emr_backup_last_ok`가 EMR만 가진 칸이라 PACS 폴더의 파일이 아니라 DB에서. 판정은 오른쪽과 같음(`Get-EmrCopyCheck`), 안내 「branchez le disque externe」. DB가 응답할 때만 | `emr_backup_copy`: 같은 보고(`pacs.routes.js` `/image-backup-report`)의 `emr_backup*` 칸. **`emr_backup` 키가 없으면(옛 PACS 스크립트) 줄 없음**(`null` → 목록에서 뺌). `failed`(`error`) · `no_disk` · `not_found` → warn. 그 밖에 `emr_backup_last_ok`(보고가 도착한 때의 EMR 시각)가 없으면 `none`/`never`, 36시간 넘으면 `stale` → warn, 아니면 ok(`count`·`newest`·`hours_since_ok`). **`emr_backup_newest`(파일 이름의 시각)는 판정에 쓰지 않음** — 시간대에 따라 어긋남 |
 | 영상 주소 (2026-09-29) | `docker exec bethesda-emr-db psql …`로 `pacs_config`의 두 주소를 읽어, 옛 포트면 노란 **A CORRIGER** 줄(없으면 줄 자체가 없음). DB가 OK일 때만 | `pacs_address`: 두 칸 모두 비면 off, `emr_base_url`의 포트가 8080이거나 `pacs_viewer_url`이 8090이면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok. 포트는 `스킴://호스트:포트` 모양에서만 읽음(`:80800`·`my8090host`는 해당 없음) |
 | 화면 연결 | — | **상단바의 상태 점**(2026-09-29, U3 결정 가 — 2.15): `frontend/src/pages/settingsStatus.jsx` `StatusDot`, `TopBar.jsx`(공용, 허락)가 설정 권한일 때만 붙임. `api/client.js`를 거치지 않는 `fetch` + **8초 시간 제한**(AbortController) — 실패·느림은 회색 점, 로그인 화면으로 보내지 않음. 처음·5분마다(창이 보일 때)·창으로 돌아올 때(`/auth/me` 동기와 같은 박자). 색은 서버의 `overall`(off는 ok와 같게 셈). 문구: `status.a.b` → `se_sys_a_b`, 항목 → `se_sysItem_<key>`, `{값}` 채움(`missing`은 개수, `old`는 「8080 → 9080」). 빠진 번역은 `backend/test/settings.status.mjs`가 알려 줌(스택 없이). 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
 
@@ -481,7 +483,7 @@
 | `POST /api/auth/setup` | 없음 (관리자 없을 때만) | 첫 관리자 생성, 토큰 반환 |
 | `POST /api/auth/login` | 없음 | `{token, user}` |
 | `POST /api/auth/password` | 로그인 (권한 필요 없음, 비활성이면 401) | 자기 비밀번호 바꾸기 `{current_password, new_password}` → `{success}`. 지금 비밀번호가 틀리면 400 (3-3절) |
-| `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29) |
+| `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29). **`theme`**(`dark`/`light`, 037)도 — 로그인·첫 설치의 `user`에도 있음(2026-09-30, 디자인 세션 부탁: 같은 PC에서 다른 사람이 로그인할 때 앞 사람의 화면이 먼저 보이지 않게). 직원 목록(`/admin/staff`)에는 없음 — 바꾸는 곳은 `/api/theme`(자기 계정만) |
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `clinic` | 로그인 | 목록 (다른 화면도 씀) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
@@ -672,4 +674,5 @@
 | 2026-09-29 | **약속처방에서 줄마다 일총투여·횟수·일수·용법을 정함**(실장님 지적), 새 약 줄은 빈 칸, 비어 있으면 저장을 막음, 검사 줄은 수량·횟수·일수 | `Settings.jsx` 약속처방 편집 창 `osItem`·`osLineProblem`·`osNum` (2.9) | (이 커밋) |
 | 2026-09-29 | 정리 스크립트가 **현금 기록(cash_movement)**의 시험 줄도 지움 — 정리 뒤 통계 수납액 0, 그날 현금 목록 비어 있음. 권한 시험에 `GET /billing/cash-day` | `clean-test-data.ps1`, `settings.access.mjs` (3-11) | `e60ee0e` |
 | 2026-09-29 | 편집 창 제목이 탭마다(「Nouveau membre du personnel」·「Modifier le médicament」…), 직원 창에 이메일 칸, 비활성 직원은 목록 아래로. 진료의 약속처방 거절 문구 7개가 「Ligne n : …」로 번역. 영상 창 변경(P-9) 뒤 상태 검사: 쓰지 않는 뷰어 주소 대신 영상 서버 주소, **짝 맞추기 안 됨** 안내 | `Settings.jsx`, `settingsMessages.js`, `status.routes.js`, `server-status.ps1`, 설명서·변경 내역 (2.10·3-6) | `eb24cb1` |
-| 2026-09-29 | 통합 시험 몫: 약속처방에 **목록에서 빠진 약**을 줄긋기 + 「⚠ N개 약이 목록에 없음」(목록·편집 창, 자료는 그대로), 약속처방 약 검색 결과에 재고·가격, 약속처방 저장 알림 «✓ Enregistré», 편집 창은 칸만 스크롤하고 단추 줄 고정(1366×768) | `Settings.jsx`, i18n `se_osGone*`·`se_osPick`, 설명서 | (이 커밋) |
+| 2026-09-29 | 통합 시험 몫: 약속처방에 **목록에서 빠진 약**을 줄긋기 + 「⚠ N개 약이 목록에 없음」(목록·편집 창, 자료는 그대로), 약속처방 약 검색 결과에 재고·가격, 약속처방 저장 알림 «✓ Enregistré», 편집 창은 칸만 스크롤하고 단추 줄 고정(1366×768) | `Settings.jsx`, i18n `se_osGone*`·`se_osPick`, 설명서 | `211f9c8` |
+| 2026-09-30 | 상태 점·상태 창에 **EMR 백업 복사**(외장 디스크) 줄, 백업 화면 안내를 「밤마다 외장 디스크로도 복사」로(BACKUP_PATH 안내 뺌), 기록 탭에서 영수 상태(배열도)·「돌려준 돈」이 말로, 로그인·`/auth/me` 답에 `theme`, 상태 점 목록이 창 안에서 열림(상단 단추가 늘어 왼쪽으로 잘리던 것), access 표에 `/api/theme` | `status.routes.js` `checkEmrBackupCopy`, `server-status.ps1` `Get-EmrCopyCheck`·창 높이 680, `Settings.jsx`, `settingsStatus.jsx`, `settingsAudit.js`, `auth.routes.js`, `settings.access.mjs` (2.9·2.10·2.15·3-6·4) | (이 커밋) |

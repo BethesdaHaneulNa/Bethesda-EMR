@@ -93,6 +93,15 @@ $T = @{
     imgFull = 'disque presque plein : {0} Go libres sur {1} Go'
     imgUnreadable = 'etat illisible (logs\image-backup-status.json)'
     adviceImg = 'Sauvegarde des images : branchez le disque de sauvegarde ou remplacez-le s''il est plein. Sinon prevenez le responsable.'
+    emrCopy = 'Copie des sauvegardes EMR (disque)'
+    emrCopyOk = 'il y a {0} h - {1} sur le disque (derniere {2})'
+    emrCopyFailed = 'echec de la copie : {0}'
+    emrCopyNoDisk = 'disque externe absent'
+    emrCopyNotFound = 'dossier de l''EMR introuvable'
+    emrCopyNone = 'aucune sauvegarde EMR a copier'
+    emrCopyNever = 'jamais copiee'
+    emrCopyStale = 'pas de copie depuis {0} h'
+    adviceEmrCopy = 'Copie des sauvegardes de l''EMR : branchez le disque externe (le meme que pour les images). Sinon prevenez le responsable.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -145,6 +154,15 @@ $T = @{
     imgFull = 'disk almost full: {0} GB free of {1} GB'
     imgUnreadable = 'status file unreadable (logs\image-backup-status.json)'
     adviceImg = 'Image backup: plug in the backup disk, or replace it if it is full. Otherwise tell the person in charge.'
+    emrCopy = 'EMR backup copy (disk)'
+    emrCopyOk = '{0} h ago - {1} on the disk (newest {2})'
+    emrCopyFailed = 'copy failed: {0}'
+    emrCopyNoDisk = 'external disk not plugged in'
+    emrCopyNotFound = 'EMR folder not found'
+    emrCopyNone = 'no EMR backup to copy'
+    emrCopyNever = 'never copied yet'
+    emrCopyStale = 'not copied for {0} h'
+    adviceEmrCopy = 'EMR backup copy: plug in the external disk (the same one as for the images). Otherwise tell the person in charge.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -197,6 +215,15 @@ $T = @{
     imgFull = '디스크가 거의 참: {1}GB 중 {0}GB 남음'
     imgUnreadable = '상태 파일을 읽을 수 없음 (logs\image-backup-status.json)'
     adviceImg = '영상 백업: 백업 디스크를 꽂거나, 가득 찼으면 바꾸세요. 그래도 안 되면 관리자에게 알리세요.'
+    emrCopy = 'EMR 백업 복사 (디스크)'
+    emrCopyOk = '{0}시간 전 - 디스크에 {1}개 (가장 새 것 {2})'
+    emrCopyFailed = '복사 실패: {0}'
+    emrCopyNoDisk = '외장 디스크가 꽂혀 있지 않음'
+    emrCopyNotFound = 'EMR 폴더를 찾지 못함'
+    emrCopyNone = '복사할 EMR 백업 없음'
+    emrCopyNever = '아직 복사된 적 없음'
+    emrCopyStale = '{0}시간째 복사 안 됨'
+    adviceEmrCopy = 'EMR 백업 복사: 외장 디스크(영상 백업과 같은 것)를 꽂으세요. 그래도 안 되면 관리자에게 알리세요.'
   }
 }
 
@@ -479,6 +506,37 @@ function Get-ImageBackupCheck {
   return New-Check 'imgBackup' 'ok' ($Strings.imgOk -f $hours, [math]::Round($free), [math]::Round($total))
 }
 
+# The night image backup also copies the EMR's backups to the same external disk (the
+# director's decision, 2026-09-29) and reports it with the images; the EMR keeps the
+# fields in service_heartbeat 'pacs_image_backup' and adds emr_backup_last_ok with its
+# own clock. Read from the database, not logs\image-backup-status.json, for that field:
+# late is judged on it (the name's time in emr_backup_newest can be shifted by a time
+# zone). The same judgement as the EMR's status check (status.routes.js). Returns $null
+# when the report has no emr_backup field (older PACS script) - nothing is known.
+function Get-EmrCopyCheck {
+  param($Strings)
+  $sql = 'SELECT coalesce(detail->>''emr_backup'', ''-''), coalesce(detail->>''emr_backup_count'', ''''), ' +
+         'coalesce(detail->>''emr_backup_newest'', ''''), ' +
+         'coalesce(round(extract(epoch FROM now() - (detail->>''emr_backup_last_ok'')::timestamptz) / 3600)::text, ''''), ' +
+         'coalesce(detail->>''emr_backup_error'', '''') ' +
+         'FROM service_heartbeat WHERE name = ''pacs_image_backup'''
+  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|', '-c', $sql)
+  if (-not $line) { return $null }
+  $parts = ([string]($line | Select-Object -First 1)) -split '\|', 5
+  if ($parts.Count -lt 5 -or $parts[0] -eq '-') { return $null }
+  $state = $parts[0]; $count = $parts[1]; $newest = $parts[2]; $err = $parts[4]
+  $hours = if ($parts[3] -ne '') { [int]$parts[3] } else { $null }
+  if ($state -eq 'failed')    { return New-Check 'emrCopy' 'warn' ($Strings.emrCopyFailed -f $err) $false $true }
+  if ($state -eq 'no_disk')   { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNoDisk }
+  if ($state -eq 'not_found') { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNotFound $false $true }
+  if ($null -eq $hours) {
+    if ($state -eq 'none') { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNone $false $true }
+    return New-Check 'emrCopy' 'warn' $Strings.emrCopyNever $false $true
+  }
+  if ($hours -gt $BackupStaleHours) { return New-Check 'emrCopy' 'warn' ($Strings.emrCopyStale -f $hours) $false $true }
+  return New-Check 'emrCopy' 'ok' ($Strings.emrCopyOk -f $hours, $count, $newest)
+}
+
 function Get-BackupCheck {
   param($Strings, [string]$BackupPath, [bool]$DbOk = $false)
   if (-not $BackupPath -or -not (Test-Path $BackupPath)) {
@@ -553,6 +611,11 @@ function Get-AllChecks {
   )
   $img = Get-ImageBackupCheck -Strings $Strings
   if ($img) { $ordered += $img }
+  # Only while the database answers; no row for a report from the older PACS script.
+  if ($checks['db'].State -eq 'ok') {
+    $emrCopy = Get-EmrCopyCheck -Strings $Strings
+    if ($emrCopy) { $ordered += $emrCopy }
+  }
   # Only while the database answers; a row appears only when an address is old.
   if ($checks['db'].State -eq 'ok') {
     $addr = Get-PacsAddressCheck -Strings $Strings
@@ -587,6 +650,7 @@ function Get-Advice {
       if ($c.Key -eq 'pacsAddr' -and $c.Pair) { return $Strings.advicePair }
       if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
       if ($c.Key -eq 'imgBackup') { return $Strings.adviceImg }
+      if ($c.Key -eq 'emrCopy') { return $Strings.adviceEmrCopy }
       return $Strings.adviceDown
     }
   }
@@ -623,8 +687,9 @@ $ColorPaper = [System.Drawing.Color]::FromArgb(248, 248, 246)
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $T[$script:CurrentLang].title
-# Room for up to nine rows (the seven, plus imaging addresses and image backup when they show).
-$form.Size = New-Object System.Drawing.Size(620, 640)
+# Room for up to ten rows (the seven, plus imaging addresses, image backup and the EMR
+# backup copy when they show).
+$form.Size = New-Object System.Drawing.Size(620, 680)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = $ColorPaper
 

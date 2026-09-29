@@ -969,6 +969,17 @@ export default {
   se_osGoneHint: "줄이 그어진 약은 약 목록에서 빠진 약입니다. 진료에서 이 약속처방을 불러도 처방되지 않습니다 — 지우거나 목록에 있는 약으로 바꾸세요.",
   se_osGoneLine: "목록에 없음",
   se_osPick: "재고 {stock} · 가격 {price}",
+  se_sysItem_emr_backup_copy: "EMR 백업 복사 (외장 디스크)",
+  se_sys_emrBackupCopy_ok: "{hours_since_ok}시간 전 복사 · 디스크에 {count}개 (가장 새 것 {newest})",
+  se_sys_emrBackupCopy_failed: "복사 실패: {error}",
+  se_sys_emrBackupCopy_noDisk: "외장 디스크가 꽂혀 있지 않음",
+  se_sys_emrBackupCopy_notFound: "영상 백업이 EMR 폴더를 찾지 못함 — 관리자에게 알리세요",
+  se_sys_emrBackupCopy_none: "복사할 EMR 백업이 없음",
+  se_sys_emrBackupCopy_never: "아직 한 번도 복사되지 않음",
+  se_sys_emrBackupCopy_stale: "{hours_since_ok}시간째 복사 안 됨",
+  se_backupIntro: "데이터베이스를 자동·수동으로 백업합니다. 백업은 앱 폴더에 저장되고, 각 백업을 ⬇로 USB 등에 내려받을 수 있어요.",
+  se_backupSafetyTip: "💾 밤마다 외장 디스크로도 복사됩니다(영상 백업과 함께). 디스크가 꽂혀 있는지는 상태 창(상단의 점 또는 서버 PC의 상태 창)에서 확인하세요. 필요하면 아래 ⬇로 USB에도 내려받을 수 있어요.",
+  se_fld_refundedAmount: "돌려준 돈",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",
