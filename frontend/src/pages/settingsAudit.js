@@ -50,6 +50,7 @@ var FIELDS = {
   order_code: 'se_fld_orderCode', order_name: 'se_fld_orderName', code_type: 'se_fld_codeType',
   dose: 'se_fld_dose', frequency: 'se_fld_frequency', days: 'se_fld_days', route: 'se_fld_route',
   quantity: 'se_fld_quantity', total_qty: 'se_fld_totalQty', unit_price: 'se_fld_unitPrice', memo: 'se_fld_memo',
+  pack_label: 'se_fld_packLabel',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',
   // Shared, and last in a line: a staff account's, order's or prescription's status,
@@ -105,6 +106,10 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'status' && v === 'ordered' && ctx && ctx.entity === 'prescription') return t.se_st_rxOrdered || v;
   if (field === 'status' && STATUS_KEYS[v]) return t[STATUS_KEYS[v]] || v;
   if (field === 'code_type') return t['se_type_' + v] || v;
+  // lab result judgement (utils/labFlag.js): low / normal / high / abnormal
+  if (field === 'flag') return t['se_flag_' + v] || v;
+  // pack-unit word copied onto a prescription (025): bottle / tube / inhaler / unit
+  if (field === 'pack_label') return t['ph_pack_' + v] || v;
   if (field === 'diagnosis_type') return t['se_dx_' + v] || v;
   if (field === 'gender') return t['se_gender_' + v] || v;
   if (field === 'department_id' && ctx && ctx.depts) {

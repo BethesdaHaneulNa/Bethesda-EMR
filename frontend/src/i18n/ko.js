@@ -807,6 +807,11 @@ export default {
   se_setPackQtyHint: "포장 단위 약: 이 세트를 쓰면 이 수만큼(병·튜브) 처방됩니다.",
   se_bkOldVersion: "가장 새 백업이 지금 EMR보다 옛 버전입니다",
   se_bkOldVersionHint: "EMR을 업데이트한 뒤로 새 백업이 없습니다. 이 백업은 보통 방법으로는 복원되지 않습니다(DEPLOYMENT.md 5b의 「옛 버전」 방법 필요). 지금 「지금 백업」을 눌러 새 백업을 만드세요.",
+  se_fld_packLabel: "포장 단위",
+  se_flag_low: "낮음",
+  se_flag_normal: "정상",
+  se_flag_high: "높음",
+  se_flag_abnormal: "이상",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

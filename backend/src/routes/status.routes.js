@@ -117,6 +117,31 @@ async function checkPacs() {
   return { key: 'pacs', state: 'ok', message: 'status.pacs.ok', values };
 }
 
+// The nightly image backup to an external disk (PACS image-backup.ps1, decision 41). It
+// reports to POST /api/pacs/image-backup-report, kept as the 'pacs_image_backup'
+// heartbeat (pacs.routes.js): ok, disk_found, error, free_gb, total_gb, last_success.
+// Warn when the disk was not plugged in, the run failed, nothing has succeeded for
+// IMAGE_BACKUP_STALE_HOURS, the job has stopped reporting, or the disk is nearly full.
+const IMAGE_BACKUP_STALE_HOURS = 36;
+async function checkImageBackup() {
+  const r = await pool.query(`SELECT last_seen, ok, detail FROM service_heartbeat WHERE name = 'pacs_image_backup'`);
+  if (!r.rows.length) return { key: 'pacs_image_backup', state: 'off', message: 'status.imageBackup.off', values: {} };
+  const row = r.rows[0];
+  const d = row.detail || {};
+  const hoursSince = t => (t ? (Date.now() - new Date(t).getTime()) / 3600000 : null);
+  const values = {
+    last_seen: row.last_seen, last_success: d.last_success || null,
+    hours_since_success: d.last_success ? Math.round(hoursSince(d.last_success)) : null,
+    free_gb: d.free_gb, total_gb: d.total_gb, error: d.error || '',
+  };
+  if (hoursSince(row.last_seen) > IMAGE_BACKUP_STALE_HOURS) return { key: 'pacs_image_backup', state: 'warn', message: 'status.imageBackup.silent', values };
+  if (d.disk_found === false) return { key: 'pacs_image_backup', state: 'warn', message: 'status.imageBackup.noDisk', values };
+  if (!row.ok) return { key: 'pacs_image_backup', state: 'warn', message: 'status.imageBackup.failed', values };
+  if (!d.last_success || hoursSince(d.last_success) > IMAGE_BACKUP_STALE_HOURS) return { key: 'pacs_image_backup', state: 'warn', message: 'status.imageBackup.stale', values };
+  if (d.total_gb > 0 && d.free_gb / d.total_gb < 0.1) return { key: 'pacs_image_backup', state: 'warn', message: 'status.imageBackup.nearlyFull', values };
+  return { key: 'pacs_image_backup', state: 'ok', message: 'status.imageBackup.ok', values };
+}
+
 // The addresses in Settings > order feed that still carry a port the EMR and the PACS
 // left behind (EMR 8080 -> 9080, PACS viewer 8090 -> 9090, both because Windows
 // reserves the old ones). Typed from the old instructions, they stay in pacs_config and
@@ -153,6 +178,7 @@ router.get('/status', authMiddleware, async (req, res) => {
     // The database being down takes these with it; report that rather than a stack trace.
     checkBridge().catch(err => ({ key: 'bridge', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacs().catch(err => ({ key: 'pacs', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
+    checkImageBackup().catch(err => ({ key: 'pacs_image_backup', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacsAddresses().catch(err => ({ key: 'pacs_address', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
   ]);
   res.json({

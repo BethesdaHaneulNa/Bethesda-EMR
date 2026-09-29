@@ -807,6 +807,11 @@ export default {
   se_setPackQtyHint: "Médicament délivré par conditionnement : appliquer cet ensemble prescrit ce nombre de flacons/tubes.",
   se_bkOldVersion: "La sauvegarde la plus récente date d'une version plus ancienne de l'EMR",
   se_bkOldVersionHint: "Aucune sauvegarde depuis la mise à jour de l'EMR. Celle-ci ne se restaure pas de la façon habituelle (il faut la procédure « plus ancienne que l'application » de DEPLOYMENT.md 5b). Appuyez sur « Sauvegarder » pour en faire une nouvelle.",
+  se_fld_packLabel: "Conditionnement",
+  se_flag_low: "bas",
+  se_flag_normal: "normal",
+  se_flag_high: "élevé",
+  se_flag_abnormal: "anormal",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

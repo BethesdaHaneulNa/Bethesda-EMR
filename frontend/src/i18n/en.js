@@ -816,6 +816,11 @@ export default {
   se_setPackQtyHint: "Pack-unit drug: applying this set prescribes this many bottles/tubes.",
   se_bkOldVersion: "The newest backup is from an older version of the EMR",
   se_bkOldVersionHint: "There has been no backup since the EMR was updated. This backup does not restore the usual way (it needs the \"older than the app\" steps in DEPLOYMENT.md 5b). Press \"Back up now\" to make a new one.",
+  se_fld_packLabel: "Pack unit",
+  se_flag_low: "low",
+  se_flag_normal: "normal",
+  se_flag_high: "high",
+  se_flag_abnormal: "abnormal",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
