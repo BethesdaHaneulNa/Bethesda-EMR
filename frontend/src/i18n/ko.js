@@ -429,6 +429,7 @@ export default {
   st_billCount: "진료 영수",
   st_settlementsSub: "+ 미수 수납 {n}건",
   st_avgPerVisit: "방문당 평균 청구액",
+  st_otherVisits: "진료비 없음·기타",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",

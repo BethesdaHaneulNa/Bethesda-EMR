@@ -152,6 +152,10 @@ export default function StatsPage(){
             <Card label={t.totalVisits||'총 내원'} value={v.total||0} unit={t.cases||'건'} color="#60a5fa" sub={(t.uniquePatients||'고유 환자')+' '+(v.unique_patients||0)} />
             <Card label={t.newVisit||'초진'} value={v.new_visits||0} unit={t.cases||'건'} small />
             <Card label={t.followUp||'재진'} value={v.follow_ups||0} unit={t.cases||'건'} small />
+            {/* Visits that are neither: "no fee" (chosen at reception or payment) and
+                the emergency/referral values older records still carry. Without it
+                the total did not add up to the cards beside it. */}
+            <Card label={t.st_otherVisits||'진료비 없음·기타'} value={v.other_visits||0} unit={t.cases||'건'} small />
             <Card label={t.completed||'완료'} value={v.completed||0} unit={t.cases||'건'} color="#10b981" small />
             <Card label={t.active||'진행 중'} value={v.active||0} unit={t.cases||'건'} color="#f59e0b" small />
             <Card label={t.st_cancelled||'취소'} value={v.cancelled||0} unit={t.cases||'건'} color="#f87171" small />

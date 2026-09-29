@@ -429,6 +429,7 @@ export default {
   st_billCount: "Factures de soins",
   st_settlementsSub: "+ {n} règlement(s) de solde",
   st_avgPerVisit: "Moy. facturée / visite",
+  st_otherVisits: "Sans frais / autres",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",
