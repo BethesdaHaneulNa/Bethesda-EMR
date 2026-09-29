@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약속처방 줄마다 일총투여·횟수·일수·용법 (실장님 지적, 가장 먼저)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`9192536` 위 — `9192536`은 결정 B의 약 저장 「보낸 칸만」, develop `7d8334d` 위로 rebase)
+- **한 일** (`Settings.jsx` 약속처방 편집 창만, 서버 변경 없음):
+  - 약 줄: 고칠 수 있는 **Dose/j · Fois · Jours · Posologie** 칸(진료의 `cs_colDaily`·`cs_colTimes`·`cs_colDays`·`cs_colSig` 그대로 — 같은 이름·순서). 「3.000×3×7」 글자 대신.
+  - 새로 넣은 약 줄은 **빈 칸**(약품 기본값을 복사하지 않음). 검사·처치 줄은 **Qté · Fois · Jours**, 1·1·1로 시작.
+  - 포장 단위 약: 네 칸(복용 안내, 비워도 됨) + 병·튜브 수(c891715 그대로).
+  - 저장 전 확인(`osLineProblem`): 약 줄(포장 아님)의 일총투여·일수가 비면 칸이 빨갛고 「⚠ dose/j, jours」, 저장하면 이름을 들어 막음. 숫자는 진료 서버 `utils/validate.js` LIMITS와 같게(일총투여 0–1000·세트 약 줄은 0보다 커야, 횟수 1–24·일수 1–365 정수, 용법 10자, 병 수 1 이상 정수, 검사 수량 0보다 큼). 검사 줄의 빈 칸은 1로 보냄.
+  - 이미 있는 세트를 열면 저장된 값이 칸에(`osNum`: '3.000' → '3').
+- **서버**: 칸 이름은 `order_set_item` 그대로(dose·frequency·days·route·quantity). 약 줄의 빈 횟수·일수는 지금 서버가 `|| 1`로 1을 넣음 — 일수는 화면이 필수로 막으므로 포장 약에서만 해당.
+- **진료 세션에 알릴 것 (내 몫 아님)**: 진료의 `applySet`은 **검사·처치 줄의 수량을 늘 1**로 보내고(`addExamOrder`의 `quantity:1`), **검사·영상 줄의 횟수·일수도 1·1·1**(실장님의 앞선 지시)로 넣습니다. 그래서 설정에서 검사 줄의 수량·횟수·일수를 바꿔도 지금은 **처치 줄의 횟수·일수만** 진료에 들어갑니다. 수량까지 쓰려면 진료의 `applySet`/`addExamOrder` 차례.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`(2.9, 8절)
+- **공용 파일 변경**: i18n `se_setColQty`·`se_setNeedDose`·`se_setNeedDoseShort`·`se_setBadNumber`·`se_setBadNumberShort`(진료의 `cs_col*` 키는 읽기만).
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`. 새 DB 격리 스택, 화면(프랑스어): 새 약속처방 → Artemether 추가 → 칸이 빈 채·빨간 테두리 → 저장 → 「Indiquez la dose par jour … : Artemether-Lumefantrine Tab」로 막힘 → 4·2·3·BID + CBC(1·1·1) → 저장 → DB `ACT01 4/2/3/BID`, `L01 1/1` → 한국어로 다시 열어 같은 값(「일총투여·횟수·일수·용법」, 「수량」) → **진료에서 세트 적용** → 처방 줄 4·2·3·BID 「2 cp × 2 fois/jour pendant 3 jours (total 12)」, CBC 1·1·1 → 진료 완료 → 처방 `total_qty 12`·800 → **수납** Artemether 12 × 800 = 9,600, CBC 12,000 → **약국** 일총투여 4·한 번 2·2회·3일·BID, 9,600. 포장 단위 시럽 줄: 네 칸 비어도 빨갛지 않고 Flacon 1 칸. `settings.ordersets.mjs`·messages 통과. 프랑스어에서 칸 이름이 잘리지 않음(칸 위 작은 이름).
+- **다음 할 일**: 앞서 받은 admin API(결정 B)는 `9192536`으로 이미 끝남 — 보고함.
+
 ## 2026-09-29 — 약 저장은 보낸 칸만 (결정 B) · 제형 칸 준비 · 상태 점 직원용 한 줄
 
 - **상태**: 확인 요청
