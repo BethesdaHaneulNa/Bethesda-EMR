@@ -39,7 +39,8 @@ function check(name, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + name + 
 let creds;
 if (fs.existsSync(CREDS)) creds = JSON.parse(fs.readFileSync(CREDS));
 else {
-  creds = { admin: { login_id: 'phtest', password: crypto.randomBytes(9).toString('base64url') },
+  // The setup account's login id is always "admin" (settings S3, a95891a).
+  creds = { admin: { login_id: 'admin', password: crypto.randomBytes(9).toString('base64url') },
             ph2: { login_id: 'phtest2', password: crypto.randomBytes(9).toString('base64url') } };
   const s = await call('POST', '/auth/setup', { ...creds.admin, name: 'Test Admin' });
   if (s.status !== 200) throw new Error('setup failed ' + JSON.stringify(s));

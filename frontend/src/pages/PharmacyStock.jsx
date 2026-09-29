@@ -6,14 +6,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
+import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
 
 // Exact texts from pharmacy.routes.js; the API client passes on only the message.
 var ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
 var ERR_MEMO_REQUIRED = 'A note is required';
 var ERR_WHOLE_NUMBER = 'Quantity must be a whole number';
+var ERR_NOTHING_TO_CHECK = 'Nothing left to check on this drug';
 // Memos the server writes itself, shown translated.
 var MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 var MEMO_OPENING = 'Start of the stock record';
+// Written by the import of the old stock program's list (migration 403).
+var MEMO_IMPORT = 'Imported from the old stock program (count of 2026-05-15)';
+// Value of the category filter that shows the imported drugs still to check.
+var TO_CHECK = '__to_check';
 
 var KIND_COLOR = { opening: '#94a3b8', receive: '#34d399', dispense: '#60a5fa', adjust: '#fbbf24', discard: '#f87171' };
 
@@ -94,12 +100,24 @@ export function PharmacyStock() {
   var shown = useMemo(function () {
     var s = q.trim().toLowerCase();
     return drugs.filter(function (d) {
-      if (cat && d.category !== cat) return false;
+      if (cat === TO_CHECK) { if (!checkOpen(d)) return false; }
+      else if (cat && d.category !== cat) return false;
       if (!s) return true;
       return (d.name || '').toLowerCase().indexOf(s) >= 0 || (d.code || '').toLowerCase().indexOf(s) >= 0 || (d.generic_name || '').toLowerCase().indexOf(s) >= 0;
     });
   }, [drugs, q, cat]);
   var sel = drugs.find(function (d) { return d.id === selId; }) || null;
+  var toCheck = drugs.filter(checkOpen).length;
+
+  async function markChecked() {
+    if (!sel || busy) return;
+    if (!window.confirm(String(t.ph_checkDoneConfirm || '').replace('{name}', sel.name))) return;
+    setBusy(true);
+    try { await api.post('/pharmacy/stock/' + sel.id + '/check-done', {}); }
+    catch (err) { alert(err.message === ERR_NOTHING_TO_CHECK ? t.ph_errNothingToCheck : 'Error: ' + err.message); }
+    await loadDrugs();
+    setBusy(false);
+  }
 
   function openForm(kind) { setForm({ kind: kind, amount: '', memo: '' }); setNotice(''); }
 
@@ -131,6 +149,7 @@ export function PharmacyStock() {
   function memoText(m) {
     if (m.memo === MEMO_OUTSIDE) return t.ph_memoOutside;
     if (m.memo === MEMO_OPENING) return t.ph_memoOpening;
+    if (m.memo === MEMO_IMPORT) return t.ph_memoImport;
     return m.memo || '';
   }
   function when(v) { try { return new Date(v).toLocaleString(locale, { hour12: false }); } catch (e) { return v; } }
@@ -152,6 +171,7 @@ export function PharmacyStock() {
           <button onClick={function () { setView('report'); }} style={{ background: view === 'report' ? '#8b5cf6' : '#1e2433', color: view === 'report' ? '#fff' : tx, border: '1px solid #8b5cf6', borderRadius: 5, padding: '6px 10px', cursor: 'pointer', fontSize: 15, fontWeight: 800, textAlign: 'left' }}>📊 {t.ph_reportTitle}</button>
           <select value={cat} onChange={function (e) { setCat(e.target.value); }} style={Object.assign({}, IN, { width: '100%' })}>
             <option value="">{t.ph_allCategories}</option>
+            {toCheck ? <option value={TO_CHECK}>⚠ {t.ph_toCheckFilter} ({toCheck})</option> : null}
             {categories.map(function (c) { return <option key={c} value={c}>{catLabel(t, c)}</option>; })}
           </select>
         </div>
@@ -161,8 +181,8 @@ export function PharmacyStock() {
             var active = d.id === selId; var low = belowMin(d);
             return <div key={d.id} onClick={function () { setSelId(d.id); setView('drug'); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? '#8b5cf615' : 'transparent', borderLeft: active ? '3px solid #8b5cf6' : '3px solid transparent', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, color: tx, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-                <div style={{ color: t3, fontSize: 13 }}>{d.code} · {catLabel(t, d.category)}</div>
+                <div style={{ fontWeight: 800, color: tx, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{checkOpen(d) ? <span title={t.ph_toCheck} style={{ color: '#fbbf24' }}>⚠ </span> : null}{d.name}</div>
+                <div style={{ color: t3, fontSize: 13 }}>{d.code} · {catLabel(t, d.category)}{d.dosage_form ? ' · ' + formLabel(t, d.dosage_form) : ''}</div>
               </div>
               <div style={{ fontWeight: 900, fontSize: 17, color: low ? '#f87171' : '#34d399', whiteSpace: 'nowrap' }}>{d.stock_qty}</div>
             </div>;
@@ -210,7 +230,7 @@ export function PharmacyStock() {
           <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: scBg, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#f8fafc' }}>{sel.name}</div>
-              <div style={{ marginTop: 4, fontSize: 15, color: t2 }}>{sel.code} · {catLabel(t, sel.category)}{sel.generic_name ? ' · ' + sel.generic_name : ''}</div>
+              <div style={{ marginTop: 4, fontSize: 15, color: t2 }}>{sel.code} · {catLabel(t, sel.category)}{sel.dosage_form ? ' · ' + formLabel(t, sel.dosage_form) : ''}{sel.generic_name ? ' · ' + sel.generic_name : ''}</div>
               <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {['receive', 'count', 'discard'].map(function (k) {
                   var on = form && form.kind === k;
@@ -224,6 +244,18 @@ export function PharmacyStock() {
               {Number(sel.min_stock) > 0 ? <div style={{ color: belowMin(sel) ? '#f87171' : t3, fontSize: 13, fontWeight: belowMin(sel) ? 800 : 400 }}>{t.ph_minStock} {sel.min_stock}{belowMin(sel) ? ' — ' + t.ph_belowMin : ''}</div> : null}
             </div>
           </div>
+
+          {checkList(sel).length ? <div style={{ padding: '10px 16px', borderBottom: '1px solid ' + bd, background: checkOpen(sel) ? '#f59e0b14' : 'transparent', display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 260 }}>
+              <div style={{ color: checkOpen(sel) ? '#fbbf24' : t3, fontWeight: 800, fontSize: 14 }}>{checkOpen(sel) ? '⚠ ' : '✓ '}{t.ph_checkTitle}</div>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 20, color: checkOpen(sel) ? tx : t3, fontSize: 14 }}>
+                {checkList(sel).map(function (c, i) { return <li key={i}>{checkText(t, c)}</li>; })}
+              </ul>
+            </div>
+            {checkOpen(sel)
+              ? <button onClick={markChecked} disabled={busy} style={{ background: '#1e2433', color: '#fbbf24', border: '1px solid #f59e0b', borderRadius: 5, padding: '6px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800 }}>✓ {t.ph_checkDone}</button>
+              : <div style={{ color: t3, fontSize: 13 }}>{String(t.ph_checkDoneBy || '').replace('{who}', sel.import_check_done_by_name || '-').replace('{date}', when(sel.import_check_done_at))}</div>}
+          </div> : null}
 
           {form ? <div style={{ padding: '12px 16px', borderBottom: '1px solid ' + bd, background: '#161a26', display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, color: t2, fontSize: 13, fontWeight: 700 }}>{FORM[form.kind].amount}

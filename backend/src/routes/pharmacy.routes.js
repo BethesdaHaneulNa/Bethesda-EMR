@@ -26,6 +26,7 @@ const ERR_TOO_OLD = 'Prescription too old to dispense here; the doctor must pres
 const ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
 const ERR_MEMO_REQUIRED = 'A note is required';
 const ERR_WHOLE_NUMBER = 'Quantity must be a whole number';
+const ERR_NOTHING_TO_CHECK = 'Nothing left to check on this drug';
 // Stored on the ledger row; the screen recognises it and shows it translated.
 const MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 
@@ -101,10 +102,14 @@ function wholeNumber(v, min) {
 
 // One row per consultation with its waiting lines. Shared by the day's queue and
 // by the per-patient lookup so both hand the screen the same shape.
+// The time is when the doctor first pressed "complete" (consultation.completed_at,
+// migration 032): updated_at moved whenever the record was saved again, which
+// reshuffled the queue (L9). Consultations finished before 032 have no
+// completed_at; they show updated_at and sort after the others.
 function pendingQuery(where) {
   return `SELECT
          c.id AS consultation_id,
-         c.updated_at AS consultation_time,
+         COALESCE(c.completed_at, c.updated_at) AS consultation_time,
          v.id AS visit_id,
          v.visit_date,
          (CURRENT_DATE - v.visit_date) AS days_ago,
@@ -151,7 +156,7 @@ function pendingQuery(where) {
 router.get('/pending', canDispense, async (req, res) => {
   try {
     const result = await pool.query(
-      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.updated_at ASC, c.id ASC'
+      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.completed_at ASC NULLS LAST, c.id ASC'
     );
     res.json(result.rows);
   } catch (err) {
@@ -169,7 +174,7 @@ router.get('/patient/:patientId/pending', canDispense, async (req, res) => {
   if (!Number.isInteger(pid) || pid <= 0) return res.status(400).json({ error: 'patientId must be a number' });
   try {
     const groups = await pool.query(
-      pendingQuery('c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - $2::int') + ' ORDER BY v.visit_date DESC, c.id DESC',
+      pendingQuery('c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - $2::int') + ' ORDER BY c.completed_at DESC NULLS LAST, c.id DESC',
       [pid, PAST_RX_DAYS]
     );
     const older = await pool.query(
@@ -389,10 +394,15 @@ router.get('/stock', canStock, async (req, res) => {
     let where = 'd.is_active = true';
     if (req.query.category) { params.push(req.query.category); where += ` AND d.category = $${params.length}`; }
     if (req.query.q) { params.push('%' + req.query.q + '%'); where += ` AND (d.code ILIKE $${params.length} OR d.name ILIKE $${params.length} OR d.generic_name ILIKE $${params.length})`; }
+    // import_check: what is still to check on a drug brought in from the old stock
+    // program (403); import_check_done_at set = someone on site marked it checked.
     const r = await pool.query(
-      `SELECT d.id, d.code, d.name, d.generic_name, d.category, COALESCE(d.stock_qty,0) AS stock_qty, d.min_stock,
+      `SELECT d.id, d.code, d.name, d.generic_name, d.category, d.dosage_form, d.pack_unit, d.pack_label,
+              COALESCE(d.stock_qty,0) AS stock_qty, d.min_stock,
+              d.import_check, d.import_check_done_at, s.name AS import_check_done_by_name,
               (SELECT MAX(m.created_at) FROM stock_movement m WHERE m.drug_id = d.id AND m.kind <> 'opening') AS last_moved_at
-         FROM drug d WHERE ${where} ORDER BY d.name, d.code`, params);
+         FROM drug d LEFT JOIN staff s ON s.id = d.import_check_done_by
+        WHERE ${where} ORDER BY d.name, d.code`, params);
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -455,6 +465,22 @@ function stockWrite(kind) {
 router.post('/stock/:drugId/receive', canStock, stockWrite('receive'));
 router.post('/stock/:drugId/count', canStock, stockWrite('adjust'));
 router.post('/stock/:drugId/discard', canStock, stockWrite('discard'));
+
+// POST /api/pharmacy/stock/:drugId/check-done - the points to check on an imported
+// drug were looked at on site (usually while counting it). The list itself is kept;
+// who and when are written next to it. Counting the stock is still an Inventaire.
+router.post('/stock/:drugId/check-done', canStock, async (req, res) => {
+  const drugId = wholeNumber(req.params.drugId, 1);
+  if (!drugId) return res.status(400).json({ error: 'drugId must be a number' });
+  try {
+    const r = await pool.query(
+      `UPDATE drug SET import_check_done_at = NOW(), import_check_done_by = $2, updated_at = NOW()
+        WHERE id = $1 AND import_check IS NOT NULL AND import_check_done_at IS NULL
+        RETURNING id, import_check_done_at`, [drugId, req.user.id]);
+    if (!r.rows.length) return res.status(409).json({ error: ERR_NOTHING_TO_CHECK });
+    res.json(r.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // GET /api/pharmacy/stock/report?month=YYYY-MM - monthly stock report, one row per drug
 //
