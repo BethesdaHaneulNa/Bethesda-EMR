@@ -14,6 +14,7 @@ import { perDose, doseSentence, fmtAmount, isLegacyTotal } from '../documents/rx
 var LOCK_MESSAGES = {
   'Prescription already dispensed': 'cs_rxLocked',
   'Order already has a result': 'cs_orderLocked',
+  'Visit was cancelled': 'cs_visitCancelled',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -43,6 +44,18 @@ function orderLocked(o){
 // before the patient reaches the cashier; it never refuses them (a free item is
 // possible). A line the pharmacy moves to an outside prescription is not billed at all,
 // so it is not marked.
+// A timestamp (result_at, ...) as a local calendar date. Cutting the ISO string at the
+// T gives the UTC date, so a reading written between midnight and 03:00 in Madagascar
+// showed the day before. Same rule as ymd() in LabResults.jsx; a plain DATE value
+// (YYYY-MM-DD, as the API now sends them) is returned as it is.
+function ymd(d){
+  if(!d) return '';
+  var s = String(d);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var x = new Date(s);
+  return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
+}
+
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
 // A prescription line with no daily dose (or no days) is stored with a total of 0
@@ -213,7 +226,12 @@ export default function ConsultationPage() {
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
       setHistory(h.filter(function(c){ return c.id !== cData.id; }));
-    } catch(err){ console.error(err); }
+    } catch(err){
+      // A visit reception cancelled is refused by the server (409); tell the doctor
+      // instead of leaving a patient bar with nothing under it.
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+      else console.error(err);
+    }
   }
 
   async function openPast(h){
@@ -925,7 +943,7 @@ export default function ConsultationPage() {
                 : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.'}</div>}
               <div style={{width:380,borderLeft:'1px solid #2a3142',background:'#11141c',display:'flex',flexDirection:'column',padding:12,boxSizing:'border-box'}}>
                 <div style={{fontWeight:800,fontSize:15,color:'#a78bfa',marginBottom:6}}>🩻 {t.reading||'판독소견'}</div>
-                {viewer.reading&&viewer.reading.result_at?<div style={{fontSize:12,color:'#64748b',marginBottom:8}}>{t.lastReadBy||'판독'}: {viewer.reading.result_by_name||''} · {String(viewer.reading.result_at).split('T')[0]}</div>:null}
+                {viewer.reading&&viewer.reading.result_at?<div style={{fontSize:12,color:'#64748b',marginBottom:8}}>{t.lastReadBy||'판독'}: {viewer.reading.result_by_name||''} · {ymd(viewer.reading.result_at)}</div>:null}
                 {canRead ? <>
                   <textarea value={readText} onChange={function(e){setReadText(e.target.value)}} placeholder={t.readingPlaceholder||'판독 소견을 입력하세요...'} style={{flex:1,background:'#0f1117',border:'1px solid #2a3142',borderRadius:6,color:'#e2e8f0',fontSize:14,padding:10,outline:'none',resize:'none',fontFamily:'inherit',lineHeight:1.6}}/>
                   <button onClick={saveReading} style={{marginTop:10,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'9px',cursor:'pointer',fontSize:14,fontWeight:800}}>💾 {t.saveReading||'판독 저장'}</button>

@@ -350,6 +350,7 @@ export default {
   cs_noDoseConfirm: "하루 총량이 없는 약이 {n}개 있습니다: {names}\n\n총량 0으로 약국·수납에 넘어갑니다. 그래도 진료를 완료할까요?",
   cs_setSkippedHidden: "목록에서 감춘 약이라 넣지 않았습니다: {names}\n필요하면 약을 직접 찾아 처방하세요.",
   cs_setHiddenDrug: "목록에서 감춘 약 — 이 세트를 적용해도 넣지 않습니다",
+  cs_visitCancelled: "접수에서 취소된 내원입니다. 진료를 열 수 없습니다.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

@@ -79,7 +79,10 @@ export function DocumentModal(props) {
   var previewRef = useRef(null);
 
   var template = getTemplate(code) || visible[0] || TEMPLATES[0];
-  var today = new Date().toISOString().slice(0, 10);
+  // The issue date in the clinic's own time. toISOString() is UTC, which in Madagascar
+  // (UTC+3) dated anything issued between midnight and 03:00 the day before.
+  var now = new Date();
+  var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   var doctor = { name: ctx.doctor_name || (user && user.name) || '', dept_code: ctx.dept_code || '' };
 
   // lg: the document language, for text an autofill writes (the medication lines).
