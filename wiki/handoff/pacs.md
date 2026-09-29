@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-18: UID 없는 영상 오더에서 다른 환자 목록이 열리지 않게
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `ff53907`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**: `GET /api/pacs/viewer-url` — 보일 스터디가 없으면(워크리스트로 안 간 영상 오더, 또는 아무것도 안 줌) `url`을 **빈 값**으로, **`no_study: true`** 추가. 전에는 뷰어 주소(`base`)를 그대로 돌려줘서 영상 창에 PACS 첫 화면(모든 환자 목록)이 열렸음. `has_viewer`는 그대로 「뷰어 주소가 설정됐는지」만 뜻함. 안내 문구 키 **`px_noStudy`**.
+  - 판독 목록(`RadiologyReadings`)의 「영상보기」는 원래 `study_instance_uid`가 있을 때만 보임 — 확인함, 바꾸지 않음.
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `wiki/modules/pacs.md`(4절 viewer-url, 7절 P-18, 8절), `wiki/handoff/pacs.md`(이 항목, 절차서 R-2 정리)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 표시 사이에 키 1개
+- **DB 마이그레이션**: 없음
+- **번역 키**: **`px_noStudy`** — ko 「이 영상 검사는 촬영 목록(워크리스트)으로 보내지 않아 연결된 영상이 없습니다. 판독만 쓸 수 있습니다.」 / en 「This imaging order was not sent to the device worklist, so no images are linked to it. You can still write the reading.」 / fr 「Cette demande d'imagerie n'a pas été envoyée à la liste de travail des appareils : aucune image n'y est liée. Le compte-rendu peut quand même être saisi.」
+- **확인한 방법**: `node --check`, 프론트 빌드 통과. 격리 스택 9188(의사 계정): 워크리스트 없는 영상 오더 → `{has_viewer:true, no_study:true, url:""}` · UID 있는 오더 → `no_study:false`, Stone 뷰어 주소 · 아무것도 안 줌 → `no_study:true, url:""` · 뷰어 주소를 비운 설정 → `has_viewer:false, url:""`. 판독 목록(프랑스어)에서 그 오더에는 「Voir image」 없음.
+- **확인 못 한 것**: 진료 영상 창의 새 안내(진료 몫). 그 전까지 진료 영상 창은 `url`이 비면 「뷰어 주소가 설정되지 않았습니다」를 보임 — 문구는 틀리지만 다른 환자 목록은 더 이상 안 열림.
+- **다른 세션에 부탁**: **진료** — 영상 창에서 `r.no_study`(그리고 `has_viewer`가 참)면 `t.px_noStudy`를 보이기 (총괄 전달함)
+
 ## 2026-09-29 — 결정 세션용 의견: 38-③ 「영상 오더도 같은 방식으로 취소」
 
 - **상태**: 보류 — 의견만(코드 변경 없음), 결정 세션이 실장님께 여쭐 것
@@ -296,7 +310,7 @@ docker compose up -d --build
 | # | 무엇 | 어떻게 | 적을 것 |
 |---|---|---|---|
 | R-1 | **P-9 뷰어가 로그인을 묻는지** | EMR 설정 **Flux d'ordres → PACS 웹/뷰어 주소**가 `http://localhost:9090`(또는 서버 IP)인지 본 뒤, 진료 화면에서 아무 영상 오더의 **🖼** → 영상 창 왼쪽에 ① 브라우저 로그인 창이 뜨는지 ② 빈/오류 화면인지 ③ Stone 뷰어가 바로 뜨는지. 로그인 창이 뜨면 **값은 넣지 말고** 뜬다는 것만 기록. 같은 브라우저로 `http://localhost:9090` 을 따로 열었을 때도 같은지 | ①②③ 중 무엇, 브라우저 종류 |
-| R-2 | P-18 UID 없는 영상 오더 | 워크리스트로 안 가는 영상 오더가 있으면(설정의 오더 코드에서 워크리스트 꺼진 것) 그 오더의 **🖼** — 뷰어 첫 화면(모든 환자 목록)이 뜨는지 | 뜸/안 뜸 |
+| R-2 | ~~P-18 UID 없는 영상 오더~~ | **2026-09-29에 고침 — 확인 불필요** (진료 영상 창이 `no_study` 안내를 보이는지만 한 번 보면 됨) | — |
 | R-3 | 서버 상태 창의 PACS 줄 | `server-status.bat` 창(설정 세션이 호스트 쪽 9090·4242 검사를 넣음)에서 **Imagerie (PACS)**·**Liste de travail des appareils** 가 초록인지 | 초록/빨강 + 문구 |
 | R-4 | 연결 시험 버튼 | EMR **Paramètres → Flux d'ordres → Tester PACS (DICOM)** — Host가 `host.docker.internal` 또는 서버 LAN IP일 때 초록인지(`localhost`면 빨강이 정상) | Host 값, 결과 |
 | R-5 | 진짜 Orthanc 응답 형식 | ⑤-5 결과 그대로 | 7줄 출력 |

@@ -626,5 +626,6 @@ export default {
   px_cancelReason: "이유",
   px_cancelledViewer: "취소된 오더의 영상입니다. 기록으로 남아 있고, 판독은 더 쓸 수 없습니다.",
   px_readingOnCancelled: "이 영상 검사는 진료실에서 취소되어 판독을 저장할 수 없습니다.",
+  px_noStudy: "이 영상 검사는 촬영 목록(워크리스트)으로 보내지 않아 연결된 영상이 없습니다. 판독만 쓸 수 있습니다.",
   // ── end pacs ──
 };

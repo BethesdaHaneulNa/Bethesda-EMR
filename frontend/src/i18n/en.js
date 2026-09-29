@@ -635,5 +635,6 @@ export default {
   px_cancelReason: "Reason",
   px_cancelledViewer: "These images belong to a cancelled order. They are kept as a record; no new reading can be saved.",
   px_readingOnCancelled: "This imaging order was cancelled in the consultation room, so the reading cannot be saved.",
+  px_noStudy: "This imaging order was not sent to the device worklist, so no images are linked to it. You can still write the reading.",
   // ── end pacs ──
 };

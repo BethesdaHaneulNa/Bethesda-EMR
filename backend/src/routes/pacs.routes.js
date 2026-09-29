@@ -128,10 +128,15 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
     } else if (req.query.study) { study = req.query.study; }
-    const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : base;
+    // No study to show (an imaging order that never went to the worklist): no URL
+    // at all. Falling back to `base` opened the viewer's front page -- the list of
+    // every patient in the PACS -- inside one patient's chart (P-18). has_viewer
+    // still says whether a viewer address is set, so the screen can tell "no
+    // viewer configured" from "nothing to show for this order".
+    const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : '';
     // A cancelled order's images stay viewable: they are part of the record.
     res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
-               order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
+               no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
