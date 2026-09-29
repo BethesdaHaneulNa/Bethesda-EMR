@@ -1,6 +1,6 @@
 # 통계 (Statistics)
 
-> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 처음 찾은 문제 17건 + 18 처리 · **19(포장 단위 약 표시) 새로 — 일부 결정 필요** · 8 의 「금고 칸」 보류
+> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 1~18 처리 · 19 (가)(나) 고침, **(다) 합계 줄은 결정 대기** · 8 의 「금고 칸」 보류
 
 ## 1. 이 모듈이 하는 일
 
@@ -70,6 +70,8 @@
    - **Toutes Rx** — 의사가 **처방한 날**(내원일) 기준, 처방한 수량 그대로. 「의사가 무엇을 얼마나 처방했나」.
    - **Dispensé** — 약국이 **약을 내준 날** 기준, **병원 약국의 약만**(원외 처방은 빠짐), 알약 단위로 올림(2.5정 → 3정). **약국 화면의 월말 재고 보고서 「출고」와 같은 숫자**입니다. 그래서 Dispensé 에서 **Externe (원외)** 를 누르면 비어 있습니다.
 4. 표는 약품별 수량이고, 많이 쓴 약이 위에 옵니다. 맨 아래 **Total** 줄이 기간별 합계입니다.
+   - 약 이름 옆에 노란 글씨 **Flacon · Tube · Inhalateur · Unité (병 · 튜브 · 흡입기 · 개)** 가 붙은 줄은 **병·개 수**입니다(시럽·흡입기·연고처럼 병째 주는 약). 붙지 않은 줄은 알약 등 먹는 양의 수입니다. 같은 약이 두 줄로 나오면 한 줄은 예전 방식(먹는 양), 한 줄은 병 수입니다.
+   - 주의: 맨 아래 Total 은 지금 알약 수와 병 수를 **그냥 더한 값**입니다(이 줄을 어떻게 할지 결정 대기, 7절 19).
 5. **⬇ CSV** 를 누르면 표를 엑셀에서 열 수 있는 파일로 내려받습니다.
 
 > 이 표의 기간은 맨 위의 기간 선택과 **따로** 고릅니다(맨 위의 「이번 달」로 월별 표를 만들면 한 칸뿐이라). 날짜는 처방한 날(내원일) 기준입니다. 취소된 접수의 처방은 세지 않습니다 — 단 약국에서 이미 내준 약은 셉니다.
@@ -203,6 +205,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 - **두 모드는 기준이 다름**(결정 18, 2026-09-29, `stats.routes.js:398-406`):
   - **처방전체**(기본): `rx.status <> 'cancelled'`, 날짜 = `visit.visit_date`, 수량 = `total_qty` 그대로, 처방 줄의 `drug_code`·`drug_name` 으로 묶음(`drug_id` 없는 자유 입력 약도 셈). `dispense_type` 필터로 원내·원외.
   - **조제완료**(`status=dispensed`): `rx.status = 'dispensed'`, 날짜 = `rx.dispensed_at::date`(병원 시간), 수량 = `CEIL(total_qty)`, `drug_id` 있고 원외가 아닌 줄만, 약 기록(`drug.code`·`drug.name`)으로 묶음 — **약국 재고 보고서의 「출고」와 같은 규칙**(조제 때 `Math.ceil(total_qty)` 만큼 `stock_movement` 에 `dispense` 로 기록). 원외 처방도 조제 단추를 누르면 `dispensed` 가 되지만 나간 것은 종이뿐이라 뺌 → 「원외」 필터 + 조제완료 는 늘 빈 표.
+  - **포장 단위 줄**(마이그레이션 025, 결정 19 (가)(나)): 처방 줄의 `pack_unit`·`pack_label` 로 한 번 더 나눠 묶습니다(`GROUP BY` 5번째 칸, JS 키 `drug_code|drug_name|pack_label`). 약마다 `pack_label`(`bottle`·`tube`·`inhaler`·`unit`, 보통 줄은 `null`)을 돌려주고, 화면은 약 이름 옆에 약국의 단위 글자(`ph_pack_*`)를 붙입니다. 이 표시는 처방할 때 줄마다 복사되므로(약국 설계), 나중에 약을 포장 단위로 바꿔도 옛 줄은 옛 뜻 그대로 따로 남습니다. CSV 에 `unit` 칸. 약국 재고 보고서는 약마다 한 줄이라, 그 약의 통계 줄들을 더하면 재고 「출고」와 같습니다(격리: 5 + 2 = 7).
   - 응답에 `basis: 'prescribed' | 'dispensed'`. 화면은 표 머리 아래에 기준을 한 줄로(`st_rxBasisAll` / `st_rxBasisDispensed`).
   - 조제 기록(`stock_movement.created_at`, `clock_timestamp()`)과 `dispensed_at`(`NOW()`)은 같은 트랜잭션이라 자정을 사이에 두고 갈릴 일은 사실상 없음. 재고 기록(마이그레이션 021) 전에 조제된 처방도 `dispensed_at` 이 있으면 조제완료에 셈 — 그 달은 재고 보고서가 비어 있으므로 두 화면이 다를 수 있음.
 - **취소된 접수의 처방**(결정 12, C): 조건 `(v.status <> 'cancelled' OR rx.status = 'dispensed')`(396) — 처방전체에서는 빼되, 약국이 이미 내준 약은 선반을 떠났으므로 두 모드 모두에서 셉니다. 조제완료 ⊆ 처방전체가 유지됩니다.
@@ -253,10 +256,10 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 |---|---|---|---|
 | **차트번호가 해마다 1번부터** (접수 ⑱ — `27-00001` 부터) | 없음 — 환자는 `patient.id` 로 셈(고유 환자 `COUNT(DISTINCT patient_id)`, 미수 명단 `GROUP BY patient_id`). `chart_no` 는 미수 명단에 **보여 주기만** 함 | **없음.** 번호 앞에 해(`YY-`)가 붙어 해가 달라도 글자가 겹치지 않음(`generate_chart_no()`). 명단은 금액순이라 번호순 정렬도 없음 | `stats.routes.js` `/outstanding`, `001_schema.sql` `generate_chart_no` |
 | **검사·처치 청구 = 일총투여 × 일수** (진료 · 수납) | 없음 — 통계는 `order_item` 을 읽지 않고 매출은 영수(`billing.procedure_total`, `billing_item`)에서만 | **없음.** 영수에 적힌 금액이 달라질 뿐 통계 계산은 그대로. 항목별 매출의 검사/처치료 = `procedure_total` − 서류 도 그대로 | `grep order_item stats.routes.js` → 0 |
-| **포장 단위 약** (약국 H2-B, 마이그레이션 025 — 시럽·흡입기·안약·연고는 `total_qty` 가 **병·개 수**) | 약품 사용통계가 `total_qty` 를 약마다 더하고, 표 머리 「총 사용」과 맨 아래 합계 줄은 **약을 가로질러** 더함 | **있음 — 문제 19.** 약 한 줄 안에서는 맞지만(그 약은 병 수), 단위가 표에 안 나와 「2」가 2정인지 2병인지 모름. 합계는 알약 30 + 병 2 = 32 처럼 **다른 단위를 더함**. 같은 약이 나중에 포장 단위로 바뀌면 옛 줄(정)과 새 줄(병)이 한 줄로 합쳐짐(처방 줄마다 `pack_unit`·`pack_label` 이 복사되어 남으므로 나눌 수 있음) | 격리: 시럽(PCM250)을 병 단위로 두고 2병 처방 → 표 「PCM250 2」, 조제완료 합계 32 = 알약 30 + 병 2 |
+| **포장 단위 약** (약국 H2-B, 마이그레이션 025 — 시럽·흡입기·안약·연고는 `total_qty` 가 **병·개 수**) | 약품 사용통계가 `total_qty` 를 약마다 더하고, 표 머리 「총 사용」과 맨 아래 합계 줄은 **약을 가로질러** 더함 | **있음 — 문제 19** ((가) 단위 표시·(나) 줄 나누기는 2026-09-29 고침, (다) 합계 줄은 결정 대기). 약 한 줄 안에서는 맞지만(그 약은 병 수), 단위가 표에 안 나와 「2」가 2정인지 2병인지 모름. 합계는 알약 30 + 병 2 = 32 처럼 **다른 단위를 더함**. 같은 약이 나중에 포장 단위로 바뀌면 옛 줄(정)과 새 줄(병)이 한 줄로 합쳐짐(처방 줄마다 `pack_unit`·`pack_label` 이 복사되어 남으므로 나눌 수 있음) | 격리: 시럽(PCM250)을 병 단위로 두고 2병 처방 → 표 「PCM250 2」, 조제완료 합계 32 = 알약 30 + 병 2 |
 | **접수 작업일자** (접수 ⑩ — 지난 날짜의 접수를 보고 정리 · 새 접수는 오늘만) | 내원 수는 `visit_date` 로 그날에 붙고, 상태는 **지금** 상태로 셈 | **의도된 동작**: 지난 날의 접수를 나중에 취소하면 그날의 총 내원이 줄고 취소가 늘며, 나중에 완료하면 그날의 「진행 중」이 「완료」로 옮겨 갑니다. 통계는 「그날 온 사람들이 지금 어떤 상태인가」를 보여 주므로, 정리한 뒤 다시 보면 그날 숫자가 바뀌는 것이 맞습니다. 매출은 영수 날짜라, 지난 접수를 오늘 수납하면 **내원은 그날, 매출은 오늘**에 잡힘 | 3.2 운영 현황 · 3.4 |
 
-참고: 포장 단위 줄의 복사(진료 `consult.routes.js` 가 처방을 쓸 때 `drug.pack_unit`·`pack_label` 을 처방 줄에 복사)는 약국 인계 노트에는 적혀 있지만 2026-09-29 `develop`(`2a76b5f`)의 `consult.routes.js` 에는 아직 없음 — 격리에서 포장 단위로 표시한 약을 처방하니 `pack_unit=false`, 총량 5(1 × 5일)로 저장됨. 위 격리 결과는 처방 줄을 SQL 로 포장 단위(2병)로 바꿔서 본 것.
+참고(2026-09-29 총괄 확인): 포장 단위 줄의 복사(진료 `consult.routes.js` 가 처방을 쓸 때 `drug.pack_unit`·`pack_label` 을 처방 줄에 복사)는 약국 인계 노트에는 적혀 있지만 2026-09-29 `develop`(`2a76b5f`)의 `consult.routes.js` 에는 아직 없음 — 격리에서 포장 단위로 표시한 약을 처방하니 `pack_unit=false`, 총량 5(1 × 5일)로 저장됨. 위 격리 결과와 19 (가)(나) 시험은 처방 줄을 SQL 로 포장 단위(2병)로 바꿔서 본 것 — 진료 세션이 복사를 넣으면(영상 오더 취소 다음 차례) 실제 처방 줄로 다시 확인할 것.
 
 ## 4. 데이터 · API
 
@@ -273,7 +276,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount(진료 영수),settlementCount(미수 수납),billedVisits,avgBilledPerVisit}, voidedCount, outstanding{owed,refund}`. 과·의사 없음은 `code`/`name` 이 `null`. 과·의사별 `paid` 는 3.8 방식. 예전 `revenue.avg` 는 없어짐(`avgBilledPerVisit` 로) |
 | `GET /monthly` | `months` (1~24, 기본 6) | `[{ym, visits, revenue}]` |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
-| `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods, drugs[{drug_code,drug_name,category,total_qty,total_count,by_period}], periodTotals, grandTotal}` — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
+| `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods, drugs[{drug_code,drug_name,category,pack_label,total_qty,total_count,by_period}], periodTotals, grandTotal}` — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
 
 ### 공용 부품
 
@@ -332,7 +335,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 16 | ~~낮음~~ **고침** (총괄 승인) | **미수 명단의 언제부터(Depuis)가 빚이 생긴 날이 아니었음.** 미수 수납(M2)을 일부만 받거나 이월된 뒤에는 남은 빚이 받은 날짜의 새 영수에 있어 그 날로 보였음. 이제 3.8 의 조각으로 「아직 못 받은 진료 중 가장 오래된 진료일」 (2026-09-29, 5차 시험) | `stats.routes.js:337-352` |
 | 17 | ~~낮음~~ **고침** (총괄 판단, 실장님께는 결정 세션이 알림) | **총 내원 ≠ 초진 + 재진이었음.** 「진료비 없음」과 옛 응급·의뢰가 `other_visits` 로 세졌지만 화면 칸이 없었음 → 재진 옆에 「진료비 없음·기타 / Sans frais / autres / No fee / other」 칸 (2026-09-29) | `Stats.jsx` 운영 현황 카드, `st_otherVisits` |
 | 18 | ~~낮음~~ **고침** (총괄 결정) | **약품 사용통계 「조제완료」와 약국 재고 보고서 「출고」가 같은 달에도 달랐음.** 조제완료를 재고와 같은 기준(내준 날 `dispensed_at` · 원내 · `drug_id` 있는 것 · 올림)으로. 처방전체는 처방(내원일) 기준 그대로. 화면에 기준 한 줄 (2026-09-29, 3.6) | `stats.routes.js:398-428`, `Stats.jsx:278` |
-| 19 | 낮음 (새로 — (가)(나)는 결정 없이 가능, (다)는 결정 필요) | **포장 단위 약이 약품 사용통계에서 알약과 섞임.** (가) 약 이름 옆에 단위가 없어 「2」가 2정인지 2병인지 모름 → 포장 단위 줄이면 「병 · 튜브 · 흡입기 · 개 / flacon · tube · inhalateur · unité」 표시. (나) 같은 약의 옛 줄(정)과 새 줄(병)이 한 줄로 합쳐짐 → 처방 줄의 `pack_unit`·`pack_label` 로 나눠 묶기. (다) 약을 가로질러 더한 「총 사용」·합계 줄은 단위가 섞여 뜻이 없음(포장 단위 전에도 정 · 캡슐 · 앰플이 섞였음) → A 그대로 / **B 약을 가로지르는 합계를 없애고 품목 수만(세션 추천)** / C 단위별로 나눠 합계. CSV 도 같이(단위 칸, TOTAL 줄) | 3.9, `stats.routes.js` `/drug-usage`, `Stats.jsx` 약품 표 |
+| 19 | 낮음 — (가)(나) **고침**, (다) **결정 대기**(결정 세션) | **포장 단위 약이 약품 사용통계에서 알약과 섞임.** ~~(가) 단위가 안 보임~~ → 약 이름 옆에 「병 · 튜브 · 흡입기 · 개 / Bottle … / Flacon …」. ~~(나) 같은 약의 옛 줄(정)과 새 줄(병)이 합쳐짐~~ → 처방 줄의 `pack_unit`·`pack_label` 로 나눠 묶음 (2026-09-29). **(다)** 약을 가로질러 더한 「총 사용」·합계 줄은 단위가 섞여 뜻이 없음 → A 그대로 / **B 없애고 품목 수만(추천)** / C 단위별 합계 — 답이 올 때까지 그대로 | 3.6, 3.9, `stats.routes.js` `/drug-usage`, `Stats.jsx` 약품 표 |
 
 ## 8. 변경 기록
 
@@ -356,4 +359,5 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 2026-09-29 | 새로 들어온 것 점검(코드 변경 없음): 검사 오더 취소 → 정정으로만 나타남(3.4), 약국 재고 보고서와 기준 차이(3.6, 문제 18 여쭘), 날짜 = `todayLocal()`(3.7) | `9d4ebf8` |
 | 2026-09-29 | 문제 18: 약품 사용통계 「조제완료」를 재고 보고서 「출고」와 같은 기준으로(내준 날 · 원내 · 올림), 기준을 화면에 한 줄로 | `bc3e00a` |
 | 2026-09-29 | 영어 화면 확인 — 개수 단위가 한국어 「건」「명」으로 보이던 것 고침(영어는 단위 없음이 정상) | `1604430` |
-| 2026-09-29 | 3.9 새로: 차트번호 해마다 1번부터 · 검사 수량 × 일수 · 포장 단위 약 · 접수 작업일자가 통계에 닿는지. 문제 19(포장 단위 약 표시) 기록 | (이 커밋) |
+| 2026-09-29 | 3.9 새로: 차트번호 해마다 1번부터 · 검사 수량 × 일수 · 포장 단위 약 · 접수 작업일자가 통계에 닿는지. 문제 19(포장 단위 약 표시) 기록 | `79a4f8d` |
+| 2026-09-29 | 문제 19 (가)(나): 약품 사용통계에서 포장 단위 줄에 단위 표시, 같은 약의 먹는 양 줄과 병 줄을 따로 묶음, CSV 에 unit 칸 | (이 커밋) |

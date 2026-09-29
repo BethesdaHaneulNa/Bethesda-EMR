@@ -418,6 +418,7 @@ router.get('/drug-usage', async (req, res) => {
               ${dispensed ? "COALESCE(NULLIF(d.code,''),'-')" : "COALESCE(NULLIF(rx.drug_code,''),'-')"} AS drug_code,
               ${dispensed ? 'd.name' : 'rx.drug_name'} AS drug_name,
               COALESCE(d.category,'') AS category,
+              CASE WHEN rx.pack_unit THEN COALESCE(rx.pack_label, 'unit') END AS pack_label,
               SUM(${dispensed ? 'CEIL(COALESCE(rx.total_qty,0))' : 'COALESCE(rx.total_qty,0)'})::numeric AS qty,
               COUNT(*)::int AS rx_count
          FROM prescription rx
@@ -425,15 +426,20 @@ router.get('/drug-usage', async (req, res) => {
          JOIN visit v ON v.id = c.visit_id
          LEFT JOIN drug d ON d.id = rx.drug_id
         WHERE ${conds.join(' AND ')}
-        GROUP BY 1, 2, 3, 4`,
+        GROUP BY 1, 2, 3, 4, 5`,
       P
     );
 
     const periods = Array.from(new Set(result.rows.map(r => r.period))).sort();
     const drugMap = {};
     for (const r of result.rows) {
-      const key = r.drug_code + '|' + r.drug_name;
-      if (!drugMap[key]) drugMap[key] = { drug_code: r.drug_code, drug_name: r.drug_name, category: r.category, total_qty: 0, total_count: 0, by_period: {} };
+      // A pack-unit line (a syrup, inhaler, cream... handed out by the bottle or
+      // tube, migration 025) counts bottles, not doses. The flag is copied onto
+      // each prescription line, so a drug switched to pack units later has old
+      // dose lines and new bottle lines: they stay separate rows, each with its
+      // unit, instead of adding tablets to bottles (item 19).
+      const key = r.drug_code + '|' + r.drug_name + '|' + (r.pack_label || '');
+      if (!drugMap[key]) drugMap[key] = { drug_code: r.drug_code, drug_name: r.drug_name, category: r.category, pack_label: r.pack_label || null, total_qty: 0, total_count: 0, by_period: {} };
       const g = drugMap[key];
       g.by_period[r.period] = (g.by_period[r.period] || 0) + Number(r.qty);
       g.total_qty += Number(r.qty);
