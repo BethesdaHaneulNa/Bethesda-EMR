@@ -2,6 +2,14 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — L6 입력 칸, 월말 보고서의 숨긴 약, 시험 약 분리
+
+- **상태**: 확인 요청. develop `353925d` 위에서 작업(rebase). 커밋 `481f242`(시험 약) · `8361494`(보고서) · 이 항목의 커밋(L6).
+- **L6** (`Settings.jsx` 약품 탭 안만, i18n `ph_genericName`·`ph_nameEn`·`ph_minStockHint`): 편집 창에 성분 · 영어 이름 · 최소 재고. 최소 재고는 0 이상 정수(화면에서 내림), 새 약 기본값 10(서버 `COALESCE(…,10)`과 같게). **약품 목록의 빨간색을 「20 미만 고정」에서 「`min_stock` 이하, 0이면 안 칠함」으로** — 약국 Stock 탭(`belowMin`)과 같은 규칙. 삭제한 약 되살리기는 설정 세션 몫으로 남김.
+- **월말 보고서**(`pharmacy.routes.js` `/stock/report`): `is_active = false`인 약은 **그 달에 기록 줄이 있을 때만** 나옴.
+- **시험 약**: 새 `backend/test/pharmacy.testdrugs.mjs`(`ensureTestDrugs`) — `TST-<이름>` 약을 설정 API로 만들고(없으면) 실사로 500에 맞춤. `pharmacy.api.mjs`·`pharmacy.stock.mjs`가 시드 약 대신 이것을 씀. 설정 API(`POST /admin/drugs`)가 바뀌면 이 파일도 봐야 합니다.
+- **확인한 것**(격리 스택 9184, 새 DB): 두 시험 ALL PASS 두 번 — 시드 약 기록은 `opening` 한 줄뿐. 숨긴 시험 약(TST-HIDDEN): 움직인 달 보고서에 있음, 다른 달엔 없음, 활성 약은 그대로. 프랑스어 편집 창: Principe actif · Nom anglais · Stock minimum 저장 → 재고 400은 그대로, Stock 탭 머리글 « Stock minimum 450 — au minimum ou en dessous » 와 목록 빨간색. 한국어 화면 라벨.
+
 ## 2026-09-29 — 105줄 가져오기 마이그레이션 설계(모양만) + 7절 남은 항목 분류
 
 - **상태**: 보류 — 실장님 검토표 답을 기다림. **값을 넣는 마이그레이션 파일은 만들지 않았습니다.** 코드 변경 없음.

@@ -120,8 +120,10 @@
 설정 권한이 있는 계정만 할 수 있습니다. 재고를 넣고 빼는 것은 **📦 Stock** 탭(2.6)에서 합니다.
 
 1. 메뉴의 **Paramètres (설정)** → 왼쪽의 **💊 Médicaments (약품)** 을 누릅니다.
-2. 목록: **Code (코드)** · **Médicament (약품명)** · **Catégorie (분류)** · **Dose** · **Fréq.** · **Jours** · **Voie** · **Prix unitaire (단가)** · **Stock (재고)**. 재고가 20 아래면 빨간색입니다.
+2. 목록: **Code (코드)** · **Médicament (약품명)** · **Catégorie (분류)** · **Dose** · **Fréq.** · **Jours** · **Voie** · **Prix unitaire (단가)** · **Stock (재고)**. 재고가 그 약의 **Stock minimum (최소 재고)** 이하면 빨간색입니다(약국 📦 Stock 탭과 같은 규칙).
 3. 새 약은 **+ Ajouter (+ 추가)**, 고칠 때는 그 줄의 **Modifier (수정)**. 칸을 채우고 저장합니다. **Dose · Fréq. · Jours · Voie** 는 의사가 처방할 때 처음 들어가는 값입니다.
+   - **Principe actif (성분)** · **Nom anglais (영어 이름)**: 약국 📦 Stock 탭 검색이 성분으로도 찾습니다. 비워도 됩니다.
+   - **Stock minimum (최소 재고)**: 재고가 이 수 **이하**가 되면 목록과 📦 Stock 탭에서 빨간색으로 보입니다. **0** 이면 표시하지 않습니다. 새 약은 10으로 시작합니다.
 4. 시럽·흡입기·안약·연고처럼 **병·튜브로 주는 약**이면 **Délivré à l'unité de conditionnement (flacon, tube…) (포장 단위 약)** 을 체크하고 단위(**Flacon 병 · Tube 튜브 · Inhalateur 흡입기 · Unité 개**)를 고릅니다. 그러면 의사가 처방할 때 병·개 수를 직접 적습니다. 이런 약의 **Prix unitaire** 는 **병·튜브 하나의 값**으로 넣으세요. 목록에는 이름 옆에 단위가 작게 붙습니다.
 5. **Supprimer (삭제)** → « Supprimer ? » (삭제할까요?) 에서 **OK** 를 누르면 목록에서 감춰집니다. 되살리는 화면은 없으니 신중히 누르세요.
 
@@ -259,6 +261,7 @@
 - **의사**는 API로는 재고를 만질 수 있지만 약국 화면(`/pharmacy`)에 들어가려면 계정에 **약국 권한도** 있어야 합니다(결정: 진료 화면에 재고 창을 만들지 않음). 의사 계정 기본 권한에 약국을 넣을지는 결정 대기.
 - 화면(② 입고·실사·폐기, ③ 월말 보고서)은 다음 단계입니다.
 - **시험**: `node backend/test/pharmacy.stock.mjs`(격리 스택 전용). 권한(간호사·의사 가능, 창구·통계 전용 불가, 의사는 조제 목록 403) · 입고/실사(0 포함)/폐기(많으면 409, 사유 없으면 400) · 부족분 · **조제 10건 + 입고 10건 동시**(재고 220 정확, 가짜 「밖 변경」 줄 0) · 설정 화면 변경 뒤 이어 쓰기 · **모든 약의 기록 사슬이 끊김 없이 `stock_qty`로 끝남**.
+  - 두 시험(`pharmacy.api.mjs`·`pharmacy.stock.mjs`)은 **자기 시험 약**을 씁니다(`pharmacy.testdrugs.mjs` `ensureTestDrugs`): 코드 `TST-<이름>`, 없으면 설정 API로 만들고, 돌 때마다 실사로 500에 맞춘 뒤 시작합니다. 시드 예시 약(ZINC·PCM500…)은 실제 약 목록을 들여오면 숨길 것이라 건드리지 않습니다 — 시험 뒤 시드 약의 기록은 `opening` 한 줄뿐입니다.
 
 ### 3.9 재고 화면 — 약국의 「Stock」 탭 (재고 2번 ②)
 
@@ -275,6 +278,7 @@
   - 월초 = 그 달 1일 0시 **전** 마지막 기록(**id 순**)의 `stock_after`. 월말 = 다음 달 1일 0시 전 마지막 기록의 `stock_after`. 사이의 종류별 합: 입고 · 조제 출고(나간 양) · 장부 부족(`shortfall`) · 실사 조정(부호 있음) · 폐기.
   - `월초 + 입고 − 조제 출고 + 장부 부족 ± 조정 − 폐기 = 월말` — 기록 줄마다 `CHECK`로 보장되므로 늘 맞아야 하고, 확인용으로 `ok`를 돌려줍니다.
   - 그 달 안에 기록이 시작된 약은 `opening` 줄을 월초로 쓰고 `started_on`을 붙입니다. 그 달 말까지 기록이 없는 약은 빠지므로, **기록 시작 전 달은 비어 있습니다.**
+  - **설정에서 숨긴 약**(`is_active = false`)은 **그 달에 기록이 있을 때만** 나옵니다(2026-09-29 결정). 숨기기 전 달의 입출고는 그 달 보고서에 남고, 숨긴 뒤 움직임 없는 달에는 빠집니다. 실제 약 목록을 들여오며 시드 예시 약을 숨겨도 보고서가 어지럽지 않게 하려는 것입니다.
   - 날짜 경계는 **병원 시간 자정**입니다. 서버 연결이 병원 시간대로 고정되어 있어야 합니다(`config/database.js` `options: -c TimeZone`, 총괄 `03f68c7` 무렵 — 전에는 운영 DB의 기본값이 UTC라 새벽 0~3시가 전날로 잡혔음). 기록 시각은 `clock_timestamp()`로 넣어 id 순서와 같게 둡니다(3.8절).
 - 화면: 「Stock」 탭 목록 위 **📊 월말 재고 보고서** → 오른쪽에 달 고르기(이번 달까지), 표, **⬇ CSV**. CSV는 **화면에서** 만듭니다(칸 이름을 화면 언어로 쓰려고). UTF-8 BOM + CRLF라 엑셀에서 한글·악센트가 깨지지 않습니다.
 - 통계 화면에 둘지는 나중(통계 세션이 같은 API를 부르면 됨).
@@ -336,14 +340,14 @@
 |---|---|---|
 | `id` | serial | |
 | `code` | varchar(20) UNIQUE NOT NULL | 약 코드. 처방·원외 처방전·재처방 경고가 이 코드로 같은 약을 찾습니다 |
-| `name` / `name_en` / `generic_name` | varchar(200) | 화면은 `name`만 씁니다. `name_en`, `generic_name`은 설정 화면에 입력 칸이 없음 |
+| `name` / `name_en` / `generic_name` | varchar(200) | 화면에 보이는 이름은 `name`. `generic_name`은 약국 Stock 탭 검색·머리글에 씀. 셋 다 설정 약품 탭에서 입력 |
 | `category` | varchar(50) | 설정 화면 선택지: Antibiotic, Analgesic, Antimalarial, Cardiovascular, GI, Vitamin, Other |
 | `default_dose` | varchar(20) '1.000' | 처방할 때 들어가는 기본 1회량 (문자열) |
 | `default_freq` / `default_days` | integer | 기본 횟수 / 일수 |
 | `default_route` | varchar(10) 'QD' | 기본 「경로」. 실제로는 `TID`·`BID`·`QD` 같은 복용 횟수 코드와 `IV`·`PO`·`INH`가 섞여 있습니다 |
 | `unit_price` | decimal(12,2) | 단가. 처방할 때 처방 줄로 복사됩니다 |
 | `stock_qty` | **integer** | 현재 재고. 조제 완료 때 줄고, 설정 화면에서 숫자를 직접 고칩니다 |
-| `min_stock` | integer 10 | **어디서도 쓰지 않습니다** (설정 화면은 `< 20`을 빨간색으로 고정 표시) |
+| `min_stock` | integer 10 | 이 수 **이하**면 약국 Stock 탭과 설정 약품 목록에서 빨간색. 0이나 비었으면 표시 안 함. 새 약은 서버가 비었을 때 10(`COALESCE`), 화면 기본값도 10 |
 | `is_active` | boolean | 설정의 「삭제」는 `false`로 바꿀 뿐입니다 |
 | `pack_unit` | boolean false | **포장 단위 약**(병·튜브로 줌) — `025_pharmacy_pack_unit.sql` |
 | `pack_label` | varchar(10) | 그 단위: bottle · tube · inhaler · unit (`CHECK`) |
@@ -395,9 +399,9 @@
 
 **설정 → 💊 약품 탭** (`Settings.jsx` `{/* DRUGS */}` 부분과 편집 창의 `editType==='drug'` 부분, 약국 세션이 고칠 수 있음). 화면 글자는 3개 국어입니다(한국어 / 프랑스어).
 
-- 목록: 코드 · 약품명 · 분류 · 용량 · 횟수 · 일수 · 용법 · 단가 · 재고 (Code · Médicament · Catégorie · Dose · Fréq. · Jours · Posologie · Prix unitaire · Stock). 재고가 20 미만이면 빨간색. 검색 칸은 이름·코드.
-- **+ 추가** (+ Ajouter) / **수정** (Modifier): 위와 같은 칸.
-  - 새 약 기본값: 분류 기타(Other), 용량 1.000, 1회, 7일, QD, 단가 0, 재고 0
+- 목록: 코드 · 약품명 · 분류 · 용량 · 횟수 · 일수 · 용법 · 단가 · 재고 (Code · Médicament · Catégorie · Dose · Fréq. · Jours · Posologie · Prix unitaire · Stock). 재고가 **`min_stock` 이하**면 빨간색(`min_stock` 0이면 칠하지 않음 — 약국 Stock 탭 `belowMin`과 같은 규칙. 전에는 20 미만 고정). 검색 칸은 이름·코드.
+- **+ 추가** (+ Ajouter) / **수정** (Modifier): 위 칸 + **성분(`generic_name`) · 영어 이름(`name_en`) · 최소 재고(`min_stock`)** (L6, 2026-09-29 — API는 전부터 받았고 입력 칸만 없었음). 최소 재고는 0 이상 정수만(화면에서 내림), 서버도 정수 검사.
+  - 새 약 기본값: 분류 기타(Other), 용량 1.000, 1회, 7일, QD, 단가 0, 재고 0, 최소 재고 10
   - **분류는 영어 단어로 저장됩니다** — 17가지: Analgesic · Antibiotic · Antihistamine · Antimalarial · Antiparasitic · Cardiovascular · Corticosteroid · Dermatology · Endocrine · GI · Gynecology · Musculoskeletal · Ophthalmic · Respiratory · Urology · Vitamin · Other (`DRUG_CATEGORIES`, `Settings.jsx` 아래쪽). 2026-09-29에 7가지에서 늘렸습니다 — 병원의 실제 약 목록(옛 재고 프로그램 105줄)이 위장관·호흡기·피부 등으로 나뉘어 있어서입니다(대응표: `wiki/reference/drug-import-review.js` `CATEGORY`). 화면에만 번역(`ph_cat_*`)해서 보여줍니다. 시드 데이터와 통계의 분류별 묶음이 이 영어 값을 쓰기 때문입니다. 목록에 없는 값이 DB에 있으면 그대로 보입니다.
 - **삭제** (Supprimer): 실제로는 비활성화. 목록에서 사라지고, 되살리는 화면은 없습니다.
 - 탭 밖의 글자(왼쪽 탭 이름, 편집 창 제목, 삭제 확인)는 설정 세션이 번역했습니다(`se_tabDrugs`, `se_newTitle`, `se_confirmDelete`).
@@ -429,7 +433,7 @@ API — 설정 세션 파일 `admin.routes.js`:
 
 ### 낮음
 
-- **L6. 설정 약품 탭의 빈 곳** — `min_stock`·`name_en`·`generic_name` 입력 칸 없음. 새 약은 `min_stock`이 비어(NULL) 저장됨(`admin.routes.js:75-77`, 기본값 10이 안 들어감). 삭제한 약은 되살릴 수 없고 같은 코드로 새로 등록도 안 됨(`code UNIQUE`).
+- **L6. 설정 약품 탭의 빈 곳** — **일부 해결**: 입력 칸 세 개(`min_stock`·`name_en`·`generic_name`)는 약국이 넣음(2026-09-29, 6절), 비었을 때 10은 설정 세션이 서버에서(`COALESCE`). **남은 것**: 삭제한 약은 되살릴 수 없고 같은 코드로 새로 등록도 안 됨(`code UNIQUE`) — 설정 세션 쪽.
 - **L9. 목록 시각·순서가 진료 기록을 다시 저장하면 바뀝니다** — `consultation.updated_at` 사용(`pharmacy.routes.js:21`, `:59`).
 
 ### 해결됨
@@ -473,6 +477,9 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | 재고 기록 ①: `stock_movement` 표(021), `moveStock`, 조제 자동 기록, 입고·실사·폐기 API, 라우트마다 권한 | `d806e14` (develop `a7c6c7b`) |
 | 2026-09-29 | 재고 기록 ②: 약국 화면 「Stock」 탭(입고·실사·폐기·재고 기록), 직원용 2.6 | `529a8f1` (develop `b795852`) |
 | 2026-09-29 | 재고 기록 ③: 월말 재고 보고서(화면 + CSV) | `d21e1d5` |
+| 2026-09-29 | 시험 스크립트가 자기 시험 약(`TST-`)을 씀 | `481f242` |
+| 2026-09-29 | 월말 보고서: 숨긴 약은 그 달 움직임이 있을 때만 | `8361494` |
+| 2026-09-29 | L6: 약품 탭에 성분·영어 이름·최소 재고 입력, 목록 빨간색을 최소 재고 기준으로 | 이 줄의 커밋 |
 | 2026-09-29 | 설정 약품 탭: 재고 칸 읽기 전용·새 약 0, 「경로」 → 「용법」 | `14ff4be` |
 | 2026-09-29 | H2-B ①: 포장 단위 약 칸(마이그레이션 025), 약품 탭 체크·단위 | `b335836` (develop `ce5d938`) |
 | 2026-09-29 | H2-B ②: 포장 단위 줄 표시(rx-dosing · 약국 화면 · 원외 처방전), 대기·완료 목록에 pack 칸 | (이 커밋) |
