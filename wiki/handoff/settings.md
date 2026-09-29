@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 업데이트 뒤 백업 한 번 더 (총괄 ②, 공용 파일 허락)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`c891715` 위)
+- **한 일**: `update.ps1`·`update.sh`에 5단계 — 새 버전이 켜지고 `/api/health`가 통과한 **뒤에만** `docker exec bethesda-emr-api node src/services/backup-cli.js update`. 건강 확인이 실패하면 이제 종료 코드 1로 멈춤(전에는 노란 글만 내고 0). 백업이 실패하면 업데이트는 끝났다고 알리고 「Settings > Backup에서 Back up now」 안내.
+- **왜 셸 한 줄이 아니라 `backup-cli.js`**: 처음에는 API 컨테이너에서 `pg_dump` 한 줄로 했는데, Alpine에 시간대 자료가 없어 `date`가 UTC(앱 이름은 병원 시각 — 3시간 차이), 호스트 시각을 넘기면 이 PC는 한국 시각이라 또 다름. 앱의 `dumpOnce`를 그대로 쓰면 이름·자리·`gzip -t`·원자적 옮기기·정리가 앱과 같음.
+- **`backup.js` 변경(백업 로직 — 총괄 허락 범위)**: `dumpOnce(trigger, workDir)`와 `clearWorkDir(dir)`에 작업 폴더 인자, `dumpOnce` 내보내기. **서버 경로는 인자 없이 전과 같음.** 이유: CLI는 다른 프로세스라 서버의 `running` 잠금을 못 보고, 같은 작업 폴더를 쓰면 시작할 때의 `clearWorkDir()`가 서버가 쓰는 중인 파일을 지울 수 있음 → CLI는 `/backups/.inprogress-<trigger>`.
+- **바꾼 파일**: `backend/src/services/backup.js` · `backend/src/services/backup-cli.js`(새) · **`update.ps1`·`update.sh`(공용, 허락)** — 단계 표시 /4 → /5, 4단계 실패 시 exit 1, 5단계. `update.ps1`는 CRLF 그대로. · `wiki/modules/settings.md`(3-4, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `sh -n update.sh`, `update.ps1` PowerShell 파서 오류 0. 격리 스택 API에서 CLI → 종료 0, `bethesda_2026-09-29_1353.sql.gz`(병원 시각, 앱이 같은 시각에 만든 이름과 같은 꼴), 두 번 동시에 → 둘 다 0·남은 임시 파일 없음·모든 파일 `gzip -t` 통과, 곧바로 `verify-backup.ps1 -Strict` **VERIFIED**(26 테이블). **업데이트 스크립트 전체는 돌리지 않음** — 실행 중 EMR(`bethesda-emr-*`)을 대상으로 하므로. 5단계 명령 자체만 격리 컨테이너 이름으로 확인.
+- **다음 할 일**: ③ 옛 버전 백업 경고·verify-backup ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
+## 2026-09-29 — 약속처방 편집 창에 포장 단위 약의 병·튜브 수 (총괄 ①, 진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `76457c9` 위)
+- **한 일** (`Settings.jsx` 약속처방 편집 창만): 약 줄의 약이 **지금** 포장 단위 약이면(`drugs` 목록의 `pack_unit` — 설정이 이미 불러 둔 목록) 용량×횟수×일수 대신 **수 칸 + 단위 말**(`ph_pack_*`). 불러올 때 `quantity`를 숫자로(DB는 DECIMAL이라 「3.000」으로 보였음). 저장 전 포장 줄은 1 이상의 정수인지 확인(아니면 `se_errNotWhole` 「Quantité : …」). 보통 약 줄은 전처럼 1.
+- **라우트는 고치지 않음**: `orderset.routes.js`는 진료 세션 소유(위키 5절). 처음에는 항목에 약의 표시를 붙이고 서버에서 수를 검사하게 고쳤다가 되돌렸습니다 — 서버는 여전히 아무 숫자나 받습니다(`it.quantity || 1`). 서버에서도 막고 싶으면 진료 세션 몫.
+- **숨긴 약**은 목록에 없어서 보통 줄로 보입니다(진료 화면은 그런 줄을 넣지 않음).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `backend/test/settings.ordersets.mjs`(새 — 수가 저장·읽힘, 빈 값·0은 1) · `wiki/modules/settings.md`(2.9, 8절)
+- **공용 파일 변경**: i18n `se_setPackQtyHint`.
+- **확인한 방법**: `npm run build`, 격리 스택 `settings.ordersets.mjs` 4개, 화면: 프랑스어 AMOX250(Flacon) 줄에 수 칸 — 2.5로 저장 → 「Erreur: Quantité : saisissez un nombre entier.」, 4로 저장 → 한국어로 다시 열면 「4 병」, 보통 약 줄은 「4.000×2×3」 그대로. 진료 화면에서 세트를 적용해 병 수가 들어가는지는 약국 세션의 끝에서 끝까지 확인에 포함됨(진료 `applySet`의 `pack_qty: it.quantity`).
+- **다음 할 일**: ② 업데이트 뒤 백업 ③ 옛 버전 백업 경고·verify-backup ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
 ## 2026-09-29 — 오더 연동 주소가 옛 포트면 경고 (총괄 요청)
 
 - **상태**: 확인 요청
