@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 프랑스어 설명서 · v1.5.0 변경 내역 초안 (총괄 ①②)
+
+- **상태**: 확인 요청 (문서만)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 합친 뒤)
+- **① `wiki/manual-fr/settings.md`** (관리자용, 규칙 `manual-fr/README.md` 순서): En bref 7단계 · Pas à pas(계정 만들기, 권한, 비활성, **Réactiver**, **자기 비밀번호 — 모든 직원**, 약 가격(**Prix unitaire**), **약속처방 — Dose/j·Fois·Jours·Posologie, 총량 = Dose/j × Jours**, 검사 참고치(**Items de test**, Par sexe et âge), 백업 띠와 **Sauvegarder**·**Télécharger**, **상태 점**, **Journal** 읽기) · Si ce message apparaît 11줄 · À ne pas faire · Qui appeler. 화면 글자는 격리 스택 프랑스어 화면과 `fr.js`에서 그대로 확인. 비밀번호 값은 적지 않음(「un mot de passe initial est déjà rempli」). 약품 탭(약국)·검사 항목 탭(임상병리)은 오늘 바뀌어 `<!-- à revoir -->` 표시.
+- **② `wiki/reference/changelog-1.5.0/settings.md`** (영어, v1.4.0 목소리): 약속처방 용량 · 자기 비밀번호·다시 활성·간호사 역할·설치 아이디 · 변경 기록(Journal)·TRUNCATE · 백업(동시 실행, 최근 7개, 색 띠, 옛 버전 백업, 업데이트 뒤 백업, 정리 스크립트) · 상태 점·상태 창 · Smaller. 마이그레이션 020·022(총괄)·026. **After updating**: 백업+verify-backup -Strict, 오더 연동 주소(9080·9090), 기존 의사 계정의 Pharmacie 체크, clean-test-data는 새 PC에서만(KEEP-TEST-DATA.txt 옮기지 말 것).
+- **디자인 세션이 색을 바꾸기 전 설정 탭에서 더 고칠 만한 것** (총괄에 목록으로 보고, 아직 손대지 않음):
+  1. 직원 편집 창 제목이 「Nouvel élément / 새 항목」(모든 편집 창 공용) — 「Nouveau membre du personnel」처럼 탭마다. 이메일 칸이 API에는 있는데 창에 없음.
+  2. 직원 목록에서 비활성 계정이 이름순으로 섞임 — 활성 먼저, 비활성은 아래(또는 「비활성 보기」).
+  3. 진료 `7e17a6d`의 약속처방 400 문구(`items[i].…`)가 `seMessage` 표에 없음 — 편집 창이 먼저 막아 보통 안 보이지만, 진료 세션이 문구 목록을 주면 번역 추가.
+  4. (PACS 몫) 오더 연동 탭의 저장 오류가 `err.message` 그대로(번역 안 됨) — `seMessage`를 쓰면 됨.
+- **바꾼 파일**: `wiki/manual-fr/settings.md`(새) · `wiki/reference/changelog-1.5.0/settings.md`(새)
+
 ## 2026-09-29 — 약국 가져오기(034) 뒤 다시 확인 (코드 변경 없음)
 
 - **상태**: 보고
