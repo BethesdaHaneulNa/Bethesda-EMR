@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 상태 창 포트 검사 · 백업 검사 스크립트 (총괄 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`develop` `5e0e056`을 ff로 당긴 뒤)
+- **한 일**:
+  1. **`server-status.ps1` 호스트 포트 검사 (B11)**: `bethesda-emr-web`·`bethesda-pacs`가 게시하도록 설정된 포트(Docker `HostConfig.PortBindings`에서 읽음 — 9080·9090·4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨 / INACCESSIBLE」로, 옆 칸에 「4242 포트를 Windows가 막음」(예약 구간 안) 또는 「9090 포트 닫힘」, 아래 안내는 「Windows가 포트를 막고 있습니다… DEPLOYMENT.md의 Windows 절」. `netsh … excludedportrange`는 막힌 포트가 있을 때만 부르고, 숫자 쌍만 읽어 언어와 무관.
+  2. **상태 창 배치 버그 (B12, 원래부터 있던 것)**: 실제 화면을 캡처해 보니 맨 위 색 띠가 **첫 두 줄(환자 기록 DB·앱 서버)을 덮고 있었습니다** — DB가 멈춰도 「PROBLEME」만 보이고 어느 줄인지 안 보이는 상태. 도킹 순서(`$rows.BringToFront()`)와 남는 높이(빈 마지막 줄)로 고침.
+  3. **`verify-backup.ps1`·`.sh` (B4·B5)**: 백업 위치를 Docker의 `/backups` 마운트에서 찾음. `-DbContainer`/`-ApiContainer`/`-BackupDir`(`.sh`는 환경변수) 추가. **B5를 격리 스택에서 먼저 재현**(백업 뒤 상용구 1개 추가 → 옛 스크립트 「VERIFY FAILED - Do not rely on it」 + 「id가 충돌한다」)한 뒤, 판정을 둘로 나눔: 구조(테이블 누락·스키마) 차이는 실패(업데이트로 마이그레이션이 늘었으면 [info]), 데이터 차이는 [info] — `-Strict`/`--strict`에서만 실패. 멈춘 DB 컨테이너를 「돌고 있음」으로 보던 것도 고침.
+- **바꾼 파일**: `server-status.ps1` · `verify-backup.ps1` · `verify-backup.sh` · `wiki/modules/settings.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음 (스크립트 안의 fr·en·ko 문자열만)
+- **확인한 방법**:
+  - `server-status.ps1`: 파서 오류 0, BOM 유지. 이 PC의 **실행 중 EMR을 읽기만** 해서 `-Console -Lang fr/ko` → PACS 줄 down 「port 4242 bloque par Windows, port 9090 ferme」, 종료 코드 2. **이 PC에서 실제로 PACS 4242·9090이 막혀 있습니다** (`bethesda-pacs` Up healthy, 동적 포트 범위가 1024부터, 4242가 예약 구간 4204–4303 안). 창 모드는 스크래치 복사본으로 띄워 `CopyFromScreen` 캡처 → 고치기 전 띠가 두 줄을 가림, 고친 뒤 7줄 모두 보임 (fr·ko).
+  - `verify-backup.ps1`: ASCII만, 파서 오류 0. 격리 스택 9187(`-DbContainer bethesda-s-settings-db`)에서 — 백업 뒤 변경 → VERIFIED + [info] / `-Strict` → 실패 「phrase_dictionary: live 26 rows, backup 25」 / 새 백업 직후 `-Strict` → 「identical」 / 절반 잘린 파일 → 「damaged」 exit 1, 임시 DB 0개(`exit`해도 `finally` 실행) / 옛 백업 → 비교 생략. `BACKUP_PATH`(임시 폴더)를 스스로 찾음.
+  - `verify-backup.sh`: `sh -n` 통과, Git Bash로 같은 격리 스택에서 기본·`--strict` 확인.
+- **확인 못 한 것**: 실제 Linux·NAS(busybox)에서 `.sh`는 돌려 보지 않았습니다(Git Bash만). 업데이트 뒤(마이그레이션 수 차이) 경로는 만들어 보지 않았습니다. 상태 창을 15초 주기로 오래 띄워 두는 것은 보지 않았습니다.
+- **위키**: `modules/settings.md` 2-9·2-10(새)·3-5·3-6·7절(B4·B5 고침, B11·B12 추가)·8절
+- **총괄 확인 요청**:
+  - **이 PC의 PACS가 지금 밖에서 접속되지 않습니다** (4242·9090). PACS 세션 P-1과 같은 원인으로 보입니다. `DEPLOYMENT.md`의 `netsh int ipv4 set dynamicport …`은 관리자 권한·재부팅이 필요한 시스템 설정이라 이 세션은 건드리지 않았습니다 — 실장님께 전달 부탁드립니다.
+  - `verify-backup`의 판정 기준이 바뀌었습니다 (데이터 차이는 기본적으로 실패가 아님). `DEPLOYMENT.md` 「Check a backup before you need it」 절에 `-Strict` 한 줄을 넣으면 좋겠습니다 (총괄 소유).
+- **다른 세션에 부탁**: **PACS** — 상태 창이 이제 호스트 포트를 봅니다. `pacs.md`의 P-1 표(「EMR 상태 화면의 PACS 검사만 잡아냄」)에 서버 상태 창도 추가해 주세요.
+- **남은 일**: U1(설정 화면 영어 고정 글자), H4 제안, U9, S2 권한표 초안 — 이어서 합니다.
+
 ## 2026-09-29 — 백업 안전장치 (동시 실행 · 최소 보관 · 실패 표시 · 시각)
 
 > **총괄 확인 (2026-09-29)**: 합침(`1ca4b79`) + 실행 중 EMR 반영. 확인: `/backup/status`에 `state: ok` · `minKeep 7` · 백업 16개 · 최근 9시간 전, 서버 로그 「keep 30d (never fewer than 7)」, 백업 탭 초록 띠(화면). 요청: `.inprogress` 폴더는 위키·이 노트에 기록됨 · B10 `DEPLOYMENT.md` 5b에 PowerShell/cmd 한 줄 넣음 · 이미지 이름표는 `657ba2c`로 해결 · 16:49 재생성은 총괄 배포(`7ad4387`)가 맞음. S1·S2·U9·B9는 다음 차례.
