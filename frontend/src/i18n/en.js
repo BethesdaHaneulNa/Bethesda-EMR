@@ -366,6 +366,7 @@ export default {
   ph_perDoseCheck: "⚠ Check with doctor (not whole or half tablets)",
   ph_noTotal: "⚠ No total",
   ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
+  ph_legacyTotal: "Old calculation (dose×times×days)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",

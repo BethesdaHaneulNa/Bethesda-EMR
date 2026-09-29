@@ -16,6 +16,19 @@ export function storedTotal(rx) {
   return isFinite(q) ? q : null;
 }
 
+// A total saved before the switch to daily totals was dose x frequency x days, so
+// read now it disagrees with its own line ("1 × 3 a day, 5 days (total 45)").
+// Same test as the consultation screen: stored total != daily total x days, to
+// three decimals. Such lines are left as saved (they were billed and dispensed on
+// that figure) and only labelled.
+export function isLegacyTotal(rx) {
+  var total = storedTotal(rx);
+  var daily = parseFloat(rx && rx.dose);
+  var days = parseInt(rx && rx.days, 10);
+  if (total === null || !(daily > 0) || !(days > 0)) return false;
+  return Math.round(total * 1000) !== Math.round(daily * days * 1000);
+}
+
 // One intake = daily total / times a day. "clean" when it comes out in whole or half
 // tablets; anything else (2 a day in 3 intakes) is shown but flagged for the doctor.
 export function perDose(rx) {

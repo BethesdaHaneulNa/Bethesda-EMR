@@ -357,6 +357,7 @@ export default {
   ph_perDoseCheck: "⚠ À vérifier avec le médecin (pas en demi-comprimés)",
   ph_noTotal: "⚠ Quantité totale absente",
   ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
+  ph_legacyTotal: "Ancien calcul (dose×fois×jours)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",

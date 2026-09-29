@@ -5,7 +5,7 @@ import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
-import { storedTotal, perDose, fmtAmount } from '../documents/rx-dosing.js';
+import { storedTotal, perDose, fmtAmount, isLegacyTotal } from '../documents/rx-dosing.js';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
@@ -302,7 +302,10 @@ export default function PharmacyPage() {
                     <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color: total === null ? '#fca5a5' : t2, fontWeight: total === null ? 800 : 400 }}>{total === null ? t.ph_noTotal : fmtAmount(total)}</div>
+                    <div style={{ padding:'10px', color: total === null ? '#fca5a5' : t2, fontWeight: total === null ? 800 : 400 }}>
+                      {total === null ? t.ph_noTotal : fmtAmount(total)}
+                      {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'#fbbf24', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
                   </div>;
                 })}

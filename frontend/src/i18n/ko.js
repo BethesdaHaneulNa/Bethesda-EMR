@@ -357,6 +357,7 @@ export default {
   ph_perDoseCheck: "⚠ 의사 확인 (반 알 단위로 안 나눠짐)",
   ph_noTotal: "⚠ 총량 없음",
   ph_noTotalConfirm: "총량이 비어 있는 약이 있습니다. 이 약은 재고에서 빠지지 않습니다. 의사에게 확인하세요:",
+  ph_legacyTotal: "예전 계산 (용량×횟수×일수)",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
