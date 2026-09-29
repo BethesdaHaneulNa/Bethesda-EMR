@@ -1,0 +1,86 @@
+// The small status dot in the top bar (U3, decided 2026-09-29): green / yellow / red from
+// GET /api/system/status (status.routes.js), shown only to accounts with the settings
+// permission (TopBar.jsx decides). Click -> the list of checks in words.
+//
+// It must never hold the top bar up: the request has a time limit, and a failed or slow
+// answer is a grey dot, not an error. It asks when the screen opens, every five minutes
+// while the window is visible, and when the window becomes visible again - the same beat
+// as TopBar's /auth/me sync. "off" (not set up here, e.g. no image backup) is grey and
+// does not count as a warning; the server's `overall` already ranks it with ok.
+import { useState, useEffect } from 'react';
+
+var TIMEOUT_MS = 8000;
+var COLORS = { ok: '#22c55e', warn: '#eab308', down: '#ef4444', off: '#64748b', none: '#64748b' };
+
+// 'status.backup.oldVersion' -> 'se_sys_backup_oldVersion'
+function msgKey(message) { return 'se_sys_' + String(message || '').replace(/^status\./, '').replace(/\./g, '_'); }
+
+// The message in words, with {name} filled from the check's values. Two values are lists.
+export function statusText(t, s) {
+  var v = Object.assign({}, s.values || {});
+  if (Array.isArray(v.missing)) v.missing = v.missing.length;
+  if (Array.isArray(v.old)) v.old = v.old.map(function (o) { return o.port + ' → ' + o.use; }).join(', ');
+  var text = t[msgKey(s.message)] || s.message;
+  return String(text).replace(/\{(\w+)\}/g, function (m, k) { return v[k] == null ? '' : String(v[k]); });
+}
+
+export function StatusDot(props) {
+  var t = props.t;
+  var dS = useState(null), data = dS[0], setData = dS[1];
+  var fS = useState(false), failed = fS[0], setFailed = fS[1];
+  var oS = useState(false), open = oS[0], setOpen = oS[1];
+
+  function load() {
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, TIMEOUT_MS);
+    var token = localStorage.getItem('medconnect_token');
+    // Not through api/client.js: a 401 there sends the page to the login screen, and
+    // this dot is no reason to do that. Any trouble is just a grey dot.
+    fetch('/api/system/status', { headers: token ? { Authorization: 'Bearer ' + token } : {}, signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) { setData(j); setFailed(false); })
+      .catch(function () { setFailed(true); })
+      .then(function () { clearTimeout(timer); });
+  }
+
+  useEffect(function () {
+    load();
+    var i = setInterval(function () { if (!document.hidden) load(); }, 300000);
+    function onVisible() { if (!document.hidden) load(); }
+    document.addEventListener('visibilitychange', onVisible);
+    return function () { clearInterval(i); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
+
+  var state = failed || !data ? 'none' : (data.overall || 'none');
+  var title = failed ? t.se_sysFailed : (!data ? t.se_sysChecking : t['se_sysOverall_' + state]);
+
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button onClick={function () { setOpen(!open); if (!open) load(); }} title={title}
+        style={{ background: '#1e2433', border: '1px solid #2a3142', borderRadius: 5, padding: '4px 7px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+        <span style={{ width: 11, height: 11, borderRadius: '50%', background: COLORS[state] || COLORS.none, boxShadow: state === 'ok' || state === 'none' ? 'none' : '0 0 6px ' + COLORS[state] }}></span>
+      </button>
+      {open ? (
+        <span>
+          <span onClick={function () { setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 1999 }}></span>
+          <span style={{ position: 'absolute', top: 30, right: 0, zIndex: 2000, width: 380, maxWidth: '92vw', background: '#0f1117', border: '1px solid #2a3142', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.5)', padding: 12, display: 'block' }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: COLORS[state] === COLORS.none ? '#cbd5e1' : COLORS[state], marginBottom: 8 }}>{title}</span>
+            {failed ? <span style={{ display: 'block', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>{t.se_sysFailedHint}</span> : null}
+            {data && !failed ? (data.services || []).map(function (s) {
+              return <span key={s.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderTop: '1px solid #1e2433' }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[s.state] || COLORS.none, flex: 'none', position: 'relative', top: 1 }}></span>
+                <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 600, width: 150, flex: 'none' }}>{t['se_sysItem_' + s.key] || s.key}</span>
+                <span style={{ fontSize: 12, color: s.state === 'ok' || s.state === 'off' ? '#94a3b8' : COLORS[s.state], lineHeight: 1.4, wordBreak: 'break-word' }}>{statusText(t, s)}</span>
+              </span>;
+            }) : null}
+            <span style={{ display: 'flex', alignItems: 'center', marginTop: 8, fontSize: 11, color: '#64748b' }}>
+              {data && data.checked_at ? (t.se_sysCheckedAt || '') + ' ' + new Date(data.checked_at).toLocaleTimeString('en-GB') : ''}
+              <span style={{ flex: 1 }}></span>
+              <button onClick={load} style={{ background: '#1e2433', color: '#94a3b8', border: '1px solid #2a3142', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>↻</button>
+            </span>
+          </span>
+        </span>
+      ) : null}
+    </span>
+  );
+}

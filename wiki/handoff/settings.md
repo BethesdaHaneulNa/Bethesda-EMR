@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 상단바의 상태 점 (U3 결정 가)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `94457d7` 위)
+- **한 일**: `frontend/src/pages/settingsStatus.jsx`(새) `StatusDot` — `/api/system/status`를 읽어 점(초록·노랑·빨강, 확인 못 하면 회색), 누르면 항목마다 점·이름·한 줄 설명(`{값}` 채움), 확인 시각, ↻.
+- **총괄 조건과 대응**:
+  - 느리거나 실패해도 멈추지 않게 → `api/client.js`를 거치지 않는 `fetch` + AbortController **8초**. 실패·시간 초과·401은 회색 점과 「상태를 확인하지 못함 — EMR은 그대로 쓸 수 있음」, 로그인 화면으로 보내지 않음.
+  - 박자 → 처음, 5분마다(창이 보일 때만), 창으로 돌아올 때 — `TopBar`의 `/auth/me` 동기와 같은 박자(따로 돌지만 같은 규칙). 목록을 열 때와 ↻에서도.
+  - 「꺼짐」은 경고가 아님 → 색은 서버의 `overall`(off를 ok와 같게 셈), 목록에서 off는 회색 줄.
+  - 설정 권한만 → `TopBar.jsx`의 기존 `canSeeUpdate`(settings 권한)일 때만 붙임.
+  - ko·en·fr → `se_sys_*` 31개 문구 + 항목 7 + 전체 4 + 그 밖 4. **`backend/test/settings.status.mjs`**(새, 스택 없이): `status.routes.js`의 모든 `status.*` 문구와 항목에 세 언어 번역이 있는지 — 다른 세션이 항목을 더하면 여기서 걸림.
+- **공용 파일 변경**: **`frontend/src/components/TopBar.jsx`** (총괄 허락) — import 한 줄, 시계 앞에 `{canSeeUpdate ? <StatusDot t={t} /> : null}` 한 줄. i18n `se_sys*` 46개.
+- **바꾼 파일**: `frontend/src/pages/settingsStatus.jsx`(새) · `TopBar.jsx` · `backend/test/settings.status.mjs`(새) · `wiki/modules/settings.md`(2.15 새, 3-6 표, 7절 U3, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`, `settings.status.mjs`(세 언어 42키 모두). 새 DB 격리 스택: 관리자 — 노란 점(백업 없음), 목록 fr(「Aucune sauvegarde — Paramètres → Sauvegarde → Sauvegarder」, 쓰지 않는 네 항목 회색 「Non utilisé」). **API 컨테이너를 일시 정지**해 느린 응답을 흉내 → ↻ 뒤 약 10초 안에 회색 점과 「Impossible de vérifier l'état」, 그동안 상단바 시계는 계속 감. 풀고 백업 → 한국어 초록 점·「모두 정상」·목록. 간호사 계정 → 점 없음. 이어서 `settings.login.mjs` 19개·access 1232건 통과.
+- **다음 할 일**: 없음 — 7절은 모두 고침·결정됨. 새 지시 대기.
+
 ## 2026-09-29 — B7 디스크 검사에 DB(Docker) 드라이브도
 
 - **상태**: 확인 요청

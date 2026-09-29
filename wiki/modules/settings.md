@@ -274,6 +274,14 @@
    - **새 PC에서 시험 자료를 지운 뒤**(2.13 6단계): 시험 때의 줄은 그대로 남고, 그 줄의 **차트번호(26-00001 …)는 이제 새 환자의 번호와 같을 수 있습니다.** 날짜가 정리한 날보다 앞선 줄은 시험 환자의 것이지, 같은 번호의 새 환자가 아닙니다. 환자 이름으로 구분하세요.
 7. 한 쪽에 50줄, 아래 **◀ Précédent / Suivant ▶** 로 넘깁니다.
 
+### 2.15 상단바의 상태 점 (설정 권한이 있는 사람만)
+
+1. **Paramètres** 권한이 있는 계정은 화면 맨 위, 시계 왼쪽에 **작은 점**이 보입니다(2026-09-29, U3 결정). 다른 직원에게는 없습니다.
+2. 색: **초록** 모두 정상 · **노랑** 확인 필요(백업이 오래됨·옛 버전, 디스크가 참, 영상 백업 디스크 없음 등) · **빨강** 문제(DB 연결 안 됨, 워크리스트가 멈춤 등) · **회색** 상태를 확인하지 못함(서버가 늦거나 끊김 — EMR은 그대로 쓸 수 있음).
+3. 누르면 목록: **Dossiers patients · Espace disque · Sauvegarde · Liste de travail des appareils · Imagerie (PACS) · Sauvegarde des images · Adresses de l'imagerie** 마다 점과 한 줄 설명. 「Non utilisé (사용 안 함)」 같은 회색 줄은 이 병원에서 쓰지 않는 것이라 경고가 아닙니다. 아래 **↻** 로 다시 확인.
+4. 5분마다, 그리고 다른 창에 갔다가 돌아올 때 스스로 다시 확인합니다.
+5. 서버 PC의 **상태 창**(2.10)과 같은 것을 봅니다. 노랑·빨강이면 목록의 설명대로 하거나 담당자에게.
+
 ## 3. 기능 상세
 
 ### 3-1. 권한 체계
@@ -374,7 +382,7 @@
 | 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행. 60초 넘게 조용 → 빨강, `ok=false` → 빨강, `failed>0` → 노랑, **`detail.arrivals_error`가 있으면 노랑 `status.bridge.arrivals`** (2026-09-29, PACS P-20 — 아래) |
 | 영상 백업 (2026-09-29, PACS 결정 41) | PACS 폴더(`bethesda-pacs`의 compose 폴더) `logs\image-backup-status.json`(`at`·`ok`·`disk_found`·`error`·`free_gb`·`total_gb`)을 읽음 — EMR이 멈춰도 보이게. 파일이 없으면 줄 없음. `at`이 36시간 넘음 / 디스크 없음 / 실패(오류 글자) / 여유 10% 미만 → 노란 **A CORRIGER** | `pacs_image_backup`: `service_heartbeat`의 같은 이름 줄(PACS `POST /api/pacs/image-backup-report`). 보고 없음 off, `last_seen` 36시간 넘음 `silent`, `disk_found` false `noDisk`, `ok` false `failed`(`error`), `last_success` 없음·36시간 넘음 `stale`, 여유 10% 미만 `nearlyFull` — 모두 warn |
 | 영상 주소 (2026-09-29) | `docker exec bethesda-emr-db psql …`로 `pacs_config`의 두 주소를 읽어, 옛 포트면 노란 **A CORRIGER** 줄(없으면 줄 자체가 없음). DB가 OK일 때만 | `pacs_address`: 두 칸 모두 비면 off, `emr_base_url`의 포트가 8080이거나 `pacs_viewer_url`이 8090이면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok. 포트는 `스킴://호스트:포트` 모양에서만 읽음(`:80800`·`my8090host`는 해당 없음) |
-| 화면 연결 | — | **아직 EMR 화면 어디에서도 부르지 않음**. 돌려주는 `status.*` 번역 키도 i18n에 없음. 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
+| 화면 연결 | — | **상단바의 상태 점**(2026-09-29, U3 결정 가 — 2.15): `frontend/src/pages/settingsStatus.jsx` `StatusDot`, `TopBar.jsx`(공용, 허락)가 설정 권한일 때만 붙임. `api/client.js`를 거치지 않는 `fetch` + **8초 시간 제한**(AbortController) — 실패·느림은 회색 점, 로그인 화면으로 보내지 않음. 처음·5분마다(창이 보일 때)·창으로 돌아올 때(`/auth/me` 동기와 같은 박자). 색은 서버의 `overall`(off는 ok와 같게 셈). 문구: `status.a.b` → `se_sys_a_b`, 항목 → `se_sysItem_<key>`, `{값}` 채움(`missing`은 개수, `old`는 「8080 → 9080」). 빠진 번역은 `backend/test/settings.status.mjs`가 알려 줌(스택 없이). 설정 → 오더 연동 화면은 같은 판정을 화면에서 직접 함(`Settings.jsx` `oldPort`) |
 
 - 2026-09-29, 이 PC의 실행 중 EMR에 대해 `server-status.ps1 -Console -Lang ko`를 **읽기만** 해서 돌려 봄: 7줄 모두 정상, 종료 코드 0. `/backups` 마운트 원본이 Windows 경로(`C:\Bethesda-EMR-main\backups`)로 잡히는 것 확인.
 - 디스크 검사는 **백업 드라이브**를 봅니다. `BACKUP_PATH`를 D:로 옮기면 DB가 있는 C:(Docker 디스크)는 보지 않습니다.
@@ -583,7 +591,7 @@
 |---|---|---|---|
 | U1 | ~~보통~~ **대부분 고침** | ~~설정 화면 글자 상당수가 영어로 고정~~ → 2026-09-29: 틀(탭 이름·공용 삭제 확인·편집 창 제목·오류·저장 알림)과 직원·오더 코드·상용구·진료과·병원 정보 탭, 그 편집 창을 `se_` 키로. 역할·오더 종류·상태도 번역해서 표시(저장 값은 그대로). **남은 것**: 약품 탭 안쪽(약국 몫 — 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·General 등 — DB에 저장되는 값이라 번역하지 않음) | (옛 코드) `Settings.jsx` |
 | U2 | ~~보통~~ **고침** | ~~비활성으로 만든 직원을 다시 활성으로 되돌릴 방법이 화면에 없음~~ → 2026-09-29 결정(관리자만, 기록): 비활성 줄의 **Réactiver**, `POST /admin/staff/:id/reactivate`. 「관리자」= admin 역할 + 설정 권한 — 설정 권한만 받은 다른 역할은 버튼이 없고 서버가 403. 편집 창의 PUT으로 돌아가는 길도 같은 규칙. 확인 `settings.reactivate.mjs` 12개 (2.5절) | `admin.routes.js`, `Settings.jsx` 직원 줄 |
-| U3 | 보통 → **결정 대기 (결정 세션)** | `/api/system/status`를 화면 어디에서도 부르지 않음 — 추천 (가) 상단바의 작은 상태 점, 설정 권한만 눌러 목록 | `status.routes.js`, 프론트엔드에 호출 없음 |
+| U3 | ~~보통~~ **고침** | ~~`/api/system/status`를 화면 어디에서도 부르지 않음~~ → 2026-09-29 결정 (가): 상단바의 작은 상태 점, 설정 권한만, 누르면 목록 (2.15, 3-6절) | `settingsStatus.jsx`, `TopBar.jsx` |
 | U4 | ~~낮음~~ **고침** | ~~첫 화면 목록 하나가 실패하면 뒤의 것이 안 불러와지고 조용함~~ → 2026-09-29: 목록을 따로따로 불러오고, 실패하면 Paramètres 맨 위에 빨간 줄로 이유(권한 없음 등)를 보여줌. 권한을 뺀 관리자에게 직원 목록이 **빈 채로** 보여 「직원이 없다」로 읽히던 것 | (옛 코드) `Settings.jsx` `loadAll` |
 | U13 | ~~보통~~ **고침 (총괄)** | ~~권한을 바꾼 직원의 메뉴는 다시 로그인해야 바뀜~~ → 2026-09-29 `TopBar.jsx`가 `/auth/me`로 주기적으로 다시 읽음. 격리 스택에서 확인: 통계 권한을 더하고 새로 고치자 메뉴에 Statistiques, `/stats` 열림 / 빼고 새로 고치자 메뉴에서 사라짐. 남은 점(권한을 뺀 화면을 보고 있던 사람이 그 화면에 남음)도 총괄이 고침(`7662160`) — 격리 스택에서 확인: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아오자 **접수로 이동**, 접수 화면에서 입력 중에 **다른** 권한(수납)을 빼자 **그대로 남고 입력도 유지**, 메뉴에서 Paiement만 사라짐 | `TopBar.jsx`(총괄) |
 | U5 | ~~낮음~~ **고침** | ~~앱 제목을 비워서 저장할 수 없음~~ → 2026-09-29: 비우면 기본값 「Bethesda EMR」, 칸을 보내지 않은 저장은 그대로 | `admin.routes.js` `PUT /clinic` |
@@ -652,4 +660,5 @@
 | 2026-09-29 | 서버 상태 창·상태 API에 **영상 백업** 줄(디스크 없음·실패·오래됨·거의 참). 「Journal」에서 검사 판정(정상→높음)과 처방의 포장 단위가 말로 | `status.routes.js` `checkImageBackup`, `server-status.ps1` `Get-ImageBackupCheck`·창 높이 640, `settingsAudit.js` (2.10·3-6·3-10) | `a0c0496` |
 | 2026-09-29 | 정리 스크립트: 준비한 PC의 표지 파일 `KEEP-TEST-DATA.txt`(총괄 `6d93954`) 설명, 기록 탭의 시험 줄 차트번호가 새 환자와 겹쳐 보일 수 있다는 안내 | 위키(2.13·2.14·3-11), 스크립트 끝 안내 세 줄 | `a446512` |
 | 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | `a95891a` |
-| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | (이 커밋) |
+| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | `8087fce` |
+| 2026-09-29 | **상단바의 상태 점** — 설정 권한이 있는 사람에게 초록·노랑·빨강(확인 못 하면 회색), 누르면 일곱 항목을 말로 (U3) | `settingsStatus.jsx`(새), `TopBar.jsx` 두 줄, `se_sys*` 46개, `settings.status.mjs`(새) (2.15·3-6) | (이 커밋) |
