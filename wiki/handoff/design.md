@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 바꾸는 단추 · 계정마다 기억 (따로 둔 가지 — 아직 합치지 말 것)
+
+- **상태**: 보류 — 설정 화면이 끝난 뒤 한꺼번에 합침(총괄 지시). 지금은 읽어 보시기만
+- **커밋**: **가지 `session/design-switch`** `296a674`(`session/design` `03bf620` 위에 한 커밋). 이 노트와 위키 3.7 은 `session/design` 에 적음 — 두 가지가 위키의 같은 자리를 고쳐 부딪히지 않게
+- **한 일**: 위키 `modules/design.md` **3.7** 의 표 그대로 — 상단바 단추, 번역 `ds_` 3개, 마이그레이션 901, `theme.routes.js`, `index.js` 한 줄, 시험 스크립트.
+- **바꾼 파일**: `backend/sql/901_design_staff_theme.sql` · `backend/src/routes/theme.routes.js` · `backend/test/design.theme.mjs`(모두 새로, 디자인 세션 것)
+- **공용 파일 변경**: `backend/src/index.js`(라우트 등록 한 줄 — 허락받음) · `frontend/src/components/TopBar.jsx`(단추) · `frontend/src/i18n/ko.js` · `en.js` · `fr.js`(파일 맨 아래 `begin design (ds_)` 표시 사이에 3개씩)
+- **DB 마이그레이션**: `backend/sql/901_design_staff_theme.sql` — `staff.theme VARCHAR(10) NOT NULL DEFAULT 'dark'` + `CHECK (theme IN ('dark','light'))`. 칸만 더함. 격리 스택의 있는 DB 에 적용됨(`[migrate] applied 1 new migration(s)`)
+- **번역 키**: `ds_themeSwitch` · `ds_themeLight` · `ds_themeDark` (ko · en · fr 모두 넣음)
+- **확인한 방법**:
+  - `node --check` 두 파일, `npm run build` 통과.
+  - `node backend/test/design.theme.mjs`(격리 스택 9189) **24가지 모두 통과**: 토큰 없이 · 깨진 토큰 401 / 새 계정은 `dark` / `purple` · 빈 값 · null · 숫자 · 배열 · 객체 · `Light` · ` light` · 빈 요청 · 다른 이름의 칸 → 400 이고 값은 그대로 / `light` 저장 · 다시 읽기 · 새로 로그인해도 같음 / 다른 계정은 그대로 / 요청에 남의 계정 번호를 넣어도 보낸 사람 것만 바뀜 / 모듈 권한이 하나도 없는 계정도 고를 수 있음 / 변경 기록 줄 수 그대로.
+  - 화면(격리 스택, 1366×768): 「☀ Clair」 → 바로 밝은 화면 · `localStorage` · 서버 값 모두 `light`. 그 PC 의 저장을 지우고 새로 고침 → 계정 값을 읽어 밝은 화면. 「🌙 Sombre」 → 되돌아감. 한국어 「🌙 어둡게 | ☀ 밝게」, 영어 「🌙 Dark | ☀ Light」.
+  - 상단바 폭: 1366 에서 오른쪽 묶음이 627~1354px, 1024 에서 285~1012px — 제목(187px 까지)과 겹치지 않고 화면 밖으로 나가지 않음. 높이 40px 그대로.
+- **확인 못 한 것**: 새 버전 알림 단추(초록)와 상태 점이 같이 떠 있을 때의 1024 폭. 설정 세션의 시험 스크립트들은 돌리지 않음(관리자 비밀번호를 환경 변수로 받는 방식이 서로 달라서) — `Object.keys` 로 모양을 재는 곳은 변경 기록의 `after_value` 뿐이고 직원 목록의 모양을 재는 시험은 찾지 못함(grep)
+- **위키**: `modules/design.md` 머리 · **3.7 새로** · 8. 2절(직원용 — 단추 쓰는 법)은 합칠 때 씀
+- **총괄 확인 요청**:
+  - **`/admin/staff` 가 `SELECT s.*` 라서 직원 목록 응답에 `theme` 칸이 새로 생깁니다.** 조건(응답 모양을 바꾸지 않음)을 지키는 길 둘: (가) 설정 세션이 `admin.routes.js` 298행 아래 `delete r.password_hash` 옆에 `delete r.theme` 한 줄 — **추천** (나) 칸을 `staff` 에 두지 않고 따로 표(`staff_theme`)에 — 직원 표는 그대로지만, 설정 세션의 시험 자료 정리 스크립트가 「모르는 표가 직원을 가리키면 멈춤」이라 그쪽도 고쳐야 함. 정해 주시면 (나)로 바꾸는 것은 제가 합니다.
+  - 합칠 때 순서: `session/design`(설정 화면까지) → `session/design-switch`. 뒤의 것은 `TopBar.jsx` · i18n · `index.js` 를 고치므로 그 사이 다른 세션이 같은 파일을 고쳤으면 제가 다시 맞춰 올립니다.
+  - 미리 보기 `?theme=light` 는 단추가 들어간 뒤에는 로그인하면 계정 값이 이깁니다(해 없음).
+- **다른 세션에 부탁**: **설정 세션**(단추를 합칠 때) — ① 위 (가) ② 로그인 응답과 `/auth/me` 에 `theme` 을 실어 주면 같은 PC 에 다른 사람이 로그인했을 때 화면이 한 번 바뀌는 순간이 없어짐(지금은 상단바가 뜬 직후 한 번 바뀜) ③ `settings.access.mjs` 표에 `/api/theme`(누구나, 자기 것만)
+- **남은 일 · 알려진 문제**: `Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx` — 「Settings.jsx 시작해도 됨」을 기다림
+
 ## 2026-09-29 — 3단계: Stats.jsx 색을 이름표로
 
 - **상태**: 확인 요청

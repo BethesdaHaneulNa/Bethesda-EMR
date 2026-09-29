@@ -1,6 +1,6 @@
 # 디자인 (Design) — 화면 색 · 주제
 
-> **담당**: 디자인 세션 · 브랜치 `session/design` · 격리 스택 9189 · **마지막 갱신**: 2026-09-29 · **상태**: 1단계(시안) 끝 — **실장님이 고르심: 시안 A · 파랑 그대로 · 기본은 어두운 화면 · 단추는 상단바 · 계정마다 기억** · 2단계 설계 승인됨(총괄, 2026-09-29 밤) · **2단계 (가) 끝**(색 이름표 · 첫 화면 스크립트 · hover — 보이는 변화 없음) · **3단계 진행 중** — 상단바 · 로그인 · 접수 · 임상병리 · 진료 · 수납 · 약국 · 재고 · 공용 창 넷 · 통계 끝, **설정 화면이 남음**(총괄 표에 「시작해도 됨」이 적히기를 기다림) · **주소로 켜는 미리 보기** 들어감(`?theme=light`) · 바꾸는 단추 · 계정마다 기억은 화면이 다 끝난 뒤 맨 마지막에(승인받음)
+> **담당**: 디자인 세션 · 브랜치 `session/design` · 격리 스택 9189 · **마지막 갱신**: 2026-09-29 · **상태**: 1단계(시안) 끝 — **실장님이 고르심: 시안 A · 파랑 그대로 · 기본은 어두운 화면 · 단추는 상단바 · 계정마다 기억** · 2단계 설계 승인됨(총괄, 2026-09-29 밤) · **2단계 (가) 끝**(색 이름표 · 첫 화면 스크립트 · hover — 보이는 변화 없음) · **3단계 진행 중** — 상단바 · 로그인 · 접수 · 임상병리 · 진료 · 수납 · 약국 · 재고 · 공용 창 넷 · 통계 끝, **설정 화면이 남음**(총괄 표에 「시작해도 됨」이 적히기를 기다림) · **주소로 켜는 미리 보기** 들어감(`?theme=light`) · 바꾸는 단추 · 계정마다 기억은 **만들어 시험까지 끝냄 — 따로 둔 가지 `session/design-switch`**(설정 화면이 끝난 뒤 한꺼번에 합침)
 
 ## 1. 이 모듈이 하는 일
 
@@ -187,6 +187,23 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 | `pages/Pharmacy.jsx` · `PharmacyStock.jsx` | 끝 (2026-09-29) | 80 · 61 | 원내 = 초록, 원외 = 노랑 단추: 어두운 화면에서 밝은 색 + 검은 글자, 밝은 화면에서 짙은 색 + 흰 글자(`--on-bright`). 재고의 입고 = 초록, 실사 = 노랑, 폐기 = 빨강 단추도 같음 — 모두 글자가 같이 있음. 재고 기록의 종류 글자색(`KIND_COLOR`)은 글자용 이름표 |
 | `pages/Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx` | 맨 마지막 | | |
 
+### 3.7 바꾸는 단추와 계정마다 기억 (가지 `session/design-switch` — 아직 합치지 않음)
+
+설정 화면까지 끝난 뒤 한꺼번에 합칩니다(총괄 지시). 그때까지 `develop` 과 `session/design` 에는 없습니다.
+
+| 부분 | 파일 | 하는 일 |
+|---|---|---|
+| 단추 | `frontend/src/components/TopBar.jsx` | 언어 단추 옆에 두 칸짜리 단추 「🌙 어둡게 | ☀ 밝게」(fr 「Sombre | Clair」, en 「Dark | Light」). 고른 쪽이 파랑으로 채워짐. 기호와 글자가 같이 있음. 누르면 바로 바뀌고 뒤에서 저장. 저장이 실패해도 아무것도 띄우지 않음 |
+| 번역 | `frontend/src/i18n/ko.js` · `en.js` · `fr.js` | `ds_themeSwitch`(단추 묶음의 설명 — 마우스를 올리면 보임) · `ds_themeLight` · `ds_themeDark` |
+| DB | `backend/sql/901_design_staff_theme.sql` | `staff.theme` — `'dark'` | `'light'`, 기본 `'dark'`. 칸과 검사만 더함. 여러 번 돌려도 됨 |
+| API | `backend/src/routes/theme.routes.js` | `GET /api/theme` → `{ theme }` · `PUT /api/theme { theme }` → `{ theme }`. 로그인한 **자기 계정 것만**(계정 번호는 토큰에서만 읽음). `dark` · `light` 가 아니면 400. 모듈 권한을 보지 않음. 변경 기록에 남기지 않음. `updated_at` 을 건드리지 않음 |
+| 등록 | `backend/src/index.js` | `app.use('/api/theme', …)` 한 줄 |
+| 시험 | `backend/test/design.theme.mjs` | 격리 스택 전용. 위 규칙 24가지 |
+
+흐름: 로그인 화면은 그 PC 에서 마지막에 쓴 화면(`localStorage`) → 로그인 뒤 상단바가 뜨면 `GET /api/theme` → 그 PC 가 보이던 것과 다르면 그때 바꿈 → 단추를 누르면 화면 · `localStorage` · 서버 순으로.
+
+**알려진 것**: `/admin/staff` 가 `SELECT s.*` 라서 직원 목록 응답의 각 줄에 `theme` 칸이 새로 생깁니다. 총괄의 조건(「`/admin/staff` 응답 모양을 바꾸지 않음」)을 지키려면 `admin.routes.js`(설정 세션 파일)에서 `password_hash` 를 지우는 자리에 `theme` 도 지워야 합니다 — 디자인 세션은 그 파일을 고치지 않았습니다.
+
 ## 4. 데이터 · API
 
 - 지금까지 DB · API 변경 없음.
@@ -219,6 +236,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇 |
 |---|---|
+| 2026-09-29 | **바꾸는 단추 · 계정마다 기억**을 가지 `session/design-switch` 에 만들고 시험(3.7). 합치지 않음 |
 | 2026-09-29 | **3단계 `Stats.jsx`** 색 68곳. 이름표 더함: `--bg-2` · `--line-soft-3` · `--text-faint` · `--field-5` · `--ok-3` · `--ok-bar` · `--accent-bar` |
 | 2026-09-29 | **주소로 켜는 미리 보기** `?theme=light` · `?theme=dark`(`index.html` 첫 화면 스크립트). develop `736c788` 을 합치다 `DocumentModal.jsx` · `PatientChart.jsx` 가 부딪혀, develop 의 것을 받고 색 작업을 다시 입힘 |
 | 2026-09-29 | **3단계 공용 부품** `PatientFinder` · `PatientChart` · `DocumentModal`(틀) · `RadiologyReadings` 색 34 · 25 · 38 · 22곳 |
