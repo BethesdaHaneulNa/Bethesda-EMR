@@ -91,6 +91,36 @@ check('a new drug with an unknown label -> 400, nothing made', made3.status === 
   !(await call('GET', '/admin/drugs?q=' + code2 + 'X', null, T)).data.length, made3);
 if (made2.data && made2.data.id) await call('DELETE', '/admin/drugs/' + made2.data.id, null, T);
 
+// Decision B (2026-09-29): the default dose / times a day / days / route leave the drug
+// form. A save that does not send them keeps them; a PUT changes only what it sends.
+const was = await listed();
+r = await call('PUT', '/admin/drugs/' + id, { default_dose: '2', default_freq: 3, default_days: 5, default_route: 'TID' }, T);
+check('a PUT with only the four defaults sets them', r.status === 200 && r.data.default_dose === '2' && r.data.default_freq === 3 && r.data.default_days === 5 && r.data.default_route === 'TID', r.data);
+check('... and leaves name, price and stock alone', r.data.name === was.name && r.data.unit_price === was.unit_price && r.data.stock_qty === was.stock_qty, [was, r.data]);
+r = await call('PUT', '/admin/drugs/' + id, { code, name: 'Stock test drug 3', unit_price: 170 }, T);
+check('a save without the defaults keeps them (not NULL)', r.status === 200 && r.data.default_dose === '2' && r.data.default_freq === 3 && r.data.default_days === 5 && r.data.default_route === 'TID' && r.data.name === 'Stock test drug 3', r.data);
+r = await call('PUT', '/admin/drugs/' + id, { default_freq: '', default_days: '' }, T);
+check('an emptied default is stored empty (NULL)', r.status === 200 && r.data.default_freq === null && r.data.default_days === null && r.data.default_dose === '2', r.data);
+r = await call('PUT', '/admin/drugs/' + id, { name: '' }, T);
+check('the name cannot be emptied (400, "A required field is missing")', r.status === 400 && r.data.error === 'A required field is missing', r);
+const plain = await call('POST', '/admin/drugs', { code: code + 'D', name: 'Defaults test', category: 'Other', unit_price: 1 }, T);
+check('a new drug without the defaults gets the columns\' defaults', plain.status === 201 && plain.data.default_freq === 1 && plain.data.default_days === 1, plain.data);
+if (plain.data && plain.data.id) await call('DELETE', '/admin/drugs/' + plain.data.id, null, T);
+// dosage_form arrives with the pharmacy's drug import; until then the column is absent
+// and the field is ignored.
+if (Object.prototype.hasOwnProperty.call(await listed(), 'dosage_form')) {
+  r = await call('PUT', '/admin/drugs/' + id, { dosage_form: ' Sirop ' }, T);
+  check('dosage_form is saved (trimmed)', r.status === 200 && r.data.dosage_form === 'Sirop', r.data);
+  r = await call('PUT', '/admin/drugs/' + id, { name: 'Stock test drug 4' }, T);
+  check('... and kept by a save without it', r.data.dosage_form === 'Sirop', r.data);
+  r = await call('PUT', '/admin/drugs/' + id, { dosage_form: '' }, T);
+  check('... and emptied by an empty value', r.data.dosage_form === null, r.data);
+} else {
+  console.log('  [info] this database has no drug.dosage_form yet (pharmacy import) - not checked');
+  r = await call('PUT', '/admin/drugs/' + id, { dosage_form: 'Sirop' }, T);
+  check('dosage_form sent before the column exists is ignored, not an error', r.status === 200, r);
+}
+
 await call('DELETE', '/admin/drugs/' + id, null, T);    // hides the test drug
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
 process.exit(failed ? 1 : 0);

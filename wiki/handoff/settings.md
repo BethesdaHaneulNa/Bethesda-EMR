@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약 저장은 보낸 칸만 (결정 B) · 제형 칸 준비 · 상태 점 직원용 한 줄
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `efed392` 위)
+- **확인한 것**: 전의 `PUT /admin/drugs/:id`는 모든 칸을 요청 값으로 썼음 → 기본 용량·횟수·일수·용법을 보내지 않는 화면으로 저장하면 **NULL로 덮였을 것**(격리에서 새 시험으로 확인할 수 있는 동작).
+- **한 일** (`admin.routes.js`):
+  - `PUT`: 고정 목록 `DRUG_FIELDS` 가운데 **요청에 온 칸만** SET(열 이름은 목록에서만 — SQL에 요청 값이 이름으로 들어가지 않음). 빈 값은 NULL, 코드·이름을 비우면 NOT NULL로 400 「A required field is missing」(전에는 빈 이름 `''`가 저장됐음). 포장 칸은 전처럼 `pack_unit`이 올 때만.
+  - `POST`: 보낸 칸만 넣고 나머지는 열 기본값. 재고 0, 최소 재고 비면 10은 그대로.
+  - **`dosage_form`**: 약국 가져오기(`6bc5c6d`, 아직 약국 브랜치)가 만드는 칸. 서버가 처음 쓸 때 `information_schema`로 약 표의 칸을 한 번 읽고, **그 칸이 있을 때만** 받음 — 가져오기가 develop에 들어오기 전에도 뒤에도 코드를 다시 고칠 필요 없음. 들어오기 전에 보내면 무시(오류 아님).
+- **위키**: 2.15 맨 위에 **직원용 한 줄**(프랑스어·한국어, 출발 전 확인 목록용 — 「점이 노랑·빨강이면 눌러서 보고, 적힌 대로 하거나 담당자에게」). 3-8 「보낸 칸만 저장」, 4절 표.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/test/settings.drugs.mjs`(10개 추가) · `backend/test/settings.ordersets.mjs` · `wiki/modules/settings.md`(2.15, 3-8, 4절, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`. 새 DB 격리 스택: `settings.drugs.mjs` — 네 기본값만 보낸 PUT → 그 넷만 바뀌고 이름·가격·재고 그대로 / 기본값 없이 저장 → 그대로 / 비운 값 → NULL / 이름 비우기 → 400 / 새 약은 열 기본값 / 제형 칸 없음 → 보낸 제형 무시·200. 이어서 **가져오기 마이그레이션을 흉내**(`ALTER TABLE drug ADD COLUMN dosage_form VARCHAR(30)`, API 재시작) → 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL. 모두 통과. access 1232건, audit, messages 통과.
+- **`settings.ordersets.mjs` 고침**: 진료의 `afc29db`가 약속처방 약 줄 수량 0을 400으로 바꿔 내 시험의 「0은 1」이 틀려짐 → 「0은 400, 빈 값은 1」로. **진료 세션 참고**: 그 400 문구 `items[i].quantity must be …`는 화면 번역표에 없음 — 설정 편집 창이 저장 전에 막으므로 보통은 안 보이지만, 보이면 영어로 나옴.
+- **다음 할 일**: 약국 가져오기가 develop에 들어오면 `settings.drugs.mjs`를 실제 칸으로 한 번 더(흉내가 아니라).
+
 ## 2026-09-29 — 상단바의 상태 점 (U3 결정 가)
 
 - **상태**: 확인 요청
