@@ -118,7 +118,7 @@ Un examen qui a déjà des images ou un compte-rendu ne peut pas être retiré ;
 - N'écrivez pas de compte-rendu tant qu'un cadre rouge ou jaune n'a pas été vérifié.
 - Ne cliquez pas autour de la **Visionneuse** avant d'avoir enregistré le compte-rendu.
 - L'absence de cadre rouge ne prouve pas que ce sont les bonnes images : si le manipulateur a choisi un autre patient dans la liste, rien ne s'affiche. Si l'image ne ressemble pas au patient, vérifiez.
-- Ne débranchez pas le disque de sauvegarde des images du serveur : il contient les images des patients et doit rester rangé en lieu sûr.
+- Ne débranchez pas le disque de sauvegarde du serveur, ne le prêtez pas et ne l'utilisez pas pour autre chose : il contient, sans chiffrement, les images des patients **et la copie de tout le dossier EMR**. Il doit rester rangé sous clé.
 
 ## Qui appeler
 

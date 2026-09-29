@@ -2,6 +2,43 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 밤 영상 백업이 EMR DB 백업도 외장 디스크로 복사 (실장님 결정 — 외장하드 하나에 둘 다)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `fd0cd02`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `cfc434c`
+- **한 일** (총괄 지시 1~7)
+  1. `image-backup.ps1`: 영상 복사가 끝나면(**성공이든 실패든** — `Finish`에서) EMR 폴더의 백업 폴더에서 `bethesda_*.sql.gz`·`medconnect_*.sql.gz`(맨 위만, `.inprogress` 안 봄, 0바이트 제외)를 디스크 `BethesdaPACS\emr-backups\`로. 같은 이름·같은 크기는 건너뜀.
+  2. EMR 폴더: `-EmrPath`, 없으면 PACS 폴더 옆 `Bethesda-EMR*`(안에 `docker-compose.yml`; 여럿이면 가장 새 백업이 있는 것). 백업 폴더는 EMR `.env`의 `BACKUP_PATH`(상대면 EMR 폴더 기준), 없으면 `<EMR>\backups`. 못 찾으면 `emr_backup: not_found`, 영상 결과는 그대로. `install-image-backup.ps1 -EmrPath <폴더>`로 예약 작업에 넘길 수 있음.
+  3. 디스크에서 지우기: EMR과 같게 — `BACKUP_RETENTION_DAYS`(EMR `.env`, 기본 30)일 넘은 것만, 가장 새 7개는 늘 남김. 날짜는 파일 이름에서. 복사 오류가 있던 밤엔 안 지움. 지울 파일은 처음부터 복사 안 함. 영상은 지우지 않음(그대로).
+  4. 확인: `.part`로 복사 → SHA-256이 원본과 같은지 → gzip이 끝까지 풀리고 **풀린 길이 = gzip 꼬리 ISIZE**인지 → 이름 바꿈. (Windows PowerShell 5.1의 GZipStream은 잘린 파일을 오류 없이 읽고 끝나서, 처음 시험에서 잘린 파일이 통과함 → 길이 비교를 넣음. 한 바이트 바꾼 파일·gzip 아닌 파일도 걸림.) EMR 쪽 실패는 영상 `ok`·exit 코드에 영향 없음.
+  5. 보고(`image-backup-report`, `logs\image-backup-status.json`)에 칸 추가 — 아래 표. EMR `pacs.routes.js`가 이 칸들을 `service_heartbeat`(`pacs_image_backup`) detail에 저장하도록 고침(전에는 정해진 칸만 골라 저장해서 새 칸이 버려졌을 것).
+  6. `restore-image-backup.ps1 -Verify`: 「EMR database backups on the disk: N; newest <이름> (<날짜>), reads as a complete gzip.」 — 가장 새 것이 망가졌거나 36시간 넘게 오래되면 VERIFIED 아님, 하나도 없으면 노란 경고만. EMR 복원 자체는 안 함 → 위키 6.2에 「디스크에서 EMR `backups\`로 복사 → DEPLOYMENT.md 5b → `pair-with-emr`」. 덤으로 영상이 0장인 디스크에서 `Get-Random -Count 0` 오류가 나던 것 고침.
+  7. 위키 6.2(EMR 백업 복사·보고 칸·복원 안내·시험), 2.7 ④와 6.2 머리에 **「외장 디스크에 영상과 EMR DB 전체가 암호화 없이 → 잠기는 곳에」**, 프랑스어 설명서 À ne pas faire, v1.5.0 변경 내역 초안(백업 절·After updating 5).
+  - 덤: PACS `README.md`의 영상 백업 명령 두 줄이 `.\restore…`의 `\r`이 줄바꿈으로 바뀌어 깨져 있었음(8fcf65f 때 Python heredoc) → 고침, EMR 백업·보관 경고 추가. 다른 파일에 같은 깨짐 없음(`git grep`).
+- **보고 칸** (설정 세션에 전할 것 — `service_heartbeat` `name='pacs_image_backup'`의 `detail`):
+
+  | 칸 | 값 |
+  |---|---|
+  | `emr_backup` | `ok` / `not_found` / `none`(EMR 폴더에 백업 없음) / `failed` / `no_disk` |
+  | `emr_backup_ok` | 참/거짓 (`emr_backup === 'ok'`) |
+  | `emr_backup_copied` | 이번 실행에 복사한 수 |
+  | `emr_backup_count` | 디스크에 있는 EMR 백업 수 |
+  | `emr_backup_newest` | 디스크에서 가장 새 백업의 이름 날짜 `YYYY-MM-DD HH:MM`, 없으면 null |
+  | `emr_backup_error` | 짧은 영어 문장(300자), 파일 이름까지만 |
+  | `emr_backup_last_ok` | EMR이 붙임 — 마지막으로 `emr_backup_ok`가 참이던 때(ISO), 실패한 밤에도 이어 둠 |
+
+  옛 스크립트의 보고에는 이 칸들이 **없음**(키 자체가 없음 = 모름 — 경고하지 말 것). `ok`·`last_success`는 계속 **영상** 결과. 경고 제안: `emr_backup`이 `failed`·`not_found`·`no_disk`이거나, `emr_backup_newest`가 36시간보다 오래됨(EMR 백업이 멈췄거나 복사가 멈춤).
+- **바꾼 파일**: PACS `image-backup.ps1`, `image-backup-common.ps1`, `restore-image-backup.ps1`, `install-image-backup.ps1`, `README.md`. EMR `backend/src/routes/pacs.routes.js`(`/image-backup-report`), `wiki/modules/pacs.md`(2.7·6.2·8), `wiki/manual-fr/pacs.md`, `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음(JSONB detail에 칸만). **번역 키**: 없음
+- **확인한 방법** (시험용 폴더 `-SearchRoots` + 가짜 EMR 폴더 — 가짜 덤프 13개 0~45일 전, `.inprogress`, 다른 파일):
+  - Orthanc 꺼진 채 첫 실행 → 영상 exit 1, EMR 백업 `ok` 9개(30일 넘은 4개는 복사 안 함) · 다시 → 0개 · 디스크의 망가진 복사본 → 다시 복사 · 잘린 EMR 백업 → 그 파일만 `failed`, 새 정상 파일 복사, 그 밤엔 안 지움 → 다음 밤 지움 · 디스크의 33·45·50일 복사본 → 지움 · `-EmrPath` 틀림 → `not_found` · 디스크 없음 → `no_disk`·exit 2 · `BACKUP_PATH=./otherbk`·`BACKUP_RETENTION_DAYS=5` → 그 폴더·5일 규칙.
+  - 격리 스택(Orthanc 9198 + EMR 9188): 영상 12장 + EMR 백업 → exit 0, EMR DB의 detail에 칸 저장, 잘린 파일 → `ok=t`·`emr_backup=failed`·`emr_backup_last_ok` 유지, 옛 모양 보고 → 칸 없음. `-Verify` → EMR 백업 11개·가장 새 것 확인·VERIFIED.
+  - `install-image-backup.ps1 -WhatIf -EmrPath …`만. **이 PC에 예약 작업 없음**(0개 확인). 실행 중 EMR·PACS 안 건드림.
+- **확인 못 한 것**: 진짜 USB 디스크, 진짜 EMR 백업 파일(실제 환자 자료라 시험에 쓰지 않음), 예약 작업으로 밤에 도는 것, 디스크를 백업 도중 뽑는 경우. 실행 중 PC(`C:\Bethesda-PACS-main` 옆 `C:\Bethesda-EMR-main`)에서는 자동으로 찾을 것으로 보이지만 돌려 보지 않음.
+- **다른 세션에 부탁**
+  - **설정**: 상태 화면(`status.routes.js` `checkImageBackup` 또는 새 줄)에 EMR 백업 복사 상태 — 위 표·경고 제안. 칸이 없으면(옛 스크립트) 표시하지 않기.
+  - **총괄**: 합칠 때 실행 중 PC는 PACS 폴더만 바꾸면 되고(예약 작업 인수 그대로 — EMR 폴더를 옆에서 찾음), EMR은 `pacs.routes.js`만(마이그레이션 없음). 실장님께: 외장 디스크 보관 장소(잠금).
+
 ## 2026-09-29 — 프랑스어 직원 설명서 · v1.5.0 변경 내역 초안 · 오더 연동 탭 오류 문구 번역
 
 - **상태**: 확인 요청
