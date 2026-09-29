@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑪ 마무리(남은 영어 문구)와 위키 2절 프랑스어 기준 정리
+
+> **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 읽기 경로 오류도 `sendDbError`, 알림·확인 창·날짜 칸 안내가 세 언어. 부탁 1(㉒)은 총괄이 `frontend/nginx.conf`의 `/api/`에 `proxy_connect_timeout 5s` 넣음. 참고 2(진료 스택 옛 이미지)는 진료 세션에 알림 — 운영 이미지 이름표는 총괄 배포로 다시 맞춰져 있음(실행 중 컨테이너와 태그 일치 확인). 2차 순서는 결정 세션에서 실장님께 여쭘.
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`ee078d4` 위, `develop`을 ff로 당긴 뒤)
+- **한 일**: 총괄 요청대로 ⑪ 나머지와 2절 정리.
+  - 완료·확인 창을 버튼 이름에 `' ✓'`를 붙이던 방식에서 언어별 문장으로 — 「Patient mis en attente — 이름 (N° dossier 26-00006)」, 「Enregistrement modifié — 이름」, 「Patient enregistré — N° dossier …」, 「Annuler l'attente de 이름 et le retirer de la liste ?」. `fill()`로 `{name}` 자리 채움
+  - 생년월일 칸 안내 글자 `YYYY/MM/DD` → 화면 언어 (프랑스어 `AAAA/MM/JJ`)
+  - 서버 연결 실패(브라우저 fetch 실패, nginx 「API backend is not reachable…」, `client.js` 「API response was not JSON…」), `Patient not found`, `Visit not found`, `sendDbError`의 형식 오류를 화면 언어 안내로. 그 밖은 「Erreur : 원문」. 저장·상태 변경 실패 뒤 대기 목록 다시 불러옴
+  - `patient.routes.js`·`visit.routes.js`의 **읽기** 경로 오류도 `sendDbError`로 (예: `/patients/abc` 500 → 400)
+  - 위키 2절을 프랑스어 화면 이름 먼저(괄호에 한국어)로 다시 쓰고, 「안내 창이 뜨면」 표(프랑스어·한국어·할 일) 추가
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `backend/src/routes/patient.routes.js`, `backend/src/routes/visit.routes.js`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `rc_` 블록 안에서만. 그 밖에 없음 (PatientFinder 안 건드림)
+- **DB 마이그레이션**: 없음
+- **번역 키**: 추가 12개 — `rc_errorWith` `rc_phYear` `rc_phMonth` `rc_phDay` `rc_patientSaved` `rc_registered` `rc_visitUpdated` `rc_cancelConfirm` `rc_patientNotFound` `rc_visitNotFound` `rc_serverDown` `rc_badFormat` (ko · en · fr 모두). **삭제 1개** — `rc_error`(1차에서 넣은 것, 접수만 썼고 `rc_errorWith`로 바뀜. grep으로 다른 사용처 없음 확인)
+- **확인한 방법**:
+  - `npm run build` 통과 · `node --check` 두 파일 통과 (최신 `develop` `ee078d4` 위에서 다시 확인)
+  - 격리 스택 9181 (규칙 7절 명령 그대로, 이미지 `bethesda-s-reception-*:dev` 확인), 프랑스어: 생년월일 칸 `AAAA / MM / JJ`, 신규 등록 → 「Patient mis en attente — Rakotobe Lina (N° dossier 26-00006)」, 접수 수정 → 「Enregistrement modifié — Rakotobe Lina」, 취소 확인 문구, **API 컨테이너만 멈추고** 저장 → 「Impossible de joindre le serveur…」
+  - 한국어: 「환자 정보를 저장했습니다 — 차트번호 26-00007」, 생년월일 칸 `YYYY/MM/DD`
+  - API: `/patients/abc`·`/patients?limit=x`·`/visits/patient/abc` → 400. `date_of_birth`가 `"1990-05-03"`으로 나옴(총괄 `7ad4387` 확인)
+- **확인 못 한 것**: `Visit not found`·`Patient not found` 안내는 화면에서 재현 안 함(기록을 지우는 기능이 없어 만들기 어려움 — 문구 맞춤만 코드로 확인). 영어 화면은 안 눌러 봄
+- **위키**: `modules/reception.md` 머리, 2절 전체 다시 씀, 3절(오류 문구·`fill`·생년월일 안내 글자), 4절(읽기 경로 오류, 날짜 형식), 7절(⑪ 고침, ㉑ 총괄 해결 표시, ㉒ 추가), 8절
+- **총괄 확인 요청**:
+  1. **㉒ (낮음)**: 백엔드가 멈췄는데 nginx가 예전 주소를 기억하면, 저장 버튼이 **약 60초** 「Enregistrement…」로 멈춰 있다가 안내가 뜸(nginx 기본 `proxy_connect_timeout`). 데이터 문제는 없음. `frontend/nginx.conf`의 `location /api/`에 `proxy_connect_timeout 5s;` 정도를 제안 — 총괄 소관이라 손대지 않음
+  2. 참고: 17:0x 무렵 `bethesda-s-consultation-*` 스택이 아직 **옛 명령**으로 떠 있어 `bethesda-emr-*:latest` 이름표를 다시 쓰고 있었음 (`docker ps`에 image `bethesda-emr-backend:latest`로 보임). 진료 세션이 `657ba2c`를 당기지 않은 듯
+- **다른 세션에 부탁**: 없음 (위 2는 총괄이 진료 세션에 전달 부탁)
+- **남은 일 · 알려진 문제**: 2차 후보(⑥ 진료과 칸, ⑦ 내원구분 칸, ④ 중복 접수·동명이인 경고, 주소·휴대폰 입력 칸, 대기 목록 자동 새로고침) 순서를 실장님께 여쭙는 중. 7절 나머지
+
 ## 2026-09-29 — 1차 수정: 대기 취소·상태 되돌림·중복 등록·인적사항 덮어쓰기·오류 창 번역
 
 > **총괄 확인 (2026-09-29)**: 합침(`edd4174`) + 실행 중 EMR 반영. 확인: 완료 내원 취소 → 409 「Only a waiting visit can be cancelled」 · 빈 본문 `PUT /visits/:id` → 400 · `PUT /patients/:id`에 이름·전화만 보내도 주소 유지(운영 DB에서 값 되돌려 놓고 확인). 요청 1(㉑ 날짜)은 총괄이 `7ad4387`로 해결 · 요청 2(이미지 이름표)는 `657ba2c` · 요청 3(`npm ci`)은 규칙 8절 고침. 16:49 재생성은 총괄 배포가 맞고 web 이미지도 본체 코드였음(그 뒤 다시 빌드해 지금은 합친 코드).

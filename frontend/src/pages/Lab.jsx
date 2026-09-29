@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
@@ -53,13 +53,27 @@ export default function LabPage() {
   var nts = useState(''), notice = nts[0], setNotice = nts[1];   // what the last save did
   var rks = useState(0), resultsKey = rks[0], setResultsKey = rks[1]; // remounts LabResults after a save
 
-  useEffect(function () { loadData(); }, []);
-  function loadData() {
-    setLoading(true);
+  var viewSeq = useRef(0);   // numbers each loadView, so only the latest one may fill the grid
+
+  // The lists refresh themselves every 30 s (while the tab is visible), so a
+  // consultation the doctor just finished shows up without pressing ↻. Only the
+  // left lists are refreshed; what the lab is typing in the centre is untouched.
+  useEffect(function () {
+    loadData();
+    var timer = setInterval(function () { if (!document.hidden) loadData(true); }, 30000);
+    return function () { clearInterval(timer); };
+  }, []);
+  function loadData(quiet) {
+    if (!quiet) setLoading(true);
     Promise.all([
-      api.get('/lab/pending').catch(function () { return []; }),
-      api.get('/lab/completed').catch(function () { return []; }),
-    ]).then(function (r) { setPending(r[0] || []); setCompleted(r[1] || []); setLoading(false); });
+      api.get('/lab/pending').catch(function () { return null; }),
+      api.get('/lab/completed').catch(function () { return null; }),
+    ]).then(function (r) {
+      // a failed background refresh keeps the lists it had instead of emptying them
+      if (r[0] || !quiet) setPending(r[0] || []);
+      if (r[1] || !quiet) setCompleted(r[1] || []);
+      setLoading(false);
+    });
   }
 
   function pickConsult(g) {
@@ -78,13 +92,16 @@ export default function LabPage() {
   function loadView(v, g) {
     g = g || sel;
     setView(v);
+    // Switching tests quickly used to let a slower, older response land last and
+    // show the previous test's rows under the new tab.
+    var seq = ++viewSeq.current;
     var orders = g.lab_orders || [];
     var targets = v === 'all' ? orders : orders.filter(function (o) { return o.order_item_id === v; });
     Promise.all(targets.map(function (o) {
       return api.get('/lab/order/' + o.order_item_id + '/items')
-        .then(function (d) { return { order_item_id: o.order_item_id, order_name: o.order_name, items: (d.items || []).map(function (x) { return Object.assign({}, x); }) }; })
-        .catch(function () { return { order_item_id: o.order_item_id, order_name: o.order_name, items: [] }; });
-    })).then(function (gr) { setGroups(gr); });
+        .then(function (d) { return { order_item_id: o.order_item_id, order_name: o.order_name, has_master: d.has_master !== false, items: (d.items || []).map(function (x) { return Object.assign({}, x); }) }; })
+        .catch(function () { return { order_item_id: o.order_item_id, order_name: o.order_name, has_master: true, items: [] }; });
+    })).then(function (gr) { if (seq === viewSeq.current) setGroups(gr); });
   }
   function setVal(gi, ii, k, val) {
     setGroups(function (prev) {
@@ -133,7 +150,8 @@ export default function LabPage() {
   function itemGrid(gi, g, showHeader) {
     return <div key={g.order_item_id} style={{ marginBottom: 14 }}>
       {showHeader ? <div style={{ fontWeight: 800, fontSize: 14, color: '#67e8f9', marginBottom: 5 }}>{g.order_name}</div> : null}
-      {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItemsDefined}</div> : (
+      {!g.has_master && g.items.length ? <div style={{ color: '#fbbf24', fontSize: 13, padding: '0 2px 5px' }}>{t.lb_noItemsDefined}</div> : null}
+      {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItems}</div> : (
         <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', background: '#161a26', color: t3, fontSize: 13, fontWeight: 800 }}>
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
@@ -165,7 +183,7 @@ export default function LabPage() {
       <div style={{ background: '#161a26', borderBottom: '1px solid ' + bd, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button onClick={function () { setTab('pending'); setSel(null); }} style={{ background: tab === 'pending' ? cyan + '20' : 'transparent', color: tab === 'pending' ? '#67e8f9' : t3, border: '1px solid ' + (tab === 'pending' ? cyan + '50' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labPending || '결과 대기'} {pending.length}</button>
         <button onClick={function () { setTab('completed'); setSel(null); }} style={{ background: tab === 'completed' ? '#10b98120' : 'transparent', color: tab === 'completed' ? '#6ee7b7' : t3, border: '1px solid ' + (tab === 'completed' ? '#10b98150' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labCompleted || '입력 완료'} {completed.length}</button>
-        <button onClick={loadData} style={{ background: '#1e2433', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 15 }}>↻</button>
+        <button onClick={function () { loadData(); }} style={{ background: '#1e2433', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 15 }}>↻</button>
         <button onClick={function () { setFinderOpen(true); }} style={{ background: '#1e2433', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>🔍 {t.findPatient}</button>
         <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: '#1e2433', color: sel ? '#ddd6fe' : '#475569', border: '1px solid ' + (sel ? '#a855f7' : bd2), borderRadius: 5, padding: '5px 12px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
       </div>

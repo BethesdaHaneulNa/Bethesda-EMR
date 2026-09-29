@@ -141,6 +141,14 @@ router.get('/order/:orderItemId/items', permMiddleware('lab'), async (req, res) 
     existing.rows.forEach(function (e) {
       if (!used.has(e.id)) items.push(fromSaved(e, items.length));
     });
+    // A panel created in Settings can be ordered before its items are defined.
+    // With no row to type into, the lab could never complete that order, so
+    // offer one free row named after the test (no reference range, no flag).
+    if (items.length === 0) {
+      items.push({ lab_test_item_id: null, name: order.order_name, unit: null,
+                   ref_low: null, ref_high: null, ref_text: null,
+                   value: '', comment: '', flag: '', sort_order: 0 });
+    }
     res.json({ order: order, has_master: master.rows.length > 0, items: items });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -173,9 +181,23 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
       return res.status(400).json({ error: 'At least one result value or comment is required' });
     }
 
+    // A row that belongs to one of this panel's items takes its name, unit and
+    // reference range from the item as it is now, not from what the screen sent:
+    // the screen may have been opened before someone edited the range in
+    // Settings, and the saved flag should follow the range in force. Rows with no
+    // live item (kept from an earlier save, or the free row of a panel with no
+    // items) keep what they came with.
+    const master = await client.query('SELECT * FROM lab_test_item WHERE order_code_id = $1', [order.order_code_id]);
+    const byId = {};
+    master.rows.forEach(function (m) { byId[m.id] = m; });
+
     await client.query('DELETE FROM lab_result WHERE order_item_id = $1', [req.params.orderItemId]);
     for (let i = 0; i < filled.length; i++) {
-      const it = filled[i] || {};
+      const sent = filled[i] || {};
+      const m = byId[parseInt(sent.lab_test_item_id, 10)];
+      const it = m ? Object.assign({}, sent, { lab_test_item_id: m.id, name: m.name, unit: m.unit,
+                                               ref_low: m.ref_low, ref_high: m.ref_high, ref_text: m.ref_text })
+                   : Object.assign({}, sent, { lab_test_item_id: null, name: sent.name || order.order_name });
       const flag = computeFlag(it.value, it.ref_low, it.ref_high);
       await client.query(
         `INSERT INTO lab_result

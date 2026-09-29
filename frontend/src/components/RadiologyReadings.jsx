@@ -4,6 +4,23 @@ import { useLang } from '../i18n/index.jsx';
 
 function ymd(d) { return d ? String(d).split('T')[0] : ''; }
 
+// What the images say about the patient, next to the order it was taken for.
+// Only the worklist bridge fills this in (POST /api/pacs/study-arrived); a
+// mismatch means the patient was typed or edited on the device, so the study
+// may belong to someone else. It cannot show a wrong pick from the worklist --
+// those images carry the picked patient's own details.
+function PatientCheck(props) {
+  var r = props.row, t = props.t;
+  if (r.patient_check !== 'mismatch' && r.patient_check !== 'missing') return null;
+  var mismatch = r.patient_check === 'mismatch';
+  var text = mismatch
+    ? String(t.px_patientMismatch || '').replace('{id}', r.image_patient_id || '').replace('{name}', String(r.image_patient_name || '').replace(/\^/g, ' ').trim())
+    : (t.px_patientMissing || '');
+  return <div style={{ margin: '4px 0 6px', padding: '6px 9px', borderRadius: 6, fontSize: 13, fontWeight: 700, lineHeight: 1.5,
+    background: mismatch ? '#7f1d1d55' : '#78350f55', color: mismatch ? '#fca5a5' : '#fcd34d',
+    border: '1px solid ' + (mismatch ? '#b91c1c' : '#b45309') }}>⚠ {text}</div>;
+}
+
 // Read-only list of a patient's imaging orders + radiology readings.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
@@ -31,8 +48,12 @@ export function RadiologyReadings(props) {
             <span style={{ fontFamily: 'monospace', color: '#34d399', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
             <span style={{ background: '#1e3a5f', color: '#93c5fd', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
             <span style={{ color: tx, fontSize: 15, fontWeight: 700 }}>{r.order_name}</span>
+            {r.images_received_at
+              ? <span style={{ color: '#34d399', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
+              : (r.study_instance_uid ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
             {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: '#7c3aed22', color: cyan, border: '1px solid #7c3aed55', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
           </div>
+          <PatientCheck row={r} t={t} />
           <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#0f1117', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
             {r.result_text || (t.noReading || '판독 소견 없음')}
           </div>

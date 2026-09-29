@@ -22,6 +22,10 @@
 | 설정 | 직원·권한, 약품, 오더 코드, 검사 패널, 진료과, 병원 정보, 백업 | [settings](modules/settings.md) | [기록](handoff/settings.md) |
 | PACS | 영상 촬영 워크리스트, 영상 보기, 판독 | [pacs](modules/pacs.md) | [기록](handoff/pacs.md) |
 
+## 실장님 결정 기록
+
+- [decisions.md](decisions.md) — 실장님이 정하신 것과 아직 기다리는 것. 결정 세션이 씁니다.
+
 ## 운영 문서 (저장소 최상위)
 
 - `README.md` — 설치 시작

@@ -72,17 +72,36 @@ router.get('/test', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// worklist_log columns the screens need, and how they are handed out. `images`
+// stays null until the bridge has reported the study (POST /study-arrived):
+// "nothing arrived yet" is a different answer from "arrived, and it matches".
+const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_count,
+                    image_patient_id, image_patient_name, patient_check`;
+function imagesOf(w) {
+  if (!w || !w.images_received_at) return null;
+  return {
+    received_at: w.images_received_at,
+    count: w.image_count,
+    patient_id: w.image_patient_id || '',
+    patient_name: w.image_patient_name || '',
+    patient_check: w.patient_check || '',
+  };
+}
+
 // Resolve the PACS viewer URL + reading for an imaging order (Stone Web Viewer by StudyInstanceUID).
 router.get('/viewer-url', authMiddleware, async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const base = cfg.pacs_viewer_url ? String(cfg.pacs_viewer_url).replace(/\/+$/, '') : '';
-    let study = '', accession = '', order_name = '', modality = '', reading = null;
+    let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     if (req.query.order_item_id) {
       const oid = req.query.order_item_id;
       const w = await pool.query(
-        'SELECT accession_no, study_instance_uid FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1', [oid]);
-      if (w.rows[0]) { study = w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || ''; }
+        `SELECT ${WL_COLUMNS} FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
+      if (w.rows[0]) {
+        study = w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || '';
+        images = imagesOf(w.rows[0]);
+      }
       const o = await pool.query(
         'SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1', [oid]);
       if (o.rows[0]) {
@@ -91,7 +110,7 @@ router.get('/viewer-url', authMiddleware, async (req, res) => {
       }
     } else if (req.query.study) { study = req.query.study; }
     const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : base;
-    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading });
+    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading, images });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -113,11 +132,12 @@ router.get('/readings/patient/:patientId', authMiddleware, async (req, res) => {
     const r = await pool.query(
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
-              wl.accession_no, wl.study_instance_uid
+              wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,
+              wl.image_patient_id, wl.image_patient_name, wl.patient_check
          FROM order_item oi
          JOIN visit v ON v.id = oi.visit_id
          LEFT JOIN staff s ON s.id = oi.result_by
-         LEFT JOIN LATERAL (SELECT accession_no, study_instance_uid FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
+         LEFT JOIN LATERAL (SELECT ${WL_COLUMNS} FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
         WHERE oi.patient_id = $1 AND oi.code_type = 'imaging'
         ORDER BY v.visit_date DESC, oi.id DESC`,
       [req.params.patientId]
@@ -218,6 +238,76 @@ router.post('/bridge-heartbeat', async (req, res) => {
     );
     res.json({ received: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// The bridge found this entry's study in Orthanc and it has stopped growing.
+// Mark the entry done -- which takes it off the device worklist on the next
+// cycle and locks the order against deletion (Consultation.jsx orderLocked) --
+// and keep what the images say about the patient.
+//
+// The patient check is made here, against the chart number, not taken from the
+// bridge: the bridge only reports what the DICOM header says. It catches images
+// whose patient was typed or edited on the device. It cannot catch a
+// technician who picked the wrong patient from the worklist: those images carry
+// that patient's own details and look correct -- which is why finished entries
+// now leave the list.
+function samePatientId(a, b) {
+  return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
+}
+
+router.post('/study-arrived', async (req, res) => {
+  let cfg;
+  try { cfg = await ensureConfig(); }
+  catch (err) { return res.status(500).json({ error: err.message }); }
+  const denied = bridgeDenied(cfg, req);
+  if (denied) return res.status(401).json({ error: denied });
+
+  const b = req.body || {};
+  const worklistId = Number(b.worklist_id);
+  const uid = String(b.study_instance_uid || '');
+  if (!Number.isInteger(worklistId) || worklistId <= 0 || !uid) {
+    return res.status(400).json({ error: 'worklist_id and study_instance_uid are required' });
+  }
+  const imagePatientId = String(b.patient_id || '').trim().slice(0, 64);
+  const imagePatientName = String(b.patient_name || '').trim().slice(0, 200);
+  const count = Number.isInteger(Number(b.instances)) && Number(b.instances) >= 0 ? Number(b.instances) : null;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const w = await client.query(
+      `SELECT wl.id, wl.order_item_id, wl.study_instance_uid, p.chart_no
+         FROM worklist_log wl JOIN patient p ON p.id = wl.patient_id
+        WHERE wl.id = $1 FOR UPDATE OF wl`, [worklistId]);
+    if (!w.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
+    const row = w.rows[0];
+    // The UID is the link; a report for some other study must not land here.
+    if (row.study_instance_uid !== uid) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Study does not belong to this worklist entry' });
+    }
+    const check = !imagePatientId ? 'missing' : (samePatientId(imagePatientId, row.chart_no) ? 'match' : 'mismatch');
+    await client.query(
+      `UPDATE worklist_log
+          SET status = CASE WHEN status = 'cancelled' THEN status ELSE 'completed' END,
+              completed_at = COALESCE(completed_at, NOW()),
+              images_received_at = COALESCE(images_received_at, NOW()),
+              orthanc_study_id = $2, image_count = $3,
+              image_patient_id = $4, image_patient_name = $5, patient_check = $6
+        WHERE id = $1`,
+      [worklistId, String(b.orthanc_study_id || '').slice(0, 64) || null, count,
+       imagePatientId || null, imagePatientName || null, check]);
+    await client.query(
+      `UPDATE order_item SET worklist_status = 'completed', updated_at = NOW()
+        WHERE id = $1 AND worklist_status <> 'cancelled'`, [row.order_item_id]);
+    await client.query('COMMIT');
+    res.json({ received: true, patient_check: check });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = router;
