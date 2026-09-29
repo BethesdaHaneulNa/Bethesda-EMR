@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 상용구에 프랑스어·영어 문장 칸 (진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `0d66ad6`을 ff로 당긴 뒤)
+- **한 일**: 진료 화면 문장사전이 `text_fr`/`text_en`을 쓰게 되었는데, 설정 → **Phrases types (상용구)** 편집 창에는 `text` 칸만 있었습니다(API·DB는 원래 셋 다 받음). 편집 창에 **Texte en français**·**Texte en anglais** 칸과 안내 한 줄을 더했고, 목록은 진료 화면과 같은 규칙(프랑스어 화면 → `text_fr`, 없으면 `text`)으로 보여주며 FR·EN 표시를 붙였습니다. 저장할 때마다 상용구가 묶음 안에서 자리를 옮기던 것도 고쳤습니다(`GET /api/admin/phrases` 정렬에 `id` — 시드의 `sort_order`가 전부 0).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx`(상용구 탭 목록·편집 창) · `backend/src/routes/admin.routes.js`(정렬 한 줄) · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 블록에 4개 (`se_fTextDefault`·`se_fTextFr`·`se_fTextEn`·`se_phraseLangHint`)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `npm run build`, `node --check`. 격리 스택 9187 프랑스어 화면에서 상용구 1번에 「État stable. Contrôle conseillé dans 1 semaine.」 입력·저장 → DB `text_fr`에 악센트 그대로, 목록에 프랑스어 문장 + FR 표시. 정렬: General 묶음이 저장 뒤에도 id 순(1…6).
+- **확인 못 한 것**: 진료 화면에서 그 문장이 실제로 프랑스어로 나오는 것(진료 세션 코드 — `phraseText` 규칙만 코드로 확인). 영어 화면.
+- **위키**: `modules/settings.md` 2-8절 상용구, 3-9절(새), 8절
+- **다른 세션에 부탁**: **진료** — 시드 상용구 24개에 프랑스어 문장이 없습니다. 현장용 번역을 넣으려면 새 마이그레이션(진료 번호대)이나 설정 화면에서 직접 입력. 의학 문장이라 번역 내용은 실장님·의료진 확인이 필요합니다.
+
 ## 2026-09-29 — 약 저장 재고 안전장치 (약국 H4 제안 A, 총괄 지시)
 
 > **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 약 행을 `FOR UPDATE`로 잠근 뒤 판단·저장, 재고를 안 고쳤으면 지금 값 유지, 그 사이 바뀌었으면 409. 실행 중 EMR에서 한 약으로 확인(읽기→단가만 같은 값으로 저장→재고 그대로, 틀린 `stock_expected`로 재고 변경→409, 저장 안 됨) — 값은 모두 원래대로. `backend/test/settings.drugs.mjs`는 격리 스택 전용이라 운영에서는 돌리지 않음.
