@@ -5,7 +5,7 @@
 ## 2026-09-29 — 결정 4-가 구현: 성별·나이별 참고치 구조
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `9c9bbee` (출발점 `develop` `ff53907`)
 - **한 일**: 승인된 설계대로, 총괄 조건(겹치면 저장 **거절**) 반영.
   - **마이그레이션 `backend/sql/501_lab_ref_ranges.sql`** (번호는 총괄이 다시 매김): `lab_ref_range` 테이블 + `lab_result.ref_label`. **추가만, 값 없음.**
   - **설계에서 바꾼 두 가지**(더 단순·정확해서):
