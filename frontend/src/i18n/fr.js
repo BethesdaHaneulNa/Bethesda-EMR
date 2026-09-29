@@ -321,6 +321,14 @@ export default {
   cs_vPR: "FC",
   cs_vRR: "FR",
   cs_vSpO2: "SpO2",
+  cs_colSig: "Posologie",
+  cs_doseHint: "Saisir la dose TOTALE par jour. Total = dose par jour × jours. Fois = en combien de prises la journée est répartie.",
+  cs_rxBreakdown: "{per} par prise × {freq}/j × {days} j = total {total}",
+  cs_rxUneven: "⚠ Dose par prise non divisible — {daily}/j en {freq} prises · {days} j = total {total}",
+  cs_rxStoredTotal: "total enregistré {total} (ancien calcul)",
+  cs_noPrice: "Sans prix",
+  cs_noPriceCount: "{n} sans prix",
+  cs_noPriceHint: "Le prix unitaire est 0 : cette ligne sera facturée 0. Saisir le prix dans les Paramètres ne change pas les lignes déjà ajoutées : saisissez-le, puis retirez cette ligne et ajoutez-la de nouveau.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

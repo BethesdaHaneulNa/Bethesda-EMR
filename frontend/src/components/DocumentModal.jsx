@@ -82,10 +82,11 @@ export function DocumentModal(props) {
   var today = new Date().toISOString().slice(0, 10);
   var doctor = { name: ctx.doctor_name || (user && user.name) || '', dept_code: ctx.dept_code || '' };
 
-  function buildValues(tpl) {
+  // lg: the document language, for text an autofill writes (the medication lines).
+  function buildValues(tpl, lg) {
     var v = {};
     (tpl.fields || []).forEach(function (f) {
-      v[f.key] = f.autofill ? autofillValue(f.autofill, ctx) : (f.default != null ? f.default : '');
+      v[f.key] = f.autofill ? autofillValue(f.autofill, ctx, lg || lang) : (f.default != null ? f.default : '');
     });
     return v;
   }
@@ -96,7 +97,7 @@ export function DocumentModal(props) {
     setMode('new'); setViewed(null);
     var first = visible[0];
     setCode(first ? first.code : '');
-    setValues(buildValues(first));
+    setValues(buildValues(first, langCtx.lang || 'en'));
     api.get('/admin/clinic').then(setClinic).catch(function () { setClinic(null); });
     api.get('/patients/' + props.patient.id).then(setFullPatient).catch(function () { setFullPatient(null); });
     setMeds([]);

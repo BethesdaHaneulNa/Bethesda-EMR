@@ -330,6 +330,14 @@ export default {
   cs_vPR: "PR",
   cs_vRR: "RR",
   cs_vSpO2: "SpO2",
+  cs_colSig: "Sig.",
+  cs_doseHint: "Enter the DAILY total. Total = daily total × days. Times = how many doses the day is split into.",
+  cs_rxBreakdown: "{per} per dose × {freq}/day × {days} days = {total} in all",
+  cs_rxUneven: "⚠ Dose per intake does not divide — {daily}/day in {freq} doses · {days} days = {total} in all",
+  cs_rxStoredTotal: "stored total {total} (old formula)",
+  cs_noPrice: "No price",
+  cs_noPriceCount: "{n} without a price",
+  cs_noPriceHint: "The unit price is 0, so this line will be billed at 0. Entering the price in Settings does not change lines already added: enter it there, then remove this line and add it again.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
