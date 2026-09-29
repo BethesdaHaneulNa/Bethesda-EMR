@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 2단계 (가): 색 이름표 · 첫 화면 스크립트 · hover (보이는 변화 없음)
+
+- **상태**: 확인 요청
+- **커밋**: session/design (이 항목과 같은 커밋). develop `0cdb794` 를 당긴 뒤 작업(앞의 위키 커밋 `92b5c8a` 가 아직 develop 에 없어 fast-forward 가 되지 않았음 → 보고한 커밋 번호를 바꾸지 않으려고 rebase 대신 merge 커밋 `fb66dd3`)
+- **한 일**: 총괄 승인(coordinator.md 「디자인 세션에게 — 설계 승인」 1 · 2 · 3)대로 주제 장치의 바닥을 깔았음. 직원에게 보이는 변화는 없음 — 바꾸는 단추가 아직 없고, 화면 파일은 아직 이름표를 읽지 않음.
+  - `frontend/index.html`: `<style id="bethesda-theme">` — `:root`(어두운 화면 = 지금 값 그대로)와 `:root[data-theme="light"]`(시안 A). 색 57개 + 옅은 색 64개 + `--scrim` · `--hover-filter` · `--scheme`.
+  - 그 아래 첫 화면 스크립트 — `localStorage('medconnect_theme')` 가 `light`·`dark` 일 때만 `<html data-theme>` 을 붙임. try/catch 로 감쌈(총괄 조건).
+  - `body` 의 `background`·`color` 와 `button:hover`·`.pressable:hover` 의 `filter` 가 이름표를 읽음.
+  - `frontend/src/theme.js` 새로 — `cv()` · `tint()` · `getTheme()` · `setTheme()`. 아직 어디서도 import 하지 않음.
+- **바꾼 파일**: `frontend/src/theme.js`(새로, 디자인 세션 것) · 위키 · `wiki/reference/design/tokens.mjs`(이름표의 원본 표) · `compare-in-browser.js`
+- **공용 파일 변경**: **`frontend/index.html`**(승인받음) — 위 세 가지. 272줄이 늘었는데 거의 다 이름표 목록
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**:
+  - `npm install --no-package-lock` + `npm run build` 통과. 격리 스택 9189 이미지 빌드 통과.
+  - **어두운 화면 비교**: 고치기 전(develop `0cdb794`) · 후 빌드에서 같은 DB · 같은 누름으로 11장(로그인, 접수 2, 진료 2, 수납, 약국, 임상병리 2, 통계, 설정 — 프랑스어 1366×768)의 모든 요소(1,295개)의 계산된 색을 뽑아 `diff` — **11장 모두 한 글자도 다르지 않음**. `--hover-filter` 는 `brightness(1.12)` 로 풀림.
+  - 첫 화면 스크립트: `medconnect_theme=light` 로 두고 새로 고침 → `data-theme="light"`, body 바탕 `rgb(239,242,247)`, hover `brightness(0.95)`. 값이 `purple` 이면 무시되고 어두운 화면. 값을 지우고 끝냄.
+  - `node wiki/reference/design/tokens.mjs --check` — 밝은 값 모두 통과(글자는 모든 바탕 위에서 4.5 이상, 같은 색 계열의 옅은 띠 위에서도 4.5 이상, 색 단추 위 흰 글자 4.5 이상, 입력 칸 테두리 3.1).
+- **확인 못 한 것**: 한국어 · 영어 화면의 비교는 하지 않음(색은 언어와 관계없고 `index.html` 만 고쳤음). 수납 · 약국 화면은 자료가 없는 빈 화면으로만 봄. 마우스를 올렸을 때의 색은 규칙의 글자로만 확인(3.4 한계). 오래된 Chrome(109 이하) 실물에서는 보지 못함 — 쓴 기능은 CSS 변수(Chrome 49)와 속성 선택자뿐
+- **위키**: `modules/design.md` 머리 · 3.3 머리말 · 3.4(비교 기록 표) · 3.5 · 4 · 8
+- **총괄 확인 요청**:
+  - `index.html` 의 블록은 `tokens.mjs` 에서 만든 것 — 다른 세션이 색을 고치려면 표를 고쳐야 함(블록 위 주석에 적음).
+  - 밝은 화면을 볼 방법이 지금은 브라우저 콘솔뿐(`localStorage.setItem('medconnect_theme','light')`). 실행 중 EMR 에 올려도 직원 화면은 그대로.
+  - **(나)로 가려면** 위 항목의 서버 쪽 결정이 필요: `theme.routes.js` 를 디자인 세션이 만드는 안 vs 설정 세션이 `/auth` 에 넣는 안. 답을 기다리는 동안 3단계 순서 1의 `TopBar.jsx` **색만**(단추 없이) 먼저 하겠습니다 — 서버 결정과 관계없음.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: (나) 단추 · 번역 · 계정마다 기억 → 3단계
+
 ## 2026-09-29 — 실장님 결정 다섯 가지 · 「계정마다 기억」에 맞춘 설계 고침
 
 - **상태**: 보류 — 설계 (총괄 승인을 기다림). 실장님 결정은 모두 받음
