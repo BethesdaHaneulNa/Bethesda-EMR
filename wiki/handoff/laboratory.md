@@ -5,7 +5,7 @@
 ## 2026-09-29 — 서버 권한(S2): 검사 API 권한 정리, 간호사 계정 확인
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory `70aab0f` (출발점 `develop` `48059dd`)
+- **커밋**: session/laboratory `20ace07` (출발점 `develop` `e54a1b2`)
 - **한 일**: 실장님 결정 S2(서버도 화면 권한대로 막기). `GET /lab/test-items`가 로그인만 확인하던 것을 `permMiddleware('lab', 'settings')`로. **진료 화면은 이 API를 읽지 않음**(프론트 전체 grep: `/lab/test-items`는 `Settings.jsx`만) → consultation은 넣지 않음. 나머지 lab 라우트는 이미 권한이 붙어 있었음. 위키 4절 API 표 권한 칸 정리 + S1(매 요청 DB에서 권한 읽음) 설명. 총괄 요청으로 5절에 진료 화면의 결과 도착 표시(`bdd14bf`) 한 줄.
 - **권한 확인 표**(격리 스택 9185, 역할별 계정으로 실제 요청. 400은 권한 통과 후 빈 본문이라 거절된 것):
 
