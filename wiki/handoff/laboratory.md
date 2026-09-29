@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 권한(S2): 검사 API 권한 정리, 간호사 계정 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory — 이 항목과 같은 커밋(출발점 `develop` `48059dd`)
+- **한 일**: 실장님 결정 S2(서버도 화면 권한대로 막기). `GET /lab/test-items`가 로그인만 확인하던 것을 `permMiddleware('lab', 'settings')`로. **진료 화면은 이 API를 읽지 않음**(프론트 전체 grep: `/lab/test-items`는 `Settings.jsx`만) → consultation은 넣지 않음. 나머지 lab 라우트는 이미 권한이 붙어 있었음. 위키 4절 API 표 권한 칸 정리 + S1(매 요청 DB에서 권한 읽음) 설명. 총괄 요청으로 5절에 진료 화면의 결과 도착 표시(`bdd14bf`) 한 줄.
+- **권한 확인 표**(격리 스택 9185, 역할별 계정으로 실제 요청. 400은 권한 통과 후 빈 본문이라 거절된 것):
+
+  | 경로 | 권한 | 관리자 | 간호사 | lab만 | 약국만 | 의사 |
+  |---|---|---|---|---|---|---|
+  | GET `/lab/pending` | lab | 200 | 200 | 200 | 403 | 403 |
+  | GET `/lab/completed` | lab | 200 | 200 | 200 | 403 | 403 |
+  | GET `/lab/visit/:id/orders` | lab | 200 | 200 | 200 | 403 | 403 |
+  | GET `/lab/order/:id/items` | lab | 200 | 200 | 200 | 403 | 403 |
+  | POST `/lab/order/:id/results` | lab | 400 | 400 | 400 | 403 | 403 |
+  | GET `/lab/patient/:id/results` | consultation · lab | 200 | 200 | 200 | 403 | 200 |
+  | GET `/lab/test-items` | **lab · settings (새로)** | 200 | 200 | 200 | 403 | 403 |
+  | POST `/lab/test-items/save` | settings | 400 | 403 | 403 | 403 | 403 |
+
+  검사 화면이 함께 쓰는 남의 API(환자 찾기 `/patients`·`/visits/patient/:id`, 차트뷰어 `/admin/clinic`·`/patients/:id`·`/documents/patient/:id`)도 간호사·lab만 계정으로 200.
+- **간호사 계정 화면 확인**(프랑스어): 메뉴 Enregistrement·Pharmacie·Laboratoire, 대기 목록(「En consultation」), 환자 선택, 📋 Dossier (vue) 열림(콘솔 오류 없음), 값 입력·저장 → 결과 표 ▼10,8, Terminé 1, 🔍 Trouver patient 검색 — 모두 정상.
+- **바꾼 파일**: `backend/src/routes/lab.routes.js`(한 줄 + 주석) · `wiki/modules/laboratory.md`(4절, 5절, 8절) · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인 못 한 것**: 설정에서 권한을 바꾼 뒤 **화면 메뉴**가 다시 로그인 없이 바뀌는지(서버는 바로 적용됨 — 코드로 확인). 진료 화면의 결과 도착 표시는 진료 세션 확인분이라 직접 보지 않음.
+- **다른 세션에 부탁**: 없음 · **남은 일**: 결정 3·4·5·12 대기.
+
 ## 2026-09-29 — 위키 정리: 문제 9(진료 화면 lab 오더 상태 칸) 해결됨으로
 
 - **상태**: 확인 요청 (위키만)

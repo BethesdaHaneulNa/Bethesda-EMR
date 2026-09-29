@@ -273,7 +273,10 @@ async function listTestItems(db, orderCodeId) {
   return r.rows;
 }
 
-router.get('/test-items', async (req, res) => {
+// Read only by the lab items tab in Settings. Was open to any signed-in account;
+// the server now gives each route the permission of the screen that uses it
+// (director's decision S2). 'lab' too, so the lab can read its own templates.
+router.get('/test-items', permMiddleware('lab', 'settings'), async (req, res) => {
   try {
     res.json(await listTestItems(pool, req.query.order_code_id));
   } catch (err) { res.status(500).json({ error: err.message }); }
