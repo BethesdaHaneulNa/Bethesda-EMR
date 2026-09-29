@@ -351,6 +351,7 @@ export default {
   py_noPrice: "가격 없음",
   py_noPriceBanner: "단가가 0인 항목 {n}개 — 가격을 확인하세요",
   py_noPriceConfirm: "단가가 0인 항목이 {n}개 있습니다: {names}.\n설정에서 가격을 넣어도 이미 넣은 처방·오더는 0원 그대로입니다(진료실에서 지우고 다시 넣어야 함).\n그래도 이대로 수납할까요?",
+  py_legacyValue: "(옛 값)",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

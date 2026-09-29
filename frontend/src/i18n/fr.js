@@ -351,6 +351,7 @@ export default {
   py_noPrice: "Sans prix",
   py_noPriceBanner: "{n} article(s) sans prix — vérifiez les prix",
   py_noPriceConfirm: "{n} article(s) sans prix : {names}.\nFixer le prix plus tard ne modifie pas les lignes déjà prescrites (le médecin doit les supprimer et les ajouter à nouveau).\nEncaisser quand même ?",
+  py_legacyValue: "(ancienne valeur)",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

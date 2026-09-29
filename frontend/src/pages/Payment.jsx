@@ -570,11 +570,13 @@ export default function PaymentPage() {
         <div>
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontWeight:900,fontSize:16,color:'#60a5fa'}}>🏥 {t.consultFee}</span>
+            {/* Visit types are 초진 · 재진 · 진료비 없음 only (decided 2026-09-29). An older visit
+                saved as emergency/referral still shows that value, marked old and not
+                offered again; its fee stays what C03/C04 price it at. */}
             <select value={vType} onChange={function(e){setVType(e.target.value)}} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'5px 8px',color:tx,fontSize:14,cursor:'pointer'}}>
+              {vType==='emergency'||vType==='referral'?<option value={vType} disabled>{t[vType]} {t.py_legacyValue}</option>:null}
               <option value="newVisit">{t.newVisit}</option>
               <option value="followUp">{t.followUp}</option>
-              <option value="emergency">{t.emergency}</option>
-              <option value="referral">{t.referral}</option>
               <option value="none">{t.noConsult}</option>
             </select>
             <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
