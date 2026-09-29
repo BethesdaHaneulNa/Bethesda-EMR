@@ -172,8 +172,10 @@ export default function LabPage() {
         // With orders listed as soon as they are placed, the doctor can still
         // delete one (allowed while it has no result) while it is being typed
         // in here; the server then answers 404 'Order not found'.
-        var removed = e.message === 'Order not found';
-        failed = { name: toSave[i].order_name, message: removed ? t.lb_orderRemoved : e.message, removed: removed };
+        // ...or cancel it (decision 3): 409 'Order is cancelled'.
+        var removed = e.message === 'Order not found' || e.message === 'Order is cancelled';
+        failed = { name: toSave[i].order_name, removed: removed,
+                   message: e.message === 'Order not found' ? t.lb_orderRemoved : e.message === 'Order is cancelled' ? t.lb_orderCancelled : e.message };
         break;
       }
     }

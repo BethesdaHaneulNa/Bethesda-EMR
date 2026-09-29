@@ -463,6 +463,8 @@ export default {
   lb_saveAnyway: "그래도 저장",
   lb_inConsultation: "진료 중",
   lb_orderRemoved: "이 검사는 진료실에서 오더가 지워졌습니다. 목록을 새로 불러옵니다.",
+  lb_cancelled: "취소됨",
+  lb_orderCancelled: "이 검사는 진료실에서 취소되었습니다. 목록을 새로 불러옵니다.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",

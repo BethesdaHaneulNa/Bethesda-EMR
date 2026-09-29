@@ -215,7 +215,9 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const oi = await client.query('SELECT * FROM order_item WHERE id = $1', [req.params.orderItemId]);
+    // FOR UPDATE: the consultation room may be cancelling this order right now
+    // (POST /api/consultations/order/:id/cancel locks it the same way).
+    const oi = await client.query('SELECT * FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderItemId]);
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Order not found' }); }
     const order = oi.rows[0];
     // Only a lab order belongs on this screen. Accepting any order id would let a
@@ -224,6 +226,13 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
     if (order.code_type !== 'lab') {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Order is not a lab order' });
+    }
+    // An order cancelled in the consultation room (decision 3, a wrong order that
+    // already had results) keeps its results as a record. Saving into it would set
+    // it back to 'completed' and put it back on the bill, so refuse.
+    if (order.status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Order is cancelled' });
     }
     const vis = await client.query('SELECT visit_date FROM visit WHERE id = $1', [order.visit_id]);
     const rdate = (vis.rows[0] && vis.rows[0].visit_date) || null;
@@ -285,7 +294,11 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
 router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab'), async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT lr.*, oc.code AS panel_code, oc.name AS panel_name
+      `SELECT lr.*, oc.code AS panel_code, oc.name AS panel_name,
+              oi.status AS order_status,
+              -- read through jsonb so this works before and after the consultation
+              -- session's migration adds order_item.cancel_reason
+              to_jsonb(oi)->>'cancel_reason' AS cancel_reason
          FROM lab_result lr
          LEFT JOIN order_item oi ON oi.id = lr.order_item_id
          LEFT JOIN order_code oc ON oc.id = oi.order_code_id
