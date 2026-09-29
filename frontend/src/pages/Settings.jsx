@@ -398,7 +398,9 @@ export default function SettingsPage() {
             <div style={{flex:1,overflow:'auto'}}>
               {phrases.map(function(p){ return <div key={p.id} style={{padding:'7px 14px',borderBottom:'1px solid #1e2433',display:'flex',gap:8}}>
                 <span style={{background:'#f59e0b20',color:'#fbbf24',borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
-                <span style={{flex:1,fontSize: 14,color:'#cbd5e1'}}>{p.text}</span>
+                {/* The same choice the consultation screen makes, so the list shows what doctors will see. */}
+                <span style={{flex:1,fontSize: 14,color:'#cbd5e1'}}>{(langCtx.lang==='fr'&&p.text_fr)||(langCtx.lang==='en'&&p.text_en)||p.text}
+                  {' '}{p.text_fr?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px'}}>FR</span>:null}{p.text_en?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px',marginLeft:3}}>EN</span>:null}</span>
                 <button onClick={function(){openEdit('phrase',p)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
                 <button onClick={function(){deleteItem('phrase',p.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
               </div>; })}
@@ -552,13 +554,13 @@ export default function SettingsPage() {
 
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12}}>
                 <div style={{fontWeight:700,fontSize: 14,color:'#60a5fa',marginBottom:10}}>2. {t.pacsServer||'PACS 서버 (Orthanc)'}</div>
-                <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginBottom:8}}>{t.pacsServerHint||'영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(8090)는 진료실 뷰어가 영상을 띄울 때 씁니다.'}</div>
+                <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginBottom:8}}>{t.pacsServerHint||'영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.'}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 90px',gap:8}}>
                   <Fld label="Host / IP"><input placeholder="NAS_IP" value={pacsConfig.worklist_scp_host||''} onChange={function(e){up('worklist_scp_host',e.target.value)}} style={IS}/></Fld>
                   <Fld label={(t.dicomPort||'DICOM Port')}><input type="number" value={pacsConfig.worklist_scp_port||4242} onChange={function(e){up('worklist_scp_port',Number(e.target.value))}} style={IS}/></Fld>
                 </div>
                 <Fld label="AE Title"><input value={pacsConfig.worklist_scp_ae||''} onChange={function(e){up('worklist_scp_ae',e.target.value)}} style={IS}/></Fld>
-                <div style={{marginTop:8}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')}><input placeholder="http://NAS_IP:8090" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
+                <div style={{marginTop:8}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')}><input placeholder="http://NAS_IP:9090" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
                   <button onClick={function(){testPacs('worklist')}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
                   {pacsConfig.pacs_viewer_url?<a href={pacsConfig.pacs_viewer_url} target="_blank" rel="noreferrer" style={{background:'#1e2433',color:'#a78bfa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13,textDecoration:'none'}}>🖼 {t.openViewer||'뷰어 열기'}</a>:null}
@@ -828,7 +830,14 @@ export default function SettingsPage() {
 
             {editType==='phrase'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
               <Fld label={t.se_fCategory}><select value={editItem.category||'General'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{'General,Internal,Surgery,Peds,OBGYN,Custom'.split(',').map(function(c){return <option key={c}>{c}</option>})}</select></Fld>
-              <Fld label={t.se_fText}><textarea value={editItem.text||''} onChange={function(e){ue('text',e.target.value)}} rows={4} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              {/* The consultation screen shows text_fr on a French screen and text_en on an
+                  English one, falling back to text (Consultation.jsx phraseText). The API
+                  has always stored all three; only text had a field here, so a phrase could
+                  never be given its French wording from the clinic. */}
+              <Fld label={t.se_fTextDefault}><textarea value={editItem.text||''} onChange={function(e){ue('text',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <Fld label={t.se_fTextFr}><textarea value={editItem.text_fr||''} onChange={function(e){ue('text_fr',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <Fld label={t.se_fTextEn}><textarea value={editItem.text_en||''} onChange={function(e){ue('text_en',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
+              <div style={{fontSize:12,color:t3,lineHeight:1.5}}>{t.se_phraseLangHint}</div>
             </div>):null}
 
             {editType==='dept'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>

@@ -243,7 +243,7 @@ export default {
   settleAll: "Settle All",
   settleAllConfirm: "Collect all outstanding at once?",
   pacsServer: "PACS Server (Orthanc)",
-  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title; the web URL (8090) is used to open the viewer from the chart.",
+  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title; the web URL (9090) is used to open the viewer from the chart.",
   pacsViewerUrl: "PACS web / viewer URL",
   dicomPort: "DICOM Port",
   testPacsBtn: "Test PACS (DICOM)",
@@ -469,6 +469,10 @@ export default {
   se_fHours: "Working hours",
   se_clinicNote: "The document chooses the name by print language — French uses the French name, English the English name, Korean the default. Address, phone and email are shared.",
   se_stockChanged: "The stock of this drug changed while it was open (dispensing, for example). It is now {n}. The stock field now shows that value; check it and save again. Your other changes are kept.",
+  se_fTextDefault: "Text (default / Korean screen)",
+  se_fTextFr: "French text",
+  se_fTextEn: "English text",
+  se_phraseLangHint: "The consultation screen uses the French text on a French screen and the English text on an English one. If empty, the default text is shown.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

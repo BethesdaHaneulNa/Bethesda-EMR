@@ -165,19 +165,31 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
   try {
     const billResult = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
-       v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name
+       v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
+       COALESCE(NULLIF(d.name_fr,''), NULLIF(d.name_en,''), d.name) as dept_name_fr,
+       x.name as cancelled_by_name,
+       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date
        FROM billing b
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
        LEFT JOIN department d ON v.department_id = d.id
        LEFT JOIN staff s ON v.doctor_id = s.id
        LEFT JOIN staff c ON b.cashier_id = c.id
+       LEFT JOIN staff x ON b.cancelled_by = x.id
+       LEFT JOIN billing ci ON ci.id = b.carried_into_id
        WHERE b.id = $1`,
       [req.params.billingId]
     );
     if (!billResult.rows.length) return res.status(404).json({ error: 'Billing not found' });
     const itemResult = await pool.query('SELECT * FROM billing_item WHERE billing_id = $1 ORDER BY id', [req.params.billingId]);
-    res.json({ bill: billResult.rows[0], items: itemResult.rows });
+    // The older receipts whose unpaid balance this one took over (016), so the
+    // printed receipt can say where "previous balance" came from.
+    const fromResult = await pool.query(
+      `SELECT receipt_no, billing_date, GREATEST(total_due - amount_paid, 0) AS amount
+         FROM billing WHERE carried_into_id = $1 ORDER BY billing_date, id`,
+      [req.params.billingId]
+    );
+    res.json({ bill: billResult.rows[0], items: itemResult.rows, carried_from: fromResult.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

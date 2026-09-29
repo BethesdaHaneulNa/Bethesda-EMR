@@ -1,6 +1,6 @@
 # 수납 (Payment)
 
-> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: 2026-09-29 · **상태**: H1 · H2 · H4 · H6 · M1 · M4 · M5 고침, H5는 통계가 고침 — 다음: H3 영수증(결정: 제대로 · 프랑스어 · A4), M2(결정: 미수 수납 때 새 영수 — 설계 먼저)
+> **담당**: 수납 세션 · 브랜치 `session/payment` · **마지막 갱신**: 2026-09-29 · **상태**: H1 · H2 · H3 · H4 · H6 · M1 · M4 · M5 · M7 고침, H5는 통계가 고침 — 다음: M2(결정: 미수 수납 때 새 영수 — 설계 먼저)
 
 ## 1. 이 모듈이 하는 일
 
@@ -51,7 +51,9 @@
    - **Montant Reçu** 칸이 비어 있으면 「전액을 미수로 남길까요?」라고 묻습니다.
 8. 한 푼도 못 받았으면 빨간 **Impayé (미수 처리)** 를 누릅니다. **총액 전부**가 미수로 남습니다. **Montant Reçu** 칸에 숫자가 있으면 「그 금액은 기록되지 않습니다」라고 한 번 묻습니다 — 실제로 돈을 받았으면 **취소**하고 **Confirmer** 를 누르세요.
 9. 누르면 처리가 끝날 때까지 버튼이 흐려지고 「…」로 바뀝니다. 여러 번 눌러도 영수는 한 장만 생깁니다.
-10. 영수증 창이 뜨면 **🖨 Imprimer Reçu (영수증 출력)** 를 누르고 **Fermer (닫기)** 로 닫습니다. — **주의(7절 H3)**: 지금 이 창은 환자 이름이 비고 **Total 이 0 Ar** 로 나옵니다. 환자에게 줄 영수증은 오른쪽 **Reçus → 🖨 Réimprimer (재출력)** 로 뽑으세요.
+10. 영수증 창이 뜨면 **🖨 Imprimer Reçu (영수증 출력)** 를 누릅니다. 새 창이 열리며 A4 인쇄 창이 뜹니다(브라우저가 팝업을 막으면 이 사이트의 팝업을 허용하세요). **Fermer (닫기)** 로 닫습니다.
+    - 영수증은 **화면 언어와 상관없이 항상 프랑스어**입니다. 병원명·주소·전화는 **Paramètres (설정)** 의 병원 정보에서 옵니다.
+    - 영수증에는 항목(약·검사·발급비), 할인, 이전 미수, 총액, 받은 돈, 거스름돈, 실제 받은 돈, 남은 미수, 받은 직원이 나옵니다. 항목이 많아 두 장이 되면 합계는 둘째 장에 통째로 옮겨지고, 그 위에 영수번호·환자 이름이 작게 붙습니다.
 
 ### 2.3 가운데 칸의 뜻 (수납할 때)
 
@@ -126,7 +128,7 @@
 
 - **Annuler (영수취소)** — **Motif d'annulation ? (취소 사유)** 를 적으면 영수증이 **ANNULÉ** 가 됩니다. 그 내원은 **En attente** 목록에 **Re-facturer** 로 돌아옵니다(2.7).
   - 「…reporté sur le reçu R-…, qui le facture maintenant. Annulez d’abord R-…」 안내가 뜨면, 이 영수증의 미수가 뒤의 영수증으로 넘어가 있는 것입니다. 안내에 나온 영수증을 **먼저** 취소한 뒤 이 영수증을 취소합니다.
-- **🖨 Réimprimer (재출력)** — 저장된 영수증을 다시 뽑습니다. 취소된 것은 **ANNULÉ** 도장이 찍힙니다.
+- **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
 
 ### 2.10 Payé aujourd’hui (수납 완료) — 오늘 수납한 것 보기
 
@@ -141,7 +143,6 @@
 | 「Les N Ar saisis ne seront pas enregistrés…」 | **Impayé** 를 눌렀는데 받은 금액 칸에 숫자가 있음. 돈을 받았으면 취소 → **Confirmer** |
 | 「Aucun montant reçu. Laisser les N Ar impayés ?」 | 받은 금액 칸이 빈 채 **Confirmer**. 정말 미수면 확인 |
 | 「…reporté sur le reçu R-…」 | 그 미수는 안내에 나온 영수증으로 넘어갔습니다(2.6 · 2.8 · 2.9) |
-| 영수증 창의 이름이 비고 Total 0 Ar | 알려진 문제(H3). **Reçus → Réimprimer** 로 뽑기 |
 | 화면 곳곳의 영어(`paid` · `partial` · `+ Outstanding` · `No items`) | 아직 번역되지 않은 글자(7절 L1). `paid` 전액 수납 · `partial` 부분 수납 · `unpaid` 미수 · `cancelled` 취소 |
 
 ## 3. 기능 상세
@@ -253,11 +254,23 @@
 - 영수취소(`/:id/void`), 정정(`/visit/:id/correct`), 미수 수납(`/:id/pay`)도 같은 환자 잠금을 겁니다. 이월 금액이 수납과 동시에 바뀌지 않게.
 - 화면은 `BILL_CHANGED`로 시작하는 오류를 받으면 `py_billChanged` 안내를 띄우고 선택을 풀고 목록을 새로 불러옵니다.
 
+### 3.10 영수증 (2026-09-29, H3 — 실장님 결정: 제대로 · 항상 프랑스어 · A4)
+
+- **부품**: `frontend/src/components/Receipt.jsx` — `ReceiptDoc`(인쇄되는 A4 한 장), `ReceiptModal`(미리보기 + 인쇄 단추). 수납 직후(`doConfirmNow`·`confirmCorrectionNow`가 새 영수의 `id`를 넘김)와 재출력(`reprint(b)`)이 **같은 `ReceiptModal`** 을 씁니다.
+- **금액은 저장된 영수에서만** 읽습니다: `GET /api/billing/:id/detail`(영수 · 항목 · 이월 출처). 화면이 계산한 값은 쓰지 않습니다 — 예전 수납 직후 영수증이 빈칸·0 Ar였던 원인(탭이 바뀌며 화면 선택이 지워짐)이 구조적으로 없어졌습니다.
+- **병원 정보**: `GET /api/admin/clinic`(로그인만 확인). 머리말은 문서 엔진의 `ClinicHeader`(`documents/shared.jsx`, 진료 주관 — **고치지 않고 가져다 씀**): 프랑스어 이름(`name_fr` → `name_en` → `name`), 주소 · 전화 · 이메일(빈 값은 안 나옴).
+- **언어**: `RECEIPT_LANG = 'fr'`. 글자는 문서 엔진처럼 `{ ko, en, fr }` 표(`RL` · `STATUS` · `VISIT_TYPE`)에 두고 프랑스어로만 그립니다 — 번역 파일(`i18n`)이 아니라 부품 안에 둔 이유: 화면 언어를 따르지 않는 인쇄물이고, 문서 엔진의 다른 양식도 같은 방식이기 때문입니다. 미리보기 창의 단추(닫기·출력)만 화면 언어입니다.
+- **용지**: `RECEIPT_PAGE = { size: 'A4', widthPx: 688 }` 한 곳에서 정합니다. 인쇄는 `printDocument()`(새 창, `@page{size:A4;margin:14mm}`). 80mm로 바꾸려면 이 상수와 전용 인쇄 창이 필요합니다(`printDocument`는 A4 고정) — 만들지 않음(결정).
+- **쪽 나눔**: 항목표 머리줄은 쪽마다 반복(`thead`), 줄은 쪼개지지 않음. 합계 덩어리는 `break-inside: avoid`라 **통째로** 다음 쪽으로 넘어가고, 맨 위에 「영수번호 · 환자」가 작게 붙습니다(떨어진 쪽이 어느 영수증인지 알게).
+- **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 항목이 없고 이전 미수가 있으면 「Règlement du solde antérieur」 — M2 미수 수납 영수를 위해) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
+- **아직 없는 것**(현지 확인 필요, 인계 노트 참고): NIF/STAT 번호, 로고, 금액 글자 표기, 서명란. 숫자는 화면과 같은 `15,000 Ar` 모양, 날짜는 다른 문서와 같은 `YYYY-MM-DD`.
+
 ## 4. 데이터 · API
 
 ### 화면
 
-- `frontend/src/pages/Payment.jsx` — 수납 화면 전체(영수증 창 포함). 영수증은 `DocumentModal`이 아니라 이 파일 안의 인쇄 영역(`#receipt-print`)입니다.
+- `frontend/src/pages/Payment.jsx` — 수납 화면 전체.
+- `frontend/src/components/Receipt.jsx` — 영수증(수납 전용, 2026-09-29 새로 만듦). 3.10.
 
 ### 서버 — `backend/src/routes/billing.routes.js` (`/api/billing`)
 
@@ -268,7 +281,7 @@
 |---|---|
 | `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 `paid`/`waived` 영수가 없는 내원 + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid` |
 | `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함** |
-| `GET /:billingId/detail` | 영수 1장 + `billing_item` |
+| `GET /:billingId/detail` | 영수 1장 + `billing_item` + `carried_from`(이 영수가 미수를 넘겨받은 옛 영수: `receipt_no` · `billing_date` · `amount`). 영수에는 `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date`도 붙음(영수증용, 2026-09-29) |
 | `GET /visit/:visitId/items` | 청구할 원내 처방·오더, `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 살아 있는 영수 id `active_bill_ids` |
 | `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
 | `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함) |
@@ -282,7 +295,7 @@
 
 ### 공용 부품
 
-- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음.
+- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음 — 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
@@ -338,7 +351,7 @@
 - **진료비** — 오더 코드 `C01` 초진 · `C02` 재진 · `C03` 응급 · `C04` 의뢰의 가격(`price_clinic`). 코드를 못 읽으면 화면은 하드코딩 값(15,000 · 10,000 · 25,000 · 12,000, `Payment.jsx:10`)을 쓰고, 서버 `/pending`은 0으로 봅니다(7절 L3).
 - **발급/기타 항목** — `code_type='fee'`이고 C01~C04가 아닌 활성 코드가 **+ 항목 추가** 목록에 나옵니다.
 - **약값** — 처방 시점에 `prescription.unit_price`로 복사된 값. **오더 가격** — `order_item.unit_price`.
-- 영수증 머리말(병원명·주소)은 설정에서 바꿀 수 없습니다 — 코드에 「Bethesda Clinic / Antananarivo, Madagascar」로 박혀 있습니다(`Payment.jsx:388`).
+- **영수증 머리말** — 설정 → 병원 정보(Clinic)의 프랑스어 이름(없으면 영어·기본 이름)·주소·전화·이메일(3.10). 빈 칸은 영수증에 안 나옵니다. NIF/STAT 같은 칸은 아직 없습니다.
 - 시간대 — `.env`의 `TZ`(기본 `Indian/Antananarivo`)가 `billing_date`·영수번호 날짜를 정합니다.
 
 ## 7. 알려진 문제 · 제약
@@ -354,7 +367,7 @@
   - (다) 이월을 흡수한 영수를 정정하면 옛 미수 10,000이 **다시 살아나는데**, 그 10,000을 받은 돈은 **환불액에도 들어감** → 화면 환불 12,000(맞는 값 2,000), 수납 화면 미수 10,000, 통계 미수 22,000.
   - (라) 할인이 사라짐 — 새 영수는 할인 없이 발행되고 환불액은 할인 전 금액과 비교(코드).
   - (마) 환불액이 새 금액보다 크면 서버가 400으로 거절하는데, 이때 **기존 영수는 이미 취소된 뒤**라 내원이 영수 없이 남음(코드).
-- **H3 수납 직후 영수증이 비어서 나옴** — 확정 후 `setTab('completed')`(`Payment.jsx:197`)가 탭 변경 효과(`:68`)로 선택 환자를 지우는데, 영수증 창(`:388-390`)은 그 선택 환자와 화면 계산값을 읽습니다. **재현(화면, 프랑스어)**: 16,800 Ar 수납에 20,000 받음 → 영수증 Patient·Chart 빈칸, Total **0 Ar**, Paid 20,000, 거스름 없음. DB 기록은 맞습니다(16,800).
+- ~~**H3 수납 직후 영수증이 비어서 나옴**~~ — **고침(2026-09-29, 3.10, 실장님 결정)**: 저장된 영수에서 읽는 영수증 부품 하나로 바꿈. 화면에서 20,000 받고 16,800 수납 → 환자·총액 16,800·거스름 3,200이 나옴. 원래 문제: 확정 후 `setTab('completed')`(`Payment.jsx:197`)가 탭 변경 효과(`:68`)로 선택 환자를 지우는데, 영수증 창(`:388-390`)은 그 선택 환자와 화면 계산값을 읽습니다. **재현(화면, 프랑스어)**: 16,800 Ar 수납에 20,000 받음 → 영수증 Patient·Chart 빈칸, Total **0 Ar**, Paid 20,000, 거스름 없음. DB 기록은 맞습니다(16,800).
 - ~~**H4 「미수 처리」 때 받은 금액 칸의 숫자가 미수에서 빠짐**~~ — **고침(2026-09-29, 3.8)**: 같은 시나리오에서 미수 15,000, 옛 화면 본문은 400. 원래 문제: `Payment.jsx:193-194`: `amount_paid`는 0으로 보내면서 `outstanding`은 `총액 − 칸의 숫자`. **재현**: 15,000 내원, 칸에 4,000 → 미수 처리 → `outstanding` 11,000(맞는 값 15,000). 수납 화면은 11,000, 통계는 15,000으로 서로 다름. 재수납 화면은 칸이 미리 채워지므로(3.5) 특히 잘 생깁니다.
 - ~~**H5 통계의 미수가 이월된 빚을 두 번 셈**~~ — **통계 세션이 고침(`52c4505`, develop)**. develop을 합친 뒤 같은 시나리오(S3·S6·S9)에서 수납 화면과 통계가 모두 0으로 일치함을 확인. 원래 문제: `stats.routes.js:108-111,164-176`이 `total_due − net_paid`로 셉니다. **재현**: 1차 미수 15,000을 2차 내원에서 이월 포함 전액 수납 → 수납 화면 미수 0, 통계 미수 15,000(명단에도 올라감). **통계 세션 파일**이라 고치지 않고 부탁으로 남깁니다.
 
@@ -369,7 +382,7 @@
 - ~~**M5 수납 API에 권한 검사 없음**~~ — **고침(2026-09-29, 4절)**: 의사 계정 403, 접수 전용 계정은 잔액만 200, 수납 계정 200 확인. 원래 문제: `billing.routes.js:8`은 로그인만 확인. 메뉴는 막혀 있지만 의사·검사실 계정도 API로 영수 취소·수납이 가능합니다. 접수 화면이 `balance`를 읽으므로 그 한 곳은 접수 권한도 허용해야 합니다(코드).
 - **M8 목록의 「환불 예정」 금액이 실제 환불과 다를 수 있음** — 목록의 `refund_due`는 「줄어든 항목 금액(할인 전)」이고, 실제 환불은 정정 화면의 금액(3.6)입니다. 덜 받았던 환자는 환불이 아니라 미수가 줄어듭니다(화면 확인: 목록 「환불 예정 2,000」, 정정 화면 「미수 4,000」). 2절에 직원용 안내를 적어 둠.
 - **M6 재수납 금액의 근거가 약함** — `prior_paid`는 마지막 취소 영수 1장만 봅니다(`billing.routes.js:44`). 추가 청구 영수까지 여러 장 취소했으면 일부만 채워짐. 취소 때 돈을 돌려줬는지 기록하지 않음(코드).
-- **M7 영수증이 현장에 맞지 않음** — 병원명·주소 하드코딩(`Payment.jsx:388`, 설정의 병원 정보를 안 씀), 글자가 영어 고정(Receipt·Date·Patient·Total·Paid·Thank you), 첫 영수증에 항목이 없음, 재출력(`:437-438`)에 할인·거스름·미수가 없음.
+- ~~**M7 영수증이 현장에 맞지 않음**~~ — **고침(H3와 함께)**: 병원 정보는 설정에서, 프랑스어, 항목·할인·거스름·미수, 재출력도 같은 모양. 원래 문제: 병원명·주소 하드코딩(`Payment.jsx:388`, 설정의 병원 정보를 안 씀), 글자가 영어 고정(Receipt·Date·Patient·Total·Paid·Thank you), 첫 영수증에 항목이 없음, 재출력(`:437-438`)에 할인·거스름·미수가 없음.
 
 ### 낮음
 
@@ -394,4 +407,6 @@
 | 2026-09-29 | develop(`181bb76`, 6개 세션 합친 판)을 합침 — 충돌 없음. 통계 H5 해결 확인, 5절 통계 공식 갱신 | `bee9e17` · `4f4c29d` |
 | 2026-09-29 | M5 수납 API 권한 검사, M1 이월된 영수에 수납 거절, M4 이월된 옛 영수 취소 거절 | `55ef4ef` |
 | 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀(버튼·칸 이름 프랑스어 + 한국어, 칸별 뜻 표, 안내 문구 표), 2절·6절에 「수납 창구 계정에는 수납 권한」(총괄 요청). develop `9ded00f` 합침 | `3342e97` · `c5ff3a9` |
-| 2026-09-29 | H6 창구 발급비를 「정정(환불)·추가 청구」 판정에서 뺌, 정정의 발급비 유지도 같은 기준(`counterFeeCond()`) | (이 커밋) |
+| 2026-09-29 | H6 창구 발급비를 「정정(환불)·추가 청구」 판정에서 뺌, 정정의 발급비 유지도 같은 기준(`counterFeeCond()`) | `bf54e5b` |
+| 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | `dee58dc` |
+| 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | (이 커밋) |

@@ -35,7 +35,7 @@ function normalizeConfig(body) {
   ];
   const out = {};
   fields.forEach(k => { if (body[k] !== undefined) out[k] = String(body[k] || '').trim(); });
-  if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 10004;
+  if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 4242;
   if (body.auto_create_worklist !== undefined) out.auto_create_worklist = !!body.auto_create_worklist;
   return out;
 }
@@ -50,11 +50,15 @@ router.get('/config', authMiddleware, permMiddleware('settings'), async (req, re
 router.put('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try {
     const cfg = normalizeConfig(req.body || {});
+    // A field left out of the request keeps its value. Writing it as NULL instead
+    // would, for bridge_token, silently unpair the PACS on a partial save.
     const result = await pool.query(
       `UPDATE pacs_config SET
-       worklist_scp_host=$1, worklist_scp_port=$2, worklist_scp_ae=$3,
-       bridge_token=$4, emr_base_url=$5, pacs_viewer_url=$6, auto_create_worklist=$7, facility_name=$8, notes=$9,
-       updated_by=$10, updated_at=NOW()
+       worklist_scp_host=COALESCE($1, worklist_scp_host), worklist_scp_port=COALESCE($2, worklist_scp_port),
+       worklist_scp_ae=COALESCE($3, worklist_scp_ae), bridge_token=COALESCE($4, bridge_token),
+       emr_base_url=COALESCE($5, emr_base_url), pacs_viewer_url=COALESCE($6, pacs_viewer_url),
+       auto_create_worklist=COALESCE($7, auto_create_worklist), facility_name=COALESCE($8, facility_name),
+       notes=COALESCE($9, notes), updated_by=$10, updated_at=NOW()
        WHERE id=1 RETURNING *`,
       [cfg.worklist_scp_host, cfg.worklist_scp_port, cfg.worklist_scp_ae,
        cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id]
@@ -229,6 +233,9 @@ router.post('/bridge-heartbeat', async (req, res) => {
       failed: Number(body.failed) || 0,
       poll_seconds: Number(body.poll_seconds) || 0,
       error: String(body.error || '').slice(0, 500),
+      // Why the bridge could not ask Orthanc which studies arrived; '' when it
+      // could. status.routes.js (settings) turns a non-empty one into a warning.
+      arrivals_error: String(body.arrivals_error || '').slice(0, 300),
     };
     await pool.query(
       `INSERT INTO service_heartbeat (name, last_seen, ok, detail)

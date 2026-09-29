@@ -234,7 +234,7 @@ export default {
   settleAll: "Tout encaisser",
   settleAllConfirm: "Encaisser tous les impayés ?",
   pacsServer: "Serveur PACS (Orthanc)",
-  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (8090) sert à ouvrir la visionneuse depuis le dossier.",
+  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (9090) sert à ouvrir la visionneuse depuis le dossier.",
   pacsViewerUrl: "URL web / visionneuse PACS",
   dicomPort: "Port DICOM",
   testPacsBtn: "Tester PACS (DICOM)",
@@ -460,6 +460,10 @@ export default {
   se_fHours: "Heures d'ouverture",
   se_clinicNote: "Le document choisit le nom selon la langue d'impression — français : nom français, anglais : nom anglais, coréen : nom par défaut. Adresse, téléphone et e-mail sont communs.",
   se_stockChanged: "Le stock de ce médicament a changé pendant la modification (délivrance, par exemple). Il est maintenant de {n}. Le champ stock affiche cette valeur ; vérifiez-la et enregistrez à nouveau. Vos autres modifications sont conservées.",
+  se_fTextDefault: "Texte (par défaut / écran coréen)",
+  se_fTextFr: "Texte en français",
+  se_fTextEn: "Texte en anglais",
+  se_phraseLangHint: "L'écran de consultation utilise le texte français sur un écran en français et le texte anglais sur un écran en anglais. S'il est vide, le texte par défaut s'affiche.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

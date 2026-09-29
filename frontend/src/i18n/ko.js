@@ -234,7 +234,7 @@ export default {
   settleAll: "전체 미수 수납",
   settleAllConfirm: "전체 미수를 일괄 수납합니다",
   pacsServer: "PACS 서버 (Orthanc)",
-  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(8090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
+  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
   pacsViewerUrl: "PACS 웹/뷰어 주소",
   dicomPort: "DICOM 포트",
   testPacsBtn: "PACS 연결 테스트 (DICOM)",
@@ -460,6 +460,10 @@ export default {
   se_fHours: "진료 시간",
   se_clinicNote: "문서는 인쇄 언어에 맞는 이름을 씁니다 — 프랑스어는 프랑스어 이름, 영어는 영어 이름, 한국어는 기본 이름. 주소·전화·이메일은 공통입니다.",
   se_stockChanged: "그 사이 이 약의 재고가 바뀌었습니다 (조제 등). 지금 재고는 {n}입니다. 재고 칸을 지금 값으로 바꿔 두었으니, 확인하고 다시 저장하세요. 다른 칸은 그대로입니다.",
+  se_fTextDefault: "문장 (기본 · 한국어 화면)",
+  se_fTextFr: "프랑스어 문장",
+  se_fTextEn: "영어 문장",
+  se_phraseLangHint: "진료 화면은 프랑스어 화면이면 프랑스어 문장을, 영어 화면이면 영어 문장을 씁니다. 비어 있으면 기본 문장이 나옵니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

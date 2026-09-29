@@ -164,6 +164,8 @@
    - **왜 브리지가 묻나**: 브리지는 Orthanc와 같은 compose 네트워크에 있고 EMR 토큰도 이미 가지고 있습니다. EMR이 직접 물으려면 EMR에 Orthanc 주소·비밀번호 설정이 새로 필요하고, `pacs_viewer_url`은 브라우저 기준 주소라 EMR 컨테이너에서 쓸 수 없습니다.
    - Orthanc에 못 닿으면(꺼짐·비밀번호 틀림) 그 바퀴는 한 줄만 로그를 남기고 넘어갑니다 — 워크리스트 동기화는 계속됩니다. Orthanc 이름을 못 찾으면 한 바퀴가 약 4초 늦어짐(격리 시험에서 잰 값) — heartbeat 한계 60초 안.
    - `ORTHANC_PASSWORD`가 없으면 이 단계는 꺼지고 시작 때 한 줄 경고.
+   - 이 단계가 안 되면 그 이유를 전역 `arrivals_error`에 담아 **다음 heartbeat에 같이 보냅니다**(정상이면 빈 값). EMR 상태 화면이 이것을 노랑 「status.bridge.arrivals」로 보여줌(설정 세션 `status.routes.js`, 필드 이름은 두 세션이 맞춤).
+   - EMR로 보내거나 로그에 쓰는 오류 글자는 모두 `scrub()`을 거칩니다 — 주소 속 `user:pass@`, 토큰, Orthanc 비밀번호를 `***`로. 그 글자가 상태 화면에 그대로 뜨기 때문.
    - EMR이 옛 버전이라 `/study-arrived`가 없으면(EMR 공통 404 `API route not found`) 재시작 전까지 묻지 않고 한 줄만 남깁니다.
 4. `report()` — `/worklists/.heartbeat`에 현재 시각을 쓰고(컨테이너 healthcheck용), `POST /api/pacs/bridge-heartbeat`로 결과(synced, failed, error, poll_seconds)를 보냅니다. 둘 다 실패해도 반복은 멈추지 않습니다.
 5. `POLL_SECONDS`(기본 15초) 잠듭니다.
@@ -178,7 +180,7 @@
 | 토큰 불일치·토큰 미설정 (401) | 위와 같음 | EMR 상태 화면 — 브리지가 heartbeat도 같은 토큰으로 보내므로 **EMR에는 신호가 아예 안 옴** → 「보고 없음」. 브리지 로그에 원인(「EMR에 토큰 미설정」 / 「토큰 불일치」)이 나옴 |
 | 브리지 컨테이너가 멈춤·먹통 | 위와 같음 | 컨테이너 healthcheck(`.heartbeat` 60초), `server-status` 창, EMR 상태 화면 |
 | Orthanc가 멈춤 | 워크리스트 조회·전송 모두 실패 (장비 쪽 오류) | Orthanc healthcheck(`/system` 200/401), EMR 상태 화면의 PACS TCP 검사 |
-| 브리지가 Orthanc에 못 물음 (비밀번호 틀림 등) | 워크리스트는 정상, **끝난 환자가 빠지지 않음**(예전 동작) | 브리지 로그 `could not ask Orthanc about studies` 뿐 — **EMR 상태 화면에는 안 나옴**(7절 P-20) |
+| 브리지가 Orthanc에 못 물음 (비밀번호 틀림 등) | 워크리스트는 정상, **끝난 환자가 빠지지 않음**(예전 동작) | 브리지 로그 `could not ask Orthanc about studies`, EMR 상태 화면 장비 워크리스트 줄 **노랑**(heartbeat `arrivals_error`, 2026-09-29부터) |
 | **호스트 포트가 안 잡힘** (Windows 예약 포트) | 장비가 4242에 연결 못 함, 뷰어가 안 열림 | **컨테이너 healthcheck는 「healthy」로 나옴** — 컨테이너 안에서만 확인하기 때문. EMR 상태 화면의 PACS 검사(설정된 Host:4242로 TCP)만 잡아냄 (7절 P-1) |
 
 EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일): heartbeat가 한 번도 없으면 「꺼짐」, 60초 넘게 없으면 「보고 없음」, `ok=false`면 「실패 중」, `failed>0`이면 「일부 실패」.
@@ -197,13 +199,13 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | 메서드 · 경로 | 인증 | 하는 일 |
 |---|---|---|
 | `GET /config` | `settings` 권한 | `pacs_config` 한 줄 전체 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5) |
-| `PUT /config` | `settings` 권한 | 설정 저장. 보내지 않은 칸은 NULL이 됨(화면은 전체를 보내므로 지금은 문제 없음) |
+| `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242 |
 | `GET /test` | 로그인 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
 | `GET /viewer-url?order_item_id=` 또는 `?study=` | 로그인 | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음 |
 | `GET /readings/patient/:patientId` | 로그인 | 환자의 영상 오더 전부 + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
-| `POST /bridge-heartbeat` | 브리지 토큰 (헤더, 본문 `token`, 쿼리 순) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀 |
+| `POST /bridge-heartbeat` | 브리지 토큰 (헤더, 본문 `token`, 쿼리 순) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀. detail = `{synced, failed, poll_seconds, error(500자), arrivals_error(300자)}` — 이 밖의 칸은 버림 |
 | `POST /study-arrived` | 브리지 토큰 | 본문 `{worklist_id, study_instance_uid, orthanc_study_id, patient_id, patient_name, instances}`. 한 트랜잭션에서 worklist_log(`FOR UPDATE`)를 완료 처리하고 영상 정보·`patient_check`를 저장, order_item.worklist_status=`completed`. 400(칸 없음)·404(항목 없음)·409(UID가 그 항목 것이 아님). 다시 보내도 안전(도착 시각은 처음 값 유지). `cancelled`는 그대로 둠 |
 
 **`images`** (`viewer-url` 응답) — 브리지가 보고하기 전에는 `null`(「아직 안 옴」과 「왔고 맞음」을 구분하려고). 보고 뒤: `{received_at, count, patient_id, patient_name, patient_check}`.
@@ -224,14 +226,14 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | 메서드 · 경로 | 인증 | 하는 일 |
 |---|---|---|
 | `GET /?modality=&station_ae=&date=&status=` | 로그인 | worklist_log + 환자 이름·생년월일. 날짜 기본 `CURRENT_DATE`(DB 시간대) |
-| `PUT /:id/status` | 브리지 토큰 **또는** 로그인 | worklist_log.status와 order_item.worklist_status 변경. **지금 부르는 곳이 없음**. 값 검사·트랜잭션 없음 (7절 P-11) |
+| `PUT /:id/status` | 브리지 토큰 **또는** 로그인 | `scheduled`/`in_progress`/`completed`/`cancelled`만(아니면 400, 없는 항목 404). 한 트랜잭션에서 worklist_log와 order_item을 같이 바꿈 — 이름이 다른 `scheduled`는 order_item에서 `sent`. completed_at은 `completed`일 때만. **지금 부르는 곳이 없음**(영상 도착은 `/api/pacs/study-arrived`) |
 | `GET /dicom-mwl?modality=&station_ae=` | 브리지 토큰 또는 로그인 | DICOM 태그 이름 모양의 JSON. 옛 외부 브리지용. **지금 쓰는 곳 없음** |
 
 ### PACS 저장소 (`C:\Bethesda-PACS-main`)
 
 - `docker-compose.yml` — 프로젝트 이름 `bethesda-pacs` 고정. 컨테이너 `bethesda-pacs`(Orthanc), `bethesda-worklist-bridge`. 볼륨은 **폴더 마운트** `./storage`(영상+색인), `./worklists`(`.wl`, `.heartbeat`).
 - `bridge/bridge.py`, `bridge/Dockerfile`(python 3.12-slim, pydicom 2.4.4, requests 2.32.3)
-- 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요.
+- 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요. `make_*`는 브리지 컨테이너 안에서 돌리며 `ORTHANC_PASSWORD`를 환경 변수에서 읽고, 시험 오더의 `STUDY_UID`·`ACCESSION`·`PATIENT_ID`도 환경 변수로 받음(가짜 환자 `TEST^Patient`).
 - `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`
 
 ### 브리지 환경 변수
@@ -328,18 +330,18 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-5 [보통] ✅ 고침 (2026-09-29)** — `GET /api/pacs/config`는 settings 권한만, 설정 화면은 토큰을 가림(보기 버튼), 브리지는 `X-Bridge-Token` 헤더로 보냄(EMR은 옛 브리지를 위해 쿼리도 계속 받음). **남은 것**: 고치기 전의 EMR 백엔드 로그(`docker logs bethesda-emr-api`)에는 토큰이 이미 찍혀 있음(2026-09-29 확인) — 필요하면 토큰을 새로 만들어 PACS `.env`와 EMR 설정을 함께 바꾸면 됨. **원래 문제**: 브리지 토큰이 모든 로그인 직원에게 보임. `GET /api/pacs/config`에 권한 검사가 없습니다(`pacs.routes.js:43`). 설정 화면도 피드 주소를 토큰째 보여줍니다(`Settings.jsx:495-496`). 브리지는 토큰을 URL 쿼리로 보내(`bridge.py:94`) 접속 기록에 남을 수 있습니다. 개선안: `/config`를 settings 권한으로, 화면에는 가려서, 브리지는 `X-Bridge-Token` 헤더로.
 - **P-9 [보통] 영상을 보는 모든 직원이 Orthanc 관리자 계정을 씀.** 사용자가 `admin` 하나(`docker-compose.yml` `REGISTERED_USERS`). 뷰어(iframe)가 Orthanc에 직접 붙으므로 직원 브라우저가 이 계정으로 로그인해야 하고, 그 계정은 영상 삭제·수정까지 됩니다. 실제 현장에서 어떻게 로그인하고 있는지 확인 필요. 개선안: 읽기 전용 사용자 분리, 또는 EMR이 대신 가져다 주는 방식(프록시).
 - **P-10 [보통] 같은 LAN의 누구나 DICOM으로 환자 목록을 조회할 수 있음.** `DICOM_ALWAYS_ALLOW_FIND=true`, `CHECK_CALLED_AET=false`(`docker-compose.yml`) — 등록 안 된 기기도 C-FIND로 저장된 환자·검사 정보를 묻고 C-STORE로 아무 영상이나 넣을 수 있습니다. 장비 등록 없이 쓰려는 의도된 선택(주석)이지만, 장비가 정해지면 `DicomModalities` 등록으로 좁히는 것을 권합니다.
-- **P-12 [낮음] 시험 스크립트에 옛 Orthanc 비밀번호와 실제 인물로 보이는 이름·생년월일이 들어 있음.** `bridge/make_demo.py:10,28-30`, `make_chest5.py:9,32-34`. 지금 PACS `.env`의 비밀번호와는 다름을 확인(값은 적지 않음). git 기록에 남아 있으므로, 그 비밀번호를 다른 곳에 썼다면 바꾸는 것을 권합니다.
-- **P-13 [낮음] `.env`가 없을 때의 기본 비밀번호.** compose가 `change-me-orthanc`, `change-me-bridge-token`으로 떨어집니다. `setup`/`start.bat`로 설치하면 `.env`가 먼저 생기므로 실제로는 드묾.
+- **P-12 [낮음] ✅ 고침 (2026-09-29, PACS `6c135aa`)** — 비밀번호는 환경 변수에서, 환자는 가짜(`TEST^Patient`, `PX-TEST-0001`, 1980-01-01)로. **남은 것**: 옛 값은 git 기록에 그대로 있음(기록을 고쳐 쓰는 것은 공개 저장소에 push된 뒤라 하지 않음). **원래 문제**: 시험 스크립트에 옛 Orthanc 비밀번호와 실제 인물로 보이는 이름·생년월일이 들어 있음. `bridge/make_demo.py:10,28-30`, `make_chest5.py:9,32-34`. 지금 PACS `.env`의 비밀번호와는 다름을 확인(값은 적지 않음). git 기록에 남아 있으므로, 그 비밀번호를 다른 곳에 썼다면 바꾸는 것을 권합니다.
+- **P-13 [낮음] `.env`가 없을 때의 기본 비밀번호.** compose가 `change-me-orthanc`, `change-me-bridge-token`으로 떨어집니다. `setup`/`start.bat`로 설치하면 `.env`가 먼저 생기므로 실제로는 드묾. (브리지 토큰은 2026-09-29에 기본값을 없앰.) **Orthanc 비밀번호 쪽 제안**: compose에서 `${ORTHANC_PASSWORD:?…}`로 바꿔 `.env` 없이는 시작을 거부하게 — 시험해 보니 동작하지만, EMR `offline/pack.ps1`·`pack.sh`(총괄 파일)가 `.env` 없는 PACS 폴더에서 `docker compose build`·`config --images`를 돌려서 **오프라인 키트 만들기가 깨짐**. pack 쪽에서 임시 값(`ORTHANC_PASSWORD=pack`)을 넘기게 함께 바꿔야 하므로 보류.
 
 ### 동작 · 기타
 
-- **P-11 [낮음] `PUT /api/worklist/:id/status`에 값 검사·트랜잭션 없음.** `worklist.routes.js:45-61` — 예: `scheduled`는 worklist_log엔 들어가지만 order_item의 CHECK에 걸려 둘이 어긋남. 로그인만 있으면 누구나 호출 가능. 지금 쓰는 곳 없음.
+- **P-11 [낮음] ✅ 고침 (2026-09-29)** — 값 검사(400), 없는 항목 404, 한 트랜잭션, `scheduled`→order_item `sent`. 누가 부를 수 있는지(로그인만)는 그대로 — 지금 쓰는 곳이 없어 권한은 쓰임새가 생길 때 정함. **원래 문제**: `PUT /api/worklist/:id/status`에 값 검사·트랜잭션 없음. `worklist.routes.js:45-61` — 예: `scheduled`는 worklist_log엔 들어가지만 order_item의 CHECK에 걸려 둘이 어긋남. 로그인만 있으면 누구나 호출 가능. 지금 쓰는 곳 없음.
 - **P-15 [낮음] 판독을 덮어쓰면 이전 판독이 사라짐(이력 없음).** `pacs.routes.js:100`. 서명·확정 개념도 없음.
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
-- **P-17 [낮음] 옛 포트 표기.** (2026-09-29: 피드 주소 예시 `:8080`→`:9080`, `bridge.py` 기본값 8080→9080은 고침) 남은 것: 설정 화면 예시 `http://NAS_IP:8090`(`Settings.jsx` PACS 웹/뷰어 주소 칸), 번역 `pacsServerHint`(ko·en·fr 모두 「8090」). 지금은 9090(PACS)·9080(EMR).
+- **P-17 [낮음] ✅ 고침 (2026-09-29)** — 피드 주소 예시 `:9080`, `bridge.py` 기본값 9080, 설정 화면 예시 `http://NAS_IP:9090`, 번역 `pacsServerHint`(ko·en·fr, 기존 키 한 줄씩)와 그 한국어 기본 문구도 9090.
 - **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
 - **P-19 [낮음] 🟡 일부 고침** — 진료 화면은 번역됨(진료 세션 `9dfcedc`, `cs_ws*` 키: Envoyé/전송됨, Réalisé/촬영 완료 …). **남은 것**: `PatientChart.jsx:70`(수납 소유 공용 — 수납·약국 화면의 차트)은 아직 `sent`/`completed` 영어 그대로.
-- **P-20 [낮음] 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.** 도착 확인 실패는 브리지 로그에만 남음(`bridge.py` `report_arrivals`). heartbeat에 따로 싣고 `status.routes.js`(설정 세션)가 보여주게 할지는 미정.
+- **P-20 [낮음] ✅ 고침 (2026-09-29)** — 브리지가 heartbeat에 `arrivals_error`를 싣고(PACS `6c135aa`), `/bridge-heartbeat`가 detail에 저장, 설정 세션의 `status.routes.js`(`9d7e380`)가 노랑 `status.bridge.arrivals`로 표시. 격리 스택에서 비밀번호 없음·Orthanc 없음 → 노랑, 정상 → 초록 확인. **원래 문제**: 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
 - **격리 스택 없음** — PACS 저장소에서 `docker compose up`을 하면 실행 중인 PACS를 덮어씁니다(프로젝트 이름·컨테이너 이름·포트·`./storage` 폴더 고정). 격리 스택은 실장님 허락 후 만듭니다.
 - 브리지는 장비별로 워크리스트를 나누지 않습니다(모든 장비가 모든 오더를 봄). Modality로만 장비가 거를 수 있음.
@@ -352,4 +354,5 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | 토큰 보안(P-2·P-5): 옛 기본값·짧은 토큰 거절, 설정 조회는 settings 권한, 화면에서 토큰 가림, 브리지는 헤더로 전송. P-1에 총괄 확인·조치 분담 기록 | EMR `6e5c63a`(develop `f3a5810`) · PACS `43bd994` |
 | 2026-09-29 | 영상 도착 확인(P-7)·환자번호 대조(P-3): 브리지가 Orthanc Stable 스터디를 EMR에 알림, 워크리스트 자동 완료, 판독 목록에 도착·경고 표시, 마이그레이션 801(→ 합칠 때 019) | EMR `6456471`(develop `7cfd6cc`) · PACS `e109157` |
 | 2026-09-29 | 2절 직원용 사용법을 프랑스어 화면 기준으로 다시 씀(프랑스어 이름 + 괄호 한국어), 「영상이 안 보일 때」·「환자 번호 경고가 떴을 때」 순서 추가 | EMR `2f9f1fe` |
-| 2026-09-29 | `PatientCheck`·`imagesOfRow` export(진료 뷰어 창과 같이 쓰도록), 2절 상태 글자를 진료 세션 번역(Envoyé/Réalisé)에 맞춤, P-3·P-19 갱신. 인계 노트에 P-1 조치 절차서 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | `PatientCheck`·`imagesOfRow` export(진료 뷰어 창과 같이 쓰도록), 2절 상태 글자를 진료 세션 번역(Envoyé/Réalisé)에 맞춤, P-3·P-19 갱신. 인계 노트에 P-1 조치 절차서 | EMR `2c15a6b` |
+| 2026-09-29 | 낮은 항목 정리: P-20(`arrivals_error`, 비밀값 가림), P-11(작업목록 상태 API), P-12(시험 스크립트), P-17(8090 표기), `PUT /config` 부분 저장. P-13은 오프라인 키트 때문에 제안으로. 절차서에 재부팅 당일·장비 설치 날 확인 목록 | EMR `session/pacs` · PACS `6c135aa` |

@@ -2,6 +2,81 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — PatientChart 오더 상태 번역 (PACS 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) — H3와 섞지 않은 작은 커밋
+- **한 일**: 과거 내원 패널(`PatientChart.jsx`)의 오더 줄 상태가 `worklist_status` 원문(`sent`·`completed`, 영어)으로 나오던 것을 진료 화면 `orderStatus()`와 **같은 규칙·같은 번역 키**로 바꿈. 검사(lab)는 `cs_labPending`·`cs_labDone`·`cs_labCancelled`, 워크리스트로 보낸 오더(`worklist_sent_at` 있음)는 `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`, 그 밖은 표시 없음. 규칙까지 맞춘 이유: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 단순 번역만 하면 결과 없는 검사에 「Réalisé(촬영 완료)」가 붙음.
+- **바꾼 파일**: 없음(자기 파일)
+- **공용 파일 변경**: **`frontend/src/components/PatientChart.jsx`**(공용, 수납 주관 — 수납·약국이 씀) · 오더 줄 상태 표시만. 약국 화면의 과거 내원 패널도 같이 바뀜.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(진료의 `cs_` 키를 읽기만)
+- **확인한 방법**: 프론트 빌드. 격리 스택 9183, 프랑스어: 검사 L01(결과 없음) → 「En attente」(예전 `completed`), 영상 S1·내시경 E1(워크리스트 전송됨) → 「Envoyé」. S1의 전송 표시는 격리 DB에서 직접 넣음(PACS 없음).
+- **확인 못 한 것**: 약국 화면에서 직접 열어 보지는 않음(같은 부품). 촬영 중·완료 상태(PACS 없이 만들지 않음 — 키 매핑은 진료와 같음).
+- **위키**: `modules/payment.md` 4절 공용 부품(PatientChart), 8절
+- **다른 세션에 부탁**: 없음 (PACS 부탁 처리 완료 알림 — 총괄 경유)
+
+## 2026-09-29 — 조사: 약 총량 계산식이 바뀌면 수납은? (총괄 요청, 코드 변경 없음)
+
+> **총괄 확인 (2026-09-29)**: H3 영수증 `dee58dc` 합침(`33d466e`) + 실행 중 EMR 반영. 총괄이 실행 중 EMR의 영수 2건을 API에서 받아 `ReceiptDoc`으로 688px 폭에 직접 찍어 확인: 프랑스어, 병원 정보·환자·항목·합계·상태 표시, 높이 534·508px. `Receipt.jsx`를 규칙 4절에 수납 소유로 넣음. 운영 병원 정보는 시드 예시 값(가짜 주소·전화·이메일)이라 실제 값 입력이 필요 — 결정 세션 경유로 실장님께 알림. 약 총량 조사 `4bc7133`: 조회 결과 운영 DB 처방 6건 중 `total_qty` NULL 0 · 0 0.
+
+- **상태**: 확인 요청(조사 결과) — 코드 변경 없음
+- **수납 안의 대체 계산 다섯 곳**(모두 `total_qty`가 없을 때만 `dose × frequency × days`): `billing.routes.js` `/pending`의 `live_total`(95행) · `buildCorrection()`(501행) / `Payment.jsx` `drugTotal()`(164행) · `chargeRows()`(182행) · 처방 표(539행). 줄 번호는 `dee58dc` 기준.
+
+**(1) 처방에 `total_qty`가 항상 저장되나** — **화면으로 만든 처방은 항상 저장됨.**
+- 진료 화면 `Consultation.jsx`의 처방 추가 `addDrugRx()`(약속처방 세트 적용 `applySet()`도 이 함수를 씀)는 `total_qty = 기본용량 × 기본횟수 × 기본일수`, 수정 `saveRx()`는 `total_qty = 용량 × 횟수 × 일수`를 **화면이 계산해서 보냄** — 첫 커밋(`e553fef`, 2026-06-28)부터 그대로.
+- 서버: 수정 `PUT /consultations/prescription/:id`는 `total_qty`가 비면 **서버가 계산해 넣음**(`calcQty`). 추가 `POST /consultations/:id/prescriptions`는 **받은 값을 그대로** 넣음 → 비어 오면 `NULL`.
+- 판단: 수납이 대체 계산을 지우고 **`total_qty`만 읽는 것이 맞다**(약국 `pharmacy.routes.js:33,183`·통계 `stats.routes.js:275`는 이미 `COALESCE(total_qty,0)`만 읽음). 그러면 계산식은 **진료의 저장 한 곳**에만 남고, 식이 바뀌어도 수납·약국·통계는 고칠 것이 없음. 단 아래 (2)의 조회로 `NULL`이 0건인지 먼저 확인하고, 진료 서버의 추가(POST)도 수정(PUT)처럼 비면 계산해 넣도록 하는 것이 안전(진료 세션 소관).
+
+**(2) `total_qty`가 비어 있을 수 있는 경로**
+- 화면 경로: 없음(위). 시드(`003_seed_data.sql`·`004_order_sets.sql`): 처방 행 없음.
+- **API를 직접 부른 경우**(`total_qty` 빼고 POST) — 유일한 경로.
+- **지금도 있는 어긋남**: `NULL`인 처방은 수납은 `용량×횟수×일수`로 청구하는데 약국은 0개로 조제·재고 차감, 통계 약품 사용량도 0. 수납이 `total_qty`만 읽게 바꾸면 셋이 같아짐.
+- 비슷한 작은 어긋남: `total_qty = 0`이면 화면(`parseFloat(total_qty) || …`)은 0을 「없음」으로 보고 대체 계산, 서버(`COALESCE`)는 0 그대로 → 수납 화면 금액과 대기 목록 판정이 다를 수 있음(7절 L3). 대체 계산을 지우면 같이 없어짐.
+- 실행 중 EMR에서 세어 볼 조회(읽기 전용):
+  ```sql
+  SELECT COUNT(*) AS null_qty,
+         COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM consultation c JOIN billing b ON b.visit_id = c.visit_id
+                                          WHERE c.id = p.consultation_id AND b.payment_status <> 'cancelled')) AS null_qty_billed
+    FROM prescription p WHERE p.total_qty IS NULL;
+  SELECT COUNT(*) AS zero_qty_with_dose FROM prescription WHERE total_qty = 0 AND NULLIF(dose,'')::numeric > 0;
+  ```
+
+**(3) 식이 바뀔 때 이미 청구된 영수·「정정(환불)」 판정**
+- **이미 발행된 영수는 영향 없음**: `billing_item`에 그때의 수량·단가·금액이, `billing`에 합계가 저장되어 있고, 영수증(3.10)·통계 매출은 이 저장값만 읽음.
+- **판정**(`/pending`의 `needs_refund`·`needs_additional`)은 「지금 처방의 `total_qty`」 대 「청구된 금액」 비교라서:
+  - 옛 처방은 저장된 `total_qty`를 그대로 쓰므로 **식이 바뀌어도 판정이 달라지지 않음.**
+  - **예외 ①** 의사가 옛 처방을 **다시 저장**하면(수정) 새 식으로 `total_qty`가 다시 계산됨 → 수량이 달라지면 그 내원이 「추가 청구」나 「정정」으로 뜸. 실제로 수량이 바뀐 것이면 맞는 동작이지만, 식만 바뀌고 처방은 그대로인데 저장만 다시 눌러도 뜰 수 있음. 조제가 끝난 처방은 수정이 막혀 있어(`d1f473e`) 그런 처방엔 해당 없음.
+  - **예외 ②** `total_qty`가 `NULL`인 처방: 수납의 대체 계산이 바뀌면(또는 지우면) 지금 금액이 달라져 이미 청구된 내원이 거짓으로 「정정」/「추가 청구」로 뜰 수 있음 → (2)의 조회로 0건 확인이 먼저.
+- **권하는 순서**: ① 조회로 `NULL` 0건 확인(아니면 그 행을 어떻게 채울지 실장님께 — 데이터 변경) ② 진료 서버 POST도 비면 계산해 넣기 ③ 수납 다섯 곳을 `total_qty`만 읽게(수납이 할 일, 작음) ④ 그다음 진료에서 식 변경. ③은 ①이 0건이면 식 변경과 무관하게 먼저 해도 결과가 같음.
+
+## 2026-09-29 — H3 영수증 다시 만듦 (실장님 결정: 제대로 · 항상 프랑스어 · A4)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋, H6 `bf54e5b` 다음)
+- **한 일**:
+  - 새 부품 **`frontend/src/components/Receipt.jsx`**(`ReceiptDoc` · `ReceiptModal`) — 수납 직후와 재출력이 같은 부품. 금액은 **저장된 영수에서만**(`GET /api/billing/:id/detail`), 병원 정보는 `GET /api/admin/clinic`. 문서 엔진(`documents/shared.jsx`)의 `A4` · `ClinicHeader` · `L` · `fmtDate` · `DOC_LABELS` · `printDocument`를 **가져다 쓰기만** 함(그 파일은 안 고침).
+  - 항상 프랑스어(`RECEIPT_LANG='fr'`). 글자는 문서 엔진처럼 부품 안의 `{ko,en,fr}` 표에 둠(번역 파일에 넣지 않은 이유: 화면 언어를 따르지 않는 인쇄물이고 다른 문서 양식도 같은 방식). 미리보기 창 단추만 화면 언어(`t.close`·`t.printReceipt`).
+  - 용지 `RECEIPT_PAGE={size:'A4',widthPx:688}` 한 곳. 80mm 양식은 만들지 않음(결정). 80mm로 가려면 이 상수 + 전용 인쇄 창(`printDocument`는 A4 고정).
+  - `Payment.jsx`: 옛 영수증 창 두 개와 `@media print` 트릭 삭제 → `receiptId` 상태 하나 + `<ReceiptModal>`. 수납·정정 뒤에는 서버가 돌려준 새 영수 `id`로 엶(화면 계산값을 안 씀 → H3 원인 제거).
+  - `billing.routes.js` `GET /:billingId/detail`에 영수증용 칸 추가(기존 칸은 그대로): `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date`, 그리고 `carried_from`(이 영수가 넘겨받은 옛 영수 목록).
+  - 영수증 모양: 7절·3.10 참고. 정정 영수는 「Remplace le(s) reçu(s)」 + 「Déjà encaissé」 + 「Remboursé au patient」, 이월된 옛 영수는 상태 「Reporté」 + 「Solde reporté sur le reçu R-…」, 취소 영수는 빨간 ANNULÉ 상자(일시·직원·사유). 항목이 없고 이전 미수만 있으면 「Règlement du solde antérieur」 — **M2의 미수 수납 영수도 이대로 인쇄됨**.
+- **바꾼 파일**: `frontend/src/components/Receipt.jsx`(새 파일), `frontend/src/pages/Payment.jsx`, `backend/src/routes/billing.routes.js`
+- **공용 파일 변경**: 없음. `documents/shared.jsx`는 import만.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(영수증 글자는 부품 안, 위 설명)
+- **확인한 방법**: `node --check`, 프론트 빌드 통과. 격리 스택 9183:
+  - 테스트 영수 8종(보통·거스름 / 정정(할인·환불) / 이월된 옛 영수 / 이월 받은 영수 / 미수 / 부분 수납 / 취소 / 항목 25줄)을 **실제 `ReceiptDoc`로 그려 `printDocument()`와 똑같이 감싼 HTML을 Edge 헤드리스로 A4 PDF 인쇄**해서 한 장씩 봄. 25줄 영수는 항목표가 1쪽, 합계 덩어리가 **통째로 2쪽**(맨 위 「R-… · 환자」), 잘림 없음.
+  - 화면: 프랑스어로 실제 수납(16,800을 20,000으로) → 수납 직후 창에 환자·총액 16,800·거스름 3,200·실수납 16,800. 한국어 화면에서 재출력 → 영수증은 프랑스어, 단추는 한국어. 「Imprimer Reçu」가 인쇄 창에 A4 규칙·제목 「Reçu R-…」·내용을 넘기는 것 확인(인쇄 대화상자는 띄우지 않음 — `window.open`을 가로채서 확인).
+  - 앞 단위 시나리오 재실행은 이번엔 안 함(서버 변경은 detail 읽기에 칸 추가뿐).
+- **확인 못 한 것**: 실제 프린터로 종이 인쇄. 팝업 차단 상태의 동작(문서 엔진 공통 — 아래 부탁). 병원 정보가 비어 있는 운영 DB에서의 머리말(빈 칸은 숨겨지게 되어 있으나 운영 값은 **확인 필요**).
+- **위키**: `modules/payment.md` 2절(보통 수납 10번, 2.9, 2.11), 3.10 새로, 4절(화면·detail), 6절(영수증 머리말), 7절 H3·M7, 8절
+- **총괄 확인 요청**:
+  - 새 파일 `frontend/src/components/Receipt.jsx`를 **수납 소유 파일**로 규칙 4절 표에 넣어 주세요(수납 화면만 씀).
+  - 운영 DB의 병원 정보(`clinic`)에 프랑스어 이름·주소·전화가 들어 있는지 — 비어 있으면 영수증 머리말이 기본 이름만 나옵니다.
+- **다른 세션에 부탁**:
+  - **진료**(문서 엔진 주관) — `documents/shared.jsx` `printDocument()`의 팝업 차단 안내가 **한국어로만** 나옵니다(「팝업이 차단되어…」). 영수증도 이 함수를 쓰므로 프랑스어 창구에서 보일 수 있습니다. 번역되게 해 주시면 좋겠습니다(수납은 이 파일을 고치지 않음).
+  - **설정** — 지금 당장은 없음. NIF/STAT(세무·통계 번호)를 영수증에 넣어야 한다고 **현지에서 확인되면** `clinic`에 칸 두 개(`nif`, `stat`)와 병원 정보 화면 입력칸이 필요합니다. 그때 영수증은 값이 있으면 머리말에 넣도록 수납이 고치겠습니다.
+- **남은 일**: M2 설계를 인계 노트에 적어 보고(코드 전). PatientChart 판독 상태 번역(PACS 부탁, 작은 커밋 따로).
+
 ## 2026-09-29 — H6 창구 발급비를 「정정(환불)」 판정에서 뺌 (실장님 결정 (가))
 
 > **총괄 확인 (2026-09-29)**: `bf54e5b` 합침(`571522c`) + 실행 중 EMR 반영. 코드 검토: `counterFeeCond()` 한 정의를 목록과 정정이 같이 씀, 저장 금액 변경 없음. 실행 중 EMR에는 발급비 받은 내원이 0건이라 전후 차이는 세션의 격리 스택 결과(F1~F4)로 갈음.
