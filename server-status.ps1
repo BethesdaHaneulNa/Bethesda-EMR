@@ -63,6 +63,7 @@ $T = @{
     stStopped = 'ARRETE'
     stStarting = 'DEMARRAGE'
     stUnhealthy = 'NE REPOND PAS'
+    stNoPort = 'INACCESSIBLE'
     stMissing = 'ABSENT'
     stOff = 'non installe'
     diskFree = '{0} Go libres sur {1} Go'
@@ -73,6 +74,9 @@ $T = @{
     adviceDown = 'Prevenez le responsable. Notez ce qui est en rouge ci-dessus.'
     adviceDisk = 'Le disque est presque plein. Prevenez le responsable.'
     adviceBackup = 'La sauvegarde de cette nuit n''a pas eu lieu. Prevenez le responsable.'
+    portClosed = 'port {0} ferme'
+    portReserved = 'port {0} bloque par Windows'
+    advicePort = 'Windows bloque un port (ligne en rouge). Prevenez le responsable : DEPLOYMENT.md, partie Windows.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -95,6 +99,7 @@ $T = @{
     stStopped = 'STOPPED'
     stStarting = 'STARTING'
     stUnhealthy = 'NOT RESPONDING'
+    stNoPort = 'UNREACHABLE'
     stMissing = 'MISSING'
     stOff = 'not installed'
     diskFree = '{0} GB free of {1} GB'
@@ -105,6 +110,9 @@ $T = @{
     adviceDown = 'Tell the person in charge. Note down whatever is red above.'
     adviceDisk = 'The disk is nearly full. Tell the person in charge.'
     adviceBackup = 'Last night''s backup did not happen. Tell the person in charge.'
+    portClosed = 'port {0} not open'
+    portReserved = 'port {0} held by Windows'
+    advicePort = 'Windows is holding a port (red line). Tell the person in charge: DEPLOYMENT.md, Windows section.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -127,6 +135,7 @@ $T = @{
     stStopped = '정지됨'
     stStarting = '시작 중'
     stUnhealthy = '응답 없음'
+    stNoPort = '접속 안 됨'
     stMissing = '없음'
     stOff = '미설치'
     diskFree = '{1}GB 중 {0}GB 남음'
@@ -137,6 +146,9 @@ $T = @{
     adviceDown = '관리자에게 알리세요. 위에 빨간색으로 표시된 항목을 적어두세요.'
     adviceDisk = '디스크가 거의 찼습니다. 관리자에게 알리세요.'
     adviceBackup = '어젯밤 백업이 실행되지 않았습니다. 관리자에게 알리세요.'
+    portClosed = '{0} 포트 닫힘'
+    portReserved = '{0} 포트를 Windows가 막음'
+    advicePort = 'Windows가 포트를 막고 있습니다(빨간 줄). 관리자에게 알리세요: DEPLOYMENT.md의 Windows 절.'
   }
 }
 
@@ -191,8 +203,81 @@ function Get-ComposeDir {
 }
 
 function New-Check {
-  param([string]$Key, [string]$State, [string]$Detail = '')
-  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail }
+  param([string]$Key, [string]$State, [string]$Detail = '', [bool]$Port = $false)
+  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail; Port = $Port }
+}
+
+# ------------------------------------------------------------ host ports
+#
+# A container can be Up and healthy while nothing listens on the host. Windows
+# (Hyper-V/WSL) reserves blocks of TCP ports, picked afresh at every boot; when
+# a published port lands in one, Docker cannot bind it, the container starts
+# anyway, and its healthcheck - which runs inside the container - stays green.
+# The screen or the imaging device then times out with nothing looking wrong.
+# So for every port a container publishes, connect to it from the host.
+
+# The ports the container was configured to publish, from Docker itself, so a
+# port changed in docker-compose.yml is followed without editing this file.
+function Get-HostPorts {
+  param([string]$Container)
+  $json = Invoke-Docker @('inspect', $Container, '--format', '{{json .HostConfig.PortBindings}}')
+  if (-not $json -or $json -eq 'null') { return @() }
+  $ports = @()
+  try {
+    $map = ($json | Select-Object -First 1) | ConvertFrom-Json
+    foreach ($prop in $map.PSObject.Properties) {
+      if ($prop.Name -notlike '*/tcp') { continue }
+      foreach ($b in @($prop.Value)) {
+        if (-not $b.HostPort) { continue }
+        # Unset or "all interfaces" is reachable on loopback; a specific address is not.
+        $ip = if (-not $b.HostIp -or $b.HostIp -eq '0.0.0.0' -or $b.HostIp -eq '::') { '127.0.0.1' } else { $b.HostIp }
+        $ports += [pscustomobject]@{ Ip = $ip; Port = [int]$b.HostPort }
+      }
+    }
+  } catch {}
+  return $ports
+}
+
+function Test-HostPort {
+  param([string]$Ip, [int]$Port)
+  $client = New-Object System.Net.Sockets.TcpClient
+  try { return $client.ConnectAsync($Ip, $Port).Wait(1000) }
+  catch { return $false }
+  finally { $client.Close() }
+}
+
+# `netsh ... excludedportrange` prints a localized header and then "start end"
+# pairs; only the number pairs are read, so a French or Korean Windows parses
+# the same. Asked only when a port is found closed.
+function Get-ReservedRanges {
+  $ranges = @()
+  try {
+    $lines = & netsh interface ipv4 show excludedportrange protocol=tcp 2>$null
+    foreach ($l in $lines) {
+      if ($l -match '^\s*(\d+)\s+(\d+)') { $ranges += ,@([int]$Matches[1], [int]$Matches[2]) }
+    }
+  } catch {}
+  # The comma keeps a single range from being unrolled into two loose numbers.
+  return ,$ranges
+}
+
+# Downgrades a container check that looked fine when one of its published
+# ports cannot be reached. A reserved port is named as such, because that is
+# the cause, and it is not one a restart of the app will fix.
+function Add-PortCheck {
+  param($Check, [string]$Container, $Strings)
+  if ($Check.State -ne 'ok' -and $Check.State -ne 'warn') { return $Check }
+  $problems = @()
+  $reserved = $null
+  foreach ($p in (Get-HostPorts -Container $Container)) {
+    if (Test-HostPort -Ip $p.Ip -Port $p.Port) { continue }
+    if ($null -eq $reserved) { $reserved = Get-ReservedRanges }
+    $held = $false
+    foreach ($r in $reserved) { if ($p.Port -ge $r[0] -and $p.Port -le $r[1]) { $held = $true } }
+    $problems += if ($held) { $Strings.portReserved -f $p.Port } else { $Strings.portClosed -f $p.Port }
+  }
+  if ($problems.Count -eq 0) { return $Check }
+  return New-Check $Check.Key 'down' ($problems -join ', ') $true
 }
 
 function Get-ContainerCheck {
@@ -274,6 +359,10 @@ function Get-AllChecks {
   $checks = @{}
   foreach ($spec in $Containers) { $checks[$spec.Key] = Get-ContainerCheck -Spec $spec -Strings $Strings }
   $checks['bridge'] = Get-BridgeHeartbeatCheck -Strings $Strings -ContainerCheck $checks['bridge']
+  # The two that publish ports to the host: the EMR screen (9080) and the PACS
+  # (viewer 9090, DICOM 4242). The others are reached only inside Docker.
+  $checks['web']  = Add-PortCheck -Check $checks['web']  -Container 'bethesda-emr-web' -Strings $Strings
+  $checks['pacs'] = Add-PortCheck -Check $checks['pacs'] -Container 'bethesda-pacs'    -Strings $Strings
 
   # Docker already knows where the backup folder was put, whichever drive that
   # is, so nobody has to configure it here. If it cannot tell us, fall back to
@@ -301,6 +390,9 @@ function Get-AllChecks {
 function Get-Advice {
   param($Result, $Strings)
   if ($Result.DockerDown) { return $Strings.dockerDown }
+  foreach ($c in $Result.Checks) {
+    if ($c.State -eq 'down' -and $c.Port) { return $Strings.advicePort }
+  }
   foreach ($c in $Result.Checks) {
     if ($c.State -eq 'down') { return $Strings.adviceDown }
   }
@@ -391,6 +483,14 @@ $langButton.Height = 26
 $langButton.FlatStyle = 'Flat'
 $footer.Controls.Add($langButton)
 
+# WinForms docks from the back of the z-order to the front, so the Fill panel
+# must be frontmost to be docked last, into whatever the banner and the footer
+# leave. Added in the order above it was docked second and took the whole top
+# of the window, and the banner was then drawn over its first two rows - the
+# database and the application server, the two lines that matter most, were
+# hidden under the word PROBLEME.
+$rows.BringToFront()
+
 # The banner and the rows are rebuilt on every pass rather than patched, so a
 # stale row can never be left behind reading OK after its check stopped running.
 function Update-Window {
@@ -426,14 +526,15 @@ function Update-Window {
     $name.TextAlign = 'MiddleLeft'
 
     $state = New-Object System.Windows.Forms.Label
-    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } else { $c.Detail }
+    # A port problem has a long explanation; it goes in the wide column, not this one.
+    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } elseif ($c.Port) { $s.stNoPort } else { $c.Detail }
     $state.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
     $state.ForeColor = $color
     $state.Dock = 'Fill'
     $state.TextAlign = 'MiddleLeft'
 
     $detail = New-Object System.Windows.Forms.Label
-    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off') { $c.Detail } else { '' }
+    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off' -or $c.Port) { $c.Detail } else { '' }
     $detail.Font = New-Object System.Drawing.Font('Segoe UI', 9)
     $detail.ForeColor = [System.Drawing.Color]::FromArgb(90, 90, 90)
     $detail.Dock = 'Fill'
@@ -448,6 +549,10 @@ function Update-Window {
     $rows.Controls.Add($state, 1, $rows.RowCount - 1)
     $rows.Controls.Add($detail, 2, $rows.RowCount - 1)
   }
+  # An empty last row takes the spare height; otherwise the table hands it all
+  # to the last real row, whose text then floats in the middle of a tall gap.
+  [void]$rows.RowStyles.Add((New-Object System.Windows.Forms.RowStyle([System.Windows.Forms.SizeType]::Percent, 100)))
+  $rows.RowCount = $rows.RowCount + 1
 
   $text = Get-Advice -Result $r -Strings $s
   $advice.Text = $text

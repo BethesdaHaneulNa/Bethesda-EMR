@@ -2,6 +2,88 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 제안: 약 저장이 재고를 덮어쓰는 문제 (약국 H4)
+
+- **상태**: 보류 — 제안만 했습니다. 코드는 바꾸지 않았습니다. **실장님 결정 + 약국과 순서 맞추기**가 필요합니다.
+- **문제** (약국 `pharmacy.md` 7절 H4): 설정 → 약품 탭에서 약 하나를 열면 편집 창이 그 순간의 행 전체를 들고 있다가, 저장할 때 `PUT /api/admin/drugs/:id`가 `stock_qty=$11`로 **받은 재고를 그대로 씁니다** (`admin.routes.js` DRUGS 절). 아침에 창을 연 목록(재고 100) → 낮에 30개 조제(70) → 오후에 그 목록에서 **단가만** 고쳐 저장 → 재고 100으로 돌아감. 경고 없음.
+- **왜 「차이만 더하기」는 답이 아닌가**: 재고를 고치는 이유가 둘입니다. 「약이 20개 들어왔다」(더하기)와 「선반을 세어 보니 45개다」(맞추기). 사람이 본 값과의 차이를 더해 주면 앞의 경우는 맞지만(70+20=90), 뒤의 경우는 45가 아니라 15가 됩니다(70+(45−100)). 어느 쪽인지 서버는 알 수 없으므로, **조용히 계산해 주지 말고 다시 묻는 것**이 안전합니다.
+
+### 제안 A — 지금 바로 할 수 있는 것 (설정 세션 파일만, 작음)
+
+1. **편집 창을 열 때 본 재고를 같이 보냄**: `Settings.jsx`의 공용 `openEdit`(틀 코드, 설정 몫)에서 약이면 `stock_expected = stock_qty`를 복사본에 넣음. 약품 탭 안쪽(약국 몫)은 안 건드림.
+2. **서버 규칙** (`PUT /api/admin/drugs/:id`, 트랜잭션 + `SELECT … FOR UPDATE`로 그 약 행 잠금 — 조제가 쓰는 것과 같은 잠금):
+   - 보낸 재고 = 본 재고 → **재고는 건드리지 않음** (단가·이름만 고친 경우. 사이에 조제가 있어도 그대로 보존)
+   - 보낸 재고 ≠ 본 재고, 그리고 지금 재고 = 본 재고 → 보낸 값으로 저장 (그 사이 아무도 안 바꿈)
+   - 보낸 재고 ≠ 본 재고, 그리고 지금 재고 ≠ 본 재고 → **409** 「그 사이 재고가 바뀌었습니다 (지금 70). 다시 열어 확인하세요」 — 저장 안 함. 화면은 이 문구를 `se_` 키로 번역(약국처럼 고정 문구 비교, `api/client.js`가 상태 코드를 안 넘기므로)
+   - `stock_expected`가 없는 요청(옛 화면을 새로고침하지 않은 브라우저) → 지금처럼 보낸 값을 씀. 배포 직후 잠깐만 해당.
+3. **같은 API의 작은 버그 두 개도 같이** (약국 L6): 새 약의 `min_stock`이 비면 NULL로 저장됨 → 스키마 기본값 10을 쓰도록 `COALESCE`. 재고에 소수(7.5)를 넣으면 DB 오류 500 → 정수 검사로 400.
+4. 확인: 격리 스택에서 창 열기 → API로 조제해 재고 줄이기 → 단가만 저장(재고 보존) / 재고 고쳐 저장(409) / 다시 열어 저장(성공). 약국의 `backend/test/pharmacy.api.mjs` 형식으로 `backend/test/settings.drugs.mjs`를 만들어 둠.
+
+### 제안 B — 길게 보면 (약국 몫, 약국의 「2번 재고」 결정과 같이)
+
+- 재고는 **움직임으로만** 바뀜: 입고(+N), 실사 조정(센 값으로 맞춤 + 이유), 조제(−N). 움직임마다 한 줄 기록하는 표(`drug_stock_log`, 약국 M5 — 약국 마이그레이션 번호대).
+- 그러면 설정의 약 편집 창에서 재고 칸은 **읽기 전용**이 되고 「약국 화면에서 재고 조정」으로 안내. `PUT /api/admin/drugs/:id`는 재고를 **아예 안 받음**.
+- A의 서버 규칙은 B가 들어올 때까지 유효하고, B가 들어오면 재고 부분만 지우면 됩니다. A와 B는 서로 막지 않습니다.
+
+- **권하는 순서**: A를 먼저(작고, 지금 운영에서 재고가 조용히 틀어지는 것을 막음) → B는 약국 재고 결정 때.
+- **실장님께 여쭐 것**: A를 진행해도 될지. 재고 숫자는 약국 업무에 직접 걸린 부분이라 결정을 받고 하겠습니다.
+- **다른 세션에 부탁**: **약국** — A는 약품 탭 안을 안 건드리지만, 409 안내가 약품 탭 편집 창에서 뜹니다. B를 설계할 때 설정 쪽 재고 칸을 읽기 전용으로 바꾸는 것은 약국이 하셔도 되고(탭 안), 서버 PUT에서 재고를 빼는 것은 설정이 맞춰 하겠습니다.
+
+## 2026-09-29 — 서버 권한 목록을 한 곳으로 (U9)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`f5e7e55` 위)
+- **한 일**: 서버에 네 번 적혀 있던 권한 목록(`admin.routes.js`의 `ALL_PERMS`, `auth.routes.js`의 `allPerms`, `middleware/auth.js`의 `defaultPermsForRole`)을 새 파일 **`backend/src/middleware/permissions.js`** 하나로 모았습니다(`ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole`). 기준은 총괄 지시대로 `frontend/src/modules.js`이고, 백엔드 이미지는 `backend/`만으로 빌드되어 그 파일을 불러올 수 없으므로, 두 목록이 같은지 보는 검사 **`backend/test/settings.permissions.mjs`** 를 넣었습니다. 설치·서버·DB 없이 파일 두 개만 읽습니다. `permissions.js`를 의존성 없는 별도 파일로 뺀 것은 이 검사가 `npm install` 없이 돌게 하려는 것입니다.
+- **동작 변화**: 없음. `defaultPermsForRole`은 전처럼 매번 새 배열을 돌려줍니다(얼린 목록을 복사). pg 드라이버에는 일반 배열을 넘깁니다.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/auth.routes.js` · `backend/test/settings.permissions.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: **`backend/src/middleware/auth.js`** — 권한 목록·역할 기본값을 지우고 `./permissions`에서 가져옴, `module.exports`에 `ALL_PERMS`·`ROLE_DEFAULT_PERMS` 추가(기존 이름은 그대로 내보냄). **`backend/src/middleware/permissions.js`(새 파일)** — 공용 폴더라 적습니다. 모듈을 추가할 때 `modules.js`와 이 파일을 같이 고쳐야 합니다.
+- **DB 마이그레이션**: 없음 (`013`에도 같은 목록이 있지만 적용된 파일이라 안 건드림) · **번역 키**: 없음
+- **확인한 방법**: `node --check` 4개 파일. `node backend/test/settings.permissions.mjs` → 8개 모두 ok, exit 0. 스크래치 복사본에서 `modules.js`에 모듈 하나를 더하면 → FAIL, exit 1. 격리 스택 9187을 **빈 DB로 다시 만들어**(`down -v`, 격리 스택 DB만) — 첫 실행 관리자 만들기 → 권한 7개 / 설치 관리자를 아이디·역할·권한·상태 바꿔 저장 → `admin`·admin·7개·active로 고정됨 / 접수 직원 로그인 → `["registration","payment"]`, `/admin/staff` 403.
+- **확인 못 한 것**: 권한 배열이 없는 옛 토큰(`defaultPermsForRole` 경로)은 서버로는 안 해 봤습니다 — 검사 스크립트가 역할별 값을 확인합니다.
+- **위키**: `modules/settings.md` 3-1절, 4절, 7절(U9 고침), 8절
+- **총괄 확인 요청**: 위 공용 파일 두 개. 다른 세션 라우트는 `middleware/auth.js`에서 가져오는 이름이 그대로라 영향 없습니다.
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — 설정 화면 영어 고정 글자를 세 언어로 (U1, 약국 부탁 포함)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`2a40e84` 위)
+- **한 일**: 약국 세션이 부탁한 세 곳(공용 삭제 확인 「Delete?」, 탭 이름 「💊 Drugs」, 편집 창 제목 「+ Add」)과, 같은 종류의 영어 고정 글자를 설정 세션 몫 전체에서 `se_` 키로 옮겼습니다 — 탭 이름 6개, 직원·오더 코드·상용구·진료과·병원 정보 탭의 머리글·표 제목·「+ Add」 버튼·편집 창 입력 칸, 오류(`Error:`)·저장 알림, 오더 코드 종류 필터. 역할(`admin`→관리자/Administrateur)·오더 종류(`fee`→진료비/Frais)·상태(`active`→활성/actif)는 **표시만** 번역하고 저장 값은 그대로입니다. 직원 「삭제」는 실제로 비활성화라서 확인 창을 「이 직원을 비활성으로 바꿀까요? 로그인할 수 없게 됩니다. 기록은 남습니다.」로 바꿨습니다. 위키 2절에 **역할별 기본 권한 표**(총괄 부탁 — 수납 창구 계정용)를 넣었습니다.
+- **일부러 안 한 것**: 약품 탭 **안쪽**(표 머리글·편집 창 칸 — 약국 몫, 약국이 부탁한 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·Laboratory…, General·Internal… — DB에 저장되는 값이라 번역하면 데이터가 바뀜).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 표시 사이에 키 66개 추가 (지금 `se_` 79개씩). 기존 키는 안 건드림. `Settings.jsx`의 **약품 탭**(약국 몫)은 탭 이름 한 줄과 공용 삭제 확인·편집 창 제목만 바뀜.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_tab*` 6 · `se_col*` 14 · `se_f*` 22 · `se_role_*` 5 · `se_type_*` 4 · `se_status*` 2 · `se_addBtn` `se_newTitle` `se_confirmDelete` `se_confirmDeactivate` `se_error` `se_saved` `se_all` `se_none` `se_on` `se_off` `se_clinicTitle` `se_clinicIntro` `se_clinicNote` — ko·en·fr 모두 (node로 세 파일 79개씩 확인)
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9187에서 프랑스어: 탭 목록·직원 표·「+ Ajouter」 편집 창(Nouvel élément, Identifiant, Mot de passe, Rôle (étiquette), Accueil…)·오더 코드(Tous/Frais/Laboratoire/Imagerie/Acte, 종류 배지)·병원 정보 탭. 한국어: 직원 탭(관리자·활성·+ 추가). 삭제 확인 문구는 `window.confirm`을 「취소」로 답하는 가짜로 바꿔 문구만 확인(실제 비활성화 안 함).
+- **확인 못 한 것**: 영어 화면, 상용구·진료과 편집 창 화면(코드로만), 삭제 확인 창의 실제 모양.
+- **위키**: `modules/settings.md` 2절(버튼 이름 한국어/Français로, 역할별 기본 권한 표), 7절(U1 대부분·U7 고침), 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: **약국** — 약품 탭 안쪽(표 머리글 Code·Name·Cat·Dose·Freq·Days·Route·Price·Stock, 편집 창 칸, 탭 머리의 「💊 Drugs」·「+ Add」)은 그대로입니다. 같은 방식으로 옮기려면 공용 키 `se_addBtn`·`se_colCode`·`se_colName`·`se_colPrice`·`se_fCode`·`se_fName`을 써도 됩니다. **PACS** — 오더 연동 탭의 「Save」「Loading...」「Bridge Token」「Host / IP」「AE Title」.
+- **남은 일**: H4 제안, U9, S2 권한표 초안.
+
+## 2026-09-29 — 서버 상태 창 포트 검사 · 백업 검사 스크립트 (총괄 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`develop` `5e0e056`을 ff로 당긴 뒤)
+- **한 일**:
+  1. **`server-status.ps1` 호스트 포트 검사 (B11)**: `bethesda-emr-web`·`bethesda-pacs`가 게시하도록 설정된 포트(Docker `HostConfig.PortBindings`에서 읽음 — 9080·9090·4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨 / INACCESSIBLE」로, 옆 칸에 「4242 포트를 Windows가 막음」(예약 구간 안) 또는 「9090 포트 닫힘」, 아래 안내는 「Windows가 포트를 막고 있습니다… DEPLOYMENT.md의 Windows 절」. `netsh … excludedportrange`는 막힌 포트가 있을 때만 부르고, 숫자 쌍만 읽어 언어와 무관.
+  2. **상태 창 배치 버그 (B12, 원래부터 있던 것)**: 실제 화면을 캡처해 보니 맨 위 색 띠가 **첫 두 줄(환자 기록 DB·앱 서버)을 덮고 있었습니다** — DB가 멈춰도 「PROBLEME」만 보이고 어느 줄인지 안 보이는 상태. 도킹 순서(`$rows.BringToFront()`)와 남는 높이(빈 마지막 줄)로 고침.
+  3. **`verify-backup.ps1`·`.sh` (B4·B5)**: 백업 위치를 Docker의 `/backups` 마운트에서 찾음. `-DbContainer`/`-ApiContainer`/`-BackupDir`(`.sh`는 환경변수) 추가. **B5를 격리 스택에서 먼저 재현**(백업 뒤 상용구 1개 추가 → 옛 스크립트 「VERIFY FAILED - Do not rely on it」 + 「id가 충돌한다」)한 뒤, 판정을 둘로 나눔: 구조(테이블 누락·스키마) 차이는 실패(업데이트로 마이그레이션이 늘었으면 [info]), 데이터 차이는 [info] — `-Strict`/`--strict`에서만 실패. 멈춘 DB 컨테이너를 「돌고 있음」으로 보던 것도 고침.
+- **바꾼 파일**: `server-status.ps1` · `verify-backup.ps1` · `verify-backup.sh` · `wiki/modules/settings.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음 (스크립트 안의 fr·en·ko 문자열만)
+- **확인한 방법**:
+  - `server-status.ps1`: 파서 오류 0, BOM 유지. 이 PC의 **실행 중 EMR을 읽기만** 해서 `-Console -Lang fr/ko` → PACS 줄 down 「port 4242 bloque par Windows, port 9090 ferme」, 종료 코드 2. **이 PC에서 실제로 PACS 4242·9090이 막혀 있습니다** (`bethesda-pacs` Up healthy, 동적 포트 범위가 1024부터, 4242가 예약 구간 4204–4303 안). 창 모드는 스크래치 복사본으로 띄워 `CopyFromScreen` 캡처 → 고치기 전 띠가 두 줄을 가림, 고친 뒤 7줄 모두 보임 (fr·ko).
+  - `verify-backup.ps1`: ASCII만, 파서 오류 0. 격리 스택 9187(`-DbContainer bethesda-s-settings-db`)에서 — 백업 뒤 변경 → VERIFIED + [info] / `-Strict` → 실패 「phrase_dictionary: live 26 rows, backup 25」 / 새 백업 직후 `-Strict` → 「identical」 / 절반 잘린 파일 → 「damaged」 exit 1, 임시 DB 0개(`exit`해도 `finally` 실행) / 옛 백업 → 비교 생략. `BACKUP_PATH`(임시 폴더)를 스스로 찾음.
+  - `verify-backup.sh`: `sh -n` 통과, Git Bash로 같은 격리 스택에서 기본·`--strict` 확인.
+- **확인 못 한 것**: 실제 Linux·NAS(busybox)에서 `.sh`는 돌려 보지 않았습니다(Git Bash만). 업데이트 뒤(마이그레이션 수 차이) 경로는 만들어 보지 않았습니다. 상태 창을 15초 주기로 오래 띄워 두는 것은 보지 않았습니다.
+- **위키**: `modules/settings.md` 2-9·2-10(새)·3-5·3-6·7절(B4·B5 고침, B11·B12 추가)·8절
+- **총괄 확인 요청**:
+  - **이 PC의 PACS가 지금 밖에서 접속되지 않습니다** (4242·9090). PACS 세션 P-1과 같은 원인으로 보입니다. `DEPLOYMENT.md`의 `netsh int ipv4 set dynamicport …`은 관리자 권한·재부팅이 필요한 시스템 설정이라 이 세션은 건드리지 않았습니다 — 실장님께 전달 부탁드립니다.
+  - `verify-backup`의 판정 기준이 바뀌었습니다 (데이터 차이는 기본적으로 실패가 아님). `DEPLOYMENT.md` 「Check a backup before you need it」 절에 `-Strict` 한 줄을 넣으면 좋겠습니다 (총괄 소유).
+- **다른 세션에 부탁**: **PACS** — 상태 창이 이제 호스트 포트를 봅니다. `pacs.md`의 P-1 표(「EMR 상태 화면의 PACS 검사만 잡아냄」)에 서버 상태 창도 추가해 주세요.
+- **남은 일**: U1(설정 화면 영어 고정 글자), H4 제안, U9, S2 권한표 초안 — 이어서 합니다.
+
 ## 2026-09-29 — 백업 안전장치 (동시 실행 · 최소 보관 · 실패 표시 · 시각)
 
 > **총괄 확인 (2026-09-29)**: 합침(`1ca4b79`) + 실행 중 EMR 반영. 확인: `/backup/status`에 `state: ok` · `minKeep 7` · 백업 16개 · 최근 9시간 전, 서버 로그 「keep 30d (never fewer than 7)」, 백업 탭 초록 띠(화면). 요청: `.inprogress` 폴더는 위키·이 노트에 기록됨 · B10 `DEPLOYMENT.md` 5b에 PowerShell/cmd 한 줄 넣음 · 이미지 이름표는 `657ba2c`로 해결 · 16:49 재생성은 총괄 배포(`7ad4387`)가 맞음. S1·S2·U9·B9는 다음 차례.
