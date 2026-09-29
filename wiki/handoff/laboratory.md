@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영어 화면 확인 · 영상 오더 취소의 영향 확인 (코드 변경 없음)
+
+- **상태**: 확인 요청 (확인만)
+- **커밋**: session/laboratory — 이 항목과 같은 커밋(노트만)
+- **영어 화면**(격리 스택 9185, develop `3aa3f87` + 23·25): 검사실 화면(Pending/Completed, In consultation, Find Patient, Chart Viewer, 입력 표 머리, Save · Complete, Lab Results 표 「2026-09-29 ✕」·기준 이름·툴팁)과 설정 → Lab Test Items(표 머리, 「▸ By sex & age (n)」, 펼침 표 All/Male/Female · days/months/years · + Add row, 겹침 거절 알림 「Hb: age bands overlap for the same sex. It cannot be saved, since nobody could tell which row applies.」). 화면 글자·툴팁·placeholder에 **한글 없음, 번역 키 이름(`lb_…`)이 그대로 나온 곳 없음**(자바스크립트로 전체 글자 검사).
+- **영상 오더 취소의 영향**: 검사실 화면에는 영상 오더가 나오지 않음 — 목록 세 곳 모두 `o.code_type = 'lab'`(`lab.routes.js` `/pending`·`/completed`·`/visit/:id/orders`), 결과 저장은 `code_type`이 `lab`이 아니면 400, 결과 표는 `lab_result`만 읽음. 그래서 진료의 영상 오더 취소가 켜져도 검사실 쪽 변경은 필요 없음. (`GET /order/:id/items`는 `code_type`을 보지 않지만 화면에서 갈 길이 없고 읽기만 함.)
+- **바꾼 파일**: 이 노트만 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **남은 일**: 14 `backend/src/utils/labFlag.js`.
+
 ## 2026-09-29 — 문제 23 결과 표 참고치 툴팁 · 문제 25 환자 찾기 실패 알림 번역
 
 - **상태**: 확인 요청
