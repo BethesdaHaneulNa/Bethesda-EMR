@@ -22,6 +22,8 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 4. Pour une autre période, saisissez la date de début et la date de fin dans les deux cases à côté.
 5. Les chiffres se mettent à jour tout seuls. Pendant le calcul, `···` s'affiche à côté des dates.
 
+Les montants s'écrivent avec un espace pour les milliers (**39 300 Ar**) et les nombres avec leur unité (**3 cas**).
+
 La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Caisse par période**, **Usage médicaments** et **Tendance mensuelle** (ils ont leurs propres dates).
 
 ### Lire « Activité » — combien de patients
@@ -51,7 +53,7 @@ La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pa
 
 1. Cliquez sur la carte **Impayé ▼**. La **Liste impayés** s'ouvre en dessous (**Chargement...** s'affiche un instant).
 2. Pour chaque patient : **N° dossier**, **Nom**, **Téléphone**, montant **Impayé**, **Depuis** (date de la plus ancienne consultation encore non payée), **Factures**.
-3. Les plus grosses dettes sont en haut. Exemple : 26-00001 · RAKOTO Jean · 15,000 Ar · Depuis 2026-08-28.
+3. Les plus grosses dettes sont en haut. Exemple : 26-00001 · RAKOTO Jean · 15 000 Ar · Depuis 2026-08-28.
 4. Le montant est le même que dans l'écran **Paiement** quand on ouvre ce patient.
 5. Pour les remboursements, cliquez sur **Remboursement dû ▼** : la **Liste remboursements** s'ouvre.
 6. Cliquez de nouveau sur la carte pour fermer la liste. À chaque ouverture, la liste est rechargée.
