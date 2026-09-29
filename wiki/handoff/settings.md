@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 「Journal」 탭에 진료·접수 칸 (재부팅 뒤 ②)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`8594492` 위)
+- **한 일** (`frontend/src/pages/settingsAudit.js`, 화면만 — 서버 변경 없음):
+  - 진료(`d7cee75`)가 쓰는 칸 이름: 끝난 진료의 기록·활력징후 13칸(`NOTE_FIELDS`), 처방(`RX_LOG`), 오더(`ORDER_LOG`), 진단(`DX_LOG`).
+  - 값: 상태(오더됨·처방됨·조제됨·취소됨·예약됨·진행 중·완료 — 처방의 `ordered`는 「처방됨」, 줄의 `entity`로 구분), 오더 종류(`se_type_*` 재사용), 주·부 진단, 성별 M/F(접수 `validate.js`).
+  - `consultation.record.edit` 문장 뒤에 무엇을 고쳤는지(`entity`: 기록·활력징후 / 진단 / 처방 / 오더). 기록 줄의 요약 `note`는 숨김(entity가 이미 말함).
+  - 접수: 환자 수정 줄의 요약(바뀐 칸 이름 「gender, mobile」)을 칸 이름으로(「Sexe, Mobile」). 칸 13개는 이미 들어 있었음.
+  - 보기 좋게: 만들거나 지운 줄은 비어 있던 칸을 빼고, 칸 순서는 `FIELDS` 순서(이름 → 용량 → … → 상태·취소 사유).
+  - 프랑스어 안내 `se_logIntro`의 「ni les consultations」 — 「본 것」의 뜻이었지만 병원에서는 「진료는 안 남는다」로 읽혀 이제 틀림 → 「ni les simples lectures」.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/pages/Settings.jsx`(Journal 「무엇을」 칸 한 줄) · `wiki/modules/settings.md`(2.14 표, 3-10, 8절)
+- **공용 파일 변경**: i18n `se_` 44개 새로(`se_fld_*` 29, `se_st_*` 7, `se_dx_*` 2, `se_gender_*` 2, `se_ent_*` 4) + 프랑스어 `se_logIntro` 문구 하나 고침.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`. 격리 스택에서 실제 진료 흐름으로 줄을 만듦(스크래치 스크립트 — 환자 등록·수정, 진료 기록·처방 2·오더 2·진단 → 진료 완료 → 기록 수정, 처방 수정·삭제, 진단 추가, 검사 결과 입력 뒤 오더 취소, 다른 오더 삭제): 7종 모두 `audit_log`에 남고, Journal 탭 프랑스어·한국어에서 모든 칸·값이 말로 나옴(예: 「Dossier de consultation terminé modifié — prescription · Dose: 1 → 2」, 「오더를 취소함 · 상태: 완료 → 취소됨 · 취소 사유: — → mauvais examen」).
+- **다음 할 일**: ③ 자기 비밀번호 바꾸기 ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
 ## 2026-09-29 — 포장 단위 두 칸 저장 (재부팅 뒤 ①)
 
 - **상태**: 확인 요청
