@@ -290,6 +290,8 @@ export default {
   py_unpaidConfirm: "Aucun montant reçu. Laisser les {total} Ar impayés ?",
   py_refundHandBack: "Rendez {amount} Ar au patient.",
   py_remainsOwed: "{amount} Ar resteront impayés.",
+  py_payCarried: "Le solde de ce reçu a déjà été reporté sur le reçu {receipt}. Encaissez-le sur ce reçu. L’historique des reçus a été rechargé.",
+  py_voidCarried: "Le solde de ce reçu a été reporté sur le reçu {receipt}, qui le facture maintenant. Annulez d’abord {receipt}, puis ce reçu.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

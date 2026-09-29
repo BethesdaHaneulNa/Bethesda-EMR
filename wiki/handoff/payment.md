@@ -2,6 +2,51 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — M5 수납 API 권한 · M1 이월된 영수에 수납 거절 · M4 이월된 옛 영수 취소 거절
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋, develop `a708c9b` 위)
+- **한 일**: 아래 분류 항목대로. 총괄이 M4도 이번 단위에 넣으라고 해서 포함.
+  - **M5** — `billing.routes.js`의 모든 경로에 `permMiddleware('payment')`, 예외로 `GET /patient/:id/balance`만 `payment` 또는 `registration`.
+  - **M1** — `POST /:id/pay`가 `carried_into_id` 있는 영수면 409 `BILL_CARRIED: <그 빚을 가진 영수번호>`. 계산식은 그대로.
+  - **M4** — `PUT /:id/void`가 `carried_into_id` 있는 영수면 409 `BILL_CARRIED: <뒤 영수번호>`. 화면은 사유를 묻기 전에 먼저 안내(`receipts`에 `carried_into_id`가 있음).
+  - 화면: 미수 수납·전체 미수 수납이 `BILL_CARRIED`를 받으면 `py_payCarried` 안내 후 영수내역·잔액을 새로 불러옴. 영수취소는 `py_voidCarried`.
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `frontend/src/pages/Payment.jsx`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 수납 구역에 `py_payCarried`, `py_voidCarried` 2개
+- **DB 마이그레이션**: 없음
+- **번역 키**: `py_payCarried`, `py_voidCarried` (ko · en · fr)
+- **확인한 방법**: `node --check`, 프론트 빌드 통과. 격리 스택 9183(새 session compose, 이미지 `bethesda-s-payment-*:dev`):
+  - 권한표(테스트 계정 3개, 비밀번호는 무작위·출력 안 함):
+
+    | 요청 | 의사(consultation) | 접수만(registration) | 수납(payment) |
+    |---|---|---|---|
+    | `GET /billing/pending` | 403 | 403 | 200 |
+    | `GET /billing/patient/:id/balance` | 403 | **200** | 200 |
+    | `GET /billing/patient/:id/history` | 403 | 403 | 200 |
+    | `PUT /billing/:id/void` | 403 | 403 | 404(없는 영수) |
+    | `POST /billing/:id/pay` | 403 | 403 | 404(없는 영수) |
+  - M1: 이월된 1차 영수에 15,000 수납 → 409 `BILL_CARRIED: R-…-0071`(예전: 200, 같은 빚 두 번). M4: 같은 영수 취소 → 409, 안내대로 2차 먼저 취소 → 200, 그다음 1차 취소 → 200. 수납 화면·통계 미수 모두 0으로 일치.
+  - 앞 단위 시나리오(T1~T5, S2·S4~S11) 재실행 — 결과 동일(회귀 없음).
+  - 화면(프랑스어): 이월된 영수의 「Annuler」 → 사유 창 없이 「… reporté sur le reçu R-20260929-0097 … Annulez d’abord R-20260929-0097, puis ce reçu.」
+- **확인 못 한 것**: 한국어 `py_voidCarried`·`py_payCarried` 화면 표시, 미수 수납 창에서의 `py_payCarried`(정상 화면에서는 이월된 영수에 미수 수납 버튼이 안 뜨므로 오래 연 화면에서만 나옴 — API로만 확인). 접수 화면을 접수 전용 계정으로 열어 보지는 않음(API 200으로 확인).
+- **위키**: `modules/payment.md` 3.4, 3.5, 4절(권한), 7절 M1·M4·M5, 8절
+- **총괄 확인 요청**: 수납 API가 이제 `payment` 권한을 요구합니다. 실행 중 EMR의 직원 중 수납 창구 계정에 `payment` 권한이 있는지 확인해 주세요(없으면 반영 직후 수납 화면이 403). 기본 `frontdesk`·`admin` 역할은 가짐.
+- **다른 세션에 부탁**: 없음. (접수 세션 참고: `balance`는 `registration` 권한으로 계속 읽힘)
+- **남은 일**: H3·H6·M2 — 결정용 자료를 다음 항목으로 씀.
+
+## 2026-09-29 — 다음 작업 목록 (M1 · M2 · M5 분류)
+
+- **상태**: 완료 — 진행분은 위 항목. M2는 결정 대기.
+- **기준**: 총괄 지시 「M1·M2·M5 중 실장님 결정 없이 되는 것」. 실장님 규칙상 **금액 계산이 바뀌는 것은 진행하지 않음**.
+
+| 항목 | 판단 | 이유 |
+|---|---|---|
+| **M5 수납 API 권한 검사** | **진행** | 금액과 무관한 접근 제한. 수납 권한(`payment`)이 없는 계정은 수납 API를 쓰지 못하게 함. 예외 하나: 접수 화면이 읽는 `GET /patient/:id/balance`는 `payment` 또는 `registration`. 수납 API를 부르는 곳은 수납 화면과 `Registration.jsx:73`뿐(grep). 관리자·기본 `frontdesk` 역할은 둘 다 가지고 있어 영향 없음. 진료 세션이 `d1f473e`에서 같은 방식(`permMiddleware`)을 씀 |
+| **M1 이월된 영수에 미수 수납** | **진행 — 거절만 추가** | `/:id/pay`에서 `carried_into_id`가 있는 영수(그 빚이 이미 다른 영수로 넘어간 것)를 409로 **거절만** 함. 계산식은 그대로이고, 이월되지 않은 영수의 수납 결과는 한 푼도 달라지지 않음. 화면 버튼은 원래 이런 영수에 뜨지 않음(`outstanding`=0) — 오래 연 화면·API만 막힘 |
+| **M2 미수 수납 돈이 원래 영수 날짜 매출로 잡힘** | **보류 — 실장님 결정 필요** | 받은 날 기준 매출로 바꾸려면 입금 기록 테이블(마이그레이션 3xx)을 새로 두고 통계 매출 계산도 바뀜 → 금액 규칙 변경이자 다른 모듈(통계) 변경. 선택지를 정리해 여쭐 예정 |
+
+- **같은 모양의 다음 후보(이번에는 안 함)**: M4 — 이미 다른 영수로 이월된 옛 영수를 **취소**하면 새 영수에 그 빚이 남음. M1처럼 「거절만 추가」로 막을 수 있음. 총괄이 괜찮다고 하면 이어서 함.
+
 ## 2026-09-29 — develop(6개 세션 합친 판)과 합침, 수납 작업 전체 확인 요청
 
 > **총괄 확인 (2026-09-29)**: 합침(`ee078d4`) + 실행 중 EMR 반영(반영 전 DB 백업). 확인(운영 DB에 아무것도 쓰지 않음, 영수 2건·수납액 474,500 전후 동일): `expected_active_bill_ids` 없는 수납 → 409 `BILL_CHANGED` · 옛 목록으로 수납 → 409 · 금액이 안 맞는 미수 → 400 · `/items`에 `active_bill_ids` · 정정 미리보기 200(받은 돈 474,500 = 총액, 환불 0) · `void-active` 404. **예전 방식 정정 영수: 실행 중 EMR에 0건**(적어 준 조회문 그대로 실행) — 고칠 데이터 없음. 배포 직후 열려 있던 수납 창이 한 번 409를 받는 것은 CHANGELOG에 적을 것. H3 범위·H6은 실장님께 여쭘.

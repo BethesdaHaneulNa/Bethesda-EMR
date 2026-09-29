@@ -53,6 +53,17 @@ export default function PaymentPage() {
     busyRef.current = true; setBusy(true);
     try { await fn(); } finally { busyRef.current = false; setBusy(false); }
   }
+  // "BILL_CARRIED: R-..." - the bill's balance already moved to a later receipt.
+  function carriedText(template, err){ return template.split('{receipt}').join(String(err && err.message || '').replace(/^BILL_CARRIED:\s*/,'')); }
+  function isCarried(err){ return String(err && err.message).indexOf('BILL_CARRIED')===0; }
+  // A refused settlement means the receipt list on screen was stale: reload it.
+  async function payRefused(err){
+    alert(carriedText(t.py_payCarried, err));
+    setSettleBill(null); setSettleAmt('');
+    var pid = sel?sel.patient_id:null;
+    if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
+             try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){} }
+  }
   function showError(err){
     if(String(err && err.message).indexOf('BILL_CARRIED')===0){
       alert(t.py_correctionCarried.split('{receipt}').join(String(err.message).replace(/^BILL_CARRIED:\s*/,'')));
@@ -262,6 +273,13 @@ export default function PaymentPage() {
 
   function voidReceipt(b){ return once(function(){ return voidReceiptNow(b); }); }
   async function voidReceiptNow(b){
+    // Its balance lives on a later receipt now; that one has to be voided first.
+    // Said before asking for a reason - the server refuses it anyway (BILL_CARRIED).
+    if(b.carried_into_id){
+      var into = (receipts||[]).filter(function(x){ return x.id===b.carried_into_id; })[0];
+      alert(t.py_voidCarried.split('{receipt}').join(into ? into.receipt_no : ('#'+b.carried_into_id)));
+      return;
+    }
     var reason = prompt(t.voidReason || '취소 사유 / Reason?');
     if(reason===null) return;
     try {
@@ -270,7 +288,10 @@ export default function PaymentPage() {
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){} }
       await loadLists();
       alert(t.voidDone || '영수 취소됨 / Cancelled');
-    } catch(err){ showError(err); }
+    } catch(err){
+      if(isCarried(err)){ alert(carriedText(t.py_voidCarried, err)); var p2 = sel?sel.patient_id:null; if(p2){ try { setReceipts(await api.get('/billing/patient/'+p2+'/history')); } catch(e){} } return; }
+      showError(err);
+    }
   }
 
   async function reprint(b){
@@ -292,7 +313,7 @@ export default function PaymentPage() {
       if(pid){ try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
                try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){} }
       await loadLists();
-    } catch(err){ showError(err); }
+    } catch(err){ if(isCarried(err)) await payRefused(err); else showError(err); }
   }
 
   function settleAll(){ return once(settleAllNow); }
@@ -307,7 +328,7 @@ export default function PaymentPage() {
       try { setReceipts(await api.get('/billing/patient/'+pid+'/history')); } catch(e){}
       try { setPatBalance(await api.get('/billing/patient/'+pid+'/balance')); } catch(e){}
       await loadLists();
-    } catch(err){ showError(err); }
+    } catch(err){ if(isCarried(err)) await payRefused(err); else showError(err); }
   }
 
   function statusBadge(s){
