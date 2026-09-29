@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 간호사 기본 권한 결정 반영 확인 (접수·약국·임상병리)
+
+- **상태**: 확인 요청 (위키·주석만, 코드 동작 변경 없음)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `f4df9bc`을 ff로 당긴 뒤)
+- **한 일**: 총괄이 결정대로 고친 `nurse` 기본값(접수·약국·임상병리)을 격리 스택에서 확인하고, 위키 2.4 표·3-1절·4절(마이그레이션 번호 020)을 맞췄습니다. `permissions.js`의 「확인 중」 주석을 결정 내용으로 바꿨습니다.
+- **확인한 방법** (9187, 세션 DB는 옛 번호 701로 적용돼 있어 020이 한 번 더 적용됨 — 재실행 안전): 프랑스어 화면 **Rôle: Infirmier(ère)** → **Enregistrement·Pharmacie·Laboratoire** 자동 체크, Paiement 꺼짐 → 저장 → 그 계정으로 로그인 → **Enregistrement**가 처음 열림, 메뉴 3개, 💉 아이콘. `/payment`·`/settings`·`/consultation`은 접수로 돌아감. 서버: `/patients`·`/visits/today`·`/pharmacy/pending`·`/lab/pending` 200, `/billing/pending`·`/admin/staff` 403, `/billing/patient/:id/balance` 200(수납 또는 **접수** 권한이면 열리는 것 — 접수 화면이 미수금을 보여주므로 의도대로).
+- **처음 열리는 화면**: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 동작은 정상. 간호사가 주로 약국에서 일한다면 `ROLE_ROUTES`에 `nurse: '/pharmacy'` 한 줄로 바꿀 수 있습니다 — **실장님 판단 필요**라 그대로 둠.
+- **실장님께 알릴 것**: 접수 권한은 「차트 보기」만이 아니라 **환자 등록·수정, 내원 접수·취소까지 모두** 됩니다(권한이 화면 단위라 보기 전용이 없음). 차트만 보게 하려면 접수 화면에 읽기 전용 모드를 만들거나(접수 세션), 차트 보기 권한을 따로 두는 설계가 필요합니다.
+- **바꾼 파일**: `wiki/modules/settings.md` · `wiki/handoff/settings.md`
+- **공용 파일 변경**: `backend/src/middleware/permissions.js` — 주석만 (값은 총괄이 고친 그대로)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **총괄 확인 요청**: 위 두 가지(첫 화면, 접수 권한의 범위)를 결정 세션에 전달 부탁드립니다.
+
 ## 2026-09-29 — 간호사(nurse) 역할 · 로그인 화면 버전
 
 > **총괄 확인 (2026-09-29)**: `47043f4` 합침 + 실행 중 EMR 반영. 마이그레이션은 `701` → **`020_settings_nurse_role.sql`** 로 번호를 바꿔 합침(내용 그대로). 실장님 결정으로 간호사 기본 권한을 **접수 · 약국 · 임상병리**로 바꿈(`modules.js`·`permissions.js` 한 줄씩, 총괄이 고침) — 실장님 말씀: 접수를 넣는 이유는 환자 차트를 보기 위해서. `TopBar.jsx`에 간호사 아이콘 추가. `settings.permissions.mjs` 통과.
