@@ -2,9 +2,148 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
+
+- **상태**: 확인 요청 — 코드 변경 없음(문서만)
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `e853799` fast-forward
+
+### 1. `wiki/manual-fr/payment.md` — 수납·접수 직원용, 프랑스어
+
+- **구성**: `wiki/manual-fr/README.md` 규칙대로 En bref · Pas à pas(1~13) · Si ce message apparaît · À ne pas faire · Qui appeler.
+- **Pas à pas에서 다루는 것**:
+  - 수납과 거스름(Monnaie), 일부만 받음 / Impayé, 미수 나중에 받기(Encaisser impayé · Tout encaisser, 이전 미수 자동 더하기)
+  - 진료 종류, Supplément
+  - **Correction(과청구 = 차액만 돌려줌 — 기본 길, 시뮬레이션 ①의 RASOA Marie 예)**, 영수 취소와 「Avez-vous rendu … ?」, Re-facturer
+  - 지난 날 내원(📅), 가격 없음 · 총량 없음 · 병 수, 재출력, 목록에 없는 환자
+- **화면 글자 대조**: 격리 스택(9183, develop `e853799`)을 프랑스어로 띄워 가짜 환자로 확인했습니다.
+  - 가짜 환자: RAKOTO Jean · RABE Hery · RASOA Marie · ANDRIA Paul · RANDRIA Lova · RAZAFY Nirina
+  - 확인한 화면: 대기 목록의 배지·줄, 수납 화면(Montant Reçu · Exact · Monnaie 2,000), Confirmer → 영수증 창(🖨 Imprimer Reçu · Fermer), 정정 화면(Montant correct · Déjà encaissé · Remboursement dû · ↩ Appliquer la correction), 재수납 띠(↺ Re-facturer · Paiement reporté), 가격 없음(Sans prix)
+  - 나머지 문구(안내 표)는 `fr.js`의 `py_` 키를 그대로 옮겼습니다.
+  - 「Le montant reçu est inférieur au total.」은 화면 흐름에서 뜨지 않아(Confirmer가 부분 수납으로 처리) 표에서 뺐습니다.
+- **그림**: 없음(글 먼저 — 규칙 5).
+- **확인할 것(현지)**: 없음. 행정 용어는 화면 글자만 썼습니다.
+- **디자인 세션이 `Payment.jsx`를 끝낸 뒤 확인할 것**: 색 설명은 넣지 않았지만(배지 이름만), 단추 이름이 바뀌면 고쳐야 합니다.
+
+### 2. `wiki/reference/changelog-1.5.0/payment.md` — 영어, 폴더 README 규칙대로
+
+- **보이는 변화 먼저**:
+  - 중복 수납 막기, 정정(실제 받은 돈 · 차액만), 취소할 때 「돌려줬나」
+  - 현금 기록(날짜별 = 금고), 나중에 받은 미수는 받은 날 영수, 프랑스어 A4 영수증
+  - 청구가 진료 오더를 따름(총량 · 수량×일수 · 취소 오더 · 가격 없음 · 진료비 한 곳), 대기 목록 정리
+- **뒤에 짧게**: 합계 검사, 이월 두 번 막기, 권한, 변경 기록, 번역.
+- **`### After updating`**:
+  - 마이그레이션 027 · 031 · 033 · 036
+  - 036의 opening 확인 SQL
+  - 업데이트 뒤 백업
+  - 직원 설명서의 Correction · 취소 질문
+
+### 기록
+
+- **바꾼 파일**: `wiki/manual-fr/payment.md`(새), `wiki/reference/changelog-1.5.0/payment.md`(새)
+- **공용 파일 변경**: 없음
+- **확인 못 한 것**: 설명서를 A4로 인쇄해 쪽수를 재 보지 않았습니다(글 길이로는 3~4쪽).
+- **곁에 본 것(고치지 않음)**: `components/Receipt.jsx`의 글자 표 `RL`에 `refunded`가 두 번 있습니다(같은 값 「Remboursé au patient」, M6 때 제가 한 번 더 넣음). 동작은 같습니다. 디자인 세션이 끝난 뒤 한 줄 지우겠습니다.
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — M9 (가) 구현: 현금 기록 `cash_movement` (수납 몫)
+
+- **상태**: 확인 요청 — 배포 전에 총괄이 실행 중 EMR의 백업 사본으로 확인(아래 SQL)
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `4dabb5f` fast-forward
+- **결정·승인**: M9 (가) 실장님. 설계 `5cfeef3` 총괄 승인(조건 ①~⑥ — `coordinator.md` 「수납 세션에게 — 현금 기준 설계 승인」).
+
+### 한 일
+
+**마이그레이션 304** (`304_payment_cash_movement.sql`, 총괄이 번호를 매겨 주세요)
+- 표 `cash_movement`: 칸은 설계 메모 그대로입니다.
+- 거절 트리거:
+  - UPDATE · TRUNCATE는 늘 거절합니다.
+  - DELETE는 `SET LOCAL bethesda.cleanup = 'on'`인 트랜잭션에서만 됩니다(조건 ①).
+- `billing.held_used`: 이 영수가 가져간 창구 돈(아래).
+- 옛 영수를 `opening` 줄로 채웁니다. 다시 돌려도 같습니다(조건 ③): `held_used`가 비어 있던 영수만 대상이고, 새 영수는 기본값 0을 가집니다.
+
+**서버** (`billing.routes.js`만 — `Payment.jsx`·`PatientChart.jsx`는 건드리지 않음, 조건 ⑥)
+- `writeCash()`가 네 곳에서 씁니다: 수납 `payment` / 미수 수납 `settlement` / 정정 `correction` / 취소 「Oui」 `cancel`.
+- 날짜는 서버의 `CURRENT_DATE`입니다(조건 ②).
+- `GET /cash-day`는 수납 또는 통계 권한입니다(조건 ④).
+
+**설계에서 하나 더 한 것 — `held_used`**
+- 재수납이 「창구에 있던 돈」을 얼마 가져갔는지 영수에 적습니다. 서버가 트랜잭션 안에서 다시 세고, **살아 있는 영수가 없을 때만**(= 재수납) 가져갑니다.
+- 창구에 남은 돈 = 대체 안 된 취소 영수의 (받은 돈 − 돌려준 돈) − `held_used` 합. 재수납 칸 `prior_paid`도 이 식으로 바꿨습니다.
+- 이유: 예전 식(「취소 뒤에 새 영수가 생겼는가」)은 다른 영수가 살아 있는 내원에서 추가 청구·미수 수납을 하면, 쓰지 않은 창구 돈을 쓴 것으로 셉니다.
+  - 격리 C10: 예전 식이면 칸 18,000, 창구에 실제로 있는 돈 33,000 → 이제 33,000.
+  - 이 경우 늘 확인할 식도 깨졌을 것입니다.
+- 옛 영수의 `held_used`는 예전 식 그대로 채웠습니다. 그래서 **지금까지 보이던 재수납 칸은 하나도 바뀌지 않습니다**(아래 전·후).
+
+**조건 ⑤**
+- 인계 노트 M6 항목의 「통계 — 정정의 환불 = change_amount」 문단에 줄을 긋고, 현금 줄로 센다고 고쳤습니다. 위키 5절도 같습니다.
+
+### 같은 데이터로 고치기 전·후
+
+- **전**: `4dabb5f`로 격리 스택을 만들었습니다. 넣은 데이터:
+  - M6 옛 취소·정정(V1~V5, 033 전처럼 `refunded_amount` 비움)
+  - M6 새 동작(N1~N7)
+  - 날짜를 나눈 시뮬레이션 ①~④
+- **후**: 이 커밋으로 다시 빌드했습니다(304 적용).
+
+| 확인 | 결과 |
+|---|---|
+| 재수납 칸 `prior_paid` (10개 내원) | 전 = 후, 모두 같음 |
+| 지나간 날(9/20·22·24·26·28)의 `opening` 합 | 전의 통계 수납액과 같음(15,000 · 10,000 · 18,000 · 18,000 · 15,000) |
+| 오늘 `opening` 합 | 130,000 = 통계 32,000 + 돈이 창구에 남은 취소 영수 98,000(설계 5의 규칙) |
+| 늘 확인할 식(환자 17명) | 틀림 0 |
+| 304를 한 번 더 돌림 | 줄 수 15 · 합 206,000 · `held_used` 합 33,000 그대로 |
+| UPDATE / DELETE / TRUNCATE | 모두 「cash_movement is append-only」 |
+| `bethesda.cleanup = 'on'` 안에서 DELETE / UPDATE | DELETE 1(롤백으로 시험) / UPDATE 거절 |
+| 0원 줄 | 값 검사로 거절 |
+
+**새 동작** (`cash.mjs`, 틀린 항목 0):
+
+| 경우 | 줄 |
+|---|---|
+| C1 20,000 받고 거스름 2,000 | `payment 18000` |
+| C2 부분 5,000 | `payment 5000` |
+| C3 미수 | 없음 |
+| C4 미수 수납 | `settlement 10000` |
+| C5 정정 | `payment 18000, correction -3000` |
+| C6 돌려줄 돈 없는 정정 | `payment 10000` |
+| C7 취소 Oui | `payment 15000, cancel -15000` |
+| C8 취소 Non → 재수납 | `payment 15000`, `held_used` 15,000 |
+| C9 취소 Non 18,000 → 15,000으로 재수납(거스름 3,000) | `payment 18000, payment -3000` |
+| C10 위의 드문 경우 | 추가 청구 `held_used` 0, 나중 재수납 칸 33,000 |
+| C11 이월 8,000 포함 수납 | `payment 18000` |
+| C12 `cash-day` | 들어옴 − 나감 = 순액 = 그날 줄 합, 날짜 틀림 400, 빈 날 0 |
+
+- **권한**: 통계만 200 · 접수만 403 · 수납 200.
+- **회귀**: H1(두 번 누름 → 줄 하나)·H2·총량·취소 오더 26·미수 수납 50+11·변경 기록 8·M3 5·M6 20 — 틀린 항목 0. 그 뒤 식 확인 **환자 80명 틀림 0**.
+- **시뮬레이션 ①~④ 다시**(새 DB, `sim2.mjs`): 날짜별 현금 기록이 모두 실제 현금과 같습니다.
+  - 시험 DB에서만 날짜를 옮기려고 트리거를 잠시 껐다가 다시 켰습니다(끝에 삭제 거절로 확인).
+
+| 경우 | 현금 기록 D1 / D2 | 지금 통계 D1 / D2 |
+|---|---|---|
+| ① | 18,000 / −3,000 | 0 / 15,000 |
+| ② | 10,000 / 0 | 0 / 10,000 |
+| ③a | 18,000 / 0 | 0 / 18,000 |
+| ③b | 18,000 / 0 | 0 / 18,000 |
+| ④ | 10,000 / 5,000 | 0 / 15,000 |
+
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`, `backend/sql/304_payment_cash_movement.sql`(새)
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: `304_payment_cash_movement.sql` — 표 · 트리거 · `billing.held_used` · 옛 영수 채우기.
+- **배포 전 확인 SQL** (실행 중 EMR 백업 사본에서, 304 적용 뒤):
+  ```sql
+  SELECT kind, COUNT(*), SUM(amount) FROM cash_movement GROUP BY kind;          -- 기대: opening 2, 474500
+  SELECT move_date, SUM(amount) FROM cash_movement GROUP BY 1 ORDER BY 1;       -- 영수 날짜별 = 지금 통계
+  SELECT SUM(held_used) FROM billing;                                           -- 기대: 0
+  ```
+- **확인 못 한 것**: 화면은 바뀌지 않았습니다(「Caisse du jour」는 디자인 세션 뒤). 통계 화면은 아직 이 표를 읽지 않습니다(통계 세션 몫).
+- **위키**: `modules/payment.md` 3.5(창구 돈 식)·**3.12 현금 기록**·4절(API·DB·마이그레이션 304)·5절(통계 — 현금 기준)·7절(M9 수납 몫 끝)·8절
+- **다른 세션에 부탁**:
+  - **통계** — 이 커밋이 develop에 들어오면 설계 메모 8절의 칸 이름 그대로 쓸 수 있습니다. 환불은 음수 줄로 셉니다(영수의 칸으로 따로 세지 않음).
+  - **설정** — 정리 스크립트: 지우는 표 맨 앞에 `cash_movement`, 트랜잭션 안에서 `SET LOCAL bethesda.cleanup = 'on'`(이미 총괄이 전달). `settings.access.mjs`에 `GET /api/billing/cash-day`(payment · stats).
+
 ## 2026-09-29 — 설계 메모: M9 (가) 통계를 현금 기준으로 — 돈이 움직일 때마다 한 줄 (`cash_movement`)
 
-- **상태**: 보류 — 설계 (코드 전. 총괄 확인 뒤 구현)
+- **상태**: 끝 — 승인(`5cfeef3`) 뒤 구현됨, 위 「M9 (가) 구현」
 - **커밋**: session/payment (이 항목과 같은 커밋) · develop `cf134d0` fast-forward
 - **결정**: M9 (가) 실장님(`coordinator.md` 「실장님 결정 — 통계는 현금 기준」). 그날 실제로 들어오고 나간 돈.
 
@@ -247,11 +386,7 @@
 - **확인 못 한 것**: `replaced_by_id` 채우기는 새 영수 비고 모양(「correction of R-…, R-… · refund N」)에 기댑니다. 격리의 옛 정정 3건은 모두 채워졌습니다. 실행 중 EMR에는 정정이 0건일 것입니다(영수 2건 모두 paid).
 - **위키**: `modules/payment.md` 2.7·2.9·3.5·3.11·4절(API·DB·마이그레이션 303)·5절(통계 — 환불을 세는 법)·7절(M6 닫음)·8절(`4fc72d5` 채움 + 이 줄)
 - **다른 세션에 부탁**:
-  - **통계** — 「그날 환불액」을 셀 때:
-    - 직원 취소의 환불 = `refunded_amount`(날짜 `cancelled_at`).
-    - 정정의 환불 = 정정 영수의 `change_amount`(비고가 `correction of`로 시작, 날짜 `billing_date`).
-    - `replaced_by_id`가 있는 취소 영수는 환불이 아닙니다(돈이 새 영수로 옮겨 감).
-    - 303 이전 취소는 `NULL`(모름)입니다.
+  - ~~**통계** — 「그날 환불액」을 영수의 칸(`refunded_amount`, 정정 영수의 `change_amount`)으로 셀 것~~ — **바뀜(2026-09-29, M9 (가))**: 환불도 현금 기록 `cash_movement`의 음수 줄로 셉니다(정정 · 취소 · 재수납 거스름). 영수의 칸으로 따로 세지 않습니다. `replaced_by_id`가 있는 취소 영수는 여전히 환불이 아닙니다.
 
 ## 2026-09-29 — M6 준비: 「영수 취소 = 환불」이면 수납에서 바뀌는 곳 (코드 전, 총괄 지시)
 

@@ -242,7 +242,7 @@ export default {
   settleAll: "Settle All",
   settleAllConfirm: "Collect all outstanding at once?",
   pacsServer: "PACS Server (Orthanc)",
-  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title; the web URL (9090) is used to open the viewer from the chart.",
+  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title. The EMR shows the images itself, so staff PCs do not need to reach port 9090.",
   pacsViewerUrl: "PACS web / viewer URL",
   dicomPort: "DICOM Port",
   testPacsBtn: "Test PACS (DICOM)",
@@ -460,6 +460,7 @@ export default {
   ph_colPerDose: "Per intake",
   ph_colDirections: "Directions",
   ph_perDoseCheck: "⚠ Check with doctor (not whole or half tablets)",
+  ph_timesCheck: "⚠ Times a day missing - check with doctor",
   ph_noTotal: "⚠ No total",
   ph_noTotalConfirm: "Some drugs have no total quantity. They will not be taken off the stock. Check with the doctor:",
   ph_legacyTotal: "Old calculation (dose×times×days)",
@@ -568,6 +569,9 @@ export default {
   ph_chk_malaria: "Antimalarial - for the doctor to check",
   ph_chk_topical: "Filed as a tablet but may be topical (ointment, cream) - pack unit too",
   ph_chk_packlabel: "Pack word (jar? bottle?)",
+  ph_packChangeWarn: "The stock number ({n}) has no unit: once saved, the same number is read in the new unit. After saving, recount it in Pharmacy → 📦 Stock with Count.",
+  ph_rMixed: "⚠ Units mixed",
+  ph_rMixedHint: "This month has lines dispensed by the dose and lines dispensed by the bottle or tube (pack unit changed). Dispensed adds both units.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Select a patient on the left",
@@ -929,5 +933,9 @@ export default {
   px_readingOnCancelled: "This imaging order was cancelled in the consultation room, so the reading cannot be saved.",
   px_noStudy: "This imaging order was not sent to the device worklist, so no images are linked to it. You can still write the reading.",
   px_linkedByAccession: "The device gave these images its own study number; they were linked to this order by accession number. Check the patient details in the images.",
+  px_orthancUrl: "Address the EMR uses to reach the image server (usually leave as is)",
+  px_orthancPasswordSet: "Image server password set — the image window opens without a login",
+  px_orthancPasswordMissing: "No image server password yet. On the server PC, run pair-with-emr.ps1 in the PACS folder.",
+  px_viewerUrlUnused: "no longer used (the EMR shows the images)",
   // ── end pacs ──
 };

@@ -233,7 +233,7 @@ export default {
   settleAll: "전체 미수 수납",
   settleAllConfirm: "전체 미수를 일괄 수납합니다",
   pacsServer: "PACS 서버 (Orthanc)",
-  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
+  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적습니다. 영상 창은 EMR이 대신 보여 주므로 진료실 PC가 9090에 닿을 필요는 없습니다.",
   pacsViewerUrl: "PACS 웹/뷰어 주소",
   dicomPort: "DICOM 포트",
   testPacsBtn: "PACS 연결 테스트 (DICOM)",
@@ -451,6 +451,7 @@ export default {
   ph_colPerDose: "1회량",
   ph_colDirections: "용법",
   ph_perDoseCheck: "⚠ 의사 확인 (반 알 단위로 안 나눠짐)",
+  ph_timesCheck: "⚠ 하루 횟수 없음 — 의사 확인",
   ph_noTotal: "⚠ 총량 없음",
   ph_noTotalConfirm: "총량이 비어 있는 약이 있습니다. 이 약은 재고에서 빠지지 않습니다. 의사에게 확인하세요:",
   ph_legacyTotal: "예전 계산 (용량×횟수×일수)",
@@ -559,6 +560,9 @@ export default {
   ph_chk_malaria: "말라리아약 — 의사 확인",
   ph_chk_topical: "정으로 되어 있으나 외용약(연고·크림)일 수 있음 — 포장 단위도",
   ph_chk_packlabel: "포장 단위 말(통? 병?)",
+  ph_packChangeWarn: "재고 숫자({n})에는 단위가 없어서, 저장하면 같은 숫자를 새 단위로 읽습니다. 저장한 뒤 약국 → 📦 재고 탭에서 「실사」로 새 단위로 세어 넣으세요.",
+  ph_rMixed: "⚠ 단위 섞임",
+  ph_rMixedHint: "이 달에 알·정 단위 조제와 병·튜브 단위 조제가 함께 있습니다(포장 단위를 바꾼 약). 조제 출고는 두 단위를 더한 값입니다.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
@@ -920,5 +924,9 @@ export default {
   px_readingOnCancelled: "이 영상 검사는 진료실에서 취소되어 판독을 저장할 수 없습니다.",
   px_noStudy: "이 영상 검사는 촬영 목록(워크리스트)으로 보내지 않아 연결된 영상이 없습니다. 판독만 쓸 수 있습니다.",
   px_linkedByAccession: "장비가 영상 번호를 새로 만들어, 검사 번호(Accession)로 이 오더에 연결했습니다. 영상 속 환자 정보를 한 번 확인하세요.",
+  px_orthancUrl: "EMR이 영상 서버에 닿는 주소 (보통 그대로)",
+  px_orthancPasswordSet: "영상 서버 비밀번호 설정됨 — 영상 창이 로그인 없이 열립니다",
+  px_orthancPasswordMissing: "영상 서버 비밀번호가 아직 없습니다. 서버 PC의 PACS 폴더에서 pair-with-emr.ps1을 실행하세요.",
+  px_viewerUrlUnused: "이제 쓰지 않음(영상은 EMR이 보여 줌)",
   // ── end pacs ──
 };

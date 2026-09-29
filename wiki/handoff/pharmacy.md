@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 빈 값 처리(진료 6e11f56 뒤) + 포장 단위를 바꿀 때 알림 셋
+
+- **상태**: 확인 요청. develop `18c52cd` 위(ff). **Pharmacy.jsx · PharmacyStock.jsx 디자인 시작해도 됨**(이 커밋이 합쳐진 뒤).
+- **① 빈 값**: 하루 총량·횟수·일수가 NULL일 수 있게 됨(진료). 격리에서 `rx-dosing.js`를 여덟 경우(모두 비움, 횟수만 비움, 일수만 비움, 하루 총량만 비움, 다 있음, 포장 줄 수 있음/없음, 빈 문자열)로 돌려 NaN·「0 fois」·「null ×」 없음 확인. 고친 것 하나: **하루 총량·일수는 있고 횟수만 빈 보통 줄**은 총량이 있어 조제되는데 먹는 법 문장이 통째로 빠졌음 → 문장 « 3 par jour pendant 7 jours (total 21) — nombre de prises à vérifier » / 「하루 3, 7일 (총 21) — 하루 횟수 확인 필요」, 약국 화면 Fréq. 칸에 「⚠ Nombre de prises absent — voir le médecin」(`missingTimes`, `ph_timesCheck`). 포장 단위 줄은 횟수가 비어도 표시 안 함(안내일 뿐). 총량이 없는 줄은 원래대로(「총량 없음」, 조제 확인 창).
+- **② 알림 셋**(결정: 막지 않고 알리기만):
+  - 설정 약품 탭: 재고가 있는 약의 포장 단위 체크나 단위를 바꾸면 편집 창에 노란 안내(`ph_packChangeWarn`). 저장은 그대로 됨.
+  - Stock 탭: 포장 단위 약은 재고 옆에 단위 말(목록·머리, « 59 flacons » / 「59병」). `/stock`이 이미 `pack_unit`·`pack_label`을 줌.
+  - 월말 보고서: `mixed_units`(그 달 조제 출고에 보통 줄과 포장 줄이 함께 — `stock_movement.prescription_id` → `prescription.pack_unit`) → 조제 출고 아래 「⚠ Unités mélangées」, CSV 확인 칸에도.
+- **가져오기 스크립트**: develop에서 034로 바뀐 뒤 스크립트를 돌리면 머리 첫 줄만 달라 **034 파일을 덮어썼습니다(곧바로 git으로 되돌림, 커밋·배포 없음)**. 스크립트 머리를 034 파일과 같게 고쳐 이제 같은 파일이 나오고(확인), 적용된 파일과 다르면 덮어쓰지 않고 `.new`로 쓰고 멈추게 함.
+- 코드·위키의 「403」 표기를 034로.
+
+### 확인 (격리 9184, 빈 DB — develop 034)
+- 두 시험 ALL PASS.
+- 횟수 없는 줄(MED-0001, 하루 3·7일 → 총 21): 약국 화면 Fréq. 「⚠ Nombre de prises absent — voir le médecin」, 원외 처방전 문장 위와 같음.
+- 섞임: MED-0009(PROFEIN) 포장 끔 → 보통 줄 15 조제 → 포장 켬(병) → 2병 조제 → 9월 보고서 이 약만 `mixed_units`(조제 출고 17, ok ✓), 135줄 중 1. 화면 「−17 ⚠ Unités mélangées」.
+- Stock 탭 « 59 flacons »(목록·머리). 설정 MED-0009 편집 창: 처음엔 안내 없음 → 체크 끄면 « ⚠ Le stock (59) n'a pas d'unité … » (저장하지 않고 닫음).
+
 ## 2026-09-29 — 결정 B(약에 기본 용량·횟수·일수 없음) + L9(목록을 진료 완료 시각 순으로)
 
 - **상태**: 확인 요청. 가져오기(`6bc5c6d`) 위에 이어서, develop `efed392` 위로 rebase. 가져오기와 같이 합쳐 주세요.

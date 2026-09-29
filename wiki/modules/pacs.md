@@ -71,7 +71,9 @@
 >
 > 판독은 **진료 권한**이 있는 직원만 쓰고 고칠 수 있습니다. 판독을 고치면 이전 내용은 남지 않습니다.
 >
-> 처음 영상을 열 때 영상 서버(PACS)의 **아이디·비밀번호를 묻습니다**(2026-09-29 확인). 모르는 값을 여러 번 넣지 말고 관리자에게 물으세요. 이 방식을 바꿀지는 정하는 중입니다(7절 P-9).
+> 영상 창은 **아이디·비밀번호를 묻지 않습니다**(P-9, EMR이 대신 영상 서버에 들어감). 창을 연 오더의 영상만 보이고, 30분이 지나면 창 안에 **La session d'affichage a expiré… (영상 보기 시간이 끝났습니다)** 가 나옵니다 — **Fermer ✕** 로 닫고 **🖼** 로 다시 여세요.
+>
+> 영상 칸 왼쪽 위의 빨간 글씨 *For patients, researchers and quality assurance. Not for diagnostic usage.* 는 영상 프로그램(Stone)이 늘 붙이는 문구입니다. 진단에 쓰는 전용 판독 프로그램이 아니라는 뜻입니다.
 
 ### 2.4 환자의 영상 검사 한눈에 보기
 
@@ -93,9 +95,11 @@
    2. 몇 분이 지나도 그대로면 방사선사에게 묻습니다 — 전송했는지, **워크리스트에서 이 환자를 골라** 찍었는지. 환자 이름을 장비에 손으로 쳐서 찍었으면 이 검사와 연결되지 않습니다. 관리자에게 알립니다(연결하는 기능은 아직 없음, 7절 P-4).
    3. 방사선사가 제대로 보냈다고 하면 관리자(실장님)에게 알립니다.
 3. **N image(s) reçue(s) (영상 N장 도착)** 인데 영상 창에 영상이 안 나오면:
-   1. 창 가운데에 **URL de la visionneuse PACS non definie… (PACS 뷰어 주소가 설정되지 않았습니다)** 가 보이면 설정이 안 된 것입니다. 관리자에게 알립니다. 그동안에도 판독은 쓸 수 있습니다.
-   2. 영상 칸이 까맣거나 「연결할 수 없음」이 나오면 이 컴퓨터가 PACS 서버에 닿지 않는 것입니다. **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 로 한 번 더 열어 보고, 그래도 안 되면 관리자에게 알립니다.
-   3. 아이디·비밀번호를 물으면 관리자에게 묻습니다. 모르는 값을 여러 번 넣지 마세요.
+   1. 창 안에 **Le serveur d'images n'est pas encore relié à ce dossier… (영상 서버가 EMR과 아직 짝이 맞지 않았습니다)** 가 보이면 관리자에게 알립니다. 관리자는 PACS 폴더에서 `pair-with-emr.ps1` 을 실행합니다(6.1). EMR 백업을 되살린 뒤에도 이렇게 됩니다. 그동안에도 판독은 쓸 수 있습니다.
+   2. **Le serveur d'images ne répond pas (영상 서버가 응답하지 않습니다)** 가 보이면 PACS 서버가 꺼졌거나 멈춘 것입니다. 관리자에게 알립니다(관리자는 서버 상태 창의 **Imagerie (PACS)** 줄을 봅니다).
+   3. **La session d'affichage a expiré (영상 보기 시간이 끝났습니다)** 이면 창을 닫고 **🖼** 로 다시 엽니다.
+   4. 영상 목록(왼쪽 작은 그림)은 보이는데 가운데 칸만 까맣다면, 브라우저 창 크기를 한 번 바꾸거나 **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 로 엽니다. 그래도 까맣다면 관리자에게 알립니다.
+   5. 아이디·비밀번호를 묻는 창이 뜨면 정상이 아닙니다. 아무것도 넣지 말고 관리자에게 알립니다.
 4. 목록에 도착 여부가 아예 나오지 않으면 워크리스트로 보내지 않는 검사입니다. 설정에서 그 검사 코드를 확인해야 합니다 — 관리자에게 알립니다.
 
 ### 2.6 환자 번호 경고가 떴을 때 — 순서대로
@@ -212,17 +216,17 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 - `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. 진료·수납 화면의 「🩻 판독소견」 창 안에 들어갑니다.
   - 같은 파일에서 **`PatientCheck({images, t, style})`** 와 **`imagesOfRow(row)`** 도 export합니다. `images`는 `viewer-url` 응답의 `images` 모양(`{patient_check, patient_id, patient_name}`, 도착 전에는 `null`)으로 통일했고, 판독 목록의 줄은 `imagesOfRow`로 그 모양으로 바꿔 넘깁니다. `style`은 바깥 상자(여백)만 덮어씀. 진료 화면의 뷰어 창이 이것을 가져다 쓰면 경고 모양·문구가 한 곳에서 관리됩니다.
-- 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다.
+- 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다. iframe `src`와 「새 탭에서 열기」는 `viewer-url`의 `url`(EMR 자신의 상대 주소 `/api/pacs/viewer/…`)을 그대로 씀 — P-9 뒤에도 진료 파일은 바뀐 것 없음.
 - 설정 → 오더 연동(Order Feed) 탭 — `Settings.jsx` 약 476~515줄, `savePacs`·`testPacs`.
 
 ### 서버 — `backend/src/routes/pacs.routes.js` (`/api/pacs`)
 
 | 메서드 · 경로 | 인증 | 하는 일 |
 |---|---|---|
-| `GET /config` | `settings` 권한 | `pacs_config` 한 줄 전체 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5) |
-| `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242 |
+| `GET /config` | `settings` 권한 | `pacs_config` 한 줄 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5). **`orthanc_password`는 빼고** `orthanc_password_set`(참/거짓)만 (`publicConfig`, P-9) |
+| `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242. `orthanc_url`은 저장, **`orthanc_password`는 화면에서 받지 않음**(보내도 무시 — `pair-with-emr`만 씀). 답도 `publicConfig` |
 | `GET /test` | `settings` 권한 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
-| `GET /viewer-url?order_item_id=` 또는 `?study=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`** — `has_viewer`는 뷰어 주소가 설정됐는지만 말함(「설정 안 됨」과 「이 오더엔 영상 없음」 구분). 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18) |
+| `GET /viewer-url?order_item_id=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). `url` = **`/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`**(상대 주소, P-9) + 그 스터디를 여는 **뷰어 쿠키**(아래 중계). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`**, 쿠키 없음. `has_viewer`는 이제 늘 `true`. 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18). **`?study=<UID>`로 여는 길은 없앰** — 쿠키가 생긴 뒤로는 아무 스터디나 열 수 있게 되므로, 오더로만 |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음. **취소된 오더는 409** `Imaging order was cancelled`(`pacs.cancel.js`의 `ORDER_CANCELLED`) — 조건을 UPDATE 안에 넣어 동시에 들어온 취소를 덮지 않음 |
 | `GET /readings/patient/:patientId` | `consultation` 또는 `payment` 권한 | 환자의 영상 오더 전부(취소된 것 포함) + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check + `order_status`·`cancelled_at`·`cancel_reason` |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
@@ -237,6 +241,23 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 **`images`** (`viewer-url` 응답) — 브리지가 보고하기 전에는 `null`(「아직 안 옴」과 「왔고 맞음」을 구분하려고). 보고 뒤: `{received_at, count, patient_id, patient_name, patient_check}`.
 
 **`patient_check`** — EMR이 정합니다(브리지가 보낸 판정을 믿지 않음). 영상 속 PatientID와 `patient.chart_no`를 앞뒤 공백 빼고 대소문자 무시로 비교: `match` / `mismatch` / `missing`(PatientID 없음). 잡는 것: 장비에서 손으로 치거나 고친 환자 정보. **못 잡는 것: 워크리스트에서 다른 환자를 고른 경우**(영상에 고른 환자의 정보가 그대로 들어감) — 그래서 끝난 환자를 목록에서 빼는 P-7이 짝입니다.
+
+### 서버 — `backend/src/routes/pacs.viewer.js` (`/api/pacs/viewer`, 영상 중계 — P-9 C)
+
+직원 브라우저는 Orthanc(9090)에 직접 가지 않고 **EMR에 영상을 달라고 하고, EMR이 Orthanc에 `admin`으로 들어가 받아 그대로 흘려 줍니다**. 직원은 Orthanc 비밀번호를 모르고, Orthanc 9090은 서버 PC 안(127.0.0.1)에만 엽니다.
+
+- **뷰어 쿠키 `px_viewer`** — `viewer-url`이 줌. 내용 `{u: 직원 id, s: [스터디 UID 최대 5개], e: 만료}` + HMAC-SHA256 서명. 서명 열쇠는 `JWT_SECRET`에서 갈라 낸 값(`HMAC(JWT_SECRET, 'bethesda-pacs-viewer-cookie-v1')`) — 따로 비밀값을 두지 않음. `HttpOnly; SameSite=Strict; Path=/api/pacs/viewer/; Max-Age=1800`(30분). 같은 직원이 다른 오더를 열면 앞의 스터디를 이어 붙임(최근 5개).
+- **요청마다 검사** (순서대로):
+  1. GET·HEAD만(아니면 405).
+  2. 경로를 **한 번 풀고**(`decodeURIComponent`) `\`·`%`(이중 인코딩)·NUL·`//`·`.`·`..` 조각이 있으면 400.
+  3. 쿠키 서명·만료(아니면 401, `index.html`이면 「영상 보기 시간이 끝났습니다」 안내 쪽).
+  4. **허용 목록**: `/stone-webviewer/<파일>`, `/system`(Stone이 부름), `/dicom-web/studies/<UID>[/series/<UID>[/instances/<UID>]][/metadata|/rendered|/thumbnail|/frames/<n,…>[/rendered]]`, 그리고 `/dicom-web/studies|series|instances?0020000D=<UID>`(QIDO — **스터디 UID로 거른 것만**). UID는 쿠키에 있는 것만. 아니면 403(로그에는 UID를 가린 경로 모양만). Orthanc REST(`/patients`, `/tools/find` …)·Explorer 2·걸러지지 않은 목록은 모두 403.
+  5. 계정: DB에서 `status='active'`이고 `consultation` 권한이 있어야(30초 캐시) — 아니면 401.
+  6. `pacs_config.orthanc_password`가 없으면 「짝이 맞지 않았습니다」 안내(페이지는 200, 데이터 요청은 **424**).
+- **Orthanc로 보냄**: `orthanc_url` + 같은 경로·쿼리, `Authorization: Basic admin:<orthanc_password>`, `Accept`만 넘김. 답은 **스트림으로 그대로**(크기 제한 없음). Orthanc의 `Set-Cookie`·`WWW-Authenticate`·연결용 헤더는 버림, `Cache-Control: private, no-store`. Orthanc가 401이면 「짝이 맞지 않았습니다」(비밀번호가 다름 — 다른 PC 백업을 복원한 경우), 연결 안 됨·502~504는 「영상 서버가 응답하지 않습니다」/424. 연결 5초, 전체 120초. 브라우저가 끊으면 Orthanc 요청도 끊음.
+- **왜 424·200인가**: nginx `/api/`가 502·503·504를 「API backend is not reachable」로 바꿔 버리므로(`proxy_intercept_errors`) 그 셋을 쓰지 않음.
+- **CSP**: EMR 전체는 helmet의 `script-src 'self'`인데, Stone은 WebAssembly와 `new Function`·인라인 스크립트를 씀 → **중계 응답에만** `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'`, `frame-ancestors 'self'`. EMR 화면·다른 API는 그대로 엄격.
+- 내보내는 것: `router`(`pacs.routes.js`가 `/viewer`에 붙임), `grantViewerCookie(req, res, uids)`, `_test`(`sign`·`verify`·`cleanPath`·`studyOf` — 시험용).
 
 **브리지 토큰 검사** — `backend/src/routes/pacs.token.js` (PACS 소유, 2026-09-29 새로 만듦). 피드·heartbeat·`/api/worklist`의 `bridgeOrAuth`가 모두 여기를 씁니다.
 
@@ -277,13 +298,13 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 ### Orthanc 설정 (compose 환경 변수)
 
-`ORTHANC__DICOM_AET=MEDCONNECT`, `DICOM_CHECK_CALLED_AET=false`, `REMOTE_ACCESS_ALLOWED=true`, `DICOM_ALWAYS_ALLOW_FIND_WORKLIST / FIND / STORE / ECHO = true`(장비 등록 없이 받음), `AUTHENTICATION_ENABLED=true`, 사용자 `admin` 하나(비밀번호 `.env`의 `ORTHANC_PASSWORD`), 워크리스트 플러그인(`/var/lib/orthanc/worklists`), DICOMweb, Stone Web Viewer, Orthanc Explorer 2. 포트 `9090→8042`(웹), `4242→4242`(DICOM).
+`ORTHANC__DICOM_AET=MEDCONNECT`, `DICOM_CHECK_CALLED_AET=false`, `REMOTE_ACCESS_ALLOWED=true`, `DICOM_ALWAYS_ALLOW_FIND_WORKLIST / FIND / STORE / ECHO = true`(장비 등록 없이 받음), `AUTHENTICATION_ENABLED=true`, 사용자 `admin` 하나(비밀번호 `.env`의 `ORTHANC_PASSWORD`), 워크리스트 플러그인(`/var/lib/orthanc/worklists`), DICOMweb, Stone Web Viewer(**`STONE_WEB_VIEWER__SHOW_INFO_PANEL_AT_STARTUP=Never`** — 시작 안내 상자를 닫으면 영상 칸이 까맣게 남는 Stone 문제 때문, 「Not for diagnostic usage」는 왼쪽에 계속 보임), Orthanc Explorer 2. 포트 **`127.0.0.1:9090→8042`**(웹 — P-9 뒤로 서버 PC 안에서만; EMR은 `host.docker.internal:9090`으로 닿음), `4242→4242`(DICOM — 장비용이라 LAN에 열림).
 
-EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?study=`** 하나뿐입니다. EMR 백엔드는 Orthanc REST를 부르지 않습니다. 브리지가 부르는 Orthanc REST: `POST /tools/find`, `GET /studies/<id>/statistics`.
+EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 Stone 파일·DICOMweb**(허용 목록 그대로). 그 밖의 Orthanc REST는 EMR이 부르지 않습니다. 브리지가 부르는 Orthanc REST: `POST /tools/find`, `GET /studies/<id>/statistics`.
 
 ### 비밀값 (이름과 의미만)
 
-- **`ORTHANC_PASSWORD`** — PACS `.env`. Orthanc `admin` 비밀번호. 뷰어로 영상을 보는 모든 사람이 이 계정을 씁니다. 브리지도 영상 도착 확인에 씁니다(Orthanc 기본 인증에는 권한 구분이 없어 관리자 계정 그대로).
+- **`ORTHANC_PASSWORD`** — PACS `.env`. Orthanc `admin` 비밀번호. 브리지(영상 도착 확인)와 **EMR 중계**가 씁니다. EMR 쪽 사본은 `pacs_config.orthanc_password` — **`pair-with-emr`만 씀**(stdin으로 넘기고 해시로 확인, 화면·명령줄·로그에 안 나옴). 설정 화면·API 응답에는 「설정됨/안 됨」만. 직원은 이 값을 알 필요가 없음(P-9).
 - **`BRIDGE_TOKEN`** — PACS `.env`와 EMR `pacs_config.bridge_token`이 **같아야** 합니다(페어링). 오더 피드와 heartbeat의 유일한 인증. 16자 이상, 옛 기본값 불가.
 
 ### 공용 부품
@@ -298,10 +319,10 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | `worklist_log` (001) | order_item_id(FK, CASCADE — 007), patient_id, modality, station_ae, body_part, accession_no, study_instance_uid, scheduled_date, scheduled_time, status(`scheduled`/`in_progress`/`completed`/`cancelled`), completed_at. **019(세션 번호 801):** images_received_at, orthanc_study_id, image_count, image_patient_id, image_patient_name, patient_check(`match`/`mismatch`/`missing`). **802:** image_study_uid(장비가 만든 실제 UID — accession으로 찾았을 때만, 아니면 NULL) | 오더 1개에 보통 1줄. `viewer-url`은 `image_study_uid`가 있으면 그것으로 엶. `completed`로 바꾸는 곳은 `POST /study-arrived` |
 | `order_item` (001, 진료 소유) | pacs_modality, station_ae, body_part, worklist_status(`pending`/`sent`/…), worklist_sent_at, result_text, result_by, result_at | 판독은 여기 저장 |
 | `order_code` (설정 소유) | pacs_modality(US/CR/CT/MR/ES/OT), worklist_enabled, station_ae, body_part | 어떤 오더가 워크리스트로 가는지 정함 |
-| `pacs_config` (001, 015) | worklist_scp_host/port/ae, bridge_token, emr_base_url, pacs_viewer_url, auto_create_worklist, facility_name, notes | 한 줄(id=1). 015가 옛 한국 데모값(`BROKER`/`192.168.0.222`)을 Orthanc 기본값으로 바꿈 |
+| `pacs_config` (001, 015, **803**) | worklist_scp_host/port/ae, bridge_token, emr_base_url, pacs_viewer_url(**P-9 뒤 안 씀**), auto_create_worklist, facility_name, notes. **803:** `orthanc_url`(기본 `http://host.docker.internal:9090` — EMR 컨테이너에서 본 Orthanc 웹 주소), `orthanc_password`(비밀값, `pair-with-emr`만 씀, 응답에 안 나옴) | 한 줄(id=1). 015가 옛 한국 데모값(`BROKER`/`192.168.0.222`)을 Orthanc 기본값으로 바꿈. `consult.routes.js`가 `SELECT *`로 읽지만 `auto_create_worklist`만 쓰고 내보내지 않음(확인) |
 | `service_heartbeat` (018, 설정과 공유) | name(`worklist_bridge`), last_seen, ok, detail(JSONB) | 현재 상태만, 이력 없음 |
 
-마이그레이션 `007_worklist_cascade.sql`(오더 삭제 시 worklist_log 같이 삭제), `015_pacs_viewer.sql`(pacs_viewer_url 추가·데모값 정리), `018_service_heartbeat.sql`. 셋 다 이미 적용된 파일이라 **고치지 않습니다**. `019_pacs_image_arrival.sql` — PACS 번호대, 칸·CHECK 추가만(기존 줄은 안 바꿈). 합칠 때 총괄이 번호를 다시 매김.
+마이그레이션 `007_worklist_cascade.sql`(오더 삭제 시 worklist_log 같이 삭제), `015_pacs_viewer.sql`(pacs_viewer_url 추가·데모값 정리), `018_service_heartbeat.sql`. 셋 다 이미 적용된 파일이라 **고치지 않습니다**. `019_pacs_image_arrival.sql` — PACS 번호대, 칸·CHECK 추가만(기존 줄은 안 바꿈). 합칠 때 총괄이 번호를 다시 매김. `035_pacs_viewer_proxy.sql` — `pacs_config`에 `orthanc_url`·`orthanc_password` 추가만(`ADD COLUMN IF NOT EXISTS`).
 
 ## 5. 다른 모듈과의 연결
 
@@ -322,7 +343,9 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | Host / IP | `worklist_scp_host` | Orthanc DICOM 주소. **EMR 컨테이너에서 본 주소**라 `localhost`는 안 됨 → `host.docker.internal` 또는 서버 LAN IP. 비우면 상태 화면이 PACS를 「꺼짐」으로 봄 |
 | DICOM Port | `worklist_scp_port` | 4242 |
 | AE Title | `worklist_scp_ae` | MEDCONNECT (화면 표시·피드 `config`에만 쓰임) |
-| PACS 웹/뷰어 주소 | `pacs_viewer_url` | **직원 브라우저에서 본 주소** `http://<서버 IP>:9090`. 비우면 영상 없이 판독만 가능 |
+| EMR이 영상 서버에 닿는 주소 (`px_orthancUrl`) | `orthanc_url` | **EMR 컨테이너에서 본** Orthanc 웹 주소. 보통 그대로 `http://host.docker.internal:9090`(같은 PC). 옛 8090이면 설정 세션의 `se_oldViewerPort` 경고 |
+| ✓ 영상 서버 비밀번호 설정됨 / ⚠ 없음 (`px_orthancPasswordSet`·`px_orthancPasswordMissing`) | `orthanc_password` | **입력 칸 없음** — 상태만. ⚠이면 PACS 폴더에서 `pair-with-emr.ps1` |
+| PACS 웹/뷰어 주소 — 이제 쓰지 않음 (`px_viewerUrlUnused`) | `pacs_viewer_url` | 흐리게 남겨 둠(옛 백업을 복원해도 깨지지 않게, 총괄 조건 ⑥). 값은 어디에도 안 씀 |
 
 **설정 → 오더 코드** — 영상 검사마다 `Modality`와 `worklist_enabled`를 켜야 워크리스트로 갑니다.
 
@@ -343,13 +366,13 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 2. `install-offline.ps1` — 이미지 load → EMR `setup -Offline` → PACS `setup.ps1 -Offline`.
    - PACS `setup`은 시작 전에 **`check-windows-ports.ps1`** 로 9090·4242가 Windows 예약 구간에 걸리는지 경고(읽기만).
    - 새 `.env`(`ORTHANC_PASSWORD`·`BRIDGE_TOKEN`)를 만들고, 같은 PC에 EMR이 떠 있으면 **`pair-with-emr.ps1`로 자동 짝 맞춤**(토큰은 화면에 안 나옴) → 「paired - nothing to copy」.
-   - 끝에 이 PC의 LAN 주소로 **뷰어 주소 `http://<IP>:9090`** 을 찍어 줌.
+   - 끝에 이 PC의 LAN 주소를 찍어 줌 — **장비가 보낼 곳 `<IP>:4242`**. 직원 PC에는 설정할 뷰어 주소가 없음(P-9).
 3. **EMR 백업 복원** — 옛 PC를 먼저 최신으로 업데이트한 뒤 만든 백업을, 같은 판의 새 EMR에(`DEPLOYMENT.md` 5b, 총괄 결정 1).
-4. **다시 짝 맞추기** — 복원된 백업은 옛 PC의 토큰·주소를 들고 옴. PACS 폴더에서 **`.\pair-with-emr.ps1`** (브리지 재생성까지 함).
-5. EMR **Paramètres → Flux d'ordres**: **PACS 웹/뷰어 주소 = `http://<서버 LAN IP>:9090`**, **Host / IP = `host.docker.internal`** — 복원된 값이 옛 PC 기준이므로.
+4. **다시 짝 맞추기** — 복원된 백업은 옛 PC의 토큰·Orthanc 비밀번호를 들고 옴. PACS 폴더에서 **`.\pair-with-emr.ps1`** — 브리지 토큰과 **Orthanc 비밀번호를 둘 다** EMR에 넣고 브리지 재생성. 끝에 「The EMR can now show images without a login.」
+5. EMR **Paramètres → Flux d'ordres**: **Host / IP = `host.docker.internal`**, 「EMR이 영상 서버에 닿는 주소」가 `http://host.docker.internal:9090`, 「✓ 영상 서버 비밀번호 설정됨」인지 — 복원된 값이 옛 PC 기준이므로.
 6. **영상 옮기기** — 옛 PC에서 마지막으로 `image-backup.ps1`을 돌린 백업 디스크를 새 PC에 꽂고 PACS 폴더에서 **`.\restore-image-backup.ps1`** (6.2). 끝에 「EMR imaging orders … missing from Orthanc: 0」인지.
 7. **영상 백업 켜기** — 새 디스크면 `prepare-backup-disk.ps1`, 그리고 `install-image-backup.ps1`(작업 스케줄러 등록, 한 번).
-8. 확인: 다른 PC에서 `Test-NetConnection <서버IP> -Port 9080` / `9090` / `4242` 모두 True(방화벽은 스크립트가 안 건드림 — 안 되면 Windows 방화벽에서 허용, 네트워크 종류 「개인」), 서버 **고정 IP**(공유기 DHCP 예약), EMR 상태 화면에서 장비 워크리스트·PACS·영상 백업이 초록, 복원한 날의 `scheduled` 시험 오더 0건.
+8. 확인: 다른 PC에서 `Test-NetConnection <서버IP> -Port 9080` / `4242` 모두 True, **`9090`은 False가 정상**(서버 안에서만), 진료 PC에서 영상 창이 로그인 없이 열림(방화벽은 스크립트가 안 건드림 — 안 되면 Windows 방화벽에서 허용, 네트워크 종류 「개인」), 서버 **고정 IP**(공유기 DHCP 예약), EMR 상태 화면에서 장비 워크리스트·PACS·영상 백업이 초록, 복원한 날의 `scheduled` 시험 오더 0건.
 
 **③ 현지 PC에서 따로 확인할 것**
 - **Windows 동적 포트 범위**(P-1과 같은 원인): `setup`이 경고하지만 재부팅 뒤 한 번 더 `netsh int ipv4 show dynamicport tcp` → 시작 49152·개수 16384. 이 PC가 왜 1024부터였는지 모르므로 새 PC도 반드시.
@@ -360,7 +383,8 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 복원된 것 | 새 PC에서 생기는 일 | 할 일 |
 |---|---|---|
 | `pacs_config.bridge_token` = 옛 PC의 토큰 | 새 PACS `.env`와 다름 → 브리지 401, 상태 화면 「보고 없음」 | ②-4 `.\pair-with-emr.ps1` |
-| `pacs_viewer_url`, `worklist_scp_host` = 옛 PC 기준 | 영상 창이 엉뚱한 주소를 엶, 연결 시험 실패 | ②-5 |
+| `pacs_config.orthanc_password` = 옛 PC의 Orthanc 비밀번호 | 영상 창에 「영상 서버가 EMR과 아직 짝이 맞지 않았습니다」 | ②-4 `.\pair-with-emr.ps1` |
+| `worklist_scp_host`·`orthanc_url` = 옛 PC 기준 | 연결 시험 실패, 영상 창 「응답하지 않습니다」 | ②-5 |
 | `service_heartbeat`(브리지·영상 백업의 마지막 보고) | 짝 맞추기·첫 백업 전까지 「보고 없음」 | 저절로 갱신 |
 | `worklist_log`의 `scheduled` 줄 | 피드는 **오늘 날짜만** — 지난 날 줄은 장비에 안 감. 복원한 날 만든 시험 오더만 주의 | ②-8 |
 | `worklist_log`의 **영상 도착 기록** | 영상을 옮기기 전에는 판독 목록 「N image(s) reçue(s)」인데 영상 창은 빈 화면 | ②-6 영상 복원 → 「missing from Orthanc」가 0인지 |
@@ -419,7 +443,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 - **P-2 [높음] ✅ 고침 (2026-09-29)** — 16자 미만·옛 기본값 토큰은 EMR이 「설정 안 됨」으로 보고 무조건 거절(`routes/pacs.token.js`). 브리지·compose에서도 기본값을 없앰. **원래 문제**: 기본 브리지 토큰이 저장소에 공개된 값이고, EMR은 그 값을 그대로 받아들임. `pacs_config.bridge_token` 기본값 `change-me-bridge-token`(`001_schema.sql`, `pacs.routes.js:15`), PACS compose 기본값도 같음. PACS를 페어링하지 않은 **모든 EMR 설치**에서 `GET /api/pacs/worklist-feed?token=change-me-bridge-token`으로 로그인 없이 오늘 영상 오더 환자의 이름·생년월일·성별·차트번호를 가져갈 수 있습니다(`pacs.routes.js:132`). 같은 토큰으로 `PUT /api/worklist/:id/status`도 됩니다(`worklist.routes.js:15`). 개선안: 기본값·빈 값·짧은 값을 「설정 안 됨」으로 보고 거절.
 - **P-5 [보통] ✅ 고침 (2026-09-29)** — `GET /api/pacs/config`는 settings 권한만, 설정 화면은 토큰을 가림(보기 버튼), 브리지는 `X-Bridge-Token` 헤더로 보냄(EMR은 옛 브리지를 위해 쿼리도 계속 받음). **남은 것**: 고치기 전의 EMR 백엔드 로그(`docker logs bethesda-emr-api`)에는 토큰이 이미 찍혀 있음(2026-09-29 확인) — 필요하면 토큰을 새로 만들어 PACS `.env`와 EMR 설정을 함께 바꾸면 됨. **원래 문제**: 브리지 토큰이 모든 로그인 직원에게 보임. `GET /api/pacs/config`에 권한 검사가 없습니다(`pacs.routes.js:43`). 설정 화면도 피드 주소를 토큰째 보여줍니다(`Settings.jsx:495-496`). 브리지는 토큰을 URL 쿼리로 보내(`bridge.py:94`) 접속 기록에 남을 수 있습니다. 개선안: `/config`를 settings 권한으로, 화면에는 가려서, 브리지는 `X-Bridge-Token` 헤더로.
-- **P-9 [보통] 영상을 보는 모든 직원이 Orthanc 관리자 계정을 씀.** 사용자가 `admin` 하나(`docker-compose.yml` `REGISTERED_USERS`). 뷰어(iframe)가 Orthanc에 직접 붙으므로 직원 브라우저가 이 계정으로 로그인해야 하고, 그 계정은 영상 삭제·수정까지 됩니다. **R-1 (2026-09-29)**: `http://localhost:9090/`과 `/stone-webviewer/index.html` 모두 401 → 브라우저가 로그인 창을 띄움. 즉 영상 창을 처음 열 때 Orthanc 관리자 아이디·비밀번호를 쳐야 함(브라우저가 기억하기 전까지). 영상 창(iframe) 안에서 어떻게 보이는지는 아직 화면으로 보지 않음. 해결 선택지: 인계 노트 「P-9 선택지」. 개선안: 읽기 전용 사용자 분리, 또는 EMR이 대신 가져다 주는 방식(프록시).
+- **P-9 [보통] ✅ 고침 (2026-09-29, 선택지 C — EMR이 영상을 중계, 총괄 승인 조건 8개)** — 4절 `pacs.viewer.js`. 직원은 로그인 창 없이 **그 오더의 스터디만** 봄, Orthanc 비밀번호는 EMR 서버와 PACS `.env`에만, Orthanc 9090은 `127.0.0.1`. **격리 스택 확인**: Stone이 EMR 영상 창·새 탭에서 열림(fr·ko), 보안 시험 25개 통과(쿠키 없음 401, 남의 스터디·거르지 않은 목록·Orthanc REST·Explorer 403, POST·DELETE 405, `..`·`%2e%2e`·`%2f`·`%252e`·`\`·`//` 400, 서명 위조·만료·없는 직원·진료 권한 없는 직원의 쿠키 401, 수납·간호사 `viewer-url` 403), 직원 비활성화 → 17초, 진료 권한 회수 → 32초 안에 401(캐시 30초 + 시험 간격), 비밀번호 없음·틀림·Orthanc 꺼짐 → 안내 쪽. `GET/PUT /config`·EMR·nginx 로그에 비밀번호 0건. **큰 영상(⑦)**: 50MB(512×512×100장, 16비트) — 9188 nginx 거쳐 한 번에 **2.8~2.9초**, 100장 한 번에 3.0초, 한 장 0.07초, 렌더 한 장 0.09초, 느린 브라우저(2MB/s 흉내) 25초에도 끊김 없음. Orthanc 직접(9198)은 0.31초 — 차이는 **Docker Desktop의 `host.docker.internal` 구간**(EMR 컨테이너에서 Orthanc로 직접 받아도 2.7초, 중계·nginx 추가분은 거의 0). 약 18MB/s라 100Mbps LAN보다 빠름. nginx는 50MB를 임시 파일에 버퍼(경고 한 줄, 기본 한도 1GB) — **nginx.conf 바꿀 필요 없음**. **남은 것·주의**: ① 쿠키를 복사하면 만료(30분)·계정 비활성까지 그 스터디는 볼 수 있음(HttpOnly라 화면 스크립트는 못 읽음). ② Stone이 EMR과 **같은 출처**에서 돌아 Stone 코드는 EMR 화면의 localStorage(로그인 토큰)에 닿을 수 있음 — Stone은 우리 Orthanc 이미지(버전 고정)의 코드지만, Stone에 XSS가 있으면 영향이 EMR까지 감. 막으려면 뷰어를 다른 포트(다른 출처)로 — nginx·compose·Windows 포트(P-1) 문제라 결정 필요. ③ 중계 응답의 CSP는 Stone 때문에 `unsafe-eval`·`unsafe-inline`. ④ EMR 컨테이너 → Orthanc를 같은 Docker 네트워크로 붙이면 `host.docker.internal` 구간(위 속도)이 없어짐 — 두 compose를 잇는 일이라 나중에. **원래 문제**: 영상을 보는 모든 직원이 Orthanc 관리자 계정을 씀. 사용자가 `admin` 하나(`docker-compose.yml` `REGISTERED_USERS`). 뷰어(iframe)가 Orthanc에 직접 붙으므로 직원 브라우저가 이 계정으로 로그인해야 하고, 그 계정은 영상 삭제·수정까지 됩니다. **R-1 (2026-09-29)**: `http://localhost:9090/`과 `/stone-webviewer/index.html` 모두 401 → 브라우저가 로그인 창을 띄움. 즉 영상 창을 처음 열 때 Orthanc 관리자 아이디·비밀번호를 쳐야 함(브라우저가 기억하기 전까지). 영상 창(iframe) 안에서 어떻게 보이는지는 아직 화면으로 보지 않음. 해결 선택지: 인계 노트 「P-9 선택지」. 개선안: 읽기 전용 사용자 분리, 또는 EMR이 대신 가져다 주는 방식(프록시).
 - **P-10 [보통] 같은 LAN의 누구나 DICOM으로 환자 목록을 조회할 수 있음.** `DICOM_ALWAYS_ALLOW_FIND=true`, `CHECK_CALLED_AET=false`(`docker-compose.yml`) — 등록 안 된 기기도 C-FIND로 저장된 환자·검사 정보를 묻고 C-STORE로 아무 영상이나 넣을 수 있습니다. 장비 등록 없이 쓰려는 의도된 선택(주석)이지만, 장비가 정해지면 `DicomModalities` 등록으로 좁히는 것을 권합니다.
 - **P-12 [낮음] ✅ 고침 (2026-09-29, PACS `6c135aa`)** — 비밀번호는 환경 변수에서, 환자는 가짜(`TEST^Patient`, `PX-TEST-0001`, 1980-01-01)로. **남은 것**: 옛 값은 git 기록에 그대로 있음(기록을 고쳐 쓰는 것은 공개 저장소에 push된 뒤라 하지 않음). **원래 문제**: 시험 스크립트에 옛 Orthanc 비밀번호와 실제 인물로 보이는 이름·생년월일이 들어 있음. `bridge/make_demo.py:10,28-30`, `make_chest5.py:9,32-34`. 지금 PACS `.env`의 비밀번호와는 다름을 확인(값은 적지 않음). git 기록에 남아 있으므로, 그 비밀번호를 다른 곳에 썼다면 바꾸는 것을 권합니다.
 - **P-13 [낮음] `.env`가 없을 때의 기본 비밀번호.** compose가 `change-me-orthanc`, `change-me-bridge-token`으로 떨어집니다. `setup`/`start.bat`로 설치하면 `.env`가 먼저 생기므로 실제로는 드묾. (브리지 토큰은 2026-09-29에 기본값을 없앰.) **Orthanc 비밀번호 쪽 제안**: compose에서 `${ORTHANC_PASSWORD:?…}`로 바꿔 `.env` 없이는 시작을 거부하게 — 시험해 보니 동작하지만, EMR `offline/pack.ps1`·`pack.sh`(총괄 파일)가 `.env` 없는 PACS 폴더에서 `docker compose build`·`config --images`를 돌려서 **오프라인 키트 만들기가 깨짐**. pack 쪽에서 임시 값(`ORTHANC_PASSWORD=pack`)을 넘기게 함께 바꿔야 하므로 보류.
@@ -466,4 +490,5 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | **P-9 C: EMR이 영상을 중계**(`pacs.viewer.js`, 마이그레이션 803 `orthanc_url`·`orthanc_password`, 서명 쿠키, 허용 목록, 뷰어용 CSP). `pair-with-emr`가 Orthanc 비밀번호도 넣음, Orthanc 9090은 127.0.0.1만, Stone 시작 안내 끔. 2.3·2.5(로그인 없음, 안내 문구), 4절 중계, 6절 설정 칸, 6.1 순서, 7절 P-9 ✅(보안 시험·50MB 수치) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 영상 백업 만듦(6.2, PACS `image-backup.ps1` 등 5개, EMR `POST /image-backup-report`), 6.1을 새 도구(check-windows-ports·pair-with-emr·영상 복원) 기준 설치 순서로 다시 씀, 2.6에 취소 뒤 늦은 영상 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |

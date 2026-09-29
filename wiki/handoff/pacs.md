@@ -2,9 +2,60 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-9 C 만듦: EMR이 영상을 중계 (총괄 조건 ①~⑧)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `9a57b6a`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `4e84b0b`
+- **한 일**
+  - 새 `backend/src/routes/pacs.viewer.js` — `/api/pacs/viewer/*` 중계. 서명 쿠키(`px_viewer`, 30분, 스터디 5개까지), 경로 정규화 + 허용 목록(Stone 파일·`/system`·스터디 UID로 거른 DICOMweb만), 요청마다 계정 활성·진료 권한 확인(30초 캐시), Orthanc에 `admin`으로 붙여 스트림 전달, Orthanc의 `Set-Cookie`·`WWW-Authenticate` 버림, 안내 쪽(짝 안 맞음 / 응답 없음 / 시간 끝) fr·ko·en, 중계 응답에만 Stone용 CSP. 자세히는 모듈 위키 4절.
+  - `pacs.routes.js` — `viewer-url`이 상대 주소 `/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`를 주고 쿠키를 붙임, **`?study=`로 여는 길 없앰**(오더로만), `has_viewer` 늘 참. `GET/PUT /config`는 `publicConfig`로 `orthanc_password`를 빼고 `orthanc_password_set`만. `orthanc_url` 저장.
+  - `Settings.jsx`(오더 연동 탭, PACS 부분) — 「EMR이 영상 서버에 닿는 주소」 칸, 비밀번호 ✓/⚠ 상태 줄(입력 칸 없음), 「PACS 웹/뷰어 주소」는 흐리게 남기고 「이제 쓰지 않음」(조건 ⑥), 「🖼 뷰어 열기」 링크 삭제. `pacsServerHint`의 한국어 기본 문구도 새 번역과 같게.
+  - **PACS 저장소**: `pair-with-emr.ps1/.sh`가 토큰 다음에 **`.env`의 Orthanc 비밀번호를 EMR `pacs_config.orthanc_password`에 넣음**(stdin, md5로 확인, 화면·명령줄에 안 나옴). 칸이 없는 옛 EMR이면 「EMR older than the built-in viewer」 안내만 하고 토큰 짝 맞춤은 그대로 성공. `docker-compose.yml` 웹 포트 **`127.0.0.1:9090:8042`**, Stone **시작 안내 상자 끔**(`ORTHANC__STONE_WEB_VIEWER__SHOW_INFO_PANEL_AT_STARTUP=Never` — 아래 「찾은 것」). `setup.ps1/.sh`·`start.bat`·`README.md` 문구(직원 PC엔 뷰어 주소 없음, 장비는 `<IP>:4242`, 9090은 서버 PC 안에서만).
+- **바꾼 파일**: EMR `backend/src/routes/pacs.viewer.js`(새), `backend/src/routes/pacs.routes.js`, `backend/sql/803_pacs_viewer_proxy.sql`(새), `frontend/src/pages/Settings.jsx`(PACS 부분), `wiki/modules/pacs.md`(2.3·2.5·4·6·6.1·7 P-9·8), `wiki/handoff/pacs.md`. PACS `pair-with-emr.ps1`, `pair-with-emr.sh`, `docker-compose.yml`, `setup.ps1`, `setup.sh`, `start.bat`, `README.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 표시 사이에 키 4개 + **기존 키 `pacsServerHint` 문구 변경(세 언어)**: 「웹 주소(9090)는 진료실 뷰어가…」 → 「영상 창은 EMR이 대신 보여 주므로 진료실 PC가 9090에 닿을 필요는 없습니다」. nginx.conf·app.js는 안 바꿈(중계는 `pacs.routes.js` 안에 붙음).
+- **DB 마이그레이션**: `803_pacs_viewer_proxy.sql` — `pacs_config`에 `orthanc_url VARCHAR(200) DEFAULT 'http://host.docker.internal:9090'`, `orthanc_password VARCHAR(200)` (`ADD COLUMN IF NOT EXISTS`만, 기존 줄 안 바꿈). 번호는 총괄이 다시 매김.
+- **번역 키**
+  - `px_orthancUrl` — ko 「EMR이 영상 서버에 닿는 주소 (보통 그대로)」 / en 「Address the EMR uses to reach the image server (usually leave as is)」 / fr 「Adresse du serveur d'images vue par l'EMR (en général, ne pas modifier)」
+  - `px_orthancPasswordSet` — ko 「영상 서버 비밀번호 설정됨 — 영상 창이 로그인 없이 열립니다」 / fr 「Mot de passe du serveur d'images enregistré — la visionneuse s'ouvre sans connexion」
+  - `px_orthancPasswordMissing` — ko 「영상 서버 비밀번호가 아직 없습니다. 서버 PC의 PACS 폴더에서 pair-with-emr.ps1을 실행하세요.」 / fr 「Pas encore de mot de passe du serveur d'images. Sur le PC serveur, lancez pair-with-emr.ps1 dans le dossier du PACS.」
+  - `px_viewerUrlUnused` — ko 「이제 쓰지 않음(영상은 EMR이 보여 줌)」 / fr 「n'est plus utilisée (l'EMR affiche les images)」
+- **총괄 조건별 결과**
+  - ① 비밀번호가 응답·로그·변경 기록에 없음 — `SELECT *`로 읽는 곳: `pacs.routes.js` `ensureConfig`(응답은 모두 `publicConfig`를 거침, 나머지 호출은 토큰 검사에만 씀), `consult.routes.js`(진료 파일, `auto_create_worklist`만 씀 — 내보내지 않음). 격리에서 `GET /config`·`PUT /config` 답, EMR api·nginx 로그에서 비밀번호와 `admin:<비밀번호>` base64 모두 **0건**. 설정 저장 뒤에도 비밀번호 그대로(md5 확인). DB 백업(`pg_dump`)에는 들어감 — 브리지 토큰과 같음.
+  - ② 쿠키 서명 열쇠 = `HMAC(JWT_SECRET, 'bethesda-pacs-viewer-cookie-v1')`. JWT_SECRET을 바꾸면 쿠키도 모두 무효.
+  - ③ 경로: 한 번 풀고 `..`·`.`·`//`·`\`·남은 `%`(= `%252e` 같은 이중 인코딩)·NUL이면 400, 그 뒤 허용 목록. 시험: `../`, `%2e%2e`, `%2f`, `%252e`, `..%5c`, `//` 모두 400. `--path-as-is`로 보내 curl이 먼저 정리하지 않게 함.
+  - ④ `Set-Cookie`·`WWW-Authenticate` 없음(중계 응답 헤더 확인), 영상은 `pipe`로 스트림.
+  - ⑤ 비밀번호 없음 → 「Le serveur d'images n'est pas encore relié à ce dossier : l'administrateur doit lancer pair-with-emr.ps1…」 (페이지 200, 데이터 424). 비밀번호 틀림(Orthanc 401)도 같은 안내. Orthanc 꺼짐·주소 틀림 → 「Le serveur d'images ne répond pas…」.
+  - ⑥ 「PACS 웹/뷰어 주소」 칸 남김(흐리게, 「이제 쓰지 않음」), 값은 안 씀.
+  - ⑦ **큰 영상 수치** (격리, 이 PC — 512×512×100장 16비트 한 파일 **52,429,878바이트**, 브라우저 → 9188 nginx → EMR 중계 → `host.docker.internal:9198` → Orthanc):
+
+    | 요청 | 결과 |
+    |---|---|
+    | 인스턴스 통째(multipart, 50MB) ×3 | 200, 첫 바이트 0.11초, 끝 **2.80~2.92초** |
+    | 같은 것 Orthanc 직접(9198) | 0.31초 |
+    | EMR 컨테이너 → Orthanc 직접(중계·nginx 없이) | 2.66~2.78초 |
+    | EMR 컨테이너 → 자기 중계(nginx 없이) | 2.77~2.85초 |
+    | 프레임 100장 한 요청 | 3.0초 |
+    | 프레임 한 장(512KB) | 0.07초 |
+    | 렌더 한 장(JPEG) | 0.09초 |
+    | 느린 브라우저(`--limit-rate 2M`) 통째 | 25.1초, 끊김 없음 |
+
+    ⇒ 늦어지는 곳은 **Docker Desktop의 `host.docker.internal` 구간**(약 18MB/s ≈ 150Mbps)이고, 중계·nginx가 더하는 시간은 거의 없음. nginx는 50MB를 임시 파일로 버퍼하며 경고 한 줄(`an upstream response is buffered to a temporary file`) — 기본 `proxy_max_temp_file_size` 1GB 안이라 문제없음. `proxy_read_timeout`(기본 60초)은 **바이트 사이 간격**이라 큰 영상이 오래 걸려도 끊지 않음(25초 시험). **⇒ nginx.conf는 바꿀 필요 없음.** 원하면 `/api/pacs/viewer/`에만 `proxy_buffering off`로 임시 파일 경고를 없앨 수 있음(선택).
+    - 중계 허용 목록이 처음엔 `frames/<한 장>`만 받아 **프레임 여러 장 한 요청(`frames/1,2,3`)이 403**이었음 → 쉼표 목록 허용으로 고침(Stone은 한 장씩 부르지만 다른 DICOMweb 도구를 위해).
+  - ⑧ 보안 시험 25개 **모두 통과** (develop 당긴 뒤 다시 돌려도 25/25): 자기 스터디 200 / 쿠키 없음 401(`index.html`은 「시간 끝」 안내) / 남의 스터디 UID 403 / 남의 스터디 QIDO 403 / 거르지 않은 `dicom-web/studies` 403 / Orthanc REST `/patients`·`/tools/find`·Explorer `/ui/app/` 403 / POST·DELETE 405 / 경로 우회 6가지 400 / 진짜 서명 + 바꾼 내용 401 / 엉터리 쿠키 401 / 서명은 맞고 만료된 쿠키 401 / 없는 직원 id 쿠키 401 / 수납 직원(진료 권한 없음) 쿠키 401 / 수납·간호사 `viewer-url` 403 / Basic 인증 헤더만 401. **직원 비활성화 → 17초 뒤 401**, 다시 활성 → 200. **진료 권한 회수 → 32초 뒤 401**(30초 캐시 + 2초 간격), 되돌리면 200. 비활성 직원의 유효한 JWT로 `viewer-url` → 401. **남의 쿠키 복사**: 로그인 없는 다른 클라이언트(curl)에서도 그 쿠키의 스터디는 200 — 만료(30분)·계정 비활성·권한 회수까지. HttpOnly라 화면 스크립트로는 못 꺼냄. 설계대로(설계 메모 참고).
+- **찾은 것**
+  - **Stone 시작 안내 상자 문제**: 「Intended use」 상자가 떠 있는 동안 Stone이 영상 칸 크기를 0으로 잡고, 상자를 닫아도 창 크기가 바뀌기 전까지 **가운데 영상 칸이 까맣게** 남음(EMR 창 안·새 탭 모두, 중계와 관계없음 — `canvas1` 크기 0 확인). 안내 상자를 끄니 50MB 영상이 바로 보임. 그래서 PACS compose에 `SHOW_INFO_PANEL_AT_STARTUP=Never`. 「For patients, researchers and quality assurance. Not for diagnostic usage.」는 왼쪽 위 빨간 글씨로 **계속 보임**. 실행 중 PACS에는 컨테이너를 다시 만들 때 적용됨(9090→127.0.0.1과 같이).
+  - **같은 출처의 위험**: Stone이 EMR과 같은 주소(9080)에서 돌아 Stone 코드가 EMR 화면의 localStorage(로그인 토큰 `medconnect_token`)를 읽을 수 있음(확인함). Stone은 우리 Orthanc 이미지(26.6.1 고정)의 코드라 지금 당장의 위험은 낮지만, Stone에 XSS(예: DICOM 태그 글자를 그대로 그림)가 있으면 EMR 로그인까지 번짐. iframe `sandbox`는 `SameSite=Strict` 쿠키가 안 따라가서 못 씀(http라 `SameSite=None; Secure` 불가). 근본 해결은 **뷰어만 다른 포트(다른 출처)** — nginx `listen` 추가·compose 포트·Windows 포트(P-1) 확인이 필요해 **결정 필요**(총괄/실장님).
+  - `viewer-url`은 이전처럼 **진료 권한이 있으면 어느 환자 오더든** 쿠키를 받음(오더 id만 알면) — 기존 권한 모델 그대로.
+- **확인한 방법**: 격리 EMR 9188(develop `9a57b6a` 위에서 다시 빌드, 새 마이그레이션 032~034 적용 확인) + 격리 PACS 9198/11298. 의사 계정으로 진료 → 🩻 → T3 「Voir image」: EMR 창 안에서 로그인 없이 Stone, 시리즈 3개(작은 시험 영상 2 + 50MB 1) 목록·50MB 영상 표시(fr·ko 버튼 문구), 같은 주소 새 탭도 열림. 관리자로 설정 → 오더 연동: 새 칸·「✓ 영상 서버 비밀번호 설정됨」·「이제 쓰지 않음」 확인. 격리 EMR의 `orthanc_password`는 **시험용 env 사본에 `pair-with-emr.ps1`**을 돌려 넣음(md5 일치). 프론트 빌드 통과.
+- **확인 못 한 것**: 실행 중 PACS·EMR(9080/9090) — 안 건드림. 다른 PC의 브라우저·실제 LAN 속도. 장비 C-STORE로 들어온 실제 영상(압축 전송 문법)의 Stone 렌더. `pair-with-emr.sh`는 문법·CR 처리만 보고 리눅스에서 실행해 보지 않음.
+- **다른 세션에 부탁**
+  - **총괄**: ① 합칠 때 실행 중 PACS를 새 compose로 다시 만들기(웹 포트 `127.0.0.1:9090`, Stone 안내 끔) → **그 뒤 `pair-with-emr.ps1`** 한 번(실행 중 EMR에 Orthanc 비밀번호 넣기; 803이 먼저 적용돼 있어야 함). 순서가 바뀌면 영상 창에 「짝이 맞지 않았습니다」 — 다시 돌리면 됨. ② nginx.conf 변경 **필요 없음**(⑦ 수치). ③ 결정: 뷰어를 다른 출처(포트)로 옮길지(위 「같은 출처의 위험」). ④ 마이그레이션 803 번호.
+  - **진료**: 바꿀 것 없음 — 영상 창은 `viewer-url`의 `url`을 그대로 iframe·새 탭에 씀(확인함). 다만 `url`이 빈 값이고 `no_study`가 아닌 경우의 「PACS 뷰어 주소가 설정되지 않았습니다」(`noViewerUrl`)는 이제 나올 일이 없음(`has_viewer` 늘 참) — 정리할지 확인만.
+  - **설정**: 상태 화면의 「EMR → 영상 서버」 확인이 있다면 이제 `pacs_viewer_url`이 아니라 `orthanc_url`(+ `orthanc_password_set`)을 봐야 함. `status.routes.js`가 `pacs_viewer_url`을 읽는 곳(옛 포트 경고)은 값이 남아 있으니 그대로 둬도 깨지지 않음 — 확인 부탁.
+
 ## 2026-09-29 — 설계 메모: P-9 C 「EMR이 영상을 대신 보여 줌」 (실험 결과 포함)
 
-- **상태**: 보류 — 설계만(코드 없음). 총괄 확인 뒤 만듦
+- **상태**: 끝 — 총괄 승인(조건 8개) 뒤 만듦. 바로 위 항목 「P-9 C 만듦」
 - **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만). **PACS 저장소** — 없음
 
 ### 한 줄 요약
@@ -121,7 +172,7 @@
 
 ## 2026-09-29 — 설계 메모: 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크, 새 영상만, 디스크 없으면 경고) · P-25 포트
 
-- **상태**: 보류 — 설계만(코드 없음). 총괄 확인 뒤 만듦
+- **상태**: 끝 — 만듦. 위 항목 「영상 백업 만듦 (결정 41)」
 - **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만). **PACS 저장소** — 없음
 
 ### 한 줄 요약

@@ -1,5 +1,5 @@
 // How a drug's dosage form and its "to check" list (drugs brought in from the old
-// stock program, migration 403) are shown. Pharmacy session; used by the pharmacy
+// stock program, migration 034) are shown. Pharmacy session; used by the pharmacy
 // Stock tab and the settings drug tab. See wiki/modules/pharmacy.md 3.11.
 
 // drug.dosage_form holds these English values (the old program's forms, corrected

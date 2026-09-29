@@ -83,6 +83,8 @@ const ROUTES = [
   ['PUT',  '/order-sets/' + X,              [SET], {}],
   ['DELETE', '/order-sets/' + X,            [SET]],
   // billing.routes.js (payment)
+  // the day's cash record (036, payment M9): payment and statistics
+  ['GET',  '/billing/cash-day',             [PAY, STATS]],
   ['GET',  '/billing/pending',              [PAY]],
   ['GET',  '/billing/completed',            [PAY]],
   ['GET',  '/billing/' + X + '/detail',     [PAY]],

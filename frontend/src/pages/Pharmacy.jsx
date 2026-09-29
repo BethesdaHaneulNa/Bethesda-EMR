@@ -5,7 +5,7 @@ import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
-import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
+import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord, missingTimes } from '../documents/rx-dosing.js';
 import { PharmacyStock } from './PharmacyStock.jsx';
 
 function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -361,7 +361,10 @@ export default function PharmacyPage() {
                       {per && per.clean ? fmtAmount(per.value) : '—'}
                       {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
+                    <div style={{ padding:'10px', color: missingTimes(rx) ? '#fbbf24' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
+                      {rx.frequency || '-'}
+                      {missingTimes(rx) ? <div style={{ fontSize: 12, marginTop:2 }}>{t.ph_timesCheck}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
                     <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : '#fca5a5', fontWeight: hasTotal(rx) ? 400 : 800 }}>

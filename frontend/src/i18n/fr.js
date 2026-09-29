@@ -233,7 +233,7 @@ export default {
   settleAll: "Tout encaisser",
   settleAllConfirm: "Encaisser tous les impayés ?",
   pacsServer: "Serveur PACS (Orthanc)",
-  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (9090) sert à ouvrir la visionneuse depuis le dossier.",
+  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title. L'EMR affiche lui-même les images : les postes n'ont pas besoin d'accéder au port 9090.",
   pacsViewerUrl: "URL web / visionneuse PACS",
   dicomPort: "Port DICOM",
   testPacsBtn: "Tester PACS (DICOM)",
@@ -451,6 +451,7 @@ export default {
   ph_colPerDose: "Dose/prise",
   ph_colDirections: "Posologie",
   ph_perDoseCheck: "⚠ À vérifier avec le médecin (pas en demi-comprimés)",
+  ph_timesCheck: "⚠ Nombre de prises absent — voir le médecin",
   ph_noTotal: "⚠ Quantité totale absente",
   ph_noTotalConfirm: "Certains médicaments n'ont pas de quantité totale. Ils ne seront pas déduits du stock. Vérifiez avec le médecin :",
   ph_legacyTotal: "Ancien calcul (dose×fois×jours)",
@@ -559,6 +560,9 @@ export default {
   ph_chk_malaria: "Antipaludique — à vérifier par le médecin",
   ph_chk_topical: "Classé comprimé mais peut-être à usage externe (pommade, crème) — unité de conditionnement aussi",
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
+  ph_packChangeWarn: "Le stock ({n}) n'a pas d'unité : après l'enregistrement, le même nombre est lu dans la nouvelle unité. Ensuite, recomptez dans Pharmacie → 📦 Stock avec « Inventaire ».",
+  ph_rMixed: "⚠ Unités mélangées",
+  ph_rMixedHint: "Ce mois-ci, des délivrances à l'unité de prise et d'autres au flacon ou au tube (conditionnement changé). « Délivré » additionne les deux unités.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
   lb_selectHint: "Sélectionnez un patient à gauche",
@@ -920,5 +924,9 @@ export default {
   px_readingOnCancelled: "Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.",
   px_noStudy: "Cette demande d'imagerie n'a pas été envoyée à la liste de travail des appareils : aucune image n'y est liée. Le compte-rendu peut quand même être saisi.",
   px_linkedByAccession: "L'appareil a donné son propre numéro d'étude à ces images ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.",
+  px_orthancUrl: "Adresse du serveur d'images vue par l'EMR (en général, ne pas modifier)",
+  px_orthancPasswordSet: "Mot de passe du serveur d'images enregistré — la visionneuse s'ouvre sans connexion",
+  px_orthancPasswordMissing: "Pas encore de mot de passe du serveur d'images. Sur le PC serveur, lancez pair-with-emr.ps1 dans le dossier du PACS.",
+  px_viewerUrlUnused: "n'est plus utilisée (l'EMR affiche les images)",
   // ── end pacs ──
 };
