@@ -14,98 +14,186 @@
 
 ## 2. 화면 사용법 (직원용)
 
-> 병원 직원(관리자)이 읽는 부분입니다. 버튼 이름은 **한국어 / Français** 로 적었습니다. 약품 탭 안쪽과 오더 연동 탭에는 아직 영어 글자가 남아 있습니다 (각각 약국·PACS 담당).
+> 병원 직원(관리자)이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다.
+> 설정 화면은 맨 위 메뉴의 **Paramètres (설정)** 입니다. **Paramètres** 권한이 있는 계정만 보입니다.
+> 서버가 보내는 안내 몇 가지는 아직 **영어로** 뜹니다 (2.12의 표, 7절 U11).
 
-### 2-1. 처음 설치했을 때 — 관리자 계정 만들기
+### 2.1 처음 설치했을 때 — 관리자 계정 만들기
 
-1. 브라우저로 EMR 주소(`http://<서버 주소>:9080`)에 들어가면 「초기 설정 / Configuration initiale」 화면이 나옵니다.
-2. 이름, 아이디, 비밀번호(6자 이상), 비밀번호 확인을 넣고 「관리자 계정 만들기 / Créer le compte admin」을 누릅니다.
-   - **아이디는 `admin`으로 하기를 권합니다.** 아이디가 `admin`인 계정만 「설치 때 만든 관리자」로 보호됩니다 (3-2절).
-3. 바로 설정 화면으로 들어갑니다. 이 화면은 관리자가 하나도 없을 때만 나옵니다.
+1. 브라우저로 EMR 주소(`http://<서버 주소>:9080`)에 들어가면 **Configuration initiale (초기 설정)** — 「Créez le compte administrateur」 화면이 나옵니다. 관리자가 하나도 없을 때만 나오는 화면입니다.
+2. **Nom affiché (이름)**, **Identifiant (아이디)**, **Mot de passe (비밀번호, 6자 이상)**, **Confirmer le mot de passe (비밀번호 확인)** 을 넣고 **Créer le compte admin (관리자 계정 만들기)** 를 누릅니다.
+   - **아이디는 `admin`으로 하기를 권합니다.** 아이디가 `admin`인 계정만 「설치 때 만든 관리자」로 보호됩니다 (2.6, 3-2절).
+3. 바로 **Paramètres** 화면으로 들어갑니다.
 
-### 2-2. 직원 추가하기
+### 2.2 로그인 · 로그아웃
 
-1. 설정 → **👥 직원 / Personnel** → 오른쪽 위 **+ 추가 / + Ajouter**
-2. 이름 / Nom, 아이디 / Identifiant, 비밀번호 / Mot de passe 를 넣습니다.
-   - 비밀번호 칸에 **`1234`가 미리 들어 있습니다.** 그대로 두지 말고 바꾸세요. 비밀번호는 화면에 그대로 보이니 주변을 확인하세요.
-3. **역할 (표시용) / Rôle (étiquette)** 에서 역할을 고릅니다 (접수·의사·약국·검사실·관리자 / Accueil·Médecin·Pharmacie·Laboratoire·Administrateur). 고르면 그 역할의 기본 권한 칸이 자동으로 체크됩니다.
-4. **권한 (접근 가능 화면)** 에서 이 직원이 들어갈 화면을 체크합니다. **실제로 무엇을 할 수 있는지는 역할이 아니라 이 체크가 정합니다.**
-   역할을 고르면 아래처럼 **기본으로 체크됩니다**. 필요하면 체크를 더하거나 빼세요.
+- 로그인 화면: **Identifiant (아이디)** · **Mot de passe (비밀번호)** → **Connexion (로그인)**. 오른쪽 위 **EN · KO · FR** 로 언어를 바꿉니다.
+- 로그아웃: 오른쪽 위 빨간 **Déconnexion (로그오프)**.
+- 한 번 로그인하면 **12시간** 유지됩니다. 그 뒤에는 아무 버튼이나 누를 때 로그인 화면으로 돌아가니, 다시 로그인하면 됩니다.
 
-   | 역할 (화면 표시: 한국어 / Français) | 기본으로 체크되는 권한 |
+### 2.3 설정 화면의 탭
+
+| 탭 (프랑스어 화면) | 한국어 화면 | 하는 일 | 담당 |
+|---|---|---|---|
+| 👥 **Personnel** | 직원 | 직원 계정·권한 (2.4 ~ 2.6) | 설정 |
+| 💊 **Médicaments** | 약품 | 약 목록·단가·재고 | 약국 (`pharmacy.md`) |
+| 📋 **Codes d'actes** | 오더 코드 | 진료비·검사·영상·처치 코드와 가격 (2.9) | 설정 |
+| 📝 **Phrases types** | 상용구 | 진료 기록 상용구 (2.9) | 설정 |
+| 🏥 **Services** | 진료과 | 진료과 (2.9) | 설정 |
+| 🧪 **Ordonnances types** | 약속처방 | 약·검사 묶음 (2.9) | 설정 |
+| 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치 | 임상병리 (`laboratory.md`) |
+| 🔗 **Flux d'ordres** | 오더 연동 | 영상 장비 워크리스트 연결 | PACS (`pacs.md`) |
+| 💾 **Sauvegarde** | 백업 | 백업 확인·지금 백업·내려받기 (2.7) | 설정 |
+| 🏢 **Établissement** | 병원 정보 | 편지지 머리글·앱 제목 (2.8) | 설정 |
+
+### 2.4 직원 추가하기
+
+1. **Personnel (직원)** → 오른쪽 위 **+ Ajouter (+ 추가)**. **Nouvel élément (새로 추가)** 창이 뜹니다.
+2. **Nom (이름)**, **Identifiant (아이디)**, **Mot de passe (비밀번호)** 를 넣습니다.
+   - 비밀번호 칸에 **`1234`가 미리 들어 있습니다.** 그대로 두지 말고 바꾸세요. 입력한 비밀번호가 화면에 그대로 보이니 주변을 확인하세요 (7절 S4).
+3. **Rôle (étiquette) (역할 · 표시용)** 에서 역할을 고릅니다. 고르면 아래 권한 칸이 그 역할의 기본값으로 **자동 체크**됩니다.
+4. **Permissions (écrans accessibles) (권한 · 접근 가능 화면)** 에서 이 직원이 들어갈 화면을 체크합니다. **실제로 무엇을 할 수 있는지는 역할이 아니라 이 체크가 정합니다.**
+
+   | Rôle (역할) | 기본으로 체크되는 권한 |
    |---|---|
-   | 접수 / Accueil (`frontdesk`) | 접수 · **수납** |
-   | 의사 / Médecin (`doctor`) | 진료 |
-   | 약국 / Pharmacie (`pharmacy`) | 약국 |
-   | 검사실 / Laboratoire (`lab`) | 임상병리 |
-   | 관리자 / Administrateur (`admin`) | 7개 전부 (접수·진료·수납·약국·임상병리·통계·설정) |
+   | **Accueil** (접수) | Enregistrement (접수) · **Paiement (수납)** |
+   | **Médecin** (의사) | Consultation (진료) |
+   | **Pharmacie** (약국) | Pharmacie (약국) |
+   | **Laboratoire** (검사실) | Laboratoire (임상병리) |
+   | **Administrateur** (관리자) | 7개 전부 — Enregistrement · Consultation · Paiement · Pharmacie · Laboratoire · Statistiques · Paramètres |
 
-   - **수납 창구 계정**: 역할 「접수」를 고르면 수납이 이미 체크되어 있습니다. 수납만 하는 직원이면 「접수」 체크를 빼세요. 수납 서버가 **수납 권한을 검사**하므로(2026-09-29부터, 수납 세션), 수납 체크가 없으면 수납 화면도 수납 요청도 거절됩니다.
-   - 기준은 `frontend/src/modules.js`의 `defaultPermsForRole`입니다. 이미 만든 직원의 역할을 바꾸면 체크가 그 역할의 기본값으로 **다시 채워지니**, 따로 더했던 체크는 다시 확인하세요.
-5. 의사라면 **진료과**를 고릅니다.
-6. **저장**. 목록에 새 직원이 나오고, 역할 아래에 들어갈 수 있는 화면의 아이콘이 보입니다.
+   - **수납 창구 계정**: **Accueil** 를 고르면 **Paiement** 가 이미 체크되어 있습니다. 수납만 하는 직원이면 **Enregistrement** 체크를 빼세요. 수납 화면·수납 서버 모두 **Paiement** 권한을 확인하므로, 이 체크가 없으면 수납이 거절됩니다.
+   - 이미 있는 직원의 역할을 바꾸면 체크가 **그 역할의 기본값으로 다시 채워집니다.** 따로 더했던 체크는 다시 확인하세요.
+5. 의사라면 **Service (진료과)** 를 고릅니다. (내원마다 고르는 진료과와는 별개인, 의사 본인의 소속입니다.)
+6. **Sauver (저장)**. 아래에 초록 「✓ Enregistré」가 잠깐 뜹니다.
 
-### 2-3. 직원 정보·권한 바꾸기, 비밀번호 초기화
+**직원 목록의 칸**
 
-1. 목록에서 그 직원 줄의 **수정** → 바꿀 것을 고치고 **저장**.
-2. 비밀번호 칸은 비어 있습니다. **비워 두면 비밀번호는 그대로**, 새로 적으면 그 비밀번호로 바뀝니다.
-3. **권한을 바꿔도 그 직원이 이미 로그인해 있으면 바로 적용되지 않습니다.** 로그아웃 후 다시 로그인해야 바뀝니다 (최대 12시간).
+| 칸 | 뜻 |
+|---|---|
+| **Nom** (이름) | 화면 오른쪽 위와 기록에 찍히는 이름 |
+| **Identifiant** (아이디) | 로그인할 때 쓰는 아이디 |
+| **Rôle** (역할) | 색 표시와 그 아래 **아이콘 줄** — 아이콘이 이 직원이 들어갈 수 있는 화면입니다 (🏥 접수 · 🩺 진료 · 💳 수납 · 💊 약국 · 🧪 임상병리 · 📊 통계 · ⚙️ 설정) |
+| **Service** (진료과) | 의사의 소속 과 코드 |
+| **Téléphone** (전화) | 연락처 |
+| **Statut** (상태) | **actif** (활성, 초록) = 로그인 가능 · **inactif** (비활성, 빨강) = 로그인 막힘 |
 
-### 2-4. 직원 그만둘 때
+### 2.5 직원 정보·권한 바꾸기 · 그만둔 직원
 
-1. 목록에서 **삭제 / Supprimer** → 확인 창 「이 직원을 비활성으로 바꿀까요? … / Désactiver ce membre du personnel ? …」 → 확인.
-2. 실제로 지워지지 않고 **inactive(비활성)** 로 바뀌어 로그인이 막힙니다. 기록(진료·수납 등)은 그대로 남습니다.
-3. **주의**: 지금은 비활성 직원을 다시 활성으로 되돌리는 버튼이 없습니다 (7절).
-4. **주의**: 이미 로그인해 있던 화면은 최대 12시간 계속 쓸 수 있습니다 (7절).
+- **바꾸기**: 그 줄의 **Modifier (수정)** → 고치고 **Sauver**.
+- **비밀번호 초기화**: **Modifier** 창의 **Mot de passe** 칸은 비어 있습니다. **비워 두면 그대로**, 새로 적으면 그 비밀번호로 바뀝니다. 새 비밀번호를 직원에게 알려 주세요.
+- **권한을 바꿔도 이미 로그인해 있는 직원에게는 바로 적용되지 않습니다.** 그 직원이 **Déconnexion** 후 다시 로그인해야 바뀝니다 (최대 12시간, 7절 S1).
+- **그만둔 직원**: 그 줄의 **Supprimer (삭제)** → 「Désactiver ce membre du personnel ? … (이 직원을 비활성으로 바꿀까요?)」 → 확인. 지워지지 않고 **inactif** 가 되어 로그인이 막힙니다. 진료·수납 기록은 그대로 남습니다.
+  - **주의**: 비활성 직원을 다시 **actif** 로 되돌리는 버튼이 아직 없습니다 (7절 U2).
+  - **주의**: 이미 로그인해 있던 화면은 최대 12시간 계속 쓸 수 있습니다. 급하면 그 PC에서 **Déconnexion** 하세요 (7절 S1).
 
-### 2-5. 관리자 계정 보호
+### 2.6 관리자 계정 보호
 
-- 설치 때 만든 `admin` 계정은 수정 창에서 아이디·역할·권한이 회색으로 잠겨 있고 「🔒 설정 때 만든 관리자 계정입니다…」 안내가 나옵니다. 이름·비밀번호·연락처·진료과는 바꿀 수 있습니다. 삭제(비활성)도 거절됩니다.
-- 다른 관리자도, **설정 화면에 들어갈 수 있는 마지막 관리자**라면 역할을 바꾸거나 설정 권한을 빼거나 삭제할 수 없습니다. 먼저 다른 계정에 Admin 역할과 설정 권한을 주세요.
+- 설치 때 만든 `admin` 계정의 **Modifier** 창에서는 **Identifiant · Rôle · Permissions** 가 회색으로 잠겨 있고 「🔒 Compte administrateur créé lors de l'installation… (설정 때 만든 관리자 계정입니다…)」 안내가 나옵니다. **Nom · Mot de passe · Téléphone · Service** 는 바꿀 수 있습니다. **Supprimer** 도 거절됩니다.
+- 다른 관리자도, **Paramètres 화면에 들어갈 수 있는 마지막 관리자**라면 역할을 바꾸거나 **Paramètres** 체크를 빼거나 **Supprimer** 할 수 없습니다. 먼저 다른 계정에 **Administrateur** 역할과 **Paramètres** 권한을 주세요.
 
-### 2-6. 백업 확인하기
+### 2.7 백업 확인하기 — Sauvegarde (백업)
 
-1. 설정 → **💾 백업 / Sauvegarde**
-2. 맨 위 색깔 띠가 백업 상태입니다.
-   - **초록 「백업 정상 / Sauvegardes en ordre」** — 최근 백업이 36시간 안에 있습니다. 옆에 마지막 백업 시각과 「몇 시간 전」이 나옵니다.
-   - **노랑 「최근 백업이 오래됐습니다 / La dernière sauvegarde est trop ancienne」** — 36시간 넘게 새 백업이 없습니다. **💾 지금 백업**을 눌러 보고, 실패하면 담당자에게 알리세요.
-   - **노랑 「백업이 하나도 없습니다 / Aucune sauvegarde」** — **💾 지금 백업**을 눌러 첫 백업을 만드세요.
-   - **빨강 「마지막 백업이 실패했습니다 / La dernière sauvegarde a échoué」** — 아래에 시도한 시각, 자동/수동, **오류 문구**가 나옵니다. 오류 문구를 그대로 담당자에게 전하세요. 자동 백업은 30분마다 다시 시도합니다.
-   - 「⏳ 백업 진행 중」이 보이면 지금 백업이 돌고 있는 것입니다.
-3. 그 아래 칸에 저장 위치, 자동 백업 시각(기본 매일 02:00), 보관 기간(기본 30일)이 나옵니다. **보관 기간이 지나도 가장 최근 7개는 지우지 않습니다.**
-4. 목록의 시각은 **이 PC의 시각**으로 나옵니다. 파일 이름의 시각(`bethesda_2026-09-29_0221`)은 서버 시각입니다. 병원에서는 둘이 같습니다.
-5. **💾 지금 백업** — 바로 한 벌 더 만듭니다. 끝나면 아래에 「백업 완료 · 파일이름」이 잠깐 뜹니다. 다른 사람이 이미 백업을 돌리고 있으면 그것이 끝날 때까지 기다렸다가 같은 결과를 보여줍니다 (두 번 돌지 않습니다).
-6. **⬇ 다운로드** — 그 백업 파일을 이 PC로 받습니다. USB에 옮겨 **병원 밖에 한 벌** 보관하세요. 같은 PC의 다른 드라이브는 도난·화재에 대비가 안 됩니다.
-7. 복원은 화면에서 하지 않습니다. 관리 담당자가 `DEPLOYMENT.md` 「5b. Restoring a backup」 절차대로 합니다.
+1. **Sauvegarde (백업)** 탭을 누릅니다.
+2. **맨 위 색 띠**를 봅니다.
 
-### 2-7. 병원 정보 (편지지)
+   | 색 띠 (프랑스어 화면) | 한국어 화면 | 뜻 | 할 일 |
+   |---|---|---|---|
+   | 초록 **✓ Sauvegardes en ordre** | 백업 정상 | 36시간 안에 백업이 있음. 옆에 **Dernière (최근)** 시각과 「il y a N h (N시간 전)」 | 없음. 가끔 **⬇ Télécharger** 로 USB에 한 벌 |
+   | 노랑 **⚠ La dernière sauvegarde est trop ancienne** | 최근 백업이 오래됐습니다 | 36시간 넘게 새 백업이 없음 (어젯밤 백업이 안 됨) | **💾 Sauvegarder (지금 백업)** 을 누름. 빨강으로 바뀌면 아래 오류를 담당자에게 |
+   | 노랑 **⚠ Aucune sauvegarde** | 백업이 하나도 없습니다 | 백업 파일이 하나도 없음 (설치 직후) | **💾 Sauvegarder** 로 첫 백업 |
+   | 빨강 **⚠ La dernière sauvegarde a échoué** | 마지막 백업이 실패했습니다 | 가장 최근 시도가 실패했고 그 뒤로 성공한 적이 없음. 아래에 **Dernière tentative (마지막 시도)** 시각, automatique/manuelle, **오류 문구** | 오류 문구를 **그대로** 담당자에게 전함. 자동 백업은 30분마다 다시 시도함 |
+   | **⏳ Sauvegarde en cours** 표시 | 백업 진행 중 | 지금 백업이 돌고 있음 | 잠시 뒤 **↻ Rafraîchir (새로고침)** |
 
-1. 설정 → **🏢 병원 정보 / Établissement**
-2. 맨 위 미리보기가 인쇄 문서(의뢰서·진단서 등) 머리글 모양입니다.
-3. **앱 제목 / Titre de l'application** — 화면 맨 위 제목. **병원 이름 / Nom de l'établissement** — 한국어(기본)·영어·프랑스어 세 가지. 인쇄 언어에 맞는 이름이 문서에 찍힙니다. 주소·전화·이메일은 공통.
-4. **저장**.
+3. 그 아래 칸의 뜻:
 
-### 2-8. 진료과 · 오더 코드 · 오더 세트 · 상용구
+   | 칸 | 뜻 |
+   |---|---|
+   | **État** (상태) | 「Sauvegardes auto activées (자동 백업 켜짐)」 — 자동 백업은 끌 수 없습니다 |
+   | **Chemin** (경로) | 백업이 저장되는 곳. 「Dossier de l'app (backups) (앱 폴더)」면 EMR과 같은 디스크 → 노란 경고 문구가 함께 나옴 |
+   | **Auto** (자동) | 「chaque jour 02:00 (매일 02:00)」 — 자동 백업 시각. 그 시각에 서버가 꺼져 있었으면 켜진 뒤 한 번 합니다 |
+   | **Garder** (보관) | 보관 일수(기본 30 j). **가장 최근 7개는 보관 기간이 지나도 지우지 않습니다** |
+   | **Sauvegardes (N)** (백업 목록) | 파일 이름 · 크기 · 시각(**이 PC의 시각**) · **⬇ Télécharger (다운로드)** |
 
-- **🏥 진료과 / Services** — + 추가로 진료과 추가(코드, 이름, 영어 이름, **프랑스어 이름은 꼭 넣으세요**, 과장 의사). 수정만 있고 삭제는 없습니다.
-- **📋 오더 코드 / Codes d'actes** — 진료비(Frais)·검사(Laboratoire)·영상(Imagerie)·처치(Acte) 코드와 가격. 영상 코드는 장비 / Modalité(US·CR…)를 넣고 워크리스트 생성을 켜야 영상 장비 목록에 올라갑니다. 삭제하면 목록에서 숨겨지고 기존 기록은 남습니다.
-- **🧪 약속처방 / Ordonnances types** — + 새 약속처방 → 이름·그룹·진료과 → 오른쪽에서 약(Rx) 또는 검사(Exam)를 검색해 눌러 추가 → 저장. 진료 화면에서 한 번에 불러옵니다.
-- **📝 상용구 / Phrases types** — 진료 기록에 쓰는 상용구. **Modifier (수정)** 창에 **Texte (par défaut / écran coréen) (문장 · 기본)**, **Texte en français (프랑스어 문장)**, **Texte en anglais (영어 문장)** 세 칸이 있습니다. 진료 화면은 프랑스어 화면이면 프랑스어 문장을 쓰고, 비어 있으면 기본 문장을 씁니다 — **현장에서 쓰는 상용구는 프랑스어 문장을 넣어 주세요.** 목록에서 프랑스어·영어 문장이 있는 줄에는 작은 **FR**·**EN** 표시가 붙습니다. 분류(General 등)는 저장되는 값이라 번역하지 않습니다.
+4. **💾 Sauvegarder (지금 백업)** — 바로 한 벌 더 만듭니다. 끝나면 「✓ Sauvegarde faite · 파일이름」이 잠깐 뜹니다. 누가 이미 백업을 돌리고 있으면 그게 끝날 때까지 기다렸다가 같은 결과를 보여줍니다 (두 번 돌지 않음).
+5. **⬇ Télécharger (다운로드)** — 그 백업을 이 PC로 받습니다. USB에 옮겨 **병원 밖에 한 벌** 보관하세요. 같은 PC의 다른 드라이브는 도난·화재에 대비가 안 됩니다.
+6. 복원은 화면에서 하지 않습니다. 담당자가 `DEPLOYMENT.md` 「5b. Restoring a backup」 절차대로 합니다.
 
-### 2-9. 서버 상태 창 (서버 PC에서)
+### 2.8 병원 정보 — Établissement (병원 정보)
 
-1. 서버 PC에서 **`server-status.bat`** 을 더블클릭합니다. 창이 뜨고 15초마다 스스로 다시 확인합니다. **닫지 말고 띄워 두세요.**
-2. 맨 위 띠가 **초록 「TOUT FONCTIONNE」** 이면 정상, **노랑 「A SURVEILLER」** 는 확인 필요, **빨강 「PROBLEME」** 는 고장입니다.
-3. 줄마다: 환자 기록(DB) · 앱 서버 · EMR 화면 · 디스크 공간 · 백업 · 영상(PACS) · 장비 워크리스트. 빨갛거나 노란 줄을 적어서 담당자에게 알리세요.
-4. **「INACCESSIBLE / 접속 안 됨」** 이 뜨고 옆에 「port 4242 bloque par Windows」 같은 글이 있으면, 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용 설명: `DEPLOYMENT.md`의 Windows 절).
+1. **Établissement** 탭. 맨 위 흰 상자가 인쇄 문서(의뢰서·진단서 등) 머리글 미리보기입니다.
+2. 칸의 뜻:
+
+   | 칸 | 뜻 |
+   |---|---|
+   | **Titre de l'application (en-tête)** (앱 제목) | 모든 화면 맨 위 왼쪽의 제목 |
+   | **Nom de l'établissement (coréen / par défaut)** (병원 이름 · 기본) | 한국어로 인쇄할 때. 다른 언어 이름이 비었을 때도 쓰임 — 프랑스어 인쇄는 프랑스어 → 영어 → 기본 이름 순 |
+   | **Nom de l'établissement (anglais / français)** (영어·프랑스어 이름) | 그 언어로 인쇄할 때. **프랑스어 이름을 꼭 넣으세요** |
+   | **Adresse · Téléphone · E-mail · Heures d'ouverture** (주소·전화·이메일·진료 시간) | 모든 언어 공통 |
+
+3. **Sauver (저장)**.
+
+### 2.9 Codes d'actes · Services · Ordonnances types · Phrases types
+
+- **📋 Codes d'actes (오더 코드)** — 위 단추 **Tous · Frais · Laboratoire · Imagerie · Acte** (전체·진료비·검사·영상·처치)로 거르고, **Rechercher (검색)** 로 찾습니다. **+ Ajouter** / **Modifier** 창:
+
+  | 칸 | 뜻 |
+  |---|---|
+  | **Code · Nom · Nom en anglais** (코드·이름·영어 이름) | 코드는 다른 코드와 겹치면 안 됩니다 |
+  | **Type** (종류) | Frais (진료비) · Laboratoire (검사) · Imagerie (영상) · Acte (처치) |
+  | **Groupe** (분류) | Consultation, Laboratory… — 목록 묶음. 저장되는 값이라 영어 그대로 |
+  | **Prix** (가격) | 청구 금액 |
+  | **Modalité · Région** (장비·부위) | 영상 코드만. US·CR… / ABDOMEN… |
+  | **Créer le Feed Worklist** — Activé/Désactivé | 켜야 이 영상 오더가 **영상 장비 목록(워크리스트)** 에 올라갑니다 |
+
+  **Supprimer** 하면 목록에서 숨겨지고, 이미 들어간 오더·청구 기록은 남습니다.
+- **🏥 Services (진료과)** — **+ Ajouter**: **Code**, **Nom (par défaut)** (이름 · 기본), **Nom en anglais**, **Nom en français** (**꼭 넣으세요** — 비면 프랑스어 화면에 기본 이름이 나옴), **Médecin-chef** (과장, 의사만 고를 수 있음). 수정만 있고 삭제는 없습니다.
+- **🧪 Ordonnances types (약속처방)** — **+ Nouvel ensemble (새 약속처방)** → **Nom de l'ensemble (이름)**, **Groupe (dossier) (그룹·폴더)**, **Service**, **Description** → 오른쪽에서 **Médicament (약)** 또는 **Examen / Imagerie (검사/영상)** 를 고르고 **Rechercher** → 결과를 눌러 추가 → **Sauver**. 진료 화면에서 한 번에 불러옵니다.
+- **📝 Phrases types (상용구)** — **Modifier** 창에 **Texte (par défaut / écran coréen) (문장 · 기본)**, **Texte en français (프랑스어 문장)**, **Texte en anglais (영어 문장)** 세 칸이 있습니다. 진료 화면은 프랑스어 화면이면 프랑스어 문장을 쓰고, 비어 있으면 기본 문장을 씁니다 — **현장에서 쓰는 상용구는 프랑스어 문장을 넣어 주세요.** 목록에서 프랑스어·영어 문장이 있는 줄에는 작은 **FR**·**EN** 표시가 붙습니다. **Catégorie** (General 등)는 저장되는 값이라 번역하지 않습니다.
+
+### 2.10 서버 상태 창 (서버 PC에서)
+
+1. 서버 PC에서 **`server-status.bat`** 을 더블클릭합니다. 15초마다 스스로 다시 확인합니다. **닫지 말고 띄워 두세요.**
+2. 맨 위 띠와 할 일:
+
+   | 띠 | 뜻 | 할 일 |
+   |---|---|---|
+   | 초록 **TOUT FONCTIONNE** (정상 작동 중) | 전부 정상 | 없음 |
+   | 노랑 **A SURVEILLER** (확인 필요) | 돌고는 있지만 볼 것이 있음 (디스크가 참, 어젯밤 백업이 없음 등) | 아래 노란 줄과 맨 아래 안내를 담당자에게 |
+   | 빨강 **PROBLEME** (문제 발생) | 무언가 멈춤 | 빨간 줄을 적어 담당자에게. 맨 아래 안내를 따름 |
+
+3. 줄: **Dossiers patients (base de donnees)** (환자 기록 · DB) · **Serveur de l'application** (앱 서버) · **Ecran de l'EMR** (EMR 화면) · **Espace disque** (디스크) · **Sauvegarde** (백업) · **Imagerie (PACS)** (영상) · **Liste de travail des appareils** (장비 워크리스트). 영상이 없는 병원은 **non installe (미설치)** 로 회색입니다.
+4. 줄의 상태 글자: **OK** 정상 · **ARRETE** 멈춤 · **DEMARRAGE** 시작 중 · **NE REPOND PAS** 응답 없음 · **ABSENT** 없음 · **INACCESSIBLE** 접속 안 됨.
+   - **INACCESSIBLE** 옆에 「port 4242 bloque par Windows」 같은 글이 있으면 프로그램은 돌고 있는데 **Windows가 그 포트를 막아서** 다른 PC나 영상 장비가 들어올 수 없는 상태입니다. EMR을 다시 켜도 풀리지 않습니다. 담당자에게 알리세요 (담당자용: `DEPLOYMENT.md` Windows 절).
 5. 아래 버튼으로 언어를 바꿉니다 (Français → English → 한국어).
 
-### 2-10. 백업 검사 (담당자용, 서버 PC에서)
+### 2.11 백업 검사 (담당자용, 서버 PC에서)
 
 1. 앱이 설치된 폴더에서 PowerShell을 열고 `.\verify-backup.ps1` (Linux·NAS는 `./verify-backup.sh`).
 2. 가장 새 백업을 임시 DB에 복원해 보고 지웁니다. 운영 데이터는 건드리지 않습니다. 백업이 다른 드라이브(`BACKUP_PATH`)에 있어도 스스로 찾습니다.
-3. 끝에 **「VERIFIED」** 면 그 백업은 복원됩니다. 중간에 노란 **「[info] the live database has changed since this backup…」** 는 백업 뒤에 직원들이 입력한 것이 있다는 뜻으로, 정상입니다.
-4. 백업과 운영 DB가 **완전히 같은지**까지 보려면: 설정 → 백업에서 **💾 지금 백업**을 누르고, 바로 `.\verify-backup.ps1 -Strict`.
+3. 끝에 **「VERIFIED」** 면 그 백업은 복원됩니다. 중간의 노란 **「[info] the live database has changed since this backup…」** 는 백업 뒤에 직원들이 입력한 것이 있다는 뜻으로, 정상입니다.
+4. 백업과 운영 DB가 **완전히 같은지**까지 보려면: **Sauvegarde** 탭에서 **💾 Sauvegarder** 를 누르고, 바로 `.\verify-backup.ps1 -Strict`.
+
+### 2.12 이런 안내가 뜰 때
+
+| 안내 (화면에 보이는 그대로) | 어디서 | 뜻 | 할 일 |
+|---|---|---|---|
+| **Identifiant ou mot de passe incorrect** | 로그인 | 아이디나 비밀번호 칸이 비었음 | 둘 다 넣고 **Connexion** |
+| **Invalid credentials** (영어) | 로그인 | 아이디나 비밀번호가 틀림 | 다시 입력. 잊었으면 관리자에게 — 관리자가 **Personnel → Modifier → Mot de passe** 로 새로 정함 |
+| **Account is inactive** (영어) | 로그인 | 비활성(**inactif**)이 된 계정 | 관리자에게. 지금은 화면에서 되돌릴 수 없음 (7절 U2) |
+| **Server error** / **API response was not JSON…** (영어) | 로그인·어디서나 | 서버나 DB가 멈춤 | 서버 PC의 상태 창(2.10)을 봄 |
+| 로그인 화면으로 갑자기 돌아감 | 어디서나 | 로그인 12시간이 지남 | 다시 로그인 |
+| **Le mot de passe doit comporter au moins 6 caractères** · **Les mots de passe ne correspondent pas** | 초기 설정 | 비밀번호가 6자 미만 / 확인 칸과 다름 | 다시 입력 |
+| **Login ID already exists** · **Setup already completed** (영어) | 초기 설정 | 그 아이디가 이미 있음 / 이미 관리자가 있음 | 로그인 화면에서 로그인 |
+| **Erreur: This is the last active administrator who can open Settings…** (영어) | Personnel 저장·삭제 | 이 계정이 **Paramètres** 에 들어갈 수 있는 마지막 관리자 | 먼저 다른 계정에 **Administrateur** 역할과 **Paramètres** 권한을 줌 (2.6) |
+| **Erreur: The administrator account created during setup cannot be deactivated.** (영어) | Personnel 삭제 | 설치 때 만든 `admin` 계정 | 비활성화할 수 없음 — 그대로 둠 |
+| **Erreur: A record with that code or ID already exists** (영어) | 저장할 때 | 같은 **Identifiant** 나 **Code** 가 이미 있음 | 다른 아이디·코드로 |
+| **Erreur: login_id is required** · **password is required** (영어) | Personnel 새로 추가 | 아이디·비밀번호 칸이 빔 | 채워서 저장 |
+| **Erreur: … must be a number / must not be negative / must be a whole number** (영어) | 가격·재고 칸 | 숫자가 아니거나 음수, 재고에 소수 | 고쳐서 저장 |
+| **Le stock de ce médicament a changé pendant la modification…** | Médicaments 저장 | 창을 열어 둔 사이 그 약의 재고가 바뀜(조제 등). **아무것도 저장 안 됨**. 재고 칸은 지금 값으로 바뀌어 있음 | 재고 칸의 새 숫자를 보고 다시 맞춰 **Sauver**. 다른 칸의 입력은 그대로 있음 |
+| **Supprimer ?** | 목록의 Supprimer | 지울지 확인 (목록에서 숨겨지고 기록은 남음) | 맞으면 확인 |
+| **Désactiver ce membre du personnel ? …** | Personnel의 Supprimer | 직원을 비활성으로 바꿀지 확인 | 맞으면 확인 (2.5) |
+| **Échec sauvegarde: …** | Sauvegarde의 Sauvegarder | 백업 실패. 뒤에 오류 문구 | 탭 맨 위가 빨간 띠로 바뀜 — 오류 문구를 담당자에게 (2.7) |
 
 ## 3. 기능 상세
 
@@ -336,7 +424,7 @@
 |---|---|---|---|
 | B1 | ~~보통~~ **고침** | ~~백업 **두 개가 같은 분에 돌면** 같은 파일 이름에 동시에 씀. 한쪽이 실패하면 다른 쪽의 좋은 파일까지 지움~~ → 2026-09-29: 한 번에 하나만 돌고, 작업 폴더에서 쓴 뒤 검증되면 옮김 (3-4절) | (옛 코드) `backup.js` `stamp()` 분 단위, 잠금 없음, 실패 시 `unlinkSync(file)` |
 | B2 | ~~보통~~ **고침** | ~~보관 정리가 개수를 보지 않고 날짜만 봄~~ → 2026-09-29: 최근 7개는 나이와 상관없이 남김 (3-4절) | (옛 코드) `backup.js` `prune()` |
-| B3 | ~~보통~~ **고침** | ~~백업 탭의 「✓ 자동 백업 켜짐」이 항상 초록~~ → 2026-09-29: 정상·오래됨·없음·실패를 색 띠로, 실패 오류 문구까지 표시 (2-6절, 3-4절) | (옛 코드) `Settings.jsx` 백업 탭 |
+| B3 | ~~보통~~ **고침** | ~~백업 탭의 「✓ 자동 백업 켜짐」이 항상 초록~~ → 2026-09-29: 정상·오래됨·없음·실패를 색 띠로, 실패 오류 문구까지 표시 (2.7절, 3-4절) | (옛 코드) `Settings.jsx` 백업 탭 |
 | B4 | ~~보통~~ **고침** | ~~`verify-backup`이 스크립트 옆 `backups`만 봄~~ → 2026-09-29: Docker의 `/backups` 마운트에서 찾음, 컨테이너 이름 매개변수 추가 (3-5절) | (옛 코드) `verify-backup.ps1:40,158` |
 | B5 | ~~보통~~ **고침** | ~~새벽 백업을 낮에 검사하면 멀쩡한 백업이 「VERIFY FAILED」~~ → 격리 스택에서 **재현한 뒤** 고침: 데이터 차이는 [info], `-Strict`에서만 실패 (3-5절) | (옛 코드) `verify-backup.ps1:197-206` |
 | B11 | ~~높음~~ **고침** | ~~서버 상태 창이 **호스트 포트가 막힌 것**을 모름 — 컨테이너가 healthy면 「정상」~~ → 2026-09-29: 게시 포트마다 호스트에서 연결 확인, Windows 예약이면 그렇게 표시 (3-6절). 이 PC에서 실제로 PACS 4242·9090이 막혀 있었음 | (옛 코드) `server-status.ps1` `Get-ContainerCheck` |
@@ -361,6 +449,7 @@
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
 | U10 | ~~높음~~ **고침(안전장치)** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 제안 A 적용: 재고를 안 고쳤으면 안 건드림, 고쳤는데 그 사이 바뀌었으면 409로 다시 물음 (3-8절). 재고를 움직임으로만 바꾸는 것(B)은 약국 결정 대기 | (옛 코드) `admin.routes.js` DRUGS `stock_qty=$11` |
+| U11 | 보통 | 로그인·설정 서버가 보내는 안내가 **영어로** 뜸 — 「Invalid credentials」「Account is inactive」「This is the last active administrator…」「A record with that code or ID already exists」 등 (목록은 2.12). 화면은 서버 문구를 그대로 보여주고, `api/client.js`(총괄)는 상태 코드를 넘기지 않음. 고치려면 약 재고 안내처럼 고정 문구를 화면에서 비교해 `se_` 키로 바꾸거나, 서버가 코드(`code`)를 같이 보내게 해야 함 | `auth.routes.js`, `admin.routes.js`, `utils/dbError.js`(총괄) |
 
 ## 8. 변경 기록
 
@@ -374,4 +463,5 @@
 | 2026-09-29 | 약 저장이 재고를 덮어쓰는 문제 제안(U10, 약국 H4) | `1874812` |
 | 2026-09-29 | 상태 API가 브리지 heartbeat의 `arrivals_error`를 「확인 필요」로 (PACS P-20, 보내는 쪽은 PACS). 서버 권한 검사(S2) 라우트별 허용 권한표 초안 — 인계 노트 | `9d7e380` |
 | 2026-09-29 | 약 저장 재고 안전장치 (약국 H4 제안 A, U10) | `f44ab9e` |
-| 2026-09-29 | 상용구 편집 창에 프랑스어·영어 문장 칸, 목록을 화면 언어로, 상용구 정렬 고정 | (이 커밋) |
+| 2026-09-29 | 상용구 편집 창에 프랑스어·영어 문장 칸, 목록을 화면 언어로, 상용구 정렬 고정 | `1d3e4fc` |
+| 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀 (탭 표, 직원 목록 칸, 백업 색 띠별 할 일, 병원 정보 칸, 오더 코드 칸, 서버 상태 창 띠·상태 글자, 「이런 안내가 뜰 때」 표). 7절 U11 추가 | (이 커밋) |
