@@ -136,7 +136,7 @@ copy_clean() {
   tar -C "$src" \
     --exclude=.git --exclude=.claude --exclude=node_modules --exclude=dist --exclude=build \
     --exclude=backups --exclude=_pre-update-backups --exclude=storage \
-    --exclude=worklists --exclude=offline \
+    --exclude=worklists --exclude=logs --exclude=offline \
     --exclude=.env --exclude='.env.*' --exclude='*.env' --exclude='*.bak' --exclude='*.log' \
     -cf - . | tar -C "$dst" -xf -
   # The pattern above also drops the template the installer starts from.

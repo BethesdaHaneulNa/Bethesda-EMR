@@ -114,6 +114,7 @@ if [ -n "$INCLUDE_PACS" ] && [ -n "$PACS_OK" ]; then
   echo "    After restoring a backup, run it again: the backup carries the old token."
   echo "  - in Settings -> Order Feed set the viewer address to http://<this machine's address>:9090"
   echo "  - check the ports 9090 and 4242 the same way; imaging devices send to 4242"
-  echo "  - images are NOT in the EMR backup. Plan a copy of $PACS_DST/storage to a second disk"
+  echo "  - images are NOT in the EMR backup. The nightly copy to an external disk is set up"
+  echo "    with the scripts in $PACS_DST (Windows only for now - see the PACS README)"
 fi
 exit 0
