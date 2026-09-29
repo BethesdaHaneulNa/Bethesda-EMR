@@ -5,6 +5,8 @@ import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
+// The change log tab (wiki/03-change-log.md): action sentences and field labels.
+import { AUDIT_ACTIONS, auditActionText, auditChanges } from './settingsAudit.js';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -19,6 +21,12 @@ export default function SettingsPage() {
   var edT = useState(''), editType = edT[0], setEditType = edT[1];
   var spS = useState(false), showPw = spS[0], setShowPw = spS[1];
   var leS = useState(''), loadError = leS[0], setLoadError = leS[1];
+  // Log tab. Opens on the last 7 days; the server pages it (at most 200 a page).
+  function localDay(d){ var p=function(n){return String(n).padStart(2,'0')}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  var auS = useState(null), audit = auS[0], setAudit = auS[1];
+  var auF = useState({from:localDay(new Date(Date.now()-6*86400000)), to:localDay(new Date()), staff_id:'', patient:'', action:''}), auditF = auF[0], setAuditF = auF[1];
+  var auP = useState(1), auditPage = auP[0], setAuditPage = auP[1];
+  var AUDIT_LIMIT = 50;
   var toS = useState(''), toast = toS[0], setToast = toS[1];
   var dcS = useState('All'), drugCat = dcS[0], setDrugCat = dcS[1];
   var ocF = useState('All'), ocFilter = ocF[0], setOcFilter = ocF[1];
@@ -46,6 +54,15 @@ export default function SettingsPage() {
 
   useEffect(function(){ loadAll(); },[]);
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
+  useEffect(function(){ if(activeTab==='audit') loadAudit(auditF, auditPage); },[activeTab, auditPage]);
+  async function loadAudit(f, page){
+    var q=['limit='+AUDIT_LIMIT,'page='+page];
+    ['from','to','staff_id','patient','action'].forEach(function(k){ if(f[k]) q.push(k+'='+encodeURIComponent(f[k])); });
+    try { setAudit(await api.get('/admin/audit?'+q.join('&'))); }
+    catch(e){ setAudit({error:e.message, rows:[], total:0}); }
+  }
+  function auditSearch(){ if(auditPage!==1) setAuditPage(1); else loadAudit(auditF, 1); }
+  function uaf(k,v){ setAuditF(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
   async function loadBackup(){ try { setBackup(await api.get('/backup/status')); } catch(e){ setBackup(null); } }
   // Reload whatever happened: a failure is now shown on the tab itself, not only in the alert.
   async function runBackup(){ setBackupBusy(true); try { var r=await api.post('/backup/run',{}); showToast((t.backupDone||'백업 완료')+' · '+r.file); } catch(e){ alert((t.backupFail||'백업 실패')+': '+seMessage(t,e.message||'')); } await loadBackup(); setBackupBusy(false); }
@@ -278,7 +295,7 @@ export default function SettingsPage() {
 
   var TABS = [
     {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},
-    {key:'phrase',label:'📝 '+t.se_tabPhrases},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'clinic',label:'🏢 '+t.se_tabClinic},
+    {key:'phrase',label:'📝 '+t.se_tabPhrases},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
   ];
 
   return(
@@ -703,6 +720,70 @@ export default function SettingsPage() {
               </div>
               <div style={{fontSize:12,color:t3,marginTop:10,lineHeight:1.6}}>{t.backupNote||'※ 같은 기계의 다른 드라이브는 디스크 고장엔 대비되지만 도난·화재엔 안 됩니다. 가끔 USB 등 다른 곳에 한 벌 더 복사하세요. 복원은 백업 파일을 psql로 가져오면 됩니다(문서 참고).'}</div>
             </>)}
+          </div>):null}
+
+          {/* LOG (change log). Read only - there is nothing here to edit or delete, and
+              the table itself refuses it. Lines are written by each module (writeAudit). */}
+          {activeTab==='audit'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+            <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,background:scBg}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                <span style={{fontWeight:700,fontSize:14,color:tx}}>📜 {t.se_tabAudit}</span>
+                <span style={{fontSize:12,color:t3}}>{t.se_logIntro}</span>
+              </div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                <span style={{fontSize:12,color:t3}}>{t.se_logFrom}</span>
+                <input type="date" value={auditF.from} onChange={function(e){uaf('from',e.target.value)}} style={Object.assign({},IS,{width:140,padding:'4px 6px'})}/>
+                <span style={{fontSize:12,color:t3}}>{t.se_logTo}</span>
+                <input type="date" value={auditF.to} onChange={function(e){uaf('to',e.target.value)}} style={Object.assign({},IS,{width:140,padding:'4px 6px'})}/>
+                <select value={auditF.staff_id} onChange={function(e){uaf('staff_id',e.target.value)}} style={Object.assign({},IS,{width:170,padding:'4px 6px'})}>
+                  <option value="">{t.se_logAllStaff}</option>
+                  {staff.map(function(s){return <option key={s.id} value={s.id}>{s.name} ({s.login_id})</option>;})}
+                </select>
+                <select value={auditF.action} onChange={function(e){uaf('action',e.target.value)}} style={Object.assign({},IS,{width:210,padding:'4px 6px'})}>
+                  <option value="">{t.se_logAllActions}</option>
+                  {Object.keys(AUDIT_ACTIONS).map(function(a){return <option key={a} value={a}>{auditActionText(t,a)}</option>;})}
+                </select>
+                <input value={auditF.patient} onChange={function(e){uaf('patient',e.target.value)}} onKeyDown={function(e){if(e.key==='Enter')auditSearch()}} placeholder={t.se_logPatientQ} style={Object.assign({},IS,{width:200,padding:'4px 6px'})}/>
+                <button onClick={auditSearch} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:4,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:600}}>{t.search}</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:'auto'}}>
+              {!audit?<div style={{padding:20,color:t3}}>{t.loading}</div>:
+               audit.error?<div style={{padding:14,color:'#fca5a5'}}>⚠ {seMessage(t, audit.error)}</div>:
+               !audit.rows.length?<div style={{padding:20,color:t3,fontStyle:'italic'}}>{t.se_logEmpty}</div>:
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                <thead><tr style={{background:'#1e2433'}}>
+                  {[t.se_logWhen,t.se_logWho,t.se_logWhat,t.se_logPatient,t.se_logChange].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize:12,borderBottom:'1px solid '+bd,whiteSpace:'nowrap'}}>{h}</th>})}
+                </tr></thead>
+                <tbody>{audit.rows.map(function(r){
+                  var ch=auditChanges(t, r, {depts:depts});
+                  return <tr key={r.id} style={{borderBottom:'1px solid #1e2433',verticalAlign:'top'}}>
+                    <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
+                    <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>
+                    <td style={{padding:'6px 10px',color:tx}}>{auditActionText(t, r.action)}{r.summary?<div style={{fontSize:12,color:t2}}>{r.summary}</div>:null}</td>
+                    <td style={{padding:'6px 10px',color:tx}}>{r.patient_name||'—'}{r.chart_no?<div style={{fontSize:11,color:'#60a5fa',fontFamily:'monospace'}}>{r.chart_no}</div>:null}</td>
+                    <td style={{padding:'6px 10px',fontSize:12,color:t2}}>
+                      {r.action==='settings.staff.password'?<span style={{fontStyle:'italic',color:t3}}>{t.se_logNoValue}</span>:null}
+                      {ch.map(function(c){return <div key={c.field} style={{marginBottom:2}}>
+                        <span style={{color:t3}}>{c.label}: </span>
+                        {c.kind==='change'?<span><span style={{color:'#fca5a5',textDecoration:'line-through'}}>{c.before}</span> → <span style={{color:'#86efac'}}>{c.after}</span></span>:
+                         c.kind==='add'?<span style={{color:'#86efac'}}>{c.after}</span>:
+                         <span style={{color:'#fca5a5'}}>{c.before} <span style={{color:t3}}>{t.se_logRemoved}</span></span>}
+                      </div>;})}
+                    </td>
+                  </tr>;
+                })}</tbody>
+              </table>}
+            </div>
+            {audit&&audit.total>0?(function(){
+              var pages=Math.max(1,Math.ceil(audit.total/AUDIT_LIMIT));
+              return <div style={{padding:'6px 14px',borderTop:'1px solid '+bd,display:'flex',alignItems:'center',gap:10,fontSize:12,color:t2,background:scBg}}>
+                <span>{(t.se_logTotal||'').replace('{n}',audit.total)}</span><div style={{flex:1}}></div>
+                <button disabled={auditPage<=1} onClick={function(){setAuditPage(auditPage-1)}} style={{background:'#1e2433',color:auditPage<=1?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage<=1?'default':'pointer',fontSize:12}}>{t.se_logPrev}</button>
+                <span>{(t.se_logPage||'').replace('{p}',auditPage).replace('{n}',pages)}</span>
+                <button disabled={auditPage>=pages} onClick={function(){setAuditPage(auditPage+1)}} style={{background:'#1e2433',color:auditPage>=pages?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage>=pages?'default':'pointer',fontSize:12}}>{t.se_logNext}</button>
+              </div>;
+            })():null}
           </div>):null}
 
           {activeTab==='clinic'&&clinic?(<div style={{padding:'16px 20px',maxWidth:580}}>

@@ -219,6 +219,25 @@
 - **손으로 하는 시간** (설치 제외): 약 5분.
 - 로그인 토큰의 서명 키(`.env`의 `JWT_SECRET`)는 새 PC가 새로 만들므로, 모든 사람이 새로 로그인합니다. 정상입니다.
 
+### 2.14 누가 무엇을 고쳤는지 보기 — Journal (기록)
+
+1. **Paramètres → 📜 Journal (기록)**. **Paramètres** 권한이 있는 사람만 보입니다.
+2. 처음에는 **최근 7일**이 나옵니다. 위의 칸으로 거릅니다: **Du / Au (부터 / 까지)** 날짜, **Tout le personnel (모든 직원)** 에서 한 사람, **Tous les types (모든 종류)** 에서 한 종류, **Nom du patient ou n° de dossier (환자 이름 또는 차트번호)** → **Rechercher (검색)**.
+3. 한 줄의 뜻:
+
+   | 칸 | 뜻 |
+   |---|---|
+   | **Quand** (언제) | 고친 시각 — 이 PC의 시각 |
+   | **Qui** (누가) | 고친 사람의 이름과 역할 (그때의 이름) |
+   | **Quoi** (무엇을) | 무슨 일이었는지 한 문장 + 짧은 설명(예: 직원 이름, 검사 이름, 영수 번호) |
+   | **Patient** (환자) | 환자 이름과 차트번호 (환자와 관계없는 일은 —) |
+   | **Modification** (바뀐 것) | 칸마다 **~~전 값~~ → 새 값**. 새로 만든 것은 새 값만, 지운 것은 전 값 옆에 「(supprimé)」 |
+
+4. 남는 것은 **고치거나 지운 일**뿐입니다: 검사 결과를 고침, 끝난 진료 기록을 고침, 처방을 지움, 오더를 지우거나 취소함, 영수를 취소하거나 정정함, 환자 인적사항을 고침, 직원 계정을 만들거나 고치거나 권한·비밀번호를 바꿈. 처음 입력한 것, 본 것, 재고(약국 재고 기록에 따로 있음)는 남지 않습니다.
+5. **비밀번호**는 「Mot de passe changé (비밀번호를 바꿈)」과 누가 바꿨는지만 남고, 값은 어디에도 남지 않습니다.
+6. **이 기록은 누구도 고치거나 지울 수 없습니다** — 관리자도, EMR 자신도. 백업에 함께 들어가고 복원해도 그대로입니다.
+7. 한 쪽에 50줄, 아래 **◀ Précédent / Suivant ▶** 로 넘깁니다.
+
 ## 3. 기능 상세
 
 ### 3-1. 권한 체계
@@ -335,6 +354,17 @@
 - 진료 화면(`Consultation.jsx` `phraseText`, 진료 세션)이 화면 언어에 맞는 문장을 쓰게 되어(`fr` → `text_fr`, `en` → `text_en`, 없으면 `text`), 편집 창에 두 칸을 더했습니다. 설정 목록도 **같은 규칙으로** 보여줘서, 관리자가 보는 문장이 의사가 보는 문장과 같습니다.
 - `GET /api/admin/phrases`의 정렬에 `id`를 더했습니다(`ORDER BY category, sort_order, id`). 시드 문장의 `sort_order`가 모두 0이라, 저장할 때마다 그 줄이 묶음 안에서 자리를 옮겼습니다 — 설정 목록과 진료 화면 목록 모두.
 
+### 3-10. 변경 기록 (2026-09-29)
+
+전체 설계와 모듈별 약속은 **`wiki/03-change-log.md`**(총괄). 표 `audit_log`(마이그레이션 022) · 쓰는 함수 `backend/src/utils/audit.js` `writeAudit()`. 설정의 몫은 세 가지입니다.
+
+- **직원 계정 기록** (`admin.routes.js`): 만들기(`settings.staff.create`, 계정 칸과 권한) · 고치기(`.edit` — 아이디·이름·역할·상태·진료과·전화·이메일 중 바뀐 칸만, **비활성화도 여기**: 상태 active → inactive) · 권한(`.permissions` — 순서만 다른 것은 바뀐 것이 아님, `ALL_PERMS` 순서로 맞춰 비교) · 비밀번호(`.password` — **값 없이** 한 줄). 세 경로(POST·PUT·DELETE `/staff`) 모두 **트랜잭션** 안에서 바꾸고 기록합니다 — 거절(마지막 관리자, 설치 관리자)되거나 실패하면 줄이 남지 않음. PUT은 바꾸기 전 행을 `FOR UPDATE`로 읽어 「전 값」으로 씁니다. 이때 함께 고친 것: **status가 빠진 요청은 지금 상태를 유지**(전에는 NULL — 7절 S6).
+- **읽기 API** `GET /api/admin/audit` (settings 권한): `from`·`to`(YYYY-MM-DD, 병원 날짜 — DB 연결이 병원 시간대), `staff_id`, `patient`(이름·차트번호 일부), `action`(전체 이름 또는 모듈 이름), `page`, `limit`(최대 200) → `{total, page, limit, rows}`, 최신순. **쓰기·고치기·지우기 라우트는 없습니다.**
+- **「Journal」 탭** (`Settings.jsx` + `frontend/src/pages/settingsAudit.js`): 종류 → 문장(`se_act_*`), 칸 이름 → 사람 말(`se_fld_*` 등), 역할·권한·상태·진료과 값 → 화면의 이름. **모르는 칸·종류는 저장된 이름 그대로** 보여서, 다른 모듈이 먼저 기록을 시작해도 읽힙니다 — 새 칸이 생기면 `settingsAudit.js`의 `FIELDS`에 한 줄 + `se_` 키. 지금 들어 있는 칸: 직원, 검사 결과(value·flag·unit), 환자 인적사항 13칸, 영수 취소·정정. 진료(오더·처방·끝난 기록)는 그 세션이 기록을 붙이면 추가.
+- **고칠 수 없음 — TRUNCATE까지** (마이그레이션 **702**, 설정): 022의 트리거는 행 단위(UPDATE·DELETE)라 **TRUNCATE(표 비우기)는 통과**했습니다 — 2026-09-29 복원한 사본에서 실제로 15줄이 비워짐. 같은 함수를 문장 단위 `BEFORE TRUNCATE` 트리거로 붙였습니다. DROP TABLE은 막지 않습니다(백업 복원이 `--clean`으로 표를 지우고 다시 만들기 때문).
+- **백업·복원** (격리 스택에서 확인): 백업 파일에 `audit_log` 데이터와 두 트리거가 들어 있음. 별도 DB에 복원 → 15줄 그대로, UPDATE·DELETE·TRUNCATE 모두 「audit_log is append-only」로 거절. 백업 직후 `verify-backup.ps1 -Strict` → VERIFIED(25개 테이블 모두 같음).
+- **확인**: `backend/test/settings.audit.mjs` (격리 스택 전용, `SE_ADMIN_PW`) 20개 — 만들기 한 줄 / 바뀐 것 없는 저장·순서만 다른 권한 → 줄 없음 / 바뀐 칸만 / 권한 전→후 / 비밀번호 줄에 값 없음, 로그 어디에도 비밀번호·해시 없음 / 거절된 변경 → 줄 없음 / 비활성화 → 상태 줄 / 거르기(종류·모듈·사람·날짜)·쪽 나누기·최대 200. 권한 없는 계정 403은 `settings.access.mjs`.
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -353,6 +383,7 @@
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `clinic` | 로그인 | 목록 (다른 화면도 씀) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
+| `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). 쓰기 라우트 없음 |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
 | `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0 (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
@@ -370,6 +401,7 @@
 - 서버 안내 문구: `backend/src/routes/settings.messages.js`(새) ↔ `frontend/src/pages/settingsMessages.js`(새), 검사 `node backend/test/settings.messages.mjs`
 - 약 재고 시험: `backend/test/settings.drugs.mjs` (격리 스택 전용)
 - **권한 전체 시험**: `backend/test/settings.access.mjs` (격리 스택 전용, 9080 거부) — 역할별 계정 10개(관리자·의사·접수·간호사·약국만·검사만·수납만·통계만·설정만·권한 없음) × 라우트 107개 = 1070건(2026-09-29 약국 재고 6개·접수 이전 내원·같은 환자 찾기 반영). 기대 값은 **S2 표**(인계 노트 2026-09-29 「S2 초안」, 결정대로)를 스크립트 안에 그대로 옮긴 것이고 라우트 파일에서 읽지 **않습니다** — 파일의 가드가 표에서 벗어나면 잡으라고. 칸마다 「막혀야 하는데 통과 / 통과해야 하는데 403」과 401·5xx를 알림. **라우트를 추가하거나 권한을 바꾸면 이 표에도 한 줄.** 쓰기 라우트는 없는 id(999999)로 부름
+- 변경 기록 시험: `backend/test/settings.audit.mjs` (격리 스택 전용)
 
 ### 공용 부품
 
@@ -385,6 +417,7 @@
 | `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸 | 001, 009 |
 | `phrase_dictionary` | 상용구 3개 국어 | 001 |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
+| `audit_log` | 변경 기록 (총괄 설계, 설정은 직원 계정 줄을 쓰고 「Journal」 탭에서 읽음). UPDATE·DELETE·**TRUNCATE** 거절 | 022(총괄), **702**(설정 — TRUNCATE) |
 | `schema_migrations` | 마이그레이션 적용 기록 (`config/migrate.js`, 총괄) | — |
 
 ## 5. 다른 모듈과의 연결
@@ -432,7 +465,7 @@
 | S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
 | S4 | 보통 (**일부 고침**) | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 직원 비밀번호 길이 제한 없음 — **결정 대기**. ~~비밀번호 칸이 가려지지 않음~~ → 2026-09-29: `type=password` + **Afficher/Masquer** 버튼, `autoComplete="new-password"`(브라우저가 관리자 자신의 비밀번호를 직원 칸에 채워 넣지 않게) | `Settings.jsx` 직원 편집 창, `admin.routes.js` POST staff |
 | S5 | 보통 | 로그인 실패 횟수 제한 없음 (LAN 안이라 위험은 제한적) | `auth.routes.js:49` |
-| S6 | 보통 | API로 `status`를 빼고 직원을 저장하면 `status`가 `NULL`이 됨 (CHECK는 NULL을 통과). 그 계정은 로그인 불가, 관리자 수에서도 빠짐. 마지막 관리자면 첫 실행 화면이 다시 열려 **로그인 없이 새 관리자를 만들 수 있음**. 화면은 항상 status를 보내므로 API 직접 호출일 때만 | `admin.routes.js:218,226,241`, `auth.routes.js:9` |
+| S6 | ~~보통~~ **고침** | ~~API로 status를 빼고 직원을 저장하면 NULL~~ → 2026-09-29 빠진 status는 지금 상태 유지 (3-10절, 기록 작업 때 함께) | (옛 코드) `admin.routes.js` PUT staff |
 | S7 | 낮음 | 비밀번호 확인 전에 「Account is inactive」를 알려줘 계정 존재·상태가 드러남 | `auth.routes.js:63` |
 | S8 | ~~낮음~~ **고침 (PACS)** | ~~`GET /api/pacs/config`가 로그인한 누구에게나 브리지 토큰을 줌~~ → S2로 settings 권한만 (`settings.access.mjs`로 확인) | `pacs.routes.js` |
 | S9 | 낮음 | 마지막 관리자 검사가 트랜잭션 없이 이뤄져, 두 관리자를 **동시에** 강등하면 둘 다 통과할 수 있음. 첫 관리자 생성(`/setup`)도 동시 요청이면 둘 생길 수 있음 | `admin.routes.js:229`, `auth.routes.js:24` |
@@ -514,4 +547,5 @@
 | 2026-09-29 | 이 변경 기록 정리, 다른 곳에서 고쳐진 S8·B9·B10 표시 | 위키만 | `4f9f84d` |
 | 2026-09-29 | 권한 시험 표에 새 라우트(이전 내원 접수, 재고 6개, 같은 환자 찾기) | `settings.access.mjs` | `b5e7f4c` · `8887333` |
 | 2026-09-29 | 설정에서 약을 저장해도 재고는 바뀌지 않음 — 재고는 약국 재고 기록으로만, 새 약은 0에서 시작 | `POST·PUT /admin/drugs`가 `stock_qty` 무시, H4 안전장치 삭제 (3-8) | `73b0517` |
-| 2026-09-29 | 의사 역할을 고르면 진료·**약국**이 체크됨(결정). 이미 있는 의사 계정은 그대로 | `permissions.js`·`modules.js` 한 줄씩, 권한 시험 계정 11개 | (이 커밋) |
+| 2026-09-29 | 의사 역할을 고르면 진료·**약국**이 체크됨(결정). 이미 있는 의사 계정은 그대로 | `permissions.js`·`modules.js` 한 줄씩, 권한 시험 계정 11개 | `8ba7a93` |
+| 2026-09-29 | 변경 기록: 직원 계정 기록, 읽기 API, 설정의 「Journal」 탭, TRUNCATE도 거절(702), 백업·복원 뒤에도 그대로. 빠진 status는 NULL이 아니라 지금 상태(S6) | `writeAudit` 3곳, `GET /admin/audit`, `settingsAudit.js`, `settings.audit.mjs` (3-10) | (이 커밋) |

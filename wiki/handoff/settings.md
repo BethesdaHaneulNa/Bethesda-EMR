@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 변경 기록(로그): 직원 계정 기록 · 읽기 API · 「Journal」 탭 · TRUNCATE 막기 (총괄 지시 3)
+
+- **상태**: 확인 요청 (a~e 모두 끝남)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`8ba7a93` 위)
+- **한 일**:
+  - (a) `admin.routes.js` POST·PUT·DELETE `/staff`를 트랜잭션으로 바꾸고 `writeAudit` — `settings.staff.create` · `.edit`(바뀐 칸만, 비활성화 포함) · `.permissions`(순서만 다른 것은 제외) · `.password`(값 없음). 거절·실패하면 줄 없음. 함께: **빠진 status는 지금 상태 유지(S6)**.
+  - (b) `GET /api/admin/audit` (settings): 날짜·직원·환자·종류(전체 이름 또는 모듈)로 거르기, 최신순, 쪽(최대 200). 쓰기 라우트 없음.
+  - (c) 설정 「📜 Journal / 기록」 탭 — 언제·누가·무엇을·환자·전→후. 문장·칸 이름은 새 파일 `frontend/src/pages/settingsAudit.js`(모르는 칸은 이름 그대로). 총괄이 알려 준 검사·환자·영수 칸 이름 넣음. **진료 쪽(`d7cee75`) 칸은 아직 안 넣음 — 재부팅 뒤.**
+  - (d) **발견·고침**: 022 트리거가 행 단위라 **TRUNCATE로 기록 전체가 비워졌음**(복원 사본에서 15줄 → 0). 마이그레이션 **`702_settings_audit_no_truncate.sql`**(트리거 하나 추가, 데이터 변경 없음)로 막음. 백업에 `audit_log`·트리거 둘 다 들어 있고, 별도 DB에 복원 뒤 UPDATE·DELETE·TRUNCATE 모두 거절·15줄 그대로. `verify-backup.ps1 -Strict` → VERIFIED.
+  - (e) `settings.access.mjs`에 `GET /admin/audit`[settings]·`POST /consultations/order/:id/cancel`[consultation] → 109 × 11 = **1199건 모두 표와 같음**.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/sql/702_settings_audit_no_truncate.sql`(새) · `frontend/src/pages/Settings.jsx`(Journal 탭) · `frontend/src/pages/settingsAudit.js`(새) · `backend/test/settings.audit.mjs`(새) · `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(2.14 새, 3-10 새, 4절, 7절 S6, 8절)
+- **공용 파일 변경**: i18n `se_` 키 56개(탭·문장 `se_act_*`·칸 `se_fld_*`). `utils/audit.js`·022는 안 건드림.
+- **DB 마이그레이션**: `702_settings_audit_no_truncate.sql` — `audit_log`에 `BEFORE TRUNCATE` 문장 트리거(022의 함수 재사용). 행을 바꾸지 않음, 재실행 안전.
+- **확인한 방법**: `node --check`, `npm run build`, `settings.audit.mjs` 20개 통과, `settings.access.mjs` 1199건, 화면(프랑스어·한국어 Journal, 권한 줄 「접수, 수납 → 접수, 통계」), 위 (d).
+- **총괄 확인 요청**: 702는 총괄 표(`audit_log`)에 트리거를 더합니다 — 설계에 맞는지 봐 주세요. DROP TABLE은 복원 때문에 막지 않음.
+- **다음 할 일 (재부팅 뒤, 순서)**: ① 포장 단위 `pack_unit`·`pack_label`(admin POST·PUT, 025) ② Journal 탭에 진료 칸 이름(`d7cee75`) ③ 자기 비밀번호 바꾸기(`POST /api/auth/password` + 상단바, 로그 `.password`) ④ 비활성 직원 되살리기(U2) ⑤ 11월 설치 대비 처음부터 끝까지 복원 연습·2.13 갱신·시험 데이터 정리 선택지 표.
+
 ## 2026-09-29 — 의사 기본 권한에 약국 (총괄 지시 2, 실장님 결정)
 
 - **상태**: 확인 요청 (기존 계정 처리는 **보류 — 총괄 확인 필요**)
