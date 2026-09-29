@@ -36,14 +36,8 @@ function translatesEverywhere(text) {
   return null;
 }
 
-// Every fixed message, except the stock one: that one carries a number and is handled
-// in Settings.jsx itself, so check it is spelled the same there.
+// Every fixed message.
 for (const [name, text] of Object.entries(MSG)) {
-  if (name === 'STOCK_CHANGED') {
-    const src = fs.readFileSync(path.join(root, 'frontend/src/pages/Settings.jsx'), 'utf8');
-    check('MSG.STOCK_CHANGED spelled the same in Settings.jsx', src.includes(JSON.stringify(text).slice(1, -1)));
-    continue;
-  }
   const bad = translatesEverywhere(text);
   check('MSG.' + name, !bad, bad);
 }

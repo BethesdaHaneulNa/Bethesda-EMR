@@ -2,6 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약 저장이 재고를 쓰지 않음 (총괄 지시 1)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a7b40e8`을 ff로 당긴 뒤)
+- **한 일**: 약국의 재고 칸 읽기 전용(`14ff4be`)에 맞춰 서버 쪽 — `POST /api/admin/drugs`는 재고 **0**으로 시작(요청의 `stock_qty` 무시, 빈 최소 재고는 10), `PUT /api/admin/drugs/:id`는 `stock_qty`·`stock_expected`를 **조용히 무시**(총괄 추천대로 — 옛 화면이 열린 채 저장해도 막히지 않게). 오전의 H4 안전장치(`stock_expected` + 409, 행 잠금 트랜잭션)는 필요 없어져 지웠고, 화면의 409 처리·`STOCK_CHANGED` 상수·번역 키 `se_stockChanged`도 지움. `settings.drugs.mjs`를 새 동작에 맞게 다시 씀.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js`(`STOCK_CHANGED` 삭제) · `frontend/src/pages/Settings.jsx`(`saveEdit` 약 부분만 — 약품 탭 화면은 안 건드림) · `backend/test/settings.drugs.mjs` · `backend/test/settings.messages.mjs` · `wiki/modules/settings.md`(2.12, 3-8 다시 씀, 4절, 7절 U10, 8절)
+- **공용 파일 변경**: i18n — `se_stockChanged` 삭제(ko·en·fr, `se_` 블록 안)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`, `settings.messages.mjs` 통과. 격리 스택 `settings.drugs.mjs` 9개 통과(위키 3-8). 화면: 프랑스어 약품 편집에서 단가만 바꿔 저장 → 알림 없이 「Enregistré」, DB 단가 4600·재고 50 그대로.
+- **다른 세션에 부탁**: **약국** — `backend/test/pharmacy.stock.mjs` 132행 「settings saves stock directly (until settings stops writing it)」와 그 뒤 「outside change bridged」 두 확인은 이제 실패합니다(설정이 재고를 안 쓰므로 PUT 뒤 재고가 그대로). 약국 시험을 「설정 저장이 재고를 바꾸지 않음」으로 바꿔 주세요. `moveStock`의 「outside」 연결 줄은 옛 DB·직접 SQL 대비로 남겨도 무방.
+
 ## 2026-09-29 — S2 표에 새 라우트 2개 · 날짜 SQL 확인
 
 - **상태**: 확인 요청
