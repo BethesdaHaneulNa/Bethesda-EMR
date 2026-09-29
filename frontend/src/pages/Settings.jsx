@@ -5,6 +5,7 @@ import { TopBar } from '../components/TopBar.jsx';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
+import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 
@@ -412,7 +413,7 @@ export default function SettingsPage() {
               <tbody>{filteredDrugs.map(function(d){
                 return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
                   <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
-                  <td style={{padding:'4px 6px',color:tx}}>{d.name}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'#fbbf24',border:'1px solid #f59e0b60',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
+                  <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'#fbbf24',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'#fbbf24',border:'1px solid #f59e0b60',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
                   <td style={{padding:'4px 6px',color:t2,fontFamily:'monospace',fontSize: 12}}>{d.default_dose}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{d.default_freq}</td>
@@ -967,10 +968,20 @@ export default function SettingsPage() {
                 <Fld label={t.ph_genericName}><input value={editItem.generic_name||''} onChange={function(e){ue('generic_name',e.target.value)}} style={IS}/></Fld>
                 <Fld label={t.ph_nameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
               </div>
+              {/* Form and the "to check" list come with the imported drug list (403) and are
+                  only shown here; the points are marked checked in the pharmacy Stock tab. */}
+              {editItem.dosage_form ? <div style={{fontSize: 13,color:'#94a3b8'}}>{t.ph_form}: <b style={{color:tx}}>{formLabel(t,editItem.dosage_form)}</b></div> : null}
+              {checkList(editItem).length ? <div style={{fontSize: 13,color:checkOpen(editItem)?'#fbbf24':'#64748b',border:'1px solid '+(checkOpen(editItem)?'#f59e0b60':bd2),borderRadius:4,padding:'5px 8px'}}>
+                <div style={{fontWeight:700}}>{checkOpen(editItem)?'⚠ ':'✓ '}{t.ph_checkTitle}</div>
+                <ul style={{margin:'2px 0 0',paddingLeft:18}}>{checkList(editItem).map(function(c,i){return <li key={i}>{checkText(t,c)}</li>;})}</ul>
+                {checkOpen(editItem) ? <div style={{color:'#94a3b8',marginTop:2}}>{t.ph_checkWhere}</div> : null}
+              </div> : null}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
                 <Fld label={t.colDose}><input value={editItem.default_dose||''} onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/></Fld>
-                <Fld label={t.colFreq}><input type="number" value={editItem.default_freq||1} onChange={function(e){ue('default_freq',Number(e.target.value))}} style={IS}/></Fld>
-                <Fld label={t.colDays}><input type="number" value={editItem.default_days||1} onChange={function(e){ue('default_days',Number(e.target.value))}} style={IS}/></Fld>
+                {/* Empty stays empty: the imported drugs (403) come without times or days,
+                    and showing "1" here looked like a value the doctor would get. */}
+                <Fld label={t.colFreq}><input type="number" value={editItem.default_freq==null?'':editItem.default_freq} onChange={function(e){ue('default_freq',e.target.value===''?null:Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.colDays}><input type="number" value={editItem.default_days==null?'':editItem.default_days} onChange={function(e){ue('default_days',e.target.value===''?null:Number(e.target.value))}} style={IS}/></Fld>
                 <Fld label={t.ph_colDirections}><input value={editItem.default_route||''} onChange={function(e){ue('default_route',e.target.value)}} style={IS}/></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1.8fr 1.1fr 0.8fr 1fr',gap:6}}>

@@ -1,6 +1,6 @@
 # 약국 (Pharmacy)
 
-> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 재고 기록 ①②③ 끝 — 설정 약품 탭 재고 칸 읽기 전용, 105줄 가져오기(실장님 검토 중) 남음
+> **담당**: 약국 세션 · 브랜치 `session/pharmacy` · **마지막 갱신**: 2026-09-29 · **상태**: 재고 기록 ①②③ 끝 · 포장 단위 약 끝에서 끝까지 확인 · 옛 재고 목록 가져오기(403) 만듦 — 실행 중 EMR에는 총괄이 올림(3.11)
 
 ## 1. 이 모듈이 하는 일
 
@@ -114,6 +114,10 @@
   - 「Registre commencé le …」(기록 시작) 표시가 있는 약은 그 달 중간부터 기록이 있는 약입니다. 기록을 시작하기 전 달은 비어 있습니다.
   - 약국 권한이 있는 계정이 이 화면을 씁니다. 통계 권한만 있는 계정도 서버에서는 볼 수 있게 해 두었습니다(통계 화면 연결은 나중).
 - 의사 계정도 약국 권한이 있으면 이 탭을 쓸 수 있습니다.
+- **옛 재고 프로그램에서 가져온 약**(코드 `MED-…`): 재고는 2026-05-15 목록의 수량으로 시작합니다(기록 표 첫 줄 **Ouverture · Importé (liste du 15/05/2026)**). 현지에서 세어 보고 **Inventaire** 로 고치세요.
+  - 이름 앞에 **⚠** 가 붙은 약은 가져올 때 **확인할 점**이 남은 약입니다. 분류 고르기 맨 위의 **⚠ Médicaments à vérifier (확인 필요한 약)** 으로 그 약만 볼 수 있습니다.
+  - 약을 누르면 머리 아래에 **À vérifier sur place (현지에서 확인할 점)** 목록이 나옵니다(예: « Quantité différente de la note d'origine — à compter — 60캡슐*66 ≈ 3960 ≠ 90 » = 옛 목록의 원래 표기로는 약 3960인데 수량 칸은 90).
+  - 다 보았으면 **✓ Vérifié (확인했음)** → 확인 창 **OK**. ⚠ 가 사라지고 「Vérifié par (누가) · (언제)」가 남습니다. **재고 숫자는 이 버튼으로 바뀌지 않습니다** — 센 수는 **Inventaire** 로 넣습니다.
 
 ### 2.7 약품 등록 — Paramètres (설정)
 
@@ -286,6 +290,20 @@
 - 통계 화면에 둘지는 나중(통계 세션이 같은 API를 부르면 됨).
 - 확인(격리 스택): ZINC의 앞 기록 7줄을 8월로 옮겨(격리 DB만, 8/31 23:59:59 한 줄과 9/1 0:00 한 줄 포함) → 8월: 기록 시작 8/10 · 월초 315 · 입고 51 · 조정 −7 · 폐기 3 · 월말 356, 9월: 월초 356 · 입고 253 · 조제 2 · 조정 −28 · 폐기 11 · 월말 568 — 손 계산과 같음. 7월은 빈 보고서. 9월 월말 = 모든 약의 지금 재고. 권한: 통계 전용 200 · 창구 403 · 의사(진료만) 403 · 잘못된 달 400. CSV 첫 바이트 `EF BB BF`.
 
+### 3.11 옛 재고 목록 가져오기 (마이그레이션 403, 2026-09-29 결정)
+
+- **무엇**: 옛 재고 프로그램의 2026-05-15 목록(105줄, 같은 코드의 묶음을 합쳐 **101개 약**)을 약 표에 넣고, 시드의 **예시 약 25개를 숨김**(`is_active = false`, 지우지 않음). 결정: `wiki/handoff/coordinator.md` 「가져올 약 결정」.
+- **만드는 법**: `node wiki/reference/drug-import-sql.js` → `backend/sql/403_pharmacy_import_mission_stock.sql`(값이 박힌 정적 SQL, 손으로 고치지 않음 — 표나 스크립트를 고치고 다시 만듦). 입력은 검토표 `wiki/reference/drug-import-review.csv`(`drug-import-review.js`가 옛 목록에서 만듦). 스크립트는 쓰기 전에 검사하고(코드 중복·예시 코드와 겹침·길이·17가지 분류·제형·용법 코드·수량 정수·포장 단위 값·「채울 칸」이 비었는지) 하나라도 걸리면 파일을 쓰지 않습니다.
+- **넣는 값**: 코드(`MED-0001`…) · 이름 · 성분 · **제형**(새 칸 `dosage_form`, 검토표의 고친 값) · 분류 · 횟수와 용법 코드(옛 용법이 코드 하나를 분명히 적은 줄만, 56줄) · 재고(목록의 수량 합계, 합 106,467) · 포장 단위(병 7 · 튜브 3 · 개 2). **비움**: 하루 총량·일수(NULL — 진료 화면이 「하루 총량 없음」을 띄움), 가격 0(「가격 없음」), 최소 재고 0.
+- **재고 기록**: 약마다 `opening` 한 줄, 메모 `Imported from the old stock program (count of 2026-05-15)`(화면 「가져오기(2026-05-15 자료)」) — 실사 조정과 섞이지 않습니다.
+- **확인할 점**(`drug.import_check` JSONB, 64개 약): 검토표의 「확인할 점」을 종류와 자료로 바꿔 넣습니다 — `[{k, d}]`. 종류(번역 `ph_chk_*`): `qty` 수량이 원래 표기와 다름(47개 약 — 결정문의 37과 다름, 인계 노트) · `dup` 같은 이름 다른 코드(13) · `form` 제형 고침(10) · `review` 옛 메모(8) · `posology` 옛 용법 「1_2」(5) · `name` 이름(4) · `topical` 정인데 외용일 수 있음(4, 포장 단위 표시 없이) · `malaria` 말라리아약(2) · `packlabel` 포장 단위 말(2) · `zero` 수량 0(1). 멈추지 않고 표시만 합니다(결정).
+  - 보이는 곳: 약국 Stock 탭(목록 ⚠, 「확인 필요한 약」 거르기, 머리 아래 목록과 **Vérifié** 단추), 설정 약품 탭(목록 ⚠ — 마우스를 올리면 목록, 편집 창에 목록). 표시 규칙은 `frontend/src/documents/drug-info.js`.
+  - **Vérifié** = `POST /stock/:drugId/check-done`(권한 `canStock`): `import_check_done_at`·`_by`를 적습니다. 목록은 지우지 않고 남깁니다(누가·언제 확인했는지와 함께). 재고 숫자는 바꾸지 않습니다. 이미 확인한 약 → 409 `ERR_NOTHING_TO_CHECK`.
+  - 변경 기록 탭(감사 로그)에는 남기지 않습니다 — 그 목록(`utils/audit.js` `ACTIONS`)은 설정 세션 파일이라, 대신 약 줄에 누가·언제를 둡니다.
+- **다시 돌려도 안전**: 칸은 `IF NOT EXISTS`, 약은 `ON CONFLICT (code) DO NOTHING`, opening은 기록이 하나도 없는 약에만, 숨기기는 아직 보이는 약에만. 마이그레이션 실행기가 파일을 한 트랜잭션으로 감쌉니다.
+- **약속처방은 건드리지 않습니다.** 예시 약을 가리키는 세트 줄(Malaria Workup: ACT01·PCM500, Diarrhea / GE: ORS·METRO)은 진료 화면이 건너뛰고 « Non ajouté(s) — retiré(s) de la liste des médicaments : … » 안내를 띄웁니다(진료 세션 `drug_active`, 확인함). 검사 줄은 그대로 들어갑니다.
+- 숨긴 예시 약: 약국·수납·통계의 옛 처방은 그대로 보이고, 조제 대기 중인 옛 처방도 조제됩니다(조제는 `is_active`를 보지 않음). 진료 약 검색·Stock 탭·설정 목록에서는 사라집니다. 월말 보고서에는 기록이 있는 달에만(3.10).
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -303,7 +321,7 @@
 |---|---|
 | `GET /pending` · `GET /patient/:patientId/pending` · `GET /completed` · `GET /patient/:patientId/recent-rx` | `pharmacy` |
 | `PUT /consultations/:id/dispense` · `PUT /prescription/:id/dispense-type` | `pharmacy` |
-| `GET /stock` · `GET /stock/:drugId/movements` · `POST /stock/:drugId/receive` · `POST /stock/:drugId/count` · `POST /stock/:drugId/discard` | `pharmacy` · `consultation` · `settings` |
+| `GET /stock` · `GET /stock/:drugId/movements` · `POST /stock/:drugId/receive` · `POST /stock/:drugId/count` · `POST /stock/:drugId/discard` · `POST /stock/:drugId/check-done` | `pharmacy` · `consultation` · `settings` |
 | `GET /stock/report` | `pharmacy` · `settings` · `stats` |
 
 기본 권한으로 `pharmacy`를 가진 역할: 약국, 간호사, 관리자(`middleware/permissions.js`).
@@ -353,6 +371,9 @@
 | `is_active` | boolean | 설정의 「삭제」는 `false`로 바꿀 뿐입니다 |
 | `pack_unit` | boolean false | **포장 단위 약**(병·튜브로 줌) — `025_pharmacy_pack_unit.sql` |
 | `pack_label` | varchar(10) | 그 단위: bottle · tube · inhaler · unit (`CHECK`) |
+| `dosage_form` | varchar(30) | 제형 — 가져온 약만(403): Tablet · Capsule · Syrup · Suppository · Powder / Sachet · Vaginal / Gel · Topical · Ophthalmic. 화면 번역 `ph_form_*`. 설정 API는 아직 이 칸을 받지 않음(보기만) |
+| `import_check` | jsonb | 가져올 때 남은 확인할 점 `[{k, d}]`(3.11). NULL = 없음 |
+| `import_check_done_at` / `import_check_done_by` | timestamptz / staff id | 현지에서 「확인했음」을 누른 때·사람 |
 
 **`prescription`** (`001_schema.sql:159`, `012_dispense_type.sql`)
 
@@ -409,6 +430,7 @@
 - 탭 밖의 글자(왼쪽 탭 이름, 편집 창 제목, 삭제 확인)는 설정 세션이 번역했습니다(`se_tabDrugs`, `se_newTitle`, `se_confirmDelete`).
 - 재고: 편집 창의 재고 칸은 **읽기 전용**, 새 약은 **0**으로 시작합니다(2026-09-29, 약국 화면 쪽). 재고는 약국 「Stock」 탭에서만 바뀌고 모두 기록에 남습니다(3.8절). 서버(`admin.routes.js` POST·PUT이 재고를 안 쓰게)는 설정 세션이 함께 바꿉니다. 그 전에도 편집 창이 재고를 보내지 않으므로(바뀌지 않은 재고는 `saveEdit`가 빼고 보냄) 설정 저장으로 재고가 바뀌지 않습니다. H4 안전장치(`stock_expected`)는 설정 세션 작업 뒤 필요 없어짐.
 - **포장 단위 약**(H2-B, 2026-09-29): 편집 창 아래 체크 + 단위(`PACK_LABELS` bottle · tube · inhaler · unit, 번역 `ph_pack_*`). 켜면 단위 기본값 bottle, 끄면 단위 비움. 목록 이름 옆 표시. 저장은 `pack_unit`·`pack_label`을 보냄 — 서버(`admin.routes.js`)가 두 칸을 받는 것은 설정 세션 작업. 처방 줄이 이 값을 복사하고(진료), 총량 대신 의사가 적은 병·개 수를 저장합니다(설계: 인계 노트 「H2 포장 단위 약」).
+- **가져온 약**(403, 3.11): 목록 이름 앞 ⚠(확인할 점이 남음, 마우스를 올리면 목록)와 이름 옆 제형. 편집 창에 「제형」과 확인할 점 목록(보기만 — 「확인했음」은 약국 Stock 탭에서). 횟수·일수가 빈 약은 편집 창에서도 **빈 칸**으로 보입니다(전에는 비어도 1로 보였음. 저장해도 빈 값은 그대로 저장됐지만 화면이 틀린 값을 보였음).
 
 API — 설정 세션 파일 `admin.routes.js`:
 
@@ -484,7 +506,8 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | 시험 스크립트가 자기 시험 약(`TST-`)을 씀 | `481f242` |
 | 2026-09-29 | 월말 보고서: 숨긴 약은 그 달 움직임이 있을 때만 | `8361494` |
 | 2026-09-29 | L6: 약품 탭에 성분·영어 이름·최소 재고 입력, 목록 빨간색을 최소 재고 기준으로 | `d6820f8` |
-| 2026-09-29 | 포장 단위 약 끝에서 끝까지 확인(H2), 단위를 바꾼 약은 바로 실사(2.7), 편집 창 분류 칸 폭 | 이 줄의 커밋 |
+| 2026-09-29 | 포장 단위 약 끝에서 끝까지 확인(H2), 단위를 바꾼 약은 바로 실사(2.7), 편집 창 분류 칸 폭 | `8638444` |
+| 2026-09-29 | 옛 재고 목록 가져오기(403): 101개 약·예시 25개 숨김·opening 기록·확인할 점 표시와 「확인했음」, 제형 칸, 설정 편집 창의 빈 횟수·일수 | 이 줄의 커밋 |
 | 2026-09-29 | 설정 약품 탭: 재고 칸 읽기 전용·새 약 0, 「경로」 → 「용법」 | `14ff4be` |
 | 2026-09-29 | H2-B ①: 포장 단위 약 칸(마이그레이션 025), 약품 탭 체크·단위 | `b335836` (develop `ce5d938`) |
 | 2026-09-29 | H2-B ②: 포장 단위 줄 표시(rx-dosing · 약국 화면 · 원외 처방전), 대기·완료 목록에 pack 칸 | (이 커밋) |
