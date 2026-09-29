@@ -901,6 +901,11 @@ export default {
   se_sys_pacsAddress_off: "적혀 있지 않음",
   se_sys_pacsAddress_oldPort: "옛 포트 {old} — 설정 → 오더 연동",
   se_sys_unknown: "확인할 수 없음: {error}",
+  se_setColQty: "수량",
+  se_setNeedDose: "일총투여와 일수를 적어 주세요 — 비어 있으면 세트로 넣은 처방이 「총량 없음」으로 들어갑니다: {names}",
+  se_setNeedDoseShort: "일총투여·일수",
+  se_setBadNumber: "숫자를 확인해 주세요 (일총투여 0–1000, 횟수 1–24, 일수 1–365 정수, 용법 10자까지, 병·튜브 수는 1 이상 정수): {names}",
+  se_setBadNumberShort: "숫자 확인",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

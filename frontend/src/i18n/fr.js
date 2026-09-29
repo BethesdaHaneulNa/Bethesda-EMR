@@ -901,6 +901,11 @@ export default {
   se_sys_pacsAddress_off: "Non renseignées",
   se_sys_pacsAddress_oldPort: "Ancien port {old} — Paramètres → Flux d'ordres",
   se_sys_unknown: "Impossible à vérifier : {error}",
+  se_setColQty: "Qté",
+  se_setNeedDose: "Indiquez la dose par jour et le nombre de jours - sinon la prescription venue de cet ensemble n'a pas de total : {names}",
+  se_setNeedDoseShort: "dose/j, jours",
+  se_setBadNumber: "Vérifiez les nombres (dose/j 0–1000, fois 1–24, jours 1–365 entiers, posologie 10 caractères au plus, nombre de flacons entier à partir de 1) : {names}",
+  se_setBadNumberShort: "nombre à vérifier",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",
