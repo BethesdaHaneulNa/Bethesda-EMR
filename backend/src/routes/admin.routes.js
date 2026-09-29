@@ -4,6 +4,7 @@ const { authMiddleware, permMiddleware, ALL_PERMS } = require('../middleware/aut
 const { sendDbError } = require('../utils/dbError');
 // Messages shown to people - translated by the screen; see settings.messages.js.
 const { MSG, fieldMsg } = require('./settings.messages');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
 // than a 500 carrying the constraint name.
@@ -221,83 +222,180 @@ router.get('/staff', permMiddleware('settings'), async (req, res) => {
   } catch (err) { sendDbError(res, err); }
 });
 
+// ── Change log for staff accounts (decided 2026-09-29, wiki/03-change-log.md) ──
+// Account created, account edited (name, login id, role, status, department, contact),
+// permissions changed, password changed. Each is written inside the same transaction
+// as the change, so a refused or failed save leaves no line. The password is never in
+// a line - only that it was changed, by whom and for whom (utils/audit.js also drops
+// any key that looks like a secret).
+const STAFF_FIELDS = ['login_id', 'name', 'role', 'status', 'department_id', 'phone', 'email'];
+function staffFields(row) {
+  const o = {};
+  STAFF_FIELDS.forEach(k => { o[k] = row[k] === undefined ? null : row[k]; });
+  return o;
+}
+// Same permissions in another order is not a change.
+function permsInOrder(list) {
+  return ALL_PERMS.filter(p => (list || []).indexOf(p) >= 0);
+}
+function staffLabel(row) { return row.name ? row.name + ' (' + row.login_id + ')' : row.login_id; }
+
 router.post('/staff', permMiddleware('settings'), async (req, res) => {
+  const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
+  if (!String(login_id || '').trim()) return res.status(400).json({ error: MSG.LOGIN_ID_REQUIRED });
+  if (!String(password || '')) return res.status(400).json({ error: MSG.PASSWORD_REQUIRED });
+  if (!ROLES.includes(String(role))) {
+    return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
+  }
+  const client = await pool.connect();
   try {
-    const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
-    if (!String(login_id || '').trim()) return res.status(400).json({ error: MSG.LOGIN_ID_REQUIRED });
-    if (!String(password || '')) return res.status(400).json({ error: MSG.PASSWORD_REQUIRED });
-    if (!ROLES.includes(String(role))) {
-      return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
-    }
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       `INSERT INTO staff (login_id, password_hash, name, role, permissions, department_id, phone, email, status)
        VALUES ($1, crypt($2, gen_salt('bf')), $3, $4, $5, $6, $7, $8, $9) RETURNING id, login_id, name, role, permissions, department_id, phone, email, status`,
       [login_id, password, name, role, Array.isArray(permissions) ? permissions : [], department_id, phone, email, status || 'active']
     );
-    res.status(201).json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+    const row = result.rows[0];
+    await writeAudit(client, req, {
+      action: ACTIONS.STAFF_CREATE, entity: 'staff', entity_id: row.id, summary: staffLabel(row),
+      before: null, after: Object.assign(staffFields(row), { permissions: permsInOrder(row.permissions) }),
+    });
+    await client.query('COMMIT');
+    res.status(201).json(row);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    sendDbError(res, err);
+  } finally { client.release(); }
 });
 
 router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
+  const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
+  if (!ROLES.includes(String(role))) {
+    return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
+  }
+  let perms = Array.isArray(permissions) ? permissions : [];
+  const client = await pool.connect();
   try {
-    const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
-    if (!ROLES.includes(String(role))) {
-      return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
-    }
-    let perms = Array.isArray(permissions) ? permissions : [];
+    await client.query('BEGIN');
+    // The row as it was, locked: the log needs the "before", and two saves of the same
+    // account at once should not interleave.
+    const cur = await client.query(
+      'SELECT id, login_id, name, role, status, department_id, phone, email, permissions FROM staff WHERE id = $1 FOR UPDATE',
+      [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const was = cur.rows[0];
 
-    const cur = await pool.query('SELECT id, login_id FROM staff WHERE id = $1', [req.params.id]);
-    if (sentMissing(res, cur)) return;
-
-    let effLogin = login_id, effRole = String(role), effStatus = status;
-    if (cur.rows[0].login_id === BOOTSTRAP_ADMIN_LOGIN) {
+    // A request without status keeps the current one. It used to write NULL, which the
+    // CHECK lets through, and an account with no status can neither log in nor count as
+    // an administrator (wiki 7, S6).
+    let effLogin = login_id, effRole = String(role);
+    let effStatus = (status === undefined || status === null || status === '') ? was.status : status;
+    if (was.login_id === BOOTSTRAP_ADMIN_LOGIN) {
       // Fixed, not merely discouraged - see BOOTSTRAP_ADMIN_LOGIN. Name, password,
       // phone, email and department stay editable; the way back in does not.
-      effLogin = cur.rows[0].login_id;
+      effLogin = was.login_id;
       effRole = 'admin';
       effStatus = 'active';
       perms = ALL_PERMS.slice();
-    } else if (effRole !== 'admin' || perms.indexOf('settings') < 0 || String(status) === 'inactive') {
+    } else if (effRole !== 'admin' || perms.indexOf('settings') < 0 || String(effStatus) === 'inactive') {
       // Not the bootstrap account, but it can still be the only one left holding the
       // key - the account may simply have been renamed.
       if (!(await otherSettingsAdminExists(req.params.id))) {
-        return res.status(400).json({
-          error: MSG.LAST_ADMIN,
-        });
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: MSG.LAST_ADMIN });
       }
     }
 
     let query, params;
     if (password) {
-      query = `UPDATE staff SET login_id=$1, password_hash=crypt($2, gen_salt('bf')), name=$3, role=$4, permissions=$5, department_id=$6, phone=$7, email=$8, status=$9, updated_at=NOW() WHERE id=$10 RETURNING id, login_id, name, role, permissions, department_id, phone, status`;
+      query = `UPDATE staff SET login_id=$1, password_hash=crypt($2, gen_salt('bf')), name=$3, role=$4, permissions=$5, department_id=$6, phone=$7, email=$8, status=$9, updated_at=NOW() WHERE id=$10 RETURNING id, login_id, name, role, permissions, department_id, phone, email, status`;
       params = [effLogin, password, name, effRole, perms, department_id, phone, email, effStatus, req.params.id];
     } else {
-      query = `UPDATE staff SET login_id=$1, name=$2, role=$3, permissions=$4, department_id=$5, phone=$6, email=$7, status=$8, updated_at=NOW() WHERE id=$9 RETURNING id, login_id, name, role, permissions, department_id, phone, status`;
+      query = `UPDATE staff SET login_id=$1, name=$2, role=$3, permissions=$4, department_id=$5, phone=$6, email=$7, status=$8, updated_at=NOW() WHERE id=$9 RETURNING id, login_id, name, role, permissions, department_id, phone, email, status`;
       params = [effLogin, name, effRole, perms, department_id, phone, email, effStatus, req.params.id];
     }
-    const result = await pool.query(query, params);
-    if (sentMissing(res, result)) return;
-    res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+    const now = (await client.query(query, params)).rows[0];
+
+    const common = { entity: 'staff', entity_id: now.id, summary: staffLabel(now) };
+    await writeAudit(client, req, Object.assign({ action: ACTIONS.STAFF_EDIT, before: staffFields(was), after: staffFields(now) }, common));
+    await writeAudit(client, req, Object.assign({ action: ACTIONS.STAFF_PERMISSIONS,
+      before: { permissions: permsInOrder(was.permissions) }, after: { permissions: permsInOrder(now.permissions) } }, common));
+    // No values at all: only that it happened. An admin changing their own password
+    // is logged the same way (the person and the account are then the same).
+    if (password) await writeAudit(client, req, Object.assign({ action: ACTIONS.STAFF_PASSWORD }, common));
+
+    await client.query('COMMIT');
+    res.json(now);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    sendDbError(res, err);
+  } finally { client.release(); }
 });
 
 router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     // Deactivating is the other way to lock everyone out, so it is gated the same way
     // as the role and permission edits above.
-    const cur = await pool.query('SELECT id, login_id, role, permissions FROM staff WHERE id = $1', [req.params.id]);
-    if (sentMissing(res, cur)) return;
-    if (cur.rows[0].login_id === BOOTSTRAP_ADMIN_LOGIN) {
+    const cur = await client.query(
+      'SELECT id, login_id, name, role, status, department_id, phone, email, permissions FROM staff WHERE id = $1 FOR UPDATE',
+      [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const was = cur.rows[0];
+    if (was.login_id === BOOTSTRAP_ADMIN_LOGIN) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: MSG.SETUP_ADMIN_KEPT });
     }
-    const held = cur.rows[0].role === 'admin' && (cur.rows[0].permissions || []).indexOf('settings') >= 0;
+    const held = was.role === 'admin' && (was.permissions || []).indexOf('settings') >= 0;
     if (held && !(await otherSettingsAdminExists(req.params.id))) {
-      return res.status(400).json({
-        error: MSG.LAST_ADMIN,
-      });
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: MSG.LAST_ADMIN });
     }
-    await pool.query("UPDATE staff SET status = 'inactive' WHERE id = $1", [req.params.id]);
+    const now = (await client.query(
+      "UPDATE staff SET status = 'inactive', updated_at = NOW() WHERE id = $1 RETURNING id, login_id, name, role, status, department_id, phone, email",
+      [req.params.id])).rows[0];
+    await writeAudit(client, req, { action: ACTIONS.STAFF_EDIT, entity: 'staff', entity_id: now.id, summary: staffLabel(now),
+      before: staffFields(was), after: staffFields(now) });
+    await client.query('COMMIT');
     res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// ── CHANGE LOG (read only) ──
+// Settings permission only. There is no route that writes, edits or deletes here:
+// lines come from writeAudit() in each module, and the table refuses UPDATE/DELETE.
+// Filters: from / to (YYYY-MM-DD, clinic dates - the connection runs in the clinic's
+// time zone), staff_id, patient (name or chart number, part of it), action (a full
+// action, or a module such as "settings"), page (1-based), limit (at most 200).
+router.get('/audit', permMiddleware('settings'), async (req, res) => {
+  try {
+    const where = [], params = [];
+    const add = (sql, v) => { params.push(v); where.push(sql.replace('?', '$' + params.length)); };
+    const day = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+    if (day(req.query.from)) add('at >= ?::date', req.query.from);
+    if (day(req.query.to)) add('at < (?::date + 1)', req.query.to);
+    if (req.query.staff_id && /^\d+$/.test(String(req.query.staff_id))) add('staff_id = ?', Number(req.query.staff_id));
+    if (req.query.patient && String(req.query.patient).trim()) {
+      params.push('%' + String(req.query.patient).trim() + '%');
+      where.push('(patient_name ILIKE $' + params.length + ' OR chart_no ILIKE $' + params.length + ')');
+    }
+    if (req.query.action && /^[a-z.]+$/.test(String(req.query.action))) {
+      const act = String(req.query.action);
+      if (act.indexOf('.') >= 0) add('action = ?', act); else add('module = ?', act);
+    }
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const w = where.length ? ' WHERE ' + where.join(' AND ') : '';
+    const total = (await pool.query('SELECT COUNT(*)::int AS n FROM audit_log' + w, params)).rows[0].n;
+    const rows = (await pool.query(
+      `SELECT id, at, staff_id, staff_name, staff_role, module, action, patient_id, patient_name, chart_no, visit_id,
+              entity, entity_id, summary, before_value, after_value
+         FROM audit_log${w} ORDER BY at DESC, id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`, params)).rows;
+    res.json({ total, page, limit, rows });
   } catch (err) { sendDbError(res, err); }
 });
 

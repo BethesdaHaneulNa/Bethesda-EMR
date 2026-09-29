@@ -66,6 +66,7 @@ const ROUTES = [
   ['DELETE', '/consultations/prescription/' + X, [CONS]],
   ['POST', '/consultations/' + X + '/orders', [CONS], {}],
   ['PUT',  '/consultations/order/' + X,     [CONS], {}],
+  ['POST', '/consultations/order/' + X + '/cancel', [CONS], {}],   // (2026-09-29)
   ['DELETE', '/consultations/order/' + X,   [CONS]],
   ['GET',  '/consultations/' + X + '/orders', [CONS, PAY, PHARM]],
   // document.routes.js (consultation)
@@ -136,6 +137,7 @@ const ROUTES = [
   ['GET',  '/admin/clinic',                 [ALL]],
   ['GET',  '/admin/doctors',                [REG, CONS]],
   ['GET',  '/admin/staff',                  [SET]],
+  ['GET',  '/admin/audit?limit=5',          [SET]],   // change log, read only (2026-09-29)
   ['POST', '/admin/staff',                  [SET], {}],
   ['PUT',  '/admin/staff/' + X,             [SET], { role: 'doctor', status: 'active' }],
   ['DELETE', '/admin/staff/' + X,           [SET]],
