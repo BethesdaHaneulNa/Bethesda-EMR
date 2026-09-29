@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험 A: 원외로 지정된 약이 없으면 원외 처방전을 발급하지 않음
+
+- **상태**: 확인 요청 (디자인이 Pharmacy.jsx를 시작하기 전에 합쳐 달라는 건). develop `fd0cd02` 위.
+- **한 일**: 약이 모두 Interne인데 💊 Ordonnance ext. → Émettre를 누르면 빈 처방전이 번호(D26-…)를 받아 발급되던 것. 서버가 그 방문(또는 진료)에 `dispense_type = 'external'` 줄이 하나도 없으면 **번호를 뽑기 전에** 400으로 막고, 화면은 Émettre를 끄고 이유를 보임(« ⚠ Aucun médicament n'est marqué « Externe » : rien à émettre… »). 🖨 Imprimer(초안)는 그대로 됨.
+- **바꾼 파일**: `frontend/src/documents/external-rx.jsx`(템플릿에 `issueBlocked(meds)` — 이유 {ko,en,fr} 또는 null), `wiki/modules/pharmacy.md` 2.3, `wiki/manual-fr/pharmacy.md`(한 줄).
+- **공용 파일 변경**:
+  - `backend/src/routes/document.routes.js`(진료 세션 파일) · POST `/documents`에서 `template_code === 'external-rx'`일 때만 외부 줄 수를 세어 0이면 400 `No prescription marked external: nothing to issue` · 번호가 헛되이 쓰이지 않게. 다른 문서 종류는 그대로.
+  - `frontend/src/components/DocumentModal.jsx`(진료 세션 파일) · 템플릿이 `issueBlocked`를 가지면 Émettre를 끄고 그 이유를 발 아래에 보임(세 줄: 계산 한 줄, `doIssue` 첫 줄 막기, 단추 옆 안내·흐린 단추). 다른 템플릿은 `issueBlocked`가 없어 그대로.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(문구는 템플릿 안 {ko,en,fr}, 문서 쪽 관례대로)
+- **확인한 방법**(격리 9184): 모두 Interne인 환자 → API로 발급 요청 400, `document_log` 0줄 그대로 · 화면 FR: Émettre 꺼짐 + 안내 · 한 줄을 Externe로 바꾸고 다시 열기 → Émettre 켜짐, 발급 번호 **D26-00001**(막힌 시도가 번호를 쓰지 않았음) · `npm run build`, `node --check`.
+- **확인 못 한 것**: 진료 화면에서 여는 원외 처방전도 같은 규칙(외부 줄이 없으면 발급 안 됨) — 전에도 빈 종이였으므로 잃는 것은 없지만 진료 화면에서 직접 눌러 보지는 않음. 실행 중 DB에 이미 있는 빈 원외 처방전(총괄 확인 예정)은 건드리지 않음.
+- **위키**: `modules/pharmacy.md` 2.3, `manual-fr/pharmacy.md` 「Imprimer l'ordonnance…」.
+
 ## 2026-09-29 — 빈 값 처리(진료 6e11f56 뒤) + 포장 단위를 바꿀 때 알림 셋
 
 - **상태**: 확인 요청. develop `18c52cd` 위(ff). **Pharmacy.jsx · PharmacyStock.jsx 디자인 시작해도 됨**(이 커밋이 합쳐진 뒤).

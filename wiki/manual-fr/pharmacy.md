@@ -50,6 +50,7 @@ Ce qui peut apparaître en jaune ou en rouge :
 
 1. Le patient choisi, cliquez sur **💊 Ordonnance ext.** La fenêtre **Ordonnance externe** s'ouvre.
 2. Seuls les médicaments **Externe** apparaissent, avec sous chaque nom la façon de le prendre (exemple : « 1 cp × 3 fois/jour pendant 7 jours (total 21) »).
+   - C'est le seul papier imprimé à la pharmacie. Si tous les médicaments sont **Interne**, il n'y a rien à émettre : le bouton **Émettre** est grisé.
 3. Si besoin, écrivez à gauche **Pharmacie (optionnel)** et **Conseils / Remarques**.
 4. Cliquez sur **Émettre** : l'ordonnance reçoit un numéro et s'ajoute à **Historique**. Puis cliquez sur **🖨 Réimprimer** pour l'imprimer.
    - **🖨 Imprimer** imprime un brouillon sans numéro (**(BROUILLON)**). Pour le patient, utilisez toujours **Émettre**.

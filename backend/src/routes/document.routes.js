@@ -13,6 +13,8 @@ router.use(authMiddleware);
 // consultation, say) was not asked for.
 const canReadDocs = permMiddleware('consultation', 'payment', 'pharmacy', 'lab', 'registration');
 const canIssueDocs = permMiddleware('consultation', 'payment', 'pharmacy');
+// The screen (external-rx.jsx issueBlocked) says the same in the user's language.
+const NO_EXTERNAL = 'No prescription marked external: nothing to issue';
 
 // GET /api/documents/patient/:id  — 발급 이력 (최신순)
 router.get('/patient/:id', canReadDocs, async (req, res) => {
@@ -51,6 +53,16 @@ router.post('/', canIssueDocs, async (req, res) => {
     const { template_code, template_name, patient_id, visit_id, consultation_id, lang, payload } = req.body;
     if (!template_code || !patient_id) {
       return res.status(400).json({ error: 'template_code and patient_id required' });
+    }
+    // An outside prescription lists the visit's lines marked external; with none it was
+    // issued as an empty paper that still took a number (integration test 2026-09-29, A;
+    // pharmacy session). Checked before a number is drawn.
+    if (template_code === 'external-rx') {
+      const ext = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM prescription rx JOIN consultation c ON c.id = rx.consultation_id
+          WHERE rx.dispense_type = 'external' AND (c.visit_id = $1 OR c.id = $2)`,
+        [visit_id || null, consultation_id || null]);
+      if (!ext.rows[0].n) return res.status(400).json({ error: NO_EXTERNAL });
     }
     const noRow = await pool.query('SELECT generate_doc_no() AS doc_no');
     const docNo = noRow.rows[0].doc_no;

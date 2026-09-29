@@ -24,6 +24,12 @@ var EMPTY = {
   fr: 'Aucune ordonnance externe. (Marquez les médicaments comme « externe » dans la pharmacie.)',
 };
 
+var NOTHING_TO_ISSUE = {
+  ko: '원외로 지정된 약이 없어 발급할 수 없습니다. 약국 화면에서 약을 「원외」로 바꾼 뒤 다시 여세요.',
+  en: 'No drug is marked external, so there is nothing to issue. Mark drugs as external in the pharmacy screen, then open this again.',
+  fr: 'Aucun médicament n\'est marqué « Externe » : rien à émettre. Marquez-les « Externe » dans la pharmacie, puis rouvrez.',
+};
+
 // A line with no stored total prints a visible gap for the outside pharmacist to query,
 // never a number worked out here (see rx-dosing.js).
 var NO_TOTAL = { ko: '확인 필요', en: 'to check', fr: 'à vérifier' };
@@ -89,6 +95,11 @@ export default {
   category: 'prescription',
   name: { ko: '원외 처방전', en: 'Outside Prescription', fr: 'Ordonnance externe' },
   needsMeds: true,
+  // Nothing marked external: a number would be spent on an empty paper. The document
+  // window disables "issue" and shows this; the server refuses it as well.
+  issueBlocked: function (meds) {
+    return (meds || []).some(function (m) { return m.dispense_type === 'external'; }) ? null : NOTHING_TO_ISSUE;
+  },
   fields: [
     { key: 'destination', label: FL.destination, type: 'text' },
     { key: 'note', label: FL.note, type: 'textarea', rows: 3 },
