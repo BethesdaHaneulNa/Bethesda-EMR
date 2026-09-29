@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 정리 스크립트에 cash_movement · 권한 시험에 cash-day (총괄 ①②)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `e853799` 위, ff)
+- **① `clean-test-data.ps1`**: `cash_movement`(036)를 지우는 목록 **맨 앞**과 백업 id 비교 대상에, 트랜잭션 첫 줄에 `set local bethesda.cleanup = 'on'`(036의 가드가 이 트랜잭션의 DELETE만 받음), 보여 주는 수에 「cash record lines」. 이 표가 없는 옛 DB도 되게 비교한 표 가운데 **있는 것만** 잠그고·다시 세고·지움. CRLF·ASCII 유지, 파서 오류 0.
+- **격리 확인**: 실행 중 EMR의 최신 백업(`…_1513`, 036까지, cash 2줄) **사본**을 문서 명령으로 복원 → 드라이런(현금 기록 2줄 포함, 되돌림) → `SET LOCAL` 없이 `DELETE FROM cash_movement` → 「cash_movement is append-only」로 거절(가드 확인) → 실제 실행 → `GET /billing/cash-day` 6-28·7-14 **빈 목록**(전: 1줄씩), `/stats/summary` 6~7월 **수납 0**(전: 474,500), `cash_movement` 0줄·트리거 둘 그대로. 사본과 시험 비밀번호는 지움.
+- **② `settings.access.mjs`**: `GET /billing/cash-day` → [수납, 통계](라우트 `canSeeCash`와 같음). **113 × 11 = 1243건 모두 표와 같음.** `/api/theme`(디자인)은 아직 develop에 없어 넣지 않음 — 없는 라우트는 404라 「통과」로 잘못 셀 수 있음. 들어오면 [모두]로.
+- **바꾼 파일**: `clean-test-data.ps1` · `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(3-11, 8절)
+
 ## 2026-09-29 — 프랑스어 설명서 · v1.5.0 변경 내역 초안 (총괄 ①②)
 
 - **상태**: 확인 요청 (문서만)
