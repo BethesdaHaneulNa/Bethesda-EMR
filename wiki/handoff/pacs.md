@@ -2,6 +2,43 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 권한 S2를 PACS 라우트에 적용 (P-21)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `48059dd`을 ff로 당긴 뒤, S1 들어간 판 기준). **PACS 저장소** — 없음
+- **한 일** (실장님 결정 S2, 설정 세션 「S2 초안」 표대로):
+  - `GET /api/pacs/test` → `settings`
+  - `GET /api/pacs/viewer-url` → `consultation` — 수납 화면의 판독 목록(`Payment.jsx`)은 `onOpen` 없이 띄워 영상 버튼이 없음을 확인하여 `payment`는 넣지 않음
+  - `GET /api/pacs/readings/patient/:id` → `consultation`·`payment`
+  - `PUT /api/pacs/reading/:id` → 이미 `consultation` (그대로)
+  - `GET /api/worklist` → `consultation`
+  - `PUT /api/worklist/:id/status` → 브리지 토큰 그대로, **로그인 경로는 `settings`만**
+  - **표 밖 하나 더**: `GET /api/worklist/dicom-mwl`도 같은 모양(브리지 토큰 또는 로그인)이고 부르는 화면이 없는데 환자 이름·생년월일을 내주므로, 로그인 경로를 `settings`로 같이 좁힘. 원치 않으시면 한 줄로 되돌릴 수 있음.
+  - `bridgeOrAuth`를 권한을 받는 함수로 바꿈(`bridgeOrAuth('settings')`). 토큰이 맞으면 그대로 통과, 아니면 `authMiddleware`(S1의 async 판) 뒤 `permMiddleware`.
+  - 브리지 토큰 경로(`worklist-feed`·`bridge-heartbeat`·`study-arrived`)는 손대지 않음.
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `backend/src/routes/worklist.routes.js`, `wiki/modules/pacs.md`(4절 표 권한 칸 + 권한 설명, 7절 P-21 새로 추가, 8절), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**:
+  - `node --check` 두 파일
+  - 격리 스택 9188, 계정 4개로 API 표: 관리자 / 의사(`consultation`) / 수납(`payment`) / 간호사(새 기본값 `pharmacy`·`lab`·`registration`)
+
+    | API | 관리자 | 의사 | 수납 | 간호사 |
+    |---|---|---|---|---|
+    | GET /pacs/test | 200 | 403 | 403 | 403 |
+    | GET /pacs/viewer-url | 200 | 200 | 403 | 403 |
+    | GET /pacs/readings/patient/:id | 200 | 200 | 200 | 403 |
+    | PUT /pacs/reading/:id | 200 | 200 | 403 | 403 |
+    | GET /pacs/config | 200 | 403 | 403 | 403 |
+    | GET /worklist | 200 | 200 | 403 | 403 |
+    | PUT /worklist/:id/status (로그인) | 200 | 403 | 403 | 403 |
+    | GET /worklist/dicom-mwl (로그인) | 200 | 403 | 403 | 403 |
+
+    브리지 토큰으로는 피드·heartbeat·상태 변경·dicom-mwl 모두 200. 로그인 없이는 401.
+  - 화면(프랑스어): **의사** — 진료 → Compte-rendu 목록 → Voir image → 영상 창이 열리고 빨간 환자번호 경고. **수납** — 수납 대기 환자 → Compte-rendu 목록(읽기만, 경고 보임). **간호사** — 메뉴가 Enregistrement·Pharmacie·Laboratoire만, 접수에서 환자 이력·약국·검사실을 열어 봄. 세 계정 모두 **네트워크에 403 없음**, 간호사 화면은 PACS API를 부르지 않음.
+- **확인 못 한 것**: 실행 중 EMR에서의 확인(총괄 몫). 영상 창 안의 실제 영상(9090이 P-1로 막혀 있어 까만 화면 — 권한과 무관).
+- **총괄 확인 요청**: 합친 뒤 실행 중 브리지 heartbeat가 계속 200인지(브리지 토큰 경로는 안 바꿨지만 같은 파일이라).
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 낮은 항목 정리 (P-20·P-11·P-12·P-17·설정 부분 저장), 절차서에 확인 목록
 
 > **총괄 확인 (2026-09-29)**: `890c64a` 합침 + 실행 중 EMR 반영. 코드 검토: 설정 부분 저장이 토큰을 지우지 않음(`COALESCE`), 워크리스트 상태 쓰기에 값 검사·트랜잭션, `arrivals_error` 300자. PACS 저장소 `6c135aa`는 재부팅 당일 절차서 ②에서 합침. P-13은 보류(오프라인 묶음 스크립트와 같이 고쳐야 함 — 총괄 할 일로 적어 둠).
