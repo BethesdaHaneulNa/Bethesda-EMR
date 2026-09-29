@@ -796,6 +796,8 @@ export default {
   se_reactivate: "Reactivate",
   se_confirmReactivate: "Reactivate {name}? They can log in again with the same login, password and permissions as before.",
   se_errReactivateAdmin: "Only an administrator can reactivate a staff account.",
+  se_oldEmrPort: "This is the old address (port 8080). The EMR is now on 9080 - change 8080 to 9080 and save.",
+  se_oldViewerPort: "This is the old address (port 8090). The PACS viewer is now on 9090 - change 8090 to 9090 and save. As it is, images will not open from the chart.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

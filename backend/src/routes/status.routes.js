@@ -112,6 +112,31 @@ async function checkPacs() {
   return { key: 'pacs', state: 'ok', message: 'status.pacs.ok', values };
 }
 
+// The addresses in Settings > order feed that still carry a port the EMR and the PACS
+// left behind (EMR 8080 -> 9080, PACS viewer 8090 -> 9090, both because Windows
+// reserves the old ones). Typed from the old instructions, they stay in pacs_config and
+// travel with every backup; the viewer then does not open. Warn only - nothing is
+// changed. The Settings screen shows the same warning under each field.
+const OLD_PORTS = [
+  { field: 'emr_base_url', old: '8080', now: '9080' },
+  { field: 'pacs_viewer_url', old: '8090', now: '9090' },
+];
+function portOf(url) {
+  const m = String(url || '').trim().match(/^[a-z]+:\/\/[^/:]+:(\d+)(\/|$)/i);
+  return m ? m[1] : null;
+}
+async function checkPacsAddresses() {
+  const r = await pool.query('SELECT emr_base_url, pacs_viewer_url FROM pacs_config WHERE id = 1');
+  const cfg = r.rows[0] || {};
+  if (!cfg.emr_base_url && !cfg.pacs_viewer_url) {
+    return { key: 'pacs_address', state: 'off', message: 'status.pacsAddress.off', values: {} };
+  }
+  const old = OLD_PORTS.filter(p => portOf(cfg[p.field]) === p.old)
+    .map(p => ({ field: p.field, url: cfg[p.field], port: p.old, use: p.now }));
+  if (old.length) return { key: 'pacs_address', state: 'warn', message: 'status.pacsAddress.oldPort', values: { old } };
+  return { key: 'pacs_address', state: 'ok', message: 'status.pacsAddress.ok', values: {} };
+}
+
 // Any logged-in member of staff can see this. Whoever notices the red dot is
 // whoever happens to be at a screen, and making them fetch someone with the
 // settings permission defeats the point of showing it.
@@ -123,6 +148,7 @@ router.get('/status', authMiddleware, async (req, res) => {
     // The database being down takes these with it; report that rather than a stack trace.
     checkBridge().catch(err => ({ key: 'bridge', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacs().catch(err => ({ key: 'pacs', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
+    checkPacsAddresses().catch(err => ({ key: 'pacs_address', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
   ]);
   res.json({
     overall: worst(checks.map(c => c.state)),

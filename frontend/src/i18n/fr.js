@@ -787,6 +787,8 @@ export default {
   se_reactivate: "Réactiver",
   se_confirmReactivate: "Réactiver {name} ? Ce compte pourra de nouveau se connecter, avec le même identifiant, mot de passe et les mêmes permissions qu'avant.",
   se_errReactivateAdmin: "Seul un administrateur peut réactiver un compte du personnel.",
+  se_oldEmrPort: "Ancienne adresse (port 8080). L'EMR est maintenant sur le port 9080 : remplacez 8080 par 9080 puis enregistrez.",
+  se_oldViewerPort: "Ancienne adresse (port 8090). La visionneuse PACS est maintenant sur le port 9090 : remplacez 8090 par 9090 puis enregistrez. Sinon les images ne s'ouvrent pas depuis le dossier.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

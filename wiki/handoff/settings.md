@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 오더 연동 주소가 옛 포트면 경고 (총괄 요청)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `8ed5881` 위)
+- **한 일** (값은 어디서도 자동으로 바꾸지 않음):
+  - **설정 → 오더 연동**: EMR 주소 칸이 `:8080`이면, PACS 웹/뷰어 주소 칸이 `:8090`이면 칸 바로 아래 노란 줄(`se_oldEmrPort`·`se_oldViewerPort`, ko·en·fr). 칸을 고치는 순간 사라짐. `Settings.jsx`는 **오더 연동 탭(PACS 몫) 안의 두 칸 아래 한 줄씩 + 판정 함수 `oldPort` 하나** — 총괄 지시로 손댐, 다른 부분은 그대로.
+  - **서버 상태 API** `GET /api/system/status`: 새 항목 `pacs_address` — 둘 다 비면 off, 옛 포트면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok.
+  - **서버 상태 창** `server-status.ps1`: DB가 OK일 때 `docker exec bethesda-emr-db psql`로 두 주소를 읽어, 옛 포트면 8번째 줄 「Adresses de l'imagerie (Parametres) · **A CORRIGER** · ancien port 8090 -> 9090」과 맨 아래 안내. 옛 포트가 없으면 줄이 없음(7줄 그대로). BOM 유지, 창 높이 안에 들어감.
+  - 설정 화면 예시 문구: `NAS_IP:8090`은 이미 없음(`NAS_IP:9090`, `egUrl` `:9080`) — 고칠 것 없음.
+- **판정**: `스킴://호스트:포트` 모양의 포트만 봄 — `http://host:80800`·`http://my8090host:9090`은 해당 없음, 끝의 `/`는 괜찮음.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `backend/src/routes/status.routes.js` · `server-status.ps1` · `wiki/modules/settings.md`(2.10, 2.13 4단계, 3-6 표, 8절)
+- **공용 파일 변경**: i18n `se_oldEmrPort`·`se_oldViewerPort`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`. 새 DB 격리 스택에서 `PUT /api/pacs/config`로 값을 바꿔 가며 상태 API 6가지(둘 다 빔 off / 8080·8090 warn 두 개 / 뷰어만 옛 포트·끝 `/` warn 한 개 / 새 포트 ok / 숫자·호스트 이름 속 8080 ok) 통과. 상태 창은 컨테이너 이름만 격리 스택으로 바꾼 **스크래치 사본**으로(실행 중 EMR DB에 묻지 않음) 콘솔 프랑스어·한국어, 창 캡처(프랑스어 「A CORRIGER」 줄과 안내). 화면: 프랑스어·한국어 오더 연동 탭에 두 경고, 뷰어 칸을 9090으로 치자 그 경고가 사라짐. `settings.access.mjs` 1221건 그대로.
+- **다음 할 일**: 결정 두 가지(옛 백업 복원 절차, 시험 데이터 A~D) 대기.
+
 ## 2026-09-29 — 11월 새 PC 대비 복원 연습 2차 (재부팅 뒤 ⑤)
 
 - **상태**: 확인 요청 — **결정 두 가지 필요**(아래 「결정 필요」)
