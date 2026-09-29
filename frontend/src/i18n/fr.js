@@ -355,6 +355,7 @@ export default {
   cs_cancelPrompt: "« {name} » a déjà un résultat et ne peut pas être retiré.\nLe marquer comme annulé ? Le résultat reste au dossier ; la demande sort de la liste du laboratoire et de la facture.\nSi elle a déjà été payée, la caisse devra la rembourser.\n\nMotif (facultatif) :",
   cs_cancelHint: "A un résultat - cliquer pour le marquer comme annulé",
   cs_orderIsCancelled: "Une demande annulée ne peut pas être modifiée.",
+  cs_imagingNoCancel: "Une demande d’imagerie ne peut pas encore être marquée comme annulée (possible une fois le PACS relié).",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
