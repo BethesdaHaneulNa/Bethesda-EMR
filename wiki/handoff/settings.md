@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 가장 새 백업이 앱보다 옛 버전이면 경고 · verify-backup이 옛 버전을 알아봄 (총괄 ③)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`90daed6` 위)
+- **판단 방법**: 백업 파일 안의 `schema_migrations` 줄(파일 이름) ↔ DB의 줄. DB에만 있는 것이 있으면 older, 백업에만 있으면 newer. 백업을 만들 때 버전을 따로 적어 두는 방식은 이미 있는 백업(오늘 것들)에 쓸 수 없어서 택하지 않음. 백업 파일은 바뀌지 않으므로 파일마다 한 번만 읽고 기억(API: 이름·크기·시각, 상태 창: 같은 키), 블록이 끝나면 읽기를 멈춤.
+- **한 일**:
+  - `backend/src/services/backup-version.js`(새) `newestBackupVersion()`.
+  - `GET /api/backup/status`에 `version`, `GET /api/system/status`의 백업이 `status.backup.oldVersion`(warn, `missing` 목록).
+  - 설정 → 백업 맨 위 띠: 다른 문제가 없고 older면 노란 「La sauvegarde la plus récente date d'une version plus ancienne de l'EMR」 + 「Sauvegarder를 누르세요」. 다른 노랑·빨강일 때는 그 아래 한 줄 더. `se_bkOldVersion`·`se_bkOldVersionHint`.
+  - `server-status.ps1`: 백업 줄이 노란 **A CORRIGER** 「plus ancienne que l'application (N …)」 + 아래 안내. DB가 OK일 때만. BOM 유지.
+  - `verify-backup.ps1`·`.sh`: 임시 DB에 복원한 뒤 `schema_migrations` 비교 — 옛 버전이면 [info]로 빠진 업데이트 이름과 「5b 'If the backup is older than the app'」, 끝의 VERIFIED 아래 노란 한 줄. `-Strict`/`--strict`는 실패(「press Back up now first」). 같은 버전이면 [ok] 「same version as the running app」.
+- **바꾼 파일**: 위 파일들 + `frontend/src/pages/Settings.jsx`(백업 띠) · `wiki/modules/settings.md`(2.7 표, 2.10, 2.11, 3-5, 8절)
+- **공용 파일 변경**: i18n `se_bkOldVersion`·`se_bkOldVersionHint`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0(`server-status.ps1`·`verify-backup.ps1`), `sh -n verify-backup.sh`, `npm run build`. 격리 스택에서 DB에 가짜 `schema_migrations` 줄을 넣어 「업데이트」를 흉내(시험 뒤 지움): API 8개(백업 직후 same·상태 ok → 줄 추가 후 older·이름·상태 warn → 새 백업 후 same → 줄 삭제 후 newer) 통과. verify-backup.ps1·.sh 보통 → VERIFIED + 옛 버전 안내, strict → VERIFY FAILED(종료 1). 상태 창 사본(컨테이너 이름만 격리로) 프랑스어·한국어 백업 줄과 안내. 화면: 프랑스어 노란 띠 → Sauvegarder → 초록, 한국어 노란 띠(버튼 이름 「지금 백업」으로 맞춤). `settings.access.mjs` 1221건, messages 통과.
+- **총괄 참고**: `DEPLOYMENT.md`(총괄 파일) 「Updating」의 단계 목록이 4개로 남아 있습니다 — ② 커밋 `90daed6`로 **5. 업데이트된 DB를 한 번 더 백업**이 생겼습니다. 5b의 「After every update, take a backup」도 스크립트가 해 준다고 바꿀 수 있습니다(손으로 업데이트했을 때는 여전히 필요).
+- **다음 할 일**: ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
 ## 2026-09-29 — 업데이트 뒤 백업 한 번 더 (총괄 ②, 공용 파일 허락)
 
 - **상태**: 확인 요청

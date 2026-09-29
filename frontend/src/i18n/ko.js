@@ -790,6 +790,8 @@ export default {
   se_oldEmrPort: "옛 주소입니다(포트 8080). EMR은 이제 9080입니다 — 주소의 8080을 9080으로 바꾸고 저장하세요.",
   se_oldViewerPort: "옛 주소입니다(포트 8090). PACS 뷰어는 이제 9090입니다 — 주소의 8090을 9090으로 바꾸고 저장하세요. 이대로면 진료실에서 영상이 열리지 않습니다.",
   se_setPackQtyHint: "포장 단위 약: 이 세트를 쓰면 이 수만큼(병·튜브) 처방됩니다.",
+  se_bkOldVersion: "가장 새 백업이 지금 EMR보다 옛 버전입니다",
+  se_bkOldVersionHint: "EMR을 업데이트한 뒤로 새 백업이 없습니다. 이 백업은 보통 방법으로는 복원되지 않습니다(DEPLOYMENT.md 5b의 「옛 버전」 방법 필요). 지금 「지금 백업」을 눌러 새 백업을 만드세요.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

@@ -751,9 +751,13 @@ export default function SettingsPage() {
                   status check uses, so a failing night is visible where people look. */}
               {(function(){
                 var st=backup.state||'ok';
-                var C={ok:'#34d399',stale:'#fbbf24',none:'#fbbf24',failed:'#f87171'}[st]||'#fbbf24';
-                var title={ok:t.se_bkOk,stale:t.se_bkStale,none:t.se_bkNone,failed:t.se_bkFailed}[st];
-                var hint={stale:t.se_bkStaleHint,none:t.se_bkNoneHint,failed:t.se_bkFailedHint}[st];
+                // The newest backup is from before the last update: it restores only with
+                // DEPLOYMENT.md 5b's "older than the app" commands (services/backup-version.js).
+                var older=backup.version&&backup.version.state==='older';
+                if(st==='ok'&&older) st='oldVersion';
+                var C={ok:'#34d399',stale:'#fbbf24',none:'#fbbf24',failed:'#f87171',oldVersion:'#fbbf24'}[st]||'#fbbf24';
+                var title={ok:t.se_bkOk,stale:t.se_bkStale,none:t.se_bkNone,failed:t.se_bkFailed,oldVersion:t.se_bkOldVersion}[st];
+                var hint={stale:t.se_bkStaleHint,none:t.se_bkNoneHint,failed:t.se_bkFailedHint,oldVersion:t.se_bkOldVersionHint}[st];
                 var la=backup.lastAttempt;
                 return <div style={{background:C+'14',border:'1px solid '+C+'55',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
                   <div style={{display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
@@ -762,6 +766,7 @@ export default function SettingsPage() {
                     {backup.running?<span style={{fontSize:13,color:'#60a5fa',fontWeight:700}}>⏳ {t.se_bkRunning}</span>:null}
                   </div>
                   {hint?<div style={{fontSize:13,color:tx,marginTop:6,lineHeight:1.5}}>{hint}</div>:null}
+                  {older&&st!=='oldVersion'?<div style={{fontSize:13,color:'#fbbf24',marginTop:6,lineHeight:1.5}}>⚠ {t.se_bkOldVersion} — {t.se_bkOldVersionHint}</div>:null}
                   {la&&!la.ok?<div style={{fontSize:12,color:t2,marginTop:8,lineHeight:1.5}}>
                     {t.se_bkLastTry}: {fmtLocal(la.at)} ({la.trigger==='scheduled'?t.se_bkTriggerAuto:t.se_bkTriggerManual})
                     {la.error?<div style={{fontFamily:'monospace',fontSize:12,color:'#fca5a5',marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{la.error}</div>:null}
