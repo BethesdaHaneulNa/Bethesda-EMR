@@ -80,11 +80,14 @@ function Psql([string]$sql) {
 
 # The tables that are emptied, children first. Every row in them is a test record once
 # the checks below have passed.
-$DELETE_ORDER = @('billing_item', 'billing', 'lab_result', 'worklist_log', 'document_log',
+# cash_movement (036, payment) is the till's record of every movement of money; it is
+# append-only, and DELETE goes through only in a transaction that ran
+# SET LOCAL bethesda.cleanup = 'on' - which this script does, and the app never does.
+$DELETE_ORDER = @('cash_movement', 'billing_item', 'billing', 'lab_result', 'worklist_log', 'document_log',
                   'order_item', 'prescription', 'diagnosis', 'consultation', 'visit', 'patient')
 # The ones whose ids are compared with the backup (the others hang off these).
 $COMPARED = @('patient', 'visit', 'consultation', 'billing', 'billing_item', 'prescription',
-              'order_item', 'diagnosis', 'lab_result', 'worklist_log', 'document_log')
+              'order_item', 'diagnosis', 'lab_result', 'worklist_log', 'document_log', 'cash_movement')
 
 # ---------------------------------------------------------------- the backup's ids
 # Read straight from the dump: the first column of each COPY block is the id.
@@ -119,8 +122,10 @@ Ok "backup read"
 # ---------------------------------------------------------------- same records as the backup?
 Step "Checking that this database is the backup, unchanged"
 $counts = @{}
+$present = @()   # the compared tables this database has (an older one may lack cash_movement)
 foreach ($t in $COMPARED) {
   $exists = @(Psql "select (to_regclass('public.$t') is not null)::text;")[0]
+  if ($exists -eq 'true') { $present += $t }
   if ($exists -ne 'true') { $counts[$t] = 0; if ($inBackup[$t] -and $inBackup[$t].Count) { Stop-Here "Table $t is in the backup but not in the database." }; continue }
   $ids = @(Psql "select id from $t order by id;")
   $bk = @(); if ($inBackup[$t]) { $bk = @($inBackup[$t]) }
@@ -166,6 +171,7 @@ Say ("patients {0} - visits {1} - consultations {2} - prescriptions {3} ({4} dis
      $counts['patient'], $counts['visit'], $counts['consultation'], $counts['prescription'], $rx, $counts['order_item'])
 Say ("lab results {0} - imaging worklist {1} - receipts {2} ({3} lines) - documents {4} - diagnoses {5}" -f `
      $counts['lab_result'], $counts['worklist_log'], $counts['billing'], $counts['billing_item'], $counts['document_log'], $counts['diagnosis'])
+Say ("cash record lines {0} (the till's record of the test receipts)" -f $counts['cash_movement'])
 Write-Host ""
 Say "Patients (chart number - name - registered):"
 $iChart = [array]::IndexOf($patientCols, 'chart_no'); $iLast = [array]::IndexOf($patientCols, 'last_name')
@@ -198,8 +204,8 @@ if (-not $DryRun) {
 
 # ---------------------------------------------------------------- one transaction
 Step $(if ($DryRun) { "Dry run: deleting inside a transaction, then rolling back" } else { "Deleting (one transaction)" })
-$expect = ($COMPARED | ForEach-Object { "(select count(*) from $_) <> $($counts[$_])" }) -join ' or '
-$deletes = ($DELETE_ORDER | ForEach-Object { "delete from $_;" }) -join "`n"
+$expect = ($present | ForEach-Object { "(select count(*) from $_) <> $($counts[$_])" }) -join ' or '
+$deletes = ($DELETE_ORDER | Where-Object { $present -contains $_ } | ForEach-Object { "delete from $_;" }) -join "`n"
 $staffSql = ''
 if ($zzIds.Count) {
   $staffSql = @"
@@ -212,7 +218,9 @@ update staff set status = 'inactive', updated_at = now() where id in ($idList);
 }
 $sql = @"
 begin;
-lock table $($COMPARED -join ', ') in share row exclusive mode;
+-- lets cash_movement's guard (036) accept this transaction's DELETE; ends with it
+set local bethesda.cleanup = 'on';
+lock table $($present -join ', ') in share row exclusive mode;
 do `$`$ begin
   if $expect then raise exception 'records changed since the check - nothing deleted'; end if;
 end `$`$;
