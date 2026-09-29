@@ -334,6 +334,9 @@ export default {
   py_remainsOwed: "{amount} Ar가 미수로 남습니다.",
   py_payCarried: "이 영수의 미수는 이미 영수 {receipt}(으)로 넘어갔습니다. 그 영수에서 받으세요. 영수내역을 새로 불러왔습니다.",
   py_voidCarried: "이 영수의 미수는 영수 {receipt}(으)로 이월되어 그 영수가 청구하고 있습니다. {receipt}를 먼저 취소한 뒤 이 영수를 취소하세요.",
+  py_qtyMissing: "⚠ 총량 없음",
+  py_qtyMissingList: "처방 총량 없는 약 있음",
+  py_qtyMissingBlock: "처방 총량이 비어 있어 금액을 계산할 수 없는 약이 있습니다: {names}. 진료실에 그 처방을 다시 저장해 달라고 한 뒤 수납하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

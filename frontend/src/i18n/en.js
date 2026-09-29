@@ -343,6 +343,9 @@ export default {
   py_remainsOwed: "{amount} Ar will remain outstanding.",
   py_payCarried: "This receipt's balance was already carried into receipt {receipt}. Collect it on that receipt. The receipt history has been reloaded.",
   py_voidCarried: "This receipt's balance was carried into receipt {receipt}, which charges it now. Cancel {receipt} first, then this receipt.",
+  py_qtyMissing: "⚠ Quantity missing",
+  py_qtyMissingList: "Drug quantity missing",
+  py_qtyMissingBlock: "The total quantity is missing for: {names}, so the amount cannot be calculated. Ask the doctor to save the prescription again, then bill.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
