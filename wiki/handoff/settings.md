@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 7절 작은 것: U8 · S10 · S7 · S9 · S3 · U5 · U6 (총괄 허락·결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a635b0b` 위)
+- **보안 관련 — 이유** (규칙):
+  - **S7** 로그인: 비밀번호를 먼저 확인하고, 맞을 때만 「Account is inactive」. 전에는 아무 비밀번호에나 그 말을 해서, 아이디가 있고 비활성이라는 것이 드러났음. 없는 아이디·틀린 비밀번호·비활성+틀린 비밀번호 모두 같은 「Invalid credentials」.
+  - **S9** 첫 설치: 확인과 만들기를 한 트랜잭션 + `pg_advisory_xact_lock(hashtext('bethesda.setup'))`. 직원 PUT·DELETE: 트랜잭션 시작에서 `bethesda.staff.admins` 잠금, 「다른 설정 관리자가 있나」를 그 트랜잭션 안에서. 실제로는 `admin`이 늘 보호되어 있어 동시 강등으로 잠길 일은 없지만(S3), 빈틈을 막음.
+  - **S3** (총괄 결정 가): 설치 아이디는 서버에서 늘 `admin`(`SETUP_LOGIN`, 보낸 값 무시), 설치 화면의 칸은 읽기 전용 + 안내 `se_setupIdFixed`. 관리자 잠금 방지(`BOOTSTRAP_ADMIN_LOGIN`)가 항상 설치 계정을 알아봄.
+  - **S10**: 권한은 `ALL_PERMS`에 있는 것만(모르는 값 400, 화면은 「Permissions」 칸 이름으로), 아이디 앞뒤 공백 제거·PUT의 빈 아이디 400, 안 쓰는 `bcryptjs` import 삭제(패키지는 그대로).
+- **그 밖**: U8 진료과 저장 뒤 엉뚱한 `setPacsConfig` 한 줄 삭제. U5 앱 제목을 비우면 「Bethesda EMR」(칸을 보내지 않으면 그대로). U6 로그인 로고 「M」 → 「B」.
+- **결정 반영**: S5 넣지 않음, B8 하지 않음, U3 결정 세션 대기 — 7절 표에.
+- **바꾼 파일**: `backend/src/routes/auth.routes.js` · `backend/src/routes/admin.routes.js` · `frontend/src/pages/Login.jsx` · `frontend/src/pages/Settings.jsx`(U8 한 줄) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.login.mjs`(새) · `wiki/modules/settings.md`(2.1, 3-3, 7절, 8절)
+- **공용 파일 변경**: i18n `se_setupIdFixed`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. **새 DB** 격리 스택에서 `settings.login.mjs` **19개**: 설치 두 번 동시에(하나는 `boss`, 하나는 `chief`) → 하나만 200·다른 쪽 403·아이디는 `admin`·관리자 1명·세 번째 403 / 맞는·틀린 비밀번호·없는 아이디 / 비활성+틀린 → Invalid, 비활성+맞는 → inactive / 공백 아이디 저장·그대로 로그인 / 모르는 권한 400(POST·PUT) / 빈 아이디 PUT 400 / 두 관리자 동시 강등 → 둘 다 200·admin 로그인 그대로 / 앱 제목 비우기·보내지 않기. 이어서 access 1232건·audit·password·reactivate·drugs·ordersets·messages·permissions 모두 통과. 화면: 새 DB에서 프랑스어 설치 화면(아이디 `admin` 고정·안내·로고 B), 아이디 칸에 「boss」를 쳐도 그대로 → 화면으로 설치 → `admin`으로 들어감; 한국어 로그인 틀린 비밀번호 → 「아이디 또는 비밀번호가 올바르지 않습니다」.
+- **다음 할 일**: B7(디스크 검사에 Docker 드라이브).
+
 ## 2026-09-29 — 7절 남은 항목: 결정 필요 / 결정 없이 가능 (총괄 요청)
 
 - **상태**: 보고 (코드 변경 없음). 2026-09-29 지금 코드에서 하나씩 다시 확인함.

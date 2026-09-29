@@ -812,6 +812,7 @@ export default {
   se_flag_normal: "정상",
   se_flag_high: "높음",
   se_flag_abnormal: "이상",
+  se_setupIdFixed: "관리자 아이디는 항상 admin입니다. 설정 화면이 잠기지 않도록 이 계정을 보호합니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

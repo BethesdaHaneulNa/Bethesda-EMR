@@ -229,7 +229,6 @@ export default function SettingsPage() {
         if(item.id) await api.put('/admin/departments/'+item.id, item);
         else await api.post('/admin/departments', item);
         setDepts(await api.get('/admin/departments'));
-      setPacsConfig(await api.get('/pacs/config'));
       }
       closeEdit(); showToast(t.se_saved);
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }

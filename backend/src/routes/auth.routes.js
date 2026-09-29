@@ -1,5 +1,4 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 const { authMiddleware, generateToken, effectivePerms, ALL_PERMS } = require('../middleware/auth');
 // Messages shown to people - translated by the screen; see settings.messages.js.
@@ -9,8 +8,8 @@ const { writeAudit, ACTIONS } = require('../utils/audit');
 const router = express.Router();
 
 // First-run setup: true when the system has no active admin account yet.
-async function noAdminExists() {
-  const r = await pool.query("SELECT COUNT(*)::int AS n FROM staff WHERE role = 'admin' AND status = 'active'");
+async function noAdminExists(db) {
+  const r = await (db || pool).query("SELECT COUNT(*)::int AS n FROM staff WHERE role = 'admin' AND status = 'active'");
   return r.rows[0].n === 0;
 }
 
@@ -22,29 +21,45 @@ router.get('/setup-status', async (req, res) => {
 
 // POST /api/auth/setup — create the first admin account. Only works while no admin exists,
 // so it can't be used to escalate privileges once the system is set up.
+//
+// S3 (2026-09-29, coordinator): the login id is always 'admin'. The protection against
+// locking everyone out (admin.routes.js BOOTSTRAP_ADMIN_LOGIN) recognises the setup
+// account by that id; a setup under another id had none of it. A login_id sent by an
+// older screen is ignored.
+// S9 (2026-09-29): one setup at a time. Two first-run screens submitted together each
+// found no admin and both created one; the lock makes the second wait and then find the
+// first. The check, the insert and the lock are one transaction.
+const SETUP_LOGIN = 'admin';
 router.post('/setup', async (req, res) => {
+  const password = String(req.body.password || '');
+  const name = String(req.body.name || '').trim() || 'Administrator';
+  if (!password) return res.status(400).json({ error: MSG.LOGIN_REQUIRED });
+  if (password.length < 6) return res.status(400).json({ error: MSG.PASSWORD_TOO_SHORT });
+  const client = await pool.connect();
   try {
-    if (!(await noAdminExists())) return res.status(403).json({ error: MSG.SETUP_DONE });
-    const login_id = String(req.body.login_id || '').trim();
-    const password = String(req.body.password || '');
-    const name = String(req.body.name || '').trim() || 'Administrator';
-    if (!login_id || !password) return res.status(400).json({ error: MSG.LOGIN_REQUIRED });
-    if (password.length < 6) return res.status(400).json({ error: MSG.PASSWORD_TOO_SHORT });
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('bethesda.setup'))");
+    if (!(await noAdminExists(client))) { await client.query('ROLLBACK'); return res.status(403).json({ error: MSG.SETUP_DONE }); }
+    const login_id = SETUP_LOGIN;
     const allPerms = ALL_PERMS.slice();   // a plain array for the pg driver, not the frozen one
-    const r = await pool.query(
+    const r = await client.query(
       "INSERT INTO staff (login_id, password_hash, name, role, permissions, status) " +
       "VALUES ($1, crypt($2, gen_salt('bf')), $3, 'admin', $4, 'active') " +
       "RETURNING id, login_id, name, role, permissions, department_id",
       [login_id, password, name, allPerms]
     );
     const user = r.rows[0];
-    await pool.query('UPDATE staff SET last_login = NOW() WHERE id = $1', [user.id]);
+    await client.query('UPDATE staff SET last_login = NOW() WHERE id = $1', [user.id]);
+    await client.query('COMMIT');
     const token = generateToken(user);
     res.json({ token, user: { id: user.id, login_id: user.login_id, name: user.name, role: user.role, permissions: effectivePerms(user), department_id: user.department_id } });
   } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* connection already out of the transaction */ }
     if (err.code === '23505') return res.status(409).json({ error: MSG.LOGIN_EXISTS });
     console.error('Setup error:', err);
     res.status(500).json({ error: MSG.SERVER_ERROR });
+  } finally {
+    client.release();
   }
 });
 
@@ -63,9 +78,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: MSG.INVALID_CREDENTIALS });
     }
     const user = result.rows[0];
-    if (user.status !== 'active') {
-      return res.status(401).json({ error: MSG.ACCOUNT_INACTIVE });
-    }
     // Compare password using pgcrypto-compatible check
     const pwCheck = await pool.query(
       "SELECT (password_hash = crypt($1, password_hash)) AS valid FROM staff WHERE id = $2",
@@ -73,6 +85,12 @@ router.post('/login', async (req, res) => {
     );
     if (!pwCheck.rows[0].valid) {
       return res.status(401).json({ error: MSG.INVALID_CREDENTIALS });
+    }
+    // S7 (2026-09-29): said only after the password was right. Before, "this account is
+    // inactive" answered any password, telling whoever tried that the login id exists.
+    // The person it is meant for still sees it, with their own password.
+    if (user.status !== 'active') {
+      return res.status(401).json({ error: MSG.ACCOUNT_INACTIVE });
     }
     // Update last_login
     await pool.query('UPDATE staff SET last_login = NOW() WHERE id = $1', [user.id]);
