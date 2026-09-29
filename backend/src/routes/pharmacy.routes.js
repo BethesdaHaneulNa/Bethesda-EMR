@@ -102,10 +102,14 @@ function wholeNumber(v, min) {
 
 // One row per consultation with its waiting lines. Shared by the day's queue and
 // by the per-patient lookup so both hand the screen the same shape.
+// The time is when the doctor first pressed "complete" (consultation.completed_at,
+// migration 032): updated_at moved whenever the record was saved again, which
+// reshuffled the queue (L9). Consultations finished before 032 have no
+// completed_at; they show updated_at and sort after the others.
 function pendingQuery(where) {
   return `SELECT
          c.id AS consultation_id,
-         c.updated_at AS consultation_time,
+         COALESCE(c.completed_at, c.updated_at) AS consultation_time,
          v.id AS visit_id,
          v.visit_date,
          (CURRENT_DATE - v.visit_date) AS days_ago,
@@ -152,7 +156,7 @@ function pendingQuery(where) {
 router.get('/pending', canDispense, async (req, res) => {
   try {
     const result = await pool.query(
-      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.updated_at ASC, c.id ASC'
+      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.completed_at ASC NULLS LAST, c.id ASC'
     );
     res.json(result.rows);
   } catch (err) {
@@ -170,7 +174,7 @@ router.get('/patient/:patientId/pending', canDispense, async (req, res) => {
   if (!Number.isInteger(pid) || pid <= 0) return res.status(400).json({ error: 'patientId must be a number' });
   try {
     const groups = await pool.query(
-      pendingQuery('c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - $2::int') + ' ORDER BY v.visit_date DESC, c.id DESC',
+      pendingQuery('c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - $2::int') + ' ORDER BY c.completed_at DESC NULLS LAST, c.id DESC',
       [pid, PAST_RX_DAYS]
     );
     const older = await pool.query(
