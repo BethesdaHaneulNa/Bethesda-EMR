@@ -11,6 +11,9 @@
 //    same-day second-visit check.
 // 3. Patient search (⑯): name order, literal % and _, limit/offset parsing.
 // 4. Patient field checks (⑬): gender M/F only, birth date YYYY-MM-DD on the calendar.
+// 5. Chart numbers (⑱): this year's prefix, and twenty patients created at once get
+//    twenty different, consecutive numbers. The year change and numbers past 99,999
+//    are checked in SQL: backend/test/reception.chartno.sql.
 //
 //   node backend/test/reception.api.mjs            (default http://127.0.0.1:9181)
 //   RC_TEST_BASE=http://127.0.0.1:9181/api node backend/test/reception.api.mjs
@@ -194,6 +197,22 @@ const wd1 = await call('GET', '/visits/day?date=' + yd, null, A);
 check('⑩ /visits/day?date=yesterday shows that day and still says what today is', wd1.status === 200 && wd1.data.date === yd && wd1.data.today === wd0.data.today && wd1.data.visits.every(v => String(v.visit_date).slice(0, 10) === yd), { date: wd1.data && wd1.data.date });
 const wd2 = await call('GET', '/visits/day?date=29-09-2026', null, A);
 check('⑩ a date not in YYYY-MM-DD form → 400', wd2.status === 400, { status: wd2.status });
+
+// ── ⑱ chart numbers: this year's prefix, no duplicates when desks create patients at once ──
+{
+  const yy = wd0.data.today.slice(2, 4);
+  const stamp = Date.now();
+  const many = await Promise.all(Array.from({ length: 20 }, (_, i) =>
+    call('POST', '/patients', { last_name: 'Chart', first_name: 'Race' + stamp + '-' + i, gender: 'M' }, A)));
+  const charts = many.map(r => r.data && r.data.chart_no);
+  check('⑱ 20 patients created at once: all 201', many.every(r => r.status === 201), { statuses: many.map(r => r.status) });
+  check('⑱ numbers carry this year\'s prefix ' + yy + '-', charts.every(c => typeof c === 'string' && c.startsWith(yy + '-')), { sample: charts.slice(0, 3) });
+  check('⑱ 20 different numbers', new Set(charts).size === 20);
+  const nums = charts.map(c => parseInt(String(c).split('-')[1], 10)).sort((a, b) => a - b);
+  check('⑱ and consecutive (no gaps between them)', nums[19] - nums[0] === 19, { first: nums[0], last: nums[19] });
+  const nextOne = await call('POST', '/patients', { last_name: 'Chart', first_name: 'After' + stamp, gender: 'F' }, A);
+  check('⑱ the next patient gets the next number', parseInt(String(nextOne.data.chart_no).split('-')[1], 10) === nums[19] + 1, { chart_no: nextOne.data.chart_no });
+}
 
 // ── ⑳ waiting → completed without a consultation becomes "no fee"; in progress → completed keeps its type ──
 const P20 = (await call('POST', '/patients', { last_name: 'Complete', first_name: 'Direct' + Date.now(), gender: 'F' }, A)).data;
