@@ -109,20 +109,60 @@ function packFields(body) {
   return { unit: true, label };
 }
 
+// The drug columns Settings may write, and only those sent (2026-09-29, decision B: the
+// default dose / times a day / days / route leave the drug form, so a save without them
+// must not wipe them - before, a PUT wrote every column and a missing one became NULL).
+// dosage_form (the form - tablet, syrup... - added by the pharmacy's drug import) is
+// written only if this database has that column yet, so this code works before and
+// after that migration. stock_qty is never among them (3-8), nor pack_* (packFields).
+const DRUG_FIELDS = ['code', 'name', 'name_en', 'generic_name', 'category', 'dosage_form',
+  'default_dose', 'default_freq', 'default_days', 'default_route', 'unit_price', 'min_stock'];
+let drugColumns = null;   // the drug table's columns, read once
+async function drugFieldsHere() {
+  if (!drugColumns) {
+    const r = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'drug'");
+    drugColumns = r.rows.map(x => x.column_name);
+  }
+  return DRUG_FIELDS.filter(f => drugColumns.indexOf(f) >= 0);
+}
+// The fields present in the request: an empty string is stored as NULL (an emptied
+// field). For code and name, which are NOT NULL, that makes the database refuse it
+// (400 "A required field is missing", utils/dbError.js) instead of storing "".
+function sentDrugFields(body, allowed) {
+  const out = {};
+  allowed.forEach(f => {
+    if (!Object.prototype.hasOwnProperty.call(body, f)) return;
+    let v = body[f];
+    if (typeof v === 'string') v = v.trim();
+    if (v === '') v = null;
+    out[f] = v;
+  });
+  return out;
+}
+function badDrug(body) {
+  const invalid = badPrices(body, ['unit_price', 'min_stock']);
+  if (invalid) return invalid;
+  if (!wholeOrBlank(body.min_stock)) return fieldMsg.notWhole('min_stock');
+  return null;
+}
+
 router.post('/drugs', permMiddleware('settings'), async (req, res) => {
   try {
-    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock } = req.body;
-    const invalid = badPrices(req.body, ['unit_price', 'min_stock']);
-    if (invalid) return res.status(400).json({ error: invalid });
-    if (!wholeOrBlank(min_stock)) return res.status(400).json({ error: fieldMsg.notWhole('min_stock') });
+    const bad = badDrug(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const pack = packFields(req.body);
     if (pack.error) return res.status(400).json({ error: pack.error });
-    // min_stock: the column's default (10) did not apply when the form sent it empty.
+    const f = sentDrugFields(req.body, await drugFieldsHere());
+    // A field not sent takes the column's default. min_stock: the default (10) also when
+    // the form sent it empty. A new drug starts with no stock (3-8).
+    if (f.min_stock == null) delete f.min_stock;
+    const cols = Object.keys(f);
+    const vals = cols.map(c => f[c]);
+    cols.push('stock_qty', 'pack_unit', 'pack_label');
+    vals.push(0, pack.unit === true, pack.label);
     const result = await pool.query(
-      `INSERT INTO drug (code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, stock_qty, min_stock, pack_unit, pack_label)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,COALESCE($11,10),$12,$13) RETURNING *`,
-      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock === '' ? null : min_stock,
-       pack.unit === true, pack.label]
+      `INSERT INTO drug (${cols.join(', ')}) VALUES (${cols.map((c, n) => '$' + (n + 1)).join(', ')}) RETURNING *`,
+      vals
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
@@ -130,22 +170,22 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
 
 router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
   try {
-    const { code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock } = req.body;
-    const invalid = badPrices(req.body, ['unit_price', 'min_stock']);
-    if (invalid) return res.status(400).json({ error: invalid });
-    if (!wholeOrBlank(min_stock)) return res.status(400).json({ error: fieldMsg.notWhole('min_stock') });
+    const bad = badDrug(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const pack = packFields(req.body);
     if (pack.error) return res.status(400).json({ error: pack.error });
-    // $13 NULL (pack_unit not sent): both pack columns stay as they are.
+    const f = sentDrugFields(req.body, await drugFieldsHere());
+    const sets = [], vals = [];
+    Object.keys(f).forEach(c => { vals.push(f[c]); sets.push(c + ' = $' + vals.length); });
+    // pack_unit not sent: both pack columns stay as they are (packFields).
+    if (pack.unit !== null) {
+      vals.push(pack.unit); sets.push('pack_unit = $' + vals.length);
+      vals.push(pack.label); sets.push('pack_label = $' + vals.length);
+    }
+    sets.push('updated_at = NOW()');
+    vals.push(req.params.id);
     const result = await pool.query(
-      `UPDATE drug SET code=$1, name=$2, name_en=$3, generic_name=$4, category=$5, default_dose=$6, default_freq=$7,
-       default_days=$8, default_route=$9, unit_price=$10, min_stock=$11,
-       pack_unit = COALESCE($13::boolean, pack_unit),
-       pack_label = CASE WHEN $13::boolean IS NULL THEN pack_label ELSE $14 END,
-       updated_at=NOW() WHERE id=$12 RETURNING *`,
-      [code, name, name_en, generic_name, category, default_dose, default_freq, default_days, default_route, unit_price, min_stock === '' ? null : min_stock, req.params.id,
-       pack.unit, pack.label]
-    );
+      `UPDATE drug SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals);
     if (sentMissing(res, result)) return;
     res.json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }

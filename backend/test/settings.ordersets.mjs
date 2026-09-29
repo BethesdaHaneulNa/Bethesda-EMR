@@ -49,9 +49,12 @@ let g = await get(id);
 const ps = g.items.find(i => i.drug_id === syrup.id), pt = g.items.find(i => i.drug_id === tab.id);
 check('pack line saved with quantity 3', Number(ps.quantity) === 3, ps);
 check('ordinary line keeps 1', Number(pt.quantity) === 1, pt);
-r = await call('PUT', '/order-sets/' + id, { name, items: [line(syrup, ''), line(tab, 0)] }, T);
+// The route (consultation's, afc29db) now refuses a drug line below 1; empty still means 1.
+r = await call('PUT', '/order-sets/' + id, { name, items: [line(syrup, 0)] }, T);
+check('0 on a drug line -> 400 (route checks since afc29db)', r.status === 400, r);
+r = await call('PUT', '/order-sets/' + id, { name, items: [line(syrup, ''), line(tab, '')] }, T);
 g = await get(id);
-check('empty and 0 still mean 1, as before', r.status === 200 && g.items.every(i => Number(i.quantity) === 1), g.items);
+check('empty still means 1', r.status === 200 && g.items.every(i => Number(i.quantity) === 1), g.items);
 
 await call('DELETE', '/order-sets/' + id, null, T);
 await call('PUT', '/admin/drugs/' + syrup.id, { ...syrup, ...wasPack }, T);

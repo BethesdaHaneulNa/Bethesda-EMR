@@ -276,6 +276,8 @@
 
 ### 2.15 상단바의 상태 점 (설정 권한이 있는 사람만)
 
+> **직원용 한 줄 (출발 전 확인 목록)** — 🇫🇷 « Si le petit point en haut de l'écran, à côté de l'heure, est **jaune** ou **rouge**, cliquez dessus pour voir ce qui ne va pas, puis faites ce qui est écrit ou prévenez le responsable. » · 🇰🇷 「화면 맨 위 시계 옆 작은 점이 **노랑**이나 **빨강**이면 눌러서 무엇인지 보고, 적힌 대로 하거나 담당자에게 알리세요.」
+
 1. **Paramètres** 권한이 있는 계정은 화면 맨 위, 시계 왼쪽에 **작은 점**이 보입니다(2026-09-29, U3 결정). 다른 직원에게는 없습니다.
 2. 색: **초록** 모두 정상 · **노랑** 확인 필요(백업이 오래됨·옛 버전, 디스크가 참, 영상 백업 디스크 없음 등) · **빨강** 문제(DB 연결 안 됨, 워크리스트가 멈춤 등) · **회색** 상태를 확인하지 못함(서버가 늦거나 끊김 — EMR은 그대로 쓸 수 있음).
 3. 누르면 목록: **Dossiers patients · Espace disque · Sauvegarde · Liste de travail des appareils · Imagerie (PACS) · Sauvegarde des images · Adresses de l'imagerie** 마다 점과 한 줄 설명. 「Non utilisé (사용 안 함)」 같은 회색 줄은 이 병원에서 쓰지 않는 것이라 경고가 아닙니다. 아래 **↻** 로 다시 확인.
@@ -405,6 +407,8 @@
   - `POST /drugs`: 새 약은 **재고 0**으로 시작(요청의 `stock_qty` 무시). 최소 재고가 비면 **10**(열 기본값이 빈 값에는 적용되지 않았음).
   - `PUT /drugs/:id`: `stock_qty`·`stock_expected`가 와도 **조용히 무시**하고 나머지만 저장. 거절(400)하지 않는 이유 — 이 변경 전에 연 설정 화면이 그대로 열려 있어도 이름·단가 저장이 막히지 않게. 최소 재고 소수는 400.
   - 화면도 요청에서 재고를 뺍니다.
+- **보낸 칸만 저장** (2026-09-29, 실장님 결정 **B** — 약품의 기본 용량·횟수·일수·용법 칸은 약품 화면에서 없앰, 화면은 약국·읽기는 진료 몫): `PUT /drugs/:id`는 **요청에 온 칸만** 바꿉니다. 전에는 모든 칸을 썼기 때문에 빠진 칸이 NULL로 덮였습니다 — 칸이 없는 화면으로 저장하면 기본값이 지워졌을 것. 빈 값(`''`)은 NULL(비움), 코드·이름을 비우면 400 「A required field is missing」. `POST`는 보내지 않은 칸을 열 기본값에 맡김. 쓸 수 있는 칸은 고정 목록(`DRUG_FIELDS`)뿐 — 재고(3-8 위)와 포장 칸(아래)은 따로.
+  - **제형 `dosage_form`** (약국 가져오기 `6bc5c6d`가 만드는 칸, 약국 부탁): DB에 그 칸이 **있을 때만** 받음(시작할 때 한 번 `information_schema`로 확인) — 가져오기 마이그레이션이 들어오기 전에도 뒤에도 같은 코드. 앞뒤 공백 제거, 빈 값은 NULL, 보내지 않으면 그대로.
 - **포장 단위 약** (2026-09-29, 약국 H2-B, 마이그레이션 025): 시럽·흡입기·안약·연고처럼 병·튜브로 내주는 약. `POST·PUT /drugs`가 `pack_unit`(참/거짓)과 `pack_label`(`bottle`·`tube`·`inhaler`·`unit`)을 저장합니다. 편집 창의 체크 칸·선택 칸은 약국 세션이 만든 것.
   - `pack_unit`이 거짓이면 `pack_label`은 **비워서**(NULL) 저장 — 무엇이 오든.
   - 참인데 단위가 비면 **`bottle`(병)**. 400으로 거절하지 않은 이유: 편집 창이 「병」을 미리 골라 보여 주므로 사람이 본 값과 같고, 이런 약은 대부분 시럽.
@@ -482,7 +486,7 @@
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). 쓰기 라우트 없음 |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙. PUT으로 비활성 → 활성은 **admin 역할만**(아니면 403) |
 | `POST /api/admin/staff/:id/reactivate` | settings **+ admin 역할** (2026-09-29, U2) | 비활성 → 활성, 다른 것은 그대로. 이미 활성이면 `{success, unchanged}`·기록 없음. 기록 `settings.staff.edit` status |
-| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로) (3-8절) |
+| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **약 `POST·PUT`은 재고를 쓰지 않음** — `stock_qty`는 무시, 새 약은 0. 포장 단위 `pack_unit`·`pack_label` 저장(PUT에서 `pack_unit`이 없으면 그대로). **PUT은 보낸 칸만**(결정 B), 제형 `dosage_form`은 칸이 있을 때만 (3-8절) |
 | `GET /api/admin/drugs/:id/order-sets` | settings | 그 약을 쓰는 **활성** 약속처방 `[{id, name}]` — 약을 감추기 전 확인 창에 이름을 보여 주려고 (2026-09-29) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
@@ -661,4 +665,5 @@
 | 2026-09-29 | 정리 스크립트: 준비한 PC의 표지 파일 `KEEP-TEST-DATA.txt`(총괄 `6d93954`) 설명, 기록 탭의 시험 줄 차트번호가 새 환자와 겹쳐 보일 수 있다는 안내 | 위키(2.13·2.14·3-11), 스크립트 끝 안내 세 줄 | `a446512` |
 | 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | `a95891a` |
 | 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | `8087fce` |
-| 2026-09-29 | **상단바의 상태 점** — 설정 권한이 있는 사람에게 초록·노랑·빨강(확인 못 하면 회색), 누르면 일곱 항목을 말로 (U3) | `settingsStatus.jsx`(새), `TopBar.jsx` 두 줄, `se_sys*` 46개, `settings.status.mjs`(새) (2.15·3-6) | (이 커밋) |
+| 2026-09-29 | **상단바의 상태 점** — 설정 권한이 있는 사람에게 초록·노랑·빨강(확인 못 하면 회색), 누르면 일곱 항목을 말로 (U3) | `settingsStatus.jsx`(새), `TopBar.jsx` 두 줄, `se_sys*` 46개, `settings.status.mjs`(새) (2.15·3-6) | `0d362a5` |
+| 2026-09-29 | 약 저장이 **보낸 칸만** 바꿈 — 약품 화면에서 기본 용량·횟수·일수·용법 칸이 빠져도 지워지지 않음(결정 B). 제형 칸을 받을 준비. 상태 점의 직원용 한 줄 | `admin.routes.js` `DRUG_FIELDS`·`sentDrugFields`, `settings.drugs.mjs` 10개 추가 (2.15·3-8) | (이 커밋) |
