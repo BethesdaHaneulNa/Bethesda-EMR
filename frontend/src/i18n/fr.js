@@ -508,6 +508,7 @@ export default {
   se_showPw: "Afficher",
   se_hidePw: "Masquer",
   se_role_nurse: "Infirmier(ère)",
+  se_pwKeep: "Vide = inchangé",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",
