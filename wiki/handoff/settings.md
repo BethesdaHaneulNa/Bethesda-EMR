@@ -4,6 +4,8 @@
 
 ## 2026-09-29 — S2 표 갱신 (접수 이전 내원 조회 · 약국 재고 라우트)
 
+> **총괄 확인 (2026-09-29)**: S2 표 갱신 `b5e7f4c` 합침(`e3292de`). 1050건 모두 표와 같음. 진료의 500 두 건은 `f52df58`로 고쳐져 develop에 있음.
+
 - **상태**: 확인 요청
 - **커밋**: session/settings — 이 항목과 같은 커밋 (develop `1ed8b1d`을 ff로 당긴 뒤)
 - **한 일**: 총괄 승인 한 칸 — `GET /api/visits/patient/:id`에 **registration** 추가(접수가 이전 내원으로 초진/재진 제안). 약국 재고 ① 라우트 5개(`/pharmacy/stock…`, pharmacy·consultation·settings)를 `settings.access.mjs` 기대 표와 아래 「S2 초안」 표에 넣음(표의 해당 줄을 그 자리에서 고치고 날짜를 적음).
