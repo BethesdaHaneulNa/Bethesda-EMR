@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 
 var TIMEOUT_MS = 8000;
-var COLORS = { ok: '#22c55e', warn: '#eab308', down: '#ef4444', off: '#64748b', none: '#64748b' };
+var COLORS = { ok: 'var(--status-ok)', warn: 'var(--status-warn)', down: 'var(--status-down)', off: 'var(--status-off)', none: 'var(--status-off)' };
 
 // 'status.backup.oldVersion' -> 'se_sys_backup_oldVersion'
 function msgKey(message) { return 'se_sys_' + String(message || '').replace(/^status\./, '').replace(/\./g, '_'); }
@@ -57,26 +57,26 @@ export function StatusDot(props) {
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
       <button onClick={function () { setOpen(!open); if (!open) load(); }} title={title}
-        style={{ background: '#1e2433', border: '1px solid #2a3142', borderRadius: 5, padding: '4px 7px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+        style={{ background: 'var(--chip)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 7px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
         <span style={{ width: 11, height: 11, borderRadius: '50%', background: COLORS[state] || COLORS.none, boxShadow: state === 'ok' || state === 'none' ? 'none' : '0 0 6px ' + COLORS[state] }}></span>
       </button>
       {open ? (
         <span>
           <span onClick={function () { setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 1999 }}></span>
-          <span style={{ position: 'absolute', top: 30, right: 0, zIndex: 2000, width: 380, maxWidth: '92vw', background: '#0f1117', border: '1px solid #2a3142', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.5)', padding: 12, display: 'block' }}>
-            <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: COLORS[state] === COLORS.none ? '#cbd5e1' : COLORS[state], marginBottom: 8 }}>{title}</span>
-            {failed ? <span style={{ display: 'block', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>{t.se_sysFailedHint}</span> : null}
+          <span style={{ position: 'absolute', top: 30, right: 0, zIndex: 2000, width: 380, maxWidth: '92vw', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px var(--shadow-50)', padding: 12, display: 'block' }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: COLORS[state] === COLORS.none ? 'var(--text-soft)' : COLORS[state], marginBottom: 8 }}>{title}</span>
+            {failed ? <span style={{ display: 'block', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{t.se_sysFailedHint}</span> : null}
             {data && !failed ? (data.services || []).map(function (s) {
-              return <span key={s.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderTop: '1px solid #1e2433' }}>
+              return <span key={s.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[s.state] || COLORS.none, flex: 'none', position: 'relative', top: 1 }}></span>
-                <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 600, width: 150, flex: 'none' }}>{t['se_sysItem_' + s.key] || s.key}</span>
-                <span style={{ fontSize: 12, color: s.state === 'ok' || s.state === 'off' ? '#94a3b8' : COLORS[s.state], lineHeight: 1.4, wordBreak: 'break-word' }}>{statusText(t, s)}</span>
+                <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, width: 150, flex: 'none' }}>{t['se_sysItem_' + s.key] || s.key}</span>
+                <span style={{ fontSize: 12, color: s.state === 'ok' || s.state === 'off' ? 'var(--text-2)' : COLORS[s.state], lineHeight: 1.4, wordBreak: 'break-word' }}>{statusText(t, s)}</span>
               </span>;
             }) : null}
-            <span style={{ display: 'flex', alignItems: 'center', marginTop: 8, fontSize: 11, color: '#64748b' }}>
+            <span style={{ display: 'flex', alignItems: 'center', marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
               {data && data.checked_at ? (t.se_sysCheckedAt || '') + ' ' + new Date(data.checked_at).toLocaleTimeString('en-GB') : ''}
               <span style={{ flex: 1 }}></span>
-              <button onClick={load} style={{ background: '#1e2433', color: '#94a3b8', border: '1px solid #2a3142', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>↻</button>
+              <button onClick={load} style={{ background: 'var(--chip)', color: 'var(--text-2)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>↻</button>
             </span>
           </span>
         </span>
