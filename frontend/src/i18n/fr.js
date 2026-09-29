@@ -365,6 +365,12 @@ export default {
   cs_cancelHint: "A un résultat - cliquer pour le marquer comme annulé",
   cs_orderIsCancelled: "Une demande annulée ne peut pas être modifiée.",
   cs_cancelPromptImg: "« {name} » a déjà un compte-rendu ou un examen réalisé et ne peut pas être retiré.\nLe marquer comme annulé ? Les images et le compte-rendu restent au dossier ; si l'examen n'a pas encore été fait, il sort de la liste de travail des appareils ; la demande sort de la facture.\nSi elle a déjà été payée, la caisse devra la rembourser.\n\nMotif (facultatif) :",
+  cs_packQty: "Quantité",
+  cs_packQtyHint: "Médicament à l’unité de conditionnement (sirop, crème, inhalateur…). Aucun total n’est calculé : le nombre de flacons/tubes/unités saisi ici est délivré et facturé. Dose par jour, fois et jours ne servent que de posologie.",
+  cs_noPackQty: "Indiquez la quantité",
+  cs_noPackQtyCount: "{n} flacon(s)/tube(s) sans quantité",
+  cs_noPackConfirm: "{n} médicament(s) sans quantité (flacons/tubes/unités) : {names}\n\nLa pharmacie s’arrêtera sur « quantité totale absente » et rien ne sera facturé. Terminer quand même la consultation ?",
+  cs_packQtyWhole: "La quantité est un nombre entier d’au moins 1 (pas de demi-flacon).",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
