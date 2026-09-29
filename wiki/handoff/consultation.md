@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 약속처방이 목록에서 감춘 약을 넣지 않게 (7.2 ㉕ 가안)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — `4e9a2d5`(develop `c5f725d`에 합쳐짐) 다음
+- **한 일** (총괄 지시 (가), 결정 없이):
+  - `orderset.routes.js` `attachItems`가 약 줄마다 `drug_active`(= `drug.is_active`)를 같이 돌려줍니다.
+  - 진료 화면 `applySet`은 `drug_active === false`인 약 줄을 넣지 않고, 끝에 한 번 「목록에서 감춘 약이라 넣지 않았습니다: 약 이름…」을 알립니다. 검사·처치 줄은 그대로 넣습니다.
+  - 약속처방 탭의 세트 카드에서 감춘 약 코드를 흐리게 줄 긋고, 마우스를 올리면 「목록에서 감춘 약 — 이 세트를 적용해도 넣지 않습니다」가 나옵니다.
+- **바꾼 파일**: `backend/src/routes/orderset.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_` 키 2개만 추가
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_setSkippedHidden` · `cs_setHiddenDrug` (ko · en · fr)
+- **확인한 방법**: `node --check` 통과, `npm run build` 통과. 격리 스택 9182, 시험 DB에서 ACT01·PCM500을 감추고 새 내원(26-00007)에서 확인했습니다.
+  - 한국어: 「Malaria Workup」 카드에 ACT01·PCM500 줄 그음과 도움말이 보였습니다. 적용하자 L04·L01만 들어갔고, 알림은 「…넣지 않았습니다: Artemether-Lumefantrine Tab, Paracetamol 500mg Tab」이었습니다.
+  - 프랑스어: 알림 « Non ajouté(s) - retiré(s) de la liste des médicaments : … »와 도움말을 확인했습니다.
+  - 되돌림 확인: PCM500을 다시 보이게 하니 카드에서 줄 그음이 ACT01만 남았고, 적용하면 PCM500은 들어가고 ACT01만 빠졌습니다.
+- **확인 못 한 것**: 영어 화면은 보지 않았습니다. 이미 없어진 약(drug 행 없음)은 `drug_active`가 NULL이라 빼지 않고 예전처럼 넣으려 합니다(외래키 때문에 오류). 이런 경우는 지금 없습니다.
+- **위키**: `modules/consultation.md` 머리 상태, 2.4(감춘 약), 3.1(`applySet`), 3.3(`attachItems`), 7.2 ㉕ ✅(가), 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: (나) 설정에서 약을 감출 때 「이 약을 쓰는 약속처방 N개」 알림은 설정 세션 몫입니다(총괄이 전달).
+- **남은 일 · 알려진 문제**: (다) 실제 약을 가져온 뒤 세트를 다시 잇는 것은 실장님 검토 뒤에 합니다. 다음은 위키 2절에 오늘 바뀐 것을 반영하는 일입니다(총괄 지시).
+
 ## 2026-09-29 — 인쇄 문서의 빈 주소·전화 줄 숨김
 
 > **총괄 확인 (2026-09-29)**: 빈 주소·전화 줄 숨김 `4e9a2d5` 합침(`c5f725d`) + 실행 중 EMR 반영. 공용 `shared.jsx` 변경 확인 — 값이 있으면 예전과 같음. 총괄 렌더 도구로 다시 찍음: 수술기록지 12종·프랑스어·빽빽한 경우 높이가 합치기 전과 같음(프랑스어 최대 990, 한국어 충수 1008).

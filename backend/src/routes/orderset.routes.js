@@ -27,9 +27,15 @@ async function attachItems(sets) {
   const ids = sets.map(function (s) { return s.id; });
   if (ids.length === 0) return sets;
   const r = await pool.query(
+    // drug_active: false when a drug line points at a drug hidden from the list
+    // (drug.is_active = false). A set keeps its own copy of the drug id and name, so
+    // without this a hidden sample drug was prescribed through a set, silently, at its
+    // old price. The screen leaves such lines out (Consultation.jsx applySet). NULL
+    // for order lines and for a drug that no longer exists.
     `SELECT i.*,
             COALESCE(dr.unit_price, oc.price_clinic, 0) AS unit_price,
-            oc.code_type AS order_code_type
+            oc.code_type AS order_code_type,
+            dr.is_active AS drug_active
        FROM order_set_item i
        LEFT JOIN drug dr ON i.drug_id = dr.id
        LEFT JOIN order_code oc ON i.order_code_id = oc.id

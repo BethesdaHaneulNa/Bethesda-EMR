@@ -344,6 +344,8 @@ export default {
   cs_noDoseCount: "{n} without a daily dose",
   cs_noDoseHint: "The daily dose (or the days) is empty, so the total is saved as 0: the pharmacy would hand out 0 and nothing would be billed.",
   cs_noDoseConfirm: "{n} drug(s) have no daily dose: {names}\n\nThey will go to the pharmacy and the cashier with a total of 0. Complete the consultation anyway?",
+  cs_setSkippedHidden: "Not added - hidden from the drug list: {names}\nSearch for a replacement if one is needed.",
+  cs_setHiddenDrug: "Hidden from the drug list - not added when the set is applied",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

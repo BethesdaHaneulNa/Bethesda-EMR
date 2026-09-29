@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 문서의 빈 주소·전화 줄 숨김 확인 요청 · 다음은 약속처방의 감춘 약(7.2 ㉕ 가안)
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 약속처방의 감춘 약 빼기(7.2 ㉕ 가안) 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -86,6 +86,7 @@
 1. 오른쪽 위 **Ordonnances types (약속처방)** 탭을 누릅니다.
 2. 📁 묶음 이름을 누르면 그 안의 세트가 펼쳐집니다.
 3. 세트를 누르면 그 안의 약·검사가 **모두** 지금 진료에 들어갑니다. 필요 없는 줄은 ✕로 지웁니다.
+   - 세트 카드의 코드 목록에서 **줄이 그어진 약**은 약 목록에서 감춘 약입니다. 세트를 눌러도 그 약은 들어가지 않고, 「Non ajouté(s) - retiré(s) de la liste des médicaments : … (목록에서 감춘 약이라 넣지 않았습니다: …)」라고 알려 줍니다. 필요하면 다른 약을 직접 찾아 넣으세요. 검사·처치 줄은 그대로 들어갑니다.
    - 세트를 만들거나 고치는 것은 **Paramètres (설정)**의 약속처방 탭에서 합니다(설정 권한 필요).
 
 ### 2.5 Visites passées — 과거 기록 (오른쪽)
@@ -203,7 +204,7 @@
 - **스치기만 한 저장은 보내지 않음**: `savedRx`(useRef)에 줄마다 서버가 마지막으로 돌려준 `dose·frequency·days·route·memo`를 기억하고(`rememberRx` — 불러올 때·추가·저장 응답), `saveRx`는 값이 그대로면 요청하지 않습니다. 이유: 칸이 포커스를 잃을 때마다 저장하므로, 예전 식으로 저장된 줄이 눌렀다 나오기만 해도 다시 계산되어 이미 수납한 내원에 환불이 뜨게 됩니다. 서버도 같은 이유로 바뀐 줄만 다시 계산합니다(3.2). 기본 용법이 없는 약에 `'TID'`를 넣던 코드는 없앴습니다(7절 ⑮).
 - **가격 0 표시**(2026-09-29): 파일 위쪽 `noPrice(v)`(`parseFloat(v) > 0`이 아니면 참). 처방 줄은 `rx.unit_price`(단, 약국이 원외로 돌린 `dispense_type='external'` 줄은 청구되지 않으니 빼고), 오더 줄은 `o.unit_price`, 검색 목록은 넣을 때 쓸 가격(약 `unit_price`, 오더 `price_clinic || price` — `addExamOrder`와 같은 값)을 봅니다. 컴포넌트 안 `NoPriceBadge`(`cs_noPrice`, 도움말 `cs_noPriceHint`)와 제목 옆 개수 `noPriceCount`(`cs_noPriceCount`). 이유: 실제 약 목록 105줄을 가격 없이 가져오기로 해서, 가져온 직후엔 모든 약이 0원입니다. 막지 않는 이유: 무료 항목이 있을 수 있음.
 - **하루 총량 없음 표시**(2026-09-29, 약국이 찾은 빈틈): 파일 위쪽 `noDose(rx)`(`dose`가 0보다 크지 않거나 `days`가 0보다 크지 않음). 줄 `NoDoseBadge`(`cs_noDose`, 도움말 `cs_noDoseHint`), 제목 옆 `noDoseRows.length`(`cs_noDoseCount`), `completeConsult` 첫머리의 `window.confirm`(`cs_noDoseConfirm`, 약 이름 나열 — 취소하면 완료하지 않음). 서버는 그대로(총량 0 저장). 이유: `rxTotal`이 하루 총량 없으면 0을 저장하고, 0은 조제·청구를 조용히 통과합니다. 약국은 총량 0을 「총량 없음」으로 표시합니다(약국 세션).
-- `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다.
+- `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다. **감춘 약**(2026-09-29, 7.2 ㉕): `drug_active === false`(약 줄이 가리키는 `drug.is_active`가 거짓)인 약 줄은 넣지 않고 모아서 끝에 한 번 알립니다(`cs_setSkippedHidden`). 세트 카드의 코드 목록에서는 그 약을 흐리게 줄 긋고 도움말 `cs_setHiddenDrug`. 검사·처치 줄은 그대로.
 - 과거 보기 `openPast`/`renderPast` (114-163): 처방·오더를 읽어 가운데에 보여 주고, 왼쪽 오더 칸은 가립니다. 읽기 전용은 **이 화면에서만**이고, 「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열립니다(7절 ⑫).
 - 영상 판독: `openViewer` → `GET /pacs/viewer-url`, `saveReading` → `PUT /pacs/reading/:id`. 판독 칸은 `canRead`(권한 `consultation` 보유, 50줄)일 때만 쓸 수 있습니다.
 - **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, PACS 세션의 `PatientCheck`(`RadiologyReadings.jsx`에서 export)를 뷰어 머리 아래에 `style={{margin:'8px 14px 0'}}`으로 씁니다 — `mismatch` 빨강, `missing` 노랑. 처음에는 export되지 않아 이 파일에 복제본(`ImagePatientCheck`)을 뒀다가, PACS가 export한 뒤 지웠습니다.
@@ -229,7 +230,7 @@
 
 - 읽기 `GET /` · `GET /:id` 는 consultation·settings(진료 화면과 설정의 약속처방 탭 — S2), 쓰기 `POST` · `PUT /:id` · `DELETE /:id` 는 `permMiddleware('settings')`.
 - `PUT`은 세트 정보를 고치고 `items`가 오면 **항목을 통째로 지우고 다시 넣습니다.**
-- `attachItems`는 항목의 단가를 `drug.unit_price` / `order_code.price_clinic`에서 지금 값으로 붙입니다(세트에 단가를 저장하지 않음).
+- `attachItems`는 항목의 단가를 `drug.unit_price` / `order_code.price_clinic`에서 지금 값으로 붙입니다(세트에 단가를 저장하지 않음). 약 줄에는 `drug_active`(= `drug.is_active`, 없는 약·오더 줄은 NULL)도 붙입니다 — 세트는 약 id·이름을 복사해 두므로 약을 목록에서 감춰도 세트는 모르고, 화면이 이 값으로 감춘 약을 뺍니다.
 - 화면은 설정 → 약속처방 탭(`Settings.jsx` 157-192, 384-)이 씁니다. 그 탭의 담당은 「확인 필요」(규칙 4절상 모듈 탭은 해당 모듈 — 진료로 보임).
 
 ### 3.4 문서 — `backend/src/routes/document.routes.js` (`/api/documents`)
@@ -459,7 +460,7 @@
 | ㉒ ✅ 09-29 | 중간 · 임상병리 부탁 | **검사 오더가 결과 전부터 「completed」로 보였다.** 상태 칸이 영상용 `worklist_status`를 보여 주는데, 워크리스트 없는 오더는 처음부터 `completed`로 저장된다. → **고침**: 검사 오더는 `o.status`(결과 대기/결과 있음/취소됨), 워크리스트 오더는 그대로, 그 밖은 비움(3.1절) | `Consultation.jsx` `orderStatus` · `consult.routes.js` POST /:id/orders · 임상병리 위키 7절 9 |
 | ㉓ ✅ 09-29 | 중간 · PACS 부탁 | **영상 뷰어가 다른 환자의 영상일 수 있다는 경고를 보여 주지 않았다**(판독 목록에만 있었음), **상태 칸의 워크리스트 상태가 영어**(P-19). → **고침**: 뷰어 위 빨강/노랑 경고, 상태 칸 3개 국어 | `Consultation.jsx` `ImagePatientCheck` · `orderStatus` · `pacs.routes.js` `/viewer-url` |
 | ㉔ ✅ 09-29 | **높음** | **약 총량 계산식이 병원 처방 방식과 다르다.** 병원은 「하루 총량 · 횟수 · 일수 · 용법」(3.000/3/7/TID = 하루 3정을 3번에 7일)으로 처방하는데 EMR은 용량×횟수×일수로 계산해 3배가 된다(청구·재고·통계 모두). 식만 바꾸면 끝나지 않는다 — 시드가 섞여 있어(ACT01 4/2/3, ORS 1/3/3은 지금 식이 맞음) 기본값도 고쳐야 하고, 시럽·흡입기(병·개 단위)는 어느 식으로도 맞지 않는다. 조사 결과·바꿀 곳·확인 시나리오는 인계 노트 2026-09-29 「조사: 약 총량 계산식」 → **고침**(실장님 결정: 입력은 하루 총량, 총량 = 하루 총량 × 일수, 1회량도 같이 보임): 서버 `rxTotal` 한 곳, 바뀐 줄만 재계산, 풀이 줄·⚠·도움말. 약 기본값·약속처방(ACT01·ORS 등)과 병 단위 약은 의사 확인 대기로 그대로. 의사 확인용 표(시드 약 25개·약속처방을 두 식으로 계산)는 인계 노트 2026-09-29 「의사 확인용 자료」 | `Consultation.jsx` addDrugRx·saveRx · `consult.routes.js` PUT calcQty · `003_seed_data.sql` 3-27 |
-| ㉕ | 중간 · 결정 대기 | **목록에서 감춘 약(`drug.is_active = false`)이 약속처방으로는 그대로 처방된다.** 약 검색(`/admin/drugs`)은 감춘 약을 빼지만, 약속처방은 세트 항목에 복사된 `drug_id`·이름으로 넣고(`applySet` → `addDrugRx`), 단가는 `drug`에서 `is_active`와 상관없이 붙으며(`orderset.routes.js` `attachItems`), 처방 API도 확인하지 않는다. 격리 스택에서 ACT01·PCM500을 감추고 「Malaria Workup」을 적용하자 두 약이 표시 없이 들어갔다(총 12·15, 예시 단가). 예시 약 25개를 감추기로 했고 시드 세트의 약 줄 4개가 예시 약을 가리킨다. 대안: (가) `attachItems`가 약의 `is_active`를 같이 돌려주고, 화면이 감춘 약 줄을 세트에서 빼고 넣으며 「목록에서 감춘 약이라 넣지 않음: …」 안내, (나) 설정에서 약을 감출 때 그 약을 쓰는 세트 수를 알려 줌(설정 세션), (다) 실제 약을 가져온 뒤 예시 세트를 새로 만듦 | `orderset.routes.js` `attachItems` · `Consultation.jsx` `applySet` · `admin.routes.js` `GET /drugs` |
+| ㉕ ✅ 09-29 (가) | 중간 | **목록에서 감춘 약(`drug.is_active = false`)이 약속처방으로는 그대로 처방된다.** 약 검색(`/admin/drugs`)은 감춘 약을 빼지만, 약속처방은 세트 항목에 복사된 `drug_id`·이름으로 넣고(`applySet` → `addDrugRx`), 단가는 `drug`에서 `is_active`와 상관없이 붙으며(`orderset.routes.js` `attachItems`), 처방 API도 확인하지 않는다. 격리 스택에서 ACT01·PCM500을 감추고 「Malaria Workup」을 적용하자 두 약이 표시 없이 들어갔다(총 12·15, 예시 단가). 예시 약 25개를 감추기로 했고 시드 세트의 약 줄 4개가 예시 약을 가리킨다. 대안: (가) `attachItems`가 약의 `is_active`를 같이 돌려주고, 화면이 감춘 약 줄을 세트에서 빼고 넣으며 「목록에서 감춘 약이라 넣지 않음: …」 안내, (나) 설정에서 약을 감출 때 그 약을 쓰는 세트 수를 알려 줌(설정 세션), (다) 실제 약을 가져온 뒤 예시 세트를 새로 만듦 → **(가) 고침**(총괄: 결정 없이 진행): 감춘 약 줄은 넣지 않고 약 이름을 알림, 세트 카드에 줄 그음. (나) 설정의 「이 약을 쓰는 세트 N개」 알림은 설정 세션, (다) 실제 약으로 세트 다시 잇기는 실장님 검토 뒤 | `orderset.routes.js` `attachItems` · `Consultation.jsx` `applySet` · `admin.routes.js` `GET /drugs` |
 
 ### 7.3 제약 (버그는 아니지만 고칠 때 알아야 할 것)
 
@@ -473,7 +474,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **문서의 빈 주소·전화 줄 숨김**(공용 `PatientBox`) — 접수가 주소를 받지 않기로 해서(실장님 결정) 늘 빈칸이던 줄. 값이 있으면 예전처럼 인쇄. 렌더: 기존 12개 수술기록지·동의서 등 출력 HTML이 전과 바이트까지 같음 | (이 커밋) |
+| 2026-09-29 | **약속처방의 감춘 약 빼기(㉕ 가안)** — `attachItems`가 `drug_active`를 돌려주고, 적용할 때 감춘 약은 넣지 않고 이름을 알림, 세트 카드에 줄 그음. 번역 키 `cs_` 2개 | (이 커밋) |
+| 2026-09-29 | **문서의 빈 주소·전화 줄 숨김**(공용 `PatientBox`) — 접수가 주소를 받지 않기로 해서(실장님 결정) 늘 빈칸이던 줄. 값이 있으면 예전처럼 인쇄. 렌더: 기존 12개 수술기록지·동의서 등 출력 HTML이 전과 바이트까지 같음 | `4e9a2d5` |
 | 2026-09-29 | **하루 총량 없는 처방 표시** — 줄 표시·제목 옆 개수·완료할 때 한 번 확인(막지 않음). 감춘 예시 약이 약속처방으로 처방되는 것을 확인해 7.2 ㉕로 기록. 번역 키 `cs_` 4개 | `40ccd6c` |
 | 2026-09-29 | **S2 — 서버 권한 = 화면 권한**(실장님 결정) — 처방·오더 읽기 consultation·payment·pharmacy, 진단 consultation, 문서 읽기 5개 권한·발급/취소 3개 권한, 약속처방 읽기 consultation·settings | `6b315c9` |
 | 2026-09-29 | **약 표기를 공용 `rx-dosing.js`로** — 진료 화면 풀이 줄·의뢰서 투약 글이 약국과 같은 문장(단위 정/cp, ½). 진료 쪽 계산·키 정리(`cs_rxStoredTotal`은 수납이 써서 유지). **검사·영상 진행 상태 30초 자동 반영**(임상병리 부탁) — 적던 칸은 그대로. 번역 키 `cs_rxUnevenFlag`·`cs_rxLegacy` 추가, `cs_rxBreakdown`·`cs_rxUneven` 삭제 | `bdd14bf` |
