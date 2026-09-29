@@ -332,6 +332,7 @@
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
+| U10 | 높음 | **약 저장이 재고를 덮어씀** (약국 H4): 약 편집 창이 연 순간의 재고를 들고 있다가 `PUT /api/admin/drugs/:id`가 그대로 씀 → 그 사이 조제한 차감이 사라짐. **제안만** — 연 순간의 재고를 같이 보내고, 그 사이 바뀌었으면 409로 다시 묻기(A), 길게는 재고를 움직임으로만 바꾸기(B, 약국). 인계 노트 2026-09-29 「제안: 약 저장이…」 | `admin.routes.js` DRUGS 절 `stock_qty=$11` |
 
 ## 8. 변경 기록
 
