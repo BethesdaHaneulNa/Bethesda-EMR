@@ -53,15 +53,20 @@ worklist no longer opens the viewer's front page — the list of every patient i
 patient's chart; it says that no images are linked. Reading dates are shown in the PC's local date:
 a reading written between midnight and 03:00 used to appear on the previous day.
 
-### Images are backed up every night to an external disk
+### Images and the EMR's backups go to an external disk every night
 
-The EMR's nightly backup covered the database only. The images and Orthanc's index were on one disk,
-with no copy anywhere. New scripts in the PACS folder copy each night (02:30) the images that are new
-since the last run, as plain DICOM files, to an external USB disk that carries a marker file; images are
-never deleted from the disk. Each run reports counts and free space (no patient data) to the EMR, whose
-status screen warns when the disk is missing, full or the last success is too old. A restore script puts
-the files back into Orthanc and checks that every EMR imaging order with images has them again;
-`-Verify` checks the disk without writing.
+The EMR's nightly backup covered the database only, and it sat on the same disk as the EMR. The images
+and Orthanc's index were on that disk too, with no copy anywhere: one failed disk would have taken
+everything. New scripts in the PACS folder copy each night (02:30) the images that are new since the
+last run, as plain DICOM files, to an external USB disk that carries a marker file; images are never
+deleted from the disk. The same run copies the EMR's database backups (`backups\*.sql.gz`) to that disk,
+each checked by hash and as a complete gzip, and keeps them by the EMR's own rule (30 days, never fewer
+than the newest seven). The EMR's own backup folder and settings are not touched, so an unplugged disk
+cannot affect the EMR. Each run reports counts and free space (no patient data) to the EMR, images and
+database copies separately; the status screen warns when the disk is missing, full or the last success
+is too old. A restore script puts the images back into Orthanc and checks that every EMR imaging order
+with images has them again; `-Verify` checks the disk, the EMR copies included, without writing. The
+disk is not encrypted and holds the whole EMR database: it must be kept locked away.
 
 ### Security: the worklist feed no longer answers to the published token
 
@@ -110,6 +115,7 @@ PACS unreachable in September while its container still looked healthy.
    9090 can be removed. Check that a doctor's PC opens an image with no login prompt, and that
    **Settings → Order Feed** shows "image server password set".
 5. **Image backup:** plug in an external disk, run `prepare-backup-disk.ps1 -Target <drive>`, then
-   `install-image-backup.ps1` once, then `image-backup.ps1` once by hand for the first full copy. Keep
-   the disk locked away: it holds patient images.
+   `install-image-backup.ps1` once (add `-EmrPath <EMR folder>` if the EMR is not in a `Bethesda-EMR*`
+   folder beside the PACS folder), then `image-backup.ps1` once by hand for the first full copy. Keep
+   the disk locked away: it holds patient images and a full copy of the EMR database, unencrypted.
 6. Devices: switch off "my AE title only" in the device's worklist query, or its worklist will be empty.

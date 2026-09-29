@@ -355,6 +355,21 @@ router.post('/image-backup-report', async (req, res) => {
       error: String(b.error || '').slice(0, 300),
       last_success: ok ? new Date().toISOString() : (prevSuccess || null),
     };
+    // The EMR's own database backups, copied to the same disk by the same run
+    // (image-backup.ps1 Copy-EmrBackups). Reported apart from the images: `ok`
+    // above stays the images' result. Absent when an older script reports.
+    const EMR_STATES = ['ok', 'not_found', 'none', 'failed', 'no_disk'];
+    if (b.emr_backup !== undefined) {
+      const prevEmrOk = prev.rows[0] && prev.rows[0].detail ? prev.rows[0].detail.emr_backup_last_ok : null;
+      Object.assign(detail, {
+        emr_backup: EMR_STATES.includes(b.emr_backup) ? b.emr_backup : 'failed',
+        emr_backup_ok: b.emr_backup_ok === true,
+        emr_backup_copied: num(b.emr_backup_copied), emr_backup_count: num(b.emr_backup_count),
+        emr_backup_newest: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(b.emr_backup_newest || '')) ? b.emr_backup_newest : null,
+        emr_backup_error: String(b.emr_backup_error || '').slice(0, 300),
+        emr_backup_last_ok: b.emr_backup_ok === true ? new Date().toISOString() : (prevEmrOk || null),
+      });
+    }
     await pool.query(
       `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
             VALUES ('pacs_image_backup', NOW(), $1, $2)

@@ -131,7 +131,7 @@ EMR 상태 화면(또는 서버 상태 창)에 영상 백업 경고가 보이면
 1. **서버 PC에 영상 백업용 외장 디스크가 꽂혀 있는지** 봅니다. 빠져 있으면 다시 꽂습니다. 다음 밤에 빠진 날 것까지 복사됩니다.
 2. 「가득 참(full)」이면 관리자(실장님)에게 알립니다 — 디스크를 바꾸거나 새로 준비해야 합니다.
 3. 그 밖의 경고(실패, 오래 안 됨)도 관리자에게 알립니다. 영상 서버와 진료는 그대로 쓸 수 있습니다 — 백업만 멈춘 것입니다.
-4. 영상 백업 디스크는 **환자 영상이 그대로 들어 있습니다.** 서버 옆 잠긴 곳에 두고, 다른 일에 쓰지 마세요.
+4. 영상 백업 디스크에는 **환자 영상과 EMR 데이터베이스 백업(모든 환자 기록)이 암호화 없이 그대로 들어 있습니다.** 서버 옆 잠기는 곳에 두고, 빌려주거나 다른 일에 쓰지 마세요.
 
 ## 3. 기능 상세
 
@@ -392,7 +392,9 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | `worklist_log`의 **영상 도착 기록** | 영상을 옮기기 전에는 판독 목록 「N image(s) reçue(s)」인데 영상 창은 빈 화면 | ②-6 영상 복원 → 「missing from Orthanc」가 0인지 |
 | `order_item`·순번 | 이어서 늘어남 → 새 AccessionNumber·UID가 옛것과 안 겹침 | 없음 |
 
-### 6.2 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크)
+### 6.2 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크) · EMR 백업도 같은 디스크로
+
+> ⚠ **외장 디스크 하나에 환자 영상과 EMR 데이터베이스 전체(환자·진료·수납 기록)가 같이 들어 있고, 암호화하지 않습니다.** 서버 옆 **잠기는 곳**에 두고, 빌려주거나 다른 일에 쓰지 마세요. 잃어버리면 병원 기록 전체가 새어 나간 것과 같습니다 — 실장님께 바로 알립니다. (암호화 BitLocker To Go는 결정 세션 몫.)
 
 **하는 일**: 매일 밤 **02:30**(EMR DB 백업 02:00 뒤) PACS 폴더의 **`image-backup.ps1`** 이 Orthanc에 **지난번 이후 새로 들어온 영상**만 물어 **원본 DICOM 파일 그대로** 외장 디스크에 쓰고, 결과를 EMR에 보고합니다. 영상은 **디스크에서 지우지 않습니다**(Orthanc에서 지운 것도 남음 — 실수로 지운 영상 되살리기).
 
@@ -401,6 +403,14 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 2. `.\install-image-backup.ps1` — Windows 작업 스케줄러에 「Bethesda PACS image backup」 등록(매일 02:30, **로그온한 사용자로** — Docker Desktop과 같은 조건, 관리자 권한·비밀번호 저장 없음, PC가 꺼져 있던 밤은 다음 시작 때 따라잡음). `-WhatIf`로 미리 보기, `-Remove`로 해제. **Windows 설정을 바꾸는 일이라 개발 세션은 돌리지 않음.**
 3. `.\image-backup.ps1` 을 한 번 손으로 돌려 첫 복사(처음엔 전부) → EMR 상태 화면 확인.
 
+**EMR 백업도 같은 디스크로** (실장님 결정 — 현지 서버는 PC 한 대, 외장하드 하나, 2026-09-29)
+- 같은 실행에서 영상 다음에 **EMR의 밤 DB 백업**(`bethesda_YYYY-MM-DD_HHMM.sql.gz`, 02:00, 파일 하나 1MB 안팎)을 디스크의 **`BethesdaPACS\emr-backups\`** 로 복사. EMR 쪽(폴더·`BACKUP_PATH`·설정)은 **건드리지 않음** — 디스크가 빠져도 EMR 백업은 그대로 EMR 폴더에 쌓임.
+- EMR 폴더: `-EmrPath`로 주거나, 없으면 **PACS 폴더 옆의 `Bethesda-EMR*`**(그 안에 `docker-compose.yml`이 있는 것; 여럿이면 가장 새 백업이 있는 것). 설치 키트는 `<드라이브>\Bethesda-EMR`·`\Bethesda-PACS`로 나란히 놓으므로 보통 저절로 찾음. 예약 작업에 넘기려면 `install-image-backup.ps1 -EmrPath <폴더>`. 백업 폴더는 EMR `.env`의 `BACKUP_PATH`(상대 경로면 EMR 폴더 기준), 없으면 `<EMR>\backups`.
+- 복사하는 것: 그 폴더 **맨 위의** `bethesda_*.sql.gz`·`medconnect_*.sql.gz`(0바이트 제외). **`.inprogress`(쓰는 중인 덤프)는 안 봄.** 같은 이름·같은 크기가 디스크에 있으면 건너뜀.
+- 확인: `.part`로 받고 → **SHA-256이 원본과 같은지** → **gzip이 끝까지 풀리고 풀린 길이가 gzip 꼬리(ISIZE)와 같은지** → 이름 바꿈. Windows PowerShell의 GZipStream은 잘린 파일을 오류 없이 끝까지 읽으므로 길이 비교가 필요했음(시험에서 잘린 파일이 처음엔 통과함). 실패하면 그 파일만 실패로 보고, 나머지는 계속 복사.
+- 디스크에서 지우는 규칙: **EMR과 같게** — EMR `.env`의 `BACKUP_RETENTION_DAYS`(기본 30)일 넘은 것만, **가장 새 7개는 항상 남김**. 날짜는 파일 이름에서(복사본의 파일 시각은 믿지 않음). **복사 오류가 있던 밤에는 지우지 않음.** 지울 파일은 처음부터 복사하지 않음. **영상은 지금처럼 지우지 않음.**
+- 영상 결과와 **따로** 보고: 영상이 실패해도(Orthanc 멈춤 등) EMR 백업은 복사하고, EMR 백업이 실패해도 영상 결과(`ok`·exit 코드)는 그대로.
+
 **어떻게 동작하나** (`image-backup.ps1`, 함께 쓰는 `image-backup-common.ps1`)
 - 디스크: 모든 드라이브에서 표시 파일을 찾음. **없으면** 「backup disk not found (is it plugged in?)」·exit 2, **둘 이상이면** 멈추고 경고.
 - 무엇이 새것인가: Orthanc `GET /changes?since=<seq>&limit=200`의 `NewInstance`. 마지막 seq는 **디스크의** `BethesdaPACS\state.json` — 디스크를 새것으로 바꾸면 처음부터 다 복사됨.
@@ -408,14 +418,30 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 - **seq는 한 묶음(200건)을 다 받은 뒤에만** 올림 — 하나라도 실패하면 거기서 멈추고 다음 밤에 같은 자리부터.
 - **디스크 가득**: 받기 전마다 남은 공간이 (그 파일 + 1GB)보다 작으면 멈춤 → 「backup disk is full – N GB free. Replace or clear it.」(실패). 끝났을 때 남은 공간이 10% 미만이면 성공이지만 「almost full」 경고.
 - 보고: `POST /api/pacs/image-backup-report`(브리지 토큰을 **헤더**로, 본문은 개수·공간·오류 글자뿐 — 환자 정보 없음) → `service_heartbeat`의 `pacs_image_backup` 줄. EMR은 `last_success`를 실패한 밤에도 이어 둠(「마지막으로 된 게 언제인가」). 같은 내용을 PACS 폴더 `logs\image-backup-status.json`에도 씀(EMR이 멈춰도 서버 상태 창이 읽을 수 있게), 실행 기록은 `logs\image-backup.log`(개수·오류만).
+- 보고의 EMR 백업 칸(같은 `pacs_image_backup` 줄의 detail, `logs\image-backup-status.json`에도):
+  | 칸 | 뜻 |
+  |---|---|
+  | `emr_backup` | `ok` / `not_found`(EMR 폴더 못 찾음) / `none`(EMR 폴더에 백업이 하나도 없음) / `failed`(복사·확인 실패, 디스크 가득) / `no_disk`(디스크 없음·둘 이상) |
+  | `emr_backup_ok` | `emr_backup`이 `ok`일 때만 참 |
+  | `emr_backup_copied` | 이번에 복사한 파일 수 |
+  | `emr_backup_count` | 디스크에 있는 EMR 백업 수 |
+  | `emr_backup_newest` | 디스크에서 가장 새 백업의 **파일 이름 날짜** `YYYY-MM-DD HH:MM` (없으면 null) |
+  | `emr_backup_error` | 짧은 영어 문장(300자까지) — 파일 이름만, 환자 정보·비밀값 없음 |
+  | `emr_backup_last_ok` | EMR이 붙임: 마지막으로 `emr_backup_ok`가 참이었던 때(실패한 밤에도 이어 둠) |
+
+  옛 스크립트가 보고하면 이 칸들이 **아예 없음**(= 「모름」). `ok`는 계속 영상 결과.
 - EMR 상태 화면·서버 상태 창에 경고로 보이는 것은 **설정 세션 몫**(디스크 없음 / 실패 / 36시간 넘게 성공 없음 / 여유 10% 미만) — 총괄이 전달.
 
 **복원·연습** (`restore-image-backup.ps1`)
 - `.\restore-image-backup.ps1` — 디스크의 `.dcm`을 Orthanc에 다시 올림(`POST /instances`). 이미 있는 것은 「AlreadyStored」 — **다시 돌려도 안전**. 끝에 올린 수·Orthanc 영상 수 전후, 그리고 **「EMR imaging orders with images recorded: N; of those, missing from Orthanc: M」**(EMR DB 컨테이너가 같은 PC에 있을 때 — 개수만). StudyInstanceUID가 그대로라 EMR 오더와의 연결도 그대로.
 - **달마다** `.\restore-image-backup.ps1 -Verify`(읽기만): 무작위 20개가 DICOM 파일인지(128바이트 뒤 `DICM`), 디스크 파일 수 ≥ Orthanc 영상 수인지, EMR 연결 확인 → `VERIFIED` / exit 1.
+- `-Verify`는 **디스크의 EMR 백업 수·가장 새 파일 이름과 날짜**도 말하고, 가장 새 것이 완전한 gzip인지 봄. 가장 새 것이 36시간보다 오래됐거나 망가졌으면 VERIFIED가 아님. 하나도 없으면 노란 경고만(EMR이 다른 PC에 있는 병원).
+- **EMR 복원은 이 스크립트가 하지 않음**: 디스크의 `BethesdaPACS\emr-backups\`에서 고른 파일을 EMR 폴더의 `backups\`로 복사한 뒤, EMR `DEPLOYMENT.md` **5b 절차 그대로**(앱 멈춤 → `docker cp` → `gunzip -t` → 복원). 복원 뒤에는 PACS 폴더에서 **`pair-with-emr.ps1`** 을 다시(백업이 옛 토큰·비밀번호를 들고 옴, 6.1).
 - **석 달마다** 실제 복원 연습: PACS 격리 스택(7절 끝, 127.0.0.1:9198)에 `-OrthancUrl http://localhost:9198`로 복원해 영상이 열리는지. 실행 중 PACS는 안 건드림.
 
 **시험 (2026-09-29, 격리 스택 + 시험용 폴더를 디스크 삼아)**: 첫 실행 9장 → 다시 돌리면 0장 → 새 영상 2장만 → 받기 전에 지운 영상은 건너뜀 → 남은 `.part` 지움 → 디스크 가득(여유를 일부러 크게) 멈춤·seq 그대로 → 디스크 없음 exit 2 → 디스크 둘 멈춤 → EMR 줄에 각 결과·`last_success` 유지. Orthanc에서 검사 하나(3장) 지운 뒤 `-Verify` VERIFIED → 복원 3장 새로·8장 이미 → 다시 복원 0장 새로 → 「missing from Orthanc」 4→3(남은 3건은 가짜 Orthanc 시절 시험 오더라 정상). `install-image-backup.ps1 -WhatIf` 만 — 등록 안 됨 확인.
+
+**EMR 백업 복사 시험 (2026-09-29, 시험용 폴더 — 가짜 EMR 폴더에 가짜 덤프 13개(0~45일 전) + `.inprogress` + 다른 파일, 디스크도 폴더)**: 첫 실행(Orthanc 꺼짐) → 영상 `ok=false`·exit 1인데 EMR 백업은 `ok`, 30일 안쪽 9개만 복사(30일 넘은 4개는 복사 안 함), `.inprogress`·다른 파일 무시 · 다시 → 0개 · 디스크의 망가진 복사본 → 다시 복사 · **잘린 EMR 백업** → 그 파일만 `failed`(「not a complete gzip」), 새 정상 파일은 복사, 그 밤엔 지우지 않음 → 다음 밤 지움 · 디스크의 45·50·33일 된 복사본 → 지움, 새 7개 남김 · `-EmrPath` 틀림 → `not_found`, 영상 결과 그대로 · 디스크 없음 → `no_disk`·exit 2 · EMR `.env`의 `BACKUP_PATH=./otherbk`·`BACKUP_RETENTION_DAYS=5` → 그 폴더에서 복사, 5일 규칙으로 7개 남김 · **격리 스택**(Orthanc 9198 + EMR 9188): 영상 12장·EMR 백업 4개 → EMR `service_heartbeat` detail에 칸들 저장 확인, 잘린 파일 → `ok=t`(영상)·`emr_backup=failed`·`emr_backup_last_ok` 이어 둠, 옛 모양 보고 → EMR 칸 없음 · `-Verify` → 「EMR database backups on the disk: 11; newest … reads as a complete gzip」·VERIFIED. `install-image-backup.ps1 -WhatIf -EmrPath …`만(등록 안 됨 확인). 진짜 USB 디스크·진짜 EMR 백업으로는 안 해 봄.
 
 **남은 것**: 리눅스·NAS용 `.sh`는 아직(필요해지면). 디스크 암호화(BitLocker To Go)는 결정 세션.
 
@@ -492,6 +518,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | 6.2: 밤 영상 백업이 **EMR DB 백업도 같은 외장 디스크로** 복사(`emr-backups`, 해시·gzip 확인, EMR과 같은 보존 규칙), 보고 칸 `emr_backup*`, `-Verify`에 EMR 백업, 디스크 보관 경고. PACS README의 깨진 두 줄(`.\restore…`) 고침 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 현지 직원용 프랑스어 설명서 `wiki/manual-fr/pacs.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/pacs.md`, 오더 연동 탭 오류 문구 번역(서버 검사 400 + `pxMessage`), 7절 P-9에 같은 출처 결정 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | **P-9 C: EMR이 영상을 중계**(`pacs.viewer.js`, 마이그레이션 035(세션 번호 803) `orthanc_url`·`orthanc_password`, 서명 쿠키, 허용 목록, 뷰어용 CSP). `pair-with-emr`가 Orthanc 비밀번호도 넣음, Orthanc 9090은 127.0.0.1만, Stone 시작 안내 끔. 2.3·2.5(로그인 없음, 안내 문구), 4절 중계, 6절 설정 칸, 6.1 순서, 7절 P-9 ✅(보안 시험·50MB 수치) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 영상 백업 만듦(6.2, PACS `image-backup.ps1` 등 5개, EMR `POST /image-backup-report`), 6.1을 새 도구(check-windows-ports·pair-with-emr·영상 복원) 기준 설치 순서로 다시 씀, 2.6에 취소 뒤 늦은 영상 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
