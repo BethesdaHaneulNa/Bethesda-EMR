@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — USB 시험 순서서 · 디스크를 다른 서버에 가져가도 영상이 빠지지 않게 · 도중에 빠진 디스크 · `-Verify` 시각
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `70877e2`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `6f5c871`
+- **한 일**
+  1. **`wiki/reference/usb-backup-rehearsal.md`** (새, 한국어, 실장님용): 무엇을 확인하나, 준비물, 걸리는 시간(30분~1시간), 이 PC에서 해도 되는 것 / 현지에서만(예약 등록), 명령 창 여는 법, 1~8단계(꽂기 → `prepare-backup-disk` → `image-backup` 한 번 → 디스크 안 보기·EMR 백업 개수 맞춰 보기 → `-Verify` → EMR 상태 점 → 안전하게 제거 후 `image-backup`(「disk not found」, EMR은 그대로) → 다시 꽂고 한 번 더), 단계마다 「정상 / 멈추고 총괄에게」 표(스크립트가 실제로 찍는 영어 줄 그대로), 도중에 뽑기(흉내 결과 표 — 진짜 디스크로는 권하지 않음), 끝난 뒤(디스크 보관, 같은 디스크를 현지로, 현지에서 `install-image-backup`), 막혔을 때 볼 곳.
+  2. **`-Verify` 36시간 판정** (총괄 지적): 파일 이름 시각이 아니라 **복사본의 수정 시각**으로(복사할 때 원본 시각을 그대로 줌). 출력도 「written <시각> on this PC's clock」. 이름 시각은 EMR 컨테이너 `TZ`(기본 Indian/Antananarivo)라 PC 시간대가 다르면 어긋남 — 현지 PC는 같은 시간대라 문제없지만 이 PC(한국)는 6시간. `image-backup.ps1`의 가지치기는 30일 단위라 몇 시간 차이는 상관없어 이름 날짜 그대로. `emr_backup_newest`도 이름 시각 그대로(위키 표에 「나이 판정에 쓰지 말 것」).
+  3. **찾아서 고친 것 — 디스크를 새 서버로 가져가면 새 영상이 빠질 뻔함**: 디스크의 `state.json` `last_seq`는 **Orthanc DB 하나의 변경 번호**. 결정 35대로 새 PC에서 같은 디스크를 쓰면(또는 영상 백업으로 Orthanc를 다시 채우면) 새 Orthanc는 1부터 — 옛 번호가 더 크면 그 사이 새 영상을 **영원히 건너뜀**(시험: 고치기 전 방식이면 12장 중 0장). 이제 `last_change`(그 번호의 `seq|종류|ID|시각`)를 같이 적고, 시작할 때 Orthanc에 그 번호가 같은 ID·시각으로 있는지 봄 → 아니면 0부터(이미 있는 영상은 크기로 건너뜀). 옛 디스크(`last_change` 없음)는 번호가 맞으면 표시만 붙임.
+  4. **도중에 빠진 디스크**: 영상마다·EMR 백업 복사 실패 때 표시 파일이 있는지 보고, 없으면 「backup disk was unplugged during the backup - plug it back in; the next run continues」, `disk_found=false`, exit 1, EMR 쪽 `emr_backup=no_disk`. 전에는 남은 공간 0으로 읽혀 「disk is full」이라고 했을 것.
+  5. 위키 6.2(위 3·4·2, 시험 기록, `.sh`는 만들지 않음 — 실장님 결정), 8절.
+- **도중에 뽑기 흉내 결과** (시험용 폴더에 `subst Q:`를 씌우고 도중에 `subst Q: /d` — 스크립트에는 디스크가 사라진 것과 같음. 격리 Orthanc 9198 영상 12장, 가짜 EMR 백업 150MB×3, `-NoReport`):
+
+  | 언제 | 결과 | 다시 꽂고 돌리면 |
+  |---|---|---|
+  | 영상 복사 중(3~5장 뒤) | `ok=false`·`disk_found=false`·「unplugged」, `state.json` 안 생김(첫 묶음 미완) | 나머지만 복사 → 12장, `ok=true` |
+  | EMR 백업 복사 중 | 영상 `ok=true`, `emr_backup=no_disk`·「unplugged」, `.part` 1개 남음 | `.part` 지우고 3개 복사, `-Verify` VERIFIED |
+
+  한계: `subst`를 없애도 이미 열린 파일에는 계속 써지므로(진짜 USB는 쓰기 자체가 실패), 「쓰는 중인 파일이 끊기는」 모습은 흉내가 덜 됨 — 그 경우에도 `.part` 이름이라 다음 실행이 지움. 진짜 디스크를 쓰는 도중에 뽑는 것은 디스크가 상할 수 있어 순서서에서도 권하지 않음.
+- **바꾼 파일**: PACS `image-backup.ps1`, `restore-image-backup.ps1`. EMR `wiki/reference/usb-backup-rehearsal.md`(새), `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음. **번역 키**: 없음
+- **확인한 방법**: 위 흉내 시험 A~E, 위치 확인 시험(옛 state → 표시만 / 다시 → 그대로 / 같은 번호 ID 바꿈 → 0부터 / 번호 5000 → 0부터 / 번호 5000 + 디스크 영상 지움 → 12장 다시). 모두 격리 Orthanc 9198과 시험용 폴더, 예약 작업 없음, 실행 중 EMR·PACS 안 건드림, 격리 스택 내림, `subst` 남은 것 없음, 시험 폴더 지움.
+- **확인 못 한 것**: 진짜 USB(순서서로 실장님과), 진짜 새 서버로 옮긴 경우(위치 확인은 흉내로만), 영상이 수천 장일 때 0부터 다시 훑는 시간.
+- **다른 세션에 부탁**
+  - **총괄**: 순서서는 이 고침을 합친 뒤에 하도록 적어 둠. 실행 중 PC의 PACS 폴더는 옛 `state.json`(표시 없음)을 가진 디스크가 있으면 첫 실행에서 표시만 붙음 — 할 일 없음.
+  - **설정**: `emr_backup_newest`는 EMR 컨테이너 시간대라 나이 판정은 `emr_backup_last_ok`로(총괄이 이미 전함 — 확인만). 순서서 6번에 「EMR 백업 복사」 줄 자리를 비워 둠(`<!-- -->`) — 줄을 넣으면 문구를 알려 주세요.
+
 ## 2026-09-29 — 밤 영상 백업이 EMR DB 백업도 외장 디스크로 복사 (실장님 결정 — 외장하드 하나에 둘 다)
 
 - **상태**: 확인 요청
