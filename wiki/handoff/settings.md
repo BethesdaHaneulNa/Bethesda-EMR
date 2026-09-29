@@ -27,6 +27,8 @@
   - 운영 중인 병원의 `backups/` 폴더에 **`.inprogress` 하위 폴더가 새로 생깁니다**. 백업을 USB로 통째로 복사하는 분이 보면 헷갈릴 수 있어 적어 둡니다. 보통 비어 있습니다.
   - B10: `DEPLOYMENT.md` 5b에 「PowerShell이나 cmd에서 실행 (Git Bash는 /tmp 경로를 바꿈)」 한 줄을 넣으면 좋겠습니다 (총괄 소유 파일).
   - 이전 항목의 총괄 확인 요청(S1·S2·U9·B9)은 그대로 유효합니다.
+  - **격리 스택이 운영 이미지 이름을 덮어씁니다 (중요)**: `docker-compose.yml`이 `image: bethesda-emr-backend:latest`·`bethesda-emr-frontend:latest`를 고정하고 `docker-compose.session.yml`은 이를 바꾸지 않습니다. 그래서 어느 세션이든 `up --build`를 하면 **실장님 EMR이 쓰는 이미지 태그가 그 세션의 코드로 바뀝니다**. 이미 떠 있는 컨테이너는 이미지 ID를 들고 있어 바로 바뀌지는 않지만, 운영 스택을 `--build` 없이 다시 만들면(`docker compose up -d` 등) **합쳐지지 않은 세션 코드가 운영에 올라갈 수 있습니다**. 2026-09-29 16:5x KST 확인: 태그는 운영 컨테이너 이미지(`de3d810652fa`·`5aac267d8ed8`)를 가리키고, pacs·payment 세션 컨테이너는 각각 다른 이미지로 떠 있었습니다. 운영 번들에 이 세션의 새 문구는 없었습니다 — **지금 운영은 이 세션 코드가 아닙니다.** 제안: `docker-compose.session.yml`에 `image: bethesda-s-${SESSION}-backend` / `-frontend`를 추가 (총괄 소유 파일이라 고치지 않음).
+  - 참고: 운영 EMR 컨테이너가 07:49:41Z(16:49 KST)에 `C:\Bethesda-EMR-main`(`develop` `7ad4387`)에서 다시 만들어졌습니다. 이 세션은 그 시각에 운영 쪽 compose를 실행하지 않았습니다 (이 세션의 compose 명령은 전부 `-p bethesda-s-settings`, 작업공간에서 실행). 총괄 배포라면 무시하셔도 됩니다.
 - **다른 세션에 부탁**: 없음
 - **남은 일 · 알려진 문제**: `verify-backup.ps1`의 B4(BACKUP_PATH를 안 봄)·B5(낮에 검사하면 멀쩡한 백업을 실패로 판정할 가능성)는 아직입니다. `verify-backup.ps1`은 컨테이너 이름이 `bethesda-emr-db`로 고정이라 격리 스택에서 돌리려면 매개변수를 추가해야 합니다 — 그대로 돌리면 실장님 운영 DB 컨테이너에 임시 DB를 만듭니다.
 
