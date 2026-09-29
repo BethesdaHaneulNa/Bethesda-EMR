@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — G-1~G-4: 설치 때 토큰을 화면에 안 찍고 짝 맞추기 · 포트 경고 · LAN IP 안내
+
+- **상태**: 확인 요청
+- **커밋**: **PACS 저장소** `session/pacs` **`d3d001c`** (그 앞 `94935f0` — 둘 다 `main` `6c135aa` 위). **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(위키만)
+- **한 일** (PACS 저장소):
+  - **G-1 새 `pair-with-emr.ps1` / `pair-with-emr.sh`** — 재부팅 날 검증한 `rotate-token.ps1`를 정식 도구로. 새 토큰(48자) → EMR `pacs_config`에 **stdin**으로(최대 1분 재시도 — EMR이 막 떠서 표가 아직 없을 때) → EMR이 성공한 뒤에만 `.env` 한 줄 교체 → 두 값을 md5로 비교 → 브리지 재생성(`-NoRestart`/`NO_RESTART=1`로 끌 수 있음). 값은 화면·명령줄·로그에 안 나옴. 옛 `.env` 사본은 **PACS 폴더 밖(TEMP)**에 두고 성공하면 지움(키트에 비밀값 사본이 섞이지 않게 — F-4와 같은 이유). **설치 뒤, 그리고 EMR 백업을 복원한 뒤** 쓰는 도구.
+  - `setup.ps1`/`setup.sh`: 첫 설치(`.env`를 새로 만든 경우)에 EMR DB(`bethesda-emr-db`)가 돌고 있으면 위 도구로 자동 짝 맞춤 → 「paired — nothing to copy」. 아니면 예전처럼 토큰을 찍고 도구를 안내. 끝에 「백업 복원 뒤에는 pair-with-emr를 다시」 안내.
+  - **G-3 새 `check-windows-ports.ps1`**(읽기만): 동적 포트 범위와 지금의 예약 구간을 읽어 9090·4242가 걸리면 경고 + 고치는 명령(관리자) 안내, exit 1. `setup.ps1`이 컨테이너를 띄우기 전에 부름(경고만, 멈추지 않음).
+  - **G-4**: `setup`이 이 PC의 LAN IPv4(가상 어댑터 제외)로 「PACS 웹/뷰어 주소: http://<IP>:9090」을 찍음, `start.bat` 끝 안내도 localhost 대신 그 주소로·짝 맞춤 결과를 읽으라고.
+  - `setup.ps1`: 컨테이너 단계부터 `$ErrorActionPreference='Continue'` + 종료 코드 확인 — PowerShell 5.1이 native 명령의 stderr를 멈춤 오류로 바꾸는 문제(시험에서 실제로 `NativeCommandError`로 멈춘 것을 보고 고침).
+  - `README.md` 짝 맞추기 절을 새 방식으로.
+- **G-2(P-13)** 는 총괄의 `offline/pack` F-1과 같이 — 이번에 안 함.
+- **확인한 방법**:
+  - `pair-with-emr.ps1`: 시험용 `.env` + 격리 EMR DB — 정상(OK, 48자, 다른 줄 그대로, TEMP 백업 남지 않음), 컨테이너 없음·DB 멈춤·`BRIDGE_TOKEN` 두 줄 → 친절한 한 줄 + exit 1(처음엔 컨테이너 없음에서 `NativeCommandError`로 멈춤 → 고친 뒤 다시).
+  - `pair-with-emr.sh`: Git Bash에서 같은 시험 — 정상·컨테이너 없음·두 줄.
+  - `check-windows-ports.ps1`: 9090·4242 → 조용히 exit 0, 5357(예약)·50000(동적 범위+예약) → 경고 3줄 + exit 1.
+  - 세 `.ps1` PowerShell 파서 오류 0, `sh -n` 두 `.sh`.
+  - 시험 뒤 격리 EMR의 토큰을 격리 브리지 값으로 되돌림.
+- **확인 못 한 것**: **`setup.ps1`/`setup.sh` 전체는 돌려 보지 않음** — `docker compose up`이 실행 중 PACS와 같은 이름(`bethesda-pacs`)으로 뜨고, 짝 맞춤이 실행 중 EMR DB에 쓰게 되므로. 바뀐 부분은 위 두 도구 호출과 안내 글자뿐. 새 PC 설치 때(또는 총괄이 오프라인 키트 시험 때) 처음 실제로 돎.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **위키**: `modules/pacs.md` 6.1 ②-4·②-5·③·④ 표, 8절
+- **총괄께**: F-6(`install-offline`의 「paste the bridge token printed above」)은 이제 「setup이 짝 맞춤을 알려 줌, 아니면 pair-with-emr」로 바꾸면 됨. 출발 전 확인 목록의 「복원 뒤 짝 맞추기」 줄은 `.\pair-with-emr.ps1` 한 줄로.
+
 ## 2026-09-29 — P-9 선택지: 영상 창이 영상 서버 로그인을 요구하는 문제 (결정 세션용)
 
 - **상태**: 보류 — 선택지만(코드 변경 없음), 실장님 결정 필요
