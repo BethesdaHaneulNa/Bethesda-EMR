@@ -204,6 +204,27 @@
 - 현재 버전은 `backend/package.json`, 최신은 GitHub `UPDATE_REPO`의 latest release. 6시간 캐시, 5초 타임아웃, 인터넷이 없으면 마지막 결과나 오류를 돌려줌. `?force=1`로 즉시 다시 확인.
 - 로그인만 확인합니다. 업데이트 알림은 `TopBar.jsx`가 `settings` 권한이 있을 때만 보여줍니다. (CHANGELOG 1.3.3은 「settings 권한으로 막혀 있다」고 썼지만 코드는 로그인만 봅니다.)
 
+### 3-8. 약 저장과 재고 (약국 H4 안전장치, 2026-09-29)
+
+약품 **탭 화면**은 약국 세션 몫이고, 그 저장 함수(`Settings.jsx` `saveEdit`의 약 부분)와 API(`PUT /api/admin/drugs/:id`)는 설정 몫입니다.
+
+- **문제였던 것**: 편집 창은 열 때의 행을 통째로 들고 있다가 저장할 때 재고까지 그대로 보냈고, 서버는 그 값으로 덮어썼습니다. 창을 연 사이에 조제된 차감이 사라졌습니다(아침 100 → 조제 30 → 오후에 단가만 고쳐 저장 → 100).
+- **왜 차이만 더해 주지 않나**: 「20개 들어왔다」(더하기)와 「세어 보니 45개」(맞추기)는 계산 방향이 반대인데 서버는 어느 쪽인지 모릅니다. 그래서 조용히 계산하지 않고 **다시 묻습니다.**
+- **화면**: 저장할 때 창을 연 순간의 재고(`stock_expected` — 창을 연 목록의 그 행 값, 창이 화면을 덮고 있는 동안 목록은 바뀌지 않음)를 같이 보냅니다. 재고 칸을 **안 고쳤으면 재고를 보내지 않습니다.**
+- **서버** (트랜잭션, 그 약 행을 `SELECT … FOR UPDATE` — 조제와 같은 잠금):
+
+  | 요청 | 결과 |
+  |---|---|
+  | 재고 없음, 또는 재고 = `stock_expected` | 재고는 **지금 값 그대로**, 나머지만 저장 |
+  | 재고 고침, 지금 재고 = `stock_expected` | 고친 값으로 저장 |
+  | 재고 고침, 지금 재고 ≠ `stock_expected` | **409** `Stock changed while this drug was open` + `current`, **아무것도 저장 안 함** |
+  | `stock_expected` 자체가 없음 (이 변경 전 화면을 새로고침 안 한 브라우저) | 전처럼 보낸 값을 씀 |
+  | 재고·최소 재고에 소수 | 400 (전에는 DB 오류) |
+
+- **409일 때 화면**: 편집 창과 다른 칸의 입력은 그대로 두고, 목록을 다시 불러 **재고 칸을 지금 값으로** 바꾼 뒤 `se_stockChanged` 안내(「그 사이 재고가 바뀌었습니다… 지금 재고는 {n}…」). 다시 저장하면 지금 값을 기준으로 판단합니다. 오류 문구는 서버·화면에 **똑같이** 있어야 번역됩니다(`api/client.js`가 상태 코드를 안 넘김 — 약국과 같은 방식).
+- **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, 9080이면 거부, `SE_ADMIN_PW` 필요) 11개 항목 통과. 화면(9187): 한국어 — 창을 연 뒤 DB에서 30 차감 → 단가만 고쳐 저장 → 재고 170 유지(전에는 200으로 돌아감). 프랑스어 — 창을 연 뒤 20 차감 → 재고 300으로 고쳐 저장 → 프랑스어 안내, 창 유지, 재고 칸 150 → 다시 300 저장 → 성공.
+- **길게는**: 재고를 움직임(입고·실사·조제)으로만 바꾸는 방안(약국 결정 「2번 재고」)이 정해지면, 이 PUT에서 재고를 아예 빼면 됩니다. 위 규칙은 그때까지의 안전장치입니다.
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -223,7 +244,7 @@
 | `GET /api/admin/doctors` | 로그인 | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙 |
-| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false` |
+| `POST/PUT/DELETE /api/admin/drugs` · `order-codes` · `phrases`, `POST/PUT departments`, `PUT clinic` | settings | 삭제는 모두 `is_active=false`. **`PUT /drugs/:id`** 는 `stock_expected`를 받고 재고 규칙이 따로 있음(3-8절, 409 가능) |
 | `GET /api/backup/status` | 로그인 | 설정·목록 (호스트 경로 포함), `state`(ok/stale/none/failed), `running`, `newestAgeHours`, `lastAttempt`{at, ok, trigger, file, error — error는 settings 권한일 때만}, `minKeep`, `staleHours` |
 | `POST /api/backup/run` | settings | 지금 백업. 진행 중이면 그 결과를 기다려 돌려줌 |
 | `GET /api/backup/download/:name` | settings | 파일 내려받기 |
@@ -333,7 +354,7 @@
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
-| U10 | 높음 | **약 저장이 재고를 덮어씀** (약국 H4): 약 편집 창이 연 순간의 재고를 들고 있다가 `PUT /api/admin/drugs/:id`가 그대로 씀 → 그 사이 조제한 차감이 사라짐. **제안만** — 연 순간의 재고를 같이 보내고, 그 사이 바뀌었으면 409로 다시 묻기(A), 길게는 재고를 움직임으로만 바꾸기(B, 약국). 인계 노트 2026-09-29 「제안: 약 저장이…」 | `admin.routes.js` DRUGS 절 `stock_qty=$11` |
+| U10 | ~~높음~~ **고침(안전장치)** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 제안 A 적용: 재고를 안 고쳤으면 안 건드림, 고쳤는데 그 사이 바뀌었으면 409로 다시 물음 (3-8절). 재고를 움직임으로만 바꾸는 것(B)은 약국 결정 대기 | (옛 코드) `admin.routes.js` DRUGS `stock_qty=$11` |
 
 ## 8. 변경 기록
 
@@ -345,4 +366,5 @@
 | 2026-09-29 | 설정 화면 영어 고정 글자를 세 언어로 (U1 대부분·U7), 직원 비활성 확인 문구, 2절에 역할별 기본 권한 표 | `f5e7e55` |
 | 2026-09-29 | 서버의 권한 목록을 `middleware/permissions.js` 한 곳으로, `modules.js`와 비교하는 검사 추가 (U9). 동작 변화 없음 | `56f2558` |
 | 2026-09-29 | 약 저장이 재고를 덮어쓰는 문제 제안(U10, 약국 H4) | `1874812` |
-| 2026-09-29 | 상태 API가 브리지 heartbeat의 `arrivals_error`를 「확인 필요」로 (PACS P-20, 보내는 쪽은 PACS). 서버 권한 검사(S2) 라우트별 허용 권한표 초안 — 인계 노트 | (이 커밋) |
+| 2026-09-29 | 상태 API가 브리지 heartbeat의 `arrivals_error`를 「확인 필요」로 (PACS P-20, 보내는 쪽은 PACS). 서버 권한 검사(S2) 라우트별 허용 권한표 초안 — 인계 노트 | `9d7e380` |
+| 2026-09-29 | 약 저장 재고 안전장치 (약국 H4 제안 A, U10) | (이 커밋) |

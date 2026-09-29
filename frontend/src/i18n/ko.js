@@ -436,6 +436,7 @@ export default {
   se_fClinicNameFr: "병원 이름 (프랑스어)",
   se_fHours: "진료 시간",
   se_clinicNote: "문서는 인쇄 언어에 맞는 이름을 씁니다 — 프랑스어는 프랑스어 이름, 영어는 영어 이름, 한국어는 기본 이름. 주소·전화·이메일은 공통입니다.",
+  se_stockChanged: "그 사이 이 약의 재고가 바뀌었습니다 (조제 등). 지금 재고는 {n}입니다. 재고 칸을 지금 값으로 바꿔 두었으니, 확인하고 다시 저장하세요. 다른 칸은 그대로입니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

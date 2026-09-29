@@ -436,6 +436,7 @@ export default {
   se_fClinicNameFr: "Nom de l'établissement (français)",
   se_fHours: "Heures d'ouverture",
   se_clinicNote: "Le document choisit le nom selon la langue d'impression — français : nom français, anglais : nom anglais, coréen : nom par défaut. Adresse, téléphone et e-mail sont communs.",
+  se_stockChanged: "Le stock de ce médicament a changé pendant la modification (délivrance, par exemple). Il est maintenant de {n}. Le champ stock affiche cette valeur ; vérifiez-la et enregistrez à nouveau. Vos autres modifications sont conservées.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",
