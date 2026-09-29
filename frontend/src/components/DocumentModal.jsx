@@ -263,7 +263,9 @@ export function DocumentModal(props) {
                           var on = cur.indexOf(opt) >= 0;
                           return <label key={opt} className="pressable" style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12.5, color: on ? tx : t2, whiteSpace: 'nowrap' }}>
                             <input type="checkbox" checked={on} onChange={function () { setField(f.key, nextChecks(f, cur, opt, on)); }} />
-                            {opt}
+                            {/* optionLabel: the template's display text in the document
+                                language. The stored value stays `opt`. */}
+                            {f.optionLabel ? f.optionLabel(opt, lang) : opt}
                           </label>;
                         })}
                       </div>

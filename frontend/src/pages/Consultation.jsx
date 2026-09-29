@@ -286,6 +286,21 @@ export default function ConsultationPage() {
     try { setOrderItems(await api.get('/consultations/'+consult.id+'/orders')); } catch(e){}
   }
 
+  // The status cell of an order row. worklist_status only means something for an order
+  // that went to an imaging worklist: every other order is stored with 'completed' there
+  // from the start (consult.routes.js POST /:id/orders), so a lab order read "completed"
+  // before the lab had entered anything. A lab order shows the lab's own status instead,
+  // and an order with neither shows nothing.
+  function orderStatus(o){
+    if(o.code_type==='lab'){
+      if(o.status==='completed') return <span style={{color:'#34d399'}}>{t.cs_labDone}</span>;
+      if(o.status==='cancelled') return <span style={{color:t3}}>{t.cs_labCancelled}</span>;
+      return <span style={{color:'#fbbf24'}}>{t.cs_labPending}</span>;
+    }
+    if(o.worklist_sent_at) return <span style={{color:o.worklist_status==='sent'?'#34d399':t2}}>{o.worklist_status}</span>;
+    return null;
+  }
+
   // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
   // clicks to read, so ask first.
   function confirmRemove(name){
@@ -579,7 +594,7 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 4px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 5px',textAlign:'center',fontSize: 12,fontWeight:700,whiteSpace:'nowrap'}}>
                             {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'#7c3aed22',color:'#a78bfa',border:'1px solid #7c3aed55',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
-                            <span style={{color:o.worklist_status==='sent'?'#34d399':t2}}>{o.worklist_status}</span>
+                            {orderStatus(o)}
                           </td>
                         </tr>;
                       })}
