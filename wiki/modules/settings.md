@@ -60,10 +60,11 @@
    | **Médecin** (의사) | Consultation (진료) |
    | **Pharmacie** (약국) | Pharmacie (약국) |
    | **Laboratoire** (검사실) | Laboratoire (임상병리) |
-   | **Infirmier(ère)** (간호사) | **Pharmacie (약국) · Laboratoire (임상병리)** — 현장에는 약사가 없고 간호사가 조제와 검사를 함께 합니다. 이 기본값이 맞는지는 결정 세션이 실장님께 확인 중 |
+   | **Infirmier(ère)** (간호사) | **Enregistrement (접수) · Pharmacie (약국) · Laboratoire (임상병리)** — 현장에는 약사가 없고 간호사가 조제와 검사를 함께 합니다. 접수는 환자 차트를 보려고 넣었습니다(2026-09-29 실장님 결정). **주의**: 접수 권한은 차트 보기만이 아니라 **환자 등록·수정, 내원 접수·취소까지** 모두 할 수 있습니다(화면 단위 권한이라 「보기만」은 없음) |
    | **Administrateur** (관리자) | 7개 전부 — Enregistrement · Consultation · Paiement · Pharmacie · Laboratoire · Statistiques · Paramètres |
 
    - **수납 창구 계정**: **Accueil** 를 고르면 **Paiement** 가 이미 체크되어 있습니다. 수납만 하는 직원이면 **Enregistrement** 체크를 빼세요. 수납 화면·수납 서버 모두 **Paiement** 권한을 확인하므로, 이 체크가 없으면 수납이 거절됩니다.
+   - **간호사**가 로그인하면 **Enregistrement (접수)** 화면이 먼저 열립니다(메뉴 순서상 첫 번째 권한). 약국·임상병리는 위쪽 메뉴에서 누르세요.
    - 이미 있는 직원의 역할을 바꾸면 체크가 **그 역할의 기본값으로 다시 채워집니다.** 따로 더했던 체크는 다시 확인하세요.
 5. 의사라면 **Service (진료과)** 를 고릅니다. (내원마다 고르는 진료과와는 별개인, 의사 본인의 소속입니다.)
 6. **Sauver (저장)**. 아래에 초록 「✓ Enregistré」가 잠깐 뜹니다.
@@ -199,7 +200,7 @@
 
 ### 3-1. 권한 체계
 
-- **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`nurse`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`). **`nurse`(간호사)는 2026-09-29 추가** — 마다가스카르 현장에는 약사가 없고 간호사가 간호·조제·검사를 모두 하는데, 역할이 없어 간호사 계정을 「pharmacy」로 만들고 검사실 권한을 손으로 체크해야 했습니다. 기본 권한 `pharmacy`+`lab`(`permissions.js`·`modules.js` 한 줄씩 — 결정이 달라지면 그 두 줄만). 기존 `pharmacy`·`lab` 역할은 그대로 둡니다. 역할 이름으로 동작이 갈리는 곳은 `doctor`(진료 목록 필터, 과장 선택)와 `admin`(잠금 방지)뿐이라 간호사는 권한 체크만으로 움직입니다. 상단바의 역할 아이콘(`TopBar.jsx` `ROLE_INFO`, 총괄)은 간호사에 없어 기본 👤로 나옵니다.
+- **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`nurse`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`). **`nurse`(간호사)는 2026-09-29 추가** — 마다가스카르 현장에는 약사가 없고 간호사가 간호·조제·검사를 모두 하는데, 역할이 없어 간호사 계정을 「pharmacy」로 만들고 검사실 권한을 손으로 체크해야 했습니다. 기본 권한 `registration`+`pharmacy`+`lab`(2026-09-29 실장님 결정 — 접수는 환자 차트를 보려고. `permissions.js`·`modules.js` 한 줄씩). 기존 `pharmacy`·`lab` 역할은 그대로 둡니다. 역할 이름으로 동작이 갈리는 곳은 `doctor`(진료 목록 필터, 과장 선택)와 `admin`(잠금 방지)뿐이라 간호사는 권한 체크만으로 움직입니다. 상단바 아이콘은 💉(`TopBar.jsx`, 총괄). 로그인 뒤 처음 화면: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 마이그레이션은 합칠 때 `701` → **`020_settings_nurse_role.sql`** 로 번호가 바뀜.
 - **권한(permissions)** 이 실제 접근을 정합니다: `staff.permissions TEXT[]`, 값은 `frontend/src/modules.js`의 `MODULES[].perm` 7개 — `registration` `consultation` `payment` `pharmacy` `lab` `stats` `settings`. 서버에는 이 목록이 **한 곳**에만 있습니다: `backend/src/middleware/permissions.js`의 `ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole` (2026-09-29, U9). `middleware/auth.js`·`admin.routes.js`(설치 관리자 고정)·`auth.routes.js`(첫 관리자 만들기)가 여기서 가져갑니다. 백엔드 이미지는 `backend/`만으로 빌드되어 `modules.js`를 불러올 수 없으므로 한 벌은 따로 둘 수밖에 없고, 대신 **`node backend/test/settings.permissions.mjs`** 가 두 목록(순서 포함)과 역할별 기본값이 같은지 확인합니다 — 설치·서버·DB 없이 파일 두 개만 읽음, 다르면 exit 1. **모듈을 추가하면 `modules.js`와 `permissions.js`를 같이 고치고 이 검사를 돌리세요.** (마이그레이션 `013`에도 같은 목록이 있지만 이미 적용된 파일이라 고치지 않습니다 — 옛 계정을 한 번 채우는 데만 쓰였음.)
 - 역할을 바꾸면 화면이 그 역할의 기본 권한으로 체크를 **덮어씁니다** (`Settings.jsx:659`). 권한이 `NULL`인 옛 계정은 역할 기본값으로 대신합니다(`effectivePerms`). 013 마이그레이션이 옛 계정을 채웠습니다.
 - **로그인 토큰(JWT)** 에 권한이 들어갑니다 (`middleware/auth.js` `generateToken`, 유효 12시간). 서버는 요청마다 DB를 다시 보지 않고 **토큰 안의 권한**으로 판단합니다. 그래서 권한 변경·비활성화는 다시 로그인할 때까지 적용되지 않습니다.
@@ -363,7 +364,7 @@
 
 | 테이블 | 이 모듈이 쓰는 것 | 마이그레이션 |
 |---|---|---|
-| `staff` | 계정. `login_id` UNIQUE, `password_hash`, `role` CHECK, `permissions TEXT[]`, `department_id`, `status` CHECK(`active`/`inactive`), `last_login` | 001, 013, **701**(`nurse` 역할 허용) |
+| `staff` | 계정. `login_id` UNIQUE, `password_hash`, `role` CHECK, `permissions TEXT[]`, `department_id`, `status` CHECK(`active`/`inactive`), `last_login` | 001, 013, **020**(`nurse` 역할 허용, 세션에서는 701) |
 | `department` | `code` UNIQUE, 이름 3개 국어, `head_doctor_id` → staff | 001, 002(기본 9개 과) |
 | `clinic` | 한 줄(id=1). 이름 3개 국어, 주소·전화·이메일·진료시간, `app_title` | 001, 002, 011 |
 | `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸 | 001, 009 |
@@ -471,4 +472,5 @@
 | 2026-09-29 | 상용구 편집 창에 프랑스어·영어 문장 칸, 목록을 화면 언어로, 상용구 정렬 고정 | `1d3e4fc` |
 | 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀 (탭 표, 직원 목록 칸, 백업 색 띠별 할 일, 병원 정보 칸, 오더 코드 칸, 서버 상태 창 띠·상태 글자, 「이런 안내가 뜰 때」 표). 7절 U11 추가 | `3b5ce27` |
 | 2026-09-29 | 서버 안내를 화면 언어로 (U11: `settings.messages.js` ↔ `settingsMessages.js`, 검사 스크립트), 틀린 비밀번호에 안내가 안 뜨던 것 (U12), 직원 비밀번호 칸 가리기 (S4 일부) | `e2f794b` |
-| 2026-09-29 | 간호사(`nurse`) 역할 — 마이그레이션 701, 기본 권한 약국+임상병리. 로그인 화면 버전을 상단바와 같게 | (이 커밋) |
+| 2026-09-29 | 간호사(`nurse`) 역할 — 마이그레이션 701(→020), 기본 권한 약국+임상병리. 로그인 화면 버전을 상단바와 같게 | `47043f4` |
+| 2026-09-29 | 간호사 기본 권한을 결정대로 접수·약국·임상병리로 (코드는 총괄 `f4df9bc`), 위키 표·주의점, 첫 화면 확인 | (이 커밋) |
