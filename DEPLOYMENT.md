@@ -313,6 +313,11 @@ The update script does everything safely, in order:
    downloading the release — your `.env` and `backups/` are kept either way).
 3. Rebuilds and restarts the containers.
 4. Verifies the app is healthy.
+5. **Backs up again**, now that the database is at the new version. The backup from step 1
+   is of the old version and needs the "older than the app" commands in
+   [section 5b](#5b-restoring-a-backup) to restore; this one restores with the ordinary ones.
+   If this step fails the update is still complete - open Settings → Backup and press
+   "Back up now".
 
 Database migrations apply automatically on startup; existing data is preserved. The banner
 clears once you're on the latest version. (Updating from inside the app's UI is intentionally
