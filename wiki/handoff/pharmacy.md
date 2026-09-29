@@ -2,6 +2,129 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 옛 재고 105줄을 EMR 약 목록으로 가져오는 계획 (실행 전)
+
+- **상태**: 보류 — 실장님이 「가져올 표」를 보신 뒤에 실행합니다. **코드·DB 변경 없음.**
+- **자료**: `wiki/reference/old-stock-inventory-2026-05-15.csv`(읽기만). 스크립트로 세어 본 값입니다.
+
+### 0. 먼저 알려 드릴 것 — 자료에서 새로 찾은 문제
+
+- **제형이 틀린 줄이 있습니다.** 「Ophthalmic(안약)」 12줄 중 **진짜 눈약은 4줄**뿐입니다(Neodex 안연고, Tolon, Tolon T, Cuolone 점안액). 나머지 8줄은 먹는 약이나 좌약입니다.
+  - 아세트아미노펜 정: Amiceta, Taracet, Susphen, Hycephen, Susphen night
+  - Silcon Tab ×2
+  - Paracetamol Supp(좌약)
+  - 그 밖에 **Almagel**(Almagate — 이름으로 보아 제산제)은 「질정/겔」로, **Montelukast Tab**은 「산제」로 들어가 있습니다.
+
+  옛 프로그램이 분류할 때 틀린 것으로 보입니다. 그래서 「안약 12 · 시럽 4 …」 숫자는 **다시 세어야 합니다.**
+- **말라리아약**: 실제 재고에는 **M-Artefix 80mg/480mg**(artemether-lumefantrine)과 **Combimal**(sulfadoxine…)이 있습니다. 예시 약 ACT01(20/120 함량으로 보이는 4/2/3)과 **함량이 달라 기본값도 다릅니다.** 의사 확인 목록의 「ACT01 급함」 질문은 실제로 쓸 약(M-Artefix 80/480) 기준으로 여쭤야 합니다.
+- **수량이 원래 표기와 다른 줄 37개**. 예) Memorain Cap 「60캡슐*66」인데 수량 90, Amoxicillin 500mg 「650캡슐」인데 2000. 어느 쪽이 맞는지 자료만으로는 알 수 없습니다. 표에 **둘 다** 보여 드리고, 어차피 시작할 때 **선반 실사**로 맞춥니다.
+- **같은 이름이 다른 코드로 두 번 이상** 나오는 것이 6가지입니다.
+  - Amoxicillin 500mg ×2, Madecassol ×3, Silcon Tab ×2, Medilac-S ×2, Bonaling-A ×2, Montelukast(정/산제)
+  - 합칠지, 그대로 둘지 표에서 정합니다. 제형이 다르면(정/산제) 따로 두는 것이 맞습니다.
+- 「needs review」 메모가 붙은 줄 8개, 이름이 이상한 줄이 있습니다(예: 「Perison ( /500T)」, 「325mg Amiceta Tab」).
+
+### 1. 칸 대응 (CSV → EMR `drug`)
+
+| EMR 칸 | 가져올 값 | 비고 |
+|---|---|---|
+| `code` | **`MED-0001` 그대로 (추천)** | 옛 표와 바로 맞춰 볼 수 있고, 예시 약 코드(PCM500…)와 겹치지 않음. 101개(묶음이 여럿인 약 3개는 한 코드로) |
+| `name` | `name` (가장 긴 것 33자) | 이상한 이름은 표에서 고침 |
+| `name_en` | 비움 | 이름이 이미 영어 |
+| `generic_name` | `generic_name` (가장 긴 것 164자, 칸은 200자) | |
+| `category` | `classification` → EMR 분류로 바꿈(2절) | |
+| `default_dose` (하루 총량) | **비움 — 의료진이 채울 칸** | 의학 판단. 표에는 옛 용법에서 계산한 「참고 값」만 따로 보여줌(가져오지 않음) |
+| `default_freq` (횟수) | 옛 용법에 **QD/BID/TID/QID/Q6H 하나만 분명히** 있을 때만(QD 1 · BID 2 · TID 3 · QID 4 · Q6H 4 · Q4H 6) — **56줄**. 「BID/TID」, 「1-2T」, PRN, 빈칸은 비움 | |
+| `default_days` | 비움 | 처방할 때 정할 일 |
+| `default_route` (용법) | 횟수를 옮긴 줄만 그 약어(`BID` 등). 원래 용법 전체(「1T BID/ 2T QD」)는 칸(10자)에 안 들어가 **표에만** 남김 | |
+| `unit_price` | 0 (비어 있음) | 3절 |
+| `stock_qty` | 같은 코드의 묶음 수량 **합계** | 4절. Beecom tab은 0 |
+| `min_stock` | 0 (전부 0) | 나중에 채움 |
+| `is_active` | true | |
+| (EMR에 칸 없음) | `strength`, `form`, `route`(경구/점안), `unit`, 위치, 제조번호, 유통기한, 공급처, 흔한 용도, 원래 분류 | 가져오지 않음. `form`·`unit`은 H2 B안(포장 단위 약)을 고르면 그 표시로 씀 |
+
+### 2. 분류 — EMR 목록을 늘리는 안
+
+지금 EMR 분류는 7가지(Antibiotic · Analgesic · Antimalarial · Cardiovascular · GI · Vitamin · Other)라 위장관 25 · 호흡기 11 등이 모두 「Other」가 됩니다. 제안하는 목록은 이렇습니다(설정 약품 탭의 `DRUG_CATEGORIES`와 `ph_cat_*` 번역만 늘리면 되고, 약국 몫이라 제가 합니다).
+
+| 옛 분류 (줄 수) | EMR 분류 |
+|---|---|
+| Gastrointestinal (25) | GI |
+| Respiratory (11) | **Respiratory** (새로) |
+| Analgesic / Antipyretic (8), Analgesic / Anti-inflammatory (7) | Analgesic |
+| Dermatology / Wound Care (7), Dermatology (3) | **Dermatology** (새로) |
+| Cardiovascular (6) | Cardiovascular |
+| Antihistamine / Allergy (6), Antihistamine / Antiemetic (2) | **Antihistamine** (새로) |
+| Obstetrics / Gynecology (4) | **Gynecology** (새로) |
+| Antibiotic (4), Antibiotic / Antiprotozoal (1) | Antibiotic |
+| Antiparasitic (4) | **Antiparasitic** (새로) |
+| Ophthalmic (4 — 진짜 눈약만) | **Ophthalmic** (새로) |
+| Vitamins / Supplements (3) | Vitamin |
+| Antimalarial (2) | Antimalarial |
+| Musculoskeletal (2) · Corticosteroid (2) · Urology (2) · Endocrine / Antidiabetic (1) · Dental / Oral (1) | 각각 **Musculoskeletal · Corticosteroid · Urology · Endocrine** (새로), Dental은 Other |
+
+- 분류는 영어 단어로 저장하고 화면에서만 번역합니다(지금과 같음). 통계의 분류별 묶음도 이 값을 그대로 씁니다.
+
+### 3. 가격 — 전부 비어 있음
+
+- 0원으로 들어가면 청구가 0원이 됩니다. 수납 세션이 이미 「가격 없는 줄」 안내를 넣었습니다(develop `2bc7c74`). 가격은 가져온 뒤 설정 → 약품에서 채웁니다.
+- **주의(진료 세션 지적)**: 처방 줄은 처방할 때의 단가를 **복사**합니다. 가격을 나중에 넣어도 **이미 처방한 줄은 0원 그대로**입니다. 그래서 가격을 채우기 전에 처방이 시작되면 후보가 필요합니다: **「0원 줄의 가격을 지금 약 가격으로 다시 불러오기」**(아직 수납 전인 줄만) — 수납·진료 세션과 의논할 일.
+- 가장 쉬운 길은 **가격을 채운 뒤 사용을 시작**하는 것입니다.
+
+### 4. 수량
+
+- 같은 코드의 묶음을 합칩니다(유통기한 관리 안 함). 묶음이 여럿인 약은 3개입니다: Pansidil Cap 3600+1890+1800, Feramine Q 3060+1200, Caritopotene 2460+400.
+- 2026-05-15 기준이라 그대로 믿을 수 없습니다. 순서는 **재고 기록 표(401) → 가져오기**입니다. 가져올 때 약마다 `opening` 한 줄(메모 「옛 재고 프로그램 2026-05-15 기준」)을 남기고, **선반 실사**를 약국 화면 「Inventaire」로 한 줄씩 넣어 맞춥니다(재고 설계 5절).
+
+### 5. 병·개로 주는 약 (H2와 같은 문제)
+
+- 이름과 성분으로 다시 세면 대략 이렇습니다(표에서 확정).
+  - 눈약 4: Neodex 안연고, Tolon, Tolon T, Cuolone
+  - 시럽 4: PROFEIN, SANDOL, IBUPROFENE SYRUP, CARBO TOUX
+  - 외용·연고: Vaseline, Sulfadiazine, Madecassol 등
+  - 질 겔 1: Metronidazole vaginal gel
+  - 좌약 1: Paracetamol Supp
+- H2 B안(약에 「포장 단위 약」 표시)을 고르면 가져올 때 이 줄들에 표시를 같이 채웁니다.
+
+### 6. 예시 약 25개 정리
+
+- 모두 `is_active = false`(지우지 않음, 목록에서만 안 보임). 이미 이 약을 가리키는 처방(실행 중 EMR 6건, 시험 데이터)은 그대로 둡니다.
+- 실제 재고에 **같은 약**이 있는 것은 Amlodipine 5mg, Amoxicillin 500mg, Prednisolone 5mg 정도입니다. 예시 행을 고쳐 쓰지 않고 새 행(MED-…)으로 가져옵니다. 옛 처방 기록을 건드리지 않기 위해서입니다.
+- **약속처방 약 줄 4개**(Malaria Workup: ACT01·PCM500, Diarrhea / GE: ORS·METRO)는 실제 재고에 같은 약이 없습니다. PCM500 정, ORS는 없고, 말라리아약은 M-Artefix 80/480으로 함량이 다르고, metronidazole 정은 상품명 약으로 있음(확인 필요). 선택지:
+  - **가. 의료진이 실제 약으로 골라 다시 잇기 (추천)** — 설정 → 약속처방에서. 함량이 다르니 용량도 새로 정함
+  - 나. 세트에서 약 줄만 빼고 검사 줄은 남김(가 전까지 임시)
+  - 다. 그대로 둠 — 세트로 처방하면 목록에서 감춘 예시 약이 처방됨. **권하지 않음.** 감춘 약이 세트로 처방될 때 진료 화면에서 어떻게 보이는지는 **확인 필요**
+
+### 7. 기본값이 빈 약을 처방할 때
+
+- 진료 화면은 기본값이 없으면 칸을 비워 두고, 의사가 하루 총량·일수를 넣습니다(`Consultation.jsx` `addDrugRx`).
+- **빈틈**: 의사가 하루 총량을 안 넣고 두면 서버가 총량을 **0**으로 저장합니다(`consult.routes.js` `rxTotal`). 약국 화면은 0을 「총량 없음」으로 보지 않아 **아무 경고 없이 0개가 조제·청구**됩니다. 105줄은 모두 기본값이 비어서 이 일이 자주 생길 수 있습니다. 제안은 두 가지입니다.
+  - 약국: 원내 줄의 총량이 **0이어도** 「⚠ 총량 없음」과 같게 표시하고 조제 확인 창에 넣기(약국 작업, 작음)
+  - 진료: 하루 총량이 비었으면 저장할 때 경고(진료 세션)
+
+### 8. 실행 방법 (표 확인 뒤, 실장님 확인을 받고)
+
+- 확인된 표에서 **마이그레이션 파일 하나**를 만듭니다(예: `402_pharmacy_import_mission_stock.sql`).
+  - 약 101개 `INSERT … ON CONFLICT (code) DO NOTHING` — 두 번 돌려도 한 번만
+  - 약마다 `opening` 재고 기록
+  - 예시 25개 `is_active = false`(코드로 지정)
+  - 약속처방 줄은 6절 결정대로
+- 데이터를 넣는 마이그레이션이라 새로 설치하는 곳에도 들어갑니다. 이 EMR은 베데스다 병원 전용이라 괜찮다고 보지만, 원하지 않으시면 **설정 화면의 「CSV 가져오기」**(한 번 쓰는 도구)로 할 수도 있습니다(작업이 더 큼).
+- 실행 순서: 재고 기록 표(401) → 이 가져오기(402) → 가격 채우기 → 선반 실사 → 사용 시작.
+
+### 9. 실장님께 보여 드릴 표 (엑셀로 여는 CSV 한 장)
+
+한 줄 = 약 하나(101줄). 칸은 이렇게 둡니다.
+- 코드 · 약 이름 · 성분 · 함량
+- **제형**(옛 값 → 고친 값) · **EMR 분류**
+- **수량 합계** · **원래 수량 표기**
+- **옛 용법**(원문) · 옮길 횟수
+- **채워야 할 칸**(하루 총량 · 일수 · 가격 · 최소 재고 — 빈칸)
+- **병·개 단위 약?**
+- **확인할 점**(제형 틀림 / 이름 중복 / 수량 불일치 / needs review)
+- **참고: 옛 용법으로 계산한 하루 총량** — 예) 「1T BID」 → 2. 가져오지 않고 의료진이 볼 참고용
+
+이 표를 만드는 스크립트는 준비되어 있습니다. 말씀하시면 CSV로 만들어 드립니다(데이터를 바꾸지 않는 파일 한 장).
+
 ## 2026-09-29 — 재고 2번 「기록 남기는 재고」 설계 (코드 전) + H2 선택지 다시
 
 - **상태**: 보류 — 총괄 설계 확인을 기다립니다. **코드·DB 변경 없음.**
