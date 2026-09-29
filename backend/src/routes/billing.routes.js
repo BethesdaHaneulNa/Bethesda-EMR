@@ -322,10 +322,19 @@ router.post('/', canPay, async (req, res) => {
       return res.status(400).json({ error: 'items, subtotal and total_due do not add up' });
     }
 
-    const visitRes = await client.query('SELECT patient_id FROM visit WHERE id = $1', [visit_id]);
+    const visitRes = await client.query('SELECT patient_id, status FROM visit WHERE id = $1', [visit_id]);
     if (!visitRes.rows.length || String(visitRes.rows[0].patient_id) !== String(patient_id)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'visit_id does not belong to patient_id' });
+    }
+    // A visit reception cancelled has nothing to bill. The find-patient window still
+    // lists it (marked, 6c13b33) because it is part of the patient's history, so the
+    // screen can open it; a new bill for it is refused here. Existing receipts of such
+    // a visit (only possible in old data - reception cancels waiting visits only) can
+    // still be voided or settled.
+    if (visitRes.rows[0].status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'VISIT_CANCELLED: this visit was cancelled at reception' });
     }
 
     const mq = await client.query(

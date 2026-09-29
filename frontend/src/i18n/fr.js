@@ -390,6 +390,7 @@ export default {
   py_stCancelled: "annulé",
   py_stWaived: "exonéré",
   py_stWaiting: "en attente",
+  py_visitCancelled: "Cette visite a été annulée à l’accueil — rien à encaisser. Les reçus et les documents restent consultables.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

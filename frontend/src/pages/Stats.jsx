@@ -132,6 +132,10 @@ export default function StatsPage(){
 
   var v = data?data.visits:{}, rev = data?data.revenue:{}, out = data?data.outstanding:{};
   var unassigned = t.st_unassigned||'미지정';
+  // Count words are deliberately empty in English ("15", not "15 cases"), so an
+  // empty string is a real value here and must not fall back to the Korean.
+  function word(v, ko){ return v != null ? v : ko; }
+  var cases = word(t.cases, '건'), people = word(t.people, '명');
   // The server sends every name a department has; show the one for the screen's
   // language. A visit with no department (or doctor) arrives with no code/name.
   function deptLabel(d){
@@ -161,16 +165,16 @@ export default function StatsPage(){
         {/* 운영 현황 */}
         <Section title={'🏥 '+(t.operations||'운영 현황')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
-            <Card label={t.totalVisits||'총 내원'} value={v.total||0} unit={t.cases||'건'} color="#60a5fa" sub={(t.uniquePatients||'고유 환자')+' '+(v.unique_patients||0)} />
-            <Card label={t.newVisit||'초진'} value={v.new_visits||0} unit={t.cases||'건'} small />
-            <Card label={t.followUp||'재진'} value={v.follow_ups||0} unit={t.cases||'건'} small />
+            <Card label={t.totalVisits||'총 내원'} value={v.total||0} unit={cases} color="#60a5fa" sub={(t.uniquePatients||'고유 환자')+' '+(v.unique_patients||0)} />
+            <Card label={t.newVisit||'초진'} value={v.new_visits||0} unit={cases} small />
+            <Card label={t.followUp||'재진'} value={v.follow_ups||0} unit={cases} small />
             {/* Visits that are neither: "no fee" (chosen at reception or payment) and
                 the emergency/referral values older records still carry. Without it
                 the total did not add up to the cards beside it. */}
-            <Card label={t.st_otherVisits||'진료비 없음·기타'} value={v.other_visits||0} unit={t.cases||'건'} small />
-            <Card label={t.completed||'완료'} value={v.completed||0} unit={t.cases||'건'} color="#10b981" small />
-            <Card label={t.active||'진행 중'} value={v.active||0} unit={t.cases||'건'} color="#f59e0b" small />
-            <Card label={t.st_cancelled||'취소'} value={v.cancelled||0} unit={t.cases||'건'} color="#f87171" small />
+            <Card label={t.st_otherVisits||'진료비 없음·기타'} value={v.other_visits||0} unit={cases} small />
+            <Card label={t.completed||'완료'} value={v.completed||0} unit={cases} color="#10b981" small />
+            <Card label={t.active||'진행 중'} value={v.active||0} unit={cases} color="#f59e0b" small />
+            <Card label={t.st_cancelled||'취소'} value={v.cancelled||0} unit={cases} color="#f87171" small />
           </div>
           <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
@@ -190,12 +194,12 @@ export default function StatsPage(){
             <Card label={t.collected||'수납액'} value={fmtAr(rev.paid)} unit="Ar" color="#10b981" sub={(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'} />
             {/* Treatment receipts only; balance settlements (payment M2) are money
                 received, not treatments, so they are shown apart (decision 14). */}
-            <Card label={t.st_billCount||'진료 영수'} value={rev.billCount||0} unit={t.cases||'건'} small
+            <Card label={t.st_billCount||'진료 영수'} value={rev.billCount||0} unit={cases} small
               sub={rev.settlementCount?(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount):null} />
             <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAr(rev.avgBilledPerVisit)} unit="Ar" small />
             <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
             <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
-            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={t.cases||'건'} color="#f59e0b" small />
+            <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="#f59e0b" small />
           </div>
           {/* 과별·의사별 매출. 진료 섹션의 방문수 그래프와 같은 모양으로 두어, "몇 명 봤는지"와
               "얼마가 들어왔는지"를 같은 눈높이에서 읽을 수 있게 한다. 과는 접수에서 고른 과,
@@ -213,7 +217,7 @@ export default function StatsPage(){
           {showList?<div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14, marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:900, color:showList==='owed'?'#f87171':'#c084fc', marginBottom:10 }}>
               {showList==='owed'?('🔴 '+(t.unpaidList||'미수 명단')):('🟣 '+(t.refundList||'환불 명단'))}
-              <span style={{ fontSize:12, color:t3, fontWeight:600, marginLeft:8 }}>{((outData&&outData[showList])||[]).length} {t.people||'명'}</span>
+              <span style={{ fontSize:12, color:t3, fontWeight:600, marginLeft:8 }}>{((outData&&outData[showList])||[]).length} {people}</span>
             </div>
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
