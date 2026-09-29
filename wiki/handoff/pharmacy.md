@@ -4,7 +4,7 @@
 
 ## 2026-09-29 — 옛 재고 목록 가져오기 (마이그레이션 403)
 
-- **상태**: 확인 요청. develop `a51c62e` 위. **번호 403은 세션 번호** — 총괄이 매겨 주세요(지금 develop 끝은 031). 실행 중 EMR에는 총괄이 실장님께 말씀드린 뒤에.
+- **상태**: 확인 요청. develop `ac3395d` 위(rebase). **번호 403은 세션 번호** — 총괄이 매겨 주세요(지금 develop 끝은 032). 실행 중 EMR에는 총괄이 실장님께 말씀드린 뒤에.
 - **파일**: `wiki/reference/drug-import-sql.js`(새, 생성 스크립트) → `backend/sql/403_pharmacy_import_mission_stock.sql`(생성물). 화면: `PharmacyStock.jsx`, `Settings.jsx` 약품 탭, 새 `frontend/src/documents/drug-info.js`, i18n `ph_` 29개. 서버: `pharmacy.routes.js` `/stock`에 칸 추가, `POST /stock/:drugId/check-done`.
 - **결정대로 한 것**: 약 101개(이름·성분·제형·분류, 가격 0·하루 총량과 일수 비움, 옛 용법이 분명한 56개는 횟수·용법 코드) · 재고 = 목록 수량(합 106,467), 기록은 `opening` 한 줄 + 메모 「가져오기(2026-05-15 자료)」 · 예시 25개 숨김 · 약속처방 안 건드림 · 확인할 점이 남은 64개는 멈추지 않고 `import_check`에 넣어 표시 · 포장 단위 확실한 12개(병 7·튜브 3·개 2) 표시, 「확인」 4개는 표시 없이 + `topical` 확인 · 다시 돌려도 안전.
 - **새 칸 4개**(같은 마이그레이션): `dosage_form`(드러그 표에 제형 칸이 없었음 — 결정의 「제형」을 넣을 곳), `import_check`(jsonb), `import_check_done_at`·`_by`.
