@@ -2,6 +2,220 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-1 조치 절차서 (재부팅 당일 총괄용) · `PatientCheck` export
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `9c7aca9`을 ff로 당긴 뒤). **PACS 저장소** — 없음 (절차서가 합칠 대상은 `43bd994`·`e109157`)
+- **한 일**:
+  - 아래 **P-1 조치 절차서**. 코드 변경 없음. 절차서 안의 스크립트 두 개는 저장소에 넣지 않고 여기에만 둠.
+  - 진료 세션 부탁: `RadiologyReadings.jsx`에서 **`PatientCheck`와 `imagesOfRow`를 export**. 모양은 **`viewer-url`의 `images`** (`{patient_check, patient_id, patient_name}`, 도착 전 `null`)로 맞춤 — 진료 뷰어 창의 `ImagePatientCheck`가 이미 이 모양이라 `<PatientCheck images={viewer.images} t={t} style={{margin:'8px 14px 0'}} />`로 그대로 바꿔 쓸 수 있음. 판독 목록은 `imagesOfRow(row)`로 바꿔 넘김. 목록의 모양·문구는 그대로.
+- **바꾼 파일**: `frontend/src/components/RadiologyReadings.jsx`, `wiki/modules/pacs.md`(2.1 상태 글자 Envoyé/Réalisé, 2.6에 뷰어 창 경고, 4절 export 설명, 7절 P-3·P-19, 8절), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**:
+  - 프론트 빌드 통과. 격리 스택 9188에서 한국어 판독 목록을 다시 열어 봄 — 도착 표시·빨강/노랑 경고가 전과 같음.
+  - 절차서의 토큰 스크립트(`rotate-token.ps1`)를 **가짜 `.env` + 격리 DB(`bethesda-s-pacs-db`)** 로 돌려 봄: 새 토큰 48자가 양쪽에 같게 들어감(md5로 비교, 값은 안 찍힘), 다른 줄(ORTHANC_PASSWORD·주석·빈 줄) 그대로, 백업에 옛 값. `BRIDGE_TOKEN=` 줄이 두 개면 아무것도 안 바꾸고 멈춤, DB 컨테이너가 없으면 `.env`를 안 바꾸고 멈춤.
+  - Orthanc 확인 스크립트(`check_orthanc.py`)는 **문법 검사만** — 진짜 Orthanc로는 못 돌려 봄(격리 스택 없음). 그래서 절차서 ⑤-5가 곧 그 확인임.
+- **확인 못 한 것**: 절차서 전체를 실제로 따라 해 보지는 못함(실행 중 시스템이라). ④의 빌드가 인터넷 없이 되는지(pip 층 캐시가 남아 있는지).
+- **총괄 확인 요청**: 아래 절차서. 끝나면 PACS 세션에 알려 주세요 — 위키 2.4의 임시 안내 한 줄을 지우고 ⑤-5 결과를 7절에 적겠습니다.
+- **다른 세션에 부탁**: **진료 세션** — `Consultation.jsx`의 `ImagePatientCheck`를 `import { PatientCheck } from '../components/RadiologyReadings.jsx'`로 바꿔 주세요(모양 그대로, 여백만 `style`로). **수납 세션** — `PatientChart.jsx:70`의 `worklist_status`가 아직 영어 그대로(`sent`/`completed`) — 진료 세션의 `cs_ws*` 번역과 맞추면 좋겠습니다(P-19 남은 부분).
+
+### P-1 조치 절차서
+
+> 실행 중인 시스템에 하는 일이므로 **총괄만** 합니다. 명령은 모두 **Windows PowerShell**(관리자 아님)에서. 비밀값(토큰·Orthanc 비밀번호)은 **어떤 단계에서도 화면에 찍지 않습니다** — 아래 명령은 전부 개수·길이·md5만 봅니다.
+> 기준: PACS `main` = `c9dc0b4`, 합칠 것 = `session/pacs` `e109157`(그 앞 `43bd994` 포함, ff 가능 확인함). EMR은 이미 develop에 있음(`/study-arrived`, 토큰 규칙).
+
+#### ⓪ 재부팅 전에 (지금 해 두어도 됨)
+
+1. 되돌리기용으로 지금 브리지 이미지에 이름표를 하나 더 붙입니다.
+   ```
+   docker tag bethesda-pacs-worklist-bridge:latest bethesda-pacs-worklist-bridge:before-p1
+   ```
+2. 아래 두 스크립트를 저장소 **밖** 폴더에 저장합니다: `C:\Bethesda-p1\rotate-token.ps1`, `C:\Bethesda-p1\check_orthanc.py` (내용은 이 절 맨 아래). 저장소 안에 두면 git에 들어갈 수 있습니다.
+3. 실장님이 관리자 PowerShell에서 동적 포트 범위를 되돌리고 재부팅:
+   ```
+   netsh int ipv4 set dynamicport tcp start=49152 num=16384
+   netsh int ipv6 set dynamicport tcp start=49152 num=16384
+   ```
+
+#### ① 재부팅 뒤 확인 (Docker Desktop이 「Engine running」이 된 뒤)
+
+| 명령 | 기대 결과 | 아니면 |
+|---|---|---|
+| `netsh int ipv4 show dynamicport tcp` | 시작 포트 **49152**, 포트 수 **16384** | 실장님 명령이 안 먹힘 → ⓪-3 다시, 재부팅. **여기서 멈춤** |
+| `netsh int ipv6 show dynamicport tcp` | 같음 | 같음 |
+| `netsh interface ipv4 show excludedportrange protocol=tcp` | **4242·9080·9090이 어느 구간에도 안 들어감** (예전 `4204–4303` 같은 구간이 없어야 함) | ⑥-A |
+| `docker ps --format "{{.Names}}\t{{.Status}}\t{{.Ports}}"` | `bethesda-pacs` 줄에 `0.0.0.0:9090->8042/tcp`, `0.0.0.0:4242->4242/tcp` · `bethesda-emr-web` 줄에 `9080->80` | Ports가 비어 있으면 ④에서 `orthanc`도 다시 만듦 |
+| `foreach ($p in 9080,9090,4242) { "$p " + (Test-NetConnection 127.0.0.1 -Port $p -WarningAction SilentlyContinue).TcpTestSucceeded }` | 세 줄 모두 `True` | 9090·4242만 False면 ④에서 `orthanc` 다시 만든 뒤 재확인. 그래도 False면 ⑥-A |
+
+#### ② PACS 저장소 합치기
+
+```
+git -C C:\Bethesda-PACS-main status --short
+git -C C:\Bethesda-PACS-main log --oneline -1
+git -C C:\Bethesda-PACS-main merge --ff-only session/pacs
+git -C C:\Bethesda-PACS-main log --oneline -3
+```
+- 기대: `status`가 **비어 있음**(`storage/`·`worklists/`·`.env`는 무시 파일이라 안 나옴), 합치기 전 `c9dc0b4`, 합친 뒤 맨 위 `e109157` → `43bd994` → `c9dc0b4`.
+- PACS 저장소에는 develop이 없고 `main`이 실행 중인 판입니다. `push`와 `CHANGELOG.md`는 총괄 판단(세션은 안 건드림).
+
+#### ③ 새 토큰 만들어 양쪽에 넣기
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\Bethesda-p1\rotate-token.ps1
+```
+- 기대: 한 줄 **`OK - EMR and PACS .env now hold the same new token (48 chars). Value not shown.`**
+- 하는 일: `.env`를 `%USERPROFILE%\pacs-env-before-p1`로 백업 → 48자 무작위 토큰 → **EMR DB에 먼저**(`docker exec -i bethesda-emr-db psql`에 **stdin**으로 넘김 — 명령줄·히스토리·psql 출력에 안 남음) → 그다음 `.env`의 `BRIDGE_TOKEN=` 한 줄만 바꿈 → 양쪽 md5 비교.
+- **설정 화면(Flux d'ordres)으로 넣지 않습니다** — 값을 복사·붙여넣기 하게 되어 클립보드·화면에 남습니다.
+- 이 순간부터 ④까지 몇 초 동안 옛 브리지는 401을 받습니다(정상).
+- 옛 토큰은 이제 무효입니다. 옛 토큰이 찍힌 EMR 백엔드 로그(`docker logs bethesda-emr-api`)는 EMR api 컨테이너를 다시 만들 때 함께 없어집니다 — 그대로 둬도 무효인 값이라 급하지 않음(총괄 판단).
+
+#### ④ 컨테이너 다시 만들기
+
+```
+cd C:\Bethesda-PACS-main
+docker compose up -d --build
+```
+- `--build`가 꼭 필요합니다(이미지가 이미 있으면 compose는 새로 짓지 않음). 바뀌는 것은 브리지뿐 — 새 `bridge.py` + 새 환경 변수(`ORTHANC_*`, 새 `BRIDGE_TOKEN`). `orthanc` 서비스 설정은 이번 합치기로 안 바뀌었으므로 보통 그대로 둡니다.
+- ①에서 PACS 포트가 비어 있었거나 연결이 안 됐으면 추가로:
+  ```
+  docker compose up -d --force-recreate orthanc
+  ```
+  영상은 `.\storage` 폴더(바인드 마운트)에 있어서 다시 만들어도 지워지지 않습니다. **`down -v`나 `storage` 폴더 삭제는 절대 하지 않습니다.**
+- 빌드가 pip 설치에서 실패하면(인터넷 없음 + 캐시 없음) ⑥-C.
+
+#### ⑤ 확인 (④ 뒤 1~2분 기다린 다음)
+
+1. `docker ps --format "{{.Names}}\t{{.Status}}"` → `bethesda-pacs`, `bethesda-worklist-bridge` 모두 **(healthy)**.
+2. 브리지 로그 — `docker logs --since 3m bethesda-worklist-bridge`
+   - 있어야 함: `synced N worklist entr…` 가 15초마다.
+   - **없어야 함**: `could not ask Orthanc` · `EMR refused the bridge token` · `BRIDGE_TOKEN is missing` · `ORTHANC_PASSWORD not set` · `no /study-arrived`. 하나라도 있으면 ⑥-B(토큰) 또는 PACS 세션에 로그 줄을 전달.
+3. heartbeat
+   ```
+   docker exec bethesda-emr-db psql -U medconnect -d medconnect -tAc "SELECT round(extract(epoch FROM now()-last_seen)), ok, detail->>'error' FROM service_heartbeat WHERE name='worklist_bridge'"
+   ```
+   → 첫 값 **20 미만**, `t`, 오류 칸 비어 있음. EMR 상태 화면의 장비 워크리스트 줄도 초록.
+4. EMR 로그에 토큰이 더는 안 찍힘 — **개수만** 봅니다(줄을 출력하면 토큰이 화면에 나옴):
+   ```
+   (docker logs --since 3m bethesda-emr-api 2>&1 | Select-String -SimpleMatch 'token=' | Measure-Object).Count
+   (docker logs --since 3m bethesda-emr-api 2>&1 | Select-String -SimpleMatch 'worklist-feed?format=json' | Measure-Object).Count
+   ```
+   → 첫째 **0**, 둘째 **10 안팎**(15초마다 1줄).
+5. **진짜 Orthanc 응답 형식** — 브리지가 기대는 값이 실제로 있는지:
+   ```
+   Get-Content C:\Bethesda-p1\check_orthanc.py | docker exec -i bethesda-worklist-bridge python -
+   ```
+   약 80초 걸립니다. 가짜 환자 `TEST^PACSCHECK`(`PX-TEST-0000`)의 8×8 시험 영상 1장을 Orthanc에 올렸다가 **마지막에 지웁니다.** 어느 워크리스트 UID와도 안 맞으므로 브리지·EMR은 건드리지 않습니다. 비밀번호는 컨테이너 환경 변수에서 읽어 화면에 안 나옵니다. 기대:
+   ```
+   1 upload: 200
+   2 has IsStable: True | IsStable now: False
+   3 PatientMainDicomTags.PatientID: PX-TEST-0000 (expect PX-TEST-0000)
+   4 waiting 75 s ...
+   5 IsStable after 75 s: True (expect True)
+   6 CountInstances: 1 (expect 1)
+   7 delete test study: 200 (expect 200)
+   ```
+   2·3·5·6 중 하나라도 다르면 결과를 PACS 세션에 그대로 전달 — 그 경우 브리지는 아무 검사도 완료 처리하지 못할 뿐 워크리스트는 정상입니다. 7이 200이 아니면 Orthanc 화면(9090)에서 `PX-TEST-0000`을 찾아 지웁니다.
+6. 브라우저로 `http://localhost:9090`이 열리는지(Orthanc 로그인 창), EMR **Paramètres → Flux d'ordres (설정 → 오더 연동)** 의 **Tester PACS (DICOM)** 이 초록인지.
+7. 백업 지우기: `Remove-Item $env:USERPROFILE\pacs-env-before-p1` (옛 토큰·Orthanc 비밀번호가 들어 있음).
+8. PACS 세션에 알림 → 위키 2.4 임시 안내 삭제, ⑤-5 결과 기록.
+
+#### ⑥ 잘못됐을 때 되돌리기
+
+- **⑥-A 포트가 여전히 막힘** — 동적 범위가 49152로 돌아왔는데도 `excludedportrange`에 4242·9080·9090이 걸리면, 실장님이 관리자 PowerShell에서:
+  ```
+  net stop winnat
+  netsh int ipv4 add excludedportrange protocol=tcp startport=4242 numberofports=1
+  netsh int ipv4 add excludedportrange protocol=tcp startport=9090 numberofports=1
+  netsh int ipv4 add excludedportrange protocol=tcp startport=9080 numberofports=1
+  net start winnat
+  ```
+  **Docker Desktop을 먼저 끄고** 합니다 — 쓰고 있는 포트는 제외 등록이 거절될 수 있습니다(확인 필요). 「관리 포트 제외」로 등록되면 Hyper-V가 그 포트를 가져가지 못합니다. 그다음 총괄이 `docker compose up -d --force-recreate orthanc` 와 EMR 쪽 재시작, ① 표 다시.
+- **⑥-B 토큰이 안 맞음** (③이 `FAIL`, 또는 브리지 로그에 `EMR refused the bridge token`) — ③을 **한 번 더** 돌리고(새 토큰을 양쪽에 다시 넣음) `docker compose up -d --force-recreate worklist-bridge`. 브리지는 `.env`를 컨테이너를 만들 때만 읽으므로 다시 만들어야 합니다. `.env` 자체가 망가졌으면 `Copy-Item $env:USERPROFILE\pacs-env-before-p1 C:\Bethesda-PACS-main\.env -Force`로 되돌린 뒤 ③부터.
+- **⑥-C 새 브리지가 이상하거나 빌드가 안 됨** — 옛 브리지로:
+  ```
+  git -C C:\Bethesda-PACS-main reset --hard c9dc0b4
+  docker tag bethesda-pacs-worklist-bridge:before-p1 bethesda-pacs-worklist-bridge:latest
+  cd C:\Bethesda-PACS-main
+  docker compose up -d --no-build --force-recreate worklist-bridge
+  ```
+  `reset --hard`는 ②에서 `status`가 비어 있었으므로 잃는 것이 없고, 무시 파일(`storage/`·`worklists/`·`.env`)은 건드리지 않습니다. 옛 브리지는 새 토큰으로도 동작합니다(토큰을 URL로 보내고 EMR이 그것도 받음). 대신 EMR 로그에 토큰이 다시 찍히고, 영상 도착 확인은 꺼집니다 — PACS 세션에 알려 주세요.
+- **⑥-D Orthanc가 안 뜸** — `docker logs --tail 50 bethesda-pacs`. 이번 합치기는 `orthanc` 설정을 바꾸지 않았으므로 원인은 거의 포트(⑥-A)입니다. 영상은 `storage` 폴더에 그대로 있습니다.
+
+#### 스크립트 1 — `C:\Bethesda-p1\rotate-token.ps1`
+
+```powershell
+param(
+  [string]$EnvFile = 'C:\Bethesda-PACS-main\.env',
+  [string]$DbContainer = 'bethesda-emr-db',
+  [string]$Backup = (Join-Path $env:USERPROFILE 'pacs-env-before-p1')
+)
+# Make a new bridge token and put the same value in the PACS .env and EMR pacs_config.
+# The value never appears on screen, on a command line or in a log (EMR gets it on stdin).
+$ErrorActionPreference = 'Stop'
+Copy-Item $EnvFile $Backup -Force
+$lines = @(Get-Content $EnvFile)
+if (@($lines | Where-Object { $_ -match '^BRIDGE_TOKEN=' }).Count -ne 1) { throw 'BRIDGE_TOKEN= must appear exactly once in .env - stopped, nothing changed' }
+$b = New-Object byte[] 24
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+$tok = ([System.BitConverter]::ToString($b) -replace '-', '').ToLower()
+"UPDATE pacs_config SET bridge_token = '$tok', updated_at = NOW() WHERE id = 1;" |
+  docker exec -i $DbContainer psql -U medconnect -d medconnect -q -v ON_ERROR_STOP=1
+if ($LASTEXITCODE -ne 0) { throw 'EMR DB update failed - .env not changed yet' }
+$lines = $lines | ForEach-Object { if ($_ -match '^BRIDGE_TOKEN=') { "BRIDGE_TOKEN=$tok" } else { $_ } }
+Set-Content -Path $EnvFile -Value $lines -Encoding ascii
+$md5 = ([System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::ASCII.GetBytes($tok))) -replace '-', '').ToLower()
+Remove-Variable tok, b
+$db = (docker exec $DbContainer psql -U medconnect -d medconnect -tAc "SELECT md5(bridge_token) FROM pacs_config WHERE id = 1").Trim()
+$fileTok = ((Get-Content $EnvFile) | Where-Object { $_ -match '^BRIDGE_TOKEN=' }) -replace '^BRIDGE_TOKEN=', ''
+$fileMd5 = ([System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::ASCII.GetBytes($fileTok))) -replace '-', '').ToLower()
+Remove-Variable fileTok
+if ($db -eq $md5 -and $fileMd5 -eq $md5) { 'OK - EMR and PACS .env now hold the same new token (48 chars). Value not shown.' } else { 'FAIL - EMR and .env differ. See procedure step 6-B.' }
+```
+
+#### 스크립트 2 — `C:\Bethesda-p1\check_orthanc.py` (브리지 컨테이너 안에서 실행)
+
+```python
+# Run inside bethesda-worklist-bridge: checks the Orthanc answers bridge.py relies on,
+# with one throwaway 8x8 test image that is deleted at the end. Touches no EMR data.
+import io, os, time, requests
+from pydicom.dataset import Dataset, FileDataset
+from pydicom.uid import generate_uid, ExplicitVRLittleEndian, SecondaryCaptureImageStorage
+
+O = os.environ.get("ORTHANC_URL", "http://orthanc:8042")
+A = ("admin", os.environ["ORTHANC_PASSWORD"])
+uid = generate_uid()
+
+fm = Dataset()
+fm.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+fm.MediaStorageSOPInstanceUID = generate_uid()
+fm.TransferSyntaxUID = ExplicitVRLittleEndian
+ds = FileDataset("t", {}, file_meta=fm, preamble=b"\0" * 128)
+ds.PatientName = "TEST^PACSCHECK"; ds.PatientID = "PX-TEST-0000"; ds.Modality = "OT"
+ds.StudyInstanceUID = uid; ds.SeriesInstanceUID = generate_uid()
+ds.SOPClassUID = fm.MediaStorageSOPClassUID; ds.SOPInstanceUID = fm.MediaStorageSOPInstanceUID
+ds.SamplesPerPixel = 1; ds.PhotometricInterpretation = "MONOCHROME2"; ds.Rows = 8; ds.Columns = 8
+ds.BitsAllocated = 8; ds.BitsStored = 8; ds.HighBit = 7; ds.PixelRepresentation = 0; ds.PixelData = bytes(64)
+ds.is_little_endian = True; ds.is_implicit_VR = False
+buf = io.BytesIO(); ds.save_as(buf, write_like_original=False)
+
+r = requests.post(O + "/instances", data=buf.getvalue(), auth=A, headers={"Content-Type": "application/dicom"}, timeout=15)
+print("1 upload:", r.status_code)
+find = lambda: requests.post(O + "/tools/find", auth=A, timeout=10,
+                             json={"Level": "Study", "Query": {"StudyInstanceUID": uid}, "Expand": True}).json()
+s = find()[0]
+try:
+    print("2 has IsStable:", "IsStable" in s, "| IsStable now:", s.get("IsStable"))
+    print("3 PatientMainDicomTags.PatientID:", (s.get("PatientMainDicomTags") or {}).get("PatientID"), "(expect PX-TEST-0000)")
+    print("4 waiting 75 s for Orthanc to call it stable ...", flush=True)
+    time.sleep(75)
+    s = find()[0]
+    print("5 IsStable after 75 s:", s.get("IsStable"), "(expect True)")
+    st = requests.get(O + "/studies/%s/statistics" % s["ID"], auth=A, timeout=10).json()
+    print("6 CountInstances:", st.get("CountInstances"), "(expect 1)")
+finally:
+    print("7 delete test study:", requests.delete(O + "/studies/" + s["ID"], auth=A, timeout=10).status_code, "(expect 200)")
+```
+
 ## 2026-09-29 — 위키 2절(직원용 사용법)을 프랑스어 화면 기준으로
 
 - **상태**: 확인 요청

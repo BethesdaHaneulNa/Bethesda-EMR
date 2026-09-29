@@ -9,16 +9,26 @@ function ymd(d) { return d ? String(d).split('T')[0] : ''; }
 // mismatch means the patient was typed or edited on the device, so the study
 // may belong to someone else. It cannot show a wrong pick from the worklist --
 // those images carry the picked patient's own details.
-function PatientCheck(props) {
-  var r = props.row, t = props.t;
-  if (r.patient_check !== 'mismatch' && r.patient_check !== 'missing') return null;
-  var mismatch = r.patient_check === 'mismatch';
+//
+// Shared with the viewer window in Consultation.jsx, so it takes the shape
+// GET /api/pacs/viewer-url returns as `images`: { patient_check, patient_id,
+// patient_name } (null before anything arrived). A row of this list is turned
+// into that shape by imagesOfRow. `style` overrides the outer box (margins).
+export function imagesOfRow(r) {
+  if (!r || !r.images_received_at) return null;
+  return { patient_check: r.patient_check || '', patient_id: r.image_patient_id || '', patient_name: r.image_patient_name || '' };
+}
+
+export function PatientCheck(props) {
+  var im = props.images, t = props.t;
+  if (!im || (im.patient_check !== 'mismatch' && im.patient_check !== 'missing')) return null;
+  var mismatch = im.patient_check === 'mismatch';
   var text = mismatch
-    ? String(t.px_patientMismatch || '').replace('{id}', r.image_patient_id || '').replace('{name}', String(r.image_patient_name || '').replace(/\^/g, ' ').trim())
+    ? String(t.px_patientMismatch || '').replace('{id}', im.patient_id || '').replace('{name}', String(im.patient_name || '').replace(/\^/g, ' ').trim())
     : (t.px_patientMissing || '');
-  return <div style={{ margin: '4px 0 6px', padding: '6px 9px', borderRadius: 6, fontSize: 13, fontWeight: 700, lineHeight: 1.5,
+  return <div style={Object.assign({ margin: '4px 0 6px', padding: '6px 9px', borderRadius: 6, fontSize: 13, fontWeight: 700, lineHeight: 1.5,
     background: mismatch ? '#7f1d1d55' : '#78350f55', color: mismatch ? '#fca5a5' : '#fcd34d',
-    border: '1px solid ' + (mismatch ? '#b91c1c' : '#b45309') }}>⚠ {text}</div>;
+    border: '1px solid ' + (mismatch ? '#b91c1c' : '#b45309') }, props.style)}>⚠ {text}</div>;
 }
 
 // Read-only list of a patient's imaging orders + radiology readings.
@@ -53,7 +63,7 @@ export function RadiologyReadings(props) {
               : (r.study_instance_uid ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
             {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: '#7c3aed22', color: cyan, border: '1px solid #7c3aed55', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
           </div>
-          <PatientCheck row={r} t={t} />
+          <PatientCheck images={imagesOfRow(r)} t={t} />
           <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#0f1117', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
             {r.result_text || (t.noReading || '판독 소견 없음')}
           </div>
