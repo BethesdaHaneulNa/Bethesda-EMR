@@ -44,22 +44,38 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/worklist/:id/status - update worklist item status
+// The two tables name the waiting state differently ('scheduled' on the worklist,
+// 'sent' on the order), and each has a CHECK. Unchecked, 'scheduled' updated the
+// worklist and then failed on the order -- outside a transaction, leaving the two
+// disagreeing. Nothing in the EMR calls this today; the arrival path is
+// POST /api/pacs/study-arrived.
+const WL_TO_ORDER_STATUS = { scheduled: 'sent', in_progress: 'in_progress', completed: 'completed', cancelled: 'cancelled' };
+
 router.put('/:id/status', bridgeOrAuth, async (req, res) => {
+  const status = String((req.body || {}).status || '');
+  if (!WL_TO_ORDER_STATUS[status]) {
+    return res.status(400).json({ error: 'status must be one of ' + Object.keys(WL_TO_ORDER_STATUS).join(', ') });
+  }
+  const client = await pool.connect();
   try {
-    const { status } = req.body;
-    const updates = { status };
-    if (status === 'completed') updates.completed_at = new Date();
-    const result = await pool.query(
-      'UPDATE worklist_log SET status = $1, completed_at = $2 WHERE id = $3 RETURNING *',
-      [status, updates.completed_at || null, req.params.id]
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE worklist_log SET status = $1,
+              completed_at = CASE WHEN $3 THEN COALESCE(completed_at, NOW()) ELSE NULL END
+        WHERE id = $2 RETURNING *`,
+      [status, req.params.id, status === 'completed']
     );
-    // Also update order_item
-    if (result.rows.length > 0) {
-      const wl = result.rows[0];
-      await pool.query('UPDATE order_item SET worklist_status = $1, updated_at = NOW() WHERE id = $2', [status, wl.order_item_id]);
-    }
+    if (!result.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
+    await client.query('UPDATE order_item SET worklist_status = $1, updated_at = NOW() WHERE id = $2',
+      [WL_TO_ORDER_STATUS[status], result.rows[0].order_item_id]);
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // GET /api/worklist/dicom-mwl - DICOM C-FIND MWL compatible response (simplified JSON)

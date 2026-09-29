@@ -2,6 +2,38 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 낮은 항목 정리 (P-20·P-11·P-12·P-17·설정 부분 저장), 절차서에 확인 목록
+
+- **상태**: 확인 요청
+- **커밋**:
+  - **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `881328e`을 ff로 당긴 뒤)
+  - **PACS 저장소** `session/pacs` `6c135aa` — 이제 합칠 것은 `6c135aa` ← `e109157` ← `43bd994` (절차서 ②가 가리키는 맨 위 커밋)
+- **한 일**:
+  - **P-20** (설정 세션 `9d7e380`과 짝): 브리지가 Orthanc에 못 물을 때 이유를 heartbeat `arrivals_error`로 보냄, `/bridge-heartbeat`가 detail에 저장(300자). 보내는 글자와 로그는 `scrub()`으로 주소 속 `user:pass@`·토큰·Orthanc 비밀번호를 `***`로.
+  - **P-11**: `PUT /api/worklist/:id/status` — 허용 값만(400), 없는 항목 404, 한 트랜잭션, `scheduled`→order_item `sent`, completed_at은 completed일 때만. 권한(로그인만)은 그대로.
+  - **`PUT /api/pacs/config`**: 보내지 않은 칸은 그대로(`COALESCE`). 전에는 NULL로 덮어써서 일부만 보내면 브리지 토큰이 지워질 수 있었음. 포트 기본값 10004(옛 데모)→4242.
+  - **P-12** (PACS): `make_demo.py`·`make_chest5.py`의 옛 Orthanc 비밀번호와 실존 인물 같은 이름·생년월일 제거 → 환경 변수 + 가짜 환자. 옛 값은 git 기록에 남음.
+  - **P-17**: 설정 화면 예시 `NAS_IP:8090`→`9090`, `pacsServerHint` 3개 언어의 `8090`→`9090`.
+  - PACS `README.md`: 영상은 StudyInstanceUID로만 붙는다고 바로잡음(전에는 「Accession / Study UID」), 도착 확인 단계, 시험 도구 실행법.
+  - **P-13은 하지 않고 제안으로 남김**: compose를 `${ORTHANC_PASSWORD:?…}`로 바꾸면 `.env` 없이 시작을 거부해 안전하지만, EMR `offline/pack.ps1`·`pack.sh`(총괄 파일)가 `.env` 없는 PACS 폴더에서 `docker compose build`·`config --images`를 돌려 **오프라인 키트 만들기가 깨짐**을 확인(`docker compose config`로 시험). 되돌림.
+  - 절차서 ⑤ 뒤에 **「⑤+ 확인 목록」** — 재부팅 당일 R-1~R-5(뷰어 로그인 P-9, P-18, 서버 상태 창, 연결 시험 버튼, Orthanc 응답), 장비 설치 날 D-1~D-6(장비 설정값, P-8, P-4, 메뉴 이름, 추가 촬영, 경고 표시). ⑤-3 heartbeat 확인에 `arrivals_error` 추가, ②의 기대 커밋을 `6c135aa`로.
+- **바꾼 파일**: EMR `backend/src/routes/pacs.routes.js`, `backend/src/routes/worklist.routes.js`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md` · PACS `bridge/bridge.py`, `bridge/make_demo.py`, `bridge/make_chest5.py`, `README.md`
+- **공용 파일 변경**:
+  - `frontend/src/pages/Settings.jsx` — **오더 연동 탭 안**만: 뷰어 주소 칸 예시 글자, `pacsServerHint`의 한국어 기본 문구(번역이 없을 때 쓰는 것) 안의 `8090`→`9090`.
+  - `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — **기존 키 `pacsServerHint` 한 줄씩**, 숫자 `8090`→`9090`만 (규칙 6: 기존 키 문구 변경).
+- **DB 마이그레이션**: 없음 · **번역 키**: 새 키 없음(기존 키 1개 문구만)
+- **확인한 방법**:
+  - `node --check` 두 라우트, `py_compile` 브리지·시험 스크립트, 프론트 `npm install --no-package-lock` + `npm run build` 통과
+  - 격리 스택 9188: `PUT /config`에 뷰어 주소만 보냄 → 토큰 48자·포트·AE·자동생성 그대로. 작업목록 상태 — `bogus` 400, 없는 항목 404, in_progress/completed/scheduled 각각 두 테이블이 맞게(scheduled→sent, completed_at). 처음 짠 SQL이 `inconsistent types deduced for parameter $1`로 500 → 매개변수를 나눠 고친 뒤 통과.
+  - 새 브리지를 격리 네트워크에서 실행: Orthanc 비밀번호 없음·Orthanc 없음 → `/api/system/status`의 bridge가 `warn`/`status.bridge.arrivals`, 가짜 Orthanc 정상 → `ok`로 돌아옴. 주소에 비밀번호를 넣은 경우 저장된 detail과 로그에 비밀번호가 안 나옴(가려서 셈).
+  - 설정 화면 프랑스어: 예시 `http://NAS_IP:9090`, 안내 「URL web (9090)」.
+- **확인 못 한 것**: 진짜 Orthanc(절차서 ⑤-5에서), 시험 스크립트 `make_*`를 진짜 Orthanc에 실제로 돌려 보지는 않음(문법만).
+- **총괄 확인 요청**:
+  - PACS 쪽 합칠 대상이 `6c135aa`로 늘었습니다 — 절차서 ②에 반영.
+  - P-13을 하려면 `offline/pack.ps1`·`pack.sh`에서 PACS `docker compose` 호출 앞에 임시 `ORTHANC_PASSWORD`를 넘기는 변경이 같이 필요합니다. 원하시면 PACS compose 쪽을 바로 만들겠습니다.
+- **다른 세션에 부탁**: 없음 (설정 세션의 P-20 받는 쪽과 필드 이름·길이 맞음 — `arrivals_error`, 300자)
+- **결정이 필요해 남긴 것**: P-4(격리 스택 허락), P-6(워크리스트를 「오늘」 말고 며칠까지 보일지 — 촬영 절차), P-9(뷰어 계정 분리 — R-1 결과 뒤), P-10(장비 등록 — D-1 뒤), P-13(위), P-14(자체 UID 루트, 선택), P-15(판독 이력·확정 — 화면·DB 구조), P-18(진료 화면 문구와 같이), 2.6의 「다른 환자 영상」 처리 절차(의학적 판단).
+
 ## 2026-09-29 — P-1 조치 절차서 (재부팅 당일 총괄용) · `PatientCheck` export
 
 > **총괄 확인 (2026-09-29)**: `2c15a6b` 합침 + 실행 중 EMR 반영. `PatientCheck` export 확인. P-1 절차서는 재부팅 당일 총괄이 이 순서대로 진행.
@@ -24,7 +56,7 @@
 ### P-1 조치 절차서
 
 > 실행 중인 시스템에 하는 일이므로 **총괄만** 합니다. 명령은 모두 **Windows PowerShell**(관리자 아님)에서. 비밀값(토큰·Orthanc 비밀번호)은 **어떤 단계에서도 화면에 찍지 않습니다** — 아래 명령은 전부 개수·길이·md5만 봅니다.
-> 기준: PACS `main` = `c9dc0b4`, 합칠 것 = `session/pacs` `e109157`(그 앞 `43bd994` 포함, ff 가능 확인함). EMR은 이미 develop에 있음(`/study-arrived`, 토큰 규칙).
+> 기준: PACS `main` = `c9dc0b4`, 합칠 것 = `session/pacs`의 **그날 맨 위 커밋**(2026-09-29 기준 `6c135aa` ← `e109157` ← `43bd994`, ff 가능 확인함 — 그 뒤 PACS 세션이 더 커밋하면 인계 노트 맨 위 항목에 적음). EMR은 이미 develop에 있음(`/study-arrived`, 토큰 규칙).
 
 #### ⓪ 재부팅 전에 (지금 해 두어도 됨)
 
@@ -57,7 +89,7 @@ git -C C:\Bethesda-PACS-main log --oneline -1
 git -C C:\Bethesda-PACS-main merge --ff-only session/pacs
 git -C C:\Bethesda-PACS-main log --oneline -3
 ```
-- 기대: `status`가 **비어 있음**(`storage/`·`worklists/`·`.env`는 무시 파일이라 안 나옴), 합치기 전 `c9dc0b4`, 합친 뒤 맨 위 `e109157` → `43bd994` → `c9dc0b4`.
+- 기대: `status`가 **비어 있음**(`storage/`·`worklists/`·`.env`는 무시 파일이라 안 나옴), 합치기 전 `c9dc0b4`, 합친 뒤 맨 위가 `session/pacs`의 맨 위 커밋(2026-09-29 기준 `6c135aa` → `e109157` → `43bd994` → `c9dc0b4`).
 - PACS 저장소에는 develop이 없고 `main`이 실행 중인 판입니다. `push`와 `CHANGELOG.md`는 총괄 판단(세션은 안 건드림).
 
 #### ③ 새 토큰 만들어 양쪽에 넣기
@@ -93,9 +125,9 @@ docker compose up -d --build
    - **없어야 함**: `could not ask Orthanc` · `EMR refused the bridge token` · `BRIDGE_TOKEN is missing` · `ORTHANC_PASSWORD not set` · `no /study-arrived`. 하나라도 있으면 ⑥-B(토큰) 또는 PACS 세션에 로그 줄을 전달.
 3. heartbeat
    ```
-   docker exec bethesda-emr-db psql -U medconnect -d medconnect -tAc "SELECT round(extract(epoch FROM now()-last_seen)), ok, detail->>'error' FROM service_heartbeat WHERE name='worklist_bridge'"
+   docker exec bethesda-emr-db psql -U medconnect -d medconnect -tAc "SELECT round(extract(epoch FROM now()-last_seen)), ok, detail->>'error', detail->>'arrivals_error' FROM service_heartbeat WHERE name='worklist_bridge'"
    ```
-   → 첫 값 **20 미만**, `t`, 오류 칸 비어 있음. EMR 상태 화면의 장비 워크리스트 줄도 초록.
+   → 첫 값 **20 미만**, `t`, 오류 칸 두 개 모두 비어 있음. EMR 상태 화면의 장비 워크리스트 줄도 초록(`arrivals_error`가 있으면 노랑 — 브리지가 Orthanc에 못 묻는 것, ⑤-2와 같이 봄).
 4. EMR 로그에 토큰이 더는 안 찍힘 — **개수만** 봅니다(줄을 출력하면 토큰이 화면에 나옴):
    ```
    (docker logs --since 3m bethesda-emr-api 2>&1 | Select-String -SimpleMatch 'token=' | Measure-Object).Count
@@ -120,6 +152,29 @@ docker compose up -d --build
 6. 브라우저로 `http://localhost:9090`이 열리는지(Orthanc 로그인 창), EMR **Paramètres → Flux d'ordres (설정 → 오더 연동)** 의 **Tester PACS (DICOM)** 이 초록인지.
 7. 백업 지우기: `Remove-Item $env:USERPROFILE\pacs-env-before-p1` (옛 토큰·Orthanc 비밀번호가 들어 있음).
 8. PACS 세션에 알림 → 위키 2.4 임시 안내 삭제, ⑤-5 결과 기록.
+
+#### ⑤+ 「확인 필요」로 남은 것 — 확인 목록
+
+**재부팅 당일 (총괄, 장비 없이 할 수 있음)** — 결과를 PACS 세션에 알려 주면 위키에 적습니다.
+
+| # | 무엇 | 어떻게 | 적을 것 |
+|---|---|---|---|
+| R-1 | **P-9 뷰어가 로그인을 묻는지** | EMR 설정 **Flux d'ordres → PACS 웹/뷰어 주소**가 `http://localhost:9090`(또는 서버 IP)인지 본 뒤, 진료 화면에서 아무 영상 오더의 **🖼** → 영상 창 왼쪽에 ① 브라우저 로그인 창이 뜨는지 ② 빈/오류 화면인지 ③ Stone 뷰어가 바로 뜨는지. 로그인 창이 뜨면 **값은 넣지 말고** 뜬다는 것만 기록. 같은 브라우저로 `http://localhost:9090` 을 따로 열었을 때도 같은지 | ①②③ 중 무엇, 브라우저 종류 |
+| R-2 | P-18 UID 없는 영상 오더 | 워크리스트로 안 가는 영상 오더가 있으면(설정의 오더 코드에서 워크리스트 꺼진 것) 그 오더의 **🖼** — 뷰어 첫 화면(모든 환자 목록)이 뜨는지 | 뜸/안 뜸 |
+| R-3 | 서버 상태 창의 PACS 줄 | `server-status.bat` 창(설정 세션이 호스트 쪽 9090·4242 검사를 넣음)에서 **Imagerie (PACS)**·**Liste de travail des appareils** 가 초록인지 | 초록/빨강 + 문구 |
+| R-4 | 연결 시험 버튼 | EMR **Paramètres → Flux d'ordres → Tester PACS (DICOM)** — Host가 `host.docker.internal` 또는 서버 LAN IP일 때 초록인지(`localhost`면 빨강이 정상) | Host 값, 결과 |
+| R-5 | 진짜 Orthanc 응답 형식 | ⑤-5 결과 그대로 | 7줄 출력 |
+
+**장비 설치 날 (실장님, 현장 장비로만 확인 가능)**
+
+| # | 무엇 | 어떻게 | 적을 것 |
+|---|---|---|---|
+| D-1 | 장비 설정값 | Called AE `MEDCONNECT`, 호스트 = 서버 LAN IP, 포트 `4242`, 워크리스트도 같은 주소 | 장비 이름·모델, 장비 자기 AE Title, 장비 IP (P-10 등록용) |
+| D-2 | **P-8** 워크리스트가 보이는지 | 테스트 환자에게 영상 오더 → 장비에서 워크리스트 조회. **비어 있으면** 장비의 「내 AE만 / Station AE 필터」 옵션을 끄고 다시 조회 | 보임/안 보임, 필터 옵션 이름 |
+| D-3 | **P-4** 장비가 UID를 그대로 쓰는지 | 워크리스트에서 그 환자를 골라 1장 찍어 전송 → 2분 뒤 EMR **🩻 Compte-rendu** 에 **N image(s) reçue(s)** 가 뜨는지. 안 뜨는데 `http://<서버>:9090`(Orthanc 화면)에는 영상이 있으면 장비가 UID를 새로 만든 것 | 뜸/안 뜸, Orthanc의 AccessionNumber 가 오더 번호(`YYMMDD-n`)와 같은지 |
+| D-4 | 장비 메뉴 이름 | 워크리스트 불러오기·전송 버튼의 실제 이름(프랑스어/영어) | 위키 2.2에 넣을 이름 |
+| D-5 | 추가 촬영 | 전송 뒤 워크리스트에서 빠진 다음, 같은 검사에 한 장 더 찍어 보낼 수 있는지 | 됨/안 됨, 방법 |
+| D-6 | 경고 표시 | 장비에서 환자번호를 일부러 바꿔 찍은 시험 영상 → 판독 목록에 빨간 경고가 뜨는지 (시험 뒤 Orthanc 화면에서 그 영상 삭제) | 뜸/안 뜸 |
 
 #### ⑥ 잘못됐을 때 되돌리기
 
