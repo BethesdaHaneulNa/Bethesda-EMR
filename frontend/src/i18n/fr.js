@@ -587,6 +587,7 @@ export default {
   st_otherVisits: "Sans frais / autres",
   st_rxBasisAll: "Toutes Rx : selon le jour de prescription (date de visite), quantité prescrite",
   st_rxBasisDispensed: "Dispensé : selon le jour de remise par la pharmacie, médicaments internes uniquement, arrondi à l’unité — même chiffre que les sorties du rapport de stock",
+  st_refundedSub: "Rendu",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",

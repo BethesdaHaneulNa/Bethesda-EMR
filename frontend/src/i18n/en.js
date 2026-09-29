@@ -596,6 +596,7 @@ export default {
   st_otherVisits: "No fee / other",
   st_rxBasisAll: "All prescriptions: by the day prescribed (visit date), quantity as written",
   st_rxBasisDispensed: "Dispensed: by the day the pharmacy handed it over, in-house drugs only, rounded up to whole units — the same figure as the stock report’s outgoing",
+  st_refundedSub: "Handed back",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",
