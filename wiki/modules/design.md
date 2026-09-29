@@ -137,6 +137,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇을 고친 뒤 | 비교한 화면 | 결과 |
 |---|---|---|---|
+| 2026-09-29 | 3단계 `Pharmacy.jsx` · `PharmacyStock.jsx` | 약국 5장(빈 화면 / 환자 둘 / 차트 창)을 포함한 34장. 재고 탭은 고치기 전 기록이 없어 `check-dark.mjs` 가 근거. `check-dark.mjs`: Pharmacy 402줄 중 401, PharmacyStock 308줄 중 307줄 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Payment.jsx` | 수납 9장(빈 화면 / 환자 둘 / 판독 · 문서 · 차트 창)을 포함한 34장. `check-dark.mjs`: 740줄 중 729줄 같음 | **모두 같음** |
 | 2026-09-29 | 3단계 `Consultation.jsx` | 진료 14장(빈 화면 / 대기 목록 / 환자 고름 / 검사결과 · 판독 · 문서 · 차트 · 외래 내역 창을 연 상태)을 포함한 20장. `check-dark.mjs`: 1,109줄 중 1,097줄 같음, 나머지(import, 상태 색 계열, 입력 칸 테두리 · 바탕 7곳, 환자 띠 주석)는 눈으로 | **모두 같음** |
 | 2026-09-29 | 3단계 `Lab.jsx` · `LabResults.jsx` | 임상병리 5장(빈 화면 / 환자 둘 / 차트 창 둘)과 진료 · 접수 15장 — 모두 20장. `check-dark.mjs`: Lab 314줄 중 309, LabResults 167줄 모두 같음 | **모두 같음** |
@@ -178,7 +179,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 | `components/PatientFinder.jsx` · `PatientChart.jsx` · `DocumentModal.jsx`(틀만) · `RadiologyReadings.jsx` | | | |
 | `pages/Payment.jsx` | 끝 (2026-09-29) | 218 | 상태 색의 뜻 그대로: 빨강 = 취소 · 미수, 초록 = 받음, 보라 = 정정, 노랑 = 안내 — 모두 글자와 함께. 위쪽 큰 단추 넷(문서 · 원외처방 · 차트 · 판독)은 짙은 색 바탕 + 옅은 글자로 두 화면에서 같음. 「대기 / 수납 완료」 탭은 고르지 않은 쪽 글자가 밝은 화면에서 검정 |
 | `pages/Stats.jsx` | 통계 세션의 현금 기준 작업 뒤 | | |
-| `pages/Pharmacy.jsx` · `PharmacyStock.jsx` | 총괄이 「시작해도 됨」이라고 적은 뒤 | | |
+| `pages/Pharmacy.jsx` · `PharmacyStock.jsx` | 끝 (2026-09-29) | 80 · 61 | 원내 = 초록, 원외 = 노랑 단추: 어두운 화면에서 밝은 색 + 검은 글자, 밝은 화면에서 짙은 색 + 흰 글자(`--on-bright`). 재고의 입고 = 초록, 실사 = 노랑, 폐기 = 빨강 단추도 같음 — 모두 글자가 같이 있음. 재고 기록의 종류 글자색(`KIND_COLOR`)은 글자용 이름표 |
 | `pages/Settings.jsx` · `settingsPassword.jsx` · `settingsStatus.jsx` | 맨 마지막 | | |
 
 ## 4. 데이터 · API
@@ -213,6 +214,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇 |
 |---|---|
+| 2026-09-29 | **3단계 `Pharmacy.jsx` · `PharmacyStock.jsx`** 색 80 · 61곳 |
 | 2026-09-29 | **3단계 `Payment.jsx`** 색 218곳. 이름표 더함: 짙은 단추 `--accent-deep` · `--teal-deep` · `--cyan-deep` · `--violet-deep`(두 화면에서 같은 값), 그 위 옅은 글자 `--on-fill-*` 9개(같은 값), `--on-bright`, `--bg-col-2` · `--accent-chip` · `--danger-box` · `--line-soft-2` · `--field-4`, 글자 `--accent-text-3` · `--danger-text-3` · `--text-soft-2` · `--violet-text-4` · `--warn-text-3` |
 | 2026-09-29 | **3단계 `Consultation.jsx`** 색 189곳. 환자 띠와 영상 창 바탕은 주제와 관계없이 그대로 |
 | 2026-09-29 | **3단계 `Lab.jsx` · `LabResults.jsx`** 색 47 · 12곳. 이름표 더함: `--on-cyan` · `--cyan-strong` · `--cyan-text-2` · `--bg-group` · `--notice` · `--notice-line` · `--hover-row` · `--hover-row-2` · `--warn-chip` · `--danger-chip`, 옅은 청록 3개 |
