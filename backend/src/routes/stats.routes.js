@@ -113,8 +113,7 @@ router.get('/summary', async (req, res) => {
          COALESCE(SUM(procedure_total),0)::numeric AS procedure,
          COALESCE(SUM(consult_fee+drug_total+procedure_total),0)::numeric AS gross,
          COALESCE(SUM(net_paid),0)::numeric AS paid,
-         COUNT(*) FILTER (WHERE payment_status <> 'cancelled')::int AS bill_count,
-         COUNT(*) FILTER (WHERE payment_status = 'cancelled')::int AS cancelled_count
+         COUNT(*)::int AS bill_count
        FROM billing
        WHERE billing_date BETWEEN $1 AND $2 AND payment_status <> 'cancelled'`, P);
 
@@ -170,20 +169,29 @@ router.get('/summary', async (req, res) => {
 router.get('/monthly', async (req, res) => {
   try {
     const months = Math.min(Math.max(parseInt(req.query.months) || 6, 1), 24);
-    const v = await pool.query(
-      `SELECT to_char(date_trunc('month', visit_date),'YYYY-MM') AS ym, COUNT(*)::int AS visits
-       FROM visit WHERE status <> 'cancelled'
-         AND visit_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
-       GROUP BY 1 ORDER BY 1`, [months - 1]);
-    const b = await pool.query(
-      `SELECT to_char(date_trunc('month', billing_date),'YYYY-MM') AS ym, COALESCE(SUM(net_paid),0)::numeric AS revenue
-       FROM billing WHERE payment_status <> 'cancelled'
-         AND billing_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
-       GROUP BY 1 ORDER BY 1`, [months - 1]);
-    const map = {};
-    v.rows.forEach(function (x) { map[x.ym] = { ym: x.ym, visits: x.visits, revenue: 0 }; });
-    b.rows.forEach(function (x) { map[x.ym] = Object.assign(map[x.ym] || { ym: x.ym, visits: 0 }, { revenue: Math.round(Number(x.revenue) || 0) }); });
-    res.json(Object.values(map).sort(function (a, c) { return a.ym < c.ym ? -1 : 1; }));
+    // Every month in the window gets a row, zero or not. Built only from the
+    // months that had data, a quiet month simply vanished from the chart and
+    // the bars either side of it read as consecutive.
+    const r = await pool.query(
+      `WITH m AS (
+         SELECT to_char(g, 'YYYY-MM') AS ym
+           FROM generate_series(date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval,
+                                date_trunc('month', CURRENT_DATE), interval '1 month') g
+       ), v AS (
+         SELECT to_char(visit_date, 'YYYY-MM') AS ym, COUNT(*)::int AS visits
+           FROM visit WHERE status <> 'cancelled'
+            AND visit_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
+          GROUP BY 1
+       ), b AS (
+         SELECT to_char(billing_date, 'YYYY-MM') AS ym, SUM(net_paid) AS revenue
+           FROM billing WHERE payment_status <> 'cancelled'
+            AND billing_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
+          GROUP BY 1
+       )
+       SELECT m.ym, COALESCE(v.visits, 0) AS visits, COALESCE(b.revenue, 0)::numeric AS revenue
+         FROM m LEFT JOIN v ON v.ym = m.ym LEFT JOIN b ON b.ym = m.ym
+        ORDER BY m.ym`, [months - 1]);
+    res.json(r.rows.map(function (x) { return { ym: x.ym, visits: x.visits, revenue: Math.round(Number(x.revenue) || 0) }; }));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

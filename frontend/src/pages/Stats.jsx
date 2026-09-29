@@ -30,6 +30,9 @@ export default function StatsPage(){
   var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
 
   useEffect(function(){ load(); }, [range.from, range.to]);
+  // The trend is always the last six months, whatever range is picked above, so
+  // it loads once rather than on every change of dates.
+  useEffect(function(){ api.get('/stats/monthly?months=6').then(setMonthly).catch(function(){ setMonthly([]); }); }, []);
   useEffect(function(){ loadDrugUsage(); }, [drugGran, drugType, drugStat]);
   async function loadDrugUsage(){
     try {
@@ -62,11 +65,16 @@ export default function StatsPage(){
     setLoading(true);
     try {
       var d = await api.get('/stats/summary?from='+range.from+'&to='+range.to); setData(d);
-      try { setOutData(await api.get('/stats/outstanding')); } catch(e){ setOutData(null); }
-      try { setMonthly(await api.get('/stats/monthly?months=6')); } catch(e){ setMonthly([]); }
     }
     catch(err){ console.error(err); setData(null); }
     setLoading(false);
+  }
+  // The debtor list does not depend on the dates either. It is fetched when a
+  // card is opened, so it is as fresh as the card total it is read against.
+  function toggleList(k){
+    var next = showList===k ? null : k;
+    setShowList(next);
+    if(next) api.get('/stats/outstanding').then(setOutData).catch(function(){ setOutData(null); });
   }
   function pick(p){ setPeriod(p); if(p!=='custom') setRange(rangeFor(p)); }
   function setFrom(v){ setPeriod('custom'); setRange(Object.assign({}, range, { from:v })); }
@@ -166,8 +174,8 @@ export default function StatsPage(){
             <Card label={t.collected||'수납액'} value={fmtAr(rev.paid)} unit="Ar" color="#10b981" sub={(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'} />
             <Card label={t.billCount||'수납 건수'} value={rev.billCount||0} unit={t.cases||'건'} small />
             <Card label={t.avgPerBill||'평균 단가'} value={fmtAr(rev.avg)} unit="Ar" small />
-            <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){setShowList(showList==='owed'?null:'owed')}} active={showList==='owed'} />
-            <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){setShowList(showList==='refund'?null:'refund')}} active={showList==='refund'} />
+            <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="#f87171" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
+            <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="#c084fc" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
             <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={t.cases||'건'} color="#f59e0b" small />
           </div>
           {/* 과별·의사별 매출. 진료 섹션의 방문수 그래프와 같은 모양으로 두어, "몇 명 봤는지"와
@@ -207,7 +215,7 @@ export default function StatsPage(){
                     {showList==='owed'?<td style={{ padding:'7px 8px', color:t2 }}>{r.since||'—'}</td>:null}
                     <td style={{ padding:'7px 8px', color:t3, textAlign:'right' }}>{r.open_bills}</td>
                   </tr>; })}
-                  {((outData&&outData[showList])||[]).length===0?<tr><td colSpan={6} style={{ padding:'14px 8px', color:t3, textAlign:'center' }}>{t.noData||'데이터 없음'}</td></tr>:null}
+                  {((outData&&outData[showList])||[]).length===0?<tr><td colSpan={6} style={{ padding:'14px 8px', color:t3, textAlign:'center' }}>{outData?(t.noData||'데이터 없음'):(t.loading||'불러오는 중...')}</td></tr>:null}
                 </tbody>
               </table>
             </div>
