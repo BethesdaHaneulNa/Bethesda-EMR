@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 비활성 직원 다시 활성 (재부팅 뒤 ④, U2 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`34e8bc2` 위)
+- **한 일**:
+  - `POST /api/admin/staff/:id/reactivate` — settings 권한 **그리고 admin 역할**. 상태만 active로, 아이디·비밀번호·역할·권한은 그대로. 기록 `settings.staff.edit`(status inactive → active)을 같은 트랜잭션에. 이미 활성이면 200 `unchanged`·기록 없음, 없는 id 404.
+  - **PUT `/staff/:id`에도 같은 규칙**: 비활성 → 활성은 admin 역할만(403). 전에는 설정 권한만 있으면 API로 되살릴 수 있었습니다(화면에는 칸이 없었을 뿐). 비활성인 채로 다른 칸을 고치는 것은 그대로 됨.
+  - 화면: 비활성 줄에 **Supprimer** 대신 초록 **Réactiver**(admin 역할에게만), 확인 창에 이름과 「같은 아이디·비밀번호·권한」.
+- **「관리자」를 어떻게 읽었나 — 확인 부탁**: 결정은 「관리자만」. 설정 화면 전체가 이미 설정 권한을 요구하므로, 그것만으로는 「관리자만」이 더해 주는 것이 없어 **admin 역할 + 설정 권한**으로 했습니다. 역할은 요청마다 DB에서 읽음(S1). 지금 설정 권한이 있는 실제 계정은 admin 역할뿐이라 실제 차이는 없습니다. 설정 권한만으로 충분하다고 보시면 두 줄(라우트 첫 줄, PUT 조건)만 빼면 됩니다.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js`(`REACTIVATE_ADMIN_ONLY`) · `frontend/src/pages/Settings.jsx`(직원 줄, `reactivateStaff`, `getUser` import) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.reactivate.mjs`(새) · `backend/test/settings.access.mjs`(라우트 1개) · `wiki/modules/settings.md`(2.5, 4절, 7절 U2, 8절)
+- **공용 파일 변경**: i18n `se_reactivate`·`se_confirmReactivate`·`se_errReactivateAdmin`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택: `settings.reactivate.mjs` **12개 통과**(비활성 로그인 401 → 설정만 있는 접수 계정 403·PUT 우회도 403·비활성인 채 수정 200 → 관리자 200 → 옛 비밀번호로 로그인·역할·권한 그대로 → 기록 한 줄 status만 → 두 번째 누름 기록 없음 → 404 → 권한 없음 403). access **111 × 11 = 1221건 모두 표와 같음**, audit·password·messages·drugs 통과. 화면: 프랑스어 관리자 — 비활성 줄에 「Réactiver」, 확인 문구, 누르면 「actif」; 한국어 — 「다시 활성」·확인 문구, 취소하면 그대로 비활성; 설정 권한만 있는 접수 계정 — 비활성 7줄 모두 「Modifier」만.
+- **다음 할 일**: ⑤ 11월 대비 복원 연습 처음부터 끝까지(pacs_config 주소 두 칸도 확인 표에).
+
 ## 2026-09-29 — 자기 비밀번호 바꾸기 (재부팅 뒤 ③, S4 결정)
 
 - **상태**: 확인 요청

@@ -322,6 +322,12 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
     // an administrator (wiki 7, S6).
     let effLogin = login_id, effRole = String(role);
     let effStatus = (status === undefined || status === null || status === '') ? was.status : status;
+    // Bringing a deactivated account back is for an administrator only (U2) - the same
+    // rule as POST /staff/:id/reactivate below, so the edit form cannot go round it.
+    if (was.status === 'inactive' && String(effStatus) === 'active' && req.user.role !== 'admin') {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: MSG.REACTIVATE_ADMIN_ONLY });
+    }
     if (was.login_id === BOOTSTRAP_ADMIN_LOGIN) {
       // Fixed, not merely discouraged - see BOOTSTRAP_ADMIN_LOGIN. Name, password,
       // phone, email and department stay editable; the way back in does not.
@@ -386,6 +392,39 @@ router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
     }
     const now = (await client.query(
       "UPDATE staff SET status = 'inactive', updated_at = NOW() WHERE id = $1 RETURNING id, login_id, name, role, status, department_id, phone, email",
+      [req.params.id])).rows[0];
+    await writeAudit(client, req, { action: ACTIONS.STAFF_EDIT, entity: 'staff', entity_id: now.id, summary: staffLabel(now),
+      before: staffFields(was), after: staffFields(now) });
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Bring a deactivated account back (U2, decided 2026-09-29: yes, administrators only,
+// logged). The account comes back as it was: same login, password, role and
+// permissions - nothing is reset, so the person can log in as before. Only the status
+// changes, and the change log gets settings.staff.edit status inactive -> active.
+// "Administrator" is the admin role on top of the settings permission: the whole
+// Settings screen needs that permission, but a front-desk account that was given it
+// does not also get to undo a deactivation. req.user.role is read from the database on
+// every request (middleware/auth.js, S1), so a role taken away applies at once.
+// Already active: 200 and nothing written, so a second click changes nothing.
+router.post('/staff/:id/reactivate', permMiddleware('settings'), async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: MSG.REACTIVATE_ADMIN_ONLY });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const cur = await client.query(
+      'SELECT id, login_id, name, role, status, department_id, phone, email, permissions FROM staff WHERE id = $1 FOR UPDATE',
+      [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const was = cur.rows[0];
+    if (was.status === 'active') { await client.query('ROLLBACK'); return res.json({ success: true, unchanged: true }); }
+    const now = (await client.query(
+      "UPDATE staff SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING id, login_id, name, role, status, department_id, phone, email",
       [req.params.id])).rows[0];
     await writeAudit(client, req, { action: ACTIONS.STAFF_EDIT, entity: 'staff', entity_id: now.id, summary: staffLabel(now),
       before: staffFields(was), after: staffFields(now) });

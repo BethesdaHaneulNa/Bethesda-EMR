@@ -773,6 +773,9 @@ export default {
   se_pwDone: "Password changed. Use the new one next time you log in.",
   se_pwOpen: "Click to change my password",
   se_errCurrentPw: "The current password is not correct.",
+  se_reactivate: "Reactivate",
+  se_confirmReactivate: "Reactivate {name}? They can log in again with the same login, password and permissions as before.",
+  se_errReactivateAdmin: "Only an administrator can reactivate a staff account.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
