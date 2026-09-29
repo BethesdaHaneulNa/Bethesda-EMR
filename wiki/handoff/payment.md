@@ -2,6 +2,38 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 조사: 약 총량 계산식이 바뀌면 수납은? (총괄 요청, 코드 변경 없음)
+
+- **상태**: 확인 요청(조사 결과) — 코드 변경 없음
+- **수납 안의 대체 계산 다섯 곳**(모두 `total_qty`가 없을 때만 `dose × frequency × days`): `billing.routes.js` `/pending`의 `live_total`(95행) · `buildCorrection()`(501행) / `Payment.jsx` `drugTotal()`(164행) · `chargeRows()`(182행) · 처방 표(539행). 줄 번호는 `dee58dc` 기준.
+
+**(1) 처방에 `total_qty`가 항상 저장되나** — **화면으로 만든 처방은 항상 저장됨.**
+- 진료 화면 `Consultation.jsx`의 처방 추가 `addDrugRx()`(약속처방 세트 적용 `applySet()`도 이 함수를 씀)는 `total_qty = 기본용량 × 기본횟수 × 기본일수`, 수정 `saveRx()`는 `total_qty = 용량 × 횟수 × 일수`를 **화면이 계산해서 보냄** — 첫 커밋(`e553fef`, 2026-06-28)부터 그대로.
+- 서버: 수정 `PUT /consultations/prescription/:id`는 `total_qty`가 비면 **서버가 계산해 넣음**(`calcQty`). 추가 `POST /consultations/:id/prescriptions`는 **받은 값을 그대로** 넣음 → 비어 오면 `NULL`.
+- 판단: 수납이 대체 계산을 지우고 **`total_qty`만 읽는 것이 맞다**(약국 `pharmacy.routes.js:33,183`·통계 `stats.routes.js:275`는 이미 `COALESCE(total_qty,0)`만 읽음). 그러면 계산식은 **진료의 저장 한 곳**에만 남고, 식이 바뀌어도 수납·약국·통계는 고칠 것이 없음. 단 아래 (2)의 조회로 `NULL`이 0건인지 먼저 확인하고, 진료 서버의 추가(POST)도 수정(PUT)처럼 비면 계산해 넣도록 하는 것이 안전(진료 세션 소관).
+
+**(2) `total_qty`가 비어 있을 수 있는 경로**
+- 화면 경로: 없음(위). 시드(`003_seed_data.sql`·`004_order_sets.sql`): 처방 행 없음.
+- **API를 직접 부른 경우**(`total_qty` 빼고 POST) — 유일한 경로.
+- **지금도 있는 어긋남**: `NULL`인 처방은 수납은 `용량×횟수×일수`로 청구하는데 약국은 0개로 조제·재고 차감, 통계 약품 사용량도 0. 수납이 `total_qty`만 읽게 바꾸면 셋이 같아짐.
+- 비슷한 작은 어긋남: `total_qty = 0`이면 화면(`parseFloat(total_qty) || …`)은 0을 「없음」으로 보고 대체 계산, 서버(`COALESCE`)는 0 그대로 → 수납 화면 금액과 대기 목록 판정이 다를 수 있음(7절 L3). 대체 계산을 지우면 같이 없어짐.
+- 실행 중 EMR에서 세어 볼 조회(읽기 전용):
+  ```sql
+  SELECT COUNT(*) AS null_qty,
+         COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM consultation c JOIN billing b ON b.visit_id = c.visit_id
+                                          WHERE c.id = p.consultation_id AND b.payment_status <> 'cancelled')) AS null_qty_billed
+    FROM prescription p WHERE p.total_qty IS NULL;
+  SELECT COUNT(*) AS zero_qty_with_dose FROM prescription WHERE total_qty = 0 AND NULLIF(dose,'')::numeric > 0;
+  ```
+
+**(3) 식이 바뀔 때 이미 청구된 영수·「정정(환불)」 판정**
+- **이미 발행된 영수는 영향 없음**: `billing_item`에 그때의 수량·단가·금액이, `billing`에 합계가 저장되어 있고, 영수증(3.10)·통계 매출은 이 저장값만 읽음.
+- **판정**(`/pending`의 `needs_refund`·`needs_additional`)은 「지금 처방의 `total_qty`」 대 「청구된 금액」 비교라서:
+  - 옛 처방은 저장된 `total_qty`를 그대로 쓰므로 **식이 바뀌어도 판정이 달라지지 않음.**
+  - **예외 ①** 의사가 옛 처방을 **다시 저장**하면(수정) 새 식으로 `total_qty`가 다시 계산됨 → 수량이 달라지면 그 내원이 「추가 청구」나 「정정」으로 뜸. 실제로 수량이 바뀐 것이면 맞는 동작이지만, 식만 바뀌고 처방은 그대로인데 저장만 다시 눌러도 뜰 수 있음. 조제가 끝난 처방은 수정이 막혀 있어(`d1f473e`) 그런 처방엔 해당 없음.
+  - **예외 ②** `total_qty`가 `NULL`인 처방: 수납의 대체 계산이 바뀌면(또는 지우면) 지금 금액이 달라져 이미 청구된 내원이 거짓으로 「정정」/「추가 청구」로 뜰 수 있음 → (2)의 조회로 0건 확인이 먼저.
+- **권하는 순서**: ① 조회로 `NULL` 0건 확인(아니면 그 행을 어떻게 채울지 실장님께 — 데이터 변경) ② 진료 서버 POST도 비면 계산해 넣기 ③ 수납 다섯 곳을 `total_qty`만 읽게(수납이 할 일, 작음) ④ 그다음 진료에서 식 변경. ③은 ①이 0건이면 식 변경과 무관하게 먼저 해도 결과가 같음.
+
 ## 2026-09-29 — H3 영수증 다시 만듦 (실장님 결정: 제대로 · 항상 프랑스어 · A4)
 
 - **상태**: 확인 요청
