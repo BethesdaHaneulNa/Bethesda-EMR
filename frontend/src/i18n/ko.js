@@ -277,6 +277,8 @@ export default {
   // ── begin laboratory (lb_) ──
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "취소",
+  st_unassigned: "미지정",
   // ── end statistics ──
   // ── begin settings (se_) ──
   // ── end settings ──

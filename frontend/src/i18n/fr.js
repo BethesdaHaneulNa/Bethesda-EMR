@@ -277,6 +277,8 @@ export default {
   // ── begin laboratory (lb_) ──
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "Annulé",
+  st_unassigned: "Non attribué",
   // ── end statistics ──
   // ── begin settings (se_) ──
   // ── end settings ──

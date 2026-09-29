@@ -2,10 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
-## 2026-09-29 — 미수·환불을 수납 화면과 같은 식으로 (문제 1·10)
+## 2026-09-29 — 취소 접수 제외 · 미지정 줄 · 서류 이중 표시 · 날짜 · 프랑스어 (문제 2·3·4·5·6·11)
 
 - **상태**: 확인 요청
 - **커밋**: session/statistics (이 항목과 같은 커밋)
+- **한 일**:
+  - (4, 실장님 결정) 취소된 접수(`visit.status='cancelled'`)를 총 내원·초진·재진·고유 환자·과별·의사별·월별 내원에서 뺌. 「취소」 칸만 셈.
+  - (5, 실장님 결정) 의사별 내원·매출을 `LEFT JOIN staff` 로 — 담당의 없는 방문이 「미지정」 줄로 나와 의사별 매출 합계 = 수납액. `s.id` 로 묶어 동명이인도 분리. 과별도 `d.id` 로 묶음.
+  - (3) 항목별 매출의 검사/처치료 = `procedure_total` − 서류(`item_type='fee'`). 수납 화면이 서류를 `procedure_total` 에 넣기 때문에 같은 돈이 두 번 그려졌음. 이제 네 막대 합 = 청구액.
+  - (2·6) 응답의 날짜를 `to_char(…,'YYYY-MM-DD')` 문자열로(`ymd()`). 미수 발생일이 하루 앞당겨 보이던 것, 약품 표 기간이 `…T21:00:00.000Z` 로 보이던 것, `/summary` 기본 `range` 가 Date 문자열이던 것.
+  - (11) 취소 카드 라벨을 없는 키 `t.cancelled` → `st_cancelled`. SQL 안의 한국어 `'(미지정)'` 을 없애고 `code/name=null` 로 보내 화면이 `st_unassigned` 로 표시. 진료과 이름을 화면 언어에 맞게(`name_fr`→`name_en`→`name`).
+- **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — **통계 표시(`st_`) 사이에만** 키 2개 추가. 그 밖은 안 건드림.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `st_cancelled`(취소 / Cancelled / Annulé), `st_unassigned`(미지정 / Unassigned / Non attribué) — ko · en · fr 모두 넣음
+- **API 모양 변경**: `/summary` 의 `byDept`·`revenueByDept` 행에 `name_en`·`name_fr` 추가, 과 없음은 `code:null,name:null`(예전 `'-'`,`'(미지정)'`). `byDoctor`·`revenueByDoctor` 행에 `doctor_id` 추가, 담당의 없음은 `name:null`. `revenue.procedure` 는 서류 제외 금액으로 뜻이 바뀜. 날짜 필드(`range`, `since`, `last_date`, drug-usage `from/to`)는 모두 `'YYYY-MM-DD'`. 이 API 를 쓰는 곳은 `Stats.jsx` 뿐인 것을 확인(`grep "/stats/"`).
+- **확인한 방법**: `node --check` 통과, 프론트 `npm run build` 통과. 격리 스택 9186 에 과·담당의 없는 방문(진료비 1 000 + 검사 2 000 + 서류 500)과 처방 1건을 더 넣고 손 계산과 비교 — 총 내원 11(접수 12 − 취소 1), 과별·의사별 합 11, 수납액 21 500 = 의사별 15 000 + 미지정 6 500 = 과별 합, 항목별 28 000 + 0 + 2 000 + 1 500 = 청구액 31 500, 발생일 2026-09-29, 약품 기간 2025-10-01 ~ 2026-09-29 모두 일치. 한국어·프랑스어 화면에서 카드·그래프·미수 명단·약품 표를 눈으로 확인.
+- **확인 못 한 것**: 영어 화면은 키만 넣고 눈으로는 안 봄. 실제 병원 데이터에서의 변화량.
+- **위키**: `modules/statistics.md` 2절, 3.2(표 다시 씀), 3.3, 3.4(1·2·3차 시험), 3.5, 3.6, 4절(API·테이블), 5절, 7절(2·3·4·5·6·11 고침, 줄 번호 갱신), 8절
+- **총괄 확인 요청**: 합치면 병원 통계의 **총 내원 수가 취소 건만큼 줄고**, 의사별 매출에 「미지정」 줄이 새로 생길 수 있습니다(실장님 결정 사항). CHANGELOG 1.4.0 의 「과별·의사별 합계는 같다」가 이제 사실이 됩니다 — 다음 CHANGELOG 에 적을 만합니다.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 7절 7(DB 시간대, 총괄), 8(금고 기준, 실장님 결정 + 수납), 9·12·13·14·15(낮음). 약품 사용통계에 취소 접수의 처방이 들어가는 것(12)은 4번과 같은 원칙이라 다음에 같이 정하면 좋겠음.
+
+## 2026-09-29 — 미수·환불을 수납 화면과 같은 식으로 (문제 1·10)
+
+- **상태**: 확인 요청
+- **커밋**: session/statistics `52c4505`
 - **한 일**: 통계의 미수를 `total_due − net_paid` 에서 `GREATEST(outstanding,0)` 로, 환불을 `GREATEST(net_paid − total_due,0)` 로 바꿈 — 수납의 `/billing/patient/:id/balance` 와 같은 식. 옛 식은 새 영수로 이월되어 이미 받은 옛 빚(`outstanding=0`)을 계속 미수로 보여줘서, 받은 돈을 받으러 환자에게 전화할 수 있었음. 명단도 환자별 상계를 그만두고 미수·환불을 따로 더해, 요약 카드 합계 = 명단 합계 = 환자별 수납 화면 잔액이 됨. 한 환자에게 둘 다 있으면 두 명단에 모두 나옴.
 - **바꾼 파일**: `backend/src/routes/stats.routes.js` (`OWED_SQL`·`REFUND_SQL` 상수, `/summary` 의 미수·환불, `/outstanding` 전체)
 - **공용 파일 변경**: 없음
