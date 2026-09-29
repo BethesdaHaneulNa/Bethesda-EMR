@@ -7,6 +7,7 @@ import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
 import { ReceiptModal } from '../components/Receipt.jsx';
+import { packWord } from '../documents/rx-dosing.js';
 
 function fmtAr(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); }
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
@@ -180,6 +181,12 @@ export default function PaymentPage() {
   // keeps no formula of its own. null means it is missing: shown as a warning and
   // billing is refused (never counted as 0 without anyone noticing).
   function rxQty(r){ return (r.total_qty==null || r.total_qty==='') ? null : (parseFloat(r.total_qty)||0); }
+  // An order line's count is total_qty as consultation stored it (⑭: quantity x days,
+  // migration 030); older rows fall back to quantity, then 1. 0 is 0 - no "|| 1".
+  function orderQty(o){
+    var v = (o.total_qty!=null && o.total_qty!=='') ? o.total_qty : (o.quantity!=null && o.quantity!=='') ? o.quantity : 1;
+    var n = parseFloat(v); return isNaN(n) ? 0 : n;
+  }
   function missingQtyRx(){ return (billItems?.prescriptions||[]).filter(function(r){ return rxQty(r)==null; }); }
   // Drug and order lines billed at unit price 0. Pointed out, not refused: a free
   // line can be deliberate, but drugs imported without a price are 0 on every line
@@ -190,7 +197,7 @@ export default function PaymentPage() {
       .concat((billItems?.orders||[]).filter(function(o){ return !(parseFloat(o.unit_price)>0); }).map(function(o){ return o.order_name; }));
   }
   function drugTotal(){ return (billItems?.prescriptions||[]).reduce(function(s,r){ return s + (rxQty(r)||0) * (parseFloat(r.unit_price)||0); },0); }
-  function procTotal(){ return (billItems?.orders||[]).reduce(function(s,o){ return s + (parseFloat(o.quantity)||1) * (parseFloat(o.unit_price)||0); },0); }
+  function procTotal(){ return (billItems?.orders||[]).reduce(function(s,o){ return s + orderQty(o) * (parseFloat(o.unit_price)||0); },0); }
   function extraTotal(){ return extraItems.reduce(function(s,it){ return s + (parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1); },0); }
 
   // 이 내원이 이미 수납된 적이 있나(→ 추가 청구 모드)
@@ -212,7 +219,7 @@ export default function PaymentPage() {
       if(nq>0.0001) rows.push({item_type:'drug',item_name:rx.drug_name,item_code:rx.drug_code,quantity:nq,unit_price:up,total_price:nq*up});
     });
     (billItems?.orders||[]).forEach(function(o){
-      var qty=parseFloat(o.quantity)||1; var up=parseFloat(o.unit_price)||0;
+      var qty=orderQty(o); var up=parseFloat(o.unit_price)||0;
       var billed=bm[o.order_code]||0; var nq=qty-billed; bm[o.order_code]=Math.max(0,billed-qty);
       if(nq>0.0001) rows.push({item_type:o.code_type||'procedure',item_name:o.order_name,item_code:o.order_code,quantity:nq,unit_price:up,total_price:nq*up});
     });
@@ -604,8 +611,8 @@ export default function PaymentPage() {
             </select>
             <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
           </div>
-          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,qtyWord:rx.pack_unit?(t['ph_pack_'+(rx.pack_label||'unit')]||''):'',unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
-          <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=parseFloat(o.quantity)||1;return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
+          <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,packRx:rx.pack_unit?rx:null,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
+          <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=orderQty(o);return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}>
             <div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8}}>
               <span>🧾 {t.adminCharges}</span>
@@ -661,7 +668,7 @@ export default function PaymentPage() {
       <div style={{display:'grid',gridTemplateColumns:'1fr 330px',gap:16}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
           <div style={{padding:'10px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>🧾 {L.item}</div>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'#101521'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid #1e2433'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','#34d399',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'#101521'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid #1e2433'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','#34d399',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
         </div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,height:'fit-content'}}>
           <div style={{display:'grid',gap:5,fontSize:15}}>
@@ -679,7 +686,7 @@ export default function PaymentPage() {
   }
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'#3b82f620',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'#60a5fa'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'#f1f5f9'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{p.chart_no} · {p.dept_code} · {p.doctor_name}</div></div></div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:fmtAr(r.qty)+(r.qtyWord?' '+r.qtyWord:'')}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid #1e2433':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'#f87171':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'#fbbf24':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'#f87171':'#34d399',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#334155',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'#bfdbfe',fontSize:13,borderBottom:'1px solid '+bd}; }
