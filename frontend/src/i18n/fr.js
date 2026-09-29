@@ -304,6 +304,8 @@ export default {
   py_unpaidConfirm: "Aucun montant reçu. Laisser les {total} Ar impayés ?",
   py_refundHandBack: "Rendez {amount} Ar au patient.",
   py_remainsOwed: "{amount} Ar resteront impayés.",
+  py_payCarried: "Le solde de ce reçu a déjà été reporté sur le reçu {receipt}. Encaissez-le sur ce reçu. L’historique des reçus a été rechargé.",
+  py_voidCarried: "Le solde de ce reçu a été reporté sur le reçu {receipt}, qui le facture maintenant. Annulez d’abord {receipt}, puis ce reçu.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
@@ -350,5 +352,9 @@ export default {
   px_show: "Afficher",
   px_hide: "Masquer",
   px_tokenUnusable: "Ce jeton ne peut pas être utilisé. Collez la valeur affichée lors de l'installation du PACS (16 caractères ou plus). D'ici là, les demandes d'imagerie n'arrivent pas aux appareils. Ignorez ce message si l'établissement n'utilise pas de PACS.",
+  px_imagesArrived: "{n} image(s) reçue(s)",
+  px_imagesWaiting: "Images en attente",
+  px_patientMismatch: "Les images sont au nom de « {id} {name} », qui ne correspond pas au numéro de dossier de ce patient. Elles peuvent appartenir à un autre patient : vérifiez d'abord l'identité dans les images.",
+  px_patientMissing: "Les images ne portent aucun numéro de patient. Vérifiez d'abord l'identité dans les images.",
   // ── end pacs ──
 };
