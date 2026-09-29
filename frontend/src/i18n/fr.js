@@ -234,7 +234,7 @@ export default {
   settleAll: "Tout encaisser",
   settleAllConfirm: "Encaisser tous les impayés ?",
   pacsServer: "Serveur PACS (Orthanc)",
-  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (8090) sert à ouvrir la visionneuse depuis le dossier.",
+  pacsServerHint: "Le PACS qui stocke les images et fournit la worklist (notre conteneur Orthanc). Port DICOM (4242 par défaut) + AE title; l'URL web (9090) sert à ouvrir la visionneuse depuis le dossier.",
   pacsViewerUrl: "URL web / visionneuse PACS",
   dicomPort: "Port DICOM",
   testPacsBtn: "Tester PACS (DICOM)",

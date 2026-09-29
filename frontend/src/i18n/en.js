@@ -243,7 +243,7 @@ export default {
   settleAll: "Settle All",
   settleAllConfirm: "Collect all outstanding at once?",
   pacsServer: "PACS Server (Orthanc)",
-  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title; the web URL (8090) is used to open the viewer from the chart.",
+  pacsServerHint: "The PACS that stores images and serves the worklist (our Orthanc container). Enter its DICOM port (default 4242) and AE title; the web URL (9090) is used to open the viewer from the chart.",
   pacsViewerUrl: "PACS web / viewer URL",
   dicomPort: "DICOM Port",
   testPacsBtn: "Test PACS (DICOM)",

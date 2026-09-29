@@ -234,7 +234,7 @@ export default {
   settleAll: "전체 미수 수납",
   settleAllConfirm: "전체 미수를 일괄 수납합니다",
   pacsServer: "PACS 서버 (Orthanc)",
-  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(8090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
+  pacsServerHint: "영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적고, 웹 주소(9090)는 진료실 뷰어가 영상을 띄울 때 씁니다.",
   pacsViewerUrl: "PACS 웹/뷰어 주소",
   dicomPort: "DICOM 포트",
   testPacsBtn: "PACS 연결 테스트 (DICOM)",
