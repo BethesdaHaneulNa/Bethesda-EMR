@@ -416,7 +416,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 - 무엇이 새것인가: Orthanc `GET /changes?since=<seq>&limit=200`의 `NewInstance`. 마지막 seq는 **디스크의** `BethesdaPACS\state.json` — 디스크를 새것으로 바꾸면 처음부터 다 복사됨.
 - 한 장씩: `GET /instances/<id>`(크기·SOPInstanceUID), `/instances/<id>/study`(StudyInstanceUID) → `BethesdaPACS\images\<StudyUID>\<SOPUID>.dcm`. **경로에 환자 이름 없음**(UID는 숫자·점만 허용, 아니면 Orthanc ID로). **`.part` 이름으로 받고 크기가 맞으면 이름 바꿈** — 끊긴 파일은 다음 실행 시작 때 지움. 이미 같은 크기로 있으면 건너뜀. 받기 전에 Orthanc에서 지워진 영상(404)은 실패로 치지 않음.
 - **seq는 한 묶음(200건)을 다 받은 뒤에만** 올림 — 하나라도 실패하면 거기서 멈추고 다음 밤에 같은 자리부터.
-- **디스크의 seq가 이 Orthanc 것인지 확인** (2026-09-30): 변경 번호는 Orthanc DB 하나에만 통함 — 디스크를 **새 서버로 가져가거나**(결정 35) 영상 백업으로 Orthanc를 다시 채우면 번호가 1부터 다시 시작하고, 옛 seq가 더 크면 **새 서버의 처음 영상들이 영원히 빠질 뻔했음**. 이제 `state.json`에 `last_change`(그 번호의 `seq|종류|ID|시각`)를 같이 적고, 시작할 때 Orthanc `GET /changes?since=<seq-1>&limit=1`이 **같은 번호·같은 ID·같은 시각**을 돌려주는지 봄. 아니면 로그 「the disk's position (change N) is not this Orthanc's … Starting again from 0」 뒤 0부터 — 디스크에 이미 있는 영상은 크기로 건너뜀(한 장마다 REST 두 번이라 영상이 많으면 몇 분). `last_change`가 없는 옛 디스크는 번호가 맞으면 그 자리에서 표시만 새로 붙임.
+- **디스크의 seq가 이 Orthanc 것인지 확인** (2026-09-30): 변경 번호는 Orthanc DB 하나에만 통함 — 디스크를 **새 서버로 가져가거나**(결정 35) 영상 백업으로 Orthanc를 다시 채우면 번호가 1부터 다시 시작하고, 옛 seq가 더 크면 **새 서버의 처음 영상들이 영원히 빠질 뻔했음**. 이제 `state.json`에 `last_change`(그 번호의 `seq|종류|ID|시각`)를 같이 적고, 시작할 때 Orthanc `GET /changes?since=<seq-1>&limit=1`이 **같은 번호·같은 ID·같은 시각**을 돌려주는지 봄. 아니면 로그 「the disk's position (change N) is not this Orthanc's … Starting again from 0」 뒤 0부터 — 디스크에 이미 있는 영상은 크기로 건너뜀. **걸리는 시간**(2026-09-30, 격리 Orthanc 9198에 시험 영상을 넣어 잼, 디스크는 이 PC의 폴더): 다시 훑기 612장 2.7초·2,012장 12초 → **한 장 약 5ms**(PowerShell 시작·EMR 부분 약 2.5초 제외). 실제 서버의 USB 디스크·큰 Orthanc DB를 생각해 **넉넉히 한 장 20ms**로 잡으면 1만 장 약 3~4분, 5만 장 약 15~20분, 10만 장 약 35분 — 새 서버에서 한 번만. 참고로 작은 시험 영상 첫 복사는 한 장 약 13ms(1,400장 16초); 실제 영상은 크기(USB 속도)가 좌우. `last_change`가 없는 옛 디스크는 번호가 맞으면 그 자리에서 표시만 새로 붙임.
 - **도중에 디스크가 빠지면** (2026-09-30): 영상마다 표시 파일이 아직 있는지 보고, 없으면 「backup disk was unplugged during the backup - plug it back in; the next run continues」·`disk_found=false`·exit 1(전에는 남은 공간을 0으로 읽어 「disk is full」이라고 했을 것). EMR 백업 복사 중에 빠지면 `emr_backup=no_disk`, 같은 문장. 반쯤 쓴 파일은 `.part`로 남았다가 다음 실행이 지움.
 - **디스크 가득**: 받기 전마다 남은 공간이 (그 파일 + 1GB)보다 작으면 멈춤 → 「backup disk is full – N GB free. Replace or clear it.」(실패). 끝났을 때 남은 공간이 10% 미만이면 성공이지만 「almost full」 경고.
 - 보고: `POST /api/pacs/image-backup-report`(브리지 토큰을 **헤더**로, 본문은 개수·공간·오류 글자뿐 — 환자 정보 없음) → `service_heartbeat`의 `pacs_image_backup` 줄. EMR은 `last_success`를 실패한 밤에도 이어 둠(「마지막으로 된 게 언제인가」). 같은 내용을 PACS 폴더 `logs\image-backup-status.json`에도 씀(EMR이 멈춰도 서버 상태 창이 읽을 수 있게), 실행 기록은 `logs\image-backup.log`(개수·오류만).
@@ -432,6 +432,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
   | `emr_backup_last_ok` | EMR이 붙임: 마지막으로 `emr_backup_ok`가 참이었던 때(실패한 밤에도 이어 둠) |
 
   옛 스크립트가 보고하면 이 칸들이 **아예 없음**(= 「모름」). `ok`는 계속 영상 결과.
+- EMR 상태 화면(위쪽 막대의 상태 점)과 서버 상태 창(`server-status.bat`)의 **「EMR 백업 복사 (외장 디스크)」** 줄 — 설정 세션 `99329ea`: 36시간 판정은 `emr_backup_last_ok`, `newest`는 보여 주기만. 문구 표는 `wiki/reference/usb-backup-rehearsal.md` 6번.
 - EMR 상태 화면·서버 상태 창에 경고로 보이는 것은 **설정 세션 몫**(디스크 없음 / 실패 / 36시간 넘게 성공 없음 / 여유 10% 미만) — 총괄이 전달.
 
 **복원·연습** (`restore-image-backup.ps1`)
@@ -524,6 +525,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-30 | 6.2에 0부터 다시 훑는 시간(한 장 약 5ms, 넉넉히 20ms), 상태 점·상태 창의 「EMR 백업 복사」 줄. 시험 순서서 6번에 실제 문구(한·프), 맨 위에 「이 PC에서는 예약 등록 안 함」 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.2: 디스크를 다른 서버에 가져가도 영상이 빠지지 않게(`last_change`로 Orthanc 확인), 도중에 빠진 디스크 안내, `-Verify` 나이는 파일 시각으로. 실장님용 USB 시험 순서서 `wiki/reference/usb-backup-rehearsal.md` | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 6.2: 밤 영상 백업이 **EMR DB 백업도 같은 외장 디스크로** 복사(`emr-backups`, 해시·gzip 확인, EMR과 같은 보존 규칙), 보고 칸 `emr_backup*`, `-Verify`에 EMR 백업, 디스크 보관 경고. PACS README의 깨진 두 줄(`.\restore…`) 고침 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 현지 직원용 프랑스어 설명서 `wiki/manual-fr/pacs.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/pacs.md`, 오더 연동 탭 오류 문구 번역(서버 검사 400 + `pxMessage`), 7절 P-9에 같은 출처 결정 | EMR `session/pacs` (인계 노트 참고) |
