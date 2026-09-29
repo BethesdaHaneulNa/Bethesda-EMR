@@ -2,6 +2,61 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑱ 차트번호 해마다 1번부터: 설계 메모 (코드 전, 총괄 확인 대기) · 5) 관리자 의사 확인
+
+- **상태**: 보류 — 설계 확인 대기. 코드 변경 없음
+- **5) 관리자 역할인 의사**: `GET /admin/doctors`는 `WHERE s.role = 'doctor' AND s.status = 'active'`(`admin.routes.js`) — 관리자 역할 계정은 **이미 목록에 없음**. 결정과 같아 고칠 것 없음
+
+### ⑱ 지금
+
+- `generate_chart_no()`(`001_schema.sql` 329행): `TO_CHAR(NOW(),'YY') || '-' || LPAD(nextval('chart_no_seq'), 5, '0')`. 시퀀스 하나가 해를 넘어 이어짐(26-00350 → 27-00351). `LPAD`는 긴 값을 **잘라서** 100000번째부터 `10000`과 겹침
+- 부르는 곳: `POST /api/patients` 하나(grep — 오프라인 설치·스크립트에도 없음). **번호를 받는 문장과 INSERT가 다른 문장이고 트랜잭션이 아님**
+- DB 시간대: 격리 스택 `SHOW timezone` = `Indian/Antananarivo`(DB 컨테이너 `TZ`). `CURRENT_DATE`가 병원의 오늘
+
+### ⑱ 제안 (B안)
+
+**번호를 「그 해에 이미 쓴 가장 큰 번호 + 1」로, 잠금 아래에서 계산**. 시퀀스·카운터 표를 쓰지 않음.
+
+```sql
+-- backend/sql/101_reception_chart_no_yearly.sql  (기존 001은 안 고침)
+DROP FUNCTION IF EXISTS generate_chart_no();              -- 인자 없는 옛 함수 (같이 두면 호출이 모호해짐)
+CREATE FUNCTION generate_chart_no(p_day date DEFAULT CURRENT_DATE) RETURNS varchar AS $$
+DECLARE yy text := to_char(p_day, 'YY'); n bigint;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('bethesda.chart_no'));   -- 트랜잭션 끝까지 한 명씩
+  SELECT COALESCE(MAX(split_part(chart_no, '-', 2)::bigint), 0) + 1 INTO n
+    FROM patient WHERE chart_no ~ ('^' || yy || '-[0-9]+$');
+  RETURN yy || '-' || CASE WHEN n < 100000 THEN lpad(n::text, 5, '0') ELSE n::text END;
+END $$ LANGUAGE plpgsql;
+```
+
+그리고 `POST /api/patients`를 **트랜잭션 하나**로: `BEGIN → SELECT generate_chart_no() → INSERT → COMMIT`. 잠금이 COMMIT까지 유지되어, 두 창구가 동시에 새 환자를 만들면 두 번째는 첫 번째가 저장된 뒤에 번호를 계산함.
+
+| 요구 | 어떻게 |
+|---|---|
+| 해가 바뀌면 1번부터 | 그 해 접두어(`27-`)의 번호가 없으면 `0+1` = `27-00001` |
+| 이미 발급된 번호는 그대로 | 데이터는 건드리지 않음. 올해(26)는 지금까지의 가장 큰 번호 다음부터 이어짐(26-00027 → 26-00028) |
+| 영상 장비·문서·영수증 | 번호 모양 `YY-00000` 그대로. 99,999 넘을 때만 `YY-100000`(6자리). `chart_no` VARCHAR(20), DICOM PatientID 64자까지라 문제없음 |
+| 99,999 초과 | `LPAD`로 자르지 않고 그대로 늘림 — 지금의 「잘려서 겹침」 버그도 같이 없어짐 |
+| 동시 등록 | `pg_advisory_xact_lock` + 같은 트랜잭션의 INSERT. 마지막 안전장치로 `chart_no UNIQUE`(이미 있음) |
+| **백업 복원 뒤 첫 번호** | 시퀀스나 카운터에 기대지 않고 **환자 표에서 계산**하므로, 복원된 데이터만 있으면 맞음(시퀀스 값이 틀어져도 상관없음) |
+| 해가 바뀌는 순간 | `CURRENT_DATE` = DB 시간대(`Indian/Antananarivo`) 기준 — `visit_date`의 「오늘」과 같은 기준 |
+| 빈 번호 | 등록이 실패(롤백)하면 번호가 다음 사람에게 다시 쓰임 — 지금처럼 번호가 빠지지 않음 |
+
+**A안(해마다 카운터 표)과 비교**: 카운터 표는 복원·손 수정 때 표와 실제 번호가 어긋날 수 있어, 결국 「최대값 확인」이 또 필요함. 환자 수가 수만 명이어도 한 해 접두어의 최대값 찾기는 순간(필요하면 나중에 `(split_part(chart_no,'-',1))` 색인).
+
+**안 바뀌는 것**: 옛 `chart_no_seq` 시퀀스는 지우지 않고 둠(쓰는 곳만 없어짐 — 되돌리기 쉽게). `001_schema.sql` 안 고침.
+
+**시험 계획**(격리 스택):
+- HTTP: 새 환자 번호가 `26-` + 기존 최대 + 1. **동시에 20명 등록 → 번호 20개가 모두 다르고 이어짐**
+- SQL(롤백 트랜잭션 안에서):
+  · `generate_chart_no('2027-01-01')` → `27-00001`
+  · `26-99999` 가짜 환자를 넣고 → `26-100000`
+- **복원**: `pg_dump` → 새 DB에 복원 → 거기서 `generate_chart_no()` = 원래 DB와 같은 다음 번호
+- 해 경계: `generate_chart_no('2026-12-31')` → `26-…`, `('2027-01-01')` → `27-00001`
+
+**확인 받고 싶은 것**: ① B안으로 가도 될지 ② 옛 시퀀스를 남겨 둘지 지울지(남기기 추천) ③ 올해(26)는 지금 번호에 이어 가는 것이 맞는지(결정 문장 「해가 바뀌면 27-00001」대로라면 올해는 그대로)
+
 ## 2026-09-29 — ⑩ 작업일자 (실장님 결정)
 
 - **상태**: 확인 요청
