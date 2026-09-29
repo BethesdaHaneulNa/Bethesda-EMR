@@ -83,10 +83,10 @@ export function LabResults(props) {
         <tbody>
           {panels.map(function (P) {
             return [
-              <tr key={'p-' + P.name}><td colSpan={3 + dates.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}>{P.name}</td></tr>
+              <tr key={'p-' + P.name}><td colSpan={3 + dates.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
             ].concat(P.items.map(function (it) {
               return <tr key={P.name + '-' + it.name}>
-                <td style={Object.assign({}, td, { left: 0, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
+                <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
                 <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}</td>
                 {dates.map(function (d) { return <td key={d} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byDate[d])}</td>; })}

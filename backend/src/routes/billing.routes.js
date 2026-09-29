@@ -1,11 +1,16 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { todayLocal } = require('../utils/localDate');
 const { PAYMENT_STATUSES } = require('../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware);
+// The menu is not a lock: without this any logged-in account (a doctor, the lab)
+// could void a receipt or record a payment through the API. Every route needs the
+// payment permission, except the balance, which reception shows at registration.
+const canPay = permMiddleware('payment');
+const canSeeBalance = permMiddleware('payment', 'registration');
 
 // Voiding a bill undoes the balances it absorbed: the older bills go back to
 // carrying their own outstanding amount. amount_paid was never touched when the
@@ -65,7 +70,7 @@ async function nextReceiptNo(client) {
 const BILL_CHANGED = 'BILL_CHANGED';
 
 // GET /api/billing/pending - visits awaiting payment
-router.get('/pending', async (req, res) => {
+router.get('/pending', canPay, async (req, res) => {
   try {
     const result = await pool.query(
       `WITH live AS (
@@ -118,7 +123,7 @@ router.get('/pending', async (req, res) => {
 
 
 // GET /api/billing/completed - today's paid/partial/unpaid bills
-router.get('/completed', async (req, res) => {
+router.get('/completed', canPay, async (req, res) => {
   try {
     const { date } = req.query;
     const billDate = date || todayLocal();
@@ -140,7 +145,7 @@ router.get('/completed', async (req, res) => {
 });
 
 // GET /api/billing/:billingId/detail - completed bill with item detail
-router.get('/:billingId/detail', async (req, res) => {
+router.get('/:billingId/detail', canPay, async (req, res) => {
   try {
     const billResult = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
@@ -161,7 +166,7 @@ router.get('/:billingId/detail', async (req, res) => {
 });
 
 // GET /api/billing/visit/:visitId/items - get billable items for a visit
-router.get('/visit/:visitId/items', async (req, res) => {
+router.get('/visit/:visitId/items', canPay, async (req, res) => {
   try {
     const rxResult = await pool.query(
       "SELECT * FROM prescription WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1) AND COALESCE(dispense_type,'internal') <> 'external'",
@@ -194,7 +199,7 @@ router.get('/visit/:visitId/items', async (req, res) => {
 });
 
 // POST /api/billing - create billing record
-router.post('/', async (req, res) => {
+router.post('/', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -348,7 +353,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/billing/patient/:patientId/history - receipt history
-router.get('/patient/:patientId/history', async (req, res) => {
+router.get('/patient/:patientId/history', canPay, async (req, res) => {
   try {
     const { from, to } = req.query;
     let query = `SELECT b.*, s.name as cashier_name, v.visit_date, d.code as dept_code
@@ -368,12 +373,26 @@ router.get('/patient/:patientId/history', async (req, res) => {
 });
 
 // PUT /api/billing/:billingId/void - 영수 취소 (해당 내원은 다시 수납 대기로 돌아감)
-router.put('/:billingId/void', async (req, res) => {
+router.put('/:billingId/void', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { reason } = req.body;
     await lockPatientOfBill(client, req.params.billingId);
+    // A bill whose balance a later bill absorbed (016) cannot be voided on its own:
+    // the later bill's total_due still charges that balance, so the debt would
+    // outlive the bill it came from. Void the later bill first - that restores this
+    // one's balance - then this one. carried_into_id always names an active bill:
+    // voiding that bill clears it and a correction moves it to the replacement.
+    const carried = await client.query(
+      `SELECT i.receipt_no FROM billing b JOIN billing i ON i.id = b.carried_into_id
+        WHERE b.id = $1 AND b.payment_status <> 'cancelled'`,
+      [req.params.billingId]
+    );
+    if (carried.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'BILL_CARRIED: ' + carried.rows[0].receipt_no });
+    }
     // 취소된 영수는 잔액 계산에서 제외되므로 outstanding=0 (크레딧 누적 방지)
     const result = await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
@@ -510,7 +529,7 @@ async function buildCorrection(db, visitId) {
 }
 
 // GET /api/billing/visit/:visitId/correction - what a correction would record (no changes)
-router.get('/visit/:visitId/correction', async (req, res) => {
+router.get('/visit/:visitId/correction', canPay, async (req, res) => {
   try {
     res.json(await buildCorrection(pool, req.params.visitId));
   } catch (err) {
@@ -523,7 +542,7 @@ router.get('/visit/:visitId/correction', async (req, res) => {
 // bill for what it costs now. Body: { expected_active_bill_ids, expected_refund,
 // expected_outstanding, reason } - the figures the cashier was shown; if anything
 // changed since, nothing is written (409) so the refund handed over is the one shown.
-router.post('/visit/:visitId/correct', async (req, res) => {
+router.post('/visit/:visitId/correct', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -581,7 +600,7 @@ router.post('/visit/:visitId/correct', async (req, res) => {
 });
 
 // GET /api/billing/patient/:patientId/balance - 환자 잔액(owed>0 미수 / refund>0 환불예정)
-router.get('/patient/:patientId/balance', async (req, res) => {
+router.get('/patient/:patientId/balance', canSeeBalance, async (req, res) => {
   try {
     // 취소된 영수는 '없던 일'로 완전 제외.
     // 미수는 outstanding 기준 — 이월된 영수는 outstanding=0 이라 이중 계산되지 않는다.
@@ -600,7 +619,7 @@ router.get('/patient/:patientId/balance', async (req, res) => {
 });
 
 // POST /api/billing/:id/pay - 기존 영수의 미수를 받아서 정산 (부분/전액)
-router.post('/:id/pay', async (req, res) => {
+router.post('/:id/pay', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     const amount = parseFloat(req.body.amount);
@@ -612,13 +631,22 @@ router.post('/:id/pay', async (req, res) => {
     // UPDATE overwrites the first — both get a success response but only one
     // payment is recorded, so cash collected goes missing from the books.
     const cur = await client.query(
-      `SELECT total_due, amount_paid, net_paid FROM billing
+      `SELECT total_due, amount_paid, net_paid, carried_into_id FROM billing
         WHERE id=$1 AND payment_status<>'cancelled' FOR UPDATE`,
       [req.params.id]
     );
     if (cur.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Not found or cancelled' });
+    }
+    // A carried bill's debt now lives on the later bill that absorbed it (016):
+    // its outstanding is 0 but total_due - net_paid below still shows the old
+    // amount, so paying it here collected the same debt a second time. Refuse,
+    // naming the bill where the debt is now. Nothing else about the sum changes.
+    if (cur.rows[0].carried_into_id) {
+      const into = await client.query('SELECT receipt_no FROM billing WHERE id = $1', [cur.rows[0].carried_into_id]);
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || cur.rows[0].carried_into_id) });
     }
     const due = parseFloat(cur.rows[0].total_due) || 0;
     const paid = parseFloat(cur.rows[0].amount_paid) || 0;

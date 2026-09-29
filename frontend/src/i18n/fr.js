@@ -271,8 +271,19 @@ export default {
   rc_dobIncomplete: "Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue.",
   rc_dobInvalid: "La date de naissance n'est pas valide. Elle ne peut pas être dans le futur.",
   rc_cancelNotWaiting: "La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. La liste a été actualisée.",
-  rc_error: "Erreur",
   rc_saving: "Enregistrement…",
+  rc_errorWith: "Erreur : {msg}",
+  rc_phYear: "AAAA",
+  rc_phMonth: "MM",
+  rc_phDay: "JJ",
+  rc_patientSaved: "Patient enregistré — N° dossier {chart}",
+  rc_registered: "Patient mis en attente — {name} (N° dossier {chart})",
+  rc_visitUpdated: "Enregistrement modifié — {name}",
+  rc_cancelConfirm: "Annuler l'attente de {name} et le retirer de la liste ?",
+  rc_patientNotFound: "Dossier patient introuvable. Recherchez à nouveau.",
+  rc_visitNotFound: "Cet enregistrement est introuvable. La liste a été actualisée.",
+  rc_serverDown: "Impossible de joindre le serveur. Réessayez dans un instant ; si cela continue, prévenez l'administrateur.",
+  rc_badFormat: "Une valeur saisie n'a pas le bon format. Vérifiez les dates et les nombres.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
@@ -290,6 +301,8 @@ export default {
   py_unpaidConfirm: "Aucun montant reçu. Laisser les {total} Ar impayés ?",
   py_refundHandBack: "Rendez {amount} Ar au patient.",
   py_remainsOwed: "{amount} Ar resteront impayés.",
+  py_payCarried: "Le solde de ce reçu a déjà été reporté sur le reçu {receipt}. Encaissez-le sur ce reçu. L’historique des reçus a été rechargé.",
+  py_voidCarried: "Le solde de ce reçu a été reporté sur le reçu {receipt}, qui le facture maintenant. Annulez d’abord {receipt}, puis ce reçu.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",
@@ -300,7 +313,7 @@ export default {
   lb_selectHint: "Sélectionnez un patient à gauche",
   lb_noPending: "Aucune analyse en attente de résultat",
   lb_noCompleted: "Aucune analyse terminée aujourd'hui",
-  lb_noItemsDefined: "Aucun item défini pour cette analyse (à définir dans Paramètres → Items de test)",
+  lb_noItemsDefined: "Aucun item défini pour cette analyse : saisie sur une seule ligne (items à définir dans Paramètres → Items de test)",
   lb_noItems: "Aucun item",
   lb_nothingToSave: "Rien n'a été saisi. Saisissez au moins une valeur ou une note.",
   lb_savedTests: "Enregistré et terminé",
@@ -336,5 +349,9 @@ export default {
   px_show: "Afficher",
   px_hide: "Masquer",
   px_tokenUnusable: "Ce jeton ne peut pas être utilisé. Collez la valeur affichée lors de l'installation du PACS (16 caractères ou plus). D'ici là, les demandes d'imagerie n'arrivent pas aux appareils. Ignorez ce message si l'établissement n'utilise pas de PACS.",
+  px_imagesArrived: "{n} image(s) reçue(s)",
+  px_imagesWaiting: "Images en attente",
+  px_patientMismatch: "Les images sont au nom de « {id} {name} », qui ne correspond pas au numéro de dossier de ce patient. Elles peuvent appartenir à un autre patient : vérifiez d'abord l'identité dans les images.",
+  px_patientMissing: "Les images ne portent aucun numéro de patient. Vérifiez d'abord l'identité dans les images.",
   // ── end pacs ──
 };

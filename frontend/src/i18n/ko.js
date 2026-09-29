@@ -271,8 +271,19 @@ export default {
   rc_dobIncomplete: "생년월일을 끝까지 입력하세요 (연-월-일). 모르면 모두 비워 두세요.",
   rc_dobInvalid: "생년월일이 올바른 날짜가 아닙니다. 미래 날짜는 넣을 수 없습니다.",
   rc_cancelNotWaiting: "이미 진료가 시작되었거나 끝난 환자라 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
-  rc_error: "오류",
   rc_saving: "저장 중…",
+  rc_errorWith: "오류: {msg}",
+  rc_phYear: "YYYY",
+  rc_phMonth: "MM",
+  rc_phDay: "DD",
+  rc_patientSaved: "환자 정보를 저장했습니다 — 차트번호 {chart}",
+  rc_registered: "대기에 올렸습니다 — {name} (차트번호 {chart})",
+  rc_visitUpdated: "접수 정보를 고쳤습니다 — {name}",
+  rc_cancelConfirm: "{name} 환자의 대기를 취소하고 목록에서 뺄까요?",
+  rc_patientNotFound: "환자 기록을 찾을 수 없습니다. 다시 검색하세요.",
+  rc_visitNotFound: "이 접수 기록을 찾을 수 없습니다. 목록을 새로 불러왔습니다.",
+  rc_serverDown: "서버에 연결할 수 없습니다. 잠시 뒤 다시 누르세요. 계속되면 관리자에게 알리세요.",
+  rc_badFormat: "입력한 값의 형식이 맞지 않습니다. 날짜와 숫자 칸을 확인하세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",
@@ -290,6 +301,8 @@ export default {
   py_unpaidConfirm: "받은 금액이 없습니다. 전액 {total} Ar를 미수로 남길까요?",
   py_refundHandBack: "환자에게 {amount} Ar를 돌려주세요.",
   py_remainsOwed: "{amount} Ar가 미수로 남습니다.",
+  py_payCarried: "이 영수의 미수는 이미 영수 {receipt}(으)로 넘어갔습니다. 그 영수에서 받으세요. 영수내역을 새로 불러왔습니다.",
+  py_voidCarried: "이 영수의 미수는 영수 {receipt}(으)로 이월되어 그 영수가 청구하고 있습니다. {receipt}를 먼저 취소한 뒤 이 영수를 취소하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
@@ -300,7 +313,7 @@ export default {
   lb_selectHint: "왼쪽에서 환자를 선택하세요",
   lb_noPending: "결과 대기 검사가 없습니다",
   lb_noCompleted: "오늘 입력을 마친 검사가 없습니다",
-  lb_noItemsDefined: "이 검사는 항목이 정의되지 않았습니다 (설정 → 검사항목에서 정의)",
+  lb_noItemsDefined: "이 검사는 항목이 정의되지 않아 한 줄로 입력합니다 (항목은 설정 → 검사항목에서 정의)",
   lb_noItems: "항목이 없습니다",
   lb_nothingToSave: "입력한 결과가 없습니다. 결과값이나 비고를 하나 이상 넣으세요.",
   lb_savedTests: "저장·완료",
@@ -336,5 +349,9 @@ export default {
   px_show: "보기",
   px_hide: "숨기기",
   px_tokenUnusable: "이 토큰은 쓸 수 없습니다. PACS를 설치할 때 화면에 나온 값(16자 이상)을 붙여넣으세요. 그 전까지는 영상 오더가 촬영 장비로 넘어가지 않습니다. PACS를 쓰지 않는 병원은 무시해도 됩니다.",
+  px_imagesArrived: "영상 {n}장 도착",
+  px_imagesWaiting: "영상 대기 중",
+  px_patientMismatch: "영상에 적힌 환자는 「{id} {name}」으로, 이 환자의 차트번호와 다릅니다. 다른 환자의 영상일 수 있으니 영상 속 환자 정보를 먼저 확인하세요.",
+  px_patientMissing: "영상에 환자번호가 없습니다. 영상 속 환자 정보를 먼저 확인하세요.",
   // ── end pacs ──
 };

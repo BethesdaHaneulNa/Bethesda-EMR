@@ -280,8 +280,19 @@ export default {
   rc_dobIncomplete: "Finish the date of birth (year-month-day), or leave it all blank if unknown.",
   rc_dobInvalid: "The date of birth is not a valid date. It cannot be in the future.",
   rc_cancelNotWaiting: "This patient's consultation has already started or finished, so the waiting entry cannot be cancelled. The list has been refreshed.",
-  rc_error: "Error",
   rc_saving: "Saving…",
+  rc_errorWith: "Error: {msg}",
+  rc_phYear: "YYYY",
+  rc_phMonth: "MM",
+  rc_phDay: "DD",
+  rc_patientSaved: "Patient saved — chart no. {chart}",
+  rc_registered: "Added to the waiting list — {name} (chart no. {chart})",
+  rc_visitUpdated: "Registration updated — {name}",
+  rc_cancelConfirm: "Cancel the waiting entry for {name} and remove it from the list?",
+  rc_patientNotFound: "Patient record not found. Search again.",
+  rc_visitNotFound: "This registration could not be found. The list has been refreshed.",
+  rc_serverDown: "Cannot reach the server. Try again in a moment; if it keeps happening, tell the administrator.",
+  rc_badFormat: "A value has the wrong format. Check the date and number fields.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
@@ -299,6 +310,8 @@ export default {
   py_unpaidConfirm: "No amount received. Leave the full {total} Ar outstanding?",
   py_refundHandBack: "Hand {amount} Ar back to the patient.",
   py_remainsOwed: "{amount} Ar will remain outstanding.",
+  py_payCarried: "This receipt's balance was already carried into receipt {receipt}. Collect it on that receipt. The receipt history has been reloaded.",
+  py_voidCarried: "This receipt's balance was carried into receipt {receipt}, which charges it now. Cancel {receipt} first, then this receipt.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
@@ -309,7 +322,7 @@ export default {
   lb_selectHint: "Select a patient on the left",
   lb_noPending: "No tests waiting for results",
   lb_noCompleted: "No tests finished today",
-  lb_noItemsDefined: "No items are defined for this test (define them in Settings → Lab Items)",
+  lb_noItemsDefined: "No items are defined for this test, so it is entered on one line (define items in Settings → Lab Items)",
   lb_noItems: "No items",
   lb_nothingToSave: "Nothing entered. Enter at least one result value or note.",
   lb_savedTests: "Saved and completed",
@@ -345,5 +358,9 @@ export default {
   px_show: "Show",
   px_hide: "Hide",
   px_tokenUnusable: "This token cannot be used. Paste the value shown when the PACS was installed (16 characters or more). Until then, imaging orders will not reach the imaging devices. Ignore this if the clinic does not use a PACS.",
+  px_imagesArrived: "{n} image(s) received",
+  px_imagesWaiting: "Waiting for images",
+  px_patientMismatch: "The images are labelled \"{id} {name}\", which does not match this patient's chart number. They may belong to another patient: check the patient details in the images first.",
+  px_patientMissing: "The images carry no patient number. Check the patient details in the images first.",
   // ── end pacs ──
 };
