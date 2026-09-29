@@ -112,7 +112,7 @@
 ### 3-1. 권한 체계
 
 - **역할(role)** 은 표시용 이름표입니다: `frontdesk`·`doctor`·`pharmacy`·`lab`·`admin` (`staff.role` CHECK 제약, `admin.routes.js:8` `ROLES`).
-- **권한(permissions)** 이 실제 접근을 정합니다: `staff.permissions TEXT[]`, 값은 `frontend/src/modules.js`의 `MODULES[].perm` 7개 — `registration` `consultation` `payment` `pharmacy` `lab` `stats` `settings`. 서버의 `ALL_PERMS`(`admin.routes.js:12`)와 `auth.routes.js:30`, `middleware/auth.js`의 `defaultPermsForRole`이 **같은 목록을 따로 들고 있어서** 모듈을 추가하면 네 곳을 같이 고쳐야 합니다.
+- **권한(permissions)** 이 실제 접근을 정합니다: `staff.permissions TEXT[]`, 값은 `frontend/src/modules.js`의 `MODULES[].perm` 7개 — `registration` `consultation` `payment` `pharmacy` `lab` `stats` `settings`. 서버에는 이 목록이 **한 곳**에만 있습니다: `backend/src/middleware/permissions.js`의 `ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole` (2026-09-29, U9). `middleware/auth.js`·`admin.routes.js`(설치 관리자 고정)·`auth.routes.js`(첫 관리자 만들기)가 여기서 가져갑니다. 백엔드 이미지는 `backend/`만으로 빌드되어 `modules.js`를 불러올 수 없으므로 한 벌은 따로 둘 수밖에 없고, 대신 **`node backend/test/settings.permissions.mjs`** 가 두 목록(순서 포함)과 역할별 기본값이 같은지 확인합니다 — 설치·서버·DB 없이 파일 두 개만 읽음, 다르면 exit 1. **모듈을 추가하면 `modules.js`와 `permissions.js`를 같이 고치고 이 검사를 돌리세요.** (마이그레이션 `013`에도 같은 목록이 있지만 이미 적용된 파일이라 고치지 않습니다 — 옛 계정을 한 번 채우는 데만 쓰였음.)
 - 역할을 바꾸면 화면이 그 역할의 기본 권한으로 체크를 **덮어씁니다** (`Settings.jsx:659`). 권한이 `NULL`인 옛 계정은 역할 기본값으로 대신합니다(`effectivePerms`). 013 마이그레이션이 옛 계정을 채웠습니다.
 - **로그인 토큰(JWT)** 에 권한이 들어갑니다 (`middleware/auth.js` `generateToken`, 유효 12시간). 서버는 요청마다 DB를 다시 보지 않고 **토큰 안의 권한**으로 판단합니다. 그래서 권한 변경·비활성화는 다시 로그인할 때까지 적용되지 않습니다.
 - **서버에서 권한을 검사하는 곳** (`permMiddleware`): 설정 API의 쓰기 전부, 백업 실행·다운로드, `pharmacy.routes`(전체), `stats.routes`(전체), `lab.routes`·`orderset.routes`·`pacs.routes` 일부.
@@ -232,6 +232,8 @@
 
 - 서비스: `backend/src/services/backup.js` · `version.js`
 - 운영 스크립트: `server-status.ps1` · `server-status.bat` · `verify-backup.ps1` (· `verify-backup.sh`)
+- 권한 목록: `backend/src/middleware/permissions.js` (공용 폴더, 설정 세션이 만듦 — 3-1절)
+- 검사: `node backend/test/settings.permissions.mjs` — 서버 권한 목록 ↔ `modules.js` (설치·서버 불필요)
 
 ### 공용 부품
 
@@ -329,7 +331,7 @@
 | U6 | 낮음 | 로그인 화면 아래 버전이 `v1.0`으로 고정, 로고 글자가 옛 이름의 「M」 | `Login.jsx:87,140` |
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
 | U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
-| U9 | 낮음 | 권한 목록이 네 곳에 따로 있음 (`modules.js`, `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js`) | 3-1절 |
+| U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
 
 ## 8. 변경 기록
 
@@ -338,4 +340,5 @@
 | 2026-09-29 | 코드 기준으로 위키 첫 작성, 알려진 문제 목록 정리 (코드 변경 없음) | `08d0336` |
 | 2026-09-29 | 백업: 동시 실행 하나로 묶기, 작업 폴더에서 쓰고 검증 뒤 옮기기, 최근 7개는 안 지우기, 백업 탭에 상태(정상·오래됨·없음·실패)와 실패 오류 표시, 시각을 PC 현지 시각으로 (B1·B2·B3·B6) | `e2a29bd` |
 | 2026-09-29 | 서버 상태 창: 호스트 포트 검사(Windows 예약 포트), 색 띠가 첫 두 줄을 가리던 배치 고침 (B11·B12). 백업 검사: 백업 위치를 Docker에서 찾기, 컨테이너 매개변수, 데이터 차이는 [info]·`-Strict`에서만 실패 (B4·B5), `.sh`도 같이 | `2a40e84` |
-| 2026-09-29 | 설정 화면 영어 고정 글자를 세 언어로 (U1 대부분·U7), 직원 비활성 확인 문구, 2절에 역할별 기본 권한 표 | (이 커밋) |
+| 2026-09-29 | 설정 화면 영어 고정 글자를 세 언어로 (U1 대부분·U7), 직원 비활성 확인 문구, 2절에 역할별 기본 권한 표 | `f5e7e55` |
+| 2026-09-29 | 서버의 권한 목록을 `middleware/permissions.js` 한 곳으로, `modules.js`와 비교하는 검사 추가 (U9). 동작 변화 없음 | (이 커밋) |

@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 서버 권한 목록을 한 곳으로 (U9)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`f5e7e55` 위)
+- **한 일**: 서버에 네 번 적혀 있던 권한 목록(`admin.routes.js`의 `ALL_PERMS`, `auth.routes.js`의 `allPerms`, `middleware/auth.js`의 `defaultPermsForRole`)을 새 파일 **`backend/src/middleware/permissions.js`** 하나로 모았습니다(`ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole`). 기준은 총괄 지시대로 `frontend/src/modules.js`이고, 백엔드 이미지는 `backend/`만으로 빌드되어 그 파일을 불러올 수 없으므로, 두 목록이 같은지 보는 검사 **`backend/test/settings.permissions.mjs`** 를 넣었습니다. 설치·서버·DB 없이 파일 두 개만 읽습니다. `permissions.js`를 의존성 없는 별도 파일로 뺀 것은 이 검사가 `npm install` 없이 돌게 하려는 것입니다.
+- **동작 변화**: 없음. `defaultPermsForRole`은 전처럼 매번 새 배열을 돌려줍니다(얼린 목록을 복사). pg 드라이버에는 일반 배열을 넘깁니다.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/auth.routes.js` · `backend/test/settings.permissions.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: **`backend/src/middleware/auth.js`** — 권한 목록·역할 기본값을 지우고 `./permissions`에서 가져옴, `module.exports`에 `ALL_PERMS`·`ROLE_DEFAULT_PERMS` 추가(기존 이름은 그대로 내보냄). **`backend/src/middleware/permissions.js`(새 파일)** — 공용 폴더라 적습니다. 모듈을 추가할 때 `modules.js`와 이 파일을 같이 고쳐야 합니다.
+- **DB 마이그레이션**: 없음 (`013`에도 같은 목록이 있지만 적용된 파일이라 안 건드림) · **번역 키**: 없음
+- **확인한 방법**: `node --check` 4개 파일. `node backend/test/settings.permissions.mjs` → 8개 모두 ok, exit 0. 스크래치 복사본에서 `modules.js`에 모듈 하나를 더하면 → FAIL, exit 1. 격리 스택 9187을 **빈 DB로 다시 만들어**(`down -v`, 격리 스택 DB만) — 첫 실행 관리자 만들기 → 권한 7개 / 설치 관리자를 아이디·역할·권한·상태 바꿔 저장 → `admin`·admin·7개·active로 고정됨 / 접수 직원 로그인 → `["registration","payment"]`, `/admin/staff` 403.
+- **확인 못 한 것**: 권한 배열이 없는 옛 토큰(`defaultPermsForRole` 경로)은 서버로는 안 해 봤습니다 — 검사 스크립트가 역할별 값을 확인합니다.
+- **위키**: `modules/settings.md` 3-1절, 4절, 7절(U9 고침), 8절
+- **총괄 확인 요청**: 위 공용 파일 두 개. 다른 세션 라우트는 `middleware/auth.js`에서 가져오는 이름이 그대로라 영향 없습니다.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — 설정 화면 영어 고정 글자를 세 언어로 (U1, 약국 부탁 포함)
 
 - **상태**: 확인 요청

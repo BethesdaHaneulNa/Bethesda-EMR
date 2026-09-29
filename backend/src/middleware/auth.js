@@ -35,17 +35,9 @@ function roleMiddleware(...roles) {
   };
 }
 
-// fallback for legacy tokens that predate the permissions array
-function defaultPermsForRole(role) {
-  switch (role) {
-    case 'admin': return ['registration', 'consultation', 'payment', 'pharmacy', 'lab', 'stats', 'settings'];
-    case 'frontdesk': return ['registration', 'payment'];
-    case 'doctor': return ['consultation'];
-    case 'pharmacy': return ['pharmacy'];
-    case 'lab': return ['lab'];
-    default: return [];
-  }
-}
+// The permission list and the per-role defaults (the fallback for legacy tokens
+// that predate the permissions array) live in permissions.js - see there.
+const { ALL_PERMS, ROLE_DEFAULT_PERMS, defaultPermsForRole } = require('./permissions');
 
 function effectivePerms(user) {
   if (user && Array.isArray(user.permissions)) return user.permissions;
@@ -73,4 +65,4 @@ function generateToken(user) {
   );
 }
 
-module.exports = { authMiddleware, roleMiddleware, permMiddleware, defaultPermsForRole, effectivePerms, generateToken };
+module.exports = { authMiddleware, roleMiddleware, permMiddleware, defaultPermsForRole, effectivePerms, generateToken, ALL_PERMS, ROLE_DEFAULT_PERMS };

@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware, ALL_PERMS } = require('../middleware/auth');
 const { sendDbError } = require('../utils/dbError');
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
@@ -8,8 +8,8 @@ const { sendDbError } = require('../utils/dbError');
 const ROLES = ['frontdesk', 'doctor', 'pharmacy', 'lab', 'admin'];
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure'];
 
-// Keep in step with frontend/src/modules.js.
-const ALL_PERMS = ['registration', 'consultation', 'payment', 'pharmacy', 'lab', 'stats', 'settings'];
+// Every module permission (ALL_PERMS) comes from middleware/auth.js, the backend's
+// single copy of frontend/src/modules.js.
 
 // The account the setup wizard creates is the one you log in with to fix everything
 // else. Unchecking its settings permission, moving it off the admin role, renaming it

@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
-const { authMiddleware, generateToken, effectivePerms } = require('../middleware/auth');
+const { authMiddleware, generateToken, effectivePerms, ALL_PERMS } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -27,7 +27,7 @@ router.post('/setup', async (req, res) => {
     const name = String(req.body.name || '').trim() || 'Administrator';
     if (!login_id || !password) return res.status(400).json({ error: 'Login ID and password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    const allPerms = ['registration', 'consultation', 'payment', 'pharmacy', 'lab', 'stats', 'settings'];
+    const allPerms = ALL_PERMS.slice();   // a plain array for the pg driver, not the frozen one
     const r = await pool.query(
       "INSERT INTO staff (login_id, password_hash, name, role, permissions, status) " +
       "VALUES ($1, crypt($2, gen_salt('bf')), $3, 'admin', $4, 'active') " +
