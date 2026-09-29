@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 단추 묶음 마무리 (모든 화면이 끝난 뒤) — 한꺼번에 합쳐 주세요
+
+- **상태**: 확인 요청
+- **커밋**: **가지 `session/design-switch`** 의 맨 위 커밋(이 항목과 같은 커밋). 이 가지는 `session/design` `41eeb88`(설정 화면까지)을 모두 담고 있으므로 **이 가지 하나만 합치면 됩니다.** 단추 커밋은 `296a674`
+- **한 일**: 모든 화면이 끝난 `session/design` 을 단추 가지에 합침(부딪힌 곳 없음) → 다시 빌드 → 다시 시험 → 위키 2절(직원용 사용법) 씀. 단추 묶음의 내용은 아래 「바꾸는 단추 · 계정마다 기억」 항목과 위키 3.7 그대로.
+- **바꾼 파일**: `backend/sql/901_design_staff_theme.sql` · `backend/src/routes/theme.routes.js` · `backend/test/design.theme.mjs`
+- **공용 파일 변경**: `backend/src/index.js`(한 줄) · `frontend/src/components/TopBar.jsx`(단추) · `frontend/src/i18n/ko.js` · `en.js` · `fr.js`(`ds_` 3개씩)
+- **DB 마이그레이션**: `backend/sql/901_design_staff_theme.sql` — `staff.theme`(기본 `'dark'`), 칸과 검사만 더함
+- **번역 키**: `ds_themeSwitch` · `ds_themeLight` · `ds_themeDark` (ko · en · fr 모두 넣음)
+- **확인한 방법**(합친 뒤 다시):
+  - 빌드 통과, 격리 스택 9189 에 올림.
+  - `node backend/test/design.theme.mjs` — 24가지 모두 통과.
+  - 화면: 「☀ Clair」 를 누른 뒤 일곱 화면(접수 · 진료 · 수납 · 약국 · 임상병리 · 통계 · 설정)을 차례로 열어 `__audit()` — **모두 기준 미달 없음**(앞서 적은 예외 제외), 화면을 옮겨도 밝은 화면 그대로. 「🌙 Sombre」 → 어두운 화면, 그 PC 의 저장 · 서버 값 모두 `dark`.
+  - 어두운 화면의 증명은 화면마다 한 것 그대로(접수 · 진료 · 수납 · 약국 · 임상병리 34장, 통계 7장, 설정 18장, 로그인 1장 — 모두 같음). 단추가 들어가면 상단바에 단추 두 칸이 더 생기는 것 말고는 달라지지 않음.
+- **확인 못 한 것**: 실제 현장 모니터 · 햇빛 아래. Chrome 109 이하 실물. 같은 PC 에 다른 계정이 로그인할 때 화면이 바뀌는 순간(설정 세션이 `/auth/me` 에 `theme` 을 실으면 없어짐)
+- **위키**: `modules/design.md` **2절 새로**(직원용) · 3.7 · 8
+- **총괄 확인 요청**:
+  - **`/admin/staff` 응답에 `theme` 칸이 생깁니다**(`SELECT s.*`) — 아래 항목의 (가)/(나) 가운데 정해 주세요. 추천 (가): 설정 세션이 `delete r.theme` 한 줄.
+  - 901 의 번호 매김.
+  - 실행 중 EMR 에 올린 뒤 실장님이 단추를 눌러 보실 수 있습니다. 미리 보기 주소(`?theme=light`)는 그대로 남아 있고 해가 없습니다.
+  - 프랑스어 설명서(`wiki/manual-fr/`)에 넣을 글은 위키 2절을 옮기면 됩니다.
+- **다른 세션에 부탁**: **설정 세션** — ① `admin.routes.js` 에 `delete r.theme` ② 로그인 응답과 `/auth/me` 에 `theme` ③ `settings.access.mjs` 표에 `/api/theme`(누구나, 자기 것만)
+- **남은 일 · 알려진 문제**: 어두운 화면의 대비 미달 다섯 군데(위키 7절) — 실장님 결정거리. 시안 도구와 격리 스택의 시험 계정(`dstest…`)은 격리 DB 에만 있음
+
 ## 2026-09-29 — 3단계: Settings.jsx · settingsPassword.jsx · settingsStatus.jsx 색을 이름표로 (마지막 화면)
 
 - **상태**: 확인 요청
