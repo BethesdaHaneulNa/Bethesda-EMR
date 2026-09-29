@@ -11,6 +11,25 @@ router.use(authMiddleware);
 // phone numbers included, straight from the API.
 router.use(permMiddleware('stats'));
 
+// What a bill still owes, and what the clinic owes back on it — the same two
+// expressions as the payment screen's patient balance (billing.routes.js,
+// /patient/:id/balance), so both screens name the same people and amounts.
+// Owed comes from the `outstanding` column, not total_due - net_paid: when an
+// old debt is carried into a newer bill (migration 016) the old bill's
+// outstanding drops to 0 but its total_due - net_paid does not, so the latter
+// kept listing debts that had already been paid on the newer bill.
+const OWED_SQL = 'GREATEST(outstanding, 0)';
+const REFUND_SQL = 'GREATEST(net_paid - total_due, 0)';
+
+// Dates leave as 'YYYY-MM-DD' text, never as a DATE column. node-pg turns a
+// DATE into a Date at local midnight, which JSON writes out in UTC — so at
+// UTC+3 every date reached the screen as the day before ('…-28T21:00:00Z').
+function ymd(expr) { return `to_char(${expr}, 'YYYY-MM-DD')`; }
+
+// Department columns for the breakdowns. All three names go to the screen,
+// which picks the viewer's language; a visit with no department has code NULL.
+const DEPT_COLS = 'd.code AS code, d.name AS name, d.name_en AS name_en, d.name_fr AS name_fr';
+
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
@@ -19,44 +38,49 @@ router.get('/summary', async (req, res) => {
     const badRange = badDateRange(from, to);
     if (badRange) return res.status(400).json({ error: badRange });
     if (!from || !to) {
-      const r = await pool.query("SELECT date_trunc('month', CURRENT_DATE)::date AS f, CURRENT_DATE AS t");
+      const r = await pool.query(`SELECT ${ymd("date_trunc('month', CURRENT_DATE)")} AS f, ${ymd('CURRENT_DATE')} AS t`);
       from = from || r.rows[0].f;
       to = to || r.rows[0].t;
     }
     const P = [from, to];
 
-    // 1) 내원 요약
+    // 1) 내원 요약. A cancelled registration is not a visit: it stays out of the
+    //    total, the new/follow-up split, unique patients and the breakdowns
+    //    below, and is shown only in its own "cancelled" count.
     const visits = await pool.query(
       `SELECT
-         COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE visit_type='newVisit')::int AS new_visits,
-         COUNT(*) FILTER (WHERE visit_type='followUp')::int AS follow_ups,
-         COUNT(*) FILTER (WHERE visit_type NOT IN ('newVisit','followUp'))::int AS other_visits,
+         COUNT(*) FILTER (WHERE status<>'cancelled')::int AS total,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type='newVisit')::int AS new_visits,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type='followUp')::int AS follow_ups,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type NOT IN ('newVisit','followUp'))::int AS other_visits,
          COUNT(*) FILTER (WHERE status='completed')::int AS completed,
          COUNT(*) FILTER (WHERE status='cancelled')::int AS cancelled,
          COUNT(*) FILTER (WHERE status IN ('registered','waiting','in_progress'))::int AS active,
-         COUNT(DISTINCT patient_id)::int AS unique_patients
+         COUNT(DISTINCT patient_id) FILTER (WHERE status<>'cancelled')::int AS unique_patients
        FROM visit WHERE visit_date BETWEEN $1 AND $2`, P);
 
-    // 2) 진료과별
+    // 2) 진료과별. A visit with no department comes back with code NULL and the
+    //    screen labels it in the viewer's language.
     const byDept = await pool.query(
-      `SELECT COALESCE(d.code,'-') AS code, COALESCE(d.name,'(미지정)') AS name, COUNT(*)::int AS cnt
+      `SELECT ${DEPT_COLS}, COUNT(*)::int AS cnt
        FROM visit v LEFT JOIN department d ON v.department_id=d.id
-       WHERE v.visit_date BETWEEN $1 AND $2
-       GROUP BY d.code, d.name ORDER BY cnt DESC`, P);
+       WHERE v.visit_date BETWEEN $1 AND $2 AND v.status<>'cancelled'
+       GROUP BY d.id ORDER BY cnt DESC`, P);
 
-    // 3) 의사별
+    // 3) 의사별. LEFT JOIN so visits with no attending doctor form their own
+    //    row instead of vanishing; grouped by id so two staff sharing a name
+    //    stay two rows.
     const byDoctor = await pool.query(
-      `SELECT s.name AS name, COUNT(*)::int AS cnt
-       FROM visit v JOIN staff s ON v.doctor_id=s.id
-       WHERE v.visit_date BETWEEN $1 AND $2
-       GROUP BY s.name ORDER BY cnt DESC`, P);
+      `SELECT s.id AS doctor_id, s.name AS name, COUNT(*)::int AS cnt
+       FROM visit v LEFT JOIN staff s ON v.doctor_id=s.id
+       WHERE v.visit_date BETWEEN $1 AND $2 AND v.status<>'cancelled'
+       GROUP BY s.id ORDER BY cnt DESC`, P);
 
     // 3b) 진료과별 매출. billing 은 visit 을 통해 과에 붙는다(billing.visit_id).
     //     기준은 접수에서 고른 과다: 한 의사가 여러 과의 진료를 볼 수 있으므로
     //     "무슨 진료였는지"는 방문에 붙고, 의사 본인의 소속과와는 다를 수 있다.
     const revByDept = await pool.query(
-      `SELECT COALESCE(d.code,'-') AS code, COALESCE(d.name,'(미지정)') AS name,
+      `SELECT ${DEPT_COLS},
               COALESCE(SUM(b.net_paid),0)::numeric AS paid,
               COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
               COUNT(*)::int AS bill_count
@@ -64,20 +88,22 @@ router.get('/summary', async (req, res) => {
          JOIN visit v ON b.visit_id = v.id
          LEFT JOIN department d ON v.department_id = d.id
         WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY d.code, d.name ORDER BY paid DESC`, P);
+        GROUP BY d.id ORDER BY paid DESC`, P);
 
     // 3c) 의사별 매출. 과별과 따로 뽑는다 — 상여·성과 산정은 사람 단위로 봐야 하고,
     //     접수에서 고른 과로 묶으면 그 사람의 실적이 여러 과에 흩어진다.
+    //     LEFT JOIN: bills for visits with no attending doctor form an
+    //     "unassigned" row, so the rows add up to the clinic's takings.
     const revByDoctor = await pool.query(
-      `SELECT s.name AS name,
+      `SELECT s.id AS doctor_id, s.name AS name,
               COALESCE(SUM(b.net_paid),0)::numeric AS paid,
               COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
               COUNT(*)::int AS bill_count
          FROM billing b
          JOIN visit v ON b.visit_id = v.id
-         JOIN staff s ON v.doctor_id = s.id
+         LEFT JOIN staff s ON v.doctor_id = s.id
         WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY s.name ORDER BY paid DESC`, P);
+        GROUP BY s.id ORDER BY paid DESC`, P);
 
     // 4) 매출 (취소 제외, billing_date 기준)
     const rev = await pool.query(
@@ -97,18 +123,20 @@ router.get('/summary', async (req, res) => {
       `SELECT COUNT(*)::int AS cnt FROM billing
        WHERE payment_status='cancelled' AND COALESCE(cancelled_at::date, billing_date) BETWEEN $1 AND $2`, P);
 
-    // 4c) 서류/행정 수가 매출 (item_type='fee')
+    // 4c) 서류/행정 수가 매출 (item_type='fee'). The payment screen files these
+    //     under procedure_total (everything that is neither consultation nor
+    //     drug), so they are taken back out of `procedure` below — otherwise the
+    //     same money is drawn twice and the item bars add up to more than billed.
     const issuance = await pool.query(
       `SELECT COALESCE(SUM(bi.total_price),0)::numeric AS amount, COUNT(*)::int AS cnt
        FROM billing_item bi JOIN billing b ON bi.billing_id=b.id
        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled' AND bi.item_type='fee'`, P);
 
-    // 5) 미수 / 환불 (실시간 잔액, 기간 무관)
+    // 5) 미수 / 환불 (실시간 잔액, 기간 무관). 계산식은 OWED_SQL / REFUND_SQL 참고.
     const bal = await pool.query(
-      `SELECT
-         COALESCE(SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid > 0),0)::numeric AS owed,
-         COALESCE(-SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid < 0),0)::numeric AS refund
-       FROM billing WHERE payment_status <> 'cancelled'`);
+      `SELECT COALESCE(SUM(${OWED_SQL}),0)::numeric AS owed,
+              COALESCE(SUM(${REFUND_SQL}),0)::numeric AS refund
+         FROM billing WHERE payment_status <> 'cancelled'`);
 
     const r = rev.rows[0];
     const num = function (x) { return Math.round(Number(x) || 0); };
@@ -120,14 +148,15 @@ router.get('/summary', async (req, res) => {
       // numeric comes back from pg as a string; round it here so the client can render
       // it straight into a bar without doing arithmetic on text.
       revenueByDept: revByDept.rows.map(function (x) {
-        return { code: x.code, name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
+        return { code: x.code, name: x.name, name_en: x.name_en, name_fr: x.name_fr,
+          paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
       }),
       revenueByDoctor: revByDoctor.rows.map(function (x) {
-        return { name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
+        return { doctor_id: x.doctor_id, name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
       }),
       revenue: {
         gross: num(r.gross), paid: num(r.paid),
-        consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure),
+        consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure - issuance.rows[0].amount),
         issuance: num(issuance.rows[0].amount), issuanceCount: issuance.rows[0].cnt,
         billCount: r.bill_count, avg: r.bill_count > 0 ? num(r.paid / r.bill_count) : 0,
       },
@@ -143,7 +172,8 @@ router.get('/monthly', async (req, res) => {
     const months = Math.min(Math.max(parseInt(req.query.months) || 6, 1), 24);
     const v = await pool.query(
       `SELECT to_char(date_trunc('month', visit_date),'YYYY-MM') AS ym, COUNT(*)::int AS visits
-       FROM visit WHERE visit_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
+       FROM visit WHERE status <> 'cancelled'
+         AND visit_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
        GROUP BY 1 ORDER BY 1`, [months - 1]);
     const b = await pool.query(
       `SELECT to_char(date_trunc('month', billing_date),'YYYY-MM') AS ym, COALESCE(SUM(net_paid),0)::numeric AS revenue
@@ -160,27 +190,39 @@ router.get('/monthly', async (req, res) => {
 // GET /api/stats/outstanding — 미수/환불 명단 (환자별: 누가·얼마·언제·연락처)
 router.get('/outstanding', async (req, res) => {
   try {
+    // Owed and refund are summed separately per patient, not netted against each
+    // other, so each list adds up to its card on the summary and matches the
+    // payment screen, which also shows the two side by side. per_bill spells out
+    // OWED_SQL / REFUND_SQL with the b. qualifier.
     const rows = await pool.query(
-      `WITH bal AS (
-         SELECT p.id, p.chart_no, p.last_name, p.first_name,
-                COALESCE(NULLIF(p.mobile,''), p.phone) AS contact,
-                SUM(b.total_due - b.net_paid) AS net,
-                MIN(b.billing_date) FILTER (WHERE b.total_due - b.net_paid > 0) AS owed_since,
-                MAX(b.billing_date) AS last_date,
-                COUNT(*) FILTER (WHERE (b.total_due - b.net_paid) <> 0) AS open_bills
-         FROM billing b JOIN patient p ON b.patient_id = p.id
-         WHERE b.payment_status <> 'cancelled'
-         GROUP BY p.id, p.chart_no, p.last_name, p.first_name, p.mobile, p.phone
+      `WITH per_bill AS (
+         SELECT b.patient_id, b.billing_date,
+                GREATEST(b.outstanding, 0) AS owed,
+                GREATEST(b.net_paid - b.total_due, 0) AS refund
+           FROM billing b
+          WHERE b.payment_status <> 'cancelled'
+       ), bal AS (
+         SELECT patient_id,
+                SUM(owed) AS owed, SUM(refund) AS refund,
+                ${ymd('MIN(billing_date) FILTER (WHERE owed > 0)')} AS owed_since,
+                ${ymd('MAX(billing_date)')} AS last_date,
+                COUNT(*) FILTER (WHERE owed > 0) AS owed_bills,
+                COUNT(*) FILTER (WHERE refund > 0) AS refund_bills
+           FROM per_bill GROUP BY patient_id
        )
-       SELECT * FROM bal WHERE ABS(net) > 0.5 ORDER BY net DESC`);
+       SELECT p.id, p.chart_no, p.last_name, p.first_name,
+              COALESCE(NULLIF(p.mobile,''), p.phone) AS contact, bal.*
+         FROM bal JOIN patient p ON p.id = bal.patient_id
+        WHERE bal.owed > 0.5 OR bal.refund > 0.5`);
     const owed = [], refund = [];
     rows.rows.forEach(function (r) {
-      const net = Math.round(Number(r.net) || 0);
       const base = { patient_id: r.id, chart_no: r.chart_no, name: (r.last_name || '') + ' ' + (r.first_name || ''),
-        contact: r.contact || '', last_date: r.last_date, open_bills: r.open_bills };
-      if (net > 0) owed.push(Object.assign({ amount: net, since: r.owed_since }, base));
-      else if (net < 0) refund.push(Object.assign({ amount: -net }, base));
+        contact: r.contact || '', last_date: r.last_date };
+      const o = Math.round(Number(r.owed) || 0), f = Math.round(Number(r.refund) || 0);
+      if (Number(r.owed) > 0.5) owed.push(Object.assign({ amount: o, since: r.owed_since, open_bills: r.owed_bills }, base));
+      if (Number(r.refund) > 0.5) refund.push(Object.assign({ amount: f, open_bills: r.refund_bills }, base));
     });
+    owed.sort(function (a, b) { return b.amount - a.amount; });
     refund.sort(function (a, b) { return b.amount - a.amount; });
     res.json({
       owed: owed, refund: refund,
@@ -203,7 +245,7 @@ router.get('/drug-usage', async (req, res) => {
     if (!from || !to) {
       const span = gran === 'day' ? "interval '29 days'" : (gran === 'year' ? "interval '4 years'" : "interval '11 months'");
       const trunc = gran === 'day' ? 'day' : (gran === 'year' ? 'year' : 'month');
-      const r = await pool.query(`SELECT (date_trunc('${trunc}', CURRENT_DATE) - ${span})::date AS f, CURRENT_DATE AS t`);
+      const r = await pool.query(`SELECT ${ymd(`date_trunc('${trunc}', CURRENT_DATE) - ${span}`)} AS f, ${ymd('CURRENT_DATE')} AS t`);
       from = from || r.rows[0].f;
       to = to || r.rows[0].t;
     }

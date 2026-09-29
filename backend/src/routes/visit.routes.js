@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { VISIT_TYPES, VISIT_STATUSES } = require('../utils/validate');
+const { sendDbError } = require('../utils/dbError');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -77,7 +78,7 @@ router.post('/', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 
@@ -88,32 +89,64 @@ router.put('/:id/status', async (req, res) => {
     if (!VISIT_STATUSES.includes(String(status))) {
       return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
     }
+    // Cancelling is only for a patient still in the queue. Reception's list does
+    // not refresh by itself, so the button can be pressed on a visit the doctor
+    // has since opened; cancelling that would orphan its consultation, orders and
+    // bill under a visit every other screen ignores.
     const result = await pool.query(
-      'UPDATE visit SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      `UPDATE visit SET status = $1::varchar, updated_at = NOW()
+        WHERE id = $2 AND ($1::varchar <> 'cancelled' OR status IN ('registered', 'waiting'))
+        RETURNING *`,
       [status, req.params.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
+    if (result.rows.length === 0) {
+      const found = await pool.query('SELECT status FROM visit WHERE id = $1', [req.params.id]);
+      if (found.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
+      return res.status(409).json({ error: 'Only a waiting visit can be cancelled', status: found.rows[0].status });
+    }
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 
 // PUT /api/visits/:id
+// Only the fields present in the body are written. Reception sends what its form
+// shows; payment sends visit_type alone. department_id/doctor_id sent as null (or
+// '') clear the assignment - with the old COALESCE a doctor could never be removed.
+// visit_type and status are NOT NULL in practice, so null there means "unchanged".
+const VISIT_FIELDS = ['visit_type', 'department_id', 'doctor_id', 'chief_complaint', 'reception_memo', 'status'];
 router.put('/:id', async (req, res) => {
   try {
-    const { visit_type, department_id, doctor_id, chief_complaint, reception_memo, status } = req.body;
+    const body = req.body || {};
+    // Same checks as POST: visit_type picks the consultation fee, and billing
+    // falls back to the new-visit price for anything it does not recognise.
+    if (body.visit_type != null && !VISIT_TYPES.includes(String(body.visit_type))) {
+      return res.status(400).json({ error: 'visit_type must be one of ' + VISIT_TYPES.join(', ') });
+    }
+    if (body.status != null && !VISIT_STATUSES.includes(String(body.status))) {
+      return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
+    }
+    const sets = [];
+    const params = [];
+    for (const field of VISIT_FIELDS) {
+      if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
+      let value = body[field];
+      if ((field === 'visit_type' || field === 'status') && value == null) continue;
+      if ((field === 'department_id' || field === 'doctor_id') && value === '') value = null;
+      params.push(value);
+      sets.push(field + '=$' + params.length);
+    }
+    if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    params.push(req.params.id);
     const result = await pool.query(
-      `UPDATE visit SET visit_type=COALESCE($1,visit_type), department_id=COALESCE($2,department_id),
-       doctor_id=COALESCE($3,doctor_id), chief_complaint=COALESCE($4,chief_complaint),
-       reception_memo=COALESCE($5,reception_memo), status=COALESCE($6,status), updated_at=NOW()
-       WHERE id=$7 RETURNING *`,
-      [visit_type, department_id, doctor_id, chief_complaint, reception_memo, status, req.params.id]
+      `UPDATE visit SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,
+      params
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 

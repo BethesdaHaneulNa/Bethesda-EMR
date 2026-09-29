@@ -267,8 +267,18 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "Saisissez le nom et le prénom.",
+  rc_dobIncomplete: "Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue.",
+  rc_dobInvalid: "La date de naissance n'est pas valide. Elle ne peut pas être dans le futur.",
+  rc_cancelNotWaiting: "La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. La liste a été actualisée.",
+  rc_error: "Erreur",
+  rc_saving: "Enregistrement…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "Retirer « {name} » ?",
+  cs_dispensed: "Délivré",
+  cs_rxLocked: "La pharmacie a déjà délivré ce médicament : il ne peut plus être modifié ni retiré. Prévenez la pharmacie et prescrivez une nouvelle ligne si nécessaire.",
+  cs_orderLocked: "Cette demande a déjà un résultat (analyses, compte-rendu ou examen commencé) : elle ne peut pas être retirée.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
@@ -282,13 +292,49 @@ export default {
   py_remainsOwed: "{amount} Ar resteront impayés.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
+  ph_drugCostInternal: "Médicaments (interne)",
+  ph_alreadyDispensed: "Ce patient a déjà été servi par quelqu'un d'autre. Le stock n'a été déduit qu'une fois. La liste est actualisée.",
+  ph_typeLocked: "Ce médicament a déjà été délivré : interne/externe ne peut plus être changé. La liste est actualisée.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "Sélectionnez un patient à gauche",
+  lb_noPending: "Aucune analyse en attente de résultat",
+  lb_noCompleted: "Aucune analyse terminée aujourd'hui",
+  lb_noItemsDefined: "Aucun item défini pour cette analyse (à définir dans Paramètres → Items de test)",
+  lb_noItems: "Aucun item",
+  lb_nothingToSave: "Rien n'a été saisi. Saisissez au moins une valeur ou une note.",
+  lb_savedTests: "Enregistré et terminé",
+  lb_notSavedEmpty: "Rien de saisi, reste en attente",
+  lb_saveFailed: "Échec de l'enregistrement",
+  lb_itemsHint: "Définissez les items de résultat et les valeurs de référence de chaque panel. L'écran du laboratoire les affiche pour la saisie ; les valeurs hors normes sont signalées automatiquement.",
+  lb_selectPanel: "choisir un panel",
+  lb_pickPanel: "Choisissez un panel ci-dessus pour modifier ses items.",
+  lb_code: "Code",
+  lb_codeNameRequired: "Saisissez un code et un nom.",
+  lb_saved: "Enregistré",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "Annulé",
+  st_unassigned: "Non attribué",
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "Sauvegardes en ordre",
+  se_bkStale: "La dernière sauvegarde est trop ancienne",
+  se_bkNone: "Aucune sauvegarde",
+  se_bkFailed: "La dernière sauvegarde a échoué",
+  se_bkStaleHint: "La sauvegarde de cette nuit n'a pas eu lieu. Appuyez sur « Sauvegarder » ; si cela échoue, prévenez le responsable.",
+  se_bkNoneHint: "Appuyez sur « Sauvegarder » pour faire la première sauvegarde.",
+  se_bkFailedHint: "Communiquez l'erreur ci-dessous au responsable. La sauvegarde automatique réessaie toutes les 30 minutes.",
+  se_bkHoursAgo: "il y a {n} h",
+  se_bkRunning: "Sauvegarde en cours",
+  se_bkLastTry: "Dernière tentative",
+  se_bkTriggerAuto: "automatique",
+  se_bkTriggerManual: "manuelle",
+  se_bkMinKeep: "Les {n} sauvegardes les plus récentes ne sont jamais supprimées, quel que soit leur âge.",
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "Afficher",
+  px_hide: "Masquer",
+  px_tokenUnusable: "Ce jeton ne peut pas être utilisé. Collez la valeur affichée lors de l'installation du PACS (16 caractères ou plus). D'ici là, les demandes d'imagerie n'arrivent pas aux appareils. Ignorez ce message si l'établissement n'utilise pas de PACS.",
   // ── end pacs ──
 };

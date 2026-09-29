@@ -11,15 +11,23 @@
 #       -f docker-compose.yml -f docker-compose.session.yml up -d --build
 #
 # -p is what separates the project (and so the pgdata volume); SESSION only names
-# the containers. Ports and names per session: wiki/01-working-rules.md.
+# the containers and images. Ports and names per session: wiki/01-working-rules.md.
+#
+# The base file also fixes the image tags (bethesda-emr-backend:latest, ...) so an
+# offline clinic can load them without building. Left alone, a session's --build
+# re-tags the clinic's images with unmerged session code, and the next plain
+# `docker compose up -d` on the clinic's stack quietly runs it. Each session
+# builds under its own tag instead.
 
 services:
   db:
     container_name: bethesda-s-${SESSION:?set SESSION, e.g. reception}-db
   backend:
     container_name: bethesda-s-${SESSION}-api
+    image: bethesda-s-${SESSION}-backend:dev
   frontend:
     container_name: bethesda-s-${SESSION}-web
+    image: bethesda-s-${SESSION}-frontend:dev
     # !override replaces the base file's "9080:80" instead of adding to it -
     # otherwise the session would still try to take 9080.
     ports: !override

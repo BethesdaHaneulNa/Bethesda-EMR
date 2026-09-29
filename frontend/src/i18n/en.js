@@ -276,8 +276,18 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "Enter both the last name and the first name.",
+  rc_dobIncomplete: "Finish the date of birth (year-month-day), or leave it all blank if unknown.",
+  rc_dobInvalid: "The date of birth is not a valid date. It cannot be in the future.",
+  rc_cancelNotWaiting: "This patient's consultation has already started or finished, so the waiting entry cannot be cancelled. The list has been refreshed.",
+  rc_error: "Error",
+  rc_saving: "Saving…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "Remove “{name}”?",
+  cs_dispensed: "Dispensed",
+  cs_rxLocked: "The pharmacy has already dispensed this drug, so it can no longer be changed or removed. Tell the pharmacy and prescribe a new line if needed.",
+  cs_orderLocked: "This order already has a result (lab values, a reading, or an exam started) and cannot be removed.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
@@ -291,13 +301,49 @@ export default {
   py_remainsOwed: "{amount} Ar will remain outstanding.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
+  ph_drugCostInternal: "Drug cost (in-house)",
+  ph_alreadyDispensed: "Someone else already dispensed this patient. Stock was deducted once. Reloading the list.",
+  ph_typeLocked: "This drug has already been dispensed; in-house/outside can no longer be changed. Reloading the list.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "Select a patient on the left",
+  lb_noPending: "No tests waiting for results",
+  lb_noCompleted: "No tests finished today",
+  lb_noItemsDefined: "No items are defined for this test (define them in Settings → Lab Items)",
+  lb_noItems: "No items",
+  lb_nothingToSave: "Nothing entered. Enter at least one result value or note.",
+  lb_savedTests: "Saved and completed",
+  lb_notSavedEmpty: "Nothing entered, left pending",
+  lb_saveFailed: "Save failed",
+  lb_itemsHint: "Define the result items and reference ranges for each lab panel. The lab screen lists these for entry; values outside the range are flagged automatically.",
+  lb_selectPanel: "select a panel",
+  lb_pickPanel: "Pick a lab panel above to edit its items.",
+  lb_code: "Code",
+  lb_codeNameRequired: "Enter a code and a name.",
+  lb_saved: "Saved",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "Cancelled",
+  st_unassigned: "Unassigned",
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "Backups are working",
+  se_bkStale: "The latest backup is too old",
+  se_bkNone: "There are no backups at all",
+  se_bkFailed: "The last backup failed",
+  se_bkStaleHint: "Last night's backup did not happen. Press \"Back up now\"; if it fails, tell the person in charge.",
+  se_bkNoneHint: "Press \"Back up now\" to make the first backup.",
+  se_bkFailedHint: "Tell the person in charge what the error below says. Automatic backups retry every 30 minutes.",
+  se_bkHoursAgo: "{n} h ago",
+  se_bkRunning: "Backup in progress",
+  se_bkLastTry: "Last attempt",
+  se_bkTriggerAuto: "automatic",
+  se_bkTriggerManual: "manual",
+  se_bkMinKeep: "The {n} most recent backups are never deleted, however old they are.",
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "Show",
+  px_hide: "Hide",
+  px_tokenUnusable: "This token cannot be used. Paste the value shown when the PACS was installed (16 characters or more). Until then, imaging orders will not reach the imaging devices. Ignore this if the clinic does not use a PACS.",
   // ── end pacs ──
 };

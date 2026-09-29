@@ -267,8 +267,18 @@ export default {
   // prefixed with its code. Separate blocks merge without conflict.
   // See wiki/01-working-rules.md.
   // ── begin reception (rc_) ──
+  rc_nameRequired: "성과 이름을 모두 입력하세요.",
+  rc_dobIncomplete: "생년월일을 끝까지 입력하세요 (연-월-일). 모르면 모두 비워 두세요.",
+  rc_dobInvalid: "생년월일이 올바른 날짜가 아닙니다. 미래 날짜는 넣을 수 없습니다.",
+  rc_cancelNotWaiting: "이미 진료가 시작되었거나 끝난 환자라 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
+  rc_error: "오류",
+  rc_saving: "저장 중…",
   // ── end reception ──
   // ── begin consultation (cs_) ──
+  cs_confirmRemove: "「{name}」을(를) 지울까요?",
+  cs_dispensed: "조제됨",
+  cs_rxLocked: "약국에서 이미 조제한 약은 고치거나 지울 수 없습니다. 바꿔야 하면 약국에 알리고 새 줄로 처방하세요.",
+  cs_orderLocked: "결과가 이미 있는 오더(검사 결과 · 판독 · 촬영 시작)는 지울 수 없습니다.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
@@ -282,13 +292,49 @@ export default {
   py_remainsOwed: "{amount} Ar가 미수로 남습니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
+  ph_drugCostInternal: "약제비 (원내)",
+  ph_alreadyDispensed: "다른 사람이 이 환자를 먼저 조제 완료했습니다. 재고는 한 번만 빠졌습니다. 목록을 새로 불러옵니다.",
+  ph_typeLocked: "이미 조제 완료된 약은 원내/원외를 바꿀 수 없습니다. 목록을 새로 불러옵니다.",
   // ── end pharmacy ──
   // ── begin laboratory (lb_) ──
+  lb_selectHint: "왼쪽에서 환자를 선택하세요",
+  lb_noPending: "결과 대기 검사가 없습니다",
+  lb_noCompleted: "오늘 입력을 마친 검사가 없습니다",
+  lb_noItemsDefined: "이 검사는 항목이 정의되지 않았습니다 (설정 → 검사항목에서 정의)",
+  lb_noItems: "항목이 없습니다",
+  lb_nothingToSave: "입력한 결과가 없습니다. 결과값이나 비고를 하나 이상 넣으세요.",
+  lb_savedTests: "저장·완료",
+  lb_notSavedEmpty: "입력한 값이 없어 대기로 남김",
+  lb_saveFailed: "저장 실패",
+  lb_itemsHint: "검사 패널마다 결과 항목과 참고치를 정합니다. 검사실 화면에 이 항목들이 입력 칸으로 나오고, 참고치를 벗어난 값은 자동으로 표시됩니다.",
+  lb_selectPanel: "검사 패널 선택",
+  lb_pickPanel: "위에서 검사 패널을 고르면 항목을 고칠 수 있습니다.",
+  lb_code: "코드",
+  lb_codeNameRequired: "코드와 이름을 넣으세요.",
+  lb_saved: "저장했습니다",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
+  st_cancelled: "취소",
+  st_unassigned: "미지정",
   // ── end statistics ──
   // ── begin settings (se_) ──
+  se_bkOk: "백업 정상",
+  se_bkStale: "최근 백업이 오래됐습니다",
+  se_bkNone: "백업이 하나도 없습니다",
+  se_bkFailed: "마지막 백업이 실패했습니다",
+  se_bkStaleHint: "어젯밤 백업이 되지 않았습니다. 「지금 백업」을 눌러 보고, 실패하면 담당자에게 알리세요.",
+  se_bkNoneHint: "「지금 백업」을 눌러 첫 백업을 만드세요.",
+  se_bkFailedHint: "아래 오류를 담당자에게 알리세요. 자동 백업은 30분마다 다시 시도합니다.",
+  se_bkHoursAgo: "{n}시간 전",
+  se_bkRunning: "백업 진행 중",
+  se_bkLastTry: "마지막 시도",
+  se_bkTriggerAuto: "자동",
+  se_bkTriggerManual: "수동",
+  se_bkMinKeep: "보관 기간이 지나도 가장 최근 백업 {n}개는 지우지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "보기",
+  px_hide: "숨기기",
+  px_tokenUnusable: "이 토큰은 쓸 수 없습니다. PACS를 설치할 때 화면에 나온 값(16자 이상)을 붙여넣으세요. 그 전까지는 영상 오더가 촬영 장비로 넘어가지 않습니다. PACS를 쓰지 않는 병원은 무시해도 됩니다.",
   // ── end pacs ──
 };
