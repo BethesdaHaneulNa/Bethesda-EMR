@@ -500,8 +500,14 @@ export default function ConsultationPage() {
     if(!consult){ alert(t.cs_selectPatient); return; }
     if(pastView) setPastView(null);
     var items = (set && set.items) ? set.items : [];
+    // A drug hidden from the list (drug_active false, orderset.routes.js) is not put in:
+    // the search no longer offers it, and a set still pointing at it would prescribe it
+    // at its old price with nothing on screen to say so. Exam and procedure lines go in
+    // as before. The skipped drugs are named once afterwards.
+    var skipped = [];
     for(var i=0;i<items.length;i++){
       var it = items[i];
+      if(it.kind!=='order' && it.drug_active===false){ skipped.push(it.name||it.code); continue; }
       if(it.kind==='order'){
         await addExamOrder({ id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
@@ -512,6 +518,7 @@ export default function ConsultationPage() {
           default_route:it.route, unit_price:it.unit_price, unit:'' });
       }
     }
+    if(skipped.length) alert(String(t.cs_setSkippedHidden||'').replace('{names}', skipped.join(', ')));
   }
 
   function osGrouped(){
@@ -837,7 +844,10 @@ export default function ConsultationPage() {
                           {s.dept_code?<span style={{fontSize:11,color:t2}}>{s.dept_code}</span>:null}
                           <span style={{fontSize:11,color:t3,marginLeft:'auto'}}>{(s.items||[]).length} {t.itemsUnit}</span>
                         </div>
-                        <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{(s.items||[]).map(function(it){return it.code;}).join(', ')||'\u2014'}</div>
+                        <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{(s.items||[]).length ? (s.items||[]).map(function(it, k){
+                          var hidden = it.kind!=='order' && it.drug_active===false;
+                          return <span key={k} title={hidden ? t.cs_setHiddenDrug : undefined} style={hidden ? {textDecoration:'line-through',color:'#475569'} : null}>{(k ? ', ' : '')+it.code}</span>;
+                        }) : '\u2014'}</div>
                       </div>;
                     })}
                   </div>:null}
