@@ -214,7 +214,8 @@
 
 ### 서버 — `backend/src/routes/lab.routes.js` (`/api/lab`, `index.js:39`)
 
-모든 요청은 로그인 필요(`authMiddleware`).
+모든 요청은 로그인 필요(`authMiddleware`). 그 위에 **그 API를 쓰는 화면의 권한**을 서버가 다시 확인합니다(실장님 결정 S2) — 권한이 없으면 403. 서버는 권한을 매 요청마다 DB에서 읽으므로(S1, `middleware/auth.js`), 설정에서 권한을 바꾸면 서버 쪽에서는 바로 적용됩니다(화면 메뉴가 다시 로그인 없이 바뀌는지는 확인 필요).
+권한 칸은 「이 중 하나라도 있으면 됨」입니다. 간호사 계정(기본 접수·약국·임상병리)은 `lab`이 있으므로 아래 `settings` 전용 하나를 뺀 전부를 씁니다.
 
 | 메서드 · 경로 | 권한 | 하는 일 |
 |---|---|---|
@@ -224,7 +225,7 @@
 | `GET /order/:orderItemId/items` | lab | 한 오더의 입력 줄 — 패널 항목 정의 + 이미 넣은 값(3.6절). `{order, has_master, items}` |
 | `POST /order/:orderItemId/results` | lab | 결과 저장 + 오더 완료 (3.4절). 본문 `{results:[{lab_test_item_id,name,value,unit,ref_low,ref_high,ref_text,comment}]}` |
 | `GET /patient/:patientId/results` | consultation 또는 lab | 환자의 모든 결과 + `panel_code`·`panel_name` |
-| `GET /test-items?order_code_id=` | (로그인만) | 패널의 항목 정의. 없으면 전체. 항목마다 `result_count` — 입력 화면이 그 항목 아래 보여줄 저장 결과 수(id로 연결된 것 + 같은 패널에서 연결이 끊긴 같은 이름의 것) |
+| `GET /test-items?order_code_id=` | lab 또는 settings | 패널의 항목 정의. 없으면 전체. 항목마다 `result_count` — 입력 화면이 그 항목 아래 보여줄 저장 결과 수(id로 연결된 것 + 같은 패널에서 연결이 끊긴 같은 이름의 것) |
 | `POST /test-items/save` | settings | 패널의 항목 목록 저장. `id`가 있는 줄은 **그 자리에서 고치고**, 없는 줄은 새로 넣고, 목록에서 빠진 항목만 지움(6절). 본문 `{order_code_id, items:[{id?, name, unit, ref_low, ref_high, ref_text}]}` → 저장된 목록(`result_count` 포함) |
 
 목록 API 세 개의 한 줄 모양: `consultation_id, visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, (allergies), doctor_name, lab_orders:[{order_item_id, order_code, order_name, order_code_id, status, (result_at)}]`
@@ -304,7 +305,8 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 - **지난 날의 검사**는 목록에 없고(실장님 결정 — 「오늘만」), 🔍 환자 찾기로 그 내원을 열어 입력합니다(`GET /visit/:visitId/orders`, 날짜 제한 없음). 입력하면 오늘 「입력 완료」에 나옵니다.
 - **안 할 검사**는 진료실에서 오더를 지웁니다(결과가 있으면 409로 막힘). 검사 화면에 「검사 안 함」 버튼은 두지 않습니다(실장님 결정 — 버튼이 따로 있으면 헷갈림). 입력 중에 지워지면 저장이 404 `Order not found` → `lb_orderRemoved` 안내 후 화면 새로 불러옴.
 - **「오늘」** 은 DB의 `CURRENT_DATE`이고, DB 컨테이너는 `TZ`(기본 `Indian/Antananarivo`)로 돕니다(`docker-compose.yml:17-18`). 다른 모듈과 같은 방식.
-- **진료 화면에서 결과 보기**: 진료 화면 위쪽의 **🧪 검사결과** 버튼(`Consultation.jsx:396`)이 `LabResults`를 큰 창으로 엽니다. 결과가 나왔다는 알림이나 표시는 없습니다.
+- **진료 화면에서 결과 보기**: 진료 화면 위쪽의 **🧪 검사결과** 버튼이 `LabResults`를 큰 창으로 엽니다.
+- **결과 도착 표시(진료 쪽)**: 진료가 열려 있고 결과를 기다리는 검사 오더가 있으면, 진료 화면이 30초마다 오더 상태를 다시 읽어 결과가 들어오면 새로고침 없이 오더 줄이 「결과 있음 / Résultat reçu」 + 🔒 로 바뀝니다(의사가 적던 칸과 포커스는 그대로). 진료 세션 `bdd14bf`. 검사 화면이 결과를 저장하면(`order_item.status = 'completed'`) 다음 읽기에서 보입니다.
 - **진료 화면의 오더 줄 상태 칸**: 검사 오더는 `order_item.status`로 결과가 들어왔는지(완료)를 보여줍니다(진료 세션 `f48cec9`, `Consultation.jsx`). 예전에는 영상용 `worklist_status`를 보여줬는데, 검사 오더는 만들 때 이 값이 `completed`라(`consult.routes.js` — 워크리스트를 쓰지 않는 오더) 결과 전부터 「completed」로 보였습니다(7절 문제 9). 오더가 진료 중에도 검사 화면에 뜨게 되어(결정 7번) 진료 중 결과 도착을 보는 데 중요합니다.
 - **진료에서 오더를 지우면**(`DELETE /api/consultations/order/:id`): 결과(`lab_result`)가 있는 오더는 **409로 거절**됩니다(진료 세션 `d1f473e`). 결과가 없는 오더만 지워집니다. 그 전에는 CASCADE로 결과까지 조용히 지워졌습니다(7절 문제 3).
 - **수납**: 청구 항목은 수납이 그 내원의 `order_item`을 상태와 관계없이 전부 읽어 만듭니다(`billing.routes.js:122-124`). 검사 결과를 넣었는지와는 관계가 없습니다. 진료에서 오더를 지우면 청구에서도 빠집니다.
@@ -363,3 +365,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-09-29 | 현장 사정 반영: 검사실 직원이 따로 없고 간호사가 약국·임상병리를 함께 함 — 1절·2절 첫머리, 입력자를 직함 없이 「입력한 사람」으로, 화면을 옮기면 저장 안 한 값이 사라진다는 안내(코드 변경 없음) | `bed6c43` |
 | 2026-09-29 | 결정 7번: 검사 오더를 내는 즉시 대기 목록에(「진료 중」 표시), 목록은 오늘만, 접수 취소 내원 제외, 「입력 완료」는 오늘 결과 입력 기준, 입력 중 오더 삭제 안내(`lb_inConsultation`·`lb_orderRemoved`), 설정 검사항목 탭 오류 알림 번역(`seMessage`), 간호사 계정 한 줄 | `1d4c239` |
 | 2026-09-29 | 5절·7절 문제 9를 해결됨으로(진료 세션 `f48cec9`) — 위키만 | `28ea7f8` |
+| 2026-09-29 | 서버 권한(S2): `GET /test-items`에 lab·settings 권한 — 4절 API 표 권한 칸 정리, 간호사 계정으로 검사 화면 전체 확인 · 5절에 진료 화면의 결과 도착 표시(`bdd14bf`) | `20ace07` |
