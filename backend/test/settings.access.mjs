@@ -40,6 +40,7 @@ const ROUTES = [
   ['GET',  '/patients?q=a',                 [REG, CONS, PAY, PHARM, LAB]],
   ['GET',  '/patients/' + X,                [REG, CONS, PAY, PHARM, LAB]],
   ['GET',  '/patients/chart/ZZ-000',        [REG]],
+  ['GET',  '/patients/similar?last_name=Rakoto&first_name=Jean', [REG]],   // duplicate check at registration (2026-09-29)
   ['GET',  '/patients/' + X + '/history',   [REG, CONS, PAY, PHARM]],
   ['GET',  '/patients/' + X + '/billing-history', [PAY]],
   ['POST', '/patients',                     [REG], {}],
@@ -100,6 +101,7 @@ const ROUTES = [
   // stock ledger (pharmacy stock (1), 2026-09-29): doctors and Settings may look and adjust too
   ['GET',  '/pharmacy/stock',               [PHARM, CONS, SET]],
   ['GET',  '/pharmacy/stock/' + X + '/movements', [PHARM, CONS, SET]],
+  ['GET',  '/pharmacy/stock/report',        [PHARM, SET, STATS]],   // canReport (2026-09-29)
   ['POST', '/pharmacy/stock/' + X + '/receive', [PHARM, CONS, SET], { qty: 1 }],
   ['POST', '/pharmacy/stock/' + X + '/count',   [PHARM, CONS, SET], { counted: 1, memo: 'access test' }],
   ['POST', '/pharmacy/stock/' + X + '/discard', [PHARM, CONS, SET], { qty: 1, memo: 'access test' }],

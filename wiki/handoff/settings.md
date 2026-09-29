@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — S2 표에 새 라우트 2개 · 날짜 SQL 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4caaedd`을 ff로 당긴 뒤)
+- **한 일**: `GET /api/patients/similar` → registration, `GET /api/pharmacy/stock/report` → pharmacy·settings·stats 를 `settings.access.mjs`와 아래 S2 표에. `POST /api/consultations/order/:id/cancel`은 develop에 **아직 없어서** 들어오면 넣겠습니다.
+- **확인한 방법**: 격리 스택(develop `4caaedd`) → **107 라우트 × 10 계정 = 1070건 모두 표와 같음.** 전에 남았던 진료 500 두 건도 이제 없음(진료 세션 수정 반영됨).
+- **DB 시간대 변경(총괄 `config/database.js`) 영향 확인**: 설정 쪽 파일(`admin`·`auth`·`backup`·`status`·`version` 라우트, `services/`, 마이그레이션 020)에 `CURRENT_DATE`·`now()::date` **없음**. 백업 파일 이름·예정 시각·「오래됨」 판단은 Node의 `TZ`와 파일 시각으로 계산 — 영향 없음.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/handoff/settings.md` · `wiki/modules/settings.md`(4절 숫자)
+
 ## 2026-09-29 — S2 표 갱신 (접수 이전 내원 조회 · 약국 재고 라우트)
 
 > **총괄 확인 (2026-09-29)**: S2 표 갱신 `b5e7f4c` 합침(`e3292de`). 1050건 모두 표와 같음. 진료의 500 두 건은 `f52df58`로 고쳐져 develop에 있음.
@@ -241,6 +250,7 @@
 | `GET /:id/history` | 읽기 | 접수, 진료, PatientChart | registration, consultation, payment, pharmacy |
 | `POST /` · `PUT /:id` | 쓰기 | 접수 | **registration** |
 | `GET /chart/:chartNo` | 읽기 | 없음 | registration |
+| `GET /similar` | 읽기 | 접수(등록 때 같은 환자 확인) | **registration** — 2026-09-29 추가 |
 | `GET /:id/billing-history` | 읽기 | 없음 | payment |
 
 **visit.routes.js** (`/api/visits`, 지금 전부 로그인만) — 접수 세션 파일
@@ -269,7 +279,7 @@
 | `GET /:id` | 읽기 | 없음 | 위와 같음 |
 | `POST /` (발급) · `POST /:id/void` (취소) | 쓰기 | DocumentModal 편집 사본(진료·수납·약국) | consultation, payment, pharmacy — 더 좁히려면 문서 **종류**별(예: 원외 처방전은 약국·진료)로. 실장님 판단 필요 |
 
-**pharmacy.routes.js 재고** (약국 재고 ①, 2026-09-29 추가) — `GET /stock`, `GET /stock/:drugId/movements`, `POST /stock/:drugId/receive|count|discard` → **pharmacy, consultation, settings** (조제 라우트는 pharmacy만 그대로)
+**pharmacy.routes.js 재고** (약국 재고 ①, 2026-09-29 추가) — `GET /stock`, `GET /stock/:drugId/movements`, `POST /stock/:drugId/receive|count|discard` → **pharmacy, consultation, settings** (조제 라우트는 pharmacy만 그대로). `GET /stock/report` → **pharmacy, settings, stats** (`canReport`, 2026-09-29 추가)
 
 **billing.routes.js** — 수납 세션이 이미 적용: 전부 `payment`, 미수금 조회(`GET /patient/:id/balance`)만 `payment` 또는 `registration`. 표와 맞음.
 
