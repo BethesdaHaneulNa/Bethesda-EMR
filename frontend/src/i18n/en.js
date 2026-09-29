@@ -290,5 +290,8 @@ export default {
   // ── begin settings (se_) ──
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "Show",
+  px_hide: "Hide",
+  px_tokenUnusable: "This token cannot be used. Paste the value shown when the PACS was installed (16 characters or more). Until then, imaging orders will not reach the imaging devices. Ignore this if the clinic does not use a PACS.",
   // ── end pacs ──
 };

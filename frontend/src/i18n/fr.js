@@ -281,5 +281,8 @@ export default {
   // ── begin settings (se_) ──
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "Afficher",
+  px_hide: "Masquer",
+  px_tokenUnusable: "Ce jeton ne peut pas être utilisé. Collez la valeur affichée lors de l'installation du PACS (16 caractères ou plus). D'ici là, les demandes d'imagerie n'arrivent pas aux appareils. Ignorez ce message si l'établissement n'utilise pas de PACS.",
   // ── end pacs ──
 };

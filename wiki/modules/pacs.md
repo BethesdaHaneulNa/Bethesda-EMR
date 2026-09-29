@@ -1,6 +1,6 @@
 # PACS (의료 영상)
 
-> **담당**: PACS 세션 · 브랜치 `session/pacs` (EMR 저장소와 PACS 저장소 둘 다) · **마지막 갱신**: 2026-09-29 · **상태**: 현황 파악 완료 — 코드는 아직 안 고침
+> **담당**: PACS 세션 · 브랜치 `session/pacs` (EMR 저장소와 PACS 저장소 둘 다) · **마지막 갱신**: 2026-09-29 · **상태**: 토큰 보안(P-2·P-5) 고침 — 나머지는 7절
 
 ## 1. 이 모듈이 하는 일
 
@@ -70,7 +70,7 @@
       │  worklist_log 1줄 생성: accession_no, study_instance_uid, scheduled_date=CURRENT_DATE
       │  order_item.worklist_status = 'sent'
       ▼
- ② 브리지(15초마다)                 GET /api/pacs/worklist-feed?token=…&format=json
+ ② 브리지(15초마다)                 GET /api/pacs/worklist-feed?format=json   (헤더 X-Bridge-Token)
       │  오늘 + status='scheduled' 인 worklist_log 전부
       │  줄마다 /worklists/<accession>.wl 파일을 씀, 목록에 없는 .wl 은 지움
       ▼
@@ -101,7 +101,8 @@
 
 `main()`이 무한 반복합니다. 한 바퀴:
 
-1. `sync()` — `EMR_FEED_URL`에 `GET ?token=<BRIDGE_TOKEN>&format=json` (timeout 10초). 실패(연결 불가, 401, 500)면 예외 → 이번 바퀴는 **파일을 건드리지 않고** 끝납니다.
+1. `sync()` — `EMR_FEED_URL`에 `GET ?format=json`, 토큰은 **`X-Bridge-Token` 헤더**로 (timeout 10초). URL에 넣으면 EMR 접속 기록(morgan)에 15초마다 토큰이 찍혔기 때문입니다. 실패(연결 불가, 401, 500)면 예외 → 이번 바퀴는 **파일을 건드리지 않고** 끝납니다. 401이면 로그에 「EMR refused the bridge token (…)」과 어느 쪽을 맞춰야 하는지 씁니다.
+   - 시작할 때 `BRIDGE_TOKEN`이 비었거나 16자 미만이거나 옛 기본값이면 경고를 한 줄 찍고 그대로 돕니다(재시작 반복으로 경고가 묻히지 않게).
 2. 받은 줄마다 `accession_no`(없으면 `study_instance_uid`)를 파일 이름으로 `write_wl()` — `<이름>.wl.tmp`에 쓰고 `os.replace`로 바꿔 끼웁니다. Orthanc가 반쯤 쓴 파일을 읽지 않게 하려는 것.
    - 한 줄이 변환에 실패해도 그 줄만 건너뛰고(이전 좋은 `.wl`은 남김) 나머지는 계속합니다 (v1.0.0에서 고친 것).
 3. 이번 목록에 없는 `.wl` 파일은 **지웁니다** — 촬영 완료·취소·오더 삭제·날짜 지남.
@@ -115,7 +116,7 @@
 | 상황 | 장비에 보이는 것 | 누가 알 수 있나 |
 |---|---|---|
 | EMR이 멈춤 / 브리지가 EMR에 못 닿음 | **마지막으로 쓴 `.wl`이 그대로 남음.** 새 오더는 안 들어오고, 끝난·취소된 오더도 안 빠짐. 자정이 지나도 어제 목록이 남음 | 브리지 로그 `bridge error:`, EMR 상태 화면 「보고 없음」(60초 이상) |
-| 토큰 불일치 (401) | 위와 같음 | EMR 상태 화면 — 브리지가 heartbeat도 같은 토큰으로 보내므로 **EMR에는 신호가 아예 안 옴** → 「보고 없음」 |
+| 토큰 불일치·토큰 미설정 (401) | 위와 같음 | EMR 상태 화면 — 브리지가 heartbeat도 같은 토큰으로 보내므로 **EMR에는 신호가 아예 안 옴** → 「보고 없음」. 브리지 로그에 원인(「EMR에 토큰 미설정」 / 「토큰 불일치」)이 나옴 |
 | 브리지 컨테이너가 멈춤·먹통 | 위와 같음 | 컨테이너 healthcheck(`.heartbeat` 60초), `server-status` 창, EMR 상태 화면 |
 | Orthanc가 멈춤 | 워크리스트 조회·전송 모두 실패 (장비 쪽 오류) | Orthanc healthcheck(`/system` 200/401), EMR 상태 화면의 PACS TCP 검사 |
 | **호스트 포트가 안 잡힘** (Windows 예약 포트) | 장비가 4242에 연결 못 함, 뷰어가 안 열림 | **컨테이너 healthcheck는 「healthy」로 나옴** — 컨테이너 안에서만 확인하기 때문. EMR 상태 화면의 PACS 검사(설정된 Host:4242로 TCP)만 잡아냄 (7절 P-1) |
@@ -134,14 +135,21 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 | 메서드 · 경로 | 인증 | 하는 일 |
 |---|---|---|
-| `GET /config` | 로그인만 (권한 없음) | `pacs_config` 한 줄 전체 — **bridge_token 포함** (7절 P-5) |
+| `GET /config` | `settings` 권한 | `pacs_config` 한 줄 전체 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5) |
 | `PUT /config` | `settings` 권한 | 설정 저장. 보내지 않은 칸은 NULL이 됨(화면은 전체를 보내므로 지금은 문제 없음) |
 | `GET /test` | 로그인 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
 | `GET /viewer-url?order_item_id=` 또는 `?study=` | 로그인 | 뷰어 주소 + 오더 이름 + 판독. UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음 |
 | `GET /readings/patient/:patientId` | 로그인 | 환자의 영상 오더 전부 + 판독 + 최신 accession/UID |
-| `GET /worklist-feed?token=&format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (쿼리 또는 `X-Bridge-Token`) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
-| `POST /bridge-heartbeat` | 브리지 토큰 (본문 `token`) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀 |
+| `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
+| `POST /bridge-heartbeat` | 브리지 토큰 (헤더, 본문 `token`, 쿼리 순) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀 |
+
+**브리지 토큰 검사** — `backend/src/routes/pacs.token.js` (PACS 소유, 2026-09-29 새로 만듦). 피드·heartbeat·`/api/worklist`의 `bridgeOrAuth`가 모두 여기를 씁니다.
+
+- `usableBridgeToken(v)` — EMR에 저장된 토큰이 **16자 이상이고 옛 기본값 `change-me-bridge-token`이 아닐 때만** 「설정됨」. 아니면 어떤 토큰이 와도 거절합니다. 기본값이 저장소에 공개돼 있어서, PACS를 연결하지 않은 병원이 로그인 없이 환자 정보를 내주고 있었기 때문(P-2). PACS setup이 만드는 토큰은 48자.
+- `presentedToken(req)` — 헤더 `X-Bridge-Token` → 본문 `token` → 쿼리 `token` 순.
+- `bridgeTokenMatches(configured, presented)` — `crypto.timingSafeEqual`로 비교.
+- 거절 메시지는 둘로 나뉩니다: `Bridge token is not set in the EMR (Settings -> Order Feed)`(EMR 쪽을 고칠 것) / `Invalid bridge token`(PACS `.env`를 고칠 것). 브리지 로그에 그대로 나옵니다.
 
 `ensureConfig()`가 요청마다 `CREATE TABLE IF NOT EXISTS pacs_config` + `ALTER … ADD COLUMN IF NOT EXISTS`를 실행합니다(오래된 DB 호환용, 마이그레이션과 중복).
 
@@ -164,8 +172,8 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 | 이름 | 기본값 (compose) | 뜻 |
 |---|---|---|
-| `EMR_FEED_URL` | `http://host.docker.internal:9080/api/pacs/worklist-feed` | EMR 피드. heartbeat 주소는 여기서 `/worklist-feed`→`/bridge-heartbeat`로 바꿔 만듦. (`bridge.py` 안 기본값은 옛 포트 8080) |
-| `BRIDGE_TOKEN` | `.env`에서 (setup이 무작위 생성) | EMR 설정의 Bridge Token과 같아야 함 |
+| `EMR_FEED_URL` | `http://host.docker.internal:9080/api/pacs/worklist-feed` | EMR 피드. heartbeat 주소는 여기서 `/worklist-feed`→`/bridge-heartbeat`로 바꿔 만듦 |
+| `BRIDGE_TOKEN` | `.env`에서 (setup이 48자 무작위 생성). **기본값 없음** — 2026-09-29 전에는 `change-me-bridge-token` | EMR 설정의 Bridge Token과 같아야 함. 헤더로 보냄 |
 | `WL_DIR` | `/worklists` | `.wl`을 쓰는 곳 |
 | `POLL_SECONDS` | `15` | 주기 |
 
@@ -178,11 +186,12 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 ### 비밀값 (이름과 의미만)
 
 - **`ORTHANC_PASSWORD`** — PACS `.env`. Orthanc `admin` 비밀번호. 뷰어로 영상을 보는 모든 사람이 이 계정을 씁니다.
-- **`BRIDGE_TOKEN`** — PACS `.env`와 EMR `pacs_config.bridge_token`이 **같아야** 합니다(페어링). 오더 피드와 heartbeat의 유일한 인증.
+- **`BRIDGE_TOKEN`** — PACS `.env`와 EMR `pacs_config.bridge_token`이 **같아야** 합니다(페어링). 오더 피드와 heartbeat의 유일한 인증. 16자 이상, 옛 기본값 불가.
 
 ### 공용 부품
 
 - `utils/localDate.js`(`todayLocal`, `dicomDate`)·`utils/tcpCheck.js` — 총괄 관리 공용 파일을 씀. 고치지 않음.
+- 브리지 토큰 검사는 공용 `utils/`가 아니라 PACS 소유 `routes/pacs.token.js`에 둠(`worklist.routes.js`도 PACS 파일이라 둘만 씀).
 
 ### DB 테이블
 
@@ -209,7 +218,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 | 화면 칸 | DB 칸 | 뜻 |
 |---|---|---|
-| Bridge Token | `bridge_token` | PACS `setup`이 출력한 값을 붙여넣음. 기본값 `change-me-bridge-token`(7절 P-2) |
+| Bridge Token | `bridge_token` | PACS `setup`이 출력한 값을 붙여넣음. **가려서 보이고** 「보기/숨기기」 버튼으로 확인. 16자 미만이거나 옛 기본값이면 입력 칸 아래 노란 경고(`px_tokenUnusable`) — 그 상태로는 오더가 장비로 가지 않음. 아래 피드 주소 예시의 토큰도 가려짐 |
 | EMR 공개 주소 | `emr_base_url` | 화면에 피드 주소 예시를 보여줄 때만 씀 |
 | 자동 워크리스트 생성 | `auto_create_worklist` | 끄면 영상 오더가 워크리스트로 안 감 |
 | Host / IP | `worklist_scp_host` | Orthanc DICOM 주소. **EMR 컨테이너에서 본 주소**라 `localhost`는 안 됨 → `host.docker.internal` 또는 서버 LAN IP. 비우면 상태 화면이 PACS를 「꺼짐」으로 봄 |
@@ -233,6 +242,8 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
   - **근본 원인 (2026-09-29 확인)**: 이 PC의 Windows **동적 포트 범위가 `1024`부터 13977개(1024–15000)** 로 바뀌어 있습니다(`netsh int ipv4 show dynamicport tcp`, ipv6도 같음. Windows 기본은 49152–65535). 그래서 Hyper-V/WinNAT가 재부팅할 때마다 1024–15000 사이 아무 곳이나 예약할 수 있고, **4242·9090은 물론 EMR의 9080도 언젠가 걸릴 수 있습니다.** 포트 번호를 다른 값(예: 11112)으로 옮겨도 같은 범위 안이라 해결되지 않습니다.
   - 해결: 동적 포트 범위를 Windows 기본값으로 되돌리고(관리자 권한, 재부팅 필요 — 시스템 설정이라 실장님이 직접), PACS 컨테이너를 다시 만들기(총괄). 포트 번호는 4242·9090 그대로 둡니다.
   - 2026-09-29 현재 **현장 장비는 아직 하나도 설정하지 않았음**(실장님 확인) — 지금 멈춘 장비 연동은 없습니다. 장비를 설정하기 전에 해결해야 합니다.
+  - **진단은 총괄이 확인함 (2026-09-29).** 조치 분담: ① 동적 포트 범위 복구(`netsh int ipv4|ipv6 set dynamicport tcp start=49152 num=16384`)와 재부팅은 **실장님이 직접**, ② 재부팅 후 PACS 컨테이너 재생성과 호스트에서 9080·9090·4242 확인은 **총괄**. PACS 세션은 실행 중인 `bethesda-pacs`를 건드리지 않음. 총괄 확인 결과를 받으면 여기에 적고 검증 항목(장비 설정 체크리스트 등)을 이어서 진행.
+  - 재발 방지 후보: `server-status.ps1`에 호스트 쪽 TCP 검사 추가(설정 세션에 부탁), 설치 문서에 동적 포트 범위 확인 추가 — 확정 전
 - `server-status.ps1`(설정 세션 파일)은 PACS를 컨테이너 health로만 봐서 P-1 상태에서도 초록으로 보일 것으로 보입니다 — 확인 필요.
 
 ### 환자 식별 (영상이 다른 환자·다른 오더에 붙는 경우)
@@ -245,8 +256,8 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 ### 보안 (토큰 · 비밀번호)
 
-- **P-2 [높음] 기본 브리지 토큰이 저장소에 공개된 값이고, EMR은 그 값을 그대로 받아들임.** `pacs_config.bridge_token` 기본값 `change-me-bridge-token`(`001_schema.sql`, `pacs.routes.js:15`), PACS compose 기본값도 같음. PACS를 페어링하지 않은 **모든 EMR 설치**에서 `GET /api/pacs/worklist-feed?token=change-me-bridge-token`으로 로그인 없이 오늘 영상 오더 환자의 이름·생년월일·성별·차트번호를 가져갈 수 있습니다(`pacs.routes.js:132`). 같은 토큰으로 `PUT /api/worklist/:id/status`도 됩니다(`worklist.routes.js:15`). 개선안: 기본값·빈 값·짧은 값을 「설정 안 됨」으로 보고 거절.
-- **P-5 [보통] 브리지 토큰이 모든 로그인 직원에게 보임.** `GET /api/pacs/config`에 권한 검사가 없습니다(`pacs.routes.js:43`). 설정 화면도 피드 주소를 토큰째 보여줍니다(`Settings.jsx:495-496`). 브리지는 토큰을 URL 쿼리로 보내(`bridge.py:94`) 접속 기록에 남을 수 있습니다. 개선안: `/config`를 settings 권한으로, 화면에는 가려서, 브리지는 `X-Bridge-Token` 헤더로.
+- **P-2 [높음] ✅ 고침 (2026-09-29)** — 16자 미만·옛 기본값 토큰은 EMR이 「설정 안 됨」으로 보고 무조건 거절(`routes/pacs.token.js`). 브리지·compose에서도 기본값을 없앰. **원래 문제**: 기본 브리지 토큰이 저장소에 공개된 값이고, EMR은 그 값을 그대로 받아들임. `pacs_config.bridge_token` 기본값 `change-me-bridge-token`(`001_schema.sql`, `pacs.routes.js:15`), PACS compose 기본값도 같음. PACS를 페어링하지 않은 **모든 EMR 설치**에서 `GET /api/pacs/worklist-feed?token=change-me-bridge-token`으로 로그인 없이 오늘 영상 오더 환자의 이름·생년월일·성별·차트번호를 가져갈 수 있습니다(`pacs.routes.js:132`). 같은 토큰으로 `PUT /api/worklist/:id/status`도 됩니다(`worklist.routes.js:15`). 개선안: 기본값·빈 값·짧은 값을 「설정 안 됨」으로 보고 거절.
+- **P-5 [보통] ✅ 고침 (2026-09-29)** — `GET /api/pacs/config`는 settings 권한만, 설정 화면은 토큰을 가림(보기 버튼), 브리지는 `X-Bridge-Token` 헤더로 보냄(EMR은 옛 브리지를 위해 쿼리도 계속 받음). **남은 것**: 고치기 전의 EMR 백엔드 로그(`docker logs bethesda-emr-api`)에는 토큰이 이미 찍혀 있음(2026-09-29 확인) — 필요하면 토큰을 새로 만들어 PACS `.env`와 EMR 설정을 함께 바꾸면 됨. **원래 문제**: 브리지 토큰이 모든 로그인 직원에게 보임. `GET /api/pacs/config`에 권한 검사가 없습니다(`pacs.routes.js:43`). 설정 화면도 피드 주소를 토큰째 보여줍니다(`Settings.jsx:495-496`). 브리지는 토큰을 URL 쿼리로 보내(`bridge.py:94`) 접속 기록에 남을 수 있습니다. 개선안: `/config`를 settings 권한으로, 화면에는 가려서, 브리지는 `X-Bridge-Token` 헤더로.
 - **P-9 [보통] 영상을 보는 모든 직원이 Orthanc 관리자 계정을 씀.** 사용자가 `admin` 하나(`docker-compose.yml` `REGISTERED_USERS`). 뷰어(iframe)가 Orthanc에 직접 붙으므로 직원 브라우저가 이 계정으로 로그인해야 하고, 그 계정은 영상 삭제·수정까지 됩니다. 실제 현장에서 어떻게 로그인하고 있는지 확인 필요. 개선안: 읽기 전용 사용자 분리, 또는 EMR이 대신 가져다 주는 방식(프록시).
 - **P-10 [보통] 같은 LAN의 누구나 DICOM으로 환자 목록을 조회할 수 있음.** `DICOM_ALWAYS_ALLOW_FIND=true`, `CHECK_CALLED_AET=false`(`docker-compose.yml`) — 등록 안 된 기기도 C-FIND로 저장된 환자·검사 정보를 묻고 C-STORE로 아무 영상이나 넣을 수 있습니다. 장비 등록 없이 쓰려는 의도된 선택(주석)이지만, 장비가 정해지면 `DicomModalities` 등록으로 좁히는 것을 권합니다.
 - **P-12 [낮음] 시험 스크립트에 옛 Orthanc 비밀번호와 실제 인물로 보이는 이름·생년월일이 들어 있음.** `bridge/make_demo.py:10,28-30`, `make_chest5.py:9,32-34`. 지금 PACS `.env`의 비밀번호와는 다름을 확인(값은 적지 않음). git 기록에 남아 있으므로, 그 비밀번호를 다른 곳에 썼다면 바꾸는 것을 권합니다.
@@ -257,7 +268,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-11 [낮음] `PUT /api/worklist/:id/status`에 값 검사·트랜잭션 없음.** `worklist.routes.js:45-61` — 예: `scheduled`는 worklist_log엔 들어가지만 order_item의 CHECK에 걸려 둘이 어긋남. 로그인만 있으면 누구나 호출 가능. 지금 쓰는 곳 없음.
 - **P-15 [낮음] 판독을 덮어쓰면 이전 판독이 사라짐(이력 없음).** `pacs.routes.js:100`. 서명·확정 개념도 없음.
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
-- **P-17 [낮음] 옛 포트 표기.** 설정 화면 예시 `http://NAS_IP:8090`, 피드 주소 예시 `:8080`(`Settings.jsx:495,508`), 번역 `pacsServerHint`(ko·en·fr 모두 「8090」), `bridge.py:15` 기본값 8080. 지금은 9090(PACS)·9080(EMR).
+- **P-17 [낮음] 옛 포트 표기.** (2026-09-29: 피드 주소 예시 `:8080`→`:9080`, `bridge.py` 기본값 8080→9080은 고침) 남은 것: 설정 화면 예시 `http://NAS_IP:8090`(`Settings.jsx` PACS 웹/뷰어 주소 칸), 번역 `pacsServerHint`(ko·en·fr 모두 「8090」). 지금은 9090(PACS)·9080(EMR).
 - **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
 - **P-19 [낮음] `worklist_status`가 번역 없이 영어(`sent`)로 보임.** `Consultation.jsx:524`, `PatientChart.jsx:70`.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
@@ -268,4 +279,5 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | 위키 첫 작성 — 실제 코드 기준으로 1~7절 채움, 문제 목록 P-1~P-19 | EMR `session/pacs` (이 커밋) |
+| 2026-09-29 | 위키 첫 작성 — 실제 코드 기준으로 1~7절 채움, 문제 목록 P-1~P-19 | EMR `7b21719`, `0e94457` |
+| 2026-09-29 | 토큰 보안(P-2·P-5): 옛 기본값·짧은 토큰 거절, 설정 조회는 settings 권한, 화면에서 토큰 가림, 브리지는 헤더로 전송. P-1에 총괄 확인·조치 분담 기록 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
