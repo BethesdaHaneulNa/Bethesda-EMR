@@ -2,6 +2,37 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 프랑스어 직원 설명서 · v1.5.0 변경 내역 초안 · 오더 연동 탭 오류 문구 번역
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `de7bc8c`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**
+  1. **`wiki/manual-fr/pacs.md`** (새, 약 1,900단어 ≈ A4 3~4쪽) — 방사선사·의사용. En bref(방사선사 4단계 / 의사 4단계), Pas à pas 7개(검사 내기, 촬영 — 찍기 직전마다 목록 새로 불러오기·목록에서 환자 고르기, 목록에 환자가 없을 때, 영상 보기와 판독, 「Not for diagnostic usage」의 뜻, 환자의 모든 영상 검사, 취소된 영상 검사), 메시지 표 12줄, À ne pas faire 6줄, Qui appeler. 화면 글자는 `fr.js` 그대로(`viewImage`·`imageViewer`·`openNewTab`·`readingPlaceholder`·`lastReadBy`·`cs_ws*`·`cs_cancelHint`·`px_*`), 뷰어 안 문구는 `pacs.viewer.js`의 fr 문장 그대로. 진료 설명서(`consultation.md` 7~9절)와 말을 맞춤(**Voir image**, **Visionneuse**, **Compte-rendu**, **Annulé**).
+     - `<!-- à revoir -->`: 장비 메뉴 이름(Worklist·MWL·Send…) — 장비 설치 날. `<!-- terme à vérifier sur place -->`: « station de diagnostic », « manipulateur radio ».
+  2. **`wiki/reference/changelog-1.5.0/pacs.md`** (새, 영어) — 보이는 변화 먼저: 로그인 없는 영상 창(P-9), 영상 도착·환자번호 대조·accession 연결(P-7·P-3·P-4), 영상 오더 취소·P-18·P-22, 영상 백업(P-24), 토큰 보안(P-2·P-5·P-21), 설치·짝 맞춤 도구. 작은 것들과 마이그레이션 **019·028·035**. 저장소 둘(EMR / PACS 폴더)을 맨 위에서 나눠 말함. 끝에 **After updating** 6가지: 포트 범위, PACS 다시 만들기, `pair-with-emr`(복원 뒤에도), 9090은 서버 PC 안에서만(방화벽 규칙 지워도 됨), 영상 백업 준비, 장비 AE 필터.
+  3. **오더 연동 탭 오류 번역** (설정 세션 지적)
+     - 서버 `pacs.routes.js`: `PUT /config`가 저장 전에 검사 — 글자 칸 길이(DB 칸 길이: host 100, AE 50, token 100, 주소 200, 시설 100) 넘으면 400 `<칸> is too long (at most N characters)`, 포트가 1~65535 정수가 아니면 400 `DICOM port must be a whole number from 1 to 65535`(전에는 70000이 저장되고 연결 시험이 500). DB 오류는 로그에만, 화면에는 `Could not save the order feed settings`. `GET /config` 실패는 `Server error`. `GET /test`는 Host가 비었으면 `No PACS host set`(전에는 EMR 컨테이너 자신을 시험했음).
+     - 화면 `Settings.jsx`(PACS 탭): `pxMessage` — 위 문구와 `tcpCheck` 문구(`TCP connection succeeded`, `Connection timed out`, Node의 `ECONNREFUSED`·`ENOTFOUND`/`EAI_AGAIN`·`ETIMEDOUT`/`EHOSTUNREACH`/`ENETUNREACH`)를 `px_` 문구로, 모르는 것은 `seMessage`로. 연결 시험 줄 끝에 `(호스트:포트)`. 「Checking...」·「Save」 글자도 번역(`px_testing`, 기존 `save`).
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `frontend/src/pages/Settings.jsx`(PACS 탭 부분과 그 위 `savePacs`·`testPacs`·새 `pxMessage`), `wiki/manual-fr/pacs.md`(새), `wiki/reference/changelog-1.5.0/pacs.md`(새), `wiki/modules/pacs.md`(4절 표·오류 문구, 7절 P-9 같은 출처 결정·035, 8절), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 표시 사이에 키 9개. 기존 키 문구 변경 없음. `settingsMessages.js`(설정 세션)는 안 고침 — 거기로 넘기기만 함.
+- **DB 마이그레이션**: 없음
+- **번역 키** (fr / ko)
+  - `px_errTooLong` — 「{f} : trop long ({n} caractères au plus).」 / 「{f}: 너무 깁니다({n}자까지).」
+  - `px_errPort` — 「Le port DICOM doit être un nombre entier de 1 à 65535.」 / 「DICOM 포트는 1~65535 사이의 정수여야 합니다.」
+  - `px_errSave` — 「Les réglages du flux d'ordres n'ont pas été enregistrés. Réessayez ; si cela continue, regardez la fenêtre d'état du serveur.」 / 「오더 연동 설정을 저장하지 못했습니다. 다시 시도하고, 계속되면 서버 상태 창을 보세요.」
+  - `px_testing` — 「Vérification...」 / 「확인 중...」
+  - `px_testOk` — 「Le port DICOM du PACS répond.」 / 「PACS의 DICOM 포트에 연결됩니다.」
+  - `px_testTimeout` — 「Pas de réponse : le serveur PACS est éteint ou l'adresse est fausse.」 / 「응답이 없습니다: PACS 서버가 꺼졌거나 주소가 틀렸습니다.」
+  - `px_testRefused` — 「Rien n'écoute à cette adresse : vérifiez le numéro de port et que le PACS est démarré.」 / 「그 주소에서 PACS가 받지 않습니다: 포트 번호가 맞는지, PACS가 켜져 있는지 보세요.」
+  - `px_testUnknownHost` — 「Adresse introuvable : vérifiez l'orthographe dans Host / IP.」 / 「그런 주소를 찾을 수 없습니다: Host / IP 칸의 철자를 보세요.」
+  - `px_testNoHost` — 「Host / IP est vide. Sur le même PC, saisissez host.docker.internal.」 / 「Host / IP 칸이 비어 있습니다. 같은 PC면 host.docker.internal을 적으세요.」
+- **확인한 방법**: 격리 EMR 9188(develop `de7bc8c` 위에서 빌드, 새 마이그레이션 적용). API — AE 60자 400·포트 70000·4242.5 400·주소 210자 400(각 문구 확인), `orthanc_password`를 보내도 무시(DB 그대로), 연결 시험: Host 빈칸 → `No PACS host set`, 127.0.0.1 → ECONNREFUSED, `no-such-host.invalid` → ENOTFOUND, 10.255.255.1 → timed out. 화면(fr, 관리자): 저장 오류 알림 「Erreur: AE Title : trop long (50 caractères au plus).」·「Erreur: Le port DICOM doit être un nombre entier de 1 à 65535.」, 저장 단추 「Sauver」, 연결 시험 줄 「✗ Pas de réponse : … (orthanc:4242)」. 시험 뒤 설정값 되돌림. 설명서는 화면 그림 없이 글만(규칙 5 — 선택).
+- **확인 못 한 것**: 설명서를 현지 직원이 읽어 본 것. 장비 쪽 메뉴 이름. `px_testRefused`·`px_testUnknownHost` 문구는 API 응답으로만 확인(화면 표시는 같은 함수).
+- **다른 세션에 부탁**
+  - **설정**: 오더 연동 탭 오류는 `pxMessage`가 먼저 보고 모르는 것만 `seMessage`로 넘김 — `settingsMessages.js`에 PACS 문구를 넣을 필요 없음. 서버 상태 창(`status.routes.js` `checkPacs`)은 `tcpCheck` 문구를 따로 쓰므로 영향 없음.
+  - **진료**: `manual-fr/pacs.md` 1·4·7절이 진료 화면을 설명함 — `consultation.md` 7~9절과 말이 어긋나면 알려 주세요.
+  - **총괄**: 설명서·변경 내역 초안 묶을 때 참고. 변경 내역의 「After updating」 1·2는 실행 중 PC에서 이미 한 것(재부팅·PACS 재생성)이라, 다른 병원용 안내로 남김.
+
 ## 2026-09-29 — P-9 C 만듦: EMR이 영상을 중계 (총괄 조건 ①~⑧)
 
 - **상태**: 확인 요청

@@ -959,5 +959,14 @@ export default {
   px_orthancPasswordSet: "Mot de passe du serveur d'images enregistré — la visionneuse s'ouvre sans connexion",
   px_orthancPasswordMissing: "Pas encore de mot de passe du serveur d'images. Sur le PC serveur, lancez pair-with-emr.ps1 dans le dossier du PACS.",
   px_viewerUrlUnused: "n'est plus utilisée (l'EMR affiche les images)",
+  px_errTooLong: "{f} : trop long ({n} caractères au plus).",
+  px_errPort: "Le port DICOM doit être un nombre entier de 1 à 65535.",
+  px_errSave: "Les réglages du flux d'ordres n'ont pas été enregistrés. Réessayez ; si cela continue, regardez la fenêtre d'état du serveur.",
+  px_testing: "Vérification...",
+  px_testOk: "Le port DICOM du PACS répond.",
+  px_testTimeout: "Pas de réponse : le serveur PACS est éteint ou l'adresse est fausse.",
+  px_testRefused: "Rien n'écoute à cette adresse : vérifiez le numéro de port et que le PACS est démarré.",
+  px_testUnknownHost: "Adresse introuvable : vérifiez l'orthographe dans Host / IP.",
+  px_testNoHost: "Host / IP est vide. Sur le même PC, saisissez host.docker.internal.",
   // ── end pacs ──
 };

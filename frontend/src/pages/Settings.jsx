@@ -103,12 +103,36 @@ export default function SettingsPage() {
   function oldPort(url, port){ var m=String(url||'').trim().match(/^[a-z]+:\/\/[^\/:]+:(\d+)(\/|$)/i); return !!m && m[1]===String(port); }
   function pacsTokenShown(v){ return showBridgeToken ? (v||'') : '••••••••'; }
 
+  // Order-feed tab (PACS session): the server's fixed English messages
+  // (pacs.routes.js CONFIG_MSG / configProblem, and utils/tcpCheck.js for the
+  // connection test) in the screen's language. A text not listed here goes on to
+  // seMessage, and is shown as it came if that does not know it either.
+  var PX_FIELD = { worklist_scp_host:'Host / IP', worklist_scp_ae:'AE Title', bridge_token:'Bridge Token' };
+  function pxFieldName(k){ return PX_FIELD[k] || ({emr_base_url:t.emrPublicUrl, pacs_viewer_url:t.pacsViewerUrl, orthanc_url:t.px_orthancUrl})[k] || k; }
+  function pxMessage(msg){
+    var s=String(msg||''), m=s.match(/^(\w+) is too long \(at most (\d+) characters\)$/);
+    if(m && t.px_errTooLong) return t.px_errTooLong.replace('{f}',pxFieldName(m[1])).replace('{n}',m[2]);
+    var known={
+      'DICOM port must be a whole number from 1 to 65535':'px_errPort',
+      'Could not save the order feed settings':'px_errSave',
+      'No PACS host set':'px_testNoHost',
+      'TCP connection succeeded':'px_testOk',
+      'Connection timed out':'px_testTimeout'
+    };
+    if(known[s] && t[known[s]]) return t[known[s]];
+    // Node's own connect errors: "connect ECONNREFUSED 10.0.0.5:4242", "getaddrinfo ENOTFOUND nas" ...
+    if(/ECONNREFUSED/.test(s) && t.px_testRefused) return t.px_testRefused;
+    if(/ENOTFOUND|EAI_AGAIN/.test(s) && t.px_testUnknownHost) return t.px_testUnknownHost;
+    if(/ETIMEDOUT|EHOSTUNREACH|ENETUNREACH/.test(s) && t.px_testTimeout) return t.px_testTimeout;
+    return seMessage(t,s);
+  }
+
   async function savePacs(){
     try {
       var saved = await api.put('/pacs/config', pacsConfig);
       setPacsConfig(saved);
       showToast(t.orderFeedSaved);
-    } catch(err){ alert((t.se_error)+': '+err.message); }
+    } catch(err){ alert((t.se_error)+': '+pxMessage(err.message)); }
   }
 
   function uclin(k,v){ setClinic(function(p){ var n=Object.assign({},p||{}); n[k]=v; return n; }); }
@@ -197,10 +221,13 @@ export default function SettingsPage() {
 
   async function testPacs(target){
     try {
-      setPacsTest(function(p){return Object.assign({},p,{[target]:{message:'Checking...'}})});
+      setPacsTest(function(p){return Object.assign({},p,{[target]:{message:t.px_testing||'Checking...'}})});
       var r = await api.get('/pacs/test?target='+target);
-      setPacsTest(function(p){return Object.assign({},p,{[target]:r})});
-    } catch(err){ setPacsTest(function(p){return Object.assign({},p,{[target]:{ok:false,message:err.message}})}); }
+      // The address tested stays in the line: the translated sentence alone would not
+      // say which host was wrong.
+      var where = r.host ? ' ('+r.host+':'+r.port+')' : '';
+      setPacsTest(function(p){return Object.assign({},p,{[target]:Object.assign({},r,{message:pxMessage(r.message)+where})})});
+    } catch(err){ setPacsTest(function(p){return Object.assign({},p,{[target]:{ok:false,message:pxMessage(err.message)}})}); }
   }
 
   async function saveEdit(){
@@ -668,7 +695,7 @@ export default function SettingsPage() {
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
               <div style={{fontWeight:800,fontSize: 16,color:tx}}>🔗 {t.orderFeedTitle}</div>
               <div style={{flex:1}}></div>
-              <button onClick={savePacs} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 14,fontWeight:700}}>Save</button>
+              <button onClick={savePacs} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 14,fontWeight:700}}>{t.save||'Save'}</button>
             </div>
             <div style={{fontSize: 14,color:t2,marginBottom:12,lineHeight:1.6}}>
               {t.feedIntroA}<b style={{color:tx}}>{t.feedIntroB}</b>{t.feedIntroC}<br/>
