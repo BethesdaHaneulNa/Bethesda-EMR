@@ -54,19 +54,20 @@ export default function StatsPage(){
   // the default half-way through a change. A start after the end is ignored.
   function setDrugFrom(v){ var to=drugRange.to||(drugUsage&&drugUsage.to)||''; if(v&&(!to||v<=to)) setDrugRange({ from:v, to:to }); }
   function setDrugTo(v){ var from=drugRange.from||(drugUsage&&drugUsage.from)||''; if(v&&(!from||from<=v)) setDrugRange({ from:from, to:v }); }
+  function packWord(l){ return t['ph_pack_'+l] || ({ bottle:'병', tube:'튜브', inhaler:'흡입기', unit:'개' })[l] || l; }
   function fmtQty(n){ n=Number(n)||0; return Math.round(n*10)/10===Math.round(n)?String(Math.round(n)):String(Math.round(n*10)/10); }
   function exportDrugCsv(){
     if(!drugUsage) return;
     var P = drugUsage.periods||[], D = drugUsage.drugs||[];
-    var head = ['code','drug','category'].concat(P).concat(['total']);
+    var head = ['code','drug','category','unit'].concat(P).concat(['total']);
     var lines = [head.join(',')];
     D.forEach(function(d){
-      var row = ['"'+(d.drug_code||'')+'"','"'+(d.drug_name||'').replace(/"/g,'""')+'"','"'+(d.category||'')+'"']
+      var row = ['"'+(d.drug_code||'')+'"','"'+(d.drug_name||'').replace(/"/g,'""')+'"','"'+(d.category||'')+'"','"'+(d.pack_label?packWord(d.pack_label):'')+'"']
         .concat(P.map(function(p){ return d.by_period[p]||0; }))
         .concat([d.total_qty]);
       lines.push(row.join(','));
     });
-    var totals = ['"TOTAL"','',''].concat(P.map(function(p){ return (drugUsage.periodTotals||{})[p]||0; })).concat([drugUsage.grandTotal||0]);
+    var totals = ['"TOTAL"','','',''].concat(P.map(function(p){ return (drugUsage.periodTotals||{})[p]||0; })).concat([drugUsage.grandTotal||0]);
     lines.push(totals.join(','));
     var blob = new Blob(["﻿"+lines.join('\n')], {type:'text/csv;charset=utf-8'});
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -292,6 +293,9 @@ export default function StatsPage(){
                     {(drugUsage.drugs||[]).map(function(d,i){ return <tr key={i} style={{ borderBottom:'1px solid #1a1f2e' }}>
                       <td style={{ padding:'6px 10px', position:'sticky', left:0, background:scBg, borderRight:'1px solid '+bd }}>
                         <span style={{ color:tx, fontWeight:700 }}>{d.drug_name}</span>
+                        {/* Pack-unit line: the quantity is bottles/tubes, not doses. The unit
+                            words are the pharmacy's (ph_pack_*), as on the drug list. */}
+                        {d.pack_label?<span style={{ marginLeft:6, fontSize:11, color:'#fbbf24', border:'1px solid #f59e0b60', borderRadius:3, padding:'0 4px' }}>{packWord(d.pack_label)}</span>:null}
                         <span style={{ color:t3, fontFamily:'monospace', fontSize:11, marginLeft:6 }}>{d.drug_code!=='-'?d.drug_code:''}</span>
                       </td>
                       {(drugUsage.periods||[]).map(function(p){ var val=d.by_period[p]; return <td key={p} style={{ padding:'6px 10px', textAlign:'right', fontFamily:'monospace', color:val?t2:'#3a4253' }}>{val?fmtQty(val):'·'}</td>; })}
