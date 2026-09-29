@@ -5,7 +5,7 @@
 ## 2026-09-29 — 위키 정리: 문제 9(진료 화면 lab 오더 상태 칸) 해결됨으로
 
 - **상태**: 확인 요청 (위키만)
-- **커밋**: session/laboratory — 이 항목과 같은 커밋(출발점 `develop` `5c0bd43`)
+- **커밋**: session/laboratory `28ea7f8` (출발점 `develop` `5c0bd43`)
 - **한 일**: 진료 세션 `f48cec9`로 진료 화면이 lab 오더에 `o.status`(완료/취소)를 보여주게 된 것을 확인(`Consultation.jsx`의 `code_type==='lab'` 분기) — `modules/laboratory.md` 5절 설명과 7절 문제 9를 해결됨으로.
 - **바꾼 파일**: `wiki/modules/laboratory.md` · 이 노트 · **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
 - **확인한 방법**: 코드 읽기. **확인 못 한 것**: 진료 화면을 직접 눌러 보지는 않음(진료 세션이 확인 중).
