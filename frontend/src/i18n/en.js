@@ -968,5 +968,14 @@ export default {
   px_orthancPasswordSet: "Image server password set — the image window opens without a login",
   px_orthancPasswordMissing: "No image server password yet. On the server PC, run pair-with-emr.ps1 in the PACS folder.",
   px_viewerUrlUnused: "no longer used (the EMR shows the images)",
+  px_errTooLong: "{f}: too long (at most {n} characters).",
+  px_errPort: "The DICOM port must be a whole number from 1 to 65535.",
+  px_errSave: "The order feed settings could not be saved. Try again; if it keeps failing, look at the server status window.",
+  px_testing: "Checking...",
+  px_testOk: "The PACS DICOM port answers.",
+  px_testTimeout: "No answer: the PACS server is off or the address is wrong.",
+  px_testRefused: "Nothing is listening at that address: check the port number and that the PACS is running.",
+  px_testUnknownHost: "That address cannot be found: check the spelling in Host / IP.",
+  px_testNoHost: "Host / IP is empty. On the same PC, enter host.docker.internal.",
   // ── end pacs ──
 };
