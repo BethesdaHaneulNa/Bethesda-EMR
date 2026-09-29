@@ -74,6 +74,15 @@ async function nextReceiptNo(client) {
 // ordered (possible through an order set) is an order_item, so it is on both sides
 // of the comparison and is not a counter fee. GET /pending and buildCorrection()
 // both use this one definition.
+//
+// CANCELLED orders stay in this list on purpose (decision 3-B, 2026-09-29: an order
+// with results is cancelled, not deleted, and leaves the bill). A fee-type order
+// that was billed and then cancelled is still an order line on the old bill; if it
+// dropped out of this list its billing line would read as a counter fee, be taken
+// out of "billed" as well as out of "now", and the refund it is owed would never
+// show. Kept here, "billed" stays higher than "now" and the visit shows as a
+// refund, and the correction does not carry it over as a counter fee.
+// Known limit, as before: the same code both ordered and added at the counter.
 function counterFeeCond(itemAlias, visitRef) {
   return itemAlias + ".item_type = 'fee' AND COALESCE(" + itemAlias + ".item_code,'') NOT IN " +
     "(SELECT COALESCE(o.order_code,'') FROM order_item o WHERE o.visit_id = " + visitRef + ')';
@@ -108,7 +117,7 @@ router.get('/pending', canPay, async (req, res) => {
            + COALESCE((SELECT SUM(COALESCE(p.total_qty,0)*COALESCE(p.unit_price,0))
                          FROM prescription p WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id=v.id)
                                AND COALESCE(p.dispense_type,'internal') <> 'external'),0)
-           + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id),0)
+           + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id AND COALESCE(o.status,'') <> 'cancelled'),0)
            ) AS live_total,
            COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0)
            - COALESCE((SELECT SUM(bi.total_price) FROM billing_item bi JOIN billing b ON b.id = bi.billing_id
@@ -215,7 +224,8 @@ router.get('/visit/:visitId/items', canPay, async (req, res) => {
       [req.params.visitId]
     );
     const orderResult = await pool.query(
-      'SELECT * FROM order_item WHERE visit_id = $1',
+      // cancelled orders (3-B) are not billed; their results stay on record elsewhere
+      "SELECT * FROM order_item WHERE visit_id = $1 AND COALESCE(status,'') <> 'cancelled'",
       [req.params.visitId]
     );
     const visitResult = await pool.query('SELECT visit_type FROM visit WHERE id = $1', [req.params.visitId]);
@@ -545,7 +555,7 @@ async function buildCorrection(db, visitId) {
   if (missing.length) throw { status: 409, error: QTY_MISSING + ': ' + missing.map(function (r) { return r.drug_name; }).join(', ') };
   const orders = await db.query(
     `SELECT order_code, order_name, code_type, COALESCE(quantity,1) AS qty, COALESCE(unit_price,0) AS unit_price
-       FROM order_item WHERE visit_id = $1 ORDER BY id`,
+       FROM order_item o WHERE o.visit_id = $1 AND COALESCE(o.status,'') <> 'cancelled' ORDER BY o.id`,
     [visitId]
   );
   // Counter fees are kept as billed; a fee-type code the doctor ordered is already

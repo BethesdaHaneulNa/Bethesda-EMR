@@ -173,7 +173,7 @@
 |---|---|---|---|
 | 진료비 | `consult_fee` | 내원 종류 → 오더 코드 `C01`(초진) `C02`(재진)의 `price_clinic`, `none`이면 0. 화면에서 계산. 내원구분은 2026-09-29 실장님 결정으로 **초진·재진·진료비 없음** 세 가지 — 수납 화면 선택지도 셋. 서버의 `VISIT_TYPES`와 `C03`(응급)·`C04`(의뢰) 코드, 옛 기록은 그대로라 예전 내원은 C03·C04 가격으로 계산되고 화면에 「(옛 값)」으로 보임(다시 고를 수 없음). 정정은 서버가 저장된 종류로 계산 | `Payment.jsx` `consultFee()` |
 | 약값 | `drug_total` | Σ `total_qty` × `unit_price`. **`total_qty`는 진료가 처방을 저장할 때 계산해 넣은 값 그대로** — 수납은 계산식을 갖지 않음(2026-09-29, 아래). **원외 처방(`dispense_type='external'`)은 제외** | `Payment.jsx` `rxQty()`·`drugTotal()`, `billing.routes.js` `/visit/:id/items` |
-| 처치·검사 | `procedure_total` | Σ `order_item.quantity × unit_price` **+ 발급비(수납에서 추가한 fee 항목)** | `Payment.jsx` `procTotal()`·`extraTotal()`·`doConfirmNow()` |
+| 처치·검사 | `procedure_total` | Σ `order_item.quantity × unit_price`(**취소된 오더 제외** — 2026-09-29 결정 3-B) **+ 발급비(수납에서 추가한 fee 항목)** | `Payment.jsx` `procTotal()`·`extraTotal()`·`doConfirmNow()` |
 | 소계 | `subtotal` | 이번에 **새로** 청구하는 항목의 합 (`chargeRows()`). 첫 수납이면 전부, 추가 청구면 차액만 | `Payment.jsx` `chargeRows()` |
 | 할인 | `discount_amount` | 직원이 넣은 금액(화면은 금액 할인만 씀. `percent` 계산 코드는 있으나 쓰이지 않음) | `Payment.jsx` `discountAmt()` |
 | 이전 미수 | `previous_balance` | 이 환자의 취소 안 된 영수의 `outstanding` 합 (서버 `/pending`이 계산해서 화면에 줌) | `billing.routes.js` `/pending` |
@@ -192,7 +192,7 @@
 
 ### 3.2 추가 청구 (수납 뒤 처방·오더가 늘어난 경우)
 
-- 서버 `/pending`이 내원마다 **지금 금액**(`live_total`: 진료비+원내약+오더)과 **이미 청구한 금액**(`billed_total`: 취소 안 된 영수의 `consult_fee+drug_total+procedure_total`)을 비교합니다(`billing.routes.js` `/pending`의 `live` CTE). **창구 발급비는 이 비교에서 뺍니다**(2026-09-29, H6 — 실장님 결정): 「이미 청구한 금액」에서 창구 발급비를 빼고 비교합니다. 창구 발급비 = `billing_item.item_type='fee'`이면서 **그 내원의 오더(`order_item`)에 없는 코드**(`counterFeeCond()`). 진료실이 오더 세트로 fee 코드를 오더한 경우는 오더이므로 양쪽에 다 있어 빼지 않습니다. 정정 계산(`buildCorrection()`)도 같은 함수로 「유지할 발급비」를 고릅니다 — 판정과 정정이 한 기준을 씁니다. 예전에는 발급비를 받은 내원이 발급비만큼 「정정(환불)」로 계속 떴고, 발급비 + 약이 **늘어난** 내원도 「정정」으로 떴습니다.
+- 서버 `/pending`이 내원마다 **지금 금액**(`live_total`: 진료비+원내약+오더)과 **이미 청구한 금액**(`billed_total`: 취소 안 된 영수의 `consult_fee+drug_total+procedure_total`)을 비교합니다(`billing.routes.js` `/pending`의 `live` CTE). **창구 발급비는 이 비교에서 뺍니다**(2026-09-29, H6 — 실장님 결정): 「이미 청구한 금액」에서 창구 발급비를 빼고 비교합니다. 창구 발급비 = `billing_item.item_type='fee'`이면서 **그 내원의 오더(`order_item`)에 없는 코드**(`counterFeeCond()`). 진료실이 오더 세트로 fee 코드를 오더한 경우는 오더이므로 양쪽에 다 있어 빼지 않습니다. 정정 계산(`buildCorrection()`)도 같은 함수로 「유지할 발급비」를 고릅니다 — 판정과 정정이 한 기준을 씁니다. 예전에는 발급비를 받은 내원이 발급비만큼 「정정(환불)」로 계속 떴고, 발급비 + 약이 **늘어난** 내원도 「정정」으로 떴습니다. **취소된 오더**(`order_item.status='cancelled'`, 결과가 있는 잘못 낸 오더를 진료실이 취소로 표시 — 결정 3-B)는 「지금 금액」에서 빠집니다. 이미 수납한 내원이면 그만큼 「정정(환불)」로 뜨고, 정정도 그 오더를 빼고 계산합니다. 단 `counterFeeCond()`의 오더 목록에는 **취소된 오더도 남겨 둡니다** — 빼면 수납 뒤 취소된 fee 코드 오더(오더 세트로 낸 CERT 등)의 청구 줄이 「창구 발급비」로 잘못 분류되어 양쪽에서 빠지고 환불이 안 뜨기 때문(격리 스택 확인: 남겨 두면 환불 8,000이 뜸).
   - `live − billed > 0.01` → `needs_additional` (목록에 「추가 청구」, 차액 `extra_due`)
   - `billed − live > 0.01` → `needs_refund` (목록에 「정정(환불)」, `refund_due`)
 - 화면의 `chargeRows()`는 `/billing/visit/:id/items`가 준 `billed_items`(이미 청구된 코드별 수량·금액)를 **코드·수량 단위로 빼서** 새로 청구할 줄만 만듭니다. 진료비는 금액 차이만큼(진료 종류를 올렸을 때 차액).
@@ -314,7 +314,7 @@
 | `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 `paid`/`waived` 영수가 없는 내원 + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid` |
 | `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함** |
 | `GET /:billingId/detail` | 영수 1장 + `billing_item` + `carried_from`(이 영수가 미수를 넘겨받은 옛 영수: `receipt_no` · `billing_date` · `amount`). 영수에는 `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date`도 붙음(영수증용, 2026-09-29) |
-| `GET /visit/:visitId/items` | 청구할 원내 처방·오더, `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 살아 있는 영수 id `active_bill_ids` |
+| `GET /visit/:visitId/items` | 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 살아 있는 영수 id `active_bill_ids` |
 | `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
 | `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함) |
 | `PUT /:billingId/void` | 영수 취소 `{reason}` |
@@ -366,7 +366,7 @@
 
 ## 5. 다른 모듈과의 연결
 
-- **진료 → 수납**: 진료 완료(`PUT /api/consultations/:id/complete`)가 `visit.status='completed'`로 바꾸면 수납 대기에 뜹니다. 수납 뒤 진료실이 처방·오더를 고치면 추가 청구/정정 표시로 나타납니다(진료실의 처방·오더 삭제는 행을 지웁니다 — `consult.routes.js:187,302`).
+- **진료 → 수납**: 진료 완료(`PUT /api/consultations/:id/complete`)가 `visit.status='completed'`로 바꾸면 수납 대기에 뜹니다. 수납 뒤 진료실이 처방·오더를 고치면 추가 청구/정정 표시로 나타납니다(진료실의 처방·오더 삭제는 행을 지웁니다 — `consult.routes.js:187,302`). 결과가 있는 오더는 지우지 않고 **취소로 표시**(`order_item.status='cancelled'`, 진료 세션의 취소 API) — 수납은 취소된 오더를 청구·목록·정정에서 뺍니다. 결과·판독은 기록으로 남습니다(임상병리·PACS 쪽).
 - **약국**: 원외 처방(`dispense_type='external'`)은 수납에서 청구하지 않습니다. 약국 서버(`pharmacy.routes.js`)는 `billing`을 읽지 않으므로 수납 전에도 조제할 수 있습니다 — 그래야 하는지는 확인 필요.
 - **접수**: `Registration.jsx:66`이 `GET /api/billing/patient/:id/balance`로 환자의 미수/환불 예정을 보여줍니다. `visit.routes.js`의 `GET /api/visits/patient/:id`가 내원마다 최신 영수 상태·번호·총액을 붙여 줍니다. `patient.routes.js`의 `GET /api/patients/:id/billing-history`도 있으나 화면에서 쓰는 곳은 없습니다.
 - **통계** (`stats.routes.js`, 모두 `payment_status <> 'cancelled'`):
@@ -462,4 +462,5 @@
 | 2026-09-29 | 과거 내원 패널의 처방 줄이 하루 총량 기준 문장, 예전 계산 줄 표시 | `rx-dosing.js` 사용 (4절) | `2a252b3` |
 | 2026-09-29 | 2절에 오늘 바뀐 안내 반영, 이 변경 기록 정리 | 위키만 | `527bda4` |
 | 2026-09-29 | 진료비 선택지가 초진 · 재진 · 진료비 없음 셋(실장님 결정). 옛 응급·의뢰 내원은 「(옛 값)」으로 보이고 금액 그대로 | 화면 선택지만, 서버·코드표·옛 기록 그대로 (3.1) | `71df1e6` |
-| 2026-09-29 | 「진료비 없음」 표기 통일(Sans frais, 총괄의 공용 키 변경)에 맞춰 2.2 고침, 진료비 없음 내원의 영수증 모양 확인 기록 | 위키만 (3.4) | (이 커밋) |
+| 2026-09-29 | 「진료비 없음」 표기 통일(Sans frais, 총괄의 공용 키 변경)에 맞춰 2.2 고침, 진료비 없음 내원의 영수증 모양 확인 기록 | 위키만 (3.4) | `4374be4` |
+| 2026-09-29 | 진료실이 취소로 표시한 오더(결정 3-B)는 청구·목록·정정에서 빠짐. 수납 뒤 취소되면 「정정(환불)」로 뜸 | `order_item` 합산 3곳에 `status <> 'cancelled'`, `counterFeeCond()`는 취소된 오더 포함 유지 (3.2) | (이 커밋) |
