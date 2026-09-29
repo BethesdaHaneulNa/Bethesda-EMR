@@ -14,6 +14,7 @@ import { perDose, doseSentence, fmtAmount, isLegacyTotal } from '../documents/rx
 var LOCK_MESSAGES = {
   'Prescription already dispensed': 'cs_rxLocked',
   'Order already has a result': 'cs_orderLocked',
+  'Visit was cancelled': 'cs_visitCancelled',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -213,7 +214,12 @@ export default function ConsultationPage() {
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
       setHistory(h.filter(function(c){ return c.id !== cData.id; }));
-    } catch(err){ console.error(err); }
+    } catch(err){
+      // A visit reception cancelled is refused by the server (409); tell the doctor
+      // instead of leaving a patient bar with nothing under it.
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+      else console.error(err);
+    }
   }
 
   async function openPast(h){

@@ -341,6 +341,7 @@ export default {
   cs_noDoseConfirm: "{n} médicament(s) sans dose par jour : {names}\n\nIls partiront à la pharmacie et à la caisse avec un total de 0. Terminer quand même la consultation ?",
   cs_setSkippedHidden: "Non ajouté(s) - retiré(s) de la liste des médicaments : {names}\nCherchez un autre médicament si nécessaire.",
   cs_setHiddenDrug: "Retiré de la liste - non ajouté quand l'ordonnance type est appliquée",
+  cs_visitCancelled: "Cette visite a été annulée à l'accueil : la consultation ne peut pas être ouverte.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

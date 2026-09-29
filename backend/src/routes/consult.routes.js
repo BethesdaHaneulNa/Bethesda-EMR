@@ -36,6 +36,7 @@ function badRoute(route) {
 // step with LOCK_MESSAGES in frontend/src/pages/Consultation.jsx.
 const RX_DISPENSED = 'Prescription already dispensed';
 const ORDER_HAS_RESULT = 'Order already has a result';
+const VISIT_CANCELLED = 'Visit was cancelled';
 
 // POST /api/consultations - start or reopen consultation
 router.post('/', canConsult, async (req, res) => {
@@ -48,6 +49,14 @@ router.post('/', canConsult, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'visit_id and patient_id are required' });
     }
+
+    // A cancelled visit stays cancelled. Opening one (it can be picked from the patient's
+    // visit list) used to create a consultation and flip the visit to in_progress,
+    // bringing back a visit reception had cancelled. The row is locked so a
+    // cancellation landing at the same moment is seen.
+    const vis = await client.query('SELECT status, visit_date FROM visit WHERE id = $1 FOR UPDATE', [visit_id]);
+    if (vis.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
+    if (vis.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return res.status(409).json({ error: VISIT_CANCELLED }); }
 
     // Reuse an existing consultation for this visit instead of creating duplicates
     // every time the doctor clicks the same waiting patient.
@@ -69,10 +78,12 @@ router.post('/', canConsult, async (req, res) => {
 
     // First time this visit is opened for consultation.
     await client.query("UPDATE visit SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [visit_id]);
+    // consult_date is the visit's date, not today: a visit from an earlier day written
+    // up late belongs on that day in the history and the statistics.
     const result = await client.query(
-      `INSERT INTO consultation (visit_id, patient_id, doctor_id, department_id)
-       VALUES ($1,$2,$3,$4) RETURNING *`,
-      [visit_id, patient_id, req.user.id, department_id || req.user.department_id]
+      `INSERT INTO consultation (visit_id, patient_id, doctor_id, department_id, consult_date)
+       VALUES ($1,$2,$3,$4,COALESCE($5::date, CURRENT_DATE)) RETURNING *`,
+      [visit_id, patient_id, req.user.id, department_id || req.user.department_id, vis.rows[0].visit_date]
     );
     await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
@@ -87,13 +98,20 @@ router.post('/', canConsult, async (req, res) => {
 // PUT /api/consultations/:id - save consultation note
 router.put('/:id', canConsult, async (req, res) => {
   try {
-    const { subjective, objective, assessment, plan, note_text,
-            bp_systolic, bp_diastolic, temperature, pulse, spo2, respiratory_rate, weight, height } = req.body;
+    // Only the fields present in the request are written. The screen sends the note and
+    // the vital signs; setting every other column from an absent key wrote NULL into
+    // subjective/objective/assessment/plan/weight/height on every save. A key sent as
+    // null still clears its field (an emptied vital sign).
+    const FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
+      'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
+    const sets = [], vals = [];
+    FIELDS.forEach(function (f) {
+      if (Object.prototype.hasOwnProperty.call(req.body, f)) { vals.push(req.body[f]); sets.push(f + '=$' + vals.length); }
+    });
+    vals.push(req.params.id);
     const result = await pool.query(
-      `UPDATE consultation SET subjective=$1, objective=$2, assessment=$3, plan=$4, note_text=$5,
-       bp_systolic=$6, bp_diastolic=$7, temperature=$8, pulse=$9, spo2=$10, respiratory_rate=$11, weight=$12, height=$13,
-       updated_at=NOW() WHERE id=$14 RETURNING *`,
-      [subjective, objective, assessment, plan, note_text, bp_systolic, bp_diastolic, temperature, pulse, spo2, respiratory_rate, weight, height, req.params.id]
+      `UPDATE consultation SET ${sets.concat(['updated_at=NOW()']).join(', ')} WHERE id=$${vals.length} RETURNING *`,
+      vals
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
@@ -295,13 +313,9 @@ router.post('/:id/orders', canConsult, async (req, res) => {
       }
     }
 
-    await client.query(`CREATE TABLE IF NOT EXISTS pacs_config (
-      id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-      worklist_scp_host VARCHAR(100) DEFAULT '192.168.0.222', worklist_scp_port INTEGER DEFAULT 10004, worklist_scp_ae VARCHAR(50) DEFAULT 'BROKER',
-      bridge_token VARCHAR(100) DEFAULT 'change-me-bridge-token', emr_base_url VARCHAR(200) DEFAULT '',
-      auto_create_worklist BOOLEAN DEFAULT TRUE, facility_name VARCHAR(100) DEFAULT 'Yonsei Shintong Clinic', notes TEXT,
-      updated_by INTEGER, updated_at TIMESTAMPTZ DEFAULT NOW())`);
-    await client.query('INSERT INTO pacs_config (id) VALUES (1) ON CONFLICT (id) DO NOTHING');
+    // pacs_config and its one row come from 001_schema.sql. (This used to re-create the
+    // table on every order, with another clinic's old defaults; removed 2026-09-29.)
+    // No row at all reads as the default, auto_create_worklist on.
     const cfgResult = await client.query('SELECT * FROM pacs_config WHERE id = 1');
     const cfg = cfgResult.rows[0] || {};
     // Do not auto-fill station AE from device names. Multiple US rooms/devices can

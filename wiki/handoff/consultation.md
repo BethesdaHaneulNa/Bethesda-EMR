@@ -2,6 +2,37 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 열린 낮은 항목: ⑫(일부) · ⑬ · ⑰ · ⑲
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — 출발 develop `5f4fded`(DB 연결 시간대 수정 포함)
+- **한 일** (총괄 승인 목록 그대로):
+  - ⑫(a) **취소된 내원은 열지 않음**: `POST /consultations`가 내원을 `FOR UPDATE`로 읽고, `cancelled`면 409 `Visit was cancelled`, 없으면 404를 돌려줍니다. 전에는 진료가 생기고 내원이 `in_progress`로 되살아났습니다. 화면은 이 거절을 「접수에서 취소된 내원입니다…」로 알리고 환자 막대를 비웁니다. 전에는 콘솔에만 오류가 남고 빈 화면이었습니다.
+  - ⑫(b) 오늘이 아닌 내원에 진료를 새로 만들면 `consult_date`가 **내원 날짜**가 됩니다. 전에는 오늘이었습니다.
+  - ⑬ `PUT /consultations/:id`는 **요청에 들어 있는 칸만** 바꿉니다. `null`을 보낸 칸은 비웁니다.
+  - ⑰ 문서 발행일을 **브라우저 현지 날짜**로 바꿨습니다(전에는 `toISOString()` UTC). 총괄 말씀대로 먼저 확인해 보니, 이 값은 SQL이 아니라 화면(브라우저)에서 만듭니다. 그래서 DB 시간대 수정으로는 고쳐지지 않고, 서버 도구 `todayLocal`도 쓸 수 없어 브라우저 날짜로 계산했습니다.
+  - ⑲ 오더를 넣을 때마다 돌던 `CREATE TABLE IF NOT EXISTS pacs_config …`(옛 병원 기본값 포함)와 `INSERT … ON CONFLICT`를 지웠습니다. 001이 만든 줄을 읽기만 하고, 줄이 없으면 자동 생성을 켠 것으로 봅니다(전과 같은 결과).
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**:
+  - `frontend/src/components/DocumentModal.jsx` — 발행일 계산 한 곳(⑰). 다섯 화면의 문서 발행일에 모두 적용됩니다.
+  - `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `cs_visitCancelled` 1개 추가
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_visitCancelled` (ko · en · fr)
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 격리 스택 9182(develop `5f4fded` 기준으로 다시 빌드)에서 확인했습니다.
+  - API 시험 15개 전부 통과:
+    - 취소된 내원 → 409, 내원은 여전히 cancelled, 진료가 생기지 않음. 없는 내원 → 404.
+    - 3일 전 내원 → `consult_date` = 내원 날짜. 오늘 내원 → 오늘, `in_progress`.
+    - S·체중을 넣은 뒤 화면처럼 기록·바이탈만 저장해도 S·체중이 남음. `bp_systolic: null`이면 비워짐. 빈 몸체 PUT이면 그대로.
+    - 영상 오더 201, 워크리스트 생성.
+  - 잠금·총량 시험도 다시 돌려 통과했습니다.
+  - 화면(프랑스어): 「Trouver patient」에서 26-00010의 내원 3개를 차례로 골랐습니다. 취소된 내원은 409와 함께 « Cette visite a été annulée à l'accueil… » 알림이 뜨고 환자 막대가 비었습니다. 나머지 둘은 정상으로 열렸습니다.
+  - ⑰: `TZ=Indian/Antananarivo`에서 현지 00:30으로 계산해 보니, 옛 식은 전날(09-29), 새 식은 당일(09-30)이 나왔습니다.
+- **확인 못 한 것**: ⑰은 실제로 새벽에 발급해 보지 않았습니다(시간대를 맞춘 계산으로 확인). 병원 PC 시계가 틀리면 날짜도 틀립니다.
+- **위키**: `modules/consultation.md` 머리 상태, 2.12(취소된 내원 안내), 3.2(`POST /`, `PUT /:id`, `POST /:id/orders`), 3.5(발행일), 7.2 ⑫ 일부 ✅ · ⑬ ⑰ ⑲ ✅, 8절
+- **총괄 확인 요청**: 없음. 결정이 필요한 ⑩ · ⑫ 나머지 · ⑭ · ⑱ · ⑳은 결정 세션으로 넘어갔습니다.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 다음은 결과 있는 검사 오더 「취소」(임상병리·수납과 같은 배포)입니다.
+
 ## 2026-09-29 — 빈 입력에 500 대신 400 (진료 API)
 
 > **총괄 확인 (2026-09-29)**: 빈 입력 400 `f52df58` 합침(`47b9574`) + 실행 중 EMR 반영. 실행 중 EMR: 빈 처방·진단·오더 POST 모두 400과 읽을 수 있는 문구, 처방 6·진단 0·오더 7건 전후 같음.
