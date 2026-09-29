@@ -14,7 +14,7 @@ if ($LASTEXITCODE -ne 0) { Write-Host "[!] Start Docker Desktop first, then run 
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
 New-Item -ItemType Directory -Force -Path "_pre-update-backups" | Out-Null
 $backup = "_pre-update-backups\preupdate_$stamp.sql.gz"
-Write-Host "[1/4] Backing up the database -> $backup"
+Write-Host "[1/5] Backing up the database -> $backup"
 # pipefail: a pipeline reports the status of its last command, so without it a failed
 # pg_dump exits 0 (gzip was fine) and we would update on top of an empty safety backup.
 # gzip -t proves the archive is whole. $ErrorActionPreference does NOT catch a native
@@ -33,7 +33,7 @@ if (-not (Test-Path $backup) -or (Get-Item $backup).Length -eq 0) {
 }
 
 # 2) Get the latest version
-Write-Host "[2/4] Getting the latest version..."
+Write-Host "[2/5] Getting the latest version..."
 if (Test-Path ".git") {
   git fetch origin --tags --quiet
   $tag = git tag --sort=-v:refname | Select-Object -First 1
@@ -56,17 +56,34 @@ if (Test-Path ".git") {
 }
 
 # 3) Rebuild & restart
-Write-Host "[3/4] Rebuilding and restarting (this can take a few minutes)..."
+Write-Host "[3/5] Rebuilding and restarting (this can take a few minutes)..."
 docker compose up -d --build
 docker restart bethesda-emr-web | Out-Null
 
 # 4) Verify
-Write-Host "[4/4] Verifying..."
+Write-Host "[4/5] Verifying..."
 Start-Sleep -Seconds 8
 $ok = $false
 for ($i = 0; $i -lt 15; $i++) {
   try { if ((Invoke-RestMethod 'http://localhost:9080/api/health' -TimeoutSec 3).status -eq 'ok') { $ok = $true; break } } catch {}
   Start-Sleep -Seconds 3
 }
-if ($ok) { Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green }
-else { Write-Host "`n[!] Health check did not pass. Your data is safe. To restore if needed:`n    $backup`n    (see DEPLOYMENT.md - Restore)" -ForegroundColor Yellow }
+if (-not $ok) {
+  Write-Host "`n[!] Health check did not pass. Your data is safe. To restore if needed:`n    $backup`n    (see DEPLOYMENT.md - Restore)" -ForegroundColor Yellow
+  exit 1
+}
+
+# 5) A backup of the database as it is now. The one taken in step 1 is of the old
+# version, and a backup restores with the usual steps only onto the version that made
+# it (DEPLOYMENT.md 5b): without this, until tonight's automatic backup every backup
+# on this PC would be older than the app. Made by the app's own backup code, so it has
+# the usual name and place and appears in Settings > Backup.
+Write-Host "[5/5] Backing up the updated database..."
+$post = docker exec bethesda-emr-api node src/services/backup-cli.js update
+if ($LASTEXITCODE -eq 0) {
+  Write-Host "      -> $post"
+  Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green
+} else {
+  Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green
+  Write-Host "[!] But the backup after the update failed. Open Settings > Backup and press 'Back up now' (Sauvegarder)." -ForegroundColor Yellow
+}

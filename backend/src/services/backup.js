@@ -76,10 +76,11 @@ function prune(days) {
 // Anything in WORK_DIR when no backup is running is the remains of one that was
 // interrupted (container stopped, power cut). It was never moved into DIR, so it was
 // never a backup; this only reclaims the space.
-function clearWorkDir() {
+function clearWorkDir(dir) {
+  const d = dir || WORK_DIR;
   try {
-    if (!fs.existsSync(WORK_DIR)) return;
-    fs.readdirSync(WORK_DIR).forEach(f => { try { fs.unlinkSync(path.join(WORK_DIR, f)); } catch (e) {} });
+    if (!fs.existsSync(d)) return;
+    fs.readdirSync(d).forEach(f => { try { fs.unlinkSync(path.join(d, f)); } catch (e) {} });
   } catch (e) {}
 }
 
@@ -92,14 +93,18 @@ let lastAttempt = null;
 // request waits for the first and gets its result.
 let running = null;
 
-function dumpOnce(trigger) {
+// workDir: where the dump is written before it is proven complete. The server always uses
+// WORK_DIR. backup-cli.js (run by update.ps1/update.sh in its own process, which cannot see
+// `running` below) passes a folder of its own, so neither can clear the other's file.
+function dumpOnce(trigger, workDir) {
+  const wdir = workDir || WORK_DIR;
   return new Promise((resolve) => {
     const c = cfg();
     if (!fs.existsSync(DIR)) return resolve({ ok: false, error: 'backup directory not mounted' });
-    try { fs.mkdirSync(WORK_DIR, { recursive: true }); } catch (e) { return resolve({ ok: false, error: e.message }); }
-    clearWorkDir();
+    try { fs.mkdirSync(wdir, { recursive: true }); } catch (e) { return resolve({ ok: false, error: e.message }); }
+    clearWorkDir(wdir);
     const name = `${PREFIX}${stamp()}.sql.gz`;
-    const work = path.join(WORK_DIR, name);
+    const work = path.join(wdir, name);
     const env = Object.assign({}, process.env, { PGPASSWORD: process.env.DB_PASSWORD || '' });
     // `set -o pipefail` matters: a pipeline reports the status of its LAST command,
     // so without it a pg_dump that dies half way through still exits 0 (gzip
@@ -212,4 +217,4 @@ function startScheduler() {
   setInterval(tick, 60000);
 }
 
-module.exports = { cfg, listBackups, runBackup, startScheduler, resolveBackup, health, STALE_HOURS };
+module.exports = { cfg, listBackups, runBackup, startScheduler, resolveBackup, health, STALE_HOURS, dumpOnce };
