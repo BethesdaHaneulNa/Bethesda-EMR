@@ -2,6 +2,38 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑱ 차트번호 해마다 1번부터: 구현 (실장님 결정, 설계 메모 B안)
+
+- **상태**: 확인 요청 — 단 **설계 메모(아래 항목 `5d53bc0`)의 질문 3개에 총괄 답이 아직 없음**. 규칙(「답이 없어도 다음 일을 계속」)대로 B안으로 구현함. B안이 아니면 합치기 전에 알려 주세요 — 되돌리기 쉽게 만듦(옛 시퀀스 남김, 데이터 안 바꿈)
+  · 질문: ① B안 ② 옛 시퀀스 남기기(그렇게 함) ③ 올해는 지금 번호에 이어 가기(그렇게 함)
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`d092373` 위, `develop` ff 뒤)
+- **한 일**:
+  - **새 마이그레이션 `backend/sql/101_reception_chart_no_yearly.sql`**(접수 번호대 — 합칠 때 총괄이 다시 매김)
+    · 인자 없는 옛 `generate_chart_no()`를 `DROP`
+    · `generate_chart_no(p_day date DEFAULT CURRENT_DATE)` 생성 — advisory xact lock + 「그 해 `YY-숫자` 번호의 최대 + 1」, 99,999 넘으면 6자리
+    · **데이터는 바꾸지 않음**. `chart_no_seq`는 남김
+  - `POST /api/patients`를 한 트랜잭션으로(`BEGIN → 번호 → INSERT → COMMIT`, 실패 시 ROLLBACK) — 잠금이 COMMIT까지 유지되어 동시 등록에도 번호가 겹치지 않음
+- **바꾼 파일**: `backend/src/routes/patient.routes.js`, `backend/test/reception.api.mjs`(⑱ 5건), **새** `backend/test/reception.chartno.sql`
+- **공용 파일 변경**: 없음 · **번역 키**: 없음
+- **DB 마이그레이션**: `101_reception_chart_no_yearly.sql` — 함수만 바꿈(데이터 변경 없음). 이미 있는 001은 안 고침
+- **다른 모듈 영향**: 번호 모양(`YY-00000`) 그대로 — 영상 장비(DICOM PatientID)·문서·영수증·검색 모두 영향 없음. `generate_chart_no`를 부르는 곳은 `POST /patients`뿐(grep, 오프라인 설치 포함)
+- **확인한 방법**(격리 스택 9181 — 기존 번호 26-00001~00027이 있는 DB에 101 적용, API 로그 `applying 101_…`):
+  - `reception.api.mjs` **168/168**. ⑱ 5건:
+    · **동시에 20명 등록 → 모두 201, 20개 모두 다르고 35~54로 이어짐**
+    · 접두어 `26-`, 다음 환자 = 55
+  - `reception.chartno.sql` → 「chart number checks passed」(전부 ROLLBACK)
+    · 다음 해 1월 1일 = `27-00001`, 12월 31일 = `26-…`
+    · `26-99999` 뒤 `26-100000`, `26-100001`
+    · 모양이 다른 번호(`26-X…`)는 안 셈
+  - **백업 복원**: `pg_dump` → 새 DB `restoretest`에 복원 → 다음 번호가 원래 DB와 같음(`26-00057`). 복원본의 `chart_no_seq`를 1로 망가뜨려도 그대로 `26-00057`. 시험 DB는 지움
+  - 옛 시퀀스 값은 27에서 멈춤(안 씀)
+- **확인 못 한 것**:
+  - 실제 새해 자정(날짜 인자로만 시험)
+  - 운영 DB의 기존 번호에 이상한 모양이 섞여 있는지 — 운영 DB는 안 봄. 총괄이 반영 전에 `SELECT chart_no FROM patient WHERE chart_no !~ '^[0-9]{2}-[0-9]+$'`로 확인해 주세요(있어도 안 셀 뿐 오류는 아님)
+- **위키**: `modules/reception.md` 머리, 1절, 2.4 N° Dossier 줄, 3절 **차트번호 채번**(다시 씀), 4절 `POST` 줄·`chart_no` 칸·색인, 7절 ⑱ 고침, 8절
+- **총괄 확인 요청**: 위 설계 질문 3개, 운영 DB 번호 모양 확인, 마이그레이션 번호 다시 매기기
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — ⑱ 차트번호 해마다 1번부터: 설계 메모 (코드 전, 총괄 확인 대기) · 5) 관리자 의사 확인
 
 - **상태**: 보류 — 설계 확인 대기. 코드 변경 없음

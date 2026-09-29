@@ -125,22 +125,33 @@ router.get('/chart/:chartNo', permMiddleware('registration'), async (req, res) =
 });
 
 // POST /api/patients - create new patient
+// The chart number and the row go in one transaction: generate_chart_no() takes an
+// advisory lock held until COMMIT and counts this year's numbers from the patient
+// table (migration 029), so a second desk creating a patient at the same moment
+// waits and then sees this one. Outside a transaction the lock would be released
+// before the INSERT and two patients could get the same number.
 router.post('/', permMiddleware('registration'), async (req, res) => {
+  const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
+  const invalid = badPatient(req.body);
+  if (invalid) return res.status(400).json({ error: invalid });
+  let client;
   try {
-    const { last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note } = req.body;
-    const invalid = badPatient(req.body);
-    if (invalid) return res.status(400).json({ error: invalid });
-    // Generate chart number
-    const chartResult = await pool.query("SELECT generate_chart_no() as chart_no");
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const chartResult = await client.query('SELECT generate_chart_no() AS chart_no');
     const chart_no = chartResult.rows[0].chart_no;
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO patient (chart_no, last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       [chart_no, last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note || null]
     );
+    await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    if (client) { try { await client.query('ROLLBACK'); } catch (e) { /* connection already gone */ } }
     sendDbError(res, err);
+  } finally {
+    if (client) client.release();
   }
 });
 

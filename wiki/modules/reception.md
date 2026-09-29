@@ -1,12 +1,12 @@
 # 접수 (Reception)
 
-> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑩ 작업일자 — 확인 요청. 다음(실장님 결정): ⑱ 차트번호 해마다 1번부터(설계 메모 먼저)
+> **담당**: 접수 세션 · 브랜치 `session/reception` · **마지막 갱신**: 2026-09-29 · **상태**: ⑱ 차트번호 해마다 1번부터 — 확인 요청(설계 질문 3개는 인계 노트에 열려 있음). 실장님 결정 목록은 이것으로 끝
 
 ## 1. 이 모듈이 하는 일
 
 병원에 온 환자가 가장 먼저 거치는 곳입니다.
 
-- **환자 등록** — 처음 온 환자의 인적사항을 입력하면 **차트번호**(`26-00001` 형식)가 자동으로 붙습니다. 이 번호는 진료·수납·약국·검사·영상(PACS)이 모두 환자를 가리킬 때 씁니다.
+- **환자 등록** — 처음 온 환자의 인적사항을 입력하면 **차트번호**(`26-00001` 형식 — 연도 두 자리 + 그 해의 번호, **해마다 1번부터**)가 자동으로 붙습니다. 이 번호는 진료·수납·약국·검사·영상(PACS)이 모두 환자를 가리킬 때 씁니다.
 - **내원 접수** — 오늘 온 환자를 담당 의사에게 배정하고 주호소·접수 메모를 적어 **대기 목록**에 올립니다. 이렇게 만들어지는 **내원(visit)** 한 건이 그날의 진료·처방·검사·청구가 모두 매달리는 중심 기록입니다.
 - **대기 관리** — 오늘 접수된 환자를 대기 / 진료중 / 완료로 나눠 보여주고, 상태를 손으로 옮기거나 대기를 취소합니다.
 - 환자를 고르면 **이전 진료 기록**, **미수금·환불예정 금액**, **차트뷰어**(발행된 수술기록지 등)를 함께 보여줍니다.
@@ -84,7 +84,7 @@
 | 칸 | 뜻 |
 |---|---|
 | **📌 Note d'accueil (접수과 메모)** 노란 상자 | 늘 기억해야 할 사항(예: 보호자 동반 필요, 통역 필요). 오늘만이 아니라 **환자에게 계속** 붙어 다니며, 다음에 이 환자를 고르면 다시 보입니다 |
-| **N° Dossier (차트번호)** | `26-00001` 처럼 연도 두 자리 + 번호. **처음 저장할 때 자동으로** 생기고 고칠 수 없습니다. 진료·수납·약국·검사·영상 장비가 모두 이 번호로 환자를 찾습니다 |
+| **N° Dossier (차트번호)** | `26-00001` 처럼 연도 두 자리 + 그 해의 번호. **해가 바뀌면 1번부터**(2027년 첫 환자는 `27-00001`). **처음 저장할 때 자동으로** 생기고 고칠 수 없습니다. 진료·수납·약국·검사·영상 장비가 모두 이 번호로 환자를 찾습니다 |
 | **Nom (성)** · **Prénom (이름)** | 둘 다 있어야 저장됩니다 |
 | **Date de Naissance (생년월일)** | **AAAA (연도 4자리) · MM (월 2자리) · JJ (일 2자리)**. 칸이 차면 다음 칸으로 넘어갑니다. 예: `1990` `05` `03`. **모르면 세 칸 모두 비워 둡니다** — 일부만 쓰면 저장되지 않습니다 |
 | **Sexe (성별)** | **Masculin (남)** / **Féminin (여)**. 처음에는 **아무것도 골라져 있지 않습니다** — 꼭 하나를 누르세요. 안 누르면 저장할 때 「Choisissez le sexe (Masculin / Féminin).」가 뜹니다. 성별은 문서와 영상 장비로 그대로 나갑니다 |
@@ -245,10 +245,15 @@
 
 ### 차트번호 채번
 
-- DB 함수 `generate_chart_no()` (`001_schema.sql` 329~338행): `TO_CHAR(NOW(),'YY') || '-' || LPAD(nextval('chart_no_seq'), 5, '0')`.
-- **연도 앞자리만 바뀌고 번호는 해마다 이어집니다** (시퀀스를 매년 1로 돌리지 않음). 2026년 마지막이 `26-00350`이면 2027년 첫 환자는 `27-00351`. 의도한 것인지는 **확인 필요**.
-- `POST /patients`에서 함수로 번호를 먼저 받고 INSERT함. 실패하면 번호가 하나 비지만 중복은 안 생김.
-- 번호는 화면에서 고칠 수 없음 (읽기 전용 칸). `PUT /patients/:id`도 `chart_no`를 바꾸지 않음.
+2026-09-29 실장님 결정 ⑱: **해마다 1번부터** — 2027년 첫 새 환자는 `27-00001`. 마이그레이션 `029_reception_chart_no_yearly.sql`.
+
+- DB 함수 `generate_chart_no(p_day date DEFAULT CURRENT_DATE)`: `pg_advisory_xact_lock(hashtext('bethesda.chart_no'))`을 잡고, **그 해 접두어(`YY-`)로 이미 쓴 가장 큰 번호 + 1**을 환자 표에서 셈(`chart_no ~ '^YY-[0-9]+$'`만 셈). 99,999 아래는 5자리, 넘으면 그대로 6자리(`26-100000`).
+- `POST /patients`는 **한 트랜잭션**: `BEGIN → generate_chart_no() → INSERT → COMMIT`. 잠금이 COMMIT까지 유지되어 두 창구가 동시에 새 환자를 만들어도 번호가 겹치지 않음(두 번째는 첫 번째 저장을 기다린 뒤 셈). 마지막 안전장치는 `chart_no UNIQUE`.
+- **왜 시퀀스가 아니라 「표에서 최대값 + 1」인가**: 백업을 새 PC에 복원한 뒤에도 다음 번호가 저절로 맞음 — 시퀀스 값이나 카운터 표가 틀어져도 상관없음(격리 스택에서 복원 DB의 옛 시퀀스를 1로 망가뜨려도 다음 번호 그대로). 등록이 실패(롤백)하면 그 번호는 다음 사람이 씀 — 번호가 비지 않음.
+- **해가 바뀌는 순간** = `CURRENT_DATE` = DB 시간대(`Indian/Antananarivo`, DB 컨테이너 `TZ`) — `visit_date`의 「오늘」과 같은 기준. `.env`에 `TZ`가 없으면 DB가 UTC가 되어 새해가 3시간 늦게 옴(6절).
+- 옛 방식(2026-09-29 전): 시퀀스 `chart_no_seq` 하나가 해를 넘어 이어졌고(26-00350 → 27-00351), `LPAD(…, 5)`가 10만 번째부터 번호를 잘라 겹쳤음. **이미 발급된 번호는 그대로**이고 올해는 그 다음 번호부터 이어짐. `chart_no_seq`는 지우지 않고 남겨 둠(쓰는 곳 없음 — 되돌리기 쉽게).
+- 번호는 화면에서 고칠 수 없음 (읽기 전용 칸). `PUT /patients/:id`도 `chart_no`를 바꾸지 않음. 번호 모양(`YY-00000`)은 영상 장비(DICOM PatientID)·문서·영수증에 그대로 나감.
+- 시험: `backend/test/reception.api.mjs`(동시 20명 — 모두 다르고 이어짐, 다음 번호), `backend/test/reception.chartno.sql`(다음 해 `-00001`, 12월 31일은 올해, 99,999 → 100000 → 100001, 모양이 다른 번호는 안 셈 — 모두 ROLLBACK).
 
 ### 환자 찾기 창 (`PatientFinder.jsx`, 공용)
 
@@ -295,7 +300,7 @@
 | `GET /api/patients/:id` | 환자 한 명 | DocumentModal |
 | `GET /api/patients/chart/:chartNo` | 차트번호로 찾기 | 프론트에서 부르는 곳 없음 (확인함) |
 | `GET /api/patients/similar?last_name=&first_name=` | 성·이름이 같은 환자(최대 10명, 최근 등록순): `id` `chart_no` `last_name` `first_name` `date_of_birth` `gender` `phone` `mobile` `last_visit_date`(취소 아닌 마지막 내원일). 대소문자·앞뒤·겹친 공백 무시, **성·이름 뒤바뀜도 같은 것으로**, **악센트 무시**(Hélène = Helene — `FOLD()`의 `translate()` 목록, 양쪽 모두 같은 SQL을 거침). 둘 중 하나가 비면 `[]`. `/:id`보다 **먼저** 선언(아니면 `similar`를 id로 받음). SQL 정규식은 `[[:space:]]+` — JS 템플릿 안의 `\s`는 역슬래시가 빠져 Postgres가 글자 s를 바꾸므로 | 접수 |
-| `POST /api/patients` | 등록. 차트번호 자동. `badPatient` 검사 — 성·이름 **둘 중 하나**만 있으면 통과, 생년월일은 `YYYY-MM-DD`이고 달력에 있는 날·미래 아님·1875년 이후, 성별은 `M`·`F`·빈 값 | 접수 |
+| `POST /api/patients` | 등록. 차트번호 자동 — 번호 받기와 INSERT가 **한 트랜잭션**(3절 채번). `badPatient` 검사 — 성·이름 **둘 중 하나**만 있으면 통과, 생년월일은 `YYYY-MM-DD`이고 달력에 있는 날·미래 아님·1875년 이후, 성별은 `M`·`F`·빈 값 | 접수 |
 | `PUT /api/patients/:id` | 수정. **본문에 있는 칸만** 씀, 없는 칸은 그대로 (`PATIENT_FIELDS`). `''`·`null`을 보내면 지움 — `date_of_birth`·`gender`의 `''`는 `null`로 바꿔 저장. `chart_no`는 못 바꿈. `badPatient` 때문에 성·이름 중 하나는 꼭 보내야 함. **트랜잭션**: 행을 `FOR UPDATE`로 읽고 → 고치고 → **변경 기록** `reception.patient.edit`을 같은 트랜잭션에(아래) | 접수 |
 | `GET /api/patients/:id/history` | 그 환자의 `consultation` 목록 + 과·의사 이름 | 접수, 진료, PatientChart |
 | `GET /api/patients/:id/billing-history` | 그 환자의 `billing` 목록 | 프론트에서 부르는 곳 없음 (확인함) |
@@ -329,7 +334,7 @@
 | 컬럼 | 형 | 비고 |
 |---|---|---|
 | `id` | SERIAL PK | |
-| `chart_no` | VARCHAR(20) UNIQUE NOT NULL | `generate_chart_no()`. DICOM 워크리스트의 PatientID로 나감 |
+| `chart_no` | VARCHAR(20) UNIQUE NOT NULL | `generate_chart_no()` — 해마다 1번부터(마이그레이션 101). DICOM 워크리스트의 PatientID로 나감 |
 | `last_name` / `first_name` | VARCHAR(100) NOT NULL | 빈 문자열은 들어갈 수 있음 |
 | `national_id` | VARCHAR(50) | 화면 입력 칸 없음 |
 | `date_of_birth` | DATE | 미래·1875년 이전은 서버가 거절 |
@@ -342,7 +347,7 @@
 | `is_active` | BOOLEAN DEFAULT TRUE | 검색에서만 걸러냄. **끄는 곳이 없음** |
 | `created_at` / `updated_at` | TIMESTAMPTZ | |
 
-색인: `idx_patient_chart(chart_no)`, `idx_patient_name(last_name, first_name)`. 시퀀스 `chart_no_seq`.
+색인: `idx_patient_chart(chart_no)`, `idx_patient_name(last_name, first_name)`. 시퀀스 `chart_no_seq`는 2026-09-29부터 쓰지 않음(남겨 둠).
 
 **`visit`** (`001_schema.sql` 76~94행)
 
@@ -416,7 +421,7 @@
 | ⑮ | ✅ 고침 (낮음) | 환자 찾기 창의 외래 내역에 취소된 내원이 구분 없이 나왔다 → 흐리게 + 취소선 + 「접수 취소」 딱지(동작은 그대로) | `PatientFinder.jsx` 내원 표 | 화면 — 진료·수납·임상병리에서 |
 | ⑯ | ✅ 고침 (낮음) | 검색이 「성 이름」 순서로만 찾았고, 검색어의 `%` `_`가 와일드카드로 먹혔고, `limit`에 숫자가 아니면 500이었다 → 두 순서 모두, `%` `_`는 글자 그대로(ESCAPE `!`), `limit` 1~200·`offset`은 숫자로 읽고 아니면 기본값, 검색어의 겹친 공백 정리 | `patient.routes.js` `GET /` | 시험 스크립트 7건 + API |
 | ⑰ | ✅ 고침 (낮음) | 접수 대기 목록에 자동 새로고침이 없었다 (진료 화면은 15초마다). ②의 원인이기도 했음. → 30초마다, 탭이 보일 때만, 입력값 유지, 실패해도 목록 유지 | `Registration.jsx` `refreshQueue` | 화면 — 뒤에서 `in_progress`로 바꾸고 30초 뒤 탭 이동·취소 버튼 사라짐·쓰던 메모 유지, API 멈춤 중 502에도 목록 유지·알림 없음, 가려진 63초 동안 요청 0건 |
-| ⑱ | 낮음 | 차트번호 99,999번을 넘으면 등록이 대부분 실패한다. PostgreSQL `LPAD`는 긴 문자열을 **잘라서** `100000`→`10000`이 되어 같은 해 번호와 겹침. 작은 병원에서는 먼 이야기 | `001_schema.sql:336` | 코드 |
+| ⑱ | ✅ 고침 — 실장님 결정 | 차트번호가 해를 넘어 이어졌고(결정: 해마다 1번부터), 99,999를 넘으면 `LPAD`가 잘라 번호가 겹쳤다. 번호 받기와 저장이 한 트랜잭션이 아니었다 → 「그 해 최대 + 1」을 잠금 아래에서, 등록과 한 트랜잭션으로. 넘으면 6자리. 복원 뒤에도 맞음 | 마이그레이션 `029_reception_chart_no_yearly.sql` · `patient.routes.js` `POST /` | 시험(HTTP 동시 20명 + SQL) + 복원 |
 | ⑲ | 하지 않음 (실장님 결정) | 환자 비활성화·중복 환자 합치기 기능 — 2026-09-29 실장님 결정으로 **만들지 않음**. 중복 차트는 ③·④의 동명이인 경고로 생기지 않게 막는 쪽으로. 그래도 생기면 DB 직접 수정(총괄) | `patient.is_active` 쓰는 곳 없음 | — |
 | ⑳ | ✅ 고침 — 실장님 결정 | 대기 중 환자의 「완료로 →」가 진료 없이 내원을 완료시켜 초진 진료비(C01)로 수납에 보냈다 → 단추는 남기되, 이 경로로 완료되면 내원구분을 **진료비 없음**으로(서버, 청구 전만). 누를 때 확인 창 | `visit.routes.js` `PUT /:id/status` · `Registration.jsx` `completeWithoutConsult` | 시험 스크립트 3건 + 화면 |
 | ㉑ | ✅ 고침 — 총괄 `7ad4387` (높음) | **날짜가 하루 이르게 나오고, 접수에서 저장하면 생년월일이 실제로 하루 당겨진다.** node-postgres가 DATE를 서버 시간대(`Indian/Antananarivo`, UTC+3) 자정의 `Date`로 읽고, JSON으로 내보낼 때 UTC로 바뀌어 `1990-05-03` → `"1990-05-02T21:00:00.000Z"`가 됨. 화면들은 `split('T')[0]`으로 앞부분만 써서 **5월 2일**로 표시. 접수 화면은 이 값을 그대로 입력칸에 넣으므로 환자를 불러 저장할 때마다 DB의 생년월일이 하루씩 앞으로 감. 같은 이유로 환자 찾기 창의 내원 날짜, 진료 화면 머리의 생년월일, **인쇄 문서의 생년월일·나이**(`shared.jsx` `fmtDate`·`calcAge`)도 하루 이름. 워크리스트는 `dicomDate`로 이미 고쳐져 있음(CHANGELOG 276행) | `config/database.js`(DATE 파서 없음) · `Registration.jsx` `fillPatient`·`selectVisit`의 `split('T')` · `PatientFinder.jsx:69` · `shared.jsx:12-21` | **화면** — DB `1990-05-03` → 화면 `1990-05-02` → 「환자 정보 저장」 → DB `1990-05-02`. 시간대가 UTC보다 동쪽인 모든 설치에서 일어남 |
@@ -479,7 +484,8 @@
 | 2026-09-29 | 접수 권한이 없는 계정은 환자 등록·접수 불가, 수납 계정은 진료비 종류만, 권한이 빠지면 안내 (⑧ · S2) | 라우트별 `permMiddleware`, 시험 `backend/test/reception.api.mjs` (4절 권한 표) | `3e03fa4` |
 | 2026-09-29 | 내원구분 단추 초진·재진·진료비 없음, 같은 과면 재진을 골라 둠, 수납 뒤 잠김, 수정 때 수납이 바꾼 값을 덮지 않음 (⑦) | `suggestedVisitType()`, `visitTypeSource`, `/visits/today`의 `has_active_bill`, `/visits/patient`에 접수 권한 (3절) | `520706d` |
 | 2026-09-29 | 같은 이름 환자가 있으면 새 차트 전에 묻기(이 환자로 / 그래도 새로 / 취소), 오늘 이미 접수된 환자면 두 번째 접수 전에 묻기 (③ ④) | `GET /patients/similar`, `confirmNewPatient()`, `postVisit()`, `POST /visits` 409·`allow_duplicate` (3·4절) | `25a7fac` |
-| 2026-09-29 | 접수 화면 맨 위 왼쪽에 작업일자 — 지난 날의 접수를 보고 정리(취소·완료), 새 접수는 오늘만, 자정이 지나면 저절로 새 날 (⑩, 실장님 결정) | `GET /visits/day`, `workRef`·`viewingPast`·`selIsPast` (3·4절) | (이 커밋) |
+| 2026-09-29 | 차트번호가 해마다 1번부터(2027년 첫 환자 27-00001), 동시에 등록해도 겹치지 않음, 10만 번을 넘으면 6자리, 백업을 복원해도 다음 번호가 맞음 (⑱, 실장님 결정) | 마이그레이션 101 `generate_chart_no(p_day)`, `POST /patients` 트랜잭션 (3절 채번) | (이 커밋) |
+| 2026-09-29 | 접수 화면 맨 위 왼쪽에 작업일자 — 지난 날의 접수를 보고 정리(취소·완료), 새 접수는 오늘만, 자정이 지나면 저절로 새 날 (⑩, 실장님 결정) | `GET /visits/day`, `workRef`·`viewingPast`·`selIsPast` (3·4절) | `3bd346a` |
 | 2026-09-29 | 대기 중 환자를 「Terminer →」로 보내면 확인 뒤 진료비 없음으로 수납에 (⑳, 실장님 결정) | `PUT /visits/:id/status`의 `CASE`, `completeWithoutConsult()` (4절) | `079b0fb` |
 | 2026-09-29 | 성별이 안 눌린 상태로 시작, 안 고르면 저장 안 됨 (⑫, 실장님 결정) | `emptyForm.gender = ''`, `formProblem()`, `rc_genderRequired` | `c135972` |
 | 2026-09-29 | 생년월일을 월부터 쳐도 칸이 섞이지 않음 (⑭), 같은 이름 경고가 악센트만 다른 이름(Hélène/Helene)도 찾음 | `DobInput` `emit`, `/patients/similar`의 `FOLD()` | `19ae811` |
