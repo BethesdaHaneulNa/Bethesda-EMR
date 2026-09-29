@@ -37,6 +37,21 @@ function badRoute(route) {
 const RX_DISPENSED = 'Prescription already dispensed';
 const ORDER_HAS_RESULT = 'Order already has a result';
 const VISIT_CANCELLED = 'Visit was cancelled';
+const ORDER_CANCELLED = 'Order is cancelled';
+const ORDER_NO_RESULT = 'Order has no result';
+
+// Whether an order has produced something that must stay on record: lab values, a
+// written reading, or an imaging study the modality has started. Such an order cannot
+// be deleted (the result would go with it) and can be marked cancelled instead.
+async function orderProduced(client, orderId, resultText) {
+  if (String(resultText || '').trim() !== '') return true;
+  const r = await client.query(
+    `SELECT EXISTS (SELECT 1 FROM lab_result WHERE order_item_id = $1)
+         OR EXISTS (SELECT 1 FROM worklist_log WHERE order_item_id = $1
+                                                 AND status IN ('in_progress','completed')) AS yes`,
+    [orderId]);
+  return r.rows[0].yes;
+}
 
 // POST /api/consultations - start or reopen consultation
 router.post('/', canConsult, async (req, res) => {
@@ -372,12 +387,62 @@ router.put('/order/:orderId', canConsult, async (req, res) => {
     const result = await pool.query(
       `UPDATE order_item
        SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price), updated_at=NOW()
-       WHERE id=$7 RETURNING *`,
+       WHERE id=$7 AND status <> 'cancelled' RETURNING *`,
       [dose, parseInt(frequency) || 1, parseInt(days) || 1, quantity === undefined || quantity === null || quantity === '' ? 1 : quantity, memo, unit_price, req.params.orderId]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    if (result.rows.length === 0) {
+      // A cancelled order is a record: its quantity and notes no longer change (and it
+      // is out of the bill, so a change would mean nothing anyway).
+      const r = await pool.query('SELECT status FROM order_item WHERE id = $1', [req.params.orderId]);
+      if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      return res.status(409).json({ error: ORDER_CANCELLED });
+    }
     res.json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
+});
+
+// POST /api/consultations/order/:orderId/cancel  {reason}
+// Decision 3-B (2026-09-29). An order with a result cannot be deleted; the doctor who
+// tries is offered this instead. The order is marked cancelled - out of the lab lists
+// and the bill (lab and payment sessions read status) - and its result stays on record.
+// - locked FOR UPDATE, like the lab's result save, so the two are ordered: a result
+//   saved first makes this a cancel, a cancel first makes the lab's save refuse (409);
+// - an order with nothing produced gets 409: delete it instead, so the two paths never
+//   blur into each other;
+// - already cancelled: returned as it is (a second click, or two screens);
+// - no undo (decision: order it again if cancelled by mistake);
+// - code_type is not checked here: the screen offers this for lab orders only for now;
+//   imaging waits for the PACS side (worklist cancellation) after the PACS merge.
+router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const oi = await client.query(
+      'SELECT id, status, result_text FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
+    if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+    if (oi.rows[0].status === 'cancelled') {
+      await client.query('ROLLBACK');
+      const same = await pool.query('SELECT * FROM order_item WHERE id = $1', [req.params.orderId]);
+      return res.json(same.rows[0]);
+    }
+    if (!(await orderProduced(client, req.params.orderId, oi.rows[0].result_text))) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: ORDER_NO_RESULT });
+    }
+    const reason = String((req.body && req.body.reason) || '').trim().slice(0, 500) || null;
+    const r = await client.query(
+      `UPDATE order_item
+          SET status = 'cancelled', cancelled_at = NOW(), cancelled_by = $1, cancel_reason = $2, updated_at = NOW()
+        WHERE id = $3 RETURNING *`,
+      [req.user.id, reason, req.params.orderId]);
+    await client.query('COMMIT');
+    res.json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    sendDbError(res, err);
+  } finally {
+    client.release();
+  }
 });
 
 // DELETE /api/consultations/order/:orderId
@@ -395,12 +460,7 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
     const oi = await client.query(
       'SELECT id, result_text FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    const produced = await client.query(
-      `SELECT EXISTS (SELECT 1 FROM lab_result WHERE order_item_id = $1)
-           OR EXISTS (SELECT 1 FROM worklist_log WHERE order_item_id = $1
-                                                   AND status IN ('in_progress','completed')) AS yes`,
-      [req.params.orderId]);
-    if (produced.rows[0].yes || String(oi.rows[0].result_text || '').trim() !== '') {
+    if (await orderProduced(client, req.params.orderId, oi.rows[0].result_text)) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: ORDER_HAS_RESULT });
     }

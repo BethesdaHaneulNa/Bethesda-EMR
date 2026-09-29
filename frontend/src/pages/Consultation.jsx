@@ -15,6 +15,7 @@ var LOCK_MESSAGES = {
   'Prescription already dispensed': 'cs_rxLocked',
   'Order already has a result': 'cs_orderLocked',
   'Visit was cancelled': 'cs_visitCancelled',
+  'Order is cancelled': 'cs_orderIsCancelled',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -23,7 +24,7 @@ var LOCK_MESSAGES = {
 // worklist_sent_at is checked because orders without a worklist are stored with
 // worklist_status 'completed' from the start (consult.routes.js POST /:id/orders).
 function orderLocked(o){
-  if(o.status==='completed') return true;
+  if(o.status==='cancelled' || o.status==='completed') return true;
   if(String(o.result_text||'').trim()!=='') return true;
   return !!o.worklist_sent_at && (o.worklist_status==='in_progress'||o.worklist_status==='completed');
 }
@@ -55,6 +56,12 @@ function ymd(d){
   var x = new Date(s);
   return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
 }
+
+// Decision 3-B (2026-09-29): a lab order that already has a result is not deleted but can
+// be marked cancelled - the ✕ on it asks for that instead of showing a lock. Lab orders
+// only for now; an imaging order keeps its lock until the PACS side (cancelling the
+// worklist) is in place.
+function cancellable(o){ return o.code_type==='lab' && o.status!=='cancelled' && orderLocked(o); }
 
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
@@ -400,10 +407,11 @@ export default function ConsultationPage() {
   // from the start (consult.routes.js POST /:id/orders), so a lab order read "completed"
   // before the lab had entered anything. A lab order shows the lab's own status instead,
   // and an order with neither shows nothing.
+  function cancelTitle(o){ return (t.cs_labCancelled||'') + (o.cancel_reason ? ' — ' + o.cancel_reason : ''); }
   function orderStatus(o){
     if(o.code_type==='lab'){
       if(o.status==='completed') return <span style={{color:'#34d399'}}>{t.cs_labDone}</span>;
-      if(o.status==='cancelled') return <span style={{color:t3}}>{t.cs_labCancelled}</span>;
+      if(o.status==='cancelled') return <span title={cancelTitle(o)} style={{color:t3,cursor:'help'}}>{t.cs_labCancelled}</span>;
       return <span style={{color:'#fbbf24'}}>{t.cs_labPending}</span>;
     }
     if(o.worklist_sent_at){
@@ -442,7 +450,7 @@ export default function ConsultationPage() {
   }
   var noDoseRows = rxList.filter(noDose);
   var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
-                   + orderItems.filter(function(o){ return noPrice(o.unit_price); }).length;
+                   + orderItems.filter(function(o){ return o.status!=='cancelled' && noPrice(o.unit_price); }).length;
 
   // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
   // clicks to read, so ask first.
@@ -496,7 +504,7 @@ export default function ConsultationPage() {
         unit_price: o.unit_price
       });
       setOrderItems(function(list){ return list.map(function(x){ return x.id===o.id ? updated : x; }); });
-    } catch(err){ alert(t.cs_errorPrefix+err.message); }
+    } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
   }
 
 
@@ -555,7 +563,23 @@ export default function ConsultationPage() {
     try {
       await api.del('/consultations/order/'+o.id);
       setOrderItems(function(p){ return p.filter(function(x){return x.id!==o.id}); });
-    } catch(err){ if(!lockAlert(err)) alert(err.message); }
+    } catch(err){
+      // A lab result arrived after the row was drawn: offer to cancel instead.
+      if(err && err.message==='Order already has a result' && o.code_type==='lab'){ cancelOrder(o); return; }
+      if(!lockAlert(err)) alert(err.message);
+    }
+  }
+
+  // Mark a lab order that already has a result as cancelled (POST /order/:id/cancel).
+  // window.prompt: OK with or without a reason cancels, Cancel/Esc does nothing. The
+  // text says what happens to the result and to a bill already paid.
+  async function cancelOrder(o){
+    var reason = window.prompt(String(t.cs_cancelPrompt||'').replace('{name}', o.order_name||''), '');
+    if(reason === null) return;
+    try {
+      var updated = await api.post('/consultations/order/'+o.id+'/cancel', { reason: reason });
+      setOrderItems(function(list){ return list.map(function(x){ return x.id===o.id ? updated : x; }); });
+    } catch(err){ alert(t.cs_errorPrefix+err.message); reloadItems(); }
   }
 
   function insertPhrase(text){ setNote(function(prev){ return prev?(prev+'\n'+text):text; }); }
@@ -740,17 +764,33 @@ export default function ConsultationPage() {
                       })}
                       {orderItems.map(function(o){
                         var inStyle={background:'#0f1117',border:'1px solid #2a3142',borderRadius:4,padding:'3px 4px',color:tx,fontSize:14,width:'100%',boxSizing:'border-box',textAlign:'center'};
-                        return <tr key={'oi-'+o.id} style={{borderBottom:'1px solid #1e2433'}}>
-                          <td style={{padding:'3px 5px'}}>{orderLocked(o)
+                        // A cancelled order stays as a grey, struck-through record: no inputs
+                        // (the server refuses changes), no ✕, the reason on hover.
+                        var gone = o.status==='cancelled';
+                        var cellRO={padding:'3px 4px',textAlign:'center',color:t3,fontSize:14};
+                        return <tr key={'oi-'+o.id} style={{borderBottom:'1px solid #1e2433',opacity:gone?0.55:1}}>
+                          <td style={{padding:'3px 5px'}}>{gone
+                            ? <span title={cancelTitle(o)} style={{cursor:'help',fontSize: 12,color:t3}}>⊘</span>
+                            : cancellable(o)
+                            ? <span onClick={function(){cancelOrder(o)}} title={t.cs_cancelHint} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>
+                            : orderLocked(o)
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
-                          <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{o.order_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}{noPrice(o.unit_price) ? <NoPriceBadge/> : null}</td>
+                          <td style={{padding:'3px 5px',color:gone?t3:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700,textDecoration:gone?'line-through':'none'}}>{o.order_code}</td>
+                          <td style={{padding:'3px 5px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}</td>
+                          {gone ? <>
+                            <td style={cellRO}>{o.quantity || 1}</td>
+                            <td style={cellRO}>{o.frequency || 1}</td>
+                            <td style={cellRO}>{o.days || 1}</td>
+                            <td style={cellRO}>{o.dose || ''}</td>
+                            <td style={cellRO}>{o.memo || o.body_part || ''}</td>
+                          </> : <>
                           <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          </>}
                           <td style={{padding:'3px 5px',textAlign:'center',fontSize: 12,fontWeight:700,whiteSpace:'nowrap'}}>
                             {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'#7c3aed22',color:'#a78bfa',border:'1px solid #7c3aed55',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
                             {orderStatus(o)}
