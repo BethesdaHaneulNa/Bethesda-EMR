@@ -58,10 +58,10 @@
 
 ### 3.1 무엇이 대기 목록에 오는가
 
-`GET /api/pharmacy/pending` (`pharmacy.routes.js:10`) 이 기준입니다. 다음을 모두 만족하는 **진료(consultation) 단위**로 묶어 보여줍니다.
+`GET /api/pharmacy/pending` (`pharmacy.routes.js:16`) 이 기준입니다. 다음을 모두 만족하는 **진료(consultation) 단위**로 묶어 보여줍니다.
 
 - `consultation.status = 'completed'` — 의사가 진료 화면에서 **완료**를 눌렀음 (`consult.routes.js:77` `PUT /api/consultations/:id/complete`)
-- `visit.visit_date = CURRENT_DATE` — **오늘 내원만** (`pharmacy.routes.js:62`). DB 시간대 기준이며, 운영 `.env`의 `TZ=Indian/Antananarivo`가 DB 컨테이너(`TZ`, `PGTZ`)에도 들어갑니다.
+- `visit.visit_date = CURRENT_DATE` — **오늘 내원만** (`pharmacy.routes.js:57`). DB 시간대 기준이며, 운영 `.env`의 `TZ=Indian/Antananarivo`가 DB 컨테이너(`TZ`, `PGTZ`)에도 들어갑니다.
 - `prescription.status = 'ordered'` 인 처방 줄이 하나 이상 있음
 
 정렬은 `consultation.updated_at` 오름차순입니다. 이 값은 진료 기록을 다시 저장할 때마다 바뀌므로(`consult.routes.js:59`) 목록 순서가 바뀔 수 있습니다. 화면의 시각도 이 값입니다(`Pharmacy.jsx:12`).
@@ -71,14 +71,14 @@
 ### 3.2 원내 · 원외
 
 - 처방 줄마다 `prescription.dispense_type` = `'internal'`(기본) 또는 `'external'` (`012_dispense_type.sql`).
-- 진료 화면에서는 정하지 않습니다. **약국 화면에서만** 바꿉니다 — `PUT /api/pharmacy/prescription/:id/dispense-type` (`pharmacy.routes.js:239`). `'external'`이 아닌 값은 모두 `'internal'`로 저장합니다.
-- **아직 조제 대기(`status='ordered'`)인 줄만** 바꿀 수 있습니다(`:243`). 조제가 끝난 줄은 409로 거절합니다.
+- 진료 화면에서는 정하지 않습니다. **약국 화면에서만** 바꿉니다 — `PUT /api/pharmacy/prescription/:id/dispense-type` (`pharmacy.routes.js:234`). `'external'`이 아닌 값은 모두 `'internal'`로 저장합니다.
+- **아직 조제 대기(`status='ordered'`)인 줄만** 바꿀 수 있습니다(`:238`). 조제가 끝난 줄은 409로 거절합니다.
   이미 원내로 재고를 뺀 줄을 원외로 바꾸면 재고는 빠진 채 청구만 사라지기 때문입니다. 화면은 조제 완료 탭에서 버튼을 숨기지만(`Pharmacy.jsx:228`), 화면만이 이 API를 부르는 길은 아니어서 서버에서 막습니다.
   조제와 전환이 동시에 일어나면 전환이 조제의 줄 잠금을 기다렸다가 조건을 다시 보고 거절됩니다.
 - 조제 완료 탭에서는 원외 줄에 「원외」 표시가 붙습니다(`Pharmacy.jsx:234`).
 - 전환하면 열려 있는 환자(`sel`)와 왼쪽 목록(`pending`)을 **둘 다** 고칩니다(`Pharmacy.jsx:44`). 목록을 안 고치면 다른 환자를 눌렀다 돌아왔을 때 예전 값이 보였습니다.
 - 원외의 효과
-  - **재고**: 조제 완료 때 차감하지 않음 (`pharmacy.routes.js:187`)
+  - **재고**: 조제 완료 때 차감하지 않음 (`pharmacy.routes.js:182`)
   - **수납**: 청구 대상에서 빠짐 (`billing.routes.js:31-33`, `:119`). 수납은 청구서를 만들 때가 아니라 매번 처방을 다시 계산하므로, 원내/원외를 바꾸면 수납 화면에 추가 수납·환불로 나타납니다.
   - **약국 화면의 약제비**: 원외 줄은 더하지 않음 (`Pharmacy.jsx:149`, 표시 이름 「약제비 (원내)」) — 수납과 같은 금액이 되도록
   - **원외 처방전**: 원외 줄만 인쇄 (`external-rx.jsx:32`)
@@ -87,19 +87,19 @@
 
 ### 3.3 조제 완료와 재고 차감
 
-`PUT /api/pharmacy/consultations/:id/dispense` (`pharmacy.routes.js:146`). **진료 하나의 대기 줄 전부를 한 번에** 조제 완료합니다(한 줄씩, 일부만은 불가).
+`PUT /api/pharmacy/consultations/:id/dispense` (`pharmacy.routes.js:141`). **진료 하나의 대기 줄 전부를 한 번에** 조제 완료합니다(한 줄씩, 일부만은 불가).
 
 한 트랜잭션 안에서:
 
-1. 그 진료의 `status='ordered'` 처방 줄을 `FOR UPDATE`로 잠급니다 (`:151-157`). 없으면 404 (`ERR_NOTHING_PENDING`).
-2. 재고를 뺄 약(원내이고 `drug_id`가 있는 줄의 약)의 행을 **`drug.id` 오름차순으로 한꺼번에** 잠급니다 (`:171-183`).
+1. 그 진료의 `status='ordered'` 처방 줄을 `FOR UPDATE`로 잠급니다 (`:146-152`). 없으면 404 (`ERR_NOTHING_PENDING`).
+2. 재고를 뺄 약(원내이고 `drug_id`가 있는 줄의 약)의 행을 **`drug.id` 오름차순으로 한꺼번에** 잠급니다 (`:166-178`).
    처방 순서대로 하나씩 잠그면, 같은 두 약을 반대 순서로 가진 두 환자가 동시에 조제될 때 서로 상대의 잠금을 기다리다 Postgres가 한쪽을 「deadlock detected」로 실패시킵니다. 모두가 같은 순서로 잠그면 이런 순환이 생기지 않습니다.
 3. 줄마다 — `drug_id`가 있고 원내이면:
-   - 차감량 = `Math.ceil(total_qty)` (`:188`). 재고 칸(`drug.stock_qty`)이 정수라서 올림합니다. 청구는 소수 그대로 합니다(예: 7.5 → 재고 8 차감, 청구 7.5개분).
-   - 현재 재고를 읽고(이미 잠근 행이라 기다리지 않음) `stock_qty = GREATEST(stock_qty - 차감량, 0)` (`:193-201`). **0 아래로 내려가지 않습니다.**
-   - 재고가 모자랐으면 `shortages`에 모자란 양을 담습니다 (`:203`). 화면은 이를 경고 창으로 보여줍니다 (`Pharmacy.jsx:116`).
+   - 차감량 = `Math.ceil(total_qty)` (`:183`). 재고 칸(`drug.stock_qty`)이 정수라서 올림합니다. 청구는 소수 그대로 합니다(예: 7.5 → 재고 8 차감, 청구 7.5개분).
+   - 현재 재고를 읽고(이미 잠근 행이라 기다리지 않음) `stock_qty = GREATEST(stock_qty - 차감량, 0)` (`:188-196`). **0 아래로 내려가지 않습니다.**
+   - 재고가 모자랐으면 `shortages`에 모자란 양을 담습니다 (`:198`). 화면은 이를 경고 창으로 보여줍니다 (`Pharmacy.jsx:116`).
      0에서 멈추면 모자란 만큼이 흔적 없이 사라지기 때문에, 선반과 장부가 어긋났다는 사실을 알리려는 것입니다.
-4. 대기 줄 전부를 `status='dispensed'`, `dispensed_by`, `dispensed_at=NOW()`로 바꿉니다 (`:212-217`).
+4. 대기 줄 전부를 `status='dispensed'`, `dispensed_by`, `dispensed_at=NOW()`로 바꿉니다 (`:207-212`).
 
 **재고 차감은 이 순간 한 번뿐입니다.** 처방할 때, 수납할 때는 재고가 바뀌지 않습니다. 조제 취소(재고 되돌리기)는 없습니다.
 
@@ -121,7 +121,7 @@
 
 ### 3.5 조기 재처방 경고
 
-`GET /api/pharmacy/patient/:patientId/recent-rx` (`pharmacy.routes.js:130`) 로 최근 120일 처방을 받고, 화면(`Pharmacy.jsx:72` `refillWarn`)에서 판단합니다.
+`GET /api/pharmacy/patient/:patientId/recent-rx` (`pharmacy.routes.js:125`) 로 최근 120일 처방을 받고, 화면(`Pharmacy.jsx:72` `refillWarn`)에서 판단합니다.
 
 - 같은 `drug_code`, 지금 진료가 아닌 **오늘 이전** 진료의 처방
 - `처방일 + 일수 > 오늘` 이면 경고 (가장 많이 남은 것 하나)
@@ -134,7 +134,7 @@
 - 입력 칸: **수신 약국(선택)**, **복약지도/비고**. 표 칸: No · 약품명(+코드) · 1회량 · 횟수 · 일수 · 총량 · 용법/비고(`route`와 `memo`를 이어 붙임).
 - 표 칸 폭: 고정 칸 합 382px, 약품명 칸이 나머지(인쇄 본문 688px 기준 약 306px). 표는 페이지 중간에서 끊기지 않게 `breakInside: avoid`.
 - 약국 화면과 수납 화면에서 인쇄합니다. 약국에서는 **💊 원외 처방전** 버튼이 `DocumentModal`을 `category="prescription"`으로 엽니다(`Pharmacy.jsx:261`). 수납 화면도 같은 방식으로 엽니다(`Payment.jsx:454`, 수납 세션 파일).
-- 환자 칸(이름·생년월일·성별·주소)은 엔진이 `GET /api/patients/:id`로 **다시 읽어** 채웁니다(`DocumentModal.jsx:75`). 그래서 생년월일이 하루 앞당겨 찍히는 문제(7절 H5)는 약국 API를 고쳐도 인쇄물에서는 그대로입니다.
+- 환자 칸(이름·생년월일·성별·주소)은 엔진이 `GET /api/patients/:id`로 **다시 읽어** 채웁니다(`DocumentModal.jsx:75`). 생년월일이 하루 앞당겨 찍히던 문제(7절 H5)는 이 경로에서 생겼습니다.
 
 ## 4. 데이터 · API
 
@@ -150,7 +150,7 @@
 
 | 메서드 · 경로 | 하는 일 | 응답 |
 |---|---|---|
-| `GET /pending` | 오늘 진료 완료 + 대기 처방이 있는 진료 목록 | 진료마다 `consultation_id, consultation_time(=c.updated_at), visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth('YYYY-MM-DD' 문자열), allergies, doctor_name, rx_count, drug_total(원외 포함 — 화면은 안 씀), prescriptions[]` |
+| `GET /pending` | 오늘 진료 완료 + 대기 처방이 있는 진료 목록 | 진료마다 `consultation_id, consultation_time(=c.updated_at), visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, allergies, doctor_name, rx_count, drug_total(원외 포함 — 화면은 안 씀), prescriptions[]` |
 | `GET /completed` | 오늘 내원 중 조제 완료된 처방, 최근 조제 순 50개 | 진료마다 한 줄 `consultation_id, dispensed_at(가장 늦은 것), visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, allergies, doctor_name, dispensed_by_name(여러 명이면 쉼표로), rx_count, prescriptions[]` |
 | `GET /patient/:patientId/recent-rx` | 최근 120일 처방 (조기 재처방 경고용) | `drug_code, drug_name, days, status, consult_date, consultation_id` |
 | `PUT /consultations/:id/dispense` | 대기 줄 전부 조제 완료 + 원내 재고 차감 | `success, dispensed_count, prescriptions[], shortages[]` (`shortages`: `prescription_id, drug_id, drug_name, requested, available, missing`). 대기 줄이 없으면(다른 사람이 먼저 조제 포함) **404** `ERR_NOTHING_PENDING` |
@@ -271,14 +271,10 @@ API — 설정 세션 파일 `admin.routes.js`:
   - 근거: 편집 창이 약 행 전체를 들고 있다가(`Settings.jsx:124`) 그대로 보냄 → `admin.routes.js:89` `stock_qty=$11`
   - 예: 아침에 설정 화면을 열어 둠(재고 100) → 낮에 30개 조제(재고 70) → 오후에 그 목록에서 단가만 고쳐 저장 → **재고 100으로 돌아감**. 경고 없음.
   - 약품 탭은 약국 몫이지만 API는 설정 세션 파일입니다. 서버 쪽 수정이 필요합니다.
-- **H5. 인쇄 문서의 생년월일이 하루 앞당겨 찍힙니다** — 약국만의 문제가 아니라 모든 문서
-  - 근거: DB의 `DATE` 칸을 node-postgres가 서버 시간대(UTC+3) 자정의 날짜 객체로 바꾸고, JSON은 이를 UTC로 씁니다. 1990-01-01생이 `"1989-12-31T21:00:00.000Z"`로 나가고, 문서 엔진은 `T` 앞만 잘라 씁니다(`shared.jsx:12-17` `fmtDate`). 문서 엔진은 환자를 `GET /api/patients/:id`로 다시 읽습니다(`DocumentModal.jsx:75`).
-  - 확인: 격리 스택(운영과 같은 `TZ=Indian/Antananarivo`)에서 1990-01-01생 환자의 원외 처방전이 「1989-12-31 (36)」으로 나옴. 운영 EMR도 설정이 같으므로 같을 것으로 보지만 운영에서는 확인하지 않았습니다.
-  - 고칠 곳: `backend/src/config/database.js`(총괄 파일)에 DATE 형(OID 1082)을 문자열 그대로 받는 설정 한 줄 — `types.setTypeParser(1082, v => v)`. 그러면 모든 API가 한 번에 고쳐집니다. 약국 API 두 개(`/pending`, `/completed`)는 이미 `TO_CHAR`로 문자열을 보내지만, 인쇄물은 위 경로를 쓰므로 이것만으로는 안 고쳐집니다.
 
 ### 보통
 
-- **M3. 오늘 내원만 대기 목록에 나옵니다** — `pharmacy.routes.js:62`. 어제 진료가 끝나고 조제하지 않은 처방은 약국 화면에서 영영 볼 수 없고 `ordered`로 남습니다. 자정 넘어 끝난 진료도 마찬가지(내원 날짜 기준).
+- **M3. 오늘 내원만 대기 목록에 나옵니다** — `pharmacy.routes.js:57`. 어제 진료가 끝나고 조제하지 않은 처방은 약국 화면에서 영영 볼 수 없고 `ordered`로 남습니다. 자정 넘어 끝난 진료도 마찬가지(내원 날짜 기준).
 - **M4. 약국 화면에 재고가 보이지 않습니다** — 조제 전에는 재고가 모자란지 알 수 없고, 조제 완료 뒤에야 경고가 뜹니다. `drug.min_stock`은 아무 데서도 쓰지 않습니다.
 - **M5. 재고 입출고 기록이 없습니다** — 재고는 숫자 하나뿐이고, 설정에서 덮어쓰면 누가 언제 왜 바꿨는지 남지 않습니다. 입고(약이 들어옴) 기능도 없습니다. H4와 함께 풀면 좋습니다.
 - **M6. 조제 취소가 없습니다** — 잘못 누르면 되돌릴 수 없고, 재고를 손으로 고쳐야 합니다.
@@ -288,19 +284,20 @@ API — 설정 세션 파일 `admin.routes.js`:
 
 - **L5. 설정 약품 탭이 영어 고정입니다** — `Settings.jsx:280-286`, `:688-701` (Drugs, Code, Dose, Stock, + Add …), 삭제 확인 「Delete?」(`:146`). 프랑스어 화면에서도 영어로 보입니다.
 - **L6. 설정 약품 탭의 빈 곳** — `min_stock`·`name_en`·`generic_name` 입력 칸 없음. 새 약은 `min_stock`이 비어(NULL) 저장됨(`admin.routes.js:75-77`, 기본값 10이 안 들어감). 재고에 소수를 넣으면 DB 오류(`stock_qty`는 정수인데 검사는 음수만 봄, `admin.routes.js:40-49`). 삭제한 약은 되살릴 수 없고 같은 코드로 새로 등록도 안 됨(`code UNIQUE`).
-- **L7. 조기 재처방 경고 문구가 짧아 뜻을 알기 어렵습니다** — 프랑스어로 「⚠ 5j 7j · reste 2j」(`Pharmacy.jsx:235`). 조제하지 않은 처방도 경고 대상에 들어갑니다(`pharmacy.routes.js:133-138`).
+- **L7. 조기 재처방 경고 문구가 짧아 뜻을 알기 어렵습니다** — 프랑스어로 「⚠ 5j 7j · reste 2j」(`Pharmacy.jsx:235`). 조제하지 않은 처방도 경고 대상에 들어갑니다(`pharmacy.routes.js:128-133`).
 - **L8. 대기 목록이 저절로 새로고침되지 않습니다** — 새 환자를 보려면 새로고침을 눌러야 합니다.
-- **L9. 목록 시각·순서가 진료 기록을 다시 저장하면 바뀝니다** — `consultation.updated_at` 사용(`pharmacy.routes.js:21`, `:64`).
+- **L9. 목록 시각·순서가 진료 기록을 다시 저장하면 바뀝니다** — `consultation.updated_at` 사용(`pharmacy.routes.js:21`, `:59`).
 
 ### 해결됨
 
 2026-09-29 수정. 무엇을 어떻게 고쳤는지는 3절, 확인 방법은 인계 노트에 있습니다.
 
-- **M1. 원내/원외 전환 API가 조제 상태를 보지 않았습니다** → 조제 대기 줄만 바꾸고, 조제된 줄은 409 (`pharmacy.routes.js:239-254`). 3.2절.
+- **M1. 원내/원외 전환 API가 조제 상태를 보지 않았습니다** → 조제 대기 줄만 바꾸고, 조제된 줄은 409 (`pharmacy.routes.js:234-249`). 3.2절.
 - **M2. 원내/원외를 바꾼 뒤 다른 환자를 눌렀다 돌아오면 예전 값이 보였습니다** → 목록도 같이 고침 (`Pharmacy.jsx:44-62`). 3.2절.
-- **L1. 교착(deadlock)** → 약 행을 `drug.id` 순서로 먼저 잠금 (`pharmacy.routes.js:171-183`). 고치기 전 24건 중 3건 실패 → 고친 뒤 0건. 3.3절.
+- **L1. 교착(deadlock)** → 약 행을 `drug.id` 순서로 먼저 잠금 (`pharmacy.routes.js:166-178`). 고치기 전 24건 중 3건 실패 → 고친 뒤 0건. 3.3절.
 - **L2. 같은 환자를 동시에 조제하면 두 번째 사람에게 영어 오류** → 번역된 안내(「다른 사람이 먼저 조제 완료했습니다」) 후 목록 새로고침 (`Pharmacy.jsx:123-127`). 3.3절.
-- **L3. 조제 완료 탭** — 같은 진료가 두 줄로 나오던 것(`STRING_AGG`로 조제자를 합침, `pharmacy.routes.js:92`), 원외 표시·약제비·알레르기 상자가 안 나오던 것(빠진 칸 추가). 4절.
+- **L3. 조제 완료 탭** — 같은 진료가 두 줄로 나오던 것(`STRING_AGG`로 조제자를 합침, `pharmacy.routes.js:87`), 원외 표시·약제비·알레르기 상자가 안 나오던 것(빠진 칸 추가). 4절.
+- **H5. 인쇄 문서의 생년월일이 하루 앞당겨 찍혔습니다** (모든 모듈의 문서) → 총괄이 `develop`에서 고침(`7ad4387`, `config/database.js`가 DATE를 'YYYY-MM-DD' 문자열 그대로 넘김). 원인: node-postgres가 DATE를 서버 시간대(UTC+3) 자정으로 만들고 JSON이 UTC로 써서, 1990-01-01생이 `1989-12-31T21:00:00.000Z`로 나가고 화면·문서가 `T` 앞만 씀. 이 약국 브랜치에는 그 커밋이 없으므로 합친 뒤에 원외 처방전의 생년월일을 한 번 확인해야 합니다.
 - **L4. 약제비가 원외 약까지 더했습니다** → 원외 제외, 이름을 「약제비 (원내)」로 (`Pharmacy.jsx:149-151`, `:211`). 3.2절.
 
 ## 8. 변경 기록
@@ -308,4 +305,5 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-29 | 코드 기준으로 위키 첫 작성 (코드 변경 없음) | `b283335` |
-| 2026-09-29 | 원내/원외 전환 잠금(조제 후 409), 전환 후 목록 갱신, 약 행 잠금 순서(교착 방지), 동시 조제 안내 번역, 조제 완료 탭 한 줄·빠진 칸, 약제비 원외 제외, 생년월일 문자열 | (이 커밋) |
+| 2026-09-29 | 원내/원외 전환 잠금(조제 후 409), 전환 후 목록 갱신, 약 행 잠금 순서(교착 방지), 동시 조제 안내 번역, 조제 완료 탭 한 줄·빠진 칸, 약제비 원외 제외 | `3b91950` |
+| 2026-09-29 | 생년월일 임시 처리(TO_CHAR) 되돌림 — 총괄 `7ad4387`이 전체를 고쳐서. H5를 해결됨으로 | (이 커밋) |

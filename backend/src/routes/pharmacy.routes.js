@@ -26,12 +26,7 @@ router.get('/pending', async (req, res) => {
          p.last_name,
          p.first_name,
          p.gender,
-         -- As text, not a DATE: node-postgres turns a DATE into local midnight
-         -- and JSON then writes it in UTC, so at UTC+3 a 1990-01-01 birth date
-         -- arrives as "1989-12-31T21:00:00.000Z" and anything that keeps the
-         -- part before the T is a day early. (The printed documents re-read
-         -- the patient from /api/patients/:id, which still has this problem.)
-         TO_CHAR(p.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
+         p.date_of_birth,
          p.allergies,
          s.name AS doctor_name,
          COUNT(rx.id) AS rx_count,
@@ -83,7 +78,7 @@ router.get('/completed', async (req, res) => {
          p.last_name,
          p.first_name,
          p.gender,
-         TO_CHAR(p.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,  -- see /pending
+         p.date_of_birth,
          p.allergies,
          s.name AS doctor_name,
          -- One row per consultation even when lines added after the first
