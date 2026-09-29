@@ -23,7 +23,10 @@ export const NEUTRAL = [
   ['field',        '#0f1117', '#ffffff', 's'],
   ['field-2',      '#11151f', '#ffffff', 's'],
   ['field-3',      '#1a1f2e', '#ffffff', 's'],   // an input drawn on the section-header colour (queue search)   // the note box inside the amber frame (reception)
-  ['bg-row',       '#111827', '#f8fafc', 's'],   // a row of search results   // input background (same as --bg when dark)
+  ['bg-row',       '#111827', '#f8fafc', 's'],   // a row of search results
+  ['bg-group',     '#0f1622', '#eaf3f8', 's'],
+  ['notice',       '#1f2937', '#eef1f5', 's'],   // a grey notice box (a cancelled imaging order)
+  ['notice-line',  '#4b5563', '#aab2be', 'l'],   // a group heading row inside a results table   // input background (same as --bg when dark)
   ['btn-neutral',  '#334155', '#d5dbe4', 's'],
   ['btn-neutral-2','#374151', '#d5dbe4', 's'],
   ['line-soft',    '#1e2433', '#e1e6ee', 'l'],   // table row separators
@@ -40,6 +43,7 @@ export const NEUTRAL = [
   ['text-4',       '#475569', '#5b6779', 't'],
   ['text-5',       '#334155', '#5b6779', 't'],   // barely visible when dark; it is still text, so readable when light
   ['on-fill',      '#ffffff', '#ffffff', 'x'],   // text on a coloured button: white in both
+  ['on-cyan',      '#08161a', '#ffffff', 'x'],   // text on the lab's cyan button: near-black when dark (the cyan is bright), white when light (the cyan is deep)
 ];
 
 // ── colour families: [name, dark, light, kind] ── kind: c fill (white text reads on it) · t text (reads on every surface and on its family's tints)
@@ -76,8 +80,10 @@ export const COLOR = [
   ['violet-text-2', '#c084fc', '#6b21a8', 't'],
   ['violet-text-3', '#ddd6fe', '#5b21b6', 't'],
   ['cyan',          '#06b6d4', '#0e7490', 'c'],
+  ['cyan-strong',   '#0891b2', '#155e75', 'c'],
   ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
   ['cyan-text',     '#67e8f9', '#0b6279', 't'],
+  ['cyan-text-2',   '#7dd3fc', '#0b6279', 't'],
   ['teal',          '#14b8a6', '#0f766e', 'c'],
   ['teal-ink',      '#14b8a6', '#0e716a', 't'],
 ];
@@ -86,7 +92,8 @@ export const COLOR = [
 const TINT_BASE = { '3b82f6': 'accent', 'ef4444': 'danger', 'dc2626': 'danger-strong', 'f59e0b': 'warn', '10b981': 'ok', '16a34a': 'ok-2', '059669': 'ok-strong', '34d399': 'ok-text', '8b5cf6': 'violet', 'a855f7': 'violet-2', '7c3aed': 'violet-strong', 'a78bfa': 'violet-text', '06b6d4': 'cyan', '94a3b8': 'text-2', '64748b': 'text-3' };
 const TINTS_USED = '3b82f640 3b82f620 ef444418 f59e0b20 10b98118 ef444440 3b82f618 10b98140 3b82f612 f59e0b60 dc262630 dc262610 f59e0b18 f59e0b14 10b98120 8b5cf620 3b82f615 f59e0b55 f59e0b40 ef444450 ef444420 ef444412 3b82f660 3b82f650 f59e0b50 f59e0b12 ef444460 ef444430 a855f750 a855f718 8b5cf615 7c3aed55 7c3aed22 10b98150 f59e0b66 f59e0b45 f59e0b30 f59e0b0d ef444455 ef444415 ef44440d dc262640 dc262620 a855f714 a78bfa40 a78bfa18 94a3b818 8b5cf650 8b5cf640 64748b55 64748b22 64748b18 3b82f680 3b82f630 3b82f608 34d39940 34d39918 16a34a40 16a34a15 10b98115 10b98112 10b98108 06b6d455 05966915'
   // tints the screens build by joining a colour and an alpha ("c + '18'") - added screen by screen in stage 3
-  + ' 10b98130 8b5cf630 06b6d415 06b6d430 f59e0b15 94a3b815 94a3b830';   // TopBar: the role chip
+  + ' 10b98130 8b5cf630 06b6d415 06b6d430 f59e0b15 94a3b815 94a3b830'   // TopBar: the role chip
+  + ' 06b6d420 06b6d450 06b6d412';   // Lab: the pending tab, the chosen patient
 const all = [...NEUTRAL, ...COLOR];
 const byName = Object.fromEntries(all.map(t => [t[0], t]));
 const lightAlpha = a => Math.min(1, a * 1.25);   // a tint needs more ink on white than on near-black
@@ -109,6 +116,10 @@ export const OTHER = [
   ['shadow-60',    'rgba(0,0,0,0.6)', 'rgba(15,23,42,0.18)'],
   ['shadow-70',    'rgba(0,0,0,0.7)', 'rgba(15,23,42,0.20)'],
   ['hover-filter', 'brightness(1.12)', 'brightness(0.95)'],
+  ['hover-row',    '#ffffff06', 'rgba(15,23,42,0.04)'],   // a list row under the mouse
+  ['hover-row-2',  '#ffffff08', 'rgba(15,23,42,0.05)'],
+  ['warn-chip',    '#78350f55', 'rgba(180,83,9,0.14)'],   // small warning tags in the prescription table
+  ['danger-chip',  '#7f1d1d55', 'rgba(220,38,38,0.12)'],
   ['scheme',       'dark', 'light'],
 ];
 

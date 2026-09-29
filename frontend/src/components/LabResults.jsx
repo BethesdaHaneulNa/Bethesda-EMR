@@ -28,7 +28,7 @@ export function LabResults(props) {
       .then(function () { setLoading(false); });
   }, [props.patientId]);
 
-  var bd = '#232838', tx = '#e2e8f0', t2 = '#94a3b8', t3 = '#64748b';
+  var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)';
 
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
   if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noLabResults || 'No lab results'}</div>;
@@ -120,7 +120,7 @@ export function LabResults(props) {
     // 'abnormal' is a text result that differs from its reference text (e.g. a
     // positive malaria test): red like high, marked "!" since it is not "above".
     var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';
-    var color = r.flag === 'low' ? '#60a5fa' : odd ? '#f87171' : tx;
+    var color = r.flag === 'low' ? 'var(--accent-text)' : odd ? 'var(--danger-text)' : tx;
     var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : r.flag === 'abnormal' ? '! ' : '';
     // The reference column shows one range per row (the latest), but each result
     // was judged by the range saved with it -- an older band for a child who has
@@ -132,8 +132,8 @@ export function LabResults(props) {
     return <span>{v}<span style={{ display: 'block', color: t3, fontSize: 10 }}>{hhmm(r.result_at)}</span></span>;
   }
 
-  var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: '#161a26', whiteSpace: 'nowrap' };
-  var td = { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid #1e2433', whiteSpace: 'nowrap' };
+  var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: 'var(--panel-2)', whiteSpace: 'nowrap' };
+  var td = { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid var(--line-soft)', whiteSpace: 'nowrap' };
 
   return (
     <div style={{ overflow: 'auto', height: '100%' }}>
@@ -149,12 +149,12 @@ export function LabResults(props) {
         <tbody>
           {panels.map(function (P) {
             return [
-              <tr key={'p-' + P.name}><td colSpan={3 + cols.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
+              <tr key={'p-' + P.name}><td colSpan={3 + cols.length} style={{ padding: '5px 8px', background: 'var(--bg-group)', color: 'var(--cyan-text-2)', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
             ].concat(P.items.map(function (it) {
               return <tr key={P.name + '-' + it.name}>
-                <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
+                <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: 'var(--bg-col)', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
-                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}{it.ref_label ? <span style={{ display: 'block', fontSize: 10, color: '#67e8f9' }}>{it.ref_label}</span> : null}</td>
+                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}{it.ref_label ? <span style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</td>
                 {cols.map(function (c) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
               </tr>;
             }));
