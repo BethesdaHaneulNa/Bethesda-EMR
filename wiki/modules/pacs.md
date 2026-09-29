@@ -202,11 +202,15 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242 |
 | `GET /test` | `settings` 권한 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`) |
 | `GET /viewer-url?order_item_id=` 또는 `?study=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). UID가 없으면 뷰어 **첫 화면 주소**를 돌려줌 |
-| `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음 |
-| `GET /readings/patient/:patientId` | `consultation` 또는 `payment` 권한 | 환자의 영상 오더 전부 + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check |
+| `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음. **취소된 오더는 409** `Imaging order was cancelled`(`pacs.cancel.js`의 `ORDER_CANCELLED`) — 조건을 UPDATE 안에 넣어 동시에 들어온 취소를 덮지 않음 |
+| `GET /readings/patient/:patientId` | `consultation` 또는 `payment` 권한 | 환자의 영상 오더 전부(취소된 것 포함) + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check + `order_status`·`cancelled_at`·`cancel_reason` |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
 | `POST /bridge-heartbeat` | 브리지 토큰 (헤더, 본문 `token`, 쿼리 순) | `service_heartbeat`의 `worklist_bridge` 줄을 덮어씀. detail = `{synced, failed, poll_seconds, error(500자), arrivals_error(300자)}` — 이 밖의 칸은 버림 |
 | `POST /study-arrived` | 브리지 토큰 | 본문 `{worklist_id, study_instance_uid, orthanc_study_id, patient_id, patient_name, instances}`. 한 트랜잭션에서 worklist_log(`FOR UPDATE`)를 완료 처리하고 영상 정보·`patient_check`를 저장, order_item.worklist_status=`completed`. 400(칸 없음)·404(항목 없음)·409(UID가 그 항목 것이 아님). 다시 보내도 안전(도착 시각은 처음 값 유지). `cancelled`는 그대로 둠 |
+
+**취소 정보** (`readings`·`viewer-url`) — `order_status`(`order_item.status`), `cancelled_at`, `cancel_reason`; `viewer-url`은 `cancelled`(참/거짓)도. `cancelled_at`·`cancel_reason`은 진료 세션 마이그레이션이 만드는 칸이라 **`to_jsonb(oi)->>'…'`로 읽음** — 그 칸이 없는 DB에서도 오류 없이 `null`(그래서 이 코드를 진료 마이그레이션보다 먼저 합쳐도 됨). 취소된 오더의 영상도 뷰어로 계속 열림(기록).
+
+**`cancelWorklistForOrder(client, orderItemId)`** — `backend/src/routes/pacs.cancel.js`(PACS 소유). 진료 세션의 취소 API가 영상 오더일 때 **같은 트랜잭션 안에서** 부름. `worklist_log`가 `scheduled`·`in_progress`인 줄만 `cancelled`로, 그런 줄이 있었으면 `order_item.worklist_status='cancelled'`. **이미 `completed`(영상 도착)인 줄은 그대로**(「찍었다」는 사실 기록). 피드가 `scheduled`만 주므로 다음 브리지 바퀴(15초 안)에 `.wl` 삭제 — 브리지 변경 없음. 돌려주는 값 `{worklist_cancelled: n}`. **영상에 켜는 것은 PACS 저장소를 합친 뒤**(그 전에는 EMR이 영상 도착을 모름 — 인계 노트 2026-09-29 의견).
 
 **`images`** (`viewer-url` 응답) — 브리지가 보고하기 전에는 `null`(「아직 안 옴」과 「왔고 맞음」을 구분하려고). 보고 뒤: `{received_at, count, patient_id, patient_name, patient_check}`.
 
@@ -344,6 +348,8 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 - **P-18 [낮음] UID가 없는 오더로 `viewer-url`을 부르면 뷰어 첫 화면(모든 환자 목록)을 돌려줌.** `pacs.routes.js:91`. 지금 화면은 🖼 버튼을 영상 오더에만 보이므로 실제로는 worklist_enabled가 꺼진 영상 오더에서 생깁니다. 확인 필요.
 - **P-19 [낮음] ✅ 고침 (2026-09-29, 다른 세션)** — 진료 화면(진료 세션 `9dfcedc`)과 수납·약국 화면의 차트 `PatientChart.jsx`(수납 세션 `768eaa9`)가 같은 규칙·같은 `cs_ws*` 키로 보여 줌: Envoyé/전송됨, Réalisé/촬영 완료 …. 워크리스트로 가지 않는 오더에는 상태를 안 보임.
 - **P-21 [보통] ✅ 고침 (2026-09-29, S2)** — 영상 판독·뷰어 주소·연결 시험·워크리스트 API가 로그인만 확인했음(어느 직원이든 모든 환자의 영상 판독을 읽음). 4절 표대로 화면 권한으로 좁힘. `bridgeOrAuth`는 권한을 받는 함수가 됨(`bridgeOrAuth('settings')`).
+- **P-22 [낮음] ✅ 고침 (2026-09-29)** — 판독 날짜가 `result_at`(UTC ISO)을 `T` 앞에서 잘라 현지 00~03시에 쓴 판독이 전날로 보였음. `RadiologyReadings.jsx`의 `ymd()`를 임상병리 `LabResults.jsx`와 같은 규칙(날짜만 있는 값은 그대로, 시각이 있는 값은 **브라우저의 현지 날짜**)으로. 진료 영상 창의 같은 한 줄은 진료 세션 몫(총괄이 전달). 주의: 이 규칙은 **브라우저 PC의 시간대**를 따릅니다 — 마다가스카르 병원 PC에서는 맞고, 한국 시간으로 된 PC에서는 자정 근처 시각이 한국 날짜로 보임(격리 시험에서 18:40(+03) 취소가 한국 PC에서 다음 날로 보임).
+- **P-23 [보통] 🟡 준비만 (2026-09-29)** — 결과 있는 영상 오더 「취소」(결정 3-B)의 PACS 몫: `readings`·`viewer-url`에 취소 정보, 취소된 오더 판독 저장 409, 판독 목록에 회색·줄긋기·「Annulé (취소됨)」·이유·날짜(「영상 대기 중」은 숨김), `cancelWorklistForOrder`. 취소된 영상 오더가 생기기 전에는 아무것도 달라지지 않음. **켜는 것**: 진료 세션 취소 API·마이그레이션 + PACS 저장소 합친 뒤(총괄 결정).
 - **P-20 [낮음] ✅ 고침 (2026-09-29)** — 브리지가 heartbeat에 `arrivals_error`를 싣고(PACS `6c135aa`), `/bridge-heartbeat`가 detail에 저장, 설정 세션의 `status.routes.js`(`9d7e380`)가 노랑 `status.bridge.arrivals`로 표시. 격리 스택에서 비밀번호 없음·Orthanc 없음 → 노랑, 정상 → 초록 확인. **원래 문제**: 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
 - **격리 스택 없음** — PACS 저장소에서 `docker compose up`을 하면 실행 중인 PACS를 덮어씁니다(프로젝트 이름·컨테이너 이름·포트·`./storage` 폴더 고정). 격리 스택은 실장님 허락 후 만듭니다.
@@ -360,3 +366,4 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | `PatientCheck`·`imagesOfRow` export(진료 뷰어 창과 같이 쓰도록), 2절 상태 글자를 진료 세션 번역(Envoyé/Réalisé)에 맞춤, P-3·P-19 갱신. 인계 노트에 P-1 조치 절차서 | EMR `2c15a6b` |
 | 2026-09-29 | 낮은 항목 정리: P-20(`arrivals_error`, 비밀값 가림), P-11(작업목록 상태 API), P-12(시험 스크립트), P-17(8090 표기), `PUT /config` 부분 저장. P-13은 오프라인 키트 때문에 제안으로. 절차서에 재부팅 당일·장비 설치 날 확인 목록 | EMR `session/pacs` · PACS `6c135aa` |
 | 2026-09-29 | 서버 권한 S2 적용(P-21): viewer-url·readings·test·worklist를 화면 권한으로, worklist 쓰기·dicom-mwl 로그인 경로는 settings만 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | P-22 판독 날짜 현지로, P-23 영상 오더 취소 준비(`pacs.cancel.js`, 취소 정보·409·회색 표시) | EMR `session/pacs` (인계 노트 참고) |

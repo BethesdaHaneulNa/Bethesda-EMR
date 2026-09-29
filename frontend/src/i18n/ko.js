@@ -593,5 +593,9 @@ export default {
   px_imagesWaiting: "영상 대기 중",
   px_patientMismatch: "영상에 적힌 환자는 「{id} {name}」으로, 이 환자의 차트번호와 다릅니다. 다른 환자의 영상일 수 있으니 영상 속 환자 정보를 먼저 확인하세요.",
   px_patientMissing: "영상에 환자번호가 없습니다. 영상 속 환자 정보를 먼저 확인하세요.",
+  px_orderCancelled: "취소됨",
+  px_cancelReason: "이유",
+  px_cancelledViewer: "취소된 오더의 영상입니다. 기록으로 남아 있고, 판독은 더 쓸 수 없습니다.",
+  px_readingOnCancelled: "이 영상 검사는 진료실에서 취소되어 판독을 저장할 수 없습니다.",
   // ── end pacs ──
 };

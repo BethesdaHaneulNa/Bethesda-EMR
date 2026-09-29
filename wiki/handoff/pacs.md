@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — P-22 판독 날짜 현지로 · 영상 오더 취소 준비(P-23, 켜지 않음)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `6a96193`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**:
+  - **P-22**: `RadiologyReadings.jsx`의 `ymd()`를 `LabResults.jsx`와 같은 규칙으로 — 날짜만 있는 값(`visit_date`)은 그대로, 시각이 있는 값(`result_at`, `cancelled_at`)은 브라우저 현지 날짜. 전에는 UTC 문자열을 `T` 앞에서 잘라 현지 00~03시 판독이 전날로 보였음.
+  - **P-23 취소 준비** (총괄 결정: 코드는 지금, 영상에 켜는 것은 PACS 저장소 합친 뒤):
+    - 새 파일 **`backend/src/routes/pacs.cancel.js`** (PACS 소유): `cancelWorklistForOrder(client, orderItemId)` — 진료 취소 API가 **같은 트랜잭션에서** 부를 함수. `scheduled`·`in_progress` 워크리스트 줄만 `cancelled` + `order_item.worklist_status='cancelled'`, `completed` 줄은 그대로. `ORDER_CANCELLED` 문구 상수도 여기.
+    - `GET /pacs/readings/patient/:id`·`GET /pacs/viewer-url`: `order_status`·`cancelled_at`·`cancel_reason`(+ viewer-url은 `cancelled`). 진료 마이그레이션 칸은 **`to_jsonb(oi)->>'cancelled_at'`로 읽어 칸이 없어도 오류 없음** → 진료 마이그레이션보다 먼저 합쳐도 안전.
+    - `PUT /pacs/reading/:id`: 취소된 오더면 **409 `Imaging order was cancelled`**. 조건을 UPDATE 안에 넣어 같은 순간의 취소를 덮지 않음.
+    - `RadiologyReadings`: 취소된 오더는 흐리게·검사 이름 줄긋기·「취소됨 / Annulé」 배지(이유는 마우스 올리면), 그 아래 「취소됨 · 날짜 — 이유 : …」 한 줄. 「영상 대기 중」은 숨김(아무도 안 찍음). 영상 도착 표시·환자번호 경고·판독·「영상보기」는 그대로(기록).
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, **새** `backend/src/routes/pacs.cancel.js`, `frontend/src/components/RadiologyReadings.jsx`, `wiki/modules/pacs.md`(4절 API·취소 정보·`cancelWorklistForOrder`, 7절 P-22·P-23, 8절), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 표시 사이에만 키 4개
+- **DB 마이그레이션**: 없음 (취소 칸은 진료 세션 몫)
+- **번역 키**: `px_orderCancelled`(취소됨/Cancelled/Annulé), `px_cancelReason`(이유/Reason/Motif), `px_cancelledViewer`(영상 창 머리 안내 — 진료 세션이 쓸 것), `px_readingOnCancelled`(판독 저장 409 안내 — 진료 세션이 쓸 것)
+- **확인한 방법**:
+  - `node --check` 두 파일, 프론트 빌드 통과
+  - 격리 스택 9188: `cancelWorklistForOrder`를 API 컨테이너 안에서 트랜잭션으로 호출 — `scheduled` 오더 → `{worklist_cancelled:1}`, 워크리스트·오더 둘 다 `cancelled`. `completed` 오더 → `{worklist_cancelled:0}`, 그대로. 이어서 새 브리지 한 바퀴 → 취소된 줄의 `.wl` 삭제(2개 → 1개).
+  - `order_item.status='cancelled'`로 흉내(진료 API 대신 SQL): **취소 칸이 없는 지금 develop 구조**에서 readings가 `order_status` 주고 `cancelled_at`·`cancel_reason`은 `null`(오류 없음). 격리 DB에만 칸을 임시로 추가해 이유·날짜가 나오는 것 확인 후 칸 삭제.
+  - `PUT /reading`: 취소된 오더 409, 살아 있는 오더 200, 취소된 오더의 판독은 그대로.
+  - P-22: 판독 시각을 현지 01:30(`2026-09-28T22:30Z`)으로 → 목록에 `2026-09-29`(옛 코드는 28일).
+  - 화면: 의사 계정으로 진료 → 판독소견, **한국어·프랑스어** — 취소된 Hand·Chest PA 흐림·줄긋기·배지, Chest PA에 「Annulé · 날짜 — Motif : …」와 빨간 경고·판독 유지, Hand의 「영상 대기 중」 숨김.
+- **확인 못 한 것**: 진료 세션의 실제 취소 API와 함께(아직 없음). 영상 창 머리 안내(진료 몫).
+- **총괄 확인 요청**:
+  - 날짜 규칙이 **브라우저 PC 시간대**를 따릅니다(LabResults와 같음). 격리 시험에서 마다가스카르 18:40 취소가 한국 시간 PC에서는 다음 날로 보였습니다 — 현장 PC(마다가스카르 시간)에서는 맞지만, 실장님 PC(한국 시간)로 볼 때는 자정 근처 날짜가 한국 날짜입니다. 모든 모듈 공통 규칙이라 알려 드림.
+  - 진료 몫 전달 부탁: ① 취소 API가 `code_type='imaging'`이면 `require('./pacs.cancel').cancelWorklistForOrder(client, id)`를 같은 트랜잭션에서 — **PACS 저장소 합친 뒤에 켬** ② 영상 창에 `viewer.cancelled`면 `px_cancelledViewer` 한 줄 ③ 판독 저장이 409면 `px_readingOnCancelled` 안내 후 다시 불러오기 ④ 영상 창 판독 날짜(`result_at`)도 P-22와 같은 규칙.
+  - 켤 때 PACS가 할 일: 위키 2.4·2.6(직원용) — 「취소된 영상 검사」 보이는 모습과 다른 환자 영상일 때 절차를 「취소로 표시 → 필요하면 다시 오더」로.
+- **다른 세션에 부탁**: 진료 — 위 ①~④ (총괄 전달)
+
 ## 2026-09-29 — 의견: 영상 오더에도 「결과 있는 오더 취소」(결정 3-B)를 켤지 · DB 시간대 확인
 
 - **상태**: 보류 — 의견만(코드 변경 없음). 켤지는 총괄·실장님 결정, 켜면 아래 PACS 몫을 만들겠음
