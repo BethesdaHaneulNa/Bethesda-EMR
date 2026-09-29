@@ -299,6 +299,7 @@ export default {
   rc_dupVisit: "{name} 환자는 오늘 이미 접수되어 있습니다 ({status}{doctor}). 한 번 더 접수할까요?",
   rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
   rc_visitCancelled: "접수 취소",
+  rc_genderRequired: "성별을 고르세요 (남 / 여).",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

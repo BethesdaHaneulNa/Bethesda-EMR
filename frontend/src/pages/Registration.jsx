@@ -61,7 +61,10 @@ export default function RegistrationPage() {
   // Only the fields this screen shows. national_id, mobile, address, city and
   // region exist on the patient but have no input here; the API keeps any field
   // the body leaves out, so they are never touched from this screen.
-  var emptyForm = { chartNo: '', lastName: '', firstName: '', dob: '', gender: 'M', phone: '', bloodType: '', allergies: '', receptionNote: '' };
+  // gender starts empty on purpose (decided 2026-09-29): with Male pre-selected, a
+  // woman registered in a hurry was saved as male, and sex goes onto documents and to
+  // the imaging devices. formProblem() refuses to save until one is chosen.
+  var emptyForm = { chartNo: '', lastName: '', firstName: '', dob: '', gender: '', phone: '', bloodType: '', allergies: '', receptionNote: '' };
   var fs = useState(emptyForm), form = fs[0], setForm = fs[1];
 
   var vfs = useState({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
@@ -175,7 +178,7 @@ export default function RegistrationPage() {
   function patientToForm(p) {
     return {
       chartNo: p.chart_no || '', lastName: p.last_name || '', firstName: p.first_name || '',
-      dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || 'M',
+      dob: p.date_of_birth ? p.date_of_birth.split('T')[0] : '', gender: p.gender || '',
       phone: p.phone || '',
       bloodType: p.blood_type || '', allergies: p.allergies || '', receptionNote: p.reception_note || '',
     };
@@ -293,7 +296,7 @@ export default function RegistrationPage() {
     setSelectedPatient({ id: v.patient_id, chart_no: v.chart_no, last_name: v.last_name, first_name: v.first_name });
     setForm({
       chartNo: v.chart_no, lastName: v.last_name, firstName: v.first_name,
-      dob: v.date_of_birth ? v.date_of_birth.split('T')[0] : '', gender: v.gender || 'M',
+      dob: v.date_of_birth ? v.date_of_birth.split('T')[0] : '', gender: v.gender || '',
       phone: v.patient_phone || '',
       bloodType: v.blood_type || '', allergies: v.allergies || '', receptionNote: v.reception_note || '',
     });
@@ -321,6 +324,7 @@ export default function RegistrationPage() {
   // the name and birth-date checks in English.
   function formProblem() {
     if (!form.lastName.trim() || !form.firstName.trim()) return t.rc_nameRequired;
+    if (form.gender !== 'M' && form.gender !== 'F') return t.rc_genderRequired;
     if (!form.dob) return null;
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(form.dob);
     if (!m) return t.rc_dobIncomplete;

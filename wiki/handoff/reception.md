@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — ⑫ 성별: 안 눌린 상태로 시작, 안 고르면 저장 안 됨 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`2a76b5f` 위, 재부팅 뒤 `develop` ff)
+- **한 일**:
+  - `emptyForm.gender`를 `'M'` → `''`, `patientToForm`·`selectVisit`의 `|| 'M'` → `|| ''`
+  - `formProblem()`에 성별 검사 → `rc_genderRequired`
+  - DB에 성별이 비어 있던 기존 환자도 고르기 전에는 저장 안 됨(의도 — 결정의 뜻)
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`
+- **공용 파일 변경**: i18n `rc_` 블록에 `rc_genderRequired` 1개
+- **DB 마이그레이션**: 없음 · **번역 키**: `rc_genderRequired` (ko · en · fr)
+- **확인한 방법**:
+  - `npm run build`. 격리 스택 9181을 **새 DB로** 다시 띄움(재부팅 전 `down -v`). 시험 스크립트가 관리자·시험 계정을 새로 만들고 148/148
+  - 화면(프랑스어): 새 환자 → 두 단추 모두 회색(안 눌림), 성·이름만 넣고 접수 → 「Choisissez le sexe (Masculin / Féminin).」 → Féminin → 접수됨, DB `F`
+  - 화면(한국어): 「성별을 고르세요 (남 / 여).」
+- **확인 못 한 것**: 영어 화면
+- **위키**: `modules/reception.md` 머리, 2.4 Sexe 줄, 2.8 안내 줄, 3절 입력 검사, 7절 ⑫ 고침, 8절
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-29 — ⑭ 생년월일 칸 · 동명이인 악센트 무시 (재부팅 전 저장)
 
 - **상태**: 확인 요청 (덩어리 끝까지 마침)

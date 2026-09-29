@@ -308,6 +308,7 @@ export default {
   rc_dupVisit: "{name} is already registered today ({status}{doctor}). Register a second visit?",
   rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   rc_visitCancelled: "Visit cancelled",
+  rc_genderRequired: "Choose the sex (Male / Female).",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

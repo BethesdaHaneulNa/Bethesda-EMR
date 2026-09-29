@@ -299,6 +299,7 @@ export default {
   rc_dupVisit: "{name} est déjà enregistré(e) aujourd’hui ({status}{doctor}). Enregistrer une seconde visite ?",
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   rc_visitCancelled: "Visite annulée",
+  rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

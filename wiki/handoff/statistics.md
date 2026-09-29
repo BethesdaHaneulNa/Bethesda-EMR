@@ -2,10 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영어 화면 확인 (재부팅 뒤 ①)
+
+- **상태**: 확인 요청
+- **커밋**: session/statistics (이 항목과 같은 커밋). `develop` `2a76b5f` 에서 fast-forward 한 뒤 작업
+- **한 일**: 지금까지 「확인 못 한 것」으로 남아 있던 영어 화면을 격리 스택에서 전부 봄(운영 현황 · 매출 · 미수 명단 · 약품 사용통계 두 모드의 기준 줄 · 월별 추이). 영어 글자는 모두 맞았고, **하나만 틀림**: 개수 뒤 단위가 「15건」「1 명」처럼 한국어로 나옴. `en.js` 의 `cases`·`people` 은 일부러 `""`(영어는 단위 없이 숫자만)인데 `Stats.jsx` 가 `t.cases||'건'` 으로 읽어 빈 문자열이 한국어 기본값으로 떨어졌음 → 빈 문자열도 값으로 보는 `word()` 로 읽게 고침.
+- **바꾼 파일**: `frontend/src/pages/Stats.jsx`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9186 에 앞선 시험 데이터(4차 매출 · 18 약품)를 넣고 영어 화면 글자 전부 읽음 — 고친 뒤 「Total visits 15」, 「Unpaid list 1」, 한국어·영어 섞임 없음. 기준 줄: 「All prescriptions: by the day prescribed (visit date), quantity as written」 / 「Dispensed: by the day the pharmacy handed it over, in-house drugs only, rounded up to whole units — the same figure as the stock report’s outgoing」. 한국어 「15건 · 1 명」, 프랑스어 「15 cas · 1 pers.」 그대로인 것 확인.
+- **확인 못 한 것**: 없음
+- **위키**: `modules/statistics.md` 3.1, 8절
+- **총괄 확인 요청**: 참고 — 다른 화면도 `t.cases||…` 식이면 영어에서 같은 증상이 날 수 있음(통계 밖이라 안 봄).
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 재부팅 뒤 할 일 ②·③ 진행 중.
+
 ## 2026-09-29 — 문제 18: 「조제완료」를 약국 재고 보고서 「출고」와 같은 기준으로
 
 - **상태**: 확인 요청
-- **커밋**: session/statistics (이 항목과 같은 커밋). `develop` `a264315` 에서 fast-forward 한 뒤 작업
+- **커밋**: session/statistics `bc3e00a` (develop 에 합쳐짐, 실행 중 EMR 반영)
 - **한 일**: 총괄 결정대로 `/drug-usage` 의 `status=dispensed` 를 재고 보고서 규칙으로 — 날짜 `rx.dispensed_at::date`, 수량 `CEIL(total_qty)`, `drug_id` 있고 원외 아닌 줄만, 약 기록(`drug.code`·`name`)으로 묶음. 처방전체는 그대로(내원일 · 저장 수량 · 처방 줄 이름). 응답에 `basis`. 화면 표 머리 아래에 지금 기준을 한 줄로(ko·en·fr).
 - **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`
 - **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — **통계 표시(`st_`) 사이에만** `st_rxBasisAll`, `st_rxBasisDispensed` 2개
