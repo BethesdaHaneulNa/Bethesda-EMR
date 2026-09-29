@@ -24,8 +24,15 @@ const BOOTSTRAP_ADMIN_LOGIN = 'admin';
 
 // Is there another way in besides this row? Used before demoting any admin, so that
 // renaming the bootstrap account does not quietly remove the protection above.
-async function otherSettingsAdminExists(excludeId) {
-  const r = await pool.query(
+//
+// S9 (2026-09-29): run inside the change's transaction, after lockAdmins(). Two admins
+// demoting each other at the same moment each saw the other still in place and both
+// went through; the lock makes the second wait until the first has committed.
+async function lockAdmins(client) {
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('bethesda.staff.admins'))");
+}
+async function otherSettingsAdminExists(excludeId, db) {
+  const r = await (db || pool).query(
     `SELECT COUNT(*)::int AS n FROM staff
       WHERE id <> $1 AND status = 'active' AND role = 'admin' AND 'settings' = ANY(permissions)`,
     [excludeId]
@@ -270,11 +277,25 @@ function staffFields(row) {
 function permsInOrder(list) {
   return ALL_PERMS.filter(p => (list || []).indexOf(p) >= 0);
 }
+// S10 (2026-09-29): the login id is stored without surrounding spaces (" lee" and
+// "lee" were two accounts, and the first could not log in by typing "lee"), and every
+// permission must be one the app knows - an unknown word used to be stored and then
+// ignored everywhere, so it looked granted in the database and was not.
+function badStaffInput(login_id, permissions) {
+  if (!String(login_id || '').trim()) return MSG.LOGIN_ID_REQUIRED;
+  if (permissions !== undefined && permissions !== null && !Array.isArray(permissions)) return fieldMsg.notOneOf('permissions', ALL_PERMS);
+  const unknown = (permissions || []).filter(p => ALL_PERMS.indexOf(p) < 0);
+  if (unknown.length) return fieldMsg.notOneOf('permissions', ALL_PERMS);
+  return null;
+}
+
 function staffLabel(row) { return row.name ? row.name + ' (' + row.login_id + ')' : row.login_id; }
 
 router.post('/staff', permMiddleware('settings'), async (req, res) => {
-  const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
-  if (!String(login_id || '').trim()) return res.status(400).json({ error: MSG.LOGIN_ID_REQUIRED });
+  const { password, name, role, permissions, department_id, phone, email, status } = req.body;
+  const bad = badStaffInput(req.body.login_id, permissions);
+  if (bad) return res.status(400).json({ error: bad });
+  const login_id = String(req.body.login_id).trim();
   if (!String(password || '')) return res.status(400).json({ error: MSG.PASSWORD_REQUIRED });
   if (!ROLES.includes(String(role))) {
     return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
@@ -301,7 +322,10 @@ router.post('/staff', permMiddleware('settings'), async (req, res) => {
 });
 
 router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
-  const { login_id, password, name, role, permissions, department_id, phone, email, status } = req.body;
+  const { password, name, role, permissions, department_id, phone, email, status } = req.body;
+  const bad = badStaffInput(req.body.login_id, permissions);
+  if (bad) return res.status(400).json({ error: bad });
+  const login_id = String(req.body.login_id).trim();
   if (!ROLES.includes(String(role))) {
     return res.status(400).json({ error: fieldMsg.notOneOf('role', ROLES) });
   }
@@ -309,6 +333,7 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await lockAdmins(client);
     // The row as it was, locked: the log needs the "before", and two saves of the same
     // account at once should not interleave.
     const cur = await client.query(
@@ -338,7 +363,7 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
     } else if (effRole !== 'admin' || perms.indexOf('settings') < 0 || String(effStatus) === 'inactive') {
       // Not the bootstrap account, but it can still be the only one left holding the
       // key - the account may simply have been renamed.
-      if (!(await otherSettingsAdminExists(req.params.id))) {
+      if (!(await otherSettingsAdminExists(req.params.id, client))) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: MSG.LAST_ADMIN });
       }
@@ -374,6 +399,7 @@ router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await lockAdmins(client);
     // Deactivating is the other way to lock everyone out, so it is gated the same way
     // as the role and permission edits above.
     const cur = await client.query(
@@ -386,7 +412,7 @@ router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
       return res.status(400).json({ error: MSG.SETUP_ADMIN_KEPT });
     }
     const held = was.role === 'admin' && (was.permissions || []).indexOf('settings') >= 0;
-    if (held && !(await otherSettingsAdminExists(req.params.id))) {
+    if (held && !(await otherSettingsAdminExists(req.params.id, client))) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: MSG.LAST_ADMIN });
     }
@@ -548,7 +574,10 @@ router.put('/clinic', permMiddleware('settings'), async (req, res) => {
     const { name, name_en, name_fr, address, phone, email, working_hours, app_title } = req.body;
     const result = await pool.query(
       'UPDATE clinic SET name=$1, name_en=$2, name_fr=$3, address=$4, phone=$5, email=$6, working_hours=$7, app_title=COALESCE($8, app_title), updated_at=NOW() WHERE id=1 RETURNING *',
-      [name, name_en, name_fr, address, phone, email, working_hours, app_title || null]
+      // U5 (2026-09-29): an emptied title goes back to the default (011) instead of
+      // silently keeping the old one. Not sent at all (an older screen): kept (NULL).
+      [name, name_en, name_fr, address, phone, email, working_hours,
+       app_title === undefined || app_title === null ? null : (String(app_title).trim() || 'Bethesda EMR')]
     );
     res.json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }

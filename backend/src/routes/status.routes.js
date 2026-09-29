@@ -40,12 +40,23 @@ async function checkDatabase() {
   }
 }
 
+// B7 (2026-09-29): two places can fill up - where the backups go (/backups, which
+// BACKUP_PATH may put on another drive) and Docker's own disk, where the database lives
+// (seen here as this container's root filesystem). Only the first was checked, so with
+// the backups on D: a full C: went unnoticed. The fuller of the two decides.
+async function freeOf(dir) {
+  const st = await fs.promises.statfs(dir);
+  return { free: (st.bsize * st.bavail) / 1e9, total: (st.bsize * st.blocks) / 1e9 };
+}
 async function checkDisk() {
   try {
-    const st = await fs.promises.statfs(backupCfg().dir);
-    const freeGb = (st.bsize * st.bavail) / 1e9;
-    const totalGb = (st.bsize * st.blocks) / 1e9;
-    const values = { free_gb: Math.round(freeGb), total_gb: Math.round(totalGb) };
+    const bk = await freeOf(backupCfg().dir);
+    let dk = null;
+    try { dk = await freeOf('/'); } catch (e) { /* not readable here - the backup disk alone */ }
+    const worst = dk && dk.free < bk.free ? dk : bk;
+    const freeGb = worst.free, totalGb = worst.total;
+    const values = { free_gb: Math.round(freeGb), total_gb: Math.round(totalGb),
+      backup_free_gb: Math.round(bk.free), docker_free_gb: dk ? Math.round(dk.free) : null };
     // A full disk stops the database from writing and the backups from being
     // taken, and it fills up long before anyone thinks to look at it.
     if (freeGb < DISK_DOWN_FREE_GB) return { key: 'disk', state: 'down', message: 'status.disk.full', values };

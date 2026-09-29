@@ -812,6 +812,7 @@ export default {
   se_flag_normal: "normal",
   se_flag_high: "élevé",
   se_flag_abnormal: "anormal",
+  se_setupIdFixed: "L'identifiant de l'administrateur est toujours admin. Ce compte est protégé pour que les Paramètres ne soient jamais bloqués.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

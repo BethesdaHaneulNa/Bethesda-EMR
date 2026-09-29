@@ -365,18 +365,46 @@ function Get-ContainerCheck {
   }
 }
 
+# Where Docker Desktop keeps its disk (and so the database): its settings may name a
+# custom folder; otherwise it is under %LOCALAPPDATA%\Docker.
+function Get-DockerDataDrive {
+  foreach ($f in @("$env:APPDATA\Docker\settings-store.json", "$env:APPDATA\Docker\settings.json")) {
+    if (-not (Test-Path $f)) { continue }
+    try {
+      $j = Get-Content $f -Raw | ConvertFrom-Json
+      foreach ($k in @('CustomWslDistroDir', 'DataFolder')) {
+        $v = $j.$k
+        if ($v -and ($v -match '^[A-Za-z]:')) { return $v.Substring(0, 2).ToUpper() }
+      }
+    } catch {}
+  }
+  if ($env:LOCALAPPDATA) { return (Split-Path -Qualifier $env:LOCALAPPDATA).ToUpper() }
+  return $null
+}
+
+# B7 (2026-09-29): the drive the backups go to and the drive Docker (the database) is
+# on. Only the first was checked, so with BACKUP_PATH on D: a full C: went unnoticed.
+# One drive -> the line reads as before; two -> both, and the fuller one decides.
 function Get-DiskCheck {
   param($Strings, [string]$BackupPath)
   $path = if ($BackupPath) { $BackupPath } else { $PSScriptRoot }
   try {
-    $qualifier = (Split-Path -Qualifier $path)
-    $drive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$qualifier'"
-    $freeGb = [math]::Round($drive.FreeSpace / 1GB)
-    $totalGb = [math]::Round($drive.Size / 1GB)
-    $detail = $Strings.diskFree -f $freeGb, $totalGb
-    if ($freeGb -lt $DiskDownFreeGb) { return New-Check 'disk' 'down' $detail }
-    if ($freeGb -lt $DiskWarnFreeGb) { return New-Check 'disk' 'warn' $detail }
-    return New-Check 'disk' 'ok' $detail
+    $drives = @((Split-Path -Qualifier $path).ToUpper())
+    $dd = Get-DockerDataDrive
+    if ($dd -and $drives -notcontains $dd) { $drives += $dd }
+    $state = 'ok'; $parts = @()
+    foreach ($q in $drives) {
+      $drive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$q'"
+      if (-not $drive) { continue }
+      $freeGb = [math]::Round($drive.FreeSpace / 1GB)
+      $totalGb = [math]::Round($drive.Size / 1GB)
+      $text = $Strings.diskFree -f $freeGb, $totalGb
+      $parts += $(if ($drives.Count -gt 1) { "${q} $text" } else { $text })
+      if ($freeGb -lt $DiskDownFreeGb) { $state = 'down' }
+      elseif ($freeGb -lt $DiskWarnFreeGb -and $state -ne 'down') { $state = 'warn' }
+    }
+    if ($parts.Count -eq 0) { return New-Check 'disk' 'warn' '?' }
+    return New-Check 'disk' $state ($parts -join ' - ')
   } catch {
     return New-Check 'disk' 'warn' '?'
   }

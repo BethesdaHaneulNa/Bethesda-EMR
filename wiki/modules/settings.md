@@ -20,8 +20,8 @@
 ### 2.1 처음 설치했을 때 — 관리자 계정 만들기
 
 1. 브라우저로 EMR 주소(`http://<서버 주소>:9080`)에 들어가면 **Configuration initiale (초기 설정)** — 「Créez le compte administrateur」 화면이 나옵니다. 관리자가 하나도 없을 때만 나오는 화면입니다.
-2. **Nom affiché (이름)**, **Identifiant (아이디)**, **Mot de passe (비밀번호, 6자 이상)**, **Confirmer le mot de passe (비밀번호 확인)** 을 넣고 **Créer le compte admin (관리자 계정 만들기)** 를 누릅니다.
-   - **아이디는 `admin`으로 하기를 권합니다.** 아이디가 `admin`인 계정만 「설치 때 만든 관리자」로 보호됩니다 (2.6, 3-2절).
+2. **Nom affiché (이름)**, **Mot de passe (비밀번호, 6자 이상)**, **Confirmer le mot de passe (비밀번호 확인)** 을 넣고 **Créer le compte admin (관리자 계정 만들기)** 를 누릅니다.
+   - **Identifiant (아이디)** 는 **`admin`으로 고정**되어 바꿀 수 없습니다(2026-09-29, 총괄 결정 S3) — 「L'identifiant de l'administrateur est toujours admin…」. 이 계정이 「설치 때 만든 관리자」로 보호됩니다 (2.6, 3-2절).
 3. 바로 **Paramètres** 화면으로 들어갑니다.
 
 ### 2.2 로그인 · 로그아웃
@@ -309,7 +309,10 @@
   - 지금 비밀번호 추측 횟수 제한은 없습니다(로그인과 같음). 이미 로그인한 사람만 부를 수 있어 로그인 화면보다 위험이 작습니다.
   - 확인: `backend/test/settings.password.mjs` (격리 스택 전용, `SE_ADMIN_PW`) 15개.
 - 로그인 실패 횟수 제한은 없습니다.
-- 로그인 순서: 아이디 조회 → 비활성이면 「Account is inactive」 → 비밀번호 확인. 비밀번호를 몰라도 그 아이디가 있고 비활성인지 알 수 있습니다.
+- 로그인 순서: 아이디 조회 → **비밀번호 확인** → 비활성이면 「Account is inactive」 (2026-09-29, S7 — 전에는 비밀번호 전에 알려 줘서, 비밀번호를 몰라도 그 아이디가 있고 비활성인지 알 수 있었음). 틀린 비밀번호·없는 아이디·비활성+틀린 비밀번호는 모두 같은 「Invalid credentials」.
+- **첫 설치** `POST /api/auth/setup` (2026-09-29): 아이디는 **항상 `admin`**(S3 — 보낸 `login_id`는 무시, 화면도 칸을 고정). 확인·만들기를 **한 트랜잭션 + advisory lock**(`bethesda.setup`)으로 — 두 화면에서 동시에 눌러도 하나만 만들어지고 다른 쪽은 「setup already done」(S9).
+- **직원 저장** (S9·S10): PUT·DELETE `/staff`가 트랜잭션 시작에서 advisory lock(`bethesda.staff.admins`)을 잡고 그 안에서 「다른 설정 관리자가 있나」를 봄 — 두 관리자를 동시에 강등해도 차례로. 아이디는 앞뒤 공백을 지워 저장, 빈 아이디는 PUT에서도 400. 권한은 `ALL_PERMS`에 있는 것만(모르는 값 400 `permissions must be one of …`).
+- 로그인 실패 횟수 제한은 넣지 않음(총괄 결정 S5 — LAN 안, 「너무 복잡해지면 안 된다」).
 - 토큰은 브라우저 `localStorage`(`medconnect_token`)에 저장. 서버가 401을 주면 `api/client.js`가 지우고 로그인 화면으로 보냅니다.
 - **로그인·첫 관리자 만들기는 `api/client.js`를 거치지 않습니다** (2026-09-29, `Login.jsx` `authPost`). 그 클라이언트는 401이면 무조건 「로그인이 끝났다」로 보고 로그인 화면을 다시 불러오는데, 로그인 화면에서 401은 **틀린 비밀번호·비활성 계정**의 답이라 안내가 뜨자마자 새로고침에 지워졌습니다 — 틀린 비밀번호를 넣으면 **아무 말 없이 칸만 비었습니다**(격리 스택에서 재현). 이제 안내가 남고 칸도 그대로입니다.
 - **서버 안내의 번역** (2026-09-29, U11): 로그인·설정 API가 사람에게 보여줄 문구는 영어 고정 문자열로 `backend/src/routes/settings.messages.js`(`MSG`, 필드 이름이 들어가는 것은 `fieldMsg`)에 모았고, 화면은 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)`로 **문자열을 맞춰** `se_` 문구로 바꿉니다(`api/client.js`가 상태 코드를 넘기지 않으므로 — 다른 세션들과 같은 방식, 총괄 결정). `utils/dbError.js`(총괄)의 문구와 `api/client.js`의 「API response was not JSON…」도 같은 표에 있습니다. 모르는 문구는 영어 그대로 보입니다(숨기지 않음). 로그인 화면은 받은 원문을 저장하고 **보여줄 때** 번역하므로 언어를 바꾸면 안내도 바뀝니다. **한쪽 문구를 바꾸면 다른 쪽도** — `node backend/test/settings.messages.mjs`가 어긋나면 알려줍니다(45개 항목 — 2026-09-29 `dbError`의 「없는 날짜」 추가).
@@ -364,7 +367,7 @@
 | 어디서 | 서버 PC의 Windows 창 (또는 `-Console` 한 번 출력, 종료 코드 0/1/2) | 백엔드. 로그인한 누구나 |
 | 어떻게 | **EMR을 거치지 않고** Docker·디스크·파일을 직접 봄. EMR이 죽어도 답하게 하려고 | 백엔드 안에서 DB·파일 확인 |
 | DB·서버·화면 | 컨테이너 `bethesda-emr-db/-api/-web`의 상태와 Docker healthcheck | DB에 `SELECT 1` |
-| 디스크 | 백업 폴더가 있는 드라이브의 남은 공간 (20GB 미만 노랑, 5GB 미만 빨강) | `/backups`의 `statfs` (같은 기준) |
+| 디스크 | 백업 폴더가 있는 드라이브 **와 Docker 데이터 드라이브**(DB — Docker Desktop 설정의 사용자 폴더, 없으면 `%LOCALAPPDATA%`의 드라이브)의 남은 공간 (20GB 미만 노랑, 5GB 미만 빨강). 같은 드라이브면 한 줄, 다르면 「C: … - D: …」로 둘 다, 더 찬 쪽이 색을 정함 (2026-09-29, B7) | `/backups`의 `statfs` **와 컨테이너의 `/`**(같은 기준, 더 찬 쪽). 값: `free_gb`(더 찬 쪽), `backup_free_gb`, `docker_free_gb`. **한계**: Windows의 Docker Desktop에서는 `/`가 가상 디스크의 한도(시험 PC 1016GB)를 보여 실제 C: 여유(102GB)가 아님 — Windows의 실제 C:는 상태 창이 봄. Linux·NAS에서는 실제 값 |
 | 백업 | 백업 폴더(= `docker inspect`로 찾은 `/backups` 마운트 원본)의 가장 새 `*.sql.gz`가 36시간 넘으면 노랑 | `services/backup.js` `health()` — 36시간 넘음·없음·**마지막 시도 실패**(`status.backup.failed`)면 노랑 |
 | PACS | 컨테이너 `bethesda-pacs` (없으면 「미설치」) + **호스트 포트** (아래) | `pacs_config.worklist_scp_host`로 TCP 연결 |
 | 호스트 포트 (2026-09-29) | `bethesda-emr-web`·`bethesda-pacs`가 **게시하도록 설정된** 포트(`HostConfig.PortBindings` — 9080, 9090, 4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨」으로 바꾸고, `netsh interface ipv4 show excludedportrange protocol=tcp`의 예약 구간 안이면 「Windows가 막음」, 아니면 「닫힘」 | — (컨테이너 안에서는 알 수 없음) |
@@ -548,14 +551,14 @@
 |---|---|---|---|
 | S1 | ~~높음~~ **고침 (총괄)** | ~~비활성·권한을 뺀 직원이 토큰으로 12시간 계속 씀~~ → 2026-09-29 실장님 결정, 총괄이 `middleware/auth.js`에서 요청마다 DB의 상태·권한을 읽게 함. 격리 스택에서 확인: 권한을 뺀 관리자가 저장 → 403 「Vous n'avez pas l'autorisation…」, 비활성으로 바꾸자 다음 화면 요청에서 로그인 화면 → 「Ce compte est désactivé」. 화면 메뉴가 늦게 바뀌는 것은 U13 | (옛 코드) `middleware/auth.js` |
 | S2 | ~~높음~~ **고침 (각 세션)** | ~~접수·문서 API와 진료 조회 API가 로그인만 확인~~ → 2026-09-29 실장님 결정, 표대로 각 파일 주인이 적용(접수·진료·수납·약국·임상병리·통계·PACS·설정). **`settings.access.mjs`로 990칸 확인 — 모두 표와 같음**(2026-09-29). 권한과 별개로 발견: `POST /consultations/:id/diagnoses`·`/prescriptions`가 빈 입력에 400 대신 **500**(진료 세션에 전달) | 각 라우트 파일 |
-| S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
+| S3 | ~~보통~~ **고침** | ~~설치 때 만든 관리자를 아이디 `admin`으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음~~ → 2026-09-29 총괄 결정 (가): 설치 아이디를 `admin`으로 고정(서버 `SETUP_LOGIN`, 화면 칸 읽기 전용 + 안내) | `auth.routes.js` `/setup`, `Login.jsx` |
 | S4 | ~~보통~~ **결정·고침** | 새 직원 비밀번호 칸에 `1234`가 미리 들어감, 길이 제한 없음 → **2026-09-29 결정: 1234 유지, 첫 로그인 때 강제로 바꾸지 않음, 최소 길이 없음 — 대신 각자 바꿀 수 있게**: 상단바 이름 → 「Changer mon mot de passe」 (`POST /api/auth/password`, 3-3절). ~~비밀번호 칸이 가려지지 않음~~ → `type=password` + **Afficher/Masquer**, `autoComplete="new-password"` | `Settings.jsx` 직원 편집 창, `auth.routes.js`, `settingsPassword.jsx` |
-| S5 | 보통 | 로그인 실패 횟수 제한 없음 (LAN 안이라 위험은 제한적) | `auth.routes.js:49` |
+| S5 | 보통 → **넣지 않음 (결정)** | 로그인 실패 횟수 제한 없음 — 2026-09-29 총괄 결정 (가): LAN 안이고 잠기면 현장 부담, 「너무 복잡해지면 안 된다」 | `auth.routes.js` |
 | S6 | ~~보통~~ **고침** | ~~API로 status를 빼고 직원을 저장하면 NULL~~ → 2026-09-29 빠진 status는 지금 상태 유지 (3-10절, 기록 작업 때 함께) | (옛 코드) `admin.routes.js` PUT staff |
-| S7 | 낮음 | 비밀번호 확인 전에 「Account is inactive」를 알려줘 계정 존재·상태가 드러남 | `auth.routes.js:63` |
+| S7 | ~~낮음~~ **고침** | ~~비밀번호 확인 전에 「Account is inactive」~~ → 2026-09-29: 비밀번호가 맞을 때만 (3-3절) | `auth.routes.js` `/login` |
 | S8 | ~~낮음~~ **고침 (PACS)** | ~~`GET /api/pacs/config`가 로그인한 누구에게나 브리지 토큰을 줌~~ → S2로 settings 권한만 (`settings.access.mjs`로 확인) | `pacs.routes.js` |
-| S9 | 낮음 | 마지막 관리자 검사가 트랜잭션 없이 이뤄져, 두 관리자를 **동시에** 강등하면 둘 다 통과할 수 있음. 첫 관리자 생성(`/setup`)도 동시 요청이면 둘 생길 수 있음 | `admin.routes.js:229`, `auth.routes.js:24` |
-| S10 | 낮음 | 권한 배열을 허용 목록으로 검사하지 않음, `login_id` 공백 제거·빈 값 검사가 PUT에 없음, `bcryptjs` import만 있고 안 씀 | `admin.routes.js:192,209,213`, `auth.routes.js:2` |
+| S9 | ~~낮음~~ **고침** | ~~마지막 관리자 검사·첫 관리자 생성이 동시 요청에 약함~~ → 2026-09-29: advisory lock + 한 트랜잭션, 격리에서 동시 설치 2번 → 하나만 (3-3절) | `admin.routes.js` `lockAdmins`, `auth.routes.js` `/setup` |
+| S10 | ~~낮음~~ **고침** | ~~권한 허용 목록 검사 없음, PUT의 `login_id` 공백·빈 값, `bcryptjs` import~~ → 2026-09-29 (3-3절) | `admin.routes.js` `badStaffInput`, `auth.routes.js` |
 
 ### 백업 신뢰성
 
@@ -569,8 +572,8 @@
 | B11 | ~~높음~~ **고침** | ~~서버 상태 창이 **호스트 포트가 막힌 것**을 모름 — 컨테이너가 healthy면 「정상」~~ → 2026-09-29: 게시 포트마다 호스트에서 연결 확인, Windows 예약이면 그렇게 표시 (3-6절). 이 PC에서 실제로 PACS 4242·9090이 막혀 있었음 | (옛 코드) `server-status.ps1` `Get-ContainerCheck` |
 | B12 | ~~보통~~ **고침** | ~~서버 상태 창의 색 띠가 첫 두 줄(DB·앱 서버)을 가림~~ → 2026-09-29 (3-6절) | (옛 코드) `server-status.ps1` 컨트롤 추가 순서 |
 | B6 | ~~낮음~~ **고침** | ~~백업 목록·「최근」의 시각이 UTC로 나옴~~ → 2026-09-29: 브라우저 PC의 현지 시각으로 표시(`fmtLocal`) | (옛 코드) `String(mtime).slice(0,16)` — ISO(UTC) 문자열 |
-| B7 | 낮음 | 디스크 검사가 백업 드라이브만 봄. 백업을 D:로 옮기면 DB가 있는 드라이브가 차도 모름 | `status.routes.js:261`, `server-status.ps1:216` |
-| B8 | 낮음 | 내려받기가 파일 전체를 브라우저 메모리에 올림 (DB가 커지면 느리거나 실패 가능) | `Settings.jsx:41` |
+| B7 | ~~낮음~~ **고침** | ~~디스크 검사가 백업 드라이브만 봄~~ → 2026-09-29: 상태 창은 백업 드라이브와 Docker 데이터 드라이브 둘 다, 상태 API는 `/backups`와 `/` 둘 다 (API의 `/`는 Windows Docker Desktop에서 가상 디스크 값 — 3-6절 표) | `server-status.ps1` `Get-DiskCheck`·`Get-DockerDataDrive`, `status.routes.js` `checkDisk` |
+| B8 | 낮음 → **하지 않음 (결정)** | 내려받기가 파일 전체를 브라우저 메모리에 올림 — 2026-09-29 총괄: 지금 크기(수십 KB)에서는 필요 없음 | `Settings.jsx` `downloadBackup` |
 | B9 | ~~낮음~~ **고침 (총괄)** | ~~`.env.example`이 「BACKUP_PATH를 비우면 백업이 꺼진다」고 설명~~ → 「항상 켜져 있음, 비우면 앱 폴더」 | `.env.example` |
 | B10 | ~~낮음~~ **고침 (총괄)** | ~~5b 복원 명령을 Git Bash에서 치면 `/tmp` 경로가 바뀜~~ → `DEPLOYMENT.md` 5b에 「PowerShell이나 cmd에서」 | `DEPLOYMENT.md` |
 
@@ -580,13 +583,13 @@
 |---|---|---|---|
 | U1 | ~~보통~~ **대부분 고침** | ~~설정 화면 글자 상당수가 영어로 고정~~ → 2026-09-29: 틀(탭 이름·공용 삭제 확인·편집 창 제목·오류·저장 알림)과 직원·오더 코드·상용구·진료과·병원 정보 탭, 그 편집 창을 `se_` 키로. 역할·오더 종류·상태도 번역해서 표시(저장 값은 그대로). **남은 것**: 약품 탭 안쪽(약국 몫 — 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·General 등 — DB에 저장되는 값이라 번역하지 않음) | (옛 코드) `Settings.jsx` |
 | U2 | ~~보통~~ **고침** | ~~비활성으로 만든 직원을 다시 활성으로 되돌릴 방법이 화면에 없음~~ → 2026-09-29 결정(관리자만, 기록): 비활성 줄의 **Réactiver**, `POST /admin/staff/:id/reactivate`. 「관리자」= admin 역할 + 설정 권한 — 설정 권한만 받은 다른 역할은 버튼이 없고 서버가 403. 편집 창의 PUT으로 돌아가는 길도 같은 규칙. 확인 `settings.reactivate.mjs` 12개 (2.5절) | `admin.routes.js`, `Settings.jsx` 직원 줄 |
-| U3 | 보통 | `/api/system/status`를 화면 어디에서도 부르지 않음. 상태 창은 서버 PC에서만 보임 | `status.routes.js`, 프론트엔드에 호출 없음 |
+| U3 | 보통 → **결정 대기 (결정 세션)** | `/api/system/status`를 화면 어디에서도 부르지 않음 — 추천 (가) 상단바의 작은 상태 점, 설정 권한만 눌러 목록 | `status.routes.js`, 프론트엔드에 호출 없음 |
 | U4 | ~~낮음~~ **고침** | ~~첫 화면 목록 하나가 실패하면 뒤의 것이 안 불러와지고 조용함~~ → 2026-09-29: 목록을 따로따로 불러오고, 실패하면 Paramètres 맨 위에 빨간 줄로 이유(권한 없음 등)를 보여줌. 권한을 뺀 관리자에게 직원 목록이 **빈 채로** 보여 「직원이 없다」로 읽히던 것 | (옛 코드) `Settings.jsx` `loadAll` |
 | U13 | ~~보통~~ **고침 (총괄)** | ~~권한을 바꾼 직원의 메뉴는 다시 로그인해야 바뀜~~ → 2026-09-29 `TopBar.jsx`가 `/auth/me`로 주기적으로 다시 읽음. 격리 스택에서 확인: 통계 권한을 더하고 새로 고치자 메뉴에 Statistiques, `/stats` 열림 / 빼고 새로 고치자 메뉴에서 사라짐. 남은 점(권한을 뺀 화면을 보고 있던 사람이 그 화면에 남음)도 총괄이 고침(`7662160`) — 격리 스택에서 확인: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아오자 **접수로 이동**, 접수 화면에서 입력 중에 **다른** 권한(수납)을 빼자 **그대로 남고 입력도 유지**, 메뉴에서 Paiement만 사라짐 | `TopBar.jsx`(총괄) |
-| U5 | 낮음 | 앱 제목을 비워서 저장할 수 없음 (빈 값이면 이전 값 유지) | `admin.routes.js:344` `COALESCE` |
-| U6 | 낮음 (**일부 고침**) | ~~로그인 화면 아래 버전이 `v1.0`으로 고정~~ → 2026-09-29: 상단바와 같은 빌드 버전(`__APP_VERSION__`). 로고 글자가 옛 이름의 「M」인 것은 그대로 | `Login.jsx` |
+| U5 | ~~낮음~~ **고침** | ~~앱 제목을 비워서 저장할 수 없음~~ → 2026-09-29: 비우면 기본값 「Bethesda EMR」, 칸을 보내지 않은 저장은 그대로 | `admin.routes.js` `PUT /clinic` |
+| U6 | ~~낮음~~ **고침** | ~~로그인 화면 버전 `v1.0` 고정, 로고 글자 「M」~~ → 빌드 버전, 로고 「B」 (2026-09-29) | `Login.jsx` |
 | U7 | ~~낮음~~ **고침** | ~~저장 알림이 영어 「Saved ✓」~~ → `se_saved` (2026-09-29) | (옛 코드) `Settings.jsx:75,92` |
-| U8 | 낮음 | 진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄이 들어가 있음 (동작엔 지장 없음) | `Settings.jsx:139` |
+| U8 | ~~낮음~~ **고침** | ~~진료과 저장 코드에 관계없는 `setPacsConfig(...)` 한 줄~~ → 지움 (2026-09-29) | `Settings.jsx` |
 | U9 | ~~낮음~~ **고침** | ~~권한 목록이 네 곳에 따로 있음~~ → 2026-09-29: 서버는 `middleware/permissions.js` 한 곳, `modules.js`와 같은지 `backend/test/settings.permissions.mjs`로 확인 (3-1절) | (옛 코드) `admin.routes.js:12`, `auth.routes.js:30`, `middleware/auth.js` |
 | U10 | ~~높음~~ **고침** | ~~약 저장이 재고를 덮어씀 (약국 H4)~~ → 2026-09-29 설정의 약 저장은 재고를 아예 쓰지 않음, 재고는 약국 재고 기록으로만 (3-8절). 오전의 409 안전장치는 필요 없어져 지움 | (옛 코드) `admin.routes.js` DRUGS |
 | U11 | ~~보통~~ **고침** | ~~로그인·설정 서버 안내가 영어로 뜸~~ → 2026-09-29: 서버 문구를 `settings.messages.js` 상수로, 화면이 `settingsMessages.js`로 맞춰 번역 (3-3절). 오더 연동·검사항목 탭 함수의 오류 표시는 각 세션 몫이라 그대로 | (옛 코드) `auth.routes.js`, `admin.routes.js` |
@@ -648,3 +651,5 @@
 | 2026-09-29 | 새 PC에서 복원 뒤 시험 환자·영수 등을 지우는 **`clean-test-data.ps1`** (결정 C) — 백업과 똑같을 때만, 목록 확인·`DELETE n` 입력, 먼저 백업, 한 트랜잭션, 드라이런. `backup-cli.js`가 작업 폴더를 지움 | `clean-test-data.ps1`(새), `backup-cli.js` (2.13·3-11) | `4336d19` · `a69f713` |
 | 2026-09-29 | 서버 상태 창·상태 API에 **영상 백업** 줄(디스크 없음·실패·오래됨·거의 참). 「Journal」에서 검사 판정(정상→높음)과 처방의 포장 단위가 말로 | `status.routes.js` `checkImageBackup`, `server-status.ps1` `Get-ImageBackupCheck`·창 높이 640, `settingsAudit.js` (2.10·3-6·3-10) | `a0c0496` |
 | 2026-09-29 | 정리 스크립트: 준비한 PC의 표지 파일 `KEEP-TEST-DATA.txt`(총괄 `6d93954`) 설명, 기록 탭의 시험 줄 차트번호가 새 환자와 겹쳐 보일 수 있다는 안내 | 위키(2.13·2.14·3-11), 스크립트 끝 안내 세 줄 | `a446512` |
+| 2026-09-29 | 첫 설치 아이디는 늘 `admin`, 두 화면에서 동시에 설치해도 하나만. 비활성 안내는 비밀번호가 맞을 때만. 직원 아이디 공백·모르는 권한 거절, 관리자 동시 강등 차례로. 앱 제목을 비우면 기본값. 로고 「B」 (S3·S7·S9·S10·U5·U6·U8) | `auth.routes.js`, `admin.routes.js`, `Login.jsx`, `Settings.jsx`, `settings.login.mjs`(새) (2.1·3-3·7절) | `a95891a` |
+| 2026-09-29 | 디스크 검사가 백업 드라이브와 DB(Docker) 드라이브를 **둘 다** 봄 — 백업을 D:로 옮겨도 C:가 차면 알림 (B7) | `server-status.ps1`, `status.routes.js` (3-6·7절) | (이 커밋) |

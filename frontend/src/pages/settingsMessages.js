@@ -51,7 +51,7 @@ var EXACT = {
 var FIELD_KEY = {
   unit_price: 'se_colPrice', price: 'se_colPrice', price_clinic: 'se_colPrice',
   stock_qty: 'se_fStock', min_stock: 'se_fMinStock',
-  role: 'se_colRole', code_type: 'se_colType',
+  role: 'se_colRole', code_type: 'se_colType', permissions: 'se_fld_permissions',
 };
 var SHAPES = [
   [/^(\w+) must be a number$/, 'se_errNotNumber'],

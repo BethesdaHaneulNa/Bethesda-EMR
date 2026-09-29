@@ -52,7 +52,8 @@ export default function LoginPage() {
 
   useEffect(function () {
     api.get('/auth/setup-status')
-      .then(function (r) { setMode(r && r.needsSetup ? 'setup' : 'login'); })
+      // The setup account's login id is always admin (S3, auth.routes.js SETUP_LOGIN).
+      .then(function (r) { if (r && r.needsSetup) { setUsername('admin'); setMode('setup'); } else setMode('login'); })
       .catch(function () { setMode('login'); });
   }, []);
 
@@ -104,7 +105,7 @@ export default function LoginPage() {
       <div style={{ width: 380, zIndex: 5 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', borderRadius: 16, width: 60, height: 60, marginBottom: 14, boxShadow: '0 8px 28px #3b82f640' }}>
-            <span style={{ fontSize: 31, fontWeight: 800, color: '#fff' }}>M</span>
+            <span style={{ fontSize: 31, fontWeight: 800, color: '#fff' }}>B</span>
           </div>
           <div style={{ fontSize: 27, fontWeight: 700, color: '#f1f5f9' }}>{t.appTitle}</div>
           <div style={{ fontSize: 14, color: '#64748b', marginTop: 3 }}>Electronic Medical Records</div>
@@ -130,7 +131,8 @@ export default function LoginPage() {
 
           <div style={{ marginBottom: 14 }}>
             <label style={LB}>{t.username}</label>
-            <input value={username} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={IN} autoComplete="username" />
+            <input value={username} readOnly={isSetup} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={isSetup ? Object.assign({}, IN, { opacity: .7, cursor: 'default' }) : IN} autoComplete="username" />
+            {isSetup ? <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, lineHeight: 1.4 }}>{t.se_setupIdFixed}</div> : null}
           </div>
 
           <div style={{ marginBottom: isSetup ? 14 : 18 }}>

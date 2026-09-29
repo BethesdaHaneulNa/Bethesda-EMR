@@ -821,6 +821,7 @@ export default {
   se_flag_normal: "normal",
   se_flag_high: "high",
   se_flag_abnormal: "abnormal",
+  se_setupIdFixed: "The administrator login is always admin. This account is protected so that Settings can never be locked.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
