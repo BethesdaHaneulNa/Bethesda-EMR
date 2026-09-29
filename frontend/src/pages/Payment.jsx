@@ -45,6 +45,7 @@ export default function PaymentPage() {
   // flight the others are refused and shown disabled. A second click used to store
   // a second receipt. The ref, not the state, is the real guard - state updates
   // are not visible to a click handled before the next render.
+  var crs = useState(null), corr = crs[0], setCorr = crs[1];   // correction preview from the server
   var busyRef = useRef(false);
   var bzs = useState(false), busy = bzs[0], setBusy = bzs[1];
   async function once(fn){
@@ -53,6 +54,10 @@ export default function PaymentPage() {
     try { await fn(); } finally { busyRef.current = false; setBusy(false); }
   }
   function showError(err){
+    if(String(err && err.message).indexOf('BILL_CARRIED')===0){
+      alert(t.py_correctionCarried.split('{receipt}').join(String(err.message).replace(/^BILL_CARRIED:\s*/,'')));
+      return;
+    }
     if(String(err && err.message).indexOf('BILL_CHANGED')===0){
       alert(t.py_billChanged);
       setSel(null); setBillItems(null); loadLists();
@@ -126,6 +131,7 @@ export default function PaymentPage() {
     try {
       var bi = await api.get('/billing/visit/'+v.id+'/items');
       setBillItems(bi);
+      if(v && v.needs_refund) loadCorrection(v.id); else setCorr(null);
       setVType((bi && bi.visit_type) || v.visit_type || 'newVisit');
     }
     catch(err){ setBillItems(null); setVType(v.visit_type||'newVisit'); }
@@ -194,9 +200,17 @@ export default function PaymentPage() {
   }
   function removeFeeItem(idx){ setExtraItems(function(p){ return p.filter(function(_,i){ return i!==idx; }); }); }
 
-  function doConfirm(status){ return once(function(){ return doConfirmNow(status); }); }
-  async function doConfirmNow(status){
+  // viaConfirm: reached from the green confirm button with nothing in the cash box.
+  function doConfirm(status, viaConfirm){ return once(function(){ return doConfirmNow(status, viaConfirm); }); }
+  async function doConfirmNow(status, viaConfirm){
     if(status==='paid' && amtPaidNum()<totalDue()){ alert('Amount insufficient'); return; }
+    // "Unpaid" means nothing was received, so the whole total stays owed. It used to
+    // subtract whatever sat in the cash box from the debt while recording 0 received.
+    if(status==='unpaid' && totalDue()>0){
+      var msg = amtPaidNum()>0 ? t.py_unpaidIgnoresAmount : (viaConfirm ? t.py_unpaidConfirm : null);
+      if(msg && !window.confirm(msg.replace('{paid}',fmtAr(amtPaidNum())).replace('{total}',fmtAr(totalDue())))) return;
+    }
+    var unpaid = status==='unpaid';
     try {
       var rows = chargeRows();
       var items = rows.map(function(r){ return {item_type:r.item_type,item_name:r.item_name,item_code:r.item_code,quantity:r.quantity,unit_price:r.unit_price,total_price:r.total_price}; });
@@ -210,8 +224,8 @@ export default function PaymentPage() {
         consult_fee:cFee, drug_total:dTot, procedure_total:pTot,
         subtotal:subtotal(), discount_amount:discountAmt(), discount_type:discount.type,
         discount_value:Number(discount.value)||0, previous_balance:prevBal(), total_due:totalDue(),
-        amount_paid:status==='unpaid'?0:amtPaidNum(), change_amount:changeAmt(),
-        outstanding:status==='paid'?0:outstandingAmt(), payment_status:status,
+        amount_paid:unpaid?0:amtPaidNum(), change_amount:unpaid?0:changeAmt(),
+        outstanding:unpaid?totalDue():(status==='paid'?0:outstandingAmt()), payment_status:status,
         note:payNote, items:items,
         expected_active_bill_ids:(billItems && billItems.active_bill_ids) || [],
       });
@@ -219,37 +233,28 @@ export default function PaymentPage() {
     } catch(err){ showError(err); }
   }
 
-  function fullCurrentItems(){
-    var items = [{item_type:'consultation',item_name:'Consultation',item_code:'',quantity:1,unit_price:consultFee(),total_price:consultFee()}];
-    (billItems?.prescriptions||[]).forEach(function(rx){ var qty=parseFloat(rx.total_qty)||parseFloat(rx.dose)*rx.frequency*rx.days; var up=parseFloat(rx.unit_price)||0; items.push({item_type:'drug',item_name:rx.drug_name,item_code:rx.drug_code,quantity:qty,unit_price:up,total_price:qty*up}); });
-    (billItems?.orders||[]).forEach(function(o){ var qty=parseFloat(o.quantity)||1; var up=parseFloat(o.unit_price)||0; items.push({item_type:o.code_type||'procedure',item_name:o.order_name,item_code:o.order_code,quantity:qty,unit_price:up,total_price:qty*up}); });
-    extraItems.forEach(function(it){ var qty=parseFloat(it.quantity)||1, up=parseFloat(it.unit_price)||0; items.push({item_type:'fee',item_name:it.name,item_code:it.code,quantity:qty,unit_price:up,total_price:qty*up}); });
-    return items;
+  // 정정(환불): the server replaces the visit's active bills with one bill for what
+  // the visit costs now, keeping the cash actually received, the discount, carried
+  // balances and counter fees (billing.routes.js, buildCorrection). The screen only
+  // shows the server's figures and sends them back, so the refund handed over is
+  // the one that was shown - if anything changed meanwhile the server refuses.
+  async function loadCorrection(visitId){
+    setCorr(null);
+    try { setCorr(await api.get('/billing/visit/'+visitId+'/correction')); }
+    catch(err){ setCorr({ error: String(err && err.message || '') }); }
   }
-  function fullCurrentTotal(){ return consultFee()+drugTotal()+procTotal()+extraTotal(); }
-
-  // 정정(환불): 활성 영수 취소 후, 현재 정확한 금액으로 재청구(정산 완료). 차액은 환불로 기록.
   function confirmCorrection(){ return once(confirmCorrectionNow); }
   async function confirmCorrectionNow(){
-    if(!sel || !sel.active_bill_id){ alert('No active bill'); return; }
-    var paid = parseFloat(sel.active_paid)||0;
-    var total = fullCurrentTotal();
-    var refund = Math.max(0, paid - total);
-    if(!window.confirm((t.correctionConfirm||'정정(환불) 처리하시겠습니까?')+'\n'+(t.refundDue||'환불')+': '+fmtAr(refund)+' Ar')) return;
+    if(!sel || !corr || corr.error){ return; }
+    var line = corr.refund>0 ? t.py_refundHandBack.replace('{amount}',fmtAr(corr.refund))
+             : corr.outstanding>0 ? t.py_remainsOwed.replace('{amount}',fmtAr(corr.outstanding))
+             : t.py_noDifference;
+    if(!window.confirm((t.correctionConfirm||'정정(환불) 처리하시겠습니까?')+'\n\n'+line)) return;
     try {
-      // 그 내원의 모든 활성 영수를 일괄 취소(잔재 영수가 합계를 부풀리는 것 방지) 후 1건으로 재발행
-      await api.put('/billing/visit/'+sel.id+'/void-active',{ reason:(t.correctionBadge||'정정') });
-      if(sel.id){ try { await api.put('/visits/'+sel.id,{ visit_type:vType }); } catch(e){} }
-      var items = fullCurrentItems();
-      var result = await api.post('/billing',{
-        visit_id:sel.id, patient_id:sel.patient_id,
-        consult_fee:consultFee(), drug_total:drugTotal(), procedure_total:procTotal()+extraTotal(),
-        subtotal:total, discount_amount:0, discount_type:'amount', discount_value:0,
-        previous_balance:0, total_due:total,
-        amount_paid:total, change_amount:refund,
-        outstanding:0, payment_status:'paid',
-        note:(t.correctionBadge||'정정')+' refund '+refund, items:items,
-        expected_active_bill_ids:[],
+      var result = await api.post('/billing/visit/'+sel.id+'/correct',{
+        expected_active_bill_ids:corr.active_bill_ids,
+        expected_refund:corr.refund, expected_outstanding:corr.outstanding,
+        reason:(t.correctionBadge||'정정'),
       });
       setReceiptNo(result.receipt_no); setShowReceipt(true); await loadLists(); setTab('completed');
     } catch(err){ showError(err); }
@@ -328,7 +333,7 @@ export default function PaymentPage() {
           <span style={{color:'#34d399',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
         ):(<>
           <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'#ef444420',color:'#f87171',border:'1px solid #ef444440',borderRadius:6,padding:'7px 14px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
-          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':'partial')}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
+          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':(amtPaidNum()>0?'partial':'unpaid'), true)}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
         </>)):null}
         <button onClick={loadLists} style={{background:'#1e2433',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
@@ -502,31 +507,41 @@ export default function PaymentPage() {
   function renderWaiting(){
     if(!(sel&&billItems)) return <Empty icon="💰" text={L.selectWaiting} />;
     if(sel.needs_refund){
-      var paidNow = parseFloat(sel.active_paid)||0;
-      var correctTotal = fullCurrentTotal();
-      var refundAmt = Math.max(0, paidNow - correctTotal);
-      return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
-        <PatientHeader p={sel} />
+      var head = <><PatientHeader p={sel} />
         <div style={{background:'#a855f714',border:'1px solid #a855f750',borderRadius:8,padding:'12px 14px',marginBottom:12}}>
           <div style={{fontWeight:900,color:'#c084fc',fontSize:15,marginBottom:4}}>↩ {t.correctionBadge}</div>
           <div style={{color:t2,fontSize:13}}>{t.correctionHint}</div>
-        </div>
+        </div></>;
+      if(!corr) return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>{head}<div style={{color:t3,padding:12}}>{t.loading}</div></div>;
+      if(corr.error){
+        var carriedMsg = corr.error.indexOf('BILL_CARRIED')===0 ? t.py_correctionCarried.split('{receipt}').join(corr.error.replace(/^BILL_CARRIED:\s*/,'')) : corr.error;
+        return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>{head}<div style={{background:'#ef444412',border:'1px solid #ef444440',borderRadius:8,padding:'12px 14px',color:'#fca5a5',fontSize:14}}>{carriedMsg}</div></div>;
+      }
+      return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
+        {head}
         <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:16}}>
           <div>
             <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,overflow:'hidden'}}>
               <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:t2}}>{t.currentItems||'현재 항목'}</div>
-              {fullCurrentItems().map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid #1e2433':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.quantity>1?' ×'+it.quantity:''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
+              {corr.items.map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid #1e2433':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.quantity>1?' ×'+fmtAr(it.quantity):''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
             </div>
           </div>
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:14,height:'fit-content'}}>
-            <SumRow label={t.alreadyBilled} amount={paidNow} />
-            <SumRow label={t.correctTotal||'정확한 금액'} amount={correctTotal} bold />
+            <SumRow label={t.correctTotal||'정확한 금액'} amount={corr.subtotal} />
+            {corr.discount_amount>0?<SumRow label={t.discount} amount={-corr.discount_amount} />:null}
+            {corr.previous_balance>0?<SumRow label={t.prevOutstanding} amount={corr.previous_balance} color="#ef4444" />:null}
+            <SumRow label={t.totalDue} amount={corr.total_due} bold />
+            <SumRow label={t.py_paidSoFar} amount={corr.paid_so_far} color="#34d399" />
             <div style={{height:1,background:bd,margin:'8px 0'}}></div>
-            <div style={{background:'#a855f718',border:'2px solid #a855f750',borderRadius:6,padding:12}}>
+            {corr.refund>0?<div style={{background:'#a855f718',border:'2px solid #a855f750',borderRadius:6,padding:12}}>
               <div style={{fontSize:13,color:'#c084fc',fontWeight:800}}>{t.refundDue}</div>
-              <div style={{fontSize:28,fontWeight:900,color:'#c084fc',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(refundAmt)} Ar</div>
-            </div>
-            <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:'pointer'}}>↩ {t.processCorrection||'정정(환불) 처리'}</button>
+              <div style={{fontSize:28,fontWeight:900,color:'#c084fc',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(corr.refund)} Ar</div>
+            </div>:corr.outstanding>0?<div style={{background:'#ef444412',border:'2px solid #ef444440',borderRadius:6,padding:12}}>
+              <div style={{fontSize:13,color:'#f87171',fontWeight:800}}>{t.outstanding}</div>
+              <div style={{fontSize:28,fontWeight:900,color:'#f87171',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(corr.outstanding)} Ar</div>
+              <div style={{fontSize:12,color:t2,marginTop:4}}>{t.py_correctionOwedHint}</div>
+            </div>:<div style={{fontSize:13,color:t2,padding:'6px 0'}}>{t.py_noDifference}</div>}
+            <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'#a855f7',color:'#fff',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:busy?'wait':'pointer'}}>↩ {t.processCorrection||'정정(환불) 처리'}</button>
           </div>
         </div>
       </div>;

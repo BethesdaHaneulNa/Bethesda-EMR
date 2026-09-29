@@ -281,6 +281,14 @@ export default {
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
+  py_paidSoFar: "Paid so far",
+  py_noDifference: "No difference — the receipt is simply re-issued",
+  py_correctionOwedHint: "Less was paid than the new total, so the difference stays outstanding.",
+  py_correctionCarried: "This visit's balance was carried into receipt {receipt}. Cancel {receipt} in the receipt history first, then correct.",
+  py_unpaidIgnoresAmount: "The {paid} Ar in the amount box will not be recorded; the full {total} Ar stays outstanding. Continue?",
+  py_unpaidConfirm: "No amount received. Leave the full {total} Ar outstanding?",
+  py_refundHandBack: "Hand {amount} Ar back to the patient.",
+  py_remainsOwed: "{amount} Ar will remain outstanding.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──

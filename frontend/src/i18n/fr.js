@@ -272,6 +272,14 @@ export default {
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
+  py_paidSoFar: "Déjà encaissé",
+  py_noDifference: "Aucune différence — le reçu est simplement réémis",
+  py_correctionOwedHint: "Le montant encaissé est inférieur au nouveau total : la différence reste impayée.",
+  py_correctionCarried: "Le solde de cette visite a été reporté sur le reçu {receipt}. Annulez d’abord {receipt} dans l’historique des reçus, puis corrigez.",
+  py_unpaidIgnoresAmount: "Les {paid} Ar saisis ne seront pas enregistrés ; la totalité ({total} Ar) restera impayée. Continuer ?",
+  py_unpaidConfirm: "Aucun montant reçu. Laisser les {total} Ar impayés ?",
+  py_refundHandBack: "Rendez {amount} Ar au patient.",
+  py_remainsOwed: "{amount} Ar resteront impayés.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   // ── end pharmacy ──
