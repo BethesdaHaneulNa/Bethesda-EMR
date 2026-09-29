@@ -262,4 +262,24 @@ export default {
   drugUsage: "Usage médicaments", daily: "Jour", monthly2: "Mois", yearly: "Année", allRx: "Tous", allOrders: "Toutes Rx", dispensedOnly: "Dispensé", drugsUnit: "articles", totalUsage: "Total", drug: "Médicament",
   newLabPanel: "Nouveau panel",
   newLabPanelHint: "Un nouveau panel est aussi commandable en consultation. Après création, définissez ses items ci-dessous.",
+  // ── session blocks ─────────────────────────────────────────────────────
+  // Each development session adds new keys ONLY between its own two markers,
+  // prefixed with its code. Separate blocks merge without conflict.
+  // See wiki/01-working-rules.md.
+  // ── begin reception (rc_) ──
+  // ── end reception ──
+  // ── begin consultation (cs_) ──
+  // ── end consultation ──
+  // ── begin payment (py_) ──
+  // ── end payment ──
+  // ── begin pharmacy (ph_) ──
+  // ── end pharmacy ──
+  // ── begin laboratory (lb_) ──
+  // ── end laboratory ──
+  // ── begin statistics (st_) ──
+  // ── end statistics ──
+  // ── begin settings (se_) ──
+  // ── end settings ──
+  // ── begin pacs (px_) ──
+  // ── end pacs ──
 };

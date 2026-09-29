@@ -262,4 +262,24 @@ export default {
   drugUsage: "약품 사용통계", daily: "일별", monthly2: "월별", yearly: "연별", allRx: "전체", allOrders: "처방전체", dispensedOnly: "조제완료", drugsUnit: "품목", totalUsage: "총 사용", drug: "약품",
   newLabPanel: "새 검사 패널",
   newLabPanelHint: "새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.",
+  // ── session blocks ─────────────────────────────────────────────────────
+  // Each development session adds new keys ONLY between its own two markers,
+  // prefixed with its code. Separate blocks merge without conflict.
+  // See wiki/01-working-rules.md.
+  // ── begin reception (rc_) ──
+  // ── end reception ──
+  // ── begin consultation (cs_) ──
+  // ── end consultation ──
+  // ── begin payment (py_) ──
+  // ── end payment ──
+  // ── begin pharmacy (ph_) ──
+  // ── end pharmacy ──
+  // ── begin laboratory (lb_) ──
+  // ── end laboratory ──
+  // ── begin statistics (st_) ──
+  // ── end statistics ──
+  // ── begin settings (se_) ──
+  // ── end settings ──
+  // ── begin pacs (px_) ──
+  // ── end pacs ──
 };

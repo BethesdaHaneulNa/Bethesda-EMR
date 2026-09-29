@@ -1,0 +1,26 @@
+# Isolated stack for a development session.
+#
+# docker-compose.yml fixes the container names and port 9080, and its top-level
+# `name:` is bethesda-emr. Run it unchanged from a session worktree and Compose
+# treats it as the SAME project as the clinic's running EMR: it rebuilds those
+# containers from the worktree's code. This file gives each session its own
+# containers, its own database volume and its own port instead.
+#
+#   SESSION=reception SESSION_PORT=9181 \
+#     docker compose -p bethesda-s-reception \
+#       -f docker-compose.yml -f docker-compose.session.yml up -d --build
+#
+# -p is what separates the project (and so the pgdata volume); SESSION only names
+# the containers. Ports and names per session: wiki/01-working-rules.md.
+
+services:
+  db:
+    container_name: bethesda-s-${SESSION:?set SESSION, e.g. reception}-db
+  backend:
+    container_name: bethesda-s-${SESSION}-api
+  frontend:
+    container_name: bethesda-s-${SESSION}-web
+    # !override replaces the base file's "9080:80" instead of adding to it -
+    # otherwise the session would still try to take 9080.
+    ports: !override
+      - "127.0.0.1:${SESSION_PORT:?set SESSION_PORT, e.g. 9181}:80"
