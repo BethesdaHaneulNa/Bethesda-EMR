@@ -20,6 +20,7 @@ export default function SettingsPage() {
   var ocF = useState('All'), ocFilter = ocF[0], setOcFilter = ocF[1];
   var pcS = useState(null), pacsConfig = pcS[0], setPacsConfig = pcS[1];
   var ptS = useState({}), pacsTest = ptS[0], setPacsTest = ptS[1];
+  var pkS = useState(false), showBridgeToken = pkS[0], setShowBridgeToken = pkS[1];
   var osS = useState([]), orderSets = osS[0], setOrderSets = osS[1];
   var oseS = useState(null), osEdit = oseS[0], setOsEdit = oseS[1];
   var osqS = useState(''), osQ = osqS[0], setOsQ = osqS[1];
@@ -62,6 +63,10 @@ export default function SettingsPage() {
   function closeEdit(){ setEditItem(null); setEditType(''); }
   function ue(k,v){ setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n[k]=v; return n; }); }
   function up(k,v){ setPacsConfig(function(p){ var n=Object.assign({},p||{}); n[k]=v; return n; }); }
+  // Same rule the server enforces (backend/src/routes/pacs.token.js) -- shown here
+  // so the warning appears while typing, not after the devices go quiet.
+  function pacsTokenUsable(v){ v=String(v||''); return v.length>=16 && v!=='change-me-bridge-token'; }
+  function pacsTokenShown(v){ return showBridgeToken ? (v||'') : '••••••••'; }
 
   async function savePacs(){
     try {
@@ -487,7 +492,11 @@ export default function SettingsPage() {
             {pacsConfig?(<div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:12}}>
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12}}>
                 <div style={{fontWeight:700,fontSize: 14,color:'#34d399',marginBottom:10}}>1. {t.feedSec1}</div>
-                <Fld label="Bridge Token"><input value={pacsConfig.bridge_token||''} onChange={function(e){up('bridge_token',e.target.value)}} style={IS}/></Fld>
+                <Fld label="Bridge Token"><div style={{display:'flex',gap:6}}>
+                  <input type={showBridgeToken?'text':'password'} autoComplete="new-password" value={pacsConfig.bridge_token||''} onChange={function(e){up('bridge_token',e.target.value)}} style={Object.assign({},IS,{flex:1,fontFamily:'monospace'})}/>
+                  <button onClick={function(){setShowBridgeToken(!showBridgeToken)}} style={{background:'#1e2433',color:'#94a3b8',border:'1px solid '+bd2,borderRadius:5,padding:'0 10px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap'}}>{showBridgeToken?t.px_hide:t.px_show}</button>
+                </div></Fld>
+                {!pacsTokenUsable(pacsConfig.bridge_token)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.px_tokenUnusable}</div>:null}
                 <Fld label={t.emrPublicUrl}>
                   <input placeholder={t.egUrl} value={pacsConfig.emr_base_url||''} onChange={function(e){up('emr_base_url',e.target.value)}} style={IS}/>
                 </Fld>
@@ -496,8 +505,8 @@ export default function SettingsPage() {
                   <span style={{fontSize: 14,color:pacsConfig.auto_create_worklist?'#34d399':t3}}>{t.autoCreateWl}</span>
                 </div>
                 <div style={{marginTop:10,fontSize: 13,color:t2,lineHeight:1.6}}>{t.feedUrlExample}</div>
-                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all'}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':8080')) + '/api/pacs/worklist-feed?token=' + (pacsConfig.bridge_token||'') + '&format=json'}</div>
-                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all',marginTop:6}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':8080')) + '/api/pacs/worklist-feed?token=' + (pacsConfig.bridge_token||'') + '&format=csv'}</div>
+                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all'}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=json'}</div>
+                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all',marginTop:6}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=csv'}</div>
                 <div style={{marginTop:8,fontSize: 13,color:t3,lineHeight:1.5}}>{t.feedConnectHint}</div>
               </div>
 

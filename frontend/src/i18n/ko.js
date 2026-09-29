@@ -324,5 +324,8 @@ export default {
   se_bkMinKeep: "보관 기간이 지나도 가장 최근 백업 {n}개는 지우지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
+  px_show: "보기",
+  px_hide: "숨기기",
+  px_tokenUnusable: "이 토큰은 쓸 수 없습니다. PACS를 설치할 때 화면에 나온 값(16자 이상)을 붙여넣으세요. 그 전까지는 영상 오더가 촬영 장비로 넘어가지 않습니다. PACS를 쓰지 않는 병원은 무시해도 됩니다.",
   // ── end pacs ──
 };

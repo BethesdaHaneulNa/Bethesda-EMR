@@ -2,17 +2,19 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { dicomDate } = require('../utils/localDate');
 const { authMiddleware } = require('../middleware/auth');
+const { presentedToken, bridgeTokenMatches } = require('./pacs.token');
 
 const router = express.Router();
 
 // allow a machine bridge to read the worklist feed with the shared bridge_token
-// (query ?token= or X-Bridge-Token header); otherwise require a normal JWT.
+// (X-Bridge-Token header, or ?token=); otherwise require a normal JWT. The
+// placeholder token never counts -- see pacs.token.js.
 async function bridgeOrAuth(req, res, next) {
-  const token = req.query.token || req.headers['x-bridge-token'];
+  const token = presentedToken(req);
   if (token) {
     try {
       const r = await pool.query('SELECT bridge_token FROM pacs_config WHERE id = 1');
-      if (r.rows[0] && r.rows[0].bridge_token && token === r.rows[0].bridge_token) return next();
+      if (r.rows[0] && bridgeTokenMatches(r.rows[0].bridge_token, token)) return next();
     } catch (e) { /* fall through to JWT */ }
   }
   return authMiddleware(req, res, next);

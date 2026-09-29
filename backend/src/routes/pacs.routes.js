@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { todayLocal, dicomDate } = require('../utils/localDate');
 const { tcpCheck } = require('../utils/tcpCheck');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
 
 const router = express.Router();
 
@@ -39,8 +40,9 @@ function normalizeConfig(body) {
   return out;
 }
 
-// Authenticated settings UI
-router.get('/config', authMiddleware, async (req, res) => {
+// Settings UI. This carries the bridge token, which opens the patient feed, so
+// it is for the settings permission only -- not every member of staff.
+router.get('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try { res.json(await ensureConfig()); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -124,12 +126,21 @@ router.get('/readings/patient/:patientId', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Why a bridge request is refused, or '' if it is not. The two messages differ
+// because they are fixed in different places: one in EMR Settings, the other in
+// the PACS .env -- and the bridge log is where someone on site will read this.
+function bridgeDenied(cfg, req) {
+  if (!usableBridgeToken(cfg.bridge_token)) return 'Bridge token is not set in the EMR (Settings -> Order Feed)';
+  if (!bridgeTokenMatches(cfg.bridge_token, presentedToken(req))) return 'Invalid bridge token';
+  return '';
+}
+
 // Bridge feed for PacsBridge/SmartServer/import script. Uses token because external bridge may not use EMR login.
 router.get('/worklist-feed', async (req, res) => {
   try {
     const cfg = await ensureConfig();
-    const token = req.query.token || req.header('x-bridge-token');
-    if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
 
     const date = req.query.date || todayLocal();
     const params = [date];
@@ -190,8 +201,8 @@ router.post('/bridge-heartbeat', async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const body = req.body || {};
-    const token = body.token || req.query.token || req.header('x-bridge-token');
-    if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
 
     const detail = {
       synced: Number(body.synced) || 0,
