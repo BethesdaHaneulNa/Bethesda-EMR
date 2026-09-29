@@ -188,7 +188,7 @@
 | 백업 | 백업 폴더(= `docker inspect`로 찾은 `/backups` 마운트 원본)의 가장 새 `*.sql.gz`가 36시간 넘으면 노랑 | `services/backup.js` `health()` — 36시간 넘음·없음·**마지막 시도 실패**(`status.backup.failed`)면 노랑 |
 | PACS | 컨테이너 `bethesda-pacs` (없으면 「미설치」) + **호스트 포트** (아래) | `pacs_config.worklist_scp_host`로 TCP 연결 |
 | 호스트 포트 (2026-09-29) | `bethesda-emr-web`·`bethesda-pacs`가 **게시하도록 설정된** 포트(`HostConfig.PortBindings` — 9080, 9090, 4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨」으로 바꾸고, `netsh interface ipv4 show excludedportrange protocol=tcp`의 예약 구간 안이면 「Windows가 막음」, 아니면 「닫힘」 | — (컨테이너 안에서는 알 수 없음) |
-| 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행 |
+| 워크리스트 | `bethesda-worklist-bridge` 컨테이너 + 그 폴더의 `worklists\.heartbeat` 파일이 60초 넘게 안 바뀌면 빨강 | `service_heartbeat` 테이블(018)의 `worklist_bridge` 행. 60초 넘게 조용 → 빨강, `ok=false` → 빨강, `failed>0` → 노랑, **`detail.arrivals_error`가 있으면 노랑 `status.bridge.arrivals`** (2026-09-29, PACS P-20 — 아래) |
 | 화면 연결 | — | **아직 EMR 화면 어디에서도 부르지 않음**. 돌려주는 `status.*` 번역 키도 i18n에 없음 |
 
 - 2026-09-29, 이 PC의 실행 중 EMR에 대해 `server-status.ps1 -Console -Lang ko`를 **읽기만** 해서 돌려 봄: 7줄 모두 정상, 종료 코드 0. `/backups` 마운트 원본이 Windows 경로(`C:\Bethesda-EMR-main\backups`)로 잡히는 것 확인.
@@ -196,6 +196,7 @@
 - 창은 15초마다 `docker` 명령 약 10개를 화면 스레드에서 차례로 돌립니다. 그동안 창이 잠깐 멈출 수 있습니다 (확인 필요). 포트 검사는 열린 포트면 즉시, 막힌 포트면 최대 1초씩 더합니다. `netsh`는 막힌 포트가 있을 때만 부릅니다.
 - **왜 포트 검사인가** (PACS 세션 P-1, `DEPLOYMENT.md` Windows 절): Windows(Hyper-V/WSL)는 부팅할 때마다 TCP 포트 구간을 예약합니다. 게시할 포트가 그 안에 들면 Docker가 못 잡는데도 컨테이너는 Up이고, healthcheck는 컨테이너 **안**에서 돌므로 healthy입니다. 그래서 상태 창도 「정상」이라고 했습니다. 포트 번호는 스크립트에 적지 않고 Docker 설정에서 읽습니다 — `docker-compose.yml`에서 포트를 바꾸면 따라갑니다.
 - **2026-09-29 이 PC에서 실제로 걸림**: `bethesda-pacs`는 Up (healthy)인데 호스트의 4242·9090이 닫혀 있었고(`docker ps`의 PORTS에 호스트 매핑이 없음), 동적 포트 범위가 1024부터(`netsh int ipv4 show dynamicport tcp`)라 **4242가 예약 구간 4204–4303 안**에 있었습니다. 고치기 전 상태 창은 PACS를 「정상」으로, 고친 뒤에는 「접속 안 됨 — 4242 포트를 Windows가 막음, 9090 포트 닫힘」으로 표시(한국어·프랑스어 화면 캡처로 확인).
+- **브리지의 도착 확인 실패** (PACS P-20, 2026-09-29): 브리지는 Orthanc에 「어느 검사가 도착했나」를 물어 끝난 환자를 장비 워크리스트에서 뺍니다. 이 질문이 실패해도(Orthanc 비밀번호 틀림 등) 워크리스트 동기화는 되므로 전부 초록이었고, 브리지 로그만 알았습니다. 약속한 필드는 heartbeat `detail`의 **`arrivals_error`**(문자열, 괜찮으면 빈 값). 상태 API는 이미 읽습니다. **보내는 쪽(브리지 `bridge.py`)과 받는 쪽(`pacs.routes.js`의 `/bridge-heartbeat`가 `detail`에 넣는 칸)은 PACS 몫이라 아직 안 보냅니다** — 그때까지는 필드가 없어 아무것도 바뀌지 않습니다. 격리 스택에서 행을 직접 넣어 세 경우(행 없음 → off, 필드 없음 → ok, 필드 있음 → warn) 확인. 서버 상태 창(`.ps1`)은 heartbeat 파일의 **시각**만 보므로 이 경우는 모릅니다.
 - **창 배치 버그 고침** (2026-09-29): 실제 화면을 캡처해 보니 맨 위 색 띠가 **첫 두 줄(환자 기록 DB, 앱 서버)을 덮고 있었습니다.** WinForms는 z-순서 뒤에서부터 도킹하는데, Fill 표가 띠보다 먼저 도킹되어 창 위쪽 전체를 차지하고 그 위에 띠가 그려졌기 때문입니다. `$rows.BringToFront()`로 표를 마지막에 도킹하게 하고, 남는 높이는 빈 마지막 줄(Percent 100)이 가져가게 해서 마지막 줄 위의 빈 틈도 없앴습니다. (`DrawToBitmap`으로 그린 그림은 겹침을 다르게 보여 줘서, 확인은 `CopyFromScreen`으로 했습니다.)
 
 ### 3-7. 버전 확인 (`services/version.js`)
@@ -292,7 +293,7 @@
 | # | 심각도 | 문제 | 근거 |
 |---|---|---|---|
 | S1 | 높음 | 비활성화하거나 권한을 뺀 직원이 **이미 받은 토큰으로 최대 12시간** 계속 씀. 서버가 요청마다 DB의 상태·권한을 보지 않고 토큰 안의 권한을 믿음 | `middleware/auth.js` `authMiddleware`·`permMiddleware`, `generateToken` `expiresIn:'12h'` |
-| S2 | 높음 | 접수·진료·수납·문서 API는 **로그인만** 확인. 약국 직원도 API로 수납 취소·진료 기록 수정 가능. 권한은 화면 메뉴에서만 지켜짐 | `patient/visit/consult/billing/document.routes.js`에 `permMiddleware` 없음. 각 세션 소유 → 총괄 확인 요청 |
+| S2 | 높음 | 접수·문서 API와 진료의 조회 API는 **로그인만** 확인. 예: 약국 직원도 API로 환자 정보를 고치거나 문서를 발급·취소할 수 있음. 권한은 화면 메뉴에서만 지켜짐. **2026-09-29 현재**: 수납(`billing`)은 수납 세션이 `payment` 검사를 넣었고, 진료의 **쓰기**는 원래 `consultation` 검사가 있었음. 남은 것 = `patient`·`visit`·`document` 전체, 진료 조회. 라우트별 허용 권한표 **초안**은 인계 노트 2026-09-29 「S2 초안」 — 막을지는 결정 세션이 실장님께 여쭙는 중 | `patient/visit/document.routes.js`에 `permMiddleware` 없음. 각 세션 소유 |
 | S3 | 보통 | 「설치 때 만든 관리자」를 **아이디 `admin`** 으로 판별하는데 첫 실행 화면은 아이디를 자유롭게 받음. 다른 아이디로 설치했으면 보호가 없고(마지막 관리자 검사만 남음), 나중에 `admin`이라는 아이디의 일반 직원을 만들면 저장할 때마다 관리자·전체 권한으로 바뀜 | `admin.routes.js:20,219`, `Login.jsx:59`, `auth.routes.js:25` |
 | S4 | 보통 | 새 직원 비밀번호 칸에 `1234`가 미리 들어가고, 비밀번호 칸이 가려지지 않음(`type="password"` 아님). 직원 비밀번호 길이 제한 없음 | `Settings.jsx:252,653`, `admin.routes.js:194` |
 | S5 | 보통 | 로그인 실패 횟수 제한 없음 (LAN 안이라 위험은 제한적) | `auth.routes.js:49` |
@@ -342,4 +343,6 @@
 | 2026-09-29 | 백업: 동시 실행 하나로 묶기, 작업 폴더에서 쓰고 검증 뒤 옮기기, 최근 7개는 안 지우기, 백업 탭에 상태(정상·오래됨·없음·실패)와 실패 오류 표시, 시각을 PC 현지 시각으로 (B1·B2·B3·B6) | `e2a29bd` |
 | 2026-09-29 | 서버 상태 창: 호스트 포트 검사(Windows 예약 포트), 색 띠가 첫 두 줄을 가리던 배치 고침 (B11·B12). 백업 검사: 백업 위치를 Docker에서 찾기, 컨테이너 매개변수, 데이터 차이는 [info]·`-Strict`에서만 실패 (B4·B5), `.sh`도 같이 | `2a40e84` |
 | 2026-09-29 | 설정 화면 영어 고정 글자를 세 언어로 (U1 대부분·U7), 직원 비활성 확인 문구, 2절에 역할별 기본 권한 표 | `f5e7e55` |
-| 2026-09-29 | 서버의 권한 목록을 `middleware/permissions.js` 한 곳으로, `modules.js`와 비교하는 검사 추가 (U9). 동작 변화 없음 | (이 커밋) |
+| 2026-09-29 | 서버의 권한 목록을 `middleware/permissions.js` 한 곳으로, `modules.js`와 비교하는 검사 추가 (U9). 동작 변화 없음 | `56f2558` |
+| 2026-09-29 | 약 저장이 재고를 덮어쓰는 문제 제안(U10, 약국 H4) | `1874812` |
+| 2026-09-29 | 상태 API가 브리지 heartbeat의 `arrivals_error`를 「확인 필요」로 (PACS P-20, 보내는 쪽은 PACS). 서버 권한 검사(S2) 라우트별 허용 권한표 초안 — 인계 노트 | (이 커밋) |
