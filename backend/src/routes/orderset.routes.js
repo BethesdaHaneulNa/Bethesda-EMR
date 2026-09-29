@@ -10,6 +10,24 @@ router.use(authMiddleware);
 // set) and the Settings order-set tab; written from Settings only.
 const canReadSets = permMiddleware('consultation', 'settings');
 
+// An item's quantity, checked before anything is written (2026-09-29). On a drug line
+// it is the bottle/tube count of a pack-unit drug (the consultation screen prescribes
+// it as pack_qty, which the consultation server takes only as a whole number >= 1), so
+// every drug line must carry a whole number of at least 1 - the Settings screen sends 1
+// for an ordinary drug. On an order line it is the quantity (the "daily total" column),
+// any positive number. Missing means 1, as before.
+function badItemQty(items) {
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    if (it.quantity === undefined || it.quantity === null || String(it.quantity).trim() === '') continue;
+    const n = Number(it.quantity);
+    if (it.kind === 'drug' ? !(Number.isInteger(n) && n >= 1) : !(n > 0)) {
+      return 'items[' + i + '].quantity must be ' + (it.kind === 'drug' ? 'a whole number of at least 1' : 'a positive number');
+    }
+  }
+  return null;
+}
+
 // 세트 항목 일괄 삽입 (생성/수정 공용)
 async function insertItems(client, setId, items) {
   for (let idx = 0; idx < items.length; idx++) {
@@ -87,6 +105,8 @@ router.post('/', permMiddleware('settings'), async (req, res) => {
     await client.query('BEGIN');
     const { name, group_name, department_id, description, items } = req.body;
     if (!name) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'name required' }); }
+    const badQty = badItemQty(Array.isArray(items) ? items : []);
+    if (badQty) { await client.query('ROLLBACK'); return res.status(400).json({ error: badQty }); }
     const s = await client.query(
       `INSERT INTO order_set (name, group_name, department_id, description) VALUES ($1,$2,$3,$4) RETURNING *`,
       [name, group_name || null, department_id || null, description || null]
@@ -106,6 +126,8 @@ router.put('/:id', permMiddleware('settings'), async (req, res) => {
   try {
     await client.query('BEGIN');
     const { name, group_name, department_id, description, items, is_active } = req.body;
+    const badQty = badItemQty(Array.isArray(items) ? items : []);
+    if (badQty) { await client.query('ROLLBACK'); return res.status(400).json({ error: badQty }); }
     await client.query(
       `UPDATE order_set SET name=COALESCE($1,name), group_name=$2, department_id=$3, description=$4,
               is_active=COALESCE($5,is_active), updated_at=NOW() WHERE id=$6`,
