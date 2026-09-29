@@ -468,6 +468,7 @@ export default {
   se_fClinicNameFr: "Clinic name (French)",
   se_fHours: "Working hours",
   se_clinicNote: "The document chooses the name by print language — French uses the French name, English the English name, Korean the default. Address, phone and email are shared.",
+  se_stockChanged: "The stock of this drug changed while it was open (dispensing, for example). It is now {n}. The stock field now shows that value; check it and save again. Your other changes are kept.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
