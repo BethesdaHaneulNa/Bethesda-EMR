@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { todayLocal } = require('../utils/localDate');
 const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -39,6 +40,71 @@ const ORDER_HAS_RESULT = 'Order already has a result';
 const VISIT_CANCELLED = 'Visit was cancelled';
 const ORDER_CANCELLED = 'Order is cancelled';
 const ORDER_NO_RESULT = 'Order has no result';
+const IMAGING_NO_CANCEL = 'Imaging order cannot be cancelled yet';
+
+// ── Change log (wiki/03-change-log.md, decision 2026-09-29) ──
+// Written here: an order cancelled or deleted, a prescription deleted, and any edit to
+// a FINISHED consultation record (note and vital signs, diagnoses, prescriptions,
+// orders). Past records stay editable (decision ⑫); the log is what keeps track.
+// "Finished", read inside the same transaction as the change, is either of:
+//   - the doctor pressed Terminer: consultation.status 'completed' (or 'signed').
+//     Nothing sets it back, so reopening a finished consultation and changing it counts;
+//   - the visit is from another day than today (clinic date, todayLocal): a record
+//     from an earlier day changed later, even if Terminer was never pressed.
+// The many saves of a consultation still open today are ordinary work and are not logged.
+const NOTE_FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
+  'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
+const RX_LOG = ['drug_code', 'drug_name', 'dose', 'frequency', 'days', 'route', 'total_qty', 'unit_price', 'memo', 'status'];
+const ORDER_LOG = ['order_code', 'order_name', 'code_type', 'dose', 'frequency', 'days', 'quantity', 'unit_price', 'memo', 'status'];
+const DX_LOG = ['icd_code', 'diagnosis_name', 'diagnosis_type'];
+
+// An empty string counts as no value: the screen sends memo '' where the row had NULL,
+// and that is not a change anyone needs to read about.
+function pick(row, keys) {
+  if (!row) return null;
+  const o = {};
+  keys.forEach(function (k) { o[k] = row[k] === undefined || row[k] === '' ? null : row[k]; });
+  return o;
+}
+function orderLabel(o) { return [o.order_code, o.order_name].filter(Boolean).join(' '); }
+function dxLabel(d) { return [d.icd_code, d.diagnosis_name].filter(Boolean).join(' '); }
+
+// The consultation a change belongs to (patient and visit for the log line), with
+// finished = whether an edit to it is logged.
+async function consultOf(db, consultationId) {
+  const r = await db.query(
+    `SELECT c.id, c.visit_id, c.patient_id, c.status,
+            (c.status IN ('completed','signed') OR v.visit_date <> $2::date) IS TRUE AS finished
+       FROM consultation c LEFT JOIN visit v ON v.id = c.visit_id
+      WHERE c.id = $1`,
+    [consultationId, todayLocal()]);
+  return r.rows[0] || null;
+}
+function recordEdit(client, req, c, entity, row, summary, before, after) {
+  if (!c || !c.finished) return false;
+  return writeAudit(client, req, {
+    action: ACTIONS.CONSULT_RECORD_EDIT, patient_id: c.patient_id, visit_id: c.visit_id,
+    entity: entity, entity_id: row.id, summary: summary, before: before, after: after,
+  });
+}
+
+// One transaction for a change and its log line: both are saved or neither.
+// fn(client) returns [status, body]; a status of 300 or more rolls back. The response
+// goes out only after COMMIT, so a failed commit is reported as the error it is.
+async function inTx(res, fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const out = await fn(client);
+    await client.query(out[0] < 300 ? 'COMMIT' : 'ROLLBACK');
+    res.status(out[0]).json(out[1]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e2) { /* connection already out of the transaction */ }
+    sendDbError(res, err);
+  } finally {
+    client.release();
+  }
+}
 
 // Whether an order has produced something that must stay on record: lab values, a
 // written reading, or an imaging study the modality has started. Such an order cannot
@@ -111,29 +177,26 @@ router.post('/', canConsult, async (req, res) => {
 });
 
 // PUT /api/consultations/:id - save consultation note
-router.put('/:id', canConsult, async (req, res) => {
-  try {
-    // Only the fields present in the request are written. The screen sends the note and
-    // the vital signs; setting every other column from an absent key wrote NULL into
-    // subjective/objective/assessment/plan/weight/height on every save. A key sent as
-    // null still clears its field (an emptied vital sign).
-    const FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
-      'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
-    const sets = [], vals = [];
-    FIELDS.forEach(function (f) {
-      if (Object.prototype.hasOwnProperty.call(req.body, f)) { vals.push(req.body[f]); sets.push(f + '=$' + vals.length); }
-    });
-    vals.push(req.params.id);
-    const result = await pool.query(
-      `UPDATE consultation SET ${sets.concat(['updated_at=NOW()']).join(', ')} WHERE id=$${vals.length} RETURNING *`,
-      vals
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    sendDbError(res, err);
-  }
-});
+router.put('/:id', canConsult, (req, res) => inTx(res, async (client) => {
+  // Only the fields present in the request are written. The screen sends the note and
+  // the vital signs; setting every other column from an absent key wrote NULL into
+  // subjective/objective/assessment/plan/weight/height on every save. A key sent as
+  // null still clears its field (an emptied vital sign).
+  const sent = NOTE_FIELDS.filter(function (f) { return Object.prototype.hasOwnProperty.call(req.body, f); });
+  const vals = sent.map(function (f) { return req.body[f]; });
+  const sets = sent.map(function (f, i) { return f + '=$' + (i + 1); });
+  const prev = await client.query('SELECT * FROM consultation WHERE id = $1 FOR UPDATE', [req.params.id]);
+  if (prev.rows.length === 0) return [404, { error: 'Not found' }];
+  vals.push(req.params.id);
+  const result = await client.query(
+    `UPDATE consultation SET ${sets.concat(['updated_at=NOW()']).join(', ')} WHERE id=$${vals.length} RETURNING *`,
+    vals
+  );
+  // Both sides are read back from the table, so '36.5' and 36.5 do not count as a change.
+  await recordEdit(client, req, await consultOf(client, req.params.id), 'consultation', prev.rows[0], 'note',
+    pick(prev.rows[0], sent), pick(result.rows[0], sent));
+  return [200, result.rows[0]];
+}));
 
 // PUT /api/consultations/:id/complete - complete consultation
 router.put('/:id/complete', canConsult, async (req, res) => {
@@ -165,25 +228,27 @@ router.get('/:id/diagnoses', canConsult, async (req, res) => {
 });
 
 // POST /api/consultations/:id/diagnoses
-router.post('/:id/diagnoses', canConsult, async (req, res) => {
-  try {
-    const { icd_code, diagnosis_name, diagnosis_type, sort_order } = req.body;
-    if (blank(diagnosis_name)) return res.status(400).json({ error: 'diagnosis_name is required' });
-    const result = await pool.query(
-      'INSERT INTO diagnosis (consultation_id, icd_code, diagnosis_name, diagnosis_type, sort_order) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [req.params.id, icd_code, diagnosis_name, diagnosis_type || 'primary', sort_order || 0]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
-});
+router.post('/:id/diagnoses', canConsult, (req, res) => inTx(res, async (client) => {
+  const { icd_code, diagnosis_name, diagnosis_type, sort_order } = req.body;
+  if (blank(diagnosis_name)) return [400, { error: 'diagnosis_name is required' }];
+  const c = await consultOf(client, req.params.id);
+  if (!c) return [404, { error: 'Consultation not found' }];
+  const result = await client.query(
+    'INSERT INTO diagnosis (consultation_id, icd_code, diagnosis_name, diagnosis_type, sort_order) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [req.params.id, icd_code, diagnosis_name, diagnosis_type || 'primary', sort_order || 0]
+  );
+  const dx = result.rows[0];
+  await recordEdit(client, req, c, 'diagnosis', dx, dxLabel(dx), null, pick(dx, DX_LOG));
+  return [201, dx];
+}));
 
 // DELETE /api/consultations/diagnosis/:dxId
-router.delete('/diagnosis/:dxId', canConsult, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM diagnosis WHERE id = $1', [req.params.dxId]);
-    res.json({ success: true });
-  } catch (err) { sendDbError(res, err); }
-});
+router.delete('/diagnosis/:dxId', canConsult, (req, res) => inTx(res, async (client) => {
+  const result = await client.query('DELETE FROM diagnosis WHERE id = $1 RETURNING *', [req.params.dxId]);
+  const dx = result.rows[0];
+  if (dx) await recordEdit(client, req, await consultOf(client, dx.consultation_id), 'diagnosis', dx, dxLabel(dx), pick(dx, DX_LOG), null);
+  return [200, { success: true }];
+}));
 
 // ── Prescriptions ──
 
@@ -224,76 +289,82 @@ function rxTotal(dose, days) {
 }
 
 // POST /api/consultations/:id/prescriptions
-router.post('/:id/prescriptions', canConsult, async (req, res) => {
-  try {
-    // total_qty from the client is ignored: the server works it out (rxTotal).
-    const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
-    if (blank(drug_name)) return res.status(400).json({ error: 'drug_name is required' });
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const result = await pool.query(
-      `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, rxTotal(dose, days), unit_price, memo]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
-});
+router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (client) => {
+  // total_qty from the client is ignored: the server works it out (rxTotal).
+  const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
+  if (blank(drug_name)) return [400, { error: 'drug_name is required' }];
+  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
+  if (invalid) return [400, { error: invalid }];
+  const c = await consultOf(client, req.params.id);
+  if (!c) return [404, { error: 'Consultation not found' }];
+  const result = await client.query(
+    `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+    [req.params.id, drug_id, drug_code, drug_name, dose, frequency, days, route, rxTotal(dose, days), unit_price, memo]
+  );
+  const rx = result.rows[0];
+  await recordEdit(client, req, c, 'prescription', rx, rx.drug_name, null, pick(rx, RX_LOG));
+  return [201, rx];
+}));
 
-
-// A write that matched no row either hit a dispensed line or a missing one; say which.
-async function rxRefusal(res, rxId) {
-  const r = await pool.query('SELECT status FROM prescription WHERE id = $1', [rxId]);
-  if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-  return res.status(409).json({ error: RX_DISPENSED });
+// Once the pharmacy has handed the drug over, its stock is already deducted. Changing
+// or deleting the line afterwards would move the bill but not the shelf, so the two
+// would disagree for good. The row is read FOR UPDATE first: the pharmacy's dispense
+// updates the same row, so it either lands before (and is seen here) or waits.
+// status can be NULL (the column only has a default); NULL is not dispensed.
+async function lockRx(client, rxId) {
+  const r = await client.query('SELECT * FROM prescription WHERE id = $1 FOR UPDATE', [rxId]);
+  if (r.rows.length === 0) return { refuse: [404, { error: 'Not found' }] };
+  if (r.rows[0].status === 'dispensed') return { refuse: [409, { error: RX_DISPENSED }] };
+  return { rx: r.rows[0] };
 }
 
 // PUT /api/consultations/prescription/:rxId - update prescription details
-router.put('/prescription/:rxId', canConsult, async (req, res) => {
-  try {
-    // total_qty from the client is ignored: the server works it out (rxTotal).
-    const { dose, frequency, days, route, memo, unit_price } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
-    const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
-    // Once the pharmacy has handed the drug over, its stock is already deducted.
-    // Changing the line afterwards would move the bill but not the shelf, so the two
-    // would disagree for good. The status test sits in the UPDATE itself so a
-    // dispense landing at the same moment cannot slip between a check and the write.
-    //
-    // total_qty is recomputed only when the dose, the times a day or the days really
-    // changed (compared as numbers: "3" and "3.000" are the same dose). The screen
-    // saves a row whenever a field loses focus, so without this an old visit opened
-    // after the formula change would have its totals cut to a third just by clicking
-    // through them - and a visit already paid for would show up for a refund.
-    // In the comparison the columns are the row's values before this UPDATE.
-    const result = await pool.query(
-      `UPDATE prescription
-       SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, unit_price=COALESCE($7, unit_price),
-           total_qty = CASE
-             WHEN (CASE WHEN dose ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$' THEN dose::numeric END) IS DISTINCT FROM $9::numeric
-               OR frequency IS DISTINCT FROM $2
-               OR days IS DISTINCT FROM $3
-             THEN $6 ELSE total_qty END
-       WHERE id=$8 AND status <> 'dispensed' RETURNING *`,
-      [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose]
-    );
-    if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
-    res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
-});
+router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (client) => {
+  // total_qty from the client is ignored: the server works it out (rxTotal).
+  const { dose, frequency, days, route, memo, unit_price } = req.body;
+  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
+  if (invalid) return [400, { error: invalid }];
+  const freq = parseInt(frequency) || 1, nDays = parseInt(days) || 1;
+  const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
+  const got = await lockRx(client, req.params.rxId);
+  if (got.refuse) return got.refuse;
+  // total_qty is recomputed only when the dose, the times a day or the days really
+  // changed (compared as numbers: "3" and "3.000" are the same dose). The screen
+  // saves a row whenever a field loses focus, so without this an old visit opened
+  // after the formula change would have its totals cut to a third just by clicking
+  // through them - and a visit already paid for would show up for a refund.
+  // In the comparison the columns are the row's values before this UPDATE.
+  const result = await client.query(
+    `UPDATE prescription
+     SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, unit_price=COALESCE($7, unit_price),
+         total_qty = CASE
+           WHEN (CASE WHEN dose ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$' THEN dose::numeric END) IS DISTINCT FROM $9::numeric
+             OR frequency IS DISTINCT FROM $2
+             OR days IS DISTINCT FROM $3
+           THEN $6 ELSE total_qty END
+     WHERE id=$8 RETURNING *`,
+    [dose, freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose]
+  );
+  const rx = result.rows[0];
+  await recordEdit(client, req, await consultOf(client, rx.consultation_id), 'prescription', rx, rx.drug_name,
+    pick(got.rx, RX_LOG), pick(rx, RX_LOG));
+  return [200, rx];
+}));
 
-// DELETE /api/consultations/prescription/:rxId
-router.delete('/prescription/:rxId', canConsult, async (req, res) => {
-  try {
-    // Same reason as the PUT above: a dispensed line stays.
-    const result = await pool.query(
-      "DELETE FROM prescription WHERE id = $1 AND status <> 'dispensed' RETURNING id", [req.params.rxId]);
-    if (result.rows.length === 0) return rxRefusal(res, req.params.rxId);
-    res.json({ success: true });
-  } catch (err) { sendDbError(res, err); }
-});
+// DELETE /api/consultations/prescription/:rxId - always logged (not only when finished)
+router.delete('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (client) => {
+  const got = await lockRx(client, req.params.rxId);
+  if (got.refuse) return got.refuse;
+  const rx = got.rx;
+  await client.query('DELETE FROM prescription WHERE id = $1', [rx.id]);
+  const c = await consultOf(client, rx.consultation_id);
+  await writeAudit(client, req, {
+    action: ACTIONS.PRESCRIPTION_DELETE, patient_id: c && c.patient_id, visit_id: c && c.visit_id,
+    entity: 'prescription', entity_id: rx.id, summary: rx.drug_name, before: pick(rx, RX_LOG), after: null,
+  });
+  return [200, { success: true }];
+}));
 
 // ── Order Items (Lab, Imaging, Procedures) ──
 
@@ -307,9 +378,9 @@ router.post('/:id/orders', canConsult, async (req, res) => {
     const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
     if (invalid) { await client.query('ROLLBACK'); return res.status(400).json({ error: invalid }); }
     // Get consultation info
-    const cResult = await client.query('SELECT visit_id, patient_id FROM consultation WHERE id = $1', [req.params.id]);
-    if (cResult.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Consultation not found' }); }
-    const { visit_id, patient_id } = cResult.rows[0];
+    const consult = await consultOf(client, req.params.id);
+    if (!consult) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Consultation not found' }); }
+    const { visit_id, patient_id } = consult;
 
     // Get order code details for order-feed mapping.
     // The visible order window stays unified. For PACS/SmartServer, the EMR exports
@@ -366,6 +437,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
       await client.query("UPDATE order_item SET worklist_status = 'sent', worklist_sent_at = NOW() WHERE id = $1", [orderItem.id]);
     }
 
+    await recordEdit(client, req, consult, 'order_item', orderItem, orderLabel(orderItem), null, pick(orderItem, ORDER_LOG));
     await client.query('COMMIT');
     res.status(201).json(orderItem);
   } catch (err) {
@@ -379,27 +451,28 @@ router.post('/:id/orders', canConsult, async (req, res) => {
 
 
 // PUT /api/consultations/order/:orderId - update order item dosing/quantity details
-router.put('/order/:orderId', canConsult, async (req, res) => {
-  try {
-    const { dose, frequency, days, quantity, memo, unit_price } = req.body;
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const result = await pool.query(
-      `UPDATE order_item
-       SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price), updated_at=NOW()
-       WHERE id=$7 AND status <> 'cancelled' RETURNING *`,
-      [dose, parseInt(frequency) || 1, parseInt(days) || 1, quantity === undefined || quantity === null || quantity === '' ? 1 : quantity, memo, unit_price, req.params.orderId]
-    );
-    if (result.rows.length === 0) {
-      // A cancelled order is a record: its quantity and notes no longer change (and it
-      // is out of the bill, so a change would mean nothing anyway).
-      const r = await pool.query('SELECT status FROM order_item WHERE id = $1', [req.params.orderId]);
-      if (r.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-      return res.status(409).json({ error: ORDER_CANCELLED });
-    }
-    res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
-});
+router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client) => {
+  const { dose, frequency, days, quantity, memo, unit_price } = req.body;
+  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
+  if (invalid) return [400, { error: invalid }];
+  // A cancelled order is a record: its quantity and notes no longer change (and it is
+  // out of the bill, so a change would mean nothing anyway). Locked and checked here,
+  // so the cancel route cannot land between the check and the write. status can be
+  // NULL (the column only has a default); NULL is not cancelled.
+  const prev = await client.query('SELECT * FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
+  if (prev.rows.length === 0) return [404, { error: 'Not found' }];
+  if (prev.rows[0].status === 'cancelled') return [409, { error: ORDER_CANCELLED }];
+  const result = await client.query(
+    `UPDATE order_item
+     SET dose=$1, frequency=$2, days=$3, quantity=$4, memo=$5, unit_price=COALESCE($6, unit_price), updated_at=NOW()
+     WHERE id=$7 RETURNING *`,
+    [dose, parseInt(frequency) || 1, parseInt(days) || 1, quantity === undefined || quantity === null || quantity === '' ? 1 : quantity, memo, unit_price, req.params.orderId]
+  );
+  const o = result.rows[0];
+  await recordEdit(client, req, await consultOf(client, o.consultation_id), 'order_item', o, orderLabel(o),
+    pick(prev.rows[0], ORDER_LOG), pick(o, ORDER_LOG));
+  return [200, o];
+}));
 
 // POST /api/consultations/order/:orderId/cancel  {reason}
 // Decision 3-B (2026-09-29). An order with a result cannot be deleted; the doctor who
@@ -411,21 +484,21 @@ router.put('/order/:orderId', canConsult, async (req, res) => {
 //   blur into each other;
 // - already cancelled: returned as it is (a second click, or two screens);
 // - no undo (decision: order it again if cancelled by mistake);
-// - code_type is not checked here: the screen offers this for lab orders only for now;
-//   imaging waits for the PACS side (worklist cancellation) after the PACS merge.
+// - imaging is refused (409) until the PACS side is switched on: cancelling it here
+//   would leave its worklist entry on the modality. When the coordinator says so, this
+//   refusal becomes a call to cancelWorklistForOrder (backend/src/routes/pacs.cancel.js).
+//   The screen offers the cancel on lab orders only.
+// - logged (ORDER_CANCEL), in the same transaction.
 router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const oi = await client.query(
-      'SELECT id, status, result_text FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
+    const oi = await client.query('SELECT * FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    if (oi.rows[0].status === 'cancelled') {
-      await client.query('ROLLBACK');
-      const same = await pool.query('SELECT * FROM order_item WHERE id = $1', [req.params.orderId]);
-      return res.json(same.rows[0]);
-    }
-    if (!(await orderProduced(client, req.params.orderId, oi.rows[0].result_text))) {
+    const prev = oi.rows[0];
+    if (prev.status === 'cancelled') { await client.query('ROLLBACK'); return res.json(prev); }
+    if (prev.code_type === 'imaging') { await client.query('ROLLBACK'); return res.status(409).json({ error: IMAGING_NO_CANCEL }); }
+    if (!(await orderProduced(client, req.params.orderId, prev.result_text))) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: ORDER_NO_RESULT });
     }
@@ -435,6 +508,11 @@ router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
           SET status = 'cancelled', cancelled_at = NOW(), cancelled_by = $1, cancel_reason = $2, updated_at = NOW()
         WHERE id = $3 RETURNING *`,
       [req.user.id, reason, req.params.orderId]);
+    await writeAudit(client, req, {
+      action: ACTIONS.ORDER_CANCEL, patient_id: prev.patient_id, visit_id: prev.visit_id,
+      entity: 'order_item', entity_id: prev.id, summary: orderLabel(prev),
+      before: { status: prev.status, cancel_reason: null }, after: { status: 'cancelled', cancel_reason: reason },
+    });
     await client.query('COMMIT');
     res.json(r.rows[0]);
   } catch (err) {
@@ -457,10 +535,10 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
     // FOR UPDATE first: a lab result being saved right now needs a key lock on this
     // row, so it either finishes before the check below sees it, or waits and then
     // fails on the missing order - never lands on an order we are deleting.
-    const oi = await client.query(
-      'SELECT id, result_text FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
+    const oi = await client.query('SELECT * FROM order_item WHERE id = $1 FOR UPDATE', [req.params.orderId]);
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    if (await orderProduced(client, req.params.orderId, oi.rows[0].result_text)) {
+    const prev = oi.rows[0];
+    if (await orderProduced(client, req.params.orderId, prev.result_text)) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: ORDER_HAS_RESULT });
     }
@@ -468,6 +546,11 @@ router.delete('/order/:orderId', canConsult, async (req, res) => {
     // the intent is visible here).
     await client.query('DELETE FROM worklist_log WHERE order_item_id = $1', [req.params.orderId]);
     await client.query('DELETE FROM order_item WHERE id = $1', [req.params.orderId]);
+    // Always logged (ORDER_DELETE), not only on a finished consultation.
+    await writeAudit(client, req, {
+      action: ACTIONS.ORDER_DELETE, patient_id: prev.patient_id, visit_id: prev.visit_id,
+      entity: 'order_item', entity_id: prev.id, summary: orderLabel(prev), before: pick(prev, ORDER_LOG), after: null,
+    });
     await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {

@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 결과 있는 검사 오더 「취소」(결정 3-B) 확인 요청 — 임상병리·수납 몫은 develop에 있음
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 변경 기록(로그) 진료 몫 · NULL 상태 · 영상 취소 거절 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -13,7 +13,7 @@
 - **문서/의뢰서**(진료의뢰서) · **차트기록**(수술기록지 12종 + 수술 동의서) 작성·발급·재출력
 - 이 환자의 **검사결과** 보기(임상병리 세션 부품) · 영상 **판독소견** 보기/쓰기(PACS 세션 부품)
 
-**진단(ICD) 입력은 없습니다.** DB 테이블과 API는 있지만 화면에서 쓰지 않습니다(7절 ⑩).
+**진단(ICD) 입력은 없습니다.** DB 테이블과 API는 있지만 화면에서 쓰지 않습니다 — **만들지 않기로 결정**(7절 ⑩, 2026-09-29).
 
 공용 **문서 엔진**(`DocumentModal` · `documents/shared.jsx` · `documents/registry.js`)도 이 모듈이 주관합니다. 진료·수납·약국·임상병리·접수 5개 화면이 같이 씁니다.
 
@@ -41,6 +41,7 @@
 2. **Note de Consultation (진료 기록)** 칸에 S·O·A·P를 적습니다. 칸은 하나입니다.
 3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
 4. **Sauver (저장)**를 누르면 기록과 바이탈이 저장됩니다.
+5. **끝난 진료도 고칠 수 있습니다**(실장님 결정 ⑫, 2026-09-29). 다만 **Terminé (완료)**를 누른 진료나 **오늘이 아닌 날의 내원**을 고치면 누가 무엇을 어떻게 바꿨는지(전 값 → 새 값)가 **변경 기록**에 남습니다. 화면에는 아무 표시도 없고, 관리자만 설정에서 봅니다. 진료 중에 여러 번 저장하는 것은 남지 않습니다. 처방·오더를 지우거나 검사를 취소한 것은 진료가 끝났든 아니든 늘 남습니다.
 
 ### 2.3 Prescriptions — 처방과 검사 (왼쪽)
 
@@ -227,7 +228,7 @@
 **상태 흐름**
 
 - 첫 로드 `loadData()` (75-89): `/visits/today`, `/admin/drugs`, `/admin/order-codes`, `/admin/phrases`, `/order-sets`를 **순서대로** 받아 둡니다. 자동완성은 전부 브라우저 안에서 거릅니다(서버 검색 없음). 약속처방은 **진료과 필터 없이 전부** 받습니다(API는 `?department_id=`를 지원).
-- `pickPatient(v)` (91-112): `POST /consultations`로 진료를 **열거나 새로 만들고**, 처방·오더·환자 이력을 받습니다. 바이탈은 `bp_systolic`이 있을 때만 채웁니다(수축기 혈압이 비었으면 체온 등도 화면에 안 나옴 — 작은 흠).
+- `pickPatient(v)` (91-112): `POST /consultations`로 진료를 **열거나 새로 만들고**, 처방·오더·환자 이력을 받습니다. 바이탈은 저장된 것을 모두 채웁니다. 전에는 `bp_systolic`이 있을 때만 채워서, 혈압 없이 저장된 체온·맥박이 화면에 안 나오고 **다음 저장 때 지워졌습니다**(작은 흠으로 적어 두었던 것이 실제로는 기록 손실 — 변경 기록 시험에서 드러나 2026-09-29 고침).
 - `saveNote()` (165-180) · `completeConsult()` (182-201): `note_text`와 바이탈만 보냅니다. 완료는 저장 → `PUT /:id/complete` → `loadData()` 순서입니다. *저장을 안 누르고 완료해도 기록이 날아가지 않게* 완료가 먼저 저장합니다.
 - 처방·오더 줄은 **추가할 때 바로 서버에 INSERT**되고(`addDrugRx`, `addExamOrder`), 칸을 고치면 `onBlur`에서 PUT(`saveRx`, `saveOrder`), ✕는 `confirmRemove`(이름을 넣은 확인 창) 후 DELETE입니다. 「저장」 버튼과 무관합니다.
 - **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다.
@@ -250,18 +251,23 @@
 
 - **권한 (S2, 2026-09-29 실장님 결정 「서버도 화면 권한대로」)**: 쓰기(POST·PUT·DELETE)는 전부 `permMiddleware('consultation')`(`canConsult`). 읽기는 부르는 화면의 권한만 — 처방·오더 읽기(`GET /visit/:visitId/prescriptions`·`/:id/prescriptions`·`/:id/orders`)는 `canReadRx` = consultation·payment·pharmacy(진료 화면, 수납·약국의 `PatientChart`와 문서 창), 진단 읽기는 consultation. 임상병리·접수는 문서 창을 읽기 전용·내원 없이 열어서 이 라우트를 부르지 않습니다. 라우트별 표는 `wiki/handoff/settings.md` 「S2」. 서버는 요청마다 DB에서 계정 상태·권한을 읽으므로(S1) 권한을 바꾸면 바로 적용됩니다.
 - `POST /` — 진료 열기. 같은 `visit_id`의 진료가 있으면 그것을 돌려주고(완료·서명 전이면 내원을 `in_progress`로), 없으면 새로 만들며 `doctor_id = 지금 로그인한 사람`, `department_id = 내원의 과 || 로그인한 사람의 과`, `consult_date = CURRENT_DATE`. `consultation.visit_id`에 UNIQUE 인덱스가 있어 한 내원에 진료는 하나입니다. **취소된 내원**(`visit.status='cancelled'`)은 409 `Visit was cancelled`로 거절하고(내원 행을 `FOR UPDATE`로 잠가 동시 취소도 봄), 없는 내원은 404. 새 진료의 `consult_date`는 **내원 날짜**(전에는 오늘 — 지난 내원을 늦게 적으면 오늘 진료로 잡혔음). 2026-09-29, 7절 ⑫.
-- `PUT /:id` — **요청에 들어 있는 칸만** 바꿉니다(`subjective, objective, assessment, plan, note_text`, 바이탈 7개 중 몸체에 키가 있는 것). 키를 `null`로 보내면 그 칸을 비웁니다(지운 바이탈). 전에는 없는 키도 NULL로 덮어써서, 화면이 보내지 않는 S/O/A/P·체중·키가 저장할 때마다 지워졌습니다(7절 ⑬, 2026-09-29).
+- `PUT /:id` — **요청에 들어 있는 칸만** 바꿉니다(`subjective, objective, assessment, plan, note_text`, 바이탈 7개 중 몸체에 키가 있는 것). 키를 `null`로 보내면 그 칸을 비웁니다(지운 바이탈). 전에는 없는 키도 NULL로 덮어써서, 화면이 보내지 않는 S/O/A/P·체중·키가 저장할 때마다 지워졌습니다(7절 ⑬, 2026-09-29). 끝난 진료(아래 「변경 기록」)면 바뀐 칸의 전 값 → 새 값을 기록합니다. 전·후 값은 둘 다 표에서 읽은 값이라 `36.5`와 `"36.5"`가 바뀜으로 잡히지 않습니다.
 - `PUT /:id/complete` — 진료 `completed` + 내원 `completed`, 한 트랜잭션.
 - 처방·오더 쓰기는 `badAmounts`(`utils/validate.js`)로 숫자 범위를 막습니다 — `dose` 0~1000 **숫자만**(그래서 `1/2` 같은 용량은 400), `frequency` 1~24 정수, `days` 1~365 정수, `quantity` 0~10000, `unit_price` 0~1억.
-- **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(없는 진료 id에 쓰면 400 「Referenced record does not exist」). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
+- **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
 - **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다.
 - `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). `pacs_config`는 001이 만든 한 줄을 읽기만 합니다(전에는 오더마다 `CREATE TABLE IF NOT EXISTS`를 돌렸음 — 7절 ⑲, 2026-09-29 삭제). 줄이 없으면 워크리스트 자동 생성이 켜진 것으로 봅니다.
-- `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**. 조건을 UPDATE/DELETE의 `WHERE ... AND status <> 'dispensed'`에 넣어, 확인과 쓰기 사이에 조제가 끼어들 수 없게 했습니다. 0행이면 `rxRefusal`이 없는 줄(404)인지 조제된 줄(409)인지 가립니다. 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다.
-- `DELETE /order/:orderId` — **결과가 생긴 오더는 409 `Order already has a result`**: `lab_result`가 있거나, `order_item.result_text`(판독)가 있거나, `worklist_log.status`가 `in_progress`·`completed`(촬영 시작). 이유: `lab_result`와 `worklist_log`가 `ON DELETE CASCADE`라 지우면 검사값·accession·판독이 소리 없이 함께 사라졌습니다. 먼저 `order_item`을 `FOR UPDATE`로 잠그므로, 동시에 저장되는 검사 결과(외래키가 이 행에 키 잠금을 요구)는 확인 전에 끝나거나 삭제 뒤 실패합니다. 시작 전 워크리스트는 오더와 함께 지워집니다.
-- `PUT /order/:orderId` — 수량·메모 등을 고칩니다(수납이 차액으로 처리). **취소된 오더는 409 `Order is cancelled`**(`WHERE … AND status <> 'cancelled'`).
-- `POST /order/:orderId/cancel` `{reason}` — **결과가 있는 오더를 「취소됨」으로 표시**(결정 3-B, 2026-09-29). `FOR UPDATE`로 잠그고(임상병리의 결과 저장과 같은 잠금 — 순서 보장), 이미 취소면 그대로 200, 결과가 **없으면 409 `Order has no result`**(지우라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'`·`cancelled_at`·`cancelled_by`·`cancel_reason`(앞뒤 공백 빼고 500자까지, 비면 NULL). 「결과 있음」 판정은 삭제와 같은 `orderProduced()`(검사값 · 판독문 · 워크리스트 진행/완료). `code_type`은 가리지 않지만 화면은 검사 오더에만 씁니다 — 영상은 PACS 저장소를 합친 뒤 워크리스트 취소와 함께. 되돌리기 없음. 취소된 오더는 임상병리 목록·결과 저장(409)·결과 표(회색), 수납 청구(`COALESCE(status,'') <> 'cancelled'`)가 각자 처리합니다.
+- `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**, 없는 줄은 404. 한 트랜잭션 안에서 줄을 먼저 `FOR UPDATE`로 읽고(`lockRx`) 상태를 본 뒤 씁니다. 약국의 조제도 같은 줄을 UPDATE하므로 확인과 쓰기 사이에 끼어들 수 없습니다. `status`는 기본값만 있는 NULL 허용 칸이라, NULL은 「조제 안 됨」으로 봅니다(전에는 `status <> 'dispensed'`가 NULL 줄을 못 잡아 409로 거절 — 2026-09-29 고침). 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다. 삭제는 늘 기록(`PRESCRIPTION_DELETE`), 수정은 끝난 진료일 때 기록.
+- `DELETE /order/:orderId` — **결과가 생긴 오더는 409 `Order already has a result`**: `lab_result`가 있거나, `order_item.result_text`(판독)가 있거나, `worklist_log.status`가 `in_progress`·`completed`(촬영 시작). 이유: `lab_result`와 `worklist_log`가 `ON DELETE CASCADE`라 지우면 검사값·accession·판독이 소리 없이 함께 사라졌습니다. 먼저 `order_item`을 `FOR UPDATE`로 잠그므로, 동시에 저장되는 검사 결과(외래키가 이 행에 키 잠금을 요구)는 확인 전에 끝나거나 삭제 뒤 실패합니다. 시작 전 워크리스트는 오더와 함께 지워집니다. 삭제는 늘 기록합니다(`ORDER_DELETE`, 지운 줄의 코드·이름·수량·가격 등).
+- `PUT /order/:orderId` — 수량·메모 등을 고칩니다(수납이 차액으로 처리). 줄을 `FOR UPDATE`로 읽고 **취소된 오더(`status='cancelled'`)면 409 `Order is cancelled`**, 없으면 404. `status`가 NULL인 줄은 취소가 아니므로 고칠 수 있습니다(전에는 `WHERE … status <> 'cancelled'`가 NULL 줄을 못 잡아 「Order is cancelled」 409가 났음 — 2026-09-29 고침). 끝난 진료면 기록.
+- `POST /order/:orderId/cancel` `{reason}` — **결과가 있는 오더를 「취소됨」으로 표시**(결정 3-B, 2026-09-29). `FOR UPDATE`로 잠그고(임상병리의 결과 저장과 같은 잠금 — 순서 보장), 이미 취소면 그대로 200, 결과가 **없으면 409 `Order has no result`**(지우라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'`·`cancelled_at`·`cancelled_by`·`cancel_reason`(앞뒤 공백 빼고 500자까지, 비면 NULL). 「결과 있음」 판정은 삭제와 같은 `orderProduced()`(검사값 · 판독문 · 워크리스트 진행/완료). **영상 오더는 409 `Imaging order cannot be cancelled yet`**(화면 문구 `cs_imagingNoCancel`): 여기서 취소하면 장비의 워크리스트가 그대로 남기 때문입니다. 영상 취소도 검사와 같은 방식으로 하기로 결정됐고(2026-09-29), PACS 저장소를 합친 뒤 총괄이 알리면 이 거절을 `cancelWorklistForOrder`(`backend/src/routes/pacs.cancel.js`) 호출로 바꿉니다. 화면은 검사 오더에만 취소를 내놓습니다. 취소는 기록합니다(`ORDER_CANCEL`, 상태·이유). 되돌리기 없음. 취소된 오더는 임상병리 목록·결과 저장(409)·결과 표(회색), 수납 청구(`COALESCE(status,'') <> 'cancelled'`)가 각자 처리합니다.
 - `GET /visit/:visitId/prescriptions` — 내원 단위 처방. 문서 엔진이 투약 목록을 채울 때 씁니다.
-- 진단 `GET/POST /:id/diagnoses`, `DELETE /diagnosis/:dxId` — 화면에서 안 씀.
+- 진단 `GET/POST /:id/diagnoses`, `DELETE /diagnosis/:dxId` — 화면에서 안 씀(진단 화면은 만들지 않기로 결정). API로 끝난 진료에 넣거나 지우면 기록합니다.
+- **변경 기록**(실장님 결정 2026-09-29, 공통 규칙 [../03-change-log.md](../03-change-log.md), 함수 `utils/audit.js`의 `writeAudit`). 진료가 남기는 것:
+  - `consultation.order.cancel` · `consultation.order.delete` · `consultation.prescription.delete` — **늘**(진료가 끝났든 아니든).
+  - `consultation.record.edit` — **끝난 진료 기록**을 고쳤을 때만: 기록·바이탈(`PUT /:id`), 처방 추가·수정, 오더 추가·수정, 진단 추가·삭제. `entity`로 무엇인지(`consultation`·`prescription`·`order_item`·`diagnosis`), 추가는 `before` 없음, 삭제는 `after` 없음.
+  - **「끝난」의 기준**(`consultOf()`, 바꾸는 트랜잭션 안에서 읽음): ① `consultation.status`가 `completed`(또는 `signed`) — Terminé를 누른 진료. 되돌리는 코드가 없으므로 다시 열어 고쳐도 끝난 진료입니다. **또는** ② 내원 날짜(`visit.visit_date`)가 오늘(병원 날짜 `todayLocal`)이 아님 — Terminé를 안 눌렀어도 지난 날의 기록을 나중에 고친 것. 오늘 열려 있는 진료의 저장은 평소 일이라 남기지 않습니다.
+  - 바꾸는 라우트는 모두 한 트랜잭션(`inTx`)이고 기록도 같은 `client`로 씁니다. 응답은 COMMIT 뒤에 나가므로, COMMIT이 실패하면 바뀐 것도 기록도 없이 오류가 갑니다. 같은 값으로 저장하면 줄이 생기지 않습니다(`writeAudit`가 다른 칸만 남김, 빈 글자 `''`와 NULL은 같은 것으로 봄 — 화면이 메모를 `''`로 보내기 때문).
 
 ### 3.3 오더 세트 — `backend/src/routes/orderset.routes.js` (`/api/order-sets`)
 
@@ -443,6 +449,8 @@
 - **통계** — 약 사용량은 `prescription`을 `consultation`과 조인. 의사별 매출은 **내원의 `doctor_id`** 기준(`consultation.doctor_id` 아님).
 - **접수** — 과거 내원 목록 `GET /patients/:id/history`는 `consultation`을 날짜순으로 줍니다.
 
+- **설정 · 변경 기록** — 진료가 쓴 기록 줄(위 3.2 「변경 기록」)은 설정의 「기록」 탭(설정 세션)에서 관리자만 읽습니다. 화면 어디에도 「수정됨」 표시는 없습니다.
+
 ## 6. 설정 항목
 
 진료 화면에 영향을 주는 설정 (모두 **설정** 화면):
@@ -483,17 +491,17 @@
 |---|---|---|---|
 | ⑧ ✅ 09-29 | **높음** | **약국이 조제한 처방을 의사가 고치거나 지울 수 있다.** 서버가 `prescription.status`를 보지 않는다. 지우면 수납은 환불로 잡지만 **재고는 돌아오지 않고**, 고치면 청구 수량만 바뀐다 — 재고와 장부가 어긋난다. 화면 처방 표에도 조제 여부가 안 보인다. → **고침**: 서버가 409로 거절, 화면은 🔒·「조제됨」 표시 | `consult.routes.js` 165-190 · `pharmacy.routes.js` 126-185(조제·재고 차감) · `Consultation.jsx` 497-510 |
 | ⑨ ✅ 09-29 | **높음** | **결과가 들어간 검사 오더를 지우면 결과도 같이 사라진다.** `lab_result.order_item_id`가 `ON DELETE CASCADE`. 영상 오더는 촬영·판독 뒤에도 지워지며 `worklist_log`(accession)와 판독문(`order_item.result_text`)이 함께 사라진다. 확인 창도 없다. → **고침**: 결과·판독·촬영 시작이 있으면 409, 화면은 🔒. 모든 ✕에 확인 창 | `consult.routes.js` 296-311 · `014_lab.sql` 20 · `007_worklist_cascade.sql` · `Consultation.jsx` 514 |
-| ⑩ | 중간 | **진단 입력 화면이 없다.** `diagnosis` 테이블·API는 있지만 화면이 부르지 않는다(`dxList` 상태만 선언). 의뢰서 진단명은 손으로 쓰고, 통계는 진단을 셀 수 없다 | `Consultation.jsx` 21 · `consult.routes.js` 97-123 |
+| ⑩ 결정됨 09-29 | 중간 | **진단 입력 화면이 없다.** `diagnosis` 테이블·API는 있지만 화면이 부르지 않는다(`dxList` 상태만 선언). 의뢰서 진단명은 손으로 쓰고, 통계는 진단을 셀 수 없다 → **실장님 결정: 만들지 않음** | `Consultation.jsx` 21 · `consult.routes.js` 97-123 |
 | ⑪ ✅ 09-29 | 중간 | **진료 API에 모듈 권한 검사가 없다.** 로그인만 하면 약국·수납·검사 직원 계정으로도 진료를 열고 처방을 넣고 지울 수 있다(화면 메뉴로만 막힘). 임상병리는 `permMiddleware('lab')`로 막고 있다. → **고침**: 진료 쓰기 API에 `consultation` 권한. 읽기도 S2(2026-09-29)로 화면 권한대로 막음. 문서 발급·취소는 진료·수납·약국만 | `consult.routes.js` 9 · 비교 `lab.routes.js` 18 · `document.routes.js` 62 |
-| ⑫ 일부 ✅ 09-29 | 중간 | **「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열린다.** 그 내원에 진료가 없었으면(취소된 내원 포함) **오늘 날짜로 진료가 새로 생기고 내원이 `in_progress`로 바뀐다** — 취소된 내원이 되살아난다. 진료가 있었으면 지난 처방에 오더를 추가할 수 있고, 청구가 없던 지난 내원이면 수납 목록에도 안 올라간다 → **고친 것**: 취소된 내원은 409로 거절(되살아나지 않음), 지난 내원에 새로 만드는 진료는 내원 날짜로. *남음*: 지난 내원을 읽기 전용으로 열지는 결정 세션 | `Consultation.jsx` 671-673 → 91-99 · `consult.routes.js` 33-47 · `billing.routes.js` 57-62 |
+| ⑫ ✅ 결정됨 09-29 | 중간 | **「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열린다.** 그 내원에 진료가 없었으면(취소된 내원 포함) **오늘 날짜로 진료가 새로 생기고 내원이 `in_progress`로 바뀐다** — 취소된 내원이 되살아난다. 진료가 있었으면 지난 처방에 오더를 추가할 수 있고, 청구가 없던 지난 내원이면 수납 목록에도 안 올라간다 → **고친 것**: 취소된 내원은 409로 거절(되살아나지 않음), 지난 내원에 새로 만드는 진료는 내원 날짜로. **실장님 결정: 지난 기록도 지금처럼 고칠 수 있게 둠(읽기 전용으로 바꾸지 않음)** — 대신 끝난 진료·지난 날의 내원을 고치면 변경 기록에 남음(3.2 「변경 기록」) | `Consultation.jsx` 671-673 → 91-99 · `consult.routes.js` 33-47 · `billing.routes.js` 57-62 |
 | ⑬ ✅ 09-29 | 중간 | **저장할 때마다 `subjective`·`objective`·`assessment`·`plan`·`weight`·`height`가 NULL이 된다.** 서버가 몸체에 없는 칸도 덮어쓰고, 화면은 `note_text`와 바이탈만 보낸다. 과거 화면은 `note_text || subjective`로 보여 주므로 예전 S/O/A/P 칸 데이터가 있었다면 한 번 저장에 지워진다. **확인 필요**: 실제 DB에 그 칸을 쓴 기록이 있는지 → **고침**: PUT은 보낸 칸만 바꿈 | `consult.routes.js` 59-67 · `Consultation.jsx` 142·169-177·610 |
 | ⑭ | 중간 | **검사·처치 오더의 Tms·Day 칸은 청구에 안 들어간다.** 청구는 `quantity × unit_price`뿐인데 화면은 Tms·Day를 고칠 수 있게 보여 준다. 주사 3회 × 5일로 적어도 1회분만 청구될 수 있다. **확인 필요**: 수납 화면이 항목을 만드는 방식(수납 세션) | `Consultation.jsx` 517-519 · `billing.routes.js` 34 |
 | ⑮ 일부 ✅ 09-29 | 낮음 | **용법(Usage) 칸이 10자를 넘으면 저장이 500 에러**(`prescription.route VARCHAR(10)`). 약에 기본 용법이 없으면 용법에 `'TID'`(횟수 표기)를 넣는다 → 기본 용법이 없는 약에 `TID`를 넣던 것은 없앰. 10자 제한은 그대로이지만 넘으면 500 대신 400 「route (sig) must be at most 10 characters」(2026-09-29) | `001_schema.sql` prescription · `Consultation.jsx` 246·506 |
 | ⑯ ✅ 09-29 | 낮음 | **프랑스어 화면에 영어·한국어가 남는다** — 대기 상태값, 문장사전 분류 버튼, 문장 본문(`text_fr` 안 씀, 기본 문장도 영어뿐), 진료 기록 안내 글(게다가 `\n`이 줄바꿈이 안 되고 글자로 보임 — JSX 속성 문자열이라서), `DRUG`, `Error:`, 팝업 차단 안내(한국어만). 문서 기본 문장(소견·동의서 위험)도 영어뿐 — 의학 문장이라 실장님 확인 필요. → **고침**: 대기 상태·문장사전 분류/문장·종류 표시·안내 글·오류 머리·바이탈 이름·팝업 안내를 3개 국어로(3.1절). *남음*: 문서 기본 문장은 의학 문장이라 영어 그대로 | `Consultation.jsx` 428·474·566·573·584 · `shared.jsx` 179 · `003_seed_data.sql` 76- |
 | ⑰ ✅ 09-29 | 낮음 | **문서 발행일이 UTC 기준**이라 마다가스카르(UTC+3)에서 0~3시에 발급하면 전날 날짜가 찍힌다 → **고침**: 브라우저 현지 날짜 | `DocumentModal.jsx` 55 |
-| ⑱ | 낮음 | **진료의 담당 의사가 「처음 연 사람」으로 기록된다.** 관리자·간호사가 먼저 열면 그 사람이 과거 내원·약국·검사 목록에 의사로 나온다. 문서 서명은 반대로 **내원의 담당의** 이름 | `consult.routes.js` 46 · `DocumentModal.jsx` 56 |
+| ⑱ 결정됨 09-29 | 낮음 | **진료의 담당 의사가 「처음 연 사람」으로 기록된다.** 관리자·간호사가 먼저 열면 그 사람이 과거 내원·약국·검사 목록에 의사로 나온다. 문서 서명은 반대로 **내원의 담당의** 이름 → **실장님 결정: 진료를 연 계정의 이름이 남는 지금 방식 그대로**(의사마다 자기 계정으로 들어감). 문서 서명은 따로 결정됨: 문서를 작성한 의사 이름(다음 작업) | `consult.routes.js` 46 · `DocumentModal.jsx` 56 |
 | ⑲ ✅ 09-29 | 낮음 | 오더를 넣을 때마다 `pacs_config`를 `CREATE TABLE IF NOT EXISTS` — 001이 이미 만든 테이블이라 효과 없는 옛 코드이며, 옛 병원 기본값(`Yonsei Shintong Clinic`, `192.168.0.222`)이 남아 있다 → **고침**: 삭제 | `consult.routes.js` 224-230 |
-| ⑳ | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) → 안내 문구는 고침(⑯과 함께, `cs_selectPatient`). 진료과 구분은 아직 | `Consultation.jsx` 86·533 |
+| ⑳ 결정됨 09-29 | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) → 안내 문구는 고침(⑯과 함께, `cs_selectPatient`). **실장님 결정: 지금처럼 전부 보임** | `Consultation.jsx` 86·533 |
 | ㉑ ✅ 09-29 | **높음** · 총괄 | **날짜가 하루 앞당겨 보인다 (시스템 전체).** _총괄이 고침(`7ad4387`): `backend/src/config/database.js`에서 DATE(1082)를 받은 문자열 그대로 넘김. 실행 중인 EMR에서도 재현됐었음(DB `2023-05-05` → API `2023-05-04T21:00:00.000Z`), 고친 뒤 API·접수 화면 모두 `2023-05-05`._ DB의 `DATE`(생년월일·내원일·진료일)를 `pg`가 JS `Date`(현지 자정)로 바꾸고, JSON은 UTC로 내보내 `1990-01-01` → `1989-12-31T21:00:00.000Z`가 되고, 화면은 `split('T')[0]`로 자른다 — **생년월일·과거 진료일·인쇄 문서의 생년월일이 모두 하루 이르다.** 격리 스택(TZ=`Indian/Antananarivo`, 실행 중인 EMR과 같은 `.env`)에서 재현. 실행 중인 EMR은 건드리지 않아 직접 확인하지 못했지만 같은 설정이다. 고칠 곳은 `backend/src/config/`의 `pg` 타입 파서(1082 = DATE를 문자열로) — 총괄 파일 | API 응답 `GET /patients/1` · `docker-compose.yml` 49 · `Consultation.jsx` 401 · `shared.jsx` `fmtDate` |
 | ㉒ ✅ 09-29 | 중간 · 임상병리 부탁 | **검사 오더가 결과 전부터 「completed」로 보였다.** 상태 칸이 영상용 `worklist_status`를 보여 주는데, 워크리스트 없는 오더는 처음부터 `completed`로 저장된다. → **고침**: 검사 오더는 `o.status`(결과 대기/결과 있음/취소됨), 워크리스트 오더는 그대로, 그 밖은 비움(3.1절) | `Consultation.jsx` `orderStatus` · `consult.routes.js` POST /:id/orders · 임상병리 위키 7절 9 |
 | ㉓ ✅ 09-29 | 중간 · PACS 부탁 | **영상 뷰어가 다른 환자의 영상일 수 있다는 경고를 보여 주지 않았다**(판독 목록에만 있었음), **상태 칸의 워크리스트 상태가 영어**(P-19). → **고침**: 뷰어 위 빨강/노랑 경고, 상태 칸 3개 국어 | `Consultation.jsx` `ImagePatientCheck` · `orderStatus` · `pacs.routes.js` `/viewer-url` |
@@ -512,7 +520,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **결과 있는 검사 오더 「취소」(결정 3-B)** — 마이그레이션 201(`cancelled_at`·`cancelled_by`·`cancel_reason`), `POST /order/:id/cancel`, 취소된 오더 PUT 409, 화면: 결과 있는 검사 줄의 ✕가 취소를 묻고(이유 선택·수납 환불 안내) 취소된 줄은 회색·⊘. 영상은 🔒 그대로. 번역 키 `cs_` 3개 | (이 커밋) |
+| 2026-09-29 | **변경 기록(로그) 진료 몫** — 오더 취소·삭제, 처방 삭제는 늘, 끝난 진료(완료 또는 지난 날의 내원)의 기록·처방·오더·진단 수정은 `consultation.record.edit`. 바꾸는 라우트를 한 트랜잭션(`inTx`)으로. **NULL 상태**: 오더 PUT·처방 PUT/DELETE가 `status` NULL 줄을 거절하던 것 고침. **영상 오더 취소는 서버가 409**(PACS 뒤에 켬, `cs_imagingNoCancel`). **바이탈 불러오기**: 혈압 없이 저장된 체온·맥박을 화면이 안 불러와 다음 저장에 지워지던 것 고침(로그 시험에서 발견). 처방·진단을 없는 진료에 쓰면 404. 7절 ⑩⑫⑱⑳ 결정으로 닫음 | (이 커밋) |
+| 2026-09-29 | **결과 있는 검사 오더 「취소」(결정 3-B)** — 마이그레이션 201(`cancelled_at`·`cancelled_by`·`cancel_reason`), `POST /order/:id/cancel`, 취소된 오더 PUT 409, 화면: 결과 있는 검사 줄의 ✕가 취소를 묻고(이유 선택·수납 환불 안내) 취소된 줄은 회색·⊘. 영상은 🔒 그대로. 번역 키 `cs_` 3개 | `a01c946` |
 | 2026-09-29 | **영상 판독 날짜를 현지 날짜로**(PACS P-22) — `result_at`을 T 앞에서 자르던 것을 `ymd`로 | `24abb17` |
 | 2026-09-29 | **열린 낮은 항목** — ⑫ 취소된 내원 거절·지난 내원 진료일은 내원 날짜, ⑬ 기록 저장은 보낸 칸만, ⑰ 문서 발행일 현지 날짜, ⑲ 오더마다 돌던 옛 DDL 삭제. 번역 키 `cs_visitCancelled` | `c11b34b` |
 | 2026-09-29 | **빈 입력·긴 용법에 400** — 진단 이름·약 이름·오더 이름 필수 검사, 용법 10자 검사, 세 라우트 파일의 오류를 `sendDbError`로(원래 500) | `f52df58` |

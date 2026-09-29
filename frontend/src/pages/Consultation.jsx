@@ -16,6 +16,7 @@ var LOCK_MESSAGES = {
   'Order already has a result': 'cs_orderLocked',
   'Visit was cancelled': 'cs_visitCancelled',
   'Order is cancelled': 'cs_orderIsCancelled',
+  'Imaging order cannot be cancelled yet': 'cs_imagingNoCancel',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -229,7 +230,10 @@ export default function ConsultationPage() {
       var oi = await api.get('/consultations/'+cData.id+'/orders');
       setOrderItems(oi);
       if(cData.note_text) setNote(cData.note_text);
-      if(cData.bp_systolic) setVt({bp:cData.bp_systolic+'/'+cData.bp_diastolic,temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
+      // Every saved vital sign is loaded, with or without a blood pressure. This used to
+      // load only when a BP was saved, so a temperature taken alone showed empty and the
+      // next Sauver wrote it away (the change log caught it, 2026-09-29).
+      setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
       setHistory(h.filter(function(c){ return c.id !== cData.id; }));
@@ -579,7 +583,7 @@ export default function ConsultationPage() {
     try {
       var updated = await api.post('/consultations/order/'+o.id+'/cancel', { reason: reason });
       setOrderItems(function(list){ return list.map(function(x){ return x.id===o.id ? updated : x; }); });
-    } catch(err){ alert(t.cs_errorPrefix+err.message); reloadItems(); }
+    } catch(err){ if(!lockAlert(err)){ alert(t.cs_errorPrefix+err.message); reloadItems(); } }
   }
 
   function insertPhrase(text){ setNote(function(prev){ return prev?(prev+'\n'+text):text; }); }
