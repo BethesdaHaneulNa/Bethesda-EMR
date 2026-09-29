@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
+import { doseSentence, isLegacyTotal, storedTotal, fmtAmount } from '../documents/rx-dosing.js';
 
 // 읽기 전용 환자 차트 패널: 과거 내원 목록 → 클릭하면 그날 노트·바이탈·처방·오더 표시.
 // patientId 만 넘기면 됨. 진료/수납/접수 어디서든 재사용.
 export function PatientChart(props){
   var patientId = props.patientId || null;
-  var t = useLang().t;
+  var langCtx = useLang(), t = langCtx.t;
   var hs = useState([]), history = hs[0], setHistory = hs[1];
   var psv = useState(null), past = psv[0], setPast = psv[1];
 
@@ -79,7 +80,13 @@ export function PatientChart(props){
           return <div key={'r'+i} style={{display:'flex',gap:6,padding:'5px 8px',borderBottom:'1px solid #1e2433',alignItems:'baseline'}}>
             <span style={{color:'#60a5fa',fontFamily:'monospace',fontSize:11,fontWeight:700,width:52}}>{rx.drug_code}</span>
             <span style={{color:tx,fontSize:13,flex:1}}>{rx.drug_name}</span>
-            <span style={{color:t2,fontSize:11}}>{rx.dose}×{rx.frequency}×{rx.days}d</span>
+            {/* dose is the DAILY total since 2026-09-29, so "dose × times × days" no longer
+                says what was given. Same sentence as the pharmacy and consultation screens
+                (documents/rx-dosing.js); a line saved under the old formula is labelled. */}
+            <span style={{color:isLegacyTotal(rx)?'#fbbf24':t2,fontSize:11,textAlign:'right'}}>
+              {doseSentence(rx, langCtx.lang)}
+              {isLegacyTotal(rx) ? ' · ' + String(t.cs_rxStoredTotal||'').replace('{total}', fmtAmount(storedTotal(rx))) : ''}
+            </span>
           </div>;
         })}
         {(past.orders||[]).map(function(o,i){

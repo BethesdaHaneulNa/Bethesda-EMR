@@ -314,7 +314,7 @@
 
 ### 공용 부품
 
-- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음 — 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
+- `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음. 처방 줄은 약국 소유의 `documents/rx-dosing.js` `doseSentence()`로 약국·진료 화면과 같은 문장(「1 cp × 3 fois/jour pendant 7 jours (total 21)」, 1회량이 나눠지지 않으면 「… par jour en N prises …」), 예전 계산식으로 저장된 줄은 노랗게 「total enregistré N (ancien calcul)」(`isLegacyTotal`, 진료 `cs_rxStoredTotal` 키) — dose가 2026-09-29부터 하루 총량이라 예전 「용량×횟수×일수d」 표시는 뜻이 틀려짐(진료 부탁). 오더 상태: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
@@ -432,4 +432,5 @@
 | 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | `768eaa9` |
 | 2026-09-29 | 약 수량은 `total_qty`만 읽음(대체 계산 다섯 곳 삭제), 비어 있으면 경고·수납 거절(`QTY_MISSING`). 영수증 금액 `15 000 Ar`, 인쇄 팝업 차단 안내 프랑스어 | `5e42571` |
 | 2026-09-29 | M2 미수 수납은 받은 날짜의 새 영수(`POST /settle`, `/:id/pay` 삭제, 전체 미수 수납은 방문마다 한 장), 정정이 같은 방문 안의 이월을 받아들임, 영수증에 「Règlement du reçu …」 | `43c0e78` |
-| 2026-09-29 | 단가 0인 약·오더 줄에 「Sans prix」 표시와 수납 전 확인(막지 않음) | (이 커밋) |
+| 2026-09-29 | 단가 0인 약·오더 줄에 「Sans prix」 표시와 수납 전 확인(막지 않음) | `a9d9492` |
+| 2026-09-29 | PatientChart 처방 줄을 하루 총량 기준 문장으로(`rx-dosing.js`), 예전 계산 줄 표시 | (이 커밋) |

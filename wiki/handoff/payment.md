@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — PatientChart 처방 줄을 하루 총량 기준으로 (진료 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop merge(`a9d9492` 때문에 ff 불가 → merge, 충돌 없음)
+- **한 일**: 과거 내원 패널의 처방 줄이 「dose × freq × days d」(예전 1회량 기준)로 나오던 것을, 약국 소유 `documents/rx-dosing.js`의 `doseSentence(rx, lang)`로 바꿈 — 약국·진료 화면과 같은 문장, 화면 언어. 예전 계산식으로 저장된 줄(`isLegacyTotal`)은 노랗게 「· total enregistré N (ancien calcul)」(진료의 `cs_rxStoredTotal` 키).
+- **바꾼 파일**: 없음(자기 파일)
+- **공용 파일 변경**: **`frontend/src/components/PatientChart.jsx`**(수납 주관, 약국도 씀) — 처방 줄 표시만. `rx-dosing.js`는 import만(약국 파일 안 고침).
+- **DB 마이그레이션·번역 키**: 없음(진료 `cs_rxStoredTotal` 읽기만)
+- **확인한 방법**: 빌드. 격리 스택, 프랑스어: 「PARA | 1 cp × 3 fois/jour pendant 7 jours (total 21)」, 1회량이 나눠지지 않는 줄 「AMOX | 2 par jour en 3 prises, pendant 5 jours (total 10)」, 예전 총량(격리 DB에서 15로 되돌림) 「IBU | … (total 15) · total enregistré 15 (ancien calcul)」. 참고: 진료 서버가 이제 처방 추가 때 총량을 계산해 넣어서, API로 15를 보내도 5로 저장됨을 봄(진료 변경이 적용된 것).
+- **확인 못 한 것**: 한국어·약국 화면에서 직접 보지 않음(같은 부품·같은 함수).
+- **위키**: `modules/payment.md` 4절 공용 부품, 8절
+- **다른 세션에 부탁**: 없음 (진료 부탁 처리 완료 — 총괄 경유)
+
 ## 2026-09-29 — 단가 0인 약·오더에 「Sans prix」 표시 (진료 제안) · 가격 없는 약에 대한 수납 의견
 
 - **상태**: 확인 요청
