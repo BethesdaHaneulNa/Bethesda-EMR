@@ -106,6 +106,22 @@ function MISSING_QTY_SQL(visitRef) {
 // visit or patient, so the request is refused rather than billed twice.
 const BILL_CHANGED = 'BILL_CHANGED';
 
+// The unit word of a pack-unit drug line (bottle, tube...), copied onto the bill line
+// from the visit's prescription when the bill is written - as consultation copies it
+// from the drug table - so the receipt, which reads only the stored bill, can say
+// "2 flacons". What the screen sends for it is not used. (302_payment_item_pack_label)
+async function stampPackLabels(db, billId, visitId) {
+  await db.query(
+    `UPDATE billing_item bi SET pack_label = (
+        SELECT p.pack_label FROM prescription p
+         WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id = $2)
+           AND p.pack_unit AND p.drug_code = bi.item_code
+         ORDER BY p.id DESC LIMIT 1)
+      WHERE bi.billing_id = $1 AND bi.item_type = 'drug'`,
+    [billId, visitId]
+  );
+}
+
 // Consultation fee codes per visit type (L2, 2026-09-29). The waiting list, the
 // correction and the screen all take the fee from the stored price here - also when
 // the code was deleted (made inactive) in settings - so the three never disagree.
@@ -140,7 +156,7 @@ router.get('/pending', canPay, async (req, res) => {
            + COALESCE((SELECT SUM(COALESCE(p.total_qty,0)*COALESCE(p.unit_price,0))
                          FROM prescription p WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id=v.id)
                                AND COALESCE(p.dispense_type,'internal') <> 'external'),0)
-           + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id AND COALESCE(o.status,'') <> 'cancelled'),0)
+           + COALESCE((SELECT SUM(COALESCE(o.total_qty,o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id AND COALESCE(o.status,'') <> 'cancelled'),0)
            ) AS live_total,
            COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0)
            - COALESCE((SELECT SUM(bi.total_price) FROM billing_item bi JOIN billing b ON b.id = bi.billing_id
@@ -171,8 +187,11 @@ router.get('/pending', canPay, async (req, res) => {
        LEFT JOIN staff s ON v.doctor_id = s.id
        WHERE v.status = 'completed'
        AND (
+         -- Today's visit until it has a bill in force (L7, decided (나) 2026-09-29): one
+         -- that ended part-paid or unpaid leaves the list too - its balance is taken
+         -- under Reçus, shows on Payé aujourd'hui, and carries into the next visit.
          ( v.visit_date = CURRENT_DATE
-           AND v.id NOT IN (SELECT visit_id FROM billing WHERE payment_status IN ('paid','waived')) )
+           AND NOT EXISTS (SELECT 1 FROM billing bt WHERE bt.visit_id = v.id AND bt.payment_status <> 'cancelled') )
          -- An earlier day's visit that was never billed: reception can now close
          -- yesterday's leftovers with the working date, and they must still reach the
          -- till. Only when there is something to bill.
@@ -443,6 +462,7 @@ router.post('/', canPay, async (req, res) => {
           [billing.id, item.item_type, item.item_name, item.item_code, item.quantity, item.unit_price, item.total_price]
         );
       }
+      await stampPackLabels(client, billing.id, visit_id);
     }
 
     // Absorb the carried-forward balance. `previous_balance` was added to this
@@ -642,7 +662,7 @@ async function buildCorrection(db, visitId) {
   const missing = rx.rows.filter(function (r) { return r.qty == null; });
   if (missing.length) throw { status: 409, error: QTY_MISSING + ': ' + missing.map(function (r) { return r.drug_name; }).join(', ') };
   const orders = await db.query(
-    `SELECT order_code, order_name, code_type, COALESCE(quantity,1) AS qty, COALESCE(unit_price,0) AS unit_price
+    `SELECT order_code, order_name, code_type, COALESCE(total_qty,quantity,1) AS qty, COALESCE(unit_price,0) AS unit_price
        FROM order_item o WHERE o.visit_id = $1 AND COALESCE(o.status,'') <> 'cancelled' ORDER BY o.id`,
     [visitId]
   );
@@ -787,6 +807,7 @@ router.post('/visit/:visitId/correct', canPay, async (req, res) => {
         [bill.id, it.item_type, it.item_name, it.item_code, it.quantity, it.unit_price, it.total_price]
       );
     }
+    await stampPackLabels(client, bill.id, req.params.visitId);
     // Balances carried in from other visits move to the new bill, which charges
     // them. Links between the replaced bills themselves are dropped: those bills
     // are cancelled, and a link left on them would let a later void of the new

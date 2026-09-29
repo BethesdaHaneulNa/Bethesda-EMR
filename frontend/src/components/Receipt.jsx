@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
 import { A4, ClinicHeader, L, fmtDate, printDocument, DOC_LABELS } from '../documents/shared.jsx';
+import { packWord } from '../documents/rx-dosing.js';
 
 // The payment receipt (수납 영수증). Owned by the payment module.
 //
@@ -181,7 +182,7 @@ export function ReceiptDoc(props) {
             return <tr key={i} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               <td style={td}>{it.item_name}</td>
               <td style={Object.assign({}, td, { color: '#444' })}>{it.item_code || ''}</td>
-              <td style={Object.assign({}, td, right)}>{qty(it.quantity)}</td>
+              <td style={Object.assign({}, td, right)}>{it.pack_label ? packWord(it, lang, num(it.quantity)) : qty(it.quantity)}</td>
               <td style={Object.assign({}, td, right)}>{money(it.unit_price)}</td>
               <td style={Object.assign({}, td, right)}>{money(it.total_price)}</td>
             </tr>;
