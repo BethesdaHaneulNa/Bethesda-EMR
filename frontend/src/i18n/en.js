@@ -446,6 +446,17 @@ export default {
   py_refundedAt: "Handed back on cancelling",
   py_keptAt: "Kept on cancelling",
   py_correctionConfirm: "Apply the correction? The current receipt is cancelled and issued again at the correct amount.",
+  py_stReplaced: "Replaced",
+  py_stCarried: "Moved on",
+  py_replacedBy: "replaced by {receipt}",
+  py_carriedTo: "balance taken on {receipt}",
+  py_inactiveReceipts: "Cancelled / replaced ({n})",
+  py_changesTitle: "What changes",
+  py_changeCancelled: "cancelled",
+  py_cashDay: "Cash today",
+  py_cashIn: "In",
+  py_cashOut: "Out",
+  py_cashNet: "Net",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

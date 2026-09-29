@@ -2,6 +2,116 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 통합 시험의 수납 몫: A · B1 · B2 · B3 화면 쪽 · 「Caisse du jour」 · L9
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · 시작 전 develop merge(`56da96c`, 디자인의 `Payment.jsx` 색 이름표 `fdd6080` 포함 — 디자인 인계 노트 「3단계: Payment.jsx 색을 이름표로」에서 끝난 것 확인)
+- **색**: 새로 넣은 색은 모두 `var(--…)`(디자인 세션 부탁). 새 이름표는 만들지 않았고, 쓴 것은 모두 `index.html`에 있습니다.
+
+### 한 일
+
+**A · L9 — 1366×768**
+- 세 칸 `340px | 1fr | 340px` → `minmax(230px,300px) | minmax(0,1fr) | minmax(240px,300px)`. 가운데가 옆으로 밀리던 것은 `1fr`의 최소 폭 때문이었습니다.
+- 가운데 안의 합계 칸 `330px` → `minmax(240px,300px)`.
+- 받은 금액 빠른 단추는 줄바꿈되게 했습니다.
+- 윗줄 단추는 여백 `7px 14px` → `6px 9px`, 글자 15 → 14로 줄이고 한 줄로 둡니다.
+- 화면 높이는 `calc(100vh − 122px)` 대신 flex로 채웁니다(위 두 줄의 실제 높이가 125px이라 세로로 넘쳤음).
+- **확인**: 1366×768에서 `scrollWidth` 1366 = 창 폭, `scrollHeight` 768 = 창 높이.
+  - 합계 「51,300 Ar」, 50,000 단추(오른쪽 끝 1037px), ↻가 모두 보이고, 받은 금액 60,000 → 「Monnaie 8,700 Ar」.
+  - 프랑스어·한국어, 어두운 화면·밝은 화면 모두 확인했습니다.
+
+**B1 — 미수를 나중에 받은 원래 영수증**
+- 목록·상세·영수내역에 **Reporté (넘어감)** 배지와 「→ solde réglé sur le reçu R-…」을 보여 줍니다. 상세의 Statut도 Reporté, Impayé는 0입니다(서버 값).
+- 격리에서 통합 시험과 같은 흐름(34,500 중 20,000 → 미수 수납 14,500)으로 확인했습니다: R-0001 「Statut Reporté · → solde réglé sur le reçu R-0002 · Impayé 0 Ar」.
+
+**B2 — 정정으로 바뀐 영수증**
+- **Remplacé (정정으로 바뀜)** 배지(보라)와 「→ remplacé par R-…」. 직원이 취소한 **ANNULÉ**(빨강)와 나뉩니다. 목록, 상세(서버 `/:id/detail`에 `replaced_by_receipt_no` 추가), 오른쪽 영수내역 모두 같습니다.
+- 「Payé aujourd’hui (N)」: 숫자는 살아 있는 영수만 세고, 목록도 그것만 보여 줍니다. 취소·바뀐 영수는 맨 아래 「▸ Annulés / remplacés (N)」을 누르면 흐리게 펼쳐집니다.
+- 격리 확인: 숫자 (3) = 보이는 줄 3.
+
+**B3 — 정정 화면**
+- 「Articles actuels」 아래에 보라 칸 **Ce qui change**를 둡니다. 서버의 `changes`로, 줄마다 수량 전 → 후와 금액 차이, 진료실이 취소한 검사는 「(annulé)」입니다.
+- 항목과 수량은 `packWord`를 씁니다: 「Amlodipine 5mg · 2 flacons」.
+- 격리 확인: 「Amoxicilline 3 → 0 −1,500」, 「CBC (annulé) 1 → 0 −12,000」, Remboursement dû 13,500.
+
+**「Caisse du jour」**
+- 수납 완료 탭 목록 위에 「💵 Caisse du jour — Encaissé +52,500 · Rendu −3,000 · Net 49,500 Ar」(`GET /cash-day`). 격리의 오늘 흐름과 같은 숫자입니다.
+
+**기타**
+- `Receipt.jsx`: 글자 표의 중복 `refunded`를 지웠습니다(영수증은 늘 프랑스어라 보이는 것은 같음).
+- 설명서 `manual-fr/payment.md`: §1(Caisse du jour), §4(6. Reporté), §7(Remplacé · Ce qui change).
+
+### 기록
+
+- **새 키**: `py_stReplaced` · `py_stCarried` · `py_replacedBy` · `py_carriedTo` · `py_inactiveReceipts` · `py_changesTitle` · `py_changeCancelled` · `py_cashDay` · `py_cashIn` · `py_cashOut` · `py_cashNet` (ko·en·fr)
+- **회귀**: `it-b` 10 · 현금 23 · 변경 기록 8 · M6 20 · 미수 수납 50 — 틀린 항목 0, 현금 식 환자 37명 틀림 0. `node --check`, 빌드 통과.
+- **바꾼 파일**: `frontend/src/pages/Payment.jsx`, `frontend/src/components/Receipt.jsx`, `backend/src/routes/billing.routes.js`(detail 한 칸), `wiki/manual-fr/payment.md`
+- **공용 파일 변경**: `i18n` ko·en·fr — 위 11개
+- **DB 마이그레이션**: 없음
+- **확인 못 한 것**: 정정 확인 창(`window.confirm`)을 자동 조작으로 눌러 보지 않았습니다. 정정 뒤의 목록은 API로 만든 정정으로 확인했습니다.
+- **위키**: `modules/payment.md` 2.6(Ce qui change · Remplacé)·2.10(Caisse du jour · 접힌 목록 · Reporté)·4절(detail)·7절(L9 닫음)·8절(`ada48fa` 채움 + 이 줄)
+- **다른 세션에 부탁**: 없음(설정 세션에 보낸 기록 탭 번역 부탁은 앞 항목 그대로)
+
+## 2026-09-29 — 통합 시험의 수납 몫: B2 · B3 · B4 서버 쪽 (화면 쪽은 디자인 세션 뒤)
+
+- **상태**: 확인 요청(서버 몫) · **남은 것 — `Payment.jsx` 디자인 커밋이 develop에 들어온 뒤**: A(1366×768), B1, B2·B3의 화면, 「Caisse du jour」, `Receipt.jsx`의 중복 `refunded`, L9
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `fd0cd02` fast-forward
+- **근거**: `wiki/reference/integration-test-2026-09-29.md` ⑥⑦⑨. 총괄 메시지의 순서대로 — `Payment.jsx`가 아닌 것 먼저.
+
+### 한 일 (`billing.routes.js`만)
+
+**B3 — 정정이 무엇을 바꾸는지**
+- `GET /visit/:id/correction`(과 대기 목록의 `corr` 계산)이 `changes`를 줍니다.
+- `changes`는 바뀌는 줄마다 `item_name` · `item_type` · `pack_label` · 수량 `qty_before→qty_after` · 금액 `amount_before→amount_after` · `difference` · `cancelled_order`(진료실이 취소한 오더면 true)입니다.
+- 약 줄 `items`에도 `pack_label`이 붙습니다. 화면이 packWord로 「2 flacons」를 쓸 수 있습니다.
+
+**B2 — 바뀐 영수와 취소된 영수를 나눌 정보**
+- `/completed`와 `/patient/:id/history`의 줄마다 `replaced_by_receipt_no`(정정으로 바뀐 영수 → 새 영수번호)와 `carried_into_receipt_no`(미수가 넘어간 영수)를 줍니다.
+- 화면의 「remplacé」 표시, 숫자와 목록 맞추기, B1(원래 영수증의 「R-… 로 마저 받음」)은 이것으로 합니다.
+
+**B4 — 변경 기록 요약의 영어 → 방식: 「요약에는 코드·숫자만, 말은 기록 탭이 번역하는 칸으로」**
+- 정정: summary = `R-0004 → R-0005 · -L02 — 사유`. 「refund N」·「owed N」을 뺐습니다(`refund` · `outstanding` 칸에 이미 있음).
+- 정정의 영수 칸: 「R-0004 paid」처럼 상태를 붙이던 것을 `receipts: ["R-0004"]`와 `payment_status: ["paid"]`(영수마다 하나, 배열)로 나눴습니다.
+- 영수 취소: summary = `R-0003 — 사유`.
+  - 「total N · paid N · refunded N / not refunded (kept at the till)」을 뺐습니다.
+  - 기록은 바뀐 칸만 남기므로, 취소로 바뀌지 않는 총액 `total_due`, 받은 돈 `amount_paid`(= `net_paid`), `refunded_amount`를 **after 쪽에만** 둡니다(0 = 창구에 둠, 받은 돈 없으면 비움).
+
+### 같은 데이터로 · 확인
+
+- **B3·B2** (`it-b.mjs`, 틀린 항목 0): 34,500 수납 → 진료실이 검사 CBC 취소 · 아목시실린 지움 · 시럽 2병 → 1병 → 정정 미리보기 결과:
+
+  | 줄 | 바뀜 |
+  |---|---|
+  | Amoxicilline | 3→0 · −1,500 |
+  | Amlodipine | 병 2→1 · −3,000 |
+  | CBC | `cancelled_order` · −12,000 |
+
+  - 진료비는 안 바뀌어 빠짐, 차액 합 −16,500 = −환불.
+  - 정정 뒤 옛 영수의 `replaced_by_receipt_no` = 새 영수(영수내역·수납 완료 목록 모두).
+  - 미수 수납된 영수의 `carried_into_receipt_no` = 미수 수납 영수, 미수 0.
+- **B4** (`audit.mjs`, 틀린 항목 0):
+  - 취소 줄: `R-…-0003 — Erreur de saisie`, after `{total_due 15000, amount_paid 15000, refunded_amount 0, payment_status cancelled, …}`
+  - 정정 줄: `R-…-0006 → R-…-0007 · -DRG1 — Médicament retiré`, `refund 2000`은 칸으로.
+- **회귀**: H1 · H2(정정 화면 숫자 전과 같음) · 총량 · 취소 오더 26 · 미수 수납 50+11 · M3 · M6 20 · 현금 23 — 틀린 항목 0. 현금 식 환자 65명 틀림 0.
+
+### C · 기다리는 것
+
+- **C 금액 표기**(화면 «12,300» / 영수증 «12 300»): 공용 금액 함수가 없습니다(`documents/shared.jsx`에는 날짜만, 영수증은 자기 `money()`). 말씀대로 두었습니다 — 총괄 몫.
+- **설명서** `manual-fr/payment.md` §4·§7의 한 줄: 화면을 고친 뒤에 넣겠습니다.
+- **「받아 간 약을 돌려줄 때」**: 결정 전이라 만들지 않았습니다.
+
+### 기록
+
+- **바꾼 파일**: `backend/src/routes/billing.routes.js`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **확인 못 한 것**: 기록 탭 화면에서 새 칸이 어떻게 보이는지는 설정 세션 몫이라 보지 않았습니다(아래 부탁).
+- **위키**: `modules/payment.md` 3.11(기록 모양)·4절(`correction`의 `changes`, 목록의 두 칸)·8절
+- **다른 세션에 부탁**: **설정 — 기록 탭 번역 표(`settingsAudit.js`)에 수납의 새 칸·값**:
+  - 칸 이름 `refunded_amount`(돌려준 돈 — 「Rendu au patient」) — 지금 표에 없음
+  - `payment_status`의 값 `paid` · `partial` · `unpaid` · `cancelled` · `waived` — 정정 줄에서는 **배열**(영수마다 하나)이므로 배열의 값마다 번역
+  - (이미 있음: `total_due` · `amount_paid` · `refund` · `outstanding` · `receipts` · `items` · `balance_restored_to` · `cancel_reason`)
+
 ## 2026-09-29 — 현지 직원용 프랑스어 설명서 · v1.5.0 변경 내역 초안
 
 - **상태**: 확인 요청 — 코드 변경 없음(문서만)

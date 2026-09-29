@@ -22,7 +22,7 @@ Encaisser un patient qui sort de consultation :
 
 ### 1. L'écran
 
-- *En haut* — **En attente (N)** : les patients à encaisser. **Payé aujourd’hui (N)** : les reçus du jour. **🔍 Trouver patient** : chercher un patient qui n'est pas dans la liste.
+- *En haut* — **En attente (N)** : les patients à encaisser. **Payé aujourd’hui (N)** : les reçus du jour ; en haut de cette liste, **💵 Caisse du jour** montre **Encaissé**, **Rendu** et **Net** du jour (à comparer avec l’argent du tiroir en fin de journée). **🔍 Trouver patient** : chercher un patient qui n'est pas dans la liste.
 - *À gauche* — la liste. Sous chaque nom, un badge : **En Attente** (pas encore payé), **Supplément** (articles ajoutés après paiement, voir 6), **Correction** (articles retirés après paiement, voir 7), **Re-facturer** (reçu annulé, voir 9).
 - *Au milieu* — ce qui est facturé : **Consultation** (le type : **Nouvelle**, **Suivi** ou **Sans frais**), **Ordonnances** (médicaments donnés par la pharmacie de la clinique), **Examens / Actes**, **Délivrance / Autres** (certificat, CD… ajoutés à la caisse avec **+ Ajouter**).
 - *À droite du milieu* — les totaux : **Sous-total**, **Remise**, **Total**, **Montant Reçu**, **Monnaie**.
@@ -53,6 +53,7 @@ Le patient quitte la liste **En attente**. Pour encaisser le reste plus tard, vo
 3. Cliquez sur **💵 Encaisser impayé**. Dans **Montant reçu**, le montant dû est déjà écrit. S'il paie une partie seulement, changez le montant.
 4. Cliquez sur **Confirmer**. Un **nouveau reçu daté d'aujourd'hui** s'ouvre (« Règlement du reçu R-… ») : **🖨 Imprimer Reçu**, puis **Fermer**.
 5. Plusieurs reçus impayés : cliquez sur **💵 Tout encaisser** en haut des reçus. Un reçu est émis par visite.
+6. Le reçu d’origine indique ensuite **Reporté** et « → solde réglé sur le reçu R-… » : son impayé est à 0, le reste a été encaissé sur le nouveau reçu.
 
 Si le patient revient pour une nouvelle consultation, son impayé s'ajoute tout seul : la liste montre **+ Solde antérieur dû: N Ar** et le **Total** le contient.
 
@@ -73,7 +74,9 @@ Exemple : RASOA Marie a payé 18 000 Ar (consultation 15 000 + médicament 3 000
 1. Elle revient dans **En attente** avec le badge **Correction** et **↩ À rembourser: 3,000 Ar**.
 2. Cliquez sur son nom. L'écran montre **Articles actuels**, **Montant correct** 15 000, **Déjà encaissé** 18 000 et **Remboursement dû** 3 000.
 3. Cliquez sur **↩ Appliquer la correction**. La fenêtre dit « Appliquer la correction ? … **Rendez 3,000 Ar au patient.** ». Cliquez sur OK.
-4. **Rendez 3 000 Ar** à la patiente. Un nouveau reçu (15 000 Ar) remplace l'ancien : il indique « Remplace le(s) reçu(s) » et « Remboursé au patient : 3 000 Ar ».
+4. **Rendez 3 000 Ar** à la patiente. Un nouveau reçu (15 000 Ar) remplace l'ancien : il indique « Remplace le(s) reçu(s) » et « Remboursé au patient : 3 000 Ar ». L'ancien reçu est marqué **Remplacé** (« → remplacé par R-… »), pas **ANNULÉ** ; dans **Payé aujourd’hui**, il est rangé sous **▸ Annulés / remplacés**.
+
+Avant de cliquer, le cadre **Ce qui change** montre chaque ligne modifiée, par exemple « CBC (annulé) 1 → 0 −12,000 » (examen annulé par le médecin) ou « Amoxicilline 3 → 0 −1,500 » (médicament retiré).
 
 Si le patient **n'avait pas tout payé**, il n'y a rien à rendre : la liste montre **↩ Reste impayé: N Ar**, et la fenêtre dit « **N Ar resteront impayés.** ». Son impayé diminue.
 

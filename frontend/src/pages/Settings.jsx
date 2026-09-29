@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
+// Design session: colours are tokens (index.html). tint() names a colour with an alpha.
+import { tint } from '../theme.js';
 import { MODULES, defaultPermsForRole } from '../modules.js';
 // Server messages (English) -> the screen's language. See settingsMessages.js.
 import { seMessage } from './settingsMessages.js';
@@ -406,17 +408,17 @@ export default function SettingsPage() {
     return r;
   },[orderCodes,ocFilter,q]);
 
-  var bd='#232838',bd2='#2a3142',scBg='#1a1f2e',pn='#13161f',tx='#e2e8f0',t2='#94a3b8',t3='#64748b';
-  var IS={width:'100%',background:'#0f1117',border:'1px solid #2a3142',borderRadius:5,padding:'7px 10px',color:'#e2e8f0',fontSize: 14,outline:'none',boxSizing:'border-box',fontFamily:'inherit'};
-  var LOCKED_IS=Object.assign({},IS,{background:'#15181f',color:'#8b95a5',cursor:'not-allowed'});
+  var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
+  var IS={width:'100%',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:'var(--text)',fontSize: 14,outline:'none',boxSizing:'border-box',fontFamily:'inherit'};
+  var LOCKED_IS=Object.assign({},IS,{background:'var(--field-locked)',color:'var(--text-locked)',cursor:'not-allowed'});
 
   // The account the setup wizard created. Its role and permissions are fixed server-side
   // (see admin.routes.js); greying them out here just stops someone trying. Editing any
   // other admin is still allowed - the API refuses only the change that would leave
   // nobody able to open Settings.
   var lockedAdmin = !!(editItem && editItem.id && editItem.login_id === 'admin');
-  var RC={frontdesk:'#3b82f6',doctor:'#10b981',nurse:'#14b8a6',pharmacy:'#8b5cf6',lab:'#06b6d4',admin:'#ef4444'};
-  var TC={fee:'#3b82f6',lab:'#f59e0b',imaging:'#8b5cf6',procedure:'#10b981'};
+  var RC={frontdesk:'accent',doctor:'ok',nurse:'teal',pharmacy:'violet',lab:'cyan',admin:'danger'};   // colour families (design): tint() and -ink make the colours
+  var TC={fee:'accent',lab:'warn',imaging:'violet',procedure:'ok'};
 
   var TABS = [
     {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},
@@ -424,47 +426,47 @@ export default function SettingsPage() {
   ];
 
   return(
-    <div style={{fontFamily:'system-ui,sans-serif',background:'#0f1117',color:tx,minHeight:'100vh',fontSize: 15}}>
+    <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,minHeight:'100vh',fontSize: 15}}>
       <TopBar />
       <div style={{display:'grid',gridTemplateColumns:'180px 1fr',height:'calc(100vh - 82px)'}}>
         {/* Sidebar */}
         <div style={{borderRight:'1px solid '+bd,background:pn,padding:'10px 0'}}>
           <div style={{padding:'0 12px 10px',fontSize: 14,fontWeight:700,color:tx}}>{t.settings}</div>
           {TABS.map(function(tab){
-            return <div key={tab.key} className="pressable" onClick={function(){setTab(tab.key);setQ('')}} style={{padding:'8px 14px',cursor:'pointer',background:activeTab===tab.key?'#3b82f612':'transparent',borderLeft:activeTab===tab.key?'3px solid #3b82f6':'3px solid transparent',color:activeTab===tab.key?'#60a5fa':t2,fontSize: 14,fontWeight:activeTab===tab.key?600:400}}>{tab.label}</div>;
+            return <div key={tab.key} className="pressable" onClick={function(){setTab(tab.key);setQ('')}} style={{padding:'8px 14px',cursor:'pointer',background:activeTab===tab.key?'var(--accent-a12)':'transparent',borderLeft:activeTab===tab.key?'3px solid var(--accent-ink)':'3px solid transparent',color:activeTab===tab.key?'var(--accent-text)':t2,fontSize: 14,fontWeight:activeTab===tab.key?600:400}}>{tab.label}</div>;
           })}
         </div>
 
         {/* Content */}
-        <div style={{display:'flex',flexDirection:'column',overflow:'hidden',background:'#11141c'}}>
-          {loadError?<div style={{background:'#ef444418',borderBottom:'1px solid #ef444440',color:'#fca5a5',padding:'8px 14px',fontSize:13,fontWeight:600}}>⚠ {seMessage(t, loadError)}</div>:null}
+        <div style={{display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--bg-col)'}}>
+          {loadError?<div style={{background:'var(--danger-a18)',borderBottom:'1px solid var(--danger-a40)',color:'var(--danger-text-2)',padding:'8px 14px',fontSize:13,fontWeight:600}}>⚠ {seMessage(t, loadError)}</div>:null}
 
           {/* STAFF */}
           {activeTab==='staff'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>👥 {t.se_tabStaff}</span><div style={{flex:1}}></div>
-              <button onClick={function(){openEdit('staff',{login_id:'',name:'',role:'frontdesk',permissions:defaultPermsForRole('frontdesk'),password:'1234',phone:'',status:'active'})}} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
+              <button onClick={function(){openEdit('staff',{login_id:'',name:'',role:'frontdesk',permissions:defaultPermsForRole('frontdesk'),password:'1234',phone:'',status:'active'})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 14}}>
-              <thead><tr style={{background:'#1e2433'}}>
+              <thead><tr style={{background:'var(--chip)'}}>
                 {[t.se_colName,t.se_colLoginId,t.se_colRole,t.se_colDept,t.se_colPhone,t.se_colStatus,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               {/* Active accounts first, the deactivated ones below; name order within each. */}
               <tbody>{staff.slice().sort(function(a,b){ return (a.status==='inactive'?1:0)-(b.status==='inactive'?1:0); }).map(function(s){
-                var rc=RC[s.role]||t2;
-                return <tr key={s.id} style={{borderBottom:'1px solid #1e2433'}}>
+                var rc=RC[s.role]||'text-2';
+                return <tr key={s.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
                   <td style={{padding:'6px 10px',fontWeight:600,color:tx}}>{s.name}</td>
-                  <td style={{padding:'6px 10px',fontFamily:'monospace',color:'#60a5fa',fontSize: 13}}>{s.login_id}</td>
-                  <td style={{padding:'6px 10px'}}><span style={{background:rc+'15',color:rc,borderRadius:3,padding:'2px 6px',fontSize: 12,fontWeight:600}}>{t['se_role_'+s.role]||s.role}</span>
+                  <td style={{padding:'6px 10px',fontFamily:'monospace',color:'var(--accent-text)',fontSize: 13}}>{s.login_id}</td>
+                  <td style={{padding:'6px 10px'}}><span style={{background:tint(rc,'15'),color:RC[s.role]?'var(--'+rc+'-ink)':t2,borderRadius:3,padding:'2px 6px',fontSize: 12,fontWeight:600}}>{t['se_role_'+s.role]||s.role}</span>
                     <div style={{marginTop:3,fontSize: 13,letterSpacing:1}} title={(s.permissions||[]).join(', ')}>{MODULES.filter(function(m){return (s.permissions||[]).indexOf(m.perm)>=0}).map(function(m){return m.icon}).join(' ')}</div></td>
                   <td style={{padding:'6px 10px',color:t2}}>{s.dept_code||'—'}</td>
                   <td style={{padding:'6px 10px',color:t2,fontSize: 13}}>{s.phone||'—'}</td>
-                  <td style={{padding:'6px 10px',color:s.status==='active'?'#34d399':'#f87171',fontSize: 13,fontWeight:600}}>{s.status==='active'?t.se_statusActive:t.se_statusInactive}</td>
+                  <td style={{padding:'6px 10px',color:s.status==='active'?'var(--ok-text)':'var(--danger-text)',fontSize: 13,fontWeight:600}}>{s.status==='active'?t.se_statusActive:t.se_statusInactive}</td>
                   <td style={{padding:'6px 10px',display:'flex',gap:3}}>
-                    <button onClick={function(){openEdit('staff',s)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                    <button onClick={function(){openEdit('staff',s)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
                     {s.status==='inactive'
-                      ? (meIsAdmin ? <button onClick={function(){reactivateStaff(s)}} style={{background:'#16a34a15',color:'#34d399',border:'1px solid #16a34a40',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.se_reactivate}</button> : null)
-                      : <button onClick={function(){deleteItem('staff',s.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>}
+                      ? (meIsAdmin ? <button onClick={function(){reactivateStaff(s)}} style={{background:'var(--ok-2-a15)',color:'var(--ok-text)',border:'1px solid var(--ok-2-a40)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.se_reactivate}</button> : null)
+                      : <button onClick={function(){deleteItem('staff',s.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>}
                   </td>
                 </tr>;
               })}</tbody>
@@ -475,25 +477,25 @@ export default function SettingsPage() {
           {activeTab==='drug'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
-              <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'#8b5cf620',color:'#a78bfa',border:'1px solid #8b5cf640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
+              <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
+              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'var(--violet-a20)',color:'var(--violet-text)',border:'1px solid var(--violet-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
-              <thead><tr style={{background:'#1e2433'}}>
+              <thead><tr style={{background:'var(--chip)'}}>
                 {/* No default dose / times / days / posology (decision B, 2026-09-29): a drug
                     carries its price; the doctor's order sets carry the dosing. */}
                 {[t.code,t.colDrugName,t.ph_category,t.ph_unitPrice,t.ph_stock,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i===3||i===4?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               <tbody>{filteredDrugs.map(function(d){
-                return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
-                  <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
-                  <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'#fbbf24',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'#fbbf24',border:'1px solid #f59e0b60',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
+                return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
+                  <td style={{padding:'4px 6px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
+                  <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'var(--warn-text)',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'var(--warn-text)',border:'1px solid var(--warn-a60)',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{d.unit_price}</td>
-                  <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'#f87171':'#34d399',fontWeight:600}}>{d.stock_qty}</td>
+                  <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'var(--danger-text)':'var(--ok-text)',fontWeight:600}}>{d.stock_qty}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
-                    <button onClick={function(){openEdit('drug',d)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
-                    <button onClick={function(){deleteItem('drug',d.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
+                    <button onClick={function(){openEdit('drug',d)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                    <button onClick={function(){deleteItem('drug',d.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
                   </td>
                 </tr>;
               })}</tbody>
@@ -505,30 +507,30 @@ export default function SettingsPage() {
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>📋 {t.se_tabOrderCodes}</span>
               {['All','fee','lab','imaging','procedure'].map(function(f){
-                var c=TC[f]||'#3b82f6';
-                return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?c+'20':'transparent',color:ocFilter===f?c:t3,border:ocFilter===f?'1px solid '+c+'40':'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{f==='All'?t.se_all:t['se_type_'+f]}</button>;
+                var c=TC[f]||'accent';
+                return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?tint(c,'20'):'transparent',color:ocFilter===f?'var(--'+c+'-ink)':t3,border:ocFilter===f?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{f==='All'?t.se_all:t['se_type_'+f]}</button>;
               })}
-              <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'1.000',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
+              <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
+              <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'1.000',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
-              <thead><tr style={{background:'#1e2433'}}>
+              <thead><tr style={{background:'var(--chip)'}}>
                 {[t.se_colCode,t.se_colName,t.se_colType,t.se_colGroup,t.se_colPrice,t.se_colModality,t.se_colWorklist,t.se_colBodyPart,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i===4?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
               </tr></thead>
               <tbody>{filteredOC.map(function(o){
-                var tc=TC[o.code_type]||t2;
-                return <tr key={o.id} style={{borderBottom:'1px solid #1e2433'}}>
-                  <td style={{padding:'4px 6px',color:'#60a5fa',fontFamily:'monospace',fontWeight:700,fontSize: 13}}>{o.code}</td>
+                var tc=TC[o.code_type]||'text-2';
+                return <tr key={o.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
+                  <td style={{padding:'4px 6px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:700,fontSize: 13}}>{o.code}</td>
                   <td style={{padding:'4px 6px',color:tx}}>{o.name}</td>
-                  <td style={{padding:'4px 6px'}}><span style={{background:tc+'15',color:tc,borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600}}>{t['se_type_'+o.code_type]||o.code_type}</span></td>
+                  <td style={{padding:'4px 6px'}}><span style={{background:tint(tc,'15'),color:TC[o.code_type]?'var(--'+tc+'-ink)':t2,borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600}}>{t['se_type_'+o.code_type]||o.code_type}</span></td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.group_name}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{o.price_clinic!=null?o.price_clinic:o.price}</td>
-                  <td style={{padding:'4px 6px'}}>{o.pacs_modality?<span style={{background:'#8b5cf620',color:'#a78bfa',borderRadius:3,padding:'1px 5px',fontSize: 12,fontWeight:700,fontFamily:'monospace'}}>{o.pacs_modality}</span>:'—'}</td>
-                  <td style={{padding:'4px 6px',color:o.worklist_enabled?'#34d399':'#334155'}}>{o.worklist_enabled?'✓':'—'}</td>
+                  <td style={{padding:'4px 6px'}}>{o.pacs_modality?<span style={{background:'var(--violet-a20)',color:'var(--violet-text)',borderRadius:3,padding:'1px 5px',fontSize: 12,fontWeight:700,fontFamily:'monospace'}}>{o.pacs_modality}</span>:'—'}</td>
+                  <td style={{padding:'4px 6px',color:o.worklist_enabled?'var(--ok-text)':'var(--text-5)'}}>{o.worklist_enabled?'✓':'—'}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.body_part||'—'}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
-                    <button onClick={function(){openEdit('order',o)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
-                    <button onClick={function(){deleteItem('order',o.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
+                    <button onClick={function(){openEdit('order',o)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                    <button onClick={function(){deleteItem('order',o.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
                   </td>
                 </tr>;
               })}</tbody>
@@ -539,16 +541,16 @@ export default function SettingsPage() {
           {activeTab==='phrase'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>📝 {t.se_tabPhrases}</span><div style={{flex:1}}></div>
-              <button onClick={function(){openEdit('phrase',{category:'General',text:''})}} style={{background:'#f59e0b20',color:'#fbbf24',border:'1px solid #f59e0b40',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
+              <button onClick={function(){openEdit('phrase',{category:'General',text:''})}} style={{background:'var(--warn-a20)',color:'var(--warn-text)',border:'1px solid var(--warn-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}>
-              {phrases.map(function(p){ return <div key={p.id} style={{padding:'7px 14px',borderBottom:'1px solid #1e2433',display:'flex',gap:8}}>
-                <span style={{background:'#f59e0b20',color:'#fbbf24',borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
+              {phrases.map(function(p){ return <div key={p.id} style={{padding:'7px 14px',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:8}}>
+                <span style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
                 {/* The same choice the consultation screen makes, so the list shows what doctors will see. */}
-                <span style={{flex:1,fontSize: 14,color:'#cbd5e1'}}>{(langCtx.lang==='fr'&&p.text_fr)||(langCtx.lang==='en'&&p.text_en)||p.text}
+                <span style={{flex:1,fontSize: 14,color:'var(--text-soft)'}}>{(langCtx.lang==='fr'&&p.text_fr)||(langCtx.lang==='en'&&p.text_en)||p.text}
                   {' '}{p.text_fr?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px'}}>FR</span>:null}{p.text_en?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px',marginLeft:3}}>EN</span>:null}</span>
-                <button onClick={function(){openEdit('phrase',p)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
-                <button onClick={function(){deleteItem('phrase',p.id)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
+                <button onClick={function(){openEdit('phrase',p)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                <button onClick={function(){deleteItem('phrase',p.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
               </div>; })}
             </div>
           </div>):null}
@@ -557,16 +559,16 @@ export default function SettingsPage() {
           {activeTab==='dept'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>🏥 {t.se_tabDepts}</span><div style={{flex:1}}></div>
-              <button onClick={function(){openEdit('dept',{code:'',name:'',name_en:'',name_fr:''})}} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
+              <button onClick={function(){openEdit('dept',{code:'',name:'',name_en:'',name_fr:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 14}}>
-              <thead><tr style={{background:'#1e2433'}}>{[t.se_colCode,t.se_colName,t.se_colHead,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}</tr></thead>
-              <tbody>{depts.map(function(d){return <tr key={d.id} style={{borderBottom:'1px solid #1e2433'}}>
-                <td style={{padding:'6px 10px',color:'#60a5fa',fontFamily:'monospace',fontWeight:600}}>{d.code}</td>
+              <thead><tr style={{background:'var(--chip)'}}>{[t.se_colCode,t.se_colName,t.se_colHead,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}</tr></thead>
+              <tbody>{depts.map(function(d){return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
+                <td style={{padding:'6px 10px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:600}}>{d.code}</td>
                 <td style={{padding:'6px 10px',color:tx}}>{d.name}</td>
                 <td style={{padding:'6px 10px',color:t2}}>{d.head_name||'—'}</td>
                 <td style={{padding:'6px 10px',display:'flex',gap:3}}>
-                  <button onClick={function(){openEdit('dept',d)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                  <button onClick={function(){openEdit('dept',d)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
                 </td>
               </tr>})}</tbody>
             </table></div>
@@ -579,28 +581,28 @@ export default function SettingsPage() {
               <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
                 <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
                   <span style={{fontWeight:700,fontSize: 14,color:tx}}>🧪 {t.orderSets}</span><div style={{flex:1}}></div>
-                  <button onClick={osNew} style={{background:'#10b98120',color:'#34d399',border:'1px solid #10b98140',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.newSet}</button>
+                  <button onClick={osNew} style={{background:'var(--ok-a20)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.newSet}</button>
                 </div>
                 <div style={{flex:1,overflow:'auto',padding:'10px 14px'}}>
                   {orderSets.length>0?osGrouped().map(function(grp,gi){
                     return <div key={gi} style={{marginBottom:14}}>
                       <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,paddingBottom:4,borderBottom:'1px solid '+bd}}>
                         <span style={{fontSize: 14}}>📁</span>
-                        <span style={{fontWeight:800,fontSize: 14,color:'#e2e8f0'}}>{grp.group||t.ungrouped}</span>
+                        <span style={{fontWeight:800,fontSize: 14,color:'var(--text)'}}>{grp.group||t.ungrouped}</span>
                         <span style={{fontSize: 12,color:t3}}>({grp.sets.length})</span>
                       </div>
                       {grp.sets.map(function(s){
                         return <div key={s.id} style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:8}}>
                           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-                            <span style={{fontWeight:800,fontSize: 14,color:'#34d399'}}>{s.name}</span>
-                            {s.dept_code?<span style={{fontSize: 12,color:t2,background:'#0f1117',border:'1px solid '+bd2,borderRadius:4,padding:'1px 6px'}}>{s.dept_code}</span>:null}
+                            <span style={{fontWeight:800,fontSize: 14,color:'var(--ok-text)'}}>{s.name}</span>
+                            {s.dept_code?<span style={{fontSize: 12,color:t2,background:'var(--bg)',border:'1px solid '+bd2,borderRadius:4,padding:'1px 6px'}}>{s.dept_code}</span>:null}
                             <span style={{fontSize: 12,color:t3}}>{(s.items||[]).length} {t.itemsUnit}</span>
-                            {osGoneCount(s.items) ? <span title={t.se_osGoneHint} style={{fontSize: 12,color:'#fbbf24'}}>{String(t.se_osGone||'').replace('{n}', osGoneCount(s.items))}</span> : null}
+                            {osGoneCount(s.items) ? <span title={t.se_osGoneHint} style={{fontSize: 12,color:'var(--warn-text)'}}>{String(t.se_osGone||'').replace('{n}', osGoneCount(s.items))}</span> : null}
                             <div style={{flex:1}}></div>
-                            <button onClick={function(){osOpen(s)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.edit}</button>
-                            <button onClick={function(){osDelete(s)}} style={{background:'#ef444418',color:'#f87171',border:'1px solid #ef444440',borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.delete}</button>
+                            <button onClick={function(){osOpen(s)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.edit}</button>
+                            <button onClick={function(){osDelete(s)}} style={{background:'var(--danger-a18)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.delete}</button>
                           </div>
-                          <div style={{fontSize: 12,color:'#94a3b8'}}>{(s.items||[]).length ? (s.items||[]).map(function(it,i){ return <span key={i}>{i ? ' · ' : ''}<span title={osGone(it) ? t.se_osGoneLine : undefined} style={osGone(it) ? {textDecoration:'line-through',color:'#64748b'} : undefined}>{it.code}</span></span>; }) : '—'}</div>
+                          <div style={{fontSize: 12,color:'var(--text-2)'}}>{(s.items||[]).length ? (s.items||[]).map(function(it,i){ return <span key={i}>{i ? ' · ' : ''}<span title={osGone(it) ? t.se_osGoneLine : undefined} style={osGone(it) ? {textDecoration:'line-through',color:'var(--text-3)'} : undefined}>{it.code}</span></span>; }) : '—'}</div>
                         </div>;
                       })}
                     </div>;
@@ -611,8 +613,8 @@ export default function SettingsPage() {
               <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
                 <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
                   <span style={{fontWeight:700,fontSize: 14,color:tx}}>{osEdit.id?t.edit:t.newSet}</span><div style={{flex:1}}></div>
-                  <button onClick={function(){setOsEdit(null)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13}}>{t.cancel||'Cancel'}</button>
-                  <button onClick={osSave} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:4,padding:'4px 14px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.save}</button>
+                  <button onClick={function(){setOsEdit(null)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13}}>{t.cancel||'Cancel'}</button>
+                  <button onClick={osSave} style={{background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:4,padding:'4px 14px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.save}</button>
                 </div>
                 <div style={{flex:1,overflow:'auto',padding:'12px 14px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
                   <div>
@@ -628,8 +630,8 @@ export default function SettingsPage() {
                       </select>
                     </Fld>
                     <Fld label={t.description||'Description'}><input value={osEdit.description||''} onChange={function(e){osField('description',e.target.value)}} style={IS}/></Fld>
-                    <div style={{marginTop:10,fontSize: 13,fontWeight:700,color:'#34d399'}}>{t.setItems} ({(osEdit.items||[]).length})</div>
-                    {osGoneCount(osEdit.items) ? <div style={{marginTop:6,padding:'6px 8px',border:'1px solid #f59e0b60',background:'#f59e0b12',borderRadius:5,fontSize: 12,color:'#fbbf24',lineHeight:1.5}}><b>{String(t.se_osGone||'').replace('{n}', osGoneCount(osEdit.items))}</b><div style={{color:'#cbd5e1'}}>{t.se_osGoneHint}</div></div> : null}
+                    <div style={{marginTop:10,fontSize: 13,fontWeight:700,color:'var(--ok-text)'}}>{t.setItems} ({(osEdit.items||[]).length})</div>
+                    {osGoneCount(osEdit.items) ? <div style={{marginTop:6,padding:'6px 8px',border:'1px solid var(--warn-a60)',background:'var(--warn-a12)',borderRadius:5,fontSize: 12,color:'var(--warn-text)',lineHeight:1.5}}><b>{String(t.se_osGone||'').replace('{n}', osGoneCount(osEdit.items))}</b><div style={{color:'var(--text-soft)'}}>{t.se_osGoneHint}</div></div> : null}
                     <div style={{marginTop:6,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
                       {(osEdit.items||[]).length>0?(osEdit.items||[]).map(function(it,idx){
                         // Each line is edited here, in the set (2026-09-29, the director): a drug
@@ -643,14 +645,14 @@ export default function SettingsPage() {
                           <span style={{whiteSpace:'nowrap'}}>{label}</span>
                           <input value={it[key]==null?'':it[key]} maxLength={key==='route'?10:undefined} inputMode={key==='route'?undefined:'decimal'} onChange={function(e){osItem(idx,key,e.target.value)}}
                             style={Object.assign({},IS,{width:w,padding:'3px 5px',textAlign:'center'},extra||{})}/></label>; };
-                        var need=prob==='missing', badB={borderColor:'#f87171'};
-                        return <div key={idx} style={{padding:'6px 8px',borderBottom:'1px solid #1e2433'}}>
+                        var need=prob==='missing', badB={borderColor:'var(--danger-text)'};
+                        return <div key={idx} style={{padding:'6px 8px',borderBottom:'1px solid var(--line-soft)'}}>
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
-                            <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'#60a5fa':'#a78bfa',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
+                            <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'var(--accent-text)':'var(--violet-text)',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
                             <span style={{fontFamily:'monospace',fontSize: 12,color:t2,width:56}}>{it.code}</span>
-                            <span style={{fontSize: 13,color:osGone(it)?'#64748b':tx,flex:1,textDecoration:osGone(it)?'line-through':'none'}}>{it.name}</span>
-                            {osGone(it) ? <span style={{fontSize: 11,color:'#fbbf24',whiteSpace:'nowrap'}}>⚠ {t.se_osGoneLine}</span> : null}
-                            <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'#f87171',cursor:'pointer',fontSize: 14}}>✕</button>
+                            <span style={{fontSize: 13,color:osGone(it)?'var(--text-3)':tx,flex:1,textDecoration:osGone(it)?'line-through':'none'}}>{it.name}</span>
+                            {osGone(it) ? <span style={{fontSize: 11,color:'var(--warn-text)',whiteSpace:'nowrap'}}>⚠ {t.se_osGoneLine}</span> : null}
+                            <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'var(--danger-text)',cursor:'pointer',fontSize: 14}}>✕</button>
                           </div>
                           <div style={{display:'flex',flexWrap:'wrap',alignItems:'flex-end',gap:8,marginTop:4,paddingLeft:44}}>
                             {it.kind==='drug' ? [
@@ -663,11 +665,11 @@ export default function SettingsPage() {
                               fld(t.cs_colTimes,'frequency',46),
                               fld(t.cs_colDays,'days',46)
                             ]}
-                            {pk ? <label title={t.se_setPackQtyHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:'#fbbf24'}}>
+                            {pk ? <label title={t.se_setPackQtyHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:'var(--warn-text)'}}>
                               <span style={{whiteSpace:'nowrap'}}>{t['ph_pack_'+pk]}</span>
                               <input type="number" min="1" step="1" value={it.quantity==null?1:it.quantity} onChange={function(e){osItem(idx,'quantity',e.target.value)}} style={Object.assign({},IS,{width:56,padding:'3px 5px',textAlign:'center'})}/></label> : null}
-                            {need ? <span style={{fontSize:11,color:'#fca5a5',paddingBottom:4}}>⚠ {t.se_setNeedDoseShort}</span> : null}
-                            {prob==='bad' ? <span style={{fontSize:11,color:'#fca5a5',paddingBottom:4}}>⚠ {t.se_setBadNumberShort}</span> : null}
+                            {need ? <span style={{fontSize:11,color:'var(--danger-text-2)',paddingBottom:4}}>⚠ {t.se_setNeedDoseShort}</span> : null}
+                            {prob==='bad' ? <span style={{fontSize:11,color:'var(--danger-text-2)',paddingBottom:4}}>⚠ {t.se_setBadNumberShort}</span> : null}
                           </div>
                         </div>;
                       }):<div style={{padding:14,textAlign:'center',color:t3,fontSize: 12}}>{t.setItemsEmpty}</div>}
@@ -675,17 +677,17 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <div style={{display:'flex',gap:6,marginBottom:6}}>
-                      <button onClick={function(){setOsKind('drug');setOsResults([])}} style={{flex:1,background:osKind==='drug'?'#3b82f620':'#1e2433',color:osKind==='drug'?'#60a5fa':t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.setDrug}</button>
-                      <button onClick={function(){setOsKind('order');setOsResults([])}} style={{flex:1,background:osKind==='order'?'#8b5cf620':'#1e2433',color:osKind==='order'?'#a78bfa':t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.setExam}</button>
+                      <button onClick={function(){setOsKind('drug');setOsResults([])}} style={{flex:1,background:osKind==='drug'?'var(--accent-a20)':'var(--chip)',color:osKind==='drug'?'var(--accent-text)':t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.setDrug}</button>
+                      <button onClick={function(){setOsKind('order');setOsResults([])}} style={{flex:1,background:osKind==='order'?'var(--violet-a20)':'var(--chip)',color:osKind==='order'?'var(--violet-text)':t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.setExam}</button>
                     </div>
                     <div style={{display:'flex',gap:6}}>
                       <input value={osQ} onChange={function(e){setOsQ(e.target.value)}} onKeyDown={function(e){if(e.key==='Enter')osRunSearch()}} placeholder={t.search} style={Object.assign({},IS,{flex:1})}/>
-                      <button onClick={osRunSearch} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:4,padding:'0 12px',cursor:'pointer',fontSize: 13}}>{t.search}</button>
+                      <button onClick={osRunSearch} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:4,padding:'0 12px',cursor:'pointer',fontSize: 13}}>{t.search}</button>
                     </div>
                     <div style={{marginTop:6,border:'1px solid '+bd,borderRadius:6,maxHeight:360,overflow:'auto'}}>
                       {osResults.map(function(r){
-                        return <div key={r.id} onClick={function(){osAdd(r)}} style={{display:'flex',gap:8,padding:'6px 8px',borderBottom:'1px solid #1e2433',cursor:'pointer'}}>
-                          <span style={{fontFamily:'monospace',fontSize: 12,color:'#60a5fa',width:56}}>{r.code}</span>
+                        return <div key={r.id} onClick={function(){osAdd(r)}} style={{display:'flex',gap:8,padding:'6px 8px',borderBottom:'1px solid var(--line-soft)',cursor:'pointer'}}>
+                          <span style={{fontFamily:'monospace',fontSize: 12,color:'var(--accent-text)',width:56}}>{r.code}</span>
                           {osKind==='drug' ? (
                             // Stock and price under the name (integration test: the imported list has
                             // two "Amoxicillin 500mg Gélule", told apart only by the code).
@@ -694,7 +696,7 @@ export default function SettingsPage() {
                               <span style={{display:'block',fontSize: 11,color:t3}}>{String(t.se_osPick||'').replace('{stock}', (osNum(r.stock_qty)||'0')+(r.pack_unit ? ' '+t['ph_pack_'+(r.pack_label||'unit')] : '')).replace('{price}', osNum(r.unit_price)||'0')}</span>
                             </span>
                           ) : <span style={{fontSize: 13,color:tx,flex:1}}>{r.name}</span>}
-                          <span style={{fontSize: 13,color:'#34d399',fontWeight:800}}>+</span>
+                          <span style={{fontSize: 13,color:'var(--ok-text)',fontWeight:800}}>+</span>
                         </div>;
                       })}
                       {osResults.length===0?<div style={{padding:14,textAlign:'center',color:t3,fontSize: 12}}>{t.searchToAdd}</div>:null}
@@ -711,7 +713,7 @@ export default function SettingsPage() {
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
               <div style={{fontWeight:800,fontSize: 16,color:tx}}>🔗 {t.orderFeedTitle}</div>
               <div style={{flex:1}}></div>
-              <button onClick={savePacs} style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 14,fontWeight:700}}>{t.save||'Save'}</button>
+              <button onClick={savePacs} style={{background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 14,fontWeight:700}}>{t.save||'Save'}</button>
             </div>
             <div style={{fontSize: 14,color:t2,marginBottom:12,lineHeight:1.6}}>
               {t.feedIntroA}<b style={{color:tx}}>{t.feedIntroB}</b>{t.feedIntroC}<br/>
@@ -719,28 +721,28 @@ export default function SettingsPage() {
             </div>
             {pacsConfig?(<div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:12}}>
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12}}>
-                <div style={{fontWeight:700,fontSize: 14,color:'#34d399',marginBottom:10}}>1. {t.feedSec1}</div>
+                <div style={{fontWeight:700,fontSize: 14,color:'var(--ok-text)',marginBottom:10}}>1. {t.feedSec1}</div>
                 <Fld label="Bridge Token"><div style={{display:'flex',gap:6}}>
                   <input type={showBridgeToken?'text':'password'} autoComplete="new-password" value={pacsConfig.bridge_token||''} onChange={function(e){up('bridge_token',e.target.value)}} style={Object.assign({},IS,{flex:1,fontFamily:'monospace'})}/>
-                  <button onClick={function(){setShowBridgeToken(!showBridgeToken)}} style={{background:'#1e2433',color:'#94a3b8',border:'1px solid '+bd2,borderRadius:5,padding:'0 10px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap'}}>{showBridgeToken?t.px_hide:t.px_show}</button>
+                  <button onClick={function(){setShowBridgeToken(!showBridgeToken)}} style={{background:'var(--chip)',color:'var(--text-2)',border:'1px solid '+bd2,borderRadius:5,padding:'0 10px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap'}}>{showBridgeToken?t.px_hide:t.px_show}</button>
                 </div></Fld>
-                {!pacsTokenUsable(pacsConfig.bridge_token)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.px_tokenUnusable}</div>:null}
+                {!pacsTokenUsable(pacsConfig.bridge_token)?<div style={{marginTop:4,fontSize:13,color:'var(--warn-text)',lineHeight:1.5}}>⚠ {t.px_tokenUnusable}</div>:null}
                 <Fld label={t.emrPublicUrl}>
                   <input placeholder={t.egUrl} value={pacsConfig.emr_base_url||''} onChange={function(e){up('emr_base_url',e.target.value)}} style={IS}/>
-                  {oldPort(pacsConfig.emr_base_url,8080)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldEmrPort}</div>:null}
+                  {oldPort(pacsConfig.emr_base_url,8080)?<div style={{marginTop:4,fontSize:13,color:'var(--warn-text)',lineHeight:1.5}}>⚠ {t.se_oldEmrPort}</div>:null}
                 </Fld>
-                <div className="pressable" onClick={function(){up('auto_create_worklist',!pacsConfig.auto_create_worklist)}} style={{marginTop:8,display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
-                  <div style={{width:14,height:14,borderRadius:3,border:pacsConfig.auto_create_worklist?'2px solid #10b981':'2px solid #2a3142',background:pacsConfig.auto_create_worklist?'#10b981':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{pacsConfig.auto_create_worklist?<span style={{color:'#fff',fontSize: 12}}>✓</span>:null}</div>
-                  <span style={{fontSize: 14,color:pacsConfig.auto_create_worklist?'#34d399':t3}}>{t.autoCreateWl}</span>
+                <div className="pressable" onClick={function(){up('auto_create_worklist',!pacsConfig.auto_create_worklist)}} style={{marginTop:8,display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:'var(--bg)',border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
+                  <div style={{width:14,height:14,borderRadius:3,border:pacsConfig.auto_create_worklist?'2px solid var(--ok-ink)':'2px solid var(--border-2)',background:pacsConfig.auto_create_worklist?'var(--ok)':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{pacsConfig.auto_create_worklist?<span style={{color:'var(--on-fill)',fontSize: 12}}>✓</span>:null}</div>
+                  <span style={{fontSize: 14,color:pacsConfig.auto_create_worklist?'var(--ok-text)':t3}}>{t.autoCreateWl}</span>
                 </div>
                 <div style={{marginTop:10,fontSize: 13,color:t2,lineHeight:1.6}}>{t.feedUrlExample}</div>
-                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all'}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=json'}</div>
-                <div style={{fontSize: 13,fontFamily:'monospace',color:'#93c5fd',background:'#0f1117',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all',marginTop:6}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=csv'}</div>
+                <div style={{fontSize: 13,fontFamily:'monospace',color:'var(--accent-text-2)',background:'var(--bg)',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all'}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=json'}</div>
+                <div style={{fontSize: 13,fontFamily:'monospace',color:'var(--accent-text-2)',background:'var(--bg)',border:'1px solid '+bd2,borderRadius:5,padding:8,wordBreak:'break-all',marginTop:6}}>{(pacsConfig.emr_base_url||('http://'+t.hostPcIp+':9080')) + '/api/pacs/worklist-feed?token=' + pacsTokenShown(pacsConfig.bridge_token) + '&format=csv'}</div>
                 <div style={{marginTop:8,fontSize: 13,color:t3,lineHeight:1.5}}>{t.feedConnectHint}</div>
               </div>
 
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12}}>
-                <div style={{fontWeight:700,fontSize: 14,color:'#60a5fa',marginBottom:10}}>2. {t.pacsServer||'PACS 서버 (Orthanc)'}</div>
+                <div style={{fontWeight:700,fontSize: 14,color:'var(--accent-text)',marginBottom:10}}>2. {t.pacsServer||'PACS 서버 (Orthanc)'}</div>
                 <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginBottom:8}}>{t.pacsServerHint||'영상이 저장되고 워크리스트를 제공하는 PACS(우리 Orthanc 컨테이너). DICOM 포트(기본 4242)·AE Title을 적습니다. 영상 창은 EMR이 대신 보여 주므로 진료실 PC가 9090에 닿을 필요는 없습니다.'}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 90px',gap:8}}>
                   <Fld label="Host / IP"><input placeholder="NAS_IP" value={pacsConfig.worklist_scp_host||''} onChange={function(e){up('worklist_scp_host',e.target.value)}} style={IS}/></Fld>
@@ -752,27 +754,27 @@ export default function SettingsPage() {
                     container reaches Orthanc; the password is set only by pair-with-emr
                     and never comes to this screen - only whether it is set. */}
                 <div style={{marginTop:8}}><Fld label={t.px_orthancUrl}><input placeholder="http://host.docker.internal:9090" value={pacsConfig.orthanc_url||''} onChange={function(e){up('orthanc_url',e.target.value)}} style={IS}/>
-                  {oldPort(pacsConfig.orthanc_url,8090)?<div style={{marginTop:4,fontSize:13,color:'#fbbf24',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
-                <div style={{marginTop:4,fontSize:13,lineHeight:1.5,color:pacsConfig.orthanc_password_set?'#34d399':'#fbbf24'}}>{pacsConfig.orthanc_password_set?('✓ '+t.px_orthancPasswordSet):('⚠ '+t.px_orthancPasswordMissing)}</div>
+                  {oldPort(pacsConfig.orthanc_url,8090)?<div style={{marginTop:4,fontSize:13,color:'var(--warn-text)',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
+                <div style={{marginTop:4,fontSize:13,lineHeight:1.5,color:pacsConfig.orthanc_password_set?'var(--ok-text)':'var(--warn-text)'}}>{pacsConfig.orthanc_password_set?('✓ '+t.px_orthancPasswordSet):('⚠ '+t.px_orthancPasswordMissing)}</div>
                 {/* Kept, not used: an old backup restores this column, and removing the
                     field would hide what it holds. */}
                 <div style={{marginTop:8,opacity:0.6}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')+' — '+t.px_viewerUrlUnused}><input placeholder="" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
-                  <button onClick={function(){testPacs('worklist')}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
+                  <button onClick={function(){testPacs('worklist')}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
                 </div>
-                {pacsTest.worklist?<div style={{marginTop:8,fontSize: 13,color:pacsTest.worklist.ok?'#34d399':'#f87171'}}>{pacsTest.worklist.ok?'✓ ':'✗ '}{pacsTest.worklist.message}</div>:null}
+                {pacsTest.worklist?<div style={{marginTop:8,fontSize: 13,color:pacsTest.worklist.ok?'var(--ok-text)':'var(--danger-text)'}}>{pacsTest.worklist.ok?'✓ ':'✗ '}{pacsTest.worklist.message}</div>:null}
               </div>
 
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,gridColumn:'1 / span 2'}}>
-                <div style={{fontWeight:700,fontSize: 14,color:'#fbbf24',marginBottom:10}}>3. {t.feedSec3}</div>
+                <div style={{fontWeight:700,fontSize: 14,color:'var(--warn-text)',marginBottom:10}}>3. {t.feedSec3}</div>
                 <div style={{fontSize: 13,color:t2,lineHeight:1.6}}>
                   {t.feedSec3A}<b style={{color:tx}}>{t.feedSec3B}</b>{t.feedSec3C}<br/>
                   {t.feedSec3Hint}
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginTop:10}}>
-                  <div style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'#93c5fd'}}>{t.modUltrasound}</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = US</div></div>
-                  <div style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'#93c5fd'}}>X-ray / CR</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = CR</div></div>
-                  <div style={{background:'#0f1117',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'#93c5fd'}}>{t.modEndoscopy}</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = ES {t.orWord} OT</div></div>
+                  <div style={{background:'var(--bg)',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'var(--accent-text-2)'}}>{t.modUltrasound}</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = US</div></div>
+                  <div style={{background:'var(--bg)',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'var(--accent-text-2)'}}>X-ray / CR</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = CR</div></div>
+                  <div style={{background:'var(--bg)',border:'1px solid '+bd2,borderRadius:6,padding:8}}><b style={{color:'var(--accent-text-2)'}}>{t.modEndoscopy}</b><div style={{fontSize: 13,color:t3,marginTop:4}}>Modality = ES {t.orWord} OT</div></div>
                 </div>
                 <div style={{fontSize: 13,color:t3,lineHeight:1.5,marginTop:8}}>{t.feedSec3Note}</div>
               </div>
@@ -789,14 +791,14 @@ export default function SettingsPage() {
                 <option value="">— {t.lb_selectPanel} —</option>
                 {orderCodes.filter(function(o){return o.code_type==='lab'}).map(function(o){return <option key={o.id} value={o.id}>{o.code} · {o.name}</option>})}
               </select>
-              <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700}}>+ {t.newLabPanel||'새 검사 패널'}</button>
+              <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700}}>+ {t.newLabPanel||'새 검사 패널'}</button>
             </div>
             {newPanelOpen?(<div style={{display:'flex',gap:8,alignItems:'flex-end',marginBottom:14,background:scBg,border:'1px solid '+bd,borderRadius:8,padding:'10px 12px',flexWrap:'wrap'}}>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.lb_code}</label><input value={newPanel.code} onChange={function(e){unp('code',e.target.value)}} placeholder="L09" style={Object.assign({},IS,{width:90})}/></div>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.name||'Name'}</label><input value={newPanel.name} onChange={function(e){unp('name',e.target.value)}} placeholder="Thyroid Panel" style={Object.assign({},IS,{width:220})}/></div>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.price||'Price'}</label><input type="number" value={newPanel.price} onChange={function(e){unp('price',e.target.value)}} placeholder="0" style={Object.assign({},IS,{width:100})}/></div>
-              <button onClick={createPanel} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.add||'추가'}</button>
-              <button onClick={function(){ setNewPanelOpen(false); }} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 14px',cursor:'pointer',fontSize: 14}}>{t.cancel||'취소'}</button>
+              <button onClick={createPanel} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.add||'추가'}</button>
+              <button onClick={function(){ setNewPanelOpen(false); }} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 14px',cursor:'pointer',fontSize: 14}}>{t.cancel||'취소'}</button>
               <div style={{fontSize: 12,color:t3,width:'100%',marginTop:2}}>{t.newLabPanelHint||'새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.'}</div>
             </div>):null}
             {labCode?(<div style={{maxWidth:860}}>
@@ -809,8 +811,8 @@ export default function SettingsPage() {
                 <input type="number" value={it.ref_low!=null?it.ref_low:''} onChange={function(e){uli(i,'ref_low',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_high!=null?it.ref_high:''} onChange={function(e){uli(i,'ref_high',e.target.value)}} style={IS}/>
                 <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={IS}/>
-                <button onClick={function(){toggleRanges(i)}} title={t.lb_rangesHint} style={{background:nr?'#0e749022':'#1e2433',color:nr?'#67e8f9':t2,border:'1px solid '+(nr?'#06b6d455':bd2),borderRadius:4,padding:'6px 4px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{it._open?'▾':'▸'} {t.lb_ranges} ({nr})</button>
-                <button onClick={function(){delLi(i)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:4,padding:'6px 0',cursor:'pointer',fontSize: 13}}>✕</button>
+                <button onClick={function(){toggleRanges(i)}} title={t.lb_rangesHint} style={{background:nr?'var(--cyan-deep-a22)':'var(--chip)',color:nr?'var(--cyan-text)':t2,border:'1px solid '+(nr?'var(--cyan-a55)':bd2),borderRadius:4,padding:'6px 4px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{it._open?'▾':'▸'} {t.lb_ranges} ({nr})</button>
+                <button onClick={function(){delLi(i)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'6px 0',cursor:'pointer',fontSize: 13}}>✕</button>
               </div>
               {it._open?(<div style={{margin:'0 0 10px 24px',padding:'8px 10px',border:'1px solid '+bd,borderRadius:6,background:scBg}}>
                 <div style={{fontSize:12,color:t3,marginBottom:6}}>{t.lb_rangesHint}</div>
@@ -826,19 +828,19 @@ export default function SettingsPage() {
                   <input type="number" value={r.ref_high!=null?r.ref_high:''} onChange={function(e){urng(i,j,'ref_high',e.target.value)}} style={IS}/>
                   <input value={r.ref_text||''} onChange={function(e){urng(i,j,'ref_text',e.target.value)}} style={IS}/>
                   <input value={r.note||''} onChange={function(e){urng(i,j,'note',e.target.value)}} style={IS}/>
-                  <button onClick={function(){delRng(i,j)}} style={{background:'#dc262610',color:'#f87171',border:'1px solid #dc262630',borderRadius:4,padding:'5px 0',cursor:'pointer',fontSize:12}}>✕</button>
+                  <button onClick={function(){delRng(i,j)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'5px 0',cursor:'pointer',fontSize:12}}>✕</button>
                 </div>; })}
-                <button onClick={function(){addRng(i)}} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:12,fontWeight:600,marginTop:2}}>{t.lb_addRange}</button>
+                <button onClick={function(){addRng(i)}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:12,fontWeight:600,marginTop:2}}>{t.lb_addRange}</button>
               </div>):null}
               </div>;})}
               <div style={{display:'flex',gap:8,marginTop:10}}>
-                <button onClick={addLi} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
-                <button onClick={function(){ saveLabItems(); }} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
+                <button onClick={addLi} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
+                <button onClick={function(){ saveLabItems(); }} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
             </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
-            {labWarn?(<div onClick={function(){ setLabWarn(null); }} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <div role="alertdialog" onClick={function(e){ e.stopPropagation(); }} style={{width:520,maxWidth:'92vw',background:scBg,border:'1px solid #f59e0b',borderRadius:8,padding:'16px 18px',color:tx}}>
-                <div style={{fontWeight:800,fontSize:15,color:'#fbbf24',marginBottom:8}}>⚠ {t.lb_unitWarnTitle}</div>
+            {labWarn?(<div onClick={function(){ setLabWarn(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div role="alertdialog" onClick={function(e){ e.stopPropagation(); }} style={{width:520,maxWidth:'92vw',background:scBg,border:'1px solid var(--warn-ink)',borderRadius:8,padding:'16px 18px',color:tx}}>
+                <div style={{fontWeight:800,fontSize:15,color:'var(--warn-text)',marginBottom:8}}>⚠ {t.lb_unitWarnTitle}</div>
                 {labWarn.changed.length?(<div style={{marginBottom:10}}>
                   <div style={{fontSize:13,color:t2,marginBottom:6}}>{t.lb_unitWarnBody}</div>
                   {labWarn.changed.map(function(c,i){ return <div key={'c'+i} style={{fontSize:13,padding:'3px 0'}}>• <b>{c.name}</b>: {c.from} → {c.to} <span style={{color:t3}}>({t.lb_resultCount.replace('{n}',c.n)})</span></div>; })}
@@ -847,10 +849,10 @@ export default function SettingsPage() {
                   <div style={{fontSize:13,color:t2,marginBottom:6}}>{t.lb_sameNameWarnBody}</div>
                   {labWarn.sameName.map(function(c,i){ return <div key={'s'+i} style={{fontSize:13,padding:'3px 0'}}>• <b>{c.name}</b> <span style={{color:t3}}>({t.lb_resultCount.replace('{n}',c.n)})</span></div>; })}
                 </div>):null}
-                <div style={{fontSize:13,color:'#6ee7b7',marginBottom:14}}>{t.lb_unitWarnSafe}</div>
+                <div style={{fontSize:13,color:'var(--ok-text-2)',marginBottom:14}}>{t.lb_unitWarnSafe}</div>
                 <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-                  <button autoFocus onClick={function(){ setLabWarn(null); }} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.cancel||'Cancel'}</button>
-                  <button onClick={function(){ saveLabItems(true); }} style={{background:'#b45309',color:'#fff',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.lb_saveAnyway}</button>
+                  <button autoFocus onClick={function(){ setLabWarn(null); }} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.cancel||'Cancel'}</button>
+                  <button onClick={function(){ saveLabItems(true); }} style={{background:'var(--warn-strong)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.lb_saveAnyway}</button>
                 </div>
               </div>
             </div>):null}
@@ -869,21 +871,21 @@ export default function SettingsPage() {
                 // DEPLOYMENT.md 5b's "older than the app" commands (services/backup-version.js).
                 var older=backup.version&&backup.version.state==='older';
                 if(st==='ok'&&older) st='oldVersion';
-                var C={ok:'#34d399',stale:'#fbbf24',none:'#fbbf24',failed:'#f87171',oldVersion:'#fbbf24'}[st]||'#fbbf24';
+                var C={ok:'ok-text',stale:'warn-text',none:'warn-text',failed:'danger-text',oldVersion:'warn-text'}[st]||'warn-text';   // a text token; tint() makes the box behind it
                 var title={ok:t.se_bkOk,stale:t.se_bkStale,none:t.se_bkNone,failed:t.se_bkFailed,oldVersion:t.se_bkOldVersion}[st];
                 var hint={stale:t.se_bkStaleHint,none:t.se_bkNoneHint,failed:t.se_bkFailedHint,oldVersion:t.se_bkOldVersionHint}[st];
                 var la=backup.lastAttempt;
-                return <div style={{background:C+'14',border:'1px solid '+C+'55',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+                return <div style={{background:tint(C,'14'),border:'1px solid '+tint(C,'55'),borderRadius:8,padding:'12px 14px',marginBottom:14}}>
                   <div style={{display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
-                    <span style={{fontSize:16,fontWeight:800,color:C}}>{st==='ok'?'✓':'⚠'} {title}</span>
+                    <span style={{fontSize:16,fontWeight:800,color:'var(--'+C+')'}}>{st==='ok'?'✓':'⚠'} {title}</span>
                     {backup.newestAgeHours!=null?<span style={{fontSize:13,color:t2}}>{t.backupLast||'최근'}: {fmtLocal(backup.last.mtime)} · {(t.se_bkHoursAgo||'{n}h').replace('{n}',backup.newestAgeHours)}</span>:null}
-                    {backup.running?<span style={{fontSize:13,color:'#60a5fa',fontWeight:700}}>⏳ {t.se_bkRunning}</span>:null}
+                    {backup.running?<span style={{fontSize:13,color:'var(--accent-text)',fontWeight:700}}>⏳ {t.se_bkRunning}</span>:null}
                   </div>
                   {hint?<div style={{fontSize:13,color:tx,marginTop:6,lineHeight:1.5}}>{hint}</div>:null}
-                  {older&&st!=='oldVersion'?<div style={{fontSize:13,color:'#fbbf24',marginTop:6,lineHeight:1.5}}>⚠ {t.se_bkOldVersion} — {t.se_bkOldVersionHint}</div>:null}
+                  {older&&st!=='oldVersion'?<div style={{fontSize:13,color:'var(--warn-text)',marginTop:6,lineHeight:1.5}}>⚠ {t.se_bkOldVersion} — {t.se_bkOldVersionHint}</div>:null}
                   {la&&!la.ok?<div style={{fontSize:12,color:t2,marginTop:8,lineHeight:1.5}}>
                     {t.se_bkLastTry}: {fmtLocal(la.at)} ({la.trigger==='scheduled'?t.se_bkTriggerAuto:t.se_bkTriggerManual})
-                    {la.error?<div style={{fontFamily:'monospace',fontSize:12,color:'#fca5a5',marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{la.error}</div>:null}
+                    {la.error?<div style={{fontFamily:'monospace',fontSize:12,color:'var(--danger-text-2)',marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{la.error}</div>:null}
                   </div>:null}
                 </div>;
               })()}
@@ -895,11 +897,11 @@ export default function SettingsPage() {
                   <div><div style={{fontSize:12,color:t3}}>{t.backupRetention||'보관'}</div><div style={{fontSize:14,color:tx}}>{backup.retentionDays}{t.days||'일'}</div></div>
                 </div>
                 {backup.minKeep?<div style={{fontSize:12,color:t3,marginTop:8}}>{(t.se_bkMinKeep||'').replace('{n}',backup.minKeep)}</div>:null}
-                {!backup.custom?<div style={{fontSize:12,color:'#fbbf24',marginTop:10,lineHeight:1.5}}>{t.backupSafetyTip||'⚠ 같은 디스크에 저장돼요. 고장·도난 대비해 아래 ⬇로 USB 등 다른 곳에 복사하거나, 다른 드라이브 자동저장은 .env의 BACKUP_PATH로 지정하세요.'}</div>:null}
+                {!backup.custom?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:10,lineHeight:1.5}}>{t.backupSafetyTip||'⚠ 같은 디스크에 저장돼요. 고장·도난 대비해 아래 ⬇로 USB 등 다른 곳에 복사하거나, 다른 드라이브 자동저장은 .env의 BACKUP_PATH로 지정하세요.'}</div>:null}
               </div>
               <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:14}}>
-                <button onClick={runBackup} disabled={backupBusy} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:6,padding:'9px 18px',cursor:backupBusy?'wait':'pointer',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
-                <button onClick={loadBackup} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'9px 14px',cursor:'pointer',fontSize:14}}>↻ {t.refresh||'새로고침'}</button>
+                <button onClick={runBackup} disabled={backupBusy} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 18px',cursor:backupBusy?'wait':'pointer',fontSize:14,fontWeight:800}}>{backupBusy?(t.backupRunning||'백업 중…'):('💾 '+(t.backupNow||'지금 백업'))}</button>
+                <button onClick={loadBackup} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'9px 14px',cursor:'pointer',fontSize:14}}>↻ {t.refresh||'새로고침'}</button>
                 {backup.last?<span style={{fontSize:13,color:t3}}>{t.backupLast||'최근'}: {fmtLocal(backup.last.mtime)} ({fmtBytes(backup.last.size)})</span>:null}
               </div>
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
@@ -908,11 +910,11 @@ export default function SettingsPage() {
                   {(backup.backups||[]).length===0?<div style={{padding:14,color:t3,fontSize:13}}>{t.backupNone||'백업 없음'}</div>:
                     <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                       <tbody>
-                        {(backup.backups||[]).map(function(b,i){ return <tr key={i} style={{borderBottom:'1px solid #1a1f2e'}}>
+                        {(backup.backups||[]).map(function(b,i){ return <tr key={i} style={{borderBottom:'1px solid var(--line-soft-3)'}}>
                           <td style={{padding:'7px 12px',color:tx,fontFamily:'monospace'}}>{b.name}</td>
                           <td style={{padding:'7px 12px',color:t2,textAlign:'right',whiteSpace:'nowrap'}}>{fmtBytes(b.size)}</td>
                           <td style={{padding:'7px 12px',color:t3,textAlign:'right',whiteSpace:'nowrap'}}>{fmtLocal(b.mtime)}</td>
-                          <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={function(){downloadBackup(b.name)}} title={t.download||'다운로드'} style={{background:'#1e2433',color:'#60a5fa',border:'1px solid '+bd2,borderRadius:5,padding:'3px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}>⬇ {t.download||'다운로드'}</button></td>
+                          <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={function(){downloadBackup(b.name)}} title={t.download||'다운로드'} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:5,padding:'3px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}>⬇ {t.download||'다운로드'}</button></td>
                         </tr>; })}
                       </tbody>
                     </table>}
@@ -944,31 +946,31 @@ export default function SettingsPage() {
                   {Object.keys(AUDIT_ACTIONS).map(function(a){return <option key={a} value={a}>{auditActionText(t,a)}</option>;})}
                 </select>
                 <input value={auditF.patient} onChange={function(e){uaf('patient',e.target.value)}} onKeyDown={function(e){if(e.key==='Enter')auditSearch()}} placeholder={t.se_logPatientQ} style={Object.assign({},IS,{width:200,padding:'4px 6px'})}/>
-                <button onClick={auditSearch} style={{background:'#3b82f620',color:'#60a5fa',border:'1px solid #3b82f640',borderRadius:4,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:600}}>{t.search}</button>
+                <button onClick={auditSearch} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:600}}>{t.search}</button>
               </div>
             </div>
             <div style={{flex:1,overflow:'auto'}}>
               {!audit?<div style={{padding:20,color:t3}}>{t.loading}</div>:
-               audit.error?<div style={{padding:14,color:'#fca5a5'}}>⚠ {seMessage(t, audit.error)}</div>:
+               audit.error?<div style={{padding:14,color:'var(--danger-text-2)'}}>⚠ {seMessage(t, audit.error)}</div>:
                !audit.rows.length?<div style={{padding:20,color:t3,fontStyle:'italic'}}>{t.se_logEmpty}</div>:
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                <thead><tr style={{background:'#1e2433'}}>
+                <thead><tr style={{background:'var(--chip)'}}>
                   {[t.se_logWhen,t.se_logWho,t.se_logWhat,t.se_logPatient,t.se_logChange].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize:12,borderBottom:'1px solid '+bd,whiteSpace:'nowrap'}}>{h}</th>})}
                 </tr></thead>
                 <tbody>{audit.rows.map(function(r){
                   var ch=auditChanges(t, r, {depts:depts});
-                  return <tr key={r.id} style={{borderBottom:'1px solid #1e2433',verticalAlign:'top'}}>
+                  return <tr key={r.id} style={{borderBottom:'1px solid var(--line-soft)',verticalAlign:'top'}}>
                     <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{auditActionText(t, r.action)}{auditEntityText(t, r)?' — '+auditEntityText(t, r):''}{auditSummary(t, r)?<div style={{fontSize:12,color:t2}}>{auditSummary(t, r)}</div>:null}</td>
-                    <td style={{padding:'6px 10px',color:tx}}>{r.patient_name||'—'}{r.chart_no?<div style={{fontSize:11,color:'#60a5fa',fontFamily:'monospace'}}>{r.chart_no}</div>:null}</td>
+                    <td style={{padding:'6px 10px',color:tx}}>{r.patient_name||'—'}{r.chart_no?<div style={{fontSize:11,color:'var(--accent-text)',fontFamily:'monospace'}}>{r.chart_no}</div>:null}</td>
                     <td style={{padding:'6px 10px',fontSize:12,color:t2}}>
                       {r.action==='settings.staff.password'?<span style={{fontStyle:'italic',color:t3}}>{t.se_logNoValue}</span>:null}
                       {ch.map(function(c){return <div key={c.field} style={{marginBottom:2}}>
                         <span style={{color:t3}}>{c.label}: </span>
-                        {c.kind==='change'?<span><span style={{color:'#fca5a5',textDecoration:'line-through'}}>{c.before}</span> → <span style={{color:'#86efac'}}>{c.after}</span></span>:
-                         c.kind==='add'?<span style={{color:'#86efac'}}>{c.after}</span>:
-                         <span style={{color:'#fca5a5'}}>{c.before} <span style={{color:t3}}>{t.se_logRemoved}</span></span>}
+                        {c.kind==='change'?<span><span style={{color:'var(--danger-text-2)',textDecoration:'line-through'}}>{c.before}</span> → <span style={{color:'var(--ok-text-3)'}}>{c.after}</span></span>:
+                         c.kind==='add'?<span style={{color:'var(--ok-text-3)'}}>{c.after}</span>:
+                         <span style={{color:'var(--danger-text-2)'}}>{c.before} <span style={{color:t3}}>{t.se_logRemoved}</span></span>}
                       </div>;})}
                     </td>
                   </tr>;
@@ -979,9 +981,9 @@ export default function SettingsPage() {
               var pages=Math.max(1,Math.ceil(audit.total/AUDIT_LIMIT));
               return <div style={{padding:'6px 14px',borderTop:'1px solid '+bd,display:'flex',alignItems:'center',gap:10,fontSize:12,color:t2,background:scBg}}>
                 <span>{(t.se_logTotal||'').replace('{n}',audit.total)}</span><div style={{flex:1}}></div>
-                <button disabled={auditPage<=1} onClick={function(){setAuditPage(auditPage-1)}} style={{background:'#1e2433',color:auditPage<=1?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage<=1?'default':'pointer',fontSize:12}}>{t.se_logPrev}</button>
+                <button disabled={auditPage<=1} onClick={function(){setAuditPage(auditPage-1)}} style={{background:'var(--chip)',color:auditPage<=1?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage<=1?'default':'pointer',fontSize:12}}>{t.se_logPrev}</button>
                 <span>{(t.se_logPage||'').replace('{p}',auditPage).replace('{n}',pages)}</span>
-                <button disabled={auditPage>=pages} onClick={function(){setAuditPage(auditPage+1)}} style={{background:'#1e2433',color:auditPage>=pages?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage>=pages?'default':'pointer',fontSize:12}}>{t.se_logNext}</button>
+                <button disabled={auditPage>=pages} onClick={function(){setAuditPage(auditPage+1)}} style={{background:'var(--chip)',color:auditPage>=pages?t3:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:auditPage>=pages?'default':'pointer',fontSize:12}}>{t.se_logNext}</button>
               </div>;
             })():null}
           </div>):null}
@@ -1010,7 +1012,7 @@ export default function SettingsPage() {
                 <Fld label={t.se_fEmail}><input value={clinic.email||''} onChange={function(e){uclin('email',e.target.value)}} style={IS}/></Fld>
               </div>
               <Fld label={t.se_fHours}><input value={clinic.working_hours||''} onChange={function(e){uclin('working_hours',e.target.value)}} style={IS}/></Fld>
-              <div><button onClick={saveClinic} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:6,padding:'9px 24px',cursor:'pointer',fontSize: 14,fontWeight:800,marginTop:4}}>{t.save||'Save'}</button></div>
+              <div><button onClick={saveClinic} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 24px',cursor:'pointer',fontSize: 14,fontWeight:800,marginTop:4}}>{t.save||'Save'}</button></div>
             </div>
 
             <div style={{fontSize: 12,color:t3,marginTop:14,lineHeight:1.6}}>
@@ -1022,8 +1024,8 @@ export default function SettingsPage() {
 
       {/* EDIT MODAL */}
       {editItem?(
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#1a1f2e',borderRadius:10,border:'1px solid '+bd,width:editType==='order'?540:420,maxHeight:'85vh',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'var(--scrim)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'var(--panel-head)',borderRadius:10,border:'1px solid '+bd,width:editType==='order'?540:420,maxHeight:'85vh',display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:'0 20px 60px var(--shadow-50)'}}>
             <div style={{fontWeight:700,fontSize: 15,color:tx,padding:'18px 18px 14px'}}>{/* The window says what it is for (was "New item" / "Edit" on every tab). */}{editItem.id?(t['se_editTitle_'+editType]||t.edit):(t['se_newTitle_'+editType]||t.se_newTitle)}</div>
             {/* Only the fields scroll: on a 1366x768 laptop the drug window is taller than the
                 screen, and Save had to be scrolled to (integration test). The buttons stay put. */}
@@ -1041,10 +1043,10 @@ export default function SettingsPage() {
                     password box looked exactly like a password already filled in. */}
                 <Fld label={t.se_fPassword}><div style={{display:'flex',gap:4}}>
                   <input type={showPw?'text':'password'} autoComplete="new-password" value={editItem.password||''} onChange={function(e){ue('password',e.target.value)}} placeholder={editItem.id?t.se_pwKeep:''} style={Object.assign({},IS,{flex:1,minWidth:0})}/>
-                  <button type="button" onClick={function(){setShowPw(!showPw)}} style={{background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'0 8px',cursor:'pointer',fontSize:12,flexShrink:0}}>{showPw?t.se_hidePw:t.se_showPw}</button>
+                  <button type="button" onClick={function(){setShowPw(!showPw)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'0 8px',cursor:'pointer',fontSize:12,flexShrink:0}}>{showPw?t.se_hidePw:t.se_showPw}</button>
                 </div></Fld>
               </div>
-              {lockedAdmin?<div style={{fontSize:12,color:'#fbbf24',background:'#f59e0b18',border:'1px solid #f59e0b40',borderRadius:5,padding:'7px 9px',lineHeight:1.5}}>
+              {lockedAdmin?<div style={{fontSize:12,color:'var(--warn-text)',background:'var(--warn-a18)',border:'1px solid var(--warn-a40)',borderRadius:5,padding:'7px 9px',lineHeight:1.5}}>
                 🔒 {t.adminLocked||'설정 때 만든 관리자 계정입니다. 이름·비밀번호·연락처는 바꿀 수 있지만, 아이디와 역할·권한은 고정입니다 — 여기서 설정 권한을 빼면 아무도 설정 화면에 들어올 수 없게 됩니다.'}
               </div>:null}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
@@ -1064,11 +1066,11 @@ export default function SettingsPage() {
                 </select>
               </Fld>
               <Fld label={(t.permissions||'Permissions (accessible screens)')}>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',background:'#0f1117',border:'1px solid #2a3142',borderRadius:5,padding:'8px 10px'}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:5,padding:'8px 10px'}}>
                   {MODULES.map(function(m){
                     var perms=editItem.permissions||[];
                     var on=perms.indexOf(m.perm)>=0;
-                    return <label key={m.perm} style={{display:'flex',alignItems:'center',gap:6,cursor:lockedAdmin?'not-allowed':'pointer',fontSize:13,color:lockedAdmin?'#8b95a5':(on?'#e2e8f0':'#94a3b8')}}>
+                    return <label key={m.perm} style={{display:'flex',alignItems:'center',gap:6,cursor:lockedAdmin?'not-allowed':'pointer',fontSize:13,color:lockedAdmin?'var(--text-locked)':(on?'var(--text)':'var(--text-2)')}}>
                       <input type="checkbox" checked={on} disabled={lockedAdmin} onChange={function(){ var cur=editItem.permissions||[]; var next=on?cur.filter(function(x){return x!==m.perm}):cur.concat([m.perm]); ue('permissions',next); }} />
                       {m.icon} {t[m.key]||m.key}
                     </label>;
@@ -1089,10 +1091,10 @@ export default function SettingsPage() {
               </div>
               {/* The "to check" list comes with the imported drug list (034) and is only
                   shown here; the points are marked checked in the pharmacy Stock tab. */}
-              {checkList(editItem).length ? <div style={{fontSize: 13,color:checkOpen(editItem)?'#fbbf24':'#64748b',border:'1px solid '+(checkOpen(editItem)?'#f59e0b60':bd2),borderRadius:4,padding:'5px 8px'}}>
+              {checkList(editItem).length ? <div style={{fontSize: 13,color:checkOpen(editItem)?'var(--warn-text)':'var(--text-3)',border:'1px solid '+(checkOpen(editItem)?'var(--warn-a60)':bd2),borderRadius:4,padding:'5px 8px'}}>
                 <div style={{fontWeight:700}}>{checkOpen(editItem)?'⚠ ':'✓ '}{t.ph_checkTitle}</div>
                 <ul style={{margin:'2px 0 0',paddingLeft:18}}>{checkList(editItem).map(function(c,i){return <li key={i}>{checkText(t,c)}</li>;})}</ul>
-                {checkOpen(editItem) ? <div style={{color:'#94a3b8',marginTop:2}}>{t.ph_checkWhere}</div> : null}
+                {checkOpen(editItem) ? <div style={{color:'var(--text-2)',marginTop:2}}>{t.ph_checkWhere}</div> : null}
               </div> : null}
               {/* No default dose / times / days / posology here (decision B, 2026-09-29):
                   the order sets carry the dosing. The columns stay in the table, unused. */}
@@ -1115,20 +1117,20 @@ export default function SettingsPage() {
                     Whole numbers only - the column is an integer and the API refuses others. */}
                 <Fld label={t.ph_minStock}><input type="number" min="0" step="1" value={editItem.min_stock==null?'':editItem.min_stock} title={t.ph_minStockHint} onChange={function(e){ue('min_stock',e.target.value===''?0:Math.max(0,Math.floor(Number(e.target.value))||0))}} style={IS}/></Fld>
               </div>
-              <div style={{fontSize: 12,color:'#94a3b8'}}>📦 {t.ph_stockReadOnlyHint}
+              <div style={{fontSize: 12,color:'var(--text-2)'}}>📦 {t.ph_stockReadOnlyHint}
               </div>
               {/* Pack-unit drug (H2-B): handed out by the bottle/tube, so the doctor writes
                   how many and no total is computed. Copied onto each prescription line
                   when it is written (025_pharmacy_pack_unit.sql). */}
-              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'8px 10px',border:'1px solid #2a3142',borderRadius:6}}>
-                <label style={{display:'flex',alignItems:'center',gap:6,fontSize: 13,fontWeight:700,color:'#e2e8f0',cursor:'pointer'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'8px 10px',border:'1px solid var(--border-2)',borderRadius:6}}>
+                <label style={{display:'flex',alignItems:'center',gap:6,fontSize: 13,fontWeight:700,color:'var(--text)',cursor:'pointer'}}>
                   <input type="checkbox" checked={!!editItem.pack_unit} onChange={function(e){ var on=e.target.checked; setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n.pack_unit=on; n.pack_label=on?(p.pack_label||'bottle'):null; return n; }); }}/>
                   {t.ph_packUnit}
                 </label>
                 <select value={editItem.pack_label||'bottle'} disabled={!editItem.pack_unit} onChange={function(e){ue('pack_label',e.target.value)}} style={Object.assign({},IS,{width:'auto',opacity:editItem.pack_unit?1:.5})}>
                   {PACK_LABELS.map(function(k){ return <option key={k} value={k}>{t['ph_pack_'+k]}</option>; })}
                 </select>
-                <div style={{fontSize: 12,color:'#94a3b8',flexBasis:'100%'}}>{editItem.pack_unit ? t.ph_packUnitHintOn : t.ph_packUnitHint}</div>
+                <div style={{fontSize: 12,color:'var(--text-2)',flexBasis:'100%'}}>{editItem.pack_unit ? t.ph_packUnitHintOn : t.ph_packUnitHint}</div>
                 {/* Only tells, does not stop (decision): the stock number has no unit, so
                     switching an existing drug makes the same number read in the other unit. */}
                 {(function(){
@@ -1137,7 +1139,7 @@ export default function SettingsPage() {
                   if(!was) return null;
                   var changed = !!was.pack_unit !== !!editItem.pack_unit || (editItem.pack_unit && (was.pack_label||'bottle') !== (editItem.pack_label||'bottle'));
                   if(!changed || !(Number(was.stock_qty) > 0)) return null;
-                  return <div style={{fontSize: 13,color:'#fbbf24',fontWeight:700,flexBasis:'100%',border:'1px solid #f59e0b60',borderRadius:4,padding:'5px 8px'}}>⚠ {String(t.ph_packChangeWarn||'').replace('{n}', was.stock_qty)}</div>;
+                  return <div style={{fontSize: 13,color:'var(--warn-text)',fontWeight:700,flexBasis:'100%',border:'1px solid var(--warn-a60)',borderRadius:4,padding:'5px 8px'}}>⚠ {String(t.ph_packChangeWarn||'').replace('{n}', was.stock_qty)}</div>;
                 })()}
               </div>
             </div>):null}
@@ -1155,8 +1157,8 @@ export default function SettingsPage() {
               <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6}}>
                 <Fld label={t.price||"가격 (Price)"}><input type="number" value={editItem.price_clinic!=null?editItem.price_clinic:(editItem.price||0)} onChange={function(e){ var v=Number(e.target.value); ue('price_clinic',v); ue('price',v); }} style={IS}/></Fld>
               </div>
-              <div style={{background:'#0f1117',border:'1px solid #2a3142',borderRadius:6,padding:'10px'}}>
-                <div style={{fontSize: 13,fontWeight:700,color:'#8b5cf6',marginBottom:6}}>📡 {t.orderFeedModality}</div>
+              <div style={{background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:6,padding:'10px'}}>
+                <div style={{fontSize: 13,fontWeight:700,color:'var(--violet-ink)',marginBottom:6}}>📡 {t.orderFeedModality}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                   <Fld label={t.se_fModality}><select value={editItem.pacs_modality||''} onChange={function(e){ue('pacs_modality',e.target.value)}} style={IS}><option value="">{t.se_none}</option><option value="US">US</option><option value="CR">CR</option><option value="CT">CT</option><option value="MR">MR</option><option value="ES">ES</option><option value="OT">OT</option></select></Fld>
                   <Fld label={t.se_fBodyPart}><input value={editItem.body_part||''} onChange={function(e){ue('body_part',e.target.value)}} style={IS} placeholder="ABDOMEN"/></Fld>
@@ -1164,8 +1166,8 @@ export default function SettingsPage() {
                 <div style={{marginTop:6}}>
                   <Fld label={t.worklistFeedCreate}>
                     <div className="pressable" onClick={function(){ue('worklist_enabled',!editItem.worklist_enabled)}} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
-                      <div style={{width:14,height:14,borderRadius:3,border:editItem.worklist_enabled?'2px solid #10b981':'2px solid #2a3142',background:editItem.worklist_enabled?'#10b981':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{editItem.worklist_enabled?<span style={{color:'#fff',fontSize: 12}}>✓</span>:null}</div>
-                      <span style={{fontSize: 14,color:editItem.worklist_enabled?'#34d399':t3}}>{editItem.worklist_enabled?t.se_on:t.se_off}</span>
+                      <div style={{width:14,height:14,borderRadius:3,border:editItem.worklist_enabled?'2px solid var(--ok-ink)':'2px solid var(--border-2)',background:editItem.worklist_enabled?'var(--ok)':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{editItem.worklist_enabled?<span style={{color:'var(--on-fill)',fontSize: 12}}>✓</span>:null}</div>
+                      <span style={{fontSize: 14,color:editItem.worklist_enabled?'var(--ok-text)':t3}}>{editItem.worklist_enabled?t.se_on:t.se_off}</span>
                     </div>
                   </Fld>
                   <div style={{fontSize: 12,color:t3,lineHeight:1.4}}>{t.aeTitleNote}</div>
@@ -1207,14 +1209,14 @@ export default function SettingsPage() {
             </div>
 
             <div style={{display:'flex',gap:8,padding:'14px 18px 18px',borderTop:'1px solid '+bd}}>
-              <button onClick={closeEdit} style={{flex:1,background:'#1e2433',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14}}>{t.cancel}</button>
-              <button onClick={saveEdit} style={{flex:2,background:'linear-gradient(135deg,#3b82f6,#2563eb)',color:'#fff',border:'none',borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14,fontWeight:600}}>{t.save}</button>
+              <button onClick={closeEdit} style={{flex:1,background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14}}>{t.cancel}</button>
+              <button onClick={saveEdit} style={{flex:2,background:'linear-gradient(135deg,var(--accent),var(--accent-strong))',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px',cursor:'pointer',fontSize: 14,fontWeight:600}}>{t.save}</button>
             </div>
           </div>
         </div>
       ):null}
 
-      {toast?<div style={{position:'fixed',bottom:24,left:'50%',transform:'translateX(-50%)',background:'#10b981',color:'#fff',borderRadius:8,padding:'10px 24px',fontSize: 14,fontWeight:600,boxShadow:'0 4px 16px rgba(0,0,0,0.3)',zIndex:200}}>✓ {toast}</div>:null}
+      {toast?<div style={{position:'fixed',bottom:24,left:'50%',transform:'translateX(-50%)',background:'var(--ok)',color:'var(--on-fill)',borderRadius:8,padding:'10px 24px',fontSize: 14,fontWeight:600,boxShadow:'0 4px 16px var(--shadow-30)',zIndex:200}}>✓ {toast}</div>:null}
     </div>
   );
 }
@@ -1228,4 +1230,4 @@ var PACK_LABELS = ['bottle','tube','inhaler','unit'];
 var DRUG_CATEGORIES = ['Analgesic','Antibiotic','Antihistamine','Antimalarial','Antiparasitic','Cardiovascular','Corticosteroid','Dermatology','Endocrine','GI','Gynecology','Musculoskeletal','Ophthalmic','Respiratory','Urology','Vitamin','Other'];
 function drugCatLabel(t, c){ return (c && t['ph_cat_' + c]) || c || ''; }
 
-function Fld(p){return <div><label style={{fontSize: 12,fontWeight:600,color:'#64748b',display:'block',marginBottom:3}}>{p.label}</label>{p.children}</div>}
+function Fld(p){return <div><label style={{fontSize: 12,fontWeight:600,color:'var(--text-3)',display:'block',marginBottom:3}}>{p.label}</label>{p.children}</div>}
