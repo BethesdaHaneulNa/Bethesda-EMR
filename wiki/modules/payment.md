@@ -143,6 +143,8 @@
 | 「Les N Ar saisis ne seront pas enregistrés…」 | **Impayé** 를 눌렀는데 받은 금액 칸에 숫자가 있음. 돈을 받았으면 취소 → **Confirmer** |
 | 「Aucun montant reçu. Laisser les N Ar impayés ?」 | 받은 금액 칸이 빈 채 **Confirmer**. 정말 미수면 확인 |
 | 「…reporté sur le reçu R-…」 | 그 미수는 안내에 나온 영수증으로 넘어갔습니다(2.6 · 2.8 · 2.9) |
+| 「Quantité totale manquante pour : …」, 금액 칸의 「⚠ Quantité manquante」, 목록의 「⚠ Quantité de médicament manquante」 | 그 약의 총량이 처방에 없어 금액을 셀 수 없습니다. 수납이 막혀 있습니다. **진료실에 그 처방을 다시 저장해 달라고** 한 뒤 **↻** 를 누르고 수납합니다 |
+| 「Le navigateur a bloqué la fenêtre d'impression…」 | 브라우저가 인쇄 창(팝업)을 막았습니다. 주소창 오른쪽의 팝업 차단 표시를 눌러 이 사이트의 팝업을 허용하고 다시 **Imprimer Reçu** |
 | 화면 곳곳의 영어(`paid` · `partial` · `+ Outstanding` · `No items`) | 아직 번역되지 않은 글자(7절 L1). `paid` 전액 수납 · `partial` 부분 수납 · `unpaid` 미수 · `cancelled` 취소 |
 
 ## 3. 기능 상세
@@ -154,7 +156,7 @@
 | 이름 | 컬럼 | 공식 · 누가 계산 | 근거 |
 |---|---|---|---|
 | 진료비 | `consult_fee` | 내원 종류 → 오더 코드 `C01`(초진) `C02`(재진) `C03`(응급) `C04`(의뢰)의 `price_clinic`. `none`이면 0. 화면에서 계산 | `Payment.jsx` `consultFee()` |
-| 약값 | `drug_total` | Σ(`total_qty` 없으면 `dose×frequency×days`) × `unit_price`. **원외 처방(`dispense_type='external'`)은 제외** | `Payment.jsx` `drugTotal()`, `billing.routes.js` `/visit/:id/items` |
+| 약값 | `drug_total` | Σ `total_qty` × `unit_price`. **`total_qty`는 진료가 처방을 저장할 때 계산해 넣은 값 그대로** — 수납은 계산식을 갖지 않음(2026-09-29, 아래). **원외 처방(`dispense_type='external'`)은 제외** | `Payment.jsx` `rxQty()`·`drugTotal()`, `billing.routes.js` `/visit/:id/items` |
 | 처치·검사 | `procedure_total` | Σ `order_item.quantity × unit_price` **+ 발급비(수납에서 추가한 fee 항목)** | `Payment.jsx` `procTotal()`·`extraTotal()`·`doConfirmNow()` |
 | 소계 | `subtotal` | 이번에 **새로** 청구하는 항목의 합 (`chargeRows()`). 첫 수납이면 전부, 추가 청구면 차액만 | `Payment.jsx` `chargeRows()` |
 | 할인 | `discount_amount` | 직원이 넣은 금액(화면은 금액 할인만 씀. `percent` 계산 코드는 있으나 쓰이지 않음) | `Payment.jsx` `discountAmt()` |
@@ -165,6 +167,8 @@
 | **순수납** | `net_paid` | **DB 생성 컬럼** `amount_paid − change_amount` = 병원이 실제로 가진 돈. 매출은 이것으로 셉니다 | `017_billing_net_paid.sql` |
 | 미수 | `outstanding` | 확정 시 `max(0, 총 수납액 − 순수납)`. **미수 처리면 총 수납액 전부**. 이후 미수 수납·이월·취소가 바꿈 | `Payment.jsx` `doConfirmNow()` |
 | 상태 | `payment_status` | `paid`(받은 금액 ≥ 총액) · `partial`(조금 받음) · `unpaid`(한 푼도 안 받음 — 미수 처리, 또는 받은 금액 칸이 빈 채 확정) · `cancelled`(취소). `waiting`·`waived`는 제약에는 있으나 화면이 만들지 않음 | 확정 버튼, `006_billing_void.sql` |
+
+**약 수량은 진료 한 곳에서만 계산** (2026-09-29, 실장님 결정: 총량 = 하루 총량 × 일수, 계산은 진료 서버): 수납(`/pending`의 `live_total`, `buildCorrection()`, 화면 `rxQty()`)은 `total_qty`만 읽습니다. 예전에는 비어 있으면 `dose × frequency × days`로 대신 셌는데 — 약국·통계에는 없는 두 번째 계산식이었고, 비어 있는 처방을 수납은 청구하고 약국·통계는 0으로 세는 어긋남이 있었습니다. **`total_qty`가 비어 있는 처방은 0원으로 넘어가지 않습니다**: 대기 목록에 `missing_qty`(「⚠ Quantité de médicament manquante」), 수납 화면에 빨간 안내와 금액 칸 「⚠ Quantité manquante」, 「Confirmer」 거절, 서버도 `POST /api/billing`·정정을 409 `QTY_MISSING: <약 이름>`으로 거절 — 진료실이 그 처방을 다시 저장하면(수정 저장은 서버가 총량을 계산해 넣음) 풀립니다. 화면으로 만든 처방은 늘 `total_qty`가 들어가서(첫 커밋부터) API를 직접 부른 경우에만 생깁니다. `total_qty = 0`은 0으로 셉니다(화면과 서버가 같음).
 
 **「그로스」(통계의 gross)** = `consult_fee + drug_total + procedure_total` — 할인·이전 미수 **전**의 이번 진료분.
 
@@ -263,7 +267,7 @@
 - **용지**: `RECEIPT_PAGE = { size: 'A4', widthPx: 688 }` 한 곳에서 정합니다. 인쇄는 `printDocument()`(새 창, `@page{size:A4;margin:14mm}`). 80mm로 바꾸려면 이 상수와 전용 인쇄 창이 필요합니다(`printDocument`는 A4 고정) — 만들지 않음(결정).
 - **쪽 나눔**: 항목표 머리줄은 쪽마다 반복(`thead`), 줄은 쪼개지지 않음. 합계 덩어리는 `break-inside: avoid`라 **통째로** 다음 쪽으로 넘어가고, 맨 위에 「영수번호 · 환자」가 작게 붙습니다(떨어진 쪽이 어느 영수증인지 알게).
 - **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 항목이 없고 이전 미수가 있으면 「Règlement du solde antérieur」 — M2 미수 수납 영수를 위해) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
-- **아직 없는 것**(현지 확인 필요, 인계 노트 참고): NIF/STAT 번호, 로고, 금액 글자 표기, 서명란. 숫자는 화면과 같은 `15,000 Ar` 모양, 날짜는 다른 문서와 같은 `YYYY-MM-DD`.
+- **아직 없는 것**(현지 확인 필요, 인계 노트 참고): NIF/STAT 번호, 로고, 금액 글자 표기, 서명란. 숫자는 **프랑스어 표기 `15 000 Ar`**(줄바꿈 없는 공백, 영수증 안에서만 — 화면은 `15,000`), 날짜는 다른 문서와 같은 `YYYY-MM-DD`. 인쇄 창을 브라우저가 막으면 `printDocument(…, 'fr')`로 **프랑스어** 안내가 뜹니다(진료 세션이 `printDocument`에 언어 인자를 추가, 2026-09-29).
 
 ## 4. 데이터 · API
 
@@ -388,7 +392,7 @@
 
 - **L1 번역 안 된 글자** — `'Amount insufficient'`(`:179`), `'+ Outstanding:'`(`:332`), `'No items'`(`:601`), `Code`·`Date`·`Status`(`:582,586`), 상태 배지가 `paid`·`partial` 영어 그대로(`:282-285`, `cancelled`는 주황으로 나옴). 화면 전용 글자 몇 개는 번역 파일이 아니라 `L` 객체 안의 삼항식(`:48-65`). 프랑스어에서 「미수 처리」 버튼과 「미수금」 표시가 둘 다 `Impayé`.
 - **L2 진료비 기본값이 화면과 서버에서 다름** — C01~C04를 못 읽으면 화면은 15,000 등(`Payment.jsx:10,127`), 서버 `/pending`은 0(`billing.routes.js:28-30`) → 거짓 정정 표시(코드상, 코드를 비활성화했을 때만).
-- **L3 `total_qty = 0`인 처방** — 화면은 `dose×frequency×days`로 대신 계산(`:129`), 서버는 0(`billing.routes.js:31`)(코드).
+- ~~**L3 `total_qty = 0`인 처방**~~ — **고침(2026-09-29)**: 수납이 `total_qty`만 읽음(3.1). 원래 문제: 화면은 `dose×frequency×days`로 대신 계산(`:129`), 서버는 0(`billing.routes.js:31`)(코드).
 - **L4 진료 종류 저장이 수납보다 먼저** — `:187`. 수납이 실패해도 내원 종류는 이미 바뀜.
 - **L5 `billing(visit_id)` 인덱스 없음** — `/pending`이 내원마다 `visit_id`로 여러 번 찾습니다. 데이터가 쌓이면 느려짐(코드).
 - **L6 「수납 완료」 개수에 취소 영수 포함** — `/completed`가 상태를 거르지 않음.
@@ -409,4 +413,5 @@
 | 2026-09-29 | 2절을 프랑스어 화면 기준으로 다시 씀(버튼·칸 이름 프랑스어 + 한국어, 칸별 뜻 표, 안내 문구 표), 2절·6절에 「수납 창구 계정에는 수납 권한」(총괄 요청). develop `9ded00f` 합침 | `3342e97` · `c5ff3a9` |
 | 2026-09-29 | H6 창구 발급비를 「정정(환불)·추가 청구」 판정에서 뺌, 정정의 발급비 유지도 같은 기준(`counterFeeCond()`) | `bf54e5b` |
 | 2026-09-29 | H3 영수증 다시 만듦(`components/Receipt.jsx`: 저장된 영수에서, 항상 프랑스어, A4, 수납 직후·재출력 같은 모양), detail API에 영수증용 칸 추가 | `dee58dc` |
-| 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | (이 커밋) |
+| 2026-09-29 | PatientChart 오더 상태를 진료 화면과 같은 규칙으로 번역해 표시(PACS 부탁) | `768eaa9` |
+| 2026-09-29 | 약 수량은 `total_qty`만 읽음(대체 계산 다섯 곳 삭제), 비어 있으면 경고·수납 거절(`QTY_MISSING`). 영수증 금액 `15 000 Ar`, 인쇄 팝업 차단 안내 프랑스어 | (이 커밋) |

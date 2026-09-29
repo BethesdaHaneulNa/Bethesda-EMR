@@ -79,6 +79,19 @@ function counterFeeCond(itemAlias, visitRef) {
     "(SELECT COALESCE(o.order_code,'') FROM order_item o WHERE o.visit_id = " + visitRef + ')';
 }
 
+// Quantity of a prescription line. Consultation stores total_qty whenever a line is
+// saved and is the one place that knows how it is computed (decided 2026-09-29:
+// daily total x days, the Korean way). Billing reads it and nothing else - it used
+// to fall back to dose x frequency x days, a second copy of the formula that
+// pharmacy and statistics never had (they count a missing quantity as 0). A line
+// with no total_qty is never billed as 0 silently: the waiting list flags it and
+// billing refuses until consultation saves the line again.
+const QTY_MISSING = 'QTY_MISSING';
+function MISSING_QTY_SQL(visitRef) {
+  return "EXISTS (SELECT 1 FROM prescription mq WHERE mq.consultation_id IN (SELECT id FROM consultation WHERE visit_id = " + visitRef + ")" +
+    " AND COALESCE(mq.dispense_type,'internal') <> 'external' AND mq.total_qty IS NULL)";
+}
+
 // Prefix the client recognises: the screen was showing an older state of this
 // visit or patient, so the request is refused rather than billed twice.
 const BILL_CHANGED = 'BILL_CHANGED';
@@ -92,7 +105,7 @@ router.get('/pending', canPay, async (req, res) => {
            ( COALESCE((SELECT price_clinic FROM order_code WHERE code = CASE v.visit_type
                          WHEN 'newVisit' THEN 'C01' WHEN 'followUp' THEN 'C02'
                          WHEN 'emergency' THEN 'C03' WHEN 'referral' THEN 'C04' WHEN 'none' THEN NULL ELSE 'C01' END),0)
-           + COALESCE((SELECT SUM(COALESCE(p.total_qty, p.dose::numeric*p.frequency*p.days)*COALESCE(p.unit_price,0))
+           + COALESCE((SELECT SUM(COALESCE(p.total_qty,0)*COALESCE(p.unit_price,0))
                          FROM prescription p WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id=v.id)
                                AND COALESCE(p.dispense_type,'internal') <> 'external'),0)
            + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id),0)
@@ -111,6 +124,7 @@ router.get('/pending', canPay, async (req, res) => {
        (EXISTS (SELECT 1 FROM billing bx WHERE bx.visit_id = v.id AND bx.payment_status = 'cancelled')
         AND NOT l.has_active_bill) as needs_rebill,
        COALESCE((SELECT net_paid FROM billing WHERE visit_id = v.id AND payment_status = 'cancelled' ORDER BY cancelled_at DESC NULLS LAST, id DESC LIMIT 1),0) as prior_paid,
+       ${MISSING_QTY_SQL('v.id')} as missing_qty,
        (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
        (l.has_active_bill AND (l.billed_total - l.live_total) > 0.01) as needs_refund,
        GREATEST(l.live_total - l.billed_total, 0) as extra_due,
@@ -287,6 +301,17 @@ router.post('/', canPay, async (req, res) => {
     if (!visitRes.rows.length || String(visitRes.rows[0].patient_id) !== String(patient_id)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'visit_id does not belong to patient_id' });
+    }
+
+    const mq = await client.query(
+      `SELECT drug_name FROM prescription
+        WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1)
+          AND COALESCE(dispense_type,'internal') <> 'external' AND total_qty IS NULL`,
+      [visit_id]
+    );
+    if (mq.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: QTY_MISSING + ': ' + mq.rows.map(function (r) { return r.drug_name; }).join(', ') });
     }
 
     // Duplicate guard. The screen sends the active bills it was billing against;
@@ -498,13 +523,15 @@ async function buildCorrection(db, visitId) {
     [visit.visit_type]
   );
   const rx = await db.query(
-    `SELECT drug_code, drug_name, COALESCE(total_qty, dose::numeric*frequency*days) AS qty, COALESCE(unit_price,0) AS unit_price
+    `SELECT drug_code, drug_name, total_qty AS qty, COALESCE(unit_price,0) AS unit_price
        FROM prescription
       WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1)
         AND COALESCE(dispense_type,'internal') <> 'external'
       ORDER BY id`,
     [visitId]
   );
+  const missing = rx.rows.filter(function (r) { return r.qty == null; });
+  if (missing.length) throw { status: 409, error: QTY_MISSING + ': ' + missing.map(function (r) { return r.drug_name; }).join(', ') };
   const orders = await db.query(
     `SELECT order_code, order_name, code_type, COALESCE(quantity,1) AS qty, COALESCE(unit_price,0) AS unit_price
        FROM order_item WHERE visit_id = $1 ORDER BY id`,
