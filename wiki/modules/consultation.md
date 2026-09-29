@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 위키 2절(직원용 사용법)을 프랑스어 화면 기준으로 다시 씀 — 확인 요청 · 코드 작업은 모두 develop에 합쳐짐
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: ⑯ 진료 화면 3개 국어 + 영상 경고를 PACS 부품으로 교체 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -20,7 +20,7 @@
 ## 2. 화면 사용법 (직원용)
 
 > 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR**로 바꿉니다.
-> 프랑스어 화면에도 아직 영어로 남은 글자가 몇 개 있습니다. 대기 목록의 상태(`waiting`, `in_progress`), 문장사전 분류(All · General …), `DRUG` 표시가 그렇습니다(7절 ⑯). 여기서는 보이는 그대로 적었습니다.
+> 대기 목록의 상태, 문장사전 분류, 검색 목록의 종류 표시, 바이탈 이름까지 화면 언어를 따릅니다(2026-09-29 ⑯). 약 처방 칸의 이름(Qté · Fois · Jours)은 곧 나올 결정에 따라 바뀔 수 있습니다.
 
 ### 2.1 환자 부르기
 
@@ -37,16 +37,16 @@
 
 ### 2.2 바이탈과 진료 기록 (가운데)
 
-1. **BP**(혈압, `120/80`처럼), **BT**(체온), **PR**(맥박), **RR**(호흡수), **SpO2** 칸에 적습니다.
+1. 바이탈 칸에 적습니다. 프랑스어 화면에서는 **TA** (BP, 혈압, `120/80`처럼) · **T°** (BT, 체온) · **FC** (PR, 맥박) · **FR** (RR, 호흡수) · **SpO2**입니다.
 2. **Note de Consultation (진료 기록)** 칸에 S·O·A·P를 적습니다. 칸은 하나입니다.
-3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼(All · General · Internal …)과 **Rechercher** 칸으로 좁힐 수 있습니다.
+3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
 4. **Sauver (저장)**를 누르면 기록과 바이탈이 저장됩니다.
 
 ### 2.3 Prescriptions — 처방과 검사 (왼쪽)
 
 1. 입력 칸 위의 **Tout (전체) · Médicament (약품) · Examen / Imagerie (검사/영상)** 중에서 찾을 종류를 고릅니다.
 2. **Saisir médicament, code examen ou nom... (약/검사 코드 또는 이름 입력...)** 칸에 코드나 이름을 **두 글자 이상** 치면 목록이 뜹니다. ↑↓로 고르고 **Enter**를 누르거나 마우스로 누르면 추가됩니다. Enter만 누르면 목록 맨 위 항목이 들어갑니다.
-   - 초록 **DRUG**는 약, 노란 글자는 검사·영상입니다(`lab`, `US` 등). 오른쪽 **WL**은 영상 장비로 바로 넘어가는 오더입니다.
+   - 목록 왼쪽의 종류 표시: 초록 **MÉD** (약), 노란 **LABO** (검사) · **ACTE** (처치) · **IMG** (영상), 영상 장비가 정해진 오더는 장비 이름(`US`, `CR` 등). 오른쪽 **WL**은 영상 장비로 바로 넘어가는 오더입니다.
 3. 약은 **+ Recherche médicament (약 검색)** 버튼으로 전체 목록에서 골라도 됩니다.
 4. 추가된 줄의 칸을 고치고 **다른 곳을 누르면 바로 저장**됩니다. Sauver를 누를 필요가 없습니다.
    - 약: **Qté (1회 용량)** · **Fois (하루 횟수)** · **Jours (일수)** · **Usage (용법)** · **Unité (단위)**
@@ -191,9 +191,9 @@
 - `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다.
 - 과거 보기 `openPast`/`renderPast` (114-163): 처방·오더를 읽어 가운데에 보여 주고, 왼쪽 오더 칸은 가립니다. 읽기 전용은 **이 화면에서만**이고, 「외래 내역 선택」으로 과거 내원을 열면 편집 상태로 열립니다(7절 ⑫).
 - 영상 판독: `openViewer` → `GET /pacs/viewer-url`, `saveReading` → `PUT /pacs/reading/:id`. 판독 칸은 `canRead`(권한 `consultation` 보유, 50줄)일 때만 쓸 수 있습니다.
-- **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, 파일 위쪽 `ImagePatientCheck`가 `patient_check`가 `mismatch`면 빨강, `missing`이면 노랑 경고를 뷰어 머리 아래에 보입니다. 문구는 PACS의 `px_patientMismatch`·`px_patientMissing` 그대로. 모양은 `RadiologyReadings.jsx`의 `PatientCheck`를 그대로 옮겼습니다 — 그 파일은 PACS 세션 소유이고 부품이 export되어 있지 않아서입니다(PACS가 export하면 그것을 쓰도록 바꾸면 됨). 이름의 `^`(DICOM 구분자)는 빈칸으로.
+- **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, PACS 세션의 `PatientCheck`(`RadiologyReadings.jsx`에서 export)를 뷰어 머리 아래에 `style={{margin:'8px 14px 0'}}`으로 씁니다 — `mismatch` 빨강, `missing` 노랑. 처음에는 export되지 않아 이 파일에 복제본(`ImagePatientCheck`)을 뒀다가, PACS가 export한 뒤 지웠습니다.
 
-**화면에 그대로 나오는 번역 안 된 글자** — 대기 상태값(`waiting` 등, 428), 문장사전 분류 버튼(573), 문장 본문(`p.text`만, 584 — DB의 `text_fr`/`text_en`은 안 씀), 진료 기록 placeholder(566), `DRUG` 배지(474), `Error:` 알림. 7절 ⑯.
+**화면 글자의 번역**(⑯, 2026-09-29) — 저장값은 그대로 두고 보여 줄 때만 `cs_` 키로 바꿉니다. 파일 위쪽의 `VISIT_STATUS_KEY`(대기 목록 상태), `PHRASE_CAT_KEY`(문장사전 분류, 버튼과 문장 옆 표시), `CODE_TYPE_KEY`(검색 목록의 `lab`·`procedure`·`imaging` 표시, 약은 `cs_badgeDrug`), 컴포넌트 안의 `label(map, v)`(키가 없으면 값 그대로). 문장은 `phraseText(p)` — fr이면 `text_fr`, en이면 `text_en`, 없거나 ko면 `text`. 검색과 끼워 넣기도 이 글자로 합니다. 분류 버튼은 `PHRASE_CATS` 다음에 문장들에 실제로 쓰인 다른 분류를 붙입니다(`phraseCats`) — 전에는 새 분류가 「All」에서만 보였습니다. 그 밖에 진료 기록 안내 글(`cs_notePlaceholder`, 전에는 JSX 속성이라 `\n`이 글자로 보였음), 오류 알림 머리(`cs_errorPrefix`), 환자를 고르기 전 안내(`cs_selectPatient`, 전에는 접수 화면 문구), 바이탈 이름(`cs_vBP` 등 — 프랑스어는 TA · T° · FC · FR). **약 처방 칸 이름(`qty`·`tms`·`day`·`usage`·`unit`)과 도움말은 일부러 손대지 않았습니다** — 용량 칸이 1회량인지 하루 총량인지 결정(약국 C)을 기다리는 중.
 
 ### 3.2 서버 — `backend/src/routes/consult.routes.js` (`/api/consultations`)
 
@@ -231,7 +231,7 @@
   - 체크 선택값은 영어 문자열(`Yes`, `3 o’clock`, `Skin tag`)이 그대로 저장값이자 키입니다. **옵션 문자열을 바꾸면 옛 문서의 그림·표시가 깨집니다.** 번역(7절 ⑥)은 저장값을 그대로 두고 인쇄할 때만 바꿔야 합니다.
 - 발행일 `today`는 `new Date().toISOString()` — UTC 날짜입니다(7절 ⑰).
 - 서명 칸의 의사는 `context.doctor_name`(= **내원의 담당의**) → 없으면 로그인한 사람.
-- `documents/shared.jsx` — `A4`(여백 `pad`), `ClinicHeader`, `DocMetaRow`, `PatientBox`(`minimal`이면 주소·전화 뺌 — 수술기록지), `DocSection`, `SignatureBlock`(`tight`), `printDocument`(새 창에 A4 노드 HTML을 복사, `@page{size:A4;margin:14mm}`, 350ms 뒤 인쇄).
+- `documents/shared.jsx` — `A4`(여백 `pad`), `ClinicHeader`, `DocMetaRow`, `PatientBox`(`minimal`이면 주소·전화 뺌 — 수술기록지), `DocSection`, `SignatureBlock`(`tight`), `printDocument(node, title, lang)`(새 창에 A4 노드 HTML을 복사, `@page{size:A4;margin:14mm}`, 350ms 뒤 인쇄. 팝업이 막혔을 때의 안내는 `lang`(문서 언어)으로 — 전에는 한국어만).
 
 ### 3.6 수술기록지 — `documents/surgical-records.jsx` · `op-figures.jsx` · `op-plates.js`
 
@@ -254,7 +254,7 @@
 | 연부조직 | 병변 위치 `layer` · 병변 종류 `massType` | 여러 개 (확인 후보 — 아래) |
 | 연부조직 | 근육층 침범 `muscleLayer` | 하나만 (Yes/No) |
 | 탈장 · 유방 | 부위 `side` (Right·Left·Bilateral) | 하나만 |
-| 탈장 | 탈장 유형 `herniaType` | **여러 개** — 양측 탈장은 좌우 유형이 다를 수 있어서(예: Bilateral + Indirect-medium, Direct-small). 처음 제안에서는 「하나만」이었으나 이 이유로 바꿈 — 실장님 확인 필요 |
+| 탈장 | 탈장 유형 `herniaType` | **여러 개** — 양측 탈장은 좌우 유형이 다를 수 있어서(예: Bilateral + Indirect-medium, Direct-small). **2026-09-29 실장님 결정: 여러 개 유지** |
 | 충수 | 충수 상태 `appyType` · 삼출액 양 `fluidAmount` | 하나만 |
 | 충수 | JP 배액관 `jp` | 여러 개, None 배타 |
 | 충수 | 충수 위치 `appyPosition` · Port `port` · 혈관 처리 `vessel` · 기저부 `base` · 삼출액 성상 `fluidType` · 봉합 `closure` | 여러 개 |
@@ -264,7 +264,7 @@
 | 치루 | 외공 `extOpening` · 내공 `intOpening` · 치루 유형 `tractType` | 여러 개 |
 | 치루 | Seton 유치 `seton` | 하나만 (Yes/No) |
 
-「하나만」일 수도 있지만 결정 범위 밖이라 **여러 개로 둔 것**(실장님 확인 후보): 충수 위치, 삼출액 성상, 연부조직 병변 위치·종류.
+「하나만」일 수도 있지만 **여러 개로 둔 것** — 충수 위치, 삼출액 성상, 연부조직 병변 위치·종류. **2026-09-29 실장님: 의사 확인 대기, 그때까지 여러 개 유지(바꾸지 말 것).**
 
 **프랑스어 표시** (⑥, 2026-09-29) — `documents/op-terms.js`
 
@@ -396,7 +396,7 @@
 |---|---|
 | **약품** (`drug`) — 코드, 이름, 기본 용량·횟수·일수·용법, 단가, 단위 | 약 자동완성·약 검색, 처방 추가 시 기본값 |
 | **오더 코드** (`order_code`) — 종류(`lab`·`imaging`·`procedure`·`fee`), 가격(`price_clinic`), 모달리티, 워크리스트 사용, 부위, 기본값 | 검사·영상 자동완성(`fee`는 제외), 오더 단가, 워크리스트 생성 |
-| **문장사전** (`phrase_dictionary`) | 진료 기록 문장. 화면의 분류 버튼은 **코드에 고정**(All · General · Internal · Surgery · Peds · OBGYN)이라 다른 분류는 「All」에서만 보임 |
+| **문장사전** (`phrase_dictionary`) | 진료 기록 문장. 분류 버튼은 기본 분류(General · Internal · Surgery · Peds · OBGYN, 화면 언어로 표시) 다음에 설정에서 만든 다른 분류가 이름 그대로 붙습니다. 문장에 프랑스어(`text_fr`)·영어(`text_en`)가 적혀 있으면 그 화면에서 그것을 씁니다 |
 | **약속처방** (`order_set`) | 오른쪽 약속처방 탭 |
 | **오더연동 → PACS** (`pacs_config.auto_create_worklist`, `pacs_viewer_url`) | 워크리스트 자동 생성 여부, 영상 뷰어 주소 |
 | **병원 정보** (`clinic` — 이름 ko/en/fr, 주소, 전화, 이메일) | 모든 인쇄 문서의 머리 |
@@ -434,12 +434,11 @@
 | ⑬ | 중간 | **저장할 때마다 `subjective`·`objective`·`assessment`·`plan`·`weight`·`height`가 NULL이 된다.** 서버가 몸체에 없는 칸도 덮어쓰고, 화면은 `note_text`와 바이탈만 보낸다. 과거 화면은 `note_text || subjective`로 보여 주므로 예전 S/O/A/P 칸 데이터가 있었다면 한 번 저장에 지워진다. **확인 필요**: 실제 DB에 그 칸을 쓴 기록이 있는지 | `consult.routes.js` 59-67 · `Consultation.jsx` 142·169-177·610 |
 | ⑭ | 중간 | **검사·처치 오더의 Tms·Day 칸은 청구에 안 들어간다.** 청구는 `quantity × unit_price`뿐인데 화면은 Tms·Day를 고칠 수 있게 보여 준다. 주사 3회 × 5일로 적어도 1회분만 청구될 수 있다. **확인 필요**: 수납 화면이 항목을 만드는 방식(수납 세션) | `Consultation.jsx` 517-519 · `billing.routes.js` 34 |
 | ⑮ | 낮음 | **용법(Usage) 칸이 10자를 넘으면 저장이 500 에러**(`prescription.route VARCHAR(10)`). 약에 기본 용법이 없으면 용법에 `'TID'`(횟수 표기)를 넣는다 | `001_schema.sql` prescription · `Consultation.jsx` 246·506 |
-| ⑯ | 낮음 | **프랑스어 화면에 영어·한국어가 남는다** — 대기 상태값, 문장사전 분류 버튼, 문장 본문(`text_fr` 안 씀, 기본 문장도 영어뿐), 진료 기록 안내 글(게다가 `
-`이 줄바꿈이 안 되고 글자로 보임 — JSX 속성 문자열이라서), `DRUG`, `Error:`, 팝업 차단 안내(한국어만). 문서 기본 문장(소견·동의서 위험)도 영어뿐 — 의학 문장이라 실장님 확인 필요 | `Consultation.jsx` 428·474·566·573·584 · `shared.jsx` 179 · `003_seed_data.sql` 76- |
+| ⑯ ✅ 09-29 | 낮음 | **프랑스어 화면에 영어·한국어가 남는다** — 대기 상태값, 문장사전 분류 버튼, 문장 본문(`text_fr` 안 씀, 기본 문장도 영어뿐), 진료 기록 안내 글(게다가 `\n`이 줄바꿈이 안 되고 글자로 보임 — JSX 속성 문자열이라서), `DRUG`, `Error:`, 팝업 차단 안내(한국어만). 문서 기본 문장(소견·동의서 위험)도 영어뿐 — 의학 문장이라 실장님 확인 필요. → **고침**: 대기 상태·문장사전 분류/문장·종류 표시·안내 글·오류 머리·바이탈 이름·팝업 안내를 3개 국어로(3.1절). *남음*: 문서 기본 문장은 의학 문장이라 영어 그대로 | `Consultation.jsx` 428·474·566·573·584 · `shared.jsx` 179 · `003_seed_data.sql` 76- |
 | ⑰ | 낮음 | **문서 발행일이 UTC 기준**이라 마다가스카르(UTC+3)에서 0~3시에 발급하면 전날 날짜가 찍힌다 | `DocumentModal.jsx` 55 |
 | ⑱ | 낮음 | **진료의 담당 의사가 「처음 연 사람」으로 기록된다.** 관리자·간호사가 먼저 열면 그 사람이 과거 내원·약국·검사 목록에 의사로 나온다. 문서 서명은 반대로 **내원의 담당의** 이름 | `consult.routes.js` 46 · `DocumentModal.jsx` 56 |
 | ⑲ | 낮음 | 오더를 넣을 때마다 `pacs_config`를 `CREATE TABLE IF NOT EXISTS` — 001이 이미 만든 테이블이라 효과 없는 옛 코드이며, 옛 병원 기본값(`Yonsei Shintong Clinic`, `192.168.0.222`)이 남아 있다 | `consult.routes.js` 224-230 |
-| ⑳ | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) | `Consultation.jsx` 86·533 |
+| ⑳ | 낮음 | 약속처방을 **진료과 구분 없이 전부** 보여 준다(API는 과 필터 지원). 환자가 없을 때 안내 문구가 접수 화면용(「신규 환자를 입력하세요」) → 안내 문구는 고침(⑯과 함께, `cs_selectPatient`). 진료과 구분은 아직 | `Consultation.jsx` 86·533 |
 | ㉑ ✅ 09-29 | **높음** · 총괄 | **날짜가 하루 앞당겨 보인다 (시스템 전체).** _총괄이 고침(`7ad4387`): `backend/src/config/database.js`에서 DATE(1082)를 받은 문자열 그대로 넘김. 실행 중인 EMR에서도 재현됐었음(DB `2023-05-05` → API `2023-05-04T21:00:00.000Z`), 고친 뒤 API·접수 화면 모두 `2023-05-05`._ DB의 `DATE`(생년월일·내원일·진료일)를 `pg`가 JS `Date`(현지 자정)로 바꾸고, JSON은 UTC로 내보내 `1990-01-01` → `1989-12-31T21:00:00.000Z`가 되고, 화면은 `split('T')[0]`로 자른다 — **생년월일·과거 진료일·인쇄 문서의 생년월일이 모두 하루 이르다.** 격리 스택(TZ=`Indian/Antananarivo`, 실행 중인 EMR과 같은 `.env`)에서 재현. 실행 중인 EMR은 건드리지 않아 직접 확인하지 못했지만 같은 설정이다. 고칠 곳은 `backend/src/config/`의 `pg` 타입 파서(1082 = DATE를 문자열로) — 총괄 파일 | API 응답 `GET /patients/1` · `docker-compose.yml` 49 · `Consultation.jsx` 401 · `shared.jsx` `fmtDate` |
 | ㉒ ✅ 09-29 | 중간 · 임상병리 부탁 | **검사 오더가 결과 전부터 「completed」로 보였다.** 상태 칸이 영상용 `worklist_status`를 보여 주는데, 워크리스트 없는 오더는 처음부터 `completed`로 저장된다. → **고침**: 검사 오더는 `o.status`(결과 대기/결과 있음/취소됨), 워크리스트 오더는 그대로, 그 밖은 비움(3.1절) | `Consultation.jsx` `orderStatus` · `consult.routes.js` POST /:id/orders · 임상병리 위키 7절 9 |
 | ㉓ ✅ 09-29 | 중간 · PACS 부탁 | **영상 뷰어가 다른 환자의 영상일 수 있다는 경고를 보여 주지 않았다**(판독 목록에만 있었음), **상태 칸의 워크리스트 상태가 영어**(P-19). → **고침**: 뷰어 위 빨강/노랑 경고, 상태 칸 3개 국어 | `Consultation.jsx` `ImagePatientCheck` · `orderStatus` · `pacs.routes.js` `/viewer-url` |
@@ -455,7 +454,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **2절(직원용 사용법)을 프랑스어 화면 기준으로 다시 씀** — 버튼·칸 이름은 프랑스어 화면 그대로 + 괄호에 한국어. 「수술기록지 쓰는 순서」(2.8), 「발급 전 [괄호] 경고가 뜨면」(2.9), 의뢰서·발급 이력·막힐 때 표 추가 (코드 변경 없음) | (이 커밋) |
+| 2026-09-29 | **진료 화면 3개 국어(⑯)** — 대기 상태, 문장사전 분류·문장(`text_fr`/`text_en`), 새 분류 버튼, 검색 종류 표시, 진료 기록 안내 글, 오류 머리, 빈 화면 안내, 바이탈 이름(fr: TA · T° · FC · FR), 인쇄 팝업 안내. 영상 경고를 PACS의 `PatientCheck`로 교체. 번역 키 `cs_` 23개 | (이 커밋) |
+| 2026-09-29 | **2절(직원용 사용법)을 프랑스어 화면 기준으로 다시 씀** — 버튼·칸 이름은 프랑스어 화면 그대로 + 괄호에 한국어. 「수술기록지 쓰는 순서」(2.8), 「발급 전 [괄호] 경고가 뜨면」(2.9), 의뢰서·발급 이력·막힐 때 표 추가 (코드 변경 없음) | `ab402f3` |
 | 2026-09-29 | **영상 환자 확인 경고 · 상태 칸 3개 국어(㉓, PACS 부탁)** — 뷰어 위에 `patient_check` 경고(mismatch 빨강 · missing 노랑), 워크리스트 상태 `cs_ws*` 5개 키 | `9dfcedc` |
 | 2026-09-29 | **수술기록지 프랑스어 표시(⑥)** — 체크 칸·인쇄 선택값·그림 글자를 FR에서만 번역(`op-terms.js`, 저장값은 영어 그대로), 시계·유방 D/G, 충수 그림 틀을 프랑스어 단어에 맞게. **검사 오더 상태 칸(㉒)** — 결과 전 「completed」 대신 「결과 대기」. 번역 키 `cs_labPending`·`cs_labDone`·`cs_labCancelled` | `f48cec9` |
 | 2026-09-29 | **수술기록지 ③④⑤⑦** — 체크 칸 하나만/None 배타 규칙(공용 `DocumentModal`의 `checks` 입력), 손대지 않은 크기 칸 인쇄 안 함, 치루 단면도에 고른 유형 전부(무늬+범례), 소견의 `[괄호]` 경고·발급 확인. 모든 수술기록지 한 장 유지(충수 빡빡한 경우 1008px 그대로, 치루 유형 5개 최악 991px) | `a6ee24e` |

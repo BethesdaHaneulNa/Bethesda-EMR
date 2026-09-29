@@ -182,7 +182,7 @@ export function DocumentModal(props) {
   }
 
   function doPrint() {
-    printDocument(previewRef.current, (mode === 'view' && viewed ? viewed.doc_no : 'document'));
+    printDocument(previewRef.current, (mode === 'view' && viewed ? viewed.doc_no : 'document'), lang);
   }
 
   if (!props.open) return null;
