@@ -42,6 +42,16 @@ function rxBreakdown(rx){
            even: Math.abs(per * 2 - Math.round(per * 2)) < 1e-9 };
 }
 
+// A price of 0 (or none) is almost always a price nobody has entered yet - the clinic's
+// drug list is being imported with every price empty. Billing charges each line at the
+// unit_price stored ON THE LINE when it was added (billing.routes.js), so such a line
+// goes to the cashier at 0, and entering the price in Settings afterwards does not
+// change lines already written. The screen marks them so a doctor or nurse sees it
+// before the patient reaches the cashier; it never refuses them (a free item is
+// possible). A line the pharmacy moves to an outside prescription is not billed at all,
+// so it is not marked.
+function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
+
 // Stored values the screen shows, and the translation key for each. The values
 // themselves (visit.status, phrase_dictionary.category, order_code.code_type) are what
 // the database and the other screens use, so they never change - only what is shown.
@@ -359,6 +369,12 @@ export default function ConsultationPage() {
     </div>;
   }
 
+  function NoPriceBadge(){
+    return <span title={t.cs_noPriceHint} style={{marginLeft:6,background:'#78350f55',color:'#fcd34d',border:'1px solid #b45309',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noPrice}</span>;
+  }
+  var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
+                   + orderItems.filter(function(o){ return noPrice(o.unit_price); }).length;
+
   // No undo exists for a removed line, and the ✕ sits right beside the code a doctor
   // clicks to read, so ask first.
   function confirmRemove(name){
@@ -576,7 +592,7 @@ export default function ConsultationPage() {
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                 <div style={{padding:'5px 10px',background:scBg,display:'flex',justifyContent:'space-between',borderBottom:'1px solid '+bd,alignItems:'center'}}>
-                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}</span>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}{noPriceCount ? <span title={t.cs_noPriceHint} style={{marginLeft:8,color:'#fbbf24',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPriceCount||'').replace('{n}', noPriceCount)}</span> : null}</span>
                   <button onClick={function(){setDrugModal(true)}} style={{background:'#10b98120',color:'#34d399',border:'1px solid #10b98140',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>+ {t.drugSearch}</button>
                 </div>
                 {/* Code input */}
@@ -597,7 +613,7 @@ export default function ConsultationPage() {
                           onMouseEnter={function(){setOSelIdx(i)}}>
                           <span style={{fontSize: 11,color:isOrder?'#fbbf24':'#34d399',fontWeight:800,width:34}}>{isOrder?(d.pacs_modality||label(CODE_TYPE_KEY, d.code_type)||'ORD'):t.cs_badgeDrug}</span>
                           <span style={{fontFamily:'monospace',fontSize: 13,color:'#60a5fa',fontWeight:700,width:55}}>{d.code}</span>
-                          <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}</span>
+                          <span style={{fontSize: 13,color:tx,flex:1}}>{d.name}{noPrice(isOrder ? (d.price_clinic || d.price) : d.unit_price) ? <NoPriceBadge/> : null}</span>
                           <span style={{fontSize: 12,color:isOrder?'#fbbf24':'#f59e0b',fontWeight:600}}>{isOrder?(d.worklist_enabled?'WL':''):(d.default_route||'')}</span>
                         </div>;
                       })}
@@ -629,7 +645,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{rxLine(rx)}</td>
+                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{rx.drug_name}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}</td>
                           {done ? <>
                             <td style={cellRO} title={t.cs_doseHint}>{rx.dose||''}</td>
                             <td style={cellRO}>{rx.frequency||''}</td>
@@ -653,7 +669,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'#f87171',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 5px',color:'#60a5fa',fontFamily:'monospace',fontSize: 13,fontWeight:700}}>{o.order_code}</td>
-                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}</td>
+                          <td style={{padding:'3px 5px',color:tx,fontSize: 15}}>{o.order_name}{noPrice(o.unit_price) ? <NoPriceBadge/> : null}</td>
                           <td style={{padding:'3px 4px'}}><input value={o.quantity || 1} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
                           <td style={{padding:'3px 4px'}}><input type="number" min="1" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>

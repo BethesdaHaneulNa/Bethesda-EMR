@@ -326,6 +326,9 @@ export default {
   cs_rxBreakdown: "1회 {per} × {freq}회 × {days}일 = 총 {total}",
   cs_rxUneven: "⚠ 1회량이 나눠지지 않음 — 하루 {daily} ÷ {freq}회 · {days}일 = 총 {total}",
   cs_rxStoredTotal: "저장된 총량 {total} (예전 계산)",
+  cs_noPrice: "가격 없음",
+  cs_noPriceCount: "가격 없는 항목 {n}개",
+  cs_noPriceHint: "단가가 0입니다. 이대로면 수납에서 0으로 청구됩니다. 설정에서 가격을 넣어도 이미 넣은 줄은 바뀌지 않으니, 가격을 넣은 뒤 이 줄을 지우고 다시 넣으세요.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
