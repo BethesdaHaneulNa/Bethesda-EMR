@@ -494,6 +494,11 @@ router.get('/stock/report', canReport, async (req, res) => {
          CROSS JOIN b
          LEFT JOIN stock_movement m ON m.drug_id = d.id AND m.created_at >= b.s AND m.created_at < b.e
         WHERE EXISTS (SELECT 1 FROM stock_movement x WHERE x.drug_id = d.id AND x.created_at < b.e)
+          -- A hidden drug (is_active false, e.g. the example drugs once the real list
+          -- is imported) is listed only in a month it actually moved, rather than in
+          -- every report from then on.
+          AND (d.is_active OR EXISTS (SELECT 1 FROM stock_movement y
+                                       WHERE y.drug_id = d.id AND y.created_at >= b.s AND y.created_at < b.e))
         GROUP BY d.id, b.s, b.e
         ORDER BY d.name, d.code`,
       [month + '-01']
