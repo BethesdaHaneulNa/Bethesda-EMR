@@ -881,6 +881,11 @@ export default {
   se_sys_pacsAddress_off: "Not filled in",
   se_sys_pacsAddress_oldPort: "Old port {old} — Settings → Order feed",
   se_sys_unknown: "Cannot be checked: {error}",
+  se_setColQty: "Qty",
+  se_setNeedDose: "Enter the daily total and the days - without them a prescription from this set goes in with no total: {names}",
+  se_setNeedDoseShort: "daily total, days",
+  se_setBadNumber: "Check the numbers (daily total 0–1000, times 1–24, days 1–365 whole numbers, directions up to 10 characters, bottle count a whole number from 1): {names}",
+  se_setBadNumberShort: "check the numbers",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

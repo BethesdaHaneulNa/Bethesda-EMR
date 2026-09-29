@@ -268,9 +268,12 @@ export default function SettingsPage() {
   // ── 약속처방(Order Sets) ──
   async function osReload(){ try { setOrderSets(await api.get('/order-sets')); } catch(e){} }
   function osNew(){ setOsEdit({name:'',group_name:'',department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
+  // A stored number as the field shows it: '3.000' -> '3'; empty stays empty.
+  function osNum(v){ if(v==null || String(v).trim()==='') return ''; var n=Number(v); return isFinite(n) ? String(n) : String(v); }
   function osOpen(s){
     setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
-      items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, dose:it.dose, frequency:it.frequency, days:it.days, route:it.route, quantity:(it.quantity==null?1:Number(it.quantity))}; }) });
+      items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
+        dose:osNum(it.dose), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity))}; }) });
     setOsQ(''); setOsResults([]); setOsKind('drug');
   }
   function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; return n; }); }
@@ -283,8 +286,11 @@ export default function SettingsPage() {
   function osAdd(r){
     setOsEdit(function(e){
       var n=Object.assign({},e); var items=(e.items||[]).slice();
-      if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:r.default_dose, frequency:r.default_freq, days:r.default_days, route:r.default_route, quantity:1});
-      else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, dose:r.default_dose, frequency:r.default_freq, days:r.default_days, quantity:1});
+      // A drug line starts empty (2026-09-29, the director: the dose, times and days are
+      // decided here, in the set - not copied from the drug, which no longer has them).
+      // An exam / procedure line starts 1 x 1 x 1.
+      if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:'', frequency:'', days:'', route:'', quantity:1});
+      else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, code_type:r.code_type, dose:'', frequency:'1', days:'1', quantity:1});
       n.items=items; return n;
     });
   }
@@ -293,16 +299,45 @@ export default function SettingsPage() {
   // drug is pack-unit is read from the drug list as it is now (a hidden drug is not in it
   // and shows as an ordinary line); the order-set route is the consultation session's.
   function drugPack(id){ var d=drugs.filter(function(x){return x.id===id;})[0]; return d && d.pack_unit ? (d.pack_label||'unit') : null; }
-  function osQty(idx, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ return i===idx ? Object.assign({},it,{quantity:v}) : it; }); return n; }); }
+  function osItem(idx, key, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ if(i!==idx) return it; var c=Object.assign({},it); c[key]=v; return c; }); return n; }); }
+  // A set line's numbers, checked the way the consultation server checks a prescription
+  // line (utils/validate.js LIMITS): daily total 0-1000, times 1-24 and days 1-365 whole
+  // numbers, directions at most 10 characters. On a drug line (not pack-unit) the daily
+  // total and the days must be there: without them a line applied from the set is
+  // prescribed with a total of 0 ("no total"). Returns 'missing' | 'bad' | null.
+  function osLineProblem(it){
+    var blank=function(v){ return v==null || String(v).trim()===''; };
+    var num=function(v,min,max,whole){ var n=Number(v); return isFinite(n) && n>=min && n<=max && (!whole || Number.isInteger(n)); };
+    if(!blank(it.dose) && !num(it.dose,0,1000,false)) return 'bad';
+    if(!blank(it.frequency) && !num(it.frequency,1,24,true)) return 'bad';
+    if(!blank(it.days) && !num(it.days,1,365,true)) return 'bad';
+    if(String(it.route||'').length>10) return 'bad';
+    if(it.kind==='drug'){
+      if(drugPack(it.drug_id)) return num(it.quantity,1,10000,true) ? null : 'bad';
+      if(blank(it.dose) || !(Number(it.dose)>0) || blank(it.days)) return 'missing';
+      return null;
+    }
+    if(!blank(it.quantity) && !num(it.quantity,0.001,10000,false)) return 'bad';
+    return null;
+  }
   function osRemove(idx){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).filter(function(_,i){return i!==idx;}); return n; }); }
   async function osSave(){
     if(!osEdit) return;
     if(!osEdit.name){ alert(t.setName+' ?'); return; }
-    // A pack line holds a whole number of bottles, at least 1 (the server takes any number).
-    var badQty=(osEdit.items||[]).some(function(it){ if(it.kind!=='drug'||!drugPack(it.drug_id)) return false; var n=Number(it.quantity); return !(Number.isInteger(n)&&n>=1); });
-    if(badQty){ alert((t.se_error)+': '+String(t.se_errNotWhole||'').replace('{f}', t.se_fld_quantity)); return; }
+    var its=osEdit.items||[];
+    var missing=its.filter(function(it){ return osLineProblem(it)==='missing'; }).map(function(it){ return it.name||it.code; });
+    var bad=its.filter(function(it){ return osLineProblem(it)==='bad'; }).map(function(it){ return it.name||it.code; });
+    if(missing.length){ alert(String(t.se_setNeedDose||'').replace('{names}', missing.join(', '))); return; }
+    if(bad.length){ alert(String(t.se_setBadNumber||'').replace('{names}', bad.join(', '))); return; }
     try {
-      var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:osEdit.items||[] };
+      // Empty times / days / quantity on an exam line mean 1; on a drug line the server
+      // stores empty times as 1 (not multiplied - the daily total is what counts).
+      var items=its.map(function(it){ var trim=function(v){ return v==null ? '' : String(v).trim(); };
+        var c={kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name,
+          dose:trim(it.dose)||null, frequency:trim(it.frequency)||null, days:trim(it.days)||null, route:trim(it.route)||null, quantity:it.quantity};
+        if(it.kind!=='drug'){ c.frequency=c.frequency||1; c.days=c.days||1; c.quantity=trim(it.quantity)||1; }
+        return c; });
+      var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:items };
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
       else await api.post('/order-sets', body);
       setOsEdit(null); await osReload(); showToast(t.save+' ✓');
@@ -559,15 +594,42 @@ export default function SettingsPage() {
                     <div style={{marginTop:10,fontSize: 13,fontWeight:700,color:'#34d399'}}>{t.setItems} ({(osEdit.items||[]).length})</div>
                     <div style={{marginTop:6,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
                       {(osEdit.items||[]).length>0?(osEdit.items||[]).map(function(it,idx){
-                        return <div key={idx} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',borderBottom:'1px solid #1e2433'}}>
-                          <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'#60a5fa':'#a78bfa',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
-                          <span style={{fontFamily:'monospace',fontSize: 12,color:t2,width:56}}>{it.code}</span>
-                          <span style={{fontSize: 13,color:tx,flex:1}}>{it.name}</span>
-                          {it.kind==='drug'&&drugPack(it.drug_id)?<span style={{display:'flex',alignItems:'center',gap:4}} title={t.se_setPackQtyHint}>
-                            <input type="number" min="1" step="1" value={it.quantity==null?1:it.quantity} onChange={function(e){osQty(idx,e.target.value)}} style={Object.assign({},IS,{width:56,padding:'3px 5px'})}/>
-                            <span style={{fontSize: 12,color:'#fbbf24'}}>{t['ph_pack_'+drugPack(it.drug_id)]}</span></span>
-                           :it.kind==='drug'?<span style={{fontSize: 11,color:t3}}>{it.dose}×{it.frequency}×{it.days}</span>:null}
-                          <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'#f87171',cursor:'pointer',fontSize: 14}}>✕</button>
+                        // Each line is edited here, in the set (2026-09-29, the director): a drug
+                        // line gets its daily total, times, days and directions - the same fields,
+                        // order and names as a prescription line in the consultation screen - and
+                        // a pack-unit drug its bottle count as well; an exam / procedure line its
+                        // quantity, times and days.
+                        var pk=it.kind==='drug'?drugPack(it.drug_id):null;
+                        var prob=osLineProblem(it);
+                        var fld=function(label, key, w, hint, extra){ return <label key={key} title={hint||''} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:t3}}>
+                          <span style={{whiteSpace:'nowrap'}}>{label}</span>
+                          <input value={it[key]==null?'':it[key]} maxLength={key==='route'?10:undefined} inputMode={key==='route'?undefined:'decimal'} onChange={function(e){osItem(idx,key,e.target.value)}}
+                            style={Object.assign({},IS,{width:w,padding:'3px 5px',textAlign:'center'},extra||{})}/></label>; };
+                        var need=prob==='missing', badB={borderColor:'#f87171'};
+                        return <div key={idx} style={{padding:'6px 8px',borderBottom:'1px solid #1e2433'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:6}}>
+                            <span style={{fontSize: 11,fontWeight:700,color:it.kind==='drug'?'#60a5fa':'#a78bfa',width:38}}>{it.kind==='drug'?'Rx':'Exam'}</span>
+                            <span style={{fontFamily:'monospace',fontSize: 12,color:t2,width:56}}>{it.code}</span>
+                            <span style={{fontSize: 13,color:tx,flex:1}}>{it.name}</span>
+                            <button onClick={function(){osRemove(idx)}} style={{background:'transparent',border:'none',color:'#f87171',cursor:'pointer',fontSize: 14}}>✕</button>
+                          </div>
+                          <div style={{display:'flex',flexWrap:'wrap',alignItems:'flex-end',gap:8,marginTop:4,paddingLeft:44}}>
+                            {it.kind==='drug' ? [
+                              fld(t.cs_colDaily,'dose',58,t.cs_colDailyHint, need && !(Number(it.dose)>0) ? badB : null),
+                              fld(t.cs_colTimes,'frequency',46),
+                              fld(t.cs_colDays,'days',46,null, need && !String(it.days==null?'':it.days).trim() ? badB : null),
+                              fld(t.cs_colSig,'route',64)
+                            ] : [
+                              fld(t.se_setColQty,'quantity',58),
+                              fld(t.cs_colTimes,'frequency',46),
+                              fld(t.cs_colDays,'days',46)
+                            ]}
+                            {pk ? <label title={t.se_setPackQtyHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:'#fbbf24'}}>
+                              <span style={{whiteSpace:'nowrap'}}>{t['ph_pack_'+pk]}</span>
+                              <input type="number" min="1" step="1" value={it.quantity==null?1:it.quantity} onChange={function(e){osItem(idx,'quantity',e.target.value)}} style={Object.assign({},IS,{width:56,padding:'3px 5px',textAlign:'center'})}/></label> : null}
+                            {need ? <span style={{fontSize:11,color:'#fca5a5',paddingBottom:4}}>⚠ {t.se_setNeedDoseShort}</span> : null}
+                            {prob==='bad' ? <span style={{fontSize:11,color:'#fca5a5',paddingBottom:4}}>⚠ {t.se_setBadNumberShort}</span> : null}
+                          </div>
                         </div>;
                       }):<div style={{padding:14,textAlign:'center',color:t3,fontSize: 12}}>{t.setItemsEmpty}</div>}
                     </div>
