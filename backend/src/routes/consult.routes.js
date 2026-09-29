@@ -4,6 +4,7 @@ const { todayLocal } = require('../utils/localDate');
 const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
+const { cancelWorklistForOrder } = require('./pacs.cancel');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -40,7 +41,6 @@ const ORDER_HAS_RESULT = 'Order already has a result';
 const VISIT_CANCELLED = 'Visit was cancelled';
 const ORDER_CANCELLED = 'Order is cancelled';
 const ORDER_NO_RESULT = 'Order has no result';
-const IMAGING_NO_CANCEL = 'Imaging order cannot be cancelled yet';
 
 // ── Change log (wiki/03-change-log.md, decision 2026-09-29) ──
 // Written here: an order cancelled or deleted, a prescription deleted, and any edit to
@@ -484,10 +484,10 @@ router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client)
 //   blur into each other;
 // - already cancelled: returned as it is (a second click, or two screens);
 // - no undo (decision: order it again if cancelled by mistake);
-// - imaging is refused (409) until the PACS side is switched on: cancelling it here
-//   would leave its worklist entry on the modality. When the coordinator says so, this
-//   refusal becomes a call to cancelWorklistForOrder (backend/src/routes/pacs.cancel.js).
-//   The screen offers the cancel on lab orders only.
+// - imaging the same way (decision 38-3, switched on 2026-09-29 after the PACS merge):
+//   its worklist entry still waiting on the modality is cancelled too, in this
+//   transaction, by PACS's cancelWorklistForOrder (pacs.cancel.js) - it leaves the
+//   bridge feed within one cycle. A study already taken stays 'completed' as a record.
 // - logged (ORDER_CANCEL), in the same transaction.
 router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
   const client = await pool.connect();
@@ -497,12 +497,14 @@ router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
     if (oi.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
     const prev = oi.rows[0];
     if (prev.status === 'cancelled') { await client.query('ROLLBACK'); return res.json(prev); }
-    if (prev.code_type === 'imaging') { await client.query('ROLLBACK'); return res.status(409).json({ error: IMAGING_NO_CANCEL }); }
     if (!(await orderProduced(client, req.params.orderId, prev.result_text))) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: ORDER_NO_RESULT });
     }
     const reason = String((req.body && req.body.reason) || '').trim().slice(0, 500) || null;
+    // Before the order's own UPDATE, so the row returned below carries the worklist
+    // status this sets. Harmless for an order with no worklist entry (a lab order).
+    await cancelWorklistForOrder(client, prev.id);
     const r = await client.query(
       `UPDATE order_item
           SET status = 'cancelled', cancelled_at = NOW(), cancelled_by = $1, cancel_reason = $2, updated_at = NOW()
@@ -511,7 +513,8 @@ router.post('/order/:orderId/cancel', canConsult, async (req, res) => {
     await writeAudit(client, req, {
       action: ACTIONS.ORDER_CANCEL, patient_id: prev.patient_id, visit_id: prev.visit_id,
       entity: 'order_item', entity_id: prev.id, summary: orderLabel(prev),
-      before: { status: prev.status, cancel_reason: null }, after: { status: 'cancelled', cancel_reason: reason },
+      before: { status: prev.status, cancel_reason: null, worklist_status: prev.worklist_status },
+      after: { status: 'cancelled', cancel_reason: reason, worklist_status: r.rows[0].worklist_status },
     });
     await client.query('COMMIT');
     res.json(r.rows[0]);

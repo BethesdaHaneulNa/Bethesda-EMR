@@ -2,6 +2,57 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-29 — 영상 오더 취소 켜기 (결정 38-③) · 영상 창 안내 · 서명 남은 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `2a76b5f` 다음
+- **한 일**:
+  - **서버**: 취소 API에서 영상 오더를 막던 409를 없앴습니다.
+    - 같은 트랜잭션 안에서 오더 UPDATE **앞에** PACS의 `cancelWorklistForOrder(client, id)`를 부릅니다. 그래서 돌려주는 줄에 `worklist_status='cancelled'`가 반영됩니다.
+    - 기다리던(`scheduled`·`in_progress`) 워크리스트 줄은 취소되어 브리지 피드에서 빠집니다. 이미 촬영된 `completed` 줄은 기록으로 남습니다.
+    - 검사 오더에는 워크리스트 줄이 없어 아무 일도 하지 않습니다.
+    - 로그(`ORDER_CANCEL`)에 워크리스트 상태의 전 → 후를 더했습니다.
+    - `IMAGING_NO_CANCEL`은 삭제했습니다.
+  - **화면**:
+    - 판독이나 촬영이 있는 **영상** 줄도 빨간 ✕로 취소를 묻습니다. 영상용 문구는 `cs_cancelPromptImg`로, 영상·판독은 남고 촬영 전이면 워크리스트에서 빠진다는 내용과 환불 안내를 담았습니다.
+    - 삭제가 409로 거절되는 경쟁 상황도 영상까지 취소 물음으로 넘어갑니다.
+    - 상태 칸은 종류와 관계없이 취소를 먼저 봅니다. 30초 새로 고침은 취소된 오더를 기다리지 않습니다.
+    - 처치는 전처럼 🔒입니다.
+  - **영상 창** (PACS 부탁 ②③, P-18):
+    - `cancelled`면 머리에 ⊘ `px_cancelledViewer`와 이유가 나오고, 판독은 읽기만 합니다(저장 단추 없음).
+    - 판독 저장이 409 `Imaging order was cancelled`면 `px_readingOnCancelled`를 알리고 창과 오더 표를 다시 불러옵니다.
+    - `no_study`이고 `has_viewer`가 참이면 `px_noStudy`를 보입니다. 「뷰어 주소 없음」은 `has_viewer`가 거짓일 때만 나옵니다.
+    - ④ 판독 날짜 규칙은 `24abb17`에서 이미 했습니다.
+  - `cs_imagingNoCancel`(ko·en·fr)을 삭제했습니다.
+- **문서 서명 남은 확인 2개 — 통과** (`b829e00`, 코드 변경 없음):
+  - ① 담당의 없는 내원을 관리자로 열면 「Médecin (Signature)」, 이름이 빈칸입니다.
+  - ② 의사 계정으로 발급한 D26-00013을 관리자로 이력에서 다시 열면 「S2 doctor」가 그대로입니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — 진료 구역에 `cs_cancelPromptImg`를 더하고 `cs_imagingNoCancel`을 뺐습니다. `px_` 키는 PACS가 넣은 것을 쓰기만 했습니다. `pacs.cancel.js`는 부르기만 했습니다.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `cs_cancelPromptImg` 추가, `cs_imagingNoCancel` 삭제
+- **확인한 방법**: `node --check`와 `npm run build` 통과. 재시작 뒤 새 격리 스택 9182(develop `2a76b5f` 기준)에서 확인했습니다.
+  - **영상 취소 시험 19개 전부 통과**:
+    - 결과가 없으면 409입니다.
+    - 판독을 쓰고 취소하면 200이고, 오더·워크리스트 상태가 모두 cancelled이며 판독은 남습니다. 로그에는 워크리스트 sent → cancelled가 남습니다.
+    - 취소된 오더의 판독 저장은 409이고, viewer-url이 cancelled와 이유를 돌려줍니다. 다시 취소해도 그대로입니다.
+    - 촬영 끝난 오더는 DELETE 409, 취소 200이며 워크리스트는 completed로 남습니다.
+    - 촬영 중이면 워크리스트가 cancelled가 됩니다.
+    - 워크리스트 없는 영상은 viewer-url이 no_study에 url 빈 값이고, 취소는 200입니다.
+    - 청구 항목에서 빠집니다.
+  - 기존 시험도 통과했습니다: 취소 E2E 25, 로그 34(② 기대값을 「영상 취소 200」으로 바꿈), lock, s2, total, t400, tlow.
+  - **화면 FR** (환자 26-00016; 뷰어 주소는 격리 DB에만 가짜로 넣음):
+    - 판독 있는 S1의 ✕ 도움말은 「A un résultat - cliquer pour le marquer comme annulé」입니다. 누르면 영상 문구로 묻고, Annuler면 그대로입니다.
+    - 취소된 S1은 ⊘ 「Annulé — Mauvais côté」로 보입니다. 영상 창에는 「⊘ Images d'une demande annulée … — Motif : Mauvais côté」가 나오고, 판독은 글자로만 보이며 저장 단추가 없습니다.
+    - 워크리스트 없는 XR-MAN은 영상 자리에 px_noStudy 문구가 나오고 iframe이 없습니다.
+    - 경쟁 상황: S1 창을 연 채로 밖에서 취소하고 판독을 저장하니 「Cet examen d'imagerie a été annulé en consultation …」 알림이 나왔습니다. 창은 취소 모습(이유 Doublon)으로 다시 열렸고 저장 단추가 없어졌습니다.
+  - **화면 KO**: 「⊘ 취소됨 — Doublon」, px_noStudy와 px_cancelledViewer가 한국어로 나옵니다.
+- **확인 못 한 것**: 실제 장비·브리지에서 워크리스트가 빠지는 것은 보지 못했습니다(격리에는 브리지가 없음). DB의 `worklist_log.status='cancelled'`와 피드 조건(`status='scheduled'`)으로 확인했습니다. 실행 중 EMR은 건드리지 않았습니다.
+- **위키**: `modules/consultation.md` 머리 · 2.3(✕·🔒 줄) · 영상 뷰어 사용법 · 2.12 · 3.1(취소·영상 판독) · 3.2(취소 API) · 8절
+- **총괄 확인 요청**: 영상 취소 켜기. 이 커밋을 합치면 실행 중 EMR에서 영상 취소가 켜집니다.
+- **다른 세션에 부탁**: PACS — 브리지 한 주기 뒤 장비에서 빠지는지, 실제 환경에서 한 번 봐 주시면 좋겠습니다(총괄 판단).
+- **남은 일 · 알려진 문제**: 다음은 3) 포장 단위 약(H2-B), 수납 부탁(`total_qty IS NULL` 다시 계산)입니다.
+
 ## 2026-09-29 — 문서 서명 = 문서를 작성한 의사 (결정)
 
 - **상태**: 확인 요청 (PC 재시작 전에 저장 — 아래 「확인 못 한 것」 두 가지는 재시작 뒤에 확인)
