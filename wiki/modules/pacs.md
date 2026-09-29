@@ -336,12 +336,12 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 3. EMR `setup.ps1 -Offline` 뒤 **PACS `setup.ps1 -Offline`**:
    - `.env`가 없으면 새로 만듦: **`ORTHANC_PASSWORD`**(무작위 32자), **`BRIDGE_TOKEN`**(무작위 48자). **토큰은 이 순간 PACS PC에서 처음 생기고, 화면에 한 번 찍힙니다.**
    - `docker compose up -d --no-build` → Orthanc(9090·4242)와 브리지가 뜸. 브리지는 바로 EMR(`host.docker.internal:9080`)에 묻기 시작하지만, EMR에는 아직 토큰이 없어서 **401 「Bridge token is not set in the EMR」** — 짝을 맞출 때까지 정상.
-4. **짝 맞추기 (지금은 사람이 함)**: 화면에 찍힌 토큰을 EMR **Paramètres → Flux d'ordres → Bridge Token**에 붙여넣고 저장. → EMR `pacs_config.bridge_token`과 PACS `.env`가 같아지는 **유일한 길**. 토큰이 화면·클립보드에 남는 방식이라, 재부팅 절차서의 `rotate-token.ps1`처럼 **두 쪽에 직접 넣는 방식**을 권함(고칠 것 G-1). 설치 뒤 한 번 `rotate-token.ps1`을 돌려도 같은 결과.
-5. EMR 설정에서 **PACS 웹/뷰어 주소 = `http://<서버 LAN IP>:9090`**(`localhost` 아님 — 진료실 다른 PC의 브라우저가 여는 주소), **Host / IP = `host.docker.internal`** 또는 서버 LAN IP.
+4. **짝 맞추기**: EMR이 같은 PC에서 돌고 있으면 `setup`이 **`pair-with-emr.ps1`(리눅스 `.sh`)로 자동으로** 맞춤 — 새 토큰을 만들어 EMR `pacs_config`에는 stdin으로, PACS `.env`에는 파일로 넣고, 두 값을 해시로 비교한 뒤 브리지를 다시 만듦. **토큰은 화면에 안 나옴**(2026-09-29, PACS `d3d001c`). EMR이 다른 PC에 있거나 아직 안 떴으면 예전처럼 토큰을 찍고 「EMR을 띄운 뒤 `pair-with-emr.ps1`을 돌리거나 설정 화면에 붙여넣기」를 안내.
+5. EMR 설정에서 **PACS 웹/뷰어 주소 = `http://<서버 LAN IP>:9090`**(`localhost` 아님 — 진료실 다른 PC의 브라우저가 여는 주소. `setup`이 이 PC의 LAN 주소로 만든 값을 찍어 줌), **Host / IP = `host.docker.internal`** 또는 서버 LAN IP.
 
 **③ 현지 PC에서 따로 확인할 것**
 
-- **Windows 동적 포트 범위** (P-1과 같은 원인): `netsh int ipv4 show dynamicport tcp` → 시작 49152·개수 16384인지, `netsh interface ipv4 show excludedportrange protocol=tcp`에 **9080·9090·4242**가 걸리지 않는지. Docker·WSL을 다 설치하고 **한 번 재부팅한 뒤** 봅니다(예약 구간은 부팅 때 바뀜). 이 PC가 왜 1024부터였는지는 모르므로 새 PC도 반드시 확인.
+- **Windows 동적 포트 범위** (P-1과 같은 원인) — `setup.ps1`이 시작 전에 **`check-windows-ports.ps1`**(읽기만)로 9090·4242가 동적 범위나 예약 구간에 걸리면 경고함. 그래도 손으로 한 번 더: `netsh int ipv4 show dynamicport tcp` → 시작 49152·개수 16384인지, `netsh interface ipv4 show excludedportrange protocol=tcp`에 **9080·9090·4242**가 걸리지 않는지. Docker·WSL을 다 설치하고 **한 번 재부팅한 뒤** 봅니다(예약 구간은 부팅 때 바뀜). 이 PC가 왜 1024부터였는지는 모르므로 새 PC도 반드시 확인.
 - **방화벽**: 스크립트는 방화벽을 건드리지 않습니다. Docker Desktop이 처음 뜰 때 Windows가 허용을 물을 수 있음(확인 필요). 네트워크 종류는 **개인(Private)**. 확인은 **다른 PC에서**: `Test-NetConnection <서버IP> -Port 9080` / `9090` / `4242` 가 모두 `True`.
 - **서버 IP 고정**: 장비와 진료실 PC가 IP로 찾아오므로 공유기에서 **고정 IP(DHCP 예약)**.
 - **영상 백업이 없음**: EMR 자동 백업(`pg_dump`)은 **DB만** — Orthanc 영상(`C:\Bethesda-PACS\storage`)은 어디에도 백업되지 않습니다(7절 P-24).
@@ -350,7 +350,7 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 
 | 복원된 것 | 새 PC에서 생기는 일 | 할 일 |
 |---|---|---|
-| `pacs_config.bridge_token` = **이 PC의 토큰** | 새 PACS `.env`의 토큰과 다름 → 브리지 401, 상태 화면 「보고 없음」 | 복원 **뒤에** 짝 맞추기(②-4 또는 `rotate-token.ps1`) 후 `docker compose up -d --force-recreate worklist-bridge` |
+| `pacs_config.bridge_token` = **이 PC의 토큰** | 새 PACS `.env`의 토큰과 다름 → 브리지 401, 상태 화면 「보고 없음」 | 복원 **뒤에** PACS 폴더에서 **`.\pair-with-emr.ps1`**(브리지 재생성까지 함) |
 | `pacs_viewer_url`, `worklist_scp_host` = 이 PC 기준 | 영상 창이 엉뚱한 주소를 엶, 연결 시험 실패 | ②-5대로 새 서버 LAN IP로 |
 | `service_heartbeat` = 이 PC 브리지의 마지막 보고 | 짝을 맞추기 전까지 「보고 없음」 | 짝 맞추면 저절로 갱신 |
 | `worklist_log`의 `scheduled` 줄(시험 오더) | 피드는 **오늘 날짜만** 주므로 지난 날 줄은 장비에 안 감. **복원한 날 만든 시험 오더**가 있으면 현지 장비 목록에 뜸 | 복원 뒤 `SELECT count(*) FROM worklist_log WHERE status='scheduled' AND scheduled_date=CURRENT_DATE` 가 0인지 |
@@ -430,3 +430,4 @@ EMR이 쓰는 Orthanc 쪽 주소는 **Stone 뷰어 `/stone-webviewer/index.html?
 | 2026-09-29 | 재부팅 뒤: P-1 해결 기록, 2.4 임시 안내 삭제, P-7에 진짜 Orthanc 응답 확인(R-5), P-9에 R-1(로그인 창), P-25(옛 8090 설정) 새로 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 직원용 2.1 ④(결과 있는 영상 검사 「취소됨」 표시 순서), 2.3 로그인 창 확인됨, 2.4 취소된 검사 모습, 2.6 ⑤(다른 환자 영상 → 취소 표시 → 다시 검사) — 결정 38-③ | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
+| 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
