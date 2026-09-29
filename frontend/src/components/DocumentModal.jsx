@@ -83,13 +83,23 @@ export function DocumentModal(props) {
   // (UTC+3) dated anything issued between midnight and 03:00 the day before.
   var now = new Date();
   var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-  var doctor = { name: ctx.doctor_name || (user && user.name) || '', dept_code: ctx.dept_code || '' };
+  // Who signs (decision 2026-09-29): the doctor who writes and issues the document, that
+  // is the account logged in, when it is a doctor's. It used to be the visit's assigned
+  // doctor, so a letter written by another doctor carried a colleague's name.
+  // An account that is not a doctor's (admin, cashier, pharmacy) never puts its own name
+  // on the doctor's line: the visit's doctor is printed as before, or, with none, the
+  // line stays blank to be signed by hand. A document already issued keeps the name it
+  // was issued with (its saved payload is printed as it is).
+  // The same name fills the fields that autofill 'doctor' (the surgeon on an op note).
+  var signer = user && user.role === 'doctor' ? (user.name || '') : (ctx.doctor_name || '');
+  var doctor = { name: signer, dept_code: ctx.dept_code || '' };
+  var fillCtx = Object.assign({}, ctx, { doctor_name: signer });
 
   // lg: the document language, for text an autofill writes (the medication lines).
   function buildValues(tpl, lg) {
     var v = {};
     (tpl.fields || []).forEach(function (f) {
-      v[f.key] = f.autofill ? autofillValue(f.autofill, ctx, lg || lang) : (f.default != null ? f.default : '');
+      v[f.key] = f.autofill ? autofillValue(f.autofill, fillCtx, lg || lang) : (f.default != null ? f.default : '');
     });
     return v;
   }
