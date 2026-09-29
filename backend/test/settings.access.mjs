@@ -164,7 +164,8 @@ const ROUTES = [
 // (backend/src/middleware/permissions.js).
 const ACCOUNTS = [
   ['admin',     null,        null],   // the setup admin: all seven
-  ['se_doc',    'doctor',    [CONS]],
+  ['se_doc',    'doctor',    [CONS, PHARM]],   // the doctor default since 2026-09-29
+  ['se_cons',   'doctor',    [CONS]],          // consultation alone
   ['se_front',  'frontdesk', [REG, PAY]],
   ['se_nurse',  'nurse',     [REG, PHARM, LAB]],
   ['se_pharm',  'pharmacy',  [PHARM]],
