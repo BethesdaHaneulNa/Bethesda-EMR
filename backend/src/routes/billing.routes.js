@@ -12,6 +12,8 @@ router.use(authMiddleware);
 // payment permission, except the balance, which reception shows at registration.
 const canPay = permMiddleware('payment');
 const canSeeBalance = permMiddleware('payment', 'registration');
+// The day's cash (M9): the payment screen and statistics.
+const canSeeCash = permMiddleware('payment', 'stats');
 
 // Voiding a bill undoes the balances it absorbed: the older bills go back to
 // carrying their own outstanding amount. amount_paid was never touched when the
@@ -36,6 +38,34 @@ async function lockPatient(client, patientId) {
 async function lockPatientOfBill(client, billingId) {
   const r = await client.query('SELECT patient_id FROM billing WHERE id = $1', [billingId]);
   if (r.rows.length) await lockPatient(client, r.rows[0].patient_id);
+}
+
+// Cash of this visit still at the till from receipts staff cancelled without
+// handing the money back (M6 "Non"): what nothing replaced, less what was handed
+// back, less what a later receipt already took over (held_used, 304). A re-bill
+// starts from it - the screen's prefilled "amount received" and the cash record.
+function HELD_SQL(visitRef) {
+  return "(COALESCE((SELECT SUM(hx.net_paid - COALESCE(hx.refunded_amount,0)) FROM billing hx" +
+    " WHERE hx.visit_id = " + visitRef + " AND hx.payment_status = 'cancelled' AND hx.replaced_by_id IS NULL),0)" +
+    " - COALESCE((SELECT SUM(hy.held_used) FROM billing hy WHERE hy.visit_id = " + visitRef + "),0))";
+}
+async function heldCash(client, visitId) {
+  const r = await client.query('SELECT GREATEST(' + HELD_SQL('$1::int') + ', 0) AS held', [visitId]);
+  return round2(r.rows[0].held);
+}
+
+// One row per movement of money (M9, decided (가) 2026-09-29; 304_payment_cash_movement):
+// + into the till, - out of it, dated by the server's today. Written in the
+// transaction that moved the money, before COMMIT; nothing moved, nothing written.
+// Statistics count cash from these rows, so a past day never changes.
+async function writeCash(client, req, kind, amount, bill, memo) {
+  const a = round2(amount);
+  if (Math.abs(a) < 0.005) return;
+  await client.query(
+    `INSERT INTO cash_movement (kind, amount, billing_id, visit_id, patient_id, staff_id, memo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [kind, a, bill.id, bill.visit_id, bill.patient_id, (req.user && req.user.id) || null, memo || null]
+  );
 }
 
 async function activeBillIds(client, visitId) {
@@ -172,14 +202,10 @@ router.get('/pending', canPay, async (req, res) => {
        (EXISTS (SELECT 1 FROM billing bx WHERE bx.visit_id = v.id AND bx.payment_status = 'cancelled')
         AND NOT l.has_active_bill) as needs_rebill,
        -- M6 (decided (다) 2026-09-29): the cash the clinic still holds from this visit's
-       -- cancelled receipts - every one no later receipt replaced (a correction or an
-       -- earlier re-bill already carried its money on), less what was handed back
-       -- when it was cancelled. Receipts cancelled before 303 were never asked, so
-       -- their money counts as kept, as the screen assumed until then.
-       COALESCE((SELECT SUM(x.net_paid - COALESCE(x.refunded_amount,0)) FROM billing x
-                  WHERE x.visit_id = v.id AND x.payment_status = 'cancelled' AND x.replaced_by_id IS NULL
-                    AND NOT EXISTS (SELECT 1 FROM billing y WHERE y.visit_id = x.visit_id AND y.id <> x.id
-                                                              AND y.created_at >= x.cancelled_at)),0) as prior_paid,
+       -- cancelled receipts - nothing replaced them, not handed back, no later receipt
+       -- took it over (held_used, 304). Receipts cancelled before 303 were never
+       -- asked, so their money counts as kept, as the screen assumed until then.
+       GREATEST(${HELD_SQL('v.id')}, 0) as prior_paid,
        ${MISSING_QTY_SQL('v.id')} as missing_qty,
        (v.visit_date < CURRENT_DATE AND NOT EXISTS (SELECT 1 FROM billing bp WHERE bp.visit_id = v.id)) as past_unbilled,
        (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
@@ -231,6 +257,27 @@ router.get('/pending', canPay, async (req, res) => {
 });
 
 
+
+// GET /api/billing/cash-day?date=YYYY-MM-DD - the day's cash (M9): every movement of
+// money that day and the totals. Default: the server's today.
+router.get('/cash-day', canSeeCash, async (req, res) => {
+  try {
+    let date = req.query.date;
+    if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    if (!date) date = (await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
+    const lines = (await pool.query(
+      `SELECT m.id, m.created_at, m.kind, m.amount, m.memo, b.receipt_no, b.billing_date,
+              p.chart_no, p.last_name, p.first_name, s.name AS staff_name
+         FROM cash_movement m
+         JOIN billing b ON b.id = m.billing_id
+         JOIN patient p ON p.id = m.patient_id
+         LEFT JOIN staff s ON s.id = m.staff_id
+        WHERE m.move_date = $1::date ORDER BY m.id`, [date])).rows;
+    let cashIn = 0, cashOut = 0;
+    lines.forEach(function (l) { const a = Number(l.amount) || 0; if (a > 0) cashIn += a; else cashOut -= a; });
+    res.json({ date: date, cash_in: round2(cashIn), cash_out: round2(cashOut), net: round2(cashIn - cashOut), lines: lines });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // GET /api/billing/completed - today's paid/partial/unpaid bills
 router.get('/completed', canPay, async (req, res) => {
@@ -430,6 +477,10 @@ router.post('/', canPay, async (req, res) => {
     }
     await lockPatient(client, patient_id);
     const nowActive = await activeBillIds(client, visit_id);
+    // A re-bill (no receipt in force) takes over the cash still at the till from its
+    // cancelled receipts - the screen prefilled it as received (M6). Worked out here
+    // again, not taken from the screen. Any other receipt takes over nothing.
+    const held = nowActive.length ? 0 : await heldCash(client, visit_id);
     const expected = expected_active_bill_ids.map(function (x) { return parseInt(x, 10); }).sort(function (a, b) { return a - b; });
     if (nowActive.join(',') !== expected.join(',')) {
       await client.query('ROLLBACK');
@@ -462,6 +513,11 @@ router.post('/', canPay, async (req, res) => {
        outstanding, payment_status, note, req.user.id]
     );
     const billing = result.rows[0];
+    if (held > 0) await client.query('UPDATE billing SET held_used = $2 WHERE id = $1', [billing.id, held]);
+    // Cash that came in now: what was handed over, less change, less what was already
+    // at the till. Negative when the re-bill is smaller than the cash kept and the
+    // difference went back as change.
+    await writeCash(client, req, 'payment', Number(billing.net_paid) - held, billing, held > 0 ? 'held ' + held + ' taken over' : null);
     // Insert billing items
     if (items && items.length > 0) {
       for (const item of items) {
@@ -587,6 +643,7 @@ router.put('/:billingId/void', canPay, async (req, res) => {
     }
     await restoreCarried(client, req.params.billingId);
     const gone = result.rows[0];
+    if (refundedAmount > 0) await writeCash(client, req, 'cancel', -refundedAmount, gone, 'handed back on cancelling');
     await writeAudit(client, req, {
       action: ACTIONS.RECEIPT_CANCEL, patient_id: gone.patient_id, visit_id: gone.visit_id,
       entity: 'billing', entity_id: gone.id,
@@ -836,6 +893,9 @@ router.post('/visit/:visitId/correct', canPay, async (req, res) => {
     // Cancelled by this correction, not by staff: not a refund (303). Their money is
     // on the new receipt, whose change_amount is what was handed back.
     await client.query('UPDATE billing SET replaced_by_id = $1 WHERE id = ANY($2::int[])', [bill.id, c.active_bill_ids]);
+    // The cash that went back is the only movement: the kept cash was counted when
+    // it came in (M9).
+    if (c.refund > 0) await writeCash(client, req, 'correction', -c.refund, bill, 'refund on correction of ' + c.replaces.join(', '));
     // Balances carried in from other visits move to the new bill, which charges
     // them. Links between the replaced bills themselves are dropped: those bills
     // are cancelled, and a link left on them would let a later void of the new
@@ -964,6 +1024,7 @@ router.post('/settle', canPay, async (req, res) => {
       'UPDATE billing SET outstanding = 0, carried_into_id = $1, updated_at = NOW() WHERE id = ANY($2::int[])',
       [settlement.id, ids]
     );
+    await writeCash(client, req, 'settlement', Number(settlement.net_paid), settlement, null);
     await client.query('COMMIT');
     res.status(201).json(settlement);
   } catch (err) {
