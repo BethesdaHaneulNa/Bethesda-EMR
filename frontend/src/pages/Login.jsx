@@ -18,6 +18,10 @@ var ROLE_ROUTES = {
 // everywhere else, but here a 401 is the answer to a wrong password or an inactive
 // account, and the reload wiped the message before anyone could read it: a wrong
 // password just emptied the form, with nothing said.
+// The same build-time version the top bar shows (vite.config.js define), so the login
+// page no longer says "v1.0" while the menu bar says v1.4.0.
+var APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+
 async function authPost(path, body) {
   var res = await fetch('/api' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   var data = null;
@@ -153,7 +157,7 @@ export default function LoginPage() {
         </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#334155' }}>{t.appTitle} v1.0</div>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#334155' }}>{t.appTitle}{APP_VERSION ? ' v' + APP_VERSION : ''}</div>
       </div>
     </div>
   );

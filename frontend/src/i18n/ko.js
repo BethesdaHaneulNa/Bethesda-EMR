@@ -489,6 +489,7 @@ export default {
   se_fMinStock: "최소 재고",
   se_showPw: "보기",
   se_hidePw: "숨기기",
+  se_role_nurse: "간호사",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

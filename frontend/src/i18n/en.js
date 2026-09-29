@@ -498,6 +498,7 @@ export default {
   se_fMinStock: "Minimum stock",
   se_showPw: "Show",
   se_hidePw: "Hide",
+  se_role_nurse: "Nurse",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

@@ -20,6 +20,10 @@ const ROLE_DEFAULT_PERMS = Object.freeze({
   doctor: Object.freeze(['consultation']),
   pharmacy: Object.freeze(['pharmacy']),
   lab: Object.freeze(['lab']),
+  // No pharmacist at the clinic: nurses dispense and run the lab. Whether this is the
+  // right default is being confirmed with the clinic - if not, change this one line
+  // (and the same line in frontend/src/modules.js).
+  nurse: Object.freeze(['pharmacy', 'lab']),
 });
 
 // A fresh, ordinary array each call, as before: callers may keep or change what

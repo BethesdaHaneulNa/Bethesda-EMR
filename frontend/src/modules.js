@@ -20,6 +20,9 @@ export function defaultPermsForRole(role) {
     case 'doctor': return ['consultation'];
     case 'pharmacy': return ['pharmacy'];
     case 'lab': return ['lab'];
+    // No pharmacist at the clinic: nurses dispense and run the lab (settings session,
+    // sql/701). Keep in step with backend/src/middleware/permissions.js.
+    case 'nurse': return ['pharmacy', 'lab'];
     default: return [];
   }
 }
