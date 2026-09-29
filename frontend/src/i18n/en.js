@@ -320,7 +320,7 @@ export default {
   lb_selectHint: "Select a patient on the left",
   lb_noPending: "No tests waiting for results",
   lb_noCompleted: "No tests finished today",
-  lb_noItemsDefined: "No items are defined for this test (define them in Settings → Lab Items)",
+  lb_noItemsDefined: "No items are defined for this test, so it is entered on one line (define items in Settings → Lab Items)",
   lb_noItems: "No items",
   lb_nothingToSave: "Nothing entered. Enter at least one result value or note.",
   lb_savedTests: "Saved and completed",
