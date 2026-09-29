@@ -310,6 +310,8 @@ export default {
   py_unpaidConfirm: "No amount received. Leave the full {total} Ar outstanding?",
   py_refundHandBack: "Hand {amount} Ar back to the patient.",
   py_remainsOwed: "{amount} Ar will remain outstanding.",
+  py_payCarried: "This receipt's balance was already carried into receipt {receipt}. Collect it on that receipt. The receipt history has been reloaded.",
+  py_voidCarried: "This receipt's balance was carried into receipt {receipt}, which charges it now. Cancel {receipt} first, then this receipt.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
