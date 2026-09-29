@@ -5,7 +5,7 @@
 ## 2026-09-29 — 문제 23 결과 표 참고치 툴팁 · 문제 25 환자 찾기 실패 알림 번역
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory — 이 항목과 같은 커밋
+- **커밋**: session/laboratory `965bf56` (출발점 `develop` `3aa3f87`)
 - **한 일**:
   - 23 (`LabResults.jsx`): 값마다 **그 결과에 저장된 참고치** 툴팁 — `Référence: 하한~상한 단위 · 기준 이름`(취소분은 기존 「Annulé — 이유」 그대로). 참고치 칸은 항목의 **가장 최근 유효한** 결과 것(예전엔 가장 최근 줄이 취소분이면 그 참고치가 칸에 나왔음).
   - 25 (`Lab.jsx` `pickVisit`): 실패 시 `Error: <영어 서버 문구>` → `lb_visitOpenFailed`(ko·en·fr), 상세는 브라우저 콘솔(`[lab] open visit`).
