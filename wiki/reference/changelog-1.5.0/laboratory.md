@@ -83,6 +83,9 @@ doctors in `wiki/reference/lab-reference-questions.md`.
   height that the bars above it exceed, so the save button and the results table's
   scrollbar sat below the window. Saving the last tests of a patient now shows what
   was saved for a few seconds instead of just closing the patient.
+- While a value is typed, the ▲ ▼ ! of the results table appear beside the box as well,
+  so high and low are not told apart by colour alone; screen readers read them as high,
+  low or abnormal.
 - In Settings → Lab Test Items the list now scrolls. With a few sex and age tables open,
   the Save button sat below a 1366×768 window, where it could not be reached.
 - The French screen no longer shows Korean text where a translation was missing.

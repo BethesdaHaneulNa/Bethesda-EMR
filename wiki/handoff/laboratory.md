@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 입력 칸 옆 ▲ ▼ ! (색만으로 구분하지 않게)
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `5077d8e`, fast-forward 뒤)
+- **한 일** (총괄 답 — 넘긴 목록 (3)):
+  - `Lab.jsx` 결과 입력 칸 오른쪽에 결과 표와 같은 **▲**(높음) · **▼**(낮음) · **!**(글자 결과 이상). 치는 동안 바뀜. 색은 지금 이름표 그대로(`--danger-text` / `--accent-text`, 칸 글자색과 같음).
+  - **자리를 미리 잡음**: 판정이 없어도 12px 칸을 비워 둠 → 치는 동안 칸 너비가 안 바뀜(1366×768에서 네 값 모두 91px 그대로 확인).
+  - 처음엔 입력 칸을 `flex: 1` 만 주었더니 칸의 원래 너비(≈200px)가 줄마다 격자 열을 밀어 **머리와 줄이 어긋남** → `width: 0` 추가로 해결(모든 줄 열 너비 같음 확인).
+  - ▲ 자리만큼 입력 칸이 91 → 75px로 줄어 `Positive`·`12 500` 이 빠듯해서, 값 열 `1fr → 1.15fr`, 비고 열 `1.4fr → 1.25fr` 로 옮김 → 입력 칸 91px 예전 그대로, 비고 칸은 16px 좁아짐. 배치만 바꾸고 색은 안 건드림.
+  - **화면 읽기 도구**: 글자에 `role=img` + `aria-label`(fr élevé / bas / anormal · ko 높음 / 낮음 / 이상 · en high / low / abnormal — 기록 탭 `se_flag_*` 와 같은 말), 입력 칸의 `aria-describedby` 가 그 글자를 가리킴. 판정이 없으면 `aria-hidden`. 번역 키는 설정 세션 키를 빌리지 않고 `lb_flagHigh` · `lb_flagLow` · `lb_flagAbnormal` 3개를 새로 둠(같은 말).
+  - `manual-fr/laboratory.md` 「Écrire les chiffres」에 한 줄, changelog-1.5.0 Less visible 한 줄, 위키 2절·3.1·3.3·8절.
+- **바꾼 파일**: `frontend/src/pages/Lab.jsx` · `frontend/src/i18n/{ko,en,fr}.js`(lab 블록 안) · `wiki/modules/laboratory.md` · `wiki/manual-fr/laboratory.md` · `wiki/reference/changelog-1.5.0/laboratory.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: `lb_flagHigh`, `lb_flagLow`, `lb_flagAbnormal`
+- **확인한 방법**: 빌드. 격리 스택 9185, 창 1366×768. 대기 환자(CBC + Malaria RDT)에 키보드로 `12 500`(▲ élevé) · `4,8`(표시 없음, aria-hidden) · `9`(▼ bas) · `Positive`(! anormal) — 프랑스어 어두운 화면 사진, 밝은 화면·한국어는 화면 값으로(높음/낮음/이상, 빨강 `#b01c1c`·파랑 `#1451d6`). `aria-describedby` 가 가리키는 id가 그 글자인지 확인. 격자 열 너비가 모든 줄에서 같음, 값이 칸에 다 들어감(`scrollWidth ≤ clientWidth`). 스택 내림.
+- **확인 못 한 것**: 실제 화면 읽기 프로그램(NVDA 등)으로 읽어 보지는 않음 — 속성만 확인.
+
 ## 2026-09-30 — 밝은 화면 점검(검사실·결과 표·설정 검사항목) · 설정 저장 버튼 · 「참고치 바꾸기」
 
 - **상태**: 확인 요청

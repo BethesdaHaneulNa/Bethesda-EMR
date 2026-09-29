@@ -219,19 +219,25 @@ export default function LabPage() {
       {!g.has_master && g.items.length ? <div style={{ color: 'var(--warn-text)', fontSize: 13, padding: '0 2px 5px' }}>{t.lb_noItemsDefined}</div> : null}
       {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItems}</div> : (
         <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', background: 'var(--panel-2)', color: t3, fontSize: 13, fontWeight: 800 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1.15fr 1.25fr', background: 'var(--panel-2)', color: t3, fontSize: 13, fontWeight: 800 }}>
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
           </div>
           {g.items.map(function (it, ii) {
             var fl = flagFor(it.value, it.ref_low, it.ref_high, it.ref_text);
             var ref = it.ref_text || (it.ref_low != null && it.ref_high != null ? it.ref_low + '~' + it.ref_high : it.ref_low != null ? '≥' + it.ref_low : it.ref_high != null ? '≤' + it.ref_high : '');
             var vc = fl === 'low' ? 'var(--accent-text)' : fl === 'high' || fl === 'abnormal' ? 'var(--danger-text)' : tx;
-            return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1fr 1.4fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
+            // Same glyphs as the results table, so high and low are not told apart by colour alone.
+            var glyph = fl === 'high' ? '▲' : fl === 'low' ? '▼' : fl === 'abnormal' ? '!' : '';
+            var word = fl === 'high' ? t.lb_flagHigh : fl === 'low' ? t.lb_flagLow : fl === 'abnormal' ? t.lb_flagAbnormal : '';
+            var flagId = 'lb-flag-' + g.order_item_id + '-' + ii;
+            return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1.15fr 1.25fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
               <div style={{ padding: '7px 10px', fontWeight: 600 }}>{it.name}</div>
               <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</div>
               <div style={{ padding: '7px 10px', color: t2, fontSize: 13 }}>{it.unit || ''}</div>
-              <div style={{ padding: '5px 8px' }}>
-                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (fl === 'low' || fl === 'high' || fl === 'abnormal' ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
+              <div style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
+                {/* The place is kept even when empty, so the box does not jump while typing. */}
+                <span id={flagId} role={glyph ? 'img' : undefined} aria-label={word || undefined} aria-hidden={glyph ? undefined : true} title={word || undefined} style={{ width: 12, flexShrink: 0, textAlign: 'center', color: vc, fontSize: 13, fontWeight: 800 }}>{glyph}</span>
               </div>
               <div style={{ padding: '5px 8px' }}>
                 <input value={it.comment || ''} onChange={function (e) { setVal(gi, ii, 'comment', e.target.value); }} placeholder="—" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 4, color: t2, fontSize: 13, padding: '5px 8px', outline: 'none' }} />
