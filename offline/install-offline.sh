@@ -78,18 +78,42 @@ install_tree "$EMR_SRC" "$EMR_DST" "Bethesda EMR"
 step "Starting Bethesda EMR"
 (cd "$EMR_DST" && sh ./setup.sh --offline) || die "The EMR did not start. Run 'docker compose logs' in $EMR_DST to see why."
 
+# The EMR is up at this point, so a PACS that fails to start does not undo the install:
+# say so plainly and carry on, instead of ending with "Installed" as if imaging worked
+# (or, under set -e, stopping here without a word).
+PACS_OK=1
 if [ -n "$INCLUDE_PACS" ]; then
   step "Starting Bethesda PACS"
-  (cd "$PACS_DST" && sh ./setup.sh --offline)
+  if ! (cd "$PACS_DST" && sh ./setup.sh --offline); then
+    PACS_OK=""
+    echo ""
+    echo "WARNING: the imaging server (PACS) did not start. The EMR is installed and works without it."
+    echo "  Run 'docker compose logs' in $PACS_DST to see why, fix it, then run 'sh ./setup.sh --offline' there again."
+  fi
 fi
 
 step "Installed"
 echo ""
 echo "  EMR   http://localhost:9080   (open it to create the administrator account)"
-[ -n "$INCLUDE_PACS" ] && echo "  PACS  http://localhost:9090   (user 'admin', password in $PACS_DST/.env)"
+if [ -n "$INCLUDE_PACS" ] && [ -n "$PACS_OK" ]; then
+  echo "  PACS  http://localhost:9090   (user 'admin', password in $PACS_DST/.env)"
+elif [ -n "$INCLUDE_PACS" ]; then
+  echo "  PACS  NOT RUNNING - see the warning above"
+fi
 echo ""
 echo "Next, from the go-live checklist in DEPLOYMENT.md:"
 echo "  - create the administrator account, then add staff with least privilege"
 echo "  - set BACKUP_PATH in $EMR_DST/.env to a second drive, and restart"
-[ -n "$INCLUDE_PACS" ] && echo "  - paste the bridge token printed above into Settings -> Order Feed"
+echo "  - give this machine a fixed IP address; staff PCs open http://<that address>:9080"
+echo "  - from another PC check that port 9080 opens (and the firewall lets it through)"
+echo "  - if you restore a backup from another machine: do it now, BEFORE the steps below -"
+echo "    it brings that machine's accounts, settings and imaging addresses with it"
+if [ -n "$INCLUDE_PACS" ] && [ -n "$PACS_OK" ]; then
+  echo "  - the PACS setup above pairs itself with the EMR ('paired - nothing to copy')."
+  echo "    If it did not say so, run  sh ./pair-with-emr.sh  in $PACS_DST"
+  echo "    After restoring a backup, run it again: the backup carries the old token."
+  echo "  - in Settings -> Order Feed set the viewer address to http://<this machine's address>:9090"
+  echo "  - check the ports 9090 and 4242 the same way; imaging devices send to 4242"
+  echo "  - images are NOT in the EMR backup. Plan a copy of $PACS_DST/storage to a second disk"
+fi
 exit 0

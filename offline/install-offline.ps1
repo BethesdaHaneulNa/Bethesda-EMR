@@ -111,25 +111,48 @@ $emrOk = ($LASTEXITCODE -eq 0)
 Pop-Location
 if (-not $emrOk) { Die "The EMR did not start. Run 'docker compose logs' in $emrDst to see why." }
 
+# The EMR is up at this point, so a PACS that fails to start does not undo the install:
+# say so plainly and carry on, instead of ending with "Installed" as if imaging worked.
+$pacsOk = $true
 if ($includePacs) {
   Step "Starting Bethesda PACS"
   Push-Location $pacsDst
   & (Join-Path $pacsDst 'setup.ps1') -Offline
+  $pacsOk = ($LASTEXITCODE -eq 0)
   Pop-Location
+  if (-not $pacsOk) {
+    Write-Host ""
+    Write-Host "WARNING: the imaging server (PACS) did not start. The EMR is installed and works without it." -ForegroundColor Yellow
+    Write-Host "  Run 'docker compose logs' in $pacsDst to see why, fix it, then run setup.ps1 -Offline there again." -ForegroundColor Yellow
+  }
 }
 
 # ---------------------------------------------------------------- done
 Step "Installed"
 Write-Host ""
 Write-Host "  EMR   http://localhost:9080   (open it to create the administrator account)"
-if ($includePacs) {
+if ($includePacs -and $pacsOk) {
   Write-Host "  PACS  http://localhost:9090   (user 'admin', password in $pacsDst\.env)"
+} elseif ($includePacs) {
+  Write-Host "  PACS  NOT RUNNING - see the warning above" -ForegroundColor Yellow
 }
 Write-Host ""
 Write-Host "Next, from the go-live checklist in DEPLOYMENT.md:" -ForegroundColor Yellow
 Write-Host "  - create the administrator account, then add staff with least privilege"
 Write-Host "  - set BACKUP_PATH in $emrDst\.env to a second drive, and restart"
 Write-Host "  - turn on 'Start Docker Desktop when you sign in' so it survives a power cut"
-if ($includePacs) {
-  Write-Host "  - paste the bridge token printed above into Settings -> Order Feed"
+Write-Host "  - give this machine a fixed IP address; staff PCs open http://<that address>:9080"
+Write-Host "  - from another PC check the ports:  Test-NetConnection <that address> -Port 9080"
+Write-Host "    (if it fails, allow the port in Windows Firewall on this machine)"
+Write-Host "  - if you restore a backup from another machine: do it now, BEFORE the steps below -"
+Write-Host "    it brings that machine's accounts, settings and imaging addresses with it"
+if ($includePacs -and $pacsOk) {
+  Write-Host "  - the PACS setup above pairs itself with the EMR ('paired - nothing to copy')."
+  Write-Host "    If it did not say so, run  .\pair-with-emr.ps1  in $pacsDst"
+  Write-Host "    After restoring a backup, run it again: the backup carries the old token."
+  Write-Host "  - in Settings -> Order Feed set the viewer address to http://<this machine's address>:9090"
+  Write-Host "  - check the ports 9090 and 4242 the same way; imaging devices send to 4242"
+  Write-Host "  - if 9090 or 4242 will not open:  netsh int ipv4 show dynamicport tcp"
+  Write-Host "    must start at 49152 (DEPLOYMENT.md, 'Windows dynamic port range')"
+  Write-Host "  - images are NOT in the EMR backup. Plan a copy of $pacsDst\storage to a second disk"
 }

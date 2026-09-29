@@ -9,6 +9,11 @@
 #   ./offline/pack.sh /media/usb/kit      -> that folder
 #   NO_PACS=1 ./offline/pack.sh           -> EMR only
 #   PACS_PATH=/srv/Bethesda-PACS ./offline/pack.sh
+#
+# The running containers are not touched. Building does move the image names onto the
+# freshly built images, so once the images are saved the names are put back on the
+# images they pointed to before. Pack from the state you mean to ship: MANIFEST.txt
+# records both commits, and says so if anything was uncommitted.
 set -e
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -34,6 +39,45 @@ fi
 # compose refuses to parse the file with JWT_SECRET unset (deliberate - see
 # docker-compose.yml). The build never reads it, so a throwaway value is enough.
 [ -f "$EMR_ROOT/.env" ] || export JWT_SECRET="pack-time-placeholder-not-used-at-runtime"
+
+# Same for the PACS compose file: placeholders let it parse on a machine with no .env.
+if [ -n "$INCLUDE_PACS" ] && [ ! -f "$PACS_PATH/.env" ]; then
+  export ORTHANC_PASSWORD="${ORTHANC_PASSWORD:-pack-time-placeholder-not-used-at-runtime}"
+  export BRIDGE_TOKEN="${BRIDGE_TOKEN:-pack-time-placeholder-not-used-at-runtime}"
+fi
+
+# Which commit is being packed, and whether anything is uncommitted.
+repo_state() {
+  if [ -e "$1/.git" ] && c="$(git -C "$1" rev-parse --short HEAD 2>/dev/null)"; then
+    b="$(git -C "$1" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    d=""
+    [ -n "$(git -C "$1" status --porcelain 2>/dev/null)" ] && d="  ** PACKED WITH UNCOMMITTED CHANGES **"
+    echo "$c ($b)$d"
+  else
+    echo "not a git checkout"
+  fi
+}
+EMR_STATE="$(repo_state "$EMR_ROOT")"
+say "EMR  commit $EMR_STATE"
+PACS_STATE=""
+if [ -n "$INCLUDE_PACS" ]; then
+  PACS_STATE="$(repo_state "$PACS_PATH")"
+  say "PACS commit $PACS_STATE"
+fi
+
+# Where each image name points now ("name id" per line), to put it back afterwards.
+image_ids() {
+  (cd "$1" && docker compose config --images) | while read -r img; do
+    [ -n "$img" ] || continue
+    if id="$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null)"; then echo "$img $id"; fi
+  done
+  return 0
+}
+BEFORE="$(image_ids "$EMR_ROOT")"
+if [ -n "$INCLUDE_PACS" ]; then
+  BEFORE="$BEFORE
+$(image_ids "$PACS_PATH")"
+fi
 
 EMR_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$EMR_ROOT/backend/package.json" | head -1)"
 say "EMR version $EMR_VERSION"
@@ -73,16 +117,36 @@ if [ -n "$INCLUDE_PACS" ]; then
   docker save -o "$DEST/images/bethesda-pacs-images.tar" $PACS_IMAGES || die "docker save failed for the PACS images."
 fi
 
+# The kit holds the new images now; give this machine its own back.
+echo "$BEFORE" | while read -r img id; do
+  [ -n "$img" ] && [ -n "$id" ] || continue
+  now="$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null || true)"
+  if [ -n "$now" ] && [ "$now" != "$id" ]; then
+    docker tag "$id" "$img" && say "put $img back on the image this machine was running"
+  fi
+done
+
 # Source tree: everything the installer needs, and nothing that belongs to *this*
-# machine. .env especially - shipping our secrets to a clinic would be a real leak.
+# machine. .env especially - shipping our secrets to a clinic would be a real leak,
+# and so would a copy of it under another name (.env.bak, prod.env, .env.old).
+# .claude holds development worktrees: whole extra copies of the source.
 copy_clean() {
   src="$1"; dst="$2"
   mkdir -p "$dst"
   tar -C "$src" \
-    --exclude=.git --exclude=node_modules --exclude=dist --exclude=build \
+    --exclude=.git --exclude=.claude --exclude=node_modules --exclude=dist --exclude=build \
     --exclude=backups --exclude=_pre-update-backups --exclude=storage \
-    --exclude=worklists --exclude=offline --exclude=.env --exclude='*.log' \
+    --exclude=worklists --exclude=offline \
+    --exclude=.env --exclude='.env.*' --exclude='*.env' --exclude='*.bak' --exclude='*.log' \
     -cf - . | tar -C "$dst" -xf -
+  # The pattern above also drops the template the installer starts from.
+  if [ -f "$src/.env.example" ]; then cp "$src/.env.example" "$dst/.env.example"; fi
+  # Check the result rather than trust the pattern.
+  leaks="$(find "$dst" -type f \( -name '.env*' -o -name '*.env' \) ! -name '.env.example' 2>/dev/null || true)"
+  if [ -n "$leaks" ]; then
+    echo "$leaks" | while read -r f; do rm -f "$f"; done
+    die "Environment file(s) reached the kit and were removed: $(echo "$leaks" | tr '\n' ' '). Packing stopped - find out why before trying again."
+  fi
 }
 
 # Re-packing over an older kit would merge the two trees and leave files that this
@@ -146,7 +210,9 @@ Bethesda offline install kit
 Packed:       $(date '+%Y-%m-%d %H:%M')
 Packed on:    $(hostname)
 EMR version:  $EMR_VERSION
+EMR commit:   $EMR_STATE
 PACS bundled: $([ -n "$INCLUDE_PACS" ] && echo yes || echo no)
+$([ -n "$INCLUDE_PACS" ] && echo "PACS commit:  $PACS_STATE" || true)
 
 Images in this kit:
 $(for i in $EMR_IMAGES $PACS_IMAGES; do echo "  $i"; done)
