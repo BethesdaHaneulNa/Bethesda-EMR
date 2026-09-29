@@ -290,6 +290,9 @@ export default {
   cs_dispensed: "조제됨",
   cs_rxLocked: "약국에서 이미 조제한 약은 고치거나 지울 수 없습니다. 바꿔야 하면 약국에 알리고 새 줄로 처방하세요.",
   cs_orderLocked: "결과가 이미 있는 오더(검사 결과 · 판독 · 촬영 시작)는 지울 수 없습니다.",
+  cs_labPending: "결과 대기",
+  cs_labDone: "결과 있음",
+  cs_labCancelled: "취소됨",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

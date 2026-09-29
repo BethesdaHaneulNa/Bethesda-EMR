@@ -290,6 +290,9 @@ export default {
   cs_dispensed: "Délivré",
   cs_rxLocked: "La pharmacie a déjà délivré ce médicament : il ne peut plus être modifié ni retiré. Prévenez la pharmacie et prescrivez une nouvelle ligne si nécessaire.",
   cs_orderLocked: "Cette demande a déjà un résultat (analyses, compte-rendu ou examen commencé) : elle ne peut pas être retirée.",
+  cs_labPending: "En attente",
+  cs_labDone: "Résultat reçu",
+  cs_labCancelled: "Annulé",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

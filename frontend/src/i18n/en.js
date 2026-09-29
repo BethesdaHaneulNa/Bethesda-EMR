@@ -299,6 +299,9 @@ export default {
   cs_dispensed: "Dispensed",
   cs_rxLocked: "The pharmacy has already dispensed this drug, so it can no longer be changed or removed. Tell the pharmacy and prescribe a new line if needed.",
   cs_orderLocked: "This order already has a result (lab values, a reading, or an exam started) and cannot be removed.",
+  cs_labPending: "Awaiting result",
+  cs_labDone: "Result in",
+  cs_labCancelled: "Cancelled",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

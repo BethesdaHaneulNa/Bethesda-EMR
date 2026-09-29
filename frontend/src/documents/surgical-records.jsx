@@ -9,6 +9,7 @@
 // afterwards, which a circled drawing never is.
 import { A4, ClinicHeader, DocMetaRow, PatientBox, DocSection, SignatureBlock, L } from './shared.jsx';
 import { OpFigures } from './op-figures.jsx';
+import { tr, showSel } from './op-terms.js';
 
 var FL = {
   opDate:    { ko: '수술일', en: 'Operation Date', fr: 'Date opératoire' },
@@ -68,7 +69,13 @@ function OpNoteLayout(props) {
 
   // Called as a function, not <OpFigures/>, so the layout knows whether a figure exists
   // before deciding how to arrange the row. It holds no state, so this is safe.
-  var fig = OpFigures({ figure: spec.figure, values: v });
+  var fig = OpFigures({ figure: spec.figure, values: v, lang: lang });
+
+  // Checkbox answers are stored in English and shown in the document language
+  // (op-terms.js). Typed text is printed exactly as typed.
+  var isChecks = {};
+  (props.fields || []).forEach(function (f) { if (f.type === 'checks') isChecks[f.key] = true; });
+  function show(key) { return isChecks[key] ? showSel(v[key], lang) : (v[key] || ''); }
 
   return (
     <A4 innerRef={props.innerRef} pad="20px 36px">
@@ -101,7 +108,7 @@ function OpNoteLayout(props) {
               <table style={Object.assign({}, tbl, { marginBottom: 0 })}>
                 <tbody>
                   {detail.map(function (f) {
-                    return <tr key={f.key}><td style={head}>{L(f.label, lang)}</td><td style={cell}>{v[f.key]}</td></tr>;
+                    return <tr key={f.key}><td style={head}>{L(f.label, lang)}</td><td style={cell}>{show(f.key)}</td></tr>;
                   })}
                 </tbody>
               </table>
@@ -114,7 +121,7 @@ function OpNoteLayout(props) {
       <DocSection label={L(FL.findings, lang)} value={v.findings} />
 
       {String(v.sutures || '').trim() ? (
-        <table style={tbl}><tbody><tr><td style={head}>{L(FL.sutures, lang)}</td><td style={cell}>{v.sutures}</td></tr></tbody></table>
+        <table style={tbl}><tbody><tr><td style={head}>{L(FL.sutures, lang)}</td><td style={cell}>{show('sutures')}</td></tr></tbody></table>
       ) : null}
 
       {/* Safety checklist. Which three or four items appear depends on the procedure -
@@ -124,13 +131,13 @@ function OpNoteLayout(props) {
         <tbody>
           {spec.safety === 'B' ? (
             <>
-              <tr><td style={head}>{L(FL.gauzeCount, lang)}</td><td style={cell}>{v.gauzeCount || ''}</td><td style={head}>{L(FL.drains, lang)}</td><td style={cell}>{v.drains || ''}</td></tr>
-              <tr><td style={head}>{L(FL.bloodLoss, lang)}</td><td style={cell}>{v.bloodLoss || ''}</td><td style={head}>{L(FL.biopsy, lang)}</td><td style={cell}>{v.biopsy || ''}</td></tr>
+              <tr><td style={head}>{L(FL.gauzeCount, lang)}</td><td style={cell}>{show('gauzeCount')}</td><td style={head}>{L(FL.drains, lang)}</td><td style={cell}>{v.drains || ''}</td></tr>
+              <tr><td style={head}>{L(FL.bloodLoss, lang)}</td><td style={cell}>{v.bloodLoss || ''}</td><td style={head}>{L(FL.biopsy, lang)}</td><td style={cell}>{show('biopsy')}</td></tr>
             </>
           ) : (
             <>
-              <tr><td style={head}>{L(FL.tissuePath, lang)}</td><td style={cell}>{v.tissuePath || ''}</td><td style={head}>{L(FL.drains, lang)}</td><td style={cell}>{v.drains || ''}</td></tr>
-              <tr><td style={head}>{L(FL.spongeCount, lang)}</td><td style={cell}>{v.spongeCount || ''}</td><td style={head}>{L(FL.bloodLoss, lang)}</td><td style={cell}>{v.bloodLoss || ''}</td></tr>
+              <tr><td style={head}>{L(FL.tissuePath, lang)}</td><td style={cell}>{show('tissuePath')}</td><td style={head}>{L(FL.drains, lang)}</td><td style={cell}>{v.drains || ''}</td></tr>
+              <tr><td style={head}>{L(FL.spongeCount, lang)}</td><td style={cell}>{show('spongeCount')}</td><td style={head}>{L(FL.bloodLoss, lang)}</td><td style={cell}>{v.bloodLoss || ''}</td></tr>
             </>
           )}
           <tr><td style={head}>{L(FL.complications, lang)}</td><td style={cell} colSpan={3}>{v.complications || ''}</td></tr>
@@ -176,10 +183,13 @@ function makeOp(code, name, title, defaults, spec) {
   }
   fields.push({ key: 'complications', label: FL.complications, type: 'text' });
   fields.push({ key: 'postPlan', label: FL.postPlan, type: 'textarea', rows: 3, default: defaults.postPlan });
+  // The form shows each checkbox in the document language too (DocumentModal reads
+  // optionLabel); what gets stored stays the English option.
+  fields.forEach(function (f) { if (f.type === 'checks') f.optionLabel = tr; });
 
   return {
     code: code, category: 'chart', name: name, fields: fields,
-    Layout: function (p) { return OpNoteLayout(Object.assign({}, p, { title: L(title, p.lang), spec: spec })); },
+    Layout: function (p) { return OpNoteLayout(Object.assign({}, p, { title: L(title, p.lang), spec: spec, fields: fields })); },
   };
 }
 
