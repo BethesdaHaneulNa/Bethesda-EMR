@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 통합 시험 B·C 몫(처방 표 고정 폭·수납된 줄 안내 등) 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-29 · **상태**: 제형 단위 말 · 밝은 화면 점검 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -277,6 +277,7 @@
 - `PUT /order/:orderId` — 수량·메모 등을 고칩니다(수납이 차액으로 처리). 줄을 `FOR UPDATE`로 읽고 **취소된 오더(`status='cancelled'`)면 409 `Order is cancelled`**, 없으면 404. `status`가 NULL인 줄은 취소가 아니므로 고칠 수 있습니다(전에는 `WHERE … status <> 'cancelled'`가 NULL 줄을 못 잡아 「Order is cancelled」 409가 났음 — 2026-09-29 고침). 끝난 진료면 기록. 총량은 **수량이나 일수가 실제로 바뀌었거나 `total_qty`가 비었을 때만** 다시 계산합니다(처방 PUT과 같은 이유 — 칸을 지나가기만 해도 옛 줄의 청구가 바뀌면 안 됨). 횟수만 바꾸면 총량 그대로.
 - `POST /order/:orderId/cancel` `{reason}` — **결과가 있는 오더를 「취소됨」으로 표시**(결정 3-B, 2026-09-29). `FOR UPDATE`로 잠그고(임상병리의 결과 저장과 같은 잠금 — 순서 보장), 이미 취소면 그대로 200, 결과가 **없으면 409 `Order has no result`**(지우라는 뜻 — 두 길이 섞이지 않게), 있으면 `status='cancelled'`·`cancelled_at`·`cancelled_by`·`cancel_reason`(앞뒤 공백 빼고 500자까지, 비면 NULL). 「결과 있음」 판정은 삭제와 같은 `orderProduced()`(검사값 · 판독문 · 워크리스트 진행/완료). **영상 오더도 같은 방식**(결정 38-③, PACS 저장소를 합친 뒤 2026-09-29 켬): 같은 트랜잭션에서 PACS의 `cancelWorklistForOrder(client, id)`(`backend/src/routes/pacs.cancel.js`)를 오더 UPDATE **앞에** 불러, 아직 기다리는(`scheduled`·`in_progress`) 워크리스트 줄을 `cancelled`로 바꾸고 `order_item.worklist_status`도 `cancelled`로 둡니다(돌려주는 줄에 반영). 브리지 피드는 `scheduled`만 내보내므로 한 주기 안에 장비에서 빠집니다. 이미 촬영된(`completed`) 줄은 기록으로 그대로. 검사 오더에는 워크리스트가 없어 아무 일도 안 합니다. 처치는 화면이 취소를 내놓지 않습니다. 취소는 기록합니다(`ORDER_CANCEL`, 상태·이유·워크리스트 상태). 되돌리기 없음. 취소된 오더는 임상병리 목록·결과 저장(409)·결과 표(회색), 수납 청구(`COALESCE(status,'') <> 'cancelled'`)가 각자 처리합니다.
 - `GET /visit/:visitId/prescriptions` — 내원 단위 처방. 문서 엔진이 투약 목록을 채울 때 씁니다.
+- **처방 줄의 `dosage_form`**(2026-09-30): `GET /visit/:visitId/prescriptions`·`GET /:id/prescriptions`와 처방 POST·PUT의 응답에 약 표의 제형(`drug.dosage_form`, 034 가져오기)을 붙입니다(복사하지 않고 그때 읽음 — 문장의 단위 말만 고르고 양은 바꾸지 않으므로). 약국의 `rx-dosing.js`(a60788f)가 이것으로 단위를 정해 « 1 gél. × 3 fois/jour … »가 진료 화면·약속처방 줄·원외 처방전에 같게 나옵니다.
 - 진단 `GET/POST /:id/diagnoses`, `DELETE /diagnosis/:dxId` — 화면에서 안 씀(진단 화면은 만들지 않기로 결정). API로 끝난 진료에 넣거나 지우면 기록합니다.
 - **변경 기록**(실장님 결정 2026-09-29, 공통 규칙 [../03-change-log.md](../03-change-log.md), 함수 `utils/audit.js`의 `writeAudit`). 진료가 남기는 것:
   - `consultation.order.cancel` · `consultation.order.delete` · `consultation.prescription.delete` — **늘**(진료가 끝났든 아니든).
@@ -559,7 +560,8 @@
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-29 | **통합 시험 B·C 몫** — 처방 표 고정 폭(1366에서 가로 스크롤 없음, 입력 중 칸이 움직이지 않음), 저장 알림 «Enregistré ✓» 등, 수량 «1.000» → «1», 약 검색 결과 없음 안내·재고 표시, 수납된 줄을 지울 때 안내(`GET /:id/billed-codes`). 대기열 서랍(B2)은 재현 안 됨 | (이 커밋) |
+| 2026-09-30 | **처방 줄에 제형** — 처방 읽기 두 곳과 POST·PUT 응답에 `dosage_form`(약국 rx-dosing의 단위 말용). 밝은 화면 1366×768 점검(대비 도구 — 결과는 인계 노트) | (이 커밋) |
+| 2026-09-29 | **통합 시험 B·C 몫** — 처방 표 고정 폭(1366에서 가로 스크롤 없음, 입력 중 칸이 움직이지 않음), 저장 알림 «Enregistré ✓» 등, 수량 «1.000» → «1», 약 검색 결과 없음 안내·재고 표시, 수납된 줄을 지울 때 안내(`GET /:id/billed-codes`). 대기열 서랍(B2)은 재현 안 됨 | `20fdc88` |
 | 2026-09-29 | **문서** — 현지 직원용 프랑스어 설명서 `wiki/manual-fr/consultation.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/consultation.md`. 2.8 집도의 자동 채움 글 고침 | `0a95569` |
 | 2026-09-29 | **가운데 칸 옆으로 밀림 고침**(디자인 세션 발견) — 문장사전 머리 접힘, 가운데 칸 `minWidth:0`, 바이탈 최소 110px. 세 화면 크기·두 언어 확인. **약속처방 처치 줄은 세트 수량 그대로**(검사·영상은 1·1·1) | `959262a` |
 | 2026-09-29 | **가져온 약 기준** — 약 검색 목록·약 찾기 창 오른쪽에 제형(`formLabel`, 약국의 `drug-info.js`), 기본 용법 표시 없앰(결정 B). 8자 약 코드가 두 줄로 꺾이지 않게. 가져온 약으로 진료 → 약국 → 수납을 격리에서 확인, 위키 2절 | `aa2cb40` |

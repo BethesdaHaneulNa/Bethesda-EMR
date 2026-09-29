@@ -261,7 +261,11 @@ router.delete('/diagnosis/:dxId', canConsult, (req, res) => inTx(res, async (cli
 router.get('/visit/:visitId/prescriptions', canReadRx, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT rx.* FROM prescription rx
+      // dosage_form: the drug's form (034 import), read now rather than copied - it only
+      // chooses the unit word of the sentence (rx-dosing.js: "1 gél. x 3 fois/jour"), never
+      // an amount, so a corrected form should show at once on old lines too.
+      `SELECT rx.*, (SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form
+         FROM prescription rx
          JOIN consultation c ON c.id = rx.consultation_id
         WHERE c.visit_id = $1 ORDER BY rx.sort_order, rx.id`,
       [req.params.visitId]
@@ -273,7 +277,9 @@ router.get('/visit/:visitId/prescriptions', canReadRx, async (req, res) => {
 // GET /api/consultations/:id/prescriptions
 router.get('/:id/prescriptions', canReadRx, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM prescription WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
+    const result = await pool.query(
+      `SELECT rx.*, (SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form
+         FROM prescription rx WHERE rx.consultation_id = $1 ORDER BY rx.sort_order`, [req.params.id]);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }
 });
@@ -301,6 +307,14 @@ function rxTotal(dose, days) {
 // An empty field is stored empty (NULL): times and days used to be filled with 1 here,
 // which turned a blank the doctor had not filled into a silent "once a day, 1 day".
 function blankNull(v) { return v === undefined || v === null || String(v).trim() === '' ? null : v; }
+// The drug's dosage form on a prescription row the screen gets back from a write, as the
+// two reads above give it.
+async function withForm(db, row) {
+  if (!row) return row;
+  const d = row.drug_id ? await db.query('SELECT dosage_form FROM drug WHERE id = $1', [row.drug_id]) : { rows: [] };
+  row.dosage_form = d.rows[0] ? d.rows[0].dosage_form : null;
+  return row;
+}
 function intOrNull(v) { const n = parseInt(v); return Number.isFinite(n) ? n : null; }
 
 // Pack-unit drugs (H2-B, decided 2026-09-29; columns from the pharmacy's 025): a syrup,
@@ -351,7 +365,7 @@ router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (cli
   );
   const rx = result.rows[0];
   await recordEdit(client, req, c, 'prescription', rx, rx.drug_name, null, pick(rx, RX_LOG));
-  return [201, rx];
+  return [201, await withForm(client, rx)];
 }));
 
 // Once the pharmacy has handed the drug over, its stock is already deducted. Changing
@@ -406,7 +420,7 @@ router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (cli
   const rx = result.rows[0];
   await recordEdit(client, req, await consultOf(client, rx.consultation_id), 'prescription', rx, rx.drug_name,
     pick(got.rx, RX_LOG), pick(rx, RX_LOG));
-  return [200, rx];
+  return [200, await withForm(client, rx)];
 }));
 
 // DELETE /api/consultations/prescription/:rxId - always logged (not only when finished)

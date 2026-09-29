@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 처방 줄의 제형(단위 말) · 밝은 화면 1366×768 점검
+
+- **상태**: 확인 요청 — **Consultation.jsx 한 줄 고침 제안이 있습니다(아래, 총괄 판단 — 파일은 디자인 세션 몫이라 손대지 않음)**
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `15b1a61` 다음
+- **한 일**:
+  - **① 단위 말**: `consult.routes.js`의 `GET /visit/:visitId/prescriptions`·`GET /:id/prescriptions`에 `(SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form`을 넣었습니다(총괄이 준 모양 그대로).
+    - 처방 **POST·PUT 응답**에도 같은 칸을 붙였습니다(`withForm`). 그러지 않으면 방금 넣거나 고친 줄이 새로 불러올 때까지 단위 없이 보입니다.
+    - 격리에서 확인한 것:
+      - API 네 곳 모두 « Capsule »이 옵니다.
+      - 진료 화면 Amoxicillin(MED-0068)은 « 1 gél. × 3 fois/jour pendant 7 jours (total 21) »입니다.
+      - 약속처방 「Gelules test」로 넣은 줄은 바로 « 1 gél. × 3 fois/jour pendant 5 jours (total 15) »입니다.
+      - 원외 처방전(수납 화면 « Ordonnance ext. », 그 줄을 격리 DB에서만 Externe로 표시)도 « 1 gél. × 3 fois/jour pendant 7 jours (total 21) »입니다.
+  - **② 밝은 화면(☀ Clair) 1366×768**: 디자인 세션의 대비 도구(`wiki/reference/design/audit-in-browser.js`)로 쟀습니다.
+    - **통과(목록 비어 있음)**: 진료 첫 화면(처방 표·바이탈·기록·사전), 오더 검색 목록, 「결과 없음」, 약 찾기 창, 약속처방(줄 그은 약 포함), Dossier(수술기록지) 창, Documents(의뢰서) 창, 빈 칸 경고가 있는 처방 줄(26-00120).
+    - **디자인 세션에 넘길 목록**:
+      1. **취소된 오더 줄**(⊘ · 줄 그음)은 줄 전체에 `opacity:0.55`를 걸어 글자 대비가 **밝은 화면 2.34 · 어두운 화면 2.02**, ⊘·「Annulé」는 3.56 / 5.21입니다. 도구는 부모의 opacity를 보지 않아 목록에 안 나와서 따로 쟀습니다. 결정 3-B 때 제가 넣은 것이고, 두 화면 모두 기준(4.5) 미달입니다. 제안: opacity를 빼고 흐린 글자 색(`--text-3`) + 줄 긋기로만 「기록」임을 보이기.
+      2. **영상 창 「스터디 없음」 안내**(`px_noStudy`, 뷰어 자리의 검은 판 위 `#64748b`)가 4.41입니다. 영상 판은 두 화면 모두 검은 색이니 글자만 한 단계 밝게.
+    - 환자 띠(진한 파랑)는 일부러 고정 — 보지 않았습니다.
+  - **③ 금액 표기**: 진료 화면·의뢰서·수술기록지에는 금액이 나오는 곳이 없습니다(가격은 「Sans prix」 표시와 개수만). 바꿀 것 없음.
+- **Consultation.jsx 한 줄 고침 제안 (총괄 판단 부탁 — 제 `20fdc88`의 부작용)**: 처방 표를 고정 폭으로 바꾼 뒤, **취소된 줄·조제된 줄(글자로만 보이는 칸, `cellRO`)**의 긴 글자가 옆 칸으로 넘칩니다 — 영상 줄의 부위 «ABDOMEN»이 상태 칸 «🖼 Annulé» 위에 겹쳐 «Annulé»가 잘림(1366, 두 화면 모두). 같은 칸들은 «1.000»을 그대로 보입니다(입력 칸만 `showNum`을 씀). 고침: `cellRO`에 `overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'`을 더하고 그 칸의 값에 `showNum(...)`. 디자인 세션이 하든 제가 하든 한 줄입니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js` · `wiki/modules/consultation.md`(3.2·8절)
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `node --check` 통과. 격리 스택(develop `15b1a61` 기준). 서버 시험 12개가 모두 통과했습니다(os, blank, lock, 포장, total, 로그, 취소, L9, ⑭, s2, t400, tlow — 예시 약이 필요한 것은 격리 DB에서 잠깐 다시 보이게 한 뒤). 화면은 위와 같습니다.
+- **다른 세션에 부탁**: 디자인 — 위 1·2. (취소된 줄 넘침은 총괄 판단 뒤.)
+- **남은 일 · 알려진 문제**: 위 한 줄 고침(허락 뒤).
+
 ## 2026-09-29 — 통합 시험 진료 몫: 처방 표 고정 폭 · 저장 알림 · 수량 표시 · 결과 없음 · 수납된 줄 안내 · 재고
 
 - **상태**: 확인 요청 (B2는 재현 안 됨 — 아래)
