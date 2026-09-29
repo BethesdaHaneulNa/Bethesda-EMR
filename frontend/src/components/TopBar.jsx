@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLang } from '../i18n/index.jsx';
 import { getUser, logout, api } from '../api/client.js';
-import { allowedModules, userPerms } from '../modules.js';
+import { allowedModules, userPerms, homePath } from '../modules.js';
 
 // Injected by Vite from package.json (see vite.config.js). Guarded so the component still
 // renders if it is ever loaded outside a Vite build.
@@ -66,6 +66,13 @@ export function TopBar() {
         localStorage.setItem('medconnect_user', JSON.stringify(Object.assign({}, cur, {
           name: me.name, role: me.role, permissions: me.permissions, department_id: me.department_id })));
         setRefresh(function (n) { return n + 1; });
+        // Someone looking at a screen when its permission is taken away would stay
+        // there, every request answering 403 and the lists quietly empty. Send them
+        // to the first screen they may still use.
+        var now = getUser();
+        var here = window.location.pathname;
+        var stillAllowed = allowedModules(now).some(function (m) { return here === m.path || here.indexOf(m.path + '/') === 0; });
+        if (!stillAllowed && here !== '/login') navigate(homePath(now), { replace: true });
       }).catch(function () {});
     }
     sync();
