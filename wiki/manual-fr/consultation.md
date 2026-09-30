@@ -49,7 +49,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
    - **Fois** : en combien de prises la journée est répartie (par exemple `3`).
    - **Jours** : la durée (par exemple `7`).
    - **Posologie** : par exemple `PO`, `TID` (facultatif, 10 caractères au plus).
-4. Cliquez ailleurs : la ligne est enregistrée tout de suite.
+4. Passez d'une case à l'autre avec Tab. La ligne est enregistrée quand vous la **quittez** (clic ailleurs, ou Tab après la dernière case).
 5. **Total = Dose/j × Jours.** Les **Fois** ne multiplient pas. Dans l'exemple : 3 × 7 = 21 comprimés.
 6. Lisez la phrase sous le nom, par exemple « 1 cp × 3 fois/jour pendant 7 jours (total 21) ». C'est la même phrase que la pharmacie imprime. Si elle ne correspond pas à ce que vous voulez, corrigez les cases.
 

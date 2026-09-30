@@ -286,7 +286,8 @@ export function DocumentModal(props) {
                           </label>;
                         })}
                       </div>
-                    : <input value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field-4)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
+                    // type 'date': a date picker (the operation date - it was a free text box)
+                    : <input type={f.type === 'date' ? 'date' : 'text'} value={values[f.key] || ''} onChange={function (e) { setField(f.key, e.target.value); }} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--field-4)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '6px 8px', outline: 'none' }} />}
                   {f.type !== 'checks' && openBrackets(values[f.key]).length
                     ? <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--warn-text)', lineHeight: 1.4 }}>⚠ {L(UI.bracketHint, lang)}: {openBrackets(values[f.key]).join('  ')}</div>
                     : null}
