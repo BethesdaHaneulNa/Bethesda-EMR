@@ -10,11 +10,15 @@ var LangContext = createContext();
 // The page says which language it is in (<html lang>). It was always "en", so a browser
 // offered to translate the French screen and a screen reader read French as English.
 function markPage(l) {
-  try { document.documentElement.lang = langs[l] ? l : 'en'; } catch (e) { /* no document */ }
+  try { document.documentElement.lang = langs[l] ? l : 'fr'; } catch (e) { /* no document */ }
 }
 
 export function LangProvider(props) {
-  var stored = localStorage.getItem('medconnect_lang') || 'en';
+  // A PC that has never chosen a language starts in French (the director's decision,
+  // 2026-09-30): the clinic's staff work in French. EN / KO / FR at the top stay as they
+  // are and the PC remembers the choice.
+  var stored = localStorage.getItem('medconnect_lang');
+  if (!langs[stored]) stored = 'fr';
   var state = useState(stored);
   var lang = state[0];
   var setLangRaw = state[1];
@@ -26,7 +30,7 @@ export function LangProvider(props) {
     localStorage.setItem('medconnect_lang', l);
   }
 
-  var t = langs[lang] || langs.en;
+  var t = langs[lang] || langs.fr;
 
   return (
     <LangContext.Provider value={{ lang: lang, setLang: setLang, t: t }}>

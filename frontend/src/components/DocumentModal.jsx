@@ -66,7 +66,7 @@ export function DocumentModal(props) {
   var visible = templatesByCategory(category);
   var visibleCodes = visible.map(function (t) { return t.code; });
 
-  var [lang, setLang] = useState(langCtx.lang || 'en');
+  var [lang, setLang] = useState(langCtx.lang || 'fr');
   var [code, setCode] = useState(visible[0] ? visible[0].code : '');
   var [values, setValues] = useState({});
   var [clinic, setClinic] = useState(null);
@@ -109,11 +109,11 @@ export function DocumentModal(props) {
 
   useEffect(function () {
     if (!props.open || !props.patient) return;
-    setLang(langCtx.lang || 'en');
+    setLang(langCtx.lang || 'fr');
     setMode('new'); setViewed(null);
     var first = visible[0];
     setCode(first ? first.code : '');
-    setValues(buildValues(first, langCtx.lang || 'en'));
+    setValues(buildValues(first, langCtx.lang || 'fr'));
     api.get('/admin/clinic').then(setClinic).catch(function () { setClinic(null); });
     api.get('/patients/' + props.patient.id).then(setFullPatient).catch(function () { setFullPatient(null); });
     setMeds([]);

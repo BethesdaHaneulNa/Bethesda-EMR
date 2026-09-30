@@ -17,6 +17,7 @@
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
 | 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
+| 서류를 발행함 / 취소함 (의뢰서·진단서·수술기록지·원외 처방전 등. 초안 인쇄는 남기지 않음) | `documents.issue` · `documents.void` | 진료 (`document.routes.js`) |
 
 **남기지 않는 것**
 
@@ -30,6 +31,13 @@
 - 가격이 같으면 쓰지 않습니다(`writeAudit`이 바뀐 칸만 남기므로 그대로 넘기면 됨). 새 약을 만들 때의 첫 가격은 「처음 입력」이라 남기지 않습니다 — 단, 가져온 약(가격 0)에 처음 가격을 넣는 것은 **고침**이라 남습니다(0 → 100).
 - 환자와 관계없는 줄이라 `patient_id`·`visit_id`는 비웁니다.
 - **오더 코드(진료비·검사·영상·처치) 가격도 같은 모양으로 남깁니다**(2026-09-30 실장님 결정, (나)): `entity` = `order_code`, `summary` = 코드와 이름, `before`/`after` = 가격 칸만. 남기는 범위는 여덟 가지.
+
+**서류 (2026-09-30 실장님 결정, (다) 발행과 취소 모두)**: 총괄 추천은 「취소만」이었으나 실장님은 둘 다를 고르심 — 기록 탭 한 곳에서 나간 서류를 모두 보시려는 뜻. 「처음 입력은 남기지 않는다」는 규칙의 예외입니다.
+- `entity` = `document`, `entity_id` = `document_log.id`, `summary` = 서류 번호와 서류 이름(`D26-00012 Certificat médical`), 환자·내원을 채움.
+- 발행: `after` = `{ doc_no, template_code, lang }`. 취소: `before` = `{ voided: false }`, `after` = `{ voided: true, void_reason }`.
+- **서류의 내용(payload)은 기록에 넣지 않습니다** — 진단·소견이 들어 있어 기록 탭(설정 권한)에 보일 것이 아닙니다.
+- 발행 줄이 많아지므로 기록 탭의 종류 거르기에 두 action이 나와야 합니다.
+- 남기는 범위는 열 가지.
 
 ## 2. 한 줄에 들어가는 것
 
