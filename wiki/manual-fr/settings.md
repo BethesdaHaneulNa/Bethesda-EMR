@@ -137,7 +137,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, comptes du personnel, prix des médicaments, prix des actes), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
 
 1. **Paramètres** → **Journal**. Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.

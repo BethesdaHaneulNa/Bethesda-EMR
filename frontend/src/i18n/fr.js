@@ -1023,6 +1023,9 @@ export default {
   se_sys_pacsRelay_notOrthanc: "Autre chose que le serveur d'images répond à {url} (HTTP {code}) — un autre programme utilise ce port",
   se_sys_pacsRelay_badAddress: "L'adresse du serveur d'images n'est pas une adresse — Paramètres → Flux d'ordres",
   se_ent_consultation_note: "note du médecin",
+  se_act_visitTransfer: "Changement de service / médecin",
+  se_fld_doctor: "Médecin",
+  se_fld_reason: "Motif",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

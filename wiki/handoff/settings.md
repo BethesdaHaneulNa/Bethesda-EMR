@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 기록 탭에 전과(visit.transfer) 이름표
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `c4a63f5` merge 위)
+- **한 일** (`settingsAudit.js`, i18n): 종류 `visit.transfer` → 「Changement de service / médecin / 전과(과·의사 변경) / Visit transferred」(접수 제안 그대로, 종류 거르기 목록에도). 칸 `doctor` 「Médecin / 담당의 / Doctor」, `reason` 「Motif / 사유 / Reason」. `department_id`는 전부터 「Service / 진료과」 + 과 이름.
+- **전과 길을 실제로 불러 확인**(격리 9187): 시험 의사 둘(zzdoc1 RABE Hery, zzdoc2 RAKOTO Aina)을 만들고 환자·내원을 만든 뒤 `PUT /api/visits/:id/transfer` 네 번 —
+  1. GEN · RABE Hery → DRM · RAKOTO Aina, 사유 있음 → 「Service: GEN - General Practice → DRM - Dermatology / Médecin: RABE Hery → RAKOTO Aina / Motif: — → Enfant de 4 ans - pédiatrie」
+  2. 의사 → 없음 → 「Médecin: RAKOTO Aina → —」(과는 안 바뀌어 줄 없음, 사유 없음 → 사유 줄 없음)
+  3. 없음 → 의사, 과도 되돌림 → 「Service: DRM … → GEN … / Médecin: — → RABE Hery」
+  4. 같은 과·의사 → 400 「Nothing to change」, 줄 없음
+  ko도 같은 모양(「진료과 · 담당의 · 사유」). 요약 「GEN · RABE Hery → DRM · RAKOTO Aina」는 접수가 쓴 대로.
+- **볼 것 세 가지**: 종류 거르기에 있음 · 의사 없음(null)은 양쪽 모두 「—」 · 사유가 없으면 그 줄이 아예 없어(`writeAudit`이 바뀐 칸만 남김) 빈 칸이 생기지 않음. 사유가 있을 때는 「Motif: — → …」로 보임 — 접수가 before에 `reason: null`을 두기 때문이고, 다른 「새로 생긴 값」 칸(영수의 Total dû 등)과 같은 모양이라 그대로 둠.
+- **위키**: `03-change-log.md`에서 접수가 남긴 「기록 탭 이름표(설정 세션) … 들어오기 전까지는」 줄을 붙은 상태로 바꿈(표의 줄은 그대로 — 겹치지 않게). `manual-fr/settings.md` 「Lire le Journal」 머리의 목록에 「changements de service ou de médecin d'une visite」. 모듈 위키 8절.
+- **공용 파일 변경**: i18n `se_act_visitTransfer`, `se_fld_doctor`, `se_fld_reason`.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · i18n 3개 · 위키 3개 · 이 노트
+- **확인한 방법**: `npm run build`, login 시험, 위의 실제 전과 넷, 기록 탭 fr·ko(글과 종류 목록).
+
 ## 2026-09-30 — 기록 탭에 새 대상 consultation_note
 
 - **상태**: 확인 요청
