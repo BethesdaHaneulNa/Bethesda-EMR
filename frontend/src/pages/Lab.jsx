@@ -308,7 +308,7 @@ export default function LabPage() {
               </div>
               <div style={{ flexShrink: 0, padding: '10px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
                 {notice ? <div style={{ flex: 1, color: 'var(--ok-text-2)', fontSize: 13 }}>{notice}</div> : null}
-                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan),var(--cyan-strong))' : 'var(--chip)', color: totalItems ? 'var(--on-fill)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
+                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan),var(--cyan-strong))' : 'var(--chip)', color: totalItems ? 'var(--on-cyan)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
               </div>
             </>
           )}

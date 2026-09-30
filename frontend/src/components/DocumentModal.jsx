@@ -212,7 +212,7 @@ export function DocumentModal(props) {
     pv = <Tpl.Layout values={P.values || {}} patient={P.patient || {}} clinic={P.clinic || clinic}
                      doctor={P.doctor || doctor} meds={P.meds || []} lang={lang} docNo={viewed.doc_no} dateStr={P.dateStr || ''} />;
   } else if (props.readOnly) {
-    pv = <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-2)', fontFamily: 'system-ui,sans-serif' }}>{L(UI.noHistory, lang)}</div>;
+    pv = <div style={{ padding: 60, textAlign: 'center', color: '#475569' /* on the white paper, the same on both screens */, fontFamily: 'system-ui,sans-serif' }}>{L(UI.noHistory, lang)}</div>;
   } else {
     pv = <template.Layout values={values} patient={fullPatient || props.patient} clinic={clinic}
                           doctor={doctor} meds={meds} lang={lang} docNo={'(' + L(UI.draft, lang) + ')'} dateStr={today} />;
