@@ -2,6 +2,39 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 통합 시험 2차 진료 몫 (6·1·2·3·4·5) + 찾기로 연 환자의 알레르기
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `b8069d7` 다음
+- **한 일**:
+  - **6) 기록이 칸마다 따로 남던 것**
+    - 원인은 서버가 아니라 화면이었습니다. 칸마다 `onBlur`로 저장해서 하루 총량 → 횟수 → 일수 → 용법을 치면 PUT이 4번 갔고, 끝난 진료라 기록도 4줄이었습니다.
+    - 이제 **줄을 벗어날 때만** 저장합니다(`leftRow(e)`: `relatedTarget`이 같은 `<tr>` 안이면 건너뜀). 처방·오더 줄의 입력 칸 11곳과 포장 수량 칸이 해당합니다.
+    - 서버의 `recordEdit`는 원래 PUT 한 번에 한 줄(바뀐 칸 모두)입니다. 기록 탭은 그대로 읽습니다.
+  - **1) 닫힌 대기열 서랍**: 닫혀 있을 때 `inert` + `aria-hidden="true"`(Chrome 102+). 열면 둘 다 빠집니다.
+  - **2) «flacons» 줄바꿈**: 단위 말은 한 줄에 넘치면 「…」, title은 전체입니다. 1366의 이름 칸(157px)에 «Quantité [2] flacons»가 다 들어가도록 수량 칸 54 → 40px, 간격 6 → 4로 줄였습니다.
+  - **3) 머리줄 «M/»**: 성별·생년월일 가운데 빈 것은 빼고 「/」로 잇습니다.
+    - **덧붙여 찾은 것(안전)**: 「Trouver patient」·「Sélection visite」로 연 내원은 방문 이력 목록(`GET /visits/patient/:id`, 접수 파일)에서 오는데, 거기에 성별·생년월일·**알레르기**가 없어 머리줄에 **알레르기 ⚠가 안 보였습니다**(대기열로 연 환자만 보였음).
+    - `pickPatient`가 그런 내원이면 `GET /patients/:id`(진료 권한 있음)로 세 칸을 채웁니다.
+  - **4) 검색 목록에 사전 문장**: EMR의 검색 목록(`buildOrderSuggestions`)은 약·오더 코드만 넣습니다 — **뜻한 것이 아닙니다.** 보인 문장은 브라우저(Chrome)가 입력 칸 밑에 띄우는 **자체 입력 기록 목록**으로 봅니다. 검색 칸에 `autocomplete`가 없었습니다. 진료 화면의 검색 칸 4개(오더 검색·사전 검색·대기열 검색·약 찾기)에 `autoComplete="off"`를 넣었습니다. 재현 순서를 모르므로 다시 통합 시험에서 봐 주세요.
+  - **5) Hernie 양식**
+    - **칸 종류**: 「Date opératoire」를 날짜 칸으로 바꿨습니다(`type: 'date'`; `DocumentModal`이 `type="date"` 입력을 그림). 모든 수술기록지가 같은 `makeOp`를 써서 12종 모두 바뀝니다.
+    - 인쇄는 `2026-09-30` 그대로이고, 옛 문서의 글자 값도 그대로 인쇄됩니다. 수술일 말고 날짜 칸은 없습니다(훑음).
+    - **언어는 두었습니다**: 「빈칸 글자」 `[anesthesia] [Mesh placed and fixed / primary repair]`는 소견 기본 문장(영어 의학 문장) 안의 괄호입니다. 바꾸려면 기본 문장을 프랑스어·한국어로 새로 써야 합니다 — 의학 문장이라 의사 질문지 ①·R3 몫으로 남깁니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/components/DocumentModal.jsx`(공용, 입력 종류 한 줄) · `frontend/src/documents/surgical-records.jsx`(수술일 칸 종류) · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md`(§4 저장 시점)
+- **공용 파일 변경**: `DocumentModal.jsx` — `type: 'date'` 칸을 날짜 입력으로 그림(다른 양식에는 date 칸이 없어 영향 없음)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택, 1366×768 FR(밝은 화면)에서 확인했습니다. 끝난 진료 26-00167(생년월일 없음, Amoxicillin + PROFEIN 2병)입니다.
+  - **6**: Amoxicillin 줄에서 Dose/j 4 → Tab → 2 → Tab → 6 → Tab → 바깥 클릭을 하니 기록이 **1줄** `{days 5, dose 3, frequency 3, total_qty 15} → {6, 4, 2, 24}`였습니다(전 0줄). 문장은 « 2 gél. × 2 fois/jour pendant 6 jours (total 24) »입니다.
+  - **1**: 닫힌 서랍은 `inert`·`aria-hidden=true`입니다. 「Dossier」 단추에서 Tab을 누르면 서랍을 건너 «☰ File d'Attente»로 갑니다. 서랍을 열면 두 속성이 빠지고 탭이 초점을 받으며, 닫으면 다시 붙습니다.
+  - **2**: «Quantité [2] flacons»가 한 줄에 다 보입니다.
+  - **3**: 머리줄은 «26-00167 SANSDATE Journal F»입니다(«/» 없음, 성별은 찾기로 열었는데도 채워짐).
+  - **4**: 검색 칸 3개가 `autocomplete="off"`입니다(약 찾기 창은 열 때 생김).
+  - **5**: Compte-rendu opératoire와 Note op. - Hernie 모두 날짜 칸이고, 2026-09-30을 고르면 미리보기에 «Date opératoire 2026-09-30»가 나옵니다. 문서 렌더링 8쪽은 기준과 바이트가 같습니다.
+- **확인 못 한 것**: 4의 원인을 재현으로 확인하지 못했습니다(추정). 알레르기가 있는 환자로 찾기 → 머리줄 ⚠는 코드상 같은 길이라 따로 보지 않았습니다.
+- **다른 세션에 부탁**: 접수(급하지 않음) — `GET /visits/patient/:id`에 `p.gender, p.date_of_birth, p.allergies`를 더하면 진료의 추가 조회가 필요 없어집니다(진료 쪽은 칸이 이미 있으면 조회하지 않음).
+- **남은 일 · 알려진 문제**: 수술기록지 기본 문장의 언어(질문지 ①·R3).
+
 ## 2026-09-30 — 글자로만 보이는 칸(넘침·「1.000」) · 취소된 줄의 흐림(대비)
 
 - **상태**: 확인 요청 — 총괄 지시(두 가지 모두 진료 세션이 고침)

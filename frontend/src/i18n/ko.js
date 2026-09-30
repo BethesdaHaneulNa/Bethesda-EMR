@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
   rc_visitCancelled: "접수 취소",
   rc_genderRequired: "성별을 고르세요 (남 / 여).",
-  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌어 수납으로 넘어갑니다. 계속할까요?",
+  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌고 받을 돈이 없어 수납에 가지 않아도 됩니다. 계속할까요?",
   rc_workDate: "작업일자",
   rc_prevDay: "하루 전",
   rc_nextDay: "하루 뒤",
@@ -308,6 +308,9 @@ export default {
   rc_pastDateBanner: "지난 날짜({date})를 보는 중입니다. 보기와 정리(대기 취소·완료로)만 되고, 새 접수와 접수 수정은 오늘 날짜에서 합니다.",
   rc_pastDateNoNew: "지난 날짜의 접수는 새로 만들거나 고칠 수 없습니다. 「오늘로」를 눌러 오늘 날짜에서 접수하세요.",
   rc_noPatientFound: "「{q}」 환자를 찾지 못했습니다 — 「+ {btn}」을 누르세요.",
+  rc_completeNoConsultBilled: "{name} 환자를 진료 없이 「완료」로 보냅니다. 이미 영수가 있는 내원이라 내원구분은 바뀌지 않습니다. 이후는 수납에서 확인하세요. 계속할까요?",
+  rc_colVisitState: "상태",
+  rc_billNothing: "받을 돈 없음",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

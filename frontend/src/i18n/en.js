@@ -308,7 +308,7 @@ export default {
   rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   rc_visitCancelled: "Visit cancelled",
   rc_genderRequired: "Choose the sex (Male / Female).",
-  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\" and the patient goes to the cashier.",
+  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\": nothing to pay, the patient does not need to go to the cashier.",
   rc_workDate: "Work date",
   rc_prevDay: "Previous day",
   rc_nextDay: "Next day",
@@ -317,6 +317,9 @@ export default {
   rc_pastDateBanner: "You are looking at a past date ({date}): viewing and tidying up (cancel, complete) only. New registrations and edits are made on today’s date.",
   rc_pastDateNoNew: "Registrations on a past date cannot be created or edited. Press \"Today\" and register on today’s date.",
   rc_noPatientFound: "No patient found for \"{q}\" — press \"+ {btn}\".",
+  rc_completeNoConsultBilled: "Complete {name} without a consultation? This visit already has a receipt: its type does not change. See the cashier for what follows.",
+  rc_colVisitState: "Status",
+  rc_billNothing: "Nothing to pay",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",

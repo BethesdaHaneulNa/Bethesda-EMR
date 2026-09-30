@@ -32,7 +32,7 @@ L'écran a trois parties :
 1. Cherchez d'abord le patient (étape 2 de « En bref ») : il est peut-être déjà venu.
 2. S'il n'existe pas, cliquez sur **+ Nouveau patient**.
 3. Saisissez **Nom** et **Prénom**. Les deux sont obligatoires.
-4. **Sexe** : cliquez sur **Masculin** ou **Féminin**. Au départ, aucun n'est choisi : il faut cliquer, sinon l'enregistrement est refusé.
+4. **Sexe** : cliquez sur **Masculin** ou **Féminin**. Au départ, aucun n'est choisi : il faut cliquer, sinon l'enregistrement est refusé. Au clavier : touche **Tab** jusqu'à **Masculin**, puis les flèches **←** **→** pour choisir (ou la barre d'espace).
 5. **Date de Naissance** : tapez l'année (**AAAA**, 4 chiffres), puis le mois (**MM**, 2 chiffres), puis le jour (**JJ**, 2 chiffres), par exemple `1990` `05` `03`. Le curseur passe tout seul à la case suivante. Vous pouvez aussi coller une date entière (`19900503`, `1990-05-03` ou `03/05/1990`, jour d'abord) : elle se range toute seule dans les trois cases. Si la date est inconnue, laissez les trois cases vides.
 6. Remplissez si possible **Téléphone**, **Groupe Sanguin** et **Allergies** (les allergies s'affichent en rouge chez le médecin).
 7. Dans **📌 Note d'accueil**, écrivez ce qu'il faut toujours savoir sur ce patient (par exemple : « vient avec un accompagnant »). Cette note reste attachée au patient pour toutes ses visites.
@@ -100,7 +100,9 @@ Si le médecin a déjà commencé la consultation, l'annulation est refusée et 
 
 ### 10. Terminer sans consultation
 
-Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » et le patient part à la caisse. » Confirmez seulement si c'est bien le cas.
+Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n'a pas à passer à la caisse. » Confirmez seulement si c'est bien le cas. Une visite **Sans frais** n'apparaît pas dans la liste de la caisse : il n'y a rien à encaisser.
+
+Si la visite a déjà un reçu (payée avant la consultation), le message dit « Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite. »
 
 Pour un patient **En cours**, **Terminer →** ne change pas le type de visite : il a vu le médecin.
 
@@ -119,8 +121,7 @@ En haut à gauche, la **Date de travail** choisit le jour affiché dans la file.
 
 Le matin, regardez la veille (**◀**) et rangez ce qui est resté **En Attente** ou **En cours**.
 
-<!-- à revoir : la liste de la caisse ne montre pas encore une visite de la veille terminée le lendemain (correction en cours côté Paiement). Pour l'instant : si le médecin a bien vu le patient, prévenez la caisse. -->
-Si le médecin a vu le patient mais a oublié de terminer la consultation, prévenez la caisse après l'avoir terminée.
+Si le médecin a vu le patient mais a oublié de terminer la consultation, terminez-la : la caisse voit alors la visite avec la ligne **📅 … visite d'un jour passé · pas encore encaissée**, et le reçu est daté du jour où l'argent est reçu.
 
 Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en moins de 30 secondes).
 
@@ -130,7 +131,7 @@ Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en m
 2. Cliquez sur le patient.
 3. **Fermer** ferme la fenêtre.
 
-Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Sélection visite**). Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
+Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Sélection visite**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Motif**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Motif** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
 
 ### 13. Dossier (vue)
 

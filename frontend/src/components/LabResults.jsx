@@ -134,6 +134,10 @@ export function LabResults(props) {
 
   var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: 'var(--panel-2)', whiteSpace: 'nowrap' };
   var td = { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid var(--line-soft)', whiteSpace: 'nowrap' };
+  // The last date column (often the cancelled "✕" one) kept its values against the
+  // panel's right edge; a wider padding there leaves room after it, also when the
+  // table is scrolled sideways to its end.
+  function edge(i) { return i === cols.length - 1 ? { paddingRight: 20 } : null; }
 
   return (
     <div style={{ overflow: 'auto', height: '100%' }}>
@@ -143,7 +147,7 @@ export function LabResults(props) {
             <th style={Object.assign({}, th, { left: 0, zIndex: 2 })}>{t.testName || '검사명'}</th>
             <th style={th}>{t.unit || '단위'}</th>
             <th style={th}>{t.refRange || '참고치'}</th>
-            {cols.map(function (c) { return <th key={c.d + '#' + c.s} title={c.n === 0 ? t.lb_cancelled : undefined} style={Object.assign({}, th, { textAlign: 'right' }, c.n === 0 ? { color: t3 } : null)}>{c.d}{c.n > 0 ? ' (' + c.n + ')' : c.n === 0 ? ' ✕' : ''}</th>; })}
+            {cols.map(function (c, i) { return <th key={c.d + '#' + c.s} title={c.n === 0 ? t.lb_cancelled : undefined} style={Object.assign({}, th, { textAlign: 'right' }, c.n === 0 ? { color: t3 } : null, edge(i))}>{c.d}{c.n > 0 ? ' (' + c.n + ')' : c.n === 0 ? ' ✕' : ''}</th>; })}
           </tr>
         </thead>
         <tbody>
@@ -155,7 +159,7 @@ export function LabResults(props) {
                 <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: 'var(--bg-col)', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
                 <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}{it.ref_label ? <span style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</td>
-                {cols.map(function (c) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
+                {cols.map(function (c, i) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' }, edge(i))}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
               </tr>;
             }));
           })}

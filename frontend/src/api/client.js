@@ -1,3 +1,4 @@
+import { setTheme } from '../theme.js';
 const BASE = '/api';
 
 function getToken() {
@@ -45,6 +46,10 @@ export const api = {
 export function saveAuth(token, user) {
   localStorage.setItem('medconnect_token', token);
   localStorage.setItem('medconnect_user', JSON.stringify(user));
+  // The account's own screen (dark / light) comes with the login answer: wear it now,
+  // before the first screen is drawn, so the previous person's choice on this PC is
+  // never shown first. The top bar still reads /api/theme afterwards.
+  if (user && (user.theme === 'light' || user.theme === 'dark')) setTheme(user.theme);
 }
 
 export function getUser() {

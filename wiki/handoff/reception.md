@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 다시 통합 시험의 접수 몫: 성별 키보드, 방문 고르기 창, 「Terminer →」 문구
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `b8069d7` ff 뒤)
+- **한 일** (총괄 지시 1~3):
+  1. **[B] 성별**: `div` 두 개 → `role="radiogroup"`(`aria-labelledby`·`aria-required`) 안의 `button type="button" role="radio" aria-checked`. Tab 정거장 하나(고른 쪽, 없으면 Masculin), ← → ↑ ↓로 고르고 포커스도 옮김(`moveGender`), 스페이스·엔터는 클릭. 색은 그대로(이름표만)
+  2. **[B] 방문 고르기 창**(`PatientFinder.jsx`):
+     · **Motif**(주호소, 말줄임 + `title`)·**État** 칸 추가 — 기다림 / 진료 중 / 끝남 / Sans frais, 취소는 날짜 칸 딱지
+     · 진료비 없이 끝난 내원은 «Rien à payer»
+     · 창 너비 760 → 900, 칸 `nowrap`
+     · 취소 줄의 `opacity 0.55` → 흐린 글자색 이름표(`t3`)
+     · 서버 `GET /visits/patient/:id`에 `chief_complaint` 한 칸
+  3. **[C] 「Terminer →」 확인 창**:
+     · 영수 없음: «… « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse.»
+     · 영수 있음: «Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite.»
+     · 대기 줄의 `has_active_bill`로 나눔. ko·en·fr 같이
+     · `manual-fr/reception.md` §10과, 낡은 «à revoir» 주석(지난 날 방문이 수납에 안 뜬다)을 📅 줄 설명으로 고침
+- **확인**(격리 스택 새 DB, 1366×768):
+  - 빌드 통과, `node --check`, `reception.api.mjs` 168/0
+  - **성별**: JJ에서 Tab → Masculin(`aria-checked=false`, `tabIndex 0`, 테두리 2px, `:focus-visible`) → → Féminin 선택(`aria-checked=true`, 포커스 따라감) → ← Masculin → Tab → 전화 칸. 한국어 «남/여», 대비 통과
+  - **확인 창**: 영수 없는 내원 → «rien à payer…». 격리 DB에서만 영수 한 장을 넣은 내원 → «déjà un reçu…», Annuler면 그대로 대기
+  - **방문 고르기 창**: 같은 환자의 세 줄이 «Erreur de saisie · Visite annulée · Non facturé» / «Contrôle · En Attente · Payé» / «Toux · Sans frais · Rien à payer»로 구분됨
+    · 진료·검사실·수납에서 어두운·밝은 화면 모두 가로 넘침 없음, 문서 768, 대비 통과
+    · 한국어 머리 칸 «주호소 · 상태», «진료비 없음 · 받을 돈 없음»
+    · 약국(환자 모드) 창도 넘침 없음
+- **바꾼 파일**: `frontend/src/pages/Registration.jsx`, `frontend/src/components/PatientFinder.jsx`(공용, 접수 주관), `backend/src/routes/visit.routes.js`, `frontend/src/i18n/{ko,en,fr}.js`(`rc_` 구역 — `rc_completeNoConsult` 고침 + `rc_completeNoConsultBilled`·`rc_colVisitState`·`rc_billNothing`), `wiki/modules/reception.md`(2·3절·변경 기록), `wiki/manual-fr/reception.md`, 이 노트
+- **공용 파일 변경**: `PatientFinder.jsx`(진료·수납·검사실·약국이 씀 — 동작은 그대로, 칸만 더함), i18n `rc_` 구역
+- **본 것(수납 몫, 참고)**: 수납 대기 목록에서 과·의사 없는 줄이 «26-00030 · ·»처럼 점만 남음(접수 대기 줄에서 고친 것과 같은 모양). 수납 세션에 전해 주세요
+- **다른 세션에 부탁**: 위 한 줄(수납)
+
 ## 2026-09-30 — 다시 통합 시험 `wiki/reference/integration-test-2026-09-30.md`
 
 - **상태**: 확인 요청

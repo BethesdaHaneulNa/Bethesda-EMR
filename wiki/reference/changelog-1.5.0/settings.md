@@ -68,6 +68,8 @@ copy for 36 hours. The Backup tab says so instead of asking for another drive in
 - The edit windows say what they edit ("New staff member", "Edit drug"...), the staff form has an
   e-mail field, and deactivated staff are listed below the active ones. On a 1366×768 laptop only the
   fields scroll; Save stays in view.
+- Amounts in Settings and the Journal are written like the payment screen's: « 15 000 » in French,
+  « 15,000 » in Korean and English, without « .00 ».
 - An order set that holds drugs removed from the list says so ("⚠ 2 drug(s) no longer in the list",
   the lines struck through): the consultation screen leaves them out. The drug search in the order-set
   editor shows stock and price, so two drugs with the same name can be told apart.
