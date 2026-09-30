@@ -11,6 +11,7 @@ import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../docum
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 import { seMoney, seMoneyInput } from './settingsMoney.js';
+import { getTemplate } from '../documents/registry.js';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -966,7 +967,7 @@ export default function SettingsPage() {
                   {[t.se_logWhen,t.se_logWho,t.se_logWhat,t.se_logPatient,t.se_logChange].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize:12,borderBottom:'1px solid '+bd,whiteSpace:'nowrap'}}>{h}</th>})}
                 </tr></thead>
                 <tbody>{audit.rows.map(function(r){
-                  var ch=auditChanges(t, r, {depts:depts, lang:langCtx.lang});
+                  var ch=auditChanges(t, r, {depts:depts, lang:langCtx.lang, templateName:function(code){ var tp=getTemplate(code); return tp && tp.name ? (tp.name[langCtx.lang]||tp.name.fr||tp.name.en) : ''; }});
                   return <tr key={r.id} style={{borderBottom:'1px solid var(--line-soft)',verticalAlign:'top'}}>
                     <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>
