@@ -80,7 +80,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 2. Un examen de laboratoire ou d'imagerie arrive toujours avec **1 · 1 · 1** (quantité, fois, jours).
 3. Facturation : **quantité × jours**. Par exemple une injection une fois par jour pendant 5 jours = `1` · `1` · `5` → « facturé 5 fois » sous le nom. Attention : **2 jours sur un examen le facture deux fois.**
 4. Le laboratoire voit l'examen dès qu'il est ajouté. Le résultat apparaît tout seul en moins de 30 secondes : la colonne de droite passe de **En attente** à **Résultat reçu**.
-5. Imagerie : la colonne de droite montre **Envoyé**, **En cours**, puis **Réalisé**.
+5. Imagerie : la colonne de droite montre **Envoyé** dès l'ajout, puis **En cours** et **Réalisé**. La région (`CHEST`, `ABDOMEN`…) est écrite en petit à côté du nom ; la case **Unité** reste libre pour une note.
 
 ### 8. Retirer ou annuler une ligne
 

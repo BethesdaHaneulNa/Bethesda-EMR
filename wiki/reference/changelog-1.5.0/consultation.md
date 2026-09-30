@@ -94,8 +94,12 @@ the phrase dictionary's header now wraps, and the vital signs keep two columns d
 - The search shows an imported drug's dosage form (**Comprimé**, **Sirop** …).
 - Lab and imaging progress (**En attente** → **Résultat reçu**, **Envoyé** → **Réalisé**)
   updates by itself while the patient is open.
-- The image viewer warns when the images carry another patient's number or none; a
-  radiology reading's date is the local date.
+- The image viewer warns when the images carry another patient's number or none, and
+  says when they were linked only by accession number; a radiology reading's date is the
+  local date. Saving a reading shows a short notice instead of a box to click away.
+- An imaging order shows **Envoyé** as soon as it is added (it used to appear only after
+  the patient was opened again). The body part is written small next to the name; the
+  **Unité** box no longer shows it cut to four letters.
 
 ### Not visible on the screen
 

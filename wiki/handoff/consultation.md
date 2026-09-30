@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 영상이 있는 하루 시험의 진료 몫 (B 1, C 3)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `a81006d` 다음
+- **한 일** (보고서 `wiki/reference/integration-test-imaging-2026-09-30.md`):
+  - **1) [B] 영상 오더 뒤 「Envoyé」가 안 보임 — 고침**
+    - 원인: `POST /:id/orders`가 **INSERT 때의 행**을 돌려줬습니다. 워크리스트를 만든 뒤 `worklist_status='sent'`·`worklist_sent_at`을 UPDATE로 넣었지만 응답에는 없었습니다.
+    - 화면의 `orderStatus`는 `worklist_sent_at`이 있어야 「Envoyé」를 그립니다. 30초 새로고침도 「기다리는 줄」을 `worklist_sent_at`이 있는 영상 줄로 골라서, 이 줄을 영영 다시 읽지 않았습니다. 그래서 환자를 다시 열어야 보였습니다.
+    - 이제 UPDATE가 `RETURNING *`로 그 행을 돌려줍니다. 추가 직후 「Envoyé」가 보이고, 새로고침도 이 줄을 기다려 「En cours」·「Réalisé」를 잡습니다. 약속처방 세트로 넣은 영상 오더도 같은 길입니다.
+  - **2) [C] 영상 창 머리의 accession 줄**: `viewer.images.linked_by === 'accession'`이면 빨강·노랑 경고 밑에 `px_linkedByAccession`(목록과 같은 키, 같은 `--warn-text` 색) 한 줄.
+  - **3) [C] Unité 칸의 «CHES»**: 촬영 부위는 이름 옆 작은 글자(`t3`, 12px, 줄바꿈 없음)로 옮겼습니다. Unité 칸은 `memo`만 보여 주고, 칸의 title은 memo 전체입니다. 취소된 줄의 글자 칸도 memo만 보입니다.
+    - 전에는 `memo || body_part`여서, 빈 메모 칸에 부위가 들어 있다가 의사가 고치면 부위 글자가 메모로 저장될 수도 있었습니다.
+  - **4) [C] 판독 저장 알림**: `alert` 대신 아래에 3초 뜨는 알림(`showToast`, 문장은 `cs_readingSaved` 그대로, 임상병리 화면과 같은 `--toast-*` 색). 영상 창(zIndex 1001) 위에 보이도록 1100입니다. 실패는 전처럼 알림 창입니다(눌러서 읽어야 할 것).
+  - **5)** `manual-fr/pacs.md` §1-3의 «montre **Envoyé**» à revoir 주석: **1)을 고쳤습니다** — PACS 세션이 지우면 됩니다(설명서 본문은 그대로 맞음).
+- **바꾼 파일**: `backend/src/routes/consult.routes.js`(오더 추가 응답) · `frontend/src/pages/Consultation.jsx` · `wiki/modules/consultation.md`(2.3·3.1·3.2·8) · `wiki/manual-fr/consultation.md`(§ examens 5) · `wiki/reference/changelog-1.5.0/consultation.md`
+- **공용 파일 변경**: 없음 (`px_linkedByAccession` 키는 PACS 것을 읽기만)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build`, `node --check` 통과. 격리 스택 1366×768 FR.
+  - **1**: API `POST` 응답이 `worklist_status sent`, `worklist_sent_at` 있음. 화면에서 `X2` + Entrée → 줄이 생기자마자 «🖼 Envoyé»(다시 열지 않음).
+  - **2**: 영상 도착 + 장비 UID ≠ 워크리스트 UID로 DB를 맞춘 오더 → `viewer-url`의 `linked_by: accession`, 영상 창 머리에 «L'appareil a donné son propre numéro d'étude …». 밝은 화면과 어두운 화면에서 모두 읽힘.
+  - **3**: X1·X2 줄 이름 옆 «CHEST», Unité 칸 빔.
+  - **4**: «Poumons clairs.» 저장 → 아래 «Compte-rendu enregistré ✓», 3초 뒤 사라짐, 알림 창 없음. 어두운 화면에서도 DOM에 뜸.
+- **확인 못 한 것**: 진짜 장비와 브리지는 쓰지 않았습니다(격리 스택에 PACS 없음) — 「Envoyé → Réalisé」가 새로고침으로 넘어가는 것은 코드상(기다리는 줄 조건이 이제 참)으로만 봤습니다. PACS 세션의 다음 시험에서 봐 주세요.
+- **다른 세션에 부탁**: PACS — `manual-fr/pacs.md` §1-3의 à revoir 주석 지우기(위 5).
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-09-30 — ① 줄 저장의 남은 틈(정전·F5) ② 서류 발행·취소를 변경 기록에
 
 - **상태**: 확인 요청

@@ -507,7 +507,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
        worklist_enabled ? 'pending' : 'completed']
     );
 
-    const orderItem = oResult.rows[0];
+    let orderItem = oResult.rows[0];
 
     // If worklist enabled, create worklist log entry
     if (worklist_enabled && pacs_modality) {
@@ -521,8 +521,13 @@ router.post('/:id/orders', canConsult, async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_DATE,CURRENT_TIME)`,
         [orderItem.id, patient_id, pacs_modality, station_ae || null, body_part, accession, studyUid]
       );
-      // Update order item worklist status
-      await client.query("UPDATE order_item SET worklist_status = 'sent', worklist_sent_at = NOW() WHERE id = $1", [orderItem.id]);
+      // Update order item worklist status. The row sent back is the updated one: the
+      // screen shows "Envoyé" from worklist_sent_at, and the insert's row did not have it,
+      // so the doctor saw only 🖼 until the patient was opened again (imaging-day test
+      // 2026-09-30, B) - the screen's 30 s refresh also waits for that field.
+      const upd = await client.query(
+        "UPDATE order_item SET worklist_status = 'sent', worklist_sent_at = NOW() WHERE id = $1 RETURNING *", [orderItem.id]);
+      orderItem = upd.rows[0];
     }
 
     await recordEdit(client, req, consult, 'order_item', orderItem, orderLabel(orderItem), null, pick(orderItem, ORDER_LOG));
