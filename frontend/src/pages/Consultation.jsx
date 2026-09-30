@@ -1267,7 +1267,10 @@ export default function ConsultationPage() {
                     <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{t.cs_noteToday}</span>
                     {/* Whose chart: department and the doctor the visit was registered with
                         (director, 2026-09-30 - «GEN» alone did not say which chart). */}
-                    <span style={{fontSize: 12,color:t2}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
+                    {/* No doctor on the visit: the account that opened the consultation, the same
+                        fallback as the earlier visits below (GET /patients/:id/history), so today's
+                        header does not change name once it becomes an earlier visit. */}
+                    <span style={{fontSize: 12,color:t2}}>{[sel.dept_code, sel.doctor_name || consult.opened_by_name].filter(Boolean).join(' ')}</span>
                   </div>
                   {notesBlock(notes, false, true)}
                 </div> : null}

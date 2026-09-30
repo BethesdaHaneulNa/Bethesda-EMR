@@ -148,7 +148,10 @@ router.post('/', canConsult, async (req, res) => {
     // Reuse an existing consultation for this visit instead of creating duplicates
     // every time the doctor clicks the same waiting patient.
     const existing = await client.query(
-      `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id = c.vitals_by) AS vitals_by_name
+      // opened_by_name: the account that opened the consultation first - the chart header's
+      // fallback when the visit has no doctor, as GET /patients/:id/history does.
+      `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id = c.vitals_by) AS vitals_by_name,
+              (SELECT s.name FROM staff s WHERE s.id = c.doctor_id) AS opened_by_name
          FROM consultation c
         WHERE c.visit_id = $1
         ORDER BY c.created_at DESC, c.id DESC
@@ -174,6 +177,7 @@ router.post('/', canConsult, async (req, res) => {
       [visit_id, patient_id, req.user.id, department_id || req.user.department_id, vis.rows[0].visit_date]
     );
     await client.query('COMMIT');
+    result.rows[0].opened_by_name = req.user.name || null;
     res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');

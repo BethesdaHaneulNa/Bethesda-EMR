@@ -91,7 +91,7 @@ the phrase dictionary's header now wraps, and the vital signs keep two columns d
 The note of a visit was one text: a second doctor opening the same visit typed into it,
 and nothing said who wrote what. Now each doctor has **one note per visit**, under their
 name. The box in the middle is *Ma note de consultation*; after **Sauver** it stays in the
-box and appears at the top of **Visites passées** under **Aujourd'hui**, with the doctor's
+box and appears at the top of **Dossier Patient** under **Aujourd'hui**, with the doctor's
 name and time (and when it was last changed). Another doctor's note shows there under
 their name and can only be read — an administrator cannot change a doctor's note either.
 Opening another patient with an unsaved note asks first; unsaved text is kept on the
@@ -99,6 +99,14 @@ computer until it is saved, the user signs out, or a day has passed. Vital signs
 set per visit and may be left empty. Payment, pharmacy and reception show every doctor's
 note with their name. Old notes are moved to the doctor who opened the consultation
 (migration **038**).
+
+### The chart says whose chart it is
+
+The right-hand tab is now called **Dossier Patient** (*Patient Chart*) on the
+consultation, payment and pharmacy screens (it was *Visites passées*). Each visit in it is
+headed by the department and the doctor the visit was registered with at reception —
+«GEN Dr. Grace», not «GEN» alone; a visit registered without a doctor shows the account
+that opened the consultation. Who wrote each note is shown on the note itself.
 
 ### Smaller changes on the screen
 
