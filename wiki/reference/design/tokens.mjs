@@ -112,6 +112,10 @@ export const COLOR = [
   ['violet-text-4', '#c4b5fd', '#5b21b6', 't'],
   ['cyan',          '#06b6d4', '#0e7490', 'c'],
   ['cyan-strong',   '#0891b2', '#155e75', 'c'],
+  // the lab's buttons, apart from --cyan: the lab screen also writes text and lines in --cyan,
+  // so a button cannot be made deeper through it without dimming that text.
+  ['cyan-fill',     '#06b6d4', '#0e7490', 'c'],
+  ['cyan-fill-2',   '#0891b2', '#155e75', 'c'],
   ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
   ['cyan-text',     '#67e8f9', '#0b6279', 't'],
   ['cyan-text-2',   '#7dd3fc', '#0b6279', 't'],

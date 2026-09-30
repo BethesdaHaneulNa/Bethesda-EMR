@@ -24,6 +24,10 @@ var ROLE_INFO = {
   admin: { icon: '⚙️', color: 'var(--danger-ink)', tint: 'danger' },
 };
 
+// When the switch was last pressed. Outside the component because every screen draws its
+// own top bar: the press on one screen must still count when the next one opens.
+var themeChosenAt = 0;
+
 export function TopBar() {
   var langCtx = useLang();
   var t = langCtx.t;
@@ -60,13 +64,25 @@ export function TopBar() {
   useEffect(function () {
     if (!user) return;
     api.get('/theme').then(function (r) {
+      // An answer that was asked for before the switch was pressed, or while its save was
+      // still on the way, is older than the choice on screen: it would turn the screen
+      // back. On a slow line that is a real gap, and every screen asks again when it opens.
+      if (Date.now() - themeChosenAt < 5000) return;
       if (r && (r.theme === 'light' || r.theme === 'dark') && r.theme !== getTheme()) setThemeShown(setTheme(r.theme));
     }).catch(function () {});
+    // The same account open in another tab of this browser: follow its switch.
+    function onStorage(e) {
+      if (e.key === 'medconnect_theme' && (e.newValue === 'light' || e.newValue === 'dark') && e.newValue !== getTheme()) setThemeShown(setTheme(e.newValue));
+    }
+    window.addEventListener('storage', onStorage);
+    return function () { window.removeEventListener('storage', onStorage); };
   }, []);
 
-  // Change at once, save behind. If the save fails the screen stays changed on this PC
-  // and nothing is shown - the next press, or the next login elsewhere, tries again.
+  // Change at once, save behind. If the save fails nothing is shown and the screen stays
+  // changed until the account's stored choice is read again (the next screen opened, or
+  // the next login): then the press has to be repeated.
   function chooseTheme(v) {
+    themeChosenAt = Date.now();
     setThemeShown(setTheme(v));
     if (user) api.put('/theme', { theme: v }).catch(function () {});
   }
