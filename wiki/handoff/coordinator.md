@@ -168,6 +168,7 @@
 | 2026-09-30 | 총괄 | 차트 머리줄에 「과 + 접수 때 정한 의사」(실장님: 「GEN까지만이 아니라 GEN Dr. Grace」) · 탭 이름 결정 (가) | ✅ | ✅ | `GET /patients/:id/history`의 `doctor_name` = **내원(visit)의 의사**, 없으면 진료를 처음 연 계정(전에는 연 계정만 — 실장님 시험 내원은 admin이 열어 「Bethesda」로 나왔음). 진료 화면 오른쪽: 오늘 묶음·지난 내원 머리줄 「GEN Dr. Grace」. 탭 이름: 진료·수납·약국 세 곳 `t.pastVisits` → `t.patientChart`(fr Dossier Patient · en/ko Patient Chart), 설명서 fr 5곳. 실행 중 EMR: history 답 `doctor_name: Dr. Grace`(연 계정 1=admin), 1366×768 화면에서 「2026-09-30 오늘 GEN Dr. Grace」·탭 「Patient Chart」 읽음. 수납·약국 화면은 눈으로 보지 않음(같은 키 한 줄) |
 | 2026-09-30 | 결정 | `c80967f` 탭 이름 (가) 세 화면 모두, ko도 「Patient Chart」 | ✅ | — | 위 줄에서 반영 |
 | 2026-09-30 | 설정 | `3566d4c` 변경 기록 화면에 `consultation_note` 이름표(note du médecin / 의사의 진료 기록 / doctor's note) | ✅ | ✅ | diff 읽음(ENTITIES 한 줄, 요약 'note' 숨김 조건, 키 3개, 위키). 실행 중 EMR에는 아직 그 종류의 줄이 없어 화면에서는 보지 못함(세션이 격리 스택에서 세 줄로 확인) |
+| 2026-09-30 | 수납 | `71df770` PatientChart: 진료 기록을 의사마다 이름·시각 머리 밑에 (목록·상세) | ✅ | ✅ | diff 읽음(PatientChart.jsx만, `notes` 없으면 옛 한 칸). 실행 중 EMR 수납 화면 1366×768 밝은 화면(읽기만): 탭 「Patient Chart」, 「Bethesda · 16:49 · 수정 17:17」과 「Dr. Grace · 17:22」가 따로, 머리줄 의사는 Dr. Grace. 약국 화면은 같은 부품이라 열지 않음. 머리줄을 「GEN Dr. Grace」로 붙이는 것은 보낸 부탁에 있음(다음 커밋) |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
