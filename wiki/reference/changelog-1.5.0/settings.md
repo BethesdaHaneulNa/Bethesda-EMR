@@ -33,6 +33,8 @@ TRUNCATE (migration 026). Staff account changes are logged by Settings, and so a
 change (old price → new price; the director's decision): a drug's, including the first price of an
 imported drug, and an order code's (consultation fees, lab tests, imaging, procedures). Every document
 issued or voided is listed too (number, document, language, reason for voiding - never its content).
+The Journal opens without the issued ones, which are many, and says how many are folded away; one tick
+shows them. Voided documents are always shown.
 
 ### Backups you can trust, and that say when they cannot be restored
 

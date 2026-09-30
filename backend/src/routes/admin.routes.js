@@ -5,6 +5,7 @@ const { sendDbError } = require('../utils/dbError');
 // Messages shown to people - translated by the screen; see settings.messages.js.
 const { MSG, fieldMsg } = require('./settings.messages');
 const { writeAudit, ACTIONS } = require('../utils/audit');
+const KNOWN_ACTIONS = new Set(Object.values(ACTIONS));
 
 // Mirror the CHECK constraints so a bad value is a 400 naming the field rather
 // than a 500 carrying the constraint name.
@@ -578,9 +579,27 @@ router.get('/audit', permMiddleware('settings'), async (req, res) => {
       params.push('%' + String(req.query.patient).trim() + '%');
       where.push('(patient_name ILIKE $' + params.length + ' OR chart_no ILIKE $' + params.length + ')');
     }
-    if (req.query.action && /^[a-z.]+$/.test(String(req.query.action))) {
-      const act = String(req.query.action);
-      if (act.indexOf('.') >= 0) add('action = ?', act); else add('module = ?', act);
+    const chosen = req.query.action && /^[a-z.]+$/.test(String(req.query.action)) ? String(req.query.action) : '';
+    if (chosen) {
+      if (chosen.indexOf('.') >= 0) add('action = ?', chosen); else add('module = ?', chosen);
+    }
+    // exclude=<action>[,<action>] (the director's decision (나), 2026-09-30): the Journal
+    // opens without the many "document issued" lines. Only known action names count;
+    // anything else is ignored. An action picked in the type filter is never excluded.
+    // The answer says how many lines each exclusion hid (same other filters), so the
+    // screen can say they are folded away rather than missing.
+    const exclude = String(req.query.exclude || '').split(',').map(a => a.trim())
+      .filter((a, i, all) => a && KNOWN_ACTIONS.has(a) && a !== chosen && all.indexOf(a) === i);
+    let excluded;
+    if (exclude.length) {
+      const w0 = where.length ? ' WHERE ' + where.join(' AND ') + ' AND' : ' WHERE';
+      const hid = await pool.query(
+        'SELECT action, COUNT(*)::int AS n FROM audit_log' + w0 + ' action = ANY($' + (params.length + 1) + '::text[]) GROUP BY action',
+        params.concat([exclude]));
+      excluded = {};
+      exclude.forEach(a => { excluded[a] = 0; });
+      hid.rows.forEach(r => { excluded[r.action] = r.n; });
+      add('action <> ALL(?::text[])', exclude);
     }
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -590,7 +609,7 @@ router.get('/audit', permMiddleware('settings'), async (req, res) => {
       `SELECT id, at, staff_id, staff_name, staff_role, module, action, patient_id, patient_name, chart_no, visit_id,
               entity, entity_id, summary, before_value, after_value
          FROM audit_log${w} ORDER BY at DESC, id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`, params)).rows;
-    res.json({ total, page, limit, rows });
+    res.json(excluded ? { total, page, limit, rows, excluded } : { total, page, limit, rows });
   } catch (err) { sendDbError(res, err); }
 });
 
