@@ -2,6 +2,38 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — ① 줄 저장의 남은 틈(정전·F5) ② 서류 발행·취소를 변경 기록에
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `33a81d2` 다음
+- **한 일**:
+  - **① 줄 저장** (`Consultation.jsx`)
+    - **진료 중**: 줄을 벗어날 때 + **마지막 입력 2초 뒤**에 그 줄을 저장(`armRowSave`, 줄마다 타이머; 처방 칸·포장 수량·오더 칸 모두 `updateRxLocal`/`updateOrderLocal`을 지남). 기록은 끝난 진료만 쓰므로 여러 번 저장해도 기록 줄이 늘지 않습니다.
+    - **끝난 진료**(Terminé 또는 다른 날 내원 — 서버 `consultOf`와 같은 규칙, `finishedRef`): 전처럼 줄을 벗어날 때만.
+    - **둘 다**: `pagehide`에서 저장 안 된 줄(`dirtyRows` — 마지막 저장 스냅숏과 다른 줄, 조제된 약·취소된 오더 줄 제외)을 `fetch keepalive`로 보냄(토큰은 `api/client.js`와 같이 `localStorage 'medconnect_token'`). `visibilitychange`(hidden)에서는 보통 저장.
+    - **순서**: 한 줄의 저장은 차례로 갑니다(`inTurn` — 앞 저장의 응답이 온 뒤 다음을 보냄). 응답마다 번호(`rowSeq`)가 있어 최신이 아니면 화면에 넣지 않고, 보낸 뒤 더 친 것이 있으면 응답에서 서버가 계산한 칸(total_qty·status·dosage_form·포장 칸)만 받습니다. 같은 값을 두 번 보내면 서버가 바뀐 것이 없어 기록을 쓰지 않습니다(unload 때 보통 저장과 keepalive가 같은 값으로 겹칠 수 있음 — 확인함).
+    - 저장 실패 표시(`lockAlert`/`cs_errorPrefix`)는 그대로입니다.
+    - `saveOrder`도 같은 규칙입니다. 오더 줄은 처음 보일 때 저장된 것으로 기억합니다(`savedOrd`) — 전에는 안 바뀐 오더 줄도 벗어날 때마다 PUT이 갔습니다.
+  - **② 서류 기록** (`document.routes.js`)
+    - 발급(`POST /`) 뒤 `documents.issue`, 취소(`POST /:id/void`) 뒤 `documents.void`. `entity 'document'`, `entity_id` = `document_log.id`, `summary` = `D26-00134 Certificat médical`(번호 + 서류 이름, 이름이 없으면 template_code), 환자·내원 채움.
+    - 발급 `after {doc_no, template_code, lang}` · 취소 `before {voided:false}` → `after {voided:true, void_reason}`. **payload는 넣지 않습니다.**
+    - 번호 뽑기·문서 행·기록 줄을 한 트랜잭션(`inTx`, consult.routes.js와 같은 모양)으로 묶었습니다.
+    - **다시 취소**: 전에는 두 번째 취소가 처음 사유·시각·사람을 덮어썼습니다. 이제 `WHERE voided IS NOT TRUE`로 바꾸지 않고 문서를 그대로 돌려줍니다(200, 화면 동작 같음) — 기록 0줄.
+    - 줄이 없는 경우: 원외 처방 없음 400, 권한 없음 403, 없는 문서 404, 다시 취소. 초안 인쇄는 서버에 오지 않습니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `backend/src/routes/document.routes.js` · `wiki/modules/consultation.md`(2.3·2.11·3.1·3.4·7.3·8) · `wiki/manual-fr/consultation.md`(§ ordonnance 4, documents 8) · `wiki/reference/changelog-1.5.0/consultation.md`
+- **공용 파일 변경**: 없음 (`document.routes.js`는 진료 파일, `utils/audit.js`는 읽기만)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build`, `node --check` 통과. 격리 스택 1366×768 FR(밝은 화면), KO 한 번.
+  - **①-1** 진료 중 26-00168: Fois 2 → 같은 줄 Unité «apres» → 3초 → F5 — PUT 한 번에 두 칸 `{frequency 2, days 6, memo apres}`, 다시 열어도 둘 다 남음.
+  - **①-2** 처방 줄 Jours 9 → 오더 줄 수량 3 → **바로** 이동(F5와 같음) — 둘 다 DB에 남음(처방은 줄 벗어남 저장 + keepalive 같은 값 겹침, 오더는 keepalive).
+  - **①-3** 끝난 진료 26-00169: 하루 총량 6 → 3초 → 횟수 2 → 3초 → 일수 4 → 3초(그동안 PUT 0번) → 바깥 클릭 — PUT 1번, 기록 **1줄** `{days 5, dose 3, frequency 3, total_qty 15} → {4, 6, 2, 24}`. 오더 줄 두 칸 고치고 바로 F5 → keepalive로 저장, 기록 1줄.
+  - **①-4 늦은 응답**: 첫 PUT(일수 3)의 응답을 6초 늦추고 그 사이 일수 5로 고쳐 벗어남 — 두 번째 PUT은 첫 응답 뒤에 나가고(send0 → reply0 → send1), 화면·DB 모두 5. (차례 저장을 넣기 전 판에서도 화면은 새 값을 지켰음.)
+  - **①-5** KO: Unité에 « matin » 덧붙이고 3초 — PUT 1번.
+  - **②** `doc-audit-e2e` 17항목 모두 통과: 발급 1줄(모양 확인), 취소 1줄, 다시 취소 0줄·처음 사유 유지, 권한 없음(임상병리 계정) 발급·취소 403·0줄, 원외 처방 없음 400·0줄, 없는 문서 404, payload에 넣은 글자가 audit_log 어디에도 없음, 이력은 두 문서 그대로.
+- **확인 못 한 것**: 실제 정전(전원 끊김)은 재현하지 않았습니다 — F5·이동으로 봤습니다. 기록 탭 화면에서 두 action이 어떻게 보이는지는 보지 않았습니다(아래 부탁).
+- **다른 세션에 부탁**: 설정(급하지 않음) — `settingsAudit.js`의 `AUDIT_ACTIONS`에 `documents.issue`·`documents.void`, `FIELDS`에 `doc_no`·`template_code`·`lang`·`voided`·`void_reason` 이름을 넣어 주세요(지금은 저장된 글자 그대로 보임). 03-change-log.md 1절의 「기록 탭의 종류 거르기에 두 action」도 그쪽 몫입니다.
+- **남은 일 · 알려진 문제**: 끝난 진료는 줄을 벗어나기 전 정전이면 그 줄의 고친 칸을 잃습니다(기록 한 줄 규칙 때문, 모듈 문서 7.3). keepalive 저장이 서버에서 막히면 알림이 없습니다(값은 틀리게 남지 않음).
+
 ## 2026-09-30 — 통합 시험 2차 진료 몫 (6·1·2·3·4·5) + 찾기로 연 환자의 알레르기
 
 - **상태**: 확인 요청
