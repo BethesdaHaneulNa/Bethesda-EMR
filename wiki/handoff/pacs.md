@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 그림 없는 자료만 온 검사: 영상 창에 빈 칸 대신 한 줄 안내
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `f776201`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**: EMR 영상 중계(`pacs.viewer.js`)가 영상 창 페이지를 열 때 그 검사에 **그림이 있는 객체가 하나라도 있는지** Orthanc에 물음(`studyPictures` — `/tools/find` → `/studies/<id>/instances` → 앞의 30개까지 `metadata?expand`의 `PixelDataOffset`, 저장된 로그인, 3초 제한). 하나도 없으면 Stone 대신 한 줄 안내 쪽:
+  - fr 「Cette demande n'a reçu que des données sans image ({n}) — par exemple un rapport ou des mesures envoyés par l'appareil. Il n'y a rien à afficher ; le compte-rendu peut être saisi à droite.」
+  - ko 「이 검사에는 그림이 없는 자료만 왔습니다({n}개) — 장비가 보낸 보고서·측정값 같은 것. 보여 줄 영상이 없습니다. 판독은 오른쪽에 쓸 수 있습니다.」
+  - en 「Only data without a picture arrived for this order ({n}) — …」
+  - 그림이 섞인 검사, 물을 수 없을 때(Orthanc가 느림·찾지 못함)는 보통처럼 Stone — 확인이 영상 창을 막지 않음.
+- **px_ 키가 아닌 이유**: 이 안내는 **Stone이 들어갈 자리(iframe)에 서버가 보내는 쪽**이라, 다른 영상 창 안내(짝 안 맞음·응답 없음·시간 끝·권한 없음)와 같이 `pacs.viewer.js` 안의 세 언어 문장으로 둠. 화면(React) 번역 파일을 거치지 않음. 영상 창 머리(진료 파일 `Consultation.jsx`)는 바꾸지 않음.
+- **바꾼 파일**: `backend/src/routes/pacs.viewer.js`, `wiki/manual-fr/pacs.md`(메시지 표 한 줄), `wiki/reference/device-connection-onsite.md`(④ 한 줄), `wiki/modules/pacs.md`(4절 중계 7, 8절), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음. **번역 키**: 없음(위 이유)
+- **확인한 방법** (격리 9188 + 9198, 모르는 종류 받기 켠 Orthanc, 장비 흉내로 진짜 C-STORE): 그림 없는 전용 자료만 → 안내 쪽(200) / 보통 영상 → Stone / 그림 있는 전용 종류 → Stone / 그림 없는 것 + 보통 섞인 검사 → Stone. 더해진 시간 약 20ms(`index.html` 한 번). 진료 화면 → Compte-rendu → Voir image(1366×768, fr, 어두운 화면)에서 안내가 영상 칸에, 판독 칸은 오른쪽 그대로. 중계 회귀 6가지(자기 검사 페이지·데이터 200, 남의 검사 403, 쿠키 없음 401, 목록 403, 경로 우회 400) 통과.
+- **확인 못 한 것**: 옛 Orthanc(1.9.1 이전)가 저장한 색인을 `storage` 폴더째 옮긴 경우(`PixelDataOffset`이 없을 수 있어 그림이 있는데도 안내가 뜰 수 있음 — 이번 설치는 새것이고, 영상 백업 복원은 영상을 다시 받아 들이므로 해당 없음), 수백 장 검사의 첫 30개가 모두 그림 없는 경우(드묾 — 그러면 안내가 뜸).
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-09-30 — 모르는 영상 종류도 받음 (총괄 결정) · device-watch 경고 거르기
 
 - **상태**: 확인 요청
