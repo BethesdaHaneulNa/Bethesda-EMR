@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — PatientChart 머리줄 「GEN Dr. …」 · 탭 이름 Dossier Patient (총괄 덧붙임)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `e4df1d8`(이후 `ad40f5a`) merge
+- **같은 커밋으로 하지 못한 까닭**: 「의사마다 나눠 그리기」(`71df770`)는 이미 develop에 합쳐져 있었습니다(`ad40f5a`). 그래서 이어지는 커밋으로 했습니다. 기억 메모대로 rebase·amend는 하지 않았습니다.
+
+### 한 일
+
+- **`PatientChart.jsx` 목록 카드 머리**: 날짜 옆에 과와 의사를 붙여 「2026-09-30 GEN Dr RASOA Lalao」로 보여 줍니다. 진료 화면의 과거 내원 목록(`[dept_code, doctor_name].join(' ')`)과 같고, 길면 줄임표로 자릅니다. 전에는 의사 이름이 오른쪽 끝에 따로 있었습니다.
+- **상세 머리**: 이미 「📅 날짜 · 과 · 의사」(`cc3a8cd`)라 그대로 둡니다.
+- **`doctor_name`의 새 뜻**(서버, 총괄 `e4df1d8`): 내원의 의사(접수 때 정함), 없으면 진료를 처음 연 계정. 화면은 받은 값을 그대로 씁니다.
+- **탭 이름**: 총괄이 `Payment.jsx`의 오른쪽 탭을 `t.patientChart`(fr Dossier Patient)로 고쳤습니다. 모듈 위키 2.1의 「Visites passées (과거 내원)」을 「Dossier Patient (환자 차트)」로 바꿨습니다. 8절의 지난 기록 줄은 그 당시 이름이라 그대로 둡니다.
+
+### 확인 (격리 스택)
+
+- 두 의사 기록 데이터(앞 항목)에 내원 의사 Dr RASOA Lalao와 과 GEN을 넣었습니다.
+  - 과는 서버가 `consultation.department_id`에서 읽으므로 격리 DB에서 진료에도 넣음 — 실제 흐름에서는 진료를 만들 때 채워짐.
+- **결과**:
+  - 오른쪽 탭 「Dossier Patient」
+  - 카드 「2026-09-30 GEN Dr RASOA Lalao」 아래에 의사마다 기록(「Dr RABE Hery · 17:28 · modifiée 17:29」 / 「Dr RASOA Lalao · 17:28」)
+  - 상세 「📅 2026-09-30 · GEN · Dr RASOA Lalao」
+  - 과·의사가 없는 내원은 날짜와 처음 연 계정 이름만 나옴
+  - 1366×768에서 스크롤 없음
+
+### 기록
+
+- **바꾼 파일**: `frontend/src/components/PatientChart.jsx`(머리 한 줄), `wiki/modules/payment.md`(2.1, 4절, 8절 `71df770` 채움 + 이 줄)
+- **공용 파일 · DB · 다른 세션 부탁**: 없음
+
 ## 2026-09-30 — PatientChart: 진료 기록을 의사마다 (총괄 부탁)
 
 - **상태**: 확인 요청
