@@ -68,12 +68,17 @@ router.get('/today', permMiddleware('registration', 'consultation'), async (req,
 });
 
 // GET /api/visits/patient/:patientId - 환자의 전체 내원 이력 (외래 내역)
+// Each row carries the patient's sex, birth date and allergies (2026-09-30, asked by the
+// consultation session): a visit opened from the patient finder then has what the chart
+// bar and the allergy warning need without a second GET /patients/:id. Every role that
+// may call this route may already read those through GET /patients/:id.
 router.get('/patient/:patientId', permMiddleware('registration', 'consultation', 'lab', 'payment'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT v.id, v.patient_id, v.visit_date, v.reception_time, v.visit_type, v.status,
               v.department_id, v.doctor_id, v.chief_complaint,
               p.chart_no, p.last_name, p.first_name,
+              p.gender, p.date_of_birth, p.allergies,
               d.code as dept_code, d.name as dept_name, s.name as doctor_name,
               b.id as billing_id, b.payment_status as bill_status, b.receipt_no, b.total_due
          FROM visit v

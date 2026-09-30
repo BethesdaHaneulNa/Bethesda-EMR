@@ -2,6 +2,38 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — `GET /visits/patient/:id`에 성별·생년월일·알레르기 (진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`920e300` 위)
+- **한 일**:
+  - 내원 목록의 줄마다 `p.gender`, `p.date_of_birth`, `p.allergies`를 더함. 진료가 환자 찾기로 연 내원의 머리줄·알레르기 경고를 채울 때 `GET /patients/:id`를 따로 부르지 않아도 됨
+  - 권한은 그대로(`registration`·`consultation`·`lab`·`payment`). 이 역할들은 모두 `GET /patients/:id`(SEARCH_READERS)로 같은 값을 이미 읽으므로 보이는 것이 넓어지지 않음
+  - 날짜는 문자열 `YYYY-MM-DD`(총괄의 DATE 파서)
+- **확인**: `node --check`, 격리 스택 `reception.api.mjs` 168/0, `GET /visits/patient/1` → `gender "M"`, `date_of_birth "1990-05-03"`, `allergies "Pénicilline"`
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `wiki/modules/reception.md`(4절 API 표), 이 노트
+- **다른 세션에 부탁**: 진료 — 원하면 `Consultation.jsx`에서 추가 조회를 빼도 됨(빼지 않아도 동작 그대로)
+
+## 2026-09-30 — 3차 짧은 확인 `integration-test-2026-09-30.md` 「3차 — 짧은 확인」
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `05b05ce` ff 뒤). **코드 변경 없음**
+- **한 일**: coordinator.md 표의 항목만, 격리 스택 새 DB, 1366×768, 어두운·밝은 화면
+- **결과**:
+  - ✅ 로그인 첫 화면부터 계정 색, `<html lang>`
+  - ✅ 수납 취소·바뀐 카드(투명도 1, 대비 통과), Caisse du jour
+  - ✅ 설정: 금액 표기, 잠긴 칸 세 곳(5.87 / 5.46)
+  - ✅ 임상병리: 결과표 여백 20 px
+  - ✅ 진료 ①~④·⑥: 저장 잃음 없음, 기록 1줄, 알레르기 ⚠, 서랍 `inert`, «flacons», 머리줄
+  - ✅ 접수 셋
+  - **남음**: 수납 대기 목록 «· ·»(수납 몫)
+  - **알림**: 진료 ⑤ — F5·창 닫기 때 고치던 줄 전체(이번엔 2칸)를 잃음. 전에는 1칸. `pagehide`에서 보내기를 검토할 만함
+- **정정**: 2차의 「검색 목록에 사전 문장」은 잘못 봄(오른쪽 Dictionnaire 목록을 같이 셈) — 보고서에 줄 그음
+- **준비**(격리 DB만): 알레르기 있는 가짜 환자·방문·약 가격은 API 스크립트로, 생년월일 없는 머리줄 확인을 위해 26-00002의 생년월일을 SQL로 비움
+- **바꾼 파일**: `wiki/reference/integration-test-2026-09-30.md`(3차 절, 2차 한 줄 정정), 이 노트
+- **공용 파일 변경**: 없음
+- **다음**: 진료 세션 부탁(`GET /visits/patient/:id`에 성별·생년월일·알레르기) — 이어서 따로 커밋
+
 ## 2026-09-30 — 다시 통합 시험의 접수 몫: 성별 키보드, 방문 고르기 창, 「Terminer →」 문구
 
 - **상태**: 확인 요청
