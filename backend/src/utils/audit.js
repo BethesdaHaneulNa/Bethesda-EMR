@@ -37,6 +37,7 @@ const ACTIONS = {
   RECEIPT_CANCEL:       'payment.receipt.cancel',
   RECEIPT_CORRECT:      'payment.receipt.correct',
   PATIENT_EDIT:         'reception.patient.edit',
+  VISIT_TRANSFER:       'visit.transfer',               // a visit moved to another department or doctor (2026-09-30): before/after department and doctor, reason
   STAFF_CREATE:         'settings.staff.create',
   STAFF_EDIT:           'settings.staff.edit',          // name, role, status, department
   STAFF_PERMISSIONS:    'settings.staff.permissions',

@@ -14,6 +14,7 @@
 | 오더를 지움 / 취소함 | `consultation.order.delete` · `consultation.order.cancel` | 진료 |
 | 영수를 취소함 / 정정함 | `payment.receipt.cancel` · `payment.receipt.correct` | 수납 |
 | 환자 인적사항을 고침 | `reception.patient.edit` | 접수 |
+| 내원의 과·의사를 바꿈(전과 — 진료 화면의 단추든 접수 화면의 저장이든, 실제로 바뀔 때만) | `visit.transfer` | 접수 (`visit.routes.js` `applyTransfer`) |
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
 | 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
@@ -38,6 +39,13 @@
 - **서류의 내용(payload)은 기록에 넣지 않습니다** — 진단·소견이 들어 있어 기록 탭(설정 권한)에 보일 것이 아닙니다.
 - 발행 줄이 많아지므로 기록 탭의 종류 거르기에 두 action이 나와야 합니다.
 - 남기는 범위는 열 가지.
+
+**전과 — 내원의 과·의사를 바꿈 (2026-09-30 실장님 요청)**: `visit.transfer`. 모듈 칸(`module`)은 `visit`.
+- 두 길이 같은 함수(`visit.routes.js` `applyTransfer`)로 씀: `PUT /api/visits/:id/transfer`(진료·접수가 부르는 전과), 그리고 접수 화면의 저장 `PUT /api/visits/:id`에서 과·의사가 **실제로** 바뀔 때. 같은 값으로 저장하면 0줄.
+- `entity` = `visit`, `entity_id` = 내원 id, 환자·내원을 채움. `summary` = `GEN · RABE Hery → PED · RAKOTO Aina`(과 코드 · 의사 이름).
+- `before`/`after` = `{ department_id, doctor, reason }` — 바뀐 칸만 남음. `department_id`는 기록 탭이 과 이름으로 바꿔 보여 주는 칸(직원 계정 줄과 같음), `doctor`는 의사 이름(글자), `reason`은 전과 사유(없으면 비움, 300자까지).
+- 기록 탭 이름표(설정 세션): 종류 `visit.transfer`, 칸 `doctor`·`reason` — 들어오기 전까지는 저장된 이름 그대로 보임.
+- 남기는 범위는 열한 가지.
 
 ## 2. 한 줄에 들어가는 것
 
