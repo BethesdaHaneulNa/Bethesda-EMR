@@ -193,13 +193,30 @@ export default function RegistrationPage() {
         var fresh = vData.filter(function (v) { return v.id === prev.id; })[0];
         // Also the bill flag and fee type, so the visit-type buttons lock once payment
         // has billed the visit and show the type payment chose.
-        if (!fresh || (fresh.status === prev.status && fresh.has_active_bill === prev.has_active_bill && fresh.visit_type === prev.visit_type)) return prev;
-        return Object.assign({}, prev, { status: fresh.status, has_active_bill: fresh.has_active_bill, visit_type: fresh.visit_type });
+        // Once billed, the stored department/doctor too: they can no longer change, and
+        // the locked list must show what is stored, not an edit the server refused.
+        var sameAssign = !fresh || !fresh.has_active_bill || (fresh.department_id === prev.department_id && fresh.doctor_id === prev.doctor_id);
+        if (!fresh || (fresh.status === prev.status && fresh.has_active_bill === prev.has_active_bill && fresh.visit_type === prev.visit_type && sameAssign)) return prev;
+        var upd = { status: fresh.status, has_active_bill: fresh.has_active_bill, visit_type: fresh.visit_type };
+        if (fresh.has_active_bill) Object.assign(upd, { department_id: fresh.department_id, doctor_id: fresh.doctor_id, dept_code: fresh.dept_code, doctor_name: fresh.doctor_name });
+        return Object.assign({}, prev, upd);
       });
     } catch (err) {
       // A failed background refresh keeps the list it had rather than emptying it.
     }
   }
+
+  // A billed visit's department/doctor are locked (server: 409 VISIT_BILLED): the form
+  // shows the stored ones, also when the visit was paid while an edit was on screen.
+  var billedLock = sel && sel.has_active_bill ? [sel.id, sel.department_id, sel.doctor_id] : [null, null, null];
+  useEffect(function () {
+    if (!billedLock[0]) return;
+    var dept = billedLock[1] || '', doc = billedLock[2] || '';
+    setVisitForm(function (f) {
+      if (String(f.department) === String(dept) && String(f.doctor) === String(doc)) return f;
+      return Object.assign({}, f, { department: dept, doctor: doc });
+    });
+  }, billedLock);
 
   useEffect(function () {
     var pid = selectedPatient ? selectedPatient.id : null;
@@ -452,6 +469,8 @@ export default function RegistrationPage() {
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;
+    // 409 VISIT_BILLED from PUT /visits/:id: paid while this form was open.
+    if (msg === 'The visit is already paid; its department and doctor can no longer change') return t.rc_visitBilledNoMove;
     // 403 from permMiddleware: the account lacks the reception permission. Since
     // 2026-09-29 (S1) a permission removed in Settings applies at once, open screens included.
     if (msg === 'Access denied') return t.rc_accessDenied;
@@ -540,6 +559,9 @@ export default function RegistrationPage() {
           // old, and sending it back put visits the doctor had completed back into
           // the queue - and off the payment list. visit_type goes only if staff
           // pressed a type button here, and never once the visit is billed.
+          // Department/doctor always go: unchanged values pass even when billed, and a
+          // change made before the visit was paid comes back as 409 VISIT_BILLED
+          // (rc_visitBilledNoMove) instead of being dropped without a word.
           var vbody = {
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
@@ -565,8 +587,10 @@ export default function RegistrationPage() {
         startNewPatient();
       } catch (err) {
         alert(errText(err));
-        // The queue may be stale (visit gone, status moved on); show what is there now.
+        // The queue may be stale (visit gone, status moved on, paid meanwhile); show what
+        // is there now - refreshQueue also updates the selected visit (bill lock).
         loadData();
+        refreshQueue();
       }
     });
   }
@@ -695,10 +719,12 @@ export default function RegistrationPage() {
                 // A new doctor can mean a new department: re-suggest, unless staff chose
                 // the type by hand or the visit is already billed.
                 if (visitTypeSource === 'loaded' && !(sel && sel.has_active_bill)) setVisitTypeSource('auto');
-              }} style={IS}>
+              }} disabled={!!(sel && sel.has_active_bill)} style={(sel && sel.has_active_bill) ? Object.assign({}, IS, { background: 'var(--field-locked)', color: 'var(--text-locked)', cursor: 'not-allowed' }) : IS}>
                 <option value="">—</option>
                 {doctors.map(function (d) { return <option key={d.id} value={d.id}>{(d.dept_code ? d.dept_code + ' – ' : '')}{d.name}</option>; })}
               </select>
+              {/* Paid: department/doctor stay (office manager, 2026-09-30) - same rule as the server. */}
+              {sel && sel.has_active_bill ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 5 }}>{t.rc_visitBilledNoMove}</div> : null}
             </div>
             {(function () {
               // First visit / follow-up / no fee - the three the office manager kept.

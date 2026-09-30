@@ -302,6 +302,10 @@ await call('PUT', '/visits/' + VT.id, { department_id: cur, doctor_id: null, chi
 await call('PUT', '/visits/' + VT.id, { department_id: cur, doctor_id: null, chief_complaint: 'form save again' }, A);
 const lines2 = await logOf();
 check('PUT /:id changing the doctor writes one more line, an unchanged save none', lines2.length === moves + 1, { lines: lines2.length });
+// The paid-visit refusal of PUT /:id (409 VISIT_BILLED) needs a bill row - checked on the
+// isolated stack with a DB script (wiki/modules/reception.md 4절). Its 404 carries a code too.
+const formMissing = await call('PUT', '/visits/99999999', { chief_complaint: 'x' }, A);
+check('PUT /:id of a visit that does not exist → 404 VISIT_NOT_FOUND', formMissing.status === 404 && formMissing.data.code === 'VISIT_NOT_FOUND', { status: formMissing.status, data: formMissing.data });
 await call('PUT', '/visits/' + VT.id + '/status', { status: 'cancelled' }, A);
 
 // Leave no queue behind: cancel the visits this run created.

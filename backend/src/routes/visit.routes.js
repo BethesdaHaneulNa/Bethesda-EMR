@@ -201,6 +201,13 @@ async function visitForTransfer(db, id, lock) {
 }
 function sameId(a, b) { return (a == null ? null : Number(a)) === (b == null ? null : Number(b)); }
 
+// The one "until the visit is paid" check for both paths (office manager's decision,
+// 2026-09-30): the receipt number of a valid (not cancelled) bill, or null.
+async function activeReceipt(db, visitId) {
+  const r = await db.query(`SELECT receipt_no FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' LIMIT 1`, [visitId]);
+  return r.rows.length ? r.rows[0].receipt_no : null;
+}
+
 // After visit.department_id/doctor_id have been written in `client`'s transaction:
 // the consultation's copy of the department follows, and one change-log line records
 // before -> after. Does nothing when neither changed.
@@ -248,8 +255,8 @@ router.put('/:id/transfer', permMiddleware('registration', 'consultation'), asyn
     const before = await visitForTransfer(client, req.params.id, true);
     if (!before) { await client.query('ROLLBACK'); return refuse(res, 404, 'VISIT_NOT_FOUND', 'Visit not found'); }
     if (before.status === 'cancelled') { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_CANCELLED', 'A cancelled visit cannot be transferred'); }
-    const bill = await client.query(`SELECT receipt_no FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' LIMIT 1`, [before.id]);
-    if (bill.rows.length) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_BILLED', 'The visit is already paid; it can no longer be transferred', { receipt_no: bill.rows[0].receipt_no }); }
+    const receiptNo = await activeReceipt(client, before.id);
+    if (receiptNo) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_BILLED', 'The visit is already paid; it can no longer be transferred', { receipt_no: receiptNo }); }
     const dept = await client.query('SELECT id FROM department WHERE id = $1 AND is_active IS NOT FALSE', [deptId]);
     if (!dept.rows.length) { await client.query('ROLLBACK'); return refuse(res, 400, 'BAD_DEPARTMENT', 'department_id must be an active department'); }
     if (doctorId !== null) {
@@ -317,7 +324,17 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
     try {
       await client.query('BEGIN');
       const before = await visitForTransfer(client, req.params.id, true);
-      if (!before) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
+      if (!before) { await client.query('ROLLBACK'); return refuse(res, 404, 'VISIT_NOT_FOUND', 'Visit not found'); }
+      // Same rule as the transfer path: once paid, department/doctor stay. Only a real
+      // change is refused - the form re-sends both with every save, and a save of the
+      // complaint or memo alone must still go through.
+      const has = (f) => Object.prototype.hasOwnProperty.call(body, f);
+      const moves = (has('department_id') && !sameId(before.department_id, body.department_id === '' ? null : body.department_id)) ||
+                    (has('doctor_id') && !sameId(before.doctor_id, body.doctor_id === '' ? null : body.doctor_id));
+      if (moves) {
+        const receiptNo = await activeReceipt(client, before.id);
+        if (receiptNo) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_BILLED', 'The visit is already paid; its department and doctor can no longer change', { receipt_no: receiptNo }); }
+      }
       params.push(req.params.id);
       const result = await client.query(
         `UPDATE visit SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,

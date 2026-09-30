@@ -311,6 +311,7 @@ export default {
   rc_completeNoConsultBilled: "Terminer {name} sans consultation ? Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite.",
   rc_colVisitState: "État",
   rc_billNothing: "Rien à payer",
+  rc_visitBilledNoMove: "Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
