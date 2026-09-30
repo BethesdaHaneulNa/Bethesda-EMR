@@ -5,13 +5,14 @@
 ## 2026-09-30 — 전과 뒤: history의 과는 내원의 과 (총괄 `119642e`), `consultation.department_id`를 읽는 곳
 
 - **상태**: 확인 요청
-- **커밋**: session/reception — 이 항목을 추가한 커밋 하나(`develop` `26e3588`, 전과가 합쳐진 뒤를 받은 위). 코드 변경 없음
+- **커밋**: session/reception `5b918e8`(+ 이 노트를 바로잡은 뒤 커밋) — develop `119642e`를 받은 위(merge `e8cea45`). 코드 변경 없음
 - **한 일**: 모듈 문서 4절 API 표의 `GET /api/patients/:id/history` 설명에 총괄의 고침(과·의사 = COALESCE(내원, 진료가 베낀 값))과 전과의 관계를 한 줄
 - **`consultation.department_id`를 읽는 곳**(develop 전체 grep):
   · 백엔드에서는 `patient.routes.js` history의 COALESCE 보조값 하나뿐(`LEFT JOIN department d ON c.department_id = d.id`)
   · 쓰는 곳은 `consult.routes.js`(진료를 열 때 INSERT)와 `visit.routes.js` `applyTransfer`(전과)
   · `consult.routes.js`의 진료 조회는 `c.*`로 그 칸을 내보내지만 화면(`Consultation.jsx`)은 읽지 않음 — POST 때 보낼 뿐
-  · 통계(`stats.routes.js`)·수납(`billing.routes.js`)·서류(`document.routes.js`)는 모두 `visit.department_id`를 읽음(또는 화면이 넘긴 값)
+  · 통계(`stats.routes.js`)·수납(`billing.routes.js`)은 `visit.department_id`를 읽음
+  · 서류(`document.routes.js`)는 과를 읽지 않음 — 화면이 고른 내원의 `dept_code`를 넘김
   · 전과 길의 `consultation.department_id` 맞추기는 약속대로 둠
 - **바꾼 파일**: `wiki/modules/reception.md`, 이 노트
 
