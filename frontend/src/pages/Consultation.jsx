@@ -998,7 +998,7 @@ export default function ConsultationPage() {
           <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace'}}>{sel.chart_no}</span>
           <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
-          <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13}}>{sel.dept_code}</span>
+          <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
         </div>
