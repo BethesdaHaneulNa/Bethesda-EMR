@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 설치 뒤 할 일 여덟 가지를 설명서에 (실장님 결정 (가))
+
+- **상태**: 확인 요청 — 문서만(코드 변경 없음)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, PACS `6ad7084` 포함)
+- **1** `manual-fr/settings.md` 맨 앞(「En bref」 앞) 새 절 **「Après l'installation — dans cet ordre」**: 표 여덟 줄 — Quoi · Où · C'est fait quand…
+  1 Établissement(영수증 머리로 확인) → 2 Personnel(각자 자기 아이디, admin 비밀번호 바꿈) → 3 Médicaments(쓰는 약의 Prix unitaire가 0 아님) → 4 Codes d'actes(C01~C04·검사) → 5 Ordonnances types(「⚠ … absent(s) de la liste」 없음) → 6 Sauvegarde(초록 띠) → 7 외장 디스크(다음 날 점의 「Copie des sauvegardes de l'EMR」 초록) → 8 영상 연결(점의 「Visionneuse → serveur d'images」 초록, 영상이 열림). 「L'EMR ne les coche pas pour vous」라고 적음 — 화면 목록이 없다는 결정대로.
+  - 7·8은 「le responsable」이 하는 일로(PACS 폴더의 스크립트), 8에는 영상 서버 주소가 `http://host.docker.internal:9090`에서 바뀌지 않아야 한다는 것 — 이번 클린 설치에서 걸린 곳.
+- **2** 한국어: 모듈 위키 2.1에 4번(같은 표, 각 줄에 위키 절 번호). `wiki/02-before-departure.md` 「현지에서 할 일」 맨 위에 한 줄 — 순서와 위치를 가리키고, 아래의 약 가격·약속처방 줄과 2·3·4절이 그 일부라고만(겹치는 줄은 그대로).
+- **3 설치 끝 안내문에 넣을 한 줄**(`offline/install-offline.ps1`·`.sh` — 총괄 파일, 문구만):
+  - fr: `Prochaine étape : guide du personnel, chapitre « Paramètres », première partie « Après l'installation — dans cet ordre ».`
+  - en: `Next: the staff guide, chapter "Paramètres", first part "Après l'installation — dans cet ordre".`
+  - ko: `다음에 할 일: 직원 설명서의 Paramètres 장, 첫 절 「Après l'installation — dans cet ordre」.`
+  - 설명서가 묶음 안에 파일로 들어간다면 경로를 붙여도 좋음(예: `docs\manual-fr\settings.md` — 묶음 안의 실제 경로는 총괄이 앎). PowerShell 5.1 콘솔에서 «» 와 —가 깨질 수 있으면 fr은 `"…"`와 `-`로.
+- **바꾼 파일**: `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · `wiki/02-before-departure.md` · 이 노트
+- **확인한 방법**: 표의 화면 이름(Établissement, Personnel, Médicaments, Prix unitaire, Codes d'actes, Ordonnances types, Sauvegarde, Sauvegarder, Sauvegardes en ordre, Flux d'ordres, Copie des sauvegardes de l'EMR, Visionneuse → serveur d'images)을 `fr.js`·화면 파일의 문자열로 대조(앞서 쓴 스크립트) — 모두 있음.
+
 ## 2026-09-30 — 클린 설치에서 걸린 둘: 포트를 듣는 다른 프로그램 · 영상 창 → 영상 서버 (+ 「설치 뒤 할 일」 제안)
 
 - **상태**: 확인 요청
