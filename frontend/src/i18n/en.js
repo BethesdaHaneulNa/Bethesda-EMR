@@ -415,9 +415,11 @@ export default {
   cs_trKeep: "Notes, prescriptions and orders stay as they are. The previous doctor's note stays under their name, and only they can change it.",
   cs_trDone: "Department and doctor changed ✓",
   cs_trCancelled: "A cancelled visit cannot be transferred.",
-  cs_trPaid: "This visit is already paid: its department and doctor cannot be changed.",
+  cs_trPaid: "This visit is already paid (receipt {receipt}): its department and doctor cannot be changed.",
+  cs_trBilledTitle: "Already paid: the visit can no longer be transferred",
+  cs_trBadDept: "That department cannot be used (inactive). Choose again.",
+  cs_trBadDoctor: "That doctor cannot be used (inactive, or not a doctor account). Choose again.",
   cs_trNoChange: "Nothing was changed.",
-  cs_trBad: "That department or doctor cannot be used (inactive department, or not a doctor account). Choose again.",
   cs_trNotFound: "Visit not found. Open the patient again.",
   // ── end consultation ──
   // ── begin payment (py_) ──

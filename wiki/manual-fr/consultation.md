@@ -130,13 +130,13 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 Le patient a été enregistré au mauvais service ou chez un autre médecin : inutile d'annuler l'enregistrement.
 
 1. Dans la barre bleue du patient, à côté de « GEN Dr … », cliquez sur **⇄ Transfert**.
-2. Choisissez le **Service**, puis le **Médecin** (la liste montre les médecins de ce service). Le service et le médecin actuels sont déjà choisis ; **Changer** reste gris tant que rien ne change.
+2. Choisissez le **Service**, puis le **Médecin** (la liste montre les médecins de ce service). Le service et le médecin actuels sont déjà choisis ; **Changer** reste gris tant que rien ne change. Si la visite a déjà un médecin, il faut en choisir un ; si elle n'en a pas, vous pouvez changer seulement le service.
 3. Écrivez un **Motif** si vous voulez (facultatif), puis **Changer**.
 4. La barre bleue, l'en-tête **Aujourd'hui** du **Dossier Patient** et la file d'attente montrent tout de suite le nouveau service et le nouveau médecin. Le changement est noté dans le journal des modifications.
 
 Ce qui ne change pas : les notes, les prescriptions et les examens. La note du médecin précédent reste à son nom, et lui seul peut la modifier. Votre note non enregistrée reste dans la case.
 
-Impossible si la visite est annulée ou déjà encaissée (un message le dit).
+Impossible si la visite est annulée ou déjà encaissée : une fois la visite encaissée, le bouton **⇄ Transfert** est grisé (le motif s'affiche au survol).
 
 ### 12. Terminer la visite
 

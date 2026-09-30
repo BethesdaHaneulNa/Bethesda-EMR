@@ -357,6 +357,10 @@ export default function ConsultationPage() {
     return function(){ clearInterval(timer); };
   },[consultId]);
 
+  // Paid visits are not transferred (decided 2026-09-30: until payment). The queue's rows
+  // say has_active_bill; a visit opened from the patient's visit list (Trouver patient /
+  // Sélection visite) carries its latest bill's status instead.
+  function visitBilled(v){ return !!(v && (v.has_active_bill || (v.billing_id && v.bill_status && v.bill_status !== 'cancelled'))); }
   async function openTransfer(){
     if(!sel) return;
     var st = { dept: sel.department_id ? String(sel.department_id) : '', doctor: sel.doctor_id ? String(sel.doctor_id) : '',
@@ -368,16 +372,14 @@ export default function ConsultationPage() {
       setTransfer(function(p){ return p ? Object.assign({}, p, { depts: ds||[], doctors: docs||[] }) : p; });
     } catch(err){ alert(t.cs_errorPrefix+err.message); setTransfer(null); }
   }
-  // The server's refusals in the screen's language. Matched on the words of the message,
-  // since the contract fixes the status codes (404 / 409 / 400) but not the sentences.
-  function transferError(msg){
-    var m = String(msg||'');
-    if(/cancel/i.test(m)) return t.cs_trCancelled;
-    if(/paid|receipt|bill|payment/i.test(m)) return t.cs_trPaid;
-    if(/nothing|no change|unchanged|same/i.test(m)) return t.cs_trNoChange;
-    if(/not found/i.test(m)) return t.cs_trNotFound;
-    if(/department|doctor/i.test(m)) return t.cs_trBad;
-    return t.cs_errorPrefix + m;
+  // The server's refusals ({error, code}, visit.routes.js) in the screen's language,
+  // picked by code; a code this screen does not know shows the server's sentence.
+  var TRANSFER_REFUSALS = { VISIT_NOT_FOUND:'cs_trNotFound', VISIT_CANCELLED:'cs_trCancelled', VISIT_BILLED:'cs_trPaid',
+    BAD_DEPARTMENT:'cs_trBadDept', BAD_DOCTOR:'cs_trBadDoctor', NO_CHANGE:'cs_trNoChange' };
+  function transferError(err){
+    var key = err && TRANSFER_REFUSALS[err.code];
+    if(!key) return t.cs_errorPrefix + (err && err.message);
+    return String(t[key]||'').replace('{receipt}', (err.data && err.data.receipt_no) || '');
   }
   async function doTransfer(){
     if(!transfer || !sel) return;
@@ -391,14 +393,14 @@ export default function ConsultationPage() {
       // The patient bar, today's chart header and the queue show the new department and
       // doctor at once. Only these fields are taken: the note being typed, the
       // prescriptions and the orders are not touched.
-      var keep = { department_id: v.department_id, doctor_id: v.doctor_id, dept_code: v.dept_code, dept_name: v.dept_name, doctor_name: v.doctor_name };
+      var keep = { department_id: v.department_id, doctor_id: v.doctor_id, dept_code: v.dept_code, dept_name: v.dept_name, doctor_name: v.doctor_name, has_active_bill: v.has_active_bill };
       setSel(function(cur){ return cur && cur.id===vid ? Object.assign({}, cur, keep) : cur; });
       setVisits(function(list){ return (list||[]).map(function(x){ return x.id===vid ? Object.assign({}, x, keep) : x; }); });
       setConsult(function(c){ return c && c.visit_id===vid ? Object.assign({}, c, { department_id: v.department_id }) : c; });
       setTransfer(null);
       showToast(t.cs_trDone);
     } catch(err){
-      alert(transferError(err.message));
+      alert(transferError(err));
       setTransfer(function(p){ return p ? Object.assign({}, p, { busy: false }) : p; });
     }
   }
@@ -1052,7 +1054,8 @@ export default function ConsultationPage() {
           <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
-          {sel.status!=='cancelled' ? <button onClick={openTransfer} title={t.cs_trTitle} style={{background:'transparent',color:'#bfdbfe',border:'1px solid #3b5b85',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
+          {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
+            style={{background:'transparent',color:'#bfdbfe',border:'1px solid #3b5b85',borderRadius:4,padding:'1px 7px',cursor:visitBilled(sel)?'not-allowed':'pointer',opacity:visitBilled(sel)?0.6:1,fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
         </div>
@@ -1467,6 +1470,11 @@ export default function ConsultationPage() {
         // department can see anyone). The doctor already on the visit stays in the list.
         var docs = tr.doctors.filter(function(d){ return !tr.dept || !d.department_id || String(d.department_id)===tr.dept || String(d.id)===tr.doctor; });
         var changed = tr.dept !== (sel.department_id ? String(sel.department_id) : '') || tr.doctor !== (sel.doctor_id ? String(sel.doctor_id) : '');
+        // Decided 2026-09-30: the consultation screen never empties the doctor. A visit
+        // without one can have its department changed alone; a visit with one needs a
+        // doctor. The department is required (the server's BAD_DEPARTMENT).
+        var noDoctorOk = !sel.doctor_id;
+        changed = changed && !!tr.dept && (!!tr.doctor || noDoctorOk);
         var fld = {width:'100%',boxSizing:'border-box',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:'var(--text)',fontSize:14,fontFamily:'inherit'};
         var lab = {display:'block',fontSize:12,fontWeight:700,color:'var(--text-3)',margin:'10px 0 3px'};
         return <div onClick={function(){ if(!tr.busy) setTransfer(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1484,7 +1492,7 @@ export default function ConsultationPage() {
             <select value={tr.doctor} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
                 setTransfer(function(p){ var doc = p.doctors.filter(function(d){ return String(d.id)===dv; })[0];
                   return Object.assign({}, p, { doctor: dv, dept: p.dept || (doc && doc.department_id ? String(doc.department_id) : '') }); }); }} style={fld}>
-              <option value="">{'\u2014'}</option>
+              {noDoctorOk || !tr.doctor ? <option value="">{'\u2014'}</option> : null}
               {docs.map(function(d){ return <option key={d.id} value={String(d.id)}>{(d.dept_code ? d.dept_code + ' – ' : '') + d.name}</option>; })}
             </select>
             <label style={lab}>{t.cs_trReason}</label>

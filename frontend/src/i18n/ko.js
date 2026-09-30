@@ -406,9 +406,11 @@ export default {
   cs_trKeep: "진료 기록·처방·오더는 그대로입니다. 앞 의사의 기록은 그 의사 이름으로 남고 그 의사만 고칠 수 있습니다.",
   cs_trDone: "과·의사를 바꿨습니다 ✓",
   cs_trCancelled: "취소된 내원은 과·의사를 바꿀 수 없습니다.",
-  cs_trPaid: "이미 수납한 내원은 과·의사를 바꿀 수 없습니다.",
+  cs_trPaid: "이미 수납한 내원(영수증 {receipt})이라 과·의사를 바꿀 수 없습니다.",
+  cs_trBilledTitle: "이미 수납한 내원이라 전과할 수 없습니다",
+  cs_trBadDept: "고른 과를 쓸 수 없습니다(쉬는 과). 다시 고르세요.",
+  cs_trBadDoctor: "고른 의사를 쓸 수 없습니다(쉬는 계정이거나 의사가 아님). 다시 고르세요.",
   cs_trNoChange: "바뀐 것이 없습니다.",
-  cs_trBad: "고른 과나 의사를 쓸 수 없습니다(쉬는 과이거나 의사가 아닌 계정). 다시 고르세요.",
   cs_trNotFound: "내원을 찾을 수 없습니다. 환자를 다시 여세요.",
   // ── end consultation ──
   // ── begin payment (py_) ──

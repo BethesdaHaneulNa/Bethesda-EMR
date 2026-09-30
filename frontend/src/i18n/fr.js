@@ -406,9 +406,11 @@ export default {
   cs_trKeep: "Les notes, prescriptions et examens restent tels quels. La note du médecin précédent reste à son nom, et lui seul peut la modifier.",
   cs_trDone: "Service et médecin changés ✓",
   cs_trCancelled: "Une visite annulée ne peut pas être transférée.",
-  cs_trPaid: "Cette visite est déjà encaissée : son service et son médecin ne peuvent plus être changés.",
+  cs_trPaid: "Cette visite est déjà encaissée (reçu {receipt}) : son service et son médecin ne peuvent plus être changés.",
+  cs_trBilledTitle: "Déjà encaissée : la visite ne peut plus être transférée",
+  cs_trBadDept: "Ce service ne peut pas être choisi (inactif). Choisissez à nouveau.",
+  cs_trBadDoctor: "Ce médecin ne peut pas être choisi (compte inactif, ou qui n'est pas médecin). Choisissez à nouveau.",
   cs_trNoChange: "Rien n'a été changé.",
-  cs_trBad: "Ce service ou ce médecin ne peut pas être choisi (service inactif, ou compte qui n'est pas médecin). Choisissez à nouveau.",
   cs_trNotFound: "Visite introuvable. Rouvrez le patient.",
   // ── end consultation ──
   // ── begin payment (py_) ──
