@@ -133,3 +133,5 @@ Prévenez l'**administrateur** si :
 - la **Visionneuse** affiche **Le serveur d'images n'est pas encore relié…** ou **Le serveur d'images ne répond pas** ;
 - une fenêtre demande un mot de passe ;
 - l'écran d'état signale un problème de sauvegarde des images.
+
+Pour l'administrateur : dans **Paramètres → Flux d'ordres**, le champ **Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)** reste `http://host.docker.internal:9090` (bouton **Par défaut**). Ce n'est pas l'adresse du PC sur le réseau. Le bouton **Tester le serveur d'images (EMR → 9090)** doit répondre **L'EMR atteint le serveur d'images.**

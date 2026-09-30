@@ -2,6 +2,53 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 클린 설치에서 나온 둘: 다른 프로그램이 EMR 포트를 차지 (P-26) · 영상 서버 주소를 잘못 넣음 (P-27)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `97a8841`을 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `59b67a1` (먼저 `main` `65203e0 v1.1.0`으로 ff)
+- **한 일 — ① 다른 프로그램이 포트를 들음 (PACS 저장소)**
+  - `check-windows-ports.ps1`: 9080·9090·4242(`-ListenPorts`)를 **Docker가 아닌 프로세스**가 듣고 있으면(127.0.0.1만 묶은 것 포함) 「WARNING: port 9080 is already used by another program: <이름> (listening on 127.0.0.1)」 + 실행 파일 경로 + 「Close that program … or change the port」. Docker 쪽으로 보는 이름: `com.docker.backend`, `com.docker.proxy`, `wslrelay`, `vpnkit`, `docker-proxy`(이 PC에서 확인한 것은 앞의 둘). 예약 구간 경고와 따로 나옴.
+  - `bridge/bridge.py`: 피드 답이 EMR이 내지 않는 상태 코드(200·401·403·500·502 밖)이거나 JSON이 아니거나 `rows` 없는 JSON이면 오류 「Something other than the EMR answered at <주소> (<이유>, HTTP <코드>, <형식>). Another program on the server PC may be using the EMR's port (in 2026-09: a download manager on 127.0.0.1:9080). Close it, or run check-windows-ports.ps1 …」. 피드가 제대로 답한 바퀴마다 `/worklists/.feed_ok`.
+  - `docker-compose.yml` 브리지 healthcheck: `.heartbeat` 60초 **그리고** `.feed_ok` 120초 안 — 피드가 2분 넘게 답하지 않으면 unhealthy(전: 프로세스만 살아 있으면 healthy).
+  - `setup.ps1`: EMR DB 컨테이너가 이 PC에 있으면 끝에서 최대 75초 `worklists\.feed_ok`가 시작 뒤에 새로 쓰이는지 봄 → 「The worklist bridge reaches the EMR - orders will go to the devices.」 또는 노란 「WARNING - the worklist bridge does NOT reach the EMR yet.」 + 브리지의 마지막 `bridge error` + 할 일. `setup.sh`는 고치지 않음(실장님 결정 — .sh 더 만들지 않음).
+  - `README.md`: 문제 해결에 두 항목.
+- **한 일 — ② 영상 서버 주소 (EMR 저장소)**
+  - `pacs.viewer.js`: `probeOrthanc(url, password)` — `<url>/system`에 `admin:<저장된 비밀번호>`, 4초. 답은 고정 영어 `PROBE_MSG`(아래). `DEFAULT_ORTHANC_URL`을 내보냄(중계도 같은 값을 씀).
+  - `pacs.routes.js`: `PUT /config`의 답에 **`orthanc_check`**(저장은 결과와 관계없이 됨), `GET /test?target=orthanc` → `{url, ok, status, message}`.
+  - `Settings.jsx`(PACS 탭): 칸 이름을 더 세게, 칸 옆 **「Par défaut」**, 칸 아래 도움말, 저장 뒤 닿지 않으면 빨강 경고 + 이유, DICOM 시험 옆에 **「Tester le serveur d'images (EMR → 9090)」**. `pxMessage`가 `PROBE_MSG`를 옮김.
+  - 위키 3.3·4·6·6.1·7(P-26·P-27)·8, `manual-fr/pacs.md` 끝에 관리자용 한 단락.
+- **바꾼 파일**: PACS `check-windows-ports.ps1`, `bridge/bridge.py`, `docker-compose.yml`, `setup.ps1`, `README.md`. EMR `backend/src/routes/pacs.viewer.js`, `backend/src/routes/pacs.routes.js`, `frontend/src/pages/Settings.jsx`(PACS 탭 부분), `wiki/modules/pacs.md`, `wiki/manual-fr/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 사이에 키 9개 + **기존 키 `px_orthancUrl` 문구 변경**(세 언어): fr 「Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)」 / ko 「서버 PC 안에서 EMR이 영상 서버를 부르는 주소 (그대로 두세요)」 / en 「Address the EMR uses inside the server PC to call the image server (leave as is)」.
+- **DB 마이그레이션**: 없음
+- **번역 키 (새, fr / ko)**
+  - `px_orthancUrlHelp` — 「Ce n'est pas une adresse pour les autres postes. Le serveur d'images n'écoute que sur le PC serveur : avec l'adresse réseau de ce PC (192.168…), la visionneuse reste vide. En général : http://host.docker.internal:9090, sans rien changer.」 / 「다른 PC에서 쓰는 주소가 아닙니다. 영상 서버는 서버 PC 안에서만 열려 있어, 이 PC의 LAN 주소(192.168…)를 넣으면 영상 창이 열리지 않습니다. 보통 http://host.docker.internal:9090 그대로입니다.」
+  - `px_orthancUrlDefault` — 「Par défaut」 / 「기본값으로」
+  - `px_orthancUnreachable` — 「Avec cette adresse, l'EMR n'atteint pas le serveur d'images — la visionneuse ne s'ouvrira pas. En général, on laisse http://host.docker.internal:9090.」 / 「이 주소로는 EMR이 영상 서버에 닿지 못합니다 — 영상 창이 열리지 않습니다. …」
+  - `px_testOrthancBtn` — 「Tester le serveur d'images (EMR → 9090)」 / 「영상 서버 연결 시험 (EMR → 9090)」
+  - `px_orthancOk` · `px_orthancBadUrl` · `px_orthancRefused` · `px_orthancLogin` · `px_orthancNotOrthanc` — 「L'EMR atteint le serveur d'images.」 · 「Adresse invalide (elle doit commencer par http://).」 · 「Pas de serveur d'images à cette adresse.」 · 「Le serveur d'images refuse le mot de passe enregistré — lancez pair-with-emr.ps1 dans le dossier du PACS.」 · 「À cette adresse, ce n'est pas le serveur d'images qui répond.」
+- **확인한 방법** (격리 9188 + 9198/11298, 실행 중 EMR·PACS 안 건드림)
+  - ①: 127.0.0.1:9197에 PikPak과 같은 답(HTTP 480 text/plain)을 하는 흉내 → `check-windows-ports.ps1 -ListenPorts 9197`이 `python … (listening on 127.0.0.1)`·경로로 경고, exit 1. 격리 브리지를 그쪽으로(`SESSION_EMR_FEED_URL`) → 로그에 위 문장, **150초 뒤 unhealthy** → 진짜 EMR로 되돌리니 6초 뒤 healthy. 이 PC의 실제 포트로는 경고 없음(exit 0). `setup.ps1`: 문법 검사 + 기다리기 부분을 떼어 내 시험(시작 뒤 새 `.feed_ok` → 닿음, 옛 파일·없음 → 경고). **setup 전체는 돌리지 않음**(개발 PC 규칙).
+  - ②: API — 이 PC의 LAN 주소(192.168.10.229:9198) → `not reachable`, EMR 자신(9188) → `Something other…`(200인데 Orthanc 아님), `ftp://` → `not a valid`, 맞는 주소 → `answers`, DB 비밀번호를 틀리게 → 401 `refused the stored password`(뒤에 `pair-with-emr`로 되돌림). 화면(fr, 1366×768): LAN 주소 저장 → 칸 아래 빨강 경고와 이유, 「Par défaut」 → `http://host.docker.internal:9090`, 맞는 주소 저장 → 경고 사라짐, 두 시험 단추 → 「✓ Le port DICOM du PACS répond. (…:11298)」·「✓ L'EMR atteint le serveur d'images. (http://host.docker.internal:9198)」. 영상 중계 회귀(페이지·데이터 200).
+- **확인 못 한 것**: 실제 PikPak, 실제 LAN에서 다른 PC, `setup.ps1 -Offline` 전체 실행, 설정 세션의 상태 줄(아래).
+- **다른 세션에 부탁**
+  - **설정** — 상태 화면(`status.routes.js`)에 **「영상 창 (EMR → 영상 서버)」 한 줄**, `checkPacs`(4242)와 별개. 모양 제안:
+    ```js
+    // PACS 세션 pacs.viewer.js가 내보냄: probeOrthanc(url, password) -> {ok, status?, message}, DEFAULT_ORTHANC_URL
+    const { probeOrthanc, DEFAULT_ORTHANC_URL } = require('./pacs.viewer');
+    async function checkViewerRelay() {
+      const c = (await pool.query('SELECT orthanc_url, orthanc_password FROM pacs_config WHERE id = 1')).rows[0] || {};
+      const url = c.orthanc_url || DEFAULT_ORTHANC_URL;
+      if (!c.orthanc_password) return { key: 'pacs_viewer', state: 'warn', message: 'status.pacsViewer.notPaired', values: { url } };
+      const r = await probeOrthanc(url, c.orthanc_password);        // 4초 제한
+      if (r.ok) return { key: 'pacs_viewer', state: 'ok', message: 'status.pacsViewer.ok', values: { url } };
+      const m = { 401: 'status.pacsViewer.login' }[r.status] || (/not a valid/.test(r.message) ? 'status.pacsViewer.badUrl'
+              : /Something other/.test(r.message) ? 'status.pacsViewer.notOrthanc' : 'status.pacsViewer.unreachable');
+      return { key: 'pacs_viewer', state: 'warn', message: m, values: { url } };
+    }
+    ```
+    문구 제안(fr): ok 「La visionneuse atteint le serveur d'images」, unreachable 「La visionneuse n'atteint pas le serveur d'images ({url}) — Paramètres → Flux d'ordres → Par défaut」, login 「Mot de passe du serveur d'images refusé — lancer pair-with-emr.ps1」, notPaired 「Serveur d'images pas encore relié — lancer pair-with-emr.ps1」, notOrthanc 「À {url}, ce n'est pas le serveur d'images」, badUrl 「Adresse du serveur d'images invalide」. 비밀번호는 `values`에 넣지 말 것. 서버 상태 창(`server-status.ps1`)은 EMR API에 로그인하지 않으므로, 넣는다면 `docker exec bethesda-emr-api node -e …`로 같은 함수를 부르는 방법(선택).
+  - **총괄** — 실행 중 PC에 올릴 때: PACS는 브리지 이미지 다시 빌드(`bridge.py`) + compose 재생성(healthcheck). 이 PC의 PikPak이 다시 켜지면 이제 브리지가 unhealthy가 되고 로그에 이유가 남음. 실행 중 EMR의 `orthanc_url`이 아직 `http://192.168.10.229:9090`이면 설정 화면에 빨강 경고가 뜰 것 — 「Par défaut」로 되돌리기(실장님).
+
 ## 2026-09-30 — 영상이 있는 하루 통합 시험 · 영상 창 안내 쪽 · 취소된 판독 카드
 
 - **상태**: 확인 요청

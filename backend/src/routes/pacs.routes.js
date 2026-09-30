@@ -105,7 +105,11 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
        cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id,
        cfg.orthanc_url]
     );
-    res.json(publicConfig(result.rows[0]));
+    // Saved either way; the screen shows the answer next to the address field
+    // when the EMR cannot reach the image server there (2026-09-30).
+    const saved = result.rows[0];
+    const orthanc_check = await viewer.probeOrthanc(saved.orthanc_url, saved.orthanc_password);
+    res.json(Object.assign(publicConfig(saved), { orthanc_check }));
   } catch (err) { console.error('[pacs] save config:', err.message); res.status(500).json({ error: CONFIG_MSG.saveFailed }); }
 });
 
@@ -114,6 +118,12 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
 router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try {
     const cfg = await ensureConfig();
+    // ?target=orthanc: the EMR -> image server path the viewer uses (orthanc_url
+    // + stored password), not the devices' DICOM port.
+    if (req.query.target === 'orthanc') {
+      const url = cfg.orthanc_url || viewer.DEFAULT_ORTHANC_URL;
+      return res.json(Object.assign({ url }, await viewer.probeOrthanc(url, cfg.orthanc_password)));
+    }
     const host = cfg.worklist_scp_host;
     const port = cfg.worklist_scp_port;
     // An empty host would quietly test the EMR container itself.

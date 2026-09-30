@@ -181,6 +181,7 @@ EMR 상태 화면(또는 서버 상태 창)에 영상 백업 경고가 보이면
 
 1. `sync()` — `EMR_FEED_URL`에 `GET ?format=json`, 토큰은 **`X-Bridge-Token` 헤더**로 (timeout 10초). URL에 넣으면 EMR 접속 기록(morgan)에 15초마다 토큰이 찍혔기 때문입니다. 실패(연결 불가, 401, 500)면 예외 → 이번 바퀴는 **파일을 건드리지 않고** 끝납니다. 401이면 로그에 「EMR refused the bridge token (…)」과 어느 쪽을 맞춰야 하는지 씁니다.
    - 시작할 때 `BRIDGE_TOKEN`이 비었거나 16자 미만이거나 옛 기본값이면 경고를 한 줄 찍고 그대로 돕니다(재시작 반복으로 경고가 묻히지 않게).
+   - **EMR이 아닌 것이 답하면**(2026-09-30, 클린 설치 때 실제로 겪음 — PikPak `DownloadServer.exe`가 `127.0.0.1:9080`에서 「480 Wrong parameters for url」): EMR 피드가 내지 않는 상태 코드(200·401·403·500·502 밖), JSON이 아닌 답, `rows` 없는 JSON이면 로그에 「Something other than the EMR answered at … (unexpected status, HTTP 480, text/plain). Another program on the server PC may be using the EMR's port … run check-windows-ports.ps1 …」. 하트비트는 EMR에 닿지 못하므로 **로그와 healthcheck**로 알림.
 2. 받은 줄마다 `accession_no`(없으면 `study_instance_uid`)를 파일 이름으로 `write_wl()` — `<이름>.wl.tmp`에 쓰고 `os.replace`로 바꿔 끼웁니다. Orthanc가 반쯤 쓴 파일을 읽지 않게 하려는 것.
    - 한 줄이 변환에 실패해도 그 줄만 건너뛰고(이전 좋은 `.wl`은 남김) 나머지는 계속합니다 (v1.0.0에서 고친 것).
 3. 이번 목록에 없는 `.wl` 파일은 **지웁니다** — 촬영 완료·취소·오더 삭제·날짜 지남.
@@ -192,7 +193,7 @@ EMR 상태 화면(또는 서버 상태 창)에 영상 백업 경고가 보이면
    - 이 단계가 안 되면 그 이유를 전역 `arrivals_error`에 담아 **다음 heartbeat에 같이 보냅니다**(정상이면 빈 값). EMR 상태 화면이 이것을 노랑 「status.bridge.arrivals」로 보여줌(설정 세션 `status.routes.js`, 필드 이름은 두 세션이 맞춤).
    - EMR로 보내거나 로그에 쓰는 오류 글자는 모두 `scrub()`을 거칩니다 — 주소 속 `user:pass@`, 토큰, Orthanc 비밀번호를 `***`로. 그 글자가 상태 화면에 그대로 뜨기 때문.
    - EMR이 옛 버전이라 `/study-arrived`가 없으면(EMR 공통 404 `API route not found`) 재시작 전까지 묻지 않고 한 줄만 남깁니다.
-4. `report()` — `/worklists/.heartbeat`에 현재 시각을 쓰고(컨테이너 healthcheck용), `POST /api/pacs/bridge-heartbeat`로 결과(synced, failed, error, poll_seconds)를 보냅니다. 둘 다 실패해도 반복은 멈추지 않습니다.
+4. `report()` — `/worklists/.heartbeat`에 현재 시각을 쓰고(컨테이너 healthcheck용; **피드가 제대로 답한 바퀴에는 `/worklists/.feed_ok`도** — 2026-09-30), `POST /api/pacs/bridge-heartbeat`로 결과(synced, failed, error, poll_seconds)를 보냅니다. 둘 다 실패해도 반복은 멈추지 않습니다.
 5. `POLL_SECONDS`(기본 15초) 잠듭니다.
 
 매 바퀴 **모든 `.wl`을 새로 씁니다**(내용이 같아도). `.wl`의 MediaStorageSOPInstanceUID는 바퀴마다 새로 만들어집니다.
@@ -225,7 +226,8 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 |---|---|---|
 | `GET /config` | `settings` 권한 | `pacs_config` 한 줄 — bridge_token 포함이라 설정 권한만 (2026-09-29부터, P-5). **`orthanc_password`는 빼고** `orthanc_password_set`(참/거짓)만 (`publicConfig`, P-9) |
 | `PUT /config` | `settings` 권한 | 설정 저장. **보내지 않은 칸은 그대로 둠**(`COALESCE`, 2026-09-29부터 — 전에는 NULL이 되어 일부만 저장하면 브리지 토큰이 지워질 수 있었음). 포트가 숫자가 아니면 4242. `orthanc_url`은 저장, **`orthanc_password`는 화면에서 받지 않음**(보내도 무시 — `pair-with-emr`만 씀). 답도 `publicConfig`. **먼저 검사(400)**: 글자 칸이 DB 칸 길이를 넘으면 `<칸> is too long (at most N characters)`, 포트가 1~65535 정수가 아니면 `DICOM port must be a whole number from 1 to 65535`. DB 오류는 로그에만 남기고 화면에는 `Could not save the order feed settings`(500) |
-| `GET /test` | `settings` 권한 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`). Host가 비었으면 시험하지 않고 `No PACS host set`(전에는 EMR 컨테이너 자신을 시험) |
+| `GET /test` | `settings` 권한 | `worklist_scp_host:port`로 TCP 연결 시험 (`utils/tcpCheck.js`). Host가 비었으면 시험하지 않고 `No PACS host set`(전에는 EMR 컨테이너 자신을 시험). **`?target=orthanc`**(2026-09-30): 영상 중계가 쓰는 길 — `orthanc_url`(없으면 기본) + 저장된 비밀번호로 Orthanc `GET /system` → `{url, ok, status, message}` |
+| (`PUT /config`의 답에) | | **`orthanc_check`** — 저장한 `orthanc_url`로 같은 시험을 한 결과. 저장은 결과와 관계없이 됨. `message`는 고정 영어(`pacs.viewer.js` `PROBE_MSG`): `Image server answers` / `Image server not reachable at this address`(연결 거부·시간 초과 4초·이름 없음) / `Image server refused the stored password - run pair-with-emr`(401) / `Something other than the image server answered at this address`(200인데 Orthanc `/system` 모양이 아님, 다른 상태 코드) / `Image server address is not a valid http(s) address`. 화면이 `px_orthanc*`로 옮김 |
 
 **오더 연동 탭의 오류 문구** (2026-09-29): 위 서버 문구(`pacs.routes.js` `CONFIG_MSG`·`configProblem`)와 `tcpCheck`의 문구(`TCP connection succeeded`, `Connection timed out`, Node의 `ECONNREFUSED`·`ENOTFOUND`·`EHOSTUNREACH`…)를 `Settings.jsx` `pxMessage`가 `px_err*`·`px_test*` 문구로 바꿈 — **서버 문구를 바꾸면 거기도**. 모르는 글자는 설정 세션의 `seMessage`로 넘기고, 그래도 모르면 그대로 보임. 연결 시험 줄에는 시험한 `호스트:포트`를 괄호로 붙임. 전에는 DB 원문(`value too long for type character varying(50)`)이나 `connect ECONNREFUSED …`가 그대로 보였고, 70000 같은 포트가 저장된 뒤 연결 시험이 500으로 깨졌음.
 | `GET /viewer-url?order_item_id=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). `url` = **`/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`**(상대 주소, P-9) + 그 스터디를 여는 **뷰어 쿠키**(아래 중계). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`**, 쿠키 없음. `has_viewer`는 이제 늘 `true`. 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18). **`?study=<UID>`로 여는 길은 없앰** — 쿠키가 생긴 뒤로는 아무 스터디나 열 수 있게 되므로, 오더로만 |
@@ -346,7 +348,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | Host / IP | `worklist_scp_host` | Orthanc DICOM 주소. **EMR 컨테이너에서 본 주소**라 `localhost`는 안 됨 → `host.docker.internal` 또는 서버 LAN IP. 비우면 상태 화면이 PACS를 「꺼짐」으로 봄 |
 | DICOM Port | `worklist_scp_port` | 4242 |
 | AE Title | `worklist_scp_ae` | MEDCONNECT (화면 표시·피드 `config`에만 쓰임) |
-| EMR이 영상 서버에 닿는 주소 (`px_orthancUrl`) | `orthanc_url` | **EMR 컨테이너에서 본** Orthanc 웹 주소. 보통 그대로 `http://host.docker.internal:9090`(같은 PC). 옛 8090이면 설정 세션의 `se_oldViewerPort` 경고 |
+| 영상 서버 주소 — 서버 PC 안 (`px_orthancUrl`: 「Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)」) | `orthanc_url` | **EMR 컨테이너에서 본** Orthanc 웹 주소. **다른 PC에서 쓰는 주소가 아님** — 9090은 서버 PC 안(127.0.0.1)에서만 열려 있어 이 PC의 LAN 주소를 넣으면 영상 창이 열리지 않음(2026-09-30 클린 설치 때 실제로 `http://192.168.10.229:9090`으로 바뀌었는데 상태 점은 모두 초록이었음). 보통 그대로 `http://host.docker.internal:9090`. 칸 옆 **「Par défaut」** 단추가 기본값을 넣음, 칸 아래 도움말 `px_orthancUrlHelp`, 저장 뒤 닿지 않으면 빨강 `px_orthancUnreachable` + 이유. **「Tester le serveur d'images (EMR → 9090)」** 단추가 DICOM 시험 옆에. 옛 8090이면 설정 세션의 `se_oldViewerPort` 경고 |
 | ✓ 영상 서버 비밀번호 설정됨 / ⚠ 없음 (`px_orthancPasswordSet`·`px_orthancPasswordMissing`) | `orthanc_password` | **입력 칸 없음** — 상태만. ⚠이면 PACS 폴더에서 `pair-with-emr.ps1` |
 | PACS 웹/뷰어 주소 — 이제 쓰지 않음 (`px_viewerUrlUnused`) | `pacs_viewer_url` | 흐리게 남겨 둠(옛 백업을 복원해도 깨지지 않게, 총괄 조건 ⑥). 값은 어디에도 안 씀 |
 
@@ -367,7 +369,8 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 **② 현지 PC 설치 순서**
 1. BIOS 가상화·WSL·Docker Desktop(키트 `installers\` 안내대로) → **한 번 재부팅**.
 2. `install-offline.ps1` — 이미지 load → EMR `setup -Offline` → PACS `setup.ps1 -Offline`.
-   - PACS `setup`은 시작 전에 **`check-windows-ports.ps1`** 로 9090·4242가 Windows 예약 구간에 걸리는지 경고(읽기만).
+   - PACS `setup`은 시작 전에 **`check-windows-ports.ps1`** 로 9090·4242가 Windows 예약 구간에 걸리는지, 그리고 **9080·9090·4242를 Docker가 아닌 프로그램이 듣고 있는지**(127.0.0.1만 묶은 것 포함, 프로그램 이름·경로를 보여 줌 — 2026-09-30) 경고(읽기만).
+   - 끝에서 브리지가 **EMR에 실제로 닿는지** 최대 약 1분 기다려 봄(`worklists\.feed_ok`가 시작 뒤에 새로 쓰였는지). 짝 맞춤은 `docker exec`로 DB에 쓰므로 다른 프로그램이 9080을 차지해도 통과했음 → 이제 「The worklist bridge reaches the EMR」 또는 노란 경고와 브리지의 마지막 오류.
    - 새 `.env`(`ORTHANC_PASSWORD`·`BRIDGE_TOKEN`)를 만들고, 같은 PC에 EMR이 떠 있으면 **`pair-with-emr.ps1`로 자동 짝 맞춤**(토큰은 화면에 안 나옴) → 「paired - nothing to copy」.
    - 끝에 이 PC의 LAN 주소를 찍어 줌 — **장비가 보낼 곳 `<IP>:4242`**. 직원 PC에는 설정할 뷰어 주소가 없음(P-9).
 3. **EMR 백업 복원** — 옛 PC를 먼저 최신으로 업데이트한 뒤 만든 백업을, 같은 판의 새 EMR에(`DEPLOYMENT.md` 5b, 총괄 결정 1).
@@ -497,6 +500,8 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 - **P-23 [보통] ✅ 켜짐 (2026-09-29)** — 결과 있는 영상 오더 「취소」(결정 3-B·38-③). 진료 세션 `8e497c2`의 취소 API가 같은 트랜잭션에서 `cancelWorklistForOrder`를 부름. **격리 스택(실제 브리지·Orthanc)에서 확인**: ① 촬영 전(판독만 있음) 취소 → 워크리스트 `cancelled`, 한 바퀴 뒤 `.wl` 삭제 ② 영상 도착(completed) 뒤 취소 → 오더는 `cancelled`, 워크리스트 줄은 `completed` 그대로 ③ 취소 뒤 영상이 늦게 도착 → 브리지는 보고하지 않음(피드에 없음), 「도착」 기록 없음, 그래도 `viewer-url`은 그 UID로 열려 영상은 볼 수 있음, 판독 저장은 409. PACS 몫: 취소 정보 표시·판독 409·`cancelWorklistForOrder`(`pacs.cancel.js`).
 - **P-20 [낮음] ✅ 고침 (2026-09-29)** — 브리지가 heartbeat에 `arrivals_error`를 싣고(PACS `6c135aa`), `/bridge-heartbeat`가 detail에 저장, 설정 세션의 `status.routes.js`(`9d7e380`)가 노랑 `status.bridge.arrivals`로 표시. 격리 스택에서 비밀번호 없음·Orthanc 없음 → 노랑, 정상 → 초록 확인. **원래 문제**: 브리지가 Orthanc에 못 물어도 EMR 상태 화면은 초록.
 - **P-14 [낮음] UID 루트를 남의 것(`1.2.826.0.1.3680043`)을 씀.** 실무상 충돌 가능성은 매우 낮음. 자체 루트 발급은 선택 사항.
+- **P-26 [보통] ✅ 알리게 고침 (2026-09-30, 실장님 클린 설치에서 실제로 겪음)** — 다른 프로그램(PikPak `DownloadServer.exe`)이 `127.0.0.1:9080`을 듣고 있었음. Docker는 `0.0.0.0:9080`에 따로 묶여 브라우저(localhost IPv6·LAN)로는 EMR이 열렸지만, `127.0.0.1`과 컨테이너의 `host.docker.internal`은 그 프로그램으로 가서 브리지가 「480 … Wrong parameters for url」만 받음 — 하트비트 없음, **컨테이너는 healthy**, 장비로 목록이 안 감. 이제: `check-windows-ports.ps1`이 프로그램 이름으로 경고, 브리지가 「Something other than the EMR answered …」를 로그에, 컨테이너 healthcheck가 **피드가 2분 넘게 답하지 않으면 unhealthy**(`.feed_ok`), `setup.ps1`이 끝에서 실제로 닿는지 확인. **격리 시험**: 127.0.0.1에 같은 답(480 text/plain)을 하는 흉내 프로그램 → 포트 검사가 `python … (listening on 127.0.0.1)`로 이름을 댐, 브리지 로그에 위 문장, 150초 뒤 unhealthy → 진짜 EMR로 되돌리면 6초 뒤 healthy. setup의 기다리기 부분은 떼어 내 시험(새 파일 → 닿음 / 옛 파일·없음 → 경고), setup 전체는 돌리지 않음(개발 PC 규칙).
+- **P-27 [보통] ✅ 알리게 고침 (2026-09-30, 실제로 겪음)** — 설정의 「EMR이 영상 서버에 닿는 주소」를 이 PC의 LAN 주소(`http://192.168.10.229:9090`)로 바꿔도 아무도 말해 주지 않았음(상태 점 모두 초록, DICOM 시험 통과) — 9090은 127.0.0.1에만 열려 있어 영상 창이 열리지 않음. 원인 절반은 설치 끝 안내의 옛 줄(총괄 `4f9ba04`에서 고침). 이제 저장할 때마다 그 주소로 Orthanc `/system`을 불러 봄(`orthanc_check`), 칸 아래 경고·도움말, 「Par défaut」, 「Tester le serveur d'images」. 상태 화면 한 줄은 설정 세션 몫(인계 노트에 모양). **격리 시험**: 이 PC의 LAN 주소 → «Pas de serveur d'images à cette adresse», EMR 자신(9188) → «ce n'est pas le serveur d'images qui répond», `ftp://` → «Adresse invalide», 틀린 비밀번호 → 401 «… lancez pair-with-emr.ps1», 맞는 주소 → «L'EMR atteint le serveur d'images.»
 - **P-25 [낮음] 옛 포트가 저장된 설정이 남음.** 실행 중 EMR의 `pacs_config.pacs_viewer_url`이 `http://localhost:8090`, `emr_base_url`이 `http://localhost:8080`이었음(총괄, 2026-09-29) → 영상 창이 안 열리는 주소. **코드가 넣은 값이 아님**: 두 칸의 DB 기본값은 처음부터 빈 값(`001_schema.sql`, `pacs.routes.js` `ensureConfig`). 6~7월 설치 당시 안내가 8090·8080이었고(PACS `README.md`·`start.bat` — `4f5320e` 전, EMR `f2ab532` 전, 설정 화면 예시 `NAS_IP:8090` — P-17 전), 사람이 그대로 넣은 값이 2026-07-23 포트를 9090·9080으로 옮길 때 **바꿔 주는 장치 없이 남은 것**. 같은 때 설치한 다른 병원에도 같을 수 있음. 실장님이 설정 화면에서 고침. 막는 방법 후보: ① 상태 화면에서 뷰어 주소가 `:8090`이면 경고(읽기만, 설정 세션과) ② 값이 정확히 옛 기본 주소일 때만 9090으로 바꾸는 마이그레이션(데이터 변경 — 실장님 결정).
 - **P-24 [보통] 🟡 만듦 (2026-09-29, 결정 41)** — 6.2 영상 백업(외장 USB, 매일 밤, 새 영상만, 경고·복원). **남은 것**: 현지에서 디스크 준비·예약 작업 등록(실장님), 상태 화면 표시(설정 세션). **원래 문제**: 영상 백업이 없음. EMR 자동 백업은 `pg_dump`(DB)만 — Orthanc 영상과 색인(`storage` 폴더, 바인드 마운트)은 어디에도 백업되지 않습니다. 디스크가 죽으면 영상은 사라지고 EMR에는 「영상 도착」 기록과 판독만 남음. 방법(두 번째 디스크로 `storage` 복사 — Orthanc를 잠깐 멈추거나 Orthanc 백업 기능, 보관 기간, 용량)은 실장님 결정. 6.1 참고.
 - **PACS 격리 스택** (실장님 결정 24, 2026-09-29) — PACS 저장소 `docker-compose.session.yml`. PACS 저장소에서 그냥 `docker compose up`을 하면 실행 중인 PACS를 덮어쓰므로(프로젝트·컨테이너 이름·포트 9090·4242·`./storage` 고정) 꼭 이 파일로:
@@ -526,6 +531,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-30 | 클린 설치에서 나온 둘: **P-26** 다른 프로그램이 EMR 포트를 차지(포트 검사가 이름을 댐, 브리지 「EMR이 아닌 것이 답함」, healthcheck `.feed_ok`, setup 끝에서 닿는지 확인), **P-27** 영상 서버 주소를 잘못 넣음(저장 때 `/system` 시험 `orthanc_check`, `/test?target=orthanc`, 칸 경고·도움말·「Par défaut」·시험 단추). 3.3·4·6·6.1·7 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | **영상이 있는 하루 통합 시험**(`wiki/reference/integration-test-imaging-2026-09-30.md`, 가짜 장비 = Orthanc로 진짜 C-FIND·C-STORE). 뒤에 고침: 남의 검사·`?study=` 없는 영상 창 페이지와 비활성 계정에 안내 쪽, 안내 쪽 영어 줄 대비, 취소된 판독 카드의 투명도 → 회색 글자·꼬리표·점선 테두리 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.2에 0부터 다시 훑는 시간(한 장 약 5ms, 넉넉히 20ms), 상태 점·상태 창의 「EMR 백업 복사」 줄. 시험 순서서 6번에 실제 문구(한·프), 맨 위에 「이 PC에서는 예약 등록 안 함」 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.2: 디스크를 다른 서버에 가져가도 영상이 빠지지 않게(`last_change`로 Orthanc 확인), 도중에 빠진 디스크 안내, `-Verify` 나이는 파일 시각으로. 실장님용 USB 시험 순서서 `wiki/reference/usb-backup-rehearsal.md` | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
