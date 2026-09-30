@@ -254,6 +254,56 @@ check('S1 payment-only 403 before registration is ticked', before.status === 403
 check('S1 same token allowed right after ticking registration', after.status === 201, { status: after.status });
 await call('PUT', '/admin/staff/' + ID.paymentOnly, { ...staffRow, permissions: ['payment'] }, A);
 
+// ── Transfer: PUT /visits/:id/transfer (2026-09-30, the office manager's request) ──
+// Who may: registration or consultation. Refusals carry a code. One change-log line per
+// move; reception's own PUT /:id writes the same line when department/doctor change.
+const depts = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false);
+if (depts.length < 2) throw new Error('need two active departments for the transfer checks');
+const [DA, DB] = depts;
+const PT = (await call('POST', '/patients', { last_name: 'Transfer', first_name: 'T' + Date.now(), gender: 'M' }, A)).data;
+const VT = (await call('POST', '/visits', { patient_id: PT.id, visit_type: 'newVisit', department_id: DA.id }, A)).data;
+const tr = (who, body, id) => call('PUT', '/visits/' + (id || VT.id) + '/transfer', body, T[who] || who);
+// Each allowed account moves the visit to the other department, so every call is a change.
+let cur = DA.id;
+for (const who of Object.keys(T)) {
+  const next = cur === DA.id ? DB.id : DA.id;
+  const r = await tr(who, { department_id: next, doctor_id: null });
+  const may = permsOf(who).some(x => x === 'registration' || x === 'consultation');
+  if (may) { check('transfer ' + who.padEnd(11) + ' → allowed', r.status === 200, r.status === 200 ? undefined : { status: r.status, data: r.data }); if (r.status === 200) cur = next; }
+  else check('transfer ' + who.padEnd(11) + ' → 403', r.status === 403, { status: r.status });
+}
+const toDoc = await tr(A, { department_id: DA.id === cur ? DB.id : DA.id, doctor_id: ID.doctor, reason: 'test reason' });
+check('transfer answers the queue row (dept_code, doctor_name)', toDoc.status === 200 && toDoc.data.dept_code && toDoc.data.doctor_name === 'RC doctor', { status: toDoc.status, data: toDoc.data && { dept_code: toDoc.data.dept_code, doctor_name: toDoc.data.doctor_name } });
+if (toDoc.status === 200) cur = toDoc.data.department_id;
+const same = await tr(A, { department_id: cur, doctor_id: ID.doctor });
+check('transfer to the same department and doctor → 400 NO_CHANGE', same.status === 400 && same.data.code === 'NO_CHANGE', { status: same.status, data: same.data });
+const badDept = await tr(A, { department_id: 999999, doctor_id: null });
+check('transfer to a department that does not exist → 400 BAD_DEPARTMENT', badDept.status === 400 && badDept.data.code === 'BAD_DEPARTMENT', { status: badDept.status, data: badDept.data });
+const noDept = await tr(A, { department_id: null, doctor_id: ID.doctor });
+check('transfer without a department → 400 BAD_DEPARTMENT', noDept.status === 400 && noDept.data.code === 'BAD_DEPARTMENT', { status: noDept.status });
+const notDoc = await tr(A, { department_id: cur, doctor_id: ID.nurse });
+check('transfer to an account that is not a doctor → 400 BAD_DOCTOR', notDoc.status === 400 && notDoc.data.code === 'BAD_DOCTOR', { status: notDoc.status, data: notDoc.data });
+const textDoc = await tr(A, { department_id: cur, doctor_id: 'abc' });
+check('transfer with doctor_id "abc" → 400 BAD_DOCTOR', textDoc.status === 400 && textDoc.data.code === 'BAD_DOCTOR', { status: textDoc.status });
+const missing = await tr(A, { department_id: cur, doctor_id: null }, 99999999);
+check('transfer of a visit that does not exist → 404 VISIT_NOT_FOUND', missing.status === 404 && missing.data.code === 'VISIT_NOT_FOUND', { status: missing.status, data: missing.data });
+const VC = (await call('POST', '/visits', { patient_id: PT.id, visit_type: 'newVisit', department_id: DA.id, allow_duplicate: true }, A)).data;
+await call('PUT', '/visits/' + VC.id + '/status', { status: 'cancelled' }, A);
+const canc = await tr(A, { department_id: DB.id, doctor_id: null }, VC.id);
+check('transfer of a cancelled visit → 409 VISIT_CANCELLED', canc.status === 409 && canc.data.code === 'VISIT_CANCELLED', { status: canc.status, data: canc.data });
+// The change log: one visit.transfer line per move, with the reason.
+const logOf = async () => { const r = await call('GET', '/admin/audit?action=visit.transfer&patient=' + encodeURIComponent(PT.last_name), null, A); const rows = Array.isArray(r.data) ? r.data : (r.data.rows || r.data.items || []); return rows.filter(x => String(x.visit_id) === String(VT.id)); };
+const lines = await logOf();
+const moves = Object.keys(T).filter(w => permsOf(w).some(x => x === 'registration' || x === 'consultation')).length + 1;
+check('change log: one visit.transfer line per move (' + moves + ')', lines.length === moves, { lines: lines.length });
+check('change log: the reason is kept', lines.some(x => JSON.stringify(x.after_value || x.after || {}).indexOf('test reason') >= 0));
+// Reception's form (PUT /:id): a doctor change writes the same line; saving unchanged writes none.
+await call('PUT', '/visits/' + VT.id, { department_id: cur, doctor_id: null, chief_complaint: 'form save' }, A);
+await call('PUT', '/visits/' + VT.id, { department_id: cur, doctor_id: null, chief_complaint: 'form save again' }, A);
+const lines2 = await logOf();
+check('PUT /:id changing the doctor writes one more line, an unchanged save none', lines2.length === moves + 1, { lines: lines2.length });
+await call('PUT', '/visits/' + VT.id + '/status', { status: 'cancelled' }, A);
+
 // Leave no queue behind: cancel the visits this run created.
 const today = (await call('GET', '/visits/today', null, A)).data;
 for (const v of today.filter(v => v.patient_id === P.id && (v.status === 'waiting' || v.status === 'registered'))) {

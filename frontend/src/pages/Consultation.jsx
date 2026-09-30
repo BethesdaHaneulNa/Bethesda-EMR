@@ -1155,7 +1155,9 @@ export default function ConsultationPage() {
                       <th style={{padding:'5px 4px',textAlign:'left',color:t3,fontSize: 12}}>{t.name}</th>
                       {/* One heading for both kinds of line (decision 29): a drug's daily total,
                           an order's quantity. Total = this column x days, for both (⑭). */}
-                      <th title={t.cs_colDailyHint} style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:50,cursor:'help'}}>{t.cs_colDaily}</th>
+                      {/* 11px and one line: «일총투여» at 12px is 48px of text in a 50px column with
+                          4px of padding, so it broke after «일총투» (director, 2026-09-30). */}
+                      <th title={t.cs_colDailyHint} style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 11,width:50,cursor:'help',whiteSpace:'nowrap'}}>{t.cs_colDaily}</th>
                       <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:40}}>{t.cs_colTimes}</th>
                       <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:44}}>{t.cs_colDays}</th>
                       <th style={{padding:'5px 2px',textAlign:'center',color:t3,fontSize: 12,width:58}}>{t.cs_colSig}</th>

@@ -133,8 +133,7 @@ export function PatientChart(props){
       return <div key={i} onClick={function(){openPast(h)}} style={{background:scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid '+bd,cursor:'pointer'}}>
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
           <span style={{fontFamily:'monospace',fontSize:13,color:'var(--accent-text)',fontWeight:700}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
-          <span style={{fontSize:12,color:t2}}>{h.dept_code||''}</span>
-          <span style={{fontSize:12,color:t2,marginLeft:'auto'}}>{h.doctor_name||''}</span>
+          <span style={{fontSize:12,color:t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
         </div>
         {hasNotes(h) ? notesBlock(h.notes, true)
           : <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>}
