@@ -483,15 +483,21 @@
        reached. opacity: Firefox fades placeholders by itself. */
     ::placeholder { color: var(--placeholder); opacity: 1; }
 
-    /* The screens set outline: none on their inputs, inline, so nothing showed which input
-       had the keyboard. !important is what it takes to win over an inline style.
-       :focus-visible, not :focus: for inputs the two are the same, and it keeps the ring
-       off anything that was only clicked. */
-    :root[data-theme="light"] input:focus-visible,
-    :root[data-theme="light"] textarea:focus-visible,
-    :root[data-theme="light"] select:focus-visible {
+    /* "This is the box you are typing in." The screens set outline: none on their inputs,
+       inline, so nothing showed where typing would go; !important is what it takes to win
+       over an inline style. For an input, :focus-visible holds however it got the
+       keyboard - by a click or by Tab - which is what was decided. */
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
       outline: 2px solid var(--focus-ring) !important;
       outline-offset: 1px;
+    }
+    /* A button shows the ring only when reached with the keyboard: for a button
+       :focus-visible does not hold after a mouse click, so pressing one does not flash. */
+    button:focus-visible {
+      outline: 2px solid var(--focus-ring) !important;
+      outline-offset: 2px;
     }
   </style>
   <style id="medconnect-readable-ui">

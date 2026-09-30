@@ -30,7 +30,13 @@ L'EMR peut s'afficher sur **fond sombre** (comme avant) ou sur **fond clair**. C
 1. Avant la connexion, l'EMR ne sait pas encore qui vous êtes. L'écran de connexion garde la couleur utilisée en dernier sur cet ordinateur.
 2. Juste après la connexion, l'écran prend votre choix. Il peut donc changer de couleur une fois à ce moment : c'est normal.
 
-### 4. Ce qui ne change jamais
+### 4. Savoir où l'on écrit
+
+1. Cliquez dans une case, ou passez d'une case à l'autre avec la touche **Tab**.
+2. La case où vous allez écrire est entourée d'un **trait bleu**. C'est pareil sur fond clair et sur fond sombre.
+3. Avant de taper un chiffre (une dose, un montant), regardez où est le trait bleu.
+
+### 5. Ce qui ne change jamais
 
 1. **Les papiers** : reçus, ordonnances, comptes-rendus opératoires, lettres de référence. Ils sont toujours sur feuille blanche, à l'écran comme à l'impression.
 2. **La bande du patient** dans **Consultation** (la ligne bleu foncé avec le nom, le N° dossier et l'allergie) : elle reste bleu foncé sur fond clair.
