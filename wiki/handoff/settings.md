@@ -2,6 +2,43 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 클린 설치에서 걸린 둘: 포트를 듣는 다른 프로그램 · 영상 창 → 영상 서버 (+ 「설치 뒤 할 일」 제안)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위)
+- **1 상태 창** (`server-status.ps1`, BOM·CRLF 유지)
+  - `Get-ForeignListeners`/`Get-ForeignCheck`: EMR 화면·PACS 컨테이너가 여는 호스트 포트(`docker inspect`, 없으면 9080·9090·4242)를 `Get-NetTCPConnection -State Listen`으로 보고, Docker 것이 아닌 프로세스(`$DockerListener` = `com.docker.*`·`docker*`·`vpnkit*`·`wslrelay`·`wsl*` — 이 PC에서 읽어 보니 `com.docker.backend`·`wslrelay`)가 있으면 새 줄 **Autres programmes sur les ports** warn 「port 9080 : DownloadServer (PID 1234)」.
+  - `Add-LoopbackEmrCheck`: `http://127.0.0.1:<EMR 포트>/api/health`가 EMR의 JSON(`status: ok` + `version`)이 아니면 **Ecran de l'EMR** down 「127.0.0.1:9080 repond, mais pas l'EMR (HTTP 480) - un autre programme utilise ce port」. 아무 답도 없으면 원래의 포트 검사 몫.
+  - 안내 줄: 다른 프로그램이 있으면 그 이름으로 「… (DownloadServer). Fermez-le ou desinstallez-le, puis redemarrez le PC. Sinon prevenez le responsable.」(Windows 예약 포트 안내 다음 순위). 창 높이 680 → 720.
+  - **PACS 세션과 문구 맞추기**(check-windows-ports.ps1): fr 「port {0} : {1} (PID {2})」 · 「127.0.0.1:{0} repond, mais pas l'EMR ({1}) - un autre programme utilise ce port」 · 「Un autre programme ecoute un port de l'EMR ou du PACS ({0}). Fermez-le ou desinstallez-le, puis redemarrez le PC.」, en 「port {0}: {1} (PID {2})」 · 「… answers, but not the EMR …」 · 「Another program is listening on a port of the EMR or the PACS ({0}). Close or uninstall it, then restart the PC.」, ko 「{0} 포트: {1} (PID {2})」 · 「… EMR이 아닌 것이 답함 …」 · 「다른 프로그램이 EMR이나 PACS의 포트를 듣고 있습니다({0}). 그 프로그램을 끄거나 지운 뒤 PC를 다시 시작하세요.」
+- **2 상태 점** — 새 줄 `pacs_relay` 「Visionneuse → serveur d'images / 영상 창 → 영상 서버」
+  - `backend/src/services/pacs-probe.js`(새) `probeOrthanc(url, password, ms)`: 영상 중계(`pacs.viewer.js`)와 같은 요청 `GET <orthanc_url>/system`(`admin:<저장된 비밀번호>`)을 EMR 컨테이너 안에서, 4초. 결과 `ok`(version) · `refused` · `unknownHost` · `timeout` · `unauthorized`(Orthanc realm의 401) · `notOrthanc`(code) · `badAddress`. **PACS 세션이 「저장할 때의 검사」에 같은 함수를 부르면 두 곳이 같은 말을 함** — 모양은 이 목록.
+  - `status.routes.js` `checkPacsRelay`: 비밀번호 없음 → off(짝 맞춤 안내는 `pacs_address`의 몫 그대로), 그 밖은 위 결과 → warn, 값에 `url`(비밀번호 없음). 「주소가 틀림 / 비밀번호 → pair-with-emr / 서버가 꺼짐」: refused는 「꺼졌거나 주소·포트가 틀림」을 한 문장으로 — TCP로는 둘을 가를 수 없음(둘 다 ECONNREFUSED). 대신 문장에 보통의 주소 `http://host.docker.internal:9090`을 적음. 없는 이름·시간 초과·다른 프로그램은 따로.
+  - `pacs`(4242)·`pacs_address`(옛 포트·짝 맞춤) 줄과 별개.
+- **3 「설치 뒤 할 일」 — 제안만(만들지 않음)**: 관리자 계정을 만든 뒤 설정 첫 화면 위(관리자에게만, 다 끝나면 사라짐)와 상태 창 아래에 짧은 목록, 끝난 것은 서버가 스스로 체크.
+
+  | # | 할 일 | 끝났다고 보는 조건 (자동) | 어디서 |
+  |---|---|---|---|
+  | 1 | 병원 정보 | `clinic`의 이름이 비어 있지 않고 처음 값(`Bethesda EMR`)과 다름 | 설정 → Établissement |
+  | 2 | 직원 계정 | 관리자 말고 활성 직원 1명 이상 — 가능하면 의사(진료 권한) 1명 이상 | 설정 → Personnel |
+  | 3 | 약 가격 | 활성 약 중 가격이 0보다 큰 약이 있음(가져온 약 101개가 모두 0으로 시작) — 「N개 중 M개에 가격」도 보여 줌 | 설정 → Médicaments |
+  | 4 | 진료비·검사 가격 | 진료비 코드(C01~C04)의 가격이 0보다 큼 | 설정 → Codes d'actes |
+  | 5 | 약속처방 | 목록에서 빠진 약을 담은 약속처방이 없음(`drug_active`) | 설정 → Ordonnances types |
+  | 6 | 백업 | 지금 버전의 백업이 1개 이상(`/backup/status` version `same`) | 설정 → Sauvegarde |
+  | 7 | 외장 디스크 | 영상 백업 보고에 `emr_backup: ok`가 한 번 이상 | 상태 점 |
+  | 8 | 영상 연결 (PACS를 쓸 때) | `pacs_relay` ok (짝 맞춤 + 주소) | 상태 점 / PACS 폴더 |
+
+  - 만든다면: 서버 `GET /api/admin/setup-checklist`(settings 권한, 위 조건을 SELECT 몇 개로) + 설정 화면 맨 위의 접을 수 있는 띠, 상태 창에는 한 줄 「Installation : 5/8」. 새 마이그레이션 없음(「다시 보지 않기」를 원하면 `clinic`에 칸 하나 — 그때 결정).
+  - 설명서에는 지금도 순서가 없음 — 만들지 않더라도 `manual-fr/settings.md` 「En bref」 앞에 같은 순서 여덟 줄을 넣는 것은 바로 할 수 있음(원하시면).
+- **4 설명서·위키**: `manual-fr/settings.md` 상태 점 5번(Visionneuse → serveur d'images의 세 경우, 영상 서버 주소는 보통 host.docker.internal — LAN 주소가 아님), 메시지 표에 상태 창의 「Autres programmes sur les ports」. 모듈 위키 2.10·2.15·3-6, 변경 내역 초안.
+- **공용 파일 변경**: i18n `se_sysItem_pacs_relay`, `se_sys_pacsRelay_*` 8.
+- **바꾼 파일**: `server-status.ps1` · `backend/src/services/pacs-probe.js`(새) · `backend/src/routes/status.routes.js` · i18n 3개 · 위키 4개
+- **확인한 방법** (격리 9187만, 실행 중 EMR·PACS 손대지 않음 — 이 PC의 리스너는 읽기만)
+  - `node --check`, PowerShell 파서 0, `npm run build`, `settings.status.mjs`(문구 빠짐 없음), login 시험.
+  - 상태 API 9가지 — 호스트의 127.0.0.1에만 여는 가짜 Orthanc(19090)·가짜 「다른 프로그램」(19091, HTTP 480)으로: 비밀번호 없음 off / 맞음 ok(1.12.4, 36 ms) / 틀린 비밀번호 unauthorized / 480 → notOrthanc(code 480) / 빈 포트 refused / **LAN 주소 192.168.10.229:19090(127.0.0.1에만 열린 서버 — 이번 사고 모양) → refused** / 없는 이름 unknownHost / 답 없는 주소 timeout 4.0초(점의 8초 안) / 주소 아님 badAddress.
+  - 상태 창 사본(격리 컨테이너 이름): 평소 — 새 줄 없음. 가짜 「다른 프로그램」 포트를 EMR 포트로 둔 사본 — fr·en 「Ecran de l'EMR down 127.0.0.1:19091 repond, mais pas l'EMR (HTTP 480)…」 + 「Autres programmes sur les ports warn port 19091 : node (PID …)」 + 안내 「… (node). Fermez-le …」. (격리 스택이 127.0.0.1:9187에 묶여 있어 그 옆에 다른 프로그램을 같이 묶을 수 없었음 — 포트 번호만 바꾼 사본으로 같은 길을 시험.)
+  - 화면: 상태 점 fr 「Visionneuse → serveur d'images — Rien ne répond à http://192.168.10.229:9090 — …」, ko 「영상 창 → 영상 서버 — …에서 받지 않음 …」.
+
 ## 2026-09-30 — 숫자의 소수 쉼표(상태 점·백업 크기) · 설명서 최종 대조 (v1.5.0 전 마지막)
 
 - **상태**: 확인 요청

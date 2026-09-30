@@ -1002,6 +1002,15 @@ export default {
   se_no: "아니요",
   se_logShowIssued: "서류 발행도 보기",
   se_logIssuedHidden: "서류 발행 {n}줄은 접혀 있음",
+  se_sysItem_pacs_relay: "영상 창 → 영상 서버",
+  se_sys_pacsRelay_ok: "닿음 (Orthanc {version})",
+  se_sys_pacsRelay_off: "사용 안 함",
+  se_sys_pacsRelay_refused: "{url}에서 받지 않음 — 영상 서버가 꺼졌거나 주소·포트가 틀림 (보통 http://host.docker.internal:9090)",
+  se_sys_pacsRelay_unknownHost: "없는 주소: {url} — 설정 → 오더 연동의 영상 서버 주소를 확인",
+  se_sys_pacsRelay_timeout: "{url}에서 답이 없음 — 주소가 틀렸거나 방화벽이 막음",
+  se_sys_pacsRelay_unauthorized: "영상 서버가 저장된 비밀번호를 거절 — PACS 폴더에서 pair-with-emr 실행",
+  se_sys_pacsRelay_notOrthanc: "{url}에서 영상 서버가 아닌 것이 답함 (HTTP {code}) — 다른 프로그램이 이 포트를 쓰고 있음",
+  se_sys_pacsRelay_badAddress: "영상 서버 주소가 주소 모양이 아님 — 설정 → 오더 연동",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

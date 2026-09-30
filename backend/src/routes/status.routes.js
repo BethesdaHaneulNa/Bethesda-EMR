@@ -13,6 +13,7 @@ const { authMiddleware } = require('../middleware/auth');
 const { tcpCheck } = require('../utils/tcpCheck');
 const { health: backupHealth, cfg: backupCfg } = require('../services/backup');
 const { newestBackupVersion } = require('../services/backup-version');
+const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
 
@@ -180,6 +181,27 @@ async function checkEmrBackupCopy() {
   return { key: 'emr_backup_copy', state: 'ok', message: 'status.emrBackupCopy.ok', values };
 }
 
+// Does the viewer relay reach the image server (services/pacs-probe.js)? The same
+// request the relay makes, from inside the EMR's container. Off where the imaging is
+// not paired (no stored password - the pacs_address line already says when it should
+// be). The address is part of the values (it holds no secret) so the line can say
+// which one failed.
+async function checkPacsRelay() {
+  const r = await pool.query('SELECT orthanc_url, orthanc_password FROM pacs_config WHERE id = 1');
+  const cfg = r.rows[0] || {};
+  if (!cfg.orthanc_password) return { key: 'pacs_relay', state: 'off', message: 'status.pacsRelay.off', values: {} };
+  const url = cfg.orthanc_url || DEFAULT_ORTHANC_URL;
+  const p = await probeOrthanc(url, cfg.orthanc_password, 4000);
+  const values = { url, code: p.code == null ? null : p.code, version: p.version || '' };
+  if (p.state === 'ok') return { key: 'pacs_relay', state: 'ok', message: 'status.pacsRelay.ok', values };
+  return { key: 'pacs_relay', state: 'warn', message: RELAY_MESSAGES[p.state] || 'status.pacsRelay.refused', values };
+}
+// Written out (not built from the state) so settings.status.mjs finds each one.
+const RELAY_MESSAGES = {
+  refused: 'status.pacsRelay.refused', unknownHost: 'status.pacsRelay.unknownHost', timeout: 'status.pacsRelay.timeout',
+  unauthorized: 'status.pacsRelay.unauthorized', notOrthanc: 'status.pacsRelay.notOrthanc', badAddress: 'status.pacsRelay.badAddress',
+};
+
 // Settings > order feed: the imaging settings the EMR itself needs.
 //  - An address still on a port the EMR and the PACS left behind (EMR 8080 -> 9080, the
 //    image server 8090 -> 9090, both because Windows reserves the old ones). Typed from
@@ -230,6 +252,7 @@ router.get('/status', authMiddleware, async (req, res) => {
     checkImageBackup().catch(err => ({ key: 'pacs_image_backup', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkEmrBackupCopy().catch(err => ({ key: 'emr_backup_copy', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
     checkPacsAddresses().catch(err => ({ key: 'pacs_address', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
+    checkPacsRelay().catch(err => ({ key: 'pacs_relay', state: 'warn', message: 'status.unknown', values: { error: err.message } })),
   ]).then(all => all.filter(Boolean));
   res.json({
     overall: worst(checks.map(c => c.state)),

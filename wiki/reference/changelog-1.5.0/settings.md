@@ -60,6 +60,9 @@ imaging addresses still on the old ports 8080/8090, and the database's drive as 
 Since the night image backup also copies the EMR's backups to the same external disk (the director's
 decision), both the dot and the window have a line for that copy: disk missing, copy failed, or no
 copy for 36 hours. The Backup tab says so instead of asking for another drive in `.env`.
+From the first clean install: the status window names any other program listening on the EMR's or
+the PACS's ports (and says when 127.0.0.1 answers with something that is not the EMR), and the status
+dot checks that the viewer really reaches the image server with the stored address and password.
 
 ### Smaller
 
