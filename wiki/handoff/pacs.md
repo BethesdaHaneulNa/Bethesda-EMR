@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 영상 서버 검사를 하나로 · 설정 화면과 상태 점이 같은 말 · 설명서 정리
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `73b0000`을 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `e016052`(README 한 줄)
+- **한 일**
+  1. **검사 하나로** — 설정 세션의 `backend/src/services/pacs-probe.js`(`probeOrthanc`, `DEFAULT_URL`)만 남김. `pacs.viewer.js`의 두 번째 검사(`probeOrthanc`·`PROBE_MSG`·`DEFAULT_ORTHANC_URL`)를 지우고, 중계의 기본 주소도 그 파일의 `DEFAULT_URL`을 씀. `pacs.routes.js`의 저장 때 검사(`orthanc_check`)와 `GET /test?target=orthanc`가 그 함수를 부르고 답은 그 모양 그대로 `{url, state, version?, code?}`.
+  2. **같은 말** — 설정 화면(`Settings.jsx` `pxRelayCheck`)이 `state`를 **상태 점의 문장 `se_sys_pacsRelay_<state>`**(설정 세션 키, `{url}`·`{code}`·`{version}` 채움)로 보여 줌 → 칸 아래 경고의 이유와 시험 줄이 상태 점 「Visionneuse → serveur d'images」 줄과 글자까지 같음. 내 문구 키 5개(`px_orthancOk`·`px_orthancBadUrl`·`px_orthancRefused`·`px_orthancLogin`·`px_orthancNotOrthanc`)는 지움. 남은 PACS 키도 상태 줄 이름에 맞춤: `px_testOrthancBtn` 「Tester : visionneuse → serveur d'images」 / 「시험: 영상 창 → 영상 서버」 / 「Test: viewer → image server」, `px_orthancUnreachable` 「Avec cette adresse, la visionneuse n'atteint pas le serveur d'images — les images ne s'ouvriront pas.」 / 「이 주소로는 영상 창이 영상 서버에 닿지 못합니다 — 영상이 열리지 않습니다.」 / 「At this address the viewer cannot reach the image server - images will not open.」(뒤에 붙는 이유 문장이 기본 주소를 이미 말하므로 겹치던 「en général …」 뺌).
+  3. `manual-fr/pacs.md` — 「Envoyé」 `<!-- à revoir -->` 지움(진료 `2a9f5bd`), 관리자 단락을 새 단추 이름과 답(「Joignable (Orthanc …)」, 상태 점과 같은 문장)으로.
+  4. PACS `README.md` — 새 두 검사(다른 프로그램이 포트를 들음, 브리지가 EMR에 닿는지)는 `setup.ps1`에만 있고 `setup.sh`에는 없다는 한 줄(현지 서버는 Windows PC — 그대로 둠).
+  5. 위키 4절(`orthanc_check` 모양·한 함수), 6절 칸 설명, 7절 P-27, 8절.
+- **바꾼 파일**: `backend/src/routes/pacs.viewer.js`, `backend/src/routes/pacs.routes.js`, `frontend/src/pages/Settings.jsx`(PACS 탭), `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`. PACS `README.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `px_` 사이에서 키 5개 지움, 이번 세션이 만든 키 2개(`px_testOrthancBtn`·`px_orthancUnreachable`) 문구 바꿈. 설정 세션 키(`se_sys_pacsRelay_*`)는 읽기만. `services/pacs-probe.js`(설정 세션 파일)는 고치지 않음.
+- **DB 마이그레이션**: 없음
+- **확인한 방법** (격리 9188 + 9198): API — 이 PC의 LAN 주소 → `refused`, EMR 자신(9188) → `notOrthanc` `code 200`, `no-such-host.invalid` → `unknownHost`, `not a url` → `badAddress`, 맞는 주소 → `ok` `version 1.12.11`. 저장 답·시험 답·상태 줄 `pacs_relay`(`status.pacsRelay.ok`, 같은 version)이 모두 같음. 화면(fr): LAN 주소 저장 → 「⚠ Avec cette adresse, la visionneuse n'atteint pas le serveur d'images … (Rien ne répond à http://192.168.10.229:9198 — le serveur d'images est arrêté, ou l'adresse ou le port est faux (en général http://host.docker.internal:9090))」, 맞는 주소 → 경고 없음, 시험 단추 → 「✓ Joignable (Orthanc 1.12.11)」. 프런트 빌드 통과. 중계는 기본 주소 상수만 바뀜.
+- **확인 못 한 것**: `timeout`·`unauthorized` 상태를 화면에서(같은 함수라 설정 세션 시험에 기댐 — 지난번 내 검사로는 401을 화면까지 봤음).
+- **다른 세션에 부탁**: 없음. (설정 세션: `se_sys_pacsRelay_*` 문장을 바꾸면 설정 화면의 오더 연동 탭 문구도 같이 바뀝니다 — 일부러 그렇게 묶었습니다.)
+
 ## 2026-09-30 — 클린 설치에서 나온 둘: 다른 프로그램이 EMR 포트를 차지 (P-26) · 영상 서버 주소를 잘못 넣음 (P-27)
 
 - **상태**: 확인 요청
