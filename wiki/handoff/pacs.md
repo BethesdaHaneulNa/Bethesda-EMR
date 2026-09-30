@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 모르는 영상 종류도 받음 (총괄 결정) · device-watch 경고 거르기
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `4247b66`을 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `71f1e87`
+- **한 일**
+  1. **잡음 거르기** — device-watch의 「영상 서버 알림」을 Orthanc **DICOM 스레드(`DICOM-SERVER`, `DICOM-n`)의 W/E 줄**로 좁힘. HTTP 스레드(관리 화면·EMR 영상 창·브리지), `WL HOUSEKEEPER`, `W001:`처럼 코드 달린 알림은 뺌. 남는 것은 쉬운 말 한 줄(연결 거절 / 도중에 끊김 / 저장 못 함 / 읽지 못함 / 그 밖) + 괄호에 원문(160자까지). 두 단어 스레드 이름(`WL HOUSEKEEPER`)도 맞게 읽음. README에 남기는 것·버리는 것 한 줄.
+  2. **`ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED: "true"`** — PACS `docker-compose.yml`(주석: 이유·디스크·되돌리는 법). 격리에서:
+     - (a) 제조사 전용 종류 저장: 그림 있음(`1.2.840.113619.4.30`)·그림 없음(`1.2.840.113619.4.26`, PixelData 뺌) **둘 다 저장됨**(장비 쪽 C-STORE 200). 설정 전에는 그림 있는 것도 거절됐음.
+     - (b) EMR 기록: 브리지가 보통처럼 보고 → `worklist_log` `completed`·`image_count 1`·`patient_check match` → 진료 화면 「Réalisé」, 판독 목록 「1 image(s) reçue(s)」(보통 영상과 구별 안 됨). 영상 창: 그림 있는 전용 종류는 썸네일·그림이 나옴(DICOMweb `rendered` 200), **그림 없는 것은 눈에 줄 그은 썸네일 + 빈 칸**(`rendered` 400, 오류 창은 없음).
+     - (c) device-watch: 「↳ 제조사 전용 영상 종류(1.2.840.113619.4.30) — 서버에 저장했지만 영상 창에서는 안 보일 수 있습니다.」, 그림 없는 것은 「↳ 그림이 없는 자료 1개(보고서·측정값·원자료 등) …」도. 그 검사의 1~2분 뒤 줄은 「EMR에 기록됨 — …: 「Réalisé」. 영상 창에 그림이 안 나올 수 있음(눈에 줄 그은 작은 그림) — 위 줄 참고」(전에는 「영상 창에서 볼 수 있음」). fr·ko로 확인.
+     - (d) 보통 영상: 그대로(저장·연결·「볼 수 있음」).
+     - 영상 백업·복원은 종류와 관계없이 파일 그대로(REST).
+  3. README(모르는 종류를 받는다는 것·디스크·되돌리기, 경고 거르기), 순서서 ④ 표(전용 종류·그림 없는 자료 줄, 「끊음」은 이제 전송 방식 쪽), 순서서 끝(되돌리는 법), 위키 6.3·8절.
+- **바꾼 파일**: PACS `docker-compose.yml`, `device-watch.ps1`, `README.md`. EMR `wiki/reference/device-connection-onsite.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음
+- **확인한 방법**: 격리 9188 + 9198(새 설정으로 Orthanc 다시 만듦, `env`에 값 확인), 장비 흉내 = 임시 Orthanc `XRAY01`(진짜 C-STORE). 경고 거르기는 표본 줄 5개(HTTP의 W001 / `WL HOUSEKEEPER` / `DICOM-SERVER` 거절 / `DICOM-3`의 `W002:` / `DICOM-2` 저장 실패)로 — 뒤의 둘 중 `W002:`는 빠지고 거절·저장 실패만 남음. 진짜 Orthanc가 DICOM 스레드에 W/E를 쓰는 경우는 이번 시험에서 만들지 못함(거절 사례가 없어짐).
+- **실행 중 PACS에 올릴 때 주의 (총괄)**
+  - `docker-compose.yml`의 Orthanc 환경 변수가 바뀌므로 `docker compose up -d`가 **Orthanc 컨테이너를 다시 만듦** — 몇 초~수십 초 동안 영상 창·장비 연결이 끊김. 장비가 영상을 보내는 중이 아닐 때(환자 없을 때).
+  - 영상·색인은 `./storage`(볼륨)에 있어 그대로. 워크리스트 `.wl`도 `./worklists`에 그대로, 브리지는 다시 만들 필요 없음(`up -d`가 바뀐 서비스만).
+  - 올린 뒤 확인: `docker exec bethesda-pacs sh -c 'env | grep UNKNOWN'` → `true`, 영상 창이 열리는지, EMR 상태 점 초록, `device-watch.bat` 「기다리는 중」.
+  - Orthanc가 다시 시작되면 로그 수준도 설정값으로 돌아감(누가 -Detail을 켜 두었어도).
+  - device-watch 파일은 이번에 `device-watch.ps1`만 바뀜(.bat 그대로) — 복사.
+- **확인 못 한 것**: 진짜 옛 후지·GE 장비가 실제로 무엇을 보내는지, 전용 종류의 큰 원자료(수십 MB)가 디스크를 얼마나 쓰는지.
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-09-30 — 현지 장비 연결: `device-watch` 도구와 순서서
 
 - **상태**: 확인 요청
