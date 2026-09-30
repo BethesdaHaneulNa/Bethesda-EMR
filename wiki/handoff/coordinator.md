@@ -165,6 +165,9 @@
 | 2026-09-30 | 진료 | `0d9ffaf` 의사마다 자기 진료 기록(마이그레이션 201 → **038** `038_consultation_note.sql`) → develop `dfe514c` | ✅ | ✅ | 합치기 전 백업 `bethesda_2026-09-30_1118`, 그 백업을 버리는 DB에 올려 038을 두 번 돌림(두 번째는 아무것도 안 바뀜). 실행 중 EMR: 038 적용, 옛 기록 1건(72자, md5 같음)이 `consultation_note`로 옮겨짐 — **진료를 연 계정이 admin이어서 글쓴이는 admin**(dr1·dr2는 못 고침). 거절 길: 옛 방식(`PUT /:id`에 note_text) 400 · 글 없음/숫자 400 · 없는 진료 404 · 토큰 없음 401 · 글쓴이 `mine:true` / 다른 의사 `mine:false` · 같은 글 저장은 아무것도 안 바꿈 · history에 `notes`와 머리말 「— 이름 시:분」. 앞뒤 md5 UNCHANGED. 적용 뒤 백업 `bethesda_2026-09-30_1121`. 새 글 쓰기·다른 의사의 새 기록은 실장님 데이터라 누르지 않음 |
 | 2026-09-30 | 총괄 | `de7559e` 처방 표 WL 칸: 「촬영 완료」가 가운데서 끊겨 줄이 두 줄이 되던 것 | ✅ | ✅ | 한국어 「촬영완료」, 상태 글은 끊기지 않게(11px·한 덩어리), 영상 단추 폭 30→23px. 1366×768 밝은 화면에서 잼: 단추 23 + 글 44 = 칸 74 안, 같은 줄. 다른 말도 잼 — 옆에 들어가는 것: 촬영 중·전송됨·전송 전·취소됨·Réalisé·En cours·Envoyé·Annulé·Done·Sent·Not sent / 단추 아래로 통째로 내려가는 것: Non envoyé·In progress·Cancelled(전에도 두 줄) |
 | 2026-09-30 | 진료 | `e7e24c7` 문서: WL 칸 상태 글자, 마이그레이션 038 표기, `saveNote` 설명을 지금 방식으로 (위키만) | ✅ | — | 읽음. 코드 변경 없음 — 배포 없음 |
+| 2026-09-30 | 총괄 | 차트 머리줄에 「과 + 접수 때 정한 의사」(실장님: 「GEN까지만이 아니라 GEN Dr. Grace」) · 탭 이름 결정 (가) | ✅ | ✅ | `GET /patients/:id/history`의 `doctor_name` = **내원(visit)의 의사**, 없으면 진료를 처음 연 계정(전에는 연 계정만 — 실장님 시험 내원은 admin이 열어 「Bethesda」로 나왔음). 진료 화면 오른쪽: 오늘 묶음·지난 내원 머리줄 「GEN Dr. Grace」. 탭 이름: 진료·수납·약국 세 곳 `t.pastVisits` → `t.patientChart`(fr Dossier Patient · en/ko Patient Chart), 설명서 fr 5곳. 실행 중 EMR: history 답 `doctor_name: Dr. Grace`(연 계정 1=admin), 1366×768 화면에서 「2026-09-30 오늘 GEN Dr. Grace」·탭 「Patient Chart」 읽음. 수납·약국 화면은 눈으로 보지 않음(같은 키 한 줄) |
+| 2026-09-30 | 결정 | `c80967f` 탭 이름 (가) 세 화면 모두, ko도 「Patient Chart」 | ✅ | — | 위 줄에서 반영 |
+| 2026-09-30 | 설정 | `3566d4c` 변경 기록 화면에 `consultation_note` 이름표(note du médecin / 의사의 진료 기록 / doctor's note) | ✅ | ✅ | diff 읽음(ENTITIES 한 줄, 요약 'note' 숨김 조건, 키 3개, 위키). 실행 중 EMR에는 아직 그 종류의 줄이 없어 화면에서는 보지 못함(세션이 격리 스택에서 세 줄로 확인) |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
