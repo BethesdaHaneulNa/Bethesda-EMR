@@ -183,6 +183,7 @@
 | 2026-09-30 | 진료 | `fe2c993`·`7877337` 전과 단추(환자 줄 「⇄ 전과」 + 작은 창), 거절 문장을 code로, 수납된 내원은 단추 꺼짐 · `api/client.js` 오류에 status·code·data | ✅ | ✅ | diff 읽음. 실행 중 EMR 1366×768 밝은 화면(읽기만): 환자 줄 「GEN Dr. Grace」 옆 「⇄ 전과」 켜져 있음(영수 없음), 창을 열면 과 = GEN – General Practice, 의사 = GEN – Dr. Grace가 먼저 골라져 있고 「바꾸기」는 꺼짐, 과 목록 9개. **「바꾸기」는 누르지 않음**(실장님 데이터). 의사 목록은 고른 과의 의사만 — Dr. Bill은 과가 달라(7) 과를 먼저 바꿔야 보임. 남은 것: 꺼진 단추가 opacity 0.6(디자인 규칙은 잠금 상태에 opacity를 쓰지 않음) — 진료에 보냄 |
 | 2026-09-30 | 접수 | `7463e3d` 수납된 내원은 접수 저장(`PUT /visits/:id`)으로도 과·의사 변경 409 VISIT_BILLED · 접수 화면에서 과·의사 목록 잠금과 이유 | ✅ | ✅ | diff 읽음(`activeReceipt` 한 함수를 두 길이 씀, 실제로 바뀔 때만 거절). 실행 중 EMR: 없는 내원 저장 404 + code, 빈 저장 400, 앞뒤 UNCHANGED. 409와 잠긴 목록은 실행 중 EMR에 수납된 내원이 없어 보지 못함(세션이 격리에서 영수 줄을 넣어 거절·허용 둘 다 확인, 188/188) |
 | 2026-09-30 | 진료 | `a0e830b` 전과 창: 의사 먼저 고르기(모든 활성 의사 「과 – 이름」, 과가 따라감) · 꺼진 단추는 opacity 없이 흐린 색 | ✅ | ✅ | 실행 중 EMR 1366×768 밝은 화면(읽기만): 창의 순서 의사 → 과 → 사유, 의사 목록 「GEN – Dr. Grace」·「SUR – Dr. Bill」, 과 9개, 「바꾸기」 꺼짐. 고르기·「바꾸기」는 누르지 않음(실장님 데이터) |
+| 2026-09-30 | PACS | PACS `71f1e87` 모르는(제조사 전용) 영상 종류도 받기(`ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED`) · device-watch는 DICOM 스레드의 경고만 쉬운 말로 · EMR `6fc0681` 문서 | ✅ PACS main = `71f1e87`(푸시) | ⏳ `device-watch.ps1`만 복사함. **compose는 아직 — Orthanc 재시작이 필요해 실장님께 알린 뒤 올림** | diff 읽음(compose 한 줄 + 주석, 경고 거르기 조건). 올릴 때: `docker-compose.yml`을 `C:/Bethesda-PACS`에 복사 → `docker compose up -d`(Orthanc만 다시 만들어짐, storage·worklists 그대로) → `env`에 true, 영상 창, 상태 초록, device-watch 「기다리는 중」 확인 |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
