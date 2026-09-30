@@ -64,17 +64,20 @@ export function RadiologyReadings(props) {
   return (
     <div style={{ overflow: 'auto', height: '100%', padding: 12 }}>
       {rows.map(function (r) {
-        // A cancelled order (decision 3-B) stays in the list, greyed: its images
-        // and reading are part of the record, including why it was cancelled.
+        // A cancelled order (decision 3-B) stays in the list: its images and
+        // reading are part of the record, including why it was cancelled. It is
+        // told apart by grey text, the struck-out name, the "Annulé" tag and a
+        // dashed border - not by opacity, which dimmed every line of it below
+        // the contrast floor (design 3.3.1; 2.5-3.0 light, 2.9-4.4 dark).
         var cancelled = r.order_status === 'cancelled';
-        return <div key={r.id} style={{ background: 'var(--panel-2)', border: '1px solid ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10, opacity: cancelled ? 0.6 : 1 }}>
+        return <div key={r.id} style={{ background: 'var(--panel-2)', border: '1px ' + (cancelled ? 'dashed' : 'solid') + ' ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: 'monospace', color: 'var(--ok-text)', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
-            <span style={{ background: 'var(--accent-chip)', color: 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
-            <span style={{ color: cancelled ? t2 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
+            <span style={{ fontFamily: 'monospace', color: cancelled ? t3 : 'var(--ok-text)', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
+            <span style={{ background: cancelled ? 'var(--btn-neutral-2)' : 'var(--accent-chip)', color: cancelled ? 'var(--text-soft-2)' : 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
+            <span style={{ color: cancelled ? t3 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
             {cancelled ? <span title={r.cancel_reason || ''} style={{ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
             {r.images_received_at
-              ? <span style={{ color: 'var(--ok-text)', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
+              ? <span style={{ color: cancelled ? t3 : 'var(--ok-text)', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
               : (r.study_instance_uid && !cancelled ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
             {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
           </div>
