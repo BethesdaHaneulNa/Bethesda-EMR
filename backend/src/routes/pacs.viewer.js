@@ -133,7 +133,7 @@ const PACS_DOWN = 424;
 function explain(res, status, fr, ko, en) {
   res.status(status).type('html').send(
     '<!doctype html><meta charset="utf-8"><body style="background:#000;color:#cbd5e1;font:15px sans-serif;padding:24px;line-height:1.6">' +
-    `<p>${fr}</p><p style="color:#94a3b8">${ko}</p><p style="color:#64748b">${en}</p></body>`);
+    `<p>${fr}</p><p style="color:#94a3b8">${ko}</p><p style="color:#8290a3">${en}</p></body>`);
 }
 const NOT_PAIRED = [
   "Le serveur d'images n'est pas encore relié à ce dossier : l'administrateur doit lancer <b>pair-with-emr.ps1</b> dans le dossier du PACS.",
@@ -148,6 +148,18 @@ const EXPIRED = [
   '영상 보기 시간이 끝났습니다. 창을 닫고 영상을 다시 여세요.',
   'The viewing session has expired: close this window and open the image again.'];
 
+// The viewer page asked for a study this cookie does not open - typed or pasted
+// into the address bar, or an old link. Its data would be refused one by one,
+// leaving a black page with a spinner; say why instead (integration test
+// 2026-09-30).
+const NOT_OPENED = [
+  "Cette image n'a pas été ouverte depuis une demande d'imagerie. Ouvrez-la avec le bouton 🖼 dans l'écran Consultation.",
+  '이 영상은 진료 화면의 오더에서 연 것이 아닙니다. 진료 화면의 🖼 단추로 여세요.',
+  'This study was not opened from an imaging order. Open it with the 🖼 button in the Consultation screen.'];
+const NOT_ALLOWED = [
+  "Ce compte ne peut plus ouvrir les images (compte désactivé ou sans accès à la consultation). Prévenez l'administrateur.",
+  '이 계정으로는 영상을 열 수 없습니다(비활성 계정이거나 진료 권한 없음). 관리자에게 알려 주세요.',
+  'This account can no longer open images (inactive, or no consultation access). Tell the administrator.'];
 function isPage(path) { return path === '/stone-webviewer/index.html'; }
 
 // The EMR's helmet() gives every API response `script-src 'self'`, which stops
@@ -184,6 +196,10 @@ router.all('*', async (req, res) => {
   const grant = verify(readCookie(req));
   if (!grant) return isPage(path) ? explain(res, 401, ...EXPIRED) : res.status(401).json({ error: 'Viewer session missing or expired' });
 
+  // Without ?study= Stone would list every study, which is refused anyway.
+  if (isPage(path) && !grant.s.includes(String(req.query.study || ''))) {
+    return explain(res, 403, ...NOT_OPENED);
+  }
   const study = studyOf(path, req.query);
   if (study === null || (study && !grant.s.includes(study))) {
     // The shape only, UIDs masked: enough to notice a Stone update calling
@@ -194,7 +210,7 @@ router.all('*', async (req, res) => {
 
   let cfg;
   try {
-    if (!(await accountAllows(grant.u))) return res.status(401).json({ error: 'Account is inactive or lacks consultation' });
+    if (!(await accountAllows(grant.u))) return isPage(path) ? explain(res, 401, ...NOT_ALLOWED) : res.status(401).json({ error: 'Account is inactive or lacks consultation' });
     cfg = (await pool.query('SELECT orthanc_url, orthanc_password FROM pacs_config WHERE id = 1')).rows[0] || {};
   } catch (e) { return res.status(PACS_DOWN).json({ error: 'Could not verify the account' }); }
   if (!cfg.orthanc_password) return isPage(path) ? explain(res, 200, ...NOT_PAIRED) : res.status(PACS_DOWN).json({ error: 'PACS not paired' });

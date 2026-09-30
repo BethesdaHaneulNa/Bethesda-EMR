@@ -29,6 +29,7 @@ Médecin :
 1. Dans **Consultation**, ouvrez le patient (**☰ File d'Attente** ou **🔍 Trouver patient**).
 2. Dans **Saisir médicament, code examen ou nom...**, tapez le nom de l'examen (par exemple `Chest`), puis Entrée. La liste montre l'appareil (`CR`, `US`…) et **WL** : l'examen part vers l'appareil.
 3. La colonne de droite de la ligne montre **Envoyé** (l'appareil a reçu la demande), puis **Réalisé** quand toutes les images sont arrivées.
+   <!-- à revoir : juste après l'ajout, « Envoyé » n'apparaît qu'en rouvrant le patient (test du 2026-09-30, session consultation) -->
 4. L'examen n'apparaît sur l'appareil **que le jour où il est demandé**. Un examen demandé hier et fait aujourd'hui doit être demandé de nouveau aujourd'hui.
 
 ### 2. Manipulateur — faire les images
@@ -108,6 +109,8 @@ Un examen qui a déjà des images ou un compte-rendu ne peut pas être retiré ;
 | **La session d'affichage a expiré : fermez cette fenêtre et rouvrez l'image.** | La fenêtre est ouverte depuis plus de 30 minutes. | **Fermer ✕**, puis **🖼** de nouveau. |
 | **Le serveur d'images n'est pas encore relié à ce dossier : l'administrateur doit lancer pair-with-emr.ps1 dans le dossier du PACS.** | L'EMR et le PACS ne sont pas (ou plus) reliés, par exemple après une restauration. | Prévenez l'administrateur. Le compte-rendu peut quand même être écrit. |
 | **Le serveur d'images ne répond pas. Prévenez l'administrateur.** | Le PACS est arrêté ou bloqué. | Prévenez l'administrateur. |
+| **Cette image n'a pas été ouverte depuis une demande d'imagerie. Ouvrez-la avec le bouton 🖼 dans l'écran Consultation.** | L'adresse a été copiée, ou l'onglet est ancien (après plusieurs examens ouverts). | Fermez l'onglet, puis cliquez sur **🖼** dans **Consultation**. |
+| **Ce compte ne peut plus ouvrir les images (compte désactivé ou sans accès à la consultation). Prévenez l'administrateur.** | Le compte a été désactivé ou n'a plus l'accès **Consultation**. | Prévenez l'administrateur. |
 | Les petites images sont à gauche, mais le milieu reste noir | Problème d'affichage. | Changez une fois la taille de la fenêtre du navigateur, ou cliquez sur **Ouvrir dans un onglet ↗**. Si c'est toujours noir, prévenez l'administrateur. |
 | Une fenêtre demande un **nom d'utilisateur et un mot de passe** | Ce n'est pas normal. | Ne tapez rien. Prévenez l'administrateur. |
 

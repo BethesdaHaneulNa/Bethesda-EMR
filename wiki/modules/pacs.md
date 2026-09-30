@@ -253,8 +253,9 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
   1. GET·HEAD만(아니면 405).
   2. 경로를 **한 번 풀고**(`decodeURIComponent`) `\`·`%`(이중 인코딩)·NUL·`//`·`.`·`..` 조각이 있으면 400.
   3. 쿠키 서명·만료(아니면 401, `index.html`이면 「영상 보기 시간이 끝났습니다」 안내 쪽).
+  3′. `index.html`인데 `?study=`가 쿠키의 검사가 아니거나 없으면 403 안내 쪽 「Cette image n'a pas été ouverte depuis une demande d'imagerie…」(2026-09-30, 통합 시험 — 전에는 데이터만 403이라 검은 화면에 점 하나).
   4. **허용 목록**: `/stone-webviewer/<파일>`, `/system`(Stone이 부름), `/dicom-web/studies/<UID>[/series/<UID>[/instances/<UID>]][/metadata|/rendered|/thumbnail|/frames/<n,…>[/rendered]]`, 그리고 `/dicom-web/studies|series|instances?0020000D=<UID>`(QIDO — **스터디 UID로 거른 것만**). UID는 쿠키에 있는 것만. 아니면 403(로그에는 UID를 가린 경로 모양만). Orthanc REST(`/patients`, `/tools/find` …)·Explorer 2·걸러지지 않은 목록은 모두 403.
-  5. 계정: DB에서 `status='active'`이고 `consultation` 권한이 있어야(30초 캐시) — 아니면 401.
+  5. 계정: DB에서 `status='active'`이고 `consultation` 권한이 있어야(30초 캐시) — 아니면 401(페이지면 안내 쪽 「Ce compte ne peut plus ouvrir les images…」).
   6. `pacs_config.orthanc_password`가 없으면 「짝이 맞지 않았습니다」 안내(페이지는 200, 데이터 요청은 **424**).
 - **Orthanc로 보냄**: `orthanc_url` + 같은 경로·쿼리, `Authorization: Basic admin:<orthanc_password>`, `Accept`만 넘김. 답은 **스트림으로 그대로**(크기 제한 없음). Orthanc의 `Set-Cookie`·`WWW-Authenticate`·연결용 헤더는 버림, `Cache-Control: private, no-store`. Orthanc가 401이면 「짝이 맞지 않았습니다」(비밀번호가 다름 — 다른 PC 백업을 복원한 경우), 연결 안 됨·502~504는 「영상 서버가 응답하지 않습니다」/424. 연결 5초, 전체 120초. 브라우저가 끊으면 Orthanc 요청도 끊음.
 - **왜 424·200인가**: nginx `/api/`가 502·503·504를 「API backend is not reachable」로 바꿔 버리므로(`proxy_intercept_errors`) 그 셋을 쓰지 않음.
@@ -525,6 +526,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-30 | **영상이 있는 하루 통합 시험**(`wiki/reference/integration-test-imaging-2026-09-30.md`, 가짜 장비 = Orthanc로 진짜 C-FIND·C-STORE). 뒤에 고침: 남의 검사·`?study=` 없는 영상 창 페이지와 비활성 계정에 안내 쪽, 안내 쪽 영어 줄 대비, 취소된 판독 카드의 투명도 → 회색 글자·꼬리표·점선 테두리 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.2에 0부터 다시 훑는 시간(한 장 약 5ms, 넉넉히 20ms), 상태 점·상태 창의 「EMR 백업 복사」 줄. 시험 순서서 6번에 실제 문구(한·프), 맨 위에 「이 PC에서는 예약 등록 안 함」 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.2: 디스크를 다른 서버에 가져가도 영상이 빠지지 않게(`last_change`로 Orthanc 확인), 도중에 빠진 디스크 안내, `-Verify` 나이는 파일 시각으로. 실장님용 USB 시험 순서서 `wiki/reference/usb-backup-rehearsal.md` | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 6.2: 밤 영상 백업이 **EMR DB 백업도 같은 외장 디스크로** 복사(`emr-backups`, 해시·gzip 확인, EMR과 같은 보존 규칙), 보고 칸 `emr_backup*`, `-Verify`에 EMR 백업, 디스크 보관 경고. PACS README의 깨진 두 줄(`.\restore…`) 고침 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |

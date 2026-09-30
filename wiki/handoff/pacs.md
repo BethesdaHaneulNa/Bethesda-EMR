@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 영상이 있는 하루 통합 시험 · 영상 창 안내 쪽 · 취소된 판독 카드
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 보고서 `e3711ec`(고치기 전), 고침·위키는 이 항목이 들어간 커밋 (develop `33a81d2`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**
+  1. **시험**(총괄 할 일 1, ①~⑨): 보고서 `wiki/reference/integration-test-imaging-2026-09-30.md` — 단계별 표(한 것 · 뜬 것 · 설명서와 다른 곳 · 막힌 곳)와 세션별 고칠 것(A/B/C). 새 DB 격리 EMR 9188 + 빈 격리 PACS 9198/11298, **장비 대신 임시 Orthanc 컨테이너**(`bethesda-s-pacs-device`, AET XRAY01, 호스트 포트 없음)가 진짜 DICOM으로 워크리스트 C-FIND·영상 C-STORE. 1366×768, 프랑스어, 어두운·밝은 화면. **A 없음.**
+  2. **보고 뒤 고침(PACS 몫)**
+     - `pacs.viewer.js`: 영상 창 페이지(`index.html`)의 `?study=`가 쿠키의 검사가 아니거나 없으면 **403 안내 쪽** 「Cette image n'a pas été ouverte depuis une demande d'imagerie. Ouvrez-la avec le bouton 🖼 dans l'écran Consultation.」(전: 검은 화면에 점 하나). 비활성·진료 권한 없는 계정의 페이지도 안내 쪽 「Ce compte ne peut plus ouvrir les images …」(전: JSON 글자). 안내 쪽 영어 줄 색 `#64748b` → `#8290a3`(검정 위 4.4 → 기준 통과, 디자인 `--viewer-text` 값). 데이터 요청의 답은 그대로.
+     - `RadiologyReadings.jsx`(총괄 할 일 2): 취소된 카드의 `opacity: 0.6` 뺌 → 날짜·이름 `--text-3`, 이름 줄긋기, 종류 꼬리표 회색(`--btn-neutral-2`/`--text-soft-2`, 「Annulé」 꼬리표와 같은 색), 도착 글자 회색, **점선 테두리**. 경고 상자(빨강·노랑)는 그대로 — 취소돼도 알아야 하므로.
+  3. `manual-fr/pacs.md` 메시지 표에 새 두 줄, §1-3 「Envoyé」에 `<!-- à revoir -->`. 위키 4절(중계 3′·5), 8절.
+- **바꾼 파일**: `backend/src/routes/pacs.viewer.js`, `frontend/src/components/RadiologyReadings.jsx`, `wiki/reference/integration-test-imaging-2026-09-30.md`(새), `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음(번역 키 없음 — 안내 쪽 문장은 `pacs.viewer.js` 안의 세 언어 그대로). **DB 마이그레이션**: 없음
+- **확인한 방법**: 보고서의 단계 전부 + 고친 뒤 격리 9188에서 중계 12가지(자기 검사 페이지·데이터 200, 남의 검사 페이지 403 안내, `?study=` 없음 403 안내, 남의 데이터·목록 403, 정적 파일 200, 쿠키 없음 401, POST 405, 경로 우회 400, 수납 `viewer-url` 403, 비활성 계정 페이지 401 안내) 모두 통과, 진료 화면에서 영상 창 다시 열림. 취소 카드 대비 밝은 4.7–8.3 · 어두운 5.6–8.3(전 2.5–3.0 · 2.9–4.4), 두 화면 눈으로.
+- **확인 못 한 것**: 진짜 장비(메뉴·압축 전송), 서버 상태 창(`server-status.bat` — 실행 중 컨테이너만 봄), `px_noStudy`, 브라우저에서 실제 30분.
+- **다른 세션에 부탁** (보고서 「고칠 것」 표 그대로)
+  - **진료**: (B) 영상 오더를 낸 직후 「Envoyé」가 안 보임 — 환자를 다시 열어야 보임. (C) 영상 창 머리에 「검사 번호로 연결됨」 줄(`viewer-url`의 `images.linked_by === 'accession'`), 영상 오더 줄 Unité 칸의 촬영 부위(«CHES»), 판독 저장 알림 창 → 잠깐 뜨는 알림.
+  - **설정**: (C) 상태 점 «97.5 Go libres» 소수점.
+  - **디자인**: 취소 카드 모양 확인(점선 테두리 + 회색 꼬리표) — 3.3.1 규칙대로 했는지.
+
 ## 2026-09-30 — 시험 순서서에 상태 화면 문구 · 예약 등록 금지 안내 · 0부터 다시 훑는 시간
 
 - **상태**: 확인 요청
