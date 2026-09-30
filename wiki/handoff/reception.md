@@ -2,6 +2,18 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — `GET /visits/patient/:id`에 성별·생년월일·알레르기 (진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`920e300` 위)
+- **한 일**:
+  - 내원 목록의 줄마다 `p.gender`, `p.date_of_birth`, `p.allergies`를 더함. 진료가 환자 찾기로 연 내원의 머리줄·알레르기 경고를 채울 때 `GET /patients/:id`를 따로 부르지 않아도 됨
+  - 권한은 그대로(`registration`·`consultation`·`lab`·`payment`). 이 역할들은 모두 `GET /patients/:id`(SEARCH_READERS)로 같은 값을 이미 읽으므로 보이는 것이 넓어지지 않음
+  - 날짜는 문자열 `YYYY-MM-DD`(총괄의 DATE 파서)
+- **확인**: `node --check`, 격리 스택 `reception.api.mjs` 168/0, `GET /visits/patient/1` → `gender "M"`, `date_of_birth "1990-05-03"`, `allergies "Pénicilline"`
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `wiki/modules/reception.md`(4절 API 표), 이 노트
+- **다른 세션에 부탁**: 진료 — 원하면 `Consultation.jsx`에서 추가 조회를 빼도 됨(빼지 않아도 동작 그대로)
+
 ## 2026-09-30 — 3차 짧은 확인 `integration-test-2026-09-30.md` 「3차 — 짧은 확인」
 
 - **상태**: 확인 요청
