@@ -163,7 +163,61 @@ const NOT_ALLOWED = [
   "Ce compte ne peut plus ouvrir les images (compte désactivé ou sans accès à la consultation). Prévenez l'administrateur.",
   '이 계정으로는 영상을 열 수 없습니다(비활성 계정이거나 진료 권한 없음). 관리자에게 알려 주세요.',
   'This account can no longer open images (inactive, or no consultation access). Tell the administrator.'];
+// A study made only of objects without a picture (a device's report, measurements,
+// raw data - stored since UnknownSopClassAccepted, 2026-09-30) opens in Stone as a
+// crossed-out eye and an empty pane, which reads as "images arrived but do not
+// show". Say what it is instead. {n} = number of objects.
+const NO_PICTURE = [
+  "Cette demande n'a reçu que des données sans image ({n}) — par exemple un rapport ou des mesures envoyés par l'appareil. Il n'y a rien à afficher ; le compte-rendu peut être saisi à droite.",
+  '이 검사에는 그림이 없는 자료만 왔습니다({n}개) — 장비가 보낸 보고서·측정값 같은 것. 보여 줄 영상이 없습니다. 판독은 오른쪽에 쓸 수 있습니다.',
+  'Only data without a picture arrived for this order ({n}) — for example a report or measurements sent by the device. There is nothing to show; the reading can be written on the right.'];
 function isPage(path) { return path === '/stone-webviewer/index.html'; }
+
+// A small JSON call to Orthanc with the stored login, for the viewer's own checks.
+// Resolves null on any failure: a check that cannot be made never blocks the viewer.
+function orthancJson(cfg, path, method, body, timeoutMs) {
+  return new Promise(resolve => {
+    let url;
+    try {
+      const base = new URL(String(cfg.orthanc_url || DEFAULT_ORTHANC_URL));
+      url = new URL(base.pathname.replace(/\/+$/, '') + path, base.origin);
+    } catch (e) { return resolve(null); }
+    const lib = url.protocol === 'https:' ? https : http;
+    let done = false;
+    const finish = v => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+    const req = lib.request(url, {
+      method: method || 'GET',
+      headers: { Authorization: 'Basic ' + Buffer.from('admin:' + cfg.orthanc_password).toString('base64'), Accept: 'application/json', 'Content-Type': 'application/json' },
+    }, up => {
+      let data = '';
+      up.setEncoding('utf8');
+      up.on('data', c => { if (data.length < 2000000) data += c; });
+      up.on('end', () => { if (up.statusCode !== 200) return finish(null); try { finish(JSON.parse(data)); } catch (e) { finish(null); } });
+      up.on('error', () => finish(null));
+    });
+    const timer = setTimeout(() => { req.destroy(); finish(null); }, timeoutMs || 3000);
+    req.on('error', () => finish(null));
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+// Does any object of this study carry a picture? Orthanc records PixelDataOffset for
+// every stored instance that has pixel data. Returns { picture: bool, count } or
+// null when it cannot tell (then the viewer opens as usual). Looks at 30 objects at
+// most: a study with a picture usually shows one among the first.
+async function studyPictures(cfg, studyUid) {
+  const ids = await orthancJson(cfg, '/tools/find', 'POST', { Level: 'Study', Query: { StudyInstanceUID: studyUid } });
+  if (!Array.isArray(ids) || ids.length !== 1) return null;
+  const instances = await orthancJson(cfg, '/studies/' + ids[0] + '/instances');
+  if (!Array.isArray(instances) || !instances.length) return null;
+  for (const inst of instances.slice(0, 30)) {
+    const meta = await orthancJson(cfg, '/instances/' + inst.ID + '/metadata?expand');
+    if (!meta) return null;
+    if (meta.PixelDataOffset) return { picture: true, count: instances.length };
+  }
+  return { picture: false, count: instances.length };
+}
 
 // The EMR's helmet() gives every API response `script-src 'self'`, which stops
 // the Stone viewer cold: it runs an inline script, compiles Vue templates with
@@ -224,6 +278,11 @@ router.all('*', async (req, res) => {
     const qs = String(req.url).includes('?') ? String(req.url).slice(String(req.url).indexOf('?')) : '';
     target = new URL(base.pathname.replace(/\/+$/, '') + path + qs, base.origin);
   } catch (e) { return isPage(path) ? explain(res, 200, ...UNREACHABLE) : res.status(PACS_DOWN).json({ error: 'Bad PACS address' }); }
+
+  if (isPage(path)) {
+    const pics = await studyPictures(cfg, String(req.query.study));
+    if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
+  }
 
   const lib = target.protocol === 'https:' ? https : http;
   const upstream = lib.request(target, {
