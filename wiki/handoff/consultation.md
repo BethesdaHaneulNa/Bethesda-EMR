@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 설계 메모: 「쓴 사람이 있는」 진료 기록 (코드 전)
+
+- **상태**: 확인 요청 (설계만 — 코드 없음)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `30aa85f` 다음
+- **한 일**: 실장님이 두 의사 계정으로 써 보시고 주신 것(기록을 쓴 사람별 항목으로, 오른쪽 차트에 바로, 자기 것만 고침)의 설계를 `wiki/modules/consultation.md` **7.5**에 적었습니다.
+  - 추천: **consultation은 내원에 한 줄 그대로, 기록만 새 표 `consultation_note`**. 두 방법의 비교와 스키마·옮기기 방법은 7.5에 있습니다.
+  - API 셋(`GET`/`POST /:id/notes`, `PUT /notes/:id` — 남의 항목 403)과 `PUT /:id`는 바이탈만 받게(note_text가 오면 400) 하고, 화면 흐름 9가지를 적었습니다.
+  - 기록을 읽는 곳 표 — **진료 파일 밖에서 꼭 바꿀 곳은 `GET /patients/:id/history`(접수 파일) 하나**입니다. 거기서 `note_text`를 항목들(이름·시각 머리)로 채워 주면, 수납·약국 PatientChart와 접수 외래 내역은 고치지 않아도 됩니다.
+  - 총괄 메모와 다른 점: 통계의 의사별 건수·매출은 `consultation.doctor_id`가 아니라 **`visit.doctor_id`**를 씁니다 — 이 일로 바뀌지 않습니다.
+  - 처방 줄에는 낸 사람 칸이 없어 `prescription.prescribed_by`를 더합니다(옛 줄 NULL). 바이탈은 `vitals_by`·`vitals_at`을 둡니다.
+  - 올리지 않은 글은 서버 자동 저장 대신 이 PC의 브라우저에 두어 F5·정전 뒤 돌아오게 합니다(제안 — 빼기 쉬움).
+- **바꾼 파일**: `wiki/modules/consultation.md`(7.5·8, 상태 줄) · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음(설계만, 번호는 총괄이 038로) · **번역 키**: 없음
+- **확인한 방법**: 코드 읽기 — `note_text`·`FROM consultation`·`PatientChart`·`/history`를 모두 찾았고, `stats.routes.js` 188·208, `patient.routes.js` 228, `Registration.jsx` 761, `PatientChart.jsx` 75·111, `documents/registry.js` 37을 확인했습니다.
+- **확인 못 한 것**: 실행 중 EMR에 옛 `subjective`·`objective`·`assessment`·`plan` 값이 있는지(세션 규칙상 보지 않음) — 옮기기에 합칠지는 총괄이 개수를 본 뒤 정해 주세요.
+- **다른 세션에 부탁**: (코드 단계에서) 접수 — `GET /patients/:id/history`에 `notes`·`note_text` 채우기, 또는 총괄이 진료에 허락. 설정 — `settingsAudit.js` `ENTITIES`에 `consultation_note`.
+- **남은 일 · 알려진 문제**: 결정 대기 ① 관리자가 남의 항목 수정 ② 바이탈 의사별 — 그리고 진료가 여쭐 것 하나(같은 날 두 번 쓰면 항목 둘 vs 이어 쓰기). 결정이 오면 코드로 갑니다.
+
 ## 2026-09-30 — 영상이 있는 하루 시험의 진료 몫 (B 1, C 3)
 
 - **상태**: 확인 요청

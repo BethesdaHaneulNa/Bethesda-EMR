@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 영상 시험 진료 몫 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 설계 메모(7.5) 확인 요청 — 쓴 사람이 있는 진료 기록
 
 ## 1. 이 모듈이 하는 일
 
@@ -564,11 +564,120 @@
 | F2 ✅ 09-29 | 2.8 수술기록지·2.10 의뢰서·2.11 발급 이력을 새 문서 서명 규칙(작성한 의사)과 함께 **인쇄 폭으로** 다시 렌더링해 보기 | 작음 |
 | F3 | 수술기록지 충수절제술의 인쇄 여유 9px(7.1) — 내용이 더 늘면 두 장이 됨. 지금은 지켜보기만 | 지켜보기 |
 
+### 7.5 설계 메모 — 「쓴 사람이 있는」 진료 기록 (2026-09-30, 코드 전 · 결정 대기 둘)
+
+실장님이 새로 설치한 EMR을 의사 계정 둘로 써 보시고 주신 것입니다. 「기록을 적은 뒤 바로 오른쪽 환자 차트로 넘어가고, 원장님 두 분이 따로 쓴 것이 누구 것인지 보이고, 각자 자기 것만 고칠 수 있게.」
+
+**지금**
+
+- `consultation`은 내원마다 한 줄이고, 기록은 그 줄의 `note_text` 한 칸입니다. `doctor_id`는 처음 연 계정입니다.
+- 두 번째 의사가 같은 내원을 열면 같은 칸을 고칩니다. 누가 어느 부분을 썼는지 남지 않고, 기록(Journal)에는 끝난 진료의 수정만 남습니다.
+- 오른쪽 「Visites passées」는 지금 연 진료를 뺍니다(`history.filter(c.id !== cData.id)`). 그래서 오늘 쓴 것이 안 보이고, 첫 내원이면 「기록 없음」입니다.
+- 처방 줄(`prescription`)에는 **낸 사람 칸이 없습니다**. 오더 줄(`order_item`)에는 `ordered_by`가 있습니다.
+- 통계의 의사별 건수·매출은 `consultation.doctor_id`가 아니라 **`visit.doctor_id`(접수가 정한 담당의)**를 씁니다(`stats.routes.js` 188·208). 이 일로 바뀌지 않습니다.
+
+**표 — 새 표 `consultation_note`를 추천합니다** (총괄 의견과 같음)
+
+| | 새 표 (기록만 항목으로) | consultation을 의사마다 한 줄 |
+|---|---|---|
+| 돈·오더·검사·약국·수납·통계 | 그대로. 모두 `consultation.id`나 `visit_id`에 매달려 있고 한 내원 = 한 진료라고 가정함(`billing.routes.js`의 `consultation_id IN (SELECT id FROM consultation WHERE visit_id=…)`는 여러 줄도 받지만, 진료 화면의 `POST /`는 「내원의 마지막 진료」 하나를 다시 씀) | 처방·오더·바이탈·완료 상태가 의사별로 쪼개짐. 누가 「완료」인지, 수납이 어느 줄을 보는지, 약국 목록·임상병리 목록(의사 이름)이 두 줄로 나오는지 모두 다시 정해야 함 |
+| 바꿀 곳 | 기록을 읽는 곳(아래 표)만 | 거의 모든 모듈 |
+| 옛 백업 복원 | `note_text` 칸을 남겨 두면 옛 백업도 그대로 읽힘(옮기기는 마이그레이션이 다시 함) | 옛 줄을 의사별로 가를 수 없음 |
+
+```sql
+-- 2xx (총괄이 038로): consultation_note
+CREATE TABLE consultation_note (
+  id              SERIAL PRIMARY KEY,
+  consultation_id INTEGER NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
+  visit_id        INTEGER REFERENCES visit(id),
+  patient_id      INTEGER NOT NULL REFERENCES patient(id),
+  author_id       INTEGER REFERENCES staff(id),      -- 쓴 계정. NULL = 옮긴 옛 기록에 여는 의사가 없던 것
+  note_text       TEXT NOT NULL CHECK (btrim(note_text) <> ''),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ                         -- 고친 시각 (한 번도 안 고쳤으면 NULL)
+);
+CREATE INDEX ON consultation_note (patient_id, created_at DESC);
+CREATE INDEX ON consultation_note (consultation_id, created_at);
+-- 옛 기록 옮기기: note_text가 빈칸이 아닌 진료마다 항목 하나, 쓴 사람 = consultation.doctor_id,
+-- 시각 = consultation.created_at, 고친 시각 = updated_at(created_at보다 뒤일 때만).
+-- 두 번 돌려도 같도록 NOT EXISTS. note_text 칸은 지우지 않고 더는 읽지 않음.
+-- 같은 파일에서: prescription.prescribed_by INTEGER REFERENCES staff(id) (옛 줄은 NULL — 누가 냈는지 모름),
+--               consultation.vitals_by INTEGER REFERENCES staff(id), consultation.vitals_at TIMESTAMPTZ.
+```
+
+- 옮기기에서 한 가지 볼 것: 옛 화면이 쓴 적 있는 `subjective`·`objective`·`assessment`·`plan`. 지금 화면은 쓰지 않고, 목록은 `note_text || subjective`로 읽습니다. 실행 중 EMR에 값이 있는지는 보지 않았습니다(세션 규칙). 있으면 `note_text`가 빈 진료에 한해 「S: … / O: … / A: … / P: …」로 합쳐 옮깁니다. 데이터를 바꾸는 마이그레이션이라, 이 부분은 총괄이 실행 중 EMR에서 개수를 확인한 뒤 넣을지 정해 주세요.
+
+**서버** (`consult.routes.js`, 진료 파일)
+
+- `GET /consultations/:id/notes` — 이 진료의 항목. 오래된 것부터, `author_name`, `created_at`, `updated_at`, `mine`(= author_id가 나)을 함께 줍니다.
+- `POST /consultations/:id/notes {note_text}` — `author_id = req.user.id`. 빈 글은 400입니다. 끝난 진료에 새 항목을 더하면 기록 1줄(`consultation.record.edit`, entity `consultation_note`, after만)을 남깁니다. 끝난 진료에 처방을 더할 때와 같은 규칙입니다.
+- `PUT /consultations/notes/:noteId {note_text}` — **`author_id ≠ req.user.id`면 403**(관리자도 같음, 결정 대기 ①). 고친 시각 `updated_at`. 끝난 진료면 기록 1줄(before/after `note_text`).
+- 지우기는 두지 않습니다(요청 없음). 빈 글로 고치기는 400.
+- `PUT /consultations/:id`는 바이탈만 받습니다. `note_text`가 오면 400을 돌려줍니다. 옛 화면이 캐시에 남아 기록을 보내면, 조용히 버리면 글을 잃으므로 알리는 쪽이 낫습니다. 바이탈이 바뀌면 `vitals_by = req.user.id`, `vitals_at = NOW()`.
+- 쓰기는 모두 `canConsult`입니다. 진료 권한이 없는 계정(간호사 등)은 403이고, 지금 규칙 그대로입니다.
+- 처방 추가(`POST /:id/prescriptions`)와 세트 추가는 `prescribed_by = req.user.id`를 저장합니다.
+
+**화면** (`Consultation.jsx`)
+
+1. 왼쪽(가운데 열)의 기록 칸은 「새로 쓰는 칸」이 됩니다. **Sauver**를 누르면 바이탈을 저장하고, 칸에 글이 있으면 항목으로 올립니다. 칸은 비워지고, 오른쪽 차트 맨 위에 「오늘 → 쓴 의사 이름·시각 → 글」로 나타납니다. 저장 알림은 잠깐 뜨는 알림입니다(판독과 같음).
+2. **자동 저장은 하지 않습니다**(총괄 지시). 대신 쓰던 글은 이 PC의 브라우저 저장소(`localStorage`, 진료 id + 계정 id별)에 둡니다. F5나 정전 뒤 같은 진료를 열면 칸에 돌아옵니다. 올리면 지워집니다. 서버로는 가지 않습니다. 줄 저장(7.3)과 같은 정전 걱정 때문이며, 원하지 않으시면 빼기 쉽습니다.
+3. 쓰던 글이 있는 채로 다른 환자·다른 내원을 열면 「올리지 않은 기록이 있습니다 — 버릴까요?」라고 묻습니다(`window.confirm`, `cs_` 키).
+4. **Terminé**를 누를 때 칸에 글이 있으면 같이 올립니다. 지금 「완료 전에 노트를 먼저 저장」과 같은 자리입니다.
+5. 오른쪽 **Visites passées**는 오늘 진료를 맨 위에 넣고, 모든 내원을 같은 모양으로 보여 줍니다. 날짜(과·담당의) 밑에 항목마다 「이름 · 시각(고쳤으면 «modifié HH:MM»)」과 글입니다.
+   - **내 항목**은 누르면 왼쪽 칸에 올라와 「고치는 중」 띠(취소 단추)가 붙습니다. Sauver는 그 항목을 고칩니다.
+   - **남의 항목**은 누를 수 없고 읽기만 합니다(자물쇠 없이 글자색만 조금 흐리게).
+   - 지난 내원의 내 항목을 고치면 기록(Journal)에 남습니다(서버 규칙).
+   - 지난 내원을 눌러 여는 「과거 기록 보기」(`renderPast`)도 같은 항목 목록을 씁니다.
+6. 두 의사가 같은 내원을 동시에 열어 두는 경우: 항목 목록은 저장할 때와, 지금 있는 30초 새로고침(검사·영상 상태)에 함께 다시 읽습니다. 상대가 쓴 항목이 30초 안에 보입니다.
+7. 처방·오더 줄의 이름 옆 작은 글자 의사 이름은 **이 내원에 낸 사람이 둘 이상일 때만** 보입니다(`prescribed_by`·`ordered_by`, 옛 줄 NULL은 표시 없음).
+8. 바이탈 칸 밑에 「마지막 저장: 이름 · 시각」 한 줄(`vitals_by`·`vitals_at`)을 둡니다. 바이탈은 내원에 한 벌 그대로입니다(결정 대기 ②).
+9. 1366×768(오른쪽 열 28%)에서 항목 머리(이름·시각)는 한 줄에 넘치면 「…」로 줄입니다. 색은 이름표로, 밝은·어두운 화면 둘 다에서 봅니다. 새 문구는 모두 `cs_` 키로 ko·en·fr에 넣습니다.
+
+**기록(note_text)을 읽는 곳 — 고칠 곳**
+
+| 곳 | 파일 (주인) | 지금 | 바꿀 것 |
+|---|---|---|---|
+| 진료 열기 | `Consultation.jsx` 323 (진료) | `setNote(cData.note_text)` | 칸은 비우고(또는 이 PC에 남은 쓰던 글), 항목은 `GET /:id/notes` |
+| Sauver·Terminé | `Consultation.jsx` 395·419 (진료) | `PUT /:id {note_text, 바이탈}` | 바이탈은 `PUT /:id`, 글은 `POST`/`PUT` 항목 |
+| 오른쪽 목록·과거 보기 | `Consultation.jsx` 1146·367 (진료) | `h.note_text \|\| h.subjective` | 항목 목록(위 5) |
+| 서류 엔진의 `ctx.note` (의뢰서 「소견」 자동 채움) | `Consultation.jsx` 1217·1220 → `documents/registry.js` (진료) | 기록 칸 글 | 칸에 글이 있으면 그 글, 없으면 **이 내원의 내 마지막 항목**. 남의 항목은 넣지 않음(의뢰서에 서명하는 의사의 소견이므로) |
+| 환자 기록 목록 API | `patient.routes.js` 228 `GET /patients/:id/history` (**접수**) | `c.*` → `note_text` | 내원마다 `notes`(항목 배열, 이름·시각) 추가 + **`note_text`를 항목들로 채워 줌**(「— 이름 HH:MM」 머리 + 글). 이렇게 하면 아래 두 화면은 고치지 않아도 두 의사의 글이 이름과 함께 보임 |
+| 수납·약국의 PatientChart | `components/PatientChart.jsx` 75·111 (**수납**) | `h.note_text` | 위 API로 그대로 읽힘. 나중에 `notes`로 모양을 맞추는 것은 수납 몫 |
+| 접수의 외래 내역 | `Registration.jsx` 761 (**접수**) | `h.note_text` | 위와 같음 |
+| 기록 탭 | `settingsAudit.js` (**설정**) | `note_text` 이름표 있음 | `ENTITIES`에 `consultation_note` 이름표(없어도 글자 그대로 보임) |
+| 임상병리·약국 목록의 의사 이름 | `lab.routes.js`·`pharmacy.routes.js` | `consultation.doctor_id` | 그대로 |
+| 통계 | `stats.routes.js` | `visit.doctor_id` | 그대로 |
+| 기록(Journal)의 옛 줄 | `audit_log` | entity `consultation`, 필드 `note_text` | 그대로 읽힘. 새 줄은 entity `consultation_note` |
+
+→ 진료 파일 밖에서 꼭 바꿀 곳은 **`GET /patients/:id/history` 하나(접수 파일)**입니다. 접수 세션에 부탁하거나, 총괄이 허락하면 진료가 그 쿼리에 `notes`·`note_text` 채우기만 넣습니다.
+
+**결정 대기** (결정 세션이 여쭙는 중 — 둘 다 한 곳만 바꾸면 되게 만듦)
+
+- ① 관리자가 남의 항목을 고칠 수 있나 — 기본 「못 고침」. 서버의 `canEditNote(user, note)` 한 함수에서 정합니다.
+- ② 바이탈을 의사마다 따로 두나 — 기본 「내원에 한 벌 + 마지막 저장한 사람」. 따로 두게 되면 바이탈도 항목 표로 옮기는 별도 일입니다.
+- (진료가 더 여쭐 것) 한 의사가 같은 날 두 번 쓰면 항목 둘로 둡니다(기본). 「자기 오늘 항목에 이어 쓰기」가 낫다면 Sauver가 내 오늘 항목을 고치게 바꾸면 됩니다.
+
+**시험 목록** (격리 스택, 의사 계정 둘 + 간호사 + 관리자)
+
+1. 의사 A·B가 같은 내원에 쓰면 항목 둘, 각자 이름·시각이 붙고 오른쪽 맨 위(오늘)에 보입니다. B의 화면에도 A의 항목이 30초 안에 보입니다.
+2. A가 B의 항목에 `PUT` → 403, 글은 그대로. 관리자 `PUT` → 403(① 기본값).
+3. A가 자기 항목을 고치면 고친 시각이 보입니다. 진행 중 진료면 기록 0줄, 끝난 진료(Terminé 또는 지난 내원)면 기록 1줄(before/after).
+4. 끝난 진료에 새 항목을 더하면 기록 1줄(after만).
+5. 옛 `note_text`가 있는 진료가 마이그레이션 뒤 항목 하나가 됩니다. 쓴 사람 = 연 의사, 시각 = 진료 시각. 두 번 돌려도 하나입니다.
+6. 간호사(진료 권한 없음) `POST`/`PUT` → 403.
+7. `PUT /:id`에 `note_text`를 보내면 400, 바이탈만 보내면 200이고 `vitals_by`가 남습니다.
+8. 쓰던 글 → F5 → 칸에 돌아옴. 다른 환자를 열면 물음. Terminé를 누르면 항목으로 올라감.
+9. 수납·약국 PatientChart와 접수 외래 내역에 두 의사의 글이 이름과 함께 보입니다(API의 `note_text` 채우기).
+10. 의뢰서 「소견」이 내 마지막 항목으로 채워지고, B의 글은 들어가지 않습니다.
+11. 처방을 A·B가 한 줄씩 내면 이름이 작은 글자로 보이고, 혼자 낸 내원에서는 안 보입니다.
+12. 1366×768 FR·KO, 밝은·어두운 화면.
+
 ## 8. 변경 기록
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-30 | **영상 시험 진료 몫** — 영상 오더 추가 응답에 `worklist_sent_at`(「Envoyé」 바로), 영상 창 머리에 accession 연결 줄, 촬영 부위는 이름 옆(Unité 칸은 메모만), 판독 저장은 잠깐 뜨는 알림 | (이 커밋) |
+| 2026-09-30 | **설계 메모: 쓴 사람이 있는 진료 기록**(7.5) — 코드 전, 새 표 `consultation_note` 추천, 읽는 곳 표, 결정 대기 둘 | (이 커밋) |
+| 2026-09-30 | **영상 시험 진료 몫** — 영상 오더 추가 응답에 `worklist_sent_at`(「Envoyé」 바로), 영상 창 머리에 accession 연결 줄, 촬영 부위는 이름 옆(Unité 칸은 메모만), 판독 저장은 잠깐 뜨는 알림 | `2a9f5bd` |
 | 2026-09-30 | **정전 대비 줄 저장** — 진료 중이면 마지막 입력 2초 뒤에도 저장, 화면이 닫힐 때 저장 안 된 줄을 fetch keepalive로, 한 줄의 저장은 차례로·늦은 응답은 버림(오더 줄도 같음). **서류 발행·취소를 변경 기록에**(payload 없음), 다시 취소는 처음 사유를 지킴 | `44008b9` |
 | 2026-09-30 | **통합 시험 2차 진료 몫** — 줄 단위 저장(기록 한 줄), 닫힌 서랍 inert, «flacons» 한 줄, 머리줄 빈 값 빼기·찾기로 연 환자의 성별·생년월일·**알레르기** 채움, 검색 칸 autocomplete off, 수술일 날짜 칸 | `2e14e13` |
 | 2026-09-30 | **글자로만 보이는 칸·취소된 줄** — `roCell`(한 줄·…·title·`showNum`)로 고정 폭 표에서 옆 칸으로 넘치던 것과 「1.000」 고침, 취소된 오더 줄의 `opacity:0.55` 없앰(흐린 글자색 + 줄 긋기). 1366에서 어두운·밝은 화면 확인 | `b799768` |
