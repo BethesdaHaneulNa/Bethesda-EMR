@@ -52,8 +52,14 @@ const ORDER_NO_RESULT = 'Order has no result';
 //   - the visit is from another day than today (clinic date, todayLocal): a record
 //     from an earlier day changed later, even if Terminer was never pressed.
 // The many saves of a consultation still open today are ordinary work and are not logged.
-const NOTE_FIELDS = ['subjective', 'objective', 'assessment', 'plan', 'note_text',
+// note_text is no longer one of them: the note is one row per doctor in consultation_note
+// (PUT /:id/note, below). The S/O/A/P columns stay writable as before; no screen sends them.
+const NOTE_FIELDS = ['subjective', 'objective', 'assessment', 'plan',
   'bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
+const VITAL_FIELDS = ['bp_systolic', 'bp_diastolic', 'temperature', 'pulse', 'spo2', 'respiratory_rate', 'weight', 'height'];
+// A screen still loaded from before the change sends its note here. Dropping it quietly
+// would lose the doctor's text, so it is refused and the screen says so.
+const NOTE_ELSEWHERE = 'The note is saved with PUT /consultations/:id/note';
 const RX_LOG = ['drug_code', 'drug_name', 'dose', 'frequency', 'days', 'route', 'total_qty', 'unit_price', 'memo', 'status', 'pack_label'];
 const ORDER_LOG = ['order_code', 'order_name', 'code_type', 'dose', 'frequency', 'days', 'quantity', 'total_qty', 'unit_price', 'memo', 'status'];
 const DX_LOG = ['icd_code', 'diagnosis_name', 'diagnosis_type'];
@@ -142,9 +148,10 @@ router.post('/', canConsult, async (req, res) => {
     // Reuse an existing consultation for this visit instead of creating duplicates
     // every time the doctor clicks the same waiting patient.
     const existing = await client.query(
-      `SELECT * FROM consultation
-        WHERE visit_id = $1
-        ORDER BY created_at DESC, id DESC
+      `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id = c.vitals_by) AS vitals_by_name
+         FROM consultation c
+        WHERE c.visit_id = $1
+        ORDER BY c.created_at DESC, c.id DESC
         LIMIT 1`,
       [visit_id]
     );
@@ -178,6 +185,7 @@ router.post('/', canConsult, async (req, res) => {
 
 // PUT /api/consultations/:id - save consultation note
 router.put('/:id', canConsult, (req, res) => inTx(res, async (client) => {
+  if (Object.prototype.hasOwnProperty.call(req.body, 'note_text')) return [400, { error: NOTE_ELSEWHERE }];
   // Only the fields present in the request are written. The screen sends the note and
   // the vital signs; setting every other column from an absent key wrote NULL into
   // subjective/objective/assessment/plan/weight/height on every save. A key sent as
@@ -188,10 +196,18 @@ router.put('/:id', canConsult, (req, res) => inTx(res, async (client) => {
   const prev = await client.query('SELECT * FROM consultation WHERE id = $1 FOR UPDATE', [req.params.id]);
   if (prev.rows.length === 0) return [404, { error: 'Not found' }];
   vals.push(req.params.id);
-  const result = await client.query(
+  let result = await client.query(
     `UPDATE consultation SET ${sets.concat(['updated_at=NOW()']).join(', ')} WHERE id=$${vals.length} RETURNING *`,
     vals
   );
+  // Who saved the vital signs last, and when - only when one of them really changed.
+  const vitalsSent = sent.filter(function (f) { return VITAL_FIELDS.indexOf(f) >= 0; });
+  const vitalsChanged = JSON.stringify(pick(prev.rows[0], vitalsSent)) !== JSON.stringify(pick(result.rows[0], vitalsSent));
+  if (vitalsSent.length && vitalsChanged) {
+    result = await client.query(
+      'UPDATE consultation SET vitals_by = $1, vitals_at = NOW() WHERE id = $2 RETURNING *', [req.user.id, req.params.id]);
+  }
+  result.rows[0].vitals_by_name = await staffName(client, result.rows[0].vitals_by);
   // Both sides are read back from the table, so '36.5' and 36.5 do not count as a change.
   await recordEdit(client, req, await consultOf(client, req.params.id), 'consultation', prev.rows[0], 'note',
     pick(prev.rows[0], sent), pick(result.rows[0], sent));
@@ -221,6 +237,86 @@ router.put('/:id/complete', canConsult, async (req, res) => {
     client.release();
   }
 });
+
+async function staffName(db, id) {
+  if (id == null) return null;
+  const r = await db.query('SELECT name FROM staff WHERE id = $1', [id]);
+  return r.rows[0] ? r.rows[0].name : null;
+}
+
+// ── Notes: one per doctor per consultation (decisions 2026-09-30) ──
+//
+// The director tried two doctor accounts on one visit: both typed into the same
+// consultation.note_text and nothing said who wrote what. Now each doctor has their own
+// note on the visit (consultation_note, UNIQUE consultation + author): the screen's note
+// box is "my note for this visit", saved with PUT /:id/note, and the chart on the right
+// lists every doctor's note under their name.
+
+// Who may change a note: its author, and nobody else - not an administrator either
+// (decision (가), 2026-09-30). The one place this rule lives.
+function canEditNote(user, note) {
+  return !!user && !!note && note.author_id != null && note.author_id === user.id;
+}
+
+async function notesOf(db, consultationId, userId) {
+  const r = await db.query(
+    `SELECT n.id, n.consultation_id, n.visit_id, n.patient_id, n.author_id, s.name AS author_name,
+            n.note_text, n.created_at, n.updated_at
+       FROM consultation_note n LEFT JOIN staff s ON s.id = n.author_id
+      WHERE n.consultation_id = $1
+      ORDER BY n.created_at, n.id`, [consultationId]);
+  return r.rows.map(function (n) { n.mine = n.author_id != null && n.author_id === userId; return n; });
+}
+
+// GET /api/consultations/:id/notes - every doctor's note on this consultation
+router.get('/:id/notes', canConsult, async (req, res) => {
+  try { res.json(await notesOf(pool, req.params.id, req.user.id)); }
+  catch (err) { sendDbError(res, err); }
+});
+
+// PUT /api/consultations/:id/note {note_text} - write or change MY note on this
+// consultation. The author is the signed-in account and nothing else: there is no id
+// in the request, so no way to point at another doctor's note. An empty text empties
+// my note - the row goes, so the chart shows no empty entry. On a finished
+// consultation (Terminé pressed, or a visit from another day) the change is logged,
+// as any change to a finished record.
+router.put('/:id/note', canConsult, (req, res) => inTx(res, async (client) => {
+  if (typeof req.body.note_text !== 'string') return [400, { error: 'note_text is required' }];
+  const text = req.body.note_text;
+  // One save at a time per consultation: two saves of the same doctor (two tabs) must
+  // not both insert.
+  const cons = await client.query('SELECT id, visit_id, patient_id FROM consultation WHERE id = $1 FOR UPDATE', [req.params.id]);
+  if (!cons.rows.length) return [404, { error: 'Not found' }];
+  const c = await consultOf(client, req.params.id);
+  const had = await client.query(
+    'SELECT * FROM consultation_note WHERE consultation_id = $1 AND author_id = $2 FOR UPDATE', [req.params.id, req.user.id]);
+  const prev = had.rows[0] || null;
+  if (prev && !canEditNote(req.user, prev)) return [403, { error: 'Only its author can change a note' }];
+  const empty = text.trim() === '';
+  let mine = null;
+  if (prev && empty) {
+    await client.query('DELETE FROM consultation_note WHERE id = $1', [prev.id]);
+    await recordEdit(client, req, c, 'consultation_note', prev, 'note', { note_text: prev.note_text }, { note_text: null });
+  } else if (prev) {
+    if (prev.note_text === text) {
+      mine = prev;
+    } else {
+      const u = await client.query(
+        'UPDATE consultation_note SET note_text = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [text, prev.id]);
+      mine = u.rows[0];
+      await recordEdit(client, req, c, 'consultation_note', mine, 'note', { note_text: prev.note_text }, { note_text: text });
+    }
+  } else if (!empty) {
+    const i = await client.query(
+      `INSERT INTO consultation_note (consultation_id, visit_id, patient_id, author_id, note_text)
+       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [cons.rows[0].id, cons.rows[0].visit_id, cons.rows[0].patient_id, req.user.id, text]);
+    mine = i.rows[0];
+    await recordEdit(client, req, c, 'consultation_note', mine, 'note', null, { note_text: text });
+  }
+  const notes = await notesOf(client, req.params.id, req.user.id);
+  return [200, { note: mine ? notes.filter(function (n) { return n.id === mine.id; })[0] : null, notes: notes }];
+}));
 
 // ── Diagnosis ──
 
@@ -278,7 +374,8 @@ router.get('/visit/:visitId/prescriptions', canReadRx, async (req, res) => {
 router.get('/:id/prescriptions', canReadRx, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT rx.*, (SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form
+      `SELECT rx.*, (SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form,
+              (SELECT s.name FROM staff s WHERE s.id = rx.prescribed_by) AS prescribed_by_name
          FROM prescription rx WHERE rx.consultation_id = $1 ORDER BY rx.sort_order`, [req.params.id]);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }
@@ -313,6 +410,8 @@ async function withForm(db, row) {
   if (!row) return row;
   const d = row.drug_id ? await db.query('SELECT dosage_form FROM drug WHERE id = $1', [row.drug_id]) : { rows: [] };
   row.dosage_form = d.rows[0] ? d.rows[0].dosage_form : null;
+  // The name of who wrote the line: the screen shows it when two doctors prescribed on one visit.
+  row.prescribed_by_name = await staffName(db, row.prescribed_by);
   return row;
 }
 function intOrNull(v) { const n = parseInt(v); return Number.isFinite(n) ? n : null; }
@@ -358,10 +457,10 @@ router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (cli
   }
   const result = await client.query(
     `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo,
-                               pack_unit, pack_label)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+                               pack_unit, pack_label, prescribed_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [req.params.id, drug_id, drug_code, drug_name, blankNull(dose), intOrNull(frequency), intOrNull(days), route, total, unit_price, memo,
-     pack.pack_unit, pack.pack_label]
+     pack.pack_unit, pack.pack_label, req.user.id]
   );
   const rx = result.rows[0];
   await recordEdit(client, req, c, 'prescription', rx, rx.drug_name, null, pick(rx, RX_LOG));
@@ -532,6 +631,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
 
     await recordEdit(client, req, consult, 'order_item', orderItem, orderLabel(orderItem), null, pick(orderItem, ORDER_LOG));
     await client.query('COMMIT');
+    orderItem.ordered_by_name = req.user.name || null;
     res.status(201).json(orderItem);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -686,7 +786,9 @@ router.get('/:id/billed-codes', canConsult, async (req, res) => {
 // GET /api/consultations/:id/orders
 router.get('/:id/orders', canReadRx, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM order_item WHERE consultation_id = $1 ORDER BY created_at', [req.params.id]);
+    const result = await pool.query(
+      `SELECT o.*, (SELECT s.name FROM staff s WHERE s.id = o.ordered_by) AS ordered_by_name
+         FROM order_item o WHERE o.consultation_id = $1 ORDER BY o.created_at`, [req.params.id]);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }
 });

@@ -385,6 +385,17 @@ export default {
   cs_noResults: "Aucun résultat. Les noms des médicaments sont en anglais (par ex. syrup).",
   cs_removePaidNote: "Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient.",
   cs_stock: "Stock {n}",
+  // Notes with an author (2026-09-30)
+  cs_noteMineTitle: "Ma note de consultation",
+  cs_noteUnsaved: "Non enregistrée",
+  cs_noteDraftBack: "Le texte non enregistré gardé sur cet ordinateur a été repris.",
+  cs_noteUnsavedSwitch: "Votre note de consultation n'est pas encore enregistrée.\nOK : l'enregistrer et ouvrir l'autre patient.\nAnnuler : rester sur ce patient.",
+  cs_noteToday: "Aujourd'hui",
+  cs_noteNone: "Pas encore de note",
+  cs_noteYou: "(vous)",
+  cs_noteEdited: "modifiée {time}",
+  cs_noPastVisit: "Aucune visite antérieure",
+  cs_vitalsBy: "Dernière saisie : {name} · {time}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

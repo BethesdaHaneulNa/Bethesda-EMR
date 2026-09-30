@@ -394,6 +394,17 @@ export default {
   cs_noResults: "No match. Drug names are in English (e.g. syrup).",
   cs_removePaidNote: "This line is already paid - removing it means the cashier refunds the patient.",
   cs_stock: "Stock {n}",
+  // Notes with an author (2026-09-30)
+  cs_noteMineTitle: "My consultation note",
+  cs_noteUnsaved: "Not saved",
+  cs_noteDraftBack: "Unsaved text kept on this computer was brought back.",
+  cs_noteUnsavedSwitch: "Your consultation note is not saved yet.\nOK: save it and open the other patient.\nCancel: stay on this patient.",
+  cs_noteToday: "Today",
+  cs_noteNone: "No note yet",
+  cs_noteYou: "(you)",
+  cs_noteEdited: "edited {time}",
+  cs_noPastVisit: "No earlier visit",
+  cs_vitalsBy: "Last saved: {name} · {time}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

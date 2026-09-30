@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 설계 메모(7.5) 확인 요청 — 쓴 사람이 있는 진료 기록
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 의사마다의 진료 기록 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -38,9 +38,13 @@
 ### 2.2 바이탈과 진료 기록 (가운데)
 
 1. 바이탈 칸에 적습니다. 프랑스어 화면에서는 **TA** (BP, 혈압, `120/80`처럼) · **T°** (BT, 체온) · **FC** (PR, 맥박) · **FR** (RR, 호흡수) · **SpO2**입니다.
-2. **Note de Consultation (진료 기록)** 칸에 S·O·A·P를 적습니다. 칸은 하나입니다.
+2. **Ma note de consultation (내 진료 기록)** 칸에 S·O·A·P를 적습니다. **이 내원의 내 기록**입니다. 의사마다 한 내원에 기록이 하나씩 있고(2026-09-30 실장님 결정 (나)), 다시 열면 내 글이 그대로 있어 이어 씁니다. 바이탈 칸은 비워도 되고(저장·완료가 막히지 않음), 혈압·체온을 기록 글에 적어도 됩니다.
 3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
-4. **Sauver (저장)**를 누르면 기록과 바이탈이 저장됩니다.
+4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Visites passées** 맨 위 **Aujourd'hui (오늘)** 밑에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
+   - **다른 의사의 기록**은 오른쪽에 그 의사 이름으로 따로 보이고 **읽기만** 됩니다(관리자도 남의 기록은 못 고침 — 결정 (가)). 두 의사가 같은 내원을 열어 두면 30초마다 상대 기록을 다시 읽습니다. 내가 쓰고 있는 칸은 건드리지 않습니다.
+   - 저장하지 않고 **다른 환자**를 열면 묻습니다: 확인 = 저장하고 열기, 취소 = 머물기.
+   - 저장하지 않은 글은 **이 PC의 브라우저**에 남아 F5·정전 뒤 같은 내원을 열면 돌아옵니다(「이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.」). 저장·로그아웃·하루가 지나면 지워집니다(7.3).
+   - 처방·오더 줄은 한 내원에 **둘 이상의 의사**가 냈을 때만 이름 옆에 작은 글자로 낸 의사가 보입니다. 바이탈 칸 밑에는 「Dernière saisie : 이름 · 시각」(마지막으로 바이탈을 저장한 사람).
 5. **끝난 진료도 고칠 수 있습니다**(실장님 결정 ⑫, 2026-09-29). 다만 **Terminé (완료)**를 누른 진료나 **오늘이 아닌 날의 내원**을 고치면 누가 무엇을 어떻게 바꿨는지(전 값 → 새 값)가 **변경 기록**에 남습니다. 화면에는 아무 표시도 없고, 관리자만 설정에서 봅니다. 진료 중에 여러 번 저장하는 것은 남지 않습니다. 처방·오더를 지우거나 검사를 취소한 것은 진료가 끝났든 아니든 늘 남습니다.
 
 ### 2.3 Prescriptions — 처방과 검사 (왼쪽)
@@ -119,7 +123,7 @@
 
 ### 2.5 Visites passées — 과거 기록 (오른쪽)
 
-1. **Visites passées (과거 내원)** 탭에 이 환자의 지난 진료가 날짜순으로 나옵니다.
+1. **Visites passées (과거 내원)** 탭 맨 위에 **오늘 진료**(Aujourd'hui — 의사마다 이름·시각·고친 시각과 글), 그 밑에 지난 진료가 날짜순으로 나옵니다. 지난 진료도 의사마다 이름과 첫 두 줄입니다.
 2. 날짜를 누르면 가운데에 그날의 바이탈·진료 기록·처방이 **Dossier passé · lecture seule (과거 기록 · 읽기 전용)**으로 나옵니다.
 3. **← Retour à l'actuel (← 현재 진료로)**를 누르면 오늘 진료로 돌아옵니다.
 
@@ -247,6 +251,7 @@
 - **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다.
 - **오더 진행 상태 자동 반영**(2026-09-29): 검사실이 진료 중에도 오더를 보게 되어(임상병리 `1d4c239`) 환자를 열어 둔 사이에 결과가 들어올 수 있습니다. 진료가 열려 있고 결과 없는 검사 오더나 끝나지 않은 워크리스트 오더가 있으면, **30초마다** `GET /consultations/:id/orders`를 다시 읽어 **진행 칸만**(`status`·`result_at`·`result_by`·`result_text`·`worklist_status`·`worklist_sent_at`, `ORDER_PROGRESS_FIELDS`) 화면의 줄에 덮어씁니다. 의사가 적고 있는 수량·메모는 건드리지 않고, 줄을 더하거나 빼지 않습니다. 탭이 숨겨져 있으면(`document.hidden`) 읽지 않습니다. 상태 칸과 🔒(`orderLocked`)가 이 칸들로 정해지므로 같이 바뀝니다. 검사결과 창(`LabResults.jsx`, 임상병리 부품)은 열 때 읽으므로 이것과 별개입니다.
 - **통합 시험 2차**(2026-09-30): 줄 단위 저장(`leftRow` — 같은 줄 안으로 초점이 옮겨 가면 저장하지 않음, 한 번 고침 = PUT 한 번 = 기록 한 줄). 닫힌 대기열 서랍에 `inert`·`aria-hidden`(화면 밖 단추가 Tab에 잡히던 것). 병·튜브 단위 말 한 줄(수량 칸 40px). 머리줄은 빈 성별·생년월일을 뺌, **「Trouver patient」·「Sélection visite」로 연 내원은 성별·생년월일·알레르기를 환자 기록(`GET /patients/:id`)에서 채움**(방문 이력 목록에는 없어서 알레르기 ⚠가 안 보였음). 검색 칸 4개 `autoComplete="off"`(브라우저의 입력 기록 목록이 검색 목록 밑에 겹쳐 사전 문장처럼 보였던 것으로 봄). 수술기록지 수술일은 날짜 칸(`type: date`, DocumentModal이 그림).
+- **의사마다의 진료 기록**(2026-09-30 결정 (나)·(가)·바이탈 한 벌): 칸 = 「이 내원의 내 기록」(`note`), 서버의 내 기록 = `mineSaved`, 다르면 「Non enregistrée」. `notes` = 이 진료의 모든 의사 기록(`GET /:id/notes`, `mine` 표시). 저장은 `saveVitals`(`PUT /:id`, 바이탈만) + `pushNote`(`PUT /:id/note`, 바뀐 때만). Terminé도 같은 둘을 먼저. `pickPatient`는 저장 안 된 글이 있으면 `window.confirm(cs_noteUnsavedSwitch)` → 확인이면 저장 후 열기. 오른쪽 목록은 오늘 진료 블록(`notesBlock(notes)`) + 지난 진료(`h.notes`, 두 줄로 줄임), 과거 보기(`renderPast`)도 `notesBlock(c.notes)`. 내 기록은 왼쪽 파란 선, 누르면 칸에 초점. 30초마다 `GET /:id/notes`(칸은 안 건드림). 저장 안 된 글: `noteDraft` — `localStorage` 키 `cs_noteDraft:<계정 id>:<진료 id>` `{text, at}`, 칸이 서버와 다르면 쓰고 같으면 지움, 진료를 열 때 이 계정의 하루 지난 것은 모두 지움, **진료를 연 직후(첫 그리기 전) 읽음** — 칸이 빈 채 그려진 뒤 읽으면 지우는 효과가 먼저 돎. 로그아웃(`api/client.js logout`)이 이 계정 것을 지움. 줄 작성자: `prescribed_by_name`·`ordered_by_name`, 이 내원의 작성자 id가 둘 이상일 때만 `authorTag`. 저장된 줄은 `Object.assign(옛 줄, 응답)`으로 이름 칸을 지킴. 서류 엔진의 `ctx.note` = 칸 = 내 기록.
 - **줄 저장 시점**(2026-09-30, 정전 대비): 줄을 벗어날 때(`leftRow`) + **진료 중이면 마지막 입력 2초 뒤**(`armRowSave`, 줄마다 타이머) + **`pagehide`에서 저장 안 된 줄을 `fetch keepalive`로**(`dirtyRows` — `savedRx`/`savedOrd` 스냅숏과 다른 줄; 토큰은 `localStorage 'medconnect_token'`), `visibilitychange`(hidden)에서는 보통 저장. 끝난 진료(`finishedRef`: completed/signed 또는 다른 날 내원 — 서버 `consultOf`와 같은 규칙)는 2초 저장을 하지 않음. 한 줄의 저장은 **차례로**(`inTurn` — 앞 저장의 응답 뒤에 다음을 보냄, 서버가 만든 순서대로 받음), 번호(`rowSeq`)가 최신이 아닌 응답은 버리고, 보낸 뒤 더 친 것이 있으면 응답에서 서버 계산 칸(total_qty·status·dosage_form…)만 받음. 같은 값을 두 번 보내도 서버는 바뀐 것이 없어 기록을 쓰지 않음.
 - **글자로만 보이는 칸**(조제된 약 줄 · 취소된 오더 줄, `roCell`, 2026-09-30): 한 줄, 넘치면 「…」, 마우스를 올리면 전체(title), 숫자는 `showNum`(「1.000」 → 「1」). 고정 폭 뒤로 긴 글자(영상 부위 «ABDOMEN»)가 상태 칸 «🖼 Annulé» 위로 넘쳤던 것.
 - **처방 표는 고정 폭**(`tableLayout:fixed`, 통합 시험 B1, 2026-09-29): ✕ 22 · 코드 70 · 이름 나머지 · Dose/j 50 · Fois 40 · Jours 44 · Posologie 58 · Unité 54 · 상태 78px(이름 밖 합 416px — 1366 폭 왼쪽 칸 574px에 가로 스크롤 없이). 자동 배치일 때는 글자를 칠 때마다 열 너비가 바뀌어 커서 밑 칸이 움직였고, Posologie에 친 «QD»가 다른 칸으로 간 적이 있음. 코드는 한 줄(넘치면 …, 마우스를 올리면 전체), 이름은 긴 낱말도 줄바꿈. 수량·용량은 DB 값 `1.000`을 `1`로 보임(`showNum`, 소수 셋째 자리까지 있는 값만 — 치는 중인 값은 그대로). 저장 알림은 끝난 말(`cs_noteSaved` «Enregistré ✓», `cs_consultDone`, `cs_readingSaved`; 공용 `save`는 단추 글자라 그대로). 약 검색에 재고(`cs_stock`)와 결과 없음(`cs_noResults`). 줄을 지울 때 `GET /:id/billed-codes`로 이미 수납된 코드인지 보고 `cs_removePaidNote`를 붙임.
@@ -276,6 +281,8 @@
 - **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
 - **처방 총량 `rxTotal(dose, days)`** — `total_qty`를 계산하는 유일한 곳(하루 총량 × 일수, 소수 셋째 자리). `POST /:id/prescriptions`는 화면이 보낸 `total_qty`를 무시하고 이것으로 저장합니다. `PUT /prescription/:rxId`는 **`dose`(숫자로 비교 — `"3"`와 `"3.000"`은 같음)·`frequency`·`days` 중 하나라도 바뀐 경우에만** `total_qty`를 다시 계산하고, 아니면 저장된 값을 둡니다(`UPDATE … total_qty = CASE WHEN … IS DISTINCT FROM … THEN … ELSE total_qty END`, 비교 쪽 칸은 UPDATE 전 값). 이미 저장된 처방의 `total_qty`는 고치지 않았습니다(청구·조제가 이미 그 값으로 일어남). 약국 조제(재고 `Math.ceil(total_qty)`)·수납·통계는 저장된 `total_qty`를 그대로 읽습니다. **하루 총량이나 일수가 비면(또는 0 이하) 총량은 NULL**입니다(결정 B, 2026-09-29) — 0도 「1일」도 아님. 서버는 빈 `dose`·`frequency`·`days`를 NULL로 저장합니다(`blankNull`·`intOrNull`; 전에는 PUT이 `parseInt||1`로 채우고 화면도 `dose||'1'`을 보내서, 칸 하나만 건드려도 빈 일수가 조용히 1일이 됐음). 화면의 `addDrugRx`는 검색으로 넣을 때 `drug.default_*`를 읽지 않고 빈 칸으로, 약속처방(`fromSet`)만 세트 값으로 넣습니다. `noDose`는 하루 총량·횟수·일수 셋 중 하나라도 비면 참(포장 약 제외).
 - **포장 단위 약**(H2-B, 실장님 결정 2026-09-29, 칸은 약국의 025) — `POST /:id/prescriptions`는 `drug_id`로 **약 표에서** `pack_unit`·`pack_label`을 읽어 줄에 복사합니다(화면이 보낸 값은 쓰지 않음, 단가를 복사하는 것과 같은 이유 — 나중에 약의 표시를 바꿔도 쓴 처방의 뜻은 그대로). 포장 단위 줄의 `total_qty` = 요청의 **`pack_qty`**(1 이상의 정수, 아니면 400 `pack_qty must be a whole number of at least 1` → 화면 `cs_packQtyWhole`), 없거나 비면 **NULL**(약국 「총량 없음」, 청구 없음 — 틀린 수가 나가지 않게). 하루 총량·횟수·일수는 안내로만 저장. `PUT /prescription/:rxId`: 포장 단위 줄(줄에 저장된 표시)은 **`pack_qty`가 왔을 때만** `total_qty`를 바꾸고(빈 값이면 NULL), 하루 총량·일수를 고쳐도 그대로. 보통 줄은 위 규칙에 더해 **`total_qty`가 NULL이면 다시 계산**합니다(수납 세션 부탁, 2026-09-29). 화면: `noPackQty`(수가 없는 포장 줄)는 `noDose`와 따로 — 포장 줄은 하루 총량이 없어도 `noDose`가 아님. 수량 칸 `packQtyBox(rx)`(함수로 부름 — 컴포넌트로 쓰면 글자마다 입력 칸이 다시 만들어져 포커스가 빠짐), 단위 말은 `rx-dosing.js`의 `packWord`, 저장은 다른 칸처럼 blur(`rxSnap`에 수량 포함). 약속처방 `applySet`은 약 줄의 `quantity`(없으면 1)를 `pack_qty`로 넘깁니다(보통 약에는 서버가 무시).
+- **진료 기록**(2026-09-30): `GET /:id/notes` — 이 진료의 모든 의사 기록(`author_name`, `created_at`, `updated_at`, `mine`), `canConsult`. `PUT /:id/note {note_text}` — **내 기록** 넣기·고치기: 작성자는 토큰의 계정뿐이고 요청에 id가 없어 남의 기록을 가리킬 길이 없음. `canEditNote(user, note)`(작성자만 — 관리자도 아님) 한 함수. 빈 글 = 내 기록 줄을 지움(오른쪽에 빈 항목이 남지 않게). 같은 글이면 아무것도 안 함. 진료 줄을 `FOR UPDATE`로 잡아 두 탭의 동시 저장이 둘 다 넣지 않게. 끝난 진료면 `consultation.record.edit`, entity `consultation_note`, before/after `note_text`(새로 넣기는 after만, 지우기는 after null). 응답 `{note, notes}`. `PUT /:id`는 이제 바이탈(과 쓰지 않는 S/O/A/P·키·몸무게)만 — **`note_text`가 오면 400** «The note is saved with PUT /consultations/:id/note»(캐시에 남은 옛 화면의 글을 조용히 잃지 않게). 바이탈이 실제로 바뀌면 `vitals_by`·`vitals_at`, 응답에 `vitals_by_name`. 진료 열기(`POST /`)의 기존 진료도 `vitals_by_name`. 처방 추가는 `prescribed_by = 나`, 처방 읽기·쓰기 응답에 `prescribed_by_name`, 오더 읽기에 `ordered_by_name`(추가 응답은 내 이름).
+- `GET /patients/:id/history`(**접수 파일, 총괄 허락으로 이 쿼리만**): 진료마다 `notes`(의사·시각·글)와, `note_text`를 기록들로 채움 — 「— 이름 HH:MM」 머리 + 글, 빈 줄로 이음(API 컨테이너 시간대). 수납·약국의 `PatientChart`와 접수 외래 내역은 그 한 칸을 그대로 읽어 두 의사의 글을 이름과 함께 봄. 옛 S/O/A/P는 기록으로 옮겼으므로 응답에서 뺌.
 - `POST /:id/orders` — 오더코드의 `pacs_modality`·`body_part`·`worklist_enabled`를 복사하고, `pacs_config.auto_create_worklist`가 꺼져 있으면 워크리스트를 안 만듭니다. 워크리스트 대상이면 `worklist_log`를 만들고(accession `YYMMDD-<order_item.id>`, DICOM SH 16자 이내) `worklist_status='sent'`. 아니면 `worklist_status='completed'`로 저장합니다. **응답은 워크리스트 표시 뒤의 행**(`UPDATE … RETURNING *`, 2026-09-30) — 전에는 INSERT 때의 행이라 `worklist_sent_at`이 없어 화면이 「Envoyé」를 못 그렸고, 30초 새로고침도 그 값이 있는 줄만 다시 읽어 환자를 다시 열 때까지 🖼만 보였습니다(영상 시험 B). station AE는 일부러 비웁니다(같은 모달리티 장비 여러 대가 한 풀을 나눠 씀). `pacs_config`는 001이 만든 한 줄을 읽기만 합니다(전에는 오더마다 `CREATE TABLE IF NOT EXISTS`를 돌렸음 — 7절 ⑲, 2026-09-29 삭제). 줄이 없으면 워크리스트 자동 생성이 켜진 것으로 봅니다. **총량**(⑭): 수량·횟수·일수가 비면 1로 저장(NULL 없음), `total_qty` = `orderTotal(quantity, days)` = 수량 × 일수(횟수는 곱하지 않음, 수량 0은 0 — 청구 없음). 계산하는 곳은 이 함수 하나이고 수납은 `total_qty`만 읽습니다.
 - `PUT /prescription/:rxId` · `DELETE /prescription/:rxId` — **조제된 처방(`status='dispensed'`)은 409 `Prescription already dispensed`**, 없는 줄은 404. 한 트랜잭션 안에서 줄을 먼저 `FOR UPDATE`로 읽고(`lockRx`) 상태를 본 뒤 씁니다. 약국의 조제도 같은 줄을 UPDATE하므로 확인과 쓰기 사이에 끼어들 수 없습니다. `status`는 기본값만 있는 NULL 허용 칸이라, NULL은 「조제 안 됨」으로 봅니다(전에는 `status <> 'dispensed'`가 NULL 줄을 못 잡아 409로 거절 — 2026-09-29 고침). 이유: 조제하면 재고가 이미 빠져 있어, 그 뒤의 수정·삭제는 청구만 움직이고 재고는 그대로라 둘이 영영 어긋납니다. 삭제는 늘 기록(`PRESCRIPTION_DELETE`), 수정은 끝난 진료일 때 기록.
 - `DELETE /order/:orderId` — **결과가 생긴 오더는 409 `Order already has a result`**: `lab_result`가 있거나, `order_item.result_text`(판독)가 있거나, `worklist_log.status`가 `in_progress`·`completed`(촬영 시작). 이유: `lab_result`와 `worklist_log`가 `ON DELETE CASCADE`라 지우면 검사값·accession·판독이 소리 없이 함께 사라졌습니다. 먼저 `order_item`을 `FOR UPDATE`로 잠그므로, 동시에 저장되는 검사 결과(외래키가 이 행에 키 잠금을 요구)는 확인 전에 끝나거나 삭제 뒤 실패합니다. 시작 전 워크리스트는 오더와 함께 지워집니다. 삭제는 늘 기록합니다(`ORDER_DELETE`, 지운 줄의 코드·이름·수량·가격 등).
@@ -438,7 +445,7 @@
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `consultation` | **`completed_at`**(032, L9 — 처음 완료한 때; 옛 완료 진료는 `updated_at`으로 채움), `visit_id`(UNIQUE), `patient_id`, `doctor_id`, `department_id`, `consult_date`, `subjective`·`objective`·`assessment`·`plan`(화면 미사용), `note_text`, `bp_systolic`·`bp_diastolic`·`temperature DECIMAL(4,1)`·`pulse`·`spo2`·`respiratory_rate`, `weight`·`height`(화면 미사용), `status` ∈ `in_progress`·`completed`·`signed` | `signed`는 쓰는 곳 없음 |
+| `consultation` | **`completed_at`**(032, L9 — 처음 완료한 때; 옛 완료 진료는 `updated_at`으로 채움), `visit_id`(UNIQUE), `patient_id`, `doctor_id`, `department_id`, `consult_date`, `subjective`·`objective`·`assessment`·`plan`(화면 미사용), `note_text`(**2026-09-30부터 읽지도 쓰지도 않음** — 옛 백업 복원용으로 남김, 기록은 `consultation_note`), **`vitals_by`·`vitals_at`**(201, 마지막으로 바이탈을 바꾼 사람·때), `bp_systolic`·`bp_diastolic`·`temperature DECIMAL(4,1)`·`pulse`·`spo2`·`respiratory_rate`, `weight`·`height`(화면 미사용), `status` ∈ `in_progress`·`completed`·`signed` | `signed`는 쓰는 곳 없음 |
 | `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(기본 `primary`), `sort_order` | 화면 미사용 |
 | `prescription` | `consultation_id`(CASCADE), `drug_id`, `drug_code`, `drug_name`, `dose VARCHAR(20)`, `frequency`, `days`, **`route VARCHAR(10)`**, `total_qty`, `unit_price`, `memo`, `dispense_type`(`internal`·`external`, 012), **`pack_unit`·`pack_label`**(약국 025 — 처방할 때 약 표에서 복사), `status` ∈ `ordered`·`dispensed`·`cancelled`, `dispensed_by/at` | `status`·`dispense_type`은 약국이 바꿈 |
 | `order_item` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `order_code_id`, `order_code`, `order_name`, `code_type` ∈ `lab`·`imaging`·`procedure`(·`fee`), `dose`, `frequency`, `days`, `quantity`, `unit_price`, `pacs_modality`, `station_ae`, `body_part`, `worklist_status`, `worklist_sent_at`, `scheduled_date`, `result_text`·`result_by`·`result_at`(영상 판독), `ordered_by`, `status`(검사 완료 등), `memo`, **`cancelled_at`·`cancelled_by`·`cancel_reason`**, **`total_qty`**(201, ⑭ — 수량 × 일수, 기존 줄은 `COALESCE(quantity,1)`로 채움)(201, 결정 3-B) | |
@@ -446,6 +453,7 @@
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
 | `order_set_item` | `set_id`(CASCADE), `kind` ∈ `drug`·`order`, `drug_id`, `order_code_id`, `code`, `name`, `dose`, `frequency`, `days`, `route`, `quantity`, `sort_order` | 단가 없음 |
+| `consultation_note` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `author_id`, `note_text`(빈 글 금지), `created_at`, `updated_at`(고친 때, 안 고쳤으면 NULL), **UNIQUE(consultation_id, author_id)** | 201(총괄이 038로) — 의사마다 한 내원 한 기록. 옛 `consultation.note_text`(와 S/O/A/P를 「S: …」로 앞에 붙여)를 `doctor_id`의 기록으로 옮김, 두 번 돌려도 같음 |
 | `document_log` | `doc_no`(UNIQUE, `D26-00001`), `template_code`, `template_name`, `patient_id`, `visit_id`, `consultation_id`, `lang`, `payload JSONB`, `issued_by/at`, `voided`, `void_reason`, `voided_at/by` | 010 · `generate_doc_no()` · `document_no_seq` |
 | `phrase_dictionary` | `category`, `text`, `text_en`, `text_fr`, `sort_order`, `is_active` | 설정 소유, 진료는 읽기만 |
 
@@ -540,6 +548,8 @@
 - 처방 용량 `dose`는 숫자만 받는다(`badAmounts`). `1/2 tab` 같은 표기는 안 된다.
 - **청구 가격은 줄에 복사된다.** 처방·오더를 넣는 순간의 약품·오더코드 가격이 줄(`prescription.unit_price`, `order_item.unit_price`)에 저장되고, 수납은 그 값을 씁니다(`billing.routes.js`). 설정에서 가격을 바꿔도 이미 넣은 줄은 그대로입니다 — 가격 0 표시(3.1)의 도움말이 「지우고 다시 넣기」를 안내하는 이유. 0원 줄의 가격을 마스터에서 다시 불러오는 기능은 없음(후보).
 
+- **저장하지 않은 진료 기록은 이 PC의 브라우저에 남습니다**(2026-09-30, 총괄 조건): 환자 글이 공용 PC의 `localStorage`에 `cs_noteDraft:<계정 id>:<진료 id>`로 남습니다. 다른 계정의 화면은 그 키를 찾지 않고, 저장하면 지우고, 하루 지난 것은 진료를 열 때 지우고, 로그아웃하면 그 계정 것을 모두 지웁니다. **로그아웃하지 않고 창만 닫으면 하루 동안 남습니다** — 브라우저 개발자 도구로는 읽힙니다. 현장 안내: 공용 PC를 떠날 때는 로그아웃.
+- **옛 화면이 캐시에 남으면** `PUT /:id`에 `note_text`를 보내 400을 받습니다(「Erreur : The note is saved with …」). 새로 고침(F5)하면 새 화면이 됩니다.
 - **줄 저장의 한계**(2026-09-30): 정전·PC 꺼짐에는 `pagehide`가 오지 않습니다. 진료 중이면 마지막 2초 안에 친 것만 잃지만, **끝난 진료는 줄을 벗어나기 전에 전원이 나가면 그 줄의 고친 칸을 잃습니다**(기록을 한 줄로 두기 위해 2초 저장을 하지 않음 — 총괄 지시). `fetch keepalive`로 보낸 저장이 막히면(그 사이 조제됨 등) 화면이 이미 없어 알림이 뜨지 않습니다 — 서버가 거절하므로 값이 틀리게 남지는 않습니다.
 
 ### 7.4 남은 일 — 결정이 필요한 것 / 결정 없이 할 수 있는 것 (2026-09-29, 위키 2절을 따라 하고 정리)
@@ -564,7 +574,9 @@
 | F2 ✅ 09-29 | 2.8 수술기록지·2.10 의뢰서·2.11 발급 이력을 새 문서 서명 규칙(작성한 의사)과 함께 **인쇄 폭으로** 다시 렌더링해 보기 | 작음 |
 | F3 | 수술기록지 충수절제술의 인쇄 여유 9px(7.1) — 내용이 더 늘면 두 장이 됨. 지금은 지켜보기만 | 지켜보기 |
 
-### 7.5 설계 메모 — 「쓴 사람이 있는」 진료 기록 (2026-09-30, 코드 전 · 결정 대기 둘)
+### 7.5 설계 메모 — 「쓴 사람이 있는」 진료 기록 (2026-09-30, **결정 뒤 구현됨**)
+
+> **결정 반영**(실장님 2026-09-30, `wiki/decisions.md`): ① 같은 의사가 같은 날 두 번 저장해도 **의사마다 그 내원의 기록은 하나**((나) — 아래의 「항목 둘」 기본값이 아님). 칸은 비우지 않고 다시 열면 내 글이 그대로. API는 `GET /:id/notes` + `PUT /:id/note` 둘(아래의 `POST`·`PUT /notes/:id`는 만들지 않음). ② 관리자도 남의 기록은 못 고침. ③ 바이탈은 내원에 한 벌(자주 비고, 기록 글 안에 적힘). 구현은 2.2·3.1·3.2·4·7.3에 있고, 아래는 설계 당시의 글입니다.
 
 실장님이 새로 설치한 EMR을 의사 계정 둘로 써 보시고 주신 것입니다. 「기록을 적은 뒤 바로 오른쪽 환자 차트로 넘어가고, 원장님 두 분이 따로 쓴 것이 누구 것인지 보이고, 각자 자기 것만 고칠 수 있게.」
 
@@ -676,7 +688,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
-| 2026-09-30 | **설계 메모: 쓴 사람이 있는 진료 기록**(7.5) — 코드 전, 새 표 `consultation_note` 추천, 읽는 곳 표, 결정 대기 둘 | (이 커밋) |
+| 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(201), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | (이 커밋) |
+| 2026-09-30 | **설계 메모: 쓴 사람이 있는 진료 기록**(7.5) — 코드 전, 새 표 `consultation_note` 추천, 읽는 곳 표, 결정 대기 둘 | `b5483be` |
 | 2026-09-30 | **영상 시험 진료 몫** — 영상 오더 추가 응답에 `worklist_sent_at`(「Envoyé」 바로), 영상 창 머리에 accession 연결 줄, 촬영 부위는 이름 옆(Unité 칸은 메모만), 판독 저장은 잠깐 뜨는 알림 | `2a9f5bd` |
 | 2026-09-30 | **정전 대비 줄 저장** — 진료 중이면 마지막 입력 2초 뒤에도 저장, 화면이 닫힐 때 저장 안 된 줄을 fetch keepalive로, 한 줄의 저장은 차례로·늦은 응답은 버림(오더 줄도 같음). **서류 발행·취소를 변경 기록에**(payload 없음), 다시 취소는 처음 사유를 지킴 | `44008b9` |
 | 2026-09-30 | **통합 시험 2차 진료 몫** — 줄 단위 저장(기록 한 줄), 닫힌 서랍 inert, «flacons» 한 줄, 머리줄 빈 값 빼기·찾기로 연 환자의 성별·생년월일·**알레르기** 채움, 검색 칸 autocomplete off, 수술일 날짜 칸 | `2e14e13` |

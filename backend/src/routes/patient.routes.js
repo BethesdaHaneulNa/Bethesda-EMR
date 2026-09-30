@@ -235,6 +235,27 @@ router.get('/:id/history', permMiddleware(...HISTORY_READERS), async (req, res) 
        WHERE c.patient_id = $1 ORDER BY c.consult_date DESC, c.created_at DESC`,
       [req.params.id]
     );
+    // (Change by the consultation session, allowed by the coordinator 2026-09-30.) The
+    // note is one row per doctor (consultation_note, migration 201). Each consultation
+    // gets `notes` (author, time, text) and, for the screens that read the one field -
+    // PatientChart in payment and pharmacy, the reception's visit list - a note_text made
+    // of every doctor's note, each under "— name HH:MM". The old S/O/A/P columns were
+    // copied into the notes, so they are not sent again.
+    const nr = await pool.query(
+      `SELECT n.id, n.consultation_id, n.author_id, s.name AS author_name, n.note_text, n.created_at, n.updated_at
+         FROM consultation_note n LEFT JOIN staff s ON s.id = n.author_id
+        WHERE n.patient_id = $1 ORDER BY n.created_at, n.id`, [req.params.id]);
+    const byC = {};
+    nr.rows.forEach(function (n) { (byC[n.consultation_id] = byC[n.consultation_id] || []).push(n); });
+    const hhmm = function (d) { return d ? new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''; };
+    result.rows.forEach(function (c) {
+      const notes = byC[c.id] || [];
+      c.notes = notes;
+      c.note_text = notes.length
+        ? notes.map(function (n) { return '— ' + [n.author_name, hhmm(n.updated_at || n.created_at)].filter(Boolean).join(' ') + '\n' + n.note_text; }).join('\n\n')
+        : null;
+      c.subjective = null; c.objective = null; c.assessment = null; c.plan = null;
+    });
     res.json(result.rows);
   } catch (err) {
     sendDbError(res, err);

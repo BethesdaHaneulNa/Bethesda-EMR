@@ -385,6 +385,17 @@ export default {
   cs_noResults: "찾는 항목이 없습니다. 약 이름은 영어입니다(예: syrup).",
   cs_removePaidNote: "이미 수납된 줄입니다 — 지우면 수납에서 환자에게 돌려줘야 합니다.",
   cs_stock: "재고 {n}",
+  // Notes with an author (2026-09-30)
+  cs_noteMineTitle: "내 진료 기록",
+  cs_noteUnsaved: "저장 안 됨",
+  cs_noteDraftBack: "이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.",
+  cs_noteUnsavedSwitch: "내 진료 기록을 아직 저장하지 않았습니다.\n확인: 저장하고 다른 환자를 엽니다.\n취소: 이 환자에 남습니다.",
+  cs_noteToday: "오늘",
+  cs_noteNone: "아직 기록 없음",
+  cs_noteYou: "(나)",
+  cs_noteEdited: "수정 {time}",
+  cs_noPastVisit: "지난 내원 없음",
+  cs_vitalsBy: "마지막 저장: {name} · {time}",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
