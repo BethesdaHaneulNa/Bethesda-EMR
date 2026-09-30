@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 오른쪽 칸 이름 「Dossier Patient」에 문서 맞춤 (총괄 `e4df1d8`)
+
+- **상태**: 확인 요청. develop `e4df1d8`을 merge(ff)한 뒤 위키만.
+- **한 일**: 총괄이 Pharmacy.jsx 오른쪽 머리를 `t.patientChart`(fr Dossier Patient, ko·en Patient Chart)로 바꾼 것(결정 (가))에 맞춰 문서의 옛 이름 「Visites passées / 과거 내원」을 고침.
+- **바꾼 파일**: `wiki/modules/pharmacy.md` 2.1 표(오른쪽 칸 — 이름과 **📋 Dossier (vue)** 와의 차이), 2.8(환자 찾기로 고른 환자), 4절 공용 부품 줄(`PatientChart.jsx`, 칸 안쪽은 수납 세션 몫) · `wiki/manual-fr/pharmacy.md` 「Remettre les médicaments」 2단계에 « À droite, **Dossier Patient** montre ses consultations précédentes. » 한 줄(전에는 오른쪽 칸을 설명하지 않았음 — 옛 이름은 없었음). 굵은 글자 82개 fr.js와 다시 대조.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음 · 코드 변경 없음
+- **확인한 방법**(격리 9184, 1366×768, FR): 머리 「Dossier Patient」 높이 36px(위아래 8px + 한 줄), 폭 319 = scrollWidth(넘침 없음) — 환자 없을 때와 고른 뒤 모두. 문서 높이 768 그대로. `changelog-1.5.0/pharmacy.md`에는 옛 이름 없음.
+- **확인 못 한 것**: 칸 안쪽(의사별 머리줄)은 수납 세션 작업 중이라 보지 않음.
+
 ## 2026-09-30 — 1366×768에서 약국·재고 화면이 창 안에 들어옴 · 밝은 화면 한 바퀴 · 설정 약 탭 검색
 
 - **상태**: 확인 요청. develop `15b1a61b` 위(ff, 디자인의 약국 색 작업 뒤).
