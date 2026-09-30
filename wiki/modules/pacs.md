@@ -456,6 +456,25 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 **남은 것**: 디스크 암호화(BitLocker To Go)는 결정 세션. 리눅스·NAS용 `.sh`는 만들지 않음(실장님 결정 2026-09-29 — 현지 서버는 PC).
 
+### 6.3 현지에서 장비 붙이기 — `device-watch` (2026-09-30)
+
+실장님이 모델을 모르는 옛 장비(후지 X-ray, GE 초음파, 내시경 게이트웨이)를 현지 서버 PC 앞에서 맞춰 보는 날을 위한 도구와 순서서. **순서서: `wiki/reference/device-connection-onsite.md`**(한국어, 개발 용어 없이).
+
+- **PACS `device-watch.ps1` / `device-watch.bat`**(더블클릭 = `-Detail`): 장비가 무엇을 하는지 사람 말로 한 줄씩(ko 기본, `-Lang fr|en`).
+  - 영상 받음: Orthanc `GET /changes`의 `NewInstance` → `/instances/<id>/simplified-tags`(PatientID, AccessionNumber, StudyInstanceUID)와 `/metadata?expand`(`RemoteAET`, `RemoteIP`, `CalledAET`, `TransferSyntax`) — **어느 로그 수준에서도**. 검사마다 5초 모아 한 줄, 그다음 EMR `worklist_log`와 맞춤(`docker exec bethesda-emr-db psql`, **읽기만**, 값은 `[0-9A-Za-z.-_]`만 넣음): 연결됨 / 환자번호 맞음·다름·없음 / 검사번호로 연결될 예정 / 오더 없음, 1~2분 뒤 「EMR에 기록됨」.
+  - 연결·C-ECHO·워크리스트 조회: Orthanc 로그(`docker logs --timestamps`)의 「Incoming connection from AET … on IP …, calling AET …」, 「Incoming Echo/FindWorklist/Store request …」, 워크리스트 플러그인의 「Received worklist query …」(조건 JSON)·「Worklist C-Find: … found N match(es)」, 「Association Release …」. **0명이면 이유**: 서버의 `.wl`(브리지 컨테이너의 pydicom으로 읽음)과 조건을 맞춰 — 목록 없음 / Station AE 거르기 / Modality 거르기 / 날짜 / 그 밖.
+  - 연결했는데 요청 없이 끊김 → 「아무것도 묻거나 보내지 않고 끊음」(서버가 영상 종류·전송 방식을 받지 않았을 때의 모습).
+  - 서버 이름(Called AE)이 MEDCONNECT가 아니면 장비마다 한 번 알림. 브리지 오류는 쉬운 말로(EMR에 닿지 못함 / EMR이 아닌 것이 답함).
+  - `-Ping <IP> [-DevicePort] [-DeviceAet]`: ping, 포트(104·4242·11112), Orthanc `POST /tools/dicom-echo`(장비를 **등록하지 않고** C-ECHO — 설정 안 바뀜).
+  - **`-Detail`**: Orthanc 로그 수준을 REST `/tools/log-level-{generic,dicom,plugins}` = `verbose`로(`http`는 그대로 — 브리지·EMR 호출이 쏟아지지 않게), 화면에 말하고, **Ctrl+C에 원래 값으로**(자기가 올린 것만). 창을 X로 닫았으면 `-Reset`. Orthanc 재시작도 원래대로. 설정 파일은 안 건드림.
+- **조사에서 알게 된 것**(격리 Orthanc 26.6.1 = Orthanc 1.12.11):
+  - 기본 로그 수준에서는 C-ECHO·C-FIND·C-STORE가 **한 줄도 안 남음** → `-Detail`이 필요한 이유.
+  - `DICOM_CHECK_CALLED_AET=false`라 장비가 서버 이름을 틀려도(예: `WRONGAET`) 연결·목록·전송 모두 됨.
+  - JPEG baseline 압축 전송: **받음**. 제조사 전용 SOP Class(시험: `1.2.840.113619.4.30`): **조용히 거절** — 연결은 받고 그 종류의 전송 방식을 하나도 수락하지 않아, 장비 쪽에만 오류가 나고 PACS 로그에는 verbose에서도 거절 줄이 없음(연결 → 끊김만). 받게 하려면 Orthanc 설정 `UnknownSopClassAccepted: true`(compose 환경 변수 `ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED`) — **설정 변경·결정 필요, 지금은 하지 않음**.
+  - EMR은 오더에 Station AE를 넣지 않아 `.wl`은 늘 `ANY` → 장비가 「내 AE만」 거르면 0명(P-8). 도구가 그 이유를 말함.
+  - Orthanc 워크리스트 플러그인도 스스로 `.wl`을 지움(「Deleting worklist … because its study is now stable」 — 이 버전의 housekeeper). 브리지의 삭제와 겹치지만 해가 없음(EMR이 완료를 기록할 때까지 브리지가 다시 써도 곧 같은 이유로 지워짐).
+- **시험**(격리 9188/9198, 장비 흉내 = 임시 Orthanc `XRAY01`, 진짜 DICOM): 연결 시험 · 틀린 서버 이름 · 목록(6명 / Station AE 거르기 0 / MR만 0 / 날짜 0 / 서버에 목록 없음 0) · 영상(맞는 번호 / 다른 번호 / 번호 없음 / 제 UID / JPEG / 제조사 전용 종류 / 손으로 친 환자) · 1~2분 뒤 EMR 기록 · 브리지가 EMR에 닿지 못함 · `-Ping`(닿음·안 닿음) · `-Reset` · 조용한 모드(fr) · en. 각 경우의 줄이 순서서 표와 같음. 로그 수준은 끝날 때 `default`로 돌아옴을 확인.
+
 ## 7. 알려진 문제 · 제약
 
 2026-09-29 코드 읽기로 찾은 것. **심각도**: 높음 / 보통 / 낮음. 고친 것은 ✅, 일부 고친 것은 🟡.
@@ -531,6 +550,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-09-30 | 6.3 현지 장비 연결: PACS `device-watch.ps1/.bat`(장비가 하는 일을 사람 말로, `-Detail`·`-Ping`·`-Reset`), 순서서 `wiki/reference/device-connection-onsite.md`, 조사 결과(기본 로그엔 DICOM 없음, 틀린 서버 이름도 받음, 제조사 전용 영상 종류는 조용히 거절) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 영상 서버 검사를 하나로: 설정 세션의 `services/pacs-probe.js`만 남기고(`pacs.viewer.js`의 두 번째 검사·기본 주소 뺌), 설정 화면이 상태 점의 문장(`se_sys_pacsRelay_*`)을 그대로 씀. 프랑스어 설명서의 「Envoyé」 à revoir 지움(진료 `2a9f5bd`) | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 클린 설치에서 나온 둘: **P-26** 다른 프로그램이 EMR 포트를 차지(포트 검사가 이름을 댐, 브리지 「EMR이 아닌 것이 답함」, healthcheck `.feed_ok`, setup 끝에서 닿는지 확인), **P-27** 영상 서버 주소를 잘못 넣음(저장 때 `/system` 시험 `orthanc_check`, `/test?target=orthanc`, 칸 경고·도움말·「Par défaut」·시험 단추). 3.3·4·6·6.1·7 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | **영상이 있는 하루 통합 시험**(`wiki/reference/integration-test-imaging-2026-09-30.md`, 가짜 장비 = Orthanc로 진짜 C-FIND·C-STORE). 뒤에 고침: 남의 검사·`?study=` 없는 영상 창 페이지와 비활성 계정에 안내 쪽, 안내 쪽 영어 줄 대비, 취소된 판독 카드의 투명도 → 회색 글자·꼬리표·점선 테두리 | EMR `session/pacs` (인계 노트 참고) |
