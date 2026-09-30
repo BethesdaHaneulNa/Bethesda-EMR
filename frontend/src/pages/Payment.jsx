@@ -473,7 +473,7 @@ export default function PaymentPage() {
           <div style={{flex:1,overflow:'auto'}}>
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
               var isSel=sel&&sel.id===v.id;
-              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',opacity:tab==='completed'&&v.payment_status==='cancelled'?0.85:1}}>
+              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'transparent')}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
                   {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
@@ -517,7 +517,7 @@ export default function PaymentPage() {
               {receipts.map(function(b,i){
                 var out=parseFloat(b.outstanding)||0;
                 var cancelled = b.payment_status==='cancelled';
-                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?'var(--danger-a40)':bd),borderRadius:5,padding:'8px 10px',marginBottom:6,opacity:cancelled?'var(--fade-85)':1}}>
+                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?(b.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):bd),borderLeft:cancelled?'3px solid '+(b.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'1px solid '+bd,borderRadius:5,padding:'8px 10px',marginBottom:6}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                     <span style={{fontFamily:'monospace',fontSize:13,color:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(b.billing_date)}</span>
                     <span style={{fontSize:11,color:t2}}>{b.dept_code||''}</span>

@@ -59,7 +59,7 @@ Si le patient revient pour une nouvelle consultation, son impayé s'ajoute tout 
 
 ### 5. Consultation : Nouvelle, Suivi, Sans frais
 
-L'accueil choisit le type de visite. Vous pouvez le changer à côté de **Consultation** avant **Confirmer**. Les prix viennent des **Paramètres** (codes C01 et C02). Une visite terminée à l'accueil sans consultation arrive en **Sans frais**.
+L'accueil choisit le type de visite. Vous pouvez le changer à côté de **Consultation** avant **Confirmer**. Les prix viennent des **Paramètres** (codes C01 et C02). Une visite terminée à l'accueil sans consultation (bouton **Terminer →**) est en **Sans frais** : le jour même, elle apparaît dans **En attente** à 0 Ar, pour encaisser par exemple un certificat (**Délivrance / Autres** → **+ Ajouter**). Une visite d'un **jour passé** terminée ainsi, sans médicament ni examen, n'apparaît pas : il n'y a rien à encaisser. Si un certificat est demandé plus tard, cherchez le patient avec **🔍 Trouver patient**.
 
 ### 6. Supplément — le médecin a ajouté quelque chose après le paiement
 
@@ -106,7 +106,7 @@ N'annulez un reçu que si le reçu lui-même est faux (mauvais patient, par exem
 
 ### 10. Visite d'un jour passé (📅)
 
-Une ligne jaune **📅 2026-09-28 · visite d’un jour passé · pas encore encaissée** signale un patient vu un jour précédent et jamais encaissé (par exemple une visite de la veille terminée ce matin par l'accueil). Encaissez-le comme d'habitude ; le reçu est daté d'aujourd'hui.
+Une ligne jaune **📅 2026-09-28 · visite d’un jour passé · pas encore encaissée** signale un patient vu un jour précédent et jamais encaissé (par exemple une visite de la veille terminée ce matin par l'accueil). Encaissez-le comme d'habitude ; le reçu est daté d'aujourd'hui. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) apparaissent ainsi.
 
 ### 11. Articles sans prix, quantité manquante
 
