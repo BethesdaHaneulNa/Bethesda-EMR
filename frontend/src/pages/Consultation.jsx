@@ -88,6 +88,15 @@ function roCell(value, color, title){
     title={title || (v ? String(v) : undefined)}>{v}</td>;
 }
 
+// A prescription / order row is saved when the focus LEAVES THE ROW, not at every box: typing
+// daily dose, times, days and sig used to send four saves, and on a finished consultation
+// the change log got four lines for one correction (integration test, 2026-09-30). Moving
+// to another box of the same row (Tab) does not save; clicking anywhere else does.
+function leftRow(e){
+  var tr = e.currentTarget && e.currentTarget.closest ? e.currentTarget.closest('tr') : null;
+  return !(e.relatedTarget && tr && tr.contains(e.relatedTarget));
+}
+
 function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 
 // A prescription line with no daily dose (or no days) is stored with a total of 0
@@ -260,6 +269,14 @@ export default function ConsultationPage() {
 
   async function pickPatient(v){
     setSel(v); setQueueOpen(false); setPastView(null);
+    // A visit picked through Trouver patient / Sélection visite comes from the visit-history
+    // list, which carries no sex, birth date or allergies - the header then showed no
+    // allergy warning. Fill them from the patient record (the queue's rows already have them).
+    if(v && v.patient_id && v.gender === undefined){
+      api.get('/patients/'+v.patient_id).then(function(p){
+        setSel(function(cur){ return cur && cur.id===v.id ? Object.assign({}, cur, {gender:p.gender, date_of_birth:p.date_of_birth, allergies:p.allergies}) : cur; });
+      }).catch(function(){});
+    }
     setDxList([]); setRxList([]); setOrderItems([]);
     setNote(''); setVt({bp:'',temp:'',pulse:'',spo2:'',rr:''});
     setOrderCode(''); setOrderSugg([]);
@@ -526,13 +543,15 @@ export default function ConsultationPage() {
   function packQtyBox(rx){
     var v = rx.pack_qty!==undefined ? rx.pack_qty : packCount(rx);
     var empty = !(parseFloat(v) > 0);
-    return <div title={t.cs_packQtyHint} style={{marginTop:3,display:'flex',alignItems:'center',gap:6,fontSize:12.5,color:t2}}>
+    return <div title={t.cs_packQtyHint} style={{marginTop:3,display:'flex',alignItems:'center',gap:4,fontSize:12.5,color:t2}}>
       <span style={{fontWeight:700,whiteSpace:'nowrap'}}>{t.cs_packQty}</span>
-      <input type="number" min="1" step="1" value={v} onChange={function(e){updateRxLocal(rx.id,'pack_qty',e.target.value)}} onBlur={function(){saveRx(rx)}}
-        style={{width:54,background:'var(--field)',border:'1px solid '+(empty?'var(--danger-deep)':'var(--field-border)'),borderRadius:4,padding:'2px 4px',color:tx,fontSize:14,textAlign:'center'}}/>
+      <input type="number" min="1" step="1" value={v} onChange={function(e){updateRxLocal(rx.id,'pack_qty',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }}
+        style={{width:40,background:'var(--field)',border:'1px solid '+(empty?'var(--danger-deep)':'var(--field-border)'),borderRadius:4,padding:'2px 4px',color:tx,fontSize:14,textAlign:'center'}}/>
       {/* The unit word agrees with the count (1 flacon, 2 flacons); packWord puts the
           number in front, which the box already shows. Korean has no plural. */}
-      <span>{lang==='ko' ? packWord(rx, lang) : packWord(rx, lang, parseFloat(v) > 1 ? 2 : 1).replace(/^[\d.,\s]+/, '')}</span>
+      {(function(){ var w = lang==='ko' ? packWord(rx, lang) : packWord(rx, lang, parseFloat(v) > 1 ? 2 : 1).replace(/^[\d.,\s]+/, '');
+        // one line: at 1366 wide « flacons » broke into « flaco / ns »
+        return <span title={w} style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{w}</span>; })()}
     </div>;
   }
   var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
@@ -751,7 +770,7 @@ export default function ConsultationPage() {
           <button onClick={function(){setChartOpen(true)}} style={{background:'#7c3aed',color:'#ede9fe',border:'1px solid #a855f7',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>📋 {t.chartRecord||'차트기록'}</button>
           <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace'}}>{sel.chart_no}</span>
           <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
-          <span style={{color:'#bfdbfe'}}>{sel.gender}/{sel.date_of_birth?sel.date_of_birth.split('T')[0]:''}</span>
+          <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13}}>{sel.dept_code}</span>
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
@@ -760,8 +779,10 @@ export default function ConsultationPage() {
 
       <div style={{display:'flex',height:sel?'calc(100vh - 120px)':'calc(100vh - 82px)',position:'relative'}}>
 
-        {/* Slide-out queue */}
-        <div data-motion="drawer" style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
+        {/* Slide-out queue. Closed, it is only moved off screen, so its tabs and search box
+            stayed in the Tab order and the focus vanished into it: inert (Chrome 102+) takes
+            the closed drawer out of it (integration test, 2026-09-30). */}
+        <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
           <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:3,flexWrap:'wrap'}}>
             {['waiting','completed'].map(function(k){
               var c=k==='waiting'?'accent':'ok';
@@ -769,7 +790,7 @@ export default function ConsultationPage() {
             })}
           </div>
           <div style={{padding:'5px 8px',borderBottom:'1px solid '+bd}}>
-            <input value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+            <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:'100%',boxSizing:'border-box'}}/>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {filteredQueue.map(function(v){
@@ -815,7 +836,7 @@ export default function ConsultationPage() {
                       return <button key={m[0]} onClick={function(){changeOrderMode(m[0])}} style={{background:orderMode===m[0]?'var(--accent-a20)':'var(--bg)',color:orderMode===m[0]?'var(--accent-text)':t3,border:orderMode===m[0]?'1px solid var(--accent-a40)':'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:700}}>{m[1]}</button>;
                     })}
                   </div>
-                  <input value={orderCode} onChange={function(e){handleOrderCodeChange(e.target.value)}} onKeyDown={handleOrderCodeKey}
+                  <input autoComplete="off" value={orderCode} onChange={function(e){handleOrderCodeChange(e.target.value)}} onKeyDown={handleOrderCodeKey}
                     placeholder={t.typeOrderPlaceholder}
                     style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'5px 8px',color:'var(--accent-text)',fontSize: 14,fontWeight:600,fontFamily:'monospace',outline:'none',width:'100%',boxSizing:'border-box'}}/>
                   {orderSugg.length>0?(
@@ -880,11 +901,11 @@ export default function ConsultationPage() {
                             {roCell(rx.route, t2)}
                             {roCell(rx.memo, t2)}
                           </> : <>
-                            <td style={{padding:'3px 2px'}}><input value={showNum(rx.dose)} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 2px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
-                            <td style={{padding:'3px 2px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(){saveRx(rx)}} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={showNum(rx.dose)} title={t.cs_doseHint} onChange={function(e){updateRxLocal(rx.id,'dose',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.frequency == null ? '' : rx.frequency} onChange={function(e){updateRxLocal(rx.id,'frequency',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={rx.days == null ? '' : rx.days} onChange={function(e){updateRxLocal(rx.id,'days',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={rx.route || ''} onChange={function(e){updateRxLocal(rx.id,'route',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }} style={inStyle}/></td>
+                            <td style={{padding:'3px 2px'}}><input value={rx.memo || ''} onChange={function(e){updateRxLocal(rx.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }} style={inStyle}/></td>
                           </>}
                           <td style={{padding:'3px 2px',textAlign:'center',color:'var(--ok-text)',fontSize: 12,fontWeight:700}}>{done ? t.cs_dispensed : ''}</td>
                         </tr>;
@@ -914,11 +935,11 @@ export default function ConsultationPage() {
                             {roCell(o.dose, t3)}
                             {roCell(o.memo || o.body_part, t3)}
                           </> : <>
-                          <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(){saveOrder(o)}} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           </>}
                           <td style={{padding:'3px 2px',textAlign:'center',fontSize: 12,fontWeight:700}}>
                             {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'var(--violet-strong-a22)',color:'var(--violet-text)',border:'1px solid var(--violet-strong-a55)',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
@@ -983,7 +1004,7 @@ export default function ConsultationPage() {
                   {phraseCats.map(function(c){
                     return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'var(--warn-a20)':'transparent',color:phraseCat===c?'var(--warn-text)':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{label(PHRASE_CAT_KEY, c)}</button>;
                   })}
-                  <input value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',flex:'1 1 100px',minWidth:90,maxWidth:160,boxSizing:'border-box'}}/>
+                  <input autoComplete="off" value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',flex:'1 1 100px',minWidth:90,maxWidth:160,boxSizing:'border-box'}}/>
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
                   {filteredPhrases.map(function(p){
@@ -1063,7 +1084,7 @@ export default function ConsultationPage() {
               <button onClick={function(){setDrugModal(false);setDrugQ('')}} style={{background:'transparent',border:'none',color:t2,cursor:'pointer',fontSize: 18}}>✕</button>
             </div>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd}}>
-              <input value={drugQ} onChange={function(e){setDrugQ(e.target.value)}} placeholder={t.search} autoFocus style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:tx,fontSize: 14,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+              <input autoComplete="off" value={drugQ} onChange={function(e){setDrugQ(e.target.value)}} placeholder={t.search} autoFocus style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:tx,fontSize: 14,outline:'none',width:'100%',boxSizing:'border-box'}}/>
             </div>
             <div style={{flex:1,overflow:'auto',maxHeight:300}}>
               {drugQ && drugResults.length===0 ? <div style={{padding:'10px 14px',fontSize:13,color:t2}}>{t.cs_noResults}</div> : null}

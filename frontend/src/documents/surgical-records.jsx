@@ -155,7 +155,8 @@ function OpNoteLayout(props) {
 function makeOp(code, name, title, defaults, spec) {
   defaults = defaults || {}; spec = spec || {};
   var fields = [
-    { key: 'opDate', label: FL.opDate, type: 'text' },
+    // A date picker: YYYY-MM-DD, printed as it is. Notes saved before keep their text.
+    { key: 'opDate', label: FL.opDate, type: 'date' },
     { key: 'opName', label: FL.opName, type: 'text', default: defaults.opName },
     { key: 'preDx', label: FL.preDx, type: 'text', default: defaults.preDx },
     { key: 'postDx', label: FL.postDx, type: 'text', default: defaults.postDx },
