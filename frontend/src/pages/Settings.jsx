@@ -10,7 +10,7 @@ import { seMessage } from './settingsMessages.js';
 import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../documents/drug-info.js';
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
-import { seMoney, seMoneyInput } from './settingsMoney.js';
+import { seMoney, seMoneyInput, seNumber } from './settingsMoney.js';
 import { getTemplate } from '../documents/registry.js';
 
 export default function SettingsPage() {
@@ -56,7 +56,10 @@ export default function SettingsPage() {
   var npfS = useState({code:'',name:'',price:''}), newPanel = npfS[0], setNewPanel = npfS[1];
   var bkS = useState(null), backup = bkS[0], setBackup = bkS[1];
   var bkbS = useState(false), backupBusy = bkbS[0], setBackupBusy = bkbS[1];
-  function fmtBytes(n){ n=Number(n)||0; if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(1)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+  // A French screen writes 24,2 Ko (decimal comma, octets), like the status dot (seNumber).
+  function fmtBytes(n){ n=Number(n)||0; var fr=langCtx.lang==='fr', u=fr?['o','Ko','Mo']:['B','KB','MB'];
+    if(n<1024) return n+' '+u[0];
+    return seNumber(Number((n/(n<1048576?1024:1048576)).toFixed(1)), langCtx.lang)+' '+u[n<1048576?1:2]; }
   // The server sends UTC. Slicing that string showed times three hours early in
   // Madagascar, next to file names stamped in local time - read it in the PC's own zone.
   function fmtLocal(iso){ var d=new Date(iso); if(isNaN(d.getTime())) return ''; var p=function(n){return String(n).padStart(2,'0')}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }

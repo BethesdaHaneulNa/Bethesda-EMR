@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 숫자의 소수 쉼표(상태 점·백업 크기) · 설명서 최종 대조 (v1.5.0 전 마지막)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, 진료 `44008b9` 포함)
+- **1 소수 쉼표**
+  - `settingsMoney.js` `seNumber(v, lang)`(새): `seMoney`와 같은 표시(천 단위 fr U+00A0 · ko/en 쉼표, 소수 fr 쉼표 · ko/en 점)지만 소수는 있는 그대로(97.5 → 「97,5」, 「97,50」이 아님). 숫자인 값만, 글자는 그대로.
+  - 상태 점: `statusText(t, s, lang)` — `{값}`이 숫자면 `seNumber`. 영상 백업 보고의 `free_gb`(97.5)가 유일한 소수였음. `StatusDot`이 `useLang()`으로 언어를 앎.
+  - 같은 규칙으로 백업 화면의 파일 크기 `fmtBytes`: fr 「24,2 Ko」·「1,3 Mo」·「512 o」, ko/en 「24.2 KB」.
+  - **서버 상태 창(`server-status.ps1`)은 바꿀 것 없음**: GB·시간·분이 모두 `[math]::Round`로 정수라 소수가 나오지 않음(읽어서 확인). 영상 백업의 97.5도 창에서는 「98 Go」.
+- **2 시각 한 줄**: 모듈 위키 2.15 상태 점 절에 — 「dernière …」는 파일 이름의 시각(EMR 컨테이너 시간대)이라 개발 PC에선 6시간 어긋나 보이나 현지 PC는 같음, 판정은 `emr_backup_last_ok`라 영향 없음(PACS 6.2).
+- **3 설명서 최종 대조** `manual-fr/settings.md`: 굵은 글씨·«» 인용 140개를 `fr.js`와 설정 화면 파일의 프랑스어 문자열에서 찾아봄(스크립트) — 못 찾은 12개는 모두 예시(«Paludisme adulte»)·강조·`{n}`이 든 틀(«⚠ 2 médicament(s)…», «Ligne n»)이라 맞음. 고친 것 하나: 상태 점의 자리 「en haut à droite, à côté de l'heure」 → 「en haut, juste avant l'heure」(밝게/어둡게 단추가 생긴 뒤 점이 가운데 쪽). 기록 탭(서류 발행 접기, 7번), 상태 점의 EMR 백업 복사 줄(4번), 백업 화면 안내(5번)는 지금 화면과 같음.
+- **바꾼 파일**: `frontend/src/pages/settingsMoney.js` · `settingsStatus.jsx` · `Settings.jsx`(`fmtBytes`·import) · 위키 3개
+- **확인한 방법**: `npm run build`, status 시험(문구 빠짐 없음). 격리 9187에 영상 백업 보고(`free_gb` 97.5, `total_gb` 1863.2, EMR 백업 1,204개)를 넣고 화면: fr 상태 점 「Disque presque plein : 97,5 / 1 863,2 Go」(빈칸이 U+00A0), 「Copiée il y a 0 h · 1 204 sur le disque (dernière 2026-09-30 02:55)」, 백업 화면 「22,9 Ko」·「Dernière: … (22,9 Ko)」. ko 「디스크가 거의 참: 97.5 / 1,863.2 GB」, 「디스크에 1,204개」, 「22.9 KB」.
+
 ## 2026-09-30 — 기록 탭은 처음에 서류 발행을 빼고 보임 (실장님 결정 (나))
 
 - **상태**: 확인 요청

@@ -23,3 +23,14 @@ export function seMoneyInput(v) {
   var n = Number(v);
   return isFinite(n) ? n : v;
 }
+
+// Any other number on the Settings screens (gigabytes free, hours, counts), with the same
+// marks as seMoney - thousands grouped, a decimal comma in French and a point in Korean
+// and English - but its fraction as it is: 97.5 -> "97,5" (not "97,50").
+export function seNumber(v, lang) {
+  if (typeof v !== 'number' || !isFinite(v)) return v == null ? '' : String(v);
+  var parts = String(Math.abs(v)).split('.');
+  var s = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ',');
+  if (parts[1]) s += (lang === 'fr' ? ',' : '.') + parts[1];
+  return (v < 0 ? '-' : '') + s;
+}
