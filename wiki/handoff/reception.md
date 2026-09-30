@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 다시 통합 시험 `wiki/reference/integration-test-2026-09-30.md`
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `764eca7` ff 뒤). **코드 변경 없음**
+- **한 일**: 시작 신호(coordinator.md 「✅ 고친 것 모두 합침」) 뒤 격리 스택 새 DB(037까지)에서 시나리오 1부(1차 ①~⑨ + 고친 곳 표) + 2부(지난 날 방문 📅, 서류, 영상 한 건, 한국어, 밝은·어두운 화면, 서랍, 업데이트 흉내) + 총괄이 더한 것(Tab 테두리, 오더 코드 가격 기록, 인쇄물, ▲▼, 저장 알림)
+- **결과**:
+  - 1차 항목 대부분 ✅ 고쳐짐(남은 것은 C8 영어 시드뿐)
+  - 막힌 곳 없음, A 없음
+  - 돈: 1부 끝 39 300, 하루 끝 83 400 — 실제 = 수납 Caisse du jour = 통계 Caisse
+- **새로 찾은 B**:
+  - **접수**: 성별 칸이 키보드로 안 됨(`div`), 방문 고르기 창(`PatientFinder.jsx`)에서 같은 날 두 방문이 똑같이 보임 — 둘 다 **내 몫, 다음 일로**
+  - **수납(+디자인)**: «Remplacé» 카드 대비 4.0~4.47
+- **C**: 0 Ar 방문 문구(접수 확인 창 «part à la caisse» — 내 몫 + 수납 설명서), 진료 닫힌 서랍 Tab·«flaco/ns»·«M/»·Hernie 영어 빈칸, 설정 금액 표기·기록 4줄, 서류 발행·취소 기록 여부(결정), 결과표 ✕ 열 끝, `<html lang>`, 시드
+- **준비 SQL**(격리 DB만): `UPDATE visit SET visit_date = CURRENT_DATE - 1 WHERE patient_id = <RASOA Marie>` — 지난 날 방문을 만들려고
+- **바꾼 파일**: `wiki/reference/integration-test-2026-09-30.md`(새로), `wiki/reference/integration-test-2-scenario.md`(G절 — 총괄이 더한 것), 이 노트
+- **공용 파일 변경**: 없음
+- **다른 세션에 부탁**: 보고서 「고칠 것 — 세션별」대로(총괄이 나눠 주세요)
+
 ## 2026-09-30 — 「N° dossier」 칸을 잠긴 칸 이름표로, 시나리오 항목 더함
 
 - **상태**: 확인 요청
