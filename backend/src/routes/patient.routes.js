@@ -233,13 +233,16 @@ router.get('/:id/history', permMiddleware(...HISTORY_READERS), async (req, res) 
       // the consultation first - the director's test visit was registered to Dr. Grace
       // and opened by the administrator, and the chart must say Dr. Grace (2026-09-30).
       // Who wrote what is in `notes`, under each author's name.
-      `SELECT c.*, d.code as dept_code, d.name as dept_name,
+      // The department likewise: the visit's, and the copy the consultation took when it
+      // was opened only when the visit has none.
+      `SELECT c.*, COALESCE(vd.code, d.code) as dept_code, COALESCE(vd.name, d.name) as dept_name,
               COALESCE(vs.name, s.name) as doctor_name
        FROM consultation c
        LEFT JOIN department d ON c.department_id = d.id
        LEFT JOIN staff s ON c.doctor_id = s.id
        LEFT JOIN visit v ON v.id = c.visit_id
        LEFT JOIN staff vs ON vs.id = v.doctor_id
+       LEFT JOIN department vd ON vd.id = v.department_id
        WHERE c.patient_id = $1 ORDER BY c.consult_date DESC, c.created_at DESC`,
       [req.params.id]
     );
