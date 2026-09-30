@@ -72,7 +72,7 @@ router.get('/patient/:patientId', permMiddleware('registration', 'consultation',
   try {
     const result = await pool.query(
       `SELECT v.id, v.patient_id, v.visit_date, v.reception_time, v.visit_type, v.status,
-              v.department_id, v.doctor_id,
+              v.department_id, v.doctor_id, v.chief_complaint,
               p.chart_no, p.last_name, p.first_name,
               d.code as dept_code, d.name as dept_name, s.name as doctor_name,
               b.id as billing_id, b.payment_status as bill_status, b.receipt_no, b.total_due

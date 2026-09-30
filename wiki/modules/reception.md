@@ -87,7 +87,7 @@
 | **N° dossier (차트번호)** | `26-00001` 처럼 연도 두 자리 + 그 해의 번호. **해가 바뀌면 1번부터**(2027년 첫 환자는 `27-00001`). **처음 저장할 때 자동으로** 생기고 고칠 수 없습니다. 진료·수납·약국·검사·영상 장비가 모두 이 번호로 환자를 찾습니다 |
 | **Nom (성)** · **Prénom (이름)** | 둘 다 있어야 저장됩니다 |
 | **Date de Naissance (생년월일)** | **AAAA (연도 4자리) · MM (월 2자리) · JJ (일 2자리)**. 칸이 차면 다음 칸으로 넘어갑니다. 예: `1990` `05` `03`. 날짜 전체를 **붙여넣어도** 세 칸으로 나뉩니다 — `19900503`, `1990-05-03`, `03/05/1990`(일/월/연 — 현지 쓰는 순서). **모르면 세 칸 모두 비워 둡니다** — 일부만 쓰면 저장되지 않습니다 |
-| **Sexe (성별)** | **Masculin (남)** / **Féminin (여)**. 처음에는 **아무것도 골라져 있지 않습니다** — 꼭 하나를 누르세요. 안 누르면 저장할 때 「Choisissez le sexe (Masculin / Féminin).」가 뜹니다. 성별은 문서와 영상 장비로 그대로 나갑니다 |
+| **Sexe (성별)** | **Masculin (남)** / **Féminin (여)**. 처음에는 **아무것도 골라져 있지 않습니다** — 꼭 하나를 누르세요. 안 누르면 저장할 때 「Choisissez le sexe (Masculin / Féminin).」가 뜹니다. 성별은 문서와 영상 장비로 그대로 나갑니다. **키보드로**: Tab으로 들어가 ← → (↑ ↓)로 고르거나 스페이스 |
 | **Téléphone (전화번호)** | 연락처. 미수 연락 등에 씁니다 |
 | **Groupe Sanguin (혈액형)** | 모르면 **—** 그대로 |
 | **Allergies (알레르기)** | 약 알레르기 등. **의사 화면에 빨간 경고로** 뜹니다. 없으면 비워 둡니다 |
@@ -123,7 +123,7 @@
 | **Terminé (완료)** | 진료가 끝났음. **수납 화면의 수납 대기 목록에 나타남** | 의사가 진료를 마치면 **저절로** |
 
 - 손으로 옮기는 버튼 **Terminer →** · **← En attente** 는 예외적인 경우에만 쓰세요.
-  - **대기 중인 환자**를 **Terminer →** 로 옮기면 진료 없이 끝낸 것으로 보고, 확인 창(「Terminer … sans consultation ?」)을 거쳐 **내원구분이 Sans frais (진료비 없음)** 으로 바뀌어 수납으로 넘어갑니다(서류만 떼러 온 경우 등). 이미 수납한 접수는 바뀌지 않습니다.
+  - **대기 중인 환자**를 **Terminer →** 로 옮기면 진료 없이 끝낸 것으로 보고, 확인 창(「Terminer … sans consultation ?」)을 거쳐 **내원구분이 Sans frais (진료비 없음)** 으로 바뀝니다(서류만 떼러 온 경우 등). **받을 돈이 없어 수납 목록에는 가지 않습니다**(확인 창도 그렇게 말함). 이미 영수가 있는 접수는 내원구분이 바뀌지 않고, 확인 창이 「이미 영수가 있다 — 수납에서 확인」으로 다르게 나옵니다.
   - **진료중** 환자의 Terminer → 는 진료를 받은 것이라 내원구분이 그대로입니다.
 - 목록은 **30초마다 저절로** 새로 고쳐집니다. 왼쪽에 쓰던 내용은 그대로 남습니다. 다른 창을 보는 동안에는 쉬었다가, 돌아오면 30초 안에 맞춰집니다. 서버가 잠깐 멈춰도 목록은 지워지지 않습니다.
 
@@ -156,7 +156,7 @@
 
 1. 이름이나 차트번호를 넣고 **Rechercher** 또는 **Enter**. 아무것도 안 넣고 누르면 최근 등록한 환자 50명이 나옵니다.
 2. 표의 칸: **N° dossier (차트번호)** · **Nom (이름)** · **Téléphone (전화)** · **Naissance (생년월일)** · **Sexe (성별)**. 환자를 누르면 고릅니다.
-3. 접수 화면에서는 여기서 끝납니다. 다른 화면에서는 이어서 **Sélection visite (외래 내역 선택)** 이 나와 그 환자의 내원을 고릅니다 — 칸은 **Date visite (날짜)** · **Heure (접수 시각)** · **Service (과)** · **Médecin (의사)** · **Paiement (수납상태)**. 수납상태는 **Payé (완납)** · **Partiel (부분)** · **Impayé (미수)** · **Exonéré (면제)** · **ANNULÉ (취소)** · **Non facturé (미수납)** 입니다. 접수에서 **취소된 내원**은 줄이 흐리고 날짜에 줄이 그어지며 빨간 **Visite annulée (접수 취소)** 딱지가 붙습니다 — 수납상태 칸의 「ANNULÉ」(영수증 취소)와는 다른 것입니다. 취소된 내원은 보통 고르지 않습니다(진료 화면은 열지 않고 안내를 띄웁니다). **← Recherche (← 검색으로)** 로 돌아갑니다.
+3. 접수 화면에서는 여기서 끝납니다. 다른 화면에서는 이어서 **Sélection visite (외래 내역 선택)** 이 나와 그 환자의 내원을 고릅니다 — 칸은 **Date visite (날짜)** · **Heure (접수 시각)** · **Service (과)** · **Médecin (의사)** · **Motif (주호소)** · **État (상태: En Attente 대기 / En cours 진료 중 / Terminé 끝남 / Sans frais 진료비 없음)** · **Paiement (수납상태)**. 같은 날 두 번 온 환자는 주호소와 상태로 구분합니다(2026-09-30 전에는 두 줄이 똑같았음). 수납상태는 **Payé (완납)** · **Partiel (부분)** · **Impayé (미수)** · **Exonéré (면제)** · **ANNULÉ (취소)** · **Non facturé (미수납)**, 그리고 진료비 없이 끝난 내원은 **Rien à payer (받을 돈 없음)** 입니다(수납 목록에 오지 않음). 접수에서 **취소된 내원**은 글자가 회색이고 날짜에 줄이 그어지며 빨간 **Visite annulée (접수 취소)** 딱지가 붙습니다 — 수납상태 칸의 「ANNULÉ」(영수증 취소)와는 다른 것입니다. 취소된 내원은 보통 고르지 않습니다(진료 화면은 열지 않고 안내를 띄웁니다). **← Recherche (← 검색으로)** 로 돌아갑니다.
 4. 창을 닫으려면 **✕ Fermer (닫기)** 또는 창 바깥을 누릅니다.
 
 ### 2.8 이런 안내가 뜰 때
@@ -231,7 +231,8 @@
   1. 신규면 `confirmNewPatient()`(동명이인 경고) → `POST /patients` (차트번호 생성) 후 **바로 `selectedPatient`에 기억**. 뒤의 내원 생성이 실패해 다시 눌러도 새 환자를 또 만들지 않음 (7절 ③). 기존이면 `PUT /patients/:id` — **실패하면 여기서 멈추고 오류를 보여줌** (예전에는 `catch (e) {}`로 삼키고 접수를 진행해 수정 내용이 조용히 사라졌음).
   2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint` `reception_memo`**만** 보냄. `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`은 `visitTypeSource`가 `'loaded'`가 아닐 때(단추를 눌렀거나 의사를 바꿔 제안이 다시 계산됐을 때)만, 그리고 `has_active_bill`이 아닐 때만 보냄 — 수납이 그 사이 바꾼 값을 덮지 않으려고. `sel`이 없으면 `POST /visits`(늘 `visit_type` 포함).
   3. 목록 다시 불러오고 입력칸을 비움 (`startNewPatient()`).
-- **상태 버튼** — `changeStatus()` → `PUT /visits/:id/status`. 화면에서 허용하는 이동: 대기→완료, 진료중→대기, 진료중→완료, 완료→대기. 대기→완료는 `completeWithoutConsult()`가 `confirm(rc_completeNoConsult)` 뒤 부름 — 서버가 그 내원을 `visit_type='none'`으로 바꾸기 때문(2026-09-29 실장님 결정 ⑳).
+- **상태 버튼** — `changeStatus()` → `PUT /visits/:id/status`. 화면에서 허용하는 이동: 대기→완료, 진료중→대기, 진료중→완료, 완료→대기. 대기→완료는 `completeWithoutConsult()`가 확인 창 뒤 부름 — 서버가 그 내원을 `visit_type='none'`으로 바꾸기 때문(2026-09-29 실장님 결정 ⑳). 확인 창 문구는 대기 줄의 `has_active_bill`로 나눔: 영수 없음 → `rc_completeNoConsult`(「rien à payer, le patient n'a pas à passer à la caisse」 — 0 Ar 내원은 수납 `HAS_CHARGES_SQL`이 목록에서 뺌), 영수 있음 → `rc_completeNoConsultBilled`(서버가 내원구분을 두므로 「수납에서 확인」). 2026-09-30 전에는 모든 경우에 「part à la caisse」라 실제와 달랐음(다시 통합 시험 C).
+- **성별 단추** — `role="radiogroup"` 안의 `button type="button" role="radio" aria-checked`. Tab 정거장은 하나(고른 쪽, 아직 없으면 Masculin — roving `tabIndex`), `moveGender()`가 ← → ↑ ↓로 고르고 포커스도 옮김, 스페이스·엔터는 단추의 클릭. 전에는 `div`라 키보드로 필수 칸을 고를 수 없었음(다시 통합 시험 B).
 - **대기 취소** — `cancelVisit()` → `PUT /visits/:id/status` `{status:'cancelled'}`. 서버가 409로 거절하면(이미 진료 시작) 안내하고 목록을 새로 불러옴. (2026-09-29 전에는 `'canceled'` 오타로 늘 실패 — 7절 ①)
 - **진료과** — 의사를 고르면 `doctors` 목록에서 그 의사의 `department_id`를 찾아 `visitForm.department`에 넣음. 진료과만 따로 고르는 칸은 없음. `depts`(`/admin/departments`)는 불러오지만 쓰지 않음.
 - **내원구분** — 단추 세 개 `newVisit`(초진) · `followUp`(재진) · `none`(진료비 없음). 2026-09-29 실장님 결정: 응급·의뢰 단추는 없음(서버 `VISIT_TYPES`·오더 코드 C03·C04·옛 기록은 그대로 — 예전 값이면 단추 아래 `rc_visitTypeOther`로 보여 줌). 글자는 공용 키 `newVisit`·`followUp`과 `rc_visitNoFee`.
@@ -266,9 +267,10 @@
 - `mode='patient'`: 환자를 누르면 `onPickPatient(p)` 호출하고 닫힘. 접수·약국이 씀.
 - `mode='visit'`(기본): 환자를 누르면 `/visits/patient/:id`로 그 환자의 모든 내원을 날짜 역순으로 보여주고, 내원을 누르면 `onPickVisit(v)`. 진료(2곳)·수납·임상병리가 씀.
 - `initialPatient`를 주면 검색을 건너뛰고 바로 그 환자의 내원 목록을 엶 (진료 화면의 이력 보기).
-- 내원 목록의 수납 상태 표시: `paid` `partial` `unpaid` `waived` `cancelled`, 청구가 없으면 「미수납」. 한 내원에 청구가 여러 개면 취소 안 된 최신 것 하나(`visit.routes.js` 46~50행).
+- 내원 목록의 수납 상태 표시: `paid` `partial` `unpaid` `waived` `cancelled`, 청구가 없으면 「미수납」. 한 내원에 청구가 여러 개면 취소 안 된 최신 것 하나(`visit.routes.js` `/patient/:patientId`의 LATERAL). 진료비 없이 끝난 내원(`completed` + `visit_type='none'` + 청구 없음)은 「미수납」 대신 `rc_billNothing`(「Rien à payer」) — 수납의 `HAS_CHARGES_SQL`이 이런 내원을 목록에서 빼기 때문.
+- **주호소·상태 칸**(2026-09-30, 다시 통합 시험 B): `chief_complaint`(말줄임, 전체는 `title`), `visitState(v)` — `waiting`/`registered` → `t.waiting`, `in_progress` → `t.in_progress`, `completed` → `t.completed` 또는 `none`이면 `t.rc_visitNoFee`, `cancelled`는 비움(날짜 칸 딱지). 같은 날 두 내원이 똑같이 보여 의사가 잘못 열 수 있었음. 창 너비 760 → 900(94vw 안), 날짜·의사·상태·수납 칸 `nowrap`.
 - 검색어 없이 **검색**을 누르면 최근 등록 환자 50명이 나옴.
-- **취소된 내원**(`status='cancelled'`)은 줄을 흐리게(`opacity 0.55`), 날짜에 취소선, `rc_visitCancelled` 딱지. 숨기거나 막지는 않음 — 환자 이력의 일부이고, 취소된 내원으로 무엇을 할지는 각 화면이 정함(진료는 서버가 409로 거절하고 안내 — 진료 세션 작업). 2026-09-29 전에는 구분 없이 나왔음(7절 ⑮).
+- **취소된 내원**(`status='cancelled'`)은 글자를 흐린 글자색(`t3`)으로(투명도는 쓰지 않음 — 2026-09-30 전에는 `opacity 0.55`), 날짜에 취소선, `rc_visitCancelled` 딱지. 숨기거나 막지는 않음 — 환자 이력의 일부이고, 취소된 내원으로 무엇을 할지는 각 화면이 정함(진료는 서버가 409로 거절하고 안내 — 진료 세션 작업). 2026-09-29 전에는 구분 없이 나왔음(7절 ⑮).
 
 ## 4. 데이터 · API
 
@@ -501,4 +503,5 @@
 | 2026-09-29 | 2절에 내원구분·중복 경고 사용법 정리, 7절 남은 것을 결정 필요 / 결정 없이 가능으로, 이 변경 기록 정리 | 위키만 | `ac5209e` |
 | 2026-09-29 | (통합 시험 뒤) 환자 검색에 결과가 없으면 칸 아래 안내 한 줄, 생년월일에 날짜 전체를 붙여넣으면 세 칸으로 나뉨, 「N° dossier」 빈 칸이 밝은 화면에서 덜 흐림(투명도 0.6 → 0.7, 디자인 세션 부탁), 시험 스크립트가 새 스택에서도 로그인 | `notFoundFor`·`rc_noPatientFound`, `parsePastedDob()`, `reception.api.mjs` 설정 로그인 (3절) | `cb0e564` |
 | 2026-09-30 | 미수·환불 금액이 프랑스어는 «17 300 Ar», 한국어·영어는 «17,300 Ar»(총괄 결정), 금액이 줄에서 쪼개지지 않음. 의사 없이 접수한 대기 줄에 점만 남던 것, 같은 이름 창의 번호·날짜가 두 줄로 쪼개지던 것. 밝은 화면·1366×768 점검(읽기 어려운 곳은 차트번호 빈 칸 하나 — 디자인 세션에) | `fmtAr(n, lang)`, 빈 값 빼고 잇기, `nowrap` (3절) | `6f6f86a` |
-| 2026-09-30 | 「N° dossier」 칸이 흐린 칸 대신 설정 화면과 같은 「잠긴 칸」 모양(회색 바탕) — 빈 칸 안내 글자가 흐려져 읽기 어렵던 것 | `var(--field-locked)`·`var(--text-locked)`, `opacity` 뺌 (3절) | (이 커밋) |
+| 2026-09-30 | 「N° dossier」 칸이 흐린 칸 대신 설정 화면과 같은 「잠긴 칸」 모양(회색 바탕) — 빈 칸 안내 글자가 흐려져 읽기 어렵던 것 | `var(--field-locked)`·`var(--text-locked)`, `opacity` 뺌 (3절) | `f63b645` |
+| 2026-09-30 | (다시 통합 시험 뒤) 성별을 키보드로 고름(Tab + 화살표), 환자 찾기 창의 내원 목록에 주호소·상태 칸 — 같은 날 두 내원이 구분됨, 진료비 없이 끝난 내원은 「Rien à payer」, 「Terminer →」 확인 창이 수납에 가는지 사실대로 | 성별 `role=radio`·`moveGender()`, `PatientFinder` `visitState()`·`rc_billNothing`, `GET /visits/patient/:id`에 `chief_complaint`, `rc_completeNoConsultBilled` (3절) | (이 커밋) |

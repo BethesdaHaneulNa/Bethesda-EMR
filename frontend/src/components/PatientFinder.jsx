@@ -66,12 +66,23 @@ export function PatientFinder(props){
     if(!m) return <span style={{fontSize:11,color:t3,fontStyle:'italic'}}>{t.notBilled||'미수납'}</span>;
     return <span style={{fontSize:11,fontWeight:800,color:m[1],background:m[2],borderRadius:4,padding:'1px 7px'}}>{m[0]}</span>;
   }
+  // Where the visit stands. Two visits on the same day used to look identical (date,
+  // time, service, doctor, "Non facturé"), so a doctor could open the wrong one
+  // (integration test 2). With the reason for the visit and this state they differ.
+  // A visit reception completed without a consultation is 'none' and has nothing to
+  // bill, so it never reaches the cash desk: say so instead of "Non facturé".
+  function visitState(v){
+    if(v.status === 'cancelled') return null;   // the date cell already says Visite annulée
+    if(v.status === 'completed') return v.visit_type === 'none' ? [t.rc_visitNoFee, 'var(--text-2)'] : [t.completed, 'var(--ok-text)'];
+    if(v.status === 'in_progress') return [t.in_progress, 'var(--warn-ink)'];
+    return [t.waiting, 'var(--accent-text)'];
+  }
   function ymd(d){ return d?String(d).split('T')[0]:''; }
   function hm(s){ if(!s) return ''; return String(s).substring(0,5); }
 
   return (
     <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}} onClick={function(e){ if(e.target===e.currentTarget && props.onClose) props.onClose(); }}>
-      <div style={{background:pn,border:'1px solid '+bd2,borderRadius:12,width:760,maxWidth:'94vw',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <div style={{background:pn,border:'1px solid '+bd2,borderRadius:12,width:900,maxWidth:'94vw',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{padding:'12px 16px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',alignItems:'center',gap:10}}>
           <span style={{fontWeight:800,fontSize:16,color:tx}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
           {selPatient?<span style={{fontSize:13,color:t2}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
@@ -125,23 +136,31 @@ export function PatientFinder(props){
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.colReceptionTime}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.department}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.doctor}</th>
+                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.chiefComplaint}</th>
+                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.rc_colVisitState}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.colBillStatus}</th>
                 </tr></thead>
                 <tbody>
                   {visits.map(function(v){
-                    // A visit reception cancelled is marked and dimmed, not hidden or blocked:
+                    // A visit reception cancelled is marked and greyed, not hidden or blocked:
                     // it is still part of the patient's history, and what may be done with it
-                    // is each screen's call (consultation's server already refuses it).
+                    // is each screen's call (consultation's server already refuses it). Grey
+                    // is the muted text colour, not opacity (design: opacity fades text below
+                    // the contrast floor).
                     var cancelled = v.status === 'cancelled';
-                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer',opacity:cancelled?0.55:1}}
+                    var st = visitState(v);
+                    var noCharge = v.status === 'completed' && v.visit_type === 'none' && !v.bill_status;
+                    return <tr key={v.id} onClick={function(){pickVisit(v)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer'}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--ok-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(v.visit_date)}
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none',whiteSpace:'nowrap'}}>{ymd(v.visit_date)}
                         {cancelled?<span style={{marginLeft:8,fontFamily:'system-ui,sans-serif',fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',borderRadius:4,padding:'1px 7px',display:'inline-block',textDecoration:'none'}}>{t.rc_visitCancelled}</span>:null}
                       </td>
-                      <td style={{padding:'9px 12px',color:t2,fontFamily:'monospace'}}>{hm(v.reception_time)}</td>
-                      <td style={{padding:'9px 12px',color:tx}}>{v.dept_code||''}</td>
-                      <td style={{padding:'9px 12px',color:t2}}>{v.doctor_name||''}</td>
-                      <td style={{padding:'9px 12px'}}>{billBadge(v.bill_status)}</td>
+                      <td style={{padding:'9px 12px',color:cancelled?t3:t2,fontFamily:'monospace'}}>{hm(v.reception_time)}</td>
+                      <td style={{padding:'9px 12px',color:cancelled?t3:tx}}>{v.dept_code||''}</td>
+                      <td style={{padding:'9px 12px',color:cancelled?t3:t2,whiteSpace:'nowrap'}}>{v.doctor_name||''}</td>
+                      <td title={v.chief_complaint||''} style={{padding:'9px 12px',color:cancelled?t3:tx,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||'—'}</td>
+                      <td style={{padding:'9px 12px',whiteSpace:'nowrap'}}>{st?<span style={{fontSize:12,fontWeight:800,color:st[1]}}>{st[0]}</span>:null}</td>
+                      <td style={{padding:'9px 12px',whiteSpace:'nowrap'}}>{noCharge?<span style={{fontSize:11,color:t3,fontStyle:'italic'}}>{t.rc_billNothing}</span>:billBadge(v.bill_status)}</td>
                     </tr>;
                   })}
                 </tbody>

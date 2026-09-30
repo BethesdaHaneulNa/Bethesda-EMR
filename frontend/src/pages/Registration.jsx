@@ -13,6 +13,8 @@ import { tint } from '../theme.js';
 // toLocaleString() followed the PC's settings instead of the screen language.
 function fmtAr(n, lang) { return Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
 
+var GENDERS = ['M', 'F'];
+
 // [year, month, day] as two-digit strings, or null when the text is not a whole date.
 function parsePastedDob(text) {
   var s = String(text || '').trim();
@@ -420,6 +422,18 @@ export default function RegistrationPage() {
   }
 
   // '{name}'-style slots, so each language can put the value where its grammar wants it.
+  // Arrow keys in the sex radio group: choose the next / previous one and move the focus
+  // with it (ARIA radio pattern). Space and Enter are the buttons' own click.
+  function moveGender(e, i) {
+    var step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    var next = (i + step + GENDERS.length) % GENDERS.length;
+    uf('gender', GENDERS[next]);
+    var sibling = e.currentTarget.parentElement.children[next];
+    if (sibling) sibling.focus();
+  }
+
   function fill(s, vars) {
     return String(s).replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? vars[k] : ''; });
   }
@@ -481,10 +495,14 @@ export default function RegistrationPage() {
   function mb(c) { return { background: tint(c, '18'), color: 'var(--' + c + '-ink)', border: '1px solid ' + tint(c, '40'), borderRadius: 5, padding: '3px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }; }
   // "Terminer →" on a patient still waiting: no consultation took place, so the server
   // turns the visit into "no fee" (decided 2026-09-29, ⑳). Ask first - it changes
-  // what the cashier will charge.
+  // what the cashier will charge. A no-fee visit has nothing to collect and never
+  // reaches the cash desk list, so the question only sends the patient to the cashier
+  // when the visit already has a receipt (the server then keeps its type) - the old
+  // wording said "part à la caisse" for every visit (integration test 2).
   function completeWithoutConsult(v, e) {
     if (e) e.stopPropagation();
-    if (!confirm(fill(t.rc_completeNoConsult, { name: nameOf(v) }))) return;
+    var msg = v.has_active_bill ? t.rc_completeNoConsultBilled : t.rc_completeNoConsult;
+    if (!confirm(fill(msg, { name: nameOf(v) }))) return;
     changeStatus(v, 'completed');
   }
   async function changeStatus(v, newStatus, e) {
@@ -638,11 +656,19 @@ export default function RegistrationPage() {
               <div><label style={labelStyle}>{t.firstName}</label><input value={form.firstName} onChange={function (e) { uf('firstName', e.target.value); }} style={IS} /></div>
             </div>
             <div><label style={labelStyle}>{t.dateOfBirth}</label><DobInput value={form.dob} onChange={function (v) { uf('dob', v); }} style={IS} /></div>
-            <div><label style={labelStyle}>{t.gender}</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['M', 'F'].map(function (g) {
+            <div><label id="rc-gender-label" style={labelStyle}>{t.gender}</label>
+              {/* A radio group: one Tab stop (the chosen sex, or Masculin while none is chosen),
+                  arrow keys move and choose, Space/Enter choose. These were plain divs, which
+                  a keyboard could not reach although the sex is required (integration test 2). */}
+              <div role="radiogroup" aria-labelledby="rc-gender-label" aria-required="true" style={{ display: 'flex', gap: 8 }}>
+                {GENDERS.map(function (g, i) {
                   var label = g === 'M' ? t.male : t.female;
-                  return <div key={g} className="pressable" onClick={function () { uf('gender', g); }} style={{ cursor: 'pointer', background: form.gender === g ? 'var(--accent-a20)' : 'var(--chip)', border: form.gender === g ? '1px solid var(--accent-a60)' : '1px solid var(--border-2)', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: form.gender === g ? 'var(--accent-text)' : t2, flex: 1, textAlign: 'center', fontWeight: 700 }}>{label}</div>;
+                  var on = form.gender === g;
+                  var tabStop = form.gender ? on : i === 0;
+                  return <button key={g} type="button" role="radio" aria-checked={on} tabIndex={tabStop ? 0 : -1} className="pressable"
+                    onClick={function () { uf('gender', g); }}
+                    onKeyDown={function (e) { moveGender(e, i); }}
+                    style={{ cursor: 'pointer', background: on ? 'var(--accent-a20)' : 'var(--chip)', border: on ? '1px solid var(--accent-a60)' : '1px solid var(--border-2)', borderRadius: 7, padding: '8px 14px', fontSize: 15, color: on ? 'var(--accent-text)' : t2, flex: 1, textAlign: 'center', fontWeight: 700, fontFamily: 'inherit' }}>{label}</button>;
                 })}
               </div>
             </div>
