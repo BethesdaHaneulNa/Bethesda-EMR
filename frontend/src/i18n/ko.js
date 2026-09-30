@@ -1022,6 +1022,7 @@ export default {
   se_sys_pacsRelay_unauthorized: "영상 서버가 저장된 비밀번호를 거절 — PACS 폴더에서 pair-with-emr 실행",
   se_sys_pacsRelay_notOrthanc: "{url}에서 영상 서버가 아닌 것이 답함 (HTTP {code}) — 다른 프로그램이 이 포트를 쓰고 있음",
   se_sys_pacsRelay_badAddress: "영상 서버 주소가 주소 모양이 아님 — 설정 → 오더 연동",
+  se_ent_consultation_note: "의사의 진료 기록",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

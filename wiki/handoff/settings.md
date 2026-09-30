@@ -2,6 +2,16 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 기록 탭에 새 대상 consultation_note
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, 진료 `dfe514c`·038 포함)
+- **한 일**: `settingsAudit.js` `ENTITIES`에 `consultation_note` → `se_ent_consultation_note` 「note du médecin / 의사의 진료 기록 / doctor's note」. 진료의 `recordEdit`가 이 줄을 요약 `note`로 쓰므로, 옛 `consultation`처럼 **요약 「note」는 숨김**(대상 이름이 이미 말함). 칸 `note_text` 이름표는 전부터 있음(「Note」).
+- **위키**: `wiki/03-change-log.md` 4-1절 아래에 `consultation.record.edit`의 대상 다섯 줄(새 `consultation_note` 포함), 모듈 위키 8절.
+- **공용 파일 변경**: i18n `se_ent_consultation_note`.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · i18n 3개 · `wiki/03-change-log.md` · 모듈 위키 · 이 노트
+- **확인한 방법**: `npm run build`. 격리 9187(038 적용)에 진료의 `recordEdit` 모양대로 세 줄(쓰기 `null → 글` · 고치기 · 지우기 `글 → null`)을 넣고 기록 탭에서 봄: fr 「Dossier de consultation terminé modifié — note du médecin · RAKOTO Note 26-00042 · Note: Fièvre 3 jours, TDR négatif. → … Paracétamol.」(지운 줄은 「… → —」), ko 「끝난 진료 기록을 고침 — 의사의 진료 기록 · 메모: …」. 요약 「note」는 보이지 않음. login 시험 통과.
+
 ## 2026-09-30 — 설치 뒤 할 일 여덟 가지를 설명서에 (실장님 결정 (가))
 
 - **상태**: 확인 요청 — 문서만(코드 변경 없음)

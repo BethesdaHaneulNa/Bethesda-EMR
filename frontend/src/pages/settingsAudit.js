@@ -75,10 +75,11 @@ var FIELDS = {
 };
 // The Log tab lists a line's fields in the order of FIELDS above (auditChanges).
 
-// consultation.record.edit covers four kinds of row; the entity says which, and is
+// consultation.record.edit covers five kinds of row; the entity says which, and is
 // shown after the sentence ("Finished consultation record edited - prescription").
+// consultation_note (038): the note is one row per doctor; its field is note_text.
 var ENTITIES = {
-  consultation: 'se_ent_consultation', diagnosis: 'se_ent_diagnosis',
+  consultation: 'se_ent_consultation', consultation_note: 'se_ent_consultation_note', diagnosis: 'se_ent_diagnosis',
   prescription: 'se_ent_prescription', order_item: 'se_ent_order_item',
 };
 export function auditEntityText(t, row) {
@@ -87,10 +88,11 @@ export function auditEntityText(t, row) {
   return (k && t[k]) || row.entity || '';
 }
 // The summary the line was written with, unless the entity already says it
-// (consultation notes are logged with the summary 'note'). A patient edit's summary
+// (consultation notes - the old column and, since 038, a doctor's own row - are logged
+// with the summary 'note'). A patient edit's summary
 // is the list of changed field names ("gender, mobile"), shown as their labels.
 export function auditSummary(t, row) {
-  if (row.entity === 'consultation' && row.summary === 'note') return '';
+  if ((row.entity === 'consultation' || row.entity === 'consultation_note') && row.summary === 'note') return '';
   if (row.action === 'reception.patient.edit' && row.summary) {
     return row.summary.split(/,\s*/).map(function (f) { return auditFieldLabel(t, f); }).join(', ');
   }
