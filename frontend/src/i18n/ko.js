@@ -1041,13 +1041,8 @@ export default {
   px_testNoHost: "Host / IP 칸이 비어 있습니다. 같은 PC면 host.docker.internal을 적으세요.",
   px_orthancUrlHelp: "다른 PC에서 쓰는 주소가 아닙니다. 영상 서버는 서버 PC 안에서만 열려 있어, 이 PC의 LAN 주소(192.168…)를 넣으면 영상 창이 열리지 않습니다. 보통 http://host.docker.internal:9090 그대로입니다.",
   px_orthancUrlDefault: "기본값으로",
-  px_orthancUnreachable: "이 주소로는 EMR이 영상 서버에 닿지 못합니다 — 영상 창이 열리지 않습니다. 보통 http://host.docker.internal:9090 그대로 둡니다.",
-  px_testOrthancBtn: "영상 서버 연결 시험 (EMR → 9090)",
-  px_orthancOk: "EMR이 영상 서버에 닿습니다.",
-  px_orthancBadUrl: "주소 모양이 틀렸습니다 (http:// 로 시작해야 합니다).",
-  px_orthancRefused: "이 주소에 영상 서버가 없습니다.",
-  px_orthancLogin: "영상 서버가 저장된 비밀번호를 거절했습니다 — PACS 폴더에서 pair-with-emr.ps1을 실행하세요.",
-  px_orthancNotOrthanc: "이 주소에서 영상 서버가 아닌 다른 것이 답합니다.",
+  px_orthancUnreachable: "이 주소로는 영상 창이 영상 서버에 닿지 못합니다 — 영상이 열리지 않습니다.",
+  px_testOrthancBtn: "시험: 영상 창 → 영상 서버",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "화면 색 (밝게 / 어둡게)",

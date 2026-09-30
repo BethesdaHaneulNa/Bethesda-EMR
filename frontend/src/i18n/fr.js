@@ -1041,13 +1041,8 @@ export default {
   px_testNoHost: "Host / IP est vide. Sur le même PC, saisissez host.docker.internal.",
   px_orthancUrlHelp: "Ce n'est pas une adresse pour les autres postes. Le serveur d'images n'écoute que sur le PC serveur : avec l'adresse réseau de ce PC (192.168…), la visionneuse reste vide. En général : http://host.docker.internal:9090, sans rien changer.",
   px_orthancUrlDefault: "Par défaut",
-  px_orthancUnreachable: "Avec cette adresse, l'EMR n'atteint pas le serveur d'images — la visionneuse ne s'ouvrira pas. En général, on laisse http://host.docker.internal:9090.",
-  px_testOrthancBtn: "Tester le serveur d'images (EMR → 9090)",
-  px_orthancOk: "L'EMR atteint le serveur d'images.",
-  px_orthancBadUrl: "Adresse invalide (elle doit commencer par http://).",
-  px_orthancRefused: "Pas de serveur d'images à cette adresse.",
-  px_orthancLogin: "Le serveur d'images refuse le mot de passe enregistré — lancez pair-with-emr.ps1 dans le dossier du PACS.",
-  px_orthancNotOrthanc: "À cette adresse, ce n'est pas le serveur d'images qui répond.",
+  px_orthancUnreachable: "Avec cette adresse, la visionneuse n'atteint pas le serveur d'images — les images ne s'ouvriront pas.",
+  px_testOrthancBtn: "Tester : visionneuse → serveur d'images",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",

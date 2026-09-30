@@ -29,7 +29,6 @@ Médecin :
 1. Dans **Consultation**, ouvrez le patient (**☰ File d'Attente** ou **🔍 Trouver patient**).
 2. Dans **Saisir médicament, code examen ou nom...**, tapez le nom de l'examen (par exemple `Chest`), puis Entrée. La liste montre l'appareil (`CR`, `US`…) et **WL** : l'examen part vers l'appareil.
 3. La colonne de droite de la ligne montre **Envoyé** (l'appareil a reçu la demande), puis **Réalisé** quand toutes les images sont arrivées.
-   <!-- à revoir : juste après l'ajout, « Envoyé » n'apparaît qu'en rouvrant le patient (test du 2026-09-30, session consultation) -->
 4. L'examen n'apparaît sur l'appareil **que le jour où il est demandé**. Un examen demandé hier et fait aujourd'hui doit être demandé de nouveau aujourd'hui.
 
 ### 2. Manipulateur — faire les images
@@ -134,4 +133,4 @@ Prévenez l'**administrateur** si :
 - une fenêtre demande un mot de passe ;
 - l'écran d'état signale un problème de sauvegarde des images.
 
-Pour l'administrateur : dans **Paramètres → Flux d'ordres**, le champ **Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)** reste `http://host.docker.internal:9090` (bouton **Par défaut**). Ce n'est pas l'adresse du PC sur le réseau. Le bouton **Tester le serveur d'images (EMR → 9090)** doit répondre **L'EMR atteint le serveur d'images.**
+Pour l'administrateur : dans **Paramètres → Flux d'ordres**, le champ **Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)** reste `http://host.docker.internal:9090` (bouton **Par défaut**). Ce n'est pas l'adresse du PC sur le réseau. Le bouton **Tester : visionneuse → serveur d'images** doit répondre **Joignable (Orthanc …)** — la même phrase que la ligne **Visionneuse → serveur d'images** du point d'état en haut de l'écran.

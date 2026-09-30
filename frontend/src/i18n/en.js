@@ -1050,13 +1050,8 @@ export default {
   px_testNoHost: "Host / IP is empty. On the same PC, enter host.docker.internal.",
   px_orthancUrlHelp: "Not an address for other PCs. The image server listens on the server PC only, so this PC's LAN address (192.168…) leaves the image window empty. Usually http://host.docker.internal:9090 as it is.",
   px_orthancUrlDefault: "Default",
-  px_orthancUnreachable: "The EMR cannot reach the image server at this address - the image window will not open. Usually leave http://host.docker.internal:9090.",
-  px_testOrthancBtn: "Test image server (EMR → 9090)",
-  px_orthancOk: "The EMR reaches the image server.",
-  px_orthancBadUrl: "Not a valid address (it must start with http://).",
-  px_orthancRefused: "No image server at this address.",
-  px_orthancLogin: "The image server refused the stored password - run pair-with-emr.ps1 in the PACS folder.",
-  px_orthancNotOrthanc: "Something other than the image server answers at this address.",
+  px_orthancUnreachable: "At this address the viewer cannot reach the image server - images will not open.",
+  px_testOrthancBtn: "Test: viewer → image server",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Screen colours (light / dark)",

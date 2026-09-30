@@ -6,6 +6,7 @@ const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
 const { ORDER_CANCELLED } = require('./pacs.cancel');
 const viewer = require('./pacs.viewer');
+const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
 
@@ -108,7 +109,10 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
     // Saved either way; the screen shows the answer next to the address field
     // when the EMR cannot reach the image server there (2026-09-30).
     const saved = result.rows[0];
-    const orthanc_check = await viewer.probeOrthanc(saved.orthanc_url, saved.orthanc_password);
+    // Same check, same answer as the status line "pacs_relay" (services/pacs-probe.js):
+    // { state: ok | refused | unknownHost | timeout | unauthorized | notOrthanc | badAddress, ... }.
+    const url = saved.orthanc_url || DEFAULT_ORTHANC_URL;
+    const orthanc_check = Object.assign({ url }, await probeOrthanc(url, saved.orthanc_password));
     res.json(Object.assign(publicConfig(saved), { orthanc_check }));
   } catch (err) { console.error('[pacs] save config:', err.message); res.status(500).json({ error: CONFIG_MSG.saveFailed }); }
 });
@@ -121,8 +125,8 @@ router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res)
     // ?target=orthanc: the EMR -> image server path the viewer uses (orthanc_url
     // + stored password), not the devices' DICOM port.
     if (req.query.target === 'orthanc') {
-      const url = cfg.orthanc_url || viewer.DEFAULT_ORTHANC_URL;
-      return res.json(Object.assign({ url }, await viewer.probeOrthanc(url, cfg.orthanc_password)));
+      const url = cfg.orthanc_url || DEFAULT_ORTHANC_URL;
+      return res.json(Object.assign({ url }, await probeOrthanc(url, cfg.orthanc_password)));
     }
     const host = cfg.worklist_scp_host;
     const port = cfg.worklist_scp_port;

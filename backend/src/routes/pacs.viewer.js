@@ -20,6 +20,9 @@ const express = require('express');
 const crypto = require('crypto');
 const http = require('http');
 const https = require('https');
+// One address and one reachability check for the relay, Settings and the status
+// screen: services/pacs-probe.js (the settings session's file).
+const { DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 const { pool } = require('../config/database');
 const { effectivePerms } = require('../middleware/auth');
 
@@ -268,49 +271,4 @@ router.all('*', async (req, res) => {
   upstream.end();
 });
 
-// Can the EMR reach the image server at this address, with the stored login?
-// Settings asks on every save and from its test button (2026-09-30: the address
-// was changed to the PC's LAN IP, where 9090 no longer listens, and every status
-// light stayed green). GET /system: Orthanc answers 200 with its Name/Version,
-// 401 when the password is not this Orthanc's. Fixed English messages - the
-// order-feed tab translates them (Settings.jsx pxMessage); change both together.
-const DEFAULT_ORTHANC_URL = 'http://host.docker.internal:9090';
-const PROBE_MSG = {
-  ok: 'Image server answers',
-  badUrl: 'Image server address is not a valid http(s) address',
-  refused: 'Image server not reachable at this address',
-  login: 'Image server refused the stored password - run pair-with-emr',
-  notOrthanc: 'Something other than the image server answered at this address',
-};
-function probeOrthanc(url, password, timeoutMs = 4000) {
-  return new Promise(resolve => {
-    let target;
-    try {
-      const base = new URL(String(url || DEFAULT_ORTHANC_URL));
-      if (!/^https?:$/.test(base.protocol)) throw new Error('scheme');
-      target = new URL(base.pathname.replace(/\/+$/, '') + '/system', base.origin);
-    } catch (e) { return resolve({ ok: false, message: PROBE_MSG.badUrl }); }
-    const lib = target.protocol === 'https:' ? https : http;
-    let done = false;
-    const finish = r => { if (!done) { done = true; resolve(r); } };
-    const req = lib.request(target, {
-      method: 'GET', timeout: timeoutMs,
-      headers: { Accept: 'application/json', Authorization: 'Basic ' + Buffer.from('admin:' + (password || '')).toString('base64') },
-    }, up => {
-      let body = '';
-      up.setEncoding('utf8');
-      up.on('data', c => { if (body.length < 4096) body += c; });
-      up.on('end', () => {
-        if (up.statusCode === 401) return finish({ ok: false, status: 401, message: PROBE_MSG.login });
-        let j = null; try { j = JSON.parse(body); } catch (e) { /* not JSON */ }
-        if (up.statusCode === 200 && j && (j.Version || j.ApiVersion)) return finish({ ok: true, status: 200, message: PROBE_MSG.ok });
-        finish({ ok: false, status: up.statusCode, message: PROBE_MSG.notOrthanc });
-      });
-    });
-    req.on('timeout', () => { req.destroy(); finish({ ok: false, message: PROBE_MSG.refused }); });
-    req.on('error', () => finish({ ok: false, message: PROBE_MSG.refused }));
-    req.end();
-  });
-}
-
-module.exports = { router, grantViewerCookie, probeOrthanc, DEFAULT_ORTHANC_URL, _test: { sign, verify, cleanPath, studyOf } };
+module.exports = { router, grantViewerCookie, _test: { sign, verify, cleanPath, studyOf } };

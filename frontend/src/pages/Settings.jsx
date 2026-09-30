@@ -130,6 +130,14 @@ export default function SettingsPage() {
   // Where the EMR container reaches the image server on the same PC (P-9). Not an
   // address for other PCs: 9090 listens on the server PC only.
   var PX_ORTHANC_DEFAULT = 'http://host.docker.internal:9090';
+  // The image-server check (services/pacs-probe.js) answers a state; say it with the
+  // status screen's own sentence for the same state (se_sys_pacsRelay_*, settings
+  // session), so the order-feed tab and the status dot never word it differently.
+  function pxRelayCheck(r){
+    if(!r) return null;
+    var text=String(t['se_sys_pacsRelay_'+r.state]||r.state||'').replace(/\{(\w+)\}/g,function(m,k){return r[k]==null?'':String(r[k]);});
+    return {ok:r.state==='ok', message:text};
+  }
   function pxFieldName(k){ return PX_FIELD[k] || ({emr_base_url:t.emrPublicUrl, pacs_viewer_url:t.pacsViewerUrl, orthanc_url:t.px_orthancUrl})[k] || k; }
   function pxMessage(msg){
     var s=String(msg||''), m=s.match(/^(\w+) is too long \(at most (\d+) characters\)$/);
@@ -139,13 +147,7 @@ export default function SettingsPage() {
       'Could not save the order feed settings':'px_errSave',
       'No PACS host set':'px_testNoHost',
       'TCP connection succeeded':'px_testOk',
-      'Connection timed out':'px_testTimeout',
-      // pacs.viewer.js PROBE_MSG: can the EMR reach the image server (orthanc_url)?
-      'Image server answers':'px_orthancOk',
-      'Image server address is not a valid http(s) address':'px_orthancBadUrl',
-      'Image server not reachable at this address':'px_orthancRefused',
-      'Image server refused the stored password - run pair-with-emr':'px_orthancLogin',
-      'Something other than the image server answered at this address':'px_orthancNotOrthanc'
+      'Connection timed out':'px_testTimeout'
     };
     if(known[s] && t[known[s]]) return t[known[s]];
     // Node's own connect errors: "connect ECONNREFUSED 10.0.0.5:4242", "getaddrinfo ENOTFOUND nas" ...
@@ -162,7 +164,7 @@ export default function SettingsPage() {
       showToast(t.orderFeedSaved);
       // Saved either way; the answer shows next to the image-server address when
       // the EMR cannot reach it there (2026-09-30: a LAN address was typed in).
-      setPacsTest(function(p){ return Object.assign({},p,{orthanc: saved.orthanc_check ? Object.assign({},saved.orthanc_check,{message:pxMessage(saved.orthanc_check.message)}) : null}); });
+      setPacsTest(function(p){ return Object.assign({},p,{orthanc: pxRelayCheck(saved.orthanc_check)}); });
     } catch(err){ alert((t.se_error)+': '+pxMessage(err.message)); }
   }
 
@@ -254,9 +256,10 @@ export default function SettingsPage() {
     try {
       setPacsTest(function(p){return Object.assign({},p,{[target]:{message:t.px_testing||'Checking...'}})});
       var r = await api.get('/pacs/test?target='+target);
+      if(target==='orthanc'){ var rc=pxRelayCheck(r); setPacsTest(function(p){return Object.assign({},p,{orthanc:rc})}); return; }
       // The address tested stays in the line: the translated sentence alone would not
       // say which host was wrong.
-      var where = r.host ? ' ('+r.host+':'+r.port+')' : (r.url ? ' ('+r.url+')' : '');
+      var where = r.host ? ' ('+r.host+':'+r.port+')' : '';
       setPacsTest(function(p){return Object.assign({},p,{[target]:Object.assign({},r,{message:pxMessage(r.message)+where})})});
     } catch(err){ setPacsTest(function(p){return Object.assign({},p,{[target]:{ok:false,message:pxMessage(err.message)}})}); }
   }
