@@ -994,6 +994,9 @@ export default {
   se_backupSafetyTip: "💾 Every night they are also copied to the external disk (with the image backup). Check that the disk is plugged in on the status (the dot at the top, or the status window on the server PC). You can also download one to a USB stick with ⬇ below.",
   se_fld_refundedAmount: "Refunded to the patient",
   se_act_drugPrice: "Drug price changed",
+  se_act_orderPrice: "Order code price changed",
+  se_fld_priceClinic: "Price",
+  se_fld_priceList: "List price",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

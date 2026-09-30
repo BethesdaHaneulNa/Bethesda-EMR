@@ -118,15 +118,15 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, comptes du personnel, prix des médicaments).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, comptes du personnel, prix des médicaments, prix des actes).
 
 1. **Paramètres** → **Journal**. Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.
 3. Les colonnes : **Quand**, **Qui**, **Quoi**, **Patient**, **Modification** (ancienne valeur barrée → nouvelle valeur).
 4. **◀ Précédent** / **Suivant ▶** pour les pages.
 5. Personne ne peut modifier ni effacer ce journal. Un mot de passe changé est noté, jamais sa valeur.
-6. Le **prix d'un médicament** est noté quand il change (« Prix d'un médicament modifié », ancien prix → nouveau prix), même le premier prix d'un médicament importé (0 → 100). Un médicament ajouté avec **+ Ajouter** ne l'est pas.
-7. Ne sont **pas** notés : les ordonnances types, le prix des actes (codes d'actes), une première saisie.
+6. Le **prix d'un médicament** est noté quand il change (« Prix d'un médicament modifié », ancien prix → nouveau prix), même le premier prix d'un médicament importé (0 → 100). Le **prix d'un acte** (**Codes d'actes** : frais de consultation, analyses, imagerie, actes) aussi (« Prix d'un acte modifié »). Un médicament ou un acte ajouté avec **+ Ajouter** ne l'est pas.
+7. Ne sont **pas** notés : les ordonnances types, une première saisie.
 
 ## Si ce message apparaît
 

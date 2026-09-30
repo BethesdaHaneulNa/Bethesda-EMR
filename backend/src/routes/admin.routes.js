@@ -173,15 +173,27 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
 // changed. Nothing when the price did not change: compared as numbers, so the "100.00"
 // the database returns and the 100 a screen sends are the same price. A first price on
 // an imported drug (0 -> 100) is a change and is logged; a new drug (POST) is not.
-// No patient or visit. Written for order codes the same way if that is decided
-// (field 'price' / 'price_clinic', action ACTIONS.ORDER_PRICE).
+// No patient or visit. Order codes the same way (decided the same day): fee, lab,
+// imaging and procedure prices, ACTIONS.ORDER_PRICE; a new code is not logged either.
+// fields: the price columns; one line holds those that changed. sameAs: a column left
+// out when it moved exactly like another - the order-code window has one "Prix" field
+// and writes it to both price_clinic (what the payment screen bills) and price, so a
+// normal save would otherwise show the same change twice.
 function priceOf(v) { return v === null || v === undefined || v === '' ? null : Number(v); }
-async function auditPrice(client, req, action, entity, was, now, field) {
-  const before = priceOf(was[field]), after = priceOf(now[field]);
-  if (before === after) return;
+async function auditPrice(client, req, action, entity, was, now, fields, sameAs) {
+  const before = {}, after = {};
+  fields.forEach(f => {
+    const b = priceOf(was[f]), a = priceOf(now[f]);
+    if (b !== a) { before[f] = b; after[f] = a; }
+  });
+  Object.keys(sameAs || {}).forEach(f => {
+    const o = sameAs[f];
+    if (f in after && o in after && before[f] === before[o] && after[f] === after[o]) { delete before[f]; delete after[f]; }
+  });
+  if (!Object.keys(after).length) return;
   await writeAudit(client, req, {
     action, entity, entity_id: now.id, summary: [now.code, now.name].filter(Boolean).join(' '),
-    before: { [field]: before }, after: { [field]: after },
+    before, after,
   });
 }
 
@@ -210,7 +222,7 @@ router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
     const result = await client.query(
       `UPDATE drug SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals);
     if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
-    await auditPrice(client, req, ACTIONS.DRUG_PRICE, 'drug', was.rows[0], result.rows[0], 'unit_price');
+    await auditPrice(client, req, ACTIONS.DRUG_PRICE, 'drug', was.rows[0], result.rows[0], ['unit_price']);
     await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
@@ -276,6 +288,7 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
 });
 
 router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
+  let client;
   try {
     const { code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo } = req.body;
     if (!CODE_TYPES.includes(String(code_type))) {
@@ -283,15 +296,28 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
     }
     const invalid = badPrices(req.body, ['price', 'price_clinic']);
     if (invalid) return res.status(400).json({ error: invalid });
-    const result = await pool.query(
+    // The prices before and the save in one transaction, the row locked between them
+    // (the change log, as for a drug's price).
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const was = await client.query('SELECT id, code, name, price, price_clinic FROM order_code WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const result = await client.query(
       `UPDATE order_code SET code=$1, name=$2, name_en=$3, code_type=$4, group_name=$5, default_dose=$6, default_freq=$7,
        default_days=$8, price=$9, price_clinic=$10, pacs_modality=$11, worklist_enabled=$12, station_ae=$13, body_part=$14, memo=$15, updated_at=NOW()
        WHERE id=$16 RETURNING *`,
       [code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo, req.params.id]
     );
-    if (sentMissing(res, result)) return;
+    if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
+    await auditPrice(client, req, ACTIONS.ORDER_PRICE, 'order_code', was.rows[0], result.rows[0],
+      ['price_clinic', 'price'], { price: 'price_clinic' });
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+  } catch (err) {
+    if (client) { try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ } }
+    sendDbError(res, err);
+  } finally {
+    if (client) client.release();
+  }
 });
 
 router.delete('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
