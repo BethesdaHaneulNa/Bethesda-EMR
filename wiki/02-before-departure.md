@@ -20,7 +20,7 @@
 | 상태 | (b)라서 출발 전에 할 것 |
 |---|---|
 | ☐ | 설치 묶음 만들기(`OFFLINE-INSTALL.md`) — EMR과 PACS 둘 다, USB 두 개에 |
-| ☐ | **설치 묶음 v1.5.0**이 바탕화면 `bethesda-offline-kit-v1.5.0`에 있음(main `736d884`에서 만듦, 2026-09-30). `installers` 폴더에 Docker Desktop과 WSL2(x64 .msi) 설치 파일을 넣은 뒤 USB로. 나중에 코드가 더 바뀌면 `offline/pack.ps1`로 다시 만들 것 |
+| ☑ | **설치 묶음 v1.5.0이 USB `F:ethesda-offline-kit`에 있음**(main `736d884`, 2026-09-30, 1.66 GB). `installers`에 Docker Desktop 설치 파일과 WSL2 `.msi`가 이미 들어 있음(7월에 받아 둔 것). 바탕화면의 같은 묶음은 사본. 나중에 코드가 더 바뀌면 `offline\pack.ps1`(기본 목적지가 이 폴더)로 다시 만들 것 — `installers`는 그대로 둠 |
 | ☐ | **이 PC를 설치 묶음과 같은 버전으로 맞춘 뒤** 마지막 백업을 만듦(설정 → 백업 → 지금 백업) → `verify-backup.ps1 -Strict`로 확인 → 그 파일 + `.env` 사본을 USB 두 개에. 옛 버전에서 만든 백업은 새 설치 위에 보통 명령으로 복원되지 않음(`DEPLOYMENT.md` 5b 「백업이 앱보다 옛 버전일 때」) |
 | ☐ | **연습**: 인터넷을 끊은 다른 PC(또는 빈 Docker)에 설치 묶음으로 설치 → 백업 복원 → 로그인·환자·약·가격·계정·변경 기록이 그대로인지 확인 |
 | ☐ | 관리자 비밀번호를 알고 감 (복원하면 초기 설정 화면이 나오지 않음) |
