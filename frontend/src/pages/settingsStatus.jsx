@@ -8,6 +8,8 @@
 // as TopBar's /auth/me sync. "off" (not set up here, e.g. no image backup) is grey and
 // does not count as a warning; the server's `overall` already ranks it with ok.
 import { useState, useEffect } from 'react';
+import { useLang } from '../i18n/index.jsx';
+import { seNumber } from './settingsMoney.js';
 
 var TIMEOUT_MS = 8000;
 var COLORS = { ok: 'var(--status-ok)', warn: 'var(--status-warn)', down: 'var(--status-down)', off: 'var(--status-off)', none: 'var(--status-off)' };
@@ -16,16 +18,19 @@ var COLORS = { ok: 'var(--status-ok)', warn: 'var(--status-warn)', down: 'var(--
 function msgKey(message) { return 'se_sys_' + String(message || '').replace(/^status\./, '').replace(/\./g, '_'); }
 
 // The message in words, with {name} filled from the check's values. Two values are lists.
-export function statusText(t, s) {
+// Numbers take the language's marks (seNumber): the image backup reports "97.5" GB free,
+// which a French screen writes 97,5.
+export function statusText(t, s, lang) {
   var v = Object.assign({}, s.values || {});
   if (Array.isArray(v.missing)) v.missing = v.missing.length;
   if (Array.isArray(v.old)) v.old = v.old.map(function (o) { return o.port + ' → ' + o.use; }).join(', ');
   var text = t[msgKey(s.message)] || s.message;
-  return String(text).replace(/\{(\w+)\}/g, function (m, k) { return v[k] == null ? '' : String(v[k]); });
+  return String(text).replace(/\{(\w+)\}/g, function (m, k) { return v[k] == null ? '' : typeof v[k] === 'number' ? seNumber(v[k], lang) : String(v[k]); });
 }
 
 export function StatusDot(props) {
   var t = props.t;
+  var lang = useLang().lang;
   var dS = useState(null), data = dS[0], setData = dS[1];
   var fS = useState(false), failed = fS[0], setFailed = fS[1];
   var oS = useState(false), open = oS[0], setOpen = oS[1];
@@ -78,7 +83,7 @@ export function StatusDot(props) {
               return <span key={s.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderTop: '1px solid var(--line-soft)' }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[s.state] || COLORS.none, flex: 'none', position: 'relative', top: 1 }}></span>
                 <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, width: 150, flex: 'none' }}>{t['se_sysItem_' + s.key] || s.key}</span>
-                <span style={{ fontSize: 12, color: s.state === 'ok' || s.state === 'off' ? 'var(--text-2)' : COLORS[s.state], lineHeight: 1.4, wordBreak: 'break-word' }}>{statusText(t, s)}</span>
+                <span style={{ fontSize: 12, color: s.state === 'ok' || s.state === 'off' ? 'var(--text-2)' : COLORS[s.state], lineHeight: 1.4, wordBreak: 'break-word' }}>{statusText(t, s, lang)}</span>
               </span>;
             }) : null}
             <span style={{ display: 'flex', alignItems: 'center', marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>

@@ -10,7 +10,7 @@ Une partie de ce guide concerne **tout le personnel** : changer son propre mot d
 2. À gauche, choisissez la partie : **Personnel**, **Médicaments**, **Ordonnances types**, **Items de test**, **Sauvegarde**, **Journal**…
 3. Pour ajouter : **+ Ajouter** (ou **Nouvel ensemble** pour une ordonnance type).
 4. Pour changer une ligne : **Modifier**, changez, puis **Sauver**.
-5. Regardez chaque jour le **petit point** en haut à droite, à côté de l'heure : vert = tout va bien.
+5. Regardez chaque jour le **petit point** en haut, juste avant l'heure : vert = tout va bien.
 6. S'il est **jaune** ou **rouge**, cliquez dessus et lisez ce qui ne va pas.
 7. Avant de fermer le soir, ouvrez **Sauvegarde** : le bandeau doit être vert (**Sauvegardes en ordre**).
 
@@ -109,7 +109,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Le petit point d'état
 
-1. En haut, à côté de l'heure, un petit point (seulement pour les comptes **Paramètres**) :
+1. En haut, juste avant l'heure, un petit point (seulement pour les comptes **Paramètres**) :
    - vert **Tout fonctionne** ; jaune **À surveiller** ; rouge **Problème** ; gris **État inconnu** (le serveur ne répond pas, l'EMR reste utilisable).
 2. **S'il est jaune ou rouge, cliquez dessus** : la liste dit ce qui ne va pas (base, disque, sauvegarde, appareils, imagerie…). Faites ce qui est écrit, ou prévenez le responsable.
 3. Une ligne grise « Non utilisé » n'est pas un problème.
