@@ -1022,6 +1022,7 @@ export default {
   se_sys_pacsRelay_unauthorized: "Le serveur d'images refuse le mot de passe enregistré — lancez pair-with-emr dans le dossier PACS",
   se_sys_pacsRelay_notOrthanc: "Autre chose que le serveur d'images répond à {url} (HTTP {code}) — un autre programme utilise ce port",
   se_sys_pacsRelay_badAddress: "L'adresse du serveur d'images n'est pas une adresse — Paramètres → Flux d'ordres",
+  se_ent_consultation_note: "note du médecin",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

@@ -1031,6 +1031,7 @@ export default {
   se_sys_pacsRelay_unauthorized: "The image server refuses the stored password — run pair-with-emr in the PACS folder",
   se_sys_pacsRelay_notOrthanc: "Something other than the image server answers at {url} (HTTP {code}) — another program is using this port",
   se_sys_pacsRelay_badAddress: "The image server address is not an address — Settings → Order feed",
+  se_ent_consultation_note: "doctor's note",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
