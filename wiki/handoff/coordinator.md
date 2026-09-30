@@ -810,3 +810,10 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 - 이 PC에서 PikPak의 `DownloadServer.exe`가 `127.0.0.1:9080`을 듣고 있어, EMR은 열리는데(`localhost`→IPv6, LAN 주소) 브리지(`host.docker.internal`)와 `http://127.0.0.1:9080`은 그 프로그램으로 갔습니다(HTTP 480). Docker의 `0.0.0.0:9080`과 다른 프로그램의 `127.0.0.1:9080`은 Windows에서 같이 묶입니다.
 - `check-windows-ports.ps1`(PACS)·`server-status.ps1`(설정): 9080·9090·4242에 대해 「Docker가 아닌 프로세스가 듣고 있는가」(`Get-NetTCPConnection -State Listen` → 프로세스 이름)를 보고, 있으면 프로그램 이름과 함께 경고. 브리지 쪽: EMR 피드가 JSON이 아니거나 모르는 상태 코드면 「EMR이 아닌 것이 답함」이라고 하트비트·로그에.
 - `server-status`의 EMR 확인도 `127.0.0.1`로 한 번(직원 PC가 아니라 서버 자신에서 브리지가 보는 길).
+
+### 보낸 것 (2026-09-30 저녁, 038 뒤)
+
+- 진료: 합침·배포 알림, 다음 번호 039, 총괄이 고친 WL 라벨을 모듈 문서에 한 줄. 탭 이름은 결정이 올 때까지 바꾸지 않음(`patientChart` 키는 지금 어느 화면도 쓰지 않음 — 세 화면 모두 `pastVisits`).
+- 설정: 변경 기록 화면 `ENTITIES`에 `consultation_note` 이름표.
+- 수납: `PatientChart`가 `notes`로 의사마다 나눠 그리기.
+- 결정: 오른쪽 「과거 내원」 이름 — (가) 세 화면 모두 「Dossier Patient / Patient Chart」(추천) (나) 진료만 (다) 그대로. **답 기다리는 중.**
