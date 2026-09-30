@@ -164,6 +164,7 @@
 | 2026-09-30 | PACS | EMR `207e5de` 영상 서버 검사를 하나로 · PACS `e016052` README 한 줄 | ✅ PACS main = `e016052` | ✅ | `probeOrthanc`는 `services/pacs-probe.js` 하나만 남음(쓰는 곳: 상태 줄, 저장할 때의 검사, 시험 단추). 설정 화면의 경고·시험 문구가 상태 점의 `se_sys_pacsRelay_*`를 그대로 씀 — 그 문구를 바꾸면 두 곳이 같이 바뀜. 실행 중 EMR: 영상 서버 시험 `{state: ok, version 1.12.11}`, DICOM 시험 ok, 상태 overall ok. 설정 화면의 빨강 경고는 주소가 맞아 보지 못함(세션이 격리에서 네 경우 확인) |
 | 2026-09-30 | 진료 | `0d9ffaf` 의사마다 자기 진료 기록(마이그레이션 201 → **038** `038_consultation_note.sql`) → develop `dfe514c` | ✅ | ✅ | 합치기 전 백업 `bethesda_2026-09-30_1118`, 그 백업을 버리는 DB에 올려 038을 두 번 돌림(두 번째는 아무것도 안 바뀜). 실행 중 EMR: 038 적용, 옛 기록 1건(72자, md5 같음)이 `consultation_note`로 옮겨짐 — **진료를 연 계정이 admin이어서 글쓴이는 admin**(dr1·dr2는 못 고침). 거절 길: 옛 방식(`PUT /:id`에 note_text) 400 · 글 없음/숫자 400 · 없는 진료 404 · 토큰 없음 401 · 글쓴이 `mine:true` / 다른 의사 `mine:false` · 같은 글 저장은 아무것도 안 바꿈 · history에 `notes`와 머리말 「— 이름 시:분」. 앞뒤 md5 UNCHANGED. 적용 뒤 백업 `bethesda_2026-09-30_1121`. 새 글 쓰기·다른 의사의 새 기록은 실장님 데이터라 누르지 않음 |
 | 2026-09-30 | 총괄 | `de7559e` 처방 표 WL 칸: 「촬영 완료」가 가운데서 끊겨 줄이 두 줄이 되던 것 | ✅ | ✅ | 한국어 「촬영완료」, 상태 글은 끊기지 않게(11px·한 덩어리), 영상 단추 폭 30→23px. 1366×768 밝은 화면에서 잼: 단추 23 + 글 44 = 칸 74 안, 같은 줄. 다른 말도 잼 — 옆에 들어가는 것: 촬영 중·전송됨·전송 전·취소됨·Réalisé·En cours·Envoyé·Annulé·Done·Sent·Not sent / 단추 아래로 통째로 내려가는 것: Non envoyé·In progress·Cancelled(전에도 두 줄) |
+| 2026-09-30 | 진료 | `e7e24c7` 문서: WL 칸 상태 글자, 마이그레이션 038 표기, `saveNote` 설명을 지금 방식으로 (위키만) | ✅ | — | 읽음. 코드 변경 없음 — 배포 없음 |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
@@ -810,3 +811,10 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 - 이 PC에서 PikPak의 `DownloadServer.exe`가 `127.0.0.1:9080`을 듣고 있어, EMR은 열리는데(`localhost`→IPv6, LAN 주소) 브리지(`host.docker.internal`)와 `http://127.0.0.1:9080`은 그 프로그램으로 갔습니다(HTTP 480). Docker의 `0.0.0.0:9080`과 다른 프로그램의 `127.0.0.1:9080`은 Windows에서 같이 묶입니다.
 - `check-windows-ports.ps1`(PACS)·`server-status.ps1`(설정): 9080·9090·4242에 대해 「Docker가 아닌 프로세스가 듣고 있는가」(`Get-NetTCPConnection -State Listen` → 프로세스 이름)를 보고, 있으면 프로그램 이름과 함께 경고. 브리지 쪽: EMR 피드가 JSON이 아니거나 모르는 상태 코드면 「EMR이 아닌 것이 답함」이라고 하트비트·로그에.
 - `server-status`의 EMR 확인도 `127.0.0.1`로 한 번(직원 PC가 아니라 서버 자신에서 브리지가 보는 길).
+
+### 보낸 것 (2026-09-30 저녁, 038 뒤)
+
+- 진료: 합침·배포 알림, 다음 번호 039, 총괄이 고친 WL 라벨을 모듈 문서에 한 줄. 탭 이름은 결정이 올 때까지 바꾸지 않음(`patientChart` 키는 지금 어느 화면도 쓰지 않음 — 세 화면 모두 `pastVisits`).
+- 설정: 변경 기록 화면 `ENTITIES`에 `consultation_note` 이름표.
+- 수납: `PatientChart`가 `notes`로 의사마다 나눠 그리기.
+- 결정: 오른쪽 「과거 내원」 이름 — (가) 세 화면 모두 「Dossier Patient / Patient Chart」(추천) (나) 진료만 (다) 그대로. **답 기다리는 중.**
