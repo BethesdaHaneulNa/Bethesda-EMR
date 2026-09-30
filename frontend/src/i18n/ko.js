@@ -323,7 +323,7 @@ export default {
   cs_wsPending: "전송 전",
   cs_wsSent: "전송됨",
   cs_wsInProgress: "촬영 중",
-  cs_wsCompleted: "촬영 완료",
+  cs_wsCompleted: "촬영완료",
   cs_wsCancelled: "취소됨",
   cs_vsRegistered: "접수",
   cs_vsWaiting: "대기",

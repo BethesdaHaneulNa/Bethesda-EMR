@@ -649,7 +649,10 @@ export default function ConsultationPage() {
     if(o.worklist_sent_at){
       var ws = o.worklist_status || '';
       var wsKey = { pending:'cs_wsPending', sent:'cs_wsSent', in_progress:'cs_wsInProgress', completed:'cs_wsCompleted', cancelled:'cs_wsCancelled' }[ws];
-      return <span style={{color:ws==='sent'?'var(--ok-text)':t2}}>{wsKey ? t[wsKey] : ws}</span>;
+      // One piece, never broken in the middle: beside the image button in the 78px column
+      // «촬영 완료» broke after «완» and made the row two lines high (director, 2026-09-30).
+      // A label too long to sit beside the button goes under it whole.
+      return <span style={{color:ws==='sent'?'var(--ok-text)':t2,display:'inline-block',whiteSpace:'nowrap',fontSize:11,verticalAlign:'middle'}}>{wsKey ? t[wsKey] : ws}</span>;
     }
     return null;
   }
@@ -1166,7 +1169,7 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 2px'}}><input value={o.memo || ''} title={o.memo || undefined} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           </>}
                           <td style={{padding:'3px 2px',textAlign:'center',fontSize: 12,fontWeight:700}}>
-                            {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'var(--violet-strong-a22)',color:'var(--violet-text)',border:'1px solid var(--violet-strong-a55)',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
+                            {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'var(--violet-strong-a22)',color:'var(--violet-text)',border:'1px solid var(--violet-strong-a55)',borderRadius:4,padding:'1px 4px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:3,verticalAlign:'middle'}}>🖼</button>:null}
                             {orderStatus(o)}
                           </td>
                         </tr>;
