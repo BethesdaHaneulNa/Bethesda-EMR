@@ -8,6 +8,11 @@
 // its labels are added. Add a line here (and the se_ key in ko/en/fr) when a module
 // logs a new field.
 import { MODULES } from '../modules.js';
+import { seMoney } from './settingsMoney.js';
+
+// Fields that hold an amount in ariary: shown grouped, without ".00" (settingsMoney.js).
+// Quantities, days and numbers of receipts are not amounts and stay as stored.
+var MONEY = { unit_price: 1, price: 1, price_clinic: 1, total_due: 1, amount_paid: 1, refunded_amount: 1, outstanding: 1, refund: 1 };
 
 // action -> se_ key of the sentence
 export var AUDIT_ACTIONS = {
@@ -102,6 +107,7 @@ var STATUS_KEYS = { ordered: 'se_st_ordered', dispensed: 'se_st_dispensed', canc
   scheduled: 'se_st_scheduled', in_progress: 'se_st_in_progress', completed: 'se_st_completed' };
 export function auditValue(t, field, v, ctx) {
   if (v === null || v === undefined || v === '') return '—';
+  if (MONEY[field] && !Array.isArray(v) && typeof v !== 'object' && isFinite(Number(v))) return seMoney(v, ctx && ctx.lang);
   if (field === 'permissions' && Array.isArray(v)) {
     if (!v.length) return '—';
     return v.map(function (p) { var m = MODULES.filter(function (x) { return x.perm === p; })[0]; return m ? (t[m.key] || p) : p; }).join(', ');

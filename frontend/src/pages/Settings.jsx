@@ -10,6 +10,7 @@ import { seMessage } from './settingsMessages.js';
 import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../documents/drug-info.js';
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
+import { seMoney, seMoneyInput } from './settingsMoney.js';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -493,7 +494,7 @@ export default function SettingsPage() {
                   <td style={{padding:'4px 6px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
                   <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'var(--warn-text)',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'var(--warn-text)',border:'1px solid var(--warn-a60)',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
-                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{d.unit_price}</td>
+                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx,whiteSpace:'nowrap'}}>{seMoney(d.unit_price, langCtx.lang)}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'var(--danger-text)':'var(--ok-text)',fontWeight:600}}>{d.stock_qty}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
                     <button onClick={function(){openEdit('drug',d)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
@@ -526,7 +527,7 @@ export default function SettingsPage() {
                   <td style={{padding:'4px 6px',color:tx}}>{o.name}</td>
                   <td style={{padding:'4px 6px'}}><span style={{background:tint(tc,'15'),color:TC[o.code_type]?'var(--'+tc+'-ink)':t2,borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600}}>{t['se_type_'+o.code_type]||o.code_type}</span></td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.group_name}</td>
-                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx}}>{o.price_clinic!=null?o.price_clinic:o.price}</td>
+                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx,whiteSpace:'nowrap'}}>{seMoney(o.price_clinic!=null?o.price_clinic:o.price, langCtx.lang)}</td>
                   <td style={{padding:'4px 6px'}}>{o.pacs_modality?<span style={{background:'var(--violet-a20)',color:'var(--violet-text)',borderRadius:3,padding:'1px 5px',fontSize: 12,fontWeight:700,fontFamily:'monospace'}}>{o.pacs_modality}</span>:'—'}</td>
                   <td style={{padding:'4px 6px',color:o.worklist_enabled?'var(--ok-text)':'var(--text-5)'}}>{o.worklist_enabled?'✓':'—'}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.body_part||'—'}</td>
@@ -695,7 +696,7 @@ export default function SettingsPage() {
                             // two "Amoxicillin 500mg Gélule", told apart only by the code).
                             <span style={{flex:1,minWidth:0}}>
                               <span style={{fontSize: 13,color:tx}}>{r.name}</span>{r.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,r.dosage_form)}</span> : null}
-                              <span style={{display:'block',fontSize: 11,color:t3}}>{String(t.se_osPick||'').replace('{stock}', (osNum(r.stock_qty)||'0')+(r.pack_unit ? ' '+t['ph_pack_'+(r.pack_label||'unit')] : '')).replace('{price}', osNum(r.unit_price)||'0')}</span>
+                              <span style={{display:'block',fontSize: 11,color:t3}}>{String(t.se_osPick||'').replace('{stock}', (osNum(r.stock_qty)||'0')+(r.pack_unit ? ' '+t['ph_pack_'+(r.pack_label||'unit')] : '')).replace('{price}', seMoney(r.unit_price, langCtx.lang)||'0')}</span>
                             </span>
                           ) : <span style={{fontSize: 13,color:tx,flex:1}}>{r.name}</span>}
                           <span style={{fontSize: 13,color:'var(--ok-text)',fontWeight:800}}>+</span>
@@ -965,7 +966,7 @@ export default function SettingsPage() {
                   {[t.se_logWhen,t.se_logWho,t.se_logWhat,t.se_logPatient,t.se_logChange].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize:12,borderBottom:'1px solid '+bd,whiteSpace:'nowrap'}}>{h}</th>})}
                 </tr></thead>
                 <tbody>{audit.rows.map(function(r){
-                  var ch=auditChanges(t, r, {depts:depts});
+                  var ch=auditChanges(t, r, {depts:depts, lang:langCtx.lang});
                   return <tr key={r.id} style={{borderBottom:'1px solid var(--line-soft)',verticalAlign:'top'}}>
                     <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>
@@ -1114,7 +1115,7 @@ export default function SettingsPage() {
                 </select></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr',gap:6}}>
-                <Fld label={t.ph_unitPrice}><input type="number" value={editItem.unit_price||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
+                <Fld label={t.ph_unitPrice}><input type="number" value={seMoneyInput(editItem.unit_price)||0} onChange={function(e){ue('unit_price',Number(e.target.value))}} style={IS}/></Fld>
                 {/* Read-only: stock moves only through the pharmacy's Stock tab, where each
                     change is written to the stock record (receive / count / discard).
                     Unchanged here, saveEdit leaves stock_qty out of the request. A new
@@ -1162,7 +1163,7 @@ export default function SettingsPage() {
                 <Fld label={t.se_fGroup}><select value={editItem.group_name||''} onChange={function(e){ue('group_name',e.target.value)}} style={IS}>{'Consultation,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6}}>
-                <Fld label={t.price||"가격 (Price)"}><input type="number" value={editItem.price_clinic!=null?editItem.price_clinic:(editItem.price||0)} onChange={function(e){ var v=Number(e.target.value); ue('price_clinic',v); ue('price',v); }} style={IS}/></Fld>
+                <Fld label={t.price||"가격 (Price)"}><input type="number" value={seMoneyInput(editItem.price_clinic!=null?editItem.price_clinic:editItem.price)||0} onChange={function(e){ var v=Number(e.target.value); ue('price_clinic',v); ue('price',v); }} style={IS}/></Fld>
               </div>
               <div style={{background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:6,padding:'10px'}}>
                 <div style={{fontSize: 13,fontWeight:700,color:'var(--violet-ink)',marginBottom:6}}>📡 {t.orderFeedModality}</div>
