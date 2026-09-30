@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 현지 장비 연결: `device-watch` 도구와 순서서
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `2162379`를 ff로 당긴 뒤). **PACS 저장소** `session/pacs` `cec7aee`
+- **한 일**
+  1. **PACS `device-watch.ps1` + `device-watch.bat`**(더블클릭 = `-Detail`) — 장비가 하는 일을 사람 말로 한 줄씩. 한국어 기본, `-Lang fr|en`. 위키 6.3에 읽는 곳·줄 모양. 요약:
+     - 영상 받음(어느 로그 수준에서도 — Orthanc `/changes` + 인스턴스 태그·메타데이터) → EMR 오더와 맞춤(EMR DB **읽기만**) → 1~2분 뒤 「EMR에 기록됨」.
+     - 연결·연결 시험·목록 조회·「0명」의 이유(목록 없음 / Station AE 거르기 / Modality 거르기 / 날짜 / 그 밖) — Orthanc 로그, **verbose일 때만** 나옴.
+     - 연결했다가 아무것도 안 하고 끊음(= 서버가 영상 종류·전송 방식을 안 받은 모습), 틀린 서버 이름(Called AE), 브리지 오류(쉬운 말로).
+     - `-Ping <IP> [-DevicePort] [-DeviceAet]` — ping·포트·C-ECHO(`/tools/dicom-echo`, 장비 등록 없음).
+     - **`-Detail`은 Orthanc 로그 수준을 REST로 올림**(`generic`·`dicom`·`plugins`, `http`는 그대로) — 화면에 그렇게 말하고, Ctrl+C에 **자기가 올린 것만** 되돌림. 창을 X로 닫았으면 `-Reset`. 설정 파일은 안 건드림, Orthanc 재시작으로도 원래대로.
+     - PACS `README.md`에 절 하나(+ 「내 AE만」 거르기를 끄라는 줄, 제 UID를 쓰는 장비는 accession으로 이어짐).
+  2. **순서서 `wiki/reference/device-connection-onsite.md`**(한국어, 실장님용) — 한눈에, 시작 전에(고정 IP, 장비에 넣을 값 셋, device-watch 켜기, 시험 검사), 장비에서 찾을 것(일반론), 장비 종류별 메모(**모르는 것은 「확인 필요」** — 후지 CR/DR 콘솔, GE 초음파의 DICOM 옵션 키, 내시경 캡처 프로그램), 단계와 판정 ①~⑤(device-watch의 글자 그대로), 워크리스트가 안 되는 장비, 전송도 안 되는 장비, EMR 쪽 설정(Modality 맞추기, Station AE는 지금 안 씀), 찍어 둘 사진, 그날 채울 칸.
+  3. 위키 6.3(도구·조사 결과·시험), 8절.
+- **조사에서 알게 된 것** (격리 Orthanc 26.6.1)
+  - 기본 로그 수준에서는 장비의 연결·C-ECHO·C-FIND·C-STORE가 **아무것도 안 남음**.
+  - Called AE를 틀려도 받음(`DICOM_CHECK_CALLED_AET=false`).
+  - JPEG 압축은 받음. **제조사 전용 SOP Class는 조용히 거절** — PACS 로그에는 verbose에서도 「연결 → 끊김」뿐, 장비 쪽에만 오류. 받게 하려면 `ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED=true`(설정 변경 — **결정 필요, 하지 않음**). 옛 GE 초음파가 표준 US 종류로 보내는지는 확인 필요.
+  - Orthanc 워크리스트 플러그인도 study가 stable해지면 `.wl`을 지움(브리지 삭제와 겹치나 해 없음).
+- **바꾼 파일**: PACS `device-watch.ps1`(새, UTF-8 BOM — PowerShell 5.1이 한국어·프랑스어를 읽게), `device-watch.bat`(새, CRLF), `README.md`. EMR `wiki/reference/device-connection-onsite.md`(새), `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음. **번역 키**: 없음(도구 안의 세 언어 문장)
+- **확인한 방법** (격리 EMR 9188 + PACS 9198/11298, 장비 흉내 = 임시 Orthanc 컨테이너 `XRAY01`이 진짜 DICOM으로 C-ECHO·C-FIND·C-STORE, 호스트 포트 없음)
+  - 연결 시험(맞는/틀린 서버 이름), 목록(6명 · Station AE 거르기 0 · MR만 0 · 날짜 0 · 서버에 목록 없음 0), 영상(맞는 번호 · 다른 번호 · 번호 없음 · 제 UID · JPEG · 제조사 전용 종류 · 손으로 친 환자), 1~2분 뒤 EMR 기록, 격리 EMR API를 40초 멈춤(브리지 오류 줄), `-Ping`(Docker 안 장비 이름 → C-ECHO 응답 / 없는 주소 → 모두 실패), `-Reset`, 조용한 모드(fr), en. 도구가 낸 줄이 순서서의 표와 같음.
+  - 처음 돌렸을 때 찾아 고친 것: 요청 줄의 IP가 쉼표까지 잡혀 모든 연결을 「아무것도 안 하고 끊음」으로 봄 → 고침. Docker 시각 길이가 달라 글자로 비교하면 순서가 틀림 → 시각으로 비교. `-Detail`이 이미 verbose였던 것까지 「되돌렸다」고 말함 → 자기가 올린 것만.
+  - 끝날 때 격리 Orthanc 로그 수준 `default` 확인. 실행 중 EMR·PACS(`C:\Bethesda-EMR`·`C:\Bethesda-PACS`) 안 건드림.
+- **확인 못 한 것**: 진짜 장비(메뉴·옵션·압축·동영상), 서버 PC의 진짜 콘솔 창에서 Ctrl+C로 끝내기(PowerShell `finally`가 Ctrl+C에 도는 것에 기댐 — 시험은 `-Seconds`로 끝냄), 장비 IP가 다른 대역일 때, 한국어 글자가 장비에서 깨지는지.
+- **다른 세션에 부탁**
+  - **총괄**: ① 제조사 전용 영상 종류를 받을지(`UnknownSopClassAccepted`) — 현지에서 「연결했다가 끊음」이 뜨면 그때 정해도 됨. ② 실행 중 PC에 올릴 때 PACS 폴더에 `device-watch.ps1`·`.bat`만 복사(다시 빌드 필요 없음). ③ 장비 설치 날 사진을 받으면 순서서의 「확인 필요」를 채우고 프랑스어 설명서의 장비 메뉴 자리(`manual-fr/pacs.md` à revoir)도.
+
 ## 2026-09-30 — 영상 서버 검사를 하나로 · 설정 화면과 상태 점이 같은 말 · 설명서 정리
 
 - **상태**: 확인 요청
