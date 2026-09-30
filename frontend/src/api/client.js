@@ -32,7 +32,16 @@ async function request(method, path, body) {
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
-  if (!res.ok) throw new Error((data && data.error) || 'Request failed');
+  if (!res.ok) {
+    // The message as before; the HTTP status, the server's `code` (e.g. the transfer
+    // route's VISIT_BILLED) and the rest of its answer ride along for screens that pick
+    // their own words by code rather than by the English sentence.
+    const err = new Error((data && data.error) || 'Request failed');
+    err.status = res.status;
+    err.code = data && data.code;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 

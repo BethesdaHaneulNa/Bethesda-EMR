@@ -396,6 +396,22 @@ export default {
   cs_noteEdited: "modifiée {time}",
   cs_noPastVisit: "Aucune visite antérieure",
   cs_vitalsBy: "Dernière saisie : {name} · {time}",
+  // Transfer: change the visit's department / doctor (2026-09-30)
+  cs_transfer: "Transfert",
+  cs_trTitle: "Changer de service ou de médecin",
+  cs_trDept: "Service",
+  cs_trDoctor: "Médecin",
+  cs_trReason: "Motif (facultatif)",
+  cs_trConfirm: "Changer",
+  cs_trKeep: "Les notes, prescriptions et examens restent tels quels. La note du médecin précédent reste à son nom, et lui seul peut la modifier.",
+  cs_trDone: "Service et médecin changés ✓",
+  cs_trCancelled: "Une visite annulée ne peut pas être transférée.",
+  cs_trPaid: "Cette visite est déjà encaissée (reçu {receipt}) : son service et son médecin ne peuvent plus être changés.",
+  cs_trBilledTitle: "Déjà encaissée : la visite ne peut plus être transférée",
+  cs_trBadDept: "Ce service ne peut pas être choisi (inactif). Choisissez à nouveau.",
+  cs_trBadDoctor: "Ce médecin ne peut pas être choisi (compte inactif, ou qui n'est pas médecin). Choisissez à nouveau.",
+  cs_trNoChange: "Rien n'a été changé.",
+  cs_trNotFound: "Visite introuvable. Rouvrez le patient.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

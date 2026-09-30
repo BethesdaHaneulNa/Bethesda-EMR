@@ -2,6 +2,49 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 전과: 접수의 서버 길과 이어 끝까지 시험
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `c4a63f5`을 merge(`c18fa1d`)한 뒤. `fe2c993`(화면 먼저)도 함께.
+- **한 일**:
+  - 거절 문장을 서버의 **code**로 고름(6개): `VISIT_NOT_FOUND`·`VISIT_CANCELLED`·`VISIT_BILLED`(영수증 번호를 문장에)·`BAD_DEPARTMENT`·`BAD_DOCTOR`·`NO_CHANGE`. 모르는 code는 서버 문장 그대로. `cs_trBad`를 `cs_trBadDept`·`cs_trBadDoctor`로 나눔.
+  - `api/client.js`가 오류에 `status`·`code`·`data`를 붙임(기존 `message`는 그대로 — 다른 화면 영향 없음).
+  - 결정대로 **수납이 끝난 내원은 단추를 끄고** 이유를 title로(`cs_trBilledTitle`). 대기 목록 줄은 `has_active_bill`, 「Trouver patient」·「Sélection visite」로 연 내원은 `billing_id`+`bill_status`로 봄.
+  - **의사를 비우지 않음**: 의사가 있는 내원은 「—」가 없고 의사를 골라야 확인이 켜짐. 의사가 없는 내원만 「—」로 과만 바꿈. 과는 꼭 골라야 함.
+  - 모듈 문서에 총괄이 넣은 것 셋(파란 줄 「과 + 의사」, 「Dose/j」 머리 11px·nowrap, history의 과 = 내원의 과) 반영. 설명서 fr 「Changer de médecin / de service」에 회색 단추·의사 규칙. changelog 초안에 절 하나.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/api/client.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(cs_trBad 빼고 cs_trBadDept·cs_trBadDoctor·cs_trBilledTitle 더함, cs_trPaid에 {receipt}) · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: `frontend/src/api/client.js` — `request()`의 오류가 `err.status`·`err.code`·`err.data`를 가짐(5줄). 던지는 시점·`message`는 같음.
+- **DB 마이그레이션**: 없음
+- **번역 키**: 더함 `cs_trBadDept`·`cs_trBadDoctor`·`cs_trBilledTitle` · 뺌 `cs_trBad` · 바꿈 `cs_trPaid`({receipt})
+- **확인한 방법**: `npm run build` 통과. 격리 스택.
+  - 서버 거절 여섯을 실제로(`transfer-e2e`): 없는 내원 404 · 바뀐 것 없음 400 · 없는 과 400 · 간호사 계정 400 BAD_DOCTOR · 취소된 내원 409 · 수납된 내원 409 + `receipt_no` — 모두 code가 맞음.
+  - 화면(1366×768 FR): GEN · S2 doctor 내원에 저장 안 한 글을 친 채 ⇄ → 의사 목록에 「—」 없음 → PED를 고르면 의사가 비고 Changer 꺼짐 → Dr DEUX → 사유 «Avis pediatrique» → Changer → 알림 «Service et médecin changés ✓», 파란 줄 «PED Dr DEUX», 오른쪽 오늘 머리 «PED Dr DEUX», **칸의 글 그대로**(«● Non enregistrée»도), 대기 목록에서 빠짐(이제 Dr DEUX의 환자). DB: 내원 과·의사와 진료의 과가 PED로, 기록 한 줄 `visit.transfer` «GEN · S2 doctor → PED · Dr DEUX»(사유 포함).
+  - 거절 문장: 답을 흉내 내어 6개 code + 모르는 code를 FR·EN·KO에서 모두 띄움 — 21문장이 모두 제 언어, 영수증 번호가 들어감, 모르는 code는 «Erreur : Something new».
+  - 수납된 내원(PAYE): 단추 꺼짐, title «Déjà encaissée : la visite ne peut plus être transférée».
+  - 의사 없는 내원(SANSMEDTR): 「—」가 있고 PED만 골라 Changer → 파란 줄 «PED», DB 과만 바뀜, 기록 «GEN → PED».
+  - 창의 밝은·어두운 화면은 `fe2c993` 때 봄(이번에 바뀐 것은 목록 항목과 단추 켜짐 조건뿐).
+- **확인 못 한 것**: 접수 화면 쪽 전과(그쪽 몫). 실제 이틀 이상 지난 내원의 전과(서버 규칙은 날짜를 보지 않음).
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
+## 2026-09-30 — 전과 단추 (화면 먼저, 접수의 서버 길 대기)
+
+- **상태**: 진행 중 — 화면은 끝남, 서버(`PUT /api/visits/:id/transfer`, 접수)가 develop에 오면 끝까지 시험
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `2028e87` 다음
+- **한 일**:
+  - 파란 줄의 「GEN Dr …」 이름표 옆 **⇄ Transfert**(ko 전과 · en Transfer). 취소된 내원에는 없음.
+  - 작은 창: **Service** → **Médecin**(그 과의 의사 + 과 없는 의사 + 지금 의사) → **Motif (facultatif)** → **Changer**. 지금 값이 골라져 있고, 바뀐 것이 없으면 Changer가 꺼짐. 목록은 접수 화면과 같은 `GET /admin/departments`·`GET /admin/doctors`.
+  - 확인 뒤: 답(그 내원 줄)의 과·의사 칸만 `sel`(파란 줄·오른쪽 오늘 머리)·대기 목록·`consult.department_id`에 합침. 내 기록 칸·처방·오더는 건드리지 않음(`pickPatient`를 부르지 않음 — 저장 안 된 글도 그대로). 성공은 잠깐 뜨는 알림.
+  - 거절 문장(ko·en·fr): 취소된 내원 · 수납이 끝난 내원 · 바뀐 것 없음 · 쓸 수 없는 과/의사 · 없는 내원. 약속이 문장을 정하지 않아 **낱말로 고름**(`transferError`) — 접수 커밋이 오면 실제 문장으로 다시 맞춤.
+  - 설명서 fr에 「Changer de médecin / de service」 절(§11과 §12 사이).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(cs_ 13개) · `wiki/modules/consultation.md`(2.7·3.1·8) · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **번역 키**: `cs_transfer`·`cs_trTitle`·`cs_trDept`·`cs_trDoctor`·`cs_trReason`·`cs_trConfirm`·`cs_trKeep`·`cs_trDone`·`cs_trCancelled`·`cs_trPaid`·`cs_trNoChange`·`cs_trBad`·`cs_trNotFound`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768 FR, 밝은·어두운 화면: 과·의사가 없는 내원에서 창을 열면 두 칸 「—」, Changer 꺼짐 → Service «GEN – Médecine Générale» → 의사 목록이 «Dr DEUX»(과 없음)·«GEN – S2 doctor»로 좁혀짐, Changer 켜짐 → 의사 고름. 서버 길이 아직 없어 **Changer는 누르지 않았습니다**.
+- **확인 못 한 것**: 서버와 이어진 전체(바뀐 뒤 화면 갱신, 거절 문장, 변경 기록 한 줄) — 접수 커밋 뒤.
+- **다른 세션에 부탁**: 접수 — 거절 문장(영어 원문)을 인계 노트에 적어 주시면 화면 쪽 매칭을 그 문장으로 맞춥니다.
+- **남은 일 · 알려진 문제**: 위 끝까지 시험.
+
 ## 2026-09-30 — 차트 머리줄(과 + 내원 의사)·탭 이름 문서 반영, 오늘 묶음의 의사 이름 대체
 
 - **상태**: 확인 요청
