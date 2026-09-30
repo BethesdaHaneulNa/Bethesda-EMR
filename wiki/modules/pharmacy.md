@@ -26,7 +26,7 @@
 | 윗줄 오른쪽 | **✓ Terminer délivrance (조제 완료)** — 환자를 골랐을 때만 보입니다 |
 | 왼쪽 | 환자 목록. 맨 위 검색 칸 **Patient / N° dossier / Médicament (환자명 / 차트번호 / 약명 검색)** 에 이름·차트번호·약 이름 일부를 치면 걸러집니다 |
 | 가운데 | 고른 환자의 처방 약 표: **Médicament (약품명)** · **Dose/jour (1일 총량)** · **Dose/prise (1회량)** · **Fréq. (횟수)** · **Jours (일수)** · **Posologie (용법)** · **Qté (수량)** · **Note (메모)**. 오른쪽 위 **Médicaments (interne) (약제비 (원내))** 는 병원에서 받을 약값 |
-| 오른쪽 | **Visites passées (과거 내원)** — 이 환자의 지난 진료 기록 |
+| 오른쪽 | **Dossier Patient (Patient Chart)** — 이 환자의 지난 진료 기록(2026-09-30부터 이 이름, 전에는 Visites passées). 윗줄의 **📋 Dossier (vue)** 는 이 환자의 차트를 읽기만 하는 창(2.8) |
 
 - 왼쪽 목록에는 **오늘 진료가 끝난** 환자 중 아직 약을 받지 않은 사람만 나옵니다(**En Attente (대기)** 표시). 의사가 진료 화면에서 진료를 끝내야 나타납니다.
 - **지난 며칠 사이 약을 안 받아 간 환자**는 **🔍 Trouver patient (환자 찾기)** 로 찾습니다. 이름이나 차트번호로 찾아 고르면:
@@ -142,7 +142,7 @@
 - **조제 완료는 되돌릴 수 없습니다.** 잘못 눌렀으면 관리자에게 알려 재고를 고쳐야 합니다.
 - **환자에게 나간 약은 돌려받지 않습니다**(2026-09-29 실장님 결정, `wiki/decisions.md` — 반품 기능 없음). 약이 잘못 나갔으면(다른 약·개수 착오) 재고는 **📦 Stock** 에서 그 약을 골라 **Inventaire (실사)** 로 선반을 센 수를 넣고 **Note (메모)** 에 사유를 적어 맞춥니다. 돈을 돌려줘야 하면 관리자에게 알립니다.
 - **어제 이전**에 진료가 끝나고 약을 받지 않은 환자는 목록에 나오지 않습니다 — **🔍 Trouver patient** 로 찾으세요(최근 7일까지).
-- **🔍 Trouver patient** 로 고른 환자는 오른쪽 **Visites passées** 에 차트가 보이고, 최근 7일 안의 조제 대기 처방이 있으면 조제할 수 있습니다.
+- **🔍 Trouver patient** 로 고른 환자는 오른쪽 **Dossier Patient** 에 차트가 보이고, 최근 7일 안의 조제 대기 처방이 있으면 조제할 수 있습니다.
 - **📋 Dossier (vue)** 는 이 환자의 차트를 읽기만 하는 창입니다.
 
 ## 3. 기능 상세
@@ -355,7 +355,7 @@
 ### 공용 부품
 
 - `components/DocumentModal.jsx` (진료 주관) — 원외 처방전, 차트뷰어
-- `components/PatientChart.jsx` (수납 주관) — 오른쪽 과거 내원
+- `components/PatientChart.jsx` (수납 주관) — 오른쪽 **Dossier Patient** 칸(머리 `t.patientChart`, 2026-09-30 결정 (가) — 진료·수납·약국 같은 이름). 칸 안쪽(의사별 기록)은 수납 세션 몫
 - `components/PatientFinder.jsx` (접수 주관) — 환자 찾기
 
 ### DB 테이블
