@@ -401,6 +401,7 @@ export default {
   cs_trTitle: "Changer de service ou de médecin",
   cs_trDept: "Service",
   cs_trDoctor: "Médecin",
+  cs_trPickDoctor: "— Choisissez le médecin —",
   cs_trReason: "Motif (facultatif)",
   cs_trConfirm: "Changer",
   cs_trKeep: "Les notes, prescriptions et examens restent tels quels. La note du médecin précédent reste à son nom, et lui seul peut la modifier.",

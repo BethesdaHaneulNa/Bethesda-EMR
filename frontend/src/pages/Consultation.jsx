@@ -1055,7 +1055,9 @@ export default function ConsultationPage() {
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
           {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
-            style={{background:'transparent',color:'#bfdbfe',border:'1px solid #3b5b85',borderRadius:4,padding:'1px 7px',cursor:visitBilled(sel)?'not-allowed':'pointer',opacity:visitBilled(sel)?0.6:1,fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
+            // Paid: the band's faint text and border instead of opacity (design rule: no
+            // opacity for locked or cancelled states). The band keeps its fixed colours.
+            style={{background:'transparent',color:visitBilled(sel)?'#6f8db3':'#bfdbfe',border:'1px solid '+(visitBilled(sel)?'#2b4568':'#3b5b85'),borderRadius:4,padding:'1px 7px',cursor:visitBilled(sel)?'not-allowed':'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
         </div>
@@ -1466,9 +1468,17 @@ export default function ConsultationPage() {
       {transfer && sel ? (function(){
         var tr = transfer;
         var deptName = function(d){ return (lang==='fr' ? d.name_fr : lang==='en' ? d.name_en : d.name) || d.name || ''; };
-        // The doctors of the chosen department, and those with none (a doctor without a
-        // department can see anyone). The doctor already on the visit stays in the list.
-        var docs = tr.doctors.filter(function(d){ return !tr.dept || !d.department_id || String(d.department_id)===tr.dept || String(d.id)===tr.doctor; });
+        // Every active doctor, "GEN – Dr. Grace": the most frequent change is the doctor alone
+        // (Dr. Grace -> Dr. Bill, director 2026-09-30), and with the list narrowed to the
+        // department a doctor of another department could not be picked without changing
+        // the department first. The visit's department's doctors come first, then doctors
+        // with no department, then the others by department - ordered by the visit, not by
+        // what is picked in the window, so the list does not reshuffle while choosing.
+        var visitDept = sel.department_id ? String(sel.department_id) : '';
+        var rank = function(d){ return d.department_id && String(d.department_id)===visitDept ? 0 : !d.department_id ? 1 : 2; };
+        var docs = tr.doctors.slice().sort(function(a, b){
+          return rank(a) - rank(b) || String(a.dept_code||'').localeCompare(String(b.dept_code||'')) || String(a.name||'').localeCompare(String(b.name||''));
+        });
         var changed = tr.dept !== (sel.department_id ? String(sel.department_id) : '') || tr.doctor !== (sel.doctor_id ? String(sel.doctor_id) : '');
         // Decided 2026-09-30: the consultation screen never empties the doctor. A visit
         // without one can have its department changed alone; a visit with one needs a
@@ -1481,19 +1491,22 @@ export default function ConsultationPage() {
           <div role="dialog" aria-label={t.cs_trTitle} onClick={function(e){e.stopPropagation()}} style={{width:420,maxWidth:'92vw',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,padding:'14px 16px'}}>
             <div style={{fontWeight:800,fontSize:15,color:'var(--text)'}}>⇄ {t.cs_trTitle}</div>
             <div style={{fontSize:13,color:'var(--text-2)',marginTop:4}}>{sel.chart_no} · {sel.last_name} {sel.first_name} — {[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ') || '\u2014'}</div>
-            <label style={lab}>{t.cs_trDept}</label>
-            <select value={tr.dept} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
-                setTransfer(function(p){ var keepDoc = p.doctors.filter(function(d){ return String(d.id)===p.doctor && (!d.department_id || !dv || String(d.department_id)===dv); }).length > 0;
-                  return Object.assign({}, p, { dept: dv, doctor: keepDoc ? p.doctor : '' }); }); }} style={fld}>
-              <option value="">{'\u2014'}</option>
-              {tr.depts.map(function(d){ return <option key={d.id} value={String(d.id)}>{d.code} – {deptName(d)}</option>; })}
-            </select>
+            {/* The doctor first: choosing one moves the department to theirs (a doctor with no
+                department leaves it as it is). Changing the department afterwards keeps the
+                doctor if they belong to it (or to none), else the doctor box asks for one. */}
             <label style={lab}>{t.cs_trDoctor}</label>
             <select value={tr.doctor} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
                 setTransfer(function(p){ var doc = p.doctors.filter(function(d){ return String(d.id)===dv; })[0];
-                  return Object.assign({}, p, { doctor: dv, dept: p.dept || (doc && doc.department_id ? String(doc.department_id) : '') }); }); }} style={fld}>
-              {noDoctorOk || !tr.doctor ? <option value="">{'\u2014'}</option> : null}
+                  return Object.assign({}, p, { doctor: dv, dept: doc && doc.department_id ? String(doc.department_id) : p.dept }); }); }} style={fld}>
+              {noDoctorOk || !tr.doctor ? <option value="">{noDoctorOk ? '\u2014' : t.cs_trPickDoctor}</option> : null}
               {docs.map(function(d){ return <option key={d.id} value={String(d.id)}>{(d.dept_code ? d.dept_code + ' – ' : '') + d.name}</option>; })}
+            </select>
+            <label style={lab}>{t.cs_trDept}</label>
+            <select value={tr.dept} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
+                setTransfer(function(p){ var keepDoc = p.doctors.filter(function(d){ return String(d.id)===p.doctor && (!d.department_id || String(d.department_id)===dv); }).length > 0;
+                  return Object.assign({}, p, { dept: dv, doctor: keepDoc ? p.doctor : '' }); }); }} style={fld}>
+              {!tr.dept ? <option value="">{'\u2014'}</option> : null}
+              {tr.depts.map(function(d){ return <option key={d.id} value={String(d.id)}>{d.code} – {deptName(d)}</option>; })}
             </select>
             <label style={lab}>{t.cs_trReason}</label>
             <input value={tr.reason} disabled={tr.busy} maxLength={200} onChange={function(e){ var rv = e.target.value; setTransfer(function(p){ return Object.assign({}, p, { reason: rv }); }); }} style={fld}/>

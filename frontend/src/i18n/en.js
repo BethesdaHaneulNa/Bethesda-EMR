@@ -410,6 +410,7 @@ export default {
   cs_trTitle: "Transfer — change department or doctor",
   cs_trDept: "Department",
   cs_trDoctor: "Doctor",
+  cs_trPickDoctor: "— Choose the doctor —",
   cs_trReason: "Reason (optional)",
   cs_trConfirm: "Change",
   cs_trKeep: "Notes, prescriptions and orders stay as they are. The previous doctor's note stays under their name, and only they can change it.",
