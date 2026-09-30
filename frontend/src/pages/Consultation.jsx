@@ -203,6 +203,11 @@ export default function ConsultationPage() {
   var lbs = useState(false), labOpen = lbs[0], setLabOpen = lbs[1];
   var chs = useState(false), chartOpen = chs[0], setChartOpen = chs[1];
   var vws = useState(null), viewer = vws[0], setViewer = vws[1];
+  // A short "saved" notice at the bottom (same look as the lab screen's), for the reading:
+  // it was an alert that had to be clicked away (imaging-day test 2026-09-30).
+  var tos = useState(''), toast = tos[0], setToast = tos[1];
+  var toastTimer = useRef(null);
+  function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
   var rdo = useState(false), readingsOpen = rdo[0], setReadingsOpen = rdo[1];
   var canRead = (user && Array.isArray(user.permissions)) ? user.permissions.indexOf('consultation')>=0 : (user && user.role==='doctor')||(user&&user.role==='admin');
@@ -223,7 +228,7 @@ export default function ConsultationPage() {
     try {
       await api.put('/pacs/reading/'+viewer.order_item_id, { result_text: readText });
       setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: readText, result_by_name: (user&&user.name)||'', result_at: new Date().toISOString() }) }); });
-      alert(t.cs_readingSaved);
+      showToast(t.cs_readingSaved);
     } catch(e){
       // Cancelled in the consultation room while this window was open (pacs.cancel.js
       // ORDER_CANCELLED): say so, then show the order as it is now.
@@ -1027,19 +1032,19 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 3px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,textDecoration:gone?'line-through':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={o.order_code}>{o.order_code}</td>
-                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
+                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{o.body_part ? <span style={{marginLeft:6,fontSize:12,color:t3,whiteSpace:'nowrap'}}>{o.body_part}</span> : null}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
                             {roCell(o.quantity == null ? 1 : o.quantity, t3)}
                             {roCell(o.frequency || 1, t3)}
                             {roCell(o.days || 1, t3)}
                             {roCell(o.dose, t3)}
-                            {roCell(o.memo || o.body_part, t3)}
+                            {roCell(o.memo, t3)}
                           </> : <>
                           <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input value={o.memo || o.body_part || ''} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input value={o.memo || ''} title={o.memo || undefined} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           </>}
                           <td style={{padding:'3px 2px',textAlign:'center',fontSize: 12,fontWeight:700}}>
                             {(o.code_type==='imaging'||o.pacs_modality)?<button onClick={function(){openViewer(o.id)}} title={t.viewImage||'영상보기'} style={{background:'var(--violet-strong-a22)',color:'var(--violet-text)',border:'1px solid var(--violet-strong-a55)',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize: 13,fontWeight:700,marginRight:4}}>🖼</button>:null}
@@ -1238,6 +1243,10 @@ export default function ConsultationPage() {
             {/* What the arrived images say about the patient (viewer-url -> images): red when
                 they name another patient, amber when they name nobody. PACS's component. */}
             <PatientCheck images={viewer.images} t={t} style={{margin:'8px 14px 0'}} />
+            {/* The device gave the images its own study number and the bridge linked them by
+                accession number - a weaker link. The list (RadiologyReadings) says so; the
+                viewer now says it too (imaging-day test 2026-09-30). */}
+            {viewer.images && viewer.images.linked_by==='accession' ? <div style={{margin:'6px 14px 0',fontSize:12,color:'var(--warn-text)'}}>{t.px_linkedByAccession}</div> : null}
             {viewer.cancelled ? <div style={{margin:'8px 14px 0',padding:'7px 12px',borderRadius:6,background:'var(--notice)',border:'1px solid var(--notice-line)',color:'var(--text-soft)',fontSize:13,fontWeight:700}}>
               ⊘ {t.px_cancelledViewer}{viewer.cancel_reason ? <span style={{fontWeight:400,color:t2}}>{' — '+(t.px_cancelReason||'')+' : '+viewer.cancel_reason}</span> : null}
             </div> : null}
@@ -1257,6 +1266,7 @@ export default function ConsultationPage() {
           </div>
         </div>
       ) : null}
+      {toast ? <div role="status" style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'var(--toast-bg)',color:'var(--toast-text)',border:'1px solid var(--toast-line)',boxShadow:'var(--toast-shadow)',borderRadius:6,padding:'10px 18px',fontSize:14,fontWeight:700,zIndex:1100}}>{toast}</div> : null}
       {readingsOpen && sel ? (
         <div onClick={function(){setReadingsOpen(false)}} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div onClick={function(e){e.stopPropagation()}} style={{width:'88vw',height:'86vh',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>
