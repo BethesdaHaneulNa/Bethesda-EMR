@@ -177,6 +177,9 @@
 | 2026-09-30 | 결정 | `3afb657` 전과: 접수 직원과 의사 둘 다 · 수납이 끝나기 전까지 | ✅ | — | 기본값 그대로 |
 | 2026-09-30 | 접수 | `5069ca7` 전과 서버 길 `PUT /visits/:id/transfer` + 접수 저장도 같은 기록 | ✅ | ✅ | diff 읽음(한 트랜잭션, `applyTransfer` 한 함수, 코드 있는 거절). 실행 중 EMR 거절 길만: 토큰 없음 401 · 없는 내원 404 VISIT_NOT_FOUND · 같은 값 400 NO_CHANGE · 없는 과/과 없음 400 BAD_DEPARTMENT · admin을 의사로/글자 400 BAD_DOCTOR. 앞뒤 UNCHANGED(visit·consultation·기록 줄 수). 실제로 바꾸는 것·409 둘은 실장님 데이터라 하지 않음(세션 시험 187 통과). **총괄 결정**: 접수 저장(`PUT /:id`)도 유효한 영수가 있으면 과·의사 변경을 막음(실장님 결정 「수납이 끝나기 전까지」의 따름) — 접수에 보냄 |
 | 2026-09-30 | 진료 | `fe2c993` 전과 단추(화면만, 중간 보고) | ⏳ 아직 안 합침 | — | 접수 길이 develop에 들어갔으니 코드(code)로 문장을 고르고 격리에서 끝까지 시험한 뒤 보고받아 합침 |
+| 2026-09-30 | PACS | PACS `cec7aee` device-watch(.ps1·.bat) · EMR `a8ddc88` 현지 장비 연결 순서서 `wiki/reference/device-connection-onsite.md` | ✅ PACS main = `cec7aee`(푸시) | ✅ 두 파일을 `C:\Bethesda-PACS`에 복사 | 스크립트 읽음: 비밀번호는 .env에서 읽어 헤더로만 쓰고 찍지 않음, EMR DB는 SELECT만(입력은 글자 검사), 로그 수준은 `-Detail`일 때만 올리고 되돌림. 실행 중 PACS에서 조용한 모드 50초(「기다리는 중」), `-Ping 127.0.0.1 -DevicePort 4242`(ping·포트·C-ECHO 응답) — 읽기만. `-Detail`과 진짜 장비는 하지 않음. 본 것: Orthanc의 W001 경고가 「영상 서버 알림」으로 그대로 뜸(관리 화면을 열면 나오는 잡음) — 걸러 달라고 보냄. **총괄 결정**: 제조사 전용 영상 종류도 받게(`UnknownSopClassAccepted`) — 현지에 개발자가 없고 조용한 거절은 찾기 어려움. PACS에 시킴 |
+| 2026-09-30 | 접수 | `5b918e8`·`7e07753` 문서: history의 과·의사 뜻, `consultation.department_id`를 읽는 곳 조사(history의 보조값 하나뿐) | ✅ | — | 읽음 |
+| 2026-09-30 | 설정 | `5bfd3df` 기록 탭 이름표: visit.transfer, doctor, reason | ✅ | ✅ | diff 읽음(키 9개, 맵 두 줄). 실행 중 EMR에는 전과 줄이 아직 없어 화면에서는 보지 못함(세션이 격리에서 전과 길을 네 번 불러 확인) |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
