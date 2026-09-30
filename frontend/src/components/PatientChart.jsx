@@ -30,6 +30,32 @@ export function PatientChart(props){
 
   var bd='var(--border)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
+  // One note per doctor on a visit (consultation_note, migration 038): the history gives
+  // `notes` [{author_name, note_text, created_at, updated_at}]. Each is drawn under its
+  // own small head - name · time (· edited time) - as the consultation screen does; the
+  // time is made here, in the browser's clock. An answer without `notes` (older server)
+  // falls back to the single note_text.
+  function hhmm(x){
+    if(!x) return '';
+    var d = new Date(x);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  }
+  function noteHead(n){
+    return [ n.author_name || '?', hhmm(n.created_at),
+      n.updated_at ? String(t.cs_noteEdited||'').replace('{time}', hhmm(n.updated_at)) : '' ].filter(Boolean).join(' \u00b7 ');
+  }
+  // compact: the list of visits - one line of text per doctor (two when there is one note)
+  function notesBlock(list, compact){
+    var lines = compact ? (list.length > 1 ? 19 : 38) : null;
+    return list.map(function(n, i){
+      return <div key={n.id || i} style={{marginTop:i?5:0,paddingLeft:7,borderLeft:'3px solid var(--line-soft)'}}>
+        <div title={noteHead(n)} style={{fontSize:12,fontWeight:700,color:t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
+        <div style={Object.assign({fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}, lines ? {maxHeight:lines,overflow:'hidden'} : {})}>{n.note_text}</div>
+      </div>;
+    });
+  }
+  function hasNotes(c){ return !!(c && Array.isArray(c.notes) && c.notes.length); }
+
   // Same rule and wording as the consultation screen (orderStatus in Consultation.jsx).
   // worklist_status only means something for an order sent to an imaging worklist:
   // every other order is stored with 'completed' there from the start, so showing it
@@ -72,7 +98,9 @@ export function PatientChart(props){
         {vrows.map(function(r){return <div key={r[0]} style={{background:scBg,border:'1px solid '+bd,borderRadius:5,padding:'3px 7px'}}><span style={{fontSize:11,color:t3,fontWeight:700,marginRight:4}}>{r[0]}</span><span style={{fontSize:13,color:tx,fontFamily:'monospace'}}>{r[1]}</span></div>;})}
       </div>
       <div style={{fontWeight:700,fontSize:12,color:'var(--accent-text)',marginBottom:3}}>{t.consultNote}</div>
-      <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'8px 10px',color:'var(--text-soft)',fontSize:13,lineHeight:1.6,whiteSpace:'pre-wrap',marginBottom:12,minHeight:44}}>{c.note_text||c.subjective||'\u2014'}</div>
+      {hasNotes(c)
+        ? <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'8px 10px',marginBottom:12,minHeight:44}}>{notesBlock(c.notes, false)}</div>
+        : <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'8px 10px',color:'var(--text-soft)',fontSize:13,lineHeight:1.6,whiteSpace:'pre-wrap',marginBottom:12,minHeight:44}}>{c.note_text||c.subjective||'\u2014'}</div>}
       <div style={{fontWeight:700,fontSize:12,color:'var(--ok-text)',marginBottom:3}}>{t.orders}</div>
       <div style={{background:pn,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
         {((past.rx||[]).length===0 && (past.orders||[]).length===0)?<div style={{padding:12,textAlign:'center',color:t3,fontSize:12}}>{'\u2014'}</div>:null}
@@ -108,7 +136,8 @@ export function PatientChart(props){
           <span style={{fontSize:12,color:t2}}>{h.dept_code||''}</span>
           <span style={{fontSize:12,color:t2,marginLeft:'auto'}}>{h.doctor_name||''}</span>
         </div>
-        <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>
+        {hasNotes(h) ? notesBlock(h.notes, true)
+          : <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>}
       </div>;
     }):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{t.noHistory}</div>}
   </div>;

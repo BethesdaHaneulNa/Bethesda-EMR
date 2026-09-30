@@ -2,6 +2,40 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — PatientChart: 진료 기록을 의사마다 (총괄 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `fdbe033` merge(진료 `dfe514c`, 마이그레이션 038 포함)
+- **근거**: 진료 기록이 의사마다 한 줄(`consultation_note`). `GET /api/patients/:id/history`의 진료마다 `notes`가 옴. S/O/A/P는 null.
+
+### 한 일 — `frontend/src/components/PatientChart.jsx`(수납 주관, 수납·약국 오른쪽 패널)
+
+- `notes`가 있으면 의사마다 작은 머리 **「이름 · HH:MM」**을 두고, 수정됐으면 **「· modifiée HH:MM」**을 붙입니다(`cs_noteEdited` 키를 빌려 씀 — ko 「수정」, en 「edited」). 그 밑에 글이 옵니다.
+  - 왼쪽에 옅은 선(`--line-soft`). 진료 화면 `Consultation.jsx`의 `notesBlock` 모양과 같게 했고, 그 파일은 고치지 않았습니다. 「내 기록」 강조는 수납·약국에는 필요 없어 뺐습니다.
+  - **목록**(과거 내원 카드): 의사가 둘 이상이면 의사마다 글 한 줄, 한 명이면 두 줄까지.
+  - **상세**(카드를 누른 뒤): 전부.
+- 시각은 **브라우저 시계**로 만듭니다(`toLocaleTimeString`). 서버가 `note_text`에 붙인 「— 이름 HH:MM」 머리말은 쓰지 않습니다.
+- `notes`가 없는 응답(옛 서버)이면 예전처럼 `note_text`(없으면 `subjective`) 한 칸을 보여 줍니다.
+- 색은 모두 이름표(`--text-2`, `--line-soft`)입니다.
+
+### 확인 (격리 스택 9183, 새 DB)
+
+- **데이터**: 의사 계정 둘(Dr RABE Hery · Dr RASOA Lalao)이 각자 `PUT /api/consultations/:id/note`로 같은 내원에 기록했고, 1분 뒤 RABE가 고쳤습니다. 다른 내원은 RABE만 기록. 같은 환자의 오늘 내원이 수납 대기에 있음.
+- **프랑스어**:
+  - 목록 「Dr RABE Hery · 17:24 · modifiée 17:25 / Toux depuis 5 jours…」, 「Dr RASOA Lalao · 17:24 / Radio thorax…」
+  - 상세는 두 글 모두 끝까지 나옴.
+- **한국어**: 「Dr RABE Hery · 17:24 · 수정 17:25」.
+- **1366×768**: 가로·세로 스크롤 없음.
+- **대비**: 디자인 `audit-in-browser.js`와 같은 계산(부모 투명도 곱함)으로 오른쪽 패널의 목록·상세를 어두운·밝은 화면에서 재었습니다 — 모자란 곳 **0**.
+
+### 기록
+
+- **바꾼 파일**: `frontend/src/components/PatientChart.jsx`, `wiki/modules/payment.md`(4절 한 줄, 8절 `cc3a8cd` 채움 + 이 줄)
+- **공용 파일 변경**: `PatientChart.jsx`(수납이 맡은 공용 부품). `i18n`은 바꾸지 않음(`cs_noteEdited`를 읽기만).
+- **DB 마이그레이션**: 없음
+- **확인 못 한 것**: 약국 화면에서의 모습은 따로 열어 보지 않았습니다(같은 부품).
+- **다른 세션에 부탁**: 없음
+
 ## 2026-09-30 — 빈 점 「· ·」 · 서류 발행 길 확인 · 설명서 마지막 점검
 
 - **상태**: 확인 요청
