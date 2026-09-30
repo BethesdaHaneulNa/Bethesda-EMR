@@ -320,7 +320,7 @@ export default function LabPage() {
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
         </div>
       </div>
-      {toast ? <div role="status" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', background: 'var(--panel-2)', color: 'var(--ok-text-2)', border: '1px solid var(--ok-a50)', borderRadius: 6, padding: '10px 18px', fontSize: 14, fontWeight: 700, zIndex: 900 }}>✓ {toast}</div> : null}
+      {toast ? <div role="status" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', background: 'var(--toast-bg)', color: 'var(--toast-text)', border: '1px solid var(--toast-line)', boxShadow: 'var(--toast-shadow)', borderRadius: 6, padding: '10px 18px', fontSize: 14, fontWeight: 700, zIndex: 900 }}>✓ {toast}</div> : null}
       <PatientFinder open={finderOpen} onClose={function () { setFinderOpen(false); }} mode="visit"
         onPickVisit={function (v) { pickVisit(v); }} />
       <DocumentModal open={chartViewOpen} onClose={function () { setChartViewOpen(false); }} category="chart" readOnly={true}

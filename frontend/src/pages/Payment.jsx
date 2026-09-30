@@ -517,7 +517,7 @@ export default function PaymentPage() {
               {receipts.map(function(b,i){
                 var out=parseFloat(b.outstanding)||0;
                 var cancelled = b.payment_status==='cancelled';
-                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?'var(--danger-a40)':bd),borderRadius:5,padding:'8px 10px',marginBottom:6,opacity:cancelled?0.85:1}}>
+                return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?'var(--danger-a40)':bd),borderRadius:5,padding:'8px 10px',marginBottom:6,opacity:cancelled?'var(--fade-85)':1}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                     <span style={{fontFamily:'monospace',fontSize:13,color:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(b.billing_date)}</span>
                     <span style={{fontSize:11,color:t2}}>{b.dept_code||''}</span>

@@ -1123,7 +1123,7 @@ export default function ConsultationPage() {
             <div style={{flex:1,display:'flex',overflow:'hidden'}}>
               {viewer.url
                 ? <iframe src={viewer.url} title="PACS Viewer" style={{flex:1,border:0,background:'#000'}}></iframe>
-                : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{viewer.has_viewer && viewer.no_study ? t.px_noStudy : (t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.')}</div>}
+                : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--viewer-text)',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{viewer.has_viewer && viewer.no_study ? t.px_noStudy : (t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.')}</div>}
               <div style={{width:380,borderLeft:'1px solid var(--border-2)',background:'var(--bg-col)',display:'flex',flexDirection:'column',padding:12,boxSizing:'border-box'}}>
                 <div style={{fontWeight:800,fontSize:15,color:'var(--violet-text)',marginBottom:6}}>🩻 {t.reading||'판독소견'}</div>
                 {viewer.reading&&viewer.reading.result_at?<div style={{fontSize:12,color:'var(--text-3)',marginBottom:8}}>{t.lastReadBy||'판독'}: {viewer.reading.result_by_name||''} · {ymd(viewer.reading.result_at)}</div>:null}
