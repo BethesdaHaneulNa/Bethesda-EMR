@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 전과 손질: 의사를 먼저 고르기, 꺼진 단추의 색
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `0fdbb58` 다음
+- **한 일**:
+  - **꺼진 단추**(수납된 내원): `opacity:0.6`을 빼고 파란 띠의 흐린 글자·테두리색(`#6f8db3`·`#2b4568`)으로. 파란 띠는 고정 색 예외 구역이라 이름표가 아니라 띠 안의 다른 글자처럼 hex입니다.
+  - **의사 고르기**(부탁하신 모양 + 한 가지 더):
+    - 의사 목록에 모든 활성 의사를 「과 – 이름」으로. 순서는 **이 내원의 과** 의사 → 과 없는 의사 → 나머지(과 코드·이름).
+    - 다른 과의 의사를 고르면 과가 그 의사의 과로 따라감. 과 없는 의사는 과 그대로.
+    - 과를 바꾸면 목록은 좁히지 않고, 고른 의사가 그 과가 아니면 의사 칸만 「— Choisissez le médecin —」(`cs_trPickDoctor`, ko·en·fr)로 비움 → 확인 꺼짐.
+    - **더 한 것 — 의사 칸을 과 칸 위로**: 가장 흔한 일이 「의사만 바꾸기」이고 과는 그 결과로 따라가므로, 고르는 순서대로 위에서 아래로(의사 → 과 → 사유). 과를 먼저 보게 두면 의사만 바꾸려는 사람도 과 칸을 먼저 읽게 됩니다.
+    - **정렬 기준은 창에서 고른 과가 아니라 내원의 과**: 처음에 고른 과를 기준으로 했더니 의사를 고를 때마다(과가 따라가며) 목록 순서가 바뀌어, 방금 본 자리에 다른 이름이 오는 것을 격리에서 보고 고쳤습니다.
+  - 설명서 fr 「Changer de médecin / de service」 2번: «Pour changer seulement de médecin, choisissez-le : le service suit tout seul.»
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(`cs_trPickDoctor`) · `wiki/modules/consultation.md`(2.7·3.1·8) · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 더함 `cs_trPickDoctor`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768.
+  - 내원 GEN · S2 doctor(과가 다른 의사 셋: GEN S2 doctor, 과 없는 Dr DEUX, PED Dr PEDIA): 목록 «GEN – S2 doctor | Dr DEUX | PED – Dr PEDIA», 고르는 동안 순서 그대로.
+  - Dr PEDIA를 고름 → 과 PED로 따라감, 확인 켜짐. 과 INT → 의사 칸 «— Choisissez le médecin —», 꺼짐. Dr DEUX(과 없음) → 과 INT 그대로, 켜짐. 과 SUR → Dr DEUX 유지. 다시 Dr PEDIA → PED.
+  - 실제로 바꾸기(KO·어두운 화면): 의사 Dr PEDIA 하나만 고르고 «바꾸기» → «과·의사를 바꿨습니다 ✓», 파란 줄 «PED Dr PEDIA». DB 내원·진료 과 PED, 기록 «GEN · S2 doctor → PED · Dr PEDIA».
+  - 수납된 내원: 단추 `disabled`, 계산된 `opacity 1`, 글자 rgb(111,141,179)·테두리 rgb(43,69,104), title «이미 수납한 내원이라 전과할 수 없습니다». 파란 띠는 밝은·어두운 화면에서 같은 색.
+  - 창: FR 밝은 화면·KO 어두운 화면 그림 확인.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-09-30 — 전과: 접수의 서버 길과 이어 끝까지 시험
 
 - **상태**: 확인 요청

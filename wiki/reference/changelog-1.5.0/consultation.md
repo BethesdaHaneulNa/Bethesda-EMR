@@ -111,8 +111,8 @@ that opened the consultation. Who wrote each note is shown on the note itself.
 ### Change the department or doctor of a visit (Transfert)
 
 A visit registered to the wrong department or doctor no longer has to be cancelled and
-registered again. **⇄ Transfert** on the patient bar opens a small window: department,
-doctor, optional reason. The patient bar, the chart and the queue change at once; notes,
+registered again. **⇄ Transfert** on the patient bar opens a small window: doctor (every
+doctor; the department follows the one chosen), department, optional reason. The patient bar, the chart and the queue change at once; notes,
 prescriptions and orders stay as they are, and each doctor's note stays theirs. It is
 written to the change log. Not possible once the visit is paid (the button is greyed) or
 cancelled. Reception can do the same from its screen.

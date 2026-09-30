@@ -402,6 +402,7 @@ export default {
   cs_trTitle: "전과 — 과·의사 바꾸기",
   cs_trDept: "과",
   cs_trDoctor: "의사",
+  cs_trPickDoctor: "— 의사를 고르세요 —",
   cs_trReason: "사유 (선택)",
   cs_trConfirm: "바꾸기",
   cs_trKeep: "진료 기록·처방·오더는 그대로입니다. 앞 의사의 기록은 그 의사 이름으로 남고 그 의사만 고칠 수 있습니다.",
