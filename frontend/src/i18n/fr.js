@@ -985,6 +985,9 @@ export default {
   se_backupSafetyTip: "💾 Chaque nuit, elles sont aussi copiées sur le disque externe (avec la sauvegarde des images). Vérifiez que le disque est branché dans l'état (le point en haut, ou la fenêtre d'état du PC serveur). Vous pouvez aussi en télécharger une sur clé USB avec ⬇ ci-dessous.",
   se_fld_refundedAmount: "Rendu au patient",
   se_act_drugPrice: "Prix d'un médicament modifié",
+  se_act_orderPrice: "Prix d'un acte modifié",
+  se_fld_priceClinic: "Prix",
+  se_fld_priceList: "Prix de base",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

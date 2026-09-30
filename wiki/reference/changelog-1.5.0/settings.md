@@ -29,8 +29,9 @@ There was no record of who changed a lab result, a finished consultation, a rece
 details. The modules now write each such change to `audit_log`, and **Paramètres → Journal** shows it:
 when, who, what, which patient, old value → new value, filtered by date, person, type or patient. The
 table refuses UPDATE, DELETE and — found during a restore drill, where it emptied the whole log —
-TRUNCATE (migration 026). Staff account changes are logged by Settings, and so is a drug's price when it
-changes (old price → new price; the director's decision), including the first price of an imported drug.
+TRUNCATE (migration 026). Staff account changes are logged by Settings, and so are prices when they
+change (old price → new price; the director's decision): a drug's, including the first price of an
+imported drug, and an order code's (consultation fees, lab tests, imaging, procedures).
 
 ### Backups you can trust, and that say when they cannot be restored
 

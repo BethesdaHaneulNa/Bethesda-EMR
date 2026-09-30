@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 오더 코드(진료비·검사·영상·처치) 가격 변경도 기록에 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `bf3904c` 이후 merge 위)
+- **한 일**: `admin.routes.js` `PUT /order-codes/:id`를 약과 같은 모양으로 — 한 트랜잭션(`SELECT id, code, name, price, price_clinic … FOR UPDATE` → UPDATE → `auditPrice` → COMMIT), 없는 코드는 ROLLBACK 뒤 404, 검사(400)는 트랜잭션 전. `ACTIONS.ORDER_PRICE`, `entity 'order_code'`, 요약 = 코드 + 이름, 환자 없음. 새 코드(POST)는 남기지 않음.
+- **가격 칸이 둘**: `price_clinic`(수납이 청구 — `billing.routes.js`·약속처방이 읽음)과 `price`. 편집 창의 「Prix」 한 칸이 둘 다 같은 값으로 씀 → 그대로 두면 한 번 바꾼 것이 「Prix」 두 줄로 보임. `auditPrice(client, req, action, entity, was, now, fields, sameAs)`로 넓혀, **두 칸이 똑같이 움직이면 `price_clinic`만**, 하나만 움직이면 그 칸만 남김. 약은 `['unit_price']`(모양 그대로).
+- **다른 길**: 없음 — `UPDATE order_code`는 이 라우트와 감추기(DELETE)뿐, 검사 항목 탭의 새 패널은 POST.
+- **기록 탭**: `settings.order.price` → 「Prix d'un acte modifié / 오더 코드 가격을 바꿈 / Order code price changed」, 칸 `price_clinic` 「Prix / 가격 / Price」, `price` 「Prix de base / 기본 가격 / List price」. 종류 목록에도.
+- **시험** `settings.drugprice.mjs`에 오더 코드 10개 더함(모두 24): 새 코드 0 / 가격만(두 칸 함께) 1줄·`price_clinic`만 5000 → 6000 / 코드·이름·환자 없음 / 이름만 0 / 같은 가격 "6000.00" 0 / `price`만 움직임 → 그 칸만 1줄 / 권한 없음 403·0 / 없는 코드 404·0.
+- **설명서** `manual-fr/settings.md` 「Lire le Journal」: 기록되는 것 여덟 가지(… prix des médicaments, prix des actes), 6에 「Le prix d'un acte … aussi」, 7에서 「le prix des actes」를 뺌. 변경 내역 초안 한 줄.
+- **포커스 테두리**: 디자인 세션의 공용 규칙이 오면 `Settings.jsx`의 `outline:'none'`을 지우겠음 — 아직 부탁이 오지 않아 손대지 않음.
+- **공용 파일 변경**: i18n `se_act_orderPrice`, `se_fld_priceClinic`, `se_fld_priceList`.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/settingsAudit.js` · i18n 3개 · `backend/test/settings.drugprice.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): drugprice 24 · drugs · audit · access(1265) 통과. 화면: 오더 코드 창에서 C01 New Visit 15000 → 16000 저장 → 기록 탭 첫 줄 fr 「Prix d'un acte modifié · C01 New Visit · — · Prix: 15000 → 16000」(한 줄), ko 「오더 코드 가격을 바꿈 … 가격: 15000 → 16000」, 종류 목록에 「오더 코드 가격을 바꿈」.
+
 ## 2026-09-30 — 약 가격 변경을 기록에 (실장님 결정 (나)) · 검사 항목 설명 두 문장
 
 - **상태**: 확인 요청

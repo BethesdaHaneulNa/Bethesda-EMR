@@ -985,6 +985,9 @@ export default {
   se_backupSafetyTip: "💾 밤마다 외장 디스크로도 복사됩니다(영상 백업과 함께). 디스크가 꽂혀 있는지는 상태 창(상단의 점 또는 서버 PC의 상태 창)에서 확인하세요. 필요하면 아래 ⬇로 USB에도 내려받을 수 있어요.",
   se_fld_refundedAmount: "돌려준 돈",
   se_act_drugPrice: "약 가격을 바꿈",
+  se_act_orderPrice: "오더 코드 가격을 바꿈",
+  se_fld_priceClinic: "가격",
+  se_fld_priceList: "기본 가격",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

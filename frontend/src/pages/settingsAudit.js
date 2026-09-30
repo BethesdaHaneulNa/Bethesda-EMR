@@ -25,6 +25,7 @@ export var AUDIT_ACTIONS = {
   'settings.staff.password': 'se_act_staffPassword',
   // price only, before -> after (decision 2026-09-30 (나)); no patient
   'settings.drug.price': 'se_act_drugPrice',
+  'settings.order.price': 'se_act_orderPrice',
 };
 
 // field name -> se_ key of its label
@@ -52,6 +53,8 @@ var FIELDS = {
   order_code: 'se_fld_orderCode', order_name: 'se_fld_orderName', code_type: 'se_fld_codeType',
   dose: 'se_fld_dose', frequency: 'se_fld_frequency', days: 'se_fld_days', route: 'se_fld_route',
   quantity: 'se_fld_quantity', total_qty: 'se_fld_totalQty', unit_price: 'se_fld_unitPrice', memo: 'se_fld_memo',
+  // settings: an order code's price (price_clinic is the one the payment screen bills)
+  price_clinic: 'se_fld_priceClinic', price: 'se_fld_priceList',
   pack_label: 'se_fld_packLabel',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',
