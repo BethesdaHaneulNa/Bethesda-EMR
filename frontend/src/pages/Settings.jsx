@@ -410,7 +410,9 @@ export default function SettingsPage() {
 
   var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
   var IS={width:'100%',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:'var(--text)',fontSize: 14,outline:'none',boxSizing:'border-box',fontFamily:'inherit'};
-  var LOCKED_IS=Object.assign({},IS,{background:'var(--field-locked)',color:'var(--text-locked)',cursor:'not-allowed'});
+  // opacity 1: Chrome fades a disabled <select> to 0.7 on its own, which also fades its text
+  // (design 3.3.1); the locked look comes from the two colours alone.
+  var LOCKED_IS=Object.assign({},IS,{background:'var(--field-locked)',color:'var(--text-locked)',cursor:'not-allowed',opacity:1});
 
   // The account the setup wizard created. Its role and permissions are fixed server-side
   // (see admin.routes.js); greying them out here just stops someone trying. Editing any
@@ -758,7 +760,7 @@ export default function SettingsPage() {
                 <div style={{marginTop:4,fontSize:13,lineHeight:1.5,color:pacsConfig.orthanc_password_set?'var(--ok-text)':'var(--warn-text)'}}>{pacsConfig.orthanc_password_set?('✓ '+t.px_orthancPasswordSet):('⚠ '+t.px_orthancPasswordMissing)}</div>
                 {/* Kept, not used: an old backup restores this column, and removing the
                     field would hide what it holds. */}
-                <div style={{marginTop:8,opacity:0.6}}><Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')+' — '+t.px_viewerUrlUnused}><input placeholder="" value={pacsConfig.pacs_viewer_url||''} onChange={function(e){up('pacs_viewer_url',e.target.value)}} style={IS}/></Fld></div>
+                <div style={{marginTop:8}}>{/* locked, not faded: opacity also fades the text (design 3.3.1) */}<Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')+' — '+t.px_viewerUrlUnused}><input placeholder="" value={pacsConfig.pacs_viewer_url||''} readOnly style={LOCKED_IS}/></Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
                   <button onClick={function(){testPacs('worklist')}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
                 </div>
@@ -1117,7 +1119,7 @@ export default function SettingsPage() {
                     change is written to the stock record (receive / count / discard).
                     Unchanged here, saveEdit leaves stock_qty out of the request. A new
                     drug starts at 0 and is received there. */}
-                <Fld label={t.ph_stock}><input type="number" value={editItem.id ? (editItem.stock_qty||0) : 0} readOnly disabled title={t.ph_stockReadOnlyHint} style={Object.assign({},IS,{opacity:.6,cursor:'not-allowed'})}/></Fld>
+                <Fld label={t.ph_stock}><input type="number" value={editItem.id ? (editItem.stock_qty||0) : 0} readOnly disabled title={t.ph_stockReadOnlyHint} style={LOCKED_IS}/></Fld>
                 {/* At or below this the Stock tab shows the count in red; 0 = no minimum.
                     Whole numbers only - the column is an integer and the API refuses others. */}
                 <Fld label={t.ph_minStock}><input type="number" min="0" step="1" value={editItem.min_stock==null?'':editItem.min_stock} title={t.ph_minStockHint} onChange={function(e){ue('min_stock',e.target.value===''?0:Math.max(0,Math.floor(Number(e.target.value))||0))}} style={IS}/></Fld>
@@ -1132,7 +1134,7 @@ export default function SettingsPage() {
                   <input type="checkbox" checked={!!editItem.pack_unit} onChange={function(e){ var on=e.target.checked; setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n.pack_unit=on; n.pack_label=on?(p.pack_label||'bottle'):null; return n; }); }}/>
                   {t.ph_packUnit}
                 </label>
-                <select value={editItem.pack_label||'bottle'} disabled={!editItem.pack_unit} onChange={function(e){ue('pack_label',e.target.value)}} style={Object.assign({},IS,{width:'auto',opacity:editItem.pack_unit?1:.5})}>
+                <select value={editItem.pack_label||'bottle'} disabled={!editItem.pack_unit} onChange={function(e){ue('pack_label',e.target.value)}} style={Object.assign({},editItem.pack_unit?IS:LOCKED_IS,{width:'auto'})}>
                   {PACK_LABELS.map(function(k){ return <option key={k} value={k}>{t['ph_pack_'+k]}</option>; })}
                 </select>
                 <div style={{fontSize: 12,color:'var(--text-2)',flexBasis:'100%'}}>{editItem.pack_unit ? t.ph_packUnitHintOn : t.ph_packUnitHint}</div>
