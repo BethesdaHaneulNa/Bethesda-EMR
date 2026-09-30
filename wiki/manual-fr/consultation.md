@@ -49,7 +49,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
    - **Fois** : en combien de prises la journée est répartie (par exemple `3`).
    - **Jours** : la durée (par exemple `7`).
    - **Posologie** : par exemple `PO`, `TID` (facultatif, 10 caractères au plus).
-4. Passez d'une case à l'autre avec Tab. La ligne est enregistrée quand vous la **quittez** (clic ailleurs, ou Tab après la dernière case).
+4. Passez d'une case à l'autre avec Tab. La ligne est enregistrée quand vous la **quittez** (clic ailleurs, ou Tab après la dernière case). Pendant la consultation, elle l'est aussi **2 secondes après votre dernière frappe** : une coupure de courant ou un F5 ne fait perdre que ce qui vient d'être tapé. Une consultation terminée n'est enregistrée qu'en quittant la ligne.
 5. **Total = Dose/j × Jours.** Les **Fois** ne multiplient pas. Dans l'exemple : 3 × 7 = 21 comprimés.
 6. Lisez la phrase sous le nom, par exemple « 1 cp × 3 fois/jour pendant 7 jours (total 21) ». C'est la même phrase que la pharmacie imprime. Si elle ne correspond pas à ce que vous voulez, corrigez les cases.
 
@@ -112,7 +112,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 5. Dans le texte proposé, remplacez chaque partie entre crochets `[ ]` par le vrai contenu et supprimez les crochets. Tant qu'il en reste, une ligne jaune **⚠ À compléter** les montre.
 6. Cliquez sur **Émettre**. Le document reçoit un numéro (par exemple `D26-00001`).
 7. Cliquez sur **🖨 Réimprimer**, puis signez. Le document porte le nom du médecin qui l'a rédigé.
-8. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**.
+8. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**. L'émission et l'annulation sont notées dans le journal des modifications (numéro et nom du document, jamais son contenu).
 
 <!-- terme à vérifier sur place : noms des formulaires opératoires et termes médicaux des comptes-rendus (liste dans wiki/modules/consultation.md 3.6) -->
 

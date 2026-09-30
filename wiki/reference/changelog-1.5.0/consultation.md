@@ -112,6 +112,12 @@ the phrase dictionary's header now wraps, and the vital signs keep two columns d
   log with the old and new values.
 - The time a consultation is first finished is stored; the pharmacy lists patients in
   that order.
+- A prescription or order row is also saved 2 seconds after the last keystroke while the
+  consultation is open, and rows not yet saved are sent when the page is closed or
+  reloaded: a power cut or an F5 loses at most what was typed in the last 2 seconds.
+  A finished consultation is still saved only on leaving the row (one change-log line).
+- Every document issued and every document voided is written to the change log (number
+  and name, never the contents). Voiding a document twice keeps the first reason.
 
 Migrations: **023** (who cancelled an order, when, why), **030** (order total),
 **032** (consultation finished time). All add columns; 030 and 032 fill them for
