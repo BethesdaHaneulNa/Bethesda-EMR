@@ -114,7 +114,11 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 2. **S'il est jaune ou rouge, cliquez dessus** : la liste dit ce qui ne va pas (base, disque, sauvegarde, appareils, imagerie…). Faites ce qui est écrit, ou prévenez le responsable.
 3. Une ligne grise « Non utilisé » n'est pas un problème.
 4. **Copie des sauvegardes de l'EMR (disque externe)** en jaune (« Disque externe absent », « Pas de copie depuis … h », « Échec de la copie … ») : branchez le disque externe (le même que pour les images). Si la ligne reste jaune le lendemain, prévenez le responsable.
-5. **Adresses de l'imagerie** en jaune « La visionneuse n'est pas appairée au serveur d'images … » : les images ne s'ouvrent pas depuis le dossier. Sur le PC serveur, dans le dossier PACS, il faut lancer **pair-with-emr** — prévenez le responsable. « Ancien port … » : dans **Flux d'ordres**, remplacez 8080 par 9080 (adresse de l'EMR) ou 8090 par 9090 (serveur d'images), puis **Sauver**.
+5. **Visionneuse → serveur d'images** en jaune : l'EMR n'arrive pas au serveur d'images, et les images ne s'ouvrent pas depuis le dossier.
+   - « Rien ne répond à … » : le serveur d'images est arrêté, ou l'adresse est fausse. Dans **Flux d'ordres**, l'adresse du serveur d'images est en général `http://host.docker.internal:9090` — **pas** l'adresse du PC sur le réseau.
+   - « … refuse le mot de passe enregistré » : lancez **pair-with-emr** dans le dossier PACS (prévenez le responsable).
+   - « Autre chose que le serveur d'images répond … » : un autre programme utilise ce port — prévenez le responsable.
+6. **Adresses de l'imagerie** en jaune « La visionneuse n'est pas appairée au serveur d'images … » : les images ne s'ouvrent pas depuis le dossier. Sur le PC serveur, dans le dossier PACS, il faut lancer **pair-with-emr** — prévenez le responsable. « Ancien port … » : dans **Flux d'ordres**, remplacez 8080 par 9080 (adresse de l'EMR) ou 8090 par 9090 (serveur d'images), puis **Sauver**.
 
 ### Lire le Journal
 
@@ -146,6 +150,7 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | La visionneuse n'est pas appairée au serveur d'images — lancez pair-with-emr… | Les images ne s'ouvrent pas depuis le dossier | Prévenez le responsable (dossier PACS du PC serveur) |
 | Ligne 2 : la dose par jour doit être supérieure à 0. (et autres « Ligne n : … ») | Une ligne d'ordonnance type a un nombre refusé | Corrigez la ligne indiquée |
 | Le serveur ne répond pas… | Le serveur est arrêté ou lent | Regardez la fenêtre d'état sur le PC serveur ; prévenez le responsable |
+| Fenêtre d'état : « Autres programmes sur les ports — port 9080 : DownloadServer … » | Un autre programme (téléchargement, serveur web…) écoute un port de l'EMR ou du PACS ; l'écran peut s'ouvrir alors que la liste de travail des appareils ne marche plus | Fermez ou désinstallez ce programme, redémarrez le PC ; sinon prévenez le responsable |
 
 ## À ne pas faire
 

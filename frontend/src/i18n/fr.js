@@ -1002,6 +1002,15 @@ export default {
   se_no: "Non",
   se_logShowIssued: "Afficher aussi les documents émis",
   se_logIssuedHidden: "{n} ligne(s) « Document émis » masquée(s)",
+  se_sysItem_pacs_relay: "Visionneuse → serveur d'images",
+  se_sys_pacsRelay_ok: "Joignable (Orthanc {version})",
+  se_sys_pacsRelay_off: "Non utilisé",
+  se_sys_pacsRelay_refused: "Rien ne répond à {url} — le serveur d'images est arrêté, ou l'adresse ou le port est faux (en général http://host.docker.internal:9090)",
+  se_sys_pacsRelay_unknownHost: "Adresse inconnue : {url} — vérifiez l'adresse du serveur d'images dans Paramètres → Flux d'ordres",
+  se_sys_pacsRelay_timeout: "Pas de réponse de {url} — adresse fausse, ou un pare-feu bloque",
+  se_sys_pacsRelay_unauthorized: "Le serveur d'images refuse le mot de passe enregistré — lancez pair-with-emr dans le dossier PACS",
+  se_sys_pacsRelay_notOrthanc: "Autre chose que le serveur d'images répond à {url} (HTTP {code}) — un autre programme utilise ce port",
+  se_sys_pacsRelay_badAddress: "L'adresse du serveur d'images n'est pas une adresse — Paramètres → Flux d'ordres",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

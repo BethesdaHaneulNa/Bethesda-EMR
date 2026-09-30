@@ -102,6 +102,11 @@ $T = @{
     emrCopyNever = 'jamais copiee'
     emrCopyStale = 'pas de copie depuis {0} h'
     adviceEmrCopy = 'Copie des sauvegardes de l''EMR : branchez le disque externe (le meme que pour les images). Sinon prevenez le responsable.'
+    foreign = 'Autres programmes sur les ports'
+    foreignOne = 'port {0} : {1} (PID {2})'
+    foreignAnswers = '127.0.0.1:{0} repond, mais pas l''EMR ({1}) - un autre programme utilise ce port'
+    foreignNoJson = 'pas de reponse de l''EMR'
+    adviceForeign = 'Un autre programme ecoute un port de l''EMR ou du PACS ({0}). Fermez-le ou desinstallez-le, puis redemarrez le PC. Sinon prevenez le responsable.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -163,6 +168,11 @@ $T = @{
     emrCopyNever = 'never copied yet'
     emrCopyStale = 'not copied for {0} h'
     adviceEmrCopy = 'EMR backup copy: plug in the external disk (the same one as for the images). Otherwise tell the person in charge.'
+    foreign = 'Other programs on the ports'
+    foreignOne = 'port {0}: {1} (PID {2})'
+    foreignAnswers = '127.0.0.1:{0} answers, but not the EMR ({1}) - another program is using this port'
+    foreignNoJson = 'not the EMR''s answer'
+    adviceForeign = 'Another program is listening on a port of the EMR or the PACS ({0}). Close or uninstall it, then restart the PC. Otherwise tell the person in charge.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -224,6 +234,11 @@ $T = @{
     emrCopyNever = '아직 복사된 적 없음'
     emrCopyStale = '{0}시간째 복사 안 됨'
     adviceEmrCopy = 'EMR 백업 복사: 외장 디스크(영상 백업과 같은 것)를 꽂으세요. 그래도 안 되면 관리자에게 알리세요.'
+    foreign = '포트를 쓰는 다른 프로그램'
+    foreignOne = '{0} 포트: {1} (PID {2})'
+    foreignAnswers = '127.0.0.1:{0}에서 EMR이 아닌 것이 답함 ({1}) - 다른 프로그램이 이 포트를 쓰고 있음'
+    foreignNoJson = 'EMR의 답이 아님'
+    adviceForeign = '다른 프로그램이 EMR이나 PACS의 포트를 듣고 있습니다({0}). 그 프로그램을 끄거나 지운 뒤 PC를 다시 시작하세요. 그래도 안 되면 관리자에게 알리세요.'
   }
 }
 
@@ -393,6 +408,66 @@ function Add-PortCheck {
   }
   if ($problems.Count -eq 0) { return $Check }
   return New-Check $Check.Key 'down' ($problems -join ', ') $true
+}
+
+# ---------------------------------------------------- other programs on our ports
+#
+# 2026-09-30, clean install on the director's PC: PikPak's DownloadServer listened on
+# 127.0.0.1:9080. Windows lets that sit next to Docker's 0.0.0.0:9080, so the EMR still
+# opened in a browser (localhost -> IPv6, the LAN address) while the worklist bridge and
+# anything asking 127.0.0.1 reached PikPak (HTTP 480) - and every line here was green.
+# Two checks: who listens on the EMR's and the PACS's host ports besides Docker, and
+# whether 127.0.0.1:<EMR port>/api/health is the EMR's own answer (the bridge's road).
+# The PACS folder's check-windows-ports.ps1 says the same (PACS session).
+$DockerListener = '^(com\.docker\..*|docker.*|vpnkit.*|wslrelay|wsl.*)$'
+
+function Get-ForeignListeners {
+  param([int[]]$Ports)
+  $found = @()
+  try { $conns = @(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { $Ports -contains [int]$_.LocalPort }) }
+  catch { return @() }
+  foreach ($c in $conns) {
+    $name = ''
+    try { $name = (Get-Process -Id $c.OwningProcess -ErrorAction Stop).ProcessName } catch {}
+    if ($name -match $DockerListener) { continue }
+    if (-not $name) { $name = '?' }
+    # PID 4 "System" is Windows' own HTTP server (HTTP.sys) - still not ours.
+    $key = [string]$c.LocalPort + '|' + $c.OwningProcess
+    if (@($found | Where-Object { $_.Key -eq $key }).Count) { continue }
+    $found += [pscustomobject]@{ Key = $key; Port = [int]$c.LocalPort; Name = $name; ProcessId = $c.OwningProcess }
+  }
+  return $found
+}
+
+function Get-ForeignCheck {
+  param($Strings, [int[]]$Ports)
+  $found = @(Get-ForeignListeners -Ports $Ports)
+  if ($found.Count -eq 0) { return $null }
+  $lines = @($found | Sort-Object Port | ForEach-Object { $Strings.foreignOne -f $_.Port, $_.Name, $_.ProcessId })
+  $check = New-Check 'foreign' 'warn' ($lines -join ', ') $false $true
+  $check | Add-Member -NotePropertyName Names -NotePropertyValue ((@($found | ForEach-Object { $_.Name }) | Select-Object -Unique) -join ', ')
+  return $check
+}
+
+# The EMR screen check says the container is healthy and its port open; this asks the
+# port on 127.0.0.1 what it is. Only the EMR's own JSON counts ({"status":"ok","version":..}).
+function Add-LoopbackEmrCheck {
+  param($Check, [int]$Port, $Strings)
+  if ($Check.State -ne 'ok' -and $Check.State -ne 'warn') { return $Check }
+  $what = $null
+  try {
+    $r = Invoke-WebRequest -Uri ('http://127.0.0.1:{0}/api/health' -f $Port) -UseBasicParsing -TimeoutSec 4
+    $j = $null
+    try { $j = $r.Content | ConvertFrom-Json } catch {}
+    if (-not ($j -and $j.status -eq 'ok' -and $j.version)) { $what = $Strings.foreignNoJson }
+  } catch {
+    $code = $null
+    try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+    if ($code) { $what = 'HTTP ' + $code }
+    # No answer at all is the port check's business (closed / held by Windows).
+  }
+  if (-not $what) { return $Check }
+  return New-Check $Check.Key 'down' ($Strings.foreignAnswers -f $Port, $what) $false $true
 }
 
 function Get-ContainerCheck {
@@ -597,6 +672,12 @@ function Get-AllChecks {
   # (viewer 9090, DICOM 4242). The others are reached only inside Docker.
   $checks['web']  = Add-PortCheck -Check $checks['web']  -Container 'bethesda-emr-web' -Strings $Strings
   $checks['pacs'] = Add-PortCheck -Check $checks['pacs'] -Container 'bethesda-pacs'    -Strings $Strings
+  $webPorts  = @(Get-HostPorts -Container 'bethesda-emr-web' | ForEach-Object { $_.Port })
+  $pacsPorts = @(Get-HostPorts -Container 'bethesda-pacs'    | ForEach-Object { $_.Port })
+  $emrPort = if ($webPorts.Count) { $webPorts[0] } else { 9080 }
+  $checks['web'] = Add-LoopbackEmrCheck -Check $checks['web'] -Port $emrPort -Strings $Strings
+  $ourPorts = @($webPorts + $pacsPorts | Select-Object -Unique)
+  if ($ourPorts.Count -eq 0) { $ourPorts = @(9080, 9090, 4242) }
 
   # Docker already knows where the backup folder was put, whichever drive that
   # is, so nobody has to configure it here. If it cannot tell us, fall back to
@@ -609,6 +690,8 @@ function Get-AllChecks {
     (Get-BackupCheck -Strings $Strings -BackupPath $backupPath -DbOk ($checks['db'].State -eq 'ok')),
     $checks['pacs'], $checks['bridge']
   )
+  $foreign = Get-ForeignCheck -Strings $Strings -Ports $ourPorts
+  if ($foreign) { $ordered += $foreign }
   $img = Get-ImageBackupCheck -Strings $Strings
   if ($img) { $ordered += $img }
   # Only while the database answers; no row for a report from the older PACS script.
@@ -638,6 +721,10 @@ function Get-Advice {
   if ($Result.DockerDown) { return $Strings.dockerDown }
   foreach ($c in $Result.Checks) {
     if ($c.State -eq 'down' -and $c.Port) { return $Strings.advicePort }
+  }
+  # Another program on our ports explains a red EMR line better than "restart".
+  foreach ($c in $Result.Checks) {
+    if ($c.Key -eq 'foreign') { return ($Strings.adviceForeign -f $c.Names) }
   }
   foreach ($c in $Result.Checks) {
     if ($c.State -eq 'down') { return $Strings.adviceDown }
@@ -687,9 +774,9 @@ $ColorPaper = [System.Drawing.Color]::FromArgb(248, 248, 246)
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $T[$script:CurrentLang].title
-# Room for up to ten rows (the seven, plus imaging addresses, image backup and the EMR
-# backup copy when they show).
-$form.Size = New-Object System.Drawing.Size(620, 680)
+# Room for up to eleven rows (the seven, plus imaging addresses, image backup, the EMR
+# backup copy and other programs on the ports when they show).
+$form.Size = New-Object System.Drawing.Size(620, 720)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = $ColorPaper
 

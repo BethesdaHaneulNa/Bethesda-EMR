@@ -1011,6 +1011,15 @@ export default {
   se_no: "No",
   se_logShowIssued: "Also show issued documents",
   se_logIssuedHidden: "{n} \"Document issued\" line(s) folded away",
+  se_sysItem_pacs_relay: "Viewer → image server",
+  se_sys_pacsRelay_ok: "Reached (Orthanc {version})",
+  se_sys_pacsRelay_off: "Not used",
+  se_sys_pacsRelay_refused: "Nothing answers at {url} — the image server is stopped, or the address or port is wrong (usually http://host.docker.internal:9090)",
+  se_sys_pacsRelay_unknownHost: "Unknown address: {url} — check the image server address in Settings → Order feed",
+  se_sys_pacsRelay_timeout: "No answer from {url} — wrong address, or a firewall blocks it",
+  se_sys_pacsRelay_unauthorized: "The image server refuses the stored password — run pair-with-emr in the PACS folder",
+  se_sys_pacsRelay_notOrthanc: "Something other than the image server answers at {url} (HTTP {code}) — another program is using this port",
+  se_sys_pacsRelay_badAddress: "The image server address is not an address — Settings → Order feed",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
