@@ -991,6 +991,15 @@ export default {
   se_act_orderPrice: "오더 코드 가격을 바꿈",
   se_fld_priceClinic: "가격",
   se_fld_priceList: "기본 가격",
+  se_act_docIssue: "서류를 발행함",
+  se_act_docVoid: "서류를 취소함",
+  se_fld_docNo: "서류 번호",
+  se_fld_template: "서류",
+  se_fld_docLang: "언어",
+  se_fld_voided: "취소됨",
+  se_fld_voidReason: "취소 사유",
+  se_yes: "예",
+  se_no: "아니요",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

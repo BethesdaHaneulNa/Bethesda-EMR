@@ -74,7 +74,7 @@ Exemple : RASOA Marie a payé 18 000 Ar (consultation 15 000 + médicament 3 000
 1. Elle revient dans **En attente** avec le badge **Correction** et **↩ À rembourser: 3 000 Ar**.
 2. Cliquez sur son nom. L'écran montre **Articles actuels**, **Montant correct** 15 000, **Déjà encaissé** 18 000 et **Remboursement dû** 3 000.
 3. Cliquez sur **↩ Appliquer la correction**. La fenêtre dit « Appliquer la correction ? … **Rendez 3 000 Ar au patient.** ». Cliquez sur OK.
-4. **Rendez 3 000 Ar** à la patiente. Un nouveau reçu (15 000 Ar) remplace l'ancien : il indique « Remplace le(s) reçu(s) » et « Remboursé au patient : 3 000 Ar ». L'ancien reçu est marqué **Remplacé** (« → remplacé par R-… »), pas **ANNULÉ** ; dans **Payé aujourd’hui**, il est rangé sous **▸ Annulés / remplacés**.
+4. **Rendez 3 000 Ar** à la patiente. Un nouveau reçu (15 000 Ar) remplace l'ancien : il indique « Remplace le(s) reçu(s) » et « Remboursé au patient : 3 000 Ar ». L'ancien reçu est marqué **Remplacé** (« → remplacé par R-… », bord violet), pas **ANNULÉ** ; dans **Payé aujourd’hui**, il est rangé sous **▸ Annulés / remplacés**.
 
 Avant de cliquer, le cadre **Ce qui change** montre chaque ligne modifiée, par exemple « CBC (annulé) 1 → 0 −12 000 » (examen annulé par le médecin) ou « Amoxicilline 3 → 0 −1 500 » (médicament retiré).
 
@@ -94,7 +94,7 @@ N'annulez un reçu que si le reçu lui-même est faux (mauvais patient, par exem
    - **Oui — N Ar rendus** : vous rendez tout l'argent au patient.
    - **Non — l’argent reste à la caisse** : l'argent reste dans la caisse ; il servira quand vous re-facturerez (9).
    - Si le reçu n'avait rien encaissé, il n'y a qu'un bouton : **Annuler le reçu**.
-4. Le reçu devient **ANNULÉ**. Dans **Reçus**, il indique **Rendu à l’annulation** ou **Gardé à l’annulation**.
+4. Le reçu devient **ANNULÉ** (bord rouge). Dans **Reçus**, il indique **Rendu à l’annulation** ou **Gardé à l’annulation**.
 
 ### 9. Re-facturer après une annulation
 
@@ -117,7 +117,7 @@ Une ligne jaune **📅 2026-09-28 · visite d’un jour passé · pas encore enc
 ### 12. Réimprimer un reçu
 
 1. Choisissez le patient (**Payé aujourd’hui** ou **🔍 Trouver patient**), puis **Reçus**.
-2. Cliquez sur **🖨 Réimprimer** à côté du reçu. Le reçu est identique au premier. Un reçu annulé porte **ANNULÉ**.
+2. Cliquez sur **🖨 Réimprimer** à côté du reçu. Le reçu est identique au premier. Un reçu annulé porte **ANNULÉ** sur le papier — aussi un reçu remplacé par une correction ; c'est le nouveau reçu qui indique « Remplace le(s) reçu(s) ».
 
 ### 13. Le patient n'est pas dans la liste
 
