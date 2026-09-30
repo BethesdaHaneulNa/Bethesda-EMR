@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   rc_visitCancelled: "Visite annulée",
   rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
-  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » et le patient part à la caisse.",
+  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse.",
   rc_workDate: "Date de travail",
   rc_prevDay: "Jour précédent",
   rc_nextDay: "Jour suivant",
@@ -308,6 +308,9 @@ export default {
   rc_pastDateBanner: "Vous consultez une date passée ({date}) : consultation et mise en ordre (annuler, terminer) seulement. Les nouveaux enregistrements et les modifications se font à la date du jour.",
   rc_pastDateNoNew: "À une date passée, on ne peut ni créer ni modifier un enregistrement. Appuyez sur « Aujourd’hui » et enregistrez à la date du jour.",
   rc_noPatientFound: "Aucun patient trouvé pour « {q} » — cliquez sur « + {btn} ».",
+  rc_completeNoConsultBilled: "Terminer {name} sans consultation ? Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite.",
+  rc_colVisitState: "État",
+  rc_billNothing: "Rien à payer",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
