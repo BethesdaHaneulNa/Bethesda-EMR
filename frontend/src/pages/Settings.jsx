@@ -127,6 +127,9 @@ export default function SettingsPage() {
   // connection test) in the screen's language. A text not listed here goes on to
   // seMessage, and is shown as it came if that does not know it either.
   var PX_FIELD = { worklist_scp_host:'Host / IP', worklist_scp_ae:'AE Title', bridge_token:'Bridge Token' };
+  // Where the EMR container reaches the image server on the same PC (P-9). Not an
+  // address for other PCs: 9090 listens on the server PC only.
+  var PX_ORTHANC_DEFAULT = 'http://host.docker.internal:9090';
   function pxFieldName(k){ return PX_FIELD[k] || ({emr_base_url:t.emrPublicUrl, pacs_viewer_url:t.pacsViewerUrl, orthanc_url:t.px_orthancUrl})[k] || k; }
   function pxMessage(msg){
     var s=String(msg||''), m=s.match(/^(\w+) is too long \(at most (\d+) characters\)$/);
@@ -136,7 +139,13 @@ export default function SettingsPage() {
       'Could not save the order feed settings':'px_errSave',
       'No PACS host set':'px_testNoHost',
       'TCP connection succeeded':'px_testOk',
-      'Connection timed out':'px_testTimeout'
+      'Connection timed out':'px_testTimeout',
+      // pacs.viewer.js PROBE_MSG: can the EMR reach the image server (orthanc_url)?
+      'Image server answers':'px_orthancOk',
+      'Image server address is not a valid http(s) address':'px_orthancBadUrl',
+      'Image server not reachable at this address':'px_orthancRefused',
+      'Image server refused the stored password - run pair-with-emr':'px_orthancLogin',
+      'Something other than the image server answered at this address':'px_orthancNotOrthanc'
     };
     if(known[s] && t[known[s]]) return t[known[s]];
     // Node's own connect errors: "connect ECONNREFUSED 10.0.0.5:4242", "getaddrinfo ENOTFOUND nas" ...
@@ -151,6 +160,9 @@ export default function SettingsPage() {
       var saved = await api.put('/pacs/config', pacsConfig);
       setPacsConfig(saved);
       showToast(t.orderFeedSaved);
+      // Saved either way; the answer shows next to the image-server address when
+      // the EMR cannot reach it there (2026-09-30: a LAN address was typed in).
+      setPacsTest(function(p){ return Object.assign({},p,{orthanc: saved.orthanc_check ? Object.assign({},saved.orthanc_check,{message:pxMessage(saved.orthanc_check.message)}) : null}); });
     } catch(err){ alert((t.se_error)+': '+pxMessage(err.message)); }
   }
 
@@ -244,7 +256,7 @@ export default function SettingsPage() {
       var r = await api.get('/pacs/test?target='+target);
       // The address tested stays in the line: the translated sentence alone would not
       // say which host was wrong.
-      var where = r.host ? ' ('+r.host+':'+r.port+')' : '';
+      var where = r.host ? ' ('+r.host+':'+r.port+')' : (r.url ? ' ('+r.url+')' : '');
       setPacsTest(function(p){return Object.assign({},p,{[target]:Object.assign({},r,{message:pxMessage(r.message)+where})})});
     } catch(err){ setPacsTest(function(p){return Object.assign({},p,{[target]:{ok:false,message:pxMessage(err.message)}})}); }
   }
@@ -772,16 +784,23 @@ export default function SettingsPage() {
                     server's login on the server. The address below is where the EMR
                     container reaches Orthanc; the password is set only by pair-with-emr
                     and never comes to this screen - only whether it is set. */}
-                <div style={{marginTop:8}}><Fld label={t.px_orthancUrl}><input placeholder="http://host.docker.internal:9090" value={pacsConfig.orthanc_url||''} onChange={function(e){up('orthanc_url',e.target.value)}} style={IS}/>
-                  {oldPort(pacsConfig.orthanc_url,8090)?<div style={{marginTop:4,fontSize:13,color:'var(--warn-text)',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}</Fld></div>
+                <div style={{marginTop:8}}><Fld label={t.px_orthancUrl}><div style={{display:'flex',gap:6}}>
+                  <input placeholder={PX_ORTHANC_DEFAULT} value={pacsConfig.orthanc_url||''} onChange={function(e){up('orthanc_url',e.target.value)}} style={Object.assign({},IS,{flex:1})}/>
+                  <button onClick={function(){up('orthanc_url',PX_ORTHANC_DEFAULT)}} title={PX_ORTHANC_DEFAULT} style={{background:'var(--chip)',color:'var(--text-2)',border:'1px solid '+bd2,borderRadius:5,padding:'0 10px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap'}}>{t.px_orthancUrlDefault}</button>
+                  </div>
+                  <div style={{marginTop:4,fontSize:13,color:t3,lineHeight:1.5}}>{t.px_orthancUrlHelp}</div>
+                  {oldPort(pacsConfig.orthanc_url,8090)?<div style={{marginTop:4,fontSize:13,color:'var(--warn-text)',lineHeight:1.5}}>⚠ {t.se_oldViewerPort}</div>:null}
+                  {pacsTest.orthanc && pacsTest.orthanc.ok===false?<div style={{marginTop:4,fontSize:13,color:'var(--danger-text)',lineHeight:1.5}}>⚠ {t.px_orthancUnreachable} ({pacsTest.orthanc.message})</div>:null}</Fld></div>
                 <div style={{marginTop:4,fontSize:13,lineHeight:1.5,color:pacsConfig.orthanc_password_set?'var(--ok-text)':'var(--warn-text)'}}>{pacsConfig.orthanc_password_set?('✓ '+t.px_orthancPasswordSet):('⚠ '+t.px_orthancPasswordMissing)}</div>
                 {/* Kept, not used: an old backup restores this column, and removing the
                     field would hide what it holds. */}
                 <div style={{marginTop:8}}>{/* locked, not faded: opacity also fades the text (design 3.3.1) */}<Fld label={(t.pacsViewerUrl||'PACS 웹/뷰어 주소')+' — '+t.px_viewerUrlUnused}><input placeholder="" value={pacsConfig.pacs_viewer_url||''} readOnly style={LOCKED_IS}/></Fld></div>
                 <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
                   <button onClick={function(){testPacs('worklist')}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.testPacsBtn||'Test PACS (DICOM)'}</button>
+                  <button onClick={function(){testPacs('orthanc')}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid '+bd2,borderRadius:5,padding:'6px 10px',cursor:'pointer',fontSize: 13}}>{t.px_testOrthancBtn}</button>
                 </div>
                 {pacsTest.worklist?<div style={{marginTop:8,fontSize: 13,color:pacsTest.worklist.ok?'var(--ok-text)':'var(--danger-text)'}}>{pacsTest.worklist.ok?'✓ ':'✗ '}{pacsTest.worklist.message}</div>:null}
+                {pacsTest.orthanc&&pacsTest.orthanc.ok!==undefined?<div style={{marginTop:4,fontSize: 13,color:pacsTest.orthanc.ok?'var(--ok-text)':'var(--danger-text)'}}>{pacsTest.orthanc.ok?'✓ ':'✗ '}{pacsTest.orthanc.message}</div>:(pacsTest.orthanc?<div style={{marginTop:4,fontSize:13,color:t3}}>{pacsTest.orthanc.message}</div>:null)}
               </div>
 
               <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,gridColumn:'1 / span 2'}}>
