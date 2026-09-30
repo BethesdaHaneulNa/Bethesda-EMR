@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 수납된 내원은 접수 화면의 저장으로도 과·의사를 바꾸지 못함
+
+- **상태**: 확인 요청
+- **왜**: 실장님 결정 「수납이 끝나기 전까지」(총괄 경유). 전과 길(`PUT /:id/transfer`)만 막고 접수 저장(`PUT /:id`)은 막지 않아 같은 규칙이 두 길에 달랐음
+- **서버** (`visit.routes.js`):
+  · 새 함수 `activeReceipt(db, visitId)`(취소 안 된 영수 번호 또는 null)를 두 길이 같이 씀
+  · `PUT /:id`: 영수가 있고 과 또는 의사가 **실제로** 바뀌면 409 `{error, code:'VISIT_BILLED', receipt_no}`, 아무것도 쓰지 않음
+  · 같은 값(글자 "8"도 숫자 8과 같게)이나 주호소·메모만의 저장은 그대로 됨, 수납의 `visit_type`만 저장도 그대로
+  · `PUT /:id`의 404에도 `code:'VISIT_NOT_FOUND'`
+- **화면** (`Registration.jsx`):
+  · `sel.has_active_bill`이면 「Service / Médecin」 목록이 잠긴 칸 + `rc_visitBilledNoMove`(ko·en·fr)
+  · 편집 중에 수납되면 저장 → 409 → 같은 문장으로 알림, 그리고 `refreshQueue()`로 잠금이 바로 걸리고 목록이 저장된 의사로 돌아감(`billedLock` useEffect, 자동 새로고침도 수납된 내원의 과·의사를 받아 옴)
+- **공유 파일**: i18n `ko/en/fr.js`(rc_ 블록 한 키), `wiki/03-change-log.md`(한 줄)
+- **확인** (격리 9181, 스택 내림):
+  · `reception.api.mjs` 188/188(새로: `PUT /:id` 404 code)
+  · DB 스크립트(영수 줄을 직접 넣음) 거절 3건: 과 변경 409 + receipt_no, 의사 비움 409, 거절 뒤 내원 그대로
+  · DB 스크립트 허용 4건: 같은 값(글자)+주호소 200, 주호소만 200, 거절·허용 모두 기록 0줄, 영수 취소 뒤 과 변경 200 + 기록 1줄
+  · 화면 KO: 수납된 내원은 목록 잠김 + 이유, 주호소 저장은 됨(DB 확인, 기록 0줄)
+  · 화면 FR: 의사를 «—»로 바꾼 뒤 뒤에서 수납 → 저장 → 프랑스어 알림, 목록이 잠기고 «RC doctor»로 돌아감, DB 그대로
+  · 빌드 통과
+- **남은 것**: 진료 화면의 전과 단추(진료 세션)도 `sel.has_active_bill`로 미리 잠그면 같은 모양. 기록 탭 이름표는 총괄이 설정 세션에 전함
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `backend/test/reception.api.mjs`, `frontend/src/pages/Registration.jsx`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/modules/reception.md`, `wiki/manual-fr/reception.md`, `wiki/03-change-log.md`, 이 노트
+
 ## 2026-09-30 — 전과 뒤: history의 과는 내원의 과 (총괄 `119642e`), `consultation.department_id`를 읽는 곳
 
 - **상태**: 확인 요청

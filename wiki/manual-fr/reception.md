@@ -154,6 +154,7 @@ Quand un patient est choisi, **📋 Dossier (vue)** montre les documents déjà 
 | Vous consultez une date passée (…) | La Date de travail n'est pas aujourd'hui | Rangez, puis **Aujourd'hui** pour enregistrer |
 | À une date passée, on ne peut ni créer ni modifier un enregistrement. | Idem | Cliquez sur **Aujourd'hui** |
 | Déjà encaissé : le type de visite se change à l'écran Paiement. | La visite est payée | Demandez à la caisse |
+| Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement. | La visite est payée : la liste **Service / Médecin** est verrouillée (ou elle a été payée pendant que vous la modifiiez) | Si le patient doit vraiment changer de médecin, la caisse annule d'abord le reçu ; ensuite changez le médecin |
 | Vous n'avez pas l'autorisation pour cette action. | Votre compte n'a pas l'accès **Enregistrement** | Voir « Qui appeler » |
 | Impossible de joindre le serveur. Réessayez dans un instant… | Le serveur ne répond pas | Attendez un peu et recommencez ; ce que vous avez saisi est gardé |
 | Dossier patient introuvable. / Cet enregistrement est introuvable. | Le dossier ou la visite n'existe plus | Cherchez de nouveau |

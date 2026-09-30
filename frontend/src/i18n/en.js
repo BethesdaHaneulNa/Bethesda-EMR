@@ -320,6 +320,7 @@ export default {
   rc_completeNoConsultBilled: "Complete {name} without a consultation? This visit already has a receipt: its type does not change. See the cashier for what follows.",
   rc_colVisitState: "Status",
   rc_billNothing: "Nothing to pay",
+  rc_visitBilledNoMove: "This visit is already paid: its department and doctor can no longer change. Cancel the receipt on the Payment screen first.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
