@@ -180,6 +180,7 @@
 | 2026-09-30 | PACS | PACS `cec7aee` device-watch(.ps1·.bat) · EMR `a8ddc88` 현지 장비 연결 순서서 `wiki/reference/device-connection-onsite.md` | ✅ PACS main = `cec7aee`(푸시) | ✅ 두 파일을 `C:\Bethesda-PACS`에 복사 | 스크립트 읽음: 비밀번호는 .env에서 읽어 헤더로만 쓰고 찍지 않음, EMR DB는 SELECT만(입력은 글자 검사), 로그 수준은 `-Detail`일 때만 올리고 되돌림. 실행 중 PACS에서 조용한 모드 50초(「기다리는 중」), `-Ping 127.0.0.1 -DevicePort 4242`(ping·포트·C-ECHO 응답) — 읽기만. `-Detail`과 진짜 장비는 하지 않음. 본 것: Orthanc의 W001 경고가 「영상 서버 알림」으로 그대로 뜸(관리 화면을 열면 나오는 잡음) — 걸러 달라고 보냄. **총괄 결정**: 제조사 전용 영상 종류도 받게(`UnknownSopClassAccepted`) — 현지에 개발자가 없고 조용한 거절은 찾기 어려움. PACS에 시킴 |
 | 2026-09-30 | 접수 | `5b918e8`·`7e07753` 문서: history의 과·의사 뜻, `consultation.department_id`를 읽는 곳 조사(history의 보조값 하나뿐) | ✅ | — | 읽음 |
 | 2026-09-30 | 설정 | `5bfd3df` 기록 탭 이름표: visit.transfer, doctor, reason | ✅ | ✅ | diff 읽음(키 9개, 맵 두 줄). 실행 중 EMR에는 전과 줄이 아직 없어 화면에서는 보지 못함(세션이 격리에서 전과 길을 네 번 불러 확인) |
+| 2026-09-30 | 진료 | `fe2c993`·`7877337` 전과 단추(환자 줄 「⇄ 전과」 + 작은 창), 거절 문장을 code로, 수납된 내원은 단추 꺼짐 · `api/client.js` 오류에 status·code·data | ✅ | ✅ | diff 읽음. 실행 중 EMR 1366×768 밝은 화면(읽기만): 환자 줄 「GEN Dr. Grace」 옆 「⇄ 전과」 켜져 있음(영수 없음), 창을 열면 과 = GEN – General Practice, 의사 = GEN – Dr. Grace가 먼저 골라져 있고 「바꾸기」는 꺼짐, 과 목록 9개. **「바꾸기」는 누르지 않음**(실장님 데이터). 의사 목록은 고른 과의 의사만 — Dr. Bill은 과가 달라(7) 과를 먼저 바꿔야 보임. 남은 것: 꺼진 단추가 opacity 0.6(디자인 규칙은 잠금 상태에 opacity를 쓰지 않음) — 진료에 보냄 |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
