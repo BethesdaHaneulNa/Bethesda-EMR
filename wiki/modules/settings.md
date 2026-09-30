@@ -23,6 +23,18 @@
 2. **Nom affiché (이름)**, **Mot de passe (비밀번호, 6자 이상)**, **Confirmer le mot de passe (비밀번호 확인)** 을 넣고 **Créer le compte admin (관리자 계정 만들기)** 를 누릅니다.
    - **Identifiant (아이디)** 는 **`admin`으로 고정**되어 바꿀 수 없습니다(2026-09-29, 총괄 결정 S3) — 「L'identifiant de l'administrateur est toujours admin…」. 이 계정이 「설치 때 만든 관리자」로 보호됩니다 (2.6, 3-2절).
 3. 바로 **Paramètres** 화면으로 들어갑니다.
+4. **그다음 이 순서로 여덟 가지** — 프랑스어 설명서(`manual-fr/settings.md`) 첫 절 「Après l'installation — dans cet ordre」와 같습니다. 화면에는 이 목록이 없습니다(실장님 결정 2026-09-30 (가) — 설명서에만). 「끝났다」는 사람이 봅니다.
+
+   | # | 할 일 | 어디서 | 끝났는지 아는 법 |
+   |---|---|---|---|
+   | 1 | 병원 정보 — 이름(프랑스어 이름도)·주소·전화 | 설정 → Établissement (2.8) | 인쇄한 영수증 머리의 이름·주소가 맞음 |
+   | 2 | 직원 계정 — 한 사람에 하나, **admin**은 설치 때와 다른 비밀번호로 | 설정 → Personnel (2.4) | 모두 자기 아이디로 들어감 |
+   | 3 | 약 가격 — 가져온 약은 모두 0으로 시작 | 설정 → Médicaments | 쓰는 약의 Prix unitaire가 0이 아님 |
+   | 4 | 진료비·검사·영상·처치 가격 | 설정 → Codes d'actes (2.9) | 진료비(C01~C04)와 검사에 실제 가격 |
+   | 5 | 약속처방 — 실제 약으로 | 설정 → Ordonnances types (2.9) | 「⚠ … absent(s) de la liste」가 붙은 약속처방이 없음 |
+   | 6 | 첫 백업 | 설정 → Sauvegarde → Sauvegarder (2.7) | 초록 띠 「Sauvegardes en ordre」 |
+   | 7 | 외장 디스크 — 서버 PC에 꽂고 밤 백업 설치(담당자, PACS 폴더) | PACS 위키 6.2 | 다음 날 상태 점의 「Copie des sauvegardes de l'EMR」이 초록 (2.15) |
+   | 8 | 영상 연결(PACS를 쓸 때) — 담당자가 `pair-with-emr`, 오더 연동의 영상 서버 주소는 `http://host.docker.internal:9090` 그대로 | PACS 폴더 · 설정 → Flux d'ordres | 상태 점의 「Visionneuse → serveur d'images」가 초록이고 차트에서 영상이 열림 |
 
 ### 2.2 로그인 · 로그아웃
 
@@ -687,4 +699,5 @@
 | 2026-09-30 | 기록 탭에 **서류 발행·취소**(실장님 결정 (다)): `documents.issue`·`documents.void` 문장, 칸 `doc_no`·`template_code`(문서 엔진의 서류 이름으로 — `documents/registry.js` `getTemplate`)·`lang`(그 언어의 이름)·`voided`(예/아니요)·`void_reason`, 종류 거르기에. 줄 2만 개에서 여는 시간 확인. 첫 설치의 고정 아이디 칸을 흐림 대신 잠긴 칸 색으로 | `settingsAudit.js`, `Settings.jsx`(`templateName`), `Login.jsx`, i18n `se_act_doc*`·`se_fld_doc*`·`se_yes`·`se_no` | `d8fecf5` |
 | 2026-09-30 | **기록 탭은 처음에 서류 발행을 빼고**(실장님 결정 (나)): 「서류 발행도 보기」 켜고 끄기(그 PC에 기억하지 않음 — 탭을 열 때마다 끔), 뺄 때는 목록 위에 「서류 발행 N줄은 접혀 있음」, 종류로 「서류를 발행함」을 고르면 그 줄만. 서류 취소는 늘 보임. 서버 `exclude` | `admin.routes.js` `/audit`, `Settings.jsx`, i18n `se_logShowIssued`·`se_logIssuedHidden`, `backend/test/settings.auditdocs.mjs` (3-10) | `d5ee1dd` |
 | 2026-09-30 | 상태 점의 숫자와 백업 화면의 파일 크기가 그 언어의 표기로(fr 「97,5 Go」, 「24,2 Ko」). 상태 창은 늘 정수라 바뀔 것 없음. 설명서 최종 대조(점의 자리 「juste avant l'heure」), 상태 점 절에 파일 이름 시각의 시간대 한 줄 | `settingsMoney.js` `seNumber`, `settingsStatus.jsx`, `Settings.jsx` `fmtBytes` (2.15) | `975a3f6` |
-| 2026-09-30 | 클린 설치에서 걸린 둘: 상태 창이 **EMR·PACS 포트를 듣는 다른 프로그램**(이름·PID)과 **127.0.0.1에서 EMR이 아닌 답**을 알림, 상태 점·API에 **영상 창 → 영상 서버** 줄(중계와 같은 요청으로 주소·비밀번호·다른 프로그램을 구분). 「설치 뒤 할 일」은 제안만(인계 노트) | `server-status.ps1` `Get-ForeignListeners`·`Add-LoopbackEmrCheck`·창 높이 720, `services/pacs-probe.js`(새), `status.routes.js` `checkPacsRelay`, i18n `se_sys_pacsRelay_*` (2.10·2.15·3-6) | (이 커밋) |
+| 2026-09-30 | 클린 설치에서 걸린 둘: 상태 창이 **EMR·PACS 포트를 듣는 다른 프로그램**(이름·PID)과 **127.0.0.1에서 EMR이 아닌 답**을 알림, 상태 점·API에 **영상 창 → 영상 서버** 줄(중계와 같은 요청으로 주소·비밀번호·다른 프로그램을 구분). 「설치 뒤 할 일」은 제안만(인계 노트) | `server-status.ps1` `Get-ForeignListeners`·`Add-LoopbackEmrCheck`·창 높이 720, `services/pacs-probe.js`(새), `status.routes.js` `checkPacsRelay`, i18n `se_sys_pacsRelay_*` (2.10·2.15·3-6) | `e7ae327` |
+| 2026-09-30 | **설치 뒤 할 일 여덟 가지**(실장님 결정 (가) — 화면에는 만들지 않고 설명서에만): 프랑스어 설명서 첫 절 「Après l'installation — dans cet ordre」, 2.1 4번, 출발 전 목록의 현지 할 일에서 가리킴 | 위키만 (2.1) | (이 커밋) |

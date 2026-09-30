@@ -4,6 +4,21 @@ L'écran **Paramètres** sert à l'administrateur : créer les comptes du person
 
 Une partie de ce guide concerne **tout le personnel** : changer son propre mot de passe (voir « Changer mon mot de passe »).
 
+## Après l'installation — dans cet ordre
+
+Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet ordre. L'EMR ne les coche pas pour vous : la colonne de droite dit comment savoir que c'est fait.
+
+| # | Quoi | Où | C'est fait quand… |
+|---|---|---|---|
+| 1 | Informations de la clinique : nom (aussi en français), adresse, téléphone | **Paramètres** → **Établissement** → **Sauver** | Le nom et l'adresse sont les bons en haut d'un reçu imprimé |
+| 2 | Un compte pour chaque personne, et un mot de passe à vous pour **admin** | **Paramètres** → **Personnel** (voir « Créer un compte ») | Chacun se connecte avec son propre identifiant ; **admin** n'a plus le mot de passe de l'installation |
+| 3 | Le prix de chaque médicament utilisé (la liste importée arrive à 0) | **Paramètres** → **Médicaments** (voir « Mettre le prix d'un médicament ») | La colonne **Prix unitaire** n'affiche plus 0 pour les médicaments que vous donnez |
+| 4 | Le prix des consultations, analyses, examens d'imagerie et actes | **Paramètres** → **Codes d'actes** | Les frais de consultation (C01 à C04) et les analyses ont leur vrai prix |
+| 5 | Les ordonnances types, avec les vrais médicaments | **Paramètres** → **Ordonnances types** (voir « Créer une ordonnance type ») | Aucune ordonnance type n'affiche « ⚠ … absent(s) de la liste » |
+| 6 | Une première sauvegarde | **Paramètres** → **Sauvegarde** → **Sauvegarder** | Le bandeau est vert : **Sauvegardes en ordre** |
+| 7 | Le disque externe branché sur le PC serveur | Le responsable installe la sauvegarde de nuit (dossier PACS) | Le lendemain, dans le petit point d'état, **Copie des sauvegardes de l'EMR** est verte |
+| 8 | L'imagerie reliée à l'EMR (si la clinique a le PACS) | Le responsable lance **pair-with-emr** (dossier PACS) ; dans **Flux d'ordres**, l'adresse du serveur d'images reste `http://host.docker.internal:9090` | Dans le petit point d'état, **Visionneuse → serveur d'images** est verte, et une image s'ouvre depuis un dossier |
+
 ## En bref
 
 1. Cliquez sur **Paramètres** dans la barre du haut.
