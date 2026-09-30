@@ -228,10 +228,18 @@ router.put('/:id', permMiddleware('registration'), async (req, res) => {
 router.get('/:id/history', permMiddleware(...HISTORY_READERS), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT c.*, d.code as dept_code, d.name as dept_name, s.name as doctor_name
+      // doctor_name says whose chart it is: the doctor the reception registered the visit
+      // with (visit.doctor_id). consultation.doctor_id is only the account that opened
+      // the consultation first - the director's test visit was registered to Dr. Grace
+      // and opened by the administrator, and the chart must say Dr. Grace (2026-09-30).
+      // Who wrote what is in `notes`, under each author's name.
+      `SELECT c.*, d.code as dept_code, d.name as dept_name,
+              COALESCE(vs.name, s.name) as doctor_name
        FROM consultation c
        LEFT JOIN department d ON c.department_id = d.id
        LEFT JOIN staff s ON c.doctor_id = s.id
+       LEFT JOIN visit v ON v.id = c.visit_id
+       LEFT JOIN staff vs ON vs.id = v.doctor_id
        WHERE c.patient_id = $1 ORDER BY c.consult_date DESC, c.created_at DESC`,
       [req.params.id]
     );

@@ -26,7 +26,7 @@ Encaisser un patient qui sort de consultation :
 - *À gauche* — la liste. Sous chaque nom, un badge : **En Attente** (pas encore payé), **Supplément** (articles ajoutés après paiement, voir 6), **Correction** (articles retirés après paiement, voir 7), **Re-facturer** (reçu annulé, voir 9).
 - *Au milieu* — ce qui est facturé : **Consultation** (le type : **Nouvelle**, **Suivi** ou **Sans frais**), **Ordonnances** (médicaments donnés par la pharmacie de la clinique), **Examens / Actes**, **Délivrance / Autres** (certificat, CD… ajoutés à la caisse avec **+ Ajouter**).
 - *À droite du milieu* — les totaux : **Sous-total**, **Remise**, **Total**, **Montant Reçu**, **Monnaie**.
-- *Tout à droite* — **Visites passées** et **Reçus** (l'historique des reçus du patient).
+- *Tout à droite* — **Dossier Patient** et **Reçus** (l'historique des reçus du patient).
 
 ### 2. Encaisser et rendre la monnaie
 

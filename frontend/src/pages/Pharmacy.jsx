@@ -391,7 +391,7 @@ export default function PharmacyPage() {
         </div>
 
         <div style={{ borderLeft:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, overflow:'hidden' }}>
-          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.pastVisits}</div>
+          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.patientChart}</div>
           <div style={{ flex:1, minHeight:0, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
       </div>}

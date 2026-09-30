@@ -503,7 +503,7 @@ export default function PaymentPage() {
 
         <div style={{borderLeft:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn,overflow:'hidden'}}>
           <div style={{display:'flex',borderBottom:'1px solid '+bd,background:scBg}}>
-            <button onClick={function(){setRightTab2('chart')}} style={{flex:1,background:rightTab2==='chart'?'var(--accent-a18)':'transparent',color:rightTab2==='chart'?'var(--accent-text)':t3,border:'none',borderBottom:rightTab2==='chart'?'2px solid var(--accent-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.pastVisits}</button>
+            <button onClick={function(){setRightTab2('chart')}} style={{flex:1,background:rightTab2==='chart'?'var(--accent-a18)':'transparent',color:rightTab2==='chart'?'var(--accent-text)':t3,border:'none',borderBottom:rightTab2==='chart'?'2px solid var(--accent-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.patientChart}</button>
             <button onClick={function(){setRightTab2('receipts')}} style={{flex:1,background:rightTab2==='receipts'?'var(--ok-a18)':'transparent',color:rightTab2==='receipts'?'var(--ok-text)':t3,border:'none',borderBottom:rightTab2==='receipts'?'2px solid var(--ok-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.receiptHistory}</button>
           </div>
           <div style={{flex:1,overflow:'auto'}}>

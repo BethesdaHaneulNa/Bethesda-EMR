@@ -1255,7 +1255,7 @@ export default function ConsultationPage() {
         {/* RIGHT: Patient Chart */}
         <div style={{width:'28%',display:'flex',flexDirection:'column',overflow:'hidden',background:pn}}>
           <div style={{display:'flex',borderBottom:'1px solid '+bd,background:scBg}}>
-            <button onClick={function(){setRightTab('past')}} style={{flex:1,background:rightTab==='past'?'var(--accent-a18)':'transparent',color:rightTab==='past'?'var(--accent-text)':t3,border:'none',borderBottom:rightTab==='past'?'2px solid var(--accent-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:13,fontWeight:800}}>{t.pastVisits}</button>
+            <button onClick={function(){setRightTab('past')}} style={{flex:1,background:rightTab==='past'?'var(--accent-a18)':'transparent',color:rightTab==='past'?'var(--accent-text)':t3,border:'none',borderBottom:rightTab==='past'?'2px solid var(--accent-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:13,fontWeight:800}}>{t.patientChart}</button>
             <button onClick={function(){setRightTab('sets')}} style={{flex:1,background:rightTab==='sets'?'var(--ok-a18)':'transparent',color:rightTab==='sets'?'var(--ok-text)':t3,border:'none',borderBottom:rightTab==='sets'?'2px solid var(--ok-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:13,fontWeight:800}}>{t.orderSets}</button>
           </div>
           <div style={{flex:1,overflow:'auto',padding:'6px 8px'}}>
@@ -1265,7 +1265,9 @@ export default function ConsultationPage() {
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
                     <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
                     <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{t.cs_noteToday}</span>
-                    <span style={{fontSize: 12,color:t2}}>{sel.dept_code||''}</span>
+                    {/* Whose chart: department and the doctor the visit was registered with
+                        (director, 2026-09-30 - «GEN» alone did not say which chart). */}
+                    <span style={{fontSize: 12,color:t2}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
                   </div>
                   {notesBlock(notes, false, true)}
                 </div> : null}
@@ -1274,8 +1276,7 @@ export default function ConsultationPage() {
                 return <div key={i} onClick={function(){openPast(h)}} style={{background:active?'var(--accent-a15)':scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid '+(active?'var(--accent-a50)':bd),borderLeft:active?'3px solid var(--accent-ink)':'3px solid transparent',cursor:'pointer'}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
                     <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
-                    <span style={{fontSize: 12,color:t2}}>{h.dept_code||''}</span>
-                    <span style={{fontSize: 12,color:t2,marginLeft:'auto'}}>{h.doctor_name||''}</span>
+                    <span style={{fontSize: 12,color:t2}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
                   </div>
                   {notesBlock(h.notes, true)}
                 </div>;
