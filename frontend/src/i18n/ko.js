@@ -1000,6 +1000,8 @@ export default {
   se_fld_voidReason: "취소 사유",
   se_yes: "예",
   se_no: "아니요",
+  se_logShowIssued: "서류 발행도 보기",
+  se_logIssuedHidden: "서류 발행 {n}줄은 접혀 있음",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

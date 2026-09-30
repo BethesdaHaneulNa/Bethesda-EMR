@@ -1000,6 +1000,8 @@ export default {
   se_fld_voidReason: "Motif de l'annulation",
   se_yes: "Oui",
   se_no: "Non",
+  se_logShowIssued: "Afficher aussi les documents émis",
+  se_logIssuedHidden: "{n} ligne(s) « Document émis » masquée(s)",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

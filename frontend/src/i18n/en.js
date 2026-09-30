@@ -1009,6 +1009,8 @@ export default {
   se_fld_voidReason: "Reason for voiding",
   se_yes: "Yes",
   se_no: "No",
+  se_logShowIssued: "Also show issued documents",
+  se_logIssuedHidden: "{n} \"Document issued\" line(s) folded away",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
