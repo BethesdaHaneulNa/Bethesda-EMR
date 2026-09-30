@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 차트 머리줄(과 + 내원 의사)·탭 이름 문서 반영, 오늘 묶음의 의사 이름 대체
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `e4df1d8` 다음
+- **한 일**:
+  - 총괄이 넣은 두 가지(차트 머리줄 「과 + 접수 때 정한 의사」, 탭 `pastVisits` → `patientChart`)를 모듈 문서 2.2·2.5·3.1·8과 changelog 초안에 적었습니다.
+  - **확인 요청받은 두 곳**:
+    - 과거 보기(`renderPast` 머리, `c.dept_code`·`c.doctor_name`) — `c`가 history의 줄이라 이미 새 뜻(내원 의사, 없으면 연 계정). 어긋남 없음.
+    - 서류(`DocumentModal` `signer`) — 의사 계정이면 그 사람, 아니면 `ctx.doctor_name` = `sel.doctor_name`(내원의 의사, `visit.routes.js` 19·82가 `v.doctor_id`로 이음). history의 새 뜻과 같음. 어긋남 없음.
+  - **어긋난 곳 하나를 고쳤습니다**: 오른쪽 오늘 묶음은 `sel.doctor_name`만 써서, 내원에 의사가 없으면 오늘은 과만 보이다가 다음 날 지난 내원 목록(history)에서는 연 계정 이름이 붙었습니다(같은 내원의 머리가 바뀜). `POST /consultations`가 `opened_by_name`(진료를 처음 연 계정)을 돌려주고, 오늘 묶음은 `sel.doctor_name || consult.opened_by_name` — history와 같은 대체입니다.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js`(`POST /` 응답에 `opened_by_name`) · `frontend/src/pages/Consultation.jsx`(오늘 묶음 한 줄) · `wiki/modules/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build`, `node --check` 통과. 격리 스택 `opener-e2e` 4항목 통과 — 내원 의사 없음: 오늘 머리 = history 머리 = «S2 doctor»(연 계정). 내원 의사 Dr DEUX: 둘 다 «Dr DEUX»(연 계정은 S2 doctor). 새로 연 진료(201)와 다시 연 진료(200) 모두 `opened_by_name`.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-09-30 — 문서 한 줄: WL 칸 상태 글자 (총괄 `de7559e`), 마이그레이션 038
 
 - **상태**: 확인 요청 (문서만)

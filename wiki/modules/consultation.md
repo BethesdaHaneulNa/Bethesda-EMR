@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 의사마다의 진료 기록 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-09-30 · **상태**: 차트 머리줄·탭 이름 문서 반영 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -40,7 +40,7 @@
 1. 바이탈 칸에 적습니다. 프랑스어 화면에서는 **TA** (BP, 혈압, `120/80`처럼) · **T°** (BT, 체온) · **FC** (PR, 맥박) · **FR** (RR, 호흡수) · **SpO2**입니다.
 2. **Ma note de consultation (내 진료 기록)** 칸에 S·O·A·P를 적습니다. **이 내원의 내 기록**입니다. 의사마다 한 내원에 기록이 하나씩 있고(2026-09-30 실장님 결정 (나)), 다시 열면 내 글이 그대로 있어 이어 씁니다. 바이탈 칸은 비워도 되고(저장·완료가 막히지 않음), 혈압·체온을 기록 글에 적어도 됩니다.
 3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
-4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Visites passées** 맨 위 **Aujourd'hui (오늘)** 밑에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
+4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Dossier Patient (환자 차트)** 맨 위 **Aujourd'hui (오늘)** 밑에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
    - **다른 의사의 기록**은 오른쪽에 그 의사 이름으로 따로 보이고 **읽기만** 됩니다(관리자도 남의 기록은 못 고침 — 결정 (가)). 두 의사가 같은 내원을 열어 두면 30초마다 상대 기록을 다시 읽습니다. 내가 쓰고 있는 칸은 건드리지 않습니다.
    - 저장하지 않고 **다른 환자**를 열면 묻습니다: 확인 = 저장하고 열기, 취소 = 머물기.
    - 저장하지 않은 글은 **이 PC의 브라우저**에 남아 F5·정전 뒤 같은 내원을 열면 돌아옵니다(「이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.」). 저장·로그아웃·하루가 지나면 지워집니다(7.3).
@@ -121,9 +121,9 @@
    - **포장 단위 약**(시럽 등)은 세트 줄의 수량(`quantity`, 없으면 1)이 병·개 수로 들어갑니다.
    - **세트에 적힌 하루 총량·횟수·일수·용법이 그대로 처방 줄에 들어갑니다**(설정의 약속처방 편집 창에서 정함 — 2026-09-29 실장님: 「용량 횟수 일수는 약속처방에서」). 세트의 약 줄에 비어 있는 칸은 처방에도 빈 칸으로 들어가고 빨간 **Indiquez dose/jour, fois et jours**가 붙습니다.
 
-### 2.5 Visites passées — 과거 기록 (오른쪽)
+### 2.5 Dossier Patient — 환자 차트 (오른쪽)
 
-1. **Visites passées (과거 내원)** 탭 맨 위에 **오늘 진료**(Aujourd'hui — 의사마다 이름·시각·고친 시각과 글), 그 밑에 지난 진료가 날짜순으로 나옵니다. 지난 진료도 의사마다 이름과 첫 두 줄입니다.
+1. **Dossier Patient (환자 차트)** 탭(2026-09-30 결정 (가) — 전에는 「Visites passées」, 수납·약국도 같은 이름) 맨 위에 **오늘 진료**(Aujourd'hui — 의사마다 이름·시각·고친 시각과 글), 그 밑에 지난 진료가 날짜순으로 나옵니다. 지난 진료도 의사마다 이름과 첫 두 줄입니다.
 2. 날짜를 누르면 가운데에 그날의 바이탈·진료 기록·처방이 **Dossier passé · lecture seule (과거 기록 · 읽기 전용)**으로 나옵니다.
 3. **← Retour à l'actuel (← 현재 진료로)**를 누르면 오늘 진료로 돌아옵니다.
 
@@ -251,6 +251,8 @@
 - **오더 줄의 상태 칸**(WL 칸, `orderStatus(o)`): 검사 오더(`code_type='lab'`)는 임상병리의 `o.status`를 「결과 대기 / 결과 있음 / 취소됨」(`cs_labPending`·`cs_labDone`·`cs_labCancelled`)으로, 워크리스트로 간 오더(`worklist_sent_at` 있음)는 `worklist_status`를 그대로, 그 밖의 오더는 비웁니다. 워크리스트 없는 오더는 만들 때 `worklist_status='completed'`로 저장되어, 전에는 검사 결과가 들어오기도 전에 「completed」로 보였습니다(임상병리 위키 7절 9, 2026-09-29). 워크리스트 상태도 번역 키로 보여 줍니다 — `pending`·`sent`·`in_progress`·`completed`·`cancelled` → `cs_wsPending`·`cs_wsSent`·`cs_wsInProgress`·`cs_wsCompleted`·`cs_wsCancelled`(PACS 부탁 P-19, 2026-09-29). 과거 보기(`renderPast`)도 같은 `orderStatus`를 씁니다. 워크리스트 상태 글자는 `inline-block`·`nowrap`·11px, 영상 단추는 padding `1px 4px`·오른쪽 3px — 1366에서 「촬영 완료」가 가운데서 끊겨 줄이 높아지던 것(총괄, 2026-09-30, `de7559e`; ko `cs_wsCompleted` = 「촬영완료」).
 - **오더 진행 상태 자동 반영**(2026-09-29): 검사실이 진료 중에도 오더를 보게 되어(임상병리 `1d4c239`) 환자를 열어 둔 사이에 결과가 들어올 수 있습니다. 진료가 열려 있고 결과 없는 검사 오더나 끝나지 않은 워크리스트 오더가 있으면, **30초마다** `GET /consultations/:id/orders`를 다시 읽어 **진행 칸만**(`status`·`result_at`·`result_by`·`result_text`·`worklist_status`·`worklist_sent_at`, `ORDER_PROGRESS_FIELDS`) 화면의 줄에 덮어씁니다. 의사가 적고 있는 수량·메모는 건드리지 않고, 줄을 더하거나 빼지 않습니다. 탭이 숨겨져 있으면(`document.hidden`) 읽지 않습니다. 상태 칸과 🔒(`orderLocked`)가 이 칸들로 정해지므로 같이 바뀝니다. 검사결과 창(`LabResults.jsx`, 임상병리 부품)은 열 때 읽으므로 이것과 별개입니다.
 - **통합 시험 2차**(2026-09-30): 줄 단위 저장(`leftRow` — 같은 줄 안으로 초점이 옮겨 가면 저장하지 않음, 한 번 고침 = PUT 한 번 = 기록 한 줄). 닫힌 대기열 서랍에 `inert`·`aria-hidden`(화면 밖 단추가 Tab에 잡히던 것). 병·튜브 단위 말 한 줄(수량 칸 40px). 머리줄은 빈 성별·생년월일을 뺌, **「Trouver patient」·「Sélection visite」로 연 내원은 성별·생년월일·알레르기를 환자 기록(`GET /patients/:id`)에서 채움**(방문 이력 목록에는 없어서 알레르기 ⚠가 안 보였음). 검색 칸 4개 `autoComplete="off"`(브라우저의 입력 기록 목록이 검색 목록 밑에 겹쳐 사전 문장처럼 보였던 것으로 봄). 수술기록지 수술일은 날짜 칸(`type: date`, DocumentModal이 그림).
+- **차트 머리줄 = 「과 + 접수 때 정한 의사」**(실장님, 2026-09-30, 총괄 `e4df1d8` 계열): 오른쪽 오늘 묶음은 `[sel.dept_code, sel.doctor_name || consult.opened_by_name]`, 지난 내원 줄과 과거 보기(`renderPast`) 머리는 `h.dept_code`·`h.doctor_name`(과 옆, 전에는 의사 이름이 오른쪽 끝). `GET /patients/:id/history`의 `doctor_name`은 **내원의 의사**(`visit.doctor_id`)이고, 없을 때만 진료를 처음 연 계정입니다. 오늘 묶음도 같은 대체를 쓰도록 `POST /consultations`가 `opened_by_name`을 돌려줍니다(진료 세션, 이 커밋 — 없으면 내원에 의사가 없는 날 오늘은 과만, 다음 날 목록에서는 연 계정 이름이 붙어 머리가 바뀌었음). **누가 썼는지는 기록마다의 이름**이 말합니다. 서류의 서명 칸(`DocumentModal` `signer`)은 그대로: 의사 계정이면 그 사람, 아니면 `ctx.doctor_name` = `sel.doctor_name`(내원의 의사) — 같은 뜻이라 어긋나지 않습니다.
+- **탭 이름**(결정 (가), 2026-09-30, 총괄이 넣음): 진료·수납·약국 모두 `t.pastVisits` → `t.patientChart`(fr «Dossier Patient», en·ko «Patient Chart»).
 - **의사마다의 진료 기록**(2026-09-30 결정 (나)·(가)·바이탈 한 벌): 칸 = 「이 내원의 내 기록」(`note`), 서버의 내 기록 = `mineSaved`, 다르면 「Non enregistrée」. `notes` = 이 진료의 모든 의사 기록(`GET /:id/notes`, `mine` 표시). 저장은 `saveVitals`(`PUT /:id`, 바이탈만) + `pushNote`(`PUT /:id/note`, 바뀐 때만). Terminé도 같은 둘을 먼저. `pickPatient`는 저장 안 된 글이 있으면 `window.confirm(cs_noteUnsavedSwitch)` → 확인이면 저장 후 열기. 오른쪽 목록은 오늘 진료 블록(`notesBlock(notes)`) + 지난 진료(`h.notes`, 두 줄로 줄임), 과거 보기(`renderPast`)도 `notesBlock(c.notes)`. 내 기록은 왼쪽 파란 선, 누르면 칸에 초점. 30초마다 `GET /:id/notes`(칸은 안 건드림). 저장 안 된 글: `noteDraft` — `localStorage` 키 `cs_noteDraft:<계정 id>:<진료 id>` `{text, at}`, 칸이 서버와 다르면 쓰고 같으면 지움, 진료를 열 때 이 계정의 하루 지난 것은 모두 지움, **진료를 연 직후(첫 그리기 전) 읽음** — 칸이 빈 채 그려진 뒤 읽으면 지우는 효과가 먼저 돎. 로그아웃(`api/client.js logout`)이 이 계정 것을 지움. 줄 작성자: `prescribed_by_name`·`ordered_by_name`, 이 내원의 작성자 id가 둘 이상일 때만 `authorTag`. 저장된 줄은 `Object.assign(옛 줄, 응답)`으로 이름 칸을 지킴. 서류 엔진의 `ctx.note` = 칸 = 내 기록.
 - **줄 저장 시점**(2026-09-30, 정전 대비): 줄을 벗어날 때(`leftRow`) + **진료 중이면 마지막 입력 2초 뒤**(`armRowSave`, 줄마다 타이머) + **`pagehide`에서 저장 안 된 줄을 `fetch keepalive`로**(`dirtyRows` — `savedRx`/`savedOrd` 스냅숏과 다른 줄; 토큰은 `localStorage 'medconnect_token'`), `visibilitychange`(hidden)에서는 보통 저장. 끝난 진료(`finishedRef`: completed/signed 또는 다른 날 내원 — 서버 `consultOf`와 같은 규칙)는 2초 저장을 하지 않음. 한 줄의 저장은 **차례로**(`inTurn` — 앞 저장의 응답 뒤에 다음을 보냄, 서버가 만든 순서대로 받음), 번호(`rowSeq`)가 최신이 아닌 응답은 버리고, 보낸 뒤 더 친 것이 있으면 응답에서 서버 계산 칸(total_qty·status·dosage_form…)만 받음. 같은 값을 두 번 보내도 서버는 바뀐 것이 없어 기록을 쓰지 않음.
 - **글자로만 보이는 칸**(조제된 약 줄 · 취소된 오더 줄, `roCell`, 2026-09-30): 한 줄, 넘치면 「…」, 마우스를 올리면 전체(title), 숫자는 `showNum`(「1.000」 → 「1」). 고정 폭 뒤로 긴 글자(영상 부위 «ABDOMEN»)가 상태 칸 «🖼 Annulé» 위로 넘쳤던 것.
@@ -689,7 +691,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-09-30 | 문서: WL 칸 상태 글자 한 줄(총괄 `de7559e`) 기록, 마이그레이션 번호 038 반영, `saveNote` 설명 고침 | (이 커밋) |
+| 2026-09-30 | **차트 머리줄 「과 + 내원 의사」·탭 「Dossier Patient」**(총괄이 넣음, `e4df1d8`까지) 문서 반영. 오늘 묶음의 의사 이름도 history와 같은 대체(내원에 의사가 없으면 연 계정 — `POST /consultations`의 `opened_by_name`). 과거 보기·서류 서명은 확인만(어긋남 없음) | (이 커밋) |
+| 2026-09-30 | 문서: WL 칸 상태 글자 한 줄(총괄 `de7559e`) 기록, 마이그레이션 번호 038 반영, `saveNote` 설명 고침 | `e7e24c7` |
 | 2026-09-30 | **설계 메모: 쓴 사람이 있는 진료 기록**(7.5) — 코드 전, 새 표 `consultation_note` 추천, 읽는 곳 표, 결정 대기 둘 | `b5483be` |
 | 2026-09-30 | **영상 시험 진료 몫** — 영상 오더 추가 응답에 `worklist_sent_at`(「Envoyé」 바로), 영상 창 머리에 accession 연결 줄, 촬영 부위는 이름 옆(Unité 칸은 메모만), 판독 저장은 잠깐 뜨는 알림 | `2a9f5bd` |
 | 2026-09-30 | **정전 대비 줄 저장** — 진료 중이면 마지막 입력 2초 뒤에도 저장, 화면이 닫힐 때 저장 안 된 줄을 fetch keepalive로, 한 줄의 저장은 차례로·늦은 응답은 버림(오더 줄도 같음). **서류 발행·취소를 변경 기록에**(payload 없음), 다시 취소는 처음 사유를 지킴 | `44008b9` |
