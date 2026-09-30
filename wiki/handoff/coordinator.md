@@ -149,6 +149,7 @@
 | 2026-09-30 | 총괄 | **v1.5.0** — `CHANGELOG.md` 항목(943줄, `assemble.mjs`로 모음, 총괄이 끝까지 읽음), 버전 1.4.0 → 1.5.0 (`d062430`) | — | ✅ | 실행 중 EMR: `/api/health` version 1.5.0, 로그인 화면 「Bethesda EMR v1.5.0」. 새 판에서 백업 `bethesda_2026-09-30_0518.sql.gz` → `verify-backup -Strict` VERIFIED. 프랑스어 설명서 최종본 PDF(9장 48쪽)를 실장님께 보냄 |
 | 2026-09-30 | 총괄 | **설치 묶음을 실제로 만듦** (`offline/pack.ps1`, 처음) | `f71ba75`(pack 고침) | — | 결과: EMR 이미지 0.2 GB + PACS 0.6 GB + 소스 = 845 MB(설치 프로그램 둘은 손으로 넣어야 함). MANIFEST: EMR 1.5.0 `d062430`(develop), PACS `6f5c871`. **비밀값 검사**: 묶음 안에 `.env`류는 `.env.example`뿐, 이 PC의 JWT_SECRET·DB_PASSWORD·브리지 토큰 값이 묶음 어디에도 없음(값으로 찾음), `KEEP-TEST-DATA.txt` 없음. 찾은 흠: 이 PC의 실행 중 이미지 이름을 되돌리지 못함(「No such image」 — containerd 이미지 저장소에서 이름을 잃은 이미지는 id로 찾을 수 없음). 해는 없음(새로 빌드된 이미지도 같은 커밋). 고침: 빌드 전에 `<이름>:pack-hold`로 잡아 두었다가 되돌림(`pack.ps1`·`pack.sh`, 파싱 확인, 다시 돌려 보지는 않음) |
 | 2026-09-30 | 총괄 | **빈 환경에 설치 → 백업 복원 연습** (묶음으로) | — | — | 묶음의 tar에서 `docker load` → 묶음의 소스 사본으로 격리 스택(`bethesda-kit`, 9190, 새 DB, 임시 .env) → 37개 마이그레이션 자동 적용, health 1.5.0 → v1.5.0 백업을 DEPLOYMENT 5b 명령 그대로 복원(exit 0) → 다시 시작해도 「database up to date」 → **마이그레이션·환자·약·영수·현금·직원이 실행 중 EMR과 같음**, 로그인 화면 200. 스택·볼륨·사본·묶음 지움. 하지 않은 것: `install-offline.ps1` 자체(Docker Desktop·WSL 설치까지 하는 것 — 진짜 빈 PC가 필요), PACS 묶음의 설치 |
+| 2026-09-30 | 총괄 | **`develop` → `main` = Release 1.5.0** (`736d884`, 태그 `v1.5.0`) — 실장님 「응 확정하자 메인에 합쳐」 | ✅ | ✅ | `--no-ff` 합침, develop도 같은 커밋으로 맞춤. push·GitHub 릴리스는 실장님 몫(EMR의 「업데이트 있음」 알림은 GitHub 릴리스를 봄). **배포 묶음을 main에서 다시 만듦**: `C:\Users\Shintong\Desktop\bethesda-offline-kit-v1.5.0` (845 MB, MANIFEST: EMR `736d884` main, PACS `6f5c871` main, UNCOMMITTED 없음). 비밀값 검사 다시(이 PC의 JWT·DB 비밀번호·PACS 토큰·Orthanc 비밀번호 값 0건, `.env`류는 `.env.example`뿐). 고친 `pack.ps1`이 이번에는 이름 셋을 되돌림(「put 3 image name(s) back」). 실행 중 EMR·PACS 그대로(health 1.5.0). 남은 손일: `installers` 폴더에 Docker Desktop과 WSL2 설치 파일을 넣기(실장님이 내려받음) |
 
 ## 메시지로 보내지 못한 것 (한도에 걸림 — 여기서 읽고 진행해 주세요)
 
@@ -778,4 +779,4 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 | 프랑스어 설명서 최종본(PDF) | ✅ 48쪽, 실장님께 보냄 |
 | 설치 묶음(`offline/pack.ps1`)을 실제로 한 번 | ✅ (묶음은 배포 커밋에서 다시 만듦) |
 | 빈 환경에 설치 → 백업 복원 → 확인 | ✅ 격리 스택으로 (진짜 빈 PC는 출발 전 목록) |
-| `develop` → `main` | 실장님께 여쭌 뒤 |
+| `develop` → `main` | ✅ `736d884` Release 1.5.0, 태그 `v1.5.0` |
