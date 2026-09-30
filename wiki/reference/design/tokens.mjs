@@ -66,7 +66,7 @@ export const NEUTRAL = [
   ['on-fill-violet-3','#c4b5fd', '#c4b5fd', 'x'],
   ['on-fill-amber','#fde68a', '#fde68a', 'x'],
   ['on-fill-red',  '#fecaca', '#fecaca', 'x'],
-  ['on-cyan',      '#08161a', '#ffffff', 'x'],   // text on the lab's cyan button: near-black when dark (the cyan is bright), white when light (the cyan is deep)
+  ['on-cyan',      '#ffffff', '#ffffff', 'x'],   // text on the lab's cyan button: white on both screens (the button is deep cyan on both since 2026-09-30)
 ];
 
 // ── colour families: [name, dark, light, kind] ── kind: c fill (white text reads on it) · t text (reads on every surface and on its family's tints)
@@ -113,9 +113,10 @@ export const COLOR = [
   ['cyan',          '#06b6d4', '#0e7490', 'c'],
   ['cyan-strong',   '#0891b2', '#155e75', 'c'],
   // the lab's buttons, apart from --cyan: the lab screen also writes text and lines in --cyan,
-  // so a button cannot be made deeper through it without dimming that text.
-  ['cyan-fill',     '#06b6d4', '#0e7490', 'c'],
-  ['cyan-fill-2',   '#0891b2', '#155e75', 'c'],
+  // so a button cannot be made deeper through it without dimming that text. Deep cyan with white
+  // text on both screens (the director's decision of 2026-09-30: like the main buttons elsewhere).
+  ['cyan-fill',     '#0e7490', '#0e7490', 'c'],
+  ['cyan-fill-2',   '#155e75', '#155e75', 'c'],
   ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
   ['cyan-text',     '#67e8f9', '#0b6279', 't'],
   ['cyan-text-2',   '#7dd3fc', '#0b6279', 't'],
