@@ -400,6 +400,7 @@
 ### 공용 부품
 
 - `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음. 처방 줄은 약국 소유의 `documents/rx-dosing.js` `doseSentence()`로 약국·진료 화면과 같은 문장(「1 cp × 3 fois/jour pendant 7 jours (total 21)」, 1회량이 나눠지지 않으면 「… par jour en N prises …」), 예전 계산식으로 저장된 줄은 노랗게 「total enregistré N (ancien calcul)」(`isLegacyTotal`, 진료 `cs_rxStoredTotal` 키) — dose가 2026-09-29부터 하루 총량이라 예전 「용량×횟수×일수d」 표시는 뜻이 틀려짐(진료 부탁). 오더 상태: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
+  - **진료 기록은 의사마다**(2026-09-30, 진료 `dfe514c` · 마이그레이션 038): history의 진료마다 `notes`[{author_name, note_text, created_at, updated_at}]가 오면 의사마다 작은 머리 「이름 · 시각(· 수정 시각)」 밑에 글 — 목록에서는 의사가 둘 이상이면 한 줄씩, 한 명이면 두 줄까지, 상세에서는 전부. 시각은 브라우저 시계로(`cs_noteEdited` 키를 빌려 씀). `notes`가 없는 응답이면 예전처럼 `note_text` 한 칸(서버가 이어 붙인 것).
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
@@ -563,4 +564,5 @@
 | 2026-09-29 | 조제되어 나간 약은 돌려받지 않음(실장님 결정) — 정정은 조제 전에 지운 약 · 취소된 검사·영상에만 생긴다는 안내 | 위키·설명서만 (2.6·2.12) | `c814983` |
 | 2026-09-30 | 프랑스어 화면의 금액이 「15 000」(영수증·약국과 같게), 한국어·영어는 「15,000」 · 오른쪽 영수내역 카드가 1366 폭에서 넘치지 않음 · 취소·바뀐 영수를 흐리게 할 때 덜 흐리게(밝은 화면에서 읽히게) | `Payment.jsx` `fmtAmount(n, lang)`·`SumRow`, 영수내역 카드 줄바꿈, 투명도 0.6·0.65 → 0.85 (2.3) | `7fa740c` |
 | 2026-09-30 | 취소·바뀐 영수를 흐리게 하지 않고 꼬리표와 테두리 색으로(두 화면 모두 대비 기준 통과) · 설명서 §5·§10: 진료 없이 「Terminer」로 끝낸 0 Ar 내원은 그날만 목록에, 지난 날 것은 청구할 것이 없으면 안 뜸 | `Payment.jsx`(투명도 → 왼쪽 띠·테두리), `manual-fr/payment.md` (2.10) | `78ee3c9` |
-| 2026-09-30 | 대기 목록 줄과 환자 머리에서 진료과·의사가 없을 때 「26-00030 · ·」의 빈 점을 뺌 · 설명서 마지막 점검(띠 색, 바뀐 영수의 재출력) | `Payment.jsx` 두 줄, `manual-fr/payment.md` | (이 커밋) |
+| 2026-09-30 | 대기 목록 줄과 환자 머리에서 진료과·의사가 없을 때 「26-00030 · ·」의 빈 점을 뺌 · 설명서 마지막 점검(띠 색, 바뀐 영수의 재출력) | `Payment.jsx` 두 줄, `manual-fr/payment.md` | `cc3a8cd` |
+| 2026-09-30 | 수납·약국 오른쪽 과거 진료 패널이 진료 기록을 의사마다 나눠 보여 줌(이름 · 시각 · 수정 시각) | 공용 `PatientChart.jsx`의 `notesBlock` (4절) | (이 커밋) |
