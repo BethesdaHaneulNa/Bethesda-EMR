@@ -44,7 +44,7 @@
 - 두 길이 같은 함수(`visit.routes.js` `applyTransfer`)로 씀: `PUT /api/visits/:id/transfer`(진료·접수가 부르는 전과), 그리고 접수 화면의 저장 `PUT /api/visits/:id`에서 과·의사가 **실제로** 바뀔 때. 같은 값으로 저장하면 0줄.
 - `entity` = `visit`, `entity_id` = 내원 id, 환자·내원을 채움. `summary` = `GEN · RABE Hery → PED · RAKOTO Aina`(과 코드 · 의사 이름).
 - `before`/`after` = `{ department_id, doctor, reason }` — 바뀐 칸만 남음. `department_id`는 기록 탭이 과 이름으로 바꿔 보여 주는 칸(직원 계정 줄과 같음), `doctor`는 의사 이름(글자), `reason`은 전과 사유(없으면 비움, 300자까지).
-- 기록 탭 이름표(설정 세션): 종류 `visit.transfer`, 칸 `doctor`·`reason` — 들어오기 전까지는 저장된 이름 그대로 보임.
+- 기록 탭 이름표(설정 세션, 2026-09-30 붙음): 종류 「Changement de service / médecin / 전과(과·의사 변경) / Visit transferred」(종류 거르기에도), 칸 `department_id` 「Service / 진료과」(과 이름으로) · `doctor` 「Médecin / 담당의」(없음은 「—」) · `reason` 「Motif / 사유」. 사유 없이 옮기면 사유 줄이 아예 없음(바뀐 칸만 남으므로).
 - 남기는 범위는 열한 가지.
 
 ## 2. 한 줄에 들어가는 것

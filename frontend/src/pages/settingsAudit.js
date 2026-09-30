@@ -24,6 +24,8 @@ export var AUDIT_ACTIONS = {
   'payment.receipt.cancel': 'se_act_receiptCancel',
   'payment.receipt.correct': 'se_act_receiptCorrect',
   'reception.patient.edit': 'se_act_patientEdit',
+  // a visit moved to another department or doctor (reception, visit.routes.js applyTransfer)
+  'visit.transfer': 'se_act_visitTransfer',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
@@ -66,6 +68,9 @@ var FIELDS = {
   // documents (document.routes.js): number, which document, its language; voiding
   doc_no: 'se_fld_docNo', template_code: 'se_fld_template', lang: 'se_fld_docLang',
   voided: 'se_fld_voided', void_reason: 'se_fld_voidReason',
+  // a visit's transfer: department_id (above, shown as the department) and the doctor by
+  // name - the line keeps the name as it was, none is "—" - and the reason as typed
+  doctor: 'se_fld_doctor', reason: 'se_fld_reason',
   pack_label: 'se_fld_packLabel',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',
