@@ -91,13 +91,20 @@ if ($emrState.Dirty -or ($pacsState -and $pacsState.Dirty)) {
   Write-Host "  WARNING: packing a folder with uncommitted changes. MANIFEST.txt will say so." -ForegroundColor Yellow
 }
 
-# Where each image name points now, so it can be put back once the kit is saved.
+# Where each image name points now, so it can be put back once the kit is saved. The
+# image is also held under a second name (<name>:pack-hold): with Docker's containerd
+# image store, an image left without a name when the build moves 'latest' cannot be
+# found by id afterwards ("No such image") even while a container still runs on it,
+# and the name could not be put back (seen 2026-09-30). A held name survives the build.
 function Get-ImageIds([string]$path) {
   $map = @{}
   Push-Location $path
   foreach ($img in (@(docker compose config --images) | Where-Object { $_ })) {
     $id = (docker image inspect -f '{{.Id}}' $img 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $id) { $map[$img] = "$id".Trim() }
+    if ($LASTEXITCODE -eq 0 -and $id) {
+      $map[$img] = "$id".Trim()
+      if ($img -notmatch ':pack-hold$') { docker tag $img "$($img -replace ':[^:/]+$', ''):pack-hold" 2>$null | Out-Null }
+    }
   }
   Pop-Location
   $global:LASTEXITCODE = 0
@@ -165,11 +172,14 @@ if ($includePacs) {
 # The kit holds the new images now; give this machine its own back.
 $restored = 0
 foreach ($img in @($before.Keys)) {
+  $hold = "$($img -replace ':[^:/]+$', ''):pack-hold"
   $now = (docker image inspect -f '{{.Id}}' $img 2>$null)
   if ($LASTEXITCODE -eq 0 -and "$now".Trim() -ne $before[$img]) {
-    docker tag $before[$img] $img
-    if ($LASTEXITCODE -eq 0) { $restored++ } else { Say "could not put $img back on $($before[$img])" }
+    docker tag $hold $img 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) { docker tag $before[$img] $img 2>$null | Out-Null }
+    if ($LASTEXITCODE -eq 0) { $restored++ } else { Say "could not put $img back on $($before[$img]) - the next 'docker compose up -d' will use the freshly built image (same source)" }
   }
+  docker rmi $hold 2>$null | Out-Null
 }
 $global:LASTEXITCODE = 0
 if ($restored) { Say "put $restored image name(s) back on the images this machine was running" }

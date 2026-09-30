@@ -69,7 +69,12 @@ fi
 image_ids() {
   (cd "$1" && docker compose config --images) | while read -r img; do
     [ -n "$img" ] || continue
-    if id="$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null)"; then echo "$img $id"; fi
+    if id="$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null)"; then
+      # Hold the image under a second name too: with the containerd image store an image
+      # left without a name cannot be found by id after the build (see pack.ps1).
+      docker tag "$img" "${img%:*}:pack-hold" >/dev/null 2>&1 || true
+      echo "$img $id"
+    fi
   done
   return 0
 }
@@ -122,8 +127,13 @@ echo "$BEFORE" | while read -r img id; do
   [ -n "$img" ] && [ -n "$id" ] || continue
   now="$(docker image inspect -f '{{.Id}}' "$img" 2>/dev/null || true)"
   if [ -n "$now" ] && [ "$now" != "$id" ]; then
-    docker tag "$id" "$img" && say "put $img back on the image this machine was running"
+    if docker tag "${img%:*}:pack-hold" "$img" >/dev/null 2>&1 || docker tag "$id" "$img" >/dev/null 2>&1; then
+      say "put $img back on the image this machine was running"
+    else
+      say "could not put $img back - the next 'docker compose up -d' will use the freshly built image (same source)"
+    fi
   fi
+  docker rmi "${img%:*}:pack-hold" >/dev/null 2>&1 || true
 done
 
 # Source tree: everything the installer needs, and nothing that belongs to *this*
