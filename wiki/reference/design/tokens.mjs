@@ -164,6 +164,25 @@ export const OTHER = [
   ['warn-chip',    '#78350f55', 'rgba(180,83,9,0.14)'],   // small warning tags in the prescription table
   ['danger-chip',  '#7f1d1d55', 'rgba(220,38,38,0.12)'],
   ['scheme',       'dark', 'light'],
+  // a notice that floats over the screen ("saved"). When dark these are the values the lab
+  // screen had (panel-2, ok-text-2, ok at 50, no shadow); when light the notice is a pale
+  // green card with a deep border and a shadow, so it does not sink into the page.
+  ['toast-bg',     '#161a26', '#ecfdf5'],
+  ['toast-text',   '#6ee7b7', '#065f46'],
+  ['toast-line',   '#10b98150', '#047857'],
+  ['toast-shadow', 'none', '0 6px 20px rgba(15,23,42,0.18)'],
+  // a card faded to say "cancelled" or "replaced": fading also fades its small text below
+  // what can be read on white, so the light screen does not fade (the red border and the
+  // tag already say it). opacity: 'var(--fade-85)'
+  ['fade-85',      '0.85', '1'],
+  // text on the black panel of the image viewer: the same on both screens
+  ['viewer-text',  '#8290a3', '#8290a3'],
+  // the example text inside an empty input. Only the light screen uses it (see the rules
+  // under the token block in index.html); the dark screen keeps the browser's own grey
+  // until the director decides on wiki/modules/design.md 7.1.
+  ['placeholder',  '#757575', '#5b6779'],
+  // the ring around the input that has the keyboard. Light screen only, for the same reason.
+  ['focus-ring',   '#60a5fa', '#1d4ed8'],
 ];
 
 export const dark = () => Object.fromEntries([...all, ...TINT, ...OTHER].map(t => [t[0], t[1]]));

@@ -218,6 +218,14 @@
       --warn-chip: #78350f55;
       --danger-chip: #7f1d1d55;
       --scheme: dark;
+      --toast-bg: #161a26;
+      --toast-text: #6ee7b7;
+      --toast-line: #10b98150;
+      --toast-shadow: none;
+      --fade-85: 0.85;
+      --viewer-text: #8290a3;
+      --placeholder: #757575;
+      --focus-ring: #60a5fa;
     }
     :root[data-theme="light"] {
       --bg: #eff2f7;
@@ -428,6 +436,14 @@
       --warn-chip: rgba(180,83,9,0.14);
       --danger-chip: rgba(220,38,38,0.12);
       --scheme: light;
+      --toast-bg: #ecfdf5;
+      --toast-text: #065f46;
+      --toast-line: #047857;
+      --toast-shadow: 0 6px 20px rgba(15,23,42,0.18);
+      --fade-85: 1;
+      --viewer-text: #8290a3;
+      --placeholder: #5b6779;
+      --focus-ring: #1d4ed8;
       color-scheme: light;
     }
   </style>
@@ -458,6 +474,26 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  </style>
+  <!-- Theme rules (design session). What the tokens alone cannot do. They apply to the
+       light screen only: the same two things are below the line on the dark screen too,
+       but changing the dark screen waits for the director (wiki/modules/design.md 7.1,
+       rows 7 and 8). -->
+  <style id="bethesda-theme-rules">
+    /* The example text in an empty input was the browser's own grey, which no token
+       reached. opacity: Firefox fades placeholders by itself. */
+    :root[data-theme="light"] ::placeholder { color: var(--placeholder); opacity: 1; }
+
+    /* The screens set outline: none on their inputs, inline, so nothing showed which input
+       had the keyboard. !important is what it takes to win over an inline style.
+       :focus-visible, not :focus: for inputs the two are the same, and it keeps the ring
+       off anything that was only clicked. */
+    :root[data-theme="light"] input:focus-visible,
+    :root[data-theme="light"] textarea:focus-visible,
+    :root[data-theme="light"] select:focus-visible {
+      outline: 2px solid var(--focus-ring) !important;
+      outline-offset: 1px;
+    }
   </style>
   <style id="medconnect-readable-ui">
     html, body, #root { min-height: 100%; }
