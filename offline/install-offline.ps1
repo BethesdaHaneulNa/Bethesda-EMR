@@ -138,6 +138,8 @@ if ($includePacs -and $pacsOk) {
 }
 Write-Host ""
 Write-Host "Next, from the go-live checklist in DEPLOYMENT.md:" -ForegroundColor Yellow
+Write-Host "  - what to do next, in order: the staff guide, chapter 'Parametres', first part"
+Write-Host "    'Apres l'installation - dans cet ordre' ($emrDst\wiki\manual-fr\settings.md)"
 Write-Host "  - create the administrator account, then add staff with least privilege"
 Write-Host "  - backups: the EMR backs itself up every night into $emrDst\backups; the image"
 Write-Host "    backup below copies those files to the external disk as well (nothing to set in .env)"

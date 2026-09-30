@@ -102,6 +102,8 @@ elif [ -n "$INCLUDE_PACS" ]; then
 fi
 echo ""
 echo "Next, from the go-live checklist in DEPLOYMENT.md:"
+echo "  - what to do next, in order: the staff guide, chapter 'Parametres', first part"
+echo "    'Apres l'installation - dans cet ordre' ($EMR_DST/wiki/manual-fr/settings.md)"
 echo "  - create the administrator account, then add staff with least privilege"
 echo "  - backups: the EMR backs itself up every night into $EMR_DST/backups (nothing to set in .env);"
 echo "    copy them to another disk - the image backup scripts are Windows-only for now"
