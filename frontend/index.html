@@ -41,7 +41,7 @@
       --line-soft: #1e2433;
       --border: #232838;
       --border-2: #2a3142;
-      --field-border: #2a3142;
+      --field-border: #64718a;
       --text-max: #ffffff;
       --text-strong: #f1f5f9;
       --text-strong-2: #f8fafc;
@@ -49,13 +49,13 @@
       --text-soft: #cbd5e1;
       --text-soft-2: #e5e7eb;
       --text-2: #94a3b8;
-      --text-3: #64748b;
-      --text-4: #475569;
-      --text-5: #334155;
-      --text-faint: #3a4253;
+      --text-3: #8793a6;
+      --text-4: #8290a3;
+      --text-5: #8290a3;
+      --text-faint: #8290a3;
       --text-locked: #8b95a5;
       --on-fill: #ffffff;
-      --on-bright: #0f1117;
+      --on-bright: #ffffff;
       --on-fill-blue: #dbeafe;
       --on-fill-blue-2: #bfdbfe;
       --on-fill-teal: #ccfbf1;
@@ -66,16 +66,16 @@
       --on-fill-amber: #fde68a;
       --on-fill-red: #fecaca;
       --on-cyan: #08161a;
-      --accent: #3b82f6;
-      --accent-strong: #2563eb;
-      --accent-ink: #3b82f6;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-ink: #60a5fa;
       --accent-text: #60a5fa;
       --accent-text-2: #93c5fd;
       --accent-text-3: #bfdbfe;
-      --ok: #10b981;
-      --ok-strong: #059669;
-      --ok-2: #16a34a;
-      --ok-2-strong: #15803d;
+      --ok: #047857;
+      --ok-strong: #046c4e;
+      --ok-2: #15803d;
+      --ok-2-strong: #166534;
       --ok-3: #22c55e;
       --ok-bar: #34d399;
       --accent-bar: #60a5fa;
@@ -83,23 +83,23 @@
       --ok-text: #34d399;
       --ok-text-2: #6ee7b7;
       --ok-text-3: #86efac;
-      --warn: #f59e0b;
-      --warn-strong: #b45309;
+      --warn: #b45309;
+      --warn-strong: #92400e;
       --warn-ink: #f59e0b;
       --warn-text: #fbbf24;
       --warn-text-2: #fcd34d;
       --warn-text-3: #fde68a;
-      --danger: #ef4444;
+      --danger: #dc2626;
       --danger-strong: #dc2626;
       --danger-deep: #b91c1c;
-      --danger-ink: #ef4444;
+      --danger-ink: #f87171;
       --danger-text: #f87171;
       --danger-text-2: #fca5a5;
       --danger-text-3: #fecaca;
-      --violet: #8b5cf6;
-      --violet-2: #a855f7;
+      --violet: #7c3aed;
+      --violet-2: #9333ea;
       --violet-strong: #7c3aed;
-      --violet-ink: #8b5cf6;
+      --violet-ink: #a78bfa;
       --violet-text: #a78bfa;
       --violet-text-2: #c084fc;
       --violet-text-3: #ddd6fe;
@@ -109,7 +109,7 @@
       --cyan-ink: #06b6d4;
       --cyan-text: #67e8f9;
       --cyan-text-2: #7dd3fc;
-      --teal: #14b8a6;
+      --teal: #0f766e;
       --accent-deep: #1e4fa0;
       --teal-deep: #0f766e;
       --cyan-deep: #0e7490;
@@ -117,8 +117,8 @@
       --teal-ink: #14b8a6;
       --status-ok: #22c55e;
       --status-warn: #eab308;
-      --status-down: #ef4444;
-      --status-off: #64748b;
+      --status-down: #f87171;
+      --status-off: #8793a6;
       --ok-strong-a15: #05966915;
       --cyan-a12: #06b6d412;
       --cyan-a15: #06b6d415;
@@ -224,7 +224,7 @@
       --toast-shadow: none;
       --fade-85: 0.85;
       --viewer-text: #8290a3;
-      --placeholder: #757575;
+      --placeholder: #8290a3;
       --focus-ring: #60a5fa;
     }
     :root[data-theme="light"] {
@@ -475,24 +475,29 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
   </style>
-  <!-- Theme rules (design session). What the tokens alone cannot do. They apply to the
-       light screen only: the same two things are below the line on the dark screen too,
-       but changing the dark screen waits for the director (wiki/modules/design.md 7.1,
-       rows 7 and 8). -->
+  <!-- Theme rules (design session). What the tokens alone cannot do. On both screens since
+       the director's decisions of 2026-09-30 (wiki/decisions.md; wiki/modules/design.md
+       7.1, rows 7 and 8). -->
   <style id="bethesda-theme-rules">
     /* The example text in an empty input was the browser's own grey, which no token
        reached. opacity: Firefox fades placeholders by itself. */
-    :root[data-theme="light"] ::placeholder { color: var(--placeholder); opacity: 1; }
+    ::placeholder { color: var(--placeholder); opacity: 1; }
 
-    /* The screens set outline: none on their inputs, inline, so nothing showed which input
-       had the keyboard. !important is what it takes to win over an inline style.
-       :focus-visible, not :focus: for inputs the two are the same, and it keeps the ring
-       off anything that was only clicked. */
-    :root[data-theme="light"] input:focus-visible,
-    :root[data-theme="light"] textarea:focus-visible,
-    :root[data-theme="light"] select:focus-visible {
+    /* "This is the box you are typing in." The screens set outline: none on their inputs,
+       inline, so nothing showed where typing would go; !important is what it takes to win
+       over an inline style. For an input, :focus-visible holds however it got the
+       keyboard - by a click or by Tab - which is what was decided. */
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
       outline: 2px solid var(--focus-ring) !important;
       outline-offset: 1px;
+    }
+    /* A button shows the ring only when reached with the keyboard: for a button
+       :focus-visible does not hold after a mouse click, so pressing one does not flash. */
+    button:focus-visible {
+      outline: 2px solid var(--focus-ring) !important;
+      outline-offset: 2px;
     }
   </style>
   <style id="medconnect-readable-ui">

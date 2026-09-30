@@ -32,7 +32,7 @@ window.__audit = function () {
   var out = []; var seen = {};
   Array.from(document.querySelectorAll('#root *')).forEach(function (el) {
     var r = el.getBoundingClientRect(); if (r.width === 0 || r.height === 0) return; var cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') return;
-    var hasText = Array.from(el.childNodes).some(function (n) { return n.nodeType === 3 && n.textContent.trim(); }) || ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && (el.value || el.placeholder));
+    var hasText = Array.from(el.childNodes).some(function (n) { return n.nodeType === 3 && n.textContent.trim(); }) || ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !/^(checkbox|radio|range|file|hidden)$/.test(el.type || '') && (el.value || el.placeholder));
     var bg = bgOf(el); var f = fade(el); var note = (el.disabled ? ' (disabled)' : '') + (f < 1 ? ' (faded to ' + f.toFixed(2) + ')' : '');
     if (hasText) {
       var fg = parse(cs.color); if (fg) { var c = over(fg.c, fg.a * f, bg); var ratio = con(c, bg); var big = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.66 && parseInt(cs.fontWeight) >= 700); var need = big ? 3 : 4.5;

@@ -42,7 +42,7 @@ export const NEUTRAL = [
   ['line-soft',    '#1e2433', '#e1e6ee', 'l'],   // table row separators
   ['border',       '#232838', '#d5dbe4', 'l'],   // bd
   ['border-2',     '#2a3142', '#c3cbd7', 'l'],   // bd2 on boxes
-  ['field-border', '#2a3142', '#77839a', 'f'],   // bd2 on inputs: 3:1 against the field and against the panel around it
+  ['field-border', '#64718a', '#77839a', 'f'],   // bd2 on inputs: 3:1 against the field and against the panel around it
   ['text-max',     '#ffffff', '#0b1220', 't'],   // #fff used as text on a panel (not on a coloured button)
   ['text-strong',  '#f1f5f9', '#0b1220', 't'],
   ['text-strong-2','#f8fafc', '#0b1220', 't'],
@@ -50,13 +50,13 @@ export const NEUTRAL = [
   ['text-soft',    '#cbd5e1', '#2c3a4d', 't'],
   ['text-soft-2',  '#e5e7eb', '#2c3a4d', 't'],
   ['text-2',       '#94a3b8', '#4a5668', 't'],   // t2
-  ['text-3',       '#64748b', '#566274', 't'],   // t3
-  ['text-4',       '#475569', '#5b6779', 't'],
-  ['text-5',       '#334155', '#5b6779', 't'],
-  ['text-faint',   '#3a4253', '#5b6779', 't'],
+  ['text-3',       '#8793a6', '#566274', 't'],   // t3
+  ['text-4',       '#8290a3', '#5b6779', 't'],
+  ['text-5',       '#8290a3', '#5b6779', 't'],
+  ['text-faint',   '#8290a3', '#5b6779', 't'],
   ['text-locked',  '#8b95a5', '#566274', 't'],   // text in a locked field   // the dot in an empty table cell   // barely visible when dark; it is still text, so readable when light
   ['on-fill',      '#ffffff', '#ffffff', 'x'],   // text on a coloured button: white in both
-  ['on-bright',    '#0f1117', '#ffffff', 'x'],   // text on a bright green / amber / red button: near-black when dark (the colour is bright), white when light (the colour is deep)
+  ['on-bright',    '#ffffff', '#ffffff', 'x'],   // text on a bright green / amber / red button: near-black when dark (the colour is bright), white when light (the colour is deep)
   ['on-fill-blue', '#dbeafe', '#dbeafe', 'x'],   // pale text on a deep coloured button: the same on both screens
   ['on-fill-blue-2','#bfdbfe', '#bfdbfe', 'x'],
   ['on-fill-teal', '#ccfbf1', '#ccfbf1', 'x'],
@@ -72,16 +72,16 @@ export const NEUTRAL = [
 // ── colour families: [name, dark, light, kind] ── kind: c fill (white text reads on it) · t text (reads on every surface and on its family's tints)
 // A dark colour used both ways gets two tokens with the same dark value: --accent (fill) and --accent-ink (text).
 export const COLOR = [
-  ['accent',        '#3b82f6', '#2563eb', 'c'],
-  ['accent-strong', '#2563eb', '#1d4ed8', 'c'],
-  ['accent-ink',    '#3b82f6', '#1451d6', 't'],
+  ['accent',        '#2563eb', '#2563eb', 'c'],
+  ['accent-strong', '#1d4ed8', '#1d4ed8', 'c'],
+  ['accent-ink',    '#60a5fa', '#1451d6', 't'],
   ['accent-text',   '#60a5fa', '#1451d6', 't'],
   ['accent-text-2', '#93c5fd', '#1e40af', 't'],
   ['accent-text-3', '#bfdbfe', '#1e40af', 't'],
-  ['ok',            '#10b981', '#047857', 'c'],
-  ['ok-strong',     '#059669', '#046c4e', 'c'],
-  ['ok-2',          '#16a34a', '#15803d', 'c'],
-  ['ok-2-strong',   '#15803d', '#166534', 'c'],
+  ['ok',            '#047857', '#047857', 'c'],
+  ['ok-strong',     '#046c4e', '#046c4e', 'c'],
+  ['ok-2',          '#15803d', '#15803d', 'c'],
+  ['ok-2-strong',   '#166534', '#166534', 'c'],
   ['ok-3',          '#22c55e', '#15803d', 'c'],
   ['ok-bar',        '#34d399', '#047857', 'c'],   // bars of a chart
   ['accent-bar',    '#60a5fa', '#2563eb', 'c'],
@@ -89,23 +89,23 @@ export const COLOR = [
   ['ok-text',       '#34d399', '#04694c', 't'],
   ['ok-text-2',     '#6ee7b7', '#065f46', 't'],
   ['ok-text-3',     '#86efac', '#065f46', 't'],
-  ['warn',          '#f59e0b', '#b45309', 'c'],
-  ['warn-strong',   '#b45309', '#92400e', 'c'],
+  ['warn',          '#b45309', '#b45309', 'c'],
+  ['warn-strong',   '#92400e', '#92400e', 'c'],
   ['warn-ink',      '#f59e0b', '#944407', 't'],
   ['warn-text',     '#fbbf24', '#944407', 't'],
   ['warn-text-2',   '#fcd34d', '#854008', 't'],
   ['warn-text-3',   '#fde68a', '#854008', 't'],
-  ['danger',        '#ef4444', '#dc2626', 'c'],
+  ['danger',        '#dc2626', '#dc2626', 'c'],
   ['danger-strong', '#dc2626', '#b91c1c', 'c'],
   ['danger-deep',   '#b91c1c', '#991b1b', 'c'],
-  ['danger-ink',    '#ef4444', '#b01c1c', 't'],
+  ['danger-ink',    '#f87171', '#b01c1c', 't'],
   ['danger-text',   '#f87171', '#b01c1c', 't'],
   ['danger-text-2', '#fca5a5', '#991b1b', 't'],
   ['danger-text-3', '#fecaca', '#991b1b', 't'],
-  ['violet',        '#8b5cf6', '#7c3aed', 'c'],
-  ['violet-2',      '#a855f7', '#9333ea', 'c'],
+  ['violet',        '#7c3aed', '#7c3aed', 'c'],
+  ['violet-2',      '#9333ea', '#9333ea', 'c'],
   ['violet-strong', '#7c3aed', '#6d28d9', 'c'],
-  ['violet-ink',    '#8b5cf6', '#6c23eb', 't'],
+  ['violet-ink',    '#a78bfa', '#6c23eb', 't'],
   ['violet-text',   '#a78bfa', '#6c23eb', 't'],
   ['violet-text-2', '#c084fc', '#6b21a8', 't'],
   ['violet-text-3', '#ddd6fe', '#5b21b6', 't'],
@@ -115,7 +115,7 @@ export const COLOR = [
   ['cyan-ink',      '#06b6d4', '#0b6279', 't'],
   ['cyan-text',     '#67e8f9', '#0b6279', 't'],
   ['cyan-text-2',   '#7dd3fc', '#0b6279', 't'],
-  ['teal',          '#14b8a6', '#0f766e', 'c'],
+  ['teal',          '#0f766e', '#0f766e', 'c'],
   // deep buttons: dark enough for pale text on both screens, so the light value is the same
   ['accent-deep',   '#1e4fa0', '#1e4fa0', 'c'],
   ['teal-deep',     '#0f766e', '#0f766e', 'c'],
@@ -125,8 +125,8 @@ export const COLOR = [
   // the server status dot and the words beside it (settings): one colour for both
   ['status-ok',     '#22c55e', '#166534', 't'],
   ['status-warn',   '#eab308', '#854008', 't'],
-  ['status-down',   '#ef4444', '#b01c1c', 't'],
-  ['status-off',    '#64748b', '#566274', 't'],
+  ['status-down',   '#f87171', '#b01c1c', 't'],
+  ['status-off',    '#8793a6', '#566274', 't'],
 ];
 
 // ── tints: family + two hex digits of alpha, as the screens write them (#3b82f640 → --accent-a40) ──
@@ -177,11 +177,11 @@ export const OTHER = [
   ['fade-85',      '0.85', '1'],
   // text on the black panel of the image viewer: the same on both screens
   ['viewer-text',  '#8290a3', '#8290a3'],
-  // the example text inside an empty input. Only the light screen uses it (see the rules
-  // under the token block in index.html); the dark screen keeps the browser's own grey
-  // until the director decides on wiki/modules/design.md 7.1.
-  ['placeholder',  '#757575', '#5b6779'],
-  // the ring around the input that has the keyboard. Light screen only, for the same reason.
+  // the example text inside an empty input (see the rules
+  // under the token block in index.html). Until 2026-09-30 it was the browser's own grey
+  // (#757575) on both screens.
+  ['placeholder',  '#8290a3', '#5b6779'],
+  // the ring around the input that has the keyboard
   ['focus-ring',   '#60a5fa', '#1d4ed8'],
 ];
 
