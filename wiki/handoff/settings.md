@@ -2,6 +2,52 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 기록 탭은 처음에 서류 발행을 빼고 보임 (실장님 결정 (나))
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위)
+- **1 서버** `GET /api/admin/audit?exclude=documents.issue`: 쉼표로 여럿 가능. **`audit.js` `ACTIONS`에 있는 이름만** 받고 모르는 값은 무시(400 아님 — 화면이 보내는 값은 늘 알려진 것이고, 새 번역 문구를 만들지 않으려고). 종류 거르기(`action`)로 고른 action은 빼지 않음. 뺄 때는 같은 거르기로 숨긴 줄 수를 세어 `excluded: { 'documents.issue': N }`을 함께 줌(`total`은 뺀 뒤의 수). SQL은 `action <> ALL($n::text[])`, 셈은 `action = ANY(…) GROUP BY action` 한 번 더.
+- **2 화면** (`Settings.jsx`)
+  - 거르기 줄 끝에 체크 「서류 발행도 보기 / Afficher aussi les documents émis」. 기본 끔 → `exclude=documents.issue`.
+  - 뺄 때 숨긴 줄이 있으면 목록 위에 「📄 서류 발행 N줄은 접혀 있음 / N ligne(s) « Document émis » masquée(s)」 + 같은 이름의 단추. 목록이 비어도 이 띠는 보임.
+  - 종류에서 「서류를 발행함」을 고르면 체크가 켜진 채 잠기고 그 줄만(1,240줄 · 25쪽).
+  - 환자 찾기도 같은 기본(빼고 보임).
+- **3 기억하지 않음**: 상태만(`useState`), `localStorage` 없음. **설정 안에서 다른 탭에 갔다 와도** 기록 탭을 열면 다시 끔. 켜고 끄거나 쪽을 옮기면 효과 한 곳에서 다시 읽고, 늦게 온 답은 버림(`useRef` 번호).
+- **4 CSV**: 기록 탭에 내려받기가 없음 — 할 일 없음.
+- **5 설명서** 7번: 처음엔 서류 발행이 빠짐, 띠 문구, 「Afficher aussi…」, 다음에 열면 다시 빠짐, 취소는 늘 보임. 변경 내역 초안 한 줄. 모듈 위키 API 표에 `exclude`.
+- **6 시험** `backend/test/settings.auditdocs.mjs`(새) 10개 통과: 뺌 → 발행 0줄·취소 3줄·total 3·`excluded` 30 / 안 뺌 → 33·`excluded` 없음 / 종류가 이김 → 30 / 쪽: 33줄 10씩 → 4쪽 3줄, 뺀 3줄 2씩 → 2쪽 1줄 / 모르는 이름(`nothing.here`, SQL 흉내) 무시 / 모르는 이름만 → 아무것도 안 뺌 / 권한 없음 403. 서류 줄은 진료의 라우트가 아직 쓰지 않아 시험이 격리 DB에 직접 넣음(`SE_DB_CONTAINER`, `bethesda-s-`로 시작하지 않으면 거절).
+- **잰 것**(서류 줄 21,000 + α): 처음 여는 조회(7일, 뺌) 1,290줄 26쪽 → **50줄 1쪽**, 6 ms. 1년 뺌 13 ms. 화면: 켬 1,290줄 1/26 → 2쪽 → 끔 50줄 1/1(쪽도 1로) → 다른 탭 갔다 옴 → 끔.
+- **공용 파일 변경**: i18n `se_logShowIssued`·`se_logIssuedHidden`.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx` · i18n 3개 · `backend/test/settings.auditdocs.mjs`(새) · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`, 격리 9187: login·auditdocs·audit·access 시험 통과, 화면 fr·ko(띠·체크·종류·다시 열기).
+
+## 2026-09-30 — 기록 탭에 서류 발행·취소 (실장님 결정 (다)) · 많은 줄에서 여는 시간 · 첫 설치 아이디 칸
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, `33a81d2` 포함). 통합 시험 중이라 `Settings.jsx` 두 줄.
+- **1 기록 탭** (`settingsAudit.js`)
+  - `documents.issue` 「서류를 발행함 / Document émis / Document issued」, `documents.void` 「서류를 취소함 / Document annulé / Document voided」 — 종류 거르기에도.
+  - 칸: `doc_no` 서류 번호 · `template_code` 서류 — **문서 엔진의 이름표로**(`Settings.jsx`가 `documents/registry.js` `getTemplate(code).name[lang]`을 `ctx.templateName`으로 넘김: 「referral」 → 「Lettre de référence / 진료의뢰서」, 모르는 코드는 코드 그대로) · `lang` 언어(「Français / 한국어 / English」 — 그 언어의 이름) · `voided` 취소됨(예/아니요 — `se_yes`·`se_no`) · `void_reason` 취소 사유.
+  - 진료의 `document.routes.js`는 아직 develop에 줄을 쓰지 않아, 03-change-log.md 1절 「서류」 모양대로 격리 DB에 직접 넣어 봄: fr 「Document émis · D26-00606 Lettre de référence · RAKOTO Test 6 · N° du document: D26-00606 / Document: Lettre de référence / Langue: Français」, 취소 「Annulé: Non → Oui / Motif de l'annulation: — → Erreur de patient」, ko 「서류를 발행함 … 서류: 진료의뢰서 언어: Français」·「취소됨: 아니요 → 예」.
+- **2 많은 줄** — 격리 DB에 서류 줄 1,000개(7일) → 더해서 20,000개(1년), 5번씩 잰 가운데 값(`/admin/audit`, 한 쪽 50줄):
+
+  | 조회 | 1,000줄(7일) | + 20,000줄(1년) |
+  |---|---|---|
+  | 기본(7일, 첫 쪽) | 11 ms · 900줄 | 12 ms · 1,233줄 |
+  | 7일의 마지막 쪽 | 15 ms | 15 ms |
+  | 종류 = 설정(서류 빼고 보는 셈) | 15 ms | 15 ms |
+  | 서류 발행만 | 15 ms | 15 ms |
+  | 환자 이름 찾기 | 15 ms | 16 ms |
+  | 1년 전체 | 14 ms | 14 ms · 21,009줄 |
+
+  응답 21 KB, 화면은 탭을 눌러 50줄이 그려지기까지 17 ms. 느려지는 곳은 없음(`idx_audit_log_at`·`_action`·`_patient`가 받침). **문제는 속도가 아니라 쪽 수**: 서류가 하루 150장이면 7일이 20쪽을 넘어, 다른 고침(결과·영수·가격)이 서류 줄 사이에 묻힘.
+  - **제안(결정 세션에)**: 종류 거르기의 기본을 「서류 발행을 뺀 모두」로 — 목록 맨 위에 「Tout sauf les documents émis」(기본), 그다음 「Tous les types」. 서버는 `action=-documents.issue` 같은 제외 한 가지만 더하면 됨(`/admin/audit` WHERE에 `action <> ?`, 인덱스 그대로). 취소 줄은 드물고 중요하니 기본에 남김. 지금은 만들지 않음 — 설명서 7번에 「종류를 고르거나 환자를 찾으라」고 적어 둠.
+- **3 설명서** `manual-fr/settings.md` 「Lire le Journal」: 머리에 서류 발행·취소, 7번(서류 — 내용은 없음, 많으니 종류·환자로 거르기), 8번 「기록 안 됨」에서 서류를 빼고 「초안 인쇄」만. 변경 내역 초안 한 줄.
+- **4 첫 설치 고정 아이디 칸** (`Login.jsx`): `opacity: .7` → 잠긴 칸 색(`--field-locked`·`--text-locked`), 커서는 그대로. 새 스택(설치 전)에서 잼: 어두운 5.87 · 밝은 5.46, 투명도 1.
+- **공용 파일 변경**: i18n `se_act_docIssue`·`se_act_docVoid`, `se_fld_docNo`·`se_fld_template`·`se_fld_docLang`·`se_fld_voided`·`se_fld_voidReason`, `se_yes`·`se_no`.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `Settings.jsx` · `Login.jsx` · i18n 3개 · 위키 4개
+- **확인한 방법**: `npm run build`. 격리 9187: login·audit·messages 시험 통과, 위 표, 화면 fr·ko(서류 줄·취소 줄·종류 목록), 새 스택의 설치 화면 대비.
+
 ## 2026-09-30 — 금액 표기 (두 번째 통합 시험의 C) · 여러 칸 줄 확인 · theme 첫 프레임 관찰
 
 - **상태**: 확인 요청

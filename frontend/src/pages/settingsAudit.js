@@ -31,6 +31,9 @@ export var AUDIT_ACTIONS = {
   // price only, before -> after (decision 2026-09-30 (나)); no patient
   'settings.drug.price': 'se_act_drugPrice',
   'settings.order.price': 'se_act_orderPrice',
+  // documents (decision 2026-09-30 (다)): issued and voided; the document's content never comes here
+  'documents.issue': 'se_act_docIssue',
+  'documents.void': 'se_act_docVoid',
 };
 
 // field name -> se_ key of its label
@@ -60,6 +63,9 @@ var FIELDS = {
   quantity: 'se_fld_quantity', total_qty: 'se_fld_totalQty', unit_price: 'se_fld_unitPrice', memo: 'se_fld_memo',
   // settings: an order code's price (price_clinic is the one the payment screen bills)
   price_clinic: 'se_fld_priceClinic', price: 'se_fld_priceList',
+  // documents (document.routes.js): number, which document, its language; voiding
+  doc_no: 'se_fld_docNo', template_code: 'se_fld_template', lang: 'se_fld_docLang',
+  voided: 'se_fld_voided', void_reason: 'se_fld_voidReason',
   pack_label: 'se_fld_packLabel',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',
@@ -103,6 +109,7 @@ export function auditFieldLabel(t, field) {
 
 // ctx: { depts: [{id, code, name}] } for department ids, entity: the line's entity
 // (a prescription's 'ordered' is "prescribed", an order's is "ordered").
+var LANG_NAMES = { ko: '한국어', en: 'English', fr: 'Français' };
 var STATUS_KEYS = { ordered: 'se_st_ordered', dispensed: 'se_st_dispensed', cancelled: 'se_st_cancelled',
   scheduled: 'se_st_scheduled', in_progress: 'se_st_in_progress', completed: 'se_st_completed' };
 export function auditValue(t, field, v, ctx) {
@@ -123,6 +130,12 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'pack_label') return t['ph_pack_' + v] || v;
   if (field === 'diagnosis_type') return t['se_dx_' + v] || v;
   if (field === 'gender') return t['se_gender_' + v] || v;
+  // a document's template code as the document engine names it (ctx.templateName, given
+  // by Settings.jsx from documents/registry.js); the code itself when it is unknown
+  if (field === 'template_code') return (ctx && ctx.templateName && ctx.templateName(v)) || v;
+  // the language a document was printed in, in its own name
+  if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
+  if (field === 'voided' && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
   // A receipt's status in the payment screen's words (py_st*): paid / partial / unpaid /
   // cancelled / waived. A correction line lists one per receipt (an array, payment B4
   // ada48fa), next to receipts in the same order.

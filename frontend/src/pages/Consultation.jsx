@@ -154,6 +154,31 @@ export default function ConsultationPage() {
   function rememberRx(rows){ (rows||[]).forEach(function(r){ savedRx.current[r.id] = rxSnap(r); }); return rows; }
   var ois = useState([]), orderItems = ois[0], setOrderItems = ois[1];
   var orderItemsRef = useRef([]); orderItemsRef.current = orderItems;
+  // ── Row saves (2026-09-30) ──
+  // A row is saved when the focus leaves it. On a consultation still open it is ALSO
+  // saved about 2 s after the doctor stops typing in it, and every row with unsaved
+  // changes is sent when the page is hidden or unloaded (fetch keepalive): with the save
+  // only on leaving the row, an F5, a closed window or a power cut lost every box changed
+  // in that row. A FINISHED consultation (Terminé pressed, or a visit from another day -
+  // the server's own rule, consult.routes.js consultOf) keeps the leave-the-row save
+  // only, so a correction still makes one line in the change log; its unsaved rows are
+  // still sent when the page goes away.
+  // Saves of one row can overlap (the pause save, then the row left). They go out one
+  // after the other (rowChain), so the server gets them in the order they were made; each
+  // carries a number, and an answer that is not the latest is dropped, so a late reply
+  // never puts back an older value on the screen. If the doctor typed on after a save left, the reply only brings
+  // the fields the server works out (total, status…) and what is typed stays.
+  var rxListRef = useRef([]); rxListRef.current = rxList;
+  var savedOrd = useRef({});
+  function ordSnap(o){ return [o.dose, o.frequency, o.days, o.quantity, o.memo].map(function(x){ return x==null ? '' : String(x); }).join('|'); }
+  var rowTimers = useRef({}), rowSeq = useRef({}), rowInflight = useRef({}), rowChain = useRef({});
+  // Sends one row's save after that row's previous one has answered.
+  function inTurn(key, send){
+    var run = (rowChain.current[key] || Promise.resolve()).then(send);
+    rowChain.current[key] = run.catch(function(){});
+    return run;
+  }
+  var finishedRef = useRef(false);
   var nts = useState(''), note = nts[0], setNote = nts[1];
   var vts = useState({ bp:'',temp:'',pulse:'',spo2:'',rr:'' }), vt = vts[0], setVt = vts[1];
   var ocs = useState(''), orderCode = ocs[0], setOrderCode = ocs[1];
@@ -580,48 +605,121 @@ export default function ConsultationPage() {
 
   function updateRxLocal(rxId, key, val){
     setRxList(function(list){ return list.map(function(r){ if(r.id!==rxId) return r; var n={}; for(var k in r)n[k]=r[k]; n[key]=val; return n; }); });
+    armRowSave('rx', rxId);
+  }
+  // The pause save: on an open consultation, 2 s after the last keystroke in a row.
+  function armRowSave(kind, id){
+    var key = kind + id;
+    clearTimeout(rowTimers.current[key]);
+    if(finishedRef.current) return;
+    rowTimers.current[key] = setTimeout(function(){ delete rowTimers.current[key]; flushRow(kind, id); }, 2000);
+  }
+  function flushRow(kind, id){
+    var list = kind==='rx' ? rxListRef.current : orderItemsRef.current;
+    var row = list.filter(function(r){ return r.id===id; })[0];
+    if(row) (kind==='rx' ? saveRx : saveOrder)(row);
+  }
+  function rxBody(rx){
+    // Sent as written: an empty field stays empty on the server (no silent 1).
+    return {
+      dose: rx.dose == null ? '' : rx.dose,
+      frequency: rx.frequency == null ? '' : rx.frequency,
+      days: rx.days == null ? '' : rx.days,
+      route: rx.route || '',
+      memo: rx.memo || '',
+      unit_price: rx.unit_price,
+      // pack_qty only for a pack-unit line; left out otherwise so the server keeps
+      // working the total out from the dose and the days.
+      pack_qty: isPack(rx) ? (rx.pack_qty!==undefined ? rx.pack_qty : packCount(rx)) : undefined
+    };
+  }
+  function ordBody(o){
+    return { dose: o.dose || '', frequency: parseInt(o.frequency) || 1, days: parseInt(o.days) || 1,
+      quantity: o.quantity || 1, memo: o.memo || '', unit_price: o.unit_price };
+  }
+  // Rows with changes not yet saved (locked rows are never sent).
+  function dirtyRows(){
+    var out = [];
+    rxListRef.current.forEach(function(r){ if(r.status!=='dispensed' && savedRx.current[r.id]!==undefined && savedRx.current[r.id]!==rxSnap(r)) out.push(['rx', r]); });
+    orderItemsRef.current.forEach(function(o){ if(o.status!=='cancelled' && savedOrd.current[o.id]!==undefined && savedOrd.current[o.id]!==ordSnap(o)) out.push(['o', o]); });
+    return out;
   }
 
   async function saveRx(rx){
-    if(savedRx.current[rx.id] === rxSnap(rx)) return;
+    var key = 'rx' + rx.id, snap = rxSnap(rx);
+    clearTimeout(rowTimers.current[key]); delete rowTimers.current[key];
+    if(savedRx.current[rx.id] === snap || rowInflight.current[key] === snap) return;
+    var seq = (rowSeq.current[key] || 0) + 1; rowSeq.current[key] = seq; rowInflight.current[key] = snap;
     try {
-      // Sent as written: an empty field stays empty on the server (no silent 1).
-      var dose = rx.dose == null ? '' : rx.dose;
-      var freq = rx.frequency == null ? '' : rx.frequency;
-      var days = rx.days == null ? '' : rx.days;
-      var updated = await api.put('/consultations/prescription/'+rx.id, {
-        dose: dose,
-        frequency: freq,
-        days: days,
-        route: rx.route || '',
-        memo: rx.memo || '',
-        unit_price: rx.unit_price,
-        // pack_qty only for a pack-unit line; left out otherwise so the server keeps
-        // working the total out from the dose and the days.
-        pack_qty: isPack(rx) ? (rx.pack_qty!==undefined ? rx.pack_qty : packCount(rx)) : undefined
-      });
+      var body = rxBody(rx);
+      var updated = await inTurn(key, function(){ return api.put('/consultations/prescription/'+rx.id, body); });
+      if(rowSeq.current[key] !== seq) return;            // a newer save of this row is on its way
+      delete rowInflight.current[key];
       rememberRx([updated]);
-      setRxList(function(list){ return list.map(function(r){ return r.id===rx.id ? updated : r; }); });
-    } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
+      setRxList(function(list){ return list.map(function(r){
+        if(r.id!==rx.id) return r;
+        if(rxSnap(r) === snap) return updated;
+        // typed on after this save left: keep what is typed, take what the server worked out
+        return Object.assign({}, r, { total_qty: updated.total_qty, status: updated.status, dosage_form: updated.dosage_form, pack_unit: updated.pack_unit, pack_label: updated.pack_label });
+      }); });
+    } catch(err){
+      if(rowSeq.current[key] === seq) delete rowInflight.current[key];
+      if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message);
+    }
   }
 
   function updateOrderLocal(orderId, key, val){
     setOrderItems(function(list){ return list.map(function(o){ if(o.id!==orderId) return o; var n={}; for(var k in o)n[k]=o[k]; n[key]=val; return n; }); });
+    armRowSave('o', orderId);
   }
 
+  // Same rules as saveRx. An order row is remembered as saved when it is first shown
+  // (the effect below), so an unchanged row is not sent.
   async function saveOrder(o){
+    var key = 'o' + o.id, snap = ordSnap(o);
+    clearTimeout(rowTimers.current[key]); delete rowTimers.current[key];
+    if(savedOrd.current[o.id] === snap || rowInflight.current[key] === snap) return;
+    var seq = (rowSeq.current[key] || 0) + 1; rowSeq.current[key] = seq; rowInflight.current[key] = snap;
     try {
-      var updated = await api.put('/consultations/order/'+o.id, {
-        dose: o.dose || '',
-        frequency: parseInt(o.frequency) || 1,
-        days: parseInt(o.days) || 1,
-        quantity: o.quantity || 1,
-        memo: o.memo || '',
-        unit_price: o.unit_price
-      });
-      setOrderItems(function(list){ return list.map(function(x){ return x.id===o.id ? updated : x; }); });
-    } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
+      var body = ordBody(o);
+      var updated = await inTurn(key, function(){ return api.put('/consultations/order/'+o.id, body); });
+      if(rowSeq.current[key] !== seq) return;
+      delete rowInflight.current[key];
+      savedOrd.current[o.id] = ordSnap(updated);
+      setOrderItems(function(list){ return list.map(function(x){
+        if(x.id!==o.id) return x;
+        if(ordSnap(x) === snap) return updated;
+        return Object.assign({}, x, { total_qty: updated.total_qty, status: updated.status });
+      }); });
+    } catch(err){
+      if(rowSeq.current[key] === seq) delete rowInflight.current[key];
+      if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message);
+    }
   }
+  // Order rows shown for the first time are taken as saved (they come from the server).
+  useEffect(function(){
+    orderItems.forEach(function(o){ if(savedOrd.current[o.id]===undefined) savedOrd.current[o.id] = ordSnap(o); });
+  },[orderItems]);
+  // Leaving the page (F5, closing, another address) or hiding it (another tab, minimised):
+  // send every row with unsaved changes. On pagehide the page may be gone before an
+  // answer comes back, so the request is fetch keepalive, sent by the browser itself.
+  useEffect(function(){
+    function sendAway(){
+      var token = null; try { token = localStorage.getItem('medconnect_token'); } catch(e){}
+      dirtyRows().forEach(function(pair){
+        var kind = pair[0], row = pair[1];
+        var url = kind==='rx' ? '/api/consultations/prescription/'+row.id : '/api/consultations/order/'+row.id;
+        try {
+          fetch(url, { method:'PUT', keepalive:true, headers: Object.assign({'Content-Type':'application/json'}, token ? {Authorization:'Bearer '+token} : {}),
+            body: JSON.stringify(kind==='rx' ? rxBody(row) : ordBody(row)) });
+        } catch(e){ /* nothing more can be done while the page goes */ }
+      });
+    }
+    function onHidden(){ if(document.visibilityState==='hidden') dirtyRows().forEach(function(pair){ flushRow(pair[0], pair[1].id); }); }
+    window.addEventListener('pagehide', sendAway);
+    document.addEventListener('visibilitychange', onHidden);
+    return function(){ window.removeEventListener('pagehide', sendAway); document.removeEventListener('visibilitychange', onHidden); };
+  },[]);
 
 
   async function addExamOrder(oc){
@@ -752,6 +850,8 @@ export default function ConsultationPage() {
     return allDrugs.filter(function(d){return d.name.toLowerCase().indexOf(s)>=0||d.code.toLowerCase().indexOf(s)>=0;});
   },[allDrugs,drugQ]);
 
+  finishedRef.current = !!(consult && (consult.status==='completed' || consult.status==='signed' ||
+    (sel && sel.visit_date && ymd(sel.visit_date) !== ymd(new Date()))));
   var SC={waiting:'accent',registered:'accent',in_progress:'warn',completed:'ok'};   // colour families (design): tint() and -ink make the colours
   var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
 

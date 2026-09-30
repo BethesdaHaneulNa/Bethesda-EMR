@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -11,6 +11,7 @@ import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../docum
 // The change log tab (wiki/03-change-log.md): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 import { seMoney, seMoneyInput } from './settingsMoney.js';
+import { getTemplate } from '../documents/registry.js';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -30,6 +31,10 @@ export default function SettingsPage() {
   var auS = useState(null), audit = auS[0], setAudit = auS[1];
   var auF = useState({from:localDay(new Date(Date.now()-6*86400000)), to:localDay(new Date()), staff_id:'', patient:'', action:''}), auditF = auF[0], setAuditF = auF[1];
   var auP = useState(1), auditPage = auP[0], setAuditPage = auP[1];
+  // Issued documents are left out until asked for (decision 2026-09-30 (나)); not kept on
+  // the PC - the tab opens without them every time, so nobody finds it left switched on.
+  var auI = useState(false), auditIssued = auI[0], setAuditIssued = auI[1];
+  var auditSeq = useRef(0);   // only the latest request's answer is shown
   var AUDIT_LIMIT = 50;
   var toS = useState(''), toast = toS[0], setToast = toS[1];
   var dcS = useState('All'), drugCat = dcS[0], setDrugCat = dcS[1];
@@ -58,14 +63,22 @@ export default function SettingsPage() {
 
   useEffect(function(){ loadAll(); },[]);
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
-  useEffect(function(){ if(activeTab==='audit') loadAudit(auditF, auditPage); },[activeTab, auditPage]);
-  async function loadAudit(f, page){
+  // Back to the default each time the Journal tab is opened, even without leaving Settings.
+  useEffect(function(){ if(activeTab==='audit') setAuditIssued(false); },[activeTab]);
+  useEffect(function(){ if(activeTab==='audit') loadAudit(auditF, auditPage); },[activeTab, auditPage, auditIssued]);
+  async function loadAudit(f, page, withIssued){
+    if(withIssued===undefined) withIssued=auditIssued;
     var q=['limit='+AUDIT_LIMIT,'page='+page];
     ['from','to','staff_id','patient','action'].forEach(function(k){ if(f[k]) q.push(k+'='+encodeURIComponent(f[k])); });
-    try { setAudit(await api.get('/admin/audit?'+q.join('&'))); }
-    catch(e){ setAudit({error:e.message, rows:[], total:0}); }
+    // Picking "document issued" in the type filter shows those lines whatever the switch says.
+    if(!withIssued && f.action!=='documents.issue') q.push('exclude=documents.issue');
+    var mine=++auditSeq.current;
+    try { var a=await api.get('/admin/audit?'+q.join('&')); if(mine===auditSeq.current) setAudit(a); }
+    catch(e){ if(mine===auditSeq.current) setAudit({error:e.message, rows:[], total:0}); }
   }
   function auditSearch(){ if(auditPage!==1) setAuditPage(1); else loadAudit(auditF, 1); }
+  // The effect above reloads when the switch or the page changes.
+  function auditToggleIssued(){ setAuditIssued(!auditIssued); setAuditPage(1); }
   function uaf(k,v){ setAuditF(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
   async function loadBackup(){ try { setBackup(await api.get('/backup/status')); } catch(e){ setBackup(null); } }
   // Reload whatever happened: a failure is now shown on the tab itself, not only in the alert.
@@ -955,9 +968,17 @@ export default function SettingsPage() {
                 </select>
                 <input value={auditF.patient} onChange={function(e){uaf('patient',e.target.value)}} onKeyDown={function(e){if(e.key==='Enter')auditSearch()}} placeholder={t.se_logPatientQ} style={Object.assign({},IS,{width:200,padding:'4px 6px'})}/>
                 <button onClick={auditSearch} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:600}}>{t.search}</button>
+                <label style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:auditF.action==='documents.issue'?t3:t2,cursor:'pointer',whiteSpace:'nowrap'}}>
+                  <input type="checkbox" checked={auditIssued||auditF.action==='documents.issue'} disabled={auditF.action==='documents.issue'} onChange={auditToggleIssued}/>{t.se_logShowIssued}
+                </label>
               </div>
             </div>
             <div style={{flex:1,overflow:'auto'}}>
+              {audit&&audit.excluded&&audit.excluded['documents.issue']>0?(
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'6px 14px',borderBottom:'1px solid var(--line-soft)',background:'var(--chip)',fontSize:13,color:t2}}>
+                  <span>📄 {String(t.se_logIssuedHidden||'').replace('{n}', audit.excluded['documents.issue'])}</span>
+                  <button onClick={auditToggleIssued} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'2px 10px',cursor:'pointer',fontSize:12,fontWeight:600}}>{t.se_logShowIssued}</button>
+                </div>):null}
               {!audit?<div style={{padding:20,color:t3}}>{t.loading}</div>:
                audit.error?<div style={{padding:14,color:'var(--danger-text-2)'}}>⚠ {seMessage(t, audit.error)}</div>:
                !audit.rows.length?<div style={{padding:20,color:t3,fontStyle:'italic'}}>{t.se_logEmpty}</div>:
@@ -966,7 +987,7 @@ export default function SettingsPage() {
                   {[t.se_logWhen,t.se_logWho,t.se_logWhat,t.se_logPatient,t.se_logChange].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize:12,borderBottom:'1px solid '+bd,whiteSpace:'nowrap'}}>{h}</th>})}
                 </tr></thead>
                 <tbody>{audit.rows.map(function(r){
-                  var ch=auditChanges(t, r, {depts:depts, lang:langCtx.lang});
+                  var ch=auditChanges(t, r, {depts:depts, lang:langCtx.lang, templateName:function(code){ var tp=getTemplate(code); return tp && tp.name ? (tp.name[langCtx.lang]||tp.name.fr||tp.name.en) : ''; }});
                   return <tr key={r.id} style={{borderBottom:'1px solid var(--line-soft)',verticalAlign:'top'}}>
                     <td style={{padding:'6px 10px',color:t2,whiteSpace:'nowrap',fontFamily:'monospace',fontSize:12}}>{fmtLocal(r.at)}</td>
                     <td style={{padding:'6px 10px',color:tx}}>{r.staff_name||'—'}{r.staff_role?<div style={{fontSize:11,color:t3}}>{t['se_role_'+r.staff_role]||r.staff_role}</div>:null}</td>

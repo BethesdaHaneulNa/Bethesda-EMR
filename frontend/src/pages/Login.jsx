@@ -131,7 +131,7 @@ export default function LoginPage() {
 
           <div style={{ marginBottom: 14 }}>
             <label style={LB}>{t.username}</label>
-            <input value={username} readOnly={isSetup} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={isSetup ? Object.assign({}, IN, { opacity: .7, cursor: 'default' }) : IN} autoComplete="username" />
+            <input value={username} readOnly={isSetup} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={isSetup ? Object.assign({}, IN, { background: 'var(--field-locked)', color: 'var(--text-locked)', cursor: 'default' }) : IN} autoComplete="username" />
             {isSetup ? <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4, lineHeight: 1.4 }}>{t.se_setupIdFixed}</div> : null}
           </div>
 

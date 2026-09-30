@@ -991,6 +991,17 @@ export default {
   se_act_orderPrice: "Prix d'un acte modifié",
   se_fld_priceClinic: "Prix",
   se_fld_priceList: "Prix de base",
+  se_act_docIssue: "Document émis",
+  se_act_docVoid: "Document annulé",
+  se_fld_docNo: "N° du document",
+  se_fld_template: "Document",
+  se_fld_docLang: "Langue",
+  se_fld_voided: "Annulé",
+  se_fld_voidReason: "Motif de l'annulation",
+  se_yes: "Oui",
+  se_no: "Non",
+  se_logShowIssued: "Afficher aussi les documents émis",
+  se_logIssuedHidden: "{n} ligne(s) « Document émis » masquée(s)",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

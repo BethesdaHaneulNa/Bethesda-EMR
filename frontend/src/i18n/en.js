@@ -1000,6 +1000,17 @@ export default {
   se_act_orderPrice: "Order code price changed",
   se_fld_priceClinic: "Price",
   se_fld_priceList: "List price",
+  se_act_docIssue: "Document issued",
+  se_act_docVoid: "Document voided",
+  se_fld_docNo: "Document number",
+  se_fld_template: "Document",
+  se_fld_docLang: "Language",
+  se_fld_voided: "Voided",
+  se_fld_voidReason: "Reason for voiding",
+  se_yes: "Yes",
+  se_no: "No",
+  se_logShowIssued: "Also show issued documents",
+  se_logIssuedHidden: "{n} \"Document issued\" line(s) folded away",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",
