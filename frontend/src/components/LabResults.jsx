@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
 
-function ymd(d) { return d ? String(d).split('T')[0] : ''; }
+// A DATE column reaches the browser as the clinic's local midnight written in
+// UTC ("2026-09-28T21:00:00.000Z" for the 29th at UTC+3), so cutting at 'T'
+// showed every visit and result one day early. Read it back as a local date;
+// a plain "YYYY-MM-DD" is already a date and is kept as it is.
+function ymd(d) {
+  if (!d) return '';
+  var s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var x = new Date(s);
+  return isNaN(x.getTime()) ? s.split('T')[0] : x.toLocaleDateString('en-CA');
+}
 
 // Date × test-item matrix of a patient's lab results (read-only).
 export function LabResults(props) {
@@ -11,14 +21,14 @@ export function LabResults(props) {
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
 
   useEffect(function () {
-    if (!props.patientId) { setRows([]); return; }
+    if (!props.patientId) { setRows([]); setLoading(false); return; }
     setLoading(true);
     api.get('/lab/patient/' + props.patientId + '/results')
       .then(function (r) { setRows(r || []); }).catch(function () { setRows([]); })
       .then(function () { setLoading(false); });
   }, [props.patientId]);
 
-  var bd = '#232838', tx = '#e2e8f0', t2 = '#94a3b8', t3 = '#64748b';
+  var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)';
 
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
   if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noLabResults || 'No lab results'}</div>;
@@ -28,19 +38,68 @@ export function LabResults(props) {
   rows.forEach(function (r) { var d = ymd(r.result_date); if (d && dates.indexOf(d) < 0) dates.push(d); });
   dates.sort().reverse();
 
+  // A test done twice on one day (a repeat) used to show only the later result:
+  // a cell was one date. Now each order of a panel on a date gets a slot --
+  // first of the day, second, ... by entry time -- and a date with repeats has
+  // one column per slot, each value with its entry time (decision 8,
+  // 2026-09-29). Different panels share slot 1, so an ordinary day stays one column.
+  function pk(r) { return r.panel_name || r.panel_code || '—'; }
+  var firstAt = {};   // order_item_id -> earliest result_at
+  rows.forEach(function (r) {
+    var at = r.result_at ? new Date(r.result_at).getTime() : 0;
+    if (firstAt[r.order_item_id] === undefined || at < firstAt[r.order_item_id]) firstAt[r.order_item_id] = at;
+  });
+  // Results of an order cancelled in the consultation room (decision 3) stay on
+  // the table as a record, but they must not take the numbered columns: a day
+  // with one cancelled test and its valid repeat showed the cancelled one as
+  // "(1)". Valid orders are numbered first; cancelled ones go into extra columns
+  // after them, headed with a cross instead of a number.
+  var cancelledOrder = {};
+  rows.forEach(function (r) { if (r.order_status === 'cancelled') cancelledOrder[r.order_item_id] = true; });
+  var perDayPanel = {};   // date|panel -> {ok: [order_item_id...], off: [...]}
+  rows.forEach(function (r) {
+    var k = ymd(r.result_date) + '|' + pk(r);
+    if (!perDayPanel[k]) perDayPanel[k] = { ok: [], off: [] };
+    var list = cancelledOrder[r.order_item_id] ? perDayPanel[k].off : perDayPanel[k].ok;
+    if (list.indexOf(r.order_item_id) < 0) list.push(r.order_item_id);
+  });
+  function byTime(a, b) { return firstAt[a] - firstAt[b] || a - b; }
+  var okSlots = {}, offSlots = {};   // date -> numbered columns / cancelled columns
+  Object.keys(perDayPanel).forEach(function (k) {
+    var d = k.split('|')[0];
+    okSlots[d] = Math.max(okSlots[d] || 0, perDayPanel[k].ok.length);
+    offSlots[d] = Math.max(offSlots[d] || 0, perDayPanel[k].off.length);
+  });
+  var slotOf = {};   // order_item_id -> column index within its date
+  Object.keys(perDayPanel).forEach(function (k) {
+    var d = k.split('|')[0], P = perDayPanel[k];
+    P.ok.sort(byTime).forEach(function (id, i) { slotOf[id] = i; });
+    P.off.sort(byTime).forEach(function (id, i) { slotOf[id] = (okSlots[d] || 0) + i; });
+  });
+  var cols = [];   // [{d, s, multi, n (1-based number, or 0 for a cancelled column)}]
+  dates.forEach(function (d) {
+    var ok = okSlots[d] || 0, off = offSlots[d] || 0, total = Math.max(ok + off, 1);
+    for (var i = 0; i < total; i++) cols.push({ d: d, s: i, multi: total > 1, n: i < ok ? (ok > 1 ? i + 1 : -1) : 0 });
+  });
+
   // group by panel, then item (by name) preserving order
   var panels = [];
   var pmap = {};
   rows.forEach(function (r) {
-    var pk = r.panel_name || r.panel_code || '—';
-    if (!pmap[pk]) { pmap[pk] = { name: pk, items: [], imap: {} }; panels.push(pmap[pk]); }
-    var P = pmap[pk];
+    var pname = pk(r);
+    if (!pmap[pname]) { pmap[pname] = { name: pname, items: [], imap: {} }; panels.push(pmap[pname]); }
+    var P = pmap[pname];
     if (!P.imap[r.name]) {
-      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, byDate: {} };
+      P.imap[r.name] = { name: r.name, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, byCol: {},
+                         fromCancelled: r.order_status === 'cancelled' };
       P.items.push(P.imap[r.name]);
+    } else if (P.imap[r.name].fromCancelled && r.order_status !== 'cancelled') {
+      // the reference column shows the latest *valid* result's range, not a cancelled one's
+      Object.assign(P.imap[r.name], { unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, ref_label: r.ref_label, fromCancelled: false });
     }
-    P.imap[r.name].byDate[ymd(r.result_date)] = r;
+    P.imap[r.name].byCol[ymd(r.result_date) + '#' + (slotOf[r.order_item_id] || 0)] = r;
   });
+  function hhmm(v) { if (!v) return ''; var x = new Date(v); return isNaN(x.getTime()) ? '' : x.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
   function refText(it) {
     if (it.ref_text) return it.ref_text;
@@ -49,15 +108,36 @@ export function LabResults(props) {
     if (it.ref_high != null) return '≤' + it.ref_high;
     return '';
   }
-  function cell(r) {
+  function cell(r, multi) {
     if (!r) return <span style={{ color: t3 }}>·</span>;
-    var color = r.flag === 'low' ? '#60a5fa' : r.flag === 'high' ? '#f87171' : tx;
-    var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : '';
-    return <span style={{ color: color, fontWeight: r.flag === 'low' || r.flag === 'high' ? 800 : 500 }}>{mark}{r.value}</span>;
+    // An order cancelled in the consultation room keeps its results as a record
+    // (decision 3): shown grey and struck through, without the high/low colour,
+    // the reason on hover when there is one.
+    if (r.order_status === 'cancelled') {
+      var tip = t.lb_cancelled + (r.cancel_reason ? ' — ' + r.cancel_reason : '');
+      return <span title={tip} style={{ color: t3, textDecoration: 'line-through' }}>{r.value}{multi ? <span style={{ display: 'block', fontSize: 10, textDecoration: 'none' }}>{hhmm(r.result_at)}</span> : null}</span>;
+    }
+    // 'abnormal' is a text result that differs from its reference text (e.g. a
+    // positive malaria test): red like high, marked "!" since it is not "above".
+    var odd = r.flag === 'low' || r.flag === 'high' || r.flag === 'abnormal';
+    var color = r.flag === 'low' ? 'var(--accent-text)' : odd ? 'var(--danger-text)' : tx;
+    var mark = r.flag === 'low' ? '▼' : r.flag === 'high' ? '▲' : r.flag === 'abnormal' ? '! ' : '';
+    // The reference column shows one range per row (the latest), but each result
+    // was judged by the range saved with it -- an older band for a child who has
+    // since grown, or a range edited in Settings since. Hovering shows that one.
+    var ref = refText(r);
+    var tip = ref ? (t.refRange || 'Ref') + ': ' + ref + (r.unit ? ' ' + r.unit : '') + (r.ref_label ? ' · ' + r.ref_label : '') : undefined;
+    var v = <span title={tip} style={{ color: color, fontWeight: odd ? 800 : 500 }}>{mark}{r.value}</span>;
+    if (!multi) return v;
+    return <span>{v}<span style={{ display: 'block', color: t3, fontSize: 10 }}>{hhmm(r.result_at)}</span></span>;
   }
 
-  var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: '#161a26', whiteSpace: 'nowrap' };
-  var td = { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid #1e2433', whiteSpace: 'nowrap' };
+  var th = { padding: '6px 8px', textAlign: 'left', color: t2, fontSize: 12, borderBottom: '1px solid ' + bd, position: 'sticky', top: 0, background: 'var(--panel-2)', whiteSpace: 'nowrap' };
+  var td = { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid var(--line-soft)', whiteSpace: 'nowrap' };
+  // The last date column (often the cancelled "✕" one) kept its values against the
+  // panel's right edge; a wider padding there leaves room after it, also when the
+  // table is scrolled sideways to its end.
+  function edge(i) { return i === cols.length - 1 ? { paddingRight: 20 } : null; }
 
   return (
     <div style={{ overflow: 'auto', height: '100%' }}>
@@ -67,19 +147,19 @@ export function LabResults(props) {
             <th style={Object.assign({}, th, { left: 0, zIndex: 2 })}>{t.testName || '검사명'}</th>
             <th style={th}>{t.unit || '단위'}</th>
             <th style={th}>{t.refRange || '참고치'}</th>
-            {dates.map(function (d) { return <th key={d} style={Object.assign({}, th, { textAlign: 'right' })}>{d}</th>; })}
+            {cols.map(function (c, i) { return <th key={c.d + '#' + c.s} title={c.n === 0 ? t.lb_cancelled : undefined} style={Object.assign({}, th, { textAlign: 'right' }, c.n === 0 ? { color: t3 } : null, edge(i))}>{c.d}{c.n > 0 ? ' (' + c.n + ')' : c.n === 0 ? ' ✕' : ''}</th>; })}
           </tr>
         </thead>
         <tbody>
           {panels.map(function (P) {
             return [
-              <tr key={'p-' + P.name}><td colSpan={3 + dates.length} style={{ padding: '5px 8px', background: '#0f1622', color: '#7dd3fc', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}>{P.name}</td></tr>
+              <tr key={'p-' + P.name}><td colSpan={3 + cols.length} style={{ padding: '5px 8px', background: 'var(--bg-group)', color: 'var(--cyan-text-2)', fontWeight: 800, fontSize: 12, borderBottom: '1px solid ' + bd }}><span style={{ position: 'sticky', left: 8 }}>{P.name}</span></td></tr>
             ].concat(P.items.map(function (it) {
               return <tr key={P.name + '-' + it.name}>
-                <td style={Object.assign({}, td, { left: 0, background: '#11141c', fontWeight: 600, color: tx })}>{it.name}</td>
+                <td style={Object.assign({}, td, { position: 'sticky', left: 0, zIndex: 1, background: 'var(--bg-col)', fontWeight: 600, color: tx })}>{it.name}</td>
                 <td style={Object.assign({}, td, { color: t2 })}>{it.unit || ''}</td>
-                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}</td>
-                {dates.map(function (d) { return <td key={d} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' })}>{cell(it.byDate[d])}</td>; })}
+                <td style={Object.assign({}, td, { color: t3 })}>{refText(it)}{it.ref_label ? <span style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</td>
+                {cols.map(function (c, i) { return <td key={c.d + '#' + c.s} style={Object.assign({}, td, { textAlign: 'right', fontFamily: 'monospace' }, edge(i))}>{cell(it.byCol[c.d + '#' + c.s], c.multi)}</td>; })}
               </tr>;
             }));
           })}

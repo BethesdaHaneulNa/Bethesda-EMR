@@ -8,7 +8,13 @@
 #   .\offline\pack.ps1 -Destination E:\kit
 #   .\offline\pack.ps1 -NoPacs                  -> EMR only
 #
-# Nothing here touches the running stack: it only builds, saves, and copies.
+# The running containers are not touched. Building does move the image names
+# (bethesda-emr-backend:latest ...) onto the freshly built images, and the next
+# 'docker compose up -d' on this machine would then start those - so once the images
+# are saved, the names are put back on the images they pointed to before.
+#
+# Pack from the state you mean to ship: both repositories on their release commit with
+# nothing uncommitted. MANIFEST.txt records the commits, and says so if not.
 
 param(
   [string]$Destination = 'F:\bethesda-offline-kit',
@@ -46,8 +52,69 @@ if (-not (Test-Path (Join-Path $emrRoot '.env'))) {
   Say "No .env here - using a placeholder secret for the build only."
 }
 
+# The PACS compose file reads its secrets from .env too. A machine that only packs has
+# none; the build does not use them, so placeholders let the file parse.
+if ($includePacs -and -not (Test-Path (Join-Path $PacsPath '.env'))) {
+  if (-not $env:ORTHANC_PASSWORD) { $env:ORTHANC_PASSWORD = 'pack-time-placeholder-not-used-at-runtime' }
+  if (-not $env:BRIDGE_TOKEN)     { $env:BRIDGE_TOKEN     = 'pack-time-placeholder-not-used-at-runtime' }
+  Say "No PACS .env here - using placeholder secrets for the build only."
+}
+
 $emrVersion = (Get-Content (Join-Path $emrRoot 'backend\package.json') -Raw | ConvertFrom-Json).version
 Say "EMR version $emrVersion"
+
+# Which commit is being packed, and whether the folder holds anything git does not
+# know about yet. A kit built from a half-edited folder cannot be traced afterwards.
+function Get-RepoState([string]$path) {
+  $state = @{ Commit = 'not a git checkout'; Branch = ''; Dirty = $false }
+  if (-not (Test-Path (Join-Path $path '.git'))) { return $state }
+  $c = (git -C $path rev-parse --short HEAD 2>$null)
+  if ($LASTEXITCODE -eq 0 -and $c) { $state.Commit = "$c".Trim() }
+  $b = (git -C $path rev-parse --abbrev-ref HEAD 2>$null)
+  if ($LASTEXITCODE -eq 0 -and $b) { $state.Branch = "$b".Trim() }
+  $state.Dirty = [bool](git -C $path status --porcelain 2>$null)
+  $global:LASTEXITCODE = 0
+  return $state
+}
+function Show-RepoState($st) {
+  $t = "$($st.Commit)"
+  if ($st.Branch) { $t += " ($($st.Branch))" }
+  if ($st.Dirty)  { $t += '  ** PACKED WITH UNCOMMITTED CHANGES **' }
+  return $t
+}
+$emrState  = Get-RepoState $emrRoot
+$pacsState = $null
+if ($includePacs) { $pacsState = Get-RepoState $PacsPath }
+Say "EMR  commit $(Show-RepoState $emrState)"
+if ($pacsState) { Say "PACS commit $(Show-RepoState $pacsState)" }
+if ($emrState.Dirty -or ($pacsState -and $pacsState.Dirty)) {
+  Write-Host "  WARNING: packing a folder with uncommitted changes. MANIFEST.txt will say so." -ForegroundColor Yellow
+}
+
+# Where each image name points now, so it can be put back once the kit is saved. The
+# image is also held under a second name (<name>:pack-hold): with Docker's containerd
+# image store, an image left without a name when the build moves 'latest' cannot be
+# found by id afterwards ("No such image") even while a container still runs on it,
+# and the name could not be put back (seen 2026-09-30). A held name survives the build.
+function Get-ImageIds([string]$path) {
+  $map = @{}
+  Push-Location $path
+  foreach ($img in (@(docker compose config --images) | Where-Object { $_ })) {
+    $id = (docker image inspect -f '{{.Id}}' $img 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $id) {
+      $map[$img] = "$id".Trim()
+      if ($img -notmatch ':pack-hold$') { docker tag $img "$($img -replace ':[^:/]+$', ''):pack-hold" 2>$null | Out-Null }
+    }
+  }
+  Pop-Location
+  $global:LASTEXITCODE = 0
+  return $map
+}
+$before = Get-ImageIds $emrRoot
+if ($includePacs) {
+  $pacsBefore = Get-ImageIds $PacsPath
+  foreach ($k in $pacsBefore.Keys) { $before[$k] = $pacsBefore[$k] }
+}
 
 # ---------------------------------------------------------------- build
 Step "Building EMR images (this is the slow part)"
@@ -102,10 +169,30 @@ if ($includePacs) {
   if ($LASTEXITCODE -ne 0) { Die "docker save failed for the PACS images." }
 }
 
+# The kit holds the new images now; give this machine its own back.
+$restored = 0
+foreach ($img in @($before.Keys)) {
+  $hold = "$($img -replace ':[^:/]+$', ''):pack-hold"
+  $now = (docker image inspect -f '{{.Id}}' $img 2>$null)
+  if ($LASTEXITCODE -eq 0 -and "$now".Trim() -ne $before[$img]) {
+    docker tag $hold $img 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) { docker tag $before[$img] $img 2>$null | Out-Null }
+    if ($LASTEXITCODE -eq 0) { $restored++ } else { Say "could not put $img back on $($before[$img]) - the next 'docker compose up -d' will use the freshly built image (same source)" }
+  }
+  docker rmi $hold 2>$null | Out-Null
+}
+$global:LASTEXITCODE = 0
+if ($restored) { Say "put $restored image name(s) back on the images this machine was running" }
+
 # Source tree: everything the installer needs, and nothing that belongs to *this*
-# machine. .env especially - shipping our secrets to a clinic would be a real leak.
-$excludeDirs  = @('.git', 'node_modules', 'dist', 'build', 'backups', '_pre-update-backups', 'storage', 'worklists', 'offline')
-$excludeFiles = @('.env', '*.log')
+# machine. .env especially - shipping our secrets to a clinic would be a real leak,
+# and so would a copy of it under another name (.env.bak, prod.env, .env.old).
+# .claude holds development worktrees: whole extra copies of the source.
+# logs: the PACS image backup's own record of this machine's runs.
+$excludeDirs  = @('.git', '.claude', 'node_modules', 'dist', 'build', 'backups', '_pre-update-backups', 'storage', 'worklists', 'logs', 'offline')
+# KEEP-TEST-DATA.txt marks the PC the EMR was prepared on (clean-test-data.ps1 stops when it
+# sees it); the clinic's PC must not inherit it.
+$excludeFiles = @('.env', '.env.*', '*.env', '*.bak', '*.log', 'KEEP-TEST-DATA.txt')
 
 function Copy-CleanTree([string]$src, [string]$dst) {
   # Not $args - that is an automatic variable in PowerShell.
@@ -116,6 +203,18 @@ function Copy-CleanTree([string]$src, [string]$dst) {
   # robocopy uses exit codes as a bitmask; anything under 8 means it succeeded.
   if ($LASTEXITCODE -ge 8) { Die "Copy of $src failed (robocopy $LASTEXITCODE)." }
   $global:LASTEXITCODE = 0
+  # The pattern above also drops the template the installer starts from.
+  $example = Join-Path $src '.env.example'
+  if (Test-Path $example) { Copy-Item $example (Join-Path $dst '.env.example') -Force }
+  # Check the result rather than trust the pattern: nothing that looks like an
+  # environment file may be in the kit, whatever it was called.
+  $leaks = @(Get-ChildItem $dst -Recurse -Force -File -ErrorAction SilentlyContinue |
+    Where-Object { ($_.Name -like '.env*' -or $_.Name -like '*.env') -and $_.Name -ne '.env.example' })
+  if ($leaks.Count) {
+    $names = ($leaks | ForEach-Object { $_.Name }) -join ', '
+    $leaks | ForEach-Object { Remove-Item $_.FullName -Force }
+    Die "Environment file(s) reached the kit and were removed: $names. Packing stopped - find out why before trying again."
+  }
 }
 
 # Re-packing over an older kit would merge the two trees and leave files that this
@@ -186,7 +285,9 @@ Bethesda offline install kit
 Packed:       $(Get-Date -Format 'yyyy-MM-dd HH:mm')
 Packed on:    $env:COMPUTERNAME
 EMR version:  $emrVersion
+EMR commit:   $(Show-RepoState $emrState)
 PACS bundled: $(if ($includePacs) { 'yes' } else { 'no' })
+$(if ($pacsState) { "PACS commit:  $(Show-RepoState $pacsState)" })
 
 Images in this kit:
 $($allImages | ForEach-Object { "  $_" } | Out-String)

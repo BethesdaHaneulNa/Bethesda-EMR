@@ -3,6 +3,12 @@
 #
 #   ./verify-backup.sh                                       newest backup
 #   ./verify-backup.sh backups/bethesda_2026-07-15_0200.sql.gz
+#   ./verify-backup.sh --strict        right after "Back up now": exact match with live
+#   DB_CONTAINER=bethesda-s-settings-db ./verify-backup.sh    a development stack
+#
+# Environment overrides: DB_CONTAINER (default bethesda-emr-db), API_CONTAINER
+# (default: DB_CONTAINER with -db replaced by -api), BACKUP_DIR (default: where
+# Docker mounted /backups into the app, else ./backups).
 #
 # It restores the backup into a temporary database, compares that against the live
 # one, and drops the temporary database again. Your data is never written to: the
@@ -20,7 +26,8 @@ cd "$(dirname "$0")"
 export MSYS_NO_PATHCONV=1
 export MSYS2_ARG_CONV_EXCL='*'
 
-DB_CONTAINER=bethesda-emr-db
+DB_CONTAINER="${DB_CONTAINER:-bethesda-emr-db}"
+API_CONTAINER="${API_CONTAINER:-$(echo "$DB_CONTAINER" | sed 's/-db$/-api/')}"
 DB_USER=medconnect
 DB_NAME=medconnect
 TMP_DB=bethesda_verify_tmp
@@ -29,15 +36,31 @@ say()  { echo "  $*"; }
 step() { echo ""; echo "==> $*"; }
 ok()   { echo "  [ok]   $*"; }
 bad()  { echo "  [FAIL] $*"; }
+info() { echo "  [info] $*"; }
 die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
 
-docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" >/dev/null 2>&1 \
+STRICT=""
+if [ "$1" = "--strict" ]; then STRICT=1; shift; fi
+
+# The output, not only the exit code: inspect succeeds on a stopped container too.
+[ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null)" = "true" ] \
   || die "The database container ($DB_CONTAINER) is not running. Start the app first."
+
+# The backups are wherever BACKUP_PATH put them - often another disk - not
+# necessarily next to this script. Docker knows: it mounted that folder into the
+# app as /backups. (The status window finds it the same way.)
+if [ -z "$BACKUP_DIR" ]; then
+  BACKUP_DIR="$(docker inspect "$API_CONTAINER" --format '{{range .Mounts}}{{.Destination}}={{.Source}}{{println}}{{end}}' 2>/dev/null \
+                | sed -n 's|^/backups=||p' | head -1)"
+  if [ -z "$BACKUP_DIR" ] || [ ! -d "$BACKUP_DIR" ]; then BACKUP_DIR=backups; fi
+fi
+say "backups: $BACKUP_DIR"
+newest_backup() { ls "$BACKUP_DIR"/bethesda_*.sql.gz 2>/dev/null | sort | tail -1; }
 
 FILE="$1"
 if [ -z "$FILE" ]; then
-  FILE="$(ls backups/bethesda_*.sql.gz 2>/dev/null | sort | tail -1)"
-  [ -n "$FILE" ] || die "No backups found in ./backups/. Take one from Settings -> Backup first."
+  FILE="$(newest_backup)"
+  [ -n "$FILE" ] || die "No backups found in $BACKUP_DIR. Take one from Settings -> Backup first."
 fi
 [ -f "$FILE" ] || die "No such file: $FILE"
 
@@ -128,10 +151,10 @@ fi
 ok "restored with no errors"
 
 # Is this the backup the live database was most recently dumped from? Only then does it
-# make sense to expect the two to match. Restoring an older one is a perfectly normal
+# make sense to compare the two at all. Restoring an older one is a perfectly normal
 # thing to do -- it is what you do after losing a day -- and it must not be reported as
 # a broken backup just because the clinic has seen patients since.
-NEWEST="$(ls backups/bethesda_*.sql.gz 2>/dev/null | sort | tail -1)"
+NEWEST="$(newest_backup)"
 IS_NEWEST=""
 [ -n "$NEWEST" ] && [ "$(basename "$FILE")" = "$(basename "$NEWEST")" ] && IS_NEWEST=1
 
@@ -152,6 +175,34 @@ else
   ok "every sequence is ahead of its own data"
 fi
 
+# From an older version of the app? It restored here because this is an empty
+# database; onto the running one the usual restore commands stop ("cannot drop
+# constraint ... depend on it") and DEPLOYMENT.md 5b's other commands are needed.
+# Found in the restore drill of 2026-09-29 (wiki/modules/settings.md 2.13).
+OLDER_VERSION=""
+if [ "$(psql_q "$TMP_DB" "select (to_regclass('public.schema_migrations') is not null)::text;")" = "true" ]; then
+  psql_q "$DB_NAME" "select filename from schema_migrations order by 1;" > "$WORK/mig.live"
+  psql_q "$TMP_DB"  "select filename from schema_migrations order by 1;" > "$WORK/mig.tmp"
+  NOT_IN_BACKUP="$(grep -vxF -f "$WORK/mig.tmp" "$WORK/mig.live" | tr '\n' ' ' || true)"
+  if [ -n "$NOT_IN_BACKUP" ]; then
+    OLDER_VERSION=1
+    info "this backup is from an older version of the app - database update(s) that came after it: $NOT_IN_BACKUP"
+    say "It restores into an empty database, as it just did here. To put it back on this machine,"
+    say "use DEPLOYMENT.md 5b, 'If the backup is older than the app': the usual commands stop on it."
+    if [ -n "$STRICT" ]; then
+      bad "with --strict the backup must be from the running version - press Back up now first"
+      FAILED=1; STRICT_OLDER=1
+    fi
+  else
+    ok "same version as the running app ($(wc -l < "$WORK/mig.tmp" | tr -d ' ') database updates)"
+  fi
+fi
+older_note() {
+  if [ -n "$OLDER_VERSION" ]; then
+    echo "  It is from an older version of the app: restore it with DEPLOYMENT.md 5b, 'If the backup is older than the app'."
+  fi
+}
+
 if [ -z "$IS_NEWEST" ]; then
   echo ""
   say "$(basename "$FILE") is not the newest backup, so it is not compared against the"
@@ -162,59 +213,92 @@ if [ -z "$IS_NEWEST" ]; then
     exit 1
   fi
   echo "VERIFIED - $(basename "$FILE") restores correctly."
+  older_note
   exit 0
 fi
 
+# Two different questions, kept apart on purpose (verify-backup.ps1 has the longer
+# story): is the backup missing structure - a fault, unless the app was updated
+# after it was taken - and does the data match, which it only can if nobody has
+# entered anything since. The nightly backup is from 02:00; a clinic that had
+# registered one patient since used to get "VERIFY FAILED - Do not rely on it"
+# about a perfectly good backup. Differences are now listed, and only --strict
+# (run straight after "Back up now") counts them as failure. Soundness on its own
+# is proven above: a clean single-transaction restore with ON_ERROR_STOP, and every
+# sequence ahead of its own data.
 step "Comparing against the live database"
 
+psql_q "$DB_NAME" "$COUNTS" > "$WORK/counts.live"
+
+count_of() { sed -n "s/^$1|//p" "$2" | head -1; }
+LIVE_MIG="$(count_of schema_migrations "$WORK/counts.live")"; LIVE_MIG="${LIVE_MIG:-0}"
+TMP_MIG="$(count_of schema_migrations "$WORK/counts.tmp")";   TMP_MIG="${TMP_MIG:-0}"
+UPDATED=""
+if [ "$LIVE_MIG" -gt "$TMP_MIG" ]; then
+  UPDATED=1
+  info "the app was updated after this backup ($((LIVE_MIG - TMP_MIG)) newer database migration(s)), so the schema is expected to differ"
+fi
+
+cut -d'|' -f1 "$WORK/counts.live" | sort > "$WORK/tables.live"
+cut -d'|' -f1 "$WORK/counts.tmp"  | sort > "$WORK/tables.tmp"
+MISSING="$(comm -23 "$WORK/tables.live" "$WORK/tables.tmp" | tr '\n' ' ')"
+if [ -n "$MISSING" ] && [ -z "$UPDATED" ]; then
+  bad "tables missing from the backup: $MISSING"; FAILED=1
+elif [ -z "$MISSING" ]; then
+  ok "all $(wc -l < "$WORK/tables.live" | tr -d ' ') tables of the live database are in the backup"
+fi
+
 psql_q "$DB_NAME" "$SHAPE" > "$WORK/shape.live"
-psql_q "$TMP_DB"  "$SHAPE" > "$WORK/shape.tmp"
 if cmp -s "$WORK/shape.live" "$WORK/shape.tmp"; then
   ok "schema: $(cat "$WORK/shape.live")"
+elif [ -n "$UPDATED" ]; then
+  info "schema differs (expected after the update)"; say "live:     $(cat "$WORK/shape.live")"; say "restored: $(cat "$WORK/shape.tmp")"
 else
   bad "schema differs"; say "live:     $(cat "$WORK/shape.live")"; say "restored: $(cat "$WORK/shape.tmp")"; FAILED=1
 fi
 
-psql_q "$DB_NAME" "$COUNTS" > "$WORK/counts.live"
-psql_q "$TMP_DB"  "$COUNTS" > "$WORK/counts.tmp"
-if cmp -s "$WORK/counts.live" "$WORK/counts.tmp"; then
-  ok "$(wc -l < "$WORK/counts.live" | tr -d ' ') tables, $(awk -F'|' '{s+=$2} END{print s}' "$WORK/counts.live") rows - counts match"
-else
-  bad "row counts differ:"; diff "$WORK/counts.live" "$WORK/counts.tmp" | sed 's/^/         /'; FAILED=1
-fi
-
-# A restore that loses sequence values looks perfect until the first new record
-# collides with an existing id. This is the check people skip.
 psql_q "$DB_NAME" "$SEQS" > "$WORK/seqs.live"
 psql_q "$TMP_DB"  "$SEQS" > "$WORK/seqs.tmp"
-if cmp -s "$WORK/seqs.live" "$WORK/seqs.tmp"; then
-  ok "$(wc -l < "$WORK/seqs.live" | tr -d ' ') sequences at the same values"
-else
-  bad "sequence values differ - new records would collide after a restore:"
-  diff "$WORK/seqs.live" "$WORK/seqs.tmp" | sed 's/^/         /'; FAILED=1
-fi
-
 psql_q "$DB_NAME" "$SUMS" > "$WORK/sums.live"
 psql_q "$TMP_DB"  "$SUMS" > "$WORK/sums.tmp"
-if cmp -s "$WORK/sums.live" "$WORK/sums.tmp"; then
-  ok "every table's contents match"
+
+# Every table (or sequence - one can move with no row left to show for it) whose
+# rows, value or contents differ from live.
+{ diff "$WORK/counts.live" "$WORK/counts.tmp"; diff "$WORK/seqs.live" "$WORK/seqs.tmp"; diff "$WORK/sums.live" "$WORK/sums.tmp"; } \
+  | sed -n 's/^[<>] \([^|]*\)|.*/\1/p' | sort -u > "$WORK/changed" || true
+# Written continuously by the system itself, not by people: they differ even
+# straight after a backup, so even --strict does not hold them against it.
+SYSTEM='service_heartbeat|document_log|worklist_log|service_heartbeat_id_seq|document_log_id_seq|worklist_log_id_seq|schema_migrations'
+BY_PEOPLE="$(grep -vxE "$SYSTEM" "$WORK/changed" | tr '\n' ' ' || true)"
+STRICT_MISMATCH=""
+
+if [ ! -s "$WORK/changed" ]; then
+  ok "identical to the live database: $(wc -l < "$WORK/counts.live" | tr -d ' ') tables, $(awk -F'|' '{s+=$2} END{print s+0}' "$WORK/counts.live") rows, every sequence and every table's contents"
+elif [ -z "$BY_PEOPLE" ]; then
+  ok "identical to the live database, except $(tr '\n' ' ' < "$WORK/changed")- written continuously by the system, so they are expected to have moved on"
+elif [ -n "$STRICT" ]; then
+  bad "differs from the live database in: $BY_PEOPLE"
+  for t in $BY_PEOPLE; do
+    L="$(count_of "$t" "$WORK/counts.live")"; B="$(count_of "$t" "$WORK/counts.tmp")"
+    if [ -n "$L" ] && [ "$L" != "$B" ]; then say "       $t: live $L rows, backup $B"; fi
+  done
+  say "(With --strict nothing may have changed since the backup. If someone was working,"
+  say " take a new backup and run this again straight after it.)"
+  FAILED=1; STRICT_MISMATCH=1
 else
-  # The live database keeps moving while the backup stands still, so tables written to
-  # continuously will differ. That is expected, not a fault.
-  CHANGED="$(diff "$WORK/sums.live" "$WORK/sums.tmp" | sed -n 's/^[<>] \([^|]*\)|.*/\1/p' | sort -u)"
-  UNEXPECTED="$(echo "$CHANGED" | grep -vxE 'service_heartbeat|document_log|worklist_log' || true)"
-  if [ -n "$UNEXPECTED" ]; then
-    bad "contents differ in: $(echo "$UNEXPECTED" | tr '\n' ' ')"
-    say "(these tables should not have changed since the backup - look into it)"
-    FAILED=1
-  else
-    ok "contents match, except $(echo "$CHANGED" | tr '\n' ' ')- those are written to continuously, so they are expected to have moved on since the backup"
-  fi
+  info "the live database has changed since this backup was taken, in: $BY_PEOPLE"
+  say "This is normal while the clinic is working and says nothing against the backup."
+  say "For an exact comparison: press Back up now, then run this again with --strict."
 fi
 
 echo ""
 if [ -n "$FAILED" ]; then
-  echo "VERIFY FAILED - this backup would not restore cleanly. Do not rely on it."
+  if [ -n "$STRICT_MISMATCH" ] || [ -n "$STRICT_OLDER" ]; then
+    echo "VERIFY FAILED - this backup restores, but does not match the live database (--strict)."
+  else
+    echo "VERIFY FAILED - this backup would not restore cleanly. Do not rely on it."
+  fi
   exit 1
 fi
 echo "VERIFIED - $(basename "$FILE") restores correctly."
+older_note

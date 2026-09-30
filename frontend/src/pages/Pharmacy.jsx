@@ -1,19 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
+import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord, missingTimes } from '../documents/rx-dosing.js';
+import { PharmacyStock } from './PharmacyStock.jsx';
 
-function fmt(n){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Thousands: 12,300 in Korean and English, 12 300 in French (integration test C).
+function fmt(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
 function patientName(v){ return ((v.last_name||'') + ' ' + (v.first_name||'')).trim(); }
 function timeText(v, locale){
   var raw = v.consultation_time || v.dispensed_at || v.visit_date;
   if(!raw) return '';
   try { return new Date(raw).toLocaleString(locale || 'en-GB', { hour12:false }); } catch(e){ return raw; }
 }
-function rxQty(rx){ return parseFloat(rx.total_qty) || ((parseFloat(rx.dose)||0) * (Number(rx.frequency)||1) * (Number(rx.days)||1)); }
+function isExternal(rx){ return rx.dispense_type === 'external'; }
+// '{ago}' style placeholders in a translated sentence, so word order can differ per language.
+function fill(s, v){ return String(s || '').replace(/\{(\w+)\}/g, function(m, k){ return v[k] != null ? v[k] : m; }); }
+
+// The queue refreshes itself this often while the screen is visible.
+var AUTO_REFRESH_MS = 30000;
+
+// Exact error texts from pharmacy.routes.js. The API client passes on only the
+// message, so matching it is how a known refusal becomes a translated one.
+var ERR_NOTHING_PENDING = 'No pending prescriptions for this consultation';
+var ERR_TYPE_LOCKED = 'Prescription already dispensed; dispense type can no longer change';
+var ERR_TOO_OLD = 'Prescription too old to dispense here; the doctor must prescribe again';
 
 export default function PharmacyPage() {
   var lc = useLang(); var t = lc.t;
@@ -30,26 +44,105 @@ export default function PharmacyPage() {
   var rrx = useState([]), recentRx = rrx[0], setRecentRx = rrx[1];
   var dcs = useState(false), docOpen = dcs[0], setDocOpen = dcs[1];
   var cvs = useState(false), chartViewOpen = cvs[0], setChartViewOpen = cvs[1];
+  // The day's queue shows today only (decision M3). A patient found through the
+  // search brings their own waiting prescriptions from the last few days with them:
+  // { pid, name, days, groups, older } - see GET /pharmacy/patient/:id/pending.
+  var pps = useState(null), past = pps[0], setPast = pps[1];
+  // Read by the auto-refresh timer, which is set up once and would otherwise
+  // only ever see the state of the first render.
+  var live = useRef({});
+  live.current = { tab: tab, sel: sel, busy: busy, loading: loading, docOpen: docOpen, chartViewOpen: chartViewOpen, phFinderOpen: phFinderOpen, past: past };
+  var switching = useRef(0); // in-house/outside switches still on their way to the server
 
   // 처방을 원내(internal)/원외(external)로 지정
+  // The list rows are updated as well as the open patient: clicking another
+  // patient and back re-selects from the list, which otherwise still held the
+  // old value and showed the switch as if it had not been pressed.
   async function setDispenseType(rxId, type){
+    function withType(group){
+      var n = Object.assign({}, group);
+      n.prescriptions = (group.prescriptions||[]).map(function(rx){ return rx.id===rxId ? Object.assign({}, rx, { dispense_type: type }) : rx; });
+      return n;
+    }
+    switching.current++;
     try {
       await api.put('/pharmacy/prescription/'+rxId+'/dispense-type', { dispense_type: type });
-      setSel(function(prev){
-        if(!prev) return prev;
-        var n = Object.assign({}, prev);
-        n.prescriptions = (prev.prescriptions||[]).map(function(rx){ return rx.id===rxId ? Object.assign({}, rx, { dispense_type: type }) : rx; });
-        return n;
-      });
-    } catch(err){ alert('Error: '+err.message); }
+      setSel(function(prev){ return prev ? withType(prev) : prev; });
+      function inGroups(list){
+        return list.map(function(g){
+          return (g.prescriptions||[]).some(function(rx){ return rx.id===rxId; }) ? withType(g) : g;
+        });
+      }
+      setPending(inGroups);
+      setPast(function(prev){ return prev ? Object.assign({}, prev, { groups: inGroups(prev.groups) }) : prev; });
+    } catch(err){
+      if(err.message === ERR_TYPE_LOCKED){ alert(t.ph_typeLocked); switching.current--; await loadData(); return; }
+      alert('Error: '+err.message);
+    }
+    switching.current--;
   }
 
   useEffect(function(){ loadData(); }, []);
+
+  async function fetchPast(pid){
+    var r = await api.get('/pharmacy/patient/' + pid + '/pending');
+    return { groups: (r && r.groups) || [], older: (r && r.older) || 0, days: (r && r.days) || 0 };
+  }
+
+  // Patient search: open their waiting prescription straight away when there is
+  // one, list them when there are several, and fall back to the chart alone.
+  async function pickPatient(p){
+    setViewPid(p.id);
+    setTab('pending');
+    try {
+      var r = await fetchPast(p.id);
+      setPast({ pid: p.id, name: patientName(p), days: r.days, groups: r.groups, older: r.older });
+      setSel(r.groups.length === 1 ? r.groups[0] : null);
+    } catch(err){
+      setPast(null); setSel(null);
+      alert('Error: ' + err.message);
+    }
+  }
+  // Keyed on the patient, not the selection object: the auto-refresh hands back a
+  // fresh object for the same patient every 30 seconds.
+  var selPid = sel ? sel.patient_id : null;
   useEffect(function(){
-    var pid = sel ? sel.patient_id : null;
-    if(!pid){ setRecentRx([]); return; }
-    api.get('/pharmacy/patient/'+pid+'/recent-rx').then(function(r){ setRecentRx(r||[]); }).catch(function(){ setRecentRx([]); });
-  }, [sel]);
+    if(!selPid){ setRecentRx([]); return; }
+    api.get('/pharmacy/patient/'+selPid+'/recent-rx').then(function(r){ setRecentRx(r||[]); }).catch(function(){ setRecentRx([]); });
+  }, [selPid]);
+
+  // New patients reach the queue as doctors finish, and nobody thought to press
+  // Refresh. This reloads quietly - no loading text, no error pop-ups, the search
+  // box and the open patient left alone - and stands aside whenever reloading
+  // could get in the way: while a dispense or a switch is being saved, while a
+  // document, chart or patient search window is open (its fields would be reset
+  // under the pharmacist), and while the browser tab is hidden.
+  async function refreshQuiet(){
+    var s = live.current;
+    if(document.hidden || s.busy || s.loading || switching.current || s.docOpen || s.chartViewOpen || s.phFinderOpen) return;
+    try {
+      var p = await api.get('/pharmacy/pending');
+      var c = await api.get('/pharmacy/completed');
+      var pastNow = s.past ? await fetchPast(s.past.pid) : null;
+      var now = live.current; // may have changed while we waited
+      if(now.busy || now.loading || switching.current) return;
+      setPending(p); setCompleted(c);
+      if(pastNow && now.past && now.past.pid === s.past.pid) setPast(Object.assign({}, now.past, pastNow));
+      if(now.sel){
+        var pool = now.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
+        var next = pool.find(function(x){ return x.consultation_id === now.sel.consultation_id; });
+        // If the open patient has left the queue it stays on screen, with a notice,
+        // rather than vanishing mid-read; see selGone below.
+        if(next) setSel(next);
+      }
+    } catch(e){ /* quiet: the next tick or the Refresh button will say if it persists */ }
+  }
+  useEffect(function(){
+    var id = setInterval(refreshQuiet, AUTO_REFRESH_MS);
+    function onVisible(){ if(!document.hidden) refreshQuiet(); }
+    document.addEventListener('visibilitychange', onVisible);
+    return function(){ clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
 
   // 같은 약을 이전에 받았고, 그 처방분(처방일+일수)이 아직 안 끝났으면 조기 재처방 경고
   function refillWarn(drugCode){
@@ -78,9 +171,13 @@ export default function PharmacyPage() {
     try {
       var p = await api.get('/pharmacy/pending');
       var c = await api.get('/pharmacy/completed');
+      var cur = live.current;
+      var pastNow = cur.past ? await fetchPast(cur.past.pid) : null;
       setPending(p); setCompleted(c);
-      if(sel){
-        var next = (tab === 'pending' ? p : c).find(function(x){ return x.consultation_id === sel.consultation_id; });
+      if(pastNow) setPast(Object.assign({}, cur.past, pastNow));
+      if(cur.sel){
+        var pool = cur.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
+        var next = pool.find(function(x){ return x.consultation_id === cur.sel.consultation_id; });
         setSel(next || null);
       }
     } catch(err){ alert('Error: ' + err.message); }
@@ -89,7 +186,14 @@ export default function PharmacyPage() {
 
   async function dispense(){
     if(!sel || busy) return;
-    if(!window.confirm(patientName(sel) + ' '+t.dispenseComplete+'?' )) return;
+    // A line with no stored total takes nothing off the shelf (the server reads the
+    // total, it does not work one out), so say so before the pharmacist confirms.
+    var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
+    // A whole sentence per language, so the word order is right (« Terminer la
+    // délivrance pour RAKOTO Jean ? », integration test C).
+    var ask = fill(t.ph_dispenseConfirm, { name: patientName(sel) });
+    if(unquantified.length) ask = t.ph_noTotalConfirm + '\n' + unquantified.map(function(rx){ return '· ' + rx.drug_name; }).join('\n') + '\n\n' + ask;
+    if(!window.confirm(ask)) return;
     setBusy(true);
     try {
       var r = await api.put('/pharmacy/consultations/' + sel.consultation_id + '/dispense');
@@ -102,11 +206,31 @@ export default function PharmacyPage() {
       }
       await loadData();
       setSel(null);
-    } catch(err){ alert('Error: ' + err.message); }
+    } catch(err){
+      if(err.message === ERR_TOO_OLD){
+        alert(fill(t.ph_tooOld, { n: past ? past.days : '' }));
+        await loadData();
+        setSel(null);
+      } else if(err.message === ERR_NOTHING_PENDING){
+        // Someone else finished this patient first. Stock was taken once, by them.
+        alert(t.ph_alreadyDispensed);
+        await loadData();
+        setSel(null);
+      } else {
+        alert('Error: ' + err.message);
+      }
+    }
     setBusy(false);
   }
 
   var activeList = tab === 'pending' ? pending : completed;
+  // The open patient is no longer waiting - usually someone else dispensed them.
+  var selGone = !!(sel && tab === 'pending' && !loading
+    && !pending.some(function(g){ return g.consultation_id === sel.consultation_id; })
+    && !(past && past.groups.some(function(g){ return g.consultation_id === sel.consultation_id; })));
+  function pastBadge(v){
+    return v && Number(v.days_ago) > 0 ? fill(t.ph_pastRx, { n: v.days_ago, date: v.visit_date }) : '';
+  }
   var filtered = useMemo(function(){
     if(!q) return activeList;
     var s = q.toLowerCase();
@@ -118,53 +242,81 @@ export default function PharmacyPage() {
     });
   }, [activeList, q]);
 
+  // Outside-pharmacy lines are not billed here (billing.routes.js leaves them
+  // out), so leaving them in made this figure disagree with the cashier's.
+  // Only stored totals count: the consultation screen works the total out (daily
+  // total x days) and that figure is what is billed and what leaves the shelf.
   var totalDrug = (sel && sel.prescriptions ? sel.prescriptions : []).reduce(function(sum, rx){
-    return sum + rxQty(rx) * (parseFloat(rx.unit_price) || 0);
+    var q = storedTotal(rx);
+    return isExternal(rx) || q === null ? sum : sum + q * (parseFloat(rx.unit_price) || 0);
   }, 0);
+  var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
+  var RX_COLS = '1.5fr .6fr .6fr .5fr .5fr .6fr .7fr 1fr';
 
-  var bd='#232838', bd2='#2a3142', scBg='#1a1f2e', pn='#13161f', tx='#e2e8f0', t2='#94a3b8', t3='#64748b';
-  var green='#10b981', violet='#8b5cf6';
+  var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
+  var green='var(--ok)', violet='var(--violet)';
+
+  function rxCard(v, where){
+    var active = sel && sel.consultation_id === v.consultation_id;
+    var badge = pastBadge(v);
+    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
+        <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
+        <div style={{ fontSize: 16, color:tab==='pending'?'var(--warn-text)':'var(--ok-text-2)', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
+      </div>
+      <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
+      {badge ? <div style={{ display:'inline-block', marginTop:4, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a50)', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
+      <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
+      <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
+    </div>;
+  }
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#0f1117', color: tx, minHeight: '100vh', fontSize: 16 }}>
+    // The page is exactly the window and only the inner areas scroll (as in Lab.jsx).
+    // It used to be "window minus 88px" for the top bars, which are taller than that, so
+    // on a 1366x768 laptop the page scrolled by about 30px and the bottom "Terminer
+    // délivrance" button sat below the window.
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontSize: 16 }}>
       <TopBar />
 
-      <div style={{ background:'#161a26', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
-        <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'#8b5cf620':'transparent', color:tab==='pending'?'#c4b5fd':t3, border:'1px solid '+(tab==='pending'?'#8b5cf650':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
-        <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'#10b98120':'transparent', color:tab==='completed'?'#6ee7b7':t3, border:'1px solid '+(tab==='completed'?'#10b98150':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
-        <button onClick={loadData} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
-        <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'#1e2433', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'#b45309':'#1e2433', color:sel?'#fde68a':'#475569', border:'1px solid '+(sel?'#f59e0b':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'#1e2433':'#1e2433', color:sel?'#ddd6fe':'#475569', border:'1px solid '+(sel?'#a855f7':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
+      <div style={{ flexShrink:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
+        <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'var(--violet-a20)':'transparent', color:tab==='pending'?'var(--violet-text-4)':t3, border:'1px solid '+(tab==='pending'?'var(--violet-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
+        <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'var(--ok-a20)':'transparent', color:tab==='completed'?'var(--ok-text-2)':t3, border:'1px solid '+(tab==='completed'?'var(--ok-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
+        <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'var(--warn-a20)':'transparent', color:tab==='stock'?'var(--warn-text-2)':t3, border:'1px solid '+(tab==='stock'?'var(--warn-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
+        {tab !== 'stock' ? <>
+        <button onClick={loadData} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
+        <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'var(--warn-strong)':'var(--chip)', color:sel?'var(--on-fill-amber)':'var(--text-4)', border:'1px solid '+(sel?'var(--warn-ink)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
+        </> : null}
         <div style={{ flex:1 }}></div>
-        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
+        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'330px 1fr 320px', height:'calc(100vh - 88px)' }}>
-        <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn }}>
+      {tab === 'stock' ? <PharmacyStock /> :
+      <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) 320px', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
+        <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
           <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
-            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:scBg, border:'1px solid '+bd2, borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
+            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
           </div>
-          <div style={{ flex:1, overflow:'auto' }}>
+          <div style={{ flex:1, minHeight:0, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
             {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
-            {!loading && filtered.map(function(v){
-              var active = sel && sel.consultation_id === v.consultation_id;
-              return <div key={v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'#8b5cf615':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
-                  <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
-                  <div style={{ fontSize: 16, color:tab==='pending'?'#fbbf24':'#6ee7b7', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
-                </div>
-                <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
-                <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
-                <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
-              </div>;
-            })}
+            {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
+                <div style={{ flex:1, fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
+                <button onClick={function(){ setPast(null); }} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
+              </div>
+              {past.groups.length === 0 ? <div style={{ padding:'8px 12px', color:t3, fontSize: 14 }}>{t.ph_noPastRx}</div> : null}
+              {past.groups.map(function(v){ return rxCard(v, 'past'); })}
+              {past.older > 0 ? <div style={{ padding:'8px 12px', color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_olderRx, { count: past.older, n: past.days })}</div> : null}
+            </div> : null}
+            {!loading && filtered.map(function(v){ return rxCard(v, 'queue'); })}
           </div>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 }}>
           {!sel ? <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:t3 }}>
             <div style={{ textAlign:'center' }}>
               <div style={{ fontSize: 49, opacity:.35, marginBottom:10 }}>💊</div>
@@ -172,64 +324,79 @@ export default function PharmacyPage() {
               <div style={{ fontSize: 16, marginTop:6 }}>{t.pharmacyOnlyCompleted}</div>
             </div>
           </div> : <>
-            <div style={{ padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
+            <div style={{ flexShrink:0, padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight:900, color:'#f8fafc' }}>{patientName(sel)}</div>
+                  <div style={{ fontSize: 22, fontWeight:900, color:'var(--text-strong-2)' }}>{patientName(sel)}</div>
                   <div style={{ marginTop:4, fontSize: 16, color:t2 }}>{t.chartNo} {sel.chart_no} · {t.doctor} {sel.doctor_name || '-'} · {timeText(sel, locale)}</div>
-                  {sel.allergies ? <div style={{ marginTop:6, color:'#fca5a5', background:'#ef444420', border:'1px solid #ef444450', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
+                  {sel.allergies ? <div style={{ marginTop:6, color:'var(--danger-text-2)', background:'var(--danger-a20)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
+                  {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
+                  {selGone ? <div style={{ marginTop:6, color:'var(--warn-text-3)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ color:t3, fontSize: 16 }}>{t.drugCost}</div>
-                  <div style={{ color:'#f8fafc', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug)}</div>
+                  <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
+                  <div style={{ color:'var(--text-strong-2)', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug, lc.lang)}</div>
+                  {anyUnquantified ? <div style={{ color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding:16, overflow:'auto', flex:1 }}>
+            <div style={{ padding:16, overflow:'auto', flex:1, minHeight:0 }}>
               <div style={{ background:pn, border:'1px solid '+bd, borderRadius:8, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'1.5fr .6fr .6fr .6fr .6fr .8fr 1fr', gap:0, background:'#161a26', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
-                  {[t.colDrugName,t.colDose,t.colFreq,t.colDays,t.colRoute,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
+                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
+                  {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
                 </div>
                 {(sel.prescriptions||[]).map(function(rx){
                   var warn = refillWarn(rx.drug_code);
-                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:'1.5fr .6fr .6fr .6fr .6fr .8fr 1fr', borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'#ef44440d':'transparent' }}>
+                  var total = storedTotal(rx);
+                  var per = perDose(rx);
+                  return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:RX_COLS, borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'var(--danger-a0d)':'transparent' }}>
                     <div style={{ padding:'10px', fontWeight:800, color:tx }}>
                       <div>{rx.drug_name}</div>
                       <div style={{ color:t3, fontSize: 16, marginTop:2 }}>{rx.drug_code}</div>
                       {tab==='pending' ? <div style={{ display:'inline-flex', marginTop:5, borderRadius:5, overflow:'hidden', border:'1px solid '+bd2 }}>
                         {[['internal',t.internalRx||'원내'],['external',t.externalRx||'원외']].map(function(o){
                           var on=(rx.dispense_type||'internal')===o[0];
-                          var c=o[0]==='external'?'#f59e0b':'#10b981';
-                          return <button key={o[0]} onClick={function(){ setDispenseType(rx.id,o[0]); }} style={{ background:on?c:'#1e2433', color:on?'#0f1117':t2, border:'none', padding:'3px 12px', cursor:'pointer', fontSize:13, fontWeight:800 }}>{o[1]}</button>;
+                          var c=o[0]==='external'?'var(--warn)':'var(--ok)';
+                          return <button key={o[0]} onClick={function(){ setDispenseType(rx.id,o[0]); }} style={{ background:on?c:'var(--chip)', color:on?'var(--on-bright)':t2, border:'none', padding:'3px 12px', cursor:'pointer', fontSize:13, fontWeight:800 }}>{o[1]}</button>;
                         })}
-                      </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'#f59e0b20', color:'#fbbf24', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
-                      {warn? <div style={{ marginTop:4, color:'#fca5a5', background:'#ef444418', border:'1px solid #ef444450', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {warn.daysAgo}{t.daysAgoSuffix} {warn.priorDays}{t.daysSupplySuffix} · {t.refillEarlyLeft} {warn.daysLeft}{t.daysLeftSuffix}</div> : null}
+                      </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'var(--warn-a20)', color:'var(--warn-text)', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
+                      {warn? <div style={{ marginTop:4, color:'var(--danger-text-2)', background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.dose || '-'}</div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.frequency || '-'}</div>
+                    <div style={{ padding:'10px', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
+                    <div style={{ padding:'10px', color: per && per.clean ? tx : isPack(rx) ? t3 : 'var(--warn-text)', fontWeight:800 }}>
+                      {per && per.clean ? fmtAmount(per.value) : '—'}
+                      {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
+                    </div>
+                    <div style={{ padding:'10px', color: missingTimes(rx) ? 'var(--warn-text)' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
+                      {rx.frequency || '-'}
+                      {missingTimes(rx) ? <div style={{ fontSize: 12, marginTop:2 }}>{t.ph_timesCheck}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color:t2 }}>{rxQty(rx)}</div>
+                    <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : 'var(--danger-text-2)', fontWeight: hasTotal(rx) ? 400 : 800 }}>
+                      {hasTotal(rx) ? (isPack(rx) ? packWord(rx, lc.lang, total) : fmtAmount(total)) : t.ph_noTotal}
+                      {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'var(--warn-text)', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
+                    </div>
                     <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
                   </div>;
                 })}
               </div>
             </div>
 
-            {tab==='pending' ? <div style={{ padding:'10px 16px', borderTop:'1px solid '+bd, background:'#161a26', display:'flex', justifyContent:'flex-end' }}>
-              <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
+            {tab==='pending' ? <div style={{ flexShrink:0, padding:'10px 16px', borderTop:'1px solid '+bd, background:'var(--panel-2)', display:'flex', justifyContent:'flex-end' }}>
+              <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
             </div> : null}
           </>}
         </div>
 
         <div style={{ borderLeft:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, overflow:'hidden' }}>
-          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'#60a5fa' }}>{t.pastVisits}</div>
-          <div style={{ flex:1, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
+          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.pastVisits}</div>
+          <div style={{ flex:1, minHeight:0, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
-      </div>
+      </div>}
       <PatientFinder open={phFinderOpen} onClose={function(){setPhFinderOpen(false);}} mode="patient"
-        onPickPatient={function(p){ setSel(null); setViewPid(p.id); }} />
+        onPickPatient={function(p){ pickPatient(p); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false);}} category="prescription"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.visit_id:null, consultation_id: sel?sel.consultation_id:null, doctor_name: sel?sel.doctor_name:'', dept_code: '' }} />

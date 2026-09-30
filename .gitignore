@@ -14,3 +14,14 @@ backups/
 # and it bundles GPL/AGPL third-party images. Never commit it.
 bethesda-offline-kit/
 *.tar
+
+# Marks the PC the EMR was prepared on; clean-test-data.ps1 stops when it sees it.
+# Never in git and never in the offline kit, so that a new PC does not have it.
+KEEP-TEST-DATA.txt
+
+# Built by wiki/manual-fr/build.mjs
+wiki/manual-fr/guide-fr.html
+wiki/manual-fr/*.pdf
+
+# assembled changelog entry (wiki/reference/changelog-1.5.0/assemble.mjs)
+wiki/reference/changelog-1.5.0/v1.5.0.md

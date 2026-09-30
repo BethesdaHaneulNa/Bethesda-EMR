@@ -1,25 +1,33 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { dicomDate } = require('../utils/localDate');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { presentedToken, bridgeTokenMatches } = require('./pacs.token');
 
 const router = express.Router();
 
-// allow a machine bridge to read the worklist feed with the shared bridge_token
-// (query ?token= or X-Bridge-Token header); otherwise require a normal JWT.
-async function bridgeOrAuth(req, res, next) {
-  const token = req.query.token || req.headers['x-bridge-token'];
-  if (token) {
-    try {
-      const r = await pool.query('SELECT bridge_token FROM pacs_config WHERE id = 1');
-      if (r.rows[0] && r.rows[0].bridge_token && token === r.rows[0].bridge_token) return next();
-    } catch (e) { /* fall through to JWT */ }
-  }
-  return authMiddleware(req, res, next);
+// allow a machine bridge in with the shared bridge_token (X-Bridge-Token header,
+// or ?token=); otherwise require a normal JWT that holds one of `perms`. The
+// placeholder token never counts -- see pacs.token.js.
+// The login path is narrowed to settings (decision S2): no screen calls these
+// routes, and they hand out or change patient worklist data.
+function bridgeOrAuth(...perms) {
+  const allowed = permMiddleware(...perms);
+  return async function (req, res, next) {
+    const token = presentedToken(req);
+    if (token) {
+      try {
+        const r = await pool.query('SELECT bridge_token FROM pacs_config WHERE id = 1');
+        if (r.rows[0] && bridgeTokenMatches(r.rows[0].bridge_token, token)) return next();
+      } catch (e) { /* fall through to JWT */ }
+    }
+    return authMiddleware(req, res, () => allowed(req, res, next));
+  };
 }
 
 // GET /api/worklist - query worklist entries (for equipment integration)
-router.get('/', authMiddleware, async (req, res) => {
+// No screen calls this today; consultation is the module that owns imaging orders (S2).
+router.get('/', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const { modality, station_ae, date, status } = req.query;
     let query = `SELECT wl.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
@@ -42,27 +50,43 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/worklist/:id/status - update worklist item status
-router.put('/:id/status', bridgeOrAuth, async (req, res) => {
+// The two tables name the waiting state differently ('scheduled' on the worklist,
+// 'sent' on the order), and each has a CHECK. Unchecked, 'scheduled' updated the
+// worklist and then failed on the order -- outside a transaction, leaving the two
+// disagreeing. Nothing in the EMR calls this today; the arrival path is
+// POST /api/pacs/study-arrived.
+const WL_TO_ORDER_STATUS = { scheduled: 'sent', in_progress: 'in_progress', completed: 'completed', cancelled: 'cancelled' };
+
+router.put('/:id/status', bridgeOrAuth('settings'), async (req, res) => {
+  const status = String((req.body || {}).status || '');
+  if (!WL_TO_ORDER_STATUS[status]) {
+    return res.status(400).json({ error: 'status must be one of ' + Object.keys(WL_TO_ORDER_STATUS).join(', ') });
+  }
+  const client = await pool.connect();
   try {
-    const { status } = req.body;
-    const updates = { status };
-    if (status === 'completed') updates.completed_at = new Date();
-    const result = await pool.query(
-      'UPDATE worklist_log SET status = $1, completed_at = $2 WHERE id = $3 RETURNING *',
-      [status, updates.completed_at || null, req.params.id]
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE worklist_log SET status = $1,
+              completed_at = CASE WHEN $3 THEN COALESCE(completed_at, NOW()) ELSE NULL END
+        WHERE id = $2 RETURNING *`,
+      [status, req.params.id, status === 'completed']
     );
-    // Also update order_item
-    if (result.rows.length > 0) {
-      const wl = result.rows[0];
-      await pool.query('UPDATE order_item SET worklist_status = $1, updated_at = NOW() WHERE id = $2', [status, wl.order_item_id]);
-    }
+    if (!result.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
+    await client.query('UPDATE order_item SET worklist_status = $1, updated_at = NOW() WHERE id = $2',
+      [WL_TO_ORDER_STATUS[status], result.rows[0].order_item_id]);
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // GET /api/worklist/dicom-mwl - DICOM C-FIND MWL compatible response (simplified JSON)
 // This endpoint would be consumed by a DICOM MWL SCP bridge
-router.get('/dicom-mwl', bridgeOrAuth, async (req, res) => {
+router.get('/dicom-mwl', bridgeOrAuth('settings'), async (req, res) => {
   try {
     const { modality, station_ae } = req.query;
     let query = `SELECT wl.accession_no, wl.study_instance_uid, wl.modality, wl.station_ae, wl.body_part,

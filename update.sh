@@ -11,7 +11,7 @@ echo "=== Bethesda EMR - Update ==="
 stamp=$(date +%Y-%m-%d_%H%M)
 mkdir -p _pre-update-backups
 backup="_pre-update-backups/preupdate_$stamp.sql.gz"
-echo "[1/4] Backing up the database -> $backup"
+echo "[1/5] Backing up the database -> $backup"
 # pipefail is what makes `set -e` above actually fire here: a pipeline reports the
 # status of its last command, so without it a failed pg_dump exits 0 (gzip was fine)
 # and we would update on top of an empty safety backup. gzip -t proves it is whole.
@@ -24,7 +24,7 @@ if [ ! -s "$backup" ]; then
 fi
 
 # 2) Get the latest version
-echo "[2/4] Getting the latest version..."
+echo "[2/5] Getting the latest version..."
 if [ -d ".git" ]; then
   git fetch origin --tags --quiet 2>/dev/null || git fetch origin --tags
   tag=$(git tag --sort=-v:refname | head -n1)
@@ -48,22 +48,35 @@ else
 fi
 
 # 3) Rebuild & restart
-echo "[3/4] Rebuilding and restarting (this can take a few minutes)..."
+echo "[3/5] Rebuilding and restarting (this can take a few minutes)..."
 docker compose up -d --build
 docker restart bethesda-emr-web >/dev/null 2>&1 || true
 
 # 4) Verify
-echo "[4/4] Verifying..."
+echo "[4/5] Verifying..."
 sleep 8
 ok=0; i=0
 while [ $i -lt 15 ]; do
   if curl -fs http://localhost:9080/api/health >/dev/null 2>&1; then ok=1; break; fi
   sleep 3; i=$((i + 1))
 done
-if [ "$ok" = "1" ]; then
-  echo ""
-  echo "[OK] Update complete - Bethesda EMR is running at http://localhost:9080"
-else
+if [ "$ok" != "1" ]; then
   echo ""
   echo "[!] Health check did not pass. Your data is safe; restore from $backup if needed (see DEPLOYMENT.md)."
+  exit 1
+fi
+
+# 5) A backup of the database as it is now. The one taken in step 1 is of the old
+# version, and a backup restores with the usual steps only onto the version that made
+# it (DEPLOYMENT.md 5b): without this, until tonight's automatic backup every backup
+# here would be older than the app. Made by the app's own backup code, so it has the
+# usual name and place and appears in Settings > Backup.
+echo "[5/5] Backing up the updated database..."
+echo ""
+if post=$(docker exec bethesda-emr-api node src/services/backup-cli.js update); then
+  echo "      -> $post"
+  echo "[OK] Update complete - Bethesda EMR is running at http://localhost:9080"
+else
+  echo "[OK] Update complete - Bethesda EMR is running at http://localhost:9080"
+  echo "[!] But the backup after the update failed. Open Settings > Backup and press 'Back up now' (Sauvegarder)."
 fi

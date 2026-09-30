@@ -1,12 +1,511 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bethesda EMR</title>
+  <!-- Theme (design session, wiki/modules/design.md 3.3). :root is the dark screen: the
+       values the screens have always had, which must never change. [data-theme="light"]
+       is the light screen (proposal A, chosen 2026-09-29). This block is generated -
+       edit the table in wiki/reference/design/tokens.mjs and run it, do not edit here. -->
+  <style id="bethesda-theme">
+    :root {
+      --bg: #0f1117;
+      --bg-2: #0d0f16;
+      --bg-col: #11141c;
+      --bg-deep: #0c0f16;
+      --panel: #13161f;
+      --panel-2: #161a26;
+      --panel-head: #1a1f2e;
+      --panel-head-2: #141824;
+      --panel-head-3: #151a28;
+      --chip: #1e2433;
+      --field: #0f1117;
+      --field-2: #11151f;
+      --field-3: #1a1f2e;
+      --field-4: #0c0f16;
+      --field-5: #13161f;
+      --field-6: #11141c;
+      --field-locked: #15181f;
+      --bg-row: #111827;
+      --bg-group: #0f1622;
+      --bg-col-2: #101521;
+      --accent-chip: #1e3a5f;
+      --danger-box: #7f1d1d;
+      --notice: #1f2937;
+      --notice-line: #4b5563;
+      --line-soft-2: #161b27;
+      --line-soft-3: #1a1f2e;
+      --btn-neutral: #334155;
+      --btn-neutral-2: #374151;
+      --line-soft: #1e2433;
+      --border: #232838;
+      --border-2: #2a3142;
+      --field-border: #64718a;
+      --text-max: #ffffff;
+      --text-strong: #f1f5f9;
+      --text-strong-2: #f8fafc;
+      --text: #e2e8f0;
+      --text-soft: #cbd5e1;
+      --text-soft-2: #e5e7eb;
+      --text-2: #94a3b8;
+      --text-3: #8793a6;
+      --text-4: #8290a3;
+      --text-5: #8290a3;
+      --text-faint: #8290a3;
+      --text-locked: #8b95a5;
+      --on-fill: #ffffff;
+      --on-bright: #ffffff;
+      --on-fill-blue: #dbeafe;
+      --on-fill-blue-2: #bfdbfe;
+      --on-fill-teal: #ccfbf1;
+      --on-fill-cyan: #cffafe;
+      --on-fill-violet: #ede9fe;
+      --on-fill-violet-2: #ddd6fe;
+      --on-fill-violet-3: #c4b5fd;
+      --on-fill-amber: #fde68a;
+      --on-fill-red: #fecaca;
+      --on-cyan: #ffffff;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-ink: #60a5fa;
+      --accent-text: #60a5fa;
+      --accent-text-2: #93c5fd;
+      --accent-text-3: #bfdbfe;
+      --ok: #047857;
+      --ok-strong: #046c4e;
+      --ok-2: #15803d;
+      --ok-2-strong: #166534;
+      --ok-3: #22c55e;
+      --ok-bar: #34d399;
+      --accent-bar: #60a5fa;
+      --ok-ink: #10b981;
+      --ok-text: #34d399;
+      --ok-text-2: #6ee7b7;
+      --ok-text-3: #86efac;
+      --warn: #b45309;
+      --warn-strong: #92400e;
+      --warn-ink: #f59e0b;
+      --warn-text: #fbbf24;
+      --warn-text-2: #fcd34d;
+      --warn-text-3: #fde68a;
+      --danger: #dc2626;
+      --danger-strong: #dc2626;
+      --danger-deep: #b91c1c;
+      --danger-ink: #f87171;
+      --danger-text: #f87171;
+      --danger-text-2: #fca5a5;
+      --danger-text-3: #fecaca;
+      --violet: #7c3aed;
+      --violet-2: #9333ea;
+      --violet-strong: #7c3aed;
+      --violet-ink: #a78bfa;
+      --violet-text: #a78bfa;
+      --violet-text-2: #c084fc;
+      --violet-text-3: #ddd6fe;
+      --violet-text-4: #c4b5fd;
+      --cyan: #06b6d4;
+      --cyan-strong: #0891b2;
+      --cyan-fill: #0e7490;
+      --cyan-fill-2: #155e75;
+      --cyan-ink: #06b6d4;
+      --cyan-text: #67e8f9;
+      --cyan-text-2: #7dd3fc;
+      --teal: #0f766e;
+      --accent-deep: #1e4fa0;
+      --teal-deep: #0f766e;
+      --cyan-deep: #0e7490;
+      --violet-deep: #5b21b6;
+      --teal-ink: #14b8a6;
+      --status-ok: #22c55e;
+      --status-warn: #eab308;
+      --status-down: #f87171;
+      --status-off: #8793a6;
+      --ok-strong-a15: #05966915;
+      --cyan-a12: #06b6d412;
+      --cyan-a15: #06b6d415;
+      --cyan-a20: #06b6d420;
+      --cyan-a30: #06b6d430;
+      --cyan-a50: #06b6d450;
+      --cyan-a55: #06b6d455;
+      --cyan-deep-a22: #0e749022;
+      --ok-a08: #10b98108;
+      --ok-a12: #10b98112;
+      --ok-a15: #10b98115;
+      --ok-a18: #10b98118;
+      --ok-a20: #10b98120;
+      --ok-a30: #10b98130;
+      --ok-a40: #10b98140;
+      --ok-a50: #10b98150;
+      --teal-a15: #14b8a615;
+      --ok-2-a15: #16a34a15;
+      --ok-2-a40: #16a34a40;
+      --ok-text-a14: #34d39914;
+      --ok-text-a18: #34d39918;
+      --ok-text-a40: #34d39940;
+      --ok-text-a55: #34d39955;
+      --accent-a08: #3b82f608;
+      --accent-a12: #3b82f612;
+      --accent-a15: #3b82f615;
+      --accent-a18: #3b82f618;
+      --accent-a20: #3b82f620;
+      --accent-a30: #3b82f630;
+      --accent-a40: #3b82f640;
+      --accent-a50: #3b82f650;
+      --accent-a60: #3b82f660;
+      --accent-a80: #3b82f680;
+      --accent-text-a15: #60a5fa15;
+      --text-3-a18: #64748b18;
+      --text-3-a22: #64748b22;
+      --text-3-a55: #64748b55;
+      --violet-strong-a22: #7c3aed22;
+      --violet-strong-a55: #7c3aed55;
+      --violet-a15: #8b5cf615;
+      --violet-a20: #8b5cf620;
+      --violet-a30: #8b5cf630;
+      --violet-a40: #8b5cf640;
+      --violet-a50: #8b5cf650;
+      --text-2-a15: #94a3b815;
+      --text-2-a18: #94a3b818;
+      --text-2-a30: #94a3b830;
+      --violet-text-a18: #a78bfa18;
+      --violet-text-a40: #a78bfa40;
+      --violet-2-a14: #a855f714;
+      --violet-2-a18: #a855f718;
+      --violet-2-a50: #a855f750;
+      --danger-strong-a10: #dc262610;
+      --danger-strong-a20: #dc262620;
+      --danger-strong-a30: #dc262630;
+      --danger-strong-a40: #dc262640;
+      --danger-a0d: #ef44440d;
+      --danger-a12: #ef444412;
+      --danger-a15: #ef444415;
+      --danger-a18: #ef444418;
+      --danger-a20: #ef444420;
+      --danger-a30: #ef444430;
+      --danger-a40: #ef444440;
+      --danger-a50: #ef444450;
+      --danger-a55: #ef444455;
+      --danger-a60: #ef444460;
+      --warn-a0d: #f59e0b0d;
+      --warn-a12: #f59e0b12;
+      --warn-a14: #f59e0b14;
+      --warn-a15: #f59e0b15;
+      --warn-a18: #f59e0b18;
+      --warn-a20: #f59e0b20;
+      --warn-a30: #f59e0b30;
+      --warn-a40: #f59e0b40;
+      --warn-a45: #f59e0b45;
+      --warn-a50: #f59e0b50;
+      --warn-a55: #f59e0b55;
+      --warn-a60: #f59e0b60;
+      --warn-a66: #f59e0b66;
+      --danger-text-a14: #f8717114;
+      --danger-text-a55: #f8717155;
+      --warn-text-a14: #fbbf2414;
+      --warn-text-a55: #fbbf2455;
+      --scrim: rgba(0,0,0,0.6);
+      --scrim-30: rgba(0,0,0,0.3);
+      --scrim-40: rgba(0,0,0,0.4);
+      --scrim-50: rgba(0,0,0,0.5);
+      --scrim-70: rgba(0,0,0,0.7);
+      --shadow-30: rgba(0,0,0,0.3);
+      --shadow-40: rgba(0,0,0,0.4);
+      --shadow-50: rgba(0,0,0,0.5);
+      --shadow-60: rgba(0,0,0,0.6);
+      --shadow-70: rgba(0,0,0,0.7);
+      --hover-filter: brightness(1.12);
+      --hover-row: #ffffff06;
+      --hover-row-2: #ffffff08;
+      --warn-chip: #78350f55;
+      --danger-chip: #7f1d1d55;
+      --scheme: dark;
+      --toast-bg: #161a26;
+      --toast-text: #6ee7b7;
+      --toast-line: #10b98150;
+      --toast-shadow: none;
+      --fade-85: 0.85;
+      --viewer-text: #8290a3;
+      --placeholder: #8290a3;
+      --focus-ring: #60a5fa;
+    }
+    :root[data-theme="light"] {
+      --bg: #eff2f7;
+      --bg-2: #eff2f7;
+      --bg-col: #f8fafc;
+      --bg-deep: #e3e8ef;
+      --panel: #ffffff;
+      --panel-2: #f3f5f9;
+      --panel-head: #e8ecf2;
+      --panel-head-2: #dfe5ee;
+      --panel-head-3: #e1e6ee;
+      --chip: #e3e8ef;
+      --field: #ffffff;
+      --field-2: #ffffff;
+      --field-3: #ffffff;
+      --field-4: #ffffff;
+      --field-5: #ffffff;
+      --field-6: #ffffff;
+      --field-locked: #eef1f5;
+      --bg-row: #f8fafc;
+      --bg-group: #eaf3f8;
+      --bg-col-2: #f8fafc;
+      --accent-chip: #dbeafe;
+      --danger-box: #fee2e2;
+      --notice: #eef1f5;
+      --notice-line: #aab2be;
+      --line-soft-2: #e6eaf0;
+      --line-soft-3: #e6eaf0;
+      --btn-neutral: #d5dbe4;
+      --btn-neutral-2: #d5dbe4;
+      --line-soft: #e1e6ee;
+      --border: #d5dbe4;
+      --border-2: #c3cbd7;
+      --field-border: #77839a;
+      --text-max: #0b1220;
+      --text-strong: #0b1220;
+      --text-strong-2: #0b1220;
+      --text: #1b2534;
+      --text-soft: #2c3a4d;
+      --text-soft-2: #2c3a4d;
+      --text-2: #4a5668;
+      --text-3: #566274;
+      --text-4: #5b6779;
+      --text-5: #5b6779;
+      --text-faint: #5b6779;
+      --text-locked: #566274;
+      --on-fill: #ffffff;
+      --on-bright: #ffffff;
+      --on-fill-blue: #dbeafe;
+      --on-fill-blue-2: #bfdbfe;
+      --on-fill-teal: #ccfbf1;
+      --on-fill-cyan: #cffafe;
+      --on-fill-violet: #ede9fe;
+      --on-fill-violet-2: #ddd6fe;
+      --on-fill-violet-3: #c4b5fd;
+      --on-fill-amber: #fde68a;
+      --on-fill-red: #fecaca;
+      --on-cyan: #ffffff;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-ink: #1451d6;
+      --accent-text: #1451d6;
+      --accent-text-2: #1e40af;
+      --accent-text-3: #1e40af;
+      --ok: #047857;
+      --ok-strong: #046c4e;
+      --ok-2: #15803d;
+      --ok-2-strong: #166534;
+      --ok-3: #15803d;
+      --ok-bar: #047857;
+      --accent-bar: #2563eb;
+      --ok-ink: #04694c;
+      --ok-text: #04694c;
+      --ok-text-2: #065f46;
+      --ok-text-3: #065f46;
+      --warn: #b45309;
+      --warn-strong: #92400e;
+      --warn-ink: #944407;
+      --warn-text: #944407;
+      --warn-text-2: #854008;
+      --warn-text-3: #854008;
+      --danger: #dc2626;
+      --danger-strong: #b91c1c;
+      --danger-deep: #991b1b;
+      --danger-ink: #b01c1c;
+      --danger-text: #b01c1c;
+      --danger-text-2: #991b1b;
+      --danger-text-3: #991b1b;
+      --violet: #7c3aed;
+      --violet-2: #9333ea;
+      --violet-strong: #6d28d9;
+      --violet-ink: #6c23eb;
+      --violet-text: #6c23eb;
+      --violet-text-2: #6b21a8;
+      --violet-text-3: #5b21b6;
+      --violet-text-4: #5b21b6;
+      --cyan: #0e7490;
+      --cyan-strong: #155e75;
+      --cyan-fill: #0e7490;
+      --cyan-fill-2: #155e75;
+      --cyan-ink: #0b6279;
+      --cyan-text: #0b6279;
+      --cyan-text-2: #0b6279;
+      --teal: #0f766e;
+      --accent-deep: #1e4fa0;
+      --teal-deep: #0f766e;
+      --cyan-deep: #0e7490;
+      --violet-deep: #5b21b6;
+      --teal-ink: #0c625c;
+      --status-ok: #166534;
+      --status-warn: #854008;
+      --status-down: #b01c1c;
+      --status-off: #566274;
+      --ok-strong-a15: rgba(4,108,78,0.103);
+      --cyan-a12: rgba(14,116,144,0.088);
+      --cyan-a15: rgba(14,116,144,0.103);
+      --cyan-a20: rgba(14,116,144,0.157);
+      --cyan-a30: rgba(14,116,144,0.235);
+      --cyan-a50: rgba(14,116,144,0.392);
+      --cyan-a55: rgba(14,116,144,0.417);
+      --cyan-deep-a22: rgba(14,116,144,0.167);
+      --ok-a08: rgba(4,120,87,0.039);
+      --ok-a12: rgba(4,120,87,0.088);
+      --ok-a15: rgba(4,120,87,0.103);
+      --ok-a18: rgba(4,120,87,0.118);
+      --ok-a20: rgba(4,120,87,0.157);
+      --ok-a30: rgba(4,120,87,0.235);
+      --ok-a40: rgba(4,120,87,0.314);
+      --ok-a50: rgba(4,120,87,0.392);
+      --teal-a15: rgba(15,118,110,0.103);
+      --ok-2-a15: rgba(21,128,61,0.103);
+      --ok-2-a40: rgba(21,128,61,0.314);
+      --ok-text-a14: rgba(4,105,76,0.098);
+      --ok-text-a18: rgba(4,105,76,0.118);
+      --ok-text-a40: rgba(4,105,76,0.314);
+      --ok-text-a55: rgba(4,105,76,0.417);
+      --accent-a08: rgba(37,99,235,0.039);
+      --accent-a12: rgba(37,99,235,0.088);
+      --accent-a15: rgba(37,99,235,0.103);
+      --accent-a18: rgba(37,99,235,0.118);
+      --accent-a20: rgba(37,99,235,0.157);
+      --accent-a30: rgba(37,99,235,0.235);
+      --accent-a40: rgba(37,99,235,0.314);
+      --accent-a50: rgba(37,99,235,0.392);
+      --accent-a60: rgba(37,99,235,0.471);
+      --accent-a80: rgba(37,99,235,0.627);
+      --accent-text-a15: rgba(20,81,214,0.103);
+      --text-3-a18: rgba(86,98,116,0.118);
+      --text-3-a22: rgba(86,98,116,0.167);
+      --text-3-a55: rgba(86,98,116,0.417);
+      --violet-strong-a22: rgba(109,40,217,0.167);
+      --violet-strong-a55: rgba(109,40,217,0.417);
+      --violet-a15: rgba(124,58,237,0.103);
+      --violet-a20: rgba(124,58,237,0.157);
+      --violet-a30: rgba(124,58,237,0.235);
+      --violet-a40: rgba(124,58,237,0.314);
+      --violet-a50: rgba(124,58,237,0.392);
+      --text-2-a15: rgba(74,86,104,0.103);
+      --text-2-a18: rgba(74,86,104,0.118);
+      --text-2-a30: rgba(74,86,104,0.235);
+      --violet-text-a18: rgba(108,35,235,0.118);
+      --violet-text-a40: rgba(108,35,235,0.314);
+      --violet-2-a14: rgba(147,51,234,0.098);
+      --violet-2-a18: rgba(147,51,234,0.118);
+      --violet-2-a50: rgba(147,51,234,0.392);
+      --danger-strong-a10: rgba(185,28,28,0.078);
+      --danger-strong-a20: rgba(185,28,28,0.157);
+      --danger-strong-a30: rgba(185,28,28,0.235);
+      --danger-strong-a40: rgba(185,28,28,0.314);
+      --danger-a0d: rgba(220,38,38,0.064);
+      --danger-a12: rgba(220,38,38,0.088);
+      --danger-a15: rgba(220,38,38,0.103);
+      --danger-a18: rgba(220,38,38,0.118);
+      --danger-a20: rgba(220,38,38,0.157);
+      --danger-a30: rgba(220,38,38,0.235);
+      --danger-a40: rgba(220,38,38,0.314);
+      --danger-a50: rgba(220,38,38,0.392);
+      --danger-a55: rgba(220,38,38,0.417);
+      --danger-a60: rgba(220,38,38,0.471);
+      --warn-a0d: rgba(180,83,9,0.064);
+      --warn-a12: rgba(180,83,9,0.088);
+      --warn-a14: rgba(180,83,9,0.098);
+      --warn-a15: rgba(180,83,9,0.103);
+      --warn-a18: rgba(180,83,9,0.118);
+      --warn-a20: rgba(180,83,9,0.157);
+      --warn-a30: rgba(180,83,9,0.235);
+      --warn-a40: rgba(180,83,9,0.314);
+      --warn-a45: rgba(180,83,9,0.338);
+      --warn-a50: rgba(180,83,9,0.392);
+      --warn-a55: rgba(180,83,9,0.417);
+      --warn-a60: rgba(180,83,9,0.471);
+      --warn-a66: rgba(180,83,9,0.5);
+      --danger-text-a14: rgba(176,28,28,0.098);
+      --danger-text-a55: rgba(176,28,28,0.417);
+      --warn-text-a14: rgba(148,68,7,0.098);
+      --warn-text-a55: rgba(148,68,7,0.417);
+      --scrim: rgba(15,23,42,0.45);
+      --scrim-30: rgba(15,23,42,0.2);
+      --scrim-40: rgba(15,23,42,0.3);
+      --scrim-50: rgba(15,23,42,0.4);
+      --scrim-70: rgba(15,23,42,0.5);
+      --shadow-30: rgba(15,23,42,0.10);
+      --shadow-40: rgba(15,23,42,0.12);
+      --shadow-50: rgba(15,23,42,0.15);
+      --shadow-60: rgba(15,23,42,0.18);
+      --shadow-70: rgba(15,23,42,0.20);
+      --hover-filter: brightness(0.95);
+      --hover-row: rgba(15,23,42,0.04);
+      --hover-row-2: rgba(15,23,42,0.05);
+      --warn-chip: rgba(180,83,9,0.14);
+      --danger-chip: rgba(220,38,38,0.12);
+      --scheme: light;
+      --toast-bg: #ecfdf5;
+      --toast-text: #065f46;
+      --toast-line: #047857;
+      --toast-shadow: 0 6px 20px rgba(15,23,42,0.18);
+      --fade-85: 1;
+      --viewer-text: #8290a3;
+      --placeholder: #5b6779;
+      --focus-ring: #1d4ed8;
+      color-scheme: light;
+    }
+  </style>
+  <script>
+    // Runs before the first paint so a light screen does not flash dark first. The value
+    // is only this PC's last choice; storage can be blocked, and then the screen is dark.
+    //
+    // Preview (coordinator, 2026-09-29): until the switch is in the top bar, opening the
+    // EMR with ?theme=light or ?theme=dark at the end of the address sets this PC's choice.
+    // The part is then taken out of the address, so a reload or a bookmark does not set it
+    // again. Staff who do not know of it cannot meet it; it does no harm once the switch
+    // exists.
+    (function () {
+      try {
+        var m = /[?&]theme=(light|dark)(?:&|$)/.exec(location.search);
+        if (m) {
+          localStorage.setItem('medconnect_theme', m[1]);
+          var rest = location.search.replace(/([?&])theme=(?:light|dark)(&|$)/, function (all, lead, tail) { return tail ? lead : ''; });
+          history.replaceState(null, '', location.pathname + rest + location.hash);
+        }
+      } catch (e) {}
+      try {
+        var t = localStorage.getItem('medconnect_theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  </style>
+  <!-- Theme rules (design session). What the tokens alone cannot do. On both screens since
+       the director's decisions of 2026-09-30 (wiki/decisions.md; wiki/modules/design.md
+       7.1, rows 7 and 8). -->
+  <style id="bethesda-theme-rules">
+    /* The example text in an empty input was the browser's own grey, which no token
+       reached. opacity: Firefox fades placeholders by itself. */
+    ::placeholder { color: var(--placeholder); opacity: 1; }
+
+    /* "This is the box you are typing in." The screens set outline: none on their inputs,
+       inline, so nothing showed where typing would go; !important is what it takes to win
+       over an inline style. For an input, :focus-visible holds however it got the
+       keyboard - by a click or by Tab - which is what was decided. */
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--focus-ring) !important;
+      /* 2px, not 1: a result box marked low has a blue border of its own (--accent-text is
+         the ring's colour on the dark screen). Touching it, the ring read as a thicker
+         border; with the gap it reads as a ring. */
+      outline-offset: 2px;
+    }
+    /* A button shows the ring only when reached with the keyboard: for a button
+       :focus-visible does not hold after a mouse click, so pressing one does not flash. */
+    button:focus-visible {
+      outline: 2px solid var(--focus-ring) !important;
+      outline-offset: 2px;
+    }
   </style>
   <style id="medconnect-readable-ui">
     html, body, #root { min-height: 100%; }
@@ -39,7 +538,7 @@
 
     /* Hover is gated: on a touch screen a tap fires a false hover that then sticks. */
     @media (hover: hover) and (pointer: fine) {
-      button:not(:disabled):hover { filter: brightness(1.12); }
+      button:not(:disabled):hover { filter: var(--hover-filter); }
     }
 
     /* For the div-based buttons that cannot become <button> without restructuring.
@@ -51,7 +550,7 @@
     }
     .pressable:active { transform: scale(0.97); }
     @media (hover: hover) and (pointer: fine) {
-      .pressable:hover { filter: brightness(1.12); }
+      .pressable:hover { filter: var(--hover-filter); }
     }
 
     /* Reduced motion means fewer and gentler animations, not none. The brightness feedback

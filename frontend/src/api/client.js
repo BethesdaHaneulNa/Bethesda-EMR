@@ -1,3 +1,4 @@
+import { setTheme } from '../theme.js';
 const BASE = '/api';
 
 function getToken() {
@@ -22,7 +23,10 @@ async function request(method, path, body) {
     throw new Error('API response was not JSON. Backend/proxy may be down. HTTP ' + res.status + ': ' + preview);
   }
 
-  if (res.status === 401) {
+  // A 401 with a token sent means the session ran out: back to the login page.
+  // A 401 with no token is an answer (wrong password, inactive account) - reloading
+  // the page there wiped the message before anyone could read it.
+  if (res.status === 401 && token) {
     localStorage.removeItem('medconnect_token');
     localStorage.removeItem('medconnect_user');
     window.location.href = '/login';
@@ -42,6 +46,10 @@ export const api = {
 export function saveAuth(token, user) {
   localStorage.setItem('medconnect_token', token);
   localStorage.setItem('medconnect_user', JSON.stringify(user));
+  // The account's own screen (dark / light) comes with the login answer: wear it now,
+  // before the first screen is drawn, so the previous person's choice on this PC is
+  // never shown first. The top bar still reads /api/theme afterwards.
+  if (user && (user.theme === 'light' || user.theme === 'dark')) setTheme(user.theme);
 }
 
 export function getUser() {

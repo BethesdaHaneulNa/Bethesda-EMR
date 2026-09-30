@@ -1,0 +1,997 @@
+# 설정 인계 노트
+
+> 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
+
+## 2026-09-30 — 숫자의 소수 쉼표(상태 점·백업 크기) · 설명서 최종 대조 (v1.5.0 전 마지막)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, 진료 `44008b9` 포함)
+- **1 소수 쉼표**
+  - `settingsMoney.js` `seNumber(v, lang)`(새): `seMoney`와 같은 표시(천 단위 fr U+00A0 · ko/en 쉼표, 소수 fr 쉼표 · ko/en 점)지만 소수는 있는 그대로(97.5 → 「97,5」, 「97,50」이 아님). 숫자인 값만, 글자는 그대로.
+  - 상태 점: `statusText(t, s, lang)` — `{값}`이 숫자면 `seNumber`. 영상 백업 보고의 `free_gb`(97.5)가 유일한 소수였음. `StatusDot`이 `useLang()`으로 언어를 앎.
+  - 같은 규칙으로 백업 화면의 파일 크기 `fmtBytes`: fr 「24,2 Ko」·「1,3 Mo」·「512 o」, ko/en 「24.2 KB」.
+  - **서버 상태 창(`server-status.ps1`)은 바꿀 것 없음**: GB·시간·분이 모두 `[math]::Round`로 정수라 소수가 나오지 않음(읽어서 확인). 영상 백업의 97.5도 창에서는 「98 Go」.
+- **2 시각 한 줄**: 모듈 위키 2.15 상태 점 절에 — 「dernière …」는 파일 이름의 시각(EMR 컨테이너 시간대)이라 개발 PC에선 6시간 어긋나 보이나 현지 PC는 같음, 판정은 `emr_backup_last_ok`라 영향 없음(PACS 6.2).
+- **3 설명서 최종 대조** `manual-fr/settings.md`: 굵은 글씨·«» 인용 140개를 `fr.js`와 설정 화면 파일의 프랑스어 문자열에서 찾아봄(스크립트) — 못 찾은 12개는 모두 예시(«Paludisme adulte»)·강조·`{n}`이 든 틀(«⚠ 2 médicament(s)…», «Ligne n»)이라 맞음. 고친 것 하나: 상태 점의 자리 「en haut à droite, à côté de l'heure」 → 「en haut, juste avant l'heure」(밝게/어둡게 단추가 생긴 뒤 점이 가운데 쪽). 기록 탭(서류 발행 접기, 7번), 상태 점의 EMR 백업 복사 줄(4번), 백업 화면 안내(5번)는 지금 화면과 같음.
+- **바꾼 파일**: `frontend/src/pages/settingsMoney.js` · `settingsStatus.jsx` · `Settings.jsx`(`fmtBytes`·import) · 위키 3개
+- **확인한 방법**: `npm run build`, status 시험(문구 빠짐 없음). 격리 9187에 영상 백업 보고(`free_gb` 97.5, `total_gb` 1863.2, EMR 백업 1,204개)를 넣고 화면: fr 상태 점 「Disque presque plein : 97,5 / 1 863,2 Go」(빈칸이 U+00A0), 「Copiée il y a 0 h · 1 204 sur le disque (dernière 2026-09-30 02:55)」, 백업 화면 「22,9 Ko」·「Dernière: … (22,9 Ko)」. ko 「디스크가 거의 참: 97.5 / 1,863.2 GB」, 「디스크에 1,204개」, 「22.9 KB」.
+
+## 2026-09-30 — 기록 탭은 처음에 서류 발행을 빼고 보임 (실장님 결정 (나))
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위)
+- **1 서버** `GET /api/admin/audit?exclude=documents.issue`: 쉼표로 여럿 가능. **`audit.js` `ACTIONS`에 있는 이름만** 받고 모르는 값은 무시(400 아님 — 화면이 보내는 값은 늘 알려진 것이고, 새 번역 문구를 만들지 않으려고). 종류 거르기(`action`)로 고른 action은 빼지 않음. 뺄 때는 같은 거르기로 숨긴 줄 수를 세어 `excluded: { 'documents.issue': N }`을 함께 줌(`total`은 뺀 뒤의 수). SQL은 `action <> ALL($n::text[])`, 셈은 `action = ANY(…) GROUP BY action` 한 번 더.
+- **2 화면** (`Settings.jsx`)
+  - 거르기 줄 끝에 체크 「서류 발행도 보기 / Afficher aussi les documents émis」. 기본 끔 → `exclude=documents.issue`.
+  - 뺄 때 숨긴 줄이 있으면 목록 위에 「📄 서류 발행 N줄은 접혀 있음 / N ligne(s) « Document émis » masquée(s)」 + 같은 이름의 단추. 목록이 비어도 이 띠는 보임.
+  - 종류에서 「서류를 발행함」을 고르면 체크가 켜진 채 잠기고 그 줄만(1,240줄 · 25쪽).
+  - 환자 찾기도 같은 기본(빼고 보임).
+- **3 기억하지 않음**: 상태만(`useState`), `localStorage` 없음. **설정 안에서 다른 탭에 갔다 와도** 기록 탭을 열면 다시 끔. 켜고 끄거나 쪽을 옮기면 효과 한 곳에서 다시 읽고, 늦게 온 답은 버림(`useRef` 번호).
+- **4 CSV**: 기록 탭에 내려받기가 없음 — 할 일 없음.
+- **5 설명서** 7번: 처음엔 서류 발행이 빠짐, 띠 문구, 「Afficher aussi…」, 다음에 열면 다시 빠짐, 취소는 늘 보임. 변경 내역 초안 한 줄. 모듈 위키 API 표에 `exclude`.
+- **6 시험** `backend/test/settings.auditdocs.mjs`(새) 10개 통과: 뺌 → 발행 0줄·취소 3줄·total 3·`excluded` 30 / 안 뺌 → 33·`excluded` 없음 / 종류가 이김 → 30 / 쪽: 33줄 10씩 → 4쪽 3줄, 뺀 3줄 2씩 → 2쪽 1줄 / 모르는 이름(`nothing.here`, SQL 흉내) 무시 / 모르는 이름만 → 아무것도 안 뺌 / 권한 없음 403. 서류 줄은 진료의 라우트가 아직 쓰지 않아 시험이 격리 DB에 직접 넣음(`SE_DB_CONTAINER`, `bethesda-s-`로 시작하지 않으면 거절).
+- **잰 것**(서류 줄 21,000 + α): 처음 여는 조회(7일, 뺌) 1,290줄 26쪽 → **50줄 1쪽**, 6 ms. 1년 뺌 13 ms. 화면: 켬 1,290줄 1/26 → 2쪽 → 끔 50줄 1/1(쪽도 1로) → 다른 탭 갔다 옴 → 끔.
+- **공용 파일 변경**: i18n `se_logShowIssued`·`se_logIssuedHidden`.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx` · i18n 3개 · `backend/test/settings.auditdocs.mjs`(새) · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`, 격리 9187: login·auditdocs·audit·access 시험 통과, 화면 fr·ko(띠·체크·종류·다시 열기).
+
+## 2026-09-30 — 기록 탭에 서류 발행·취소 (실장님 결정 (다)) · 많은 줄에서 여는 시간 · 첫 설치 아이디 칸
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위, `33a81d2` 포함). 통합 시험 중이라 `Settings.jsx` 두 줄.
+- **1 기록 탭** (`settingsAudit.js`)
+  - `documents.issue` 「서류를 발행함 / Document émis / Document issued」, `documents.void` 「서류를 취소함 / Document annulé / Document voided」 — 종류 거르기에도.
+  - 칸: `doc_no` 서류 번호 · `template_code` 서류 — **문서 엔진의 이름표로**(`Settings.jsx`가 `documents/registry.js` `getTemplate(code).name[lang]`을 `ctx.templateName`으로 넘김: 「referral」 → 「Lettre de référence / 진료의뢰서」, 모르는 코드는 코드 그대로) · `lang` 언어(「Français / 한국어 / English」 — 그 언어의 이름) · `voided` 취소됨(예/아니요 — `se_yes`·`se_no`) · `void_reason` 취소 사유.
+  - 진료의 `document.routes.js`는 아직 develop에 줄을 쓰지 않아, 03-change-log.md 1절 「서류」 모양대로 격리 DB에 직접 넣어 봄: fr 「Document émis · D26-00606 Lettre de référence · RAKOTO Test 6 · N° du document: D26-00606 / Document: Lettre de référence / Langue: Français」, 취소 「Annulé: Non → Oui / Motif de l'annulation: — → Erreur de patient」, ko 「서류를 발행함 … 서류: 진료의뢰서 언어: Français」·「취소됨: 아니요 → 예」.
+- **2 많은 줄** — 격리 DB에 서류 줄 1,000개(7일) → 더해서 20,000개(1년), 5번씩 잰 가운데 값(`/admin/audit`, 한 쪽 50줄):
+
+  | 조회 | 1,000줄(7일) | + 20,000줄(1년) |
+  |---|---|---|
+  | 기본(7일, 첫 쪽) | 11 ms · 900줄 | 12 ms · 1,233줄 |
+  | 7일의 마지막 쪽 | 15 ms | 15 ms |
+  | 종류 = 설정(서류 빼고 보는 셈) | 15 ms | 15 ms |
+  | 서류 발행만 | 15 ms | 15 ms |
+  | 환자 이름 찾기 | 15 ms | 16 ms |
+  | 1년 전체 | 14 ms | 14 ms · 21,009줄 |
+
+  응답 21 KB, 화면은 탭을 눌러 50줄이 그려지기까지 17 ms. 느려지는 곳은 없음(`idx_audit_log_at`·`_action`·`_patient`가 받침). **문제는 속도가 아니라 쪽 수**: 서류가 하루 150장이면 7일이 20쪽을 넘어, 다른 고침(결과·영수·가격)이 서류 줄 사이에 묻힘.
+  - **제안(결정 세션에)**: 종류 거르기의 기본을 「서류 발행을 뺀 모두」로 — 목록 맨 위에 「Tout sauf les documents émis」(기본), 그다음 「Tous les types」. 서버는 `action=-documents.issue` 같은 제외 한 가지만 더하면 됨(`/admin/audit` WHERE에 `action <> ?`, 인덱스 그대로). 취소 줄은 드물고 중요하니 기본에 남김. 지금은 만들지 않음 — 설명서 7번에 「종류를 고르거나 환자를 찾으라」고 적어 둠.
+- **3 설명서** `manual-fr/settings.md` 「Lire le Journal」: 머리에 서류 발행·취소, 7번(서류 — 내용은 없음, 많으니 종류·환자로 거르기), 8번 「기록 안 됨」에서 서류를 빼고 「초안 인쇄」만. 변경 내역 초안 한 줄.
+- **4 첫 설치 고정 아이디 칸** (`Login.jsx`): `opacity: .7` → 잠긴 칸 색(`--field-locked`·`--text-locked`), 커서는 그대로. 새 스택(설치 전)에서 잼: 어두운 5.87 · 밝은 5.46, 투명도 1.
+- **공용 파일 변경**: i18n `se_act_docIssue`·`se_act_docVoid`, `se_fld_docNo`·`se_fld_template`·`se_fld_docLang`·`se_fld_voided`·`se_fld_voidReason`, `se_yes`·`se_no`.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `Settings.jsx` · `Login.jsx` · i18n 3개 · 위키 4개
+- **확인한 방법**: `npm run build`. 격리 9187: login·audit·messages 시험 통과, 위 표, 화면 fr·ko(서류 줄·취소 줄·종류 목록), 새 스택의 설치 화면 대비.
+
+## 2026-09-30 — 금액 표기 (두 번째 통합 시험의 C) · 여러 칸 줄 확인 · theme 첫 프레임 관찰
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위). 통합 시험 중이라 `Settings.jsx`는 여섯 줄만.
+- **1 금액 표기** — `frontend/src/pages/settingsMoney.js`(새, 설정 파일): `seMoney(v, lang)` = 천 단위를 fr U+00A0 · ko/en 쉼표로, 「.00」 없음, 소수가 실제로 있으면 그 나라 소수점으로(fr 「0,50」, en 「0.50」). 수납·통계의 `fmtAmount`와 같은 모양이지만 반올림하지 않음(단가 0.50을 0으로 보이지 않게). 공용 금액 함수가 생기면 그것으로 바꾸면 됨(총괄 몫).
+  - 설정 → Codes d'actes 목록의 Prix, Médicaments 목록의 Prix unitaire, 약속처방 약 검색의 「Prix」.
+  - 편집 창의 입력 칸은 숫자만: `seMoneyInput` — 「15000.00」 → 15000, 「0.50」 → 0.5(타자 값은 그대로).
+  - 기록(Journal): `settingsAudit.js`의 `MONEY` 칸만 — `unit_price` · `price` · `price_clinic` · `total_due` · `amount_paid` · `refunded_amount` · `outstanding` · `refund`. 수량·일수·영수 번호는 그대로. 언어는 `auditChanges`의 `ctx.lang`.
+- **2 여러 칸 줄**: 끝난 진료의 처방 한 줄 고침(용량·횟수·일수·총량·단가가 한 줄에)을 격리 DB에 넣어 봄 — 칸마다 한 줄씩 「Dose: 3 → 4 / … / Prix unitaire: 300 → 47 300」, 옛 값 줄긋기, 읽기 좋음. 기록 탭은 바꿀 것 없음(4줄 → 1줄은 진료 세션 몫).
+- **3 관찰 — theme 첫 프레임**(디자인 세션 몫, 고치지 않음): 로그인 답의 `user.theme`은 `api/client.js` `saveAuth`가 `medconnect_user`에 저장만 하고 화면에 쓰지 않음. 화면 색은 `index.html`이 PC의 `medconnect_theme`으로 먼저 그리고, `TopBar.jsx`가 상단바가 뜬 뒤 `GET /api/theme`을 읽어 다르면 바꿈 → 첫 프레임은 PC의 마지막 색. 제안: `saveAuth`(또는 Login.jsx의 로그인 성공)에서 `user.theme`이 dark/light면 `theme.js` `setTheme(user.theme)`을 먼저 부르기 — 그러면 로그인 뒤 첫 화면부터 계정 색이고, TopBar의 `/theme` 읽기는 다른 PC에서 바꾼 경우만 맞춤.
+- **공용 파일 변경**: 없음(i18n 그대로).
+- **바꾼 파일**: `frontend/src/pages/settingsMoney.js`(새) · `frontend/src/pages/Settings.jsx` · `frontend/src/pages/settingsAudit.js` · 위키 3개
+- **확인한 방법**: `npm run build`. 스택 없이 `seMoney` 12가지(15000.00 fr/ko, 1234567 en, 0.50 fr/en, 0, 999, -2000, 12.999 → 13, 빈 값, null, 글자) + 기록 줄 풀기(fr·ko) 통과. 새 격리 스택(9187): drugprice 24 통과, 화면 fr — Codes d'actes 「15 000」(문자 코드로 U+00A0 확인), 편집 창 입력 「15000」, 약 목록 「0,50」(MED-0002를 0.5로 두고), 약 창 입력 「0.5」, 기록 「Prix: 5 000 → 6 000」·「Prix de base: 6 000 → 7 000」·「Prix unitaire: 300 → 47 300」. ko — 「15,000」, 「단가: 300 → 47,300」.
+
+## 2026-09-30 — 투명도로 나타낸 「잠김·쓰지 않음」 세 곳을 잠긴 칸 이름표로 (디자인 세션이 넘긴 세 줄)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위). 통합 시험 중이라 `Settings.jsx`는 이 네 줄만.
+- **바꾼 것** (`Settings.jsx`)
+  - 오더 연동 탭의 쓰지 않는 뷰어 주소 묶음: `opacity:0.6` 뺌 → 칸은 `LOCKED_IS` + `readOnly`(P-9 뒤 쓰지 않는 칸이라 고칠 일이 없음, 저장 때 값은 그대로 감), 이름 글자는 `Fld`의 `var(--text-3)` 그대로.
+  - 약 창의 재고 칸: `opacity:.6` → `LOCKED_IS`.
+  - 포장 단위 고르기: 체크 전(`disabled`) `opacity:.5` → `LOCKED_IS`, 체크하면 `IS`.
+  - **덤 — `LOCKED_IS`에 `opacity:1`**: 재어 보니 크롬이 막힌 `<select>`에 스스로 `opacity 0.7`을 걸어(브라우저 기본 규칙) 잠긴 칸 색으로 바꿔도 3.53이었음. 이 한 칸으로 직원 창의 잠긴 역할 고르기(마지막 관리자)도 같이 고쳐짐.
+- **대비** (격리 9187, 화면에서 `getComputedStyle`로 글자색 × **부모까지 곱한 투명도**를 바탕 위에 섞어 계산):
+
+  | 곳 | 전(어두운 화면) | 어두운 화면 | 밝은 화면 |
+  |---|---|---|---|
+  | 뷰어 주소 이름 글자 | 2.78 (투명도 0.6) | 5.28 | 5.22 |
+  | 뷰어 주소 칸 | 2.93 (0.6) | 5.87 | 5.46 |
+  | 약 창 재고 칸 | 2.93 (0.6) | 5.87 | 5.46 |
+  | 포장 단위 고르기(체크 전) | 4.53 (0.5, 옛 `IS` 색) · 3.53 (잠긴 색 + 크롬 0.7) | 5.87 | 5.46 |
+
+  고친 뒤 세 곳 모두 부모까지 곱한 투명도 1. `Settings.jsx`에 `opacity`는 이제 주석 한 곳뿐.
+- **outline**: 새로 넣지 않음. 있는 `outline:'none'`은 공용 규칙(`!important`)이 이기므로 그대로.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · 위키 2개
+- **확인한 방법**: `npm run build`, 새 격리 스택에서 fr 화면 두 주제(어두운·밝은) — 위 표, 재고 「800」·포장 단위 「Flacon」이 잠긴 칸 색으로 읽힘.
+
+## 2026-09-30 — 오더 코드(진료비·검사·영상·처치) 가격 변경도 기록에 (실장님 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `bf3904c` 이후 merge 위)
+- **한 일**: `admin.routes.js` `PUT /order-codes/:id`를 약과 같은 모양으로 — 한 트랜잭션(`SELECT id, code, name, price, price_clinic … FOR UPDATE` → UPDATE → `auditPrice` → COMMIT), 없는 코드는 ROLLBACK 뒤 404, 검사(400)는 트랜잭션 전. `ACTIONS.ORDER_PRICE`, `entity 'order_code'`, 요약 = 코드 + 이름, 환자 없음. 새 코드(POST)는 남기지 않음.
+- **가격 칸이 둘**: `price_clinic`(수납이 청구 — `billing.routes.js`·약속처방이 읽음)과 `price`. 편집 창의 「Prix」 한 칸이 둘 다 같은 값으로 씀 → 그대로 두면 한 번 바꾼 것이 「Prix」 두 줄로 보임. `auditPrice(client, req, action, entity, was, now, fields, sameAs)`로 넓혀, **두 칸이 똑같이 움직이면 `price_clinic`만**, 하나만 움직이면 그 칸만 남김. 약은 `['unit_price']`(모양 그대로).
+- **다른 길**: 없음 — `UPDATE order_code`는 이 라우트와 감추기(DELETE)뿐, 검사 항목 탭의 새 패널은 POST.
+- **기록 탭**: `settings.order.price` → 「Prix d'un acte modifié / 오더 코드 가격을 바꿈 / Order code price changed」, 칸 `price_clinic` 「Prix / 가격 / Price」, `price` 「Prix de base / 기본 가격 / List price」. 종류 목록에도.
+- **시험** `settings.drugprice.mjs`에 오더 코드 10개 더함(모두 24): 새 코드 0 / 가격만(두 칸 함께) 1줄·`price_clinic`만 5000 → 6000 / 코드·이름·환자 없음 / 이름만 0 / 같은 가격 "6000.00" 0 / `price`만 움직임 → 그 칸만 1줄 / 권한 없음 403·0 / 없는 코드 404·0.
+- **설명서** `manual-fr/settings.md` 「Lire le Journal」: 기록되는 것 여덟 가지(… prix des médicaments, prix des actes), 6에 「Le prix d'un acte … aussi」, 7에서 「le prix des actes」를 뺌. 변경 내역 초안 한 줄.
+- **포커스 테두리**: 디자인 세션의 공용 규칙이 오면 `Settings.jsx`의 `outline:'none'`을 지우겠음 — 아직 부탁이 오지 않아 손대지 않음.
+- **공용 파일 변경**: i18n `se_act_orderPrice`, `se_fld_priceClinic`, `se_fld_priceList`.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/settingsAudit.js` · i18n 3개 · `backend/test/settings.drugprice.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): drugprice 24 · drugs · audit · access(1265) 통과. 화면: 오더 코드 창에서 C01 New Visit 15000 → 16000 저장 → 기록 탭 첫 줄 fr 「Prix d'un acte modifié · C01 New Visit · — · Prix: 15000 → 16000」(한 줄), ko 「오더 코드 가격을 바꿈 … 가격: 15000 → 16000」, 종류 목록에 「오더 코드 가격을 바꿈」.
+
+## 2026-09-30 — 약 가격 변경을 기록에 (실장님 결정 (나)) · 검사 항목 설명 두 문장
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5077d8e` merge 위)
+- **1** `admin.routes.js` `PUT /drugs/:id`: 한 트랜잭션 — `SELECT id, code, name, unit_price … FOR UPDATE` → UPDATE → `auditPrice` → COMMIT. 가격을 `Number()`로 비교해 다를 때만 `ACTIONS.DRUG_PRICE` 한 줄(`entity 'drug'`, `summary` = 코드 + 이름, `before`/`after` = `{ unit_price }`만, 환자·내원 없음). 없는 약은 ROLLBACK 뒤 404. 검사(400)는 트랜잭션 전.
+- **2** 새 약(POST)은 남기지 않음. 가져온 약의 첫 가격(0 → 3000)은 남음 — 화면에서 PROFEIN으로 확인.
+- **3 다른 길**: 없음. 약국(`pharmacy.routes.js`)은 `stock_qty`·가져오기 확인 칸만, 진료(`consult.routes.js`)·수납(`billing.routes.js`)의 `unit_price`는 처방·영수 줄의 그때 가격, 034 가져오기는 한 번. 화면에서 약을 저장하는 곳도 Settings.jsx뿐.
+- **4 기록 탭**: `settings.drug.price` → 「Prix d'un médicament modifié / 약 가격을 바꿈 / Drug price changed」(`se_act_drugPrice`), 칸 `unit_price`는 있던 「Prix unitaire / 단가」. 종류 거르기 목록에도 나옴. 환자 칸은 직원 줄처럼 「—」.
+- **5 시험** `backend/test/settings.drugprice.mjs` 14개: 새 약 0줄 / 가격만 1줄(100 → 150, 코드·이름·누가, 환자 없음) / 이름만 0 / 같은 가격(150, "150.00") 0 / 가격 칸 없는 저장 0 / 가격 + 이름 1줄(가격만, 150 → 200) / 권한 없음 403·0 / 없는 약 404·0 / 음수 400·0.
+- **6 오더 코드**: 만들지 않음. `auditPrice(client, req, action, entity, was, now, field)`로 떼어 두어 `PUT /order-codes/:id`에 `price`·`price_clinic` 두 번 부르면 됨(그 라우트도 트랜잭션으로 바꿔야 함).
+- **임상병리 부탁**: `manual-fr/settings.md` 「Régler les valeurs de référence」 5단계에 「plusieurs tableaux … défiler vers le bas pour voir Sauver」, 그 아래 「Les résultats déjà enregistrés gardent …」 — 보내 준 문장 그대로. Journal 절도 고침(약 가격은 기록됨, 오더 코드 가격은 아님).
+- **실수 하나(고침)**: 처음 넣을 때 스크립트의 `String.replace`가 `$$`를 `$`로 바꿔 UPDATE의 `$n`이 깨짐 → 500 — 시험이 잡음, 고친 뒤 통과. 앞으로 문서·코드 넣기는 split/join으로.
+- **공용 파일 변경**: i18n `se_act_drugPrice`(설정 표시 안).
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/settingsAudit.js` · i18n 3개 · `backend/test/settings.drugprice.mjs`(새) · 위키 4개
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): drugprice 14 · drugs · audit · access(1265) 통과. 화면: 약 창에서 PROFEIN 0 → 3000 저장 → 기록 탭 첫 줄 fr 「Prix d'un médicament modifié · MED-0009 PROFEIN · — · Prix unitaire: 0 → 3000」, ko 「약 가격을 바꿈 … 단가: 0 → 3000」, 종류 목록에 「약 가격을 바꿈」.
+
+## 2026-09-30 — EMR 백업 복사 상태 줄 · 백업 화면 안내 · 기록 탭 영수 칸 · 로그인 답의 theme (총괄 1~4)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `15b1a61` merge 위 — rebase 아님)
+- **총괄이 넣은 한 줄 확인**: `admin.routes.js` 직원 목록의 `delete r.theme` — 맞음. 격리에서 `/admin/staff` 답에 `theme` 없음 확인(아래 시험).
+- **1 EMR 백업 복사**: `status.routes.js` `checkEmrBackupCopy`(항목 `emr_backup_copy`)와 `server-status.ps1` `Get-EmrCopyCheck`(줄 `emrCopy`, 안내 「branchez le disque externe」).
+  - `detail.emr_backup` 키가 없으면(옛 PACS 스크립트) **줄 없음** — API는 `null`을 목록에서 뺌.
+  - warn: `failed`(오류 글자) · `no_disk` · `not_found` · `emr_backup_last_ok` 없음(`none`/`never`) · 36시간 넘음(`stale`). **36시간은 `emr_backup_last_ok`(EMR 시각)로**, `emr_backup_newest`는 보여 주기만.
+  - 상태 창은 PACS 폴더의 json이 아니라 **DB**에서 읽음(`emr_backup_last_ok`는 EMR이 붙이는 칸이라 파일에 없음). 오류 글자에 `|`가 있어도 잘리지 않게 마지막 칸으로. 창 높이 640 → 680(줄 최대 열).
+- **2 백업 화면**: 노란 안내 → 「💾 밤마다 외장 디스크로도 복사됩니다(영상 백업과 함께). 디스크가 꽂혀 있는지는 상태 창…에서 확인. 필요하면 ⬇로 USB에도」 — 경로와 상관없이 늘. 머리글의 BACKUP_PATH 문장도 뺌. 공용 키 `backupSafetyTip`·`backupIntro`는 두고 **설정 키 `se_backupSafetyTip`·`se_backupIntro`를 새로**(공용 키를 고치지 않으려고). 맨 아래 「다른 드라이브는 고장엔 대비, 도난·화재엔 안 됨 — USB에도」 주석(공용 `backupNote`류)은 그대로 맞는 말이라 둠.
+- **3 기록 탭(수납 B4)**: `settingsAudit.js` — 칸 `refunded_amount` 「Rendu au patient / 돌려준 돈」, `payment_status` 값은 수납 화면의 말(`py_st*`: payé · partiel · impayé · annulé · exonéré)로, **배열이면 값마다** 번역해 쉼표로. `receipts` 배열은 전부터 쉼표로. 수납 모양대로 만든 취소·정정 줄을 ko·en·fr로 풀어 확인(「Statut du paiement: payé → partiel」, 「Rendu au patient: — → 0」).
+- **4 디자인 세션 부탁**
+  - 로그인·첫 설치의 `user`와 `/auth/me`에 `theme`. 토큰(JWT)에는 넣지 않음.
+  - `settings.access.mjs`에 `GET`·`PUT /theme` [ALL] — 115 routes × 11 = **1265** 요청.
+  - `staff.theme`과 스크립트: 격리에서 admin을 light로 두고 백업 → `verify-backup -Strict` **VERIFIED**(내용까지 같음) → `clean-test-data -DryRun` 통과(직원은 id·상태만 보므로 새 칸과 무관). 037 전 백업의 5b 복원 연습은 다시 하지 않음(037은 칸만 더하고 기본값이 있어 5b 그대로 적용될 것으로 봄).
+- **덤(상태 점)**: 상단에 밝게/어둡게 단추가 생겨 점이 왼쪽으로 옮겨지자, 오른쪽 끝에 매단 목록이 화면 왼쪽으로 잘림 → 누른 자리에서 창 안으로 맞춰 여는 `position: fixed`로(`settingsStatus.jsx`), 목록이 길면 스크롤.
+- **5 약 가격 기록**: 결정 전이라 만들지 않음.
+- **공용 파일 변경**: i18n(설정 표시 안) `se_sysItem_emr_backup_copy`, `se_sys_emrBackupCopy_*` 7, `se_backupIntro`, `se_backupSafetyTip`, `se_fld_refundedAmount`. `auth.routes.js`(설정 파일).
+- **바꾼 파일**: `backend/src/routes/status.routes.js` · `backend/src/routes/auth.routes.js` · `server-status.ps1`(BOM·CRLF 유지) · `frontend/src/pages/Settings.jsx` · `settingsStatus.jsx` · `settingsAudit.js` · i18n 3개 · `backend/test/settings.access.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`, status·messages 시험(스택 없이). 새 격리 스택(9187): login·access(1265) 통과. 상태 API·theme 15가지(보고 없음 / 옛 보고 → 줄 없음, 방금 복사 ok·개수·가장 새 것, 30시간 ok, 40시간 stale, 이름 날짜가 옛날이어도 1시간 전 복사면 ok, failed·no_disk·not_found·none, overall warn, 로그인 답 theme dark → PUT light → /me·다음 로그인 light, 직원 목록에 theme 없음) 통과. 상태 창 사본(DB만 격리로): ok(fr) · failed(fr, 오류의 `|` 그대로) · stale(en) · no_disk(ko) · 옛 보고(줄 없음). 화면 fr·ko(밝은 화면): 백업 탭 안내, 상태 점 목록의 복사 줄(ok·실패), 목록이 창 안에서 열림.
+- **남은 것**: 약 가격 기록(결정 대기).
+
+## 2026-09-29 — 통합 시험의 설정 몫 (B1 · C 넷)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `fd0cd02` merge 위)
+- **B1 목록에서 빠진 약**: 약속처방 목록 카드와 편집 창에서, 약이 감춰졌거나(`drug_active` false) 없어진(null) 약 줄을 줄긋기 + 「⚠ N개 약이 목록에 없음」, 편집 창에는 「진료에서 불러도 처방되지 않음 — 지우거나 바꾸세요」 설명. `drug_active`는 진료의 `orderset.routes.js`가 이미 주던 값(서버 변경 없음). 자료는 고치지 않음(현지에서 다시 만듦). 편집 창에서 새로 넣은 줄은 목록에서 고른 것이라 표시 없음.
+- **B2**(Journal 영수증 정정의 영어 «refund», «paid / partial»): 수납 세션이 값 이름을 알려 오면 기록 탭 번역 표에 넣음 — 아직 안 옴.
+- **C 저장 알림**: 약속처방 저장이 `t.save+' ✓'`(«✓ Sauver ✓»)였음 → 다른 저장과 같은 `se_saved`(«✓ Enregistré»). 새 키 없음.
+- **C 편집 창**: 설정의 편집 창(직원·약·오더 코드·상용구·진료과 공용)을 제목 / 칸(스크롤) / 단추 줄로 나눔 — 1366×768에서 포장 단위 약(PROFEIN)의 창도 **Sauver**가 스크롤 없이 보임. 약 탭 편집 창은 Settings.jsx(설정 파일)라 약국에 넘기지 않음.
+- **C 약 검색 결과**: 약속처방 편집 창 오른쪽에 제형 + 「Stock N · Prix P」(포장 단위 약은 재고 뒤에 Flacon 등). Amoxicillin MED-0068/0069가 재고 2000 / 2500으로 갈림. 약 탭 쪽은 약국 몫.
+- **C 약 가격 변경 기록 — 결정 세션에 올릴 선택지(만들지 않음)**: (가) 지금처럼 남기지 않음 — 기록 범위 여섯 가지 그대로 / (나) 약 가격(`unit_price`)이 바뀔 때만 Journal에 한 줄(누가·옛 값→새 값, `admin.routes.js` PUT에서 같은 트랜잭션, 새 마이그레이션 없음 — `audit_log` 그대로) / (다) 약 저장 전체(이름·제형·최소 재고·포장 단위까지). 설정 세션 의견: (나) — 돈에 닿는 값만, 가져온 뒤 처음 가격을 넣는 101줄도 남아 「누가 0→100」이 보임.
+- **설명서** `manual-fr/settings.md`: 「À vérifier sur place」 상자(막지 않음, 약국이 Vérifié로 지움), 같은 이름 두 줄(둘 다 가격, 약국에 알림), 약속처방 검색의 재고·가격, 「absent de la liste」 줄 처리, Journal에 남지 않는 것(약 가격·약속처방·처음 입력). 옛 「à revoir」 주석은 지움. `changelog-1.5.0/settings.md` Smaller 두 줄.
+- **공용 파일 변경**: i18n `se_osGone`·`se_osGoneHint`·`se_osGoneLine`·`se_osPick` (ko·en·fr, 설정 표시 안).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · i18n 3개 · 위키 4개
+- **확인한 방법**: `npm run build`. 새 격리 스택(9187, 034 포함): login(새 스택)·messages·ordersets·drugs 시험, access 1243 요청 통과. 화면 1366×768, fr: 목록에 Malaria Workup·Diarrhea / GE만 「2 médicament(s) absent(s)」와 줄그은 코드(Basic Labs는 없음), 편집 창의 노란 상자·줄긋기·「absent de la liste」, 새로 넣은 Amoxicillin 줄은 표시 없음, 검색 「Stock 2000 · Prix 0」/「Stock 2500 · Prix 0」, 저장 알림 「✓ Enregistré」, PROFEIN 편집 창의 Sauver가 스크롤 없이 보임. ko: 목록 「⚠ 2개 약이 목록에 없음」, 편집 창 설명·「목록에 없음」, 검색 「재고 2000 · 가격 0」.
+- **남은 것**: B2(수납의 값 이름), 영상 백업의 EMR 백업 복사 보고 칸이 정해지면 상태 화면에 한 줄, `/api/theme` access.
+
+## 2026-09-29 — 편집 창 제목·이메일·비활성 아래로 · 약속처방 문구 번역 · 영상 창(P-9) 뒤 상태 검사 (총괄 ③④⑤)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`e60ee0e` 위)
+- **③** `Settings.jsx`: 편집 창 제목을 탭마다(`se_newTitle_<탭>`·`se_editTitle_<탭>` — 직원·약·오더 코드·상용구·진료과, 없으면 옛 공용 제목). 직원 창에 **E-mail**(API는 전부터 받음). 직원 목록은 활성 먼저·비활성 아래(각각 이름순). 설정 화면의 기록 탭 직원 거르기 목록 순서는 그대로.
+- **④** `settingsMessages.js`: 진료 `orderset.routes.js`의 거절 문구 7개(`name required`, `items[i].…` 6) — `items[i]`에서 번호를 떼어 **i + 1**을 줄 번호로(「Ligne 3 : …」). `settings.messages.mjs`가 그 파일의 문구를 읽어 모두 번역되는지·줄 번호가 맞는지 확인(새 문구가 생기면 걸림).
+- **⑤** 영상 창이 EMR을 거치게 된 뒤(PACS P-9, 035): `status.routes.js` `checkPacsAddresses`·`server-status.ps1` `Get-PacsAddressCheck`가 쓰지 않게 된 `pacs_viewer_url` 대신 `orthanc_url`(8090이면 옛 포트 — 오더 연동 탭과 같은 판정)과 `emr_base_url`(8080)을 보고, 영상을 쓰는 설치(`worklist_bridge` 보고가 있거나 워크리스트 호스트가 적힘)인데 비밀번호가 없으면 **`status.pacsAddress.notPaired`**(「PACS 폴더에서 pair-with-emr」, 상태 창도 같은 안내). 영상을 쓰지 않는 설치는 경고하지 않음. 총괄 메시지는 「옛 포트는 emr_base_url에만」이었지만 `orthanc_url`도 넣었습니다 — 오더 연동 탭(PACS)이 이미 그 칸의 8090을 경고하고, 틀리면 영상 창이 안 열리므로. 빼야 하면 한 줄.
+- **문서**: `manual-fr/settings.md`(상태 점에 짝 맞추기·옛 포트 설명, 메시지 표 두 줄, 창 이름 「Nouveau membre du personnel」·E-mail), `changelog-1.5.0/settings.md`(After updating의 영상 설정·pair-with-emr, Smaller 한 줄).
+- **공용 파일 변경**: i18n `se_newTitle_*`·`se_editTitle_*` 10개, `se_osErr*` 7개, `se_sys_pacsAddress_notPaired`.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `frontend/src/pages/settingsMessages.js` · `backend/src/routes/status.routes.js` · `server-status.ps1`(BOM·CRLF 유지) · `backend/test/settings.messages.mjs` · 위키 4개
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`, messages(약속처방 7개 포함)·status 시험. 격리(복원·정리한 DB): 상태 API 8가지(영상 안 씀 off / 옛 뷰어 주소는 경고 아님 / 워크리스트 호스트·브리지 보고인데 짝 없음 → notPaired / 짝 있고 포트 맞음 ok / EMR 8080·영상 서버 8090 → oldPort / 둘 다면 notPaired가 먼저·옛 포트 목록 함께) 통과. 상태 창 사본 fr·en(짝 없음+8080 → 한 줄에 둘, 안내는 짝 맞추기), 짝 있음 → 옛 포트 안내. 화면 fr: 상태 점 목록의 짝 맞추기 안내, 직원 창 「Modifier le membre du personnel」·E-mail 저장 → API에 남음, 비활성 계정이 목록 맨 아래. ko: 새 약 창 「새 약」.
+
+## 2026-09-29 — 정리 스크립트에 cash_movement · 권한 시험에 cash-day (총괄 ①②)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `e853799` 위, ff)
+- **① `clean-test-data.ps1`**: `cash_movement`(036)를 지우는 목록 **맨 앞**과 백업 id 비교 대상에, 트랜잭션 첫 줄에 `set local bethesda.cleanup = 'on'`(036의 가드가 이 트랜잭션의 DELETE만 받음), 보여 주는 수에 「cash record lines」. 이 표가 없는 옛 DB도 되게 비교한 표 가운데 **있는 것만** 잠그고·다시 세고·지움. CRLF·ASCII 유지, 파서 오류 0.
+- **격리 확인**: 실행 중 EMR의 최신 백업(`…_1513`, 036까지, cash 2줄) **사본**을 문서 명령으로 복원 → 드라이런(현금 기록 2줄 포함, 되돌림) → `SET LOCAL` 없이 `DELETE FROM cash_movement` → 「cash_movement is append-only」로 거절(가드 확인) → 실제 실행 → `GET /billing/cash-day` 6-28·7-14 **빈 목록**(전: 1줄씩), `/stats/summary` 6~7월 **수납 0**(전: 474,500), `cash_movement` 0줄·트리거 둘 그대로. 사본과 시험 비밀번호는 지움.
+- **② `settings.access.mjs`**: `GET /billing/cash-day` → [수납, 통계](라우트 `canSeeCash`와 같음). **113 × 11 = 1243건 모두 표와 같음.** `/api/theme`(디자인)은 아직 develop에 없어 넣지 않음 — 없는 라우트는 404라 「통과」로 잘못 셀 수 있음. 들어오면 [모두]로.
+- **바꾼 파일**: `clean-test-data.ps1` · `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(3-11, 8절)
+
+## 2026-09-29 — 프랑스어 설명서 · v1.5.0 변경 내역 초안 (총괄 ①②)
+
+- **상태**: 확인 요청 (문서만)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 합친 뒤)
+- **① `wiki/manual-fr/settings.md`** (관리자용, 규칙 `manual-fr/README.md` 순서): En bref 7단계 · Pas à pas(계정 만들기, 권한, 비활성, **Réactiver**, **자기 비밀번호 — 모든 직원**, 약 가격(**Prix unitaire**), **약속처방 — Dose/j·Fois·Jours·Posologie, 총량 = Dose/j × Jours**, 검사 참고치(**Items de test**, Par sexe et âge), 백업 띠와 **Sauvegarder**·**Télécharger**, **상태 점**, **Journal** 읽기) · Si ce message apparaît 11줄 · À ne pas faire · Qui appeler. 화면 글자는 격리 스택 프랑스어 화면과 `fr.js`에서 그대로 확인. 비밀번호 값은 적지 않음(「un mot de passe initial est déjà rempli」). 약품 탭(약국)·검사 항목 탭(임상병리)은 오늘 바뀌어 `<!-- à revoir -->` 표시.
+- **② `wiki/reference/changelog-1.5.0/settings.md`** (영어, v1.4.0 목소리): 약속처방 용량 · 자기 비밀번호·다시 활성·간호사 역할·설치 아이디 · 변경 기록(Journal)·TRUNCATE · 백업(동시 실행, 최근 7개, 색 띠, 옛 버전 백업, 업데이트 뒤 백업, 정리 스크립트) · 상태 점·상태 창 · Smaller. 마이그레이션 020·022(총괄)·026. **After updating**: 백업+verify-backup -Strict, 오더 연동 주소(9080·9090), 기존 의사 계정의 Pharmacie 체크, clean-test-data는 새 PC에서만(KEEP-TEST-DATA.txt 옮기지 말 것).
+- **디자인 세션이 색을 바꾸기 전 설정 탭에서 더 고칠 만한 것** (총괄에 목록으로 보고, 아직 손대지 않음):
+  1. 직원 편집 창 제목이 「Nouvel élément / 새 항목」(모든 편집 창 공용) — 「Nouveau membre du personnel」처럼 탭마다. 이메일 칸이 API에는 있는데 창에 없음.
+  2. 직원 목록에서 비활성 계정이 이름순으로 섞임 — 활성 먼저, 비활성은 아래(또는 「비활성 보기」).
+  3. 진료 `7e17a6d`의 약속처방 400 문구(`items[i].…`)가 `seMessage` 표에 없음 — 편집 창이 먼저 막아 보통 안 보이지만, 진료 세션이 문구 목록을 주면 번역 추가.
+  4. (PACS 몫) 오더 연동 탭의 저장 오류가 `err.message` 그대로(번역 안 됨) — `seMessage`를 쓰면 됨.
+- **바꾼 파일**: `wiki/manual-fr/settings.md`(새) · `wiki/reference/changelog-1.5.0/settings.md`(새)
+
+## 2026-09-29 — 약국 가져오기(034) 뒤 다시 확인 (코드 변경 없음)
+
+- **상태**: 보고
+- **확인**: develop `e6b68c1`(약국 가져오기 034 `dosage_form`, 진료 `7e17a6d` 약속처방 서버 검사 포함)로 ff, 새 DB 격리 스택. 가져온 약 101개 모두 활성·제형 있음. `settings.drugs.mjs` — **실제 `dosage_form` 칸으로** 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL 통과(흉내가 아니라 034의 칸). `settings.ordersets.mjs`(진료 서버 검사와 함께), access 1232건, messages, status, permissions 모두 통과.
+- **남은 것(예고)**: 수납의 `cash_movement`가 develop에 들어오면 `clean-test-data.ps1`(지우는 목록 맨 앞, 트랜잭션 안 `SET LOCAL bethesda.cleanup='on'`, id 비교 대상) + `settings.access.mjs`에 `GET /api/billing/cash-day`.
+
+## 2026-09-29 — 약속처방 줄마다 일총투여·횟수·일수·용법 (실장님 지적, 가장 먼저)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`9192536` 위 — `9192536`은 결정 B의 약 저장 「보낸 칸만」, develop `7d8334d` 위로 rebase)
+- **한 일** (`Settings.jsx` 약속처방 편집 창만, 서버 변경 없음):
+  - 약 줄: 고칠 수 있는 **Dose/j · Fois · Jours · Posologie** 칸(진료의 `cs_colDaily`·`cs_colTimes`·`cs_colDays`·`cs_colSig` 그대로 — 같은 이름·순서). 「3.000×3×7」 글자 대신.
+  - 새로 넣은 약 줄은 **빈 칸**(약품 기본값을 복사하지 않음). 검사·처치 줄은 **Qté · Fois · Jours**, 1·1·1로 시작.
+  - 포장 단위 약: 네 칸(복용 안내, 비워도 됨) + 병·튜브 수(c891715 그대로).
+  - 저장 전 확인(`osLineProblem`): 약 줄(포장 아님)의 일총투여·일수가 비면 칸이 빨갛고 「⚠ dose/j, jours」, 저장하면 이름을 들어 막음. 숫자는 진료 서버 `utils/validate.js` LIMITS와 같게(일총투여 0–1000·세트 약 줄은 0보다 커야, 횟수 1–24·일수 1–365 정수, 용법 10자, 병 수 1 이상 정수, 검사 수량 0보다 큼). 검사 줄의 빈 칸은 1로 보냄.
+  - 이미 있는 세트를 열면 저장된 값이 칸에(`osNum`: '3.000' → '3').
+- **서버**: 칸 이름은 `order_set_item` 그대로(dose·frequency·days·route·quantity). 약 줄의 빈 횟수·일수는 지금 서버가 `|| 1`로 1을 넣음 — 일수는 화면이 필수로 막으므로 포장 약에서만 해당.
+- **진료 세션에 알릴 것 (내 몫 아님)**: 진료의 `applySet`은 **검사·처치 줄의 수량을 늘 1**로 보내고(`addExamOrder`의 `quantity:1`), **검사·영상 줄의 횟수·일수도 1·1·1**(실장님의 앞선 지시)로 넣습니다. 그래서 설정에서 검사 줄의 수량·횟수·일수를 바꿔도 지금은 **처치 줄의 횟수·일수만** 진료에 들어갑니다. 수량까지 쓰려면 진료의 `applySet`/`addExamOrder` 차례.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`(2.9, 8절)
+- **공용 파일 변경**: i18n `se_setColQty`·`se_setNeedDose`·`se_setNeedDoseShort`·`se_setBadNumber`·`se_setBadNumberShort`(진료의 `cs_col*` 키는 읽기만).
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`. 새 DB 격리 스택, 화면(프랑스어): 새 약속처방 → Artemether 추가 → 칸이 빈 채·빨간 테두리 → 저장 → 「Indiquez la dose par jour … : Artemether-Lumefantrine Tab」로 막힘 → 4·2·3·BID + CBC(1·1·1) → 저장 → DB `ACT01 4/2/3/BID`, `L01 1/1` → 한국어로 다시 열어 같은 값(「일총투여·횟수·일수·용법」, 「수량」) → **진료에서 세트 적용** → 처방 줄 4·2·3·BID 「2 cp × 2 fois/jour pendant 3 jours (total 12)」, CBC 1·1·1 → 진료 완료 → 처방 `total_qty 12`·800 → **수납** Artemether 12 × 800 = 9,600, CBC 12,000 → **약국** 일총투여 4·한 번 2·2회·3일·BID, 9,600. 포장 단위 시럽 줄: 네 칸 비어도 빨갛지 않고 Flacon 1 칸. `settings.ordersets.mjs`·messages 통과. 프랑스어에서 칸 이름이 잘리지 않음(칸 위 작은 이름).
+- **다음 할 일**: 앞서 받은 admin API(결정 B)는 `9192536`으로 이미 끝남 — 보고함.
+
+## 2026-09-29 — 약 저장은 보낸 칸만 (결정 B) · 제형 칸 준비 · 상태 점 직원용 한 줄
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `efed392` 위)
+- **확인한 것**: 전의 `PUT /admin/drugs/:id`는 모든 칸을 요청 값으로 썼음 → 기본 용량·횟수·일수·용법을 보내지 않는 화면으로 저장하면 **NULL로 덮였을 것**(격리에서 새 시험으로 확인할 수 있는 동작).
+- **한 일** (`admin.routes.js`):
+  - `PUT`: 고정 목록 `DRUG_FIELDS` 가운데 **요청에 온 칸만** SET(열 이름은 목록에서만 — SQL에 요청 값이 이름으로 들어가지 않음). 빈 값은 NULL, 코드·이름을 비우면 NOT NULL로 400 「A required field is missing」(전에는 빈 이름 `''`가 저장됐음). 포장 칸은 전처럼 `pack_unit`이 올 때만.
+  - `POST`: 보낸 칸만 넣고 나머지는 열 기본값. 재고 0, 최소 재고 비면 10은 그대로.
+  - **`dosage_form`**: 약국 가져오기(`6bc5c6d`, 아직 약국 브랜치)가 만드는 칸. 서버가 처음 쓸 때 `information_schema`로 약 표의 칸을 한 번 읽고, **그 칸이 있을 때만** 받음 — 가져오기가 develop에 들어오기 전에도 뒤에도 코드를 다시 고칠 필요 없음. 들어오기 전에 보내면 무시(오류 아님).
+- **위키**: 2.15 맨 위에 **직원용 한 줄**(프랑스어·한국어, 출발 전 확인 목록용 — 「점이 노랑·빨강이면 눌러서 보고, 적힌 대로 하거나 담당자에게」). 3-8 「보낸 칸만 저장」, 4절 표.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/test/settings.drugs.mjs`(10개 추가) · `backend/test/settings.ordersets.mjs` · `wiki/modules/settings.md`(2.15, 3-8, 4절, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`. 새 DB 격리 스택: `settings.drugs.mjs` — 네 기본값만 보낸 PUT → 그 넷만 바뀌고 이름·가격·재고 그대로 / 기본값 없이 저장 → 그대로 / 비운 값 → NULL / 이름 비우기 → 400 / 새 약은 열 기본값 / 제형 칸 없음 → 보낸 제형 무시·200. 이어서 **가져오기 마이그레이션을 흉내**(`ALTER TABLE drug ADD COLUMN dosage_form VARCHAR(30)`, API 재시작) → 제형 저장(공백 제거)·보내지 않으면 그대로·비우면 NULL. 모두 통과. access 1232건, audit, messages 통과.
+- **`settings.ordersets.mjs` 고침**: 진료의 `afc29db`가 약속처방 약 줄 수량 0을 400으로 바꿔 내 시험의 「0은 1」이 틀려짐 → 「0은 400, 빈 값은 1」로. **진료 세션 참고**: 그 400 문구 `items[i].quantity must be …`는 화면 번역표에 없음 — 설정 편집 창이 저장 전에 막으므로 보통은 안 보이지만, 보이면 영어로 나옴.
+- **다음 할 일**: 약국 가져오기가 develop에 들어오면 `settings.drugs.mjs`를 실제 칸으로 한 번 더(흉내가 아니라).
+
+## 2026-09-29 — 상단바의 상태 점 (U3 결정 가)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `94457d7` 위)
+- **한 일**: `frontend/src/pages/settingsStatus.jsx`(새) `StatusDot` — `/api/system/status`를 읽어 점(초록·노랑·빨강, 확인 못 하면 회색), 누르면 항목마다 점·이름·한 줄 설명(`{값}` 채움), 확인 시각, ↻.
+- **총괄 조건과 대응**:
+  - 느리거나 실패해도 멈추지 않게 → `api/client.js`를 거치지 않는 `fetch` + AbortController **8초**. 실패·시간 초과·401은 회색 점과 「상태를 확인하지 못함 — EMR은 그대로 쓸 수 있음」, 로그인 화면으로 보내지 않음.
+  - 박자 → 처음, 5분마다(창이 보일 때만), 창으로 돌아올 때 — `TopBar`의 `/auth/me` 동기와 같은 박자(따로 돌지만 같은 규칙). 목록을 열 때와 ↻에서도.
+  - 「꺼짐」은 경고가 아님 → 색은 서버의 `overall`(off를 ok와 같게 셈), 목록에서 off는 회색 줄.
+  - 설정 권한만 → `TopBar.jsx`의 기존 `canSeeUpdate`(settings 권한)일 때만 붙임.
+  - ko·en·fr → `se_sys_*` 31개 문구 + 항목 7 + 전체 4 + 그 밖 4. **`backend/test/settings.status.mjs`**(새, 스택 없이): `status.routes.js`의 모든 `status.*` 문구와 항목에 세 언어 번역이 있는지 — 다른 세션이 항목을 더하면 여기서 걸림.
+- **공용 파일 변경**: **`frontend/src/components/TopBar.jsx`** (총괄 허락) — import 한 줄, 시계 앞에 `{canSeeUpdate ? <StatusDot t={t} /> : null}` 한 줄. i18n `se_sys*` 46개.
+- **바꾼 파일**: `frontend/src/pages/settingsStatus.jsx`(새) · `TopBar.jsx` · `backend/test/settings.status.mjs`(새) · `wiki/modules/settings.md`(2.15 새, 3-6 표, 7절 U3, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`, `settings.status.mjs`(세 언어 42키 모두). 새 DB 격리 스택: 관리자 — 노란 점(백업 없음), 목록 fr(「Aucune sauvegarde — Paramètres → Sauvegarde → Sauvegarder」, 쓰지 않는 네 항목 회색 「Non utilisé」). **API 컨테이너를 일시 정지**해 느린 응답을 흉내 → ↻ 뒤 약 10초 안에 회색 점과 「Impossible de vérifier l'état」, 그동안 상단바 시계는 계속 감. 풀고 백업 → 한국어 초록 점·「모두 정상」·목록. 간호사 계정 → 점 없음. 이어서 `settings.login.mjs` 19개·access 1232건 통과.
+- **다음 할 일**: 없음 — 7절은 모두 고침·결정됨. 새 지시 대기.
+
+## 2026-09-29 — B7 디스크 검사에 DB(Docker) 드라이브도
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`a95891a` 위)
+- **상태 창** `Get-DiskCheck`: 백업 드라이브 + Docker 데이터 드라이브(`Get-DockerDataDrive`: Docker Desktop 설정 파일의 `CustomWslDistroDir`/`DataFolder`, 없으면 `%LOCALAPPDATA%`의 드라이브). 같으면 전과 같은 한 줄, 다르면 「C: … - D: …」, 더 찬 쪽이 색을 정함.
+- **상태 API** `checkDisk`: `/backups`와 컨테이너 `/`를 둘 다, 더 찬 쪽. 값에 `backup_free_gb`·`docker_free_gb`.
+- **한계(솔직히)**: Windows Docker Desktop에서는 컨테이너 `/`가 가상 디스크의 한도를 보여 줌(시험 PC: `docker_free_gb` 1016, 실제 C: 여유는 102GB) — 그래서 **Windows의 실제 C:는 상태 창이 맡음**. 거짓 경고는 내지 않음(더 넉넉하게 보일 뿐). Linux·NAS 설치에서는 실제 값.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0. 상태 창 사본(콘솔): 이 PC는 백업·Docker 모두 C: → 「102 Go libres sur 931 Go」 한 줄(전과 같음). Docker 드라이브를 E:로 흉내 → 「C: 102 … - E: 292 …」. 노랑 기준을 150GB로 올려 → C:만 걸려 **warn** + 「Le disque est presque plein」. 이 PC에서 `Get-DockerDataDrive` → C:. API: `free_gb` 109, `backup_free_gb` 109, `docker_free_gb` 1016.
+- **바꾼 파일**: `server-status.ps1` · `backend/src/routes/status.routes.js` · `wiki/modules/settings.md`(3-6 표, 7절 B7, 8절)
+- **다음 할 일**: 7절에서 남은 것은 U3(결정 세션 대기)뿐 — 나머지는 고침·결정(S5 넣지 않음, B8 하지 않음).
+
+## 2026-09-29 — 7절 작은 것: U8 · S10 · S7 · S9 · S3 · U5 · U6 (총괄 허락·결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a635b0b` 위)
+- **보안 관련 — 이유** (규칙):
+  - **S7** 로그인: 비밀번호를 먼저 확인하고, 맞을 때만 「Account is inactive」. 전에는 아무 비밀번호에나 그 말을 해서, 아이디가 있고 비활성이라는 것이 드러났음. 없는 아이디·틀린 비밀번호·비활성+틀린 비밀번호 모두 같은 「Invalid credentials」.
+  - **S9** 첫 설치: 확인과 만들기를 한 트랜잭션 + `pg_advisory_xact_lock(hashtext('bethesda.setup'))`. 직원 PUT·DELETE: 트랜잭션 시작에서 `bethesda.staff.admins` 잠금, 「다른 설정 관리자가 있나」를 그 트랜잭션 안에서. 실제로는 `admin`이 늘 보호되어 있어 동시 강등으로 잠길 일은 없지만(S3), 빈틈을 막음.
+  - **S3** (총괄 결정 가): 설치 아이디는 서버에서 늘 `admin`(`SETUP_LOGIN`, 보낸 값 무시), 설치 화면의 칸은 읽기 전용 + 안내 `se_setupIdFixed`. 관리자 잠금 방지(`BOOTSTRAP_ADMIN_LOGIN`)가 항상 설치 계정을 알아봄.
+  - **S10**: 권한은 `ALL_PERMS`에 있는 것만(모르는 값 400, 화면은 「Permissions」 칸 이름으로), 아이디 앞뒤 공백 제거·PUT의 빈 아이디 400, 안 쓰는 `bcryptjs` import 삭제(패키지는 그대로).
+- **그 밖**: U8 진료과 저장 뒤 엉뚱한 `setPacsConfig` 한 줄 삭제. U5 앱 제목을 비우면 「Bethesda EMR」(칸을 보내지 않으면 그대로). U6 로그인 로고 「M」 → 「B」.
+- **결정 반영**: S5 넣지 않음, B8 하지 않음, U3 결정 세션 대기 — 7절 표에.
+- **바꾼 파일**: `backend/src/routes/auth.routes.js` · `backend/src/routes/admin.routes.js` · `frontend/src/pages/Login.jsx` · `frontend/src/pages/Settings.jsx`(U8 한 줄) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.login.mjs`(새) · `wiki/modules/settings.md`(2.1, 3-3, 7절, 8절)
+- **공용 파일 변경**: i18n `se_setupIdFixed`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. **새 DB** 격리 스택에서 `settings.login.mjs` **19개**: 설치 두 번 동시에(하나는 `boss`, 하나는 `chief`) → 하나만 200·다른 쪽 403·아이디는 `admin`·관리자 1명·세 번째 403 / 맞는·틀린 비밀번호·없는 아이디 / 비활성+틀린 → Invalid, 비활성+맞는 → inactive / 공백 아이디 저장·그대로 로그인 / 모르는 권한 400(POST·PUT) / 빈 아이디 PUT 400 / 두 관리자 동시 강등 → 둘 다 200·admin 로그인 그대로 / 앱 제목 비우기·보내지 않기. 이어서 access 1232건·audit·password·reactivate·drugs·ordersets·messages·permissions 모두 통과. 화면: 새 DB에서 프랑스어 설치 화면(아이디 `admin` 고정·안내·로고 B), 아이디 칸에 「boss」를 쳐도 그대로 → 화면으로 설치 → `admin`으로 들어감; 한국어 로그인 틀린 비밀번호 → 「아이디 또는 비밀번호가 올바르지 않습니다」.
+- **다음 할 일**: B7(디스크 검사에 Docker 드라이브).
+
+## 2026-09-29 — 7절 남은 항목: 결정 필요 / 결정 없이 가능 (총괄 요청)
+
+- **상태**: 보고 (코드 변경 없음). 2026-09-29 지금 코드에서 하나씩 다시 확인함.
+- **결정 필요** (추천 먼저):
+  - **U3** 상태 조회(`/api/system/status`)를 화면 어디에서도 안 부름 — 상태 창은 서버 PC에서만 보임. 선택: (가) 상단바에 작은 점(초록/노랑/빨강), 설정 권한만 누르면 목록 **추천** (나) 모든 직원에게 점 (다) 설정에 「État」 탭만. 오늘 더한 영상 백업·옛 버전 백업·옛 주소 경고가 서버 PC 밖에서도 보이게 됨. 상단바(`TopBar.jsx`)는 공용 파일.
+  - **S3** 「설치 때 만든 관리자」를 아이디 `admin`으로 알아봄 — 설치 화면은 아이디를 자유롭게 받음. 지금 PC·새 PC(복원)는 `admin`이라 실제 위험은 없음(`login_id` UNIQUE라 다른 `admin`도 못 만듦). 선택: (가) 설치 화면에서 아이디를 `admin`으로 고정 **추천**(작음) (나) 설치 관리자 id를 따로 저장(마이그레이션) (다) 그대로.
+  - **S5** 로그인 실패 횟수 제한 없음 — 잠그면 직원이 잠길 수 있어 현장 부담(실장님 「복잡하지 않게」). 선택: (가) 그대로 — LAN 안 **추천** (나) 같은 아이디 10번 실패 → 5분 대기(잠금 없음).
+- **결정 없이 가능** (작은 것부터):
+  - **U8** 진료과 저장 뒤 관계없는 `setPacsConfig(...)` 한 줄(`Settings.jsx` 232행 근처) — 지움.
+  - **S10** 권한 배열을 `ALL_PERMS`로 걸러 저장, PUT의 `login_id` 공백 제거·빈 값 400, 안 쓰는 `bcryptjs` import 삭제(패키지는 그대로).
+  - **S7** 비활성 계정에 「Account is inactive」를 **비밀번호가 맞을 때만**(틀리면 보통 「틀림」) — 계정 존재·상태가 드러나지 않게. 로그인 화면 안내는 그대로.
+  - **S9** 마지막 관리자 검사·첫 관리자 만들기를 advisory lock으로 한 번에 하나씩 — 동시 강등·동시 설치 방지.
+  - **U5** 병원 정보의 앱 제목을 비우면 기본값 「Bethesda EMR」으로(지금은 이전 값 유지).
+  - **U6** 로그인 화면 로고 글자 「M」(옛 이름 MedConnect) → 「B」.
+  - **B7** 상태 창·상태 조회의 디스크 검사가 백업 드라이브만 봄 → Docker 데이터가 있는 드라이브(C:)도 함께(BACKUP_PATH가 D:일 때).
+  - **B8** 백업 내려받기가 파일을 브라우저 메모리에 통째로 올림 — 지금 백업은 18KB라 급하지 않음. 몇 년 뒤 수백 MB가 되면 문제. 짧게 사는 내려받기 표(쿼리 토큰 대신 1회용)로 바꾸는 설계가 필요해 **맨 뒤**.
+- **남은 것 없음(다른 세션 몫)**: U1의 나머지 — 약품 탭 안쪽(약국), 오더 연동 탭(PACS), 분류 값(DB 저장 값이라 번역 안 함).
+- **제안 순서**: U8 → S10 → S7 → S9 → U5 → U6 → B7 (한두 커밋), 결정이 나면 U3·S3.
+
+## 2026-09-29 — 정리 스크립트 표지 파일 설명 · 기록 탭 차트번호 안내 (총괄 ①②)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a51c62e` 위)
+- **① 표지 파일**: 총괄이 더한 `KEEP-TEST-DATA.txt` 가드(`6d93954`)를 위키 3-11 안전장치 0번, 2.13 6단계에 설명 — 준비한 PC에서는 멈춤, git·설치 묶음에 없음, **새 PC로 옮기지 말 것**.
+- **② 차트번호 겹침**: 정리 뒤 새 환자가 26-00001을 다시 받으므로, 기록 탭에 남은 시험 줄의 차트번호가 새 환자와 같아 보일 수 있음. 위키 2.14(직원용 기록 탭)·3-11, `clean-test-data.ps1` 끝 「Next」 안내에 세 줄(ASCII). 화면 글자는 바꾸지 않음(정리한 날 이후로는 해당 없는 안내라서).
+- **바꾼 파일**: `clean-test-data.ps1`(끝 안내만) · `wiki/modules/settings.md`(2.13, 2.14, 3-11, 8절)
+- **확인한 방법**: PowerShell 파서 오류 0, ASCII 확인.
+- **다음 할 일**: 7절 남은 항목을 「결정 필요 / 결정 없이 가능」으로 나눠 보고.
+
+## 2026-09-29 — 영상 백업 상태 줄 · 기록 탭의 검사 판정·포장 단위 (총괄 「설정 세션에게 (저녁)」)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`4336d19` 위)
+- **영상 백업 상태** (PACS `4d0b196`의 부탁):
+  - `status.routes.js` `checkImageBackup` → `pacs_image_backup` 항목. 보고 없음 → off, `last_seen` 36시간 넘음 → `status.imageBackup.silent`, `disk_found` false → `noDisk`, `ok` false → `failed`(`values.error`), `last_success` 없음·36시간 넘음 → `stale`, 여유 10% 미만 → `nearlyFull`, 모두 warn. 판단 순서도 이대로.
+  - `server-status.ps1` `Get-ImageBackupCheck`: `bethesda-pacs`의 compose 폴더 `logs\image-backup-status.json`. 파일이 없으면 줄 없음(영상 백업을 안 깐 PC). 같은 규칙(`at` 기준 36시간), 노란 A CORRIGER + 맨 아래 안내(fr·en·ko). 줄이 최대 9개가 되어 창 높이 560 → 640. BOM 유지.
+- **기록 탭** (임상병리 `97af696`·진료 `33e70a5`): 검사 결과의 `flag` 값을 말로(fr bas/normal/élevé/anormal, ko 낮음/정상/높음/이상, en low/normal/high/abnormal, 빈칸 —). `total_qty`는 이미 칸 이름이 있었음(`se_fld_totalQty`). 처방 기록에 새로 생긴 `pack_label` 칸 이름·값(`ph_pack_*`). 「값을 지운 줄은 값만」(선택)은 이미 — 지운 줄은 비어 있던 칸을 빼고 보여 줌(139b9fc).
+- **바꾼 파일**: `backend/src/routes/status.routes.js` · `server-status.ps1` · `frontend/src/pages/settingsAudit.js` · `wiki/modules/settings.md`(2.10, 3-6 표, 3-10, 8절)
+- **공용 파일 변경**: i18n `se_fld_packLabel`, `se_flag_low/normal/high/abnormal`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`. 격리 스택: `service_heartbeat`에 줄을 바꿔 넣어 상태 API 7가지(off / ok / silent / noDisk / failed·오류 글자 / stale / nearlyFull) 통과. 상태 창은 **실행 중 PACS 폴더를 건드리지 않게** 스크래치 사본에서 PACS 폴더 자리를 가짜 폴더로 바꿔 파일 없음·정상·디스크 없음(fr)·실패·거의 참(ko)·보고 없음(en), 창 캡처(9줄 모두 보임). 기록 탭: 격리에서 WBC 7 → 20으로 고친 실제 줄 — fr 「Indicateur: normal → élevé」, ko 「판정: 정상 → 높음」.
+- **다음 할 일**: 총괄의 정리 스크립트 검토 반영.
+
+## 2026-09-29 — 시험 데이터 정리 스크립트 (결정 C) · backup-cli 작업 폴더
+
+- **상태**: **총괄 검토 요청** (데이터를 지우는 스크립트 — 규칙대로 검토 뒤에만 쓰임)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`a69f713` 위; `a69f713` = backup-cli가 끝나면 자기 작업 폴더를 지움, 총괄 「작은 것」)
+- **한 일**: 앱 폴더에 `clean-test-data.ps1`(새, ASCII, PS 5.1). 무엇을 지우고·끄고·남기는지, 안전장치 8개, 번호 표, 시험 결과는 `modules/settings.md` **3-11절**에 모두. 2.13의 6단계를 이 스크립트로 바꿈.
+- **총괄 조건과 대응**:
+  - 이 PC에서 돌리지 않음 → 스크립트가 알아보는 방법은 「DB가 방금 복원한 백업 파일과 id까지 똑같은가」. 이 PC의 실행 중 EMR도 가장 새 백업 뒤로 아무것도 입력되지 않았다면 통과할 수 있습니다 — 그래서 확인 글자 앞에 「NEW PC, right after restoring?」 경고와 목록을 보여 주고, 위키·스크립트 머리에 「NEVER RUN THIS ON THE OLD PC」. 컨테이너 이름으로는 막을 수 없음(새 PC도 `bethesda-emr-*`).
+  - 지울 것의 수·환자 이름·차트번호 목록 → 확인 글자 `DELETE <환자 수>`. 컨테이너 이름 인자, 기본값 없음(Mandatory).
+  - 실제 환자를 넣은 뒤 잘못 돌려도 안 지워짐 → 11개 표의 id가 백업 파일과 정확히 같을 때만(한 건만 더 있어도 멈춤 — 시험함).
+  - 한 트랜잭션·실행 전 자동 백업 → 둘 다. 트랜잭션 안에서 표를 잠그고 다시 셈.
+  - 남길 것 → 11개 표만 지움. 재고 기록의 조제 줄은 FK SET NULL로 남음(확인: 25줄 그대로), 안내에 「실사로 맞춤」.
+  - 차트번호 029 → 확인만(26-00001). 영수·문서·오더 번호 표 → 3-11. 문서 번호 시퀀스만 처음으로 돌림(모든 문서가 지워지므로), accession은 영상 서버의 시험 검사와 겹치지 않게 그대로.
+  - 기록 탭의 시험 줄은 남음 → 안내 한 줄. 끈 계정은 기록에 5줄(「clean-test-data.ps1」).
+  - 격리 스택: 복원 → 스크립트 → 화면·통계·수납·약국 재고·월말 보고서 → verify-backup → 모두 함(3-11).
+- **Linux용 `.sh`는 만들지 않음** — 새 PC가 Windows. 필요하면 말씀해 주세요.
+- **바꾼 파일**: `clean-test-data.ps1`(새) · `wiki/modules/settings.md`(2.13, 3-11 새, 8절)
+- **DB 마이그레이션**: 없음.
+- **다음 할 일**: 총괄 검토 반영. 그 뒤 「설정 세션에게 (2026-09-29 저녁)」 — 영상 백업 상태 줄, 기록 탭 검사 판정 값, `total_qty` 칸 이름.
+
+## 2026-09-29 — 위키 2.13을 5b에 맞춤 · 권한 시험에 /visits/day (총괄 ④⑤)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — `4f5ba87` (`39440aa` 위). 이 항목은 명령줄 따옴표 문제로 글자가 빠져 다음 커밋에서 다시 씀.
+- **④ 위키 2.13**: 「확인 대기」였던 옛 백업 절차를 **`DEPLOYMENT.md` 5b 「If the backup is older than the app」를 그대로 쓰라**로 바꿈(먼저 파일로 풀기 → DB 비우기와 복원을 한 트랜잭션). 기본은 같은 버전 백업 — 업데이트 스크립트가 끝에 새 버전 백업을 만들고, 백업 탭이 초록이면 같은 버전(2.7). 시험 데이터 표 제목은 「결정 세션에서 결정 대기 — 추천 C에 총괄 동의」. 모듈 문서 맨 위 상태 줄도.
+- **⑤ `settings.access.mjs`**: `GET /visits/day` → registration만(라우트의 `permMiddleware('registration')`와 같음). **112 × 11 = 1232건 모두 표와 같음.**
+- **바꾼 파일**: `wiki/modules/settings.md`(1행, 2.13, 8절) · `backend/test/settings.access.mjs`
+- **DB 마이그레이션**: 없음.
+- **다음 할 일**: 결정 세션의 시험 데이터 답(A~D) 대기 — C면 정리 스크립트를 써서 총괄 검토.
+
+## 2026-09-29 — 가장 새 백업이 앱보다 옛 버전이면 경고 · verify-backup이 옛 버전을 알아봄 (총괄 ③)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`90daed6` 위)
+- **판단 방법**: 백업 파일 안의 `schema_migrations` 줄(파일 이름) ↔ DB의 줄. DB에만 있는 것이 있으면 older, 백업에만 있으면 newer. 백업을 만들 때 버전을 따로 적어 두는 방식은 이미 있는 백업(오늘 것들)에 쓸 수 없어서 택하지 않음. 백업 파일은 바뀌지 않으므로 파일마다 한 번만 읽고 기억(API: 이름·크기·시각, 상태 창: 같은 키), 블록이 끝나면 읽기를 멈춤.
+- **한 일**:
+  - `backend/src/services/backup-version.js`(새) `newestBackupVersion()`.
+  - `GET /api/backup/status`에 `version`, `GET /api/system/status`의 백업이 `status.backup.oldVersion`(warn, `missing` 목록).
+  - 설정 → 백업 맨 위 띠: 다른 문제가 없고 older면 노란 「La sauvegarde la plus récente date d'une version plus ancienne de l'EMR」 + 「Sauvegarder를 누르세요」. 다른 노랑·빨강일 때는 그 아래 한 줄 더. `se_bkOldVersion`·`se_bkOldVersionHint`.
+  - `server-status.ps1`: 백업 줄이 노란 **A CORRIGER** 「plus ancienne que l'application (N …)」 + 아래 안내. DB가 OK일 때만. BOM 유지.
+  - `verify-backup.ps1`·`.sh`: 임시 DB에 복원한 뒤 `schema_migrations` 비교 — 옛 버전이면 [info]로 빠진 업데이트 이름과 「5b 'If the backup is older than the app'」, 끝의 VERIFIED 아래 노란 한 줄. `-Strict`/`--strict`는 실패(「press Back up now first」). 같은 버전이면 [ok] 「same version as the running app」.
+- **바꾼 파일**: 위 파일들 + `frontend/src/pages/Settings.jsx`(백업 띠) · `wiki/modules/settings.md`(2.7 표, 2.10, 2.11, 3-5, 8절)
+- **공용 파일 변경**: i18n `se_bkOldVersion`·`se_bkOldVersionHint`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0(`server-status.ps1`·`verify-backup.ps1`), `sh -n verify-backup.sh`, `npm run build`. 격리 스택에서 DB에 가짜 `schema_migrations` 줄을 넣어 「업데이트」를 흉내(시험 뒤 지움): API 8개(백업 직후 same·상태 ok → 줄 추가 후 older·이름·상태 warn → 새 백업 후 same → 줄 삭제 후 newer) 통과. verify-backup.ps1·.sh 보통 → VERIFIED + 옛 버전 안내, strict → VERIFY FAILED(종료 1). 상태 창 사본(컨테이너 이름만 격리로) 프랑스어·한국어 백업 줄과 안내. 화면: 프랑스어 노란 띠 → Sauvegarder → 초록, 한국어 노란 띠(버튼 이름 「지금 백업」으로 맞춤). `settings.access.mjs` 1221건, messages 통과.
+- **총괄 참고**: `DEPLOYMENT.md`(총괄 파일) 「Updating」의 단계 목록이 4개로 남아 있습니다 — ② 커밋 `90daed6`로 **5. 업데이트된 DB를 한 번 더 백업**이 생겼습니다. 5b의 「After every update, take a backup」도 스크립트가 해 준다고 바꿀 수 있습니다(손으로 업데이트했을 때는 여전히 필요).
+- **다음 할 일**: ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
+## 2026-09-29 — 업데이트 뒤 백업 한 번 더 (총괄 ②, 공용 파일 허락)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`c891715` 위)
+- **한 일**: `update.ps1`·`update.sh`에 5단계 — 새 버전이 켜지고 `/api/health`가 통과한 **뒤에만** `docker exec bethesda-emr-api node src/services/backup-cli.js update`. 건강 확인이 실패하면 이제 종료 코드 1로 멈춤(전에는 노란 글만 내고 0). 백업이 실패하면 업데이트는 끝났다고 알리고 「Settings > Backup에서 Back up now」 안내.
+- **왜 셸 한 줄이 아니라 `backup-cli.js`**: 처음에는 API 컨테이너에서 `pg_dump` 한 줄로 했는데, Alpine에 시간대 자료가 없어 `date`가 UTC(앱 이름은 병원 시각 — 3시간 차이), 호스트 시각을 넘기면 이 PC는 한국 시각이라 또 다름. 앱의 `dumpOnce`를 그대로 쓰면 이름·자리·`gzip -t`·원자적 옮기기·정리가 앱과 같음.
+- **`backup.js` 변경(백업 로직 — 총괄 허락 범위)**: `dumpOnce(trigger, workDir)`와 `clearWorkDir(dir)`에 작업 폴더 인자, `dumpOnce` 내보내기. **서버 경로는 인자 없이 전과 같음.** 이유: CLI는 다른 프로세스라 서버의 `running` 잠금을 못 보고, 같은 작업 폴더를 쓰면 시작할 때의 `clearWorkDir()`가 서버가 쓰는 중인 파일을 지울 수 있음 → CLI는 `/backups/.inprogress-<trigger>`.
+- **바꾼 파일**: `backend/src/services/backup.js` · `backend/src/services/backup-cli.js`(새) · **`update.ps1`·`update.sh`(공용, 허락)** — 단계 표시 /4 → /5, 4단계 실패 시 exit 1, 5단계. `update.ps1`는 CRLF 그대로. · `wiki/modules/settings.md`(3-4, 8절)
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `sh -n update.sh`, `update.ps1` PowerShell 파서 오류 0. 격리 스택 API에서 CLI → 종료 0, `bethesda_2026-09-29_1353.sql.gz`(병원 시각, 앱이 같은 시각에 만든 이름과 같은 꼴), 두 번 동시에 → 둘 다 0·남은 임시 파일 없음·모든 파일 `gzip -t` 통과, 곧바로 `verify-backup.ps1 -Strict` **VERIFIED**(26 테이블). **업데이트 스크립트 전체는 돌리지 않음** — 실행 중 EMR(`bethesda-emr-*`)을 대상으로 하므로. 5단계 명령 자체만 격리 컨테이너 이름으로 확인.
+- **다음 할 일**: ③ 옛 버전 백업 경고·verify-backup ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
+## 2026-09-29 — 약속처방 편집 창에 포장 단위 약의 병·튜브 수 (총괄 ①, 진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `76457c9` 위)
+- **한 일** (`Settings.jsx` 약속처방 편집 창만): 약 줄의 약이 **지금** 포장 단위 약이면(`drugs` 목록의 `pack_unit` — 설정이 이미 불러 둔 목록) 용량×횟수×일수 대신 **수 칸 + 단위 말**(`ph_pack_*`). 불러올 때 `quantity`를 숫자로(DB는 DECIMAL이라 「3.000」으로 보였음). 저장 전 포장 줄은 1 이상의 정수인지 확인(아니면 `se_errNotWhole` 「Quantité : …」). 보통 약 줄은 전처럼 1.
+- **라우트는 고치지 않음**: `orderset.routes.js`는 진료 세션 소유(위키 5절). 처음에는 항목에 약의 표시를 붙이고 서버에서 수를 검사하게 고쳤다가 되돌렸습니다 — 서버는 여전히 아무 숫자나 받습니다(`it.quantity || 1`). 서버에서도 막고 싶으면 진료 세션 몫.
+- **숨긴 약**은 목록에 없어서 보통 줄로 보입니다(진료 화면은 그런 줄을 넣지 않음).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `backend/test/settings.ordersets.mjs`(새 — 수가 저장·읽힘, 빈 값·0은 1) · `wiki/modules/settings.md`(2.9, 8절)
+- **공용 파일 변경**: i18n `se_setPackQtyHint`.
+- **확인한 방법**: `npm run build`, 격리 스택 `settings.ordersets.mjs` 4개, 화면: 프랑스어 AMOX250(Flacon) 줄에 수 칸 — 2.5로 저장 → 「Erreur: Quantité : saisissez un nombre entier.」, 4로 저장 → 한국어로 다시 열면 「4 병」, 보통 약 줄은 「4.000×2×3」 그대로. 진료 화면에서 세트를 적용해 병 수가 들어가는지는 약국 세션의 끝에서 끝까지 확인에 포함됨(진료 `applySet`의 `pack_qty: it.quantity`).
+- **다음 할 일**: ② 업데이트 뒤 백업 ③ 옛 버전 백업 경고·verify-backup ④ 위키 2.13 ↔ 5b ⑤ `/visits/day`.
+
+## 2026-09-29 — 오더 연동 주소가 옛 포트면 경고 (총괄 요청)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `8ed5881` 위)
+- **한 일** (값은 어디서도 자동으로 바꾸지 않음):
+  - **설정 → 오더 연동**: EMR 주소 칸이 `:8080`이면, PACS 웹/뷰어 주소 칸이 `:8090`이면 칸 바로 아래 노란 줄(`se_oldEmrPort`·`se_oldViewerPort`, ko·en·fr). 칸을 고치는 순간 사라짐. `Settings.jsx`는 **오더 연동 탭(PACS 몫) 안의 두 칸 아래 한 줄씩 + 판정 함수 `oldPort` 하나** — 총괄 지시로 손댐, 다른 부분은 그대로.
+  - **서버 상태 API** `GET /api/system/status`: 새 항목 `pacs_address` — 둘 다 비면 off, 옛 포트면 warn `status.pacsAddress.oldPort` `{old:[{field,url,port,use}]}`, 아니면 ok.
+  - **서버 상태 창** `server-status.ps1`: DB가 OK일 때 `docker exec bethesda-emr-db psql`로 두 주소를 읽어, 옛 포트면 8번째 줄 「Adresses de l'imagerie (Parametres) · **A CORRIGER** · ancien port 8090 -> 9090」과 맨 아래 안내. 옛 포트가 없으면 줄이 없음(7줄 그대로). BOM 유지, 창 높이 안에 들어감.
+  - 설정 화면 예시 문구: `NAS_IP:8090`은 이미 없음(`NAS_IP:9090`, `egUrl` `:9080`) — 고칠 것 없음.
+- **판정**: `스킴://호스트:포트` 모양의 포트만 봄 — `http://host:80800`·`http://my8090host:9090`은 해당 없음, 끝의 `/`는 괜찮음.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `backend/src/routes/status.routes.js` · `server-status.ps1` · `wiki/modules/settings.md`(2.10, 2.13 4단계, 3-6 표, 8절)
+- **공용 파일 변경**: i18n `se_oldEmrPort`·`se_oldViewerPort`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, PowerShell 파서 오류 0, `npm run build`. 새 DB 격리 스택에서 `PUT /api/pacs/config`로 값을 바꿔 가며 상태 API 6가지(둘 다 빔 off / 8080·8090 warn 두 개 / 뷰어만 옛 포트·끝 `/` warn 한 개 / 새 포트 ok / 숫자·호스트 이름 속 8080 ok) 통과. 상태 창은 컨테이너 이름만 격리 스택으로 바꾼 **스크래치 사본**으로(실행 중 EMR DB에 묻지 않음) 콘솔 프랑스어·한국어, 창 캡처(프랑스어 「A CORRIGER」 줄과 안내). 화면: 프랑스어·한국어 오더 연동 탭에 두 경고, 뷰어 칸을 9090으로 치자 그 경고가 사라짐. `settings.access.mjs` 1221건 그대로.
+- **다음 할 일**: 결정 두 가지(옛 백업 복원 절차, 시험 데이터 A~D) 대기.
+
+## 2026-09-29 — 11월 새 PC 대비 복원 연습 2차 (재부팅 뒤 ⑤)
+
+- **상태**: 확인 요청 — **결정 두 가지 필요**(아래 「결정 필요」)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`a6e0de8` 위). 코드 변경 없음, 위키만.
+- **한 일**: 실행 중 EMR 백업 폴더에서 **최신 백업(`bethesda_2026-09-29_0221.sql.gz`) 사본만** 읽어(sha256 같음) 격리 스택(9187)에서. 실행 중 EMR은 건드리지 않음.
+  1. **빈 새 설치(027) + 02:21 백업(018) — 문서 명령 그대로 → 실패(종료 코드 3)**: 「cannot drop constraint staff_pkey on table public.staff because other objects depend on it — stock_movement_staff_id_fkey, order_item_cancelled_by_fkey」. 백업은 `--clean --if-exists`라 **자기가 아는 개체만** 지우는데, 새 버전에만 있는 021·023의 외래 키가 `staff_pkey`를 붙잡음. `--single-transaction`이라 **DB는 그대로**(안전하게 멈춤). 1차 연습(오후, `c8437ad`) 때 통과한 것은 새 설치가 020이라 이런 표가 없었기 때문 — **wiki 2.13의 「옛 버전 백업도 됩니다」는 틀렸음, 고침**.
+  2. **빈 스키마로 만든 뒤 같은 명령 → 성공**: `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` → 복원 0 → 앱 시작 때 **019~027(9개) 자동 적용**. `pgcrypto`는 백업이 다시 만듦.
+  3. **확인 표** (백업 파일의 COPY 줄 수 ↔ 복원 뒤 DB):
+
+     | 항목 | 백업 | 복원 뒤 |
+     |---|---|---|
+     | `schema_migrations` | 18 (001~018) | **27** (019~027 자동) |
+     | 환자 / 내원 / 진료 | 2 / 3 / 3 | 같음 |
+     | 영수 / 영수 항목 | 2 / 3 | 같음 |
+     | 처방 / 오더 / 진단 / 검사 결과 | 6 / 7 / 0 / 0 | 같음 |
+     | 약 / 재고 합계 | 25 / — | 25 / 6452 (예시 약) |
+     | `stock_movement` | (표 없음) | 25 — 021의 시작 재고 줄 |
+     | 직원 / 권한 | 8 | 8, 권한 그대로(lee = 진료만 — 약국 체크는 실장님이 할 일) |
+     | 병원 정보 / 진료과 / 오더 코드 / 검사 항목 | 1 / 9 / 40 / 26 | 같음 |
+     | 상용구 / 약속처방(항목) | 24 / 3(10) | 같음 |
+     | `lab_ref_range` | (표 없음) | 0 — 024가 표만 만듦 |
+     | `audit_log` | (표 없음) | 0줄, 트리거 `audit_log_no_change`·`audit_log_no_truncate` |
+     | `pacs_config` | 1 | 같음 — **`localhost:8080`·`localhost:8090`, 브리지 토큰(48자)도 그대로 넘어옴** |
+
+  4. 그 DB에서 「Sauvegarder」(027) → **`verify-backup.ps1 -Strict` VERIFIED**(26 테이블, 228행, 모든 시퀀스·내용 같음).
+  5. **빈 새 설치(027) + 같은 버전 백업 — 문서 명령 그대로 → 성공**: 종료 코드 0, 26개 테이블 **모두 같음**, 추가 마이그레이션 0, TRUNCATE 거절, 화면(프랑스어 직원 목록, 한국어 오더 연동 두 주소·기록 탭). 복원 약 5초, 켜기 약 1.3초.
+  6. 시험 데이터 정리 **미리 해 보기**(한 트랜잭션, **ROLLBACK** — 남긴 것 없음, 스크립트도 커밋 안 함): 영수 항목 → 영수 → 검사 결과 → 작업목록 → 문서 → 오더 → 처방 → 진단 → 진료 → 내원 → 환자 순서로 막힘 없음. `stock_movement`의 처방·진료 연결은 `ON DELETE SET NULL`이라 재고 기록은 남음, `audit_log`는 환자 외래 키가 없어 영향 없음. 시험 계정 `zz%` 비활성 → 활성 직원 2(admin, lee). `chart_no_seq`를 처음으로 → 다음 차트번호 **26-00001**(안 하면 **26-00697**).
+- **위키**: `modules/settings.md` 2.13(버전 맞추기, 옛 백업 실패 설명, 빈 DB 길은 「확인 대기」로, 영상 주소 다시 적기 단계, 번호 다시 매김, **시험 데이터 선택지 A~D 표**, 백업 파일에 해시·토큰), 3-4(2차 연습 기술 내용), 8절.
+- **결정 필요**:
+  1. **(실장님·총괄) 옛 버전 백업 복원**: 11월에는 「떠나기 전 옛 PC를 새 PC와 같은 버전으로 업데이트 → 그 뒤 Sauvegarder → 그 파일로 복원」이면 문서 명령 그대로 됩니다(추천, 연습 5). 그래도 옛 백업밖에 없을 때를 위해 「새 PC 빈 설치에서만 DB 비우고 복원」(연습 2)을 절차로 적을지 — 백업·복원 절차 변경이라 확인 뒤에만 적겠습니다. `DEPLOYMENT.md` 5b(총괄 파일)에도 한 줄 필요해 보입니다.
+  2. **(실장님) 시험 데이터** — 2.13 표의 A~D. 추천 **C**(새 PC에서 복원한 뒤에만 지움, 번호 처음부터). 고르시면 설정 세션이 스크립트를 쓰고 총괄이 검토.
+- **총괄 참고 — 지금 실행 중 EMR에도 해당**: 실행 중 EMR은 오늘 027로 올라갔는데 백업 폴더의 파일은 모두 **018 이하**입니다(최신 02:21). DB가 지금 망가지면 문서 명령으로는 어느 백업도 복원되지 않고(안전하게 멈춤) 빈 스키마 방법이 필요합니다. **오늘 밤 02:00 자동 백업이 첫 027 백업** — 그 전에 실행 중 EMR에서 「Sauvegarder」를 한 번 눌러 두시길 권합니다(실장님 또는 총괄 — 저는 9080을 건드리지 않음). 같은 이유로 업데이트 뒤에는 바로 백업 한 벌. `update.ps1`의 업데이트 전 안전 백업(`_pre-update-backups`)도 옛 버전이라, 업데이트를 되돌릴 때는 **옛 코드로 먼저 되돌린 뒤** 복원해야 합니다(새 코드 위에서는 같은 이유로 멈춤).
+- **정리**: 격리 스택 `down -v`, 스크래치의 백업 사본·시험 비밀번호 파일 삭제.
+- **다음 할 일**: 결정 두 가지를 기다림. 그 밖의 요청 대기.
+
+## 2026-09-29 — 비활성 직원 다시 활성 (재부팅 뒤 ④, U2 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`34e8bc2` 위)
+- **한 일**:
+  - `POST /api/admin/staff/:id/reactivate` — settings 권한 **그리고 admin 역할**. 상태만 active로, 아이디·비밀번호·역할·권한은 그대로. 기록 `settings.staff.edit`(status inactive → active)을 같은 트랜잭션에. 이미 활성이면 200 `unchanged`·기록 없음, 없는 id 404.
+  - **PUT `/staff/:id`에도 같은 규칙**: 비활성 → 활성은 admin 역할만(403). 전에는 설정 권한만 있으면 API로 되살릴 수 있었습니다(화면에는 칸이 없었을 뿐). 비활성인 채로 다른 칸을 고치는 것은 그대로 됨.
+  - 화면: 비활성 줄에 **Supprimer** 대신 초록 **Réactiver**(admin 역할에게만), 확인 창에 이름과 「같은 아이디·비밀번호·권한」.
+- **「관리자」를 어떻게 읽었나 — 확인 부탁**: 결정은 「관리자만」. 설정 화면 전체가 이미 설정 권한을 요구하므로, 그것만으로는 「관리자만」이 더해 주는 것이 없어 **admin 역할 + 설정 권한**으로 했습니다. 역할은 요청마다 DB에서 읽음(S1). 지금 설정 권한이 있는 실제 계정은 admin 역할뿐이라 실제 차이는 없습니다. 설정 권한만으로 충분하다고 보시면 두 줄(라우트 첫 줄, PUT 조건)만 빼면 됩니다.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js`(`REACTIVATE_ADMIN_ONLY`) · `frontend/src/pages/Settings.jsx`(직원 줄, `reactivateStaff`, `getUser` import) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.reactivate.mjs`(새) · `backend/test/settings.access.mjs`(라우트 1개) · `wiki/modules/settings.md`(2.5, 4절, 7절 U2, 8절)
+- **공용 파일 변경**: i18n `se_reactivate`·`se_confirmReactivate`·`se_errReactivateAdmin`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택: `settings.reactivate.mjs` **12개 통과**(비활성 로그인 401 → 설정만 있는 접수 계정 403·PUT 우회도 403·비활성인 채 수정 200 → 관리자 200 → 옛 비밀번호로 로그인·역할·권한 그대로 → 기록 한 줄 status만 → 두 번째 누름 기록 없음 → 404 → 권한 없음 403). access **111 × 11 = 1221건 모두 표와 같음**, audit·password·messages·drugs 통과. 화면: 프랑스어 관리자 — 비활성 줄에 「Réactiver」, 확인 문구, 누르면 「actif」; 한국어 — 「다시 활성」·확인 문구, 취소하면 그대로 비활성; 설정 권한만 있는 접수 계정 — 비활성 7줄 모두 「Modifier」만.
+- **다음 할 일**: ⑤ 11월 대비 복원 연습 처음부터 끝까지(pacs_config 주소 두 칸도 확인 표에).
+
+## 2026-09-29 — 자기 비밀번호 바꾸기 (재부팅 뒤 ③, S4 결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`139b9fc` 위)
+- **한 일**:
+  - 서버 `POST /api/auth/password` `{current_password, new_password}` (`auth.routes.js`, 로그인만 필요 — 권한 없음도 됨).
+  - 화면 `frontend/src/pages/settingsPassword.jsx`(새): 지금 비밀번호 1번, 새 비밀번호 2번(오타로 잠기지 않게), 「Afficher」, Enter로 바꾸기·Esc로 닫기. 안내는 `seMessage`로 번역.
+  - 상단바 이름에 🔑, 누르면 창.
+- **보안 관련 — 이유** (규칙: 비밀번호 변경은 이유를 자세히):
+  - **지금 비밀번호를 묻습니다** — 로그인한 채 둔 화면(접수 PC 등)에서 다른 사람이 비밀번호를 바꿔 계정을 가져가지 못하게.
+  - **확인과 변경을 UPDATE 한 문장으로**(`WHERE id = 나 AND status = 'active' AND password_hash = crypt(지금, password_hash)`) — 확인한 뒤 바꾸기 전에 다른 변경이 끼어들 수 없음. 해시는 기존과 같은 pgcrypto `crypt(…, gen_salt('bf'))`.
+  - **틀린 지금 비밀번호는 400** (401 아님) — `api/client.js`가 토큰을 보낸 401을 「로그인 끝남」으로 보고 로그인 화면으로 보내 버리기 때문.
+  - **최소 길이 없음**(한 글자 이상), **강제 변경 없음** — 결정대로. 첫 관리자 만들기의 6자 규칙은 그대로 둠(바꾸라는 결정이 없음).
+  - **이미 받은 토큰은 끊지 않습니다.** 서버는 요청마다 상태·권한을 읽지만 비밀번호 변경 시각은 보지 않아, 다른 PC의 열린 화면은 12시간까지 그대로입니다. 끊으려면 토큰에 비밀번호 버전을 넣어야 하는데(인증 미들웨어·`staff` 열 — 총괄 파일·마이그레이션) 결정 밖이라 하지 않았습니다. 필요하면 관리자가 비활성 → 되살리기(U2)로 끊을 수 있음.
+  - 지금 비밀번호 추측 횟수 제한 없음 — 로그인 화면과 같은 수준, 이미 로그인한 사람만 부를 수 있음.
+  - 변경 기록: `settings.staff.password` 한 줄(쓴 사람 = 본인, `entity_id` = 본인, 값 없음), 변경과 같은 트랜잭션. 거절되면 줄 없음.
+- **바꾼 파일**: `backend/src/routes/auth.routes.js` · `backend/src/routes/settings.messages.js`(`CURRENT_PASSWORD_WRONG`) · `frontend/src/pages/settingsPassword.jsx`(새) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.password.mjs`(새) · `backend/test/settings.access.mjs`(라우트 1개) · `wiki/modules/settings.md`(2.2, 3-3, 4절, 7절 S4, 8절)
+- **공용 파일 변경**: **`frontend/src/components/TopBar.jsx`** (총괄 허락) — import 한 줄, 상태 한 줄, 이름 `<span>`에 `onClick`·`title`·`cursor`·🔑, 창 한 줄. 다른 부분은 그대로. i18n `se_pw*` 10개 + `se_errCurrentPw`.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택: `settings.password.mjs` **15개 통과**(틀린 지금 비밀번호 400·옛 비밀번호 그대로, 빈 값 400, 토큰 없음 401, 권한 없는 계정 200, 옛 비밀번호 401·새 것 200, 이전 토큰 유효, 한 글자 허용, 기록 두 줄·쓴 사람 본인·값/해시 없음, 비활성 401). `settings.access.mjs` **110 × 11 = 1210건 모두 표와 같음**, `settings.audit.mjs`·`settings.messages.mjs` 통과. 화면: 간호사 역할 시험 계정으로 프랑스어 — 틀린 지금 비밀번호 → 「Le mot de passe actuel n'est pas correct.」, 창 남음(로그아웃 안 됨); 한국어 — 두 칸 다름 → 「새 비밀번호 두 칸이 서로 다릅니다.」, 고쳐서 바꾸기 → 「비밀번호를 바꿨습니다…」, 새 비밀번호 로그인 200·옛 것 401, Journal에 「Rasoa Infirmière」가 쓴 한 줄.
+- **다음 할 일**: ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
+## 2026-09-29 — 「Journal」 탭에 진료·접수 칸 (재부팅 뒤 ②)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`8594492` 위)
+- **한 일** (`frontend/src/pages/settingsAudit.js`, 화면만 — 서버 변경 없음):
+  - 진료(`d7cee75`)가 쓰는 칸 이름: 끝난 진료의 기록·활력징후 13칸(`NOTE_FIELDS`), 처방(`RX_LOG`), 오더(`ORDER_LOG`), 진단(`DX_LOG`).
+  - 값: 상태(오더됨·처방됨·조제됨·취소됨·예약됨·진행 중·완료 — 처방의 `ordered`는 「처방됨」, 줄의 `entity`로 구분), 오더 종류(`se_type_*` 재사용), 주·부 진단, 성별 M/F(접수 `validate.js`).
+  - `consultation.record.edit` 문장 뒤에 무엇을 고쳤는지(`entity`: 기록·활력징후 / 진단 / 처방 / 오더). 기록 줄의 요약 `note`는 숨김(entity가 이미 말함).
+  - 접수: 환자 수정 줄의 요약(바뀐 칸 이름 「gender, mobile」)을 칸 이름으로(「Sexe, Mobile」). 칸 13개는 이미 들어 있었음.
+  - 보기 좋게: 만들거나 지운 줄은 비어 있던 칸을 빼고, 칸 순서는 `FIELDS` 순서(이름 → 용량 → … → 상태·취소 사유).
+  - 프랑스어 안내 `se_logIntro`의 「ni les consultations」 — 「본 것」의 뜻이었지만 병원에서는 「진료는 안 남는다」로 읽혀 이제 틀림 → 「ni les simples lectures」.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/pages/Settings.jsx`(Journal 「무엇을」 칸 한 줄) · `wiki/modules/settings.md`(2.14 표, 3-10, 8절)
+- **공용 파일 변경**: i18n `se_` 44개 새로(`se_fld_*` 29, `se_st_*` 7, `se_dx_*` 2, `se_gender_*` 2, `se_ent_*` 4) + 프랑스어 `se_logIntro` 문구 하나 고침.
+- **DB 마이그레이션**: 없음.
+- **확인한 방법**: `npm run build`. 격리 스택에서 실제 진료 흐름으로 줄을 만듦(스크래치 스크립트 — 환자 등록·수정, 진료 기록·처방 2·오더 2·진단 → 진료 완료 → 기록 수정, 처방 수정·삭제, 진단 추가, 검사 결과 입력 뒤 오더 취소, 다른 오더 삭제): 7종 모두 `audit_log`에 남고, Journal 탭 프랑스어·한국어에서 모든 칸·값이 말로 나옴(예: 「Dossier de consultation terminé modifié — prescription · Dose: 1 → 2」, 「오더를 취소함 · 상태: 완료 → 취소됨 · 취소 사유: — → mauvais examen」).
+- **다음 할 일**: ③ 자기 비밀번호 바꾸기 ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
+## 2026-09-29 — 포장 단위 두 칸 저장 (재부팅 뒤 ①)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4fde219` 위)
+- **한 일**: `admin.routes.js` `POST·PUT /drugs`가 `pack_unit`·`pack_label`(025)을 저장. 새 함수 `packFields`: 거짓 → 단위 NULL, **참인데 단위가 비면 `bottle`**(편집 창이 「병」을 미리 골라 보여 주므로 400보다 이쪽), 목록 밖 단위·참/거짓 아님 → 400(`fieldMsg.notOneOf`, 화면은 「허용되지 않는 값」). **PUT에 `pack_unit`이 없으면 두 칸 모두 그대로**(옛 화면·스크립트가 지우지 않게). `GET /admin/drugs`는 `SELECT *`라 그대로 나옴 — 확인.
+- **함께**: `utils/dbError.js`(`86fab5f`)의 새 문구 「A date field has a date that does not exist」를 `settingsMessages.js`와 `se_errBadDate`(ko·en·fr)에 — `settings.messages.mjs`가 찾아냄.
+- **위키 고침(총괄 요청)**: `modules/settings.md`의 702 → **026**(3-10절, 4절 표, 8절). 8절 「변경 기록」 줄의 커밋을 `5e91dbf`로. 아래 옛 인계 항목의 702는 그때의 기록이라 그대로 둠. `03-change-log.md`에는 702가 없었음.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/test/settings.drugs.mjs` · `frontend/src/pages/settingsMessages.js` · `wiki/modules/settings.md`(3-8, 3-10, 4절, 8절)
+- **공용 파일 변경**: i18n `se_errBadDate` 한 줄씩(ko·en·fr, `se_` 구역 안).
+- **DB 마이그레이션**: 없음(025는 약국).
+- **확인한 방법**: `node --check`, `npm run build`, 새 DB 격리 스택에서 `settings.drugs.mjs` **20개 통과**(포장 단위 11개 새로), `settings.access.mjs` 1199건 모두 표와 같음, `settings.audit.mjs`·`settings.messages.mjs`·`settings.permissions.mjs` 통과. 화면: 프랑스어 AMOX250 「Délivré à l'unité de conditionnement」 체크(Flacon) → 저장 → 목록에 「Flacon」, 한국어로 단위 바꾸기 → 저장 → 체크 해제 → 단위 NULL, 재고 30 그대로.
+- **총괄 질문에 대한 확인** (코드 변경 없음):
+  - ③ `GET /admin/doctors`는 `role = 'doctor' AND status = 'active'`만 — **관리자 역할 계정은 권한에 진료가 있어도 목록에 안 나옵니다.** 결정(의사는 의사 계정 + 필요하면 설정 체크)과 같음.
+  - ④ 8090·8080 기본값: **EMR 쪽 시드·초기 설정에는 없음.** `pacs_config`는 001·`pacs.routes.js` `ensureConfig` 모두 `emr_base_url`·`pacs_viewer_url` 기본 **빈 값**, 015도 두 칸을 건드리지 않음. 새 DB 격리 스택 확인: 4242 · 빈 값 · 빈 값. 화면 예시는 `NAS_IP:9090`·`egUrl` `:9080`(P-17 `890c64a`에서 고침), 설치 스크립트 안내도 9090. 실행 중 EMR의 8090·8080은 **누군가 옛 예시대로 적어 저장한 값**으로 보입니다(P-17 전 예시가 `NAS_IP:8090`, 피드 예시 `:8080`). **11월 복원에 중요**: 이 두 주소는 `pacs_config`에 저장되어 **백업과 함께 새 PC로 넘어갑니다** — 새 PC의 IP가 다르면 복원 뒤 설정 → 오더 연동에서 다시 적어야 함. 복원 연습(⑤) 확인 표와 2.13에 넣겠습니다.
+- **다음 할 일**: ② Journal 탭에 진료 칸(`d7cee75`) + 접수 칸 이름 ③ 자기 비밀번호 바꾸기 ④ 비활성 직원 되살리기(U2) ⑤ 복원 연습 처음부터 끝까지.
+
+## 2026-09-29 — 변경 기록(로그): 직원 계정 기록 · 읽기 API · 「Journal」 탭 · TRUNCATE 막기 (총괄 지시 3)
+
+- **상태**: 확인 요청 (a~e 모두 끝남)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`8ba7a93` 위)
+- **한 일**:
+  - (a) `admin.routes.js` POST·PUT·DELETE `/staff`를 트랜잭션으로 바꾸고 `writeAudit` — `settings.staff.create` · `.edit`(바뀐 칸만, 비활성화 포함) · `.permissions`(순서만 다른 것은 제외) · `.password`(값 없음). 거절·실패하면 줄 없음. 함께: **빠진 status는 지금 상태 유지(S6)**.
+  - (b) `GET /api/admin/audit` (settings): 날짜·직원·환자·종류(전체 이름 또는 모듈)로 거르기, 최신순, 쪽(최대 200). 쓰기 라우트 없음.
+  - (c) 설정 「📜 Journal / 기록」 탭 — 언제·누가·무엇을·환자·전→후. 문장·칸 이름은 새 파일 `frontend/src/pages/settingsAudit.js`(모르는 칸은 이름 그대로). 총괄이 알려 준 검사·환자·영수 칸 이름 넣음. **진료 쪽(`d7cee75`) 칸은 아직 안 넣음 — 재부팅 뒤.**
+  - (d) **발견·고침**: 022 트리거가 행 단위라 **TRUNCATE로 기록 전체가 비워졌음**(복원 사본에서 15줄 → 0). 마이그레이션 **`702_settings_audit_no_truncate.sql`**(트리거 하나 추가, 데이터 변경 없음)로 막음. 백업에 `audit_log`·트리거 둘 다 들어 있고, 별도 DB에 복원 뒤 UPDATE·DELETE·TRUNCATE 모두 거절·15줄 그대로. `verify-backup.ps1 -Strict` → VERIFIED.
+  - (e) `settings.access.mjs`에 `GET /admin/audit`[settings]·`POST /consultations/order/:id/cancel`[consultation] → 109 × 11 = **1199건 모두 표와 같음**.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/sql/702_settings_audit_no_truncate.sql`(새) · `frontend/src/pages/Settings.jsx`(Journal 탭) · `frontend/src/pages/settingsAudit.js`(새) · `backend/test/settings.audit.mjs`(새) · `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(2.14 새, 3-10 새, 4절, 7절 S6, 8절)
+- **공용 파일 변경**: i18n `se_` 키 56개(탭·문장 `se_act_*`·칸 `se_fld_*`). `utils/audit.js`·022는 안 건드림.
+- **DB 마이그레이션**: `702_settings_audit_no_truncate.sql` — `audit_log`에 `BEFORE TRUNCATE` 문장 트리거(022의 함수 재사용). 행을 바꾸지 않음, 재실행 안전.
+- **확인한 방법**: `node --check`, `npm run build`, `settings.audit.mjs` 20개 통과, `settings.access.mjs` 1199건, 화면(프랑스어·한국어 Journal, 권한 줄 「접수, 수납 → 접수, 통계」), 위 (d).
+- **총괄 확인 요청**: 702는 총괄 표(`audit_log`)에 트리거를 더합니다 — 설계에 맞는지 봐 주세요. DROP TABLE은 복원 때문에 막지 않음.
+- **다음 할 일 (재부팅 뒤, 순서)**: ① 포장 단위 `pack_unit`·`pack_label`(admin POST·PUT, 025) ② Journal 탭에 진료 칸 이름(`d7cee75`) ③ 자기 비밀번호 바꾸기(`POST /api/auth/password` + 상단바, 로그 `.password`) ④ 비활성 직원 되살리기(U2) ⑤ 11월 설치 대비 처음부터 끝까지 복원 연습·2.13 갱신·시험 데이터 정리 선택지 표.
+
+## 2026-09-29 — 의사 기본 권한에 약국 (총괄 지시 2, 실장님 결정)
+
+- **상태**: 확인 요청 (기존 계정 처리는 **보류 — 총괄 확인 필요**)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`73b0517` 위)
+- **한 일**: 의사 역할 기본 권한 = 진료 + 약국. `backend/src/middleware/permissions.js`·`frontend/src/modules.js` 한 줄씩. 의사 첫 화면은 그대로 진료(`Login.jsx` `ROLE_ROUTES`). `settings.access.mjs` 계정을 11개로(의사 = 기본값 진료·약국, 진료만 계정 `se_cons` 새로).
+- **이미 있는 의사 계정 — 확인한 것**: 역할 기본값이 쓰이는 곳은 ① 직원 창에서 역할을 고를 때 자동 체크 ② 저장된 권한이 NULL인 계정(`auth.js`·`effectivePerms`) 두 군데뿐입니다. 모든 계정은 권한 목록이 저장되어 있어서(`013`이 옛 계정을 채웠고, 만드는 경로는 모두 목록을 저장) **이미 있는 의사 계정은 진료만 그대로**입니다. 격리 스택에서 확인: 기존 `doc1` = `consultation`, 새 `se_doc` = `consultation,pharmacy`. 복원 연습 때 본 실행 중 EMR 사본(오늘 02:21)의 의사 계정은 **`lee`(Dr. Lee, 진료만)**, **`zzdoc`(시험 계정, 진료만)** 둘.
+- **기존 계정 선택지** (총괄 확인 요청):
+  - (a) **마이그레이션 없이** 관리자가 Dr. Lee 한 명만 **Personnel → Modifier → Pharmacie 체크**. 실제 의사가 한 명이라 가장 간단하고, 누가 무엇을 받았는지 화면에서 보입니다. **추천.**
+  - (b) 마이그레이션(설정 번호대): `UPDATE staff SET permissions = array_append(permissions, 'pharmacy') WHERE role = 'doctor' AND NOT ('pharmacy' = ANY(permissions))` — 계정 권한을 **바꾸는** 마이그레이션이라 규칙상 총괄·실장님 확인 뒤에만. 쓰지 않았습니다.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(2.4 표, 3-1, 8절)
+- **공용 파일 변경**: `backend/src/middleware/permissions.js`·`frontend/src/modules.js` 의사 줄 (총괄 지시)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `settings.permissions.mjs` 통과, `npm run build`, 격리 스택 `settings.access.mjs` **107 × 11 = 1177건 모두 표와 같음**. 화면: 새로 추가 창에서 역할 Médecin → Consultation·Pharmacie 체크. 기존 의사 계정 권한 그대로(DB).
+
+## 2026-09-29 — 약 저장이 재고를 쓰지 않음 (총괄 지시 1)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a7b40e8`을 ff로 당긴 뒤)
+- **한 일**: 약국의 재고 칸 읽기 전용(`14ff4be`)에 맞춰 서버 쪽 — `POST /api/admin/drugs`는 재고 **0**으로 시작(요청의 `stock_qty` 무시, 빈 최소 재고는 10), `PUT /api/admin/drugs/:id`는 `stock_qty`·`stock_expected`를 **조용히 무시**(총괄 추천대로 — 옛 화면이 열린 채 저장해도 막히지 않게). 오전의 H4 안전장치(`stock_expected` + 409, 행 잠금 트랜잭션)는 필요 없어져 지웠고, 화면의 409 처리·`STOCK_CHANGED` 상수·번역 키 `se_stockChanged`도 지움. `settings.drugs.mjs`를 새 동작에 맞게 다시 씀.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js`(`STOCK_CHANGED` 삭제) · `frontend/src/pages/Settings.jsx`(`saveEdit` 약 부분만 — 약품 탭 화면은 안 건드림) · `backend/test/settings.drugs.mjs` · `backend/test/settings.messages.mjs` · `wiki/modules/settings.md`(2.12, 3-8 다시 씀, 4절, 7절 U10, 8절)
+- **공용 파일 변경**: i18n — `se_stockChanged` 삭제(ko·en·fr, `se_` 블록 안)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`, `settings.messages.mjs` 통과. 격리 스택 `settings.drugs.mjs` 9개 통과(위키 3-8). 화면: 프랑스어 약품 편집에서 단가만 바꿔 저장 → 알림 없이 「Enregistré」, DB 단가 4600·재고 50 그대로.
+- **다른 세션에 부탁**: **약국** — `backend/test/pharmacy.stock.mjs` 132행 「settings saves stock directly (until settings stops writing it)」와 그 뒤 「outside change bridged」 두 확인은 이제 실패합니다(설정이 재고를 안 쓰므로 PUT 뒤 재고가 그대로). 약국 시험을 「설정 저장이 재고를 바꾸지 않음」으로 바꿔 주세요. `moveStock`의 「outside」 연결 줄은 옛 DB·직접 SQL 대비로 남겨도 무방.
+
+## 2026-09-29 — S2 표에 새 라우트 2개 · 날짜 SQL 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4caaedd`을 ff로 당긴 뒤)
+- **한 일**: `GET /api/patients/similar` → registration, `GET /api/pharmacy/stock/report` → pharmacy·settings·stats 를 `settings.access.mjs`와 아래 S2 표에. `POST /api/consultations/order/:id/cancel`은 develop에 **아직 없어서** 들어오면 넣겠습니다.
+- **확인한 방법**: 격리 스택(develop `4caaedd`) → **107 라우트 × 10 계정 = 1070건 모두 표와 같음.** 전에 남았던 진료 500 두 건도 이제 없음(진료 세션 수정 반영됨).
+- **DB 시간대 변경(총괄 `config/database.js`) 영향 확인**: 설정 쪽 파일(`admin`·`auth`·`backup`·`status`·`version` 라우트, `services/`, 마이그레이션 020)에 `CURRENT_DATE`·`now()::date` **없음**. 백업 파일 이름·예정 시각·「오래됨」 판단은 Node의 `TZ`와 파일 시각으로 계산 — 영향 없음.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/handoff/settings.md` · `wiki/modules/settings.md`(4절 숫자)
+
+## 2026-09-29 — S2 표 갱신 (접수 이전 내원 조회 · 약국 재고 라우트)
+
+> **총괄 확인 (2026-09-29)**: S2 표 갱신 `b5e7f4c` 합침(`e3292de`). 1050건 모두 표와 같음. 진료의 500 두 건은 `f52df58`로 고쳐져 develop에 있음.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `1ed8b1d`을 ff로 당긴 뒤)
+- **한 일**: 총괄 승인 한 칸 — `GET /api/visits/patient/:id`에 **registration** 추가(접수가 이전 내원으로 초진/재진 제안). 약국 재고 ① 라우트 5개(`/pharmacy/stock…`, pharmacy·consultation·settings)를 `settings.access.mjs` 기대 표와 아래 「S2 초안」 표에 넣음(표의 해당 줄을 그 자리에서 고치고 날짜를 적음).
+- **확인한 방법**: 격리 스택(develop `1ed8b1d`, 마이그레이션 021 적용) `settings.access.mjs` → **105 라우트 × 10 계정 = 1050건, 권한은 모두 표와 같음.** 남은 차이는 전과 같은 진료 500 두 건(`POST /consultations/:id/diagnoses`·`/prescriptions` 빈 입력) — develop에 아직 안 고쳐짐.
+- **참고**: `pharmacy.routes.js`의 `canReport`(pharmacy·settings·stats)는 정의만 있고 쓰는 라우트가 아직 없음 — 약국 ②③에서 쓰이면 표에 넣겠습니다.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/handoff/settings.md` · `wiki/modules/settings.md`(4절 숫자)
+
+## 2026-09-29 — 위키 8절 변경 기록 정리 (총괄 부탁)
+
+- **상태**: 확인 요청 (위키만)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `279137e`을 ff로 당긴 뒤)
+- **한 일**: `modules/settings.md` 8절을 수납 세션 형식으로 — 「처음 읽는 분을 위한 요약」(백업·서버 상태 창·현장 언어·로그인과 계정·권한·다른 모듈과 맞추기·남은 것) + 커밋별 표(현장 눈으로 / 코드 쪽 / 커밋, 위키 페이지를 안 건드린 커밋 `46dc52c`·`60977c0` 포함). 머리말 상태 줄 갱신. 7절에서 다른 곳에서 고쳐진 3건 표시: **S8**(PACS — `/pacs/config` settings만, access 시험으로 확인), **B9**(`.env.example`, 총괄), **B10**(`DEPLOYMENT.md` 5b, 총괄 — 코드·문서에서 확인).
+- **바꾼 파일**: `wiki/modules/settings.md` · `wiki/handoff/settings.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+
+## 2026-09-29 — 약을 감출 때 그 약을 쓰는 약속처방 알림 (진료 세션 발견)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`f3b8f01` 위)
+- **한 일**: 약속처방은 약 id를 복사해 두어서, 약을 감춰도(`is_active=false`) 그 세트가 계속 처방합니다. 설정 쪽 몫으로 — 새 API `GET /api/admin/drugs/:id/order-sets`(settings, 그 약을 쓰는 **활성** 세트의 id·이름), 공용 삭제 함수 `deleteItem`이 약이면 먼저 물어 보고 세트가 있으면 확인 창에 「이 약을 쓰는 약속처방 N개: 이름… 약을 감춰도 약속처방에는 남아 계속 처방됩니다… 그래도 감출까요?」. **막지는 않습니다.** 약품 탭 화면 글자는 안 건드림.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx`(`deleteItem`) · `backend/test/settings.access.mjs`(새 라우트 한 줄) · `wiki/modules/settings.md`(2.12 표, 4절 API, 8절)
+- **공용 파일 변경**: i18n `se_drugInSets` 1개 (ko·en·fr)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택 프랑스어 화면에서 확인 창을 「취소」로 답하는 가짜로 바꿔 문구만 봄 — ACT01 → 「1 ordonnance(s) type(s)… : Malaria Workup…」, ORS → 「… : Diarrhea / GE…」, AMLO5(세트 없음) → 「Supprimer ?」, 세 약 모두 그대로 남음. `settings.access.mjs` 1000건 — 새 라우트 표대로(settings만), 차이는 전과 같은 진료 500 두 건뿐.
+- **다른 세션에 부탁**: **약국** — `pharmacy.md` 2절(약 감추기)에 이 확인 창 한 줄. **진료** — 세트를 적용할 때 감춘 약 줄 빼기(진료 쪽 계획대로).
+
+## 2026-09-29 — 역할 × 라우트 권한 시험 (S2 마지막 그물) · U13 남은 점 확인
+
+> **총괄 확인 (2026-09-29)**: 역할 × 라우트 시험 `f3b8f01` 합침(`f9e4873`). 990칸 모두 표와 같다는 결과 확인. 진료 쪽 500 두 건은 진료 세션에 전달. U13 남은 점의 화면 확인도 받음.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4a77f97`까지 반영)
+- **한 일**: `backend/test/settings.access.mjs`(새) — 역할별 계정 10개 × API 라우트 99개 = **990건**. 계정: 설치 관리자, 의사, 접수(접수·수납), 간호사(접수·약국·임상병리), 약국만, 검사만, 수납만, 통계만, 설정만, 권한 없음. 라우트: 모든 GET과 대표 쓰기(없는 id 999999로 — 가드는 통과하고 대상은 없음). 기대 값은 **S2 표를 스크립트 안에 옮긴 것**이고 라우트 파일에서 읽지 않음(표에서 벗어난 가드를 잡으려고). 「wiki에서 표를 읽기」는 하지 않았습니다 — 인계 노트의 표는 설명·예외가 섞인 글이라 기계로 읽으면 깨지기 쉬워서, 스크립트가 표의 실행판이 되고 위키가 스크립트를 가리키게 했습니다.
+- **결과 (격리 스택 9187, develop `4a77f97`)**: **권한은 990칸 모두 표와 같음.** 권한과 별개로 2건 — `POST /api/consultations/:id/diagnoses`, `POST /api/consultations/:id/prescriptions`가 필수 칸(`diagnosis_name`, `drug_name`)이 빈 요청에 **400이 아니라 500**(DB not-null 오류가 그대로). 화면은 항상 채워서 보내므로 현장 영향은 작지만, 서버 오류로 기록됨.
+- **U13 남은 점 (총괄 `7662160`) 확인**: 통계 화면을 연 채 통계 권한을 빼고 창으로 돌아옴 → **`/registration`으로 이동**, 저장 권한 갱신. 접수 화면에서 입력 중(「Rakoto en cours」)에 **수납** 권한만 빼고 돌아옴 → **접수에 그대로, 입력 유지**, 메뉴에서 Paiement만 사라짐. (브라우저 창이 가려진 상태로 판단돼 `visibilitychange`가 동기화를 건너뛰어서, 시험 때만 `document.hidden`을 false로 두고 이벤트를 보냄 — 실제 사용에서는 사람이 창을 보고 있으면 그대로 동작)
+- **바꾼 파일**: `backend/test/settings.access.mjs`(새) · `wiki/modules/settings.md`(4절 시험 목록, 7절 S2 고침·U13) · `wiki/handoff/settings.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **실행 방법**: 격리 스택을 띄우고 `node backend/test/settings.access.mjs` (빈 DB면 관리자를 스스로 만듦, 아니면 `SE_ADMIN_PW=…`). 계정 비밀번호는 OS 임시 폴더 `bethesda-se-access-<포트>.json`에 두고 다시 씀. 표와 다르면 exit 1.
+- **확인 못 한 것**: 브리지 토큰으로만 부르는 라우트(`/pacs/worklist-feed`·`bridge-heartbeat`·`study-arrived`, 워크리스트의 토큰 경로) — 로그인 권한 표의 대상이 아님.
+- **다른 세션에 부탁**: **진료** — 위 500 두 건: 빈 `diagnosis_name`/`drug_name`(그리고 없는 진료 id)에 400/404로. **모든 세션** — 라우트를 추가하거나 권한을 바꾸면 `settings.access.mjs`의 `ROUTES` 표에 한 줄(주인이 직접 넣어도 됨).
+
+## 2026-09-29 — U13 해결 확인 (총괄 구현)
+
+- **상태**: 확인 요청 (위키만)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `33b5e81`을 ff로 당긴 뒤)
+- **확인한 방법**: 격리 스택 9187. 접수 직원 `fdx`(접수·수납)로 로그인 → 밖에서 통계 권한 추가 → 새로 고침 → 저장본 `["registration","payment","stats"]`, 메뉴에 **Statistiques**, `/stats` 열림. 다시 통계 권한 제거 → `/stats`를 새로 고침 → 저장본·메뉴에서 사라짐.
+- **남은 작은 점 (총괄 확인 요청)**: 권한을 뺀 화면을 **보고 있던** 사람은 그 화면에 남습니다(라우트 가드는 이동할 때만 봄). 통계 화면은 「Aucune donnée」로 **조용히 빈 채** — 이유가 안 보임. `TopBar.jsx`의 동기화에서 지금 경로의 권한이 없어졌으면 `homePath()`로 보내면 풀립니다.
+- **위키**: `modules/settings.md` 2.2·2.5·2.12(「다시 로그인」 → 「새로 고치면 반영」), 3-1, 7절 U13 ✅, 8절
+
+## 2026-09-29 — S1 후속 (화면 확인·위키) · `/admin/doctors` 권한 (S2)
+
+> **총괄 확인 (2026-09-29)**: S1 후속·`/admin/doctors` 권한 `d277d53` 합침 + 실행 중 EMR 반영. U13(권한을 더한 계정의 메뉴)은 총괄이 `TopBar.jsx`에서 해결(`c4d4d67`·`a527c3d`). 실행 중 EMR에서 `/admin/doctors`: 의사·접수 200, 약국·검사 403 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `2c2ca89` 이후)
+- **한 일**:
+  1. **S1이 화면에서 어떻게 보이는지 확인** (격리 스택 9187, 빈 DB에서 계정 5개 만들어): ① 설정 권한을 뺀 관리자가 Établissement에서 저장 → 403 → 알림 「Erreur: Vous n'avez pas l'autorisation pour cela…」(새 키 `se_errAccessDenied` — 전에는 영어 「Access denied」) ② 그 관리자가 새로고침 → **메뉴에 Paramètres가 그대로 있고, 직원 목록이 빈 채로 조용히** 나옴(「직원이 없다」로 읽힘) → 고침: `loadAll`을 목록별로 따로 불러오고 실패하면 맨 위 빨간 줄로 이유 표시(U4도 같이 해결) ③ 비활성으로 바꾸자 다음 화면 요청에서 로그인 화면 → 로그인하면 「Ce compte est désactivé」 ④ 접수 직원에게 통계 권한을 **더하자** 서버는 200인데 **메뉴에 안 나오고 `/stats`를 쳐도 접수로 되돌아감** — 다시 로그인해야 함.
+  2. ④·②의 뿌리는 화면이 로그인 때 저장한 권한(`localStorage`)을 쓰는 것 — **U13**로 적고, 고칠 수 있게 **`GET /api/auth/me`가 현재 권한을 로그인 답과 같은 모양(null 없음)으로** 돌려주게 함(부르는 화면은 아직 없음).
+  3. `settingsMessages.js`에 `middleware/auth.js`(총괄)의 문구 5개(`Access denied` · `Could not verify the account` · `No token provided` · `Invalid token` · `Account is inactive`) — `settings.messages.mjs`가 이제 `middleware/auth.js`의 `error: '…'`도 읽어서 비교(45개 통과).
+  4. **S2 설정 몫**: `GET /api/admin/doctors` → `permMiddleware('registration','consultation')`. 다른 기준 자료 GET은 표대로 그대로.
+  5. 위키: 2.2·2.5(비활성은 바로 막힘, 권한 변경은 서버 즉시·메뉴는 다시 로그인), 2.12 표에 권한 없음 안내, 3-1(토큰은 누구인지만, 권한은 요청마다 DB), 4절 API 표, 7절(S1 고침(총괄)·U4 고침·U13 추가).
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `auth.routes.js`(`/me`) · `frontend/src/pages/Settings.jsx`(`loadAll`, 빨간 줄) · `frontend/src/pages/settingsMessages.js` · `backend/test/settings.messages.mjs` · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_errAccessDenied`·`se_errSessionEnded` 2개
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `node --check`, `npm run build`, `settings.messages.mjs` 45개·`settings.permissions.mjs` 통과. 위 ①~④ 화면·API. `/admin/doctors`: 의사·간호사(접수 권한)·접수 200, 약국 역할 403. `/auth/me` → `{"permissions":["registration","payment","stats"], …}`.
+- **확인 못 한 것**: 다른 화면(접수·수납 등)이 403을 받을 때 어떻게 보이는지 — 각 화면 몫(아래 부탁).
+- **총괄 확인 요청**:
+  - **U13 (보통)**: 메뉴·라우트 가드가 옛 권한. 권한을 **더한** 직원은 다시 로그인할 때까지 그 화면을 못 엶(서버는 허락). 제안: `App.jsx`가 시작할 때(그리고 창에 돌아올 때) `GET /api/auth/me`로 `medconnect_user`의 `permissions`·`role`을 새로 고침 — `/me`는 준비됨. 그 전까지 위키 2.2·2.5에 「권한을 바꾸면 그 직원은 다시 로그인」으로 적어 둠. `02-before-departure.md`의 「12시간 유지」 문장은 총괄이 고친다고 하셨음.
+- **다른 세션에 부탁**: **모든 화면 세션** — S1·S2 뒤로 권한을 뺀 직원이 그 화면에 남아 있으면 요청마다 403 「Access denied」(영어)를 받습니다. 각 화면의 오류 표시에서 `seMessage`(`frontend/src/pages/settingsMessages.js`)를 쓰면 프랑스어 「Vous n'avez pas l'autorisation…」로 나옵니다.
+- **남은 일**: 다른 세션의 S2 적용이 끝나면 **역할 × 라우트 시험 스크립트**.
+
+## 2026-09-29 — 새 PC로 옮기는 복원 연습 (총괄 부탁)
+
+> **총괄 확인 (2026-09-29)**: `c8437ad` 합침 + 실행 중 EMR 반영. 복원 연습 결과를 출발 전 목록 0절 (b)에 연결하고 「관리자 비밀번호를 알고 가기」를 넣음. 옛 백업을 복원해도 재시작 때 마이그레이션 019·020이 자동 적용된다는 확인이 특히 중요.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `c04adbd`을 ff로 당긴 뒤)
+- **한 일**: 실행 중 EMR의 가장 최근 백업(`backups/bethesda_2026-09-29_0221.sql.gz`)을 **복사만** 해서(원본과 해시 같음 확인), 빈 격리 스택(새 설치 상태)에 `DEPLOYMENT.md` 5b 명령 그대로(컨테이너 이름만 격리용) PowerShell에서 복원 → 로그인 → 확인 → 시험 계정 비활성 → 관리자 비밀번호 변경 → 첫 백업까지 해 보고 `modules/settings.md` **2.13절**에 절차로 적었습니다.
+- **결과**:
+  - 새 설치 기동 9초(이미지 있음) · 복원 5초(종료 코드 0, `gunzip -t` 0) · 재시작 3초 · 시험 계정 5개 비활성 약 6초 · 비밀번호 변경 1분 이내. 손으로 하는 시간 약 5분(설치 제외).
+  - 백업 파일의 **23개 테이블 행 수가 복원 결과와 모두 같음**(`schema_migrations`만 18 → 20).
+  - 백업이 새 코드보다 **옛 버전**(02:21, 019·020 전)이었는데, 앱 재시작 때 **019·020이 자동 적용**되어 문제없음.
+  - 직원 8명(설치 관리자 아이디 **`admin`** — S3 걱정 없음, 시험 계정 `zz…` 6개, Dr. Lee), 약 25, 오더 코드 40, 진료과 9, 상용구 24, 환자 2·내원 3·수납 2, 병원 정보(아직 설치 예시 값) 그대로.
+  - 시험 계정 비활성 뒤 그 계정 로그인 → 「Account is inactive」. 관리자 비밀번호 변경 뒤 옛 비밀번호 거절, 새 비밀번호 로그인.
+- **막힌 곳·주의점** (2.13절에 반영):
+  1. **관리자 비밀번호를 알아야 함** — 복원하면 이 PC의 계정·비밀번호가 옮겨 감. 모르면 새 PC에서 설정에 못 들어감. (연습에서는 실제 비밀번호를 모르므로 **격리 사본 DB에서만** 관리자 비밀번호를 임시 값으로 바꿔 로그인했습니다.)
+  2. 초기 설정 화면에서 관리자를 만들 필요 없음(만들어도 복원이 덮어씀).
+  3. 설치 뒤 2분 넘게 두면 **빈 DB 백업**이 하나 생김 — 해는 없지만 헷갈림.
+  4. **찾아서 고침**: 기존 직원 편집 창의 비밀번호 칸 힌트가 「••••」라 **비밀번호가 채워진 것처럼 보였음** → 기존 직원이면 「Vide = inchangé / 비우면 그대로 / Empty = unchanged」(`se_pwKeep`). 새 직원 창은 힌트 없음.
+  5. Git Bash에서 5b 명령을 치면 안 됨(B10, 이미 DEPLOYMENT에 있음).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx`(비밀번호 칸 힌트) · `wiki/modules/settings.md`(2.13 새 절, 3-4 복원 연습, 8절)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_pwKeep` 1개
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: 위 연습. `npm run build`. 비밀번호 칸 힌트는 프랑스어 화면에서 봄.
+- **확인 못 한 것**: 실제 새 PC에서 오프라인 묶음으로 이미지 불러오기(시간 포함). 데이터가 많아졌을 때의 복원 시간.
+- **정리**: 격리 스택을 `down -v`로 내려 **복원한 실제 데이터 사본을 지웠고**, 스크래치의 백업 사본·연습 백업도 지웠습니다. 실행 중 EMR·그 DB·원본 백업 파일은 건드리지 않았습니다.
+- **총괄 확인 요청**: `02-before-departure.md` 0절 (b)에 「관리자 비밀번호를 알고 가기」와 「2.13절 절차」 링크를 넣으면 좋겠습니다.
+
+## 2026-09-29 — 출발 전 확인 목록 검토 (총괄 부탁, 보고만)
+
+- **상태**: 확인 요청 (이 항목 외 변경 없음 — `wiki/02-before-departure.md`는 총괄 소유라 안 고침)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5c0bd43`을 ff로 당긴 뒤)
+- **보고한 것** (총괄에게 메시지로 전체 전달):
+  - ★ **데이터를 어떻게 가져가나**가 목록에 없음 — 오프라인 설치 묶음에는 DB·`.env`가 없어 새 PC는 빈 DB로 시작(`OFFLINE-INSTALL.md`). 이 PC를 가져갈지, 새 PC에 백업을 복원할지(그러면 시험 데이터·계정도 같이 옴 → 복원 뒤 정리), 새로 입력할지 먼저 정해야 함.
+  - 계정: 시험 계정은 **지울 수 없고 비활성만**(되돌리기 없음, 아이디 재사용 불가), Front Desk → 프랑스어 화면 「Accueil」, 새 직원 `1234` 기본값·최소 길이 없음, 설치 관리자 아이디가 `admin`이어야 잠금 방지(S3) 또는 관리자 둘, 관리자 비밀번호 바꾸는 곳과 12시간(S1).
+  - 설치: 백업 위치 확인 방법(Sauvegarde 탭 Chemin + 초록 띠, 백업 직후 `verify-backup -Strict`), 병원 밖 USB 사본 담당, `TZ`, 서버 상태 창을 시작 프로그램에 두고 PACS INACCESSIBLE 확인, `DEPLOYMENT.md` §9 영어 목록에 링크.
+  - 병원 정보: 프랑스어 인쇄는 프랑스어 → 영어 → 기본 이름 순, 앱 제목도 확인.
+- **확인한 방법**: `02-before-departure.md`, `DEPLOYMENT.md` §4·§5·§9, `OFFLINE-INSTALL.md`, `.env.example`(B9는 총괄이 이미 고침 확인), 실장님 PC `.env`의 `TZ`·`BACKUP_*` 키(값 중 비밀값은 안 봄). 실행 중 EMR은 들여다보지 않았습니다 — 그래서 **실제 설치 관리자 아이디가 `admin`인지는 모릅니다.**
+
+## 2026-09-29 — 간호사 기본 권한 결정 반영 확인 (접수·약국·임상병리)
+
+> **총괄 확인 (2026-09-29)**: `7ea53f5` 합침(위키·주석). 처음 열리는 화면과 「접수 권한은 보기 전용이 아님」은 결정 세션에 넘김.
+
+- **상태**: 확인 요청 (위키·주석만, 코드 동작 변경 없음)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `f4df9bc`을 ff로 당긴 뒤)
+- **한 일**: 총괄이 결정대로 고친 `nurse` 기본값(접수·약국·임상병리)을 격리 스택에서 확인하고, 위키 2.4 표·3-1절·4절(마이그레이션 번호 020)을 맞췄습니다. `permissions.js`의 「확인 중」 주석을 결정 내용으로 바꿨습니다.
+- **확인한 방법** (9187, 세션 DB는 옛 번호 701로 적용돼 있어 020이 한 번 더 적용됨 — 재실행 안전): 프랑스어 화면 **Rôle: Infirmier(ère)** → **Enregistrement·Pharmacie·Laboratoire** 자동 체크, Paiement 꺼짐 → 저장 → 그 계정으로 로그인 → **Enregistrement**가 처음 열림, 메뉴 3개, 💉 아이콘. `/payment`·`/settings`·`/consultation`은 접수로 돌아감. 서버: `/patients`·`/visits/today`·`/pharmacy/pending`·`/lab/pending` 200, `/billing/pending`·`/admin/staff` 403, `/billing/patient/:id/balance` 200(수납 또는 **접수** 권한이면 열리는 것 — 접수 화면이 미수금을 보여주므로 의도대로).
+- **처음 열리는 화면**: `Login.jsx` `ROLE_ROUTES`에 `nurse`가 없어 `homePath()` — 메뉴 순서상 첫 권한인 **접수**. 동작은 정상. 간호사가 주로 약국에서 일한다면 `ROLE_ROUTES`에 `nurse: '/pharmacy'` 한 줄로 바꿀 수 있습니다 — **실장님 판단 필요**라 그대로 둠.
+- **실장님께 알릴 것**: 접수 권한은 「차트 보기」만이 아니라 **환자 등록·수정, 내원 접수·취소까지 모두** 됩니다(권한이 화면 단위라 보기 전용이 없음). 차트만 보게 하려면 접수 화면에 읽기 전용 모드를 만들거나(접수 세션), 차트 보기 권한을 따로 두는 설계가 필요합니다.
+- **바꾼 파일**: `wiki/modules/settings.md` · `wiki/handoff/settings.md`
+- **공용 파일 변경**: `backend/src/middleware/permissions.js` — 주석만 (값은 총괄이 고친 그대로)
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **총괄 확인 요청**: 위 두 가지(첫 화면, 접수 권한의 범위)를 결정 세션에 전달 부탁드립니다.
+
+## 2026-09-29 — 간호사(nurse) 역할 · 로그인 화면 버전
+
+> **총괄 확인 (2026-09-29)**: `47043f4` 합침 + 실행 중 EMR 반영. 마이그레이션은 `701` → **`020_settings_nurse_role.sql`** 로 번호를 바꿔 합침(내용 그대로). 실장님 결정으로 간호사 기본 권한을 **접수 · 약국 · 임상병리**로 바꿈(`modules.js`·`permissions.js` 한 줄씩, 총괄이 고침) — 실장님 말씀: 접수를 넣는 이유는 환자 차트를 보기 위해서. `TopBar.jsx`에 간호사 아이콘 추가. `settings.permissions.mjs` 통과.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `20e68ce` 이후)
+- **한 일**: 현장(약사 없음, 간호사가 간호·약국·임상병리)에 맞춰 역할 **`nurse`** — 화면 「간호사 / Nurse / Infirmier(ère)」, 기본 권한 **pharmacy + lab**. 기존 `pharmacy`·`lab` 역할은 그대로. 기본값이 결정으로 바뀌면 `permissions.js`와 `modules.js`의 `nurse` 한 줄씩만 바꾸면 되고, `settings.permissions.mjs`가 둘이 같은지 봅니다. 로그인 화면 아래 「Bethesda EMR v1.0」을 상단바와 같은 빌드 버전(`__APP_VERSION__`)으로.
+- **바꾼 파일**: `backend/sql/701_settings_nurse_role.sql`(새) · `backend/src/routes/admin.routes.js`(`ROLES`) · `frontend/src/pages/Settings.jsx`(역할 선택·색 — `lab`에 없던 색도 넣음) · `frontend/src/pages/Login.jsx`(버전) · `backend/test/settings.permissions.mjs`(nurse 비교) · `wiki/modules/settings.md`
+- **공용 파일 변경**:
+  - **`frontend/src/modules.js`(총괄)** — `defaultPermsForRole`에 `case 'nurse': return ['pharmacy', 'lab'];` 한 줄 (총괄 허락).
+  - `backend/src/middleware/permissions.js` — `ROLE_DEFAULT_PERMS.nurse` 한 줄.
+  - `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_role_nurse` 1개.
+- **DB 마이그레이션**: `backend/sql/701_settings_nurse_role.sql` — `staff_role_check`를 지우고 `nurse`를 더해 다시 만듦. **허용 값만 넓힘, 기존 행은 안 바뀜.** 여러 번 돌려도 됨. 총괄이 번호를 다시 매길 때 `013` 뒤면 됩니다(`013`이 같은 제약을 만듦).
+- **번역 키**: `se_role_nurse` (ko 간호사 · en Nurse · fr Infirmier(ère))
+- **확인한 방법**: `node --check`, `npm run build`, `settings.permissions.mjs`(nurse 포함) · `settings.messages.mjs` 통과. 격리 스택 9187: 마이그레이션 로그 「applying 701… applied 1」, 제약에 `nurse` 들어간 것 확인. 프랑스어 화면에서 관리자가 **+ Ajouter → Rôle: Infirmier(ère)** 고르자 **Pharmacie·Laboratoire가 자동 체크** → 저장 → 목록에 「Infirmier(ère)」 배지와 💊🧪 아이콘. 그 계정으로 로그인 → **Pharmacie**로 들어가고 메뉴는 Pharmacie·Laboratoire뿐. 주소창에 `/registration`·`/payment`·`/settings`를 치면 모두 `/pharmacy`로 돌아감. `/lab` 열림. 한국어 화면도 약국·임상병리만. 서버: 간호사 토큰으로 `/pharmacy/pending`·`/lab/pending` 200, `/billing/pending`·`/admin/staff`·`/stats/summary` 403. 로그인 화면 아래 「Bethesda EMR v1.4.0」.
+- **확인 못 한 것**: 간호사로 실제 조제·검사 결과 입력(각 화면은 권한으로 열리는 것까지만). 영어 화면.
+- **위키**: `modules/settings.md` 2.4 역할 표(간호사 줄), 3-1절, 4절 staff 테이블, 7절 U6, 8절
+- **총괄 확인 요청**: `modules.js` 한 줄(위). 상단바 `TopBar.jsx`의 `ROLE_INFO`에 `nurse`가 없어 간호사 이름 옆 아이콘이 기본 👤입니다 — 원하시면 한 줄.
+- **다른 세션에 부탁**: **약국·임상병리** — 위키 2절의 「누가 이 화면을 쓰나」에 간호사(역할 `nurse`, 기본으로 두 화면 모두)를 적어 두면 좋겠습니다.
+
+## 2026-09-29 — 서버 안내를 화면 언어로 (U11) · 틀린 비밀번호 안내 (U12) · 비밀번호 칸 가리기
+
+> **총괄 확인 (2026-09-29)**: `e2f794b` 합침 + 실행 중 EMR 반영. `settings.messages.mjs` 39개 통과. U12는 실행 중 EMR 로그인 화면에서 직접 확인(아래 총괄 답장). 뿌리 쪽도 고침: `api/client.js`가 **토큰을 보낸 요청의 401만** 로그인 화면으로 보냄 — 토큰 없는 401(틀린 비밀번호 등)은 안내 문구를 그대로 돌려줌. `Login.jsx`의 직접 호출은 그대로 둬도 됨.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `58e62f2`을 ff로 당긴 뒤)
+- **한 일**:
+  1. **U11** (총괄 결정: 화면에서 고정 문구 비교): 로그인·설정 API의 사람용 문구를 새 파일 `backend/src/routes/settings.messages.js`(`MSG`·`fieldMsg`)로 모으고 `auth.routes.js`·`admin.routes.js`가 가져다 씀(문구 자체는 그대로). 화면 쪽 비교 표는 새 파일 `frontend/src/pages/settingsMessages.js` `seMessage(t, text)` — `utils/dbError.js`(총괄)와 `api/client.js`의 문구도 포함. 두 파일에 「함께 고칠 것」 주석. `Settings.jsx`의 설정 몫 오류 표시(병원 정보·공통 저장/삭제·약속처방·백업)와 `Login.jsx`에 적용. **오더 연동·검사항목 탭 함수의 오류 표시는 각 세션 몫이라 안 건드림.**
+  2. **U12 (새로 찾아 고침, 높음)**: 틀린 비밀번호나 비활성 계정으로 로그인하면 **아무 안내 없이 칸만 비었습니다.** `api/client.js`가 401을 받으면 로그인 화면을 다시 불러오는데, 로그인 화면의 401은 「비밀번호 틀림」이라 안내가 새로고침에 지워짐(격리 스택에서 재현). 공용 파일은 안 건드리고, `Login.jsx`가 로그인·첫 설정 요청만 직접 보내게 함(`authPost`). 로그인 안내는 원문을 저장하고 보여줄 때 번역 → 언어를 바꾸면 안내도 바뀜.
+  3. **비밀번호 칸 가리기** (S4 중 결정 없이 되는 것): 직원 편집 창 `type=password` + **Afficher/Masquer** 버튼(직원에게 불러 줘야 하므로), `autoComplete="new-password"`(브라우저가 관리자 자신의 저장된 비밀번호를 직원 칸에 채우지 않게), 아이디 칸 `autoComplete="off"`. `1234` 기본값·최소 길이는 **결정 대기라 그대로**.
+- **바꾼 파일**: `backend/src/routes/settings.messages.js`(새) · `auth.routes.js` · `admin.routes.js` · `frontend/src/pages/settingsMessages.js`(새) · `Settings.jsx` · `Login.jsx` · `backend/test/settings.messages.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 블록에 22개. `api/client.js`·`utils/dbError.js`는 **안 건드림**(문구만 읽어 비교).
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_err*` 18개(`Inactive`·`Server`·`SetupDone`·`LoginExists`·`NotFound`·`LoginIdRequired`·`PasswordRequired`·`LastAdmin`·`SetupAdminKept`·`Duplicate`·`MissingRef`·`Required`·`NotAllowed`·`Format`·`Range`·`NotNumber`·`Negative`·`NotWhole`), `se_fStock`·`se_fMinStock`·`se_showPw`·`se_hidePw` — ko·en·fr
+- **확인한 방법**: `node --check` 3개, `npm run build`, `node backend/test/settings.messages.mjs` → 39개 통과(서버의 모든 문구가 한국어·프랑스어로 바뀌고 키가 다 있는지, dbError 문구 포함). `settings.permissions.mjs`도 통과. 격리 스택 9187: **고치기 전** 틀린 비밀번호 → 안내 없이 빈 칸(재현) / **고친 뒤** 프랑스어 「Identifiant ou mot de passe incorrect」, 칸 유지 / 비활성 계정 → 「Ce compte est désactivé…」 / 정상 로그인 됨 / 직원 추가 창 비밀번호 ••••, Afficher → 1234 / 같은 아이디 저장 → 「Erreur: Un élément avec ce code ou cet identifiant existe déjà.」 / 설치 관리자 Supprimer → 「Erreur: Le compte administrateur créé à l'installation ne peut pas être désactivé.」(확인 창·알림은 기록용 가짜로 받아 문구 확인).
+- **확인 못 한 것**: 영어 화면. 첫 관리자 만들기 화면의 오류(빈 DB가 필요 — 코드와 검사 스크립트로만).
+- **위키**: `modules/settings.md` 2.4·2.12(표를 실제 프랑스어 문구로), 3-3절, 4절, 7절(S4 일부·U11·U12), 8절
+- **총괄 확인 요청**: U12는 `api/client.js`의 401 처리 때문입니다. 로그인 화면은 우회했지만, 다른 화면에서도 **401을 「로그인 끝남」 말고 다른 뜻으로 쓰는 API**가 있다면 같은 일이 생깁니다(지금 설정 쪽에는 없음).
+- **다른 세션에 부탁**: **PACS·임상병리** — 설정 화면 안의 각자 탭 함수(`savePacs`, `saveLabItems`·`createPanel`)의 `alert('…'+err.message)`는 영어 서버 문구가 그대로 나옵니다. 원하면 같은 `seMessage`를 쓰거나 각자 방식으로.
+
+## 2026-09-29 — 위키 2절을 프랑스어 화면 기준으로 (총괄 지시)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`1d3e4fc` 위). **위키만** 바꿈.
+- **한 일**: `modules/settings.md` 2절을 수납·통계 방식으로 다시 썼습니다. 버튼·칸 이름은 **프랑스어 화면 그대로**, 괄호에 한국어 화면 이름. 새로 넣은 것: 2.2 로그인·로그아웃(12시간), 2.3 탭 표(탭마다 담당 세션), 2.4 역할별 기본 권한 표를 프랑스어 역할명으로 + **직원 목록 칸의 뜻** 표(아이콘 줄 포함), 2.7 **백업 색 띠별 뜻·할 일** 표와 칸의 뜻 표, 2.8 병원 정보 칸의 뜻 표(프랑스어 인쇄는 프랑스어 → 영어 → 기본 이름 순 — `documents/shared.jsx`에서 확인), 2.9 오더 코드 칸의 뜻 표, 2.10 서버 상태 창의 띠·상태 글자(OK·ARRETE·DEMARRAGE·NE REPOND PAS·ABSENT·INACCESSIBLE), 2.12 **「이런 안내가 뜰 때」** 표(17줄).
+- **문구 확인 방법**: 프랑스어 문구는 `fr.js`에서 키마다 뽑아 적었고(`node`로 확인), 서버 안내는 `auth.routes.js`·`admin.routes.js`·`utils/dbError.js`·`api/client.js`의 문자열 그대로. 서버 상태 창 문구는 `server-status.ps1`의 `fr` 표.
+- **새로 적은 문제**: 7절 **U11** — 로그인·설정 서버 안내 여러 개가 프랑스어 화면에서도 **영어로** 뜸(2.12 표에 「(영어)」로 표시). 고치는 방법 두 가지를 적어 둠. 서버 문구를 번역하려면 `utils/dbError.js`(총괄)도 걸림.
+- **바꾼 파일**: `wiki/modules/settings.md`(2절 전체, 7절 B3 참조 번호·U11, 8절), `wiki/handoff/settings.md`
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인 못 한 것**: 이 절의 화면 설명은 오늘 격리 스택에서 본 화면과 코드로 적었습니다. 영어 화면 문구는 표에 넣지 않았습니다.
+- **총괄 확인 요청**: U11을 고칠지 — 서버 문구를 화면에서 비교해 바꾸는 방식이면 설정 세션 파일만으로 되고, 서버가 오류 코드를 같이 보내는 방식이면 `utils/dbError.js`·`api/client.js`(총괄)를 건드려야 합니다.
+
+## 2026-09-29 — 상용구에 프랑스어·영어 문장 칸 (진료 세션 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `0d66ad6`을 ff로 당긴 뒤)
+- **한 일**: 진료 화면 문장사전이 `text_fr`/`text_en`을 쓰게 되었는데, 설정 → **Phrases types (상용구)** 편집 창에는 `text` 칸만 있었습니다(API·DB는 원래 셋 다 받음). 편집 창에 **Texte en français**·**Texte en anglais** 칸과 안내 한 줄을 더했고, 목록은 진료 화면과 같은 규칙(프랑스어 화면 → `text_fr`, 없으면 `text`)으로 보여주며 FR·EN 표시를 붙였습니다. 저장할 때마다 상용구가 묶음 안에서 자리를 옮기던 것도 고쳤습니다(`GET /api/admin/phrases` 정렬에 `id` — 시드의 `sort_order`가 전부 0).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx`(상용구 탭 목록·편집 창) · `backend/src/routes/admin.routes.js`(정렬 한 줄) · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 블록에 4개 (`se_fTextDefault`·`se_fTextFr`·`se_fTextEn`·`se_phraseLangHint`)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**: `npm run build`, `node --check`. 격리 스택 9187 프랑스어 화면에서 상용구 1번에 「État stable. Contrôle conseillé dans 1 semaine.」 입력·저장 → DB `text_fr`에 악센트 그대로, 목록에 프랑스어 문장 + FR 표시. 정렬: General 묶음이 저장 뒤에도 id 순(1…6).
+- **확인 못 한 것**: 진료 화면에서 그 문장이 실제로 프랑스어로 나오는 것(진료 세션 코드 — `phraseText` 규칙만 코드로 확인). 영어 화면.
+- **위키**: `modules/settings.md` 2.9절 상용구, 3-9절(새), 8절
+- **다른 세션에 부탁**: **진료** — 시드 상용구 24개에 프랑스어 문장이 없습니다. 현장용 번역을 넣으려면 새 마이그레이션(진료 번호대)이나 설정 화면에서 직접 입력. 의학 문장이라 번역 내용은 실장님·의료진 확인이 필요합니다.
+
+## 2026-09-29 — 약 저장 재고 안전장치 (약국 H4 제안 A, 총괄 지시)
+
+> **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 약 행을 `FOR UPDATE`로 잠근 뒤 판단·저장, 재고를 안 고쳤으면 지금 값 유지, 그 사이 바뀌었으면 409. 실행 중 EMR에서 한 약으로 확인(읽기→단가만 같은 값으로 저장→재고 그대로, 틀린 `stock_expected`로 재고 변경→409, 저장 안 됨) — 값은 모두 원래대로. `backend/test/settings.drugs.mjs`는 격리 스택 전용이라 운영에서는 돌리지 않음.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `881328e`을 ff로 당긴 뒤)
+- **한 일**: 약을 저장해도 **재고를 안 고쳤으면 재고를 건드리지 않고**, 고쳤는데 **창을 연 사이 재고가 바뀌었으면 409로 다시 묻도록** 했습니다. 규칙 표와 이유는 `modules/settings.md` 3-8절.
+  - 서버 `PUT /api/admin/drugs/:id`: 트랜잭션 + 약 행 `FOR UPDATE`(조제와 같은 잠금) → 재고를 안 보냈거나 `stock_expected`와 같으면 지금 값 유지 / 고쳤고 지금 = 본 값이면 저장 / 고쳤고 지금 ≠ 본 값이면 409 `Stock changed while this drug was open` + `current`, 아무것도 저장 안 함 / `stock_expected` 없는 옛 요청은 전처럼. 재고·최소 재고 소수는 400(약국 L6 일부).
+  - 화면: `saveEdit`의 약 부분만. 창을 연 목록 행의 재고를 `stock_expected`로 보내고, 재고 칸을 안 고쳤으면 재고를 빼고 보냄. 409면 창과 다른 입력은 두고 재고 칸을 지금 값으로 바꾼 뒤 안내. **약품 탭 화면 글자·칸은 안 건드림.**
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx`(`saveEdit` 약 부분) · `backend/test/settings.drugs.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 블록에 `se_stockChanged` 1개
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_stockChanged` (ko·en·fr)
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택 9187에서 `SE_ADMIN_PW=… node backend/test/settings.drugs.mjs` → 11개 모두 통과 (그 사이 70으로 바뀐 뒤 단가만 저장 → 70 유지 / 재고 고침 → 409, 단가도 저장 안 됨 / 70을 보고 다시 저장 → 성공 / 옛 요청 → 전처럼 / 소수 → 400 / 없는 약 → 404). 화면: 한국어 — 창을 연 뒤 DB에서 30 차감 → 단가만 저장 → 재고 170 유지(전에는 200). 프랑스어 — 창을 연 뒤 20 차감 → 재고 300으로 저장 → 프랑스어 안내(`alert`를 기록용으로 바꿔 문구 확인), 창 유지, 재고 칸 150 → 다시 300 저장 → 「Enregistré」, DB 300·850.
+- **확인 못 한 것**: 약국 화면의 실제 「조제 완료」와 동시에 한 시험은 아닙니다(DB에서 직접 빼서 흉내). 둘이 같은 행 잠금을 쓰는 것은 코드로 확인. 영어 화면.
+- **위키**: `modules/settings.md` 3-8절(새), 4절 API 표, 7절 U10, 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: **약국** — `pharmacy.md` 2절(직원용)에 「약품 탭에서 재고를 고쳐 저장했는데 『그 사이 재고가 바뀌었습니다』가 뜨면, 재고 칸의 새 숫자를 보고 다시 맞춰 저장」 한 줄, 7절 H4를 「안전장치 적용(설정 3-8절), B는 결정 대기」로. B(재고를 움직임으로만)가 정해지면 서버 PUT에서 재고를 빼는 것은 설정이 맞춰 하겠습니다.
+
+## 2026-09-29 — S2 초안: 라우트별 허용 권한표 · PACS P-20 상태 표시
+
+- **상태**: P-20 코드 = 확인 요청 / S2 표 = 보류(막을지는 결정 세션이 실장님께 여쭙는 중. 코드 변경 없음)
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop 병합 `3f2198e` 이후, `1874812` 위)
+
+### PACS P-20 (코드)
+
+- `status.routes.js` `checkBridge`가 heartbeat `detail.arrivals_error`(문자열, 괜찮으면 빈 값)를 읽어, 있으면 노랑 `status.bridge.arrivals`. **이 필드 이름을 약속으로 제안합니다.** 보내는 쪽(`bridge.py`)과 받는 쪽(`pacs.routes.js` `/bridge-heartbeat`가 `detail`에 넣는 칸 — 지금은 `synced·failed·poll_seconds·error`만 남김)은 PACS 몫이라, 그쪽이 넣기 전까지는 **아무것도 바뀌지 않습니다.**
+- 확인: `node --check`, 격리 스택 9187에서 heartbeat 행을 직접 넣어 — 행 없음 → `off`, 옛 브리지(필드 없음) → `ok`, `arrivals_error: "401 Unauthorized from Orthanc"` → `warn status.bridge.arrivals`.
+- 서버 상태 창(`server-status.ps1`)은 heartbeat **파일의 시각**만 보므로 이 경우는 모릅니다. 브리지가 파일 안에 상태를 쓰게 되면 그때 맞추겠습니다.
+- **다른 세션에 부탁 — PACS**: 도착 확인이 실패하면 heartbeat 요청 본문에 `arrivals_error: "<짧은 이유>"`, 성공하면 `""`. `pacs.routes.js`의 `detail` 객체에 `arrivals_error: String(body.arrivals_error || '').slice(0, 500)` 한 줄.
+
+### S2 — 라우트별 허용 권한표 초안 (결정 전, 코드 변경 없음)
+
+조사 기준: develop 병합 후 `3f2198e`. 모든 라우트와, 그 라우트를 부르는 화면(공용 부품은 그 부품을 쓰는 화면)을 코드에서 찾았습니다. **원칙**: 쓰기는 그 일을 하는 화면의 권한만, 읽기는 부르는 화면들의 권한을 모두 허용. 부르는 곳이 없는 라우트는 주인 모듈만. 「제안」 칸의 권한 중 **하나라도** 있으면 통과(`permMiddleware`는 OR).
+
+공용 부품이 쓰이는 곳: PatientFinder — 진료·임상병리·수납(내원 모드), 약국·접수(환자 모드, 환자 검색만) / PatientChart — 수납·약국 / DocumentModal — 진료·수납·약국(편집), 임상병리·접수(읽기 전용, 발급·취소 버튼 숨김) / RadiologyReadings — 진료·수납.
+
+**patient.routes.js** (`/api/patients`, 지금 전부 로그인만) — 접수 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /` (검색) | 읽기 | 접수, PatientFinder | registration, consultation, payment, pharmacy, lab |
+| `GET /:id` | 읽기 | DocumentModal | registration, consultation, payment, pharmacy, lab |
+| `GET /:id/history` | 읽기 | 접수, 진료, PatientChart | registration, consultation, payment, pharmacy |
+| `POST /` · `PUT /:id` | 쓰기 | 접수 | **registration** |
+| `GET /chart/:chartNo` | 읽기 | 없음 | registration |
+| `GET /similar` | 읽기 | 접수(등록 때 같은 환자 확인) | **registration** — 2026-09-29 추가 |
+| `GET /:id/billing-history` | 읽기 | 없음 | payment |
+
+**visit.routes.js** (`/api/visits`, 지금 전부 로그인만) — 접수 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /today` | 읽기 | 접수, 진료 | registration, consultation |
+| `GET /patient/:patientId` | 읽기 | PatientFinder(내원 모드), **접수**(초진/재진 제안) | **registration**, consultation, lab, payment — registration은 2026-09-29 총괄 승인으로 추가 |
+| `POST /` | 쓰기 | 접수 | **registration** |
+| `PUT /:id/status` | 쓰기 | 접수(취소) | **registration** |
+| `PUT /:id` | 쓰기 | 접수, **수납**(`Payment.jsx:232`, `visit_type`만 보냄, 오류 무시) | registration, payment — ⚠ 수납은 초진/재진만 바꾸므로, 수납 권한일 때는 `visit_type`만 받게 좁히는 것을 권함 |
+
+**consult.routes.js** (`/api/consultations`) — 진료 세션 파일. 쓰기는 이미 전부 `consultation`.
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /visit/:visitId/prescriptions` | 읽기 | DocumentModal(진료·수납·약국) | consultation, payment, pharmacy |
+| `GET /:id/prescriptions` · `GET /:id/orders` | 읽기 | 진료, PatientChart | consultation, payment, pharmacy |
+| `GET /:id/diagnoses` | 읽기 | 없음 | consultation |
+
+**document.routes.js** (`/api/documents`, 지금 전부 로그인만) — 진료 세션 파일
+
+| 라우트 | 읽기/쓰기 | 부르는 화면 | 제안 |
+|---|---|---|---|
+| `GET /patient/:id` | 읽기 | DocumentModal | consultation, payment, pharmacy, lab, registration |
+| `GET /:id` | 읽기 | 없음 | 위와 같음 |
+| `POST /` (발급) · `POST /:id/void` (취소) | 쓰기 | DocumentModal 편집 사본(진료·수납·약국) | consultation, payment, pharmacy — 더 좁히려면 문서 **종류**별(예: 원외 처방전은 약국·진료)로. 실장님 판단 필요 |
+
+**pharmacy.routes.js 재고** (약국 재고 ①, 2026-09-29 추가) — `GET /stock`, `GET /stock/:drugId/movements`, `POST /stock/:drugId/receive|count|discard` → **pharmacy, consultation, settings** (조제 라우트는 pharmacy만 그대로). `GET /stock/report` → **pharmacy, settings, stats** (`canReport`, 2026-09-29 추가)
+
+**billing.routes.js** — 수납 세션이 이미 적용: 전부 `payment`, 미수금 조회(`GET /patient/:id/balance`)만 `payment` 또는 `registration`. 표와 맞음.
+
+**그 밖에 로그인만 확인하는 것** (기준 자료·공통 — 대부분 그대로 두기를 권함)
+- 그대로: `GET /api/admin/drugs`·`order-codes`·`departments`·`phrases`·`clinic`(여러 화면·상단바가 씀), `GET /api/version`·`/api/system/status`(누구나 — 의도), `GET /api/backup/status`(오류 문구는 이미 settings만).
+- 좁힐 후보: `GET /api/admin/doctors`(접수만 부름, 전화·이메일 포함) → registration, consultation / `GET /api/order-sets` → consultation, settings / `GET /api/lab/test-items` → lab, settings / `GET /api/pacs/test` → settings / `GET /api/pacs/viewer-url` → consultation / `GET /api/pacs/readings/patient/:id` → consultation, payment / `GET /api/worklist` → consultation.
+- **주의**: `PUT /api/worklist/:id/status`(쓰기)는 브리지 토큰 **또는 로그인만**이면 됩니다. 부르는 화면이 없으니 로그인 경로는 막거나 settings로 좁히기를 권함 (PACS 몫).
+- 부르는 곳이 없는 라우트(정리 후보): `GET /api/patients/chart/:chartNo`, `GET /api/patients/:id/billing-history`, 진단 3개(`GET/POST /consultations/:id/diagnoses`, `DELETE /consultations/diagnosis/:dxId`), `GET /api/documents/:id`, `GET /api/order-sets/:id`, `GET /api/auth/me`, 워크리스트 3개.
+
+**적용할 때 주의** (결정되면)
+- 관리자(`admin`) 역할은 권한 7개를 다 가지므로 영향 없음. 영향은 **권한을 좁게 준 직원**에게만.
+- **S1(토큰 12시간)과 묶어서 보세요**: 권한 검사를 넣어도 토큰 안의 권한을 믿으므로, 권한을 뺀 직원은 다시 로그인할 때까지 그대로입니다.
+- 화면 쪽은 바뀌는 것이 없어야 합니다 — 위 표는 **지금 부르는 화면이 모두 통과하도록** 만든 것입니다. 적용 뒤 각 화면을 그 권한만 가진 계정으로 한 번씩 눌러 보면 확인됩니다 (403이 뜨면 표가 빠뜨린 것).
+- 파일 주인: patient·visit = 접수, consult·document = 진료, worklist·pacs = PACS. 설정 세션은 표만 만들었습니다.
+
+## 2026-09-29 — 제안: 약 저장이 재고를 덮어쓰는 문제 (약국 H4)
+
+> **총괄 확인 (2026-09-29)**: `2a40e84`·`f5e7e55`·`56f2558`·`1874812` 합침(`72895a1`) + 실행 중 EMR 반영(반영 전 DB 백업). 확인: `node backend/test/settings.permissions.mjs` 전부 ok · 역할별 API(관리자 200, 의사·접수는 직원 관리 403) · 번역 키 세 언어 533개씩 같음. `DEPLOYMENT.md`에 `-Strict` 넣음. PACS 포트가 막힌 것은 실장님께 이미 보고됨(P-1, 재부팅 뒤 조치). `server-status.ps1`·`verify-backup`은 총괄이 직접 돌려 보지 않음 — 재부팅 뒤 P-1 확인 때 같이 돌려 봄. H4 제안은 약국 재고 결정(B)과 함께 결정 세션으로.
+
+- **상태**: 보류 — 제안만 했습니다. 코드는 바꾸지 않았습니다. **실장님 결정 + 약국과 순서 맞추기**가 필요합니다.
+- **문제** (약국 `pharmacy.md` 7절 H4): 설정 → 약품 탭에서 약 하나를 열면 편집 창이 그 순간의 행 전체를 들고 있다가, 저장할 때 `PUT /api/admin/drugs/:id`가 `stock_qty=$11`로 **받은 재고를 그대로 씁니다** (`admin.routes.js` DRUGS 절). 아침에 창을 연 목록(재고 100) → 낮에 30개 조제(70) → 오후에 그 목록에서 **단가만** 고쳐 저장 → 재고 100으로 돌아감. 경고 없음.
+- **왜 「차이만 더하기」는 답이 아닌가**: 재고를 고치는 이유가 둘입니다. 「약이 20개 들어왔다」(더하기)와 「선반을 세어 보니 45개다」(맞추기). 사람이 본 값과의 차이를 더해 주면 앞의 경우는 맞지만(70+20=90), 뒤의 경우는 45가 아니라 15가 됩니다(70+(45−100)). 어느 쪽인지 서버는 알 수 없으므로, **조용히 계산해 주지 말고 다시 묻는 것**이 안전합니다.
+
+### 제안 A — 지금 바로 할 수 있는 것 (설정 세션 파일만, 작음)
+
+1. **편집 창을 열 때 본 재고를 같이 보냄**: `Settings.jsx`의 공용 `openEdit`(틀 코드, 설정 몫)에서 약이면 `stock_expected = stock_qty`를 복사본에 넣음. 약품 탭 안쪽(약국 몫)은 안 건드림.
+2. **서버 규칙** (`PUT /api/admin/drugs/:id`, 트랜잭션 + `SELECT … FOR UPDATE`로 그 약 행 잠금 — 조제가 쓰는 것과 같은 잠금):
+   - 보낸 재고 = 본 재고 → **재고는 건드리지 않음** (단가·이름만 고친 경우. 사이에 조제가 있어도 그대로 보존)
+   - 보낸 재고 ≠ 본 재고, 그리고 지금 재고 = 본 재고 → 보낸 값으로 저장 (그 사이 아무도 안 바꿈)
+   - 보낸 재고 ≠ 본 재고, 그리고 지금 재고 ≠ 본 재고 → **409** 「그 사이 재고가 바뀌었습니다 (지금 70). 다시 열어 확인하세요」 — 저장 안 함. 화면은 이 문구를 `se_` 키로 번역(약국처럼 고정 문구 비교, `api/client.js`가 상태 코드를 안 넘기므로)
+   - `stock_expected`가 없는 요청(옛 화면을 새로고침하지 않은 브라우저) → 지금처럼 보낸 값을 씀. 배포 직후 잠깐만 해당.
+3. **같은 API의 작은 버그 두 개도 같이** (약국 L6): 새 약의 `min_stock`이 비면 NULL로 저장됨 → 스키마 기본값 10을 쓰도록 `COALESCE`. 재고에 소수(7.5)를 넣으면 DB 오류 500 → 정수 검사로 400.
+4. 확인: 격리 스택에서 창 열기 → API로 조제해 재고 줄이기 → 단가만 저장(재고 보존) / 재고 고쳐 저장(409) / 다시 열어 저장(성공). 약국의 `backend/test/pharmacy.api.mjs` 형식으로 `backend/test/settings.drugs.mjs`를 만들어 둠.
+
+### 제안 B — 길게 보면 (약국 몫, 약국의 「2번 재고」 결정과 같이)
+
+- 재고는 **움직임으로만** 바뀜: 입고(+N), 실사 조정(센 값으로 맞춤 + 이유), 조제(−N). 움직임마다 한 줄 기록하는 표(`drug_stock_log`, 약국 M5 — 약국 마이그레이션 번호대).
+- 그러면 설정의 약 편집 창에서 재고 칸은 **읽기 전용**이 되고 「약국 화면에서 재고 조정」으로 안내. `PUT /api/admin/drugs/:id`는 재고를 **아예 안 받음**.
+- A의 서버 규칙은 B가 들어올 때까지 유효하고, B가 들어오면 재고 부분만 지우면 됩니다. A와 B는 서로 막지 않습니다.
+
+- **권하는 순서**: A를 먼저(작고, 지금 운영에서 재고가 조용히 틀어지는 것을 막음) → B는 약국 재고 결정 때.
+- **실장님께 여쭐 것**: A를 진행해도 될지. 재고 숫자는 약국 업무에 직접 걸린 부분이라 결정을 받고 하겠습니다.
+- **다른 세션에 부탁**: **약국** — A는 약품 탭 안을 안 건드리지만, 409 안내가 약품 탭 편집 창에서 뜹니다. B를 설계할 때 설정 쪽 재고 칸을 읽기 전용으로 바꾸는 것은 약국이 하셔도 되고(탭 안), 서버 PUT에서 재고를 빼는 것은 설정이 맞춰 하겠습니다.
+
+## 2026-09-29 — 서버 권한 목록을 한 곳으로 (U9)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`f5e7e55` 위)
+- **한 일**: 서버에 네 번 적혀 있던 권한 목록(`admin.routes.js`의 `ALL_PERMS`, `auth.routes.js`의 `allPerms`, `middleware/auth.js`의 `defaultPermsForRole`)을 새 파일 **`backend/src/middleware/permissions.js`** 하나로 모았습니다(`ALL_PERMS`·`ROLE_DEFAULT_PERMS`·`defaultPermsForRole`). 기준은 총괄 지시대로 `frontend/src/modules.js`이고, 백엔드 이미지는 `backend/`만으로 빌드되어 그 파일을 불러올 수 없으므로, 두 목록이 같은지 보는 검사 **`backend/test/settings.permissions.mjs`** 를 넣었습니다. 설치·서버·DB 없이 파일 두 개만 읽습니다. `permissions.js`를 의존성 없는 별도 파일로 뺀 것은 이 검사가 `npm install` 없이 돌게 하려는 것입니다.
+- **동작 변화**: 없음. `defaultPermsForRole`은 전처럼 매번 새 배열을 돌려줍니다(얼린 목록을 복사). pg 드라이버에는 일반 배열을 넘깁니다.
+- **바꾼 파일**: `backend/src/routes/admin.routes.js` · `backend/src/routes/auth.routes.js` · `backend/test/settings.permissions.mjs`(새) · `wiki/modules/settings.md`
+- **공용 파일 변경**: **`backend/src/middleware/auth.js`** — 권한 목록·역할 기본값을 지우고 `./permissions`에서 가져옴, `module.exports`에 `ALL_PERMS`·`ROLE_DEFAULT_PERMS` 추가(기존 이름은 그대로 내보냄). **`backend/src/middleware/permissions.js`(새 파일)** — 공용 폴더라 적습니다. 모듈을 추가할 때 `modules.js`와 이 파일을 같이 고쳐야 합니다.
+- **DB 마이그레이션**: 없음 (`013`에도 같은 목록이 있지만 적용된 파일이라 안 건드림) · **번역 키**: 없음
+- **확인한 방법**: `node --check` 4개 파일. `node backend/test/settings.permissions.mjs` → 8개 모두 ok, exit 0. 스크래치 복사본에서 `modules.js`에 모듈 하나를 더하면 → FAIL, exit 1. 격리 스택 9187을 **빈 DB로 다시 만들어**(`down -v`, 격리 스택 DB만) — 첫 실행 관리자 만들기 → 권한 7개 / 설치 관리자를 아이디·역할·권한·상태 바꿔 저장 → `admin`·admin·7개·active로 고정됨 / 접수 직원 로그인 → `["registration","payment"]`, `/admin/staff` 403.
+- **확인 못 한 것**: 권한 배열이 없는 옛 토큰(`defaultPermsForRole` 경로)은 서버로는 안 해 봤습니다 — 검사 스크립트가 역할별 값을 확인합니다.
+- **위키**: `modules/settings.md` 3-1절, 4절, 7절(U9 고침), 8절
+- **총괄 확인 요청**: 위 공용 파일 두 개. 다른 세션 라우트는 `middleware/auth.js`에서 가져오는 이름이 그대로라 영향 없습니다.
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — 설정 화면 영어 고정 글자를 세 언어로 (U1, 약국 부탁 포함)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`2a40e84` 위)
+- **한 일**: 약국 세션이 부탁한 세 곳(공용 삭제 확인 「Delete?」, 탭 이름 「💊 Drugs」, 편집 창 제목 「+ Add」)과, 같은 종류의 영어 고정 글자를 설정 세션 몫 전체에서 `se_` 키로 옮겼습니다 — 탭 이름 6개, 직원·오더 코드·상용구·진료과·병원 정보 탭의 머리글·표 제목·「+ Add」 버튼·편집 창 입력 칸, 오류(`Error:`)·저장 알림, 오더 코드 종류 필터. 역할(`admin`→관리자/Administrateur)·오더 종류(`fee`→진료비/Frais)·상태(`active`→활성/actif)는 **표시만** 번역하고 저장 값은 그대로입니다. 직원 「삭제」는 실제로 비활성화라서 확인 창을 「이 직원을 비활성으로 바꿀까요? 로그인할 수 없게 됩니다. 기록은 남습니다.」로 바꿨습니다. 위키 2절에 **역할별 기본 권한 표**(총괄 부탁 — 수납 창구 계정용)를 넣었습니다.
+- **일부러 안 한 것**: 약품 탭 **안쪽**(표 머리글·편집 창 칸 — 약국 몫, 약국이 부탁한 탭 이름만 옮김), 오더 연동 탭(PACS 몫), 분류 드롭다운 값(Consultation·Laboratory…, General·Internal… — DB에 저장되는 값이라 번역하면 데이터가 바뀜).
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `wiki/modules/settings.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `se_` 표시 사이에 키 66개 추가 (지금 `se_` 79개씩). 기존 키는 안 건드림. `Settings.jsx`의 **약품 탭**(약국 몫)은 탭 이름 한 줄과 공용 삭제 확인·편집 창 제목만 바뀜.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_tab*` 6 · `se_col*` 14 · `se_f*` 22 · `se_role_*` 5 · `se_type_*` 4 · `se_status*` 2 · `se_addBtn` `se_newTitle` `se_confirmDelete` `se_confirmDeactivate` `se_error` `se_saved` `se_all` `se_none` `se_on` `se_off` `se_clinicTitle` `se_clinicIntro` `se_clinicNote` — ko·en·fr 모두 (node로 세 파일 79개씩 확인)
+- **확인한 방법**: `npm run build` 통과. 격리 스택 9187에서 프랑스어: 탭 목록·직원 표·「+ Ajouter」 편집 창(Nouvel élément, Identifiant, Mot de passe, Rôle (étiquette), Accueil…)·오더 코드(Tous/Frais/Laboratoire/Imagerie/Acte, 종류 배지)·병원 정보 탭. 한국어: 직원 탭(관리자·활성·+ 추가). 삭제 확인 문구는 `window.confirm`을 「취소」로 답하는 가짜로 바꿔 문구만 확인(실제 비활성화 안 함).
+- **확인 못 한 것**: 영어 화면, 상용구·진료과 편집 창 화면(코드로만), 삭제 확인 창의 실제 모양.
+- **위키**: `modules/settings.md` 2절(버튼 이름 한국어/Français로, 역할별 기본 권한 표), 7절(U1 대부분·U7 고침), 8절
+- **총괄 확인 요청**: 없음
+- **다른 세션에 부탁**: **약국** — 약품 탭 안쪽(표 머리글 Code·Name·Cat·Dose·Freq·Days·Route·Price·Stock, 편집 창 칸, 탭 머리의 「💊 Drugs」·「+ Add」)은 그대로입니다. 같은 방식으로 옮기려면 공용 키 `se_addBtn`·`se_colCode`·`se_colName`·`se_colPrice`·`se_fCode`·`se_fName`을 써도 됩니다. **PACS** — 오더 연동 탭의 「Save」「Loading...」「Bridge Token」「Host / IP」「AE Title」.
+- **남은 일**: H4 제안, U9, S2 권한표 초안.
+
+## 2026-09-29 — 서버 상태 창 포트 검사 · 백업 검사 스크립트 (총괄 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`develop` `5e0e056`을 ff로 당긴 뒤)
+- **한 일**:
+  1. **`server-status.ps1` 호스트 포트 검사 (B11)**: `bethesda-emr-web`·`bethesda-pacs`가 게시하도록 설정된 포트(Docker `HostConfig.PortBindings`에서 읽음 — 9080·9090·4242)마다 호스트에서 TCP 연결(1초). 안 되면 그 줄을 빨강 「접속 안 됨 / INACCESSIBLE」로, 옆 칸에 「4242 포트를 Windows가 막음」(예약 구간 안) 또는 「9090 포트 닫힘」, 아래 안내는 「Windows가 포트를 막고 있습니다… DEPLOYMENT.md의 Windows 절」. `netsh … excludedportrange`는 막힌 포트가 있을 때만 부르고, 숫자 쌍만 읽어 언어와 무관.
+  2. **상태 창 배치 버그 (B12, 원래부터 있던 것)**: 실제 화면을 캡처해 보니 맨 위 색 띠가 **첫 두 줄(환자 기록 DB·앱 서버)을 덮고 있었습니다** — DB가 멈춰도 「PROBLEME」만 보이고 어느 줄인지 안 보이는 상태. 도킹 순서(`$rows.BringToFront()`)와 남는 높이(빈 마지막 줄)로 고침.
+  3. **`verify-backup.ps1`·`.sh` (B4·B5)**: 백업 위치를 Docker의 `/backups` 마운트에서 찾음. `-DbContainer`/`-ApiContainer`/`-BackupDir`(`.sh`는 환경변수) 추가. **B5를 격리 스택에서 먼저 재현**(백업 뒤 상용구 1개 추가 → 옛 스크립트 「VERIFY FAILED - Do not rely on it」 + 「id가 충돌한다」)한 뒤, 판정을 둘로 나눔: 구조(테이블 누락·스키마) 차이는 실패(업데이트로 마이그레이션이 늘었으면 [info]), 데이터 차이는 [info] — `-Strict`/`--strict`에서만 실패. 멈춘 DB 컨테이너를 「돌고 있음」으로 보던 것도 고침.
+- **바꾼 파일**: `server-status.ps1` · `verify-backup.ps1` · `verify-backup.sh` · `wiki/modules/settings.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음 (스크립트 안의 fr·en·ko 문자열만)
+- **확인한 방법**:
+  - `server-status.ps1`: 파서 오류 0, BOM 유지. 이 PC의 **실행 중 EMR을 읽기만** 해서 `-Console -Lang fr/ko` → PACS 줄 down 「port 4242 bloque par Windows, port 9090 ferme」, 종료 코드 2. **이 PC에서 실제로 PACS 4242·9090이 막혀 있습니다** (`bethesda-pacs` Up healthy, 동적 포트 범위가 1024부터, 4242가 예약 구간 4204–4303 안). 창 모드는 스크래치 복사본으로 띄워 `CopyFromScreen` 캡처 → 고치기 전 띠가 두 줄을 가림, 고친 뒤 7줄 모두 보임 (fr·ko).
+  - `verify-backup.ps1`: ASCII만, 파서 오류 0. 격리 스택 9187(`-DbContainer bethesda-s-settings-db`)에서 — 백업 뒤 변경 → VERIFIED + [info] / `-Strict` → 실패 「phrase_dictionary: live 26 rows, backup 25」 / 새 백업 직후 `-Strict` → 「identical」 / 절반 잘린 파일 → 「damaged」 exit 1, 임시 DB 0개(`exit`해도 `finally` 실행) / 옛 백업 → 비교 생략. `BACKUP_PATH`(임시 폴더)를 스스로 찾음.
+  - `verify-backup.sh`: `sh -n` 통과, Git Bash로 같은 격리 스택에서 기본·`--strict` 확인.
+- **확인 못 한 것**: 실제 Linux·NAS(busybox)에서 `.sh`는 돌려 보지 않았습니다(Git Bash만). 업데이트 뒤(마이그레이션 수 차이) 경로는 만들어 보지 않았습니다. 상태 창을 15초 주기로 오래 띄워 두는 것은 보지 않았습니다.
+- **위키**: `modules/settings.md` 2-9·2-10(새)·3-5·3-6·7절(B4·B5 고침, B11·B12 추가)·8절
+- **총괄 확인 요청**:
+  - **이 PC의 PACS가 지금 밖에서 접속되지 않습니다** (4242·9090). PACS 세션 P-1과 같은 원인으로 보입니다. `DEPLOYMENT.md`의 `netsh int ipv4 set dynamicport …`은 관리자 권한·재부팅이 필요한 시스템 설정이라 이 세션은 건드리지 않았습니다 — 실장님께 전달 부탁드립니다.
+  - `verify-backup`의 판정 기준이 바뀌었습니다 (데이터 차이는 기본적으로 실패가 아님). `DEPLOYMENT.md` 「Check a backup before you need it」 절에 `-Strict` 한 줄을 넣으면 좋겠습니다 (총괄 소유).
+- **다른 세션에 부탁**: **PACS** — 상태 창이 이제 호스트 포트를 봅니다. `pacs.md`의 P-1 표(「EMR 상태 화면의 PACS 검사만 잡아냄」)에 서버 상태 창도 추가해 주세요.
+- **남은 일**: U1(설정 화면 영어 고정 글자), H4 제안, U9, S2 권한표 초안 — 이어서 합니다.
+
+## 2026-09-29 — 백업 안전장치 (동시 실행 · 최소 보관 · 실패 표시 · 시각)
+
+> **총괄 확인 (2026-09-29)**: 합침(`1ca4b79`) + 실행 중 EMR 반영. 확인: `/backup/status`에 `state: ok` · `minKeep 7` · 백업 16개 · 최근 9시간 전, 서버 로그 「keep 30d (never fewer than 7)」, 백업 탭 초록 띠(화면). 요청: `.inprogress` 폴더는 위키·이 노트에 기록됨 · B10 `DEPLOYMENT.md` 5b에 PowerShell/cmd 한 줄 넣음 · 이미지 이름표는 `657ba2c`로 해결 · 16:49 재생성은 총괄 배포(`7ad4387`)가 맞음. S1·S2·U9·B9는 다음 차례.
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (`08d0336` 위)
+- **한 일**: 실장님이 백업 로직 수정을 허락하셔서 7절 B1·B2·B3·B6을 고쳤습니다.
+  1. **동시 실행**: `runBackup()`이 진행 중인 백업이 있으면 그 Promise를 돌려줍니다. 전에는 같은 분에 두 백업이 같은 파일에 쓰고, 실패한 쪽이 성공한 쪽 파일을 지웠습니다.
+  2. **작업 폴더**: 덤프를 `/backups/.inprogress/`에 쓰고 `gzip -t`까지 통과해야 `/backups/`로 `rename`합니다. 실패하면 자기 작업 파일만 지웁니다. 남은 조각은 서버 시작·백업 시작 때 지웁니다. `pipefail`·`gzip -t`·크기 0 거부(1.3.3)는 그대로입니다.
+  3. **최소 보관**: `prune()`이 가장 최근 7개(`MIN_KEEP`)는 나이와 상관없이 남깁니다.
+  4. **상태 표시**: `backup.health()`(ok·stale·none·failed)를 새로 만들어 백업 탭과 `/api/system/status`가 같이 씁니다. 백업 탭 맨 위에 색 띠 + 안내 + 실패 시 오류 문구(settings 권한만). 마지막 시도 결과는 메모리에만 둡니다(재시작하면 사라지지만 36시간 기준으로 다시 잡힘).
+  5. **시각**: 백업 목록·「최근」을 브라우저 PC 현지 시각으로 표시(UTC 문자열을 잘라 쓰던 것).
+  6. 백업 탭 안내문의 옛 한국어 대체 문구(「경로가 없으면 백업은 꺼집니다」)를 지웠습니다 — 번역 키가 세 언어 모두 있어 필요 없음.
+- **바꾼 파일**: `backend/src/services/backup.js` · `backend/src/routes/backup.routes.js` · `backend/src/routes/status.routes.js` · `frontend/src/pages/Settings.jsx`(백업 탭과 위쪽 함수 두 개만)
+- **공용 파일 변경**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — **`se_` 표시 사이에만** 키 추가. 기존 키는 안 건드림.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `se_bkOk` `se_bkStale` `se_bkNone` `se_bkFailed` `se_bkStaleHint` `se_bkNoneHint` `se_bkFailedHint` `se_bkHoursAgo` `se_bkRunning` `se_bkLastTry` `se_bkTriggerAuto` `se_bkTriggerManual` `se_bkMinKeep` — 13개, ko·en·fr 모두 (node로 세 파일 13개씩 확인)
+- **확인한 방법**:
+  - `node --check` 세 백엔드 파일 통과. 프론트 `npm run build` 통과. **`npm ci`는 저장소에 `package-lock.json`이 없어 실행 불가** → `npm install --no-package-lock`으로 설치(잠금 파일 안 생김).
+  - 격리 스택 9187(`-p bethesda-s-settings`), `BACKUP_PATH`를 작업용 임시 폴더로 지정해 실장님 백업 폴더와 분리. 실행 중인 EMR(`bethesda-emr-*`)은 건드리지 않음.
+  - ① 「지금 백업」 API 3개 동시 호출 → 세 요청 모두 같은 파일, 파일 1개. ② 정상 백업 직후 **같은 분에** 격리 DB를 멈추고 백업 → 실패로 기록, 같은 이름의 정상 파일이 남음, `.inprogress` 비어 있음. 화면(한국어) 빨간 띠·오류 문구 확인. 「지금 백업」 누르면 초록(프랑스어) 확인. ③ 40~51일 된 가짜 백업 12개 + 진짜 2개에서 백업 → 7개 남음(오래된 것부터 삭제). ④ `.inprogress`에 조각을 두고 API 재시작 → 지워짐. 오래된 백업만 남긴 상태 → 노랑 「La dernière sauvegarde est trop ancienne」(프랑스어), `/api/system/status`도 `status.backup.stale`. 재시작 2분 뒤 밀린 자동 백업이 스스로 돎. ⑤ **복원**: 악센트 든 진료과 → 백업 → 이름 바꾸고 직원 추가 → `DEPLOYMENT.md` 5b 명령 그대로(컨테이너 이름만 격리용) 복원 → 종료 코드 0, 원래대로 돌아옴, 악센트 유지.
+- **확인 못 한 것**: 새벽 02:00 정시 자동 백업은 기다려 보지 않았습니다(재시작 뒤 밀린 백업으로 같은 경로 확인). 여러 사람이 **화면에서** 동시에 누르는 것은 API 동시 호출로 대신했습니다. 서버 상태 창(`server-status.ps1`)은 바꾸지 않았고, `.inprogress` 폴더를 무시하는 것은 코드로만 확인했습니다(`Get-ChildItem -File`은 하위 폴더를 보지 않음). 영어 화면은 보지 않았습니다.
+- **위키**: `modules/settings.md` 2-6절(백업 탭 사용법), 3-4절(백업 흐름·동시 실행·정리·상태 판정·복원 확인), 3-6절 표, 4절 API, 6절 상수, 7절(B1·B2·B3·B6 고침, B9 수정, B10 추가, 줄 번호 기준 명시), 8절
+- **총괄 확인 요청**:
+  - 운영 중인 병원의 `backups/` 폴더에 **`.inprogress` 하위 폴더가 새로 생깁니다**. 백업을 USB로 통째로 복사하는 분이 보면 헷갈릴 수 있어 적어 둡니다. 보통 비어 있습니다.
+  - B10: `DEPLOYMENT.md` 5b에 「PowerShell이나 cmd에서 실행 (Git Bash는 /tmp 경로를 바꿈)」 한 줄을 넣으면 좋겠습니다 (총괄 소유 파일).
+  - 이전 항목의 총괄 확인 요청(S1·S2·U9·B9)은 그대로 유효합니다.
+  - **격리 스택이 운영 이미지 이름을 덮어씁니다 (중요)**: `docker-compose.yml`이 `image: bethesda-emr-backend:latest`·`bethesda-emr-frontend:latest`를 고정하고 `docker-compose.session.yml`은 이를 바꾸지 않습니다. 그래서 어느 세션이든 `up --build`를 하면 **실장님 EMR이 쓰는 이미지 태그가 그 세션의 코드로 바뀝니다**. 이미 떠 있는 컨테이너는 이미지 ID를 들고 있어 바로 바뀌지는 않지만, 운영 스택을 `--build` 없이 다시 만들면(`docker compose up -d` 등) **합쳐지지 않은 세션 코드가 운영에 올라갈 수 있습니다**. 2026-09-29 16:5x KST 확인: 태그는 운영 컨테이너 이미지(`de3d810652fa`·`5aac267d8ed8`)를 가리키고, pacs·payment 세션 컨테이너는 각각 다른 이미지로 떠 있었습니다. 운영 번들에 이 세션의 새 문구는 없었습니다 — **지금 운영은 이 세션 코드가 아닙니다.** 제안: `docker-compose.session.yml`에 `image: bethesda-s-${SESSION}-backend` / `-frontend`를 추가 (총괄 소유 파일이라 고치지 않음).
+  - 참고: 운영 EMR 컨테이너가 07:49:41Z(16:49 KST)에 `C:\Bethesda-EMR-main`(`develop` `7ad4387`)에서 다시 만들어졌습니다. 이 세션은 그 시각에 운영 쪽 compose를 실행하지 않았습니다 (이 세션의 compose 명령은 전부 `-p bethesda-s-settings`, 작업공간에서 실행). 총괄 배포라면 무시하셔도 됩니다.
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: `verify-backup.ps1`의 B4(BACKUP_PATH를 안 봄)·B5(낮에 검사하면 멀쩡한 백업을 실패로 판정할 가능성)는 아직입니다. `verify-backup.ps1`은 컨테이너 이름이 `bethesda-emr-db`로 고정이라 격리 스택에서 돌리려면 매개변수를 추가해야 합니다 — 그대로 돌리면 실장님 운영 DB 컨테이너에 임시 DB를 만듭니다.
+
+## 2026-09-29 — 현황 파악, 위키 첫 작성
+
+- **상태**: 확인 요청 (위키뿐이라 합쳐도 무해. 순서는 실장님이 백업부터로 정하심 — 위 항목)
+- **커밋**: session/settings `08d0336`
+- **한 일**: 설정 모듈의 자기 파일 전부(Settings.jsx, Login.jsx, admin/auth/backup/status/version 라우트, services, 운영 스크립트, 011·013·018 마이그레이션, DEPLOYMENT.md 백업·보안 절)를 읽고 `wiki/modules/settings.md` 1~8절을 코드 기준으로 채웠습니다. 찾은 문제 28건을 7절에 심각도·근거와 함께 정리했습니다. **코드는 고치지 않았습니다.**
+- **작업공간 정리**: worktree가 `f1e9cc4`(1.4.0)에 있어서 `git branch -m session/settings` 후 `git merge --ff-only a4a9ea6`로 지시된 출발점에 맞췄습니다 (앞으로 감기만, 다른 세션 브랜치 가져오기 아님).
+- **바꾼 파일**: `wiki/modules/settings.md`, `wiki/handoff/settings.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음
+- **확인한 방법**: 코드 읽기. 실행 중 EMR에 대해 `server-status.ps1 -Console -Lang ko`를 **읽기 전용으로** 한 번 돌림(`docker inspect`/`docker info`만 부름) — 7줄 모두 정상, 종료 코드 0, `/backups` 마운트 원본이 Windows 경로로 잡히는 것 확인. i18n 키 존재 여부는 node로 ko/en/fr 객체를 불러 확인.
+- **확인 못 한 것**: 격리 스택(9187)은 아직 띄우지 않았습니다. 7절 B5(verify-backup이 낮에 멀쩡한 백업을 실패로 판정)는 코드상 추론이고 실제 실행은 안 해 봤습니다. 통계 라우트가 staff/department를 어떻게 쓰는지 보지 않았습니다. 상태 창의 화면 멈춤(3-6절)은 추정입니다.
+- **위키**: `modules/settings.md` 1~8절 전부 새로 씀
+- **총괄 확인 요청**:
+  1. **S2 — 서버 권한 검사 누락 (높음)**: `patient`·`visit`·`consult`·`billing`·`document` 라우트가 `authMiddleware`만 있고 `permMiddleware`가 없습니다. 로그인한 직원이면 누구든 API로 수납 취소(`PUT /api/billing/:id/void`) 등을 할 수 있습니다. 각 라우트는 접수·진료·수납·진료 세션 소유라 제가 고치지 않았습니다. 세션들에 전달하거나 총괄이 일괄로 정할지 판단해 주세요. 다른 화면이 서로의 API를 부르는 경우(예: 수납이 진료 API 조회)가 있어 라우트별로 허용 권한을 정해야 합니다.
+  2. **S1 — 토큰 12시간 유효 (높음)**: 비활성·권한 변경이 다시 로그인할 때까지 적용되지 않습니다. 고치려면 `backend/src/middleware/auth.js`(총괄 소유)의 `authMiddleware`가 요청마다 `staff.status`·`permissions`를 DB에서 확인해야 합니다. 실장님이 이걸 먼저 고치기로 하시면 제가 최소 변경안을 만들어 인계 노트에 적겠습니다 — 허락해 주시겠습니까?
+  3. **U9**: 권한 목록이 `modules.js`(총괄)·`admin.routes.js`·`auth.routes.js`·`middleware/auth.js`에 따로 있습니다. 모듈을 추가할 때 네 곳을 같이 고쳐야 합니다.
+  4. **B9**: `.env.example`의 BACKUP_PATH 설명(「비우면 꺼짐」)이 1.x 이후 코드와 반대입니다. 루트 설정 파일이라 제가 고치지 않았습니다.
+- **다른 세션에 부탁**:
+  - **PACS**: `GET /api/pacs/config`가 로그인한 누구에게나 `bridge_token`을 돌려줍니다(S8). 설정 권한이 없으면 토큰을 빼 주면 좋겠습니다. 또 오더 연동 탭의 피드 주소 예시 기본값이 `:8080`인데 EMR은 1.x부터 `:9080`입니다 (`Settings.jsx:495-496`, 탭 안이라 PACS 담당).
+  - **약국**: 약품 탭의 재고 빨간색 기준이 `min_stock`이 아니라 `20`으로 고정입니다 (`Settings.jsx:298`). 약품 수정 창에 `name_en`·`generic_name`·`min_stock` 칸이 없습니다. 참고만.
+- **남은 일 · 알려진 문제**: `modules/settings.md` 7절 전체. 실장님께 제안한 순서는 아래 보고와 같습니다.

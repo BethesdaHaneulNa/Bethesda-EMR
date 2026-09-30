@@ -1,0 +1,1222 @@
+# 약국 인계 노트
+
+> 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
+
+## 2026-09-30 — 1366×768에서 약국·재고 화면이 창 안에 들어옴 · 밝은 화면 한 바퀴 · 설정 약 탭 검색
+
+- **상태**: 확인 요청. develop `15b1a61b` 위(ff, 디자인의 약국 색 작업 뒤).
+- **한 일**: 약국 화면 바깥 틀을 창 높이 그대로(`height: 100vh`, 세로 flex, `overflow: hidden`), 위 도구 줄 `flexShrink: 0`, 세 칸 격자는 `flex: 1; minHeight: 0; gridTemplateRows: minmax(0,1fr)`, 목록·처방 표·지난 내원·재고 목록·기록·보고서만 스크롤(임상병리 `3d9091c`와 같은 방식). 전에는 `calc(100vh - 88px)`인데 위 두 줄이 88px보다 높아 페이지가 넘쳤음. Stock 탭(`PharmacyStock.jsx`)도 같은 틀(`flex: 1; minHeight: 0`).
+- **바꾼 파일**: `Pharmacy.jsx`, `PharmacyStock.jsx`(틀의 크기 규칙만, 색 없음), `wiki/modules/pharmacy.md` 8절.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**(격리 9184, 1366×768, FR): 문서 높이 `scrollHeight` = 768(창 768) — 빈 화면 · 환자 고름(아래 **✓ Terminer délivrance** 아래 끝 758) · 📦 Stock 목록 · 약 고름 · Entrée 줄 열림(Sauver 보임) · 월말 보고서(⬇ CSV 보임). 약 목록(101줄)은 안쪽에서만 스크롤.
+- **밝은 화면(☀ Clair) 한 바퀴** — 디자인 세션에 넘길 것 **없음**: 대기 목록, 환자 셋(횟수 없음 · 병 단위 · 총량 없음), Externe로 바꾼 줄, 원외 처방전 창, Délivré, Stock(⚠ 확인 상자·기록·입력 줄), 월말 보고서, 설정 약품 탭과 편집 창에서 글자·바탕 대비를 스크립트로 모두 재어 3.5:1 아래 없음(그라데이션 단추는 화면으로 확인). 확인 뒤 테마는 어두운 화면으로 되돌림.
+- **설정 → Médicaments 검색 결과**: 이미 약 탭 목록 자체가 검색 결과이고 **코드 · 이름(옆에 제형) · 분류 · Prix unitaire · Stock**이 나옴 — Amoxicillin 500mg 두 줄이 MED-0068 150.00 / 2000, MED-0069 0.00 / 2500으로 구분됨. 약국 몫으로 더할 것 없음.
+- **확인 못 한 것**: 1366보다 좁은 창(1280 등), 한국어 화면의 높이(글자가 달라도 틀은 같음).
+
+## 2026-09-29 — 통합 시험 C1(확인 창 어순, 금액 자릿수)
+
+- **상태**: 확인 요청. 디자인 커밋(`a7d6c2b`, 약국 화면 색)이 develop에 들어온 뒤 그 위에서.
+- **한 일**: 조제 완료 확인 창을 언어마다 한 문장으로(`ph_dispenseConfirm`): FR « Terminer la délivrance pour RAKOTO Jean ? », KO 「RAKOTO Jean 환자의 조제를 완료할까요?」, EN « Finish dispensing for RAKOTO Jean? ». 총량 없는 약 안내가 앞에 붙는 것은 그대로. **Médicaments (interne)** 금액을 프랑스어에서 « 13 500 »(나눔 없는 빈칸)으로, ko·en은 쉼표 그대로.
+- **바꾼 파일**: `Pharmacy.jsx`(`fmt`, `dispense`의 확인 문장), i18n `ph_dispenseConfirm`(ko·en·fr), `wiki/modules/pharmacy.md` 2.2.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **확인한 방법**: 격리 9184 FR — 확인 창 « Terminer la délivrance pour TEST RAKOTO ? », 금액 « 13 500 ». `npm run build`.
+
+## 2026-09-29 — 통합 시험 B(가져온 메모의 한국어, 같은 이름 두 줄) · C2(단위 말을 제형에서)
+
+- **상태**: 확인 요청(화면 파일 Pharmacy.jsx·PharmacyStock.jsx는 건드리지 않음 — 디자인 작업과 안 부딪힘). 커밋 `4ce5ed7`.
+- **한 일**:
+  - B 메모: 가져온 확인할 점의 자료(옛 프로그램의 원래 표기 「60캡슐*66」, 「79병」)를 **화면에서** 화면 언어로 — 한국어 단위 다섯 개(정·캡슐·병·개·포)를 cp · gél. · fl. · u. · sachet로, `*`를 ×로, 수량 항목은 « 60 gél. × 66 ≈ 3960 ; quantité importée : 90 ». 저장된 값은 그대로라 **마이그레이션 없음**(실행 중 DB 값 안 바꿈). 가져온 93개 항목 전부 FR 화면에 한국어 0 확인(node로 전부 그려 봄).
+  - C2: `rx-dosing.js`가 단위 말을 `rx.dosage_form`에서 먼저 정함(Tablet cp · Capsule gél. · Powder / Sachet sachet · Suppository suppo.), 없으면 전처럼 이름에서. 옛 처방(예시 약, 제형 없음)의 문장은 그대로.
+- **바꾼 파일**: `frontend/src/documents/drug-info.js`, `frontend/src/documents/rx-dosing.js`, i18n `ph_chkQtyDetail`·`ph_u_*` 5개(ko·en·fr), `wiki/modules/pharmacy.md` 3.4·3.11.
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **다른 세션에 부탁**(총괄 전달):
+  - **진료** — C2가 화면에 나오려면: `consult.routes.js`의 `GET /visit/:visitId/prescriptions`와 `GET /:id/prescriptions`에 `(SELECT d.dosage_form FROM drug d WHERE d.id = rx.drug_id) AS dosage_form` 한 칸(진료 화면 문장·원외 처방전이 이 둘을 읽음). 처방을 막 추가한 줄은 검색 결과의 `dosage_form`을 같이 넣어 두면 다시 불러오기 전에도 맞게 나옴. 제형은 읽을 때 약 표에서 가져오므로, 나중에 약의 제형을 고치면 그 약의 옛 문장 단위도 바뀜(처방 줄에 복사하는 마이그레이션이 필요하면 말씀 주세요 — 지금은 가져온 약만 제형이 있어 영향이 작다고 봄).
+  - **진료** — B: 약 검색 목록에 **재고와 가격**을 같이(같은 이름 Amoxicillin 500mg Gélule: MED-0068 재고 2000 / MED-0069 재고 2500). `/admin/drugs`가 이미 `stock_qty`·`unit_price`·`dosage_form`을 줌. 예: 이름 옆 작게 « gél. · stock 2000 · 0 Ar ».
+  - **설정** — B: 약속처방 편집 창의 약 검색 결과·약 줄에 같은 것(재고·가격, 그리고 코드).
+- **확인한 방법**: `npm run build`. node로 `checkText`(fr·ko, 93개)와 `doseSentence`(이름만 / Capsule / Tab 이름 / Syrup — « 1 gél. × 3 fois/jour… », 「1회 1캡슐 × 하루 3회…」, 시럽은 단위 없음).
+- **확인 못 한 것**: 진료 쪽 칸이 들어오기 전이라 진료 화면·원외 처방전에서 실제로 « gél. »가 나오는 것은 못 봄.
+
+## 2026-09-29 — 통합 시험 A: 원외로 지정된 약이 없으면 원외 처방전을 발급하지 않음
+
+- **상태**: 확인 요청 (디자인이 Pharmacy.jsx를 시작하기 전에 합쳐 달라는 건). develop `fd0cd02` 위.
+- **한 일**: 약이 모두 Interne인데 💊 Ordonnance ext. → Émettre를 누르면 빈 처방전이 번호(D26-…)를 받아 발급되던 것. 서버가 그 방문(또는 진료)에 `dispense_type = 'external'` 줄이 하나도 없으면 **번호를 뽑기 전에** 400으로 막고, 화면은 Émettre를 끄고 이유를 보임(« ⚠ Aucun médicament n'est marqué « Externe » : rien à émettre… »). 🖨 Imprimer(초안)는 그대로 됨.
+- **바꾼 파일**: `frontend/src/documents/external-rx.jsx`(템플릿에 `issueBlocked(meds)` — 이유 {ko,en,fr} 또는 null), `wiki/modules/pharmacy.md` 2.3, `wiki/manual-fr/pharmacy.md`(한 줄).
+- **공용 파일 변경**:
+  - `backend/src/routes/document.routes.js`(진료 세션 파일) · POST `/documents`에서 `template_code === 'external-rx'`일 때만 외부 줄 수를 세어 0이면 400 `No prescription marked external: nothing to issue` · 번호가 헛되이 쓰이지 않게. 다른 문서 종류는 그대로.
+  - `frontend/src/components/DocumentModal.jsx`(진료 세션 파일) · 템플릿이 `issueBlocked`를 가지면 Émettre를 끄고 그 이유를 발 아래에 보임(세 줄: 계산 한 줄, `doIssue` 첫 줄 막기, 단추 옆 안내·흐린 단추). 다른 템플릿은 `issueBlocked`가 없어 그대로.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음(문구는 템플릿 안 {ko,en,fr}, 문서 쪽 관례대로)
+- **확인한 방법**(격리 9184): 모두 Interne인 환자 → API로 발급 요청 400, `document_log` 0줄 그대로 · 화면 FR: Émettre 꺼짐 + 안내 · 한 줄을 Externe로 바꾸고 다시 열기 → Émettre 켜짐, 발급 번호 **D26-00001**(막힌 시도가 번호를 쓰지 않았음) · `npm run build`, `node --check`.
+- **확인 못 한 것**: 진료 화면에서 여는 원외 처방전도 같은 규칙(외부 줄이 없으면 발급 안 됨) — 전에도 빈 종이였으므로 잃는 것은 없지만 진료 화면에서 직접 눌러 보지는 않음. 실행 중 DB에 이미 있는 빈 원외 처방전(총괄 확인 예정)은 건드리지 않음.
+- **위키**: `modules/pharmacy.md` 2.3, `manual-fr/pharmacy.md` 「Imprimer l'ordonnance…」.
+
+## 2026-09-29 — 빈 값 처리(진료 6e11f56 뒤) + 포장 단위를 바꿀 때 알림 셋
+
+- **상태**: 확인 요청. develop `18c52cd` 위(ff). **Pharmacy.jsx · PharmacyStock.jsx 디자인 시작해도 됨**(이 커밋이 합쳐진 뒤).
+- **① 빈 값**: 하루 총량·횟수·일수가 NULL일 수 있게 됨(진료). 격리에서 `rx-dosing.js`를 여덟 경우(모두 비움, 횟수만 비움, 일수만 비움, 하루 총량만 비움, 다 있음, 포장 줄 수 있음/없음, 빈 문자열)로 돌려 NaN·「0 fois」·「null ×」 없음 확인. 고친 것 하나: **하루 총량·일수는 있고 횟수만 빈 보통 줄**은 총량이 있어 조제되는데 먹는 법 문장이 통째로 빠졌음 → 문장 « 3 par jour pendant 7 jours (total 21) — nombre de prises à vérifier » / 「하루 3, 7일 (총 21) — 하루 횟수 확인 필요」, 약국 화면 Fréq. 칸에 「⚠ Nombre de prises absent — voir le médecin」(`missingTimes`, `ph_timesCheck`). 포장 단위 줄은 횟수가 비어도 표시 안 함(안내일 뿐). 총량이 없는 줄은 원래대로(「총량 없음」, 조제 확인 창).
+- **② 알림 셋**(결정: 막지 않고 알리기만):
+  - 설정 약품 탭: 재고가 있는 약의 포장 단위 체크나 단위를 바꾸면 편집 창에 노란 안내(`ph_packChangeWarn`). 저장은 그대로 됨.
+  - Stock 탭: 포장 단위 약은 재고 옆에 단위 말(목록·머리, « 59 flacons » / 「59병」). `/stock`이 이미 `pack_unit`·`pack_label`을 줌.
+  - 월말 보고서: `mixed_units`(그 달 조제 출고에 보통 줄과 포장 줄이 함께 — `stock_movement.prescription_id` → `prescription.pack_unit`) → 조제 출고 아래 「⚠ Unités mélangées」, CSV 확인 칸에도.
+- **가져오기 스크립트**: develop에서 034로 바뀐 뒤 스크립트를 돌리면 머리 첫 줄만 달라 **034 파일을 덮어썼습니다(곧바로 git으로 되돌림, 커밋·배포 없음)**. 스크립트 머리를 034 파일과 같게 고쳐 이제 같은 파일이 나오고(확인), 적용된 파일과 다르면 덮어쓰지 않고 `.new`로 쓰고 멈추게 함.
+- 코드·위키의 「403」 표기를 034로.
+
+### 확인 (격리 9184, 빈 DB — develop 034)
+- 두 시험 ALL PASS.
+- 횟수 없는 줄(MED-0001, 하루 3·7일 → 총 21): 약국 화면 Fréq. 「⚠ Nombre de prises absent — voir le médecin」, 원외 처방전 문장 위와 같음.
+- 섞임: MED-0009(PROFEIN) 포장 끔 → 보통 줄 15 조제 → 포장 켬(병) → 2병 조제 → 9월 보고서 이 약만 `mixed_units`(조제 출고 17, ok ✓), 135줄 중 1. 화면 「−17 ⚠ Unités mélangées」.
+- Stock 탭 « 59 flacons »(목록·머리). 설정 MED-0009 편집 창: 처음엔 안내 없음 → 체크 끄면 « ⚠ Le stock (59) n'a pas d'unité … » (저장하지 않고 닫음).
+
+## 2026-09-29 — 결정 B(약에 기본 용량·횟수·일수 없음) + L9(목록을 진료 완료 시각 순으로)
+
+- **상태**: 확인 요청. 가져오기(`6bc5c6d`) 위에 이어서, develop `efed392` 위로 rebase. 가져오기와 같이 합쳐 주세요.
+- **결정 B — 설정 약품 탭**(`Settings.jsx` 약품 탭만): 목록의 용량·횟수·일수·용법 열, 편집 창의 네 칸을 없앰. 편집 창 = 코드·이름·성분·영어 이름·분류·**제형(새 고르기, 8가지)**·가격·재고(보기만)·최소 재고·포장 단위. `saveEdit`이 `default_dose/freq/days/route`를 요청에서 뺌. 새 약 기본값에서도 뺌. DB 칸은 그대로.
+  - **설정 세션에 전달**: ① `admin.routes.js` PUT이 **안 온 칸을 그대로 두게**. 지금 서버는 안 온 칸을 NULL로 저장합니다 — 확인: 가져온 MED-0003을 저장하니 횟수 2·용법 BID가 비워짐(쓰지 않는 칸이지만 「56개 그대로」와 다름). **이 커밋과 설정 쪽 고침을 같이 합치는 것이 좋습니다.** ② POST/PUT이 `dosage_form`을 받게(지금은 무시 — 화면 고르기는 보이지만 저장 안 됨). ③ 약속처방 편집 창은 약을 넣을 때 약의 `default_*`로 용량·횟수·일수를 채움(`Settings.jsx:290`) — 이제 약에 값이 없으니 세트 줄에서 직접 넣는 칸이 필요합니다(이미 부탁한 「수량 칸」과 같이).
+- **가져오기 SQL**(다시 만듦): 머리말을 「가격만 현지에서, 용량·횟수·일수는 쓰지 않음(칸은 남고, 옛 용법의 횟수·용법 56개는 들어가되 안 씀)」으로. 확인할 점에서 **옛 용법 「1_2」 뺌** → 확인할 약 **64 → 63**(용법만 걸렸던 약 1개). `ph_chk_posology` 키 뺌.
+- **L9**(`pharmacy.routes.js` `pendingQuery`·`/pending`·`/patient/:id/pending`): 표시 시각 = `COALESCE(c.completed_at, c.updated_at)`, 대기 목록 `completed_at ASC NULLS LAST`, 환자 찾기 `completed_at DESC NULLS LAST`. **조제 완료 탭은 그대로** — 원래 조제한 시각을 보이고 그 순서라 진료 기록 저장에 흔들리지 않음(총괄 말씀의 「완료」 목록이 이것을 뜻했다면 알려 주세요).
+- **시험 스크립트 고침**: 설정 S3(`a95891a`) 뒤로 첫 설정 계정의 로그인 아이디가 늘 `admin` — `pharmacy.api.mjs`가 `phtest`로 만들어 로그인이 안 되던 것을 `admin`으로.
+
+### 확인 (격리 스택 9184, 빈 DB)
+- 가져오기: 활성 101 / 감춤 25, opening 합 106,467, 확인할 점 63, 기록 사슬 끊김 0. 두 시험 ALL PASS.
+- L9: A 완료 → B 완료 → A 기록을 다시 저장(`updated_at`이 B보다 늦음) → 대기 목록 A, B 그대로, 시각은 A의 완료 시각. 환자 찾기도 완료 시각.
+- 설정 FR: 목록 열 Code · Médicament · Catégorie · Prix unitaire · Stock. 편집 창 Catégorie | Forme, Prix unitaire | Stock | Stock minimum. 가격 1200 저장 → 요청에 `default_*` 없음, 재고 90 그대로, 가격 저장됨(위의 NULL 문제는 서버 쪽).
+
+## 2026-09-29 — 옛 재고 목록 가져오기 (마이그레이션 403)
+
+- **상태**: 확인 요청. develop `ac3395d` 위(rebase). **번호 403은 세션 번호** — 총괄이 매겨 주세요(지금 develop 끝은 032). 실행 중 EMR에는 총괄이 실장님께 말씀드린 뒤에.
+- **파일**: `wiki/reference/drug-import-sql.js`(새, 생성 스크립트) → `backend/sql/403_pharmacy_import_mission_stock.sql`(생성물). 화면: `PharmacyStock.jsx`, `Settings.jsx` 약품 탭, 새 `frontend/src/documents/drug-info.js`, i18n `ph_` 29개. 서버: `pharmacy.routes.js` `/stock`에 칸 추가, `POST /stock/:drugId/check-done`.
+- **결정대로 한 것**: 약 101개(이름·성분·제형·분류, 가격 0·하루 총량과 일수 비움, 옛 용법이 분명한 56개는 횟수·용법 코드) · 재고 = 목록 수량(합 106,467), 기록은 `opening` 한 줄 + 메모 「가져오기(2026-05-15 자료)」 · 예시 25개 숨김 · 약속처방 안 건드림 · 확인할 점이 남은 64개는 멈추지 않고 `import_check`에 넣어 표시 · 포장 단위 확실한 12개(병 7·튜브 3·개 2) 표시, 「확인」 4개는 표시 없이 + `topical` 확인 · 다시 돌려도 안전.
+- **새 칸 4개**(같은 마이그레이션): `dosage_form`(드러그 표에 제형 칸이 없었음 — 결정의 「제형」을 넣을 곳), `import_check`(jsonb), `import_check_done_at`·`_by`.
+- **「확인 필요」 표시 방법(세션 판단)**: 한국어 문장 대신 종류 코드 + 자료(`[{k:'qty', d:'60캡슐*66 ≈ 3960 ≠ 90'}]`) — 현장 화면이 프랑스어라 종류를 번역해 보여 주기 위해. 약국 Stock 탭에서 **Vérifié**로 「확인했음」(누가·언제 남음, 목록은 남김, 재고는 안 바꿈). 설정 약품 탭은 보기만.
+
+### 확인한 것 (격리 스택 9184)
+| | 빈 DB(시드 25) | 실행 중 EMR 백업 사본(`bethesda_2026-09-29_1406`, 031까지) |
+|---|---|---|
+| 활성 / 숨김 | 101 / 25 | 101 / 25 |
+| 가져온 약 재고 합 = opening 합 | 106,467 = 106,467 (101줄) | 같음 |
+| 확인할 점 / 포장 단위 | 64 / 병 7 · 튜브 3 · 개 2 | 같음 |
+| 모든 약의 기록 사슬 끝 = `stock_qty` | 끊김 0 | 끊김 0 |
+| 다시 돌림 | 약·기록 수·지문(md5) 그대로 | 그대로(기록 25 → 126 → 126) |
+- 백업 사본은 격리 DB 안의 따로 만든 DB에 풀어서 시험하고 지웠습니다(사본 파일도 지움). 실행 중 EMR·백업 폴더는 읽기만.
+- 두 시험(`pharmacy.api.mjs`·`pharmacy.stock.mjs`) 가져온 뒤 ALL PASS.
+- 화면(FR·KO): Stock 탭 「⚠ Médicaments à vérifier (64)」 거르기, 약 머리 아래 목록, Vérifié → 「Vérifié par Test Admin · 날짜」와 63, 기록 표 « Ouverture · Importé (liste du 15/05/2026) ». 설정 약품 탭 ⚠·제형·편집 창 목록. 월말 보고서 9월 101줄 `started_on`, 모두 ok. 진료 약 검색은 가져온 약만(AMLO5·AMLO10 안 보임), 가져온 약을 넣으면 「하루 총량 없음」·「가격 없음」 경고.
+- **약속처방**(진료 세션과 같이 볼 것): Malaria Workup 적용 → ACT01·PCM500은 « Non ajouté(s) — retiré(s) de la liste des médicaments : Artemether-Lumefantrine Tab, Paracetamol 500mg Tab » 안내와 함께 빠지고 L04·L01만 들어감. 진료 세션 `drug_active` 그대로 동작.
+
+### 총괄께 알릴 것
+- **수량 불일치 줄 수**: 결정문은 「37줄」인데 검토표에서 세면 **47개 약**(묶음이 둘인 약이 있어 불일치 항목은 49). 규칙은 같게 적용(목록의 수량 칸 값 + 확인 필요) — 37이 다른 기준이면 알려 주세요.
+- 실행 중 EMR에 **예시 약을 쓴 조제 대기 처방 5줄**(시험 자료)이 있습니다. 숨긴 뒤에도 약국에서 조제·수납은 됩니다(조제는 `is_active`를 보지 않음).
+- 9월 월말 보고서에는 예시 약 25개가 그대로 나옵니다(021의 opening이 9월). 10월부터는 움직임이 없으면 빠집니다.
+- **다른 세션에 넘길 것**: 설정 — `admin.routes.js` POST/PUT이 `dosage_form`을 받게(지금은 가져온 값만, 편집 창은 보기만). 진료 — 약 검색 결과에 제형을 보여 주면 좋음(`dosage_form`, 번역은 `drug-info.js` `formLabel`).
+- 작은 수정: 설정 편집 창의 횟수·일수가 비어도 「1」로 보이던 것(가져온 약 45개가 빈 횟수) → 빈 칸으로.
+
+## 2026-09-29 — 포장 단위 약 끝에서 끝까지 (H2-B)
+
+- **상태**: 확인 요청 — 흐름은 모두 맞음. **단위가 바뀐 약의 재고·보고서** 보완은 결정 대기(아래 C).
+- 격리 스택 9184, develop `76457c9`. 프랑스어 화면, 원외 처방전은 한국어도.
+
+### A. 따라 한 흐름과 결과
+
+| 단계 | 한 것 | 결과 |
+|---|---|---|
+| 표시 전 | AMOX250(시럽)을 보통 줄로 처방·조제(API) | 총량 15, 재고 30 → 15 |
+| 설정 | 약품 탭에서 AMOX250 체크 · Flacon, 저장 | `pack_unit` true · bottle, 재고 15 그대로 |
+| 약속처방 | 설정에서 「Test sirop」(AMOX250 + PCM500) → 진료에서 적용 | 포장 줄 「Quantité 1 flacon」, 2로 고침 → « … pendant 7 jours — 2 flacons » |
+| 진료 직접 | SALB를 흡입기로(설정 API) → 검색으로 추가 | 수량 칸 빈 채 「Indiquez la quantité」, 머리 「⚠ 1 flacon(s)/tube(s) sans quantité」, Terminé에 확인 창 |
+| 약국 (수량 없음) | 그대로 완료 → 약국 | SALB 「⚠ Quantité totale absente」, 머리 경고, 약제비는 그 줄 빼고 14,200. 조제 확인 창에 「재고에서 빠지지 않음 · 의사 확인」 |
+| 진료 고침 | 완료된 진료에서 SALB 수량 1 | 저장됨(`total_qty` 1), 경고 사라짐 |
+| 조제 | 약국 Terminer délivrance | AMOX250 15 → 13, SALB 20 → 19, PCM500 −15. 기록 표 `qty −2` |
+| 수납 | Paiement | 2 × 6,500 = 13,000 · 1 × 8,000 · PCM 1,200 → 약 22,200, 합계 37,200. 영수증 금액 같음 |
+| 원외 | 둘째 환자(API: AMOX 2병·SALB 1개·PCM) → 약국에서 두 줄 Externe → 원외 처방전 | FR « 2 flacons » « 1 inhalateur », KO 「2병」「흡입기 1개」(문장·총량 칸 둘 다). 조제 뒤 두 약 재고 그대로, 약제비 720(PCM만) |
+| 화면이 보낸 표시 | 처방 POST에 `pack_unit:false`를 보냄 | 무시되고 약 표에서 복사(true) — 진료 설계대로 |
+| 월말 보고서 | 9월 | AMOX250 조제 출고 **17 = 15(예전 단위) + 2(병)**, `ok` true. SALB 1, PCM 24 |
+| 통계 | 약 사용량 | AMOX250이 두 줄: 단위 없음 15 · Flacon 4(원내 2 + 원외 2). SALB Inhalateur 2. 합계 줄만 섞임(19 (다)) |
+| 표시 끔 | AMOX250 체크 풂 | 이미 쓴 처방 세 줄은 bottle 그대로(조제 완료 탭 「2 flacons」). 새 처방은 보통 줄(총량 15) |
+
+### B. 다른 세션에 넘길 것
+- **수납**: 수납 화면의 처방 표와 영수증 「Qté」가 숫자만(「2」) — 포장 줄이면 「2 flacons」처럼 단위 말을 붙이면 좋겠습니다(`rx-dosing.js` `packWord(rx, lang, n)`를 쓸 수 있음). 금액은 맞습니다.
+- **설정**: 약속처방 편집 창의 약 줄 수량 칸(총괄 표에 이미 있음). 확인해 보니 세트의 포장 줄은 늘 1병으로 들어옵니다.
+
+### C. 단위가 바뀐 약의 재고 — 결정 대기
+재고 숫자·기록 표에는 단위가 없습니다. 쓰던 약을 포장 단위로 바꾸면(또는 풀면) 그 순간부터 같은 숫자를 다른 단위로 읽고, 그 달 보고서 「조제 출고」에 두 단위가 더해집니다. 실행 중 EMR은 지금 25개 모두 false이고, 실제 약 목록은 처음부터 표시를 달고 들어올 것이라(가져오기 설계 A) **실제로 생기는 경우는 「나중에 바꿀 때」뿐**입니다.
+- 이번에 한 것: 위키 2.7 직원 안내 — 바꾸면 바로 Inventaire로 새 단위로 세기.
+- 제안(약국 파일만, 결정 없이 가능하다고 봄 — 하라시면 진행):
+  1. 약품 탭에서 **재고나 기록이 있는 약의 체크를 바꾸면 확인 창**(「재고 N을 병으로 읽게 됩니다. 저장 뒤 Stock 탭에서 실사하세요」).
+  2. Stock 탭: 포장 단위 약은 재고 옆에 단위 말(「13 flacons」).
+  3. 월말 보고서: 한 약의 그 달 조제 출고에 **두 단위가 섞였으면 그 줄에 표시**(처방 줄의 `pack_unit`로 가름, 통계 `f08939d`와 같은 기준). 칸을 둘로 나누지는 않음.
+- 결정이 필요한 것: 체크를 바꿀 때 **막을지**(재고 0이어야만 바꿈) 아니면 위 1처럼 **알리기만** 할지.
+
+### D. 작은 수정
+- 약품 편집 창 분류 칸이 좁아 「Antibiotique」가 잘리던 것(L6 때 칸을 넷으로 나눔) → 칸 비율 조정(`Settings.jsx` 약품 탭 편집 창).
+
+## 2026-09-29 — L6 입력 칸, 월말 보고서의 숨긴 약, 시험 약 분리
+
+- **상태**: 확인 요청. develop `353925d` 위에서 작업(rebase). 커밋 `481f242`(시험 약) · `8361494`(보고서) · 이 항목의 커밋(L6).
+- **L6** (`Settings.jsx` 약품 탭 안만, i18n `ph_genericName`·`ph_nameEn`·`ph_minStockHint`): 편집 창에 성분 · 영어 이름 · 최소 재고. 최소 재고는 0 이상 정수(화면에서 내림), 새 약 기본값 10(서버 `COALESCE(…,10)`과 같게). **약품 목록의 빨간색을 「20 미만 고정」에서 「`min_stock` 이하, 0이면 안 칠함」으로** — 약국 Stock 탭(`belowMin`)과 같은 규칙. 삭제한 약 되살리기는 설정 세션 몫으로 남김.
+- **월말 보고서**(`pharmacy.routes.js` `/stock/report`): `is_active = false`인 약은 **그 달에 기록 줄이 있을 때만** 나옴.
+- **시험 약**: 새 `backend/test/pharmacy.testdrugs.mjs`(`ensureTestDrugs`) — `TST-<이름>` 약을 설정 API로 만들고(없으면) 실사로 500에 맞춤. `pharmacy.api.mjs`·`pharmacy.stock.mjs`가 시드 약 대신 이것을 씀. 설정 API(`POST /admin/drugs`)가 바뀌면 이 파일도 봐야 합니다.
+- **확인한 것**(격리 스택 9184, 새 DB): 두 시험 ALL PASS 두 번 — 시드 약 기록은 `opening` 한 줄뿐. 숨긴 시험 약(TST-HIDDEN): 움직인 달 보고서에 있음, 다른 달엔 없음, 활성 약은 그대로. 프랑스어 편집 창: Principe actif · Nom anglais · Stock minimum 저장 → 재고 400은 그대로, Stock 탭 머리글 « Stock minimum 450 — au minimum ou en dessous » 와 목록 빨간색. 한국어 화면 라벨.
+
+## 2026-09-29 — 105줄 가져오기 마이그레이션 설계(모양만) + 7절 남은 항목 분류
+
+- **상태**: 보류 — 실장님 검토표 답을 기다림. **값을 넣는 마이그레이션 파일은 만들지 않았습니다.** 코드 변경 없음.
+
+### A. 가져오기 마이그레이션의 모양
+
+**만드는 방법**: 실장님·의료진이 고친 검토표(`wiki/reference/drug-import-review.csv`의 확정본)를 **스크립트**(`wiki/reference/drug-import-sql.js`, 검토표 스크립트 옆, 패키지 없음)가 읽어 **값이 박힌 SQL 파일 하나**를 씁니다(`backend/sql/4xx_pharmacy_import_mission_stock.sql`, 번호는 총괄). 마이그레이션은 파일 체크섬이 기록되므로 실행할 때 CSV를 읽지 않고, 확정된 값을 그대로 담은 정적 SQL이어야 합니다.
+- 스크립트가 쓰기 전에 검사합니다: 코드 중복 없음 · 이름·성분 길이(200자) · 분류가 17가지 안 · 포장 단위 값이 bottle·tube·inhaler·unit 중 하나 · 수량·가격·최소 재고가 0 이상 정수(가격은 소수 허용) · 「확인할 점」이 남은 줄은 멈추고 목록을 보여줌(실장님이 「그대로」라고 표시한 줄만 통과).
+
+**칸 대응** (검토표 열 → `drug`)
+
+| drug 칸 | 검토표 열 | 비어 있으면 |
+|---|---|---|
+| `code` | 코드 (MED-0001) | — (필수) |
+| `name` | 약 이름 (검토 때 고친 이름) | — (필수) |
+| `generic_name` | 성분 | NULL |
+| `category` | EMR 분류 | `Other` |
+| `default_dose` | 채울 칸: 하루 총량 | **NULL** (지금 기본값 '1.000'을 쓰지 않도록 명시) |
+| `default_freq` | 옮길 횟수 | NULL |
+| `default_days` | 채울 칸: 일수 | NULL |
+| `default_route` | 옮길 용법 (QD·BID·TID·QID·Q6H…) | NULL |
+| `unit_price` | 채울 칸: 가격 | 0 (수납의 「가격 없는 줄」 안내가 잡음) |
+| `min_stock` | 채울 칸: 최소 재고 | 0 |
+| `pack_unit` / `pack_label` | 포장 단위 약 (H2-B) — 병→bottle · 튜브→tube · 흡입기→inhaler · 개→unit, 「확인」·빈칸 → false/NULL | false / NULL |
+| `stock_qty` | 수량 합계 | 0 |
+| `is_active` | true | |
+
+**SQL의 순서** (한 파일, 한 트랜잭션)
+1. `INSERT INTO drug (…) VALUES (…), … ON CONFLICT (code) DO NOTHING` — 101줄(검토에서 합친 줄은 하나로). 두 번 돌려도 한 번만.
+2. **opening 재고 기록**: 이번에 넣은 약마다 `stock_movement`에 `opening` 한 줄(`qty = stock_before 0 → stock_after = 수량 합계`, 메모 「Old stock program, count of 2026-05-15」). 조건은 「그 약에 기록이 하나도 없을 때」(021과 같은 방식) — `drug.stock_qty` = 마지막 기록이라는 규칙이 처음부터 맞습니다.
+3. **예시 약 25개 숨기기**: `UPDATE drug SET is_active = false WHERE code IN (<시드 코드 25개>) AND is_active`. 지우지 않으므로 옛 처방(시험 데이터)·재고 기록은 그대로입니다.
+4. **약속처방의 약 줄**: 결정 대기(아래) — 기본안은 **마이그레이션에서 건드리지 않음**.
+
+**약속처방 약 줄 4개** (Malaria Workup: ACT01·PCM500, Diarrhea / GE: ORS·METRO — 실제 재고에 같은 약이 없음)
+- 기본안(추천): 마이그레이션은 그대로 두고, 사용 시작 전에 의료진이 **설정 → 약속처방**에서 실제 약(예: M-Artefix 80/480)으로 다시 잇습니다(결정 (가)). 되돌릴 수 있고 화면에서 보입니다.
+- 실장님이 「그 전까지 약 줄을 빼 두기(나)」를 고르시면: 마이그레이션에 `DELETE FROM order_set_item WHERE kind = 'drug' AND drug_id IN (<숨길 25개 id>)` 한 줄을 넣습니다 — **지우는 일이라 실장님 확인이 필요합니다.** 검사 줄은 남습니다.
+- 숨긴 약이 들어 있는 세트로 처방하면 진료 화면이 어떻게 보이는지는 **진료 세션 확인 필요**입니다.
+
+**약국 쪽 작은 코드 한 가지(결정 없이 가능)**: 지금 월말 보고서는 숨긴 약도 기록이 있으면 매달 나옵니다(`pharmacy.routes.js` report의 `WHERE EXISTS …`). 가져온 뒤 예시 25개가 보고서에 계속 남지 않도록, **숨긴 약은 그 달에 움직임이 있을 때만** 보이게 바꿉니다(가져오기와 같은 커밋).
+
+**시험 계획**(격리 스택, 빈 DB에서)
+- 시드 25 → 가져오기 → 활성 101 · 숨김 25
+- opening 합 = 검토표 수량 합, 모든 약의 기록 사슬 = `stock_qty`
+- 포장 단위 12줄(또는 검토 뒤 수)
+- 약국 Stock 탭·월말 보고서(예시 약 안 보임)
+- 다시 돌려도 변화 없음
+- `pharmacy.stock.mjs`·`pharmacy.api.mjs`: 예시 약 코드(ZINC 등)를 쓰므로, 가져온 뒤에는 **자기가 만든 시험 약**을 쓰게 고침
+
+**작업 크기**: 검토표가 오면 반나절(스크립트 + 생성된 SQL + 보고서 한 줄 + 시험).
+
+### B. 위키 7절 남은 항목 — 결정 필요 / 결정 없이 가능
+
+**결정 필요**
+
+| 항목 | 무엇을 정해야 하나 | 추천 |
+|---|---|---|
+| 105줄 가져오기(검토표) | 확인할 점 63줄, 같은 이름 다른 코드 6가지 합칠지, 제형 틀린 줄 고친 값, 포장 단위 「확인」 4줄, 가격·하루 총량은 나중에 채울지 | 표 답이 오면 위 A대로 |
+| 약속처방 약 줄 4개 | (가) 의료진이 다시 잇기 / (나) 그 전까지 약 줄 빼기(지우는 일) | (가), 마이그레이션은 안 건드림 |
+| L9 목록 순서 | 진료 완료 시각 순 / 접수 순 / 지금대로 | 진료 완료 시각 순(진료 세션 + 마이그레이션) — 급하지 않음 |
+| 정·캡슐 청구 올림 | 반 알 처방 때 재고는 올림, 청구는 소수 — 청구도 올릴지(수납) | 올림 |
+| 용법(TID)·횟수 불일치 경고 | 이번에는 안 하기로 함 — 다시 볼지 | 나중 |
+| 「복용 단위」 칸(mL·번) | 포장 단위 약의 하루 총량 단위를 약 표에 둘지 | 나중(H2가 현장에서 쓰인 뒤) |
+
+**결정 없이 가능**
+
+| 항목 | 할 일 | 크기 |
+|---|---|---|
+| H2 끝에서 끝까지 확인 | 설정 API·진료가 들어오면 실제 처방 줄로 확인(설정 표시 → 진료 병 수 → 약국 화면·종이·원외 처방전 → 조제 → 재고 → 수납 → 월말 보고서) | 반나절 이하 |
+| L6 약품 탭 빈 칸 | 편집 창에 **최소 재고**(Stock 탭 빨간색의 기준인데 지금 넣을 곳이 없음)와 **성분**·**영어 이름** 입력 칸 추가. 서버는 이미 이 칸들을 받음(`admin.routes.js`). 삭제한 약을 되살리는 화면은 설정 몫 | 작음 |
+| 월말 보고서의 숨긴 약 | 그 달에 움직임이 있을 때만(위 A) | 작음 |
+| 시험 스크립트 | 예시 약 대신 시험 약을 만들어 쓰게(가져오기 전에 해 둘 수 있음) | 작음 |
+
+## 2026-09-29 — H2-B ②: 포장 단위 줄 표시 (rx-dosing · 약국 화면 · 원외 처방전)
+
+- **상태**: 확인 요청 — 실장님 PC 재시작 전 저장. 코드는 끝났고 시험도 통과.
+- **커밋**: session/pharmacy — develop `ce5d938` 위 커밋 하나
+- **한 일**
+  - `rx-dosing.js`: `isPack`, `packWord`(2병 · 흡입기 1개 · 2 flacons · 1 inhalateur), 포장 줄은 `perDose` null · `isLegacyTotal` 거짓 · `doseSentence` = 안내 + 「— 2병」(수가 없으면 「병 수 확인 필요」 « nombre de flacons à vérifier »). 수납의 PatientChart도 이 함수를 쓰므로 같이 바뀜.
+  - `Pharmacy.jsx`: 포장 줄의 1회량 「—」(⚠ 없음), 수량 칸 병·개 단어. `external-rx.jsx`: 총량 칸 병·개 단어.
+  - `pharmacy.routes.js`: **대기·완료 목록의 처방 줄에 `pack_unit`, `pack_label` 추가** — 처음 시험에서 이것이 빠져 약국 화면이 포장 줄을 보통 줄로(「예전 계산」까지) 보이는 것을 찾아 고침. 원외 처방전은 처방 줄 전체를 읽어 처음부터 맞았음.
+  - 주석의 마이그레이션 이름 402 → 025.
+- **바꾼 파일**: `frontend/src/documents/rx-dosing.js`, `frontend/src/pages/Pharmacy.jsx`, `frontend/src/documents/external-rx.jsx`, `backend/src/routes/pharmacy.routes.js`, `backend/test/pharmacy.api.mjs`, `wiki/modules/pharmacy.md`(2.2, 3.4, 7절 H2, 8절), 이 노트
+- **공용 파일 변경 · 번역 키 · 마이그레이션**: 없음
+- **시험 고침**: `backend/test/pharmacy.api.mjs` T2 — 여러 번 돌리면 METRO 재고가 0이 되어 조제가 부족분으로 멈추고 「−24」가 안 맞았음(코드 문제 아님). 시작 전에 두 약을 실사로 500에 맞추게 함.
+- **확인한 방법**: `rx-dosing` 단독 시험(시럽 15/3/7 총 2 → 「하루 15, 3회로 나눠 7일 — 2병」, 흡입기 → 「하루 3회, 30일 — 흡입기 1개」, 크림 안내 없음 → 「1튜브」, 수 없음 → 「병 수 확인 필요」, 보통 정 줄은 그대로). 빌드, `node --check`, `pharmacy.api.mjs`·`pharmacy.stock.mjs` 통과. 격리 스택(포장 표시는 진료 쪽이 아직 안 붙이므로 **격리 DB에서 줄 3개에 직접 표시**): 프랑스어 약국 화면 「2 flacons」「1 inhalateur」, 1회량 「—」, 수 없는 줄 « Quantité totale absente » + 조제 확인 창에 이름, 원외 처방전 « 3 fois/jour pendant 30 jours — 1 inhalateur », 약제비 9,000(= 2병 × 4,500), **조제 후 Codaep 재고 40 → 38**.
+- **확인 못 한 것**: 한국어 화면 눈으로(함수 출력으로만 확인), 진료가 실제로 붙인 줄(진료 작업 뒤).
+- **다른 세션에 부탁**: 없음(설정·진료 몫은 설계 메모대로 총괄이 전달함)
+
+## 2026-09-29 — H2-B ①: 포장 단위 약 칸(마이그레이션 402) + 약품 탭 체크·단위
+
+- **상태**: 확인 요청 — **이것이 develop에 들어가야 설정(API 두 칸)·진료가 칸 이름을 보고 시작**(총괄 지시대로 먼저 한 커밋)
+- **커밋**: session/pharmacy — develop `a264315` 위 커밋 하나
+- **DB 마이그레이션**: `backend/sql/402_pharmacy_pack_unit.sql` — `drug.pack_unit`(boolean, 기본 false) · `drug.pack_label`(varchar(10)) · `prescription.pack_unit` · `prescription.pack_label`, 단위 `CHECK`(bottle · tube · inhaler · unit). **칸만 추가, 어떤 약도 표시하지 않음**(결정: 예시 약 4개 표시 안 함). 여러 번 돌려도 안전.
+- **칸 이름(다른 세션용)**
+  - 설정 `admin.routes.js` POST·PUT `/drugs`: `pack_unit`(불린), `pack_label`(`'bottle'|'tube'|'inhaler'|'unit'`|null). `pack_unit` 거짓이면 `pack_label` null로.
+  - 진료 `consult.routes.js`: POST 때 `drug_id`로 `drug.pack_unit`, `drug.pack_label`을 읽어 `prescription.pack_unit`, `prescription.pack_label`에 복사. 포장 단위 줄의 병·개 수는 요청 칸 `pack_qty`(정수 ≥ 1) → `total_qty`, 없으면 NULL. (설계는 아래 「H2 설계 메모」)
+- **약품 탭**(`Settings.jsx` 약품 탭 안): 편집 창 아래 「포장 단위 약」 체크 + 단위 고르기(켜면 기본 병, 끄면 비움) + 안내(단가는 병·튜브 하나 값). 목록 이름 옆에 단위 표시. 새 번역 키 `ph_packUnit`, `ph_pack_bottle|tube|inhaler|unit`, `ph_packUnitHint`, `ph_packUnitHintOn`(ko·en·fr).
+- **시험 고침**: `backend/test/pharmacy.stock.mjs` — 설정이 이제 재고를 안 쓰므로(설정 `73b0517`) 「설정 저장이 재고를 바꾼다 / 밖에서 바뀜 메움」 검사를 「설정 저장이 재고를 안 바꾼다 / 입고가 기록에서 바로 이어진다」로.
+- **확인한 방법**: 빌드. 격리 스택 9184에서 402 적용(네 칸, 기본값 false/비움), **한 번 더 돌려도 오류 없음**, 단위 CHECK가 `'jar'`를 거절. `pharmacy.stock.mjs`·`pharmacy.api.mjs` 전부 통과. 화면(관리자, 프랑스어): Codaep 편집 → 체크 전 단위 칸 흐림·안내 « À cocher pour les sirops… », 체크 → 단위 « Flacon »(Flacon/Tube/Inhalateur/Unité), 안내 « Le médecin indique le nombre… Saisissez le prix par flacon/tube », 저장 요청에 `pack_unit: true, pack_label: "bottle"`.
+- **확인 못 한 것**: 저장한 표시가 **남는지**는 설정 세션이 API에 두 칸을 넣은 뒤 확인됨(지금 서버는 모르는 칸을 무시). 시험으로 저장한 것은 없음 — 예시 약은 표시하지 않기로 해서 창을 취소로 닫음.
+- **위키**: 2.7(체크 사용법), 4절 DB 표 두 곳, 6절, 7절 H2 진행·「복용 단위」 후보, 8절.
+- **다른 세션에 부탁**: 설정 — API 두 칸(위 칸 이름). 진료 — 설계 메모대로(서버 규칙·처방 줄 수량 칸·약속처방 quantity).
+
+## 2026-09-29 — H2 「포장 단위 약」(B) 설계 메모 + 검토표에 포장 단위 열
+
+- **상태**: 보류 — 총괄 설계 확인 대기(코드 전). 검토표 갱신은 확인 요청.
+- **결정**(실장님, 2026-09-29): 병·개로 주는 약은 약에 「포장 단위 약」 표시를 해 두고, 표시한 약은 총량을 계산하지 않고 **의사가 병·개 수를 직접** 적는다.
+
+### 1. 무엇이 바뀌나 (한 줄 요약)
+
+포장 단위 약의 처방 줄은 `total_qty` = **의사가 적은 병·개 수**(정수 ≥ 1)입니다. 하루 총량·횟수·일수는 **복용 안내**로만 남고 총량 계산에 쓰지 않습니다. 수납·재고·통계는 이미 저장된 `total_qty`만 읽으므로, 그대로 병·개 수로 청구·차감·집계됩니다.
+
+### 2. 데이터 — 마이그레이션(약국 번호대, 예: `402_pharmacy_pack_unit.sql`)
+
+```sql
+ALTER TABLE drug         ADD COLUMN IF NOT EXISTS pack_unit  BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE drug         ADD COLUMN IF NOT EXISTS pack_label VARCHAR(10)
+                         CHECK (pack_label IS NULL OR pack_label IN ('bottle','tube','inhaler','unit'));
+ALTER TABLE prescription ADD COLUMN IF NOT EXISTS pack_unit  BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE prescription ADD COLUMN IF NOT EXISTS pack_label VARCHAR(10);
+```
+- `drug.pack_unit` / `pack_label`: 약의 표시와 종이에 찍을 단위(병 flacon · 튜브 tube · 흡입기 inhalateur · 개 unité).
+- **처방 줄에도 복사**(`prescription.pack_unit`, `pack_label`) — 단가를 처방할 때 복사하는 것과 같은 이유입니다. 나중에 약의 표시를 바꿔도 이미 쓴 처방의 뜻이 바뀌지 않게 합니다.
+- **옛 처방**: 새 칸의 기본값이 `false`라 **그대로**입니다(예전 계산 총량, 다시 계산하지 않음). 실행 중 EMR은 시험 데이터뿐이고, 흡입기 SALB 같은 줄은 「예전 계산」 표시만 붙습니다.
+- **시드 약 4개 표시**(PCM250·AMOX250·CODAEP 시럽 → bottle, SALB → inhaler): 데이터를 바꾸는 일이라 **실장님 확인이 필요**합니다. 예시 25개는 어차피 105줄 가져올 때 숨길 예정이므로, 이 표시는 **안 해도 됩니다**(추천: 안 함).
+- 105줄 가져오기 때는 검토표의 「포장 단위 약」 열대로 채웁니다.
+
+### 3. 누가 무엇을
+
+| 부분 | 파일 | 세션 | 할 일 |
+|---|---|---|---|
+| 마이그레이션 | `backend/sql/4xx_pharmacy_pack_unit.sql` | **약국** | 위 2절 |
+| 약 등록 API | `admin.routes.js` POST·PUT `/drugs` | **설정** | `pack_unit`(불린), `pack_label`(목록 중 하나 또는 비움) 받아 저장. `pack_unit`이 참인데 `pack_label`이 비면 `'unit'` |
+| 약품 편집 창 | `Settings.jsx` **약품 탭 안** | **약국** | 「포장 단위 약」 체크 + 단위 고르기(병/튜브/흡입기/개), 목록에 표시 |
+| 처방 줄 저장 규칙 | `consult.routes.js` POST·PUT `/prescriptions`, `rxTotal()` | **진료** | ① POST: `drug_id`로 **약 표에서** `pack_unit`·`pack_label`을 읽어 줄에 복사(화면이 보낸 값은 믿지 않음). ② 포장 단위 줄이면 `total_qty` = 요청의 `pack_qty`(정수 ≥ 1, 없거나 비면 **NULL**), 하루 총량·횟수·일수는 계산에 쓰지 않음. ③ PUT: 포장 단위 줄은 `pack_qty`가 왔을 때만 `total_qty`를 바꿈(하루 총량·일수를 고쳐도 총량 그대로). 조제된 줄은 지금처럼 409 |
+| 처방 줄 화면 | `Consultation.jsx` | **진료** | 포장 단위 약이면 **수량 칸(병·개)**을 보이고 필수로 표시. 하루 총량·횟수·일수 칸은 **복용 안내**로 남김(비워도 됨). 풀이 줄은 `doseSentence`가 알아서 바꿈 |
+| 약속처방 | `order_set_item.quantity`(이미 있음) → `applySet` | **진료** (+ 설정의 약속처방 탭 편집 칸) | 포장 단위 약이면 세트의 `quantity`를 `pack_qty`로 넘김(기본 1) |
+| 처방 줄 읽는 규칙 | `documents/rx-dosing.js` | **약국** | `perDose` → 포장 단위 줄은 `null`(1회량을 계산하지 않음, ⚠도 없음). `isLegacyTotal` → 포장 단위 줄은 늘 거짓. `doseSentence` → 아래 4절. `packWord(rx, lang)` 새로 |
+| 약국 조제 화면 | `Pharmacy.jsx` | **약국** | 1회량 칸 「—」(경고 없이), 수량 칸 「2 병 / 2 flacons」 |
+| 원외 처방전 | `external-rx.jsx` | **약국** | 총량 칸 「2 flacons」, 1일량 칸은 안내 그대로 |
+| 수납 | `billing.routes.js`, `Payment.jsx` | **수납** | **코드 변경 없음**(`total_qty × unit_price`). 대신 이런 약의 **단가는 병·개당**이어야 함 — 설정 편집 창에 안내 한 줄(약국이 함) |
+| 환자 차트 기록 | `PatientChart.jsx` | 수납 | 변경 없음(`doseSentence`를 이미 씀) |
+| 재고·월말 보고서 | `pharmacy.routes.js` | 약국 | 변경 없음 — 조제 때 `Math.ceil(total_qty)` = 병·개 수. 입고·실사도 병·개로 셈 |
+| 통계 약품 사용량 | `stats.routes.js` | 통계 | 변경 없음(약마다 합). 포장 단위 약은 「병」 단위로 합쳐짐 — 원하면 통계 화면에 단위 표시(선택) |
+
+**합치는 순서**: 마이그레이션 + 설정 API + 약품 편집 창(약국) → 진료 서버·화면 → 약국 표시. **같은 날 함께** 합치는 것을 권합니다. 진료가 먼저 들어가면 포장 단위 줄의 총량이 NULL로 저장되고, 약국·수납은 「총량 없음」을 띄웁니다 — 틀린 숫자는 나가지 않습니다.
+
+### 4. 종이·화면 문장 (`doseSentence`, 포장 단위 줄)
+
+- 하루 총량·횟수·일수가 있으면 안내 + 병·개 수: 한국어 「하루 15, 3회로 나눠 7일 — 2병」, 프랑스어 « 15 par jour en 3 prises, pendant 7 jours — 2 flacons », 영어 « 15 a day in 3 doses for 7 days — 2 bottles »
+- 안내가 없으면 병·개 수만: 「2병」 « 2 flacons »
+- **하루 총량의 단위(mL, 번 뿌림, 방울)는 약 표에 없어서** 숫자만 찍힙니다. 단위가 필요하면 의사가 메모 칸에 적고(메모는 원외 처방전 「용법/비고」에 찍힘), 나중에 약 표에 「복용 단위」 칸을 더할 수 있습니다(이번 범위 밖).
+- 병·개 단어: bottle 병/flacon(s)/bottle(s), tube 튜브/tube(s), inhaler 흡입기/inhalateur(s), unit 개/unité(s).
+- 1회량: 계산하지 않고 「—」(⚠ 없음). 1회 5 mL 같은 안내는 문장의 「하루 15, 3회로 나눠」로 읽힘.
+
+### 5. 빈틈과 규칙
+
+- 포장 단위 약인데 병·개 수를 안 적으면 `total_qty` NULL → 약국 「총량 없음」, 조제 확인 창에 이름, 수납은 이미 「수량 없는 줄」로 표시. **0으로 청구·조제되지 않음.**
+- 병·개 수는 **정수**만(재고가 정수). 반 병 처방은 안 됨.
+- 처방한 뒤 약의 표시를 바꿔도 그 줄은 그대로(복사했으므로).
+
+### 6. 작업 크기
+
+| 세션 | 크기 |
+|---|---|
+| 약국(마이그레이션, 약품 탭, rx-dosing, 약국 화면, 원외 처방전) | 약 반나절 |
+| 설정(API 두 칸) | 작음 |
+| 진료(서버 규칙 + 처방 줄 수량 칸 + 세트) | 반나절 |
+| 수납·통계 | 없음(확인만) |
+
+### 7. 검토표에 포장 단위 열
+
+- `wiki/reference/drug-import-review.csv`에 **「포장 단위 약 (H2-B)」**(병/튜브/개/확인)과 **「포장 단위 근거」**(제형·단위·원래 수량 표기) 두 열을 넣었습니다. 옛 「병·개 단위 약?」 열 자리입니다. 스크립트 `drug-import-review.js`도 함께 고침.
+- **확실한 12줄**: 시럽 4(병) · 질 겔 1(튜브) · 크림·연고 2(Hydrocortisone, Neodex 안연고 — 튜브) · 점안액 3(병) · Vaseline·Sulfadiazine 2(「개」 — 통인지 병인지 확인).
+- **「확인」 4줄**: Hemorex, Madecassol ×3 — 제형은 「정」인데 세부 분류가 외용(Topical wound/skin)이고, Madecassol 한 줄은 neomycin이 들어 있어 연고일 수 있습니다. 확인할 점 칸에도 적었습니다.
+- 총괄이 말씀하신 「약 21줄」은 옛 프로그램의 제형 칸을 그대로 센 수입니다. 그 칸의 「안약 12」에 알약 8개가 섞여 있어서, 고친 제형으로 세면 **12 + 확인 4**입니다.
+
+## 2026-09-29 — 설정 약품 탭: 재고 칸 읽기 전용 (약국 화면 쪽 먼저)
+
+- **상태**: 확인 요청 — 설정 세션의 서버 작업(`admin.routes.js` POST·PUT이 재고를 안 씀)과 같이 합치기로 받음
+- **커밋**: session/pharmacy — `d21e1d5` 위 커밋 하나
+- **한 일**: 약품 편집 창의 재고 칸을 **읽기 전용·흐리게**, 새 약은 **0 고정**, 칸 아래 안내 「재고는 약국 → 📦 재고 탭에서…」(`ph_stockReadOnlyHint`). 같은 탭의 「경로 / Voie」 칸 이름(목록 머리·편집 칸)을 결정대로 「용법 / Posologie」(`ph_colDirections`)로.
+  - `saveEdit`(설정 세션 코드)는 **고치지 않았음** — 재고가 바뀌지 않으면 요청에서 재고를 빼고 보내므로, 읽기 전용이면 서버를 바꾸기 전에도 설정 저장이 재고를 건드리지 않음.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx`(약품 편집 창의 재고 칸·용법 칸 이름, 약품 목록 머리 — 약품 탭 안), `wiki/modules/pharmacy.md`(2.7, 6절, 7절 M5, 8절), 이 노트
+- **공용 파일 변경**: i18n `ph_stockReadOnlyHint` 1개(ko·en·fr)
+- **확인한 방법**: 빌드. 격리 스택 9184, 관리자 계정, 프랑스어:
+  - Amlodipine 10mg 편집 → 재고 칸 disabled(400), 안내 « 📦 Le stock se modifie dans Pharmacie → 📦 Stock … », 칸 이름에 « Posologie ». 단가만 120 → 125 저장 → 단가 125, **재고 400 그대로, 기록은 opening 한 줄뿐**(밖에서 바뀜 줄 없음).
+  - + Ajouter로 새 약 TESTNEW → 편집 창 재고 0, 등록 후 재고 0. 간호사 계정으로 Stock 탭 입고 10 → 0 → 10, 이번 달 보고서 「월초 0 · 입고 10 · 월말 10 · ✓」.
+- **다른 세션에 부탁**: 설정 — `admin.routes.js` POST/PUT이 `stock_qty`를 쓰지 않게(새 약은 0). 그러면 `stock_expected` 안전장치와 `moveStock`의 「밖에서 바뀜」 메움 줄은 더 생기지 않음(메움 코드는 남겨 둬도 무해).
+
+## 2026-09-29 — 재고 기록 ③: 월말 재고 보고서 (화면 + CSV)
+
+> **총괄 확인 (2026-09-29)**: 재고 ③ 월말 보고서 `d21e1d5` 합침 + 실행 중 EMR 반영. 실행 중 EMR: 2026-09 보고서 25줄 모두 맞춤 확인 ok, 월말 합 6,452 = 지금 재고 합, 25개 모두 이달에 기록 시작 / 2026-08 빈 목록 / 잘못된 달 400 / 의사·접수 계정 403. 달 경계를 DB 기본값 UTC 상태에서 확인해 시간대 고정이 필요했음을 보인 것 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — develop 위 커밋 하나(rebase 뒤 해시는 보고 메시지에)
+- **한 일**: `GET /api/pharmacy/stock/report?month=YYYY-MM`(권한 pharmacy·settings·stats) — 기록 표에서만 계산(월초·입고·조제 출고·장부 부족·실사 조정·폐기·월말·ok), 그 달 안에 기록이 시작된 약은 opening을 월초로 하고 `started_on`, 기록 시작 전 달은 빈 목록. 「Stock」 탭 목록 위 **📊 월말 재고 보고서** 버튼 → 달 고르기, 표, **⬇ CSV**(화면에서 만듦 — 칸 이름이 화면 언어, UTF-8 BOM + CRLF).
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `frontend/src/pages/PharmacyStock.jsx`, `backend/test/pharmacy.stock.mjs`(보고서 검사 추가), `wiki/modules/pharmacy.md`(2.6 보고서 사용법, **3.10 새로**, 4절, 7절 M4·M5 해결됨·M6 결정, 8절)
+- **공용 파일 변경**: i18n `ph_` 키 13개(`ph_reportTitle`, `ph_month`, `ph_r*`, `ph_reportEmpty`, ko·en·fr)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**
+  - `node --check`, 빌드. `pharmacy.stock.mjs` 전부 통과(보고서: 이번 달 모든 줄 합 맞음 · 월말 = 지금 재고 · 통계 전용 200 · 창구 403 · 잘못된 달 400 · 기록 전 달 빈 목록), `pharmacy.api.mjs` 통과.
+  - **달 경계**: 격리 DB에서 ZINC 기록 7줄을 8월로 옮김(8/31 23:59:59 한 줄, 9/1 00:00 한 줄 포함) → 8월 「기록 시작 8/10 · 315 +51 −7(조정) −3(폐기) = 356」, 9월 「356 +253 −2 −28 −11 = 568」 손 계산과 같음, 7월 빈 목록. 의사(진료만) 403.
+  - 화면(간호사, 프랑스어): Rapport mensuel de stock, 9월 표, CSV 첫 바이트 `EF BB BF`, 머리글 « Code,Médicament,Catégorie,Stock début,… », ZINC 줄 « ZINC,Zinc 20mg Tab,Vitamine,356,253,2,0,-28,11,568,OK ».
+  - develop의 DB 연결 시간대 고정 뒤 경계 재확인 — 보고 메시지에 결과.
+- **확인 못 한 것**: 엑셀에서 직접 열어 보지는 못함(바이트로 BOM 확인). 실제 자정을 넘기며 쓴 기록은 없음(시각을 옮겨 확인).
+- **다른 세션에 부탁**: 통계 — 원하면 같은 API로 통계 화면에 연결(나중)
+
+## 2026-09-29 — 재고 기록 ②: 약국 화면 「📦 Stock」 탭 (입고 · 실사 · 폐기 · 재고 기록)
+
+> **총괄 확인 (2026-09-29)**: 재고 ② `529a8f1` 합침(`b795852`) + 실행 중 EMR 반영. **실행 중 EMR 화면에서 직접 확인**(한국어, 관리자): 약국 → 📦 재고 탭 → 약 25개와 지금 재고, 약을 고르면 입고·실사·폐기 단추와 재고 기록(기록 시작 +300, 0 → 300). 콘솔 오류 없음. 입고·실사·폐기를 실제로 눌러 보지는 않음(운영 재고를 바꾸지 않으려고) — 그 부분은 세션의 격리 스택 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — develop `c898cd1` 위 커밋 하나. (합쳐진 ① `d806e14`의 rebase 사본 `b5bf99f`는 develop에 이미 있는 내용이라 rebase 때 빠짐 — 401/021이 두 번 생기지 않음.)
+- **한 일**
+  - 새 파일 `frontend/src/pages/PharmacyStock.jsx`: 왼쪽 약 목록(검색·분류, 최소 재고 이하 빨간색), 오른쪽 지금 재고 + **Entrée · Inventaire · Mise au rebut** 버튼 → 한 줄 입력(수 + 메모, 실사는 「장부와 차이」 미리 보기), 저장 뒤 초록 알림 「477 → 577」, 아래 재고 기록 표(종류·변화·앞→뒤·장부 부족·누가·환자·메모).
+  - `Pharmacy.jsx`: 윗줄에 탭 하나, 재고 탭에서는 조제용 버튼을 감춤. 조제 흐름은 그대로.
+  - 화면에서 먼저 검사(정수, 실사·폐기 메모 필수, 폐기 > 재고), 서버 문구(`ERR_*`)도 번역. 서버가 쓰는 메모 두 개(기록 시작, 밖에서 바뀜)도 번역.
+  - 위키: 직원용 **2.6 재고 탭 사용법 새로**(프랑스어 화면 기준), 약품 등록은 2.7, 주의는 2.8, 2.2의 재고 부족 안내를 Stock 탭으로, **3.9 새로**, 마이그레이션 이름 401 → **021**(총괄이 바꾼 이름), 7절 M5 진행, 8절.
+- **바꾼 파일**: `frontend/src/pages/PharmacyStock.jsx`(새), `frontend/src/pages/Pharmacy.jsx`, `wiki/modules/pharmacy.md`, 이 노트
+- **공용 파일 변경**: i18n `ph_` 키 추가 — 탭·검색·버튼·입력 칸·안내·오류·기록 표 칸·종류 5개·메모 2개 (약 37개, ko·en·fr, 쓰인 키 모두 있음 확인)
+- **DB 마이그레이션**: 없음
+- **확인한 방법** — 빌드 통과. 격리 스택 9184, **간호사 계정**(role nurse, 권한 registration·pharmacy·lab):
+  - 프랑스어: 📦 Stock 탭 → Zinc 선택 → **Entrée 100**(메모 « Équipe mission octobre », 악센트 그대로) → « ✓ Zinc 20mg Tab: 477 → 577 », 기록 맨 위 Entrée +100. **Inventaire**: 메모 없이 저장 → « Veuillez écrire une note. », 570 입력 시 « Écart avec le registre -7 », 메모 넣고 저장 → 577 → 570. **Mise au rebut** 9999 → « Impossible de jeter plus que le stock enregistré… », 2 → 570 → 568(사유 « cassé »).
+  - 한국어: Folic acid 기록에 조제 −8 · 3 → 0 · **장부 부족 5** · 환자 「STOCK short #26-…」, Loratadine 기록에 「기록 밖에서 바뀜 (설정 화면)」 줄 번역.
+  - 조제 대기 탭으로 돌아가면 목록·환자 찾기·원외 처방전 버튼 그대로.
+  - **총괄 알림 확인(PatientBox)**: 원외 처방전 환자 상자가 주소·전화 없이 2줄(성명·차트번호 / 생년월일·성별), 688px 폭에서 전체 높이 501px — 이상 없음.
+- **확인 못 한 것**: 영어 화면은 키만. 약이 수백 개일 때 목록 속도(지금 25개).
+- **다른 세션에 부탁**: 설정 — (앞 항목과 같음) 약품 탭 재고 칸 읽기 전용, admin POST/PUT 재고 안 씀. 약품 탭 화면은 약국이 할 수 있으니 순서를 정해 주세요(서버를 먼저 바꾸면 화면에서 재고 칸을 고쳐도 무시됨).
+
+## 2026-09-29 — 재고 기록 ①: 기록 표 · moveStock · 조제 자동 기록 · 입고/실사/폐기 API · 라우트마다 권한
+
+> **총괄 확인 (2026-09-29)**: 재고 ① 실행 중 EMR 확인 결과: 마이그레이션 021 적용, 약 25개의 재고 지문이 반영 전과 같음(합 6,452), 기록 표에 opening 25줄(합 6,452), 「지금 재고 ≠ 마지막 기록」 0건. 권한: 관리자·의사·약국 계정은 재고 조회 200, 접수 403, 의사의 조제 대기 목록 403. 메모 없는 실사 400. 확인하며 쓴 것 없음(기록 25줄 그대로).
+
+> **총괄 확인 (2026-09-29)**: 재고 ① `d806e14` 합침 + 실행 중 EMR 반영(반영 전 DB 백업). 마이그레이션은 `401` → **`021_pharmacy_stock_movement.sql`** 로 번호를 바꿔 합침(내용 그대로, 첫 줄 주석만). 결과는 아래 총괄 답장. 동시 시험에서 「마지막 기록」 순서 문제를 찾아 id 순서·`clock_timestamp()`로 고친 것, 설정 화면이 밖에서 바꾼 재고를 사슬이 끊기지 않게 메우는 것 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — `2bb89c3` 위 커밋 하나
+- **DB 마이그레이션**: `backend/sql/401_pharmacy_stock_movement.sql` — 새 표 `stock_movement` + 약마다 `opening` 한 줄. **기존 값은 바꾸지 않음**(`drug.stock_qty` 그대로). 번호는 총괄이 매김.
+- **한 일** (승인된 설계 그대로, 달라진 점은 굵게)
+  - `moveStock()` 하나로 모든 재고 변화: 약 행 `FOR UPDATE` → `drug.stock_qty` → 기록 한 줄, 부른 쪽 트랜잭션 안. 조제는 지금 트랜잭션 안에서 줄마다 `dispense` 기록(처방·진료·조제한 사람), 부족분은 `shortfall`로. 약 행 잠금 순서(`drug.id` 오름차순)는 그대로.
+  - API: `GET /stock`, `GET /stock/:drugId/movements`, `POST /stock/:drugId/receive|count|discard`. 정수만, 실사·폐기는 메모 필수, 폐기가 장부보다 많으면 409.
+  - 권한을 **라우트마다**로: 기존 6개 라우트 모두 `canDispense`(pharmacy) — 빠진 것 없음(위키 4절 표). 재고 5개는 `canStock`(pharmacy·consultation·settings). `canReport`(pharmacy·settings·stats)는 ③에서 씀.
+  - **설계에 더한 것**: 설정 화면이 아직 재고를 직접 쓰므로, `moveStock`은 지금 재고가 마지막 기록과 다르면 먼저 `adjust` 한 줄(직원 없음, 메모 「Changed outside the stock record (settings screen)」)로 메움 → 기록 사슬이 끊기지 않고 밖에서 바뀐 사실이 남음. 설정 세션이 재고 칸을 읽기 전용으로 바꾸면 더는 생기지 않음.
+- **시험에서 찾아 고친 것 두 가지**
+  1. **순서를 시각으로 보면 틀림**: 처음에 「마지막 기록」을 `created_at`(=`NOW()`, 트랜잭션 **시작** 시각) 순으로 찾았더니, 조제 10건 + 입고 10건 동시 시험에서 **있지도 않은 「밖에서 바뀜」 줄이 여러 개** 생김(재고 숫자는 맞았음). → 순서는 `id`(잠금 쥔 채 넣으므로 실제 순서)로, `created_at`은 넣는 순간의 `clock_timestamp()`로(마이그레이션 기본값도). 고친 뒤 세 번 돌려 0줄.
+  2. 파일을 만드는 스크립트의 따옴표 문제로 SQL 자리표시자의 `$`가 빠진 줄 4개(검색·분류 거르기·기록 날짜 범위)를 시험이 잡아냄 → 고침. 코드에 `${params.length}` 앞에 `$`가 모두 있는지 grep으로 확인.
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `backend/sql/401_pharmacy_stock_movement.sql`(새), `backend/test/pharmacy.stock.mjs`(새), `wiki/modules/pharmacy.md`(3.3·**3.8 새로**·4절 라우트×권한 표·API·DB·7절 M5·8절)
+- **공용 파일 변경 · 번역 키**: 없음(화면은 ②에서)
+- **확인한 방법**
+  - `node --check`. 격리 스택 9184에서 마이그레이션 적용(약 25 · opening 25 · 재고와 기록이 다른 약 0).
+  - `node backend/test/pharmacy.stock.mjs` **전부 통과, 세 번**: 권한(간호사 계정·의사 계정 재고 가능, 창구·통계 전용 불가, 의사는 조제 목록 403, 간호사 조제 목록 200) · 입고 +50 · 0/2.5 거절 · 실사(같은 숫자 → 0 기록, 적은 숫자 → −7) · 메모 없는 실사·폐기 거절 · 장부보다 많은 폐기 409 · 없는 약 404 · 부족분(3개에 8개 조제 → shortage 보고, 기록 `-8, 3→0, shortfall 5`, 환자 차트번호 연결) · **조제 10 + 입고 10 동시** → 모두 200, 재고 200−30+50=220, 가짜 줄 0 · 설정 화면에서 재고 +11 뒤 입고 → 메움 줄 +11 뒤 입고가 이어짐 · **모든 약 기록 사슬 끊김 없음, 마지막 = stock_qty**.
+  - `node backend/test/pharmacy.api.mjs` 전부 통과(동시 조제·교착·원내/원외 잠금 등 기존 시험).
+- **확인 못 한 것**: 화면이 아직 없음(②). 자정 경계는 ③에서.
+- **다른 세션에 부탁**: 설정 — 이것이 합쳐진 뒤 약품 탭 재고 칸 읽기 전용, `admin.routes.js` POST/PUT이 재고를 쓰지 않게(총괄이 전달 예정이라고 받음). 약품 탭 화면 쪽은 약국이 함.
+
+## 2026-09-29 — 약품 분류 17가지 · 총량 0도 「총량 없음」으로 (작은 커밋 두 개)
+
+> **총괄 확인 (2026-09-29)**: 분류 17가지 `3e07b11`·총량 0 표시 `2bb89c3` 합침(`4575c34`) + 실행 중 EMR 반영. 화면은 세션의 격리 스택 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy `3e07b11`(분류) · 이 커밋(총량 0)
+- **분류**: 설정 약품 탭 `DRUG_CATEGORIES` 7 → 17(Analgesic · Antibiotic · Antihistamine · Antimalarial · Antiparasitic · Cardiovascular · Corticosteroid · Dermatology · Endocrine · GI · Gynecology · Musculoskeletal · Ophthalmic · Respiratory · Urology · Vitamin · Other). 가져올 표의 대응표(`drug-import-review.js` `CATEGORY`)가 쓰는 값이 모두 들어 있는지 스크립트로 확인. `ph_cat_*` 10개 추가(ko·en·fr). 저장값은 영어 그대로.
+- **총량 0**: `rx-dosing.js`에 `hasTotal(rx)`(저장 총량 > 0). 약국 화면 수량 칸·약제비 아래·조제 확인 창, 원외 처방전 총량 칸·복용 문장이 모두 이것을 씀. 총량 0인 줄은 「예전 계산」으로 보지 않음(`isLegacyTotal`).
+- **공용 파일 변경**: i18n `ph_cat_*` 10개
+- **확인한 방법**: 빌드. 격리 스택 9184에서 하루 총량을 비운 처방 → 서버가 `total_qty = 0.000`으로 저장하는 것 확인 → 약국 화면(한국어) 「⚠ 총량 없음」, 약제비 아래 표시, 조제 확인 창에 「· Loratadine 10mg Tab」.
+- **다른 세션에 부탁**: 진료 — 하루 총량이 빈 채 저장하려 할 때 경고(총괄이 전달 예정이라고 받음)
+
+## 2026-09-29 — 실장님께 드릴 「가져올 표」: wiki/reference/drug-import-review.csv
+
+> **총괄 확인 (2026-09-29)**: 검토표 `106e38f` 합침. 실장님께 파일로 전달(「베데스다_가져올약_검토표.csv」, 101줄). 실장님 확인 전에는 가져오기를 실행하지 않음.
+
+- **상태**: 확인 요청 (표만, 데이터 변경 없음) — 총괄이 실장님께 전달
+- **커밋**: session/pharmacy — 표와 만드는 스크립트
+- **파일**: `wiki/reference/drug-import-review.csv`(UTF-8 BOM, 엑셀용 CRLF, 머리글 한국어) · 다시 만들기 `node wiki/reference/drug-import-review.js`(패키지 필요 없음, 원본 CSV는 읽기만)
+- **내용**: 약 코드 하나 = 한 줄, **101줄**(묶음 합산). **확인할 점이 있는 63줄이 위**, 없는 38줄이 아래.
+  - 칸: 확인할 점 · 코드 · 약 이름 · 성분 · 함량 · 제형(옛 값/고친 값) · EMR 분류 · 옛 분류 · 수량 합계 · 원래 수량 표기 · 묶음 수 · 옛 용법(원문) · 옮길 횟수 · 옮길 용법 · 참고: 옛 용법으로 계산한 하루 총량(가져오지 않음) · 채울 칸(하루 총량·일수·가격·최소 재고, 빈칸) · 병·개 단위 약? · 흔한 용도
+- **확인할 점의 종류**
+  - 제형 틀림 — 이름·원래 수량 표기(정/캡슐)로 고친 값 제안
+    - Ophthalmic으로 들어간 아세트아미노펜 정 6개·Silcon 2개·좌약 1개
+    - **Almagel은 「500정*2」라 정**(질 겔 아님)
+  - 같은 이름 다른 코드 · 수량 불일치(원래 표기 ≈ 계산값 vs 수량) · 수량 0 · 옛 메모 needs review · 이름 확인(「( /500T)」, 숫자로 시작) · 말라리아약(의사 확인 목록 급함)
+  - **옛 용법 「1_2T」의 뜻** — 캡슐·겔에도 쓰여 ½인지 1~2인지 알 수 없음. 참고 하루 총량을 비워 둠
+- **병·개 단위 약 다시 센 결과 12개**: 시럽 4(PROFEIN, SANDOL, IBUPROFENE, CARBO TOUX) · 질 겔 1 · 크림·연고 3(Vaseline, Sulfadiazine, Hydrocortisone) · 눈약 4(Neodex 안연고, Tolon, Tolon T, Cuolone)
+- **옮길 횟수**: 옛 용법에 코드가 하나만 분명한 56줄(「1QD」「1TID」처럼 붙여 쓴 것 포함). 하루 총량은 **가져오지 않고** 표에서 참고로만 보여줌.
+- **확인한 방법**: 스크립트 출력 101줄, BOM(EF BB BF) 확인, 문제 줄을 하나씩 원본과 대조. 처음 판에서 찾은 규칙 오류 네 가지를 고침 — 이름에 Tab이 없는 정의 제형, 「1,000정」 쉼표, 「1QD」 붙여 쓰기, 「1_2」를 ½로 단정한 것.
+- **확인 못 한 것**: 엑셀에서 직접 열어 보지는 못했습니다(이 PC에서 엑셀을 실행하지 않음). BOM과 CRLF로 한글·악센트가 깨지지 않게 만들었습니다.
+
+## 2026-09-29 — 옛 재고 105줄을 EMR 약 목록으로 가져오는 계획 (실행 전)
+
+- **상태**: 보류 — 실장님이 「가져올 표」를 보신 뒤에 실행합니다. **코드·DB 변경 없음.**
+- **자료**: `wiki/reference/old-stock-inventory-2026-05-15.csv`(읽기만). 스크립트로 세어 본 값입니다.
+
+### 0. 먼저 알려 드릴 것 — 자료에서 새로 찾은 문제
+
+- **제형이 틀린 줄이 있습니다.** 「Ophthalmic(안약)」 12줄 중 **진짜 눈약은 4줄**뿐입니다(Neodex 안연고, Tolon, Tolon T, Cuolone 점안액). 나머지 8줄은 먹는 약이나 좌약입니다.
+  - 아세트아미노펜 정: Amiceta, Taracet, Susphen, Hycephen, Susphen night
+  - Silcon Tab ×2
+  - Paracetamol Supp(좌약)
+  - 그 밖에 **Almagel**(Almagate — 이름으로 보아 제산제)은 「질정/겔」로, **Montelukast Tab**은 「산제」로 들어가 있습니다.
+
+  옛 프로그램이 분류할 때 틀린 것으로 보입니다. 그래서 「안약 12 · 시럽 4 …」 숫자는 **다시 세어야 합니다.**
+- **말라리아약**: 실제 재고에는 **M-Artefix 80mg/480mg**(artemether-lumefantrine)과 **Combimal**(sulfadoxine…)이 있습니다. 예시 약 ACT01(20/120 함량으로 보이는 4/2/3)과 **함량이 달라 기본값도 다릅니다.** 의사 확인 목록의 「ACT01 급함」 질문은 실제로 쓸 약(M-Artefix 80/480) 기준으로 여쭤야 합니다.
+- **수량이 원래 표기와 다른 줄 37개**. 예) Memorain Cap 「60캡슐*66」인데 수량 90, Amoxicillin 500mg 「650캡슐」인데 2000. 어느 쪽이 맞는지 자료만으로는 알 수 없습니다. 표에 **둘 다** 보여 드리고, 어차피 시작할 때 **선반 실사**로 맞춥니다.
+- **같은 이름이 다른 코드로 두 번 이상** 나오는 것이 6가지입니다.
+  - Amoxicillin 500mg ×2, Madecassol ×3, Silcon Tab ×2, Medilac-S ×2, Bonaling-A ×2, Montelukast(정/산제)
+  - 합칠지, 그대로 둘지 표에서 정합니다. 제형이 다르면(정/산제) 따로 두는 것이 맞습니다.
+- 「needs review」 메모가 붙은 줄 8개, 이름이 이상한 줄이 있습니다(예: 「Perison ( /500T)」, 「325mg Amiceta Tab」).
+
+### 1. 칸 대응 (CSV → EMR `drug`)
+
+| EMR 칸 | 가져올 값 | 비고 |
+|---|---|---|
+| `code` | **`MED-0001` 그대로 (추천)** | 옛 표와 바로 맞춰 볼 수 있고, 예시 약 코드(PCM500…)와 겹치지 않음. 101개(묶음이 여럿인 약 3개는 한 코드로) |
+| `name` | `name` (가장 긴 것 33자) | 이상한 이름은 표에서 고침 |
+| `name_en` | 비움 | 이름이 이미 영어 |
+| `generic_name` | `generic_name` (가장 긴 것 164자, 칸은 200자) | |
+| `category` | `classification` → EMR 분류로 바꿈(2절) | |
+| `default_dose` (하루 총량) | **비움 — 의료진이 채울 칸** | 의학 판단. 표에는 옛 용법에서 계산한 「참고 값」만 따로 보여줌(가져오지 않음) |
+| `default_freq` (횟수) | 옛 용법에 **QD/BID/TID/QID/Q6H 하나만 분명히** 있을 때만(QD 1 · BID 2 · TID 3 · QID 4 · Q6H 4 · Q4H 6) — **56줄**. 「BID/TID」, 「1-2T」, PRN, 빈칸은 비움 | |
+| `default_days` | 비움 | 처방할 때 정할 일 |
+| `default_route` (용법) | 횟수를 옮긴 줄만 그 약어(`BID` 등). 원래 용법 전체(「1T BID/ 2T QD」)는 칸(10자)에 안 들어가 **표에만** 남김 | |
+| `unit_price` | 0 (비어 있음) | 3절 |
+| `stock_qty` | 같은 코드의 묶음 수량 **합계** | 4절. Beecom tab은 0 |
+| `min_stock` | 0 (전부 0) | 나중에 채움 |
+| `is_active` | true | |
+| (EMR에 칸 없음) | `strength`, `form`, `route`(경구/점안), `unit`, 위치, 제조번호, 유통기한, 공급처, 흔한 용도, 원래 분류 | 가져오지 않음. `form`·`unit`은 H2 B안(포장 단위 약)을 고르면 그 표시로 씀 |
+
+### 2. 분류 — EMR 목록을 늘리는 안
+
+지금 EMR 분류는 7가지(Antibiotic · Analgesic · Antimalarial · Cardiovascular · GI · Vitamin · Other)라 위장관 25 · 호흡기 11 등이 모두 「Other」가 됩니다. 제안하는 목록은 이렇습니다(설정 약품 탭의 `DRUG_CATEGORIES`와 `ph_cat_*` 번역만 늘리면 되고, 약국 몫이라 제가 합니다).
+
+| 옛 분류 (줄 수) | EMR 분류 |
+|---|---|
+| Gastrointestinal (25) | GI |
+| Respiratory (11) | **Respiratory** (새로) |
+| Analgesic / Antipyretic (8), Analgesic / Anti-inflammatory (7) | Analgesic |
+| Dermatology / Wound Care (7), Dermatology (3) | **Dermatology** (새로) |
+| Cardiovascular (6) | Cardiovascular |
+| Antihistamine / Allergy (6), Antihistamine / Antiemetic (2) | **Antihistamine** (새로) |
+| Obstetrics / Gynecology (4) | **Gynecology** (새로) |
+| Antibiotic (4), Antibiotic / Antiprotozoal (1) | Antibiotic |
+| Antiparasitic (4) | **Antiparasitic** (새로) |
+| Ophthalmic (4 — 진짜 눈약만) | **Ophthalmic** (새로) |
+| Vitamins / Supplements (3) | Vitamin |
+| Antimalarial (2) | Antimalarial |
+| Musculoskeletal (2) · Corticosteroid (2) · Urology (2) · Endocrine / Antidiabetic (1) · Dental / Oral (1) | 각각 **Musculoskeletal · Corticosteroid · Urology · Endocrine** (새로), Dental은 Other |
+
+- 분류는 영어 단어로 저장하고 화면에서만 번역합니다(지금과 같음). 통계의 분류별 묶음도 이 값을 그대로 씁니다.
+
+### 3. 가격 — 전부 비어 있음
+
+- 0원으로 들어가면 청구가 0원이 됩니다. 수납 세션이 이미 「가격 없는 줄」 안내를 넣었습니다(develop `2bc7c74`). 가격은 가져온 뒤 설정 → 약품에서 채웁니다.
+- **주의(진료 세션 지적)**: 처방 줄은 처방할 때의 단가를 **복사**합니다. 가격을 나중에 넣어도 **이미 처방한 줄은 0원 그대로**입니다. 그래서 가격을 채우기 전에 처방이 시작되면 후보가 필요합니다: **「0원 줄의 가격을 지금 약 가격으로 다시 불러오기」**(아직 수납 전인 줄만) — 수납·진료 세션과 의논할 일.
+- 가장 쉬운 길은 **가격을 채운 뒤 사용을 시작**하는 것입니다.
+
+### 4. 수량
+
+- 같은 코드의 묶음을 합칩니다(유통기한 관리 안 함). 묶음이 여럿인 약은 3개입니다: Pansidil Cap 3600+1890+1800, Feramine Q 3060+1200, Caritopotene 2460+400.
+- 2026-05-15 기준이라 그대로 믿을 수 없습니다. 순서는 **재고 기록 표(401) → 가져오기**입니다. 가져올 때 약마다 `opening` 한 줄(메모 「옛 재고 프로그램 2026-05-15 기준」)을 남기고, **선반 실사**를 약국 화면 「Inventaire」로 한 줄씩 넣어 맞춥니다(재고 설계 5절).
+
+### 5. 병·개로 주는 약 (H2와 같은 문제)
+
+- 이름과 성분으로 다시 세면 대략 이렇습니다(표에서 확정).
+  - 눈약 4: Neodex 안연고, Tolon, Tolon T, Cuolone
+  - 시럽 4: PROFEIN, SANDOL, IBUPROFENE SYRUP, CARBO TOUX
+  - 외용·연고: Vaseline, Sulfadiazine, Madecassol 등
+  - 질 겔 1: Metronidazole vaginal gel
+  - 좌약 1: Paracetamol Supp
+- H2 B안(약에 「포장 단위 약」 표시)을 고르면 가져올 때 이 줄들에 표시를 같이 채웁니다.
+
+### 6. 예시 약 25개 정리
+
+- 모두 `is_active = false`(지우지 않음, 목록에서만 안 보임). 이미 이 약을 가리키는 처방(실행 중 EMR 6건, 시험 데이터)은 그대로 둡니다.
+- 실제 재고에 **같은 약**이 있는 것은 Amlodipine 5mg, Amoxicillin 500mg, Prednisolone 5mg 정도입니다. 예시 행을 고쳐 쓰지 않고 새 행(MED-…)으로 가져옵니다. 옛 처방 기록을 건드리지 않기 위해서입니다.
+- **약속처방 약 줄 4개**(Malaria Workup: ACT01·PCM500, Diarrhea / GE: ORS·METRO)는 실제 재고에 같은 약이 없습니다. PCM500 정, ORS는 없고, 말라리아약은 M-Artefix 80/480으로 함량이 다르고, metronidazole 정은 상품명 약으로 있음(확인 필요). 선택지:
+  - **가. 의료진이 실제 약으로 골라 다시 잇기 (추천)** — 설정 → 약속처방에서. 함량이 다르니 용량도 새로 정함
+  - 나. 세트에서 약 줄만 빼고 검사 줄은 남김(가 전까지 임시)
+  - 다. 그대로 둠 — 세트로 처방하면 목록에서 감춘 예시 약이 처방됨. **권하지 않음.** 감춘 약이 세트로 처방될 때 진료 화면에서 어떻게 보이는지는 **확인 필요**
+
+### 7. 기본값이 빈 약을 처방할 때
+
+- 진료 화면은 기본값이 없으면 칸을 비워 두고, 의사가 하루 총량·일수를 넣습니다(`Consultation.jsx` `addDrugRx`).
+- **빈틈**: 의사가 하루 총량을 안 넣고 두면 서버가 총량을 **0**으로 저장합니다(`consult.routes.js` `rxTotal`). 약국 화면은 0을 「총량 없음」으로 보지 않아 **아무 경고 없이 0개가 조제·청구**됩니다. 105줄은 모두 기본값이 비어서 이 일이 자주 생길 수 있습니다. 제안은 두 가지입니다.
+  - 약국: 원내 줄의 총량이 **0이어도** 「⚠ 총량 없음」과 같게 표시하고 조제 확인 창에 넣기(약국 작업, 작음)
+  - 진료: 하루 총량이 비었으면 저장할 때 경고(진료 세션)
+
+### 8. 실행 방법 (표 확인 뒤, 실장님 확인을 받고)
+
+- 확인된 표에서 **마이그레이션 파일 하나**를 만듭니다(예: `402_pharmacy_import_mission_stock.sql`).
+  - 약 101개 `INSERT … ON CONFLICT (code) DO NOTHING` — 두 번 돌려도 한 번만
+  - 약마다 `opening` 재고 기록
+  - 예시 25개 `is_active = false`(코드로 지정)
+  - 약속처방 줄은 6절 결정대로
+- 데이터를 넣는 마이그레이션이라 새로 설치하는 곳에도 들어갑니다. 이 EMR은 베데스다 병원 전용이라 괜찮다고 보지만, 원하지 않으시면 **설정 화면의 「CSV 가져오기」**(한 번 쓰는 도구)로 할 수도 있습니다(작업이 더 큼).
+- 실행 순서: 재고 기록 표(401) → 이 가져오기(402) → 가격 채우기 → 선반 실사 → 사용 시작.
+
+### 9. 실장님께 보여 드릴 표 (엑셀로 여는 CSV 한 장)
+
+한 줄 = 약 하나(101줄). 칸은 이렇게 둡니다.
+- 코드 · 약 이름 · 성분 · 함량
+- **제형**(옛 값 → 고친 값) · **EMR 분류**
+- **수량 합계** · **원래 수량 표기**
+- **옛 용법**(원문) · 옮길 횟수
+- **채워야 할 칸**(하루 총량 · 일수 · 가격 · 최소 재고 — 빈칸)
+- **병·개 단위 약?**
+- **확인할 점**(제형 틀림 / 이름 중복 / 수량 불일치 / needs review)
+- **참고: 옛 용법으로 계산한 하루 총량** — 예) 「1T BID」 → 2. 가져오지 않고 의료진이 볼 참고용
+
+이 표를 만드는 스크립트는 준비되어 있습니다. 말씀하시면 CSV로 만들어 드립니다(데이터를 바꾸지 않는 파일 한 장).
+
+## 2026-09-29 — 재고 2번 「기록 남기는 재고」 설계 (코드 전) + H2 선택지 다시
+
+- **상태**: 보류 — 총괄 설계 확인을 기다립니다. **코드·DB 변경 없음.**
+- **근거한 결정** (`wiki/decisions.md`): 재고 2번(EMR 안, 약국 화면 「재고」 탭) · 유통기한 관리 안 함 · 조제 취소 안 함 · 월말 재고 보고서 필요 · 입고·실사 조정은 약국·진료·간호·관리자 모두 · 조제 전 부족 경고는 지금대로.
+
+### 1. 움직임 기록 표 — `401_pharmacy_stock_movement.sql`
+
+```sql
+CREATE TABLE IF NOT EXISTS stock_movement (
+    id              SERIAL PRIMARY KEY,
+    drug_id         INTEGER NOT NULL REFERENCES drug(id),
+    kind            VARCHAR(10) NOT NULL
+                    CHECK (kind IN ('opening','receive','dispense','adjust','discard')),
+    qty             INTEGER NOT NULL,          -- 재고 변화(부호): 입고 +, 조제 -, 폐기 -, 조정 ±, 시작 = 그때 재고
+    stock_before    INTEGER NOT NULL,
+    stock_after     INTEGER NOT NULL,
+    shortfall       INTEGER NOT NULL DEFAULT 0, -- 조제 때 장부 재고가 모자라 0에서 멈춘 양
+    prescription_id INTEGER REFERENCES prescription(id) ON DELETE SET NULL,
+    consultation_id INTEGER REFERENCES consultation(id) ON DELETE SET NULL,
+    staff_id        INTEGER REFERENCES staff(id),
+    memo            TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (stock_after = stock_before + qty + shortfall),
+    CHECK (stock_after >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_stock_movement_drug_time ON stock_movement (drug_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_stock_movement_time      ON stock_movement (created_at);
+
+-- 기록 시작: 지금 장부 재고를 약마다 한 줄 (기존 데이터는 바꾸지 않고 새 표에 줄만 더함)
+INSERT INTO stock_movement (drug_id, kind, qty, stock_before, stock_after, memo)
+SELECT d.id, 'opening', COALESCE(d.stock_qty,0), 0, COALESCE(d.stock_qty,0), 'EMR 재고 기록 시작'
+  FROM drug d
+ WHERE NOT EXISTS (SELECT 1 FROM stock_movement m WHERE m.drug_id = d.id);
+```
+
+- `drug.stock_qty`는 **지금 재고**로 그대로 둡니다(빨리 읽기용). 기록 표가 **왜 바뀌었는지**의 장부입니다. 둘은 늘 맞아야 합니다: `drug.stock_qty` = 그 약의 마지막 기록의 `stock_after`.
+- **부족분(`shortfall`)**: 지금 조제는 재고가 모자라면 0에서 멈춥니다. 이때 기록은 「나간 양 8, 장부 5 → 0, 부족 3」으로 남깁니다. 식이 늘 맞고(앞 + 변화 + 부족 = 뒤), 선반과 장부가 어긋난 사실이 기록에 남습니다.
+- `opening` 줄은 기록이 시작된 날을 표시합니다. 그 전 달의 보고서는 나오지 않습니다(6절).
+
+### 2. 재고가 바뀌는 길 — 모두 한 함수로
+
+서버에 `moveStock(client, { drugId, kind, qty | counted, memo, prescriptionId, consultationId, staffId })` 하나를 둡니다. 이 함수가 약 행을 `FOR UPDATE`로 잠그고, 앞 재고를 읽고, `drug.stock_qty`를 바꾸고, 기록 한 줄을 넣습니다. 모두 **같은 트랜잭션**입니다.
+
+| 길 | 종류 | 누가 | 내용 |
+|---|---|---|---|
+| 조제 완료(자동) | `dispense` | 조제한 사람 | 지금 조제 트랜잭션 안에서, 원내 줄마다 한 줄(처방·진료 번호 연결). 약 행 잠금 순서(`drug.id` 오름차순, 교착 방지)는 그대로 |
+| 입고 | `receive` | 약국·진료·설정 권한 | 들어온 수(정수 > 0), 메모(공급처·선교팀 등, 선택) |
+| 실사 조정 | `adjust` | 같음 | **센 숫자**(정수 ≥ 0)를 넣으면 차이를 계산. 차이가 0이어도 「실사 확인」으로 한 줄 남김. **메모 필수** |
+| 폐기 | `discard` | 같음 | 버린 수(정수 > 0), **사유 필수**(파손·변질·기한 지남). 장부 재고보다 많으면 거절 → 실사 조정 먼저 |
+| 설정 화면 약 저장 | — | — | **재고를 쓰지 않게** 바꿈(아래 7절, 설정 세션과 조율) |
+
+- 입고 수·센 숫자·폐기 수는 **정수**만 받습니다. `stock_qty`가 정수 칸이기 때문입니다.
+- 지금 코드에서 재고를 쓰는 곳은 조제(`pharmacy.routes.js`)와 설정 약 저장(`admin.routes.js` POST·PUT) 둘뿐입니다(`grep`으로 확인). 설정 쪽을 막으면 모든 변화가 기록에 남습니다.
+
+### 3. API와 권한 (모두 `/api/pharmacy` 아래, 약국 파일 안)
+
+| 메서드 · 경로 | 하는 일 | 권한(하나라도) |
+|---|---|---|
+| `GET /stock?q=&category=` | 약마다 지금 재고·최소 재고·마지막 움직임 날짜 | pharmacy · consultation · settings |
+| `GET /stock/:drugId/movements?from=&to=` | 그 약의 기록(날짜·종류·수량·앞→뒤·부족·누가·메모·처방의 환자 차트번호) | 같음 |
+| `POST /stock/:drugId/receive` `{ qty, memo }` | 입고 | 같음 |
+| `POST /stock/:drugId/count` `{ counted, memo }` | 실사 조정 | 같음 |
+| `POST /stock/:drugId/discard` `{ qty, memo }` | 폐기 | 같음 |
+| `GET /stock/report?month=YYYY-MM[&format=csv]` | 월말 재고 보고서 | pharmacy · settings · stats |
+
+- 지금 `pharmacy.routes.js`는 파일 전체에 `permMiddleware('pharmacy')`를 겁니다. 이것을 **줄마다 권한**으로 바꿔 한 파일 안에 둡니다. 새 파일로 나누면 `index.js`(총괄 파일)를 고쳐야 하기 때문입니다. 조제·원내/원외 전환은 지금처럼 pharmacy만 할 수 있습니다.
+- 간호사는 기본 권한에 약국이 있어서 그대로 됩니다. 관리자는 settings로 됩니다.
+- **의사(진료 권한만)의 문제**: API는 허용되지만 **약국 화면(`/pharmacy`)에 들어갈 수 없습니다**(`modules.js`). 선택지:
+  - (가) 재고를 만질 의사 계정에 **약국 권한도 체크**(설정 → 직원, 계정마다) — 코드 없음. **추천**
+  - (나) 재고 창을 공용 부품으로 만들어 진료 화면에서도 열기 — 진료 세션 작업이 따라옴
+
+### 4. 화면 — 약국 화면에 「Stock (재고)」 탭
+
+- 윗줄 탭: **En attente (조제 대기)** · **Délivré (조제 완료)** · **Stock (재고)**
+- 왼쪽: 약 목록(검색·분류), 약마다 지금 재고. 최소 재고(`min_stock`) 이하면 빨간색 — 따로 「부족 알림 화면」은 만들지 않습니다(결정).
+- 가운데: 고른 약의 재고와 버튼 세 개 **Entrée (입고)** · **Inventaire (실사)** · **Mise au rebut (폐기)**. 누르면 작은 입력 창이 열립니다. 아래에 그 약의 기록 표가 나옵니다.
+- 위: **Rapport mensuel (월말 보고서)** — 달을 고르면 표가 나오고 **⬇ CSV** 로 내려받습니다.
+- 모든 글자는 `ph_` 키로 3개 국어로 만듭니다. 직함(약사/Pharmacien)은 쓰지 않습니다.
+
+### 5. 시작 재고 넣는 법
+
+1. 마이그레이션이 그때 장부 재고로 약마다 `opening` 한 줄을 넣습니다.
+2. 105줄을 가져오는 경우에는 가져온 약도 `opening` 한 줄로 시작합니다. 메모는 「옛 재고 프로그램 2026-05-15 기준」.
+3. **선반 실사**: 날을 정해 약마다 실제로 센 뒤, 화면의 **Inventaire (실사)** 로 한 줄씩 넣습니다. 메모는 「시작 실사」. 이 뒤로 나오는 월 보고서의 숫자가 믿을 만해집니다.
+   - 약이 100개가 넘으면 하나씩 넣기 번거롭습니다. 필요하면 **실사표 CSV를 올려 한꺼번에 실사 조정**하는 기능을 후보로 둡니다(이번 범위 밖).
+
+### 6. 월말 재고 보고서
+
+- 약마다 한 줄: **월초 재고 · 입고 · 조제 출고 · 장부 부족분 · 조정(+/−) · 폐기 · 월말 재고 · 맞춤 확인**
+  - 맞춤 확인: `월초 + 입고 − 조제 출고 + 부족분 ± 조정 − 폐기 = 월말`. 안 맞는 줄은 빨간 표시(모든 변화가 기록을 거치면 안 맞을 일이 없지만, 확인용으로 둠).
+- 계산은 기록 표 하나로 합니다.
+  - **월초** = 그 달 1일 0시 **전** 마지막 기록의 `stock_after`
+  - **월말** = 다음 달 1일 0시 전 마지막 기록의 `stock_after`(그 달에 기록이 없으면 월초와 같음)
+  - 가운데 칸들 = 그 달 안의 종류별 합
+  - 날짜 경계는 DB 시간대, 곧 병원 시간(`TZ=Indian/Antananarivo`)입니다.
+- **기록 시작 전 달은 나오지 않습니다.** `opening`이 그 달 안에 있으면 그 줄을 월초로 쓰고 「기록 시작: 10월 3일」처럼 표시합니다.
+- **화면 + CSV**: CSV는 엑셀에서 한글·프랑스어가 깨지지 않게 UTF-8 BOM을 붙이고, 칸 이름은 화면 언어로 씁니다.
+- **어디에 둘지**: **약국 화면 「Stock」 탭 안**을 추천합니다. 재고를 다루는 사람(간호사)이 보는 곳이기 때문입니다. 통계 화면에도 두고 싶으면 같은 API를 통계 세션이 불러 쓰면 됩니다. 보고서 API는 `stats` 권한도 허용해 둡니다. 통계 쪽 작업은 통계 세션과 나눌 일입니다.
+
+### 7. 다른 모듈과 조율
+
+- **설정 세션**: 약품 탭의 재고 칸을 **읽기 전용**으로 두고 「재고는 약국 화면 → Stock에서」 안내를 붙입니다. `POST/PUT /api/admin/drugs`는 재고를 쓰지 않게 합니다(새 약은 0에서 시작 → 입고·실사). H4 안전장치(`stock_expected`)는 그러면 필요 없어집니다.
+  - 약품 탭 안의 화면은 약국 몫이라 제가 하고, `admin.routes.js`는 설정 세션이 합니다.
+  - 당장 바꾸기 어려우면 임시로, 설정에서 재고를 고칠 때도 `moveStock('adjust', 메모 '설정 화면')`을 거치게 할 수 있습니다.
+- **통계**: 보고서를 통계 화면에도 둘지(선택).
+- **수납·진료**: 영향 없음(진료는 3절 (나)를 고를 때만).
+- **백업**: 새 표도 자동으로 포함(`pg_dump`).
+
+### 8. 동시에 일어날 때
+
+모든 재고 변화가 같은 약 행 잠금(`FOR UPDATE`)을 거칩니다. 입고와 조제가 겹치면 차례로 적용되고, 기록의 앞·뒤 숫자가 순서대로 이어집니다. 조제는 지금처럼 `drug.id` 오름차순으로 잠가 교착이 없습니다. 입고·실사·폐기는 약 하나만 잠급니다. 기록 표의 `CHECK`가 앞·뒤가 안 맞는 줄은 저장 자체를 막습니다.
+
+### 9. 작업 크기
+
+| 부분 | 크기 |
+|---|---|
+| 마이그레이션 + `moveStock` + 조제 연결 + API 6개 + 권한 재구성 | 약 1일 |
+| 약국 「Stock」 탭(목록·입고/실사/폐기 창·기록 표·월 보고서·CSV), 3개 국어 | 약 1일 |
+| 설정 약품 탭 재고 칸 읽기 전용(약국) + `admin.routes.js` 재고 쓰기 제거(설정 세션) | 작음 |
+| 시험(동시 입고·조제, 부족분, 보고서 맞춤, 격리 스택 한·프) | 반나절 |
+
+합계 **약 2~2.5일**입니다. 앞서 1~2일로 잡은 것보다 월말 보고서만큼 늘었습니다.
+
+### H2 다시 — 병·개로 주는 약(시럽·흡입기·안약·연고·겔), 한국식 기준
+
+- **지금 문제**: 총량 = 하루 총량 × 일수라서, 시럽 「하루 15 mL × 7일」 → 105가 **병 수**로 청구·재고 차감됩니다. 105줄 자료에 이런 약이 약 21줄(안약 12 · 시럽 4 · 외용 3 · 질정/겔 2)입니다.
+
+| 선택지 | 내용 | 작업 |
+|---|---|---|
+| A. 의사가 총량을 직접 고침 | 진료 화면의 총량 칸을 고칠 수 있게. 약국·수납·재고는 저장된 총량만 읽으므로 자동으로 맞음 | 진료 세션만, 마이그레이션 없음, 작음. 단점: 의사가 매번 기억해야 함 |
+| B. 약에 「포장 단위 약」 표시 **(추천)** | 설정 약품 탭에 체크 하나. 이런 약은 진료 화면이 총량을 **계산하지 않고 비워 둠** → 의사가 병·개 수를 적음(비어 있으면 약국에 「총량 없음」). 1회량·하루량은 「5 mL」「2번 뿌림」처럼 글로 | 마이그레이션(약 칸 하나) · 설정 약품 탭(약국) · 진료 화면(진료) — 보통 |
+| C. 포장 크기로 자동 환산 | 약마다 「1병 = 100 mL」「1개 = 200번」을 넣고 총 mL ÷ 포장 크기를 올림 | 가장 정확하지만 가장 큼. 약마다 포장 정보를 모아야 함 |
+
+추천은 **B**입니다(105줄 가져올 때 이 표시를 같이 채움). A는 B 전까지 진료 세션이 임시로 할 수 있습니다.
+
+## 2026-09-29 — M3: 환자 찾기로 최근 7일 미조제 처방 조제 (실장님 결정)
+
+> **총괄 확인 (2026-09-29)**: `442b75f` 합침 + 실행 중 EMR 반영. 7일은 실장님 결정으로 확정. 코드 검토: 목록·환자별 조회가 같은 쿼리를 나눠 씀, 조제 API도 7일 넘으면 409, 조제 완료 탭은 조제 날짜 기준. 실행 중 EMR에서 확인(읽기만): 환자별 조회 200(`days 7`), 잘못된 번호 400, 대기·완료 목록 200. 화면은 세션의 격리 스택 확인.
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — develop 위 커밋 하나
+- **한 일** (앞 항목 「M3 답」의 설계 그대로, 기간 7일 확정)
+  - 서버 `pharmacy.routes.js`: `/pending`의 SQL을 `pendingQuery(where)`로 나눠 씀. 새 `GET /patient/:patientId/pending` → `{ days: 7, groups, older }`. 두 목록에 `days_ago`. `/completed`는 **조제 날짜 = 오늘**. 조제 API는 7일보다 오래된 내원이면 409 `ERR_TOO_OLD`. 기간은 상수 `PAST_RX_DAYS = 7` 하나.
+  - 화면 `Pharmacy.jsx`: 환자 찾기 → 그 환자의 대기 처방을 불러와 1건이면 바로 열고, 여러 건이면 목록 위 주황 칸(닫기 버튼). 「N일 전 처방 (날짜)」 표시(목록 카드·머리). 7일보다 오래된 것은 개수만 + 「진료실에서 다시 처방」. 수동·자동 새로고침이 이 목록도 다시 받고, `selGone`이 두 목록을 모두 봄. 목록 카드를 `rxCard` 하나로 합침.
+  - 위키: 2절 첫머리 간호사 계정 한 줄, 2.1 환자 찾기 사용법, 2.5·2.7, 3.1(설계), 4절 API 표, 7절 M3 → 해결됨.
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `frontend/src/pages/Pharmacy.jsx`, `wiki/modules/pharmacy.md`, 이 노트
+- **공용 파일 변경**: i18n `ph_` 키 5개(`ph_pastRx`, `ph_pastListTitle`, `ph_noPastRx`, `ph_olderRx`, `ph_tooOld`, ko·en·fr)
+- **DB 마이그레이션**: 없음
+- **확인한 방법**
+  - `node --check`, `npm run build` 통과. `node backend/test/pharmacy.api.mjs` 전부 통과(조제 완료 목록 기준 변경 뒤에도).
+  - 격리 스택 9184, 내원 날짜를 격리 DB에서만 옮긴 환자 둘(① 3일 전 + 10일 전, ② 2일 전 + 5일 전):
+    - API: ① `{days:7, groups:[3일 전], older:1}`, ② 두 건. 오늘 대기 목록에는 안 나옴. `/patient/abc/pending` → 400. 10일 전 진료 조제 → **409** `ERR_TOO_OLD`.
+    - 한국어 화면: ①을 환자 찾기로 고르면 바로 열림, 「🕘 3일 전 처방 (2026-09-26)」, 「7일보다 오래된 조제 대기 처방 1건 …」. 30초 자동 새로고침 뒤에도 「목록에서 사라짐」 안내가 **안 뜸**. 조제 완료 → 주황 칸 「조제 대기 처방이 없습니다」, **조제 완료 탭에 나옴**(조제 날짜 기준).
+    - 프랑스어 화면: ② 두 건이 « Prescrit il y a 2 j (2026-09-27) », « … 5 j (2026-09-24) » 로 목록 위에 나옴.
+- **확인 못 한 것**: 영어 화면은 키만. 자정을 넘기는 순간의 동작(날짜 경계)은 시험하지 않음.
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — 예전 식으로 저장된 처방 줄에 「예전 계산」 표시 (진료 세션 지적)
+
+> **총괄 확인 (2026-09-29)**: `f464095`·`d692b42`·`f9489cf` 합침(`728cd4f`) + 실행 중 EMR 반영. 진료 계산식과 같이 올림. `rx-dosing.js` 검토: 저장된 총량만 읽음, 1회량은 0.5 단위일 때만, 옛 줄 표시. 화면은 세션의 격리 스택 확인.
+
+- **상태**: 확인 요청 — `f464095`와 같이 합치면 됩니다(진료 `7d16518`과 함께).
+- **커밋**: session/pharmacy — `d692b42` 위 커밋 하나
+- **한 일**: `rx-dosing.js`에 `isLegacyTotal(rx)` — 저장된 총량 ≠ 하루 총량 × 일수(소수 셋째 자리까지)면 참. 진료 화면과 같은 판정. 약국 화면 수량 칸 아래 노란 「예전 계산 (용량×횟수×일수)」, 원외 처방전 총량 칸 아래 「(ancien calcul / 예전 계산 / old calculation)」. 줄 자체는 고치지 않음(이미 그 수로 청구·조제됨).
+- **바꾼 파일**: `rx-dosing.js`, `Pharmacy.jsx`, `external-rx.jsx`, `wiki/modules/pharmacy.md`(2.2·3.4·8절), 이 노트
+- **공용 파일 변경**: i18n `ph_legacyTotal` 1개(ko·en·fr)
+- **확인한 방법**: 판정 단독 시험(3/5 총 45 → 참, 15 → 거짓, 1.5/7 총 10.5 → 거짓, 총량 없음 → 거짓). 빌드 통과. 격리 스택 9184에서 PCM500 3/3/5 총 45 줄: 약국 화면 「45 · 예전 계산 (용량×횟수×일수)」, 원외 처방전(FR) 「45 (ancien calcul)」.
+- **다른 세션에 부탁**: 없음
+
+## 2026-09-29 — M3 답: 「목록은 오늘만 + 환자 찾기로 지난 미조제 처방도 조제」가 되는가
+
+- **상태**: 보류 — 실장님 결정 대기(결정 세션). 코드 변경 없음.
+- **결정 반영**: 「조제 안 함」 버튼은 만들지 않음(안 줄 약은 진료실에서 처방을 지움) — 7절·결정용 자료의 그 제안은 접습니다.
+
+**답: 됩니다. 작업은 작음(반나절 정도), 마이그레이션 없음.**
+
+| 바꿀 곳 | 지금 | 바꾸는 것 |
+|---|---|---|
+| 서버: 환자별 미조제 처방 조회 | 없음. `/pending`은 오늘 내원만(`pharmacy.routes.js:57`) | **새 API 하나** `GET /api/pharmacy/patient/:patientId/pending` — `/pending`과 같은 모양(진료 단위 묶음), 조건만 `c.patient_id = $1` + 기간 제한. SQL은 `/pending`과 나눠 씀 |
+| 서버: 조제 | `PUT /consultations/:id/dispense` — 진료 번호 기준, **날짜를 보지 않음**(`:141-149`) | **그대로 씀.** 잠금·재고 차감·동시 조제 처리도 그대로 |
+| 서버: 원내/원외 전환 | 처방 줄 번호 기준, 날짜 안 봄 | 그대로 |
+| 서버: 조제 완료 목록 | `/completed`가 **내원 날짜 = 오늘**(`:113`) | **조제한 날짜 = 오늘**(`dispensed_at`)로. 안 바꾸면 3일 전 처방을 오늘 조제해도 Délivré 탭에 안 나옴 |
+| 화면: 환자 찾기 | 고르면 차트만(`Pharmacy.jsx:324` `setSel(null); setViewPid`) | 고른 환자의 미조제 처방을 불러와서, **1건이면 바로 열고, 여러 건이면 왼쪽 목록 위에 「이 환자의 지난 처방」 칸**으로 보여줌. 없으면 지금처럼 차트만 |
+| 화면: 표시 | — | 머리에 **「3일 전 처방 (2026-09-26)」** 같은 주황 표시(`ph_` 키). 목록 줄에도 같은 표시 |
+| 화면: 자동 새로고침·「목록에서 사라짐」 안내 | 오늘 목록에 없으면 「더 이상 대기 아님」으로 판단(`selGone`) | 지난 처방을 연 때는 **환자별 조회로 다시 확인**하도록 고침. 안 고치면 열자마자 노란 안내가 뜸 |
+
+**며칠 전 것까지** — 제한을 두는 것을 권합니다. 제 추천은 **7일**입니다.
+- 오래된 처방은 증상이 이미 바뀌었을 수 있습니다(항생제 등). 이것은 의료진이 판단할 일이라, 오래된 처방은 **진료실에서 다시 처방**하도록 두는 편이 안전합니다.
+- 조회는 기간 안의 것만 보여주고, 그보다 오래된 미조제 처방이 있으면 「7일보다 오래된 미조제 처방 N건 — 진료실 확인」 한 줄만 보여줍니다(조제는 막음).
+- 날짜는 **진료 날짜 기준**(`visit.visit_date`)입니다.
+- 기간은 코드 상수 하나로 둡니다. 나중에 설정으로 옮길 수 있습니다.
+
+**함께 알아 둘 것**
+- 조기 재처방 경고는 그대로 동작합니다(지금 여는 진료를 뺀 과거 처방과 비교).
+- 수납은 영향 없습니다(청구는 조제 여부와 무관).
+- 조제한 시각은 오늘로 남아서, 월말 재고 보고서의 「조제 출고」는 조제한 날 기준으로 잡힙니다(재고 설계와 일치).
+- 임상병리와 같은 방식(환자 찾기 → 지난 것)이라 직원이 익히기 쉽습니다.
+
+## 2026-09-29 — 한국식 일총투여: 약국은 저장된 총량만 읽고 1회량을 같이 보여줌
+
+- **상태**: 확인 요청 — **진료 세션 `7d16518`(계산식 변경)이 이것을 기다립니다.**
+- **커밋**: session/pharmacy — develop `58e62f2` 위 커밋 하나
+- **폐기 표시**: 아래쪽 「C 준비: 약 기본값 바로잡는 마이그레이션 초안」과 「C 준비: 약 기본값 고칠 표」는 **폐기(선택지 2 한국식으로 결정)**. 기본값·약속처방은 고치지 않음. ACT01 8/2/3·ORS는 의사 확인 목록(급함).
+- **한 일**
+  - 새 파일 `frontend/src/documents/rx-dosing.js`(약국 소유): `storedTotal`(저장된 `total_qty`만, 없으면 null) · `perDose`(하루 총량 ÷ 횟수, 0.5 단위면 clean) · `fmtAmount`(½ 표기) · `doseSentence`(원외 처방전 문장 ko·fr·en).
+  - `Pharmacy.jsx`: `rxQty`(옛 계산식 예비) 삭제 → 저장된 총량만. 표 칸 「1일 총량 · 1회량 · 횟수 · 일수 · 용법 · 수량 · 메모」. 1회량이 0.5 단위로 안 떨어지면 「—」+ 노란 「⚠ 의사 확인」(막지 않음). 총량이 없으면 빨간 「⚠ 총량 없음」, 약제비 아래에도 표시, 조제 완료 확인 창에 그 약 목록 + 「재고에서 빠지지 않습니다」.
+  - `external-rx.jsx`: `qtyOf`(예비 계산) 삭제. 칸 이름 「1일량 / Dose/j」, 「용법·비고 / Posologie / Note」. 약 이름 아래 복용 문장 « 1 cp × 3 fois/jour pendant 7 jours (total 21) », 안 나눠지면 « 2 cp par jour en 3 prises, pendant 5 jours (total 10) ». 총량 없으면 「확인 필요 / à vérifier」.
+  - 「경로」→「용법 / Posologie / Directions」 이름만(약국 화면 `ph_colDirections`, 원외 처방전).
+  - 위키에서 「약사」 직함을 뺌(현장에 약사 없음, 간호사가 조제) — 화면 문구(`ph_`)에는 원래 없었음.
+- **바꾼 파일**: `frontend/src/pages/Pharmacy.jsx`, `frontend/src/documents/external-rx.jsx`, `frontend/src/documents/rx-dosing.js`(새), `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경**: `i18n` `ph_` 블록에 키 6개 추가만
+- **DB 마이그레이션**: 없음
+- **번역 키**: `ph_colDaily`, `ph_colPerDose`, `ph_colDirections`, `ph_perDoseCheck`, `ph_noTotal`, `ph_noTotalConfirm` (ko·en·fr)
+- **확인한 방법**
+  - `npm run build` 통과, 쓰인 키 ko·en·fr 모두 있음.
+  - `rx-dosing.js` 단독 시험: 3/3/7→1회 1(총 21), 1.5/3/7→½(총 10½), 2/3/5→안 나눠짐(하루 양 문장), 총량 없음→「—」.
+  - 격리 스택 9184, 네 줄 처방(PCM500 3/3/7 총 21 원외, BRUFEN 1.5/3/7 총 10.5, DICLO 2/3/5 총 10 원외, CODAEP 3/3/7 총량 없음):
+    - 약국 화면 한국어·프랑스어 칸과 표시 모두 확인. 약제비 1,575 = BRUFEN 10.5 × 150만(원외·총량 없음 제외).
+    - 조제 완료 확인 창(프랑스어)에 « Certains médicaments n'ont pas de quantité totale… · Codaep Syrup 20mL » 확인. 재고: BRUFEN 300→289(10.5 올림 11), CODAEP 그대로, 원외 둘 그대로.
+    - 원외 처방전을 688px 폭으로 재기: 한국어 602px · 프랑스어 619px(한 장 1017px), 표 폭 608px. 총량 없는 줄을 원외로 바꿔 「à vérifier」 확인 후 되돌림.
+- **확인 못 한 것**: 진료 세션 `7d16518`과 합친 상태의 화면(그쪽이 저장하는 새 총량)은 합친 뒤 한 번 보면 좋습니다. 영어 화면은 키만 확인.
+- **제안만(하지 않음)**
+  - **정·캡슐 청구도 올림**: 지금 재고는 올림(10.5→11), 청구는 10.5정분. 반 알 처방이 늘면 자주 어긋남 — 수납 세션과 결정 필요.
+  - **용법(TID)과 횟수가 다를 때 경고**: 예) TID인데 횟수 2. 계산은 횟수를 따름.
+- **다른 세션에 부탁**: 수납 — `billing.routes.js:95`, `:489`, `Payment.jsx:165`, `:183`, `:587`의 예비 계산식(`dose × frequency × days`)을 한국식(`dose × days`)으로. `total_qty`가 늘 저장되면 거의 안 쓰이지만, 남아 있으면 비어 있는 줄에서 금액이 3배로 나옵니다.
+
+## 2026-09-29 — H4 해결됨 반영 (설정 세션 f44ab9e)
+
+- **상태**: 확인 요청 (위키만)
+- **커밋**: session/pharmacy — develop `33d466e` 위, `ea14b9e`(C 의견) 다음 커밋
+- **한 일**: 설정 세션의 약 저장 안전장치(`admin.routes.js` `PUT /drugs/:id`: 재고 칸을 고쳤을 때만, 그 사이 안 바뀌었을 때만 저장, 아니면 409 + `se_stockChanged`, 같은 행 `FOR UPDATE`)를 코드로 읽고 위키에 반영.
+  - 2.6: 「재고가 바뀌었습니다」 안내가 뜨면 할 일(저장 안 됨 → Stock 칸에 지금 재고가 들어가 있음 → 선반과 맞춰 보고 다시 저장).
+  - 3.3 동시 조제 · 6절 설정 항목 · 7절 H4 → 해결됨. L6에서 정수 검사 부분을 뺌(설정이 같이 고침). `min_stock` 입력 칸 없음과 새 약의 `min_stock` NULL은 남음.
+- **B 결정 자료에 미치는 영향**: B의 「1. 최소한」에서 H4와 정수 검사가 빠집니다. 남는 것은 M4(약국 화면 재고 표시·조제 전 경고)와 `min_stock` 칸입니다. 추천(2. 기록 남기는 재고)은 그대로입니다 — 누가 왜 바꿨는지(M5)는 여전히 남지 않습니다.
+- **바꾼 파일**: `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경 · 마이그레이션 · 번역 키**: 없음
+- **확인한 방법**: `admin.routes.js:86-135`, `Settings.jsx:159-169`, `se_stockChanged`(ko·fr)를 읽음. 화면에서 눌러 보지는 않았습니다(설정 세션이 확인한 것으로 받음).
+
+## 2026-09-29 — C 의견: 「용량」을 한국식 하루 총량(일총투여)으로 볼 때
+
+- **상태**: 보류 — 의견만, 코드 변경 없음. 결정은 실장님(현장에서 누가 어떻게 입력하는지에 따라).
+- **커밋**: session/pharmacy — 인계 노트만
+- **먼저 짚을 사실**: 한국식으로 읽으면 시드 기본값은 **대부분 맞고**, 틀린 것은 계산식(용량 × 횟수 × 일수)입니다. 그런데 예외가 있습니다.
+  - **ACT01 (Artemether-Lumefantrine) 4 / 2 / 3** — 한국식이면 「하루 4정」이라 총 **12정**. 성인 표준 치료는 **24정**(1회 4정 × 하루 2번 × 3일)입니다. 선택지 2로 가면 이 약은 **8 / 2 / 3**으로 고쳐야 하고, 고치지 않으면 **절반만 나갑니다.** (의사 확인)
+  - **ORS 1 / 3 / 3** — 한국식이면 「하루 1봉을 3번에 나눠」, 총 3봉. 지금 계산으로는 9봉. 어느 쪽이 의도인지 의사 확인.
+  - **SALB 흡입기 2 / 3 / 30** — 「하루 2번 뿌림을 3번에 나눠」는 어색합니다. 1회 2번 뿌림으로 쓴 것으로 보입니다. 흡입기는 어차피 개수 문제(아래 1-다)로 따로 다뤄야 합니다.
+  - 횟수가 1인 약(Amlodipine, PRED5, CEFT 등)은 어느 쪽으로 읽어도 같습니다.
+
+### 1) 절충안(입력은 하루 총량, 1회량을 같이 표시)이 약국 업무에 맞는가 — **맞습니다, 추천합니다**
+
+- 약사가 봉투·라벨에 쓰고 환자에게 말하는 것은 **1회량**(「1정씩 하루 3번」)입니다. 하루 총량만 보이면 약사가 매번 나눗셈을 해야 합니다. 약국 화면과 원외 처방전에 **「1일 총량 · 1회량 · 횟수 · 일수 · 총량」**을 모두 보이게 하는 것이 맞습니다.
+- 바깥 약국(마다가스카르)이 읽는 **원외 처방전**은 약어(TID) 대신 **프랑스어 문장**이 좋습니다. 예) « 1 cp × 3 fois/jour pendant 7 jours (total 21) ». 1회량을 알아야 이렇게 쓸 수 있으므로 절충안이 필요합니다.
+- **가. 나눠떨어지지 않을 때** (예: 하루 2정을 3번 → 1회 0.667정)
+  - 1회량은 **0.5 단위(반 알)** 로 나눠떨어질 때만 숫자로 보입니다(예: 1.5 ÷ 3 = 0.5 → 「½정」). 안 나눠떨어지면 **「⚠ 1회량이 나눠지지 않음 — 의사 확인」** 을 약국 화면에 표시하고, 원외 처방전에는 1회량 대신 「하루 2정을 3번에 나눠」로 찍는 것을 제안합니다. 계산은 막지 않습니다.
+  - 가능하면 **진료 화면에서 입력할 때** 같은 경고를 먼저 보여 주면 좋습니다(진료 세션).
+- **나. 반 알 처방과 재고** — 한국식에서는 1.5 × 7 = 10.5정 같은 **소수 총량**이 흔해집니다. 지금은 재고는 올림(11정 차감), 청구는 소수 그대로(10.5정분)입니다(`pharmacy.routes.js:183`). 반 알을 쪼개 주면 남은 반 알은 버려지므로, **청구도 올림으로 맞출지** 정해야 합니다(수납 세션과 함께). 제 추천은 정·캡슐은 청구도 올림입니다.
+- **다. 시럽·흡입기** — 어느 선택지든 「용량 × … 」로는 **병·개 수**가 나오지 않습니다(H2).
+  - 제안: 약품에 **「조제 단위」** 두 가지 중 하나를 둡니다.
+    - ① **낱개**(정·캡슐·봉지·주사 — 지금처럼 계산)
+    - ② **포장 단위**(시럽·흡입기·연고) — 총량을 계산하지 않고 **의사가 병·개 수를 직접** 적습니다. 1회량은 「5 mL」「2번 뿌림」처럼 글로만 적습니다.
+  - ②는 약품 표에 칸 하나(마이그레이션), 진료 화면 입력 방식, 설정 약품 탭이 바뀝니다. **H1과 따로 결정해도 됩니다.**
+
+### 2) 선택지 2로 갈 때 약국이 고칠 곳, 재고 차감은 무엇을 읽나
+
+**재고 차감·통계는 저장된 `total_qty`만 읽습니다**(계산식을 다시 쓰지 않음).
+- 재고: `pharmacy.routes.js:183` `Math.ceil(Number(rx.total_qty))`
+- 통계: `stats.routes.js:275`
+
+그래서 **계산하는 곳(진료)만 바르게 저장하면 재고·통계는 따라옵니다.** 다만 `total_qty`가 비어 있으면 재고는 **0개**가 빠집니다. 선택지와 관계없이 서버가 항상 채우도록 하는 것이 안전합니다.
+
+| 곳 | 파일 | 할 일 |
+|---|---|---|
+| **총량 계산(원천)** | `Consultation.jsx:279`(처방 추가), `:350`(수정), `consult.routes.js:191`(서버 예비) — **진료 세션** | `용량 × 일수`로. 서버가 항상 `total_qty`를 채우게 |
+| 예비 계산(`total_qty`가 비었을 때) | `billing.routes.js:95`, `:489`, `Payment.jsx:165`, `:183`, `:587` — **수납 세션** | 같은 식으로. 한 곳이라도 옛 식이면 금액이 어긋남 |
+| 약국 화면 | `Pharmacy.jsx:16` `rxQty`(예비 계산) · 표 칸(`colDose` 「용량」 → 「1일 총량」, 1회량 칸 추가, 나눠떨어지지 않음 경고) — **약국** | |
+| 원외 처방전 | `external-rx.jsx:24-28` `qtyOf`(예비 계산) · 칸 이름 「1회량」(`:12`) → 「1일량」 + 1회량 칸, 프랑스어 복용 문장 — **약국** | 인쇄 폭 688px 다시 확인 |
+| 약속처방 미리보기 | `Settings.jsx` 약속처방 탭의 `dose×frequency×days` 글자 — **설정 세션** | 표시만 |
+| 기본값 | ACT01 4 → 8 (+ ORS·SALB 의사 확인) | 데이터 변경 → 실장님 확인 |
+
+**모든 곳이 같은 날 함께 바뀌어야 합니다.** 진료만 먼저 바뀌면 약국·수납의 예비 계산과 뜻이 달라집니다. 가능하면 총량 계산을 **서버 한 곳**(`consult.routes.js`)으로 모으고, 화면의 예비 계산은 서버 값만 쓰게 줄이는 것을 권합니다.
+
+### 3) 이미 저장된 처방은 그대로 두는가 — **그대로 둡니다**
+
+- 저장된 `total_qty`로 이미 청구·재고 차감·통계가 끝났습니다. 조제된 줄을 다시 계산하면 **재고와 영수증이 어긋납니다.** 다시 계산하는 마이그레이션은 만들지 않는 것을 권합니다.
+- 운영 DB가 시험 데이터뿐이라면, 실제 사용 시작 전에 **시험 데이터를 정리할지**는 따로 정할 일입니다(이 결정과 섞지 않음). 정리하지 않으면 전환일 앞뒤로 「용량」의 뜻이 달라집니다. 이것은 위키에 **전환 날짜**를 적어 두면 됩니다.
+- 조제 대기 중인 줄(아직 `ordered`)이 전환 순간에 있으면 옛 총량으로 나갑니다. 전환은 **대기 목록이 빈 때**(진료 끝난 뒤)에 반영하는 것이 안전합니다.
+
+### 4) M7 — 「경로」를 「용법」으로 바꾸는 것도 필요한가 — **같이 하는 것을 권합니다**
+
+- 한국식에서 TID·BID·QD는 **용법** 칸의 값입니다. 지금 화면 이름 「경로 / Voie (route)」는 IV·PO·INH를 뜻해서, 약사가 「TID가 경로?」 하고 헷갈립니다. 원외 처방전에는 이미 「용법 / 비고」로 찍힙니다(`external-rx.jsx`).
+- 이름만 바꾸면 됩니다(데이터 그대로): 한국어 「용법」, 프랑스어 « Posologie », 영어 « Directions ».
+  - 약국 화면은 `ph_` 키로(기존 `colRoute`는 다른 화면도 씀)
+  - 진료 화면은 진료 세션
+- 덧붙여, 선택지 2에서는 1회량을 **횟수 칸(숫자)** 으로 나눕니다. 용법(TID)과 횟수(3)가 서로 다를 때(예: TID인데 횟수 2) 약국 화면에 작은 경고를 띄우는 것을 제안합니다. 계산은 횟수를 따릅니다.
+
+**요약 추천**: 선택지 2(한국식) + 절충 표시 + 용법 이름 변경. ACT01 기본값은 8/2/3으로 고쳐야 합니다. 시럽·흡입기(포장 단위)는 따로 결정하시면 됩니다. 전환은 진료·수납·약국이 같은 날 함께 하고, 저장된 처방은 그대로 둡니다.
+
+## 2026-09-29 — C 준비: 약 기본값 바로잡는 마이그레이션 초안 (파일 아님) — **폐기: 선택지 2(한국식)로 결정**
+
+- **상태**: 보류 — C(「용량」 = 1회량) 결정과, 데이터를 바꾸는 마이그레이션이라 **실장님 확인**(규칙 5절)을 기다립니다. **파일은 만들지 않았습니다**(`backend/sql/`에 4xx 없음). 아래는 노트 안의 초안입니다.
+- **커밋**: session/pharmacy — 인계 노트만
+- **무엇을 바꾸나**: 「약 기본값 고칠 표」의 ① 10개 약 기본 용량 → 1, 그리고 약속처방에 복사된 **같은 약·같은 옛 값** 줄(시드 세트 2줄: Malaria Workup의 PCM500, Diarrhea / GE의 METRO). 횟수·일수·경로는 그대로.
+- **무엇을 안 바꾸나**
+  - **이미 저장된 처방(`prescription`)은 건드리지 않습니다.** 기본값은 새로 처방할 때 처음 들어가는 값일 뿐입니다.
+  - 용량·횟수·일수 **셋 다** 시드 값과 같을 때만 바꿉니다. 병원이 이미 고친 약·세트는 그대로입니다.
+  - ③ 의사 확인 7개(시럽·흡입기·주사·ACT01·PRED5)는 넣지 않았습니다.
+- **세트 줄 범위 — 결정 필요**: 세트 **이름과 관계없이** 같은 약 코드 + 같은 옛 값(3개 모두)인 줄을 바꿉니다. 병원이 기본값을 불러와 만든 세트도 같은 문제를 갖기 때문입니다. 시드 세트 2줄만 바꾸려면 두 번째 UPDATE에 `AND s.name IN ('Malaria Workup','Diarrhea / GE')`를 더하면 됩니다. 제 추천은 이름과 관계없이 바꾸고, 바뀐 줄은 기록 표로 확인하는 것입니다.
+- **새로 설치하는 병원**: 파일 순서상 시드(003) 다음에 이 마이그레이션이 돌아서, 새 설치도 바른 기본값으로 시작합니다.
+- **바뀐 줄 기록**: 마이그레이션 실행기(`config/migrate.js`)는 파일마다 한 트랜잭션으로 돌리고 알림(NOTICE)을 어디에도 남기지 않습니다. 그래서 새 표 `pharmacy_dose_fix_log`에 바뀐 행마다 한 줄(대상, 행 번호, 약 코드, 세트 이름, 옛/새 용량, 시각)을 남깁니다. 반영 후에는 읽기 전용으로 이렇게 확인합니다:
+  `SELECT target, code, set_name, old_dose, new_dose, changed_at FROM pharmacy_dose_fix_log ORDER BY id;`
+
+**초안 SQL** (파일로 만들 때 이름 예: `401_pharmacy_per_dose_defaults.sql`)
+
+```sql
+-- 4xx_pharmacy_per_dose_defaults.sql  (초안 — 실장님 결정 C-1 뒤에만 파일로 만듦)
+-- 약 기본값의 「용량」을 1회량으로 바로잡는다.
+-- · 시드 값 그대로인 행만 바꾼다 (용량·횟수·일수 셋 다 같을 때). 병원이 이미 고친 약·세트는 그대로.
+-- · 이미 저장된 처방(prescription)은 건드리지 않는다. 새로 처방할 때 들어가는 값만 바뀐다.
+-- · 무엇을 바꿨는지 pharmacy_dose_fix_log 에 한 줄씩 남긴다 (되돌리기도 이 표로).
+-- · 두 번 돌려도 두 번째는 아무것도 안 바꾼다 (옛 값 조건 때문).
+
+CREATE TABLE IF NOT EXISTS pharmacy_dose_fix_log (
+    id          SERIAL PRIMARY KEY,
+    target      VARCHAR(20)  NOT NULL CHECK (target IN ('drug','order_set_item')),
+    row_id      INTEGER      NOT NULL,
+    code        VARCHAR(20),
+    set_name    VARCHAR(200),
+    old_dose    VARCHAR(20),
+    new_dose    VARCHAR(20),
+    changed_at  TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- 옛 값(시드) → 새 1회량. 횟수·일수는 바꾸지 않는다.
+DROP TABLE IF EXISTS pg_temp.dose_fix;
+CREATE TEMP TABLE dose_fix (code VARCHAR(20), old_dose VARCHAR(20), freq INTEGER, days INTEGER, new_dose VARCHAR(20)) ON COMMIT DROP;
+INSERT INTO dose_fix VALUES
+  ('PCM500',  '3.000', 3,  5, '1.000'),
+  ('BRUFEN',  '3.000', 3,  7, '1.000'),
+  ('BRUFEN4', '3.000', 3,  5, '1.000'),
+  ('DICLO',   '2.000', 2,  5, '1.000'),
+  ('AMOX500', '3.000', 3,  7, '1.000'),
+  ('METRO',   '3.000', 3,  5, '1.000'),
+  ('METF500', '2.000', 2, 30, '1.000'),
+  ('METF850', '2.000', 2, 30, '1.000'),
+  ('RECOMID', '3.000', 3,  7, '1.000'),
+  ('CHLOR',   '3.000', 3,  5, '1.000');
+
+-- 1) 약 기본값
+WITH changed AS (
+  UPDATE drug d
+     SET default_dose = f.new_dose, updated_at = NOW()
+    FROM dose_fix f
+   WHERE d.code = f.code
+     AND d.default_dose = f.old_dose AND d.default_freq = f.freq AND d.default_days = f.days
+  RETURNING d.id, d.code, f.old_dose, f.new_dose
+)
+INSERT INTO pharmacy_dose_fix_log (target, row_id, code, old_dose, new_dose)
+SELECT 'drug', id, code, old_dose, new_dose FROM changed;
+
+-- 2) 약속처방(오더 세트)에 복사된 같은 약·같은 옛 값 줄 — 세트 이름과 관계없이
+WITH changed AS (
+  UPDATE order_set_item i
+     SET dose = f.new_dose
+    FROM dose_fix f, order_set s
+   WHERE s.id = i.set_id AND i.kind = 'drug' AND i.code = f.code
+     AND i.dose = f.old_dose AND i.frequency = f.freq AND i.days = f.days
+  RETURNING i.id, i.code, s.name, f.old_dose, f.new_dose
+)
+INSERT INTO pharmacy_dose_fix_log (target, row_id, code, set_name, old_dose, new_dose)
+SELECT 'order_set_item', id, code, name, old_dose, new_dose FROM changed;
+```
+
+**되돌리는 SQL** — 이미 적용된 마이그레이션 파일은 고칠 수 없으므로(규칙 5절) 되돌릴 때는 **새 번호 파일**로 넣습니다. 이 마이그레이션이 바꾼 행만, 그 뒤 누가 다시 고치지 않은 경우에만 옛 값으로 돌립니다.
+
+```sql
+-- 되돌리기: 이 마이그레이션이 바꾼 행만, 그 뒤에 누가 또 고치지 않았을 때만 옛 값으로
+UPDATE drug d SET default_dose = l.old_dose, updated_at = NOW()
+  FROM pharmacy_dose_fix_log l
+ WHERE l.target = 'drug' AND l.row_id = d.id AND d.default_dose = l.new_dose;
+UPDATE order_set_item i SET dose = l.old_dose
+  FROM pharmacy_dose_fix_log l
+ WHERE l.target = 'order_set_item' AND l.row_id = i.id AND i.dose = l.new_dose;
+```
+
+- **시험** (격리 스택 9184의 DB에서 한 트랜잭션으로 돌리고 **ROLLBACK** — DB에 남은 변화 없음):
+  - 1회째: 약 10개 + 세트 2줄(PCM500·METRO)이 바뀜. ACT01·ORS·PCM250 등 대상이 아닌 것은 그대로
+  - 처방 기록: 용량 3인 시험 처방을 하나 넣고 전·후 `prescription` 전체의 지문(md5)과 개수(384)를 비교 → **같음**
+  - 2회째: 기록이 늘지 않음(아무것도 안 바뀜)
+  - 되돌리기: 12행 모두 옛 값(3.000 / 2.000)으로 돌아옴
+  - 처음 초안은 같은 세션에서 두 번 돌릴 때 임시 표 이름이 겹쳐 실패 → `DROP TABLE IF EXISTS pg_temp.dose_fix` 추가 후 통과
+- **확인 못 한 것**: 운영 DB에서는 돌리지 않았습니다. 운영 세트의 약 줄이 4개뿐이라는 것은 총괄의 읽기 전용 확인에 따른 것입니다.
+
+## 2026-09-29 — 위키 2절 직원용 사용법을 프랑스어 화면 기준으로
+
+- **상태**: 확인 요청 (위키만)
+- **커밋**: session/pharmacy — develop `72895a1` 위, `c581ebb`(약 기본값 표) 다음 커밋
+- **한 일**: `modules/pharmacy.md` 2절을 통계·접수 페이지와 같은 방식으로 다시 씀 — 버튼 이름은 프랑스어 화면 그대로, 괄호에 한국어. 2.1 화면 구성(표) · 2.2 약 내어주기 · **2.3 원외 처방전**(Émettre로 발급 → 🖨 Réimprimer, Imprimer는 BROUILLON 초안, 발급 취소 Annuler) · 2.4 이런 창·표시가 뜨면(표) · **2.5 Délivré 탭** · **2.6 약품 등록과 재고**(재고 덮어쓰기 주의 포함) · 2.7 주의. 새로 들어간 것은 굵게 표시한 세 절.
+- 설정 세션 병합(`72895a1`)으로 탭 이름·삭제 확인·편집 창 제목이 번역된 것을 반영해 6절과 7절 L5를 「해결됨」으로 고침.
+- **바꾼 파일**: `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경 · 마이그레이션 · 번역 키**: 없음
+- **확인한 방법**: 프랑스어 글자는 `fr.js`, `DocumentModal.jsx`(UI 표), `external-rx.jsx`에서 그대로 옮기고, 앞선 격리 스택 화면(Pharmacie, Ordonnance externe 창, Médicaments 탭)과 맞춰 봄.
+- **확인 못 한 것**: 확인 창의 OK/취소 버튼 글자는 브라우저 언어를 따라서 PC마다 다를 수 있습니다.
+
+## 2026-09-29 — C 준비: 약 기본값 고칠 표 (「용량」 = 1회량으로 정해질 때) — **폐기: 선택지 2(한국식)로 결정**
+
+- **상태**: 보류 — C 결정과 의사 선생님 확인을 기다립니다. 코드·DB 변경 없음.
+- **값의 출처**: 처음 설치 때 넣는 시드 파일 `backend/sql/003_seed_data.sql`(3~27줄). **운영 DB 값과 다를 수 있습니다.** 병원에서 고친 약이나 새로 넣은 약은 여기 없습니다. 총괄이 운영 DB 앞 12개를 읽어 본 값은 시드와 같았습니다.
+- **제안 값을 만든 방법**: 의학적 판단이 아니라 **산수**입니다. 「용량」이 「횟수」와 같은 숫자(3/3회, 2/2회)로 들어 있는 정·캡슐은 하루 총량을 적은 것으로 보고, 1회량 **1**로 나눴습니다. 그 밖의 것은 모두 **의사 확인**으로 두었습니다. 모든 값은 의사 선생님이 보고 정하셔야 합니다.
+- **총량**: 처방 한 번에 청구되고 재고에서 빠지는 수(용량 × 횟수 × 일수).
+
+**① 산수로 바로 보이는 것** — 정·캡슐, 용량 = 횟수 (10개)
+
+| 코드 | 약 | 제형 | 지금 (용량 / 횟수 / 일수) | 지금 총량 | 제안 용량 (1회량) | 제안 총량 | 지금 값의 뜻 (1회량으로 읽으면) |
+|---|---|---|---|---|---|---|---|
+| PCM500 | Paracetamol 500mg | 정 | 3 / 3 / 5 | 45 | **1** | 15 | 1회 3정 = 하루 4.5g (성인 하루 최대 4g 초과) |
+| BRUFEN | Brufen 200mg (Ibuprofen) | 정 | 3 / 3 / 7 | 63 | **1** | 21 | 1회 600mg, 하루 1.8g |
+| BRUFEN4 | Brufen 400mg (Ibuprofen) | 정 | 3 / 3 / 5 | 45 | **1** | 15 | 1회 1.2g, 하루 3.6g |
+| DICLO | Diclofenac 50mg | 정 | 2 / 2 / 5 | 20 | **1** | 10 | 1회 100mg, 하루 200mg |
+| AMOX500 | Amoxicillin 500mg | 캡슐 | 3 / 3 / 7 | 63 | **1** | 21 | 1회 1.5g, 하루 4.5g |
+| METRO | Metronidazole 400mg | 정 | 3 / 3 / 5 | 45 | **1** | 15 | 1회 1.2g, 하루 3.6g |
+| METF500 | Metformin 500mg | 정 | 2 / 2 / 30 | 120 | **1** | 60 | 1회 1g, 하루 2g |
+| METF850 | Metformin 850mg | 정 | 2 / 2 / 30 | 120 | **1** | 60 | 1회 1.7g, 하루 3.4g |
+| RECOMID | Ranitidine 150mg | 정 | 3 / 3 / 7 | 63 | **1** | 21 | 1회 450mg, 하루 1.35g |
+| CHLOR | Chlorpheniramine 4mg | 정 | 3 / 3 / 5 | 45 | **1** | 15 | 1회 12mg, 하루 36mg |
+
+**② 이미 1회량 1 — 그대로** (8개)
+
+| 코드 | 약 | 제형 | 지금 | 총량 |
+|---|---|---|---|---|
+| AMLO5 | Amlodipine 5mg | 정 | 1 / 1 / 30 | 30 |
+| AMLO10 | Amlodipine 10mg | 정 | 1 / 1 / 30 | 30 |
+| OMEP20 | Omeprazole 20mg | 캡슐 | 1 / 1 / 14 | 14 |
+| LORAT | Loratadine 10mg | 정 | 1 / 1 / 7 | 7 |
+| ZINC | Zinc 20mg | 정 | 1 / 1 / 10 | 10 |
+| IRON | Ferrous Sulfate 200mg | 정 | 1 / 1 / 30 | 30 |
+| FOLIC | Folic Acid 5mg | 정 | 1 / 1 / 30 | 30 |
+| ORS | ORS | 봉지 | 1 / 3 / 3 | 9 (1봉씩 하루 3번) |
+
+**③ 의사 확인** — 산수로 정할 수 없음 (7개)
+
+| 코드 | 약 | 제형 | 지금 | 지금 총량 | 확인할 것 |
+|---|---|---|---|---|---|
+| ACT01 | Artemether-Lumefantrine | 정 | 4 / 2 / 3 | 24 | 용량 ≠ 횟수라 이미 1회량(1회 4정)으로 보임. 성인 기준이면 그대로. 체중별 용량을 기본값으로 둘지 |
+| PRED5 | Prednisolone 5mg | 정 | 3 / 1 / 5 | 15 | 하루 1번 3정(15mg)이 의도인지 |
+| CEFT | Ceftriaxone 1g | 주사 | 1 / 1 / 1 | 1 | 1병 하루 1번 1일 — 주사 일수·횟수 기본값 |
+| PCM250 | Paracetamol 250mg 시럽 | 시럽 | 3 / 3 / 5 | 45 | 「3」이 mL인지 병인지. 지금은 총량 45가 **병** 수로 청구·차감됨(단가 3,500) — H2 |
+| AMOX250 | Amoxicillin 250mg 시럽 | 시럽 | 3 / 3 / 7 | 63 | 같음 (단가 6,500 × 63) — H2 |
+| CODAEP | Codaep 20mL 시럽 | 시럽 | 3 / 3 / 7 | 63 | 같음 (단가 4,500 × 63) — H2 |
+| SALB | Salbutamol 흡입기 100mcg | 흡입기 | 2 / 3 / 30 | 180 | 1회 2번 뿌림은 1회량으로 맞아 보이나, 총량 180이 **흡입기 개수**로 청구·차감됨(단가 8,000) — H2 |
+
+**함께 고쳐야 하는 곳**
+- **약속처방(오더 세트)** 은 약 기본값을 **복사해서 따로 가지고 있습니다**(`order_set_item`, 진료 화면 `applySet`이 이 복사본을 씀). 약 기본값만 고치면 세트로 처방할 때는 옛 값이 그대로 나갑니다. 시드에 있는 세트: **Malaria Workup**(ACT01 4/2/3, PCM500 3/3/5) · **Diarrhea / GE**(ORS 1/3/3, METRO 3/3/5). 병원이 직접 만든 세트도 확인해야 합니다. 설정 → 약속처방 탭에서 고칩니다.
+- 이미 저장된 처방은 바뀌지 않습니다. 기본값은 **새로 처방할 때** 처음 들어가는 값일 뿐이고, 의사가 칸을 고치면 그 값이 쓰입니다.
+- 의사 선생님들이 지금 「용량」 칸에 하루 총량을 적는 습관이면, 기본값을 고쳐도 **입력 습관**이 같이 바뀌어야 합니다. 이것이 C의 질문입니다.
+
+**고치는 방법** (결정 후, 실장님 확인을 받고)
+- 설정 → 약품 탭에서 약마다 손으로 고치거나, 약국 번호대(401~) 마이그레이션 하나로 한 번에 고칩니다. **데이터를 바꾸는 마이그레이션이라 규칙 5절대로 실장님 확인이 먼저**입니다. 병원에서 이미 고친 약을 덮어쓰지 않도록, 「지금 값이 시드 값과 같을 때만」 바꾸게 쓰겠습니다.
+
+## 2026-09-29 — 결정용 자료: B 재고 · C 용량 기준 · M3 지난 날 처방 · L9 목록 순서
+
+- **상태**: 보류 — 실장님 결정을 기다립니다. 코드 변경 없음. (자세한 근거는 `modules/pharmacy.md` 7절)
+
+### B. 「2번 재고」 — 약 재고 숫자를 믿을 수 있게
+
+**지금 문제** (다섯 가지를 묶은 것입니다)
+
+| 번호 | 문제 | 쉽게 말하면 |
+|---|---|---|
+| H4 | 설정 화면에서 약 정보를 저장하면 재고가 덮어써짐 | 아침에 설정 화면을 열어 두고 오후에 단가만 고쳐 저장해도, 그 사이 조제로 줄어든 재고가 아침 숫자로 되돌아갑니다. 경고도 없습니다. |
+| M4 | 약국 화면에 재고가 안 보임 | 약사는 조제 완료를 누른 **뒤에야** 「재고 부족」을 알게 됩니다. |
+| M5 | 입고·조정 기록이 없음 | 재고는 숫자 하나뿐이라, 누가 언제 왜 바꿨는지 남지 않습니다. 약이 들어와도 「입고」가 아니라 숫자를 고쳐 씁니다. |
+| M6 | 조제 취소가 없음 | 잘못 누르면 되돌릴 수 없고, 재고를 손으로 고쳐야 합니다. |
+| L6 | 최소 재고 칸이 없고, 재고에 소수를 넣으면 오류 | 「몇 개 아래면 빨간색」이 20으로 고정입니다. |
+
+**선택지**
+
+| | 1. 최소한 | 2. 기록을 남기는 재고 **(추천)** | 3. 2번 + 조제 취소 |
+|---|---|---|---|
+| 하는 일 | H4 막기(설정 화면에서 약 정보를 저장해도 재고는 안 바뀜, 재고는 따로 「재고 고치기」로) · 약국 화면에 재고 표시와 조제 **전** 부족 경고 · 최소 재고 칸, 정수 검사 | 1번 전부 + 재고가 바뀔 때마다 **기록 한 줄**(언제·누가·몇 개·왜: 조제/입고/실사 조정). 「입고」 버튼(들어온 수만큼 더하기)과 「실사 조정」 버튼(센 숫자로 맞추기, 사유 필수). 약마다 기록 보기 | 2번 전부 + 조제 완료 탭에서 「조제 취소」: 처방이 다시 대기로 돌아가고 재고가 되돌아옴(기록 남음) |
+| 약국 화면 | 약마다 재고 숫자, 모자라면 빨간 경고 | + 「재고」 탭(입고·실사 조정·기록) | + 조제 완료 탭에 「조제 취소」 버튼 |
+| 설정 화면 약품 탭 | 재고 칸은 새 약 등록 때만. 최소 재고 칸 추가 | 재고 칸은 읽기만(바꾸는 건 입고·조정으로) | 2번과 같음 |
+| 작업 크기 | 작음 (반나절) | 보통 (1~2일) | 보통+ (2~3일) |
+| DB 마이그레이션 | 없음 | **있음** — 새 표(재고 기록) 하나 추가. 기존 데이터는 바꾸지 않음 | 2번과 같음 |
+| 다른 모듈 영향 | 설정 세션: 약 저장 API가 재고를 안 건드리게(`admin.routes.js`) | 1번 + 통계가 나중에 이 기록을 쓸 수 있음(필수 아님) | 2번 + 수납에는 영향 없음(청구는 조제 여부와 무관) |
+
+**추천: 2번.** 재고 숫자가 맞으려면 「왜 바뀌었는지」가 남아야 합니다. 3번의 조제 취소는 규칙(누가, 언제까지, 사유 필수 여부)을 먼저 정해야 해서 2번 뒤에 따로 하는 것이 안전합니다.
+어느 것을 고르셔도 **시작할 때 선반을 한 번 실제로 세어** 숫자를 맞추셔야 합니다. 지금 숫자는 H4 때문에 이미 틀어졌을 수 있습니다.
+
+**2번·3번이면 함께 정해 주실 것**
+- 입고·실사 조정을 **누가** 하나요? ① 약사(약국 권한) ② 지금처럼 설정 권한이 있는 사람만. — 제 추천은 ①(약을 받는 사람이 약사이므로).
+
+### C. H1 용량 기준 — 처방의 「용량」 칸은 1회량인가, 하루 총량인가
+
+**지금 동작**
+- 총량(청구 수량 = 재고 차감량) = **용량 × 횟수 × 일수**. 즉 프로그램은 「용량」을 **1회에 먹는 양**으로 계산합니다. 원외 처방전에도 「1회량」으로 찍힙니다.
+- 그런데 처음 넣어 둔 약 기본값 중 상당수는 **하루 총량**처럼 보입니다. 예) Paracetamol 500mg 「3 / 3회 / 5일」 → 1회 3정 × 하루 3번 = 하루 4.5g(성인 최대 4g 초과), 45정 청구.
+- 운영 중인 EMR의 약 기본값이 처음 값 그대로인지, 병원에서 이미 고쳤는지는 **확인하지 못했습니다**(운영 DB를 보지 않았습니다).
+
+**선택지**
+
+| | 1. 「용량」 = 1회량 **(추천, 의사 선생님 답에 따라)** | 2. 「용량」 = 하루 총량 |
+|---|---|---|
+| 바뀌는 것 | 계산은 그대로. 잘못된 약 기본값만 고침(의사 선생님이 약마다 정해 주셔야 함). 화면 이름을 「1회량」으로 통일 | 총량 = 용량 × 일수로 계산을 바꿈. 원외 처방전은 「1일량」으로 |
+| 작업 크기 | 작음 (기본값 고치기는 설정 화면에서 손으로도 가능) | 큼 — 진료 화면 계산, 수납 계산, 원외 처방전, 통계가 모두 바뀜 |
+| 다른 모듈 | 진료 화면 칸 이름(진료 세션) | 진료·수납·통계 세션 모두 |
+| 이미 저장된 처방 | 그대로 | 예전 처방과 새 처방의 뜻이 달라짐 — 주의 |
+
+**의사 선생님께 물을 질문 한 줄**
+> 「Paracetamol 500mg을 **한 번에 1정씩 하루 3번 5일** 먹게 하려면, 지금 처방 화면의 「용량」 칸에 **1**을 적으십니까, **3**을 적으십니까?」
+> — 1이면 선택지 1(기본값만 고치면 됨), 3이면 지금 청구와 재고가 3배로 잡히고 있는 것이라 선택지 2나 입력 습관을 바꾸는 것을 의논해야 합니다.
+
+시럽·흡입기처럼 병·개로 주는 약(H2)은 어느 쪽이든 따로 정해야 합니다. 예를 들어 흡입기 하나가 180개로 청구됩니다. 의사가 총량을 직접 적을 수 있게 할지 등은 C가 정해진 뒤 여쭙겠습니다.
+
+### M3. 지난 날 조제하지 않은 처방을 대기 목록에 보일지
+
+지금은 **오늘 내원만** 보입니다. 어제 진료가 끝나고 약을 안 받아 간 환자는 약국 화면에서 다시 찾을 수 없습니다.
+
+| 선택지 | 내용 |
+|---|---|
+| 1. 지금처럼 오늘만 | 바뀌는 것 없음 |
+| 2. 최근 7일 **(추천)** | 7일 안의 조제 안 된 처방을 함께 보여주고, 오늘 것이 아니면 「어제」·「3일 전」 표시. 작업 작음, 마이그레이션 없음, 다른 모듈 영향 없음 |
+| 3. 기간 없이 전부 | 끝내 안 찾아간 처방이 계속 쌓임 |
+
+2·3번이면 끝내 안 찾아가는 처방을 목록에서 치우는 「조제 안 함」 버튼도 곧 필요해집니다. 재고는 건드리지 않고, 처방을 취소 상태로 두는 방식입니다.
+
+### L9. 대기 목록 순서
+
+지금은 「진료 기록이 마지막으로 저장된 시각」 순입니다. 의사가 완료 뒤에 기록을 고치면 그 환자가 뒤로 밀립니다. 급하지 않습니다.
+
+| 선택지 | 내용 |
+|---|---|
+| 1. 지금대로 | — |
+| 2. 진료 **완료** 시각 순 **(추천)** | 먼저 진료가 끝난 사람이 위. 진료 쪽에 「완료 시각」 칸이 필요 → 진료 세션 작업 + 마이그레이션 하나 |
+| 3. 접수 시각 순 | 칸이 이미 있어 작업이 가장 작지만, 진료가 끝난 순서와 다를 수 있음 |
+
+## 2026-09-29 — 조기 재처방 경고 문장화 · 약품 탭 3개 국어 · 대기 목록 자동 새로고침 (총괄 지시 ①②③)
+
+> **총괄 확인 (2026-09-29)**: 합침 + 실행 중 EMR 반영. 코드 검토: 자동 새로고침은 저장 중·창 열림·탭 숨김일 때 건너뛰고 열린 환자·검색어 유지, 약 분류는 영어로 저장하고 화면만 번역, 경고 기준 변경 없음. 쓰인 번역 키가 세 언어에 모두 있는 것 확인. 실행 중 EMR에서는 빌드·화면 열림만 확인(동작은 세션의 격리 스택 확인).
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy — develop `a708c9b` 위 커밋 하나
+- **한 일**: 기준·금액·재고는 그대로, 글자와 새로고침만.
+  - ① L7 경고를 문장 하나(`ph_refillWarn`, `{ago}`·`{supply}`·`{left}` 자리 채움)로. 조제 여부를 안 따지므로 「받았다」가 아니라 「처방되었다」.
+  - ② L5 약품 탭 **안**의 영어 글자(제목·+ Add·표 머리·편집 칸·분류 이름)를 3개 국어로. 분류는 **저장값을 영어 그대로** 두고 보여줄 때만 번역 — 시드와 통계 분류 묶음이 영어 값을 씀. 저장 후 API로 `Antimalarial` 그대로인 것 확인.
+  - ③ L8 30초마다 조용히 새로고침. 건너뛰는 때: 조제·전환 저장 중, 수동 새로고침 중, 원외 처방전·차트뷰어·환자 찾기 창이 열려 있을 때, 탭이 안 보일 때. 탭이 다시 보이면 바로 한 번. 검색어·열린 환자 유지. 열린 환자가 목록에서 사라지면(다른 사람이 조제) 화면에 남기고 노란 안내 「새로고침을 누르세요」. 최근 처방 조회는 환자가 바뀔 때만.
+- **바꾼 파일**: `frontend/src/pages/Pharmacy.jsx`, `frontend/src/pages/Settings.jsx`(약품 탭 안 + 파일 아래쪽 `Fld` 위에 약품 탭 전용 도우미 `DRUG_CATEGORIES`·`drugCatLabel` 두 줄), `wiki/modules/pharmacy.md`
+- **공용 파일 변경**: `i18n/ko.js`·`en.js`·`fr.js`의 `ph_` 블록에 키 추가만. `Settings.jsx`는 약품 탭 안과 그 탭만 쓰는 도우미 두 줄 — 탭 밖 글자(「Delete?」 `:155`, 탭 이름 `:238`, 편집 창 제목 `:683`)는 **건드리지 않음**(설정 세션 몫).
+- **DB 마이그레이션**: 없음
+- **번역 키**: `ph_refillWarn`, `ph_selGone`, `ph_category`, `ph_unitPrice`, `ph_stock`, `ph_cat_Antibiotic`·`Analgesic`·`Antimalarial`·`Cardiovascular`·`GI`·`Vitamin`·`Other` — 14개, ko·en·fr 모두. 표 머리의 코드·약품명·용량·횟수·일수·경로·추가·약은 기존 키(`code`, `colDrugName`, `colDose` …, `add`, `drugs`)를 다시 씀.
+- **확인한 방법**
+  - `npm install --no-package-lock` + `npm run build` 통과. 사용한 키가 ko·en·fr에 모두 있는지 스크립트로 확인.
+  - 격리 스택 9184(규칙 7절 명령 그대로):
+    - 조기 재처방: 3일 전 7일분 처방이 있는 환자 → 한국어 「같은 약이 3일 전에 7일분 처방되었습니다 — 아직 4일분 남음」, 프랑스어 « Même médicament prescrit il y a 3 j pour 7 j — encore 4 j de traitement ». (지난 진료 날짜는 격리 DB에서만 `UPDATE consultation SET consult_date` 로 옮김.)
+    - 자동 새로고침: 요청 시각 29초·59초 / 원외 처방전 창을 연 36초 동안 0회 / 그동안 최근 처방 조회 0회 / 검색어 「REFILL」 유지 / 뒤에서 새 환자 추가 + 열린 환자 조제 → 30초 안에 대기 수 갱신, 열린 환자는 남고 노란 안내(한국어·프랑스어 둘 다 봄).
+    - 약품 탭: 한국어·프랑스어 목록, 편집 창 칸 이름, 분류 선택 「항말라리아제 / Antipaludique」.
+  - 처음 빌드에서 경고 문장의 `{ago}`가 그대로 찍히는 것을 화면에서 발견 — 셸 따옴표 때문에 정규식의 `\`가 빠졌던 것. 고치고 다시 확인.
+- **확인 못 한 것**: 브라우저 탭이 가려졌을 때 멈추는 것은 코드로만(미리보기 창에서는 `document.hidden`을 직접 만들기 어려움). 영어 화면은 키만 확인.
+- **위키**: `modules/pharmacy.md` 머리말, 2절(자동 새로고침·경고 예·노란 안내), 3.5, **3.6 자동 새로고침 신설**(원외 처방전은 3.7로), 6절 약품 탭, 7절(L7·L8·L5 탭 안 → 해결됨, L5 탭 밖만 남김), 8절. Pharmacy.jsx가 늘어나 위키의 줄 번호를 다시 맞춤.
+- **다른 세션에 부탁**: 없음(탭 밖 영어 글자는 이미 총괄이 설정 세션에 전달)
+- **남은 일**: 총괄 요청 「결정용 자료」와 위키 2절 프랑스어 화면 기준 다시 쓰기를 이어서 합니다.
+
+## 2026-09-29 — 다음 작업 A 분류: 결정 없이 되는 것 / 결정이 필요한 것
+
+> **총괄 확인 (2026-09-29)**: 합침(handoff만). ①②③(L7 문장화 · L5 약품 탭 국어화 · L8 30초 자동 새로고침)은 실장님께 허락을 여쭘. 설정 세션 부탁 3곳(Settings.jsx 영어 고정 글자)은 설정 세션에 전달.
+
+- **상태**: 보류 — 실장님이 A·B·C 중 무엇을 할지 정하시길 기다립니다. 코드 변경 없음.
+- **커밋**: session/pharmacy — develop `97c4df9` 위 커밋 하나 (이 노트만)
+- **결정 없이 할 수 있는 것** (의학 판단·재고 동작·화면 구성 변경 없음, 약국 파일과 약품 탭 안)
+  1. **L7 조기 재처방 경고 문구** — 지금 「⚠ 5j 7j · reste 2j」(`Pharmacy.jsx:235`)를 문장으로. 예: fr « Même médicament reçu il y a 5 j (pour 7 j) — encore 2 j ». 기준(처방일+일수)은 그대로, 글자만. `ph_` 키 추가.
+  2. **L5 약품 탭 안의 영어 고정 글자** — 표 머리(Code·Name·Cat·Dose·Freq·Days·Route·Price·Stock, `Settings.jsx:295`), 제목 「💊 Drugs」(`:289`), **+ Add**(`:291`), 편집 칸 이름(`:722-737`)을 3개 국어로. `ph_` 키.
+     - 탭 **밖**이라 제 몫이 아닌 것: 삭제 확인 「Delete?」(`:155`, 모든 탭 공용 함수), 왼쪽 탭 이름 「💊 Drugs」(`:238`), 편집 창 제목 「+ Add」(`:683`) → **설정 세션**에 부탁.
+  3. **L8 대기 목록 자동 새로고침** — 약국 화면이 열려 있는 동안 30초마다 목록만 다시 불러오기. 약사가 고른 환자·입력 중인 검색어는 유지. 조제·전환 로직은 그대로.
+- **실장님 결정이 필요한 것**
+  - **M3 지난 날 조제 안 된 처방 표시** — 며칠 전까지 보일지(제 추천 7일), 오래된 것을 어떻게 구분해 보일지. 지금은 오늘 내원만 보여서, 어제 것은 약국에서 영영 안 보입니다. 대기 목록에 무엇이 뜨는지가 바뀌는 일입니다.
+  - **L6 약품 탭의 `min_stock` 입력 칸·재고 정수 검사** — 재고 기준이라 B(2번 재고)와 같이 정할 일.
+  - **L9 목록 순서** — 「진료 완료 시각」 순으로 하려면 진료 쪽에 완료 시각 칸이 필요합니다(진료 세션). 급하지 않음.
+- **다른 세션에 부탁**: 설정 — 위 L5의 탭 밖 영어 글자 3곳 (`Settings.jsx:155`, `:238`, `:683`)
+- **남은 일**: 실장님이 「A 중 결정 없이 되는 것 먼저」라고 하시면 1~3을 한 작업 단위로 하겠습니다.
+
+## 2026-09-29 — develop 당긴 뒤 정리 (총괄 요청)
+
+> **총괄 확인 (2026-09-29)**: 합침(`5292f43`, fast-forward). 문서·주석만이라 동작 변경 없음. H4는 설정 세션에 전달됨.
+
+- **상태**: 확인 요청 (문서·주석만, 동작 변경 없음)
+- **커밋**: session/pharmacy — `git merge --ff-only develop`(`5e0e056`) 다음 커밋 하나
+- **한 일**: 총괄 요청대로 `develop`을 fast-forward로 당김. 시험 스크립트 머리에 「격리 스택 전용 — 운영 EMR·운영 DB에 돌리지 말 것」 한 줄(한·영). 위키 7절 H3을 해결됨으로(진료 `d1f473e`: 조제된 줄 수정·삭제 409, `consult.routes.js:180`·`:199`·`:212`를 읽어 확인), 3.3·5절 문구 갱신, 설정 화면 병합으로 밀린 `Settings.jsx` 줄 번호 갱신.
+- **바꾼 파일**: `backend/test/pharmacy.api.mjs`(주석), `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음
+- **확인한 방법**: `node --check backend/test/pharmacy.api.mjs`. 코드 동작이 바뀌지 않아 격리 스택은 다시 띄우지 않았습니다.
+- **확인 못 한 것**: 진료 쪽 409와 조제가 **동시에** 일어나는 경우는 코드로만 판단(수정 UPDATE가 조제의 줄 잠금을 기다린 뒤 `status <> 'dispensed'`를 다시 봄).
+- **다른 세션에 부탁**: 설정 — H4(약 저장 시 재고 덮어쓰기)는 병합 후에도 그대로입니다(`admin.routes.js:90`, `Settings.jsx:133`). 총괄이 전달 예정이라고 받음.
+- **남은 일 · 알려진 문제**: M3~M7 중 의학 판단이 없는 것(M3 지난 날 대기 처방, M6 조제 취소, M4 재고 표시)은 화면·재고 동작이 바뀌는 일이라 실장님께 먼저 여쭙니다(규칙 11절).
+
+## 2026-09-29 — 약국 파일 안의 작은 버그 6건 수정 (실장님 지시 「1번부터」)
+
+> **총괄 확인 (2026-09-29)**: 합침(`93616cc`) + 실행 중 EMR 반영. 확인: 조제된 줄 원내/원외 전환 → 409 · `/completed` 진료당 한 줄에 성별·생년월일·알레르기 포함(오늘 조제 0건이라 형태만). 요청 1(이미지 이름표)은 총괄이 `657ba2c`로 `docker-compose.session.yml`에 `image: bethesda-s-${SESSION}-*:dev` 넣음 — 임시 `-f pharmacy-images.yml` 없이 규칙 7절 명령 그대로 쓰면 됨. 요청 2(생년월일)는 `7ad4387`로 전 모듈 해결. 요청 3(`npm ci`)은 규칙 8절을 `npm install --no-package-lock`으로 고침. `backend/test/pharmacy.api.mjs`는 그대로 둠(격리 스택 전용, 운영에선 돌리지 말 것).
+
+- **상태**: 확인 요청
+- **커밋**: session/pharmacy `3b91950` + 이 항목을 고친 뒤따르는 커밋 하나 (생년월일 임시 처리 되돌림)
+- **한 일**: 의학적 판단이 필요 없는 버그만 고쳤습니다. 재고 차감 규칙·용량은 바꾸지 않았습니다.
+  - M1 원내/원외 전환은 조제 대기 줄만 — 조제된 줄은 409. 이미 뺀 재고와 청구가 어긋나는 것을 막으려고.
+  - M2 전환 후 왼쪽 목록도 같이 고침 — 다른 환자를 눌렀다 오면 예전 값이 보이던 것.
+  - L1 조제할 때 약 행을 `drug.id` 순서로 먼저 잠금 — 교착(deadlock)으로 조제가 실패하던 것.
+  - L2 같은 환자를 두 사람이 동시에 조제하면 두 번째 사람에게 번역된 안내 + 목록 새로고침(전에는 영어 오류).
+  - L3 조제 완료 탭: 한 진료가 두 줄로 나오던 것, 원외 표시·약제비·알레르기 상자·원외 처방전의 성별/생년월일이 빠지던 것.
+  - L4 약제비에서 원외 제외, 이름 「약제비 (원내)」 — 수납과 같은 금액.
+- **바꾼 파일**: `backend/src/routes/pharmacy.routes.js`, `frontend/src/pages/Pharmacy.jsx`, `backend/test/pharmacy.api.mjs`(새 파일, 시험 스크립트), `wiki/modules/pharmacy.md`
+- **공용 파일 변경**: `frontend/src/i18n/ko.js`·`en.js`·`fr.js` — `// ── begin pharmacy (ph_) ──` 블록 안에 키 3개 추가만. 다른 공용 파일은 없음.
+- **DB 마이그레이션**: 없음
+- **번역 키**: `ph_drugCostInternal`, `ph_alreadyDispensed`, `ph_typeLocked` (ko · en · fr 모두)
+- **API 동작 변경** (다른 화면은 이 API를 안 부름 — `grep`으로 확인)
+  - `PUT /api/pharmacy/prescription/:id/dispense-type`: 조제된 줄이면 409 (전에는 200으로 바뀜)
+  - `GET /api/pharmacy/completed`: 진료당 한 줄, `dispensed_by_name`은 쉼표로 이은 이름, 칸 추가(`gender, date_of_birth, allergies`, 줄의 `drug_id, unit_price, dispense_type`)
+  - 오류 문구 두 개가 서버(`pharmacy.routes.js:12-13`)와 화면(`Pharmacy.jsx:21-22`)에 똑같이 있어야 번역됩니다 — `api/client.js`가 상태 코드를 넘기지 않아서입니다.
+- **확인한 방법**
+  - `npm run build` 통과, `node --check backend/src/routes/pharmacy.routes.js` 통과
+  - 격리 스택 9184에서 `node backend/test/pharmacy.api.mjs` — 15개 항목 통과, 세 번 반복. 동시 조제(같은 환자 2명 동시 → 한 번만 차감), 약 순서가 반대인 12쌍 동시 조제(**고치기 전 코드로 24건 중 3건 deadlock 실패를 재현**, 고친 뒤 0건, 재고 정확히 −24), 전환 409/404, 원외 재고 미차감, 완료 목록 한 줄.
+  - 화면(9184): 한국어 — 약제비 (원내) 13,400 → Paracetamol 원외 → 12,200, 다른 환자 눌렀다 와도 원외 유지, 뒤에서 조제된 환자에서 원외 누르면 「이미 조제 완료된 약은…」 안내 후 목록 18→17. 프랑스어 — Médicaments (interne), 뒤에서 다른 약사가 조제한 환자에서 Terminer délivrance → « Ce patient a déjà été servi… » 후 목록 19→18, Délivré 탭에 Externe 표시·알레르기·약제비 표시, 재고는 Amoxicillin −21 / Paracetamol(원외) 0 / Salbutamol −1.
+- **확인 못 한 것**: 영어 화면은 눌러 보지 않았습니다(키만 확인). 원외 처방전 양식(`external-rx.jsx`)은 안 바꿔서 인쇄 폭은 다시 보지 않았습니다.
+- **위키**: `modules/pharmacy.md` 머리말, 2절(약제비, 새 안내 창), 3.2·3.3(잠금 순서·동시 조제 시험 결과·오류 문구 규칙)·3.6, 4절 API 표, 7절(H5 기록 후 해결됨으로, 해결됨 절 신설), 8절
+- **총괄 확인 요청 — 급함**
+  1. **세션 격리 스택이 운영 EMR과 같은 이미지 이름을 씁니다.** `docker-compose.yml`에 `image: bethesda-emr-backend:latest` / `bethesda-emr-frontend:latest`가 박혀 있고 `docker-compose.session.yml`은 이것을 바꾸지 않습니다. 그래서 어느 세션이든 `--build`하면 그 이름표가 그 세션 코드로 옮겨갑니다.
+     - 실제로 제 스택이 다른 세션이 뒤이어 빌드한 백엔드로 떠서, 고치기 전 코드로 시험이 돌았습니다.
+     - 운영 컨테이너는 제가 확인한 동안 세션 이미지로 바뀌지 않았습니다. 16:49에 총괄 배포(`7ad4387`)로 본체 폴더에서 다시 만들어졌고, 백엔드 이미지(`de3d8106…`)가 컨테이너 생성 3초 전에 빌드된 것으로 보아 `--build` 배포로 보입니다. 운영 컨테이너 안은 들여다보지 않았습니다.
+     - 그러나 본체 폴더에서 `--build` 없이 `docker compose up -d`(또는 `setup.ps1 -Offline`의 `--no-build`)를 하면, 마지막으로 빌드한 **세션의 코드로 운영 EMR이 다시 만들어집니다.** `start.bat`·`update.bat`은 `--build`라 괜찮습니다.
+     - 제안: `docker-compose.session.yml`의 backend·frontend에 `image: bethesda-s-${SESSION}-backend:dev` / `-frontend:dev` 추가. 저는 공용 파일을 안 고치고, 작업공간 밖 임시 파일 `-f pharmacy-images.yml`(같은 두 줄)로 우회했습니다.
+  2. **H5 문서의 생년월일 하루 밀림** — 제가 찾은 직후 총괄이 `7ad4387`로 같은 방법(DATE 형 파서)으로 고친 것을 확인했습니다. 그래서 약국 쪽 임시 처리(`TO_CHAR`)는 되돌렸습니다. 이 브랜치에는 그 커밋이 없으니 **합친 뒤 원외 처방전의 생년월일을 한 번 봐 주세요.**
+  3. **`npm ci`가 안 됩니다** — `frontend/package-lock.json`이 저장소에 없습니다. 규칙 8절은 `npm ci`인데, 저는 Dockerfile과 같은 `npm install --include=dev`로 빌드했습니다(생긴 lock 파일은 지웠습니다).
+- **다른 세션에 부탁**
+  - **진료**: 조제된 처방 줄의 수정·삭제 막기 (H3) — 앞 항목과 같음, 아직 제안
+  - **설정**: 약 저장 시 재고 덮어쓰기 (H4) — 앞 항목과 같음, 아직 제안
+- **남은 일 · 알려진 문제**: 높음 H1~H4, 보통 M3~M7, 낮음 L5~L9. 다음은 실장님이 정하실 「2번 재고」와 H1 용량 기준.
+
+## 2026-09-29 — 현황 파악, 위키 첫 작성
+
+- **상태**: 보류 — 무엇부터 고칠지 실장님 결정을 기다립니다. (이 커밋은 위키만 바꿨으므로 합쳐도 무방합니다.)
+- **커밋**: session/pharmacy (이 항목이 들어간 커밋 하나)
+- **한 일**: 약국 화면·서버·원외처방전·설정 약품 탭·관련 테이블, 그리고 진료→약국→수납 연결을 읽고 `modules/pharmacy.md` 1~7절을 코드 기준으로 채웠습니다. 코드는 고치지 않았습니다.
+  - 작업공간이 `f1e9cc4`(main 쪽)에서 만들어져 있어서, 지시대로 `develop`의 `a4a9ea6`으로 fast-forward 하고 브랜치 이름을 `session/pharmacy`로 바꿨습니다.
+- **바꾼 파일**: `wiki/modules/pharmacy.md`, `wiki/handoff/pharmacy.md`
+- **공용 파일 변경**: 없음
+- **DB 마이그레이션**: 없음
+- **번역 키**: 없음 (약국 화면이 쓰는 키는 ko·en·fr에 모두 있음을 확인)
+- **확인한 방법**: 코드 읽기. 동시 조제 시 재고가 두 번 빠지지 않는지는 잠금 구조로 판단했고, 실제로 동시에 눌러 보지는 않았습니다.
+- **확인 못 한 것**: 운영 DB의 약품 기본값·재고가 시드(`003_seed_data.sql`) 그대로인지 — 운영 EMR은 건드리지 않았습니다. 격리 스택은 아직 띄우지 않았습니다.
+- **위키**: `modules/pharmacy.md` 1~8절 전부
+- **총괄 확인 요청**: 7절 **H1·H2**(기본 용량 해석, 병·개 단위 약 수량)는 청구 금액과 원외 처방전 인쇄에 걸린 문제라 진료·수납·설정과 함께 봐야 합니다.
+- **다른 세션에 부탁** (아직 실장님 결정 전이라 「제안」입니다. 결정되면 다시 적겠습니다)
+  - **진료**: 조제 완료(`status='dispensed'`)된 처방 줄은 수정·삭제를 막아 주세요 — `consult.routes.js:165-190`, 7절 H3.
+  - **진료**: 시럽·흡입기처럼 총량을 따로 적어야 하는 약을 위해 `total_qty`를 의사가 직접 고칠 수 있게 — `Consultation.jsx:278`, 7절 H2 (실장님 결정 후).
+  - **설정**: `PUT /api/admin/drugs/:id`가 재고를 받은 값으로 통째로 덮어써서 조제 차감이 사라질 수 있습니다 — `admin.routes.js:89`, 7절 H4. 재고는 따로 바꾸는 길(약국 쪽 재고 조정 API 등)로 빼고 이 PUT에서는 재고를 건드리지 않는 방안을 제안합니다. 새 약 `min_stock` NULL 저장(`:75-77`), 재고 소수 입력 시 DB 오류(`:40`)도 같이.
+- **남은 일 · 알려진 문제**: `modules/pharmacy.md` 7절 — 높음 4 · 보통 7 · 낮음 9

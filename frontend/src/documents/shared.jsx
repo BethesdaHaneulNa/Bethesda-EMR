@@ -78,8 +78,21 @@ export function DocMetaRow(props) {
 }
 
 // ── patient identity box ────────────────────────────────────────
+// `minimal` drops the address and phone rows. Operation notes pass it: those two answer
+// no clinical question on a record of what was done, and the note is the document that
+// gets copied onward - to an insurer, to another hospital, into the patient's own file.
+// Every copy carrying a home address widens the exposure for no gain. Documents that
+// exist so somebody can make contact (referral, certificate, outside prescription) keep
+// them, which is why this is a prop and not a deletion.
+//
+// An address or phone row with nothing to put in it is left out, not printed empty.
+// Reception does not record an address (decision 2026-09-29: no address, second phone
+// or ID-number fields), so the address row would be blank on every document; a blank
+// row on an issued record looks like a detail someone forgot to fill in.
 export function PatientBox(props) {
   var p = props.patient || {}, lang = props.lang;
+  var address = String(p.address || '').trim();
+  var phone = String(p.mobile || p.phone || '').trim();
   var cell = { border: '1px solid #999', padding: '4px 8px', fontSize: 12, verticalAlign: 'top' };
   var head = Object.assign({}, cell, { background: '#f0f0f0', fontWeight: 700, whiteSpace: 'nowrap', width: 90 });
   var sex = p.gender === 'M' ? L(DOC_LABELS.male, lang) : p.gender === 'F' ? L(DOC_LABELS.female, lang) : '';
@@ -99,14 +112,18 @@ export function PatientBox(props) {
           <td style={head}>{L(DOC_LABELS.sex, lang)}</td>
           <td style={cell}>{sex}</td>
         </tr>
-        <tr>
-          <td style={head}>{L(DOC_LABELS.address, lang)}</td>
-          <td style={cell} colSpan={3}>{p.address || ''}</td>
-        </tr>
-        <tr>
-          <td style={head}>{L(DOC_LABELS.phone, lang)}</td>
-          <td style={cell} colSpan={3}>{p.mobile || p.phone || ''}</td>
-        </tr>
+        {props.minimal || !address ? null : (
+          <tr>
+            <td style={head}>{L(DOC_LABELS.address, lang)}</td>
+            <td style={cell} colSpan={3}>{address}</td>
+          </tr>
+        )}
+        {props.minimal || !phone ? null : (
+          <tr>
+            <td style={head}>{L(DOC_LABELS.phone, lang)}</td>
+            <td style={cell} colSpan={3}>{phone}</td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
@@ -123,10 +140,11 @@ export function DocSection(props) {
 }
 
 // ── doctor / clinic signature block ─────────────────────────────
+// `tight` halves the gap above the block, for forms that are fighting for one page.
 export function SignatureBlock(props) {
   var lang = props.lang, doctor = props.doctor || {}, clinic = props.clinic || {};
   return (
-    <div style={{ marginTop: 28, fontSize: 12.5, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+    <div style={{ marginTop: props.tight ? 14 : 28, fontSize: 12.5, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <table style={{ borderCollapse: 'collapse' }}>
           <tbody>
@@ -146,11 +164,13 @@ export function SignatureBlock(props) {
 }
 
 // ── A4 wrapper ──────────────────────────────────────────────────
+// `pad` lets a dense form trade some of its own white margin for content. Print already
+// adds a 14 mm page margin (printDocument), so the padding here is on top of that.
 export function A4(props) {
   return (
     <div ref={props.innerRef} style={{
       width: '100%', background: '#fff', color: '#111',
-      padding: '34px 40px', boxSizing: 'border-box',
+      padding: props.pad || '34px 40px', boxSizing: 'border-box',
       fontFamily: '"Times New Roman", Georgia, serif', fontSize: 13, lineHeight: 1.45,
     }}>
       {props.children}
@@ -159,11 +179,18 @@ export function A4(props) {
 }
 
 // ── print: open the A4 node in a clean print window ─────────────
-export function printDocument(node, title) {
+// `lang` picks the language of the one message this shows (popup blocked); it was
+// Korean only, which a French-speaking desk could not read.
+var POPUP_BLOCKED = {
+  ko: '팝업이 차단되어 인쇄할 수 없습니다. 브라우저에서 팝업을 허용해 주세요.',
+  en: 'The browser blocked the print window. Allow pop-ups for this site and try again.',
+  fr: "Le navigateur a bloqué la fenêtre d'impression. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
+};
+export function printDocument(node, title, lang) {
   if (!node) return;
   var html = node.outerHTML;
   var w = window.open('', '_blank', 'width=900,height=1000');
-  if (!w) { alert('팝업이 차단되어 인쇄할 수 없습니다. 브라우저에서 팝업을 허용해 주세요.'); return; }
+  if (!w) { alert(L(POPUP_BLOCKED, lang || 'ko')); return; }
   w.document.open();
   w.document.write(
     '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (title || 'Document') + '</title>' +

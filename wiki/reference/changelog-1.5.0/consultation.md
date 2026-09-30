@@ -1,0 +1,140 @@
+## Consultation
+
+### Prescription totals follow the way the clinic prescribes
+
+The clinic writes a prescription as *daily total · times a day · days · sig* — `3 · 3 · 7 · TID`
+is three tablets a day, one at a time, for a week: 21. The EMR multiplied all three
+(3 × 3 × 7 = 63), so every line with more than one intake a day was dispensed, billed and
+counted in the statistics three or four times over. The total is now worked out in one
+place on the server, daily total × days; the times a day only split the day's amount for
+the label. Under each drug the screen shows the same sentence the pharmacy prints —
+« 1 cp × 3 fois/jour pendant 7 jours (total 21) » — so the doctor reads what will be
+handed over. Lines saved before the change keep their total (they were already
+dispensed and paid) and are marked *old calculation*; they are recomputed only if the
+dose, times or days are actually changed, never by clicking through them.
+
+### An empty field is never quietly turned into "1"
+
+A drug added from the search now starts empty: the director decided a drug carries a
+price, not a default dose, and the dose belongs to the prescription or to an order set.
+While checking this we found the screen saved an empty daily total as `1` and empty times
+or days as `1`, and the server did the same, so touching one box could turn a half-written
+line into "1 a day for 1 day" that nobody wrote — and that total is stock and money.
+Empty now stays empty. A line without a daily total or days has no total at all (not 0):
+it carries a red mark, the heading counts it, **Terminé** asks once, the pharmacy stops on
+it and the cashier's list flags it. Order sets can now hold the daily total, times, days
+and sig of each drug line (and quantity, times, days of each order line); applying a set
+copies them as written.
+
+### Vital signs were erased when there was no blood pressure
+
+The screen loaded the saved vital signs only when a blood pressure was among them. A
+temperature or pulse taken alone showed empty when the consultation was reopened, and the
+next **Sauver** wrote the empty boxes back — the measurement was gone. Found by the new
+change log on its first test. All saved vital signs now load.
+
+### Operation notes
+
+Eleven operation notes — general, soft-tissue mass, hernia, appendectomy, breast,
+haemorrhoids, anal fistula, wound suture, incision and drainage, caesarean, circumcision —
+and the surgical consent, each fitting one A4 page. Ticking a box draws on the printed
+figure (clock face, breast quadrants, hernia and appendix plates, a fistula cross-section
+that shows every tract chosen). In French everything on the page is French, while the
+stored values stay the same, so a note can be reprinted in any language. One-answer
+groups (yes/no, side) untick the other answer; a size left blank is not printed; text
+still holding a `[placeholder]` is flagged under the box and asked about before issuing.
+Documents are signed with the name of the doctor who writes them — not the visit's
+assigned doctor — and are dated with the clinic's date, not the UTC one.
+
+### Results are kept: an order that has one is cancelled, not deleted
+
+Deleting a lab order took its results with it (the database cascaded), and an imaging
+order could be deleted after the study and the reading, taking the accession and the
+report too; there was not even a confirmation. Such an order can no longer be deleted.
+The ✕ on it offers to mark it **cancelled** instead, with an optional reason: the result
+stays on record, the order leaves the lab list and the bill, a paid one comes back at the
+cashier as a refund, and an imaging study not yet taken is withdrawn from the device
+worklist. A cancelled line stays grey and struck through. Removing any line now asks
+first.
+
+### A dispensed prescription can no longer be changed
+
+The pharmacy's stock is taken out when a drug is handed over. Editing or deleting the
+line afterwards moved the bill but not the shelf, and the two disagreed for good. Such a
+line is now locked (🔒, **Délivré**); the doctor tells the pharmacy and writes a new line.
+
+### Orders are billed quantity × days
+
+The times and days of an exam or procedure line were shown and editable but never
+billed: an injection course written as 1 · 1 · 5 was charged once. Orders now follow the
+prescription rule — quantity × days — and a line billed more than once says so under its
+name. Lab and imaging orders always start at 1 · 1 · 1. Existing orders keep what they
+meant (migration 030 fills the new total with their quantity), so nothing already paid
+changes.
+
+### Syrups, creams and inhalers are prescribed by the bottle
+
+For a drug the pharmacy marks as sold by the bottle, tube or piece, the doctor writes the
+number of bottles; the daily dose and days stay as instructions for the patient. The
+count must be a whole number, and a missing count is marked like a missing dose.
+
+### The screen in French, and at 1366 × 768
+
+Queue states, phrase categories and phrases, search badges, vital-sign names, statuses
+and messages follow the screen language. At 1366 wide — the most common screen at the
+clinic — the middle column slid 135 px sideways and cut off the vital signs and the note;
+the phrase dictionary's header now wraps, and the vital signs keep two columns down to
+1280. Times and days boxes no longer hide their number behind spin buttons.
+
+### Smaller changes on the screen
+
+- A line whose price is 0 is marked **Sans prix** in the search and in the table.
+- Drugs hidden from the list are no longer prescribed through an order set; the set shows
+  them struck through and the doctor is told which were left out.
+- The search shows an imported drug's dosage form (**Comprimé**, **Sirop** …).
+- Lab and imaging progress (**En attente** → **Résultat reçu**, **Envoyé** → **Réalisé**)
+  updates by itself while the patient is open.
+- The image viewer warns when the images carry another patient's number or none, and
+  says when they were linked only by accession number; a radiology reading's date is the
+  local date. Saving a reading shows a short notice instead of a box to click away.
+- An imaging order shows **Envoyé** as soon as it is added (it used to appear only after
+  the patient was opened again). The body part is written small next to the name; the
+  **Unité** box no longer shows it cut to four letters.
+
+### Not visible on the screen
+
+- Writing prescriptions and orders needs the *consultation* permission on the server,
+  not only in the menu; reading them is limited to the screens that show them.
+- A visit cancelled at reception can no longer be reopened (it used to come back to
+  *in progress*); a consultation for an earlier visit is dated with the visit's day.
+- Saving the note writes only the fields sent: every save used to blank the S/O/A/P,
+  weight and height columns the screen does not show.
+- Missing names and an over-long sig are refused with a 400 that says which field, instead
+  of a 500.
+- Cancelling an order, deleting an order or a prescription, and editing a finished
+  consultation (Terminé pressed, or a visit from another day) are written to the change
+  log with the old and new values.
+- The time a consultation is first finished is stored; the pharmacy lists patients in
+  that order.
+- A prescription or order row is also saved 2 seconds after the last keystroke while the
+  consultation is open, and rows not yet saved are sent when the page is closed or
+  reloaded: a power cut or an F5 loses at most what was typed in the last 2 seconds.
+  A finished consultation is still saved only on leaving the row (one change-log line).
+- Every document issued and every document voided is written to the change log (number
+  and name, never the contents). Voiding a document twice keeps the first reason.
+
+Migrations: **023** (who cancelled an order, when, why), **030** (order total),
+**032** (consultation finished time). All add columns; 030 and 032 fill them for
+existing rows without changing any existing value.
+
+Details: `wiki/modules/consultation.md`, section 8.
+
+### After updating
+
+- **Enter drug prices before the first patient.** A line keeps the price it was
+  prescribed at; a line written at price 0 stays at 0 after the price is set, unless the
+  doctor removes it and adds it again.
+- **Rebuild the order sets' drug lines.** After the drug import the example drugs are
+  hidden, so the existing sets add only their exams until their drug lines are replaced
+  in Settings — with the daily total, times and days, which are no longer taken from the
+  drug.

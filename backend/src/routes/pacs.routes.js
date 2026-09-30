@@ -3,6 +3,9 @@ const { pool } = require('../config/database');
 const { todayLocal, dicomDate } = require('../utils/localDate');
 const { tcpCheck } = require('../utils/tcpCheck');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
+const { ORDER_CANCELLED } = require('./pacs.cancel');
+const viewer = require('./pacs.viewer');
 
 const router = express.Router();
 
@@ -28,94 +31,202 @@ async function ensureConfig() {
   return r.rows[0];
 }
 
+// pacs_config as the settings screen may see it. The image server's password
+// (orthanc_password, written only by pair-with-emr) never leaves the server:
+// the screen learns only whether it is set.
+function publicConfig(row) {
+  const out = Object.assign({}, row || {});
+  out.orthanc_password_set = !!out.orthanc_password;
+  delete out.orthanc_password;
+  return out;
+}
+
 function normalizeConfig(body) {
   const fields = [
-    'worklist_scp_host','worklist_scp_ae','bridge_token','emr_base_url','pacs_viewer_url','facility_name','notes'
+    'worklist_scp_host','worklist_scp_ae','bridge_token','emr_base_url','pacs_viewer_url','facility_name','notes','orthanc_url'
   ];
+  // orthanc_password is deliberately not here: only pair-with-emr sets it.
   const out = {};
   fields.forEach(k => { if (body[k] !== undefined) out[k] = String(body[k] || '').trim(); });
-  if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 10004;
+  if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 4242;
   if (body.auto_create_worklist !== undefined) out.auto_create_worklist = !!body.auto_create_worklist;
   return out;
 }
 
-// Authenticated settings UI
-router.get('/config', authMiddleware, async (req, res) => {
-  try { res.json(await ensureConfig()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+// What the order-feed tab can be told, as fixed English strings that Settings.jsx
+// (pxMessage) puts in the screen's language -- CHANGE ONE HERE, CHANGE IT THERE TOO.
+// The raw driver text used to reach the screen ("value too long for type character
+// varying(50)"), and a port like 70000 was stored and then broke the connection test.
+const CONFIG_MAX = {
+  worklist_scp_host: 100, worklist_scp_ae: 50, bridge_token: 100, emr_base_url: 200,
+  pacs_viewer_url: 200, facility_name: 100, orthanc_url: 200,
+};
+const CONFIG_MSG = {
+  port: 'DICOM port must be a whole number from 1 to 65535',
+  saveFailed: 'Could not save the order feed settings',
+  noHost: 'No PACS host set',
+  server: 'Server error',
+};
+function configProblem(cfg) {
+  for (const k of Object.keys(CONFIG_MAX)) {
+    if (cfg[k] !== undefined && cfg[k].length > CONFIG_MAX[k]) return `${k} is too long (at most ${CONFIG_MAX[k]} characters)`;
+  }
+  const p = cfg.worklist_scp_port;
+  if (p !== undefined && !(Number.isInteger(p) && p >= 1 && p <= 65535)) return CONFIG_MSG.port;
+  return null;
+}
+
+// The viewer relay: its own auth (the cookie above), not the JWT.
+router.use('/viewer', viewer.router);
+
+// Settings UI. This carries the bridge token, which opens the patient feed, so
+// it is for the settings permission only -- not every member of staff.
+router.get('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
+  try { res.json(publicConfig(await ensureConfig())); }
+  catch (err) { console.error('[pacs] read config:', err.message); res.status(500).json({ error: CONFIG_MSG.server }); }
 });
 
 router.put('/config', authMiddleware, permMiddleware('settings'), async (req, res) => {
+  const cfg = normalizeConfig(req.body || {});
+  const problem = configProblem(cfg);
+  if (problem) return res.status(400).json({ error: problem });
   try {
-    const cfg = normalizeConfig(req.body || {});
+    // A field left out of the request keeps its value. Writing it as NULL instead
+    // would, for bridge_token, silently unpair the PACS on a partial save.
     const result = await pool.query(
       `UPDATE pacs_config SET
-       worklist_scp_host=$1, worklist_scp_port=$2, worklist_scp_ae=$3,
-       bridge_token=$4, emr_base_url=$5, pacs_viewer_url=$6, auto_create_worklist=$7, facility_name=$8, notes=$9,
-       updated_by=$10, updated_at=NOW()
+       worklist_scp_host=COALESCE($1, worklist_scp_host), worklist_scp_port=COALESCE($2, worklist_scp_port),
+       worklist_scp_ae=COALESCE($3, worklist_scp_ae), bridge_token=COALESCE($4, bridge_token),
+       emr_base_url=COALESCE($5, emr_base_url), pacs_viewer_url=COALESCE($6, pacs_viewer_url),
+       auto_create_worklist=COALESCE($7, auto_create_worklist), facility_name=COALESCE($8, facility_name),
+       notes=COALESCE($9, notes), orthanc_url=COALESCE(NULLIF($11, ''), orthanc_url), updated_by=$10, updated_at=NOW()
        WHERE id=1 RETURNING *`,
       [cfg.worklist_scp_host, cfg.worklist_scp_port, cfg.worklist_scp_ae,
-       cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id]
+       cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id,
+       cfg.orthanc_url]
     );
-    res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json(publicConfig(result.rows[0]));
+  } catch (err) { console.error('[pacs] save config:', err.message); res.status(500).json({ error: CONFIG_MSG.saveFailed }); }
 });
 
-router.get('/test', authMiddleware, async (req, res) => {
+// Route permissions follow the screens that call them (decision S2, 2026-09-29):
+// the connection test lives in Settings only.
+router.get('/test', authMiddleware, permMiddleware('settings'), async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const host = cfg.worklist_scp_host;
     const port = cfg.worklist_scp_port;
+    // An empty host would quietly test the EMR container itself.
+    if (!String(host || '').trim()) return res.json({ ok: false, host: '', port, message: CONFIG_MSG.noHost });
     res.json(await tcpCheck(host, port));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('[pacs] connection test:', err.message); res.status(500).json({ error: CONFIG_MSG.server }); }
 });
 
+// worklist_log columns the screens need, and how they are handed out. `images`
+// stays null until the bridge has reported the study (POST /study-arrived):
+// "nothing arrived yet" is a different answer from "arrived, and it matches".
+const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_count,
+                    image_patient_id, image_patient_name, patient_check, image_study_uid`;
+// Whether the imaging order was cancelled after it had a result (decision 3-B).
+// cancelled_at / cancel_reason are added by the consultation session's
+// migration; to_jsonb reads them without failing on a database that does not
+// have them yet, so this can ship before that migration.
+const ORDER_CANCEL_COLUMNS = `oi.status AS order_status,
+       to_jsonb(oi)->>'cancelled_at' AS cancelled_at, to_jsonb(oi)->>'cancel_reason' AS cancel_reason`;
+
+function imagesOf(w) {
+  if (!w || !w.images_received_at) return null;
+  return {
+    received_at: w.images_received_at,
+    count: w.image_count,
+    patient_id: w.image_patient_id || '',
+    patient_name: w.image_patient_name || '',
+    patient_check: w.patient_check || '',
+    // 'accession' when the device made up its own UID and the bridge found the
+    // study by AccessionNumber (P-4) -- a weaker link, shown to the doctor.
+    linked_by: w.image_study_uid && w.image_study_uid !== w.study_instance_uid ? 'accession' : 'uid',
+  };
+}
+
 // Resolve the PACS viewer URL + reading for an imaging order (Stone Web Viewer by StudyInstanceUID).
-router.get('/viewer-url', authMiddleware, async (req, res) => {
+// Only the consultation screen opens the viewer; the payment screen's readings
+// list shows text and has no image button.
+router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
-    const cfg = await ensureConfig();
-    const base = cfg.pacs_viewer_url ? String(cfg.pacs_viewer_url).replace(/\/+$/, '') : '';
-    let study = '', accession = '', order_name = '', modality = '', reading = null;
+    // The viewer is served by the EMR itself (pacs.viewer.js, P-9): the image
+    // window opens a relative address and this response grants the short cookie
+    // for this order's study. pacs_viewer_url (the old direct address) is kept in
+    // the table but no longer used.
+    const base = '/api/pacs/viewer';
+    let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
+    let order_status = '', cancelled_at = null, cancel_reason = '';
     if (req.query.order_item_id) {
       const oid = req.query.order_item_id;
       const w = await pool.query(
-        'SELECT accession_no, study_instance_uid FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1', [oid]);
-      if (w.rows[0]) { study = w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || ''; }
+        `SELECT ${WL_COLUMNS} FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
+      if (w.rows[0]) {
+        // Open the study the images really carry (P-4); it is the worklist's own UID
+        // unless the device made up a new one.
+        study = w.rows[0].image_study_uid || w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || '';
+        images = imagesOf(w.rows[0]);
+      }
       const o = await pool.query(
-        'SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1', [oid]);
+        `SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, ${ORDER_CANCEL_COLUMNS}
+           FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1`, [oid]);
       if (o.rows[0]) {
         order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || '';
+        order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
-    } else if (req.query.study) { study = req.query.study; }
-    const url = (base && study) ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : base;
-    res.json({ has_viewer: !!base, base, study_instance_uid: study, accession, url, order_name, modality, reading });
+    }
+    // (A bare ?study=<UID> used to be accepted too. Nothing calls it, and with the
+    // viewer cookie it would open any study number - only an order grants now.)
+    // No study to show (an imaging order that never went to the worklist): no URL
+    // at all. Falling back to `base` opened the viewer's front page -- the list of
+    // every patient in the PACS -- inside one patient's chart (P-18). has_viewer
+    // is always true now (the EMR is the viewer), so the screen shows "nothing to
+    // show for this order" rather than the old "no viewer address set".
+    const url = study ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : '';
+    if (study) viewer.grantViewerCookie(req, res, [study]);
+    // A cancelled order's images stay viewable: they are part of the record.
+    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
+               no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Save a radiology reading for an imaging order (doctors only).
+// A cancelled order takes no new reading -- the laboratory refuses results for a
+// cancelled test the same way. The condition sits in the UPDATE itself, so a
+// cancel that lands at the same moment cannot be overwritten.
 router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const r = await pool.query(
-      'UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW() WHERE id = $3 AND code_type = $4 RETURNING id',
-      [req.body.result_text || '', req.user.id, req.params.orderItemId, 'imaging']
+      `UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW()
+        WHERE id = $3 AND code_type = 'imaging' AND status IS DISTINCT FROM 'cancelled' RETURNING id`,
+      [req.body.result_text || '', req.user.id, req.params.orderItemId]
     );
-    if (!r.rows.length) return res.status(404).json({ error: 'Imaging order not found' });
+    if (!r.rows.length) {
+      const o = await pool.query(`SELECT status FROM order_item WHERE id = $1 AND code_type = 'imaging'`, [req.params.orderItemId]);
+      if (o.rows[0] && o.rows[0].status === 'cancelled') return res.status(409).json({ error: ORDER_CANCELLED });
+      return res.status(404).json({ error: 'Imaging order not found' });
+    }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// All imaging readings for a patient (read-only view for any staff).
-router.get('/readings/patient/:patientId', authMiddleware, async (req, res) => {
+// All imaging readings for a patient (read-only; consultation and payment screens).
+router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consultation', 'payment'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
-              wl.accession_no, wl.study_instance_uid
+              wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,
+              wl.image_patient_id, wl.image_patient_name, wl.patient_check, wl.image_study_uid,
+              ${ORDER_CANCEL_COLUMNS}
          FROM order_item oi
          JOIN visit v ON v.id = oi.visit_id
          LEFT JOIN staff s ON s.id = oi.result_by
-         LEFT JOIN LATERAL (SELECT accession_no, study_instance_uid FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
+         LEFT JOIN LATERAL (SELECT ${WL_COLUMNS} FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
         WHERE oi.patient_id = $1 AND oi.code_type = 'imaging'
         ORDER BY v.visit_date DESC, oi.id DESC`,
       [req.params.patientId]
@@ -124,12 +235,21 @@ router.get('/readings/patient/:patientId', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Why a bridge request is refused, or '' if it is not. The two messages differ
+// because they are fixed in different places: one in EMR Settings, the other in
+// the PACS .env -- and the bridge log is where someone on site will read this.
+function bridgeDenied(cfg, req) {
+  if (!usableBridgeToken(cfg.bridge_token)) return 'Bridge token is not set in the EMR (Settings -> Order Feed)';
+  if (!bridgeTokenMatches(cfg.bridge_token, presentedToken(req))) return 'Invalid bridge token';
+  return '';
+}
+
 // Bridge feed for PacsBridge/SmartServer/import script. Uses token because external bridge may not use EMR login.
 router.get('/worklist-feed', async (req, res) => {
   try {
     const cfg = await ensureConfig();
-    const token = req.query.token || req.header('x-bridge-token');
-    if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
 
     const date = req.query.date || todayLocal();
     const params = [date];
@@ -190,14 +310,17 @@ router.post('/bridge-heartbeat', async (req, res) => {
   try {
     const cfg = await ensureConfig();
     const body = req.body || {};
-    const token = body.token || req.query.token || req.header('x-bridge-token');
-    if (!cfg.bridge_token || token !== cfg.bridge_token) return res.status(401).json({ error: 'Invalid bridge token' });
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
 
     const detail = {
       synced: Number(body.synced) || 0,
       failed: Number(body.failed) || 0,
       poll_seconds: Number(body.poll_seconds) || 0,
       error: String(body.error || '').slice(0, 500),
+      // Why the bridge could not ask Orthanc which studies arrived; '' when it
+      // could. status.routes.js (settings) turns a non-empty one into a warning.
+      arrivals_error: String(body.arrivals_error || '').slice(0, 300),
     };
     await pool.query(
       `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
@@ -207,6 +330,129 @@ router.post('/bridge-heartbeat', async (req, res) => {
     );
     res.json({ received: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// The nightly image backup (PACS image-backup.ps1, decision 41) reports here
+// after every run: counts and disk space only, never patient data. Stored as the
+// 'pacs_image_backup' heartbeat so the status screen can warn when the disk was
+// missing, the run failed, the disk is nearly full, or no run has succeeded for
+// too long (settings session's status.routes.js reads it). last_success is kept
+// across failed runs, because "when did it last work" is the question.
+router.post('/image-backup-report', async (req, res) => {
+  try {
+    const cfg = await ensureConfig();
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
+    const b = req.body || {};
+    const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const ok = b.ok === true;
+    const prev = await pool.query(`SELECT detail FROM service_heartbeat WHERE name = 'pacs_image_backup'`);
+    const prevSuccess = prev.rows[0] && prev.rows[0].detail ? prev.rows[0].detail.last_success : null;
+    const detail = {
+      disk_found: b.disk_found === true,
+      copied: num(b.copied), failed: num(b.failed), total_files: num(b.total_files),
+      free_gb: num(b.free_gb), total_gb: num(b.total_gb),
+      error: String(b.error || '').slice(0, 300),
+      last_success: ok ? new Date().toISOString() : (prevSuccess || null),
+    };
+    // The EMR's own database backups, copied to the same disk by the same run
+    // (image-backup.ps1 Copy-EmrBackups). Reported apart from the images: `ok`
+    // above stays the images' result. Absent when an older script reports.
+    const EMR_STATES = ['ok', 'not_found', 'none', 'failed', 'no_disk'];
+    if (b.emr_backup !== undefined) {
+      const prevEmrOk = prev.rows[0] && prev.rows[0].detail ? prev.rows[0].detail.emr_backup_last_ok : null;
+      Object.assign(detail, {
+        emr_backup: EMR_STATES.includes(b.emr_backup) ? b.emr_backup : 'failed',
+        emr_backup_ok: b.emr_backup_ok === true,
+        emr_backup_copied: num(b.emr_backup_copied), emr_backup_count: num(b.emr_backup_count),
+        emr_backup_newest: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(b.emr_backup_newest || '')) ? b.emr_backup_newest : null,
+        emr_backup_error: String(b.emr_backup_error || '').slice(0, 300),
+        emr_backup_last_ok: b.emr_backup_ok === true ? new Date().toISOString() : (prevEmrOk || null),
+      });
+    }
+    await pool.query(
+      `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
+            VALUES ('pacs_image_backup', NOW(), $1, $2)
+       ON CONFLICT (name) DO UPDATE SET last_seen = NOW(), ok = EXCLUDED.ok, detail = EXCLUDED.detail`,
+      [ok, JSON.stringify(detail)]);
+    res.json({ received: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// The bridge found this entry's study in Orthanc and it has stopped growing.
+// Mark the entry done -- which takes it off the device worklist on the next
+// cycle and locks the order against deletion (Consultation.jsx orderLocked) --
+// and keep what the images say about the patient.
+//
+// The patient check is made here, against the chart number, not taken from the
+// bridge: the bridge only reports what the DICOM header says. It catches images
+// whose patient was typed or edited on the device. It cannot catch a
+// technician who picked the wrong patient from the worklist: those images carry
+// that patient's own details and look correct -- which is why finished entries
+// now leave the list.
+function samePatientId(a, b) {
+  return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
+}
+
+router.post('/study-arrived', async (req, res) => {
+  let cfg;
+  try { cfg = await ensureConfig(); }
+  catch (err) { return res.status(500).json({ error: err.message }); }
+  const denied = bridgeDenied(cfg, req);
+  if (denied) return res.status(401).json({ error: denied });
+
+  const b = req.body || {};
+  const worklistId = Number(b.worklist_id);
+  const uid = String(b.study_instance_uid || '');
+  if (!Number.isInteger(worklistId) || worklistId <= 0 || !uid) {
+    return res.status(400).json({ error: 'worklist_id and study_instance_uid are required' });
+  }
+  const imagePatientId = String(b.patient_id || '').trim().slice(0, 64);
+  const imagePatientName = String(b.patient_name || '').trim().slice(0, 200);
+  const count = Number.isInteger(Number(b.instances)) && Number(b.instances) >= 0 ? Number(b.instances) : null;
+  const byAccession = b.found_by === 'accession';
+  const imageStudyUid = String(b.image_study_uid || '').slice(0, 128);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const w = await client.query(
+      `SELECT wl.id, wl.order_item_id, wl.study_instance_uid, wl.accession_no, p.chart_no
+         FROM worklist_log wl JOIN patient p ON p.id = wl.patient_id
+        WHERE wl.id = $1 FOR UPDATE OF wl`, [worklistId]);
+    if (!w.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
+    const row = w.rows[0];
+    // The UID is the link; a report for some other study must not land here.
+    // A study found by accession (the device made up its own UID, P-4) must
+    // carry this entry's accession number, and its own UID is kept apart.
+    if (row.study_instance_uid !== uid || (byAccession && (!imageStudyUid || String(b.accession_no || '') !== row.accession_no))) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Study does not belong to this worklist entry' });
+    }
+    const check = !imagePatientId ? 'missing' : (samePatientId(imagePatientId, row.chart_no) ? 'match' : 'mismatch');
+    await client.query(
+      `UPDATE worklist_log
+          SET status = CASE WHEN status = 'cancelled' THEN status ELSE 'completed' END,
+              completed_at = COALESCE(completed_at, NOW()),
+              images_received_at = COALESCE(images_received_at, NOW()),
+              orthanc_study_id = $2, image_count = $3,
+              image_patient_id = $4, image_patient_name = $5, patient_check = $6,
+              image_study_uid = $7
+        WHERE id = $1`,
+      [worklistId, String(b.orthanc_study_id || '').slice(0, 64) || null, count,
+       imagePatientId || null, imagePatientName || null, check,
+       byAccession && imageStudyUid !== row.study_instance_uid ? imageStudyUid : null]);
+    await client.query(
+      `UPDATE order_item SET worklist_status = 'completed', updated_at = NOW()
+        WHERE id = $1 AND worklist_status <> 'cancelled'`, [row.order_item_id]);
+    await client.query('COMMIT');
+    res.json({ received: true, patient_check: check });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = router;

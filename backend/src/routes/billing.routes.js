@@ -1,11 +1,19 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { todayLocal } = require('../utils/localDate');
 const { PAYMENT_STATUSES } = require('../utils/validate');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 const router = express.Router();
 router.use(authMiddleware);
+// The menu is not a lock: without this any logged-in account (a doctor, the lab)
+// could void a receipt or record a payment through the API. Every route needs the
+// payment permission, except the balance, which reception shows at registration.
+const canPay = permMiddleware('payment');
+const canSeeBalance = permMiddleware('payment', 'registration');
+// The day's cash (M9): the payment screen and statistics.
+const canSeeCash = permMiddleware('payment', 'stats');
 
 // Voiding a bill undoes the balances it absorbed: the older bills go back to
 // carrying their own outstanding amount. amount_paid was never touched when the
@@ -19,8 +27,155 @@ async function restoreCarried(client, billingId) {
   );
 }
 
+// One patient's bills are written one transaction at a time. Creating, voiding
+// and settling all move money between a patient's bills (carry-over reads every
+// open balance), so two cashiers - or one cashier clicking twice - must not
+// interleave. The lock is held until COMMIT/ROLLBACK.
+async function lockPatient(client, patientId) {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1), $2)', ['billing_patient', parseInt(patientId, 10) || 0]);
+}
+
+async function lockPatientOfBill(client, billingId) {
+  const r = await client.query('SELECT patient_id FROM billing WHERE id = $1', [billingId]);
+  if (r.rows.length) await lockPatient(client, r.rows[0].patient_id);
+}
+
+// Cash of this visit still at the till from receipts staff cancelled without
+// handing the money back (M6 "Non"): what nothing replaced, less what was handed
+// back, less what a later receipt already took over (held_used, 304). A re-bill
+// starts from it - the screen's prefilled "amount received" and the cash record.
+function HELD_SQL(visitRef) {
+  return "(COALESCE((SELECT SUM(hx.net_paid - COALESCE(hx.refunded_amount,0)) FROM billing hx" +
+    " WHERE hx.visit_id = " + visitRef + " AND hx.payment_status = 'cancelled' AND hx.replaced_by_id IS NULL),0)" +
+    " - COALESCE((SELECT SUM(hy.held_used) FROM billing hy WHERE hy.visit_id = " + visitRef + "),0))";
+}
+async function heldCash(client, visitId) {
+  const r = await client.query('SELECT GREATEST(' + HELD_SQL('$1::int') + ', 0) AS held', [visitId]);
+  return round2(r.rows[0].held);
+}
+
+// One row per movement of money (M9, decided (가) 2026-09-29; 304_payment_cash_movement):
+// + into the till, - out of it, dated by the server's today. Written in the
+// transaction that moved the money, before COMMIT; nothing moved, nothing written.
+// Statistics count cash from these rows, so a past day never changes.
+async function writeCash(client, req, kind, amount, bill, memo) {
+  const a = round2(amount);
+  if (Math.abs(a) < 0.005) return;
+  await client.query(
+    `INSERT INTO cash_movement (kind, amount, billing_id, visit_id, patient_id, staff_id, memo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [kind, a, bill.id, bill.visit_id, bill.patient_id, (req.user && req.user.id) || null, memo || null]
+  );
+}
+
+async function activeBillIds(client, visitId) {
+  const r = await client.query(
+    `SELECT id FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' ORDER BY id`,
+    [visitId]
+  );
+  return r.rows.map(function (x) { return x.id; });
+}
+
+// Receipt number: R-YYYYMMDD-NNNN, sequential per day.
+//
+// This used to be a random 4-digit suffix, which collides with the UNIQUE
+// constraint on receipt_no long before a clinic runs out of numbers: with a
+// 9000-value space the odds of a repeat pass 50% at ~110 receipts in a day,
+// and a collision surfaces to the cashier as a raw 500 error mid-payment.
+// The advisory lock serialises number allocation for the duration of this
+// transaction, so concurrent cashiers cannot pick the same number.
+async function nextReceiptNo(client) {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['billing_receipt_no']);
+  const seqResult = await client.query(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(receipt_no, '^R-\\d{8}-', ''), '')::int), 0) + 1 AS next
+       FROM billing
+      WHERE billing_date = CURRENT_DATE
+        AND receipt_no ~ '^R-\\d{8}-\\d+$'`
+  );
+  const dayStamp = (await client.query(`SELECT to_char(CURRENT_DATE, 'YYYYMMDD') AS d`)).rows[0].d;
+  return 'R-' + dayStamp + '-' + String(seqResult.rows[0].next).padStart(4, '0');
+}
+
+// Counter fees - certificates, CD copies and the like - are added by the cashier
+// and stored as billing_item rows of type 'fee'. They belong to no clinical item
+// of the visit, so a comparison between what the visit costs now (prescriptions,
+// orders, consultation) and what was billed must leave them out; otherwise every
+// visit with a counter fee looks overbilled by exactly that fee and sits on the
+// waiting list as a refund (H6, decided 2026-09-29). A fee-type code the doctor
+// ordered (possible through an order set) is an order_item, so it is on both sides
+// of the comparison and is not a counter fee. GET /pending and buildCorrection()
+// both use this one definition.
+//
+// CANCELLED orders stay in this list on purpose (decision 3-B, 2026-09-29: an order
+// with results is cancelled, not deleted, and leaves the bill). A fee-type order
+// that was billed and then cancelled is still an order line on the old bill; if it
+// dropped out of this list its billing line would read as a counter fee, be taken
+// out of "billed" as well as out of "now", and the refund it is owed would never
+// show. Kept here, "billed" stays higher than "now" and the visit shows as a
+// refund, and the correction does not carry it over as a counter fee.
+// Known limit, as before: the same code both ordered and added at the counter.
+function counterFeeCond(itemAlias, visitRef) {
+  return itemAlias + ".item_type = 'fee' AND COALESCE(" + itemAlias + ".item_code,'') NOT IN " +
+    "(SELECT COALESCE(o.order_code,'') FROM order_item o WHERE o.visit_id = " + visitRef + ')';
+}
+
+// Quantity of a prescription line. Consultation stores total_qty whenever a line is
+// saved and is the one place that knows how it is computed (decided 2026-09-29:
+// daily total x days, the Korean way). Billing reads it and nothing else - it used
+// to fall back to dose x frequency x days, a second copy of the formula that
+// pharmacy and statistics never had (they count a missing quantity as 0). A line
+// with no total_qty is never billed as 0 silently: the waiting list flags it and
+// billing refuses until consultation saves the line again.
+const QTY_MISSING = 'QTY_MISSING';
+function MISSING_QTY_SQL(visitRef) {
+  return "EXISTS (SELECT 1 FROM prescription mq WHERE mq.consultation_id IN (SELECT id FROM consultation WHERE visit_id = " + visitRef + ")" +
+    " AND COALESCE(mq.dispense_type,'internal') <> 'external' AND mq.total_qty IS NULL)";
+}
+
+// Prefix the client recognises: the screen was showing an older state of this
+// visit or patient, so the request is refused rather than billed twice.
+const BILL_CHANGED = 'BILL_CHANGED';
+
+// The unit word of a pack-unit drug line (bottle, tube...), copied onto the bill line
+// from the visit's prescription when the bill is written - as consultation copies it
+// from the drug table - so the receipt, which reads only the stored bill, can say
+// "2 flacons". What the screen sends for it is not used. (302_payment_item_pack_label)
+async function stampPackLabels(db, billId, visitId) {
+  await db.query(
+    `UPDATE billing_item bi SET pack_label = (
+        SELECT p.pack_label FROM prescription p
+         WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id = $2)
+           AND p.pack_unit AND p.drug_code = bi.item_code
+         ORDER BY p.id DESC LIMIT 1)
+      WHERE bi.billing_id = $1 AND bi.item_type = 'drug'`,
+    [billId, visitId]
+  );
+}
+
+// Consultation fee codes per visit type (L2, 2026-09-29). The waiting list, the
+// correction and the screen all take the fee from the stored price here - also when
+// the code was deleted (made inactive) in settings - so the three never disagree.
+// The screen used to fall back to its own constants when it could not see a code.
+// A code with no row at all counts as 0 and the screen says so.
+const CONSULT_CODES = ['C01', 'C02', 'C03', 'C04'];
+async function consultPrices(db) {
+  const r = await db.query('SELECT code, price_clinic FROM order_code WHERE code = ANY($1::text[])', [CONSULT_CODES]);
+  const out = {};
+  r.rows.forEach(function (x) { out[x.code] = Number(x.price_clinic) || 0; });
+  return out;
+}
+
+// Something to bill on a visit: a consultation fee, a drug given here or an order.
+// A visit reception closed without a consultation ('none', no lines) has nothing.
+function HAS_CHARGES_SQL(visitRef) {
+  return "(COALESCE(" + visitRef + ".visit_type,'newVisit') <> 'none'" +
+    " OR EXISTS (SELECT 1 FROM prescription hp WHERE hp.consultation_id IN (SELECT id FROM consultation WHERE visit_id = " + visitRef + ".id)" +
+    " AND COALESCE(hp.dispense_type,'internal') <> 'external')" +
+    " OR EXISTS (SELECT 1 FROM order_item ho WHERE ho.visit_id = " + visitRef + ".id AND COALESCE(ho.status,'') <> 'cancelled'))";
+}
+
 // GET /api/billing/pending - visits awaiting payment
-router.get('/pending', async (req, res) => {
+router.get('/pending', canPay, async (req, res) => {
   try {
     const result = await pool.query(
       `WITH live AS (
@@ -28,20 +183,31 @@ router.get('/pending', async (req, res) => {
            ( COALESCE((SELECT price_clinic FROM order_code WHERE code = CASE v.visit_type
                          WHEN 'newVisit' THEN 'C01' WHEN 'followUp' THEN 'C02'
                          WHEN 'emergency' THEN 'C03' WHEN 'referral' THEN 'C04' WHEN 'none' THEN NULL ELSE 'C01' END),0)
-           + COALESCE((SELECT SUM(COALESCE(p.total_qty, p.dose::numeric*p.frequency*p.days)*COALESCE(p.unit_price,0))
+           + COALESCE((SELECT SUM(COALESCE(p.total_qty,0)*COALESCE(p.unit_price,0))
                          FROM prescription p WHERE p.consultation_id IN (SELECT id FROM consultation WHERE visit_id=v.id)
                                AND COALESCE(p.dispense_type,'internal') <> 'external'),0)
-           + COALESCE((SELECT SUM(COALESCE(o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id),0)
+           + COALESCE((SELECT SUM(COALESCE(o.total_qty,o.quantity,1)*COALESCE(o.unit_price,0)) FROM order_item o WHERE o.visit_id=v.id AND COALESCE(o.status,'') <> 'cancelled'),0)
            ) AS live_total,
-           COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0) AS billed_total,
+           COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0)
+           - COALESCE((SELECT SUM(bi.total_price) FROM billing_item bi JOIN billing b ON b.id = bi.billing_id
+                        WHERE b.visit_id=v.id AND b.payment_status<>'cancelled' AND ${counterFeeCond('bi', 'v.id')}),0) AS billed_total,
            EXISTS(SELECT 1 FROM billing b2 WHERE b2.visit_id=v.id AND b2.payment_status<>'cancelled') AS has_active_bill
          FROM visit v WHERE v.status='completed'
        )
        SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
        d.code as dept_code, s.name as doctor_name,
        (SELECT COALESCE(SUM(outstanding),0) FROM billing WHERE patient_id = p.id AND outstanding > 0 AND payment_status <> 'cancelled') as previous_balance,
-       EXISTS (SELECT 1 FROM billing bx WHERE bx.visit_id = v.id AND bx.payment_status = 'cancelled') as needs_rebill,
-       COALESCE((SELECT net_paid FROM billing WHERE visit_id = v.id AND payment_status = 'cancelled' ORDER BY cancelled_at DESC NULLS LAST, id DESC LIMIT 1),0) as prior_paid,
+       -- re-billing means "cancelled and nothing replaced it"; a corrected visit also
+       -- has a cancelled bill, but its replacement is active and may still be owed
+       (EXISTS (SELECT 1 FROM billing bx WHERE bx.visit_id = v.id AND bx.payment_status = 'cancelled')
+        AND NOT l.has_active_bill) as needs_rebill,
+       -- M6 (decided (다) 2026-09-29): the cash the clinic still holds from this visit's
+       -- cancelled receipts - nothing replaced them, not handed back, no later receipt
+       -- took it over (held_used, 304). Receipts cancelled before 303 were never
+       -- asked, so their money counts as kept, as the screen assumed until then.
+       GREATEST(${HELD_SQL('v.id')}, 0) as prior_paid,
+       ${MISSING_QTY_SQL('v.id')} as missing_qty,
+       (v.visit_date < CURRENT_DATE AND NOT EXISTS (SELECT 1 FROM billing bp WHERE bp.visit_id = v.id)) as past_unbilled,
        (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
        (l.has_active_bill AND (l.billed_total - l.live_total) > 0.01) as needs_refund,
        GREATEST(l.live_total - l.billed_total, 0) as extra_due,
@@ -55,29 +221,76 @@ router.get('/pending', async (req, res) => {
        LEFT JOIN staff s ON v.doctor_id = s.id
        WHERE v.status = 'completed'
        AND (
+         -- Today's visit until it has a bill in force (L7, decided (나) 2026-09-29): one
+         -- that ended part-paid or unpaid leaves the list too - its balance is taken
+         -- under Reçus, shows on Payé aujourd'hui, and carries into the next visit.
          ( v.visit_date = CURRENT_DATE
-           AND v.id NOT IN (SELECT visit_id FROM billing WHERE payment_status IN ('paid','waived')) )
+           AND NOT EXISTS (SELECT 1 FROM billing bt WHERE bt.visit_id = v.id AND bt.payment_status <> 'cancelled') )
+         -- An earlier day's visit that was never billed: reception can now close
+         -- yesterday's leftovers with the working date, and they must still reach the
+         -- till. Only when there is something to bill.
+         OR ( v.visit_date < CURRENT_DATE
+              AND NOT EXISTS (SELECT 1 FROM billing bn WHERE bn.visit_id = v.id)
+              AND ${HAS_CHARGES_SQL('v')} )
          OR ( EXISTS (SELECT 1 FROM billing bc WHERE bc.visit_id = v.id AND bc.payment_status = 'cancelled')
               AND NOT EXISTS (SELECT 1 FROM billing ba WHERE ba.visit_id = v.id AND ba.payment_status <> 'cancelled') )
          OR ( l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01 )
        )
        ORDER BY (l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01) DESC, needs_rebill DESC, v.visit_date DESC, v.updated_at DESC`
     );
+    // M8 (2026-09-29): a visit flagged for correction shows what the correction will
+    // actually do - money back, balance left, or no money difference - worked out by
+    // the same buildCorrection() as the correction screen and the correction itself.
+    // refund_due above is only "charged before minus charges now" and stays for the
+    // flag. Usually only a few rows are flagged.
+    for (const row of result.rows) {
+      if (!row.needs_refund) continue;
+      try {
+        const c = await buildCorrection(pool, row.id);
+        row.corr = { refund: c.refund, outstanding: c.outstanding, total_due: c.total_due };
+      } catch (e) {
+        row.corr = { error: (e && e.error) || (e && e.message) || String(e) };
+      }
+    }
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
 
+// GET /api/billing/cash-day?date=YYYY-MM-DD - the day's cash (M9): every movement of
+// money that day and the totals. Default: the server's today.
+router.get('/cash-day', canSeeCash, async (req, res) => {
+  try {
+    let date = req.query.date;
+    if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    if (!date) date = (await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
+    const lines = (await pool.query(
+      `SELECT m.id, m.created_at, m.kind, m.amount, m.memo, b.receipt_no, b.billing_date,
+              p.chart_no, p.last_name, p.first_name, s.name AS staff_name
+         FROM cash_movement m
+         JOIN billing b ON b.id = m.billing_id
+         JOIN patient p ON p.id = m.patient_id
+         LEFT JOIN staff s ON s.id = m.staff_id
+        WHERE m.move_date = $1::date ORDER BY m.id`, [date])).rows;
+    let cashIn = 0, cashOut = 0;
+    lines.forEach(function (l) { const a = Number(l.amount) || 0; if (a > 0) cashIn += a; else cashOut -= a; });
+    res.json({ date: date, cash_in: round2(cashIn), cash_out: round2(cashOut), net: round2(cashIn - cashOut), lines: lines });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /api/billing/completed - today's paid/partial/unpaid bills
-router.get('/completed', async (req, res) => {
+router.get('/completed', canPay, async (req, res) => {
   try {
     const { date } = req.query;
     const billDate = date || todayLocal();
     const result = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
-       v.id as visit_id, v.visit_date, d.code as dept_code, s.name as doctor_name, c.name as cashier_name
+       v.id as visit_id, v.visit_date, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
+       rb.receipt_no AS replaced_by_receipt_no, ci.receipt_no AS carried_into_receipt_no
        FROM billing b
+       LEFT JOIN billing rb ON rb.id = b.replaced_by_id
+       LEFT JOIN billing ci ON ci.id = b.carried_into_id
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
        LEFT JOIN department d ON v.department_id = d.id
@@ -92,35 +305,50 @@ router.get('/completed', async (req, res) => {
 });
 
 // GET /api/billing/:billingId/detail - completed bill with item detail
-router.get('/:billingId/detail', async (req, res) => {
+router.get('/:billingId/detail', canPay, async (req, res) => {
   try {
     const billResult = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
-       v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name
+       v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
+       COALESCE(NULLIF(d.name_fr,''), NULLIF(d.name_en,''), d.name) as dept_name_fr,
+       x.name as cancelled_by_name,
+       ci.receipt_no as carried_into_receipt_no, ci.billing_date as carried_into_date,
+       rb.receipt_no as replaced_by_receipt_no
        FROM billing b
        JOIN patient p ON b.patient_id = p.id
        LEFT JOIN visit v ON b.visit_id = v.id
        LEFT JOIN department d ON v.department_id = d.id
        LEFT JOIN staff s ON v.doctor_id = s.id
        LEFT JOIN staff c ON b.cashier_id = c.id
+       LEFT JOIN staff x ON b.cancelled_by = x.id
+       LEFT JOIN billing ci ON ci.id = b.carried_into_id
+       LEFT JOIN billing rb ON rb.id = b.replaced_by_id
        WHERE b.id = $1`,
       [req.params.billingId]
     );
     if (!billResult.rows.length) return res.status(404).json({ error: 'Billing not found' });
     const itemResult = await pool.query('SELECT * FROM billing_item WHERE billing_id = $1 ORDER BY id', [req.params.billingId]);
-    res.json({ bill: billResult.rows[0], items: itemResult.rows });
+    // The older receipts whose unpaid balance this one took over (016), so the
+    // printed receipt can say where "previous balance" came from.
+    const fromResult = await pool.query(
+      `SELECT receipt_no, billing_date, GREATEST(total_due - amount_paid, 0) AS amount
+         FROM billing WHERE carried_into_id = $1 ORDER BY billing_date, id`,
+      [req.params.billingId]
+    );
+    res.json({ bill: billResult.rows[0], items: itemResult.rows, carried_from: fromResult.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/billing/visit/:visitId/items - get billable items for a visit
-router.get('/visit/:visitId/items', async (req, res) => {
+router.get('/visit/:visitId/items', canPay, async (req, res) => {
   try {
     const rxResult = await pool.query(
       "SELECT * FROM prescription WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1) AND COALESCE(dispense_type,'internal') <> 'external'",
       [req.params.visitId]
     );
     const orderResult = await pool.query(
-      'SELECT * FROM order_item WHERE visit_id = $1',
+      // cancelled orders (3-B) are not billed; their results stay on record elsewhere
+      "SELECT * FROM order_item WHERE visit_id = $1 AND COALESCE(status,'') <> 'cancelled'",
       [req.params.visitId]
     );
     const visitResult = await pool.query('SELECT visit_type FROM visit WHERE id = $1', [req.params.visitId]);
@@ -138,19 +366,24 @@ router.get('/visit/:visitId/items', async (req, res) => {
       prescriptions: rxResult.rows,
       orders: orderResult.rows,
       billed_items: billedRes.rows,
-      billed_consult: billedConsult
+      billed_consult: billedConsult,
+      // consultation fee per code, from the one place the list and the correction read (L2)
+      consult_prices: await consultPrices(pool),
+      // what the screen is billing against; POST / refuses if this has changed
+      active_bill_ids: await activeBillIds(pool, req.params.visitId)
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/billing - create billing record
-router.post('/', async (req, res) => {
+router.post('/', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { visit_id, patient_id, consult_fee, drug_total, procedure_total, subtotal,
             discount_amount, discount_type, discount_value, previous_balance, total_due,
-            amount_paid, change_amount, outstanding, payment_status, note, items } = req.body;
+            amount_paid, change_amount, outstanding, payment_status, note, items,
+            expected_active_bill_ids } = req.body;
 
     // A receipt is a financial record, so refuse impossible figures here rather
     // than storing them. The payment screen already clamps these, but a stale
@@ -182,24 +415,99 @@ router.post('/', async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'payment_status must be one of ' + PAYMENT_STATUSES.join(', ') });
     }
+    // The figures must follow from one another. "Leave unpaid" used to send
+    // amount_paid 0 while still subtracting whatever sat in the cash box from
+    // outstanding, so the debt on record was smaller than the bill and the payment
+    // screen and the statistics disagreed about what the patient owed.
+    const due = parseFloat(total_due) || 0, handed = parseFloat(amount_paid) || 0;
+    const back = parseFloat(change_amount) || 0, owed = parseFloat(outstanding) || 0;
+    const figuresBad =
+      Math.abs(back - Math.max(0, handed - due)) > 0.5 ||
+      Math.abs(owed - Math.max(0, due - (handed - back))) > 0.5 ||
+      (payment_status === 'unpaid' && handed > 0.5) ||
+      (payment_status === 'paid' && owed > 0.5) ||
+      (payment_status === 'partial' && !(owed > 0.5 && handed - back > 0.5));
+    if (figuresBad) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'change_amount, outstanding and payment_status must follow from total_due and amount_paid' });
+    }
+    // The totals must add up to the lines (M3). The screen computes them from the
+    // same lines, so a real payment always passes; a request whose figures disagree
+    // (a stale or hand-made one) would otherwise store a total no line explains.
+    // This checks, it does not recompute: nothing a valid request sends is changed.
+    const lines = Array.isArray(items) ? items : [];
+    const lineSum = lines.reduce(function (s, it) { return s + (parseFloat(it.total_price) || 0); }, 0);
+    const sub = parseFloat(subtotal) || 0;
+    const partsSum = (parseFloat(consult_fee) || 0) + (parseFloat(drug_total) || 0) + (parseFloat(procedure_total) || 0);
+    const dueFromParts = Math.max(0, sub - (parseFloat(discount_amount) || 0) + (parseFloat(previous_balance) || 0));
+    if (Math.abs(lineSum - sub) > 0.5 || Math.abs(partsSum - sub) > 0.5 || Math.abs(due - dueFromParts) > 0.5 ||
+        lines.some(function (it) { return Math.abs((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0) - (parseFloat(it.total_price) || 0)) > 0.5; })) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'items, subtotal and total_due do not add up' });
+    }
 
-    // Receipt number: R-YYYYMMDD-NNNN, sequential per day.
-    //
-    // This used to be a random 4-digit suffix, which collides with the UNIQUE
-    // constraint on receipt_no long before a clinic runs out of numbers: with a
-    // 9000-value space the odds of a repeat pass 50% at ~110 receipts in a day,
-    // and a collision surfaces to the cashier as a raw 500 error mid-payment.
-    // The advisory lock serialises number allocation for the duration of this
-    // transaction, so concurrent cashiers cannot pick the same number.
-    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['billing_receipt_no']);
-    const seqResult = await client.query(
-      `SELECT COALESCE(MAX(NULLIF(regexp_replace(receipt_no, '^R-\\d{8}-', ''), '')::int), 0) + 1 AS next
-         FROM billing
-        WHERE billing_date = CURRENT_DATE
-          AND receipt_no ~ '^R-\\d{8}-\\d+$'`
+    const visitRes = await client.query('SELECT patient_id, status FROM visit WHERE id = $1', [visit_id]);
+    if (!visitRes.rows.length || String(visitRes.rows[0].patient_id) !== String(patient_id)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'visit_id does not belong to patient_id' });
+    }
+    // A visit reception cancelled has nothing to bill. The find-patient window still
+    // lists it (marked, 6c13b33) because it is part of the patient's history, so the
+    // screen can open it; a new bill for it is refused here. Existing receipts of such
+    // a visit (only possible in old data - reception cancels waiting visits only) can
+    // still be voided or settled.
+    if (visitRes.rows[0].status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'VISIT_CANCELLED: this visit was cancelled at reception' });
+    }
+
+    const mq = await client.query(
+      `SELECT drug_name FROM prescription
+        WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1)
+          AND COALESCE(dispense_type,'internal') <> 'external' AND total_qty IS NULL`,
+      [visit_id]
     );
-    const dayStamp = (await client.query(`SELECT to_char(CURRENT_DATE, 'YYYYMMDD') AS d`)).rows[0].d;
-    const receipt_no = 'R-' + dayStamp + '-' + String(seqResult.rows[0].next).padStart(4, '0');
+    if (mq.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: QTY_MISSING + ': ' + mq.rows.map(function (r) { return r.drug_name; }).join(', ') });
+    }
+
+    // Duplicate guard. The screen sends the active bills it was billing against;
+    // if another request billed this visit in the meantime (a second click, a
+    // second cashier, a tab left open) the sets differ and nothing is written.
+    // Without this, a double click stored two receipts for the same visit.
+    if (!Array.isArray(expected_active_bill_ids)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': reload the payment screen and try again' });
+    }
+    await lockPatient(client, patient_id);
+    const nowActive = await activeBillIds(client, visit_id);
+    // A re-bill (no receipt in force) takes over the cash still at the till from its
+    // cancelled receipts - the screen prefilled it as received (M6). Worked out here
+    // again, not taken from the screen. Any other receipt takes over nothing.
+    const held = nowActive.length ? 0 : await heldCash(client, visit_id);
+    const expected = expected_active_bill_ids.map(function (x) { return parseInt(x, 10); }).sort(function (a, b) { return a - b; });
+    if (nowActive.join(',') !== expected.join(',')) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': this visit was billed while the screen was open' });
+    }
+    // The previous balance must still be there to carry. If another bill already
+    // absorbed it, adding it again would charge the same debt twice.
+    const carriedIn = parseFloat(previous_balance) || 0;
+    if (carriedIn > 0.5) {
+      const avail = await client.query(
+        `SELECT COALESCE(SUM(outstanding),0) AS amt FROM billing
+          WHERE patient_id = $1 AND payment_status <> 'cancelled'
+            AND carried_into_id IS NULL AND outstanding > 0`,
+        [patient_id]
+      );
+      if (carriedIn > (parseFloat(avail.rows[0].amt) || 0) + 0.5) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: BILL_CHANGED + ': the previous balance has already been settled' });
+      }
+    }
+
+    const receipt_no = await nextReceiptNo(client);
     const result = await client.query(
       `INSERT INTO billing (visit_id, patient_id, receipt_no, consult_fee, drug_total, procedure_total, subtotal,
        discount_amount, discount_type, discount_value, previous_balance, total_due, amount_paid, change_amount,
@@ -210,6 +518,11 @@ router.post('/', async (req, res) => {
        outstanding, payment_status, note, req.user.id]
     );
     const billing = result.rows[0];
+    if (held > 0) await client.query('UPDATE billing SET held_used = $2 WHERE id = $1', [billing.id, held]);
+    // Cash that came in now: what was handed over, less change, less what was already
+    // at the till. Negative when the re-bill is smaller than the cash kept and the
+    // difference went back as change.
+    await writeCash(client, req, 'payment', Number(billing.net_paid) - held, billing, held > 0 ? 'held ' + held + ' taken over' : null);
     // Insert billing items
     if (items && items.length > 0) {
       for (const item of items) {
@@ -218,6 +531,7 @@ router.post('/', async (req, res) => {
           [billing.id, item.item_type, item.item_name, item.item_code, item.quantity, item.unit_price, item.total_price]
         );
       }
+      await stampPackLabels(client, billing.id, visit_id);
     }
 
     // Absorb the carried-forward balance. `previous_balance` was added to this
@@ -260,11 +574,14 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/billing/patient/:patientId/history - receipt history
-router.get('/patient/:patientId/history', async (req, res) => {
+router.get('/patient/:patientId/history', canPay, async (req, res) => {
   try {
     const { from, to } = req.query;
-    let query = `SELECT b.*, s.name as cashier_name, v.visit_date, d.code as dept_code
+    let query = `SELECT b.*, s.name as cashier_name, v.visit_date, d.code as dept_code,
+                 rb.receipt_no AS replaced_by_receipt_no, ci.receipt_no AS carried_into_receipt_no
                  FROM billing b
+                 LEFT JOIN billing rb ON rb.id = b.replaced_by_id
+                 LEFT JOIN billing ci ON ci.id = b.carried_into_id
                  LEFT JOIN staff s ON b.cashier_id = s.id
                  LEFT JOIN visit v ON b.visit_id = v.id
                  LEFT JOIN department d ON v.department_id = d.id
@@ -280,23 +597,75 @@ router.get('/patient/:patientId/history', async (req, res) => {
 });
 
 // PUT /api/billing/:billingId/void - 영수 취소 (해당 내원은 다시 수납 대기로 돌아감)
-router.put('/:billingId/void', async (req, res) => {
+router.put('/:billingId/void', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { reason } = req.body;
+    const { reason, refunded } = req.body;
+    await lockPatientOfBill(client, req.params.billingId);
+    // A bill whose balance a later bill absorbed (016) cannot be voided on its own:
+    // the later bill's total_due still charges that balance, so the debt would
+    // outlive the bill it came from. Void the later bill first - that restores this
+    // one's balance - then this one. carried_into_id always names an active bill:
+    // voiding that bill clears it and a correction moves it to the replacement.
+    const carried = await client.query(
+      `SELECT i.receipt_no FROM billing b JOIN billing i ON i.id = b.carried_into_id
+        WHERE b.id = $1 AND b.payment_status <> 'cancelled'`,
+      [req.params.billingId]
+    );
+    if (carried.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'BILL_CARRIED: ' + carried.rows[0].receipt_no });
+    }
+    // For the change log (decision 2026-09-29): the bill as it was, and the older
+    // receipts whose balance this void hands back.
+    const was = (await client.query(
+      'SELECT payment_status, total_due, amount_paid, net_paid, outstanding FROM billing WHERE id = $1', [req.params.billingId])).rows[0];
+    if (!was || was.payment_status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found or already cancelled' });
+    }
+    // M6 (decided (다) 2026-09-29): the cashier says whether the money this receipt
+    // took was handed back. Yes - all of it (net_paid) is recorded as refunded;
+    // handing back only part of it is a correction, not a cancellation. No - the
+    // money stays at the till and a re-bill starts from it. Nothing taken, nothing
+    // to ask.
+    const held = Number(was.net_paid) || 0;
+    if (held > 0.005 && typeof refunded !== 'boolean') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'refunded (true/false) is required: was the money handed back?' });
+    }
+    const refundedAmount = held > 0.005 && refunded ? held : 0;
+    const restoring = (await client.query(
+      'SELECT receipt_no FROM billing WHERE carried_into_id = $1 ORDER BY id', [req.params.billingId])).rows.map(function (r) { return r.receipt_no; });
     // 취소된 영수는 잔액 계산에서 제외되므로 outstanding=0 (크레딧 누적 방지)
     const result = await client.query(
-      `UPDATE billing SET payment_status='cancelled', outstanding=0,
+      `UPDATE billing SET payment_status='cancelled', outstanding=0, refunded_amount=$4,
               cancelled_at=NOW(), cancelled_by=$2, cancel_reason=$3, updated_at=NOW()
         WHERE id=$1 AND payment_status<>'cancelled' RETURNING *`,
-      [req.params.billingId, req.user.id, reason || null]
+      [req.params.billingId, req.user.id, reason || null, refundedAmount]
     );
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Not found or already cancelled' });
     }
     await restoreCarried(client, req.params.billingId);
+    const gone = result.rows[0];
+    if (refundedAmount > 0) await writeCash(client, req, 'cancel', -refundedAmount, gone, 'handed back on cancelling');
+    await writeAudit(client, req, {
+      action: ACTIONS.RECEIPT_CANCEL, patient_id: gone.patient_id, visit_id: gone.visit_id,
+      entity: 'billing', entity_id: gone.id,
+      // Receipt number and reason only; the rest are fields the Log tab translates
+      // (integration test 2026-09-29, B4). The log keeps changed fields only, so the
+      // receipt's total and the money it took - which a void does not change - are
+      // given on the after side alone: amount_paid is net_paid, what the clinic held.
+      // refunded_amount: handed back (M6); 0 = kept at the till.
+      summary: gone.receipt_no + (reason ? ' — ' + reason : ''),
+      before: { payment_status: was.payment_status, outstanding: Number(was.outstanding) },
+      after:  { payment_status: 'cancelled', outstanding: 0, total_due: Number(was.total_due), amount_paid: held,
+                refunded_amount: held > 0.005 ? refundedAmount : null, cancel_reason: reason || null,
+                balance_restored_to: restoring.length ? restoring : null },
+    });
     await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
@@ -305,30 +674,295 @@ router.put('/:billingId/void', async (req, res) => {
   } finally { client.release(); }
 });
 
-// PUT /api/billing/visit/:visitId/void-active - 내원의 모든 활성(미취소) 영수를 일괄 취소
-// (정정 처리 시 잔재 영수가 남아 합계가 부풀지 않도록)
-router.put('/visit/:visitId/void-active', async (req, res) => {
+// ── Correction (정정) ────────────────────────────────────────────────────────
+//
+// When a visit's items shrink after it was billed, its active bills are replaced
+// by one bill for what the visit costs now. This used to be done by the screen in
+// two requests (void everything, then post a bill it had computed itself), which
+// recorded money that was never received:
+//   - amount_paid was set to the new total whatever had actually been paid, so
+//     correcting an unpaid bill stored it as paid in full;
+//   - the refund went into change_amount on top of that, so net_paid came out as
+//     total minus refund - short by exactly the refund;
+//   - discount, previously billed issuance fees and carried-forward balances were
+//     dropped, and the cash that had paid those balances was counted as refund
+//     while the balances themselves were restored as debt.
+// Now the server builds the replacement from the database, in one transaction.
+//
+// Rules (approved 2026-09-29):
+//   - the new bill records the cash actually kept for this visit so far
+//     (sum of net_paid of the bills it replaces) as amount_paid;
+//   - discount and carried-forward balances stay as they were billed; issuance
+//     fees billed at the counter stay too - they are not clinical items;
+//   - kept >= new total: status paid, change_amount = refund handed back now;
+//   - kept <  new total: the difference stays as outstanding (partial / unpaid).
+
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+// Everything the replacement bill would contain, from what is in the database
+// now. Throws { status, error } when a correction is not possible.
+async function buildCorrection(db, visitId) {
+  const vr = await db.query('SELECT id, patient_id, visit_type FROM visit WHERE id = $1', [visitId]);
+  if (!vr.rows.length) throw { status: 404, error: 'Visit not found' };
+  const visit = vr.rows[0];
+
+  const ar = await db.query(
+    `SELECT id, receipt_no, net_paid, discount_amount, previous_balance, carried_into_id, total_due, amount_paid
+       FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' ORDER BY id`,
+    [visitId]
+  );
+  const active = ar.rows;
+  if (!active.length) throw { status: 409, error: BILL_CHANGED + ': this visit has no active bill' };
+  const ids = active.map(function (b) { return b.id; });
+  // A bill whose balance a bill of ANOTHER visit absorbed cannot be replaced here:
+  // that bill already charges the balance. Voiding it first restores this one.
+  // A carry inside the visit is fine and common - a settlement receipt (M2) or an
+  // additional charge absorbs the visit's own earlier bill - since every bill of
+  // the visit is being replaced together (see internalCarried below).
+  const carried = active.find(function (b) { return b.carried_into_id && ids.indexOf(b.carried_into_id) < 0; });
+  if (carried) {
+    const into = await db.query('SELECT receipt_no FROM billing WHERE id = $1', [carried.carried_into_id]);
+    throw { status: 409, error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || carried.carried_into_id) };
+  }
+  // Balance passed from one bill of this visit to another. It sits in the later
+  // bill's previous_balance but is this visit's own debt, already inside the new
+  // total - only debt carried in from other visits stays as previous_balance.
+  // A carried bill keeps its amount_paid, so what it passed on is total_due - amount_paid
+  // (the same figure restoreCarried() gives back on a void).
+  const internalCarried = active.reduce(function (s, b) {
+    return s + (b.carried_into_id ? Math.max(0, (Number(b.total_due) || 0) - (Number(b.amount_paid) || 0)) : 0);
+  }, 0);
+
+  // Same price sources as GET /pending, so the correction agrees with the flag
+  // that put the visit on the list.
+  const cr = await db.query(
+    `SELECT COALESCE((SELECT price_clinic FROM order_code WHERE code = CASE $1::text
+        WHEN 'newVisit' THEN 'C01' WHEN 'followUp' THEN 'C02'
+        WHEN 'emergency' THEN 'C03' WHEN 'referral' THEN 'C04' WHEN 'none' THEN NULL ELSE 'C01' END),0) AS fee`,
+    [visit.visit_type]
+  );
+  const rx = await db.query(
+    `SELECT drug_code, drug_name, total_qty AS qty, COALESCE(unit_price,0) AS unit_price, pack_unit, pack_label
+       FROM prescription
+      WHERE consultation_id IN (SELECT id FROM consultation WHERE visit_id = $1)
+        AND COALESCE(dispense_type,'internal') <> 'external'
+      ORDER BY id`,
+    [visitId]
+  );
+  const missing = rx.rows.filter(function (r) { return r.qty == null; });
+  if (missing.length) throw { status: 409, error: QTY_MISSING + ': ' + missing.map(function (r) { return r.drug_name; }).join(', ') };
+  const orders = await db.query(
+    `SELECT order_code, order_name, code_type, COALESCE(total_qty,quantity,1) AS qty, COALESCE(unit_price,0) AS unit_price
+       FROM order_item o WHERE o.visit_id = $1 AND COALESCE(o.status,'') <> 'cancelled' ORDER BY o.id`,
+    [visitId]
+  );
+  // Counter fees are kept as billed; a fee-type code the doctor ordered is already
+  // in `orders` above and must not be counted twice.
+  const fees = await db.query(
+    `SELECT bi.item_code, bi.item_name, bi.quantity, bi.unit_price, bi.total_price
+       FROM billing_item bi WHERE bi.billing_id = ANY($1::int[]) AND ${counterFeeCond('bi', '$2')} ORDER BY bi.id`,
+    [ids, visitId]
+  );
+
+  const items = [];
+  const consultFee = round2(cr.rows[0].fee);
+  if (consultFee > 0) items.push({ item_type: 'consultation', item_name: 'Consultation', item_code: '', quantity: 1, unit_price: consultFee, total_price: consultFee });
+  let drugTotal = 0, procTotal = 0;
+  rx.rows.forEach(function (r) {
+    const q = Number(r.qty) || 0, up = Number(r.unit_price) || 0, tot = round2(q * up);
+    drugTotal += tot;
+    items.push({ item_type: 'drug', item_name: r.drug_name, item_code: r.drug_code, quantity: q, unit_price: up, total_price: tot,
+                 pack_label: r.pack_unit ? (r.pack_label || 'unit') : null });
+  });
+  orders.rows.forEach(function (o) {
+    const q = Number(o.qty) || 0, up = Number(o.unit_price) || 0, tot = round2(q * up);
+    procTotal += tot;
+    items.push({ item_type: o.code_type || 'procedure', item_name: o.order_name, item_code: o.order_code, quantity: q, unit_price: up, total_price: tot });
+  });
+  fees.rows.forEach(function (f) {
+    const tot = round2(f.total_price);
+    procTotal += tot;
+    items.push({ item_type: 'fee', item_name: f.item_name, item_code: f.item_code, quantity: Number(f.quantity) || 1, unit_price: Number(f.unit_price) || 0, total_price: tot });
+  });
+
+  const subtotal = round2(consultFee + drugTotal + procTotal);
+  const discount = round2(Math.min(subtotal, active.reduce(function (s, b) { return s + (Number(b.discount_amount) || 0); }, 0)));
+  const previousBalance = round2(Math.max(0, active.reduce(function (s, b) { return s + (Number(b.previous_balance) || 0); }, 0) - internalCarried));
+  const totalDue = round2(Math.max(0, subtotal - discount + previousBalance));
+  const kept = round2(active.reduce(function (s, b) { return s + (Number(b.net_paid) || 0); }, 0));
+  const refund = round2(Math.max(0, kept - totalDue));
+  const outstanding = round2(Math.max(0, totalDue - kept));
+  const status = outstanding > 0.5 ? (kept > 0.5 ? 'partial' : 'unpaid') : 'paid';
+
+  // What the correction changes, line by line: the lines of the receipts being
+  // replaced against the lines of the new one (integration test 2026-09-29: the screen
+  // said how much went back but not why). cancelled_order: the doctor marked that
+  // order cancelled (3-B), as opposed to a line deleted or reduced.
+  const billed = await db.query(
+    `SELECT item_type, item_code, item_name, SUM(quantity) AS qty, SUM(total_price) AS amount, MAX(pack_label) AS pack_label
+       FROM billing_item WHERE billing_id = ANY($1::int[]) GROUP BY item_type, item_code, item_name`,
+    [ids]
+  );
+  const cancelledCodes = (await db.query(
+    "SELECT DISTINCT order_code FROM order_item WHERE visit_id = $1 AND status = 'cancelled' AND order_code IS NOT NULL",
+    [visitId])).rows.map(function (r) { return r.order_code; });
+  const lineKey = function (t, code, name) { return t + '|' + (code || name); };
+  const byKey = {};
+  billed.rows.forEach(function (r) {
+    const k = lineKey(r.item_type, r.item_code, r.item_name);
+    byKey[k] = { item_type: r.item_type, item_code: r.item_code || '', item_name: r.item_name, pack_label: r.pack_label || null,
+                 qty_before: round2(r.qty), amount_before: round2(r.amount), qty_after: 0, amount_after: 0 };
+  });
+  items.forEach(function (it) {
+    const k = lineKey(it.item_type, it.item_code, it.item_name);
+    const e = byKey[k] || (byKey[k] = { item_type: it.item_type, item_code: it.item_code || '', item_name: it.item_name,
+                                        pack_label: null, qty_before: 0, amount_before: 0, qty_after: 0, amount_after: 0 });
+    e.qty_after = round2(e.qty_after + (Number(it.quantity) || 0));
+    e.amount_after = round2(e.amount_after + (Number(it.total_price) || 0));
+    if (it.pack_label) e.pack_label = it.pack_label;
+  });
+  const changes = Object.keys(byKey).map(function (k) { return byKey[k]; })
+    .filter(function (e) { return Math.abs(e.qty_after - e.qty_before) > 1e-6 || Math.abs(e.amount_after - e.amount_before) > 0.005; })
+    .map(function (e) {
+      return Object.assign(e, { difference: round2(e.amount_after - e.amount_before),
+        cancelled_order: e.qty_after === 0 && !!e.item_code && cancelledCodes.indexOf(e.item_code) >= 0 });
+    });
+
+  return {
+    visit_id: visit.id, patient_id: visit.patient_id,
+    active_bill_ids: ids, replaces: active.map(function (b) { return b.receipt_no; }),
+    items: items,
+    consult_fee: consultFee, drug_total: round2(drugTotal), procedure_total: round2(procTotal),
+    subtotal: subtotal, discount_amount: discount, previous_balance: previousBalance, total_due: totalDue,
+    paid_so_far: kept, amount_paid: kept, change_amount: refund, refund: refund,
+    outstanding: outstanding, payment_status: status,
+    changes: changes,
+  };
+}
+
+// One change-log line for a correction (payment.receipt.correct), whichever way it
+// went - money handed back, or a balance left owing. The summary names the
+// receipts and what changed in the items; before/after keep the totals and item
+// quantities (only what differs is stored).
+function correctionAudit(c, bill, oldBills, oldItems, reason) {
+  const key = function (it) { return it.item_code || it.item_name; };
+  const was = {}; oldItems.forEach(function (r) { was[r.k] = Number(r.q) || 0; });
+  const now = {}; c.items.forEach(function (it) { now[key(it)] = (now[key(it)] || 0) + (Number(it.quantity) || 0); });
+  const changes = [];
+  Object.keys(was).forEach(function (k) { if (!(k in now)) changes.push('-' + k); else if (Math.abs(now[k] - was[k]) > 1e-6) changes.push(k + ' ' + was[k] + '→' + now[k]); });
+  Object.keys(now).forEach(function (k) { if (!(k in was)) changes.push('+' + k); });
+  const list = function (m) { return Object.keys(m).sort().map(function (k) { return k + '×' + m[k]; }); };
+  const sum = function (f) { return round2(oldBills.reduce(function (a, b) { return a + (Number(b[f]) || 0); }, 0)); };
+  return {
+    action: ACTIONS.RECEIPT_CORRECT, patient_id: c.patient_id, visit_id: c.visit_id,
+    entity: 'billing', entity_id: bill.id,
+    // Receipt numbers and item codes only: the words (refund, statuses) are fields
+    // below, which the Log tab translates (integration test 2026-09-29, B4).
+    summary: oldBills.map(function (b) { return b.receipt_no; }).join(', ') + ' → ' + bill.receipt_no +
+      (changes.length ? ' · ' + changes.join(', ') : '') +
+      (reason ? ' — ' + reason : ''),
+    before: { receipts: oldBills.map(function (b) { return b.receipt_no; }),
+              payment_status: oldBills.map(function (b) { return b.payment_status; }),
+              total_due: sum('total_due'), amount_paid: sum('net_paid'), outstanding: sum('outstanding'), items: list(was) },
+    after:  { receipts: [bill.receipt_no], payment_status: [bill.payment_status],
+              total_due: c.total_due, amount_paid: c.paid_so_far, refund: c.refund, outstanding: c.outstanding, items: list(now) },
+  };
+}
+
+// GET /api/billing/visit/:visitId/correction - what a correction would record (no changes)
+router.get('/visit/:visitId/correction', canPay, async (req, res) => {
+  try {
+    res.json(await buildCorrection(pool, req.params.visitId));
+  } catch (err) {
+    if (err && err.status) return res.status(err.status).json({ error: err.error });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/billing/visit/:visitId/correct - replace the visit's active bills with one
+// bill for what it costs now. Body: { expected_active_bill_ids, expected_refund,
+// expected_outstanding, reason } - the figures the cashier was shown; if anything
+// changed since, nothing is written (409) so the refund handed over is the one shown.
+router.post('/visit/:visitId/correct', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { reason } = req.body;
-    const result = await client.query(
+    const vr = await client.query('SELECT patient_id FROM visit WHERE id = $1', [req.params.visitId]);
+    if (!vr.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
+    await lockPatient(client, vr.rows[0].patient_id);
+
+    const c = await buildCorrection(client, req.params.visitId);
+    const expected = (Array.isArray(req.body.expected_active_bill_ids) ? req.body.expected_active_bill_ids : [])
+      .map(function (x) { return parseInt(x, 10); }).sort(function (a, b) { return a - b; });
+    if (expected.join(',') !== c.active_bill_ids.join(',') ||
+        Math.abs((parseFloat(req.body.expected_refund) || 0) - c.refund) > 0.5 ||
+        Math.abs((parseFloat(req.body.expected_outstanding) || 0) - c.outstanding) > 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': the bill changed while the screen was open' });
+    }
+
+    // For the change log: the receipts being replaced and what they charged.
+    const oldBills = (await client.query(
+      'SELECT receipt_no, total_due, net_paid, outstanding, payment_status FROM billing WHERE id = ANY($1::int[]) ORDER BY id',
+      [c.active_bill_ids])).rows;
+    const oldItems = (await client.query(
+      `SELECT COALESCE(NULLIF(item_code,''), item_name) AS k, SUM(quantity) AS q FROM billing_item
+        WHERE billing_id = ANY($1::int[]) GROUP BY 1 ORDER BY 1`, [c.active_bill_ids])).rows;
+
+    // Replace, do not restore: balances the old bills absorbed move to the new
+    // bill (below) instead of reappearing as debt, because the new bill charges them.
+    await client.query(
       `UPDATE billing SET payment_status='cancelled', outstanding=0,
               cancelled_at=NOW(), cancelled_by=$2, cancel_reason=$3, updated_at=NOW()
-        WHERE visit_id=$1 AND payment_status<>'cancelled' RETURNING id`,
-      [req.params.visitId, req.user.id, reason || null]
+        WHERE id = ANY($1::int[])`,
+      [c.active_bill_ids, req.user.id, req.body.reason || 'correction']
     );
-    for (const row of result.rows) await restoreCarried(client, row.id);
+    const receipt_no = await nextReceiptNo(client);
+    const note = 'correction of ' + c.replaces.join(', ') + (c.refund > 0 ? ' · refund ' + c.refund : '');
+    const ins = await client.query(
+      `INSERT INTO billing (visit_id, patient_id, receipt_no, consult_fee, drug_total, procedure_total, subtotal,
+       discount_amount, discount_type, discount_value, previous_balance, total_due, amount_paid, change_amount,
+       outstanding, payment_status, note, cashier_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'amount',$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [c.visit_id, c.patient_id, receipt_no, c.consult_fee, c.drug_total, c.procedure_total, c.subtotal,
+       c.discount_amount, c.previous_balance, c.total_due, c.amount_paid, c.change_amount,
+       c.outstanding, c.payment_status, note, req.user.id]
+    );
+    const bill = ins.rows[0];
+    for (const it of c.items) {
+      await client.query(
+        'INSERT INTO billing_item (billing_id, item_type, item_name, item_code, quantity, unit_price, total_price) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [bill.id, it.item_type, it.item_name, it.item_code, it.quantity, it.unit_price, it.total_price]
+      );
+    }
+    await stampPackLabels(client, bill.id, req.params.visitId);
+    // Cancelled by this correction, not by staff: not a refund (303). Their money is
+    // on the new receipt, whose change_amount is what was handed back.
+    await client.query('UPDATE billing SET replaced_by_id = $1 WHERE id = ANY($2::int[])', [bill.id, c.active_bill_ids]);
+    // The cash that went back is the only movement: the kept cash was counted when
+    // it came in (M9).
+    if (c.refund > 0) await writeCash(client, req, 'correction', -c.refund, bill, 'refund on correction of ' + c.replaces.join(', '));
+    // Balances carried in from other visits move to the new bill, which charges
+    // them. Links between the replaced bills themselves are dropped: those bills
+    // are cancelled, and a link left on them would let a later void of the new
+    // bill "restore" a balance onto a cancelled bill.
+    await client.query(
+      'UPDATE billing SET carried_into_id = $1, updated_at = NOW() WHERE carried_into_id = ANY($2::int[]) AND NOT (id = ANY($2::int[]))',
+      [bill.id, c.active_bill_ids]
+    );
+    await client.query('UPDATE billing SET carried_into_id = NULL WHERE id = ANY($1::int[])', [c.active_bill_ids]);
+    await writeAudit(client, req, correctionAudit(c, bill, oldBills, oldItems, req.body.reason));
     await client.query('COMMIT');
-    res.json({ voided: result.rows.length });
+    res.status(201).json(Object.assign({}, bill, { refund: c.refund }));
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err && err.status) return res.status(err.status).json({ error: err.error });
     res.status(500).json({ error: err.message });
   } finally { client.release(); }
 });
 
 // GET /api/billing/patient/:patientId/balance - 환자 잔액(owed>0 미수 / refund>0 환불예정)
-router.get('/patient/:patientId/balance', async (req, res) => {
+router.get('/patient/:patientId/balance', canSeeBalance, async (req, res) => {
   try {
     // 취소된 영수는 '없던 일'로 완전 제외.
     // 미수는 outstanding 기준 — 이월된 영수는 outstanding=0 이라 이중 계산되지 않는다.
@@ -346,44 +980,99 @@ router.get('/patient/:patientId/balance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/billing/:id/pay - 기존 영수의 미수를 받아서 정산 (부분/전액)
-router.post('/:id/pay', async (req, res) => {
+// ── Settlement of an unpaid balance (미수 수납, M2) ───────────────────────────
+//
+// Decided 2026-09-29 (wiki/decisions.md 23, option C): money received later for an
+// old debt is recorded on a NEW receipt dated the day it is received. It used to be
+// added to the old bill's amount_paid, so the cash counted as revenue of the old
+// bill's date - a day already closed, whose figure then changed - and today's cash
+// drawer held money today's report did not show.
+//
+// The new receipt S works exactly like a carry-over (016):
+//   visit_id / patient_id   the old bill's - statistics credit the original visit's
+//                            department and doctor (their request)
+//   consult/drug/procedure  0, no items - the clinical amount stays on the old date
+//   previous_balance        the old bills' outstanding, all of it (O)
+//   total_due               O
+//   amount_paid             what was received now (A <= O); change_amount 0
+//   outstanding             O - A, status paid / partial
+// and each old bill gets outstanding 0, carried_into_id = S, amount_paid unchanged.
+//
+// SHAPE CONTRACT - statistics tells a settlement receipt from a clinical one by its
+// shape: consult_fee + drug_total + procedure_total = 0 and previous_balance > 0
+// (not by the note text). Keep it that way; change it only together with statistics.
+//
+// Voiding S restores the old bills' balance (restoreCarried). The old bills cannot
+// be voided or settled again while carried (M4, M1). A correction of the visit
+// takes the carry inside the visit into account (buildCorrection).
+
+// POST /api/billing/settle - { bill_ids, amount, expected_outstanding }
+// bill_ids: the unpaid bills of ONE visit (the screen sends one; "settle all" sends
+// one call per visit, so each visit gets its own receipt). expected_outstanding is
+// the total the cashier saw; if it changed meanwhile nothing is written (409).
+router.post('/settle', canPay, async (req, res) => {
   const client = await pool.connect();
   try {
-    const amount = parseFloat(req.body.amount);
+    const ids = (Array.isArray(req.body.bill_ids) ? req.body.bill_ids : [])
+      .map(function (x) { return parseInt(x, 10); }).filter(function (x) { return x > 0; });
+    const amount = round2(parseFloat(req.body.amount));
+    if (!ids.length) return res.status(400).json({ error: 'bill_ids required' });
     if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'amount must be > 0' });
     await client.query('BEGIN');
-    // FOR UPDATE: read-modify-write on money. Without the row lock two cashiers
-    // settling the same bill at once both read the old amount_paid and the second
-    // UPDATE overwrites the first — both get a success response but only one
-    // payment is recorded, so cash collected goes missing from the books.
-    const cur = await client.query(
-      `SELECT total_due, amount_paid, net_paid FROM billing
-        WHERE id=$1 AND payment_status<>'cancelled' FOR UPDATE`,
-      [req.params.id]
+    await lockPatientOfBill(client, ids[0]);
+    const r = await client.query(
+      `SELECT id, patient_id, visit_id, receipt_no, outstanding, carried_into_id, payment_status
+         FROM billing WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE`,
+      [ids]
     );
-    if (cur.rows.length === 0) {
+    const rows = r.rows;
+    if (rows.length !== ids.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Billing not found' }); }
+    const first = rows[0];
+    if (rows.some(function (b) { return b.patient_id !== first.patient_id || b.visit_id !== first.visit_id; })) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Not found or cancelled' });
+      return res.status(400).json({ error: 'bill_ids must belong to one visit' });
     }
-    const due = parseFloat(cur.rows[0].total_due) || 0;
-    const paid = parseFloat(cur.rows[0].amount_paid) || 0;
-    // What is still owed depends on the cash kept, not the note handed over.
-    const outstanding = due - (parseFloat(cur.rows[0].net_paid) || 0);
-    if (amount > outstanding + 0.5) {
+    // Carried: the debt now lives on the later receipt (M1).
+    const carried = rows.find(function (b) { return b.carried_into_id; });
+    if (carried) {
+      const into = await client.query('SELECT receipt_no FROM billing WHERE id = $1', [carried.carried_into_id]);
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'BILL_CARRIED: ' + ((into.rows[0] && into.rows[0].receipt_no) || carried.carried_into_id) });
+    }
+    if (rows.some(function (b) { return b.payment_status === 'cancelled' || !(Number(b.outstanding) > 0); })) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': a bill was cancelled or already settled' });
+    }
+    const owedNow = round2(rows.reduce(function (s, b) { return s + (Number(b.outstanding) || 0); }, 0));
+    if (Math.abs(owedNow - (parseFloat(req.body.expected_outstanding) || 0)) > 0.5) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: BILL_CHANGED + ': the balance changed while the screen was open' });
+    }
+    if (amount > owedNow + 0.5) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'amount exceeds outstanding' });
     }
-    const newPaid = paid + amount;
-    const newOut = outstanding - amount;
-    const status = newOut <= 0.5 ? 'paid' : 'partial';
-    const result = await client.query(
-      `UPDATE billing SET amount_paid=$2, outstanding=$3, payment_status=$4, cashier_id=$5, updated_at=NOW()
-        WHERE id=$1 RETURNING *`,
-      [req.params.id, newPaid, newOut > 0 ? newOut : 0, status, req.user.id]
+    const received = Math.min(amount, owedNow);
+    const left = round2(owedNow - received);
+    const status = left <= 0.5 ? 'paid' : 'partial';
+
+    const receipt_no = await nextReceiptNo(client);
+    const ins = await client.query(
+      `INSERT INTO billing (visit_id, patient_id, receipt_no, consult_fee, drug_total, procedure_total, subtotal,
+       discount_amount, discount_type, discount_value, previous_balance, total_due, amount_paid, change_amount,
+       outstanding, payment_status, note, cashier_id)
+       VALUES ($1,$2,$3,0,0,0,0,0,'amount',0,$4,$4,$5,0,$6,$7,$8,$9) RETURNING *`,
+      [first.visit_id, first.patient_id, receipt_no, owedNow, received, status === 'paid' ? 0 : left, status,
+       'settlement of ' + rows.map(function (b) { return b.receipt_no; }).join(', '), req.user.id]
     );
+    const settlement = ins.rows[0];
+    await client.query(
+      'UPDATE billing SET outstanding = 0, carried_into_id = $1, updated_at = NOW() WHERE id = ANY($2::int[])',
+      [settlement.id, ids]
+    );
+    await writeCash(client, req, 'settlement', Number(settlement.net_paid), settlement, null);
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+    res.status(201).json(settlement);
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });

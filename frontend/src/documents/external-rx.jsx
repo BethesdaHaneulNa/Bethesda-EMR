@@ -1,6 +1,9 @@
 // External / outside prescription (원외 처방전). Lists drugs marked 'external'
 // in the pharmacy so the patient can fill them at an outside pharmacy. A4.
+// The dose column is the daily total (Korean style); under each drug a sentence
+// spells out one intake, e.g. « 1 cp × 3 fois/jour pendant 7 jours (total 21) ».
 import { A4, ClinicHeader, DocMetaRow, PatientBox, DocSection, SignatureBlock, L } from './shared.jsx';
+import { storedTotal, hasTotal, fmtAmount, doseSentence, isLegacyTotal, isPack, packWord } from './rx-dosing.js';
 
 var FL = {
   destination: { ko: '수신 약국 (선택)', en: 'Pharmacy (optional)', fr: 'Pharmacie (optionnel)' },
@@ -9,11 +12,11 @@ var FL = {
 var COL = {
   no:    { ko: 'No', en: 'No', fr: 'N°' },
   drug:  { ko: '약품명', en: 'Medication', fr: 'Médicament' },
-  dose:  { ko: '1회량', en: 'Dose', fr: 'Dose' },
+  dose:  { ko: '1일량', en: 'Per day', fr: 'Dose/j' },
   freq:  { ko: '횟수', en: 'Freq', fr: 'Fréq.' },
   days:  { ko: '일수', en: 'Days', fr: 'Jours' },
   qty:   { ko: '총량', en: 'Qty', fr: 'Qté' },
-  route: { ko: '용법 / 비고', en: 'Route / Note', fr: 'Voie / Note' },
+  route: { ko: '용법 / 비고', en: 'Directions / Note', fr: 'Posologie / Note' },
 };
 var EMPTY = {
   ko: '원외로 지정된 처방이 없습니다. (약국 화면에서 약을 "원외"로 지정하세요)',
@@ -21,11 +24,17 @@ var EMPTY = {
   fr: 'Aucune ordonnance externe. (Marquez les médicaments comme « externe » dans la pharmacie.)',
 };
 
-function qtyOf(rx) {
-  var q = parseFloat(rx.total_qty);
-  if (!isNaN(q) && q > 0) return q;
-  return (parseFloat(rx.dose) || 0) * (Number(rx.frequency) || 1) * (Number(rx.days) || 1);
-}
+var NOTHING_TO_ISSUE = {
+  ko: '원외로 지정된 약이 없어 발급할 수 없습니다. 약국 화면에서 약을 「원외」로 바꾼 뒤 다시 여세요.',
+  en: 'No drug is marked external, so there is nothing to issue. Mark drugs as external in the pharmacy screen, then open this again.',
+  fr: 'Aucun médicament n\'est marqué « Externe » : rien à émettre. Marquez-les « Externe » dans la pharmacie, puis rouvrez.',
+};
+
+// A line with no stored total prints a visible gap for the outside pharmacist to query,
+// never a number worked out here (see rx-dosing.js).
+var NO_TOTAL = { ko: '확인 필요', en: 'to check', fr: 'à vérifier' };
+// Saved before the daily-total rule; see isLegacyTotal.
+var LEGACY = { ko: '예전 계산', en: 'old calculation', fr: 'ancien calcul' };
 
 function Layout(props) {
   var v = props.values || {}, lang = props.lang;
@@ -61,11 +70,13 @@ function Layout(props) {
             : meds.map(function (rx, i) {
                 return <tr key={rx.id || i}>
                   <td style={num}>{i + 1}</td>
-                  <td style={cell}><b>{rx.drug_name}</b>{rx.drug_code ? <span style={{ color: '#666', marginLeft: 6, fontSize: 11 }}>{rx.drug_code}</span> : null}</td>
-                  <td style={num}>{rx.dose || ''}</td>
+                  <td style={cell}><b>{rx.drug_name}</b>{rx.drug_code ? <span style={{ color: '#666', marginLeft: 6, fontSize: 11 }}>{rx.drug_code}</span> : null}
+                    {doseSentence(rx, lang) ? <div style={{ fontSize: 11.5, marginTop: 2 }}>{doseSentence(rx, lang)}</div> : null}</td>
+                  <td style={num}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : ''}</td>
                   <td style={num}>{rx.frequency || ''}</td>
                   <td style={num}>{rx.days || ''}</td>
-                  <td style={num}>{qtyOf(rx)}</td>
+                  <td style={num}>{!hasTotal(rx) ? <span style={{ color: '#b91c1c', fontSize: 10.5 }}>{L(NO_TOTAL, lang)}</span> : isPack(rx) ? packWord(rx, lang, storedTotal(rx)) : fmtAmount(storedTotal(rx))}
+                    {isLegacyTotal(rx) ? <div style={{ fontSize: 9.5, color: '#666' }}>({L(LEGACY, lang)})</div> : null}</td>
                   <td style={cell}>{[rx.route, rx.memo].filter(Boolean).join(' · ')}</td>
                 </tr>;
               })}
@@ -84,6 +95,11 @@ export default {
   category: 'prescription',
   name: { ko: '원외 처방전', en: 'Outside Prescription', fr: 'Ordonnance externe' },
   needsMeds: true,
+  // Nothing marked external: a number would be spent on an empty paper. The document
+  // window disables "issue" and shows this; the server refuses it as well.
+  issueBlocked: function (meds) {
+    return (meds || []).some(function (m) { return m.dispense_type === 'external'; }) ? null : NOTHING_TO_ISSUE;
+  },
   fields: [
     { key: 'destination', label: FL.destination, type: 'text' },
     { key: 'note', label: FL.note, type: 'textarea', rows: 3 },

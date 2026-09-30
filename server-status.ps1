@@ -63,6 +63,7 @@ $T = @{
     stStopped = 'ARRETE'
     stStarting = 'DEMARRAGE'
     stUnhealthy = 'NE REPOND PAS'
+    stNoPort = 'INACCESSIBLE'
     stMissing = 'ABSENT'
     stOff = 'non installe'
     diskFree = '{0} Go libres sur {1} Go'
@@ -73,6 +74,34 @@ $T = @{
     adviceDown = 'Prevenez le responsable. Notez ce qui est en rouge ci-dessus.'
     adviceDisk = 'Le disque est presque plein. Prevenez le responsable.'
     adviceBackup = 'La sauvegarde de cette nuit n''a pas eu lieu. Prevenez le responsable.'
+    portClosed = 'port {0} ferme'
+    portReserved = 'port {0} bloque par Windows'
+    advicePort = 'Windows bloque un port (ligne en rouge). Prevenez le responsable : DEPLOYMENT.md, partie Windows.'
+    pacsAddr = 'Adresses de l''imagerie (Parametres)'
+    notPaired = 'visionneuse non appairee'
+    advicePair = 'La visionneuse n''est pas appairee au serveur d''images : lancez pair-with-emr dans le dossier PACS (guide PACS 6.1).'
+    stFix = 'A CORRIGER'
+    oldPort = 'ancien port {0} -> {1}'
+    adviceAddr = 'Ancienne adresse dans Parametres > Flux d''ordres : remplacez 8090 par 9090 et 8080 par 9080, puis enregistrez.'
+    backupOldVersion = 'plus ancienne que l''application ({0} mise(s) a jour de la base manquante(s)) - {1}'
+    adviceBackupOld = 'La derniere sauvegarde date d''avant la mise a jour de l''EMR. Dans l''EMR : Parametres > Sauvegarde > Sauvegarder.'
+    imgBackup = 'Sauvegarde des images (disque)'
+    imgOk = 'il y a {0} h - {1} Go libres sur {2} Go'
+    imgSilent = 'aucun compte rendu depuis {0} h'
+    imgNoDisk = 'disque de sauvegarde absent'
+    imgFailed = 'echec : {0}'
+    imgFull = 'disque presque plein : {0} Go libres sur {1} Go'
+    imgUnreadable = 'etat illisible (logs\image-backup-status.json)'
+    adviceImg = 'Sauvegarde des images : branchez le disque de sauvegarde ou remplacez-le s''il est plein. Sinon prevenez le responsable.'
+    emrCopy = 'Copie des sauvegardes EMR (disque)'
+    emrCopyOk = 'il y a {0} h - {1} sur le disque (derniere {2})'
+    emrCopyFailed = 'echec de la copie : {0}'
+    emrCopyNoDisk = 'disque externe absent'
+    emrCopyNotFound = 'dossier de l''EMR introuvable'
+    emrCopyNone = 'aucune sauvegarde EMR a copier'
+    emrCopyNever = 'jamais copiee'
+    emrCopyStale = 'pas de copie depuis {0} h'
+    adviceEmrCopy = 'Copie des sauvegardes de l''EMR : branchez le disque externe (le meme que pour les images). Sinon prevenez le responsable.'
   }
   en = @{
     title = 'Bethesda EMR - server status'
@@ -95,6 +124,7 @@ $T = @{
     stStopped = 'STOPPED'
     stStarting = 'STARTING'
     stUnhealthy = 'NOT RESPONDING'
+    stNoPort = 'UNREACHABLE'
     stMissing = 'MISSING'
     stOff = 'not installed'
     diskFree = '{0} GB free of {1} GB'
@@ -105,6 +135,34 @@ $T = @{
     adviceDown = 'Tell the person in charge. Note down whatever is red above.'
     adviceDisk = 'The disk is nearly full. Tell the person in charge.'
     adviceBackup = 'Last night''s backup did not happen. Tell the person in charge.'
+    portClosed = 'port {0} not open'
+    portReserved = 'port {0} held by Windows'
+    advicePort = 'Windows is holding a port (red line). Tell the person in charge: DEPLOYMENT.md, Windows section.'
+    pacsAddr = 'Imaging addresses (Settings)'
+    notPaired = 'viewer not paired'
+    advicePair = 'The viewer is not paired with the image server: run pair-with-emr in the PACS folder (PACS guide 6.1).'
+    stFix = 'TO FIX'
+    oldPort = 'old port {0} -> {1}'
+    adviceAddr = 'Old address in Settings > Order feed: change 8090 to 9090 and 8080 to 9080, then save.'
+    backupOldVersion = 'older than the app ({0} database update(s) missing) - {1}'
+    adviceBackupOld = 'The newest backup is from before the EMR was updated. In the EMR: Settings > Backup > Back up now.'
+    imgBackup = 'Image backup (disk)'
+    imgOk = '{0} h ago - {1} GB free of {2} GB'
+    imgSilent = 'no report for {0} h'
+    imgNoDisk = 'backup disk not plugged in'
+    imgFailed = 'failed: {0}'
+    imgFull = 'disk almost full: {0} GB free of {1} GB'
+    imgUnreadable = 'status file unreadable (logs\image-backup-status.json)'
+    adviceImg = 'Image backup: plug in the backup disk, or replace it if it is full. Otherwise tell the person in charge.'
+    emrCopy = 'EMR backup copy (disk)'
+    emrCopyOk = '{0} h ago - {1} on the disk (newest {2})'
+    emrCopyFailed = 'copy failed: {0}'
+    emrCopyNoDisk = 'external disk not plugged in'
+    emrCopyNotFound = 'EMR folder not found'
+    emrCopyNone = 'no EMR backup to copy'
+    emrCopyNever = 'never copied yet'
+    emrCopyStale = 'not copied for {0} h'
+    adviceEmrCopy = 'EMR backup copy: plug in the external disk (the same one as for the images). Otherwise tell the person in charge.'
   }
   ko = @{
     title = 'Bethesda EMR - 서버 상태'
@@ -127,6 +185,7 @@ $T = @{
     stStopped = '정지됨'
     stStarting = '시작 중'
     stUnhealthy = '응답 없음'
+    stNoPort = '접속 안 됨'
     stMissing = '없음'
     stOff = '미설치'
     diskFree = '{1}GB 중 {0}GB 남음'
@@ -137,6 +196,34 @@ $T = @{
     adviceDown = '관리자에게 알리세요. 위에 빨간색으로 표시된 항목을 적어두세요.'
     adviceDisk = '디스크가 거의 찼습니다. 관리자에게 알리세요.'
     adviceBackup = '어젯밤 백업이 실행되지 않았습니다. 관리자에게 알리세요.'
+    portClosed = '{0} 포트 닫힘'
+    portReserved = '{0} 포트를 Windows가 막음'
+    advicePort = 'Windows가 포트를 막고 있습니다(빨간 줄). 관리자에게 알리세요: DEPLOYMENT.md의 Windows 절.'
+    pacsAddr = '영상 주소 (설정)'
+    notPaired = '영상 창 짝 맞추기 안 됨'
+    advicePair = '영상 창이 영상 서버와 짝이 맞지 않습니다: PACS 폴더에서 pair-with-emr를 실행하세요 (PACS 위키 6.1).'
+    stFix = '고칠 것'
+    oldPort = '옛 포트 {0} → {1}'
+    adviceAddr = '설정 → 오더 연동의 주소가 옛 포트입니다. 8090은 9090으로, 8080은 9080으로 고쳐 저장하세요.'
+    backupOldVersion = '앱보다 옛 버전 (DB 변경 {0}개 없음) - {1}'
+    adviceBackupOld = '가장 새 백업이 EMR 업데이트 전 것입니다. EMR에서 설정 → 백업 → 「지금 백업」을 누르세요.'
+    imgBackup = '영상 백업 (디스크)'
+    imgOk = '{0}시간 전 - {2}GB 중 {1}GB 남음'
+    imgSilent = '{0}시간째 보고 없음'
+    imgNoDisk = '백업 디스크가 꽂혀 있지 않음'
+    imgFailed = '실패: {0}'
+    imgFull = '디스크가 거의 참: {1}GB 중 {0}GB 남음'
+    imgUnreadable = '상태 파일을 읽을 수 없음 (logs\image-backup-status.json)'
+    adviceImg = '영상 백업: 백업 디스크를 꽂거나, 가득 찼으면 바꾸세요. 그래도 안 되면 관리자에게 알리세요.'
+    emrCopy = 'EMR 백업 복사 (디스크)'
+    emrCopyOk = '{0}시간 전 - 디스크에 {1}개 (가장 새 것 {2})'
+    emrCopyFailed = '복사 실패: {0}'
+    emrCopyNoDisk = '외장 디스크가 꽂혀 있지 않음'
+    emrCopyNotFound = 'EMR 폴더를 찾지 못함'
+    emrCopyNone = '복사할 EMR 백업 없음'
+    emrCopyNever = '아직 복사된 적 없음'
+    emrCopyStale = '{0}시간째 복사 안 됨'
+    adviceEmrCopy = 'EMR 백업 복사: 외장 디스크(영상 백업과 같은 것)를 꽂으세요. 그래도 안 되면 관리자에게 알리세요.'
   }
 }
 
@@ -191,8 +278,121 @@ function Get-ComposeDir {
 }
 
 function New-Check {
-  param([string]$Key, [string]$State, [string]$Detail = '')
-  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail }
+  # Wide: the detail is a sentence for the wide column; the state column gets a short word.
+  param([string]$Key, [string]$State, [string]$Detail = '', [bool]$Port = $false, [bool]$Wide = $false)
+  return [pscustomobject]@{ Key = $Key; State = $State; Detail = $Detail; Port = $Port; Wide = $Wide }
+}
+
+# ------------------------------------------------------- imaging addresses
+#
+# The EMR moved from 8080 to 9080 and the PACS viewer from 8090 to 9090 (Windows
+# reserves the old ones). Addresses typed into Settings > Order feed from the old
+# instructions stay in the database - and travel with every backup - and the viewer
+# then does not open from the chart. This reads the two fields and warns; it changes
+# nothing. The EMR's own status check and the Settings screen say the same.
+# Returns $null when there is nothing to say (the row is then not shown at all).
+function Get-UrlPort {
+  param([string]$Url)
+  if ($Url -match '^[a-z]+://[^/:]+:(\d+)(/|$)') { return $Matches[1] }
+  return $null
+}
+# Since P-9 (035, 2026-09-29) the EMR relays the viewer itself through orthanc_url, with
+# the image server's password that only the PACS folder's pair-with-emr writes;
+# pacs_viewer_url is no longer used and no longer checked. Not paired is reported only
+# where the imaging is in use (the worklist bridge has reported, or a worklist host is
+# set). Same judgement as the EMR's own status check (status.routes.js).
+function Get-PacsAddressCheck {
+  param($Strings)
+  $sql = 'SELECT coalesce(c.emr_base_url, ''''), coalesce(c.orthanc_url, ''''), ' +
+         '(coalesce(c.orthanc_password, '''') <> '''')::text, ' +
+         '(EXISTS (SELECT 1 FROM service_heartbeat h WHERE h.name = ''worklist_bridge'') OR coalesce(c.worklist_scp_host, '''') <> '''')::text ' +
+         'FROM pacs_config c WHERE c.id = 1'
+  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|', '-c', $sql)
+  if (-not $line) { return $null }
+  $parts = ([string]($line | Select-Object -First 1)) -split '\|'
+  if ($parts.Count -lt 4) { return $null }
+  $found = @()
+  $notPaired = ($parts[3] -eq 'true' -and $parts[2] -ne 'true')
+  if ($notPaired) { $found += $Strings.notPaired }
+  if ((Get-UrlPort $parts[0].Trim()) -eq '8080') { $found += ($Strings.oldPort -f '8080', '9080') }
+  if ((Get-UrlPort $parts[1].Trim()) -eq '8090') { $found += ($Strings.oldPort -f '8090', '9090') }
+  if ($found.Count -eq 0) { return $null }
+  $c = New-Check 'pacsAddr' 'warn' ($found -join ', ') $false $true
+  $c | Add-Member -NotePropertyName Pair -NotePropertyValue $notPaired
+  return $c
+}
+
+# ------------------------------------------------------------ host ports
+#
+# A container can be Up and healthy while nothing listens on the host. Windows
+# (Hyper-V/WSL) reserves blocks of TCP ports, picked afresh at every boot; when
+# a published port lands in one, Docker cannot bind it, the container starts
+# anyway, and its healthcheck - which runs inside the container - stays green.
+# The screen or the imaging device then times out with nothing looking wrong.
+# So for every port a container publishes, connect to it from the host.
+
+# The ports the container was configured to publish, from Docker itself, so a
+# port changed in docker-compose.yml is followed without editing this file.
+function Get-HostPorts {
+  param([string]$Container)
+  $json = Invoke-Docker @('inspect', $Container, '--format', '{{json .HostConfig.PortBindings}}')
+  if (-not $json -or $json -eq 'null') { return @() }
+  $ports = @()
+  try {
+    $map = ($json | Select-Object -First 1) | ConvertFrom-Json
+    foreach ($prop in $map.PSObject.Properties) {
+      if ($prop.Name -notlike '*/tcp') { continue }
+      foreach ($b in @($prop.Value)) {
+        if (-not $b.HostPort) { continue }
+        # Unset or "all interfaces" is reachable on loopback; a specific address is not.
+        $ip = if (-not $b.HostIp -or $b.HostIp -eq '0.0.0.0' -or $b.HostIp -eq '::') { '127.0.0.1' } else { $b.HostIp }
+        $ports += [pscustomobject]@{ Ip = $ip; Port = [int]$b.HostPort }
+      }
+    }
+  } catch {}
+  return $ports
+}
+
+function Test-HostPort {
+  param([string]$Ip, [int]$Port)
+  $client = New-Object System.Net.Sockets.TcpClient
+  try { return $client.ConnectAsync($Ip, $Port).Wait(1000) }
+  catch { return $false }
+  finally { $client.Close() }
+}
+
+# `netsh ... excludedportrange` prints a localized header and then "start end"
+# pairs; only the number pairs are read, so a French or Korean Windows parses
+# the same. Asked only when a port is found closed.
+function Get-ReservedRanges {
+  $ranges = @()
+  try {
+    $lines = & netsh interface ipv4 show excludedportrange protocol=tcp 2>$null
+    foreach ($l in $lines) {
+      if ($l -match '^\s*(\d+)\s+(\d+)') { $ranges += ,@([int]$Matches[1], [int]$Matches[2]) }
+    }
+  } catch {}
+  # The comma keeps a single range from being unrolled into two loose numbers.
+  return ,$ranges
+}
+
+# Downgrades a container check that looked fine when one of its published
+# ports cannot be reached. A reserved port is named as such, because that is
+# the cause, and it is not one a restart of the app will fix.
+function Add-PortCheck {
+  param($Check, [string]$Container, $Strings)
+  if ($Check.State -ne 'ok' -and $Check.State -ne 'warn') { return $Check }
+  $problems = @()
+  $reserved = $null
+  foreach ($p in (Get-HostPorts -Container $Container)) {
+    if (Test-HostPort -Ip $p.Ip -Port $p.Port) { continue }
+    if ($null -eq $reserved) { $reserved = Get-ReservedRanges }
+    $held = $false
+    foreach ($r in $reserved) { if ($p.Port -ge $r[0] -and $p.Port -le $r[1]) { $held = $true } }
+    $problems += if ($held) { $Strings.portReserved -f $p.Port } else { $Strings.portClosed -f $p.Port }
+  }
+  if ($problems.Count -eq 0) { return $Check }
+  return New-Check $Check.Key 'down' ($problems -join ', ') $true
 }
 
 function Get-ContainerCheck {
@@ -211,26 +411,134 @@ function Get-ContainerCheck {
   }
 }
 
+# Where Docker Desktop keeps its disk (and so the database): its settings may name a
+# custom folder; otherwise it is under %LOCALAPPDATA%\Docker.
+function Get-DockerDataDrive {
+  foreach ($f in @("$env:APPDATA\Docker\settings-store.json", "$env:APPDATA\Docker\settings.json")) {
+    if (-not (Test-Path $f)) { continue }
+    try {
+      $j = Get-Content $f -Raw | ConvertFrom-Json
+      foreach ($k in @('CustomWslDistroDir', 'DataFolder')) {
+        $v = $j.$k
+        if ($v -and ($v -match '^[A-Za-z]:')) { return $v.Substring(0, 2).ToUpper() }
+      }
+    } catch {}
+  }
+  if ($env:LOCALAPPDATA) { return (Split-Path -Qualifier $env:LOCALAPPDATA).ToUpper() }
+  return $null
+}
+
+# B7 (2026-09-29): the drive the backups go to and the drive Docker (the database) is
+# on. Only the first was checked, so with BACKUP_PATH on D: a full C: went unnoticed.
+# One drive -> the line reads as before; two -> both, and the fuller one decides.
 function Get-DiskCheck {
   param($Strings, [string]$BackupPath)
   $path = if ($BackupPath) { $BackupPath } else { $PSScriptRoot }
   try {
-    $qualifier = (Split-Path -Qualifier $path)
-    $drive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$qualifier'"
-    $freeGb = [math]::Round($drive.FreeSpace / 1GB)
-    $totalGb = [math]::Round($drive.Size / 1GB)
-    $detail = $Strings.diskFree -f $freeGb, $totalGb
-    if ($freeGb -lt $DiskDownFreeGb) { return New-Check 'disk' 'down' $detail }
-    if ($freeGb -lt $DiskWarnFreeGb) { return New-Check 'disk' 'warn' $detail }
-    return New-Check 'disk' 'ok' $detail
+    $drives = @((Split-Path -Qualifier $path).ToUpper())
+    $dd = Get-DockerDataDrive
+    if ($dd -and $drives -notcontains $dd) { $drives += $dd }
+    $state = 'ok'; $parts = @()
+    foreach ($q in $drives) {
+      $drive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$q'"
+      if (-not $drive) { continue }
+      $freeGb = [math]::Round($drive.FreeSpace / 1GB)
+      $totalGb = [math]::Round($drive.Size / 1GB)
+      $text = $Strings.diskFree -f $freeGb, $totalGb
+      $parts += $(if ($drives.Count -gt 1) { "${q} $text" } else { $text })
+      if ($freeGb -lt $DiskDownFreeGb) { $state = 'down' }
+      elseif ($freeGb -lt $DiskWarnFreeGb -and $state -ne 'down') { $state = 'warn' }
+    }
+    if ($parts.Count -eq 0) { return New-Check 'disk' 'warn' '?' }
+    return New-Check 'disk' $state ($parts -join ' - ')
   } catch {
     return New-Check 'disk' 'warn' '?'
   }
 }
 
 # The check nobody notices has been failing until the day they need it.
+# The migration file names in a backup's schema_migrations data, or $null. A backup
+# restores with the usual steps only onto the version that made it (DEPLOYMENT.md 5b), so
+# a newest backup from before the last update is worth a yellow line. Backup files never
+# change, so each is read once (by name, size and time) - not every 15 seconds.
+$script:DumpMigrationCache = @{}
+function Get-DumpMigrations {
+  param($File)
+  $key = '{0}|{1}|{2}' -f $File.FullName, $File.Length, $File.LastWriteTime.Ticks
+  if ($script:DumpMigrationCache.ContainsKey($key)) { return $script:DumpMigrationCache[$key] }
+  $names = $null
+  $fs = $null
+  try {
+    $fs = [IO.File]::OpenRead($File.FullName)
+    $gz = New-Object IO.Compression.GZipStream($fs, [IO.Compression.CompressionMode]::Decompress)
+    $rd = New-Object IO.StreamReader($gz, [Text.Encoding]::UTF8)
+    $inBlock = $false
+    while ($null -ne ($line = $rd.ReadLine())) {
+      if (-not $inBlock) { if ($line.StartsWith('COPY public.schema_migrations ')) { $inBlock = $true; $names = @() }; continue }
+      if ($line -eq '\.') { break }
+      $names += ($line -split "`t")[0]
+    }
+    $rd.Dispose()
+  } catch { $names = $null } finally { if ($fs) { $fs.Dispose() } }
+  $script:DumpMigrationCache[$key] = $names
+  return $names
+}
+
+# The nightly image backup to an external disk (PACS image-backup.ps1, decision 41)
+# writes its last result to the PACS folder's logs\image-backup-status.json - read here
+# rather than from the EMR, so this still answers when the EMR is down. No file (the
+# backup was never set up on this PC) -> no row at all.
+function Get-ImageBackupCheck {
+  param($Strings)
+  $dir = Get-ComposeDir -Container 'bethesda-pacs'
+  if (-not $dir) { return $null }
+  $file = Join-Path $dir 'logs\image-backup-status.json'
+  if (-not (Test-Path $file)) { return $null }
+  try { $s = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return New-Check 'imgBackup' 'warn' ($Strings.imgUnreadable) $false $true }
+  $at = $null
+  try { $at = [datetime]::Parse([string]$s.at, [Globalization.CultureInfo]::InvariantCulture) } catch {}
+  $hours = if ($at) { [math]::Round(((Get-Date) - $at).TotalHours) } else { $null }
+  if ($null -eq $hours -or $hours -gt $BackupStaleHours) { return New-Check 'imgBackup' 'warn' ($Strings.imgSilent -f $hours) $false $true }
+  if ($s.disk_found -eq $false) { return New-Check 'imgBackup' 'warn' $Strings.imgNoDisk $false $true }
+  if ($s.ok -ne $true) { return New-Check 'imgBackup' 'warn' ($Strings.imgFailed -f [string]$s.error) $false $true }
+  $free = [double]("0" + $s.free_gb); $total = [double]("0" + $s.total_gb)
+  if ($total -gt 0 -and ($free / $total) -lt 0.1) { return New-Check 'imgBackup' 'warn' ($Strings.imgFull -f [math]::Round($free), [math]::Round($total)) $false $true }
+  return New-Check 'imgBackup' 'ok' ($Strings.imgOk -f $hours, [math]::Round($free), [math]::Round($total))
+}
+
+# The night image backup also copies the EMR's backups to the same external disk (the
+# director's decision, 2026-09-29) and reports it with the images; the EMR keeps the
+# fields in service_heartbeat 'pacs_image_backup' and adds emr_backup_last_ok with its
+# own clock. Read from the database, not logs\image-backup-status.json, for that field:
+# late is judged on it (the name's time in emr_backup_newest can be shifted by a time
+# zone). The same judgement as the EMR's status check (status.routes.js). Returns $null
+# when the report has no emr_backup field (older PACS script) - nothing is known.
+function Get-EmrCopyCheck {
+  param($Strings)
+  $sql = 'SELECT coalesce(detail->>''emr_backup'', ''-''), coalesce(detail->>''emr_backup_count'', ''''), ' +
+         'coalesce(detail->>''emr_backup_newest'', ''''), ' +
+         'coalesce(round(extract(epoch FROM now() - (detail->>''emr_backup_last_ok'')::timestamptz) / 3600)::text, ''''), ' +
+         'coalesce(detail->>''emr_backup_error'', '''') ' +
+         'FROM service_heartbeat WHERE name = ''pacs_image_backup'''
+  $line = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At', '-F', '|', '-c', $sql)
+  if (-not $line) { return $null }
+  $parts = ([string]($line | Select-Object -First 1)) -split '\|', 5
+  if ($parts.Count -lt 5 -or $parts[0] -eq '-') { return $null }
+  $state = $parts[0]; $count = $parts[1]; $newest = $parts[2]; $err = $parts[4]
+  $hours = if ($parts[3] -ne '') { [int]$parts[3] } else { $null }
+  if ($state -eq 'failed')    { return New-Check 'emrCopy' 'warn' ($Strings.emrCopyFailed -f $err) $false $true }
+  if ($state -eq 'no_disk')   { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNoDisk }
+  if ($state -eq 'not_found') { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNotFound $false $true }
+  if ($null -eq $hours) {
+    if ($state -eq 'none') { return New-Check 'emrCopy' 'warn' $Strings.emrCopyNone $false $true }
+    return New-Check 'emrCopy' 'warn' $Strings.emrCopyNever $false $true
+  }
+  if ($hours -gt $BackupStaleHours) { return New-Check 'emrCopy' 'warn' ($Strings.emrCopyStale -f $hours) $false $true }
+  return New-Check 'emrCopy' 'ok' ($Strings.emrCopyOk -f $hours, $count, $newest)
+}
+
 function Get-BackupCheck {
-  param($Strings, [string]$BackupPath)
+  param($Strings, [string]$BackupPath, [bool]$DbOk = $false)
   if (-not $BackupPath -or -not (Test-Path $BackupPath)) {
     return New-Check 'backup' 'warn' $Strings.backupNone
   }
@@ -240,6 +548,17 @@ function Get-BackupCheck {
   $hours = [math]::Round(((Get-Date) - $newest.LastWriteTime).TotalHours)
   $detail = $Strings.backupAge -f $hours, $newest.Name
   if ($hours -gt $BackupStaleHours) { return New-Check 'backup' 'warn' $detail }
+  if ($DbOk) {
+    $inBackup = Get-DumpMigrations -File $newest
+    $inDb = Invoke-Docker @('exec', 'bethesda-emr-db', 'psql', '-U', 'medconnect', '-d', 'medconnect', '-At',
+      '-c', 'SELECT filename FROM schema_migrations')
+    if ($null -ne $inBackup -and $inDb) {
+      $missing = @($inDb | Where-Object { $_ -and ($inBackup -notcontains $_) })
+      if ($missing.Count -gt 0) {
+        return New-Check 'backup' 'warn' ($Strings.backupOldVersion -f $missing.Count, $newest.Name) $false $true
+      }
+    }
+  }
   return New-Check 'backup' 'ok' $detail
 }
 
@@ -274,6 +593,10 @@ function Get-AllChecks {
   $checks = @{}
   foreach ($spec in $Containers) { $checks[$spec.Key] = Get-ContainerCheck -Spec $spec -Strings $Strings }
   $checks['bridge'] = Get-BridgeHeartbeatCheck -Strings $Strings -ContainerCheck $checks['bridge']
+  # The two that publish ports to the host: the EMR screen (9080) and the PACS
+  # (viewer 9090, DICOM 4242). The others are reached only inside Docker.
+  $checks['web']  = Add-PortCheck -Check $checks['web']  -Container 'bethesda-emr-web' -Strings $Strings
+  $checks['pacs'] = Add-PortCheck -Check $checks['pacs'] -Container 'bethesda-pacs'    -Strings $Strings
 
   # Docker already knows where the backup folder was put, whichever drive that
   # is, so nobody has to configure it here. If it cannot tell us, fall back to
@@ -283,9 +606,21 @@ function Get-AllChecks {
   $ordered = @(
     $checks['db'], $checks['api'], $checks['web'],
     (Get-DiskCheck -Strings $Strings -BackupPath $backupPath),
-    (Get-BackupCheck -Strings $Strings -BackupPath $backupPath),
+    (Get-BackupCheck -Strings $Strings -BackupPath $backupPath -DbOk ($checks['db'].State -eq 'ok')),
     $checks['pacs'], $checks['bridge']
   )
+  $img = Get-ImageBackupCheck -Strings $Strings
+  if ($img) { $ordered += $img }
+  # Only while the database answers; no row for a report from the older PACS script.
+  if ($checks['db'].State -eq 'ok') {
+    $emrCopy = Get-EmrCopyCheck -Strings $Strings
+    if ($emrCopy) { $ordered += $emrCopy }
+  }
+  # Only while the database answers; a row appears only when an address is old.
+  if ($checks['db'].State -eq 'ok') {
+    $addr = Get-PacsAddressCheck -Strings $Strings
+    if ($addr) { $ordered += $addr }
+  }
 
   $rank = @{ ok = 0; off = 0; warn = 1; down = 2 }
   $overall = 'ok'
@@ -302,12 +637,20 @@ function Get-Advice {
   param($Result, $Strings)
   if ($Result.DockerDown) { return $Strings.dockerDown }
   foreach ($c in $Result.Checks) {
+    if ($c.State -eq 'down' -and $c.Port) { return $Strings.advicePort }
+  }
+  foreach ($c in $Result.Checks) {
     if ($c.State -eq 'down') { return $Strings.adviceDown }
   }
   foreach ($c in $Result.Checks) {
     if ($c.State -eq 'warn') {
       if ($c.Key -eq 'disk') { return $Strings.adviceDisk }
+      if ($c.Key -eq 'backup' -and $c.Wide) { return $Strings.adviceBackupOld }
       if ($c.Key -eq 'backup') { return $Strings.adviceBackup }
+      if ($c.Key -eq 'pacsAddr' -and $c.Pair) { return $Strings.advicePair }
+      if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
+      if ($c.Key -eq 'imgBackup') { return $Strings.adviceImg }
+      if ($c.Key -eq 'emrCopy') { return $Strings.adviceEmrCopy }
       return $Strings.adviceDown
     }
   }
@@ -344,7 +687,9 @@ $ColorPaper = [System.Drawing.Color]::FromArgb(248, 248, 246)
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $T[$script:CurrentLang].title
-$form.Size = New-Object System.Drawing.Size(620, 560)
+# Room for up to ten rows (the seven, plus imaging addresses, image backup and the EMR
+# backup copy when they show).
+$form.Size = New-Object System.Drawing.Size(620, 680)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = $ColorPaper
 
@@ -391,6 +736,14 @@ $langButton.Height = 26
 $langButton.FlatStyle = 'Flat'
 $footer.Controls.Add($langButton)
 
+# WinForms docks from the back of the z-order to the front, so the Fill panel
+# must be frontmost to be docked last, into whatever the banner and the footer
+# leave. Added in the order above it was docked second and took the whole top
+# of the window, and the banner was then drawn over its first two rows - the
+# database and the application server, the two lines that matter most, were
+# hidden under the word PROBLEME.
+$rows.BringToFront()
+
 # The banner and the rows are rebuilt on every pass rather than patched, so a
 # stale row can never be left behind reading OK after its check stopped running.
 function Update-Window {
@@ -426,14 +779,15 @@ function Update-Window {
     $name.TextAlign = 'MiddleLeft'
 
     $state = New-Object System.Windows.Forms.Label
-    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } else { $c.Detail }
+    # A port problem has a long explanation; it goes in the wide column, not this one.
+    $state.Text = if ($c.State -eq 'ok') { $s.stOk } elseif ($c.State -eq 'off') { $s.stOff } elseif ($c.Port) { $s.stNoPort } elseif ($c.Wide) { $s.stFix } else { $c.Detail }
     $state.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
     $state.ForeColor = $color
     $state.Dock = 'Fill'
     $state.TextAlign = 'MiddleLeft'
 
     $detail = New-Object System.Windows.Forms.Label
-    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off') { $c.Detail } else { '' }
+    $detail.Text = if ($c.State -eq 'ok' -or $c.State -eq 'off' -or $c.Port -or $c.Wide) { $c.Detail } else { '' }
     $detail.Font = New-Object System.Drawing.Font('Segoe UI', 9)
     $detail.ForeColor = [System.Drawing.Color]::FromArgb(90, 90, 90)
     $detail.Dock = 'Fill'
@@ -448,6 +802,10 @@ function Update-Window {
     $rows.Controls.Add($state, 1, $rows.RowCount - 1)
     $rows.Controls.Add($detail, 2, $rows.RowCount - 1)
   }
+  # An empty last row takes the spare height; otherwise the table hands it all
+  # to the last real row, whose text then floats in the middle of a tall gap.
+  [void]$rows.RowStyles.Add((New-Object System.Windows.Forms.RowStyle([System.Windows.Forms.SizeType]::Percent, 100)))
+  $rows.RowCount = $rows.RowCount + 1
 
   $text = Get-Advice -Result $r -Strings $s
   $advice.Text = $text

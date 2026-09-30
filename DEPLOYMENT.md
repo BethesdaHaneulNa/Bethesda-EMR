@@ -104,7 +104,8 @@ docker compose stop backend frontend    # leave the database running
 ```
 
 **Restore.** Copy the backup into the database container and unpack it *there*. These three
-commands are the same on Windows, Linux and a NAS — replace the filename with the backup
+commands are the same on Windows, Linux and a NAS (on Windows run them from PowerShell or
+cmd, not Git Bash — Git Bash rewrites the `/tmp/...` path into a Windows one) — replace the filename with the backup
 you want (they are in `backups/`, newest last):
 
 ```
@@ -148,6 +149,46 @@ backup file, or free up disk space. Then tidy up:
 docker exec bethesda-emr-db rm -f /tmp/restore.sql.gz
 ```
 
+### If the backup is older than the app ("cannot drop constraint … depend on it")
+
+A backup only knows the tables that existed when it was taken. After an update has added
+tables, restoring a backup from *before* that update stops with exit code `3` and a line
+like:
+
+```
+ERROR:  cannot drop constraint staff_pkey on table public.staff because other objects depend on it
+```
+
+Nothing was changed (the transaction rolled back). This is the case for every backup taken
+before the last update, including the ones in `_pre-update-backups/`.
+
+Use these commands instead. They empty the database and restore the backup **in one
+transaction** — all of it happens or none of it does:
+
+```
+docker cp backups/bethesda_2026-07-24_0200.sql.gz bethesda-emr-db:/tmp/restore.sql.gz
+
+docker exec bethesda-emr-db sh -c "gunzip -c /tmp/restore.sql.gz > /tmp/restore.sql"
+
+docker exec bethesda-emr-db psql -v ON_ERROR_STOP=1 --single-transaction -U medconnect -d medconnect -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public" -f /tmp/restore.sql
+```
+
+- **Check the exit code after the second command.** Not `0` means the backup file is
+  damaged: stop there, nothing has been touched, use another backup.
+- The backup is unpacked to a file first, on purpose. Piping it straight into `psql` here
+  would empty the database and then run out of data on a damaged file — and keep the
+  result. (Tested: a truncated backup fails at the unpack step and the database is
+  untouched.)
+- Check the exit code after the third command as well: `0` means restored.
+- Tidy up: `docker exec bethesda-emr-db rm -f /tmp/restore.sql /tmp/restore.sql.gz`
+
+When the app starts again it brings the restored database up to its own version by itself
+(the log shows `[migrate] applying …`). Everything entered after the backup was taken is
+gone, as with any restore.
+
+> **After every update, take a backup** (Settings → Backup → "Back up now") **and run
+> `verify-backup.ps1`.** Until you do, every backup you hold is from the older version.
+
 **Start back up and look at it:**
 
 ```powershell
@@ -168,12 +209,19 @@ data:
 ```powershell
 .\verify-backup.ps1                                             # newest backup
 .\verify-backup.ps1 -File backups\bethesda_2026-07-15_0200.sql.gz
+.\verify-backup.ps1 -Strict                                     # right after "Back up now": must match exactly
 ```
 
 ```bash
 ./verify-backup.sh
 ./verify-backup.sh backups/bethesda_2026-07-15_0200.sql.gz
+./verify-backup.sh --strict
 ```
+
+A backup taken at 02:00 and checked in the afternoon differs from the live database by the
+day's work. That is reported as information, not as a failure; only a difference in
+structure fails. Use `-Strict` / `--strict` straight after a manual backup, when nothing
+should differ at all.
 
 It checks table count, row counts per table, sequence values (a restore that loses these
 collides on the first new record), index and constraint counts, and a content checksum of
@@ -217,6 +265,18 @@ netsh interface ipv4 show excludedportrange protocol=tcp
 If a port you need appears in that list, pick a different one in `docker-compose.yml` rather
 than fighting Windows for it. On Linux hosts this problem does not exist.
 
+9080 and 9090 are only safe while Windows picks its blocks from the default dynamic range
+(49152–65535). Some installers change that range; on one host it had become 1024–15000, and
+then 4242 (DICOM) and 9090 were silently reserved. Check with
+```
+netsh int ipv4 show dynamicport tcp
+```
+If `Start Port` is not 49152, put it back from an administrator prompt and reboot:
+```
+netsh int ipv4 set dynamicport tcp start=49152 num=16384
+netsh int ipv6 set dynamicport tcp start=49152 num=16384
+```
+
 ### HTTPS (optional, recommended on Wi-Fi)
 By default the app is served over plain HTTP. On a trusted **wired** LAN the risk is low. On
 **Wi-Fi**, or if you ever allow remote access, you should put HTTPS in front so passwords and
@@ -253,6 +313,11 @@ The update script does everything safely, in order:
    downloading the release — your `.env` and `backups/` are kept either way).
 3. Rebuilds and restarts the containers.
 4. Verifies the app is healthy.
+5. **Backs up again**, now that the database is at the new version. The backup from step 1
+   is of the old version and needs the "older than the app" commands in
+   [section 5b](#5b-restoring-a-backup) to restore; this one restores with the ordinary ones.
+   If this step fails the update is still complete - open Settings → Backup and press
+   "Back up now".
 
 Database migrations apply automatically on startup; existing data is preserved. The banner
 clears once you're on the latest version. (Updating from inside the app's UI is intentionally
@@ -260,8 +325,21 @@ not offered — a container rebuilding itself is unsafe for a medical system, so
 from the host instead.)
 
 If something looks wrong after an update, your data is safe — restore the pre-update backup
-from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-backup)
-(same steps, just a different folder).
+from `_pre-update-backups/` using the procedure in [section 5b](#5b-restoring-a-backup).
+That backup is from the version before the update, so use the commands under "If the
+backup is older than the app" there.
+
+**Staff PCs after an update:** nothing to do. The page is checked with the server each time
+it is opened, so a browser gets the new version by itself. A screen that was already open
+during the update keeps the old version until it is reloaded - ask staff to press **F5**
+once (or close and reopen the browser). Updating *from v1.4.0 or older* is the one
+exception: those versions did not tell the browser to check, and a PC may go on showing
+the old page for some days. On each staff PC press **Ctrl + F5** once after that update;
+if the screen is blank, that is the same thing - Ctrl + F5.
+
+**Moving to another machine:** update the old machine first, take a backup *after* the
+update, and restore that on the new machine, installed from the same version. Then the
+ordinary restore commands work as written.
 
 ## 9. Before you go live — checklist
 

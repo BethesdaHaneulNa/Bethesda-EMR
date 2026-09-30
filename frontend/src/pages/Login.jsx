@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../i18n/index.jsx';
 import { api, saveAuth } from '../api/client.js';
+// The server answers in English ("Invalid credentials", "Account is inactive");
+// show it in the screen's language. See settingsMessages.js.
+import { seMessage } from './settingsMessages.js';
 
 var ROLE_ROUTES = {
   frontdesk: '/registration',
@@ -10,8 +13,25 @@ var ROLE_ROUTES = {
   admin: '/settings',
 };
 
-var IN = { width: '100%', background: '#0f1117', border: '1px solid #2a3142', borderRadius: 8, padding: '11px 14px', color: '#e2e8f0', fontSize: 16, outline: 'none', boxSizing: 'border-box' };
-var LB = { fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 };
+// Login and setup are sent here rather than through api/client.js. That client
+// treats every 401 as "your session ran out" and reloads the login page - right
+// everywhere else, but here a 401 is the answer to a wrong password or an inactive
+// account, and the reload wiped the message before anyone could read it: a wrong
+// password just emptied the form, with nothing said.
+// The same build-time version the top bar shows (vite.config.js define), so the login
+// page no longer says "v1.0" while the menu bar says v1.4.0.
+var APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+
+async function authPost(path, body) {
+  var res = await fetch('/api' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  var data = null;
+  try { data = await res.json(); } catch (e) { throw new Error('API response was not JSON'); }
+  if (!res.ok) throw new Error((data && data.error) || 'Request failed');
+  return data;
+}
+
+var IN = { width: '100%', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 8, padding: '11px 14px', color: 'var(--text)', fontSize: 16, outline: 'none', boxSizing: 'border-box' };
+var LB = { fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 };
 
 export default function LoginPage() {
   var langCtx = useLang();
@@ -32,7 +52,8 @@ export default function LoginPage() {
 
   useEffect(function () {
     api.get('/auth/setup-status')
-      .then(function (r) { setMode(r && r.needsSetup ? 'setup' : 'login'); })
+      // The setup account's login id is always admin (S3, auth.routes.js SETUP_LOGIN).
+      .then(function (r) { if (r && r.needsSetup) { setUsername('admin'); setMode('setup'); } else setMode('login'); })
       .catch(function () { setMode('login'); });
   }, []);
 
@@ -41,11 +62,11 @@ export default function LoginPage() {
     if (!username || !password) { setError(t.loginError); return; }
     setLoading(true);
     try {
-      var data = await api.post('/auth/login', { login_id: username, password: password });
+      var data = await authPost('/auth/login', { login_id: username, password: password });
       saveAuth(data.token, data.user);
       navigate(ROLE_ROUTES[data.user.role] || '/');
     } catch (err) {
-      setError(err.message || t.loginError);
+      setError(err.message || t.loginError);   // translated where it is shown
     } finally { setLoading(false); }
   }
 
@@ -56,11 +77,11 @@ export default function LoginPage() {
     if (password !== sPass2) { setError(t.pwMismatch || '비밀번호가 일치하지 않습니다'); return; }
     setLoading(true);
     try {
-      var data = await api.post('/auth/setup', { login_id: username, password: password, name: sName });
+      var data = await authPost('/auth/setup', { login_id: username, password: password, name: sName });
       saveAuth(data.token, data.user);
       navigate('/settings');
     } catch (err) {
-      setError(err.message || 'Setup failed');
+      setError(err.message || t.se_errServer);
     } finally { setLoading(false); }
   }
 
@@ -69,35 +90,35 @@ export default function LoginPage() {
   var isSetup = mode === 'setup';
 
   return (
-    <div style={{ fontFamily: 'system-ui,-apple-system,sans-serif', background: '#0f1117', color: '#e2e8f0', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+    <div style={{ fontFamily: 'system-ui,-apple-system,sans-serif', background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,#3b82f608,transparent 70%)' }}></div>
-        <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle,#10b98108,transparent 70%)' }}></div>
+        <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,var(--accent-a08),transparent 70%)' }}></div>
+        <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle,var(--ok-a08),transparent 70%)' }}></div>
       </div>
 
-      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid #2a3142', zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-2)', zIndex: 10 }}>
         {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].map(function (i) {
-          return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? '#3b82f6' : '#1e2433', color: lang === i[0] ? '#fff' : '#94a3b8', border: 'none', padding: '4px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{i[1]}</button>;
+          return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? 'var(--accent)' : 'var(--chip)', color: lang === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '4px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{i[1]}</button>;
         })}
       </div>
 
       <div style={{ width: 380, zIndex: 5 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', borderRadius: 16, width: 60, height: 60, marginBottom: 14, boxShadow: '0 8px 28px #3b82f640' }}>
-            <span style={{ fontSize: 31, fontWeight: 800, color: '#fff' }}>M</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,var(--accent),var(--accent-strong))', borderRadius: 16, width: 60, height: 60, marginBottom: 14, boxShadow: '0 8px 28px var(--accent-a40)' }}>
+            <span style={{ fontSize: 31, fontWeight: 800, color: 'var(--on-fill)' }}>B</span>
           </div>
-          <div style={{ fontSize: 27, fontWeight: 700, color: '#f1f5f9' }}>{t.appTitle}</div>
-          <div style={{ fontSize: 14, color: '#64748b', marginTop: 3 }}>Electronic Medical Records</div>
+          <div style={{ fontSize: 27, fontWeight: 700, color: 'var(--text-strong)' }}>{t.appTitle}</div>
+          <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 3 }}>Electronic Medical Records</div>
         </div>
 
         {mode === 'checking' ? (
-          <div style={{ textAlign: 'center', color: '#475569', fontSize: 14, padding: 30 }}>···</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: 14, padding: 30 }}>···</div>
         ) : (
-        <div style={{ background: 'linear-gradient(135deg,#1a1f2e,#151a28)', border: '1px solid #2a3142', borderRadius: 14, padding: '28px', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: 'linear-gradient(135deg,var(--panel-head),var(--panel-head-3))', border: '1px solid var(--border-2)', borderRadius: 14, padding: '28px', boxShadow: '0 16px 48px var(--shadow-40)' }}>
           {isSetup ? (
             <div style={{ marginBottom: 18, textAlign: 'center' }}>
-              <div style={{ fontSize: 19, fontWeight: 800, color: '#f1f5f9' }}>🔐 {t.setupTitle || '초기 설정'}</div>
-              <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>{t.setupSubtitle || '관리자 계정을 만드세요'}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text-strong)' }}>🔐 {t.setupTitle || '초기 설정'}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>{t.setupSubtitle || '관리자 계정을 만드세요'}</div>
             </div>
           ) : null}
 
@@ -110,7 +131,8 @@ export default function LoginPage() {
 
           <div style={{ marginBottom: 14 }}>
             <label style={LB}>{t.username}</label>
-            <input value={username} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={IN} autoComplete="username" />
+            <input value={username} readOnly={isSetup} onChange={function (e) { setUsername(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder={isSetup ? (t.adminId || '관리자 아이디') : t.username} style={isSetup ? Object.assign({}, IN, { background: 'var(--field-locked)', color: 'var(--text-locked)', cursor: 'default' }) : IN} autoComplete="username" />
+            {isSetup ? <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4, lineHeight: 1.4 }}>{t.se_setupIdFixed}</div> : null}
           </div>
 
           <div style={{ marginBottom: isSetup ? 14 : 18 }}>
@@ -125,19 +147,19 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          {error ? <div style={{ background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14, color: '#f87171', textAlign: 'center' }}>⚠ {error}</div> : null}
+          {error ? <div style={{ background: 'var(--danger-a15)', border: '1px solid var(--danger-a30)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14, color: 'var(--danger-text)', textAlign: 'center' }}>⚠ {seMessage(t, error)}</div> : null}
 
           <button onClick={isSetup ? handleSetup : handleLogin} disabled={loading} style={{
             width: '100%', padding: '13px', borderRadius: 10, border: 'none', cursor: loading ? 'wait' : 'pointer',
-            background: loading ? '#1e2433' : (isSetup ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#3b82f6,#2563eb)'),
-            color: '#fff', fontSize: 17, fontWeight: 700, boxShadow: loading ? 'none' : '0 4px 16px #3b82f640',
+            background: loading ? 'var(--chip)' : (isSetup ? 'linear-gradient(135deg,var(--ok),var(--ok-strong))' : 'linear-gradient(135deg,var(--accent),var(--accent-strong))'),
+            color: loading ? 'var(--text-max)' : 'var(--on-fill)', fontSize: 17, fontWeight: 700, boxShadow: loading ? 'none' : '0 4px 16px var(--accent-a40)',
           }}>
             {loading ? (t.loggingIn || '...') : (isSetup ? (t.createAdmin || '관리자 계정 만들기') : t.login)}
           </button>
         </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#334155' }}>{t.appTitle} v1.0</div>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'var(--text-5)' }}>{t.appTitle}{APP_VERSION ? ' v' + APP_VERSION : ''}</div>
       </div>
     </div>
   );

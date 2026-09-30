@@ -11,6 +11,139 @@ router.use(authMiddleware);
 // phone numbers included, straight from the API.
 router.use(permMiddleware('stats'));
 
+// What a bill still owes, and what the clinic owes back on it — the same two
+// expressions as the payment screen's patient balance (billing.routes.js,
+// /patient/:id/balance), so both screens name the same people and amounts.
+// Owed comes from the `outstanding` column, not total_due - net_paid: when an
+// old debt is carried into a newer bill (migration 016) the old bill's
+// outstanding drops to 0 but its total_due - net_paid does not, so the latter
+// kept listing debts that had already been paid on the newer bill.
+const OWED_SQL = 'GREATEST(outstanding, 0)';
+const REFUND_SQL = 'GREATEST(net_paid - total_due, 0)';
+
+// Dates leave as 'YYYY-MM-DD' text, never as a DATE column. node-pg turns a
+// DATE into a Date at local midnight, which JSON writes out in UTC — so at
+// UTC+3 every date reached the screen as the day before ('…-28T21:00:00Z').
+function ymd(expr) { return `to_char(${expr}, 'YYYY-MM-DD')`; }
+
+// Department columns for the breakdowns. All three names go to the screen,
+// which picks the viewer's language; a visit with no department has code NULL.
+const DEPT_COLS = 'd.code AS code, d.name AS name, d.name_en AS name_en, d.name_fr AS name_fr';
+
+// A balance-settlement receipt (payment M2): issued when an old debt is paid
+// later, dated the day the money came in. It charges nothing itself and only
+// carries the debt, so it is recognised by that shape — no charges, a previous
+// balance — rather than by its note, which is free text. Ordinary carry-over
+// receipts always have charges of their own, so no receipt from before M2
+// matches. Settlements are money received, not treatments: they count in
+// Encaissé but not in the receipt count or the average (decision 14).
+function settlementSql(a) {
+  const p = a ? a + '.' : '';
+  return `(${p}consult_fee + ${p}drug_total + ${p}procedure_total = 0 AND ${p}previous_balance > 0)`;
+}
+
+// Where a receipt's money came from, piece by piece (decision 9, 2026-09-29).
+//
+// A receipt can carry older debts (carry-over, migration 016; settlements,
+// payment M2): the older bills point at it through carried_into_id. Grouped by
+// the receipt's own visit, the cash paid on an old debt landed on whichever
+// visit happened to collect it — a doctor was credited for treatment someone
+// else gave. The office manager chose to give it back to the visit that
+// created the debt, with a partial payment settling the oldest debt first (the
+// same order carry-over absorbs debts in). Dates do not move: the money still
+// counts on the day of the receipt that took it (decision 8).
+//
+// Each bill's total_due is broken into pieces, oldest first: what it carried
+// from each older bill (that bill's unpaid remainder, itself broken the same
+// way), then its own charges. Its net_paid pays the pieces in that order. A
+// piece remembers the visit whose treatment it was for and that visit's date,
+// so what is still unpaid can say since when it has been owed (problem 16).
+// A cancelled bill carries nothing: a correction may leave replaced bills
+// pointing at the new one, but the new bill's previous_balance already
+// excludes them.
+//
+// `bills` rows need id, visit_id, visit_date, net_paid, total_due, billing_date.
+// Returns split(id) -> { paid: [pieces], unpaid: [pieces] }, piece =
+// { visit_id, visit_date, amount }.
+async function debtPieces(bills) {
+  const byId = new Map();
+  bills.forEach(function (b) { byId.set(b.id, b); });
+  const src = await pool.query(
+    `WITH RECURSIVE src AS (
+       SELECT c.id, c.visit_id, c.net_paid, c.total_due, c.billing_date, c.carried_into_id
+         FROM billing c WHERE c.carried_into_id = ANY($1::int[]) AND c.payment_status <> 'cancelled'
+       UNION
+       SELECT c.id, c.visit_id, c.net_paid, c.total_due, c.billing_date, c.carried_into_id
+         FROM billing c JOIN src ON c.carried_into_id = src.id WHERE c.payment_status <> 'cancelled'
+     )
+     SELECT src.*, ${ymd('v.visit_date')} AS visit_date FROM src JOIN visit v ON v.id = src.visit_id`,
+    [bills.map(function (b) { return b.id; })]
+  );
+  const carriedFrom = new Map();
+  src.rows.forEach(function (c) {
+    if (!byId.has(c.id)) byId.set(c.id, c);
+    if (!carriedFrom.has(c.carried_into_id)) carriedFrom.set(c.carried_into_id, []);
+    carriedFrom.get(c.carried_into_id).push(c);
+  });
+  const n = function (x) { return Number(x) || 0; };
+  const memo = new Map();
+  function pieces(b) {                  // pieces making up total_due, oldest debt first
+    const older = (carriedFrom.get(b.id) || []).slice().sort(function (x, y) {
+      return x.billing_date < y.billing_date ? -1 : x.billing_date > y.billing_date ? 1 : x.id - y.id;
+    });
+    const out = []; let carried = 0;
+    older.forEach(function (c) { split(c.id).unpaid.forEach(function (p) { out.push(p); carried += p.amount; }); });
+    const own = n(b.total_due) - carried;
+    if (own > 0.005) out.push({ visit_id: b.visit_id, visit_date: b.visit_date, amount: own });
+    return out;
+  }
+  function split(id) {                  // net_paid laid over the pieces
+    if (memo.has(id)) return memo.get(id);
+    const b = byId.get(id); let pay = n(b.net_paid); const paid = [], unpaid = [];
+    pieces(b).forEach(function (p) {
+      const take = Math.min(pay, p.amount); pay -= take;
+      if (take > 0.005) paid.push(Object.assign({}, p, { amount: take }));
+      if (p.amount - take > 0.005) unpaid.push(Object.assign({}, p, { amount: p.amount - take }));
+    });
+    // Paid beyond what was due (a refund owed) stays with the receipt's own visit.
+    if (pay > 0.005) paid.push({ visit_id: b.visit_id, visit_date: b.visit_date, amount: pay });
+    const r = { paid: paid, unpaid: unpaid };
+    memo.set(id, r);
+    return r;
+  }
+  return split;
+}
+
+// Cash of the given receipts per visit it paid for: Map visit_id -> amount.
+async function paidByVisit(bills) {
+  const split = await debtPieces(bills);
+  const total = new Map();
+  bills.forEach(function (b) {
+    split(b.id).paid.forEach(function (p) { total.set(p.visit_id, (total.get(p.visit_id) || 0) + p.amount); });
+  });
+  return total;
+}
+
+// The day's cash (decided 2026-09-29: statistics count the money that actually
+// came in and went out). Payment writes one cash_movement row per movement of
+// money, in the transaction that moves it, and never edits it (migration 036):
+// + cash taken, - cash handed back. So a day's sum is that day's till, and a
+// past day never changes when a receipt is later corrected or cancelled.
+// Receipts written before 036 are there as 'opening' rows on their own date,
+// equal to what these statistics showed for them.
+// What stays on receipts: department and doctor revenue (whose treatment the
+// money was for), billed amounts, the average per visit, balances.
+const CASH_KINDS = ['payment', 'settlement', 'correction', 'cancel', 'opening'];
+const CASH_COLS = `COALESCE(SUM(amount) FILTER (WHERE amount > 0), 0)::numeric AS cash_in,
+       COALESCE(-SUM(amount) FILTER (WHERE amount < 0), 0)::numeric AS cash_out,
+       ${CASH_KINDS.map(function (k) { return `COALESCE(SUM(amount) FILTER (WHERE kind = '${k}'), 0)::numeric AS k_${k}`; }).join(',\n       ')}`;
+function cashOf(row) {
+  const n = function (x) { return Math.round(Number(x) || 0); };
+  const byKind = {};
+  CASH_KINDS.forEach(function (k) { byKind[k] = n(row['k_' + k]); });
+  return { in: n(row.cash_in), out: n(row.cash_out), net: n(row.cash_in) - n(row.cash_out), byKind: byKind };
+}
+
 // GET /api/stats/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
 // 운영 현황(내원) + 매출/정산(수납)을 한 번에 반환. 기간 미지정 시 이번 달.
 router.get('/summary', async (req, res) => {
@@ -19,65 +152,84 @@ router.get('/summary', async (req, res) => {
     const badRange = badDateRange(from, to);
     if (badRange) return res.status(400).json({ error: badRange });
     if (!from || !to) {
-      const r = await pool.query("SELECT date_trunc('month', CURRENT_DATE)::date AS f, CURRENT_DATE AS t");
+      const r = await pool.query(`SELECT ${ymd("date_trunc('month', CURRENT_DATE)")} AS f, ${ymd('CURRENT_DATE')} AS t`);
       from = from || r.rows[0].f;
       to = to || r.rows[0].t;
     }
     const P = [from, to];
 
-    // 1) 내원 요약
+    // 1) 내원 요약. A cancelled registration is not a visit: it stays out of the
+    //    total, the new/follow-up split, unique patients and the breakdowns
+    //    below, and is shown only in its own "cancelled" count.
     const visits = await pool.query(
       `SELECT
-         COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE visit_type='newVisit')::int AS new_visits,
-         COUNT(*) FILTER (WHERE visit_type='followUp')::int AS follow_ups,
-         COUNT(*) FILTER (WHERE visit_type NOT IN ('newVisit','followUp'))::int AS other_visits,
+         COUNT(*) FILTER (WHERE status<>'cancelled')::int AS total,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type='newVisit')::int AS new_visits,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type='followUp')::int AS follow_ups,
+         COUNT(*) FILTER (WHERE status<>'cancelled' AND visit_type NOT IN ('newVisit','followUp'))::int AS other_visits,
          COUNT(*) FILTER (WHERE status='completed')::int AS completed,
          COUNT(*) FILTER (WHERE status='cancelled')::int AS cancelled,
          COUNT(*) FILTER (WHERE status IN ('registered','waiting','in_progress'))::int AS active,
-         COUNT(DISTINCT patient_id)::int AS unique_patients
+         COUNT(DISTINCT patient_id) FILTER (WHERE status<>'cancelled')::int AS unique_patients
        FROM visit WHERE visit_date BETWEEN $1 AND $2`, P);
 
-    // 2) 진료과별
+    // 2) 진료과별. A visit with no department comes back with code NULL and the
+    //    screen labels it in the viewer's language.
     const byDept = await pool.query(
-      `SELECT COALESCE(d.code,'-') AS code, COALESCE(d.name,'(미지정)') AS name, COUNT(*)::int AS cnt
+      `SELECT ${DEPT_COLS}, COUNT(*)::int AS cnt
        FROM visit v LEFT JOIN department d ON v.department_id=d.id
-       WHERE v.visit_date BETWEEN $1 AND $2
-       GROUP BY d.code, d.name ORDER BY cnt DESC`, P);
+       WHERE v.visit_date BETWEEN $1 AND $2 AND v.status<>'cancelled'
+       GROUP BY d.id ORDER BY cnt DESC`, P);
 
-    // 3) 의사별
+    // 3) 의사별. LEFT JOIN so visits with no attending doctor form their own
+    //    row instead of vanishing; grouped by id so two staff sharing a name
+    //    stay two rows.
     const byDoctor = await pool.query(
-      `SELECT s.name AS name, COUNT(*)::int AS cnt
-       FROM visit v JOIN staff s ON v.doctor_id=s.id
-       WHERE v.visit_date BETWEEN $1 AND $2
-       GROUP BY s.name ORDER BY cnt DESC`, P);
+      `SELECT s.id AS doctor_id, s.name AS name, COUNT(*)::int AS cnt
+       FROM visit v LEFT JOIN staff s ON v.doctor_id=s.id
+       WHERE v.visit_date BETWEEN $1 AND $2 AND v.status<>'cancelled'
+       GROUP BY s.id ORDER BY cnt DESC`, P);
 
-    // 3b) 진료과별 매출. billing 은 visit 을 통해 과에 붙는다(billing.visit_id).
-    //     기준은 접수에서 고른 과다: 한 의사가 여러 과의 진료를 볼 수 있으므로
-    //     "무슨 진료였는지"는 방문에 붙고, 의사 본인의 소속과와는 다를 수 있다.
-    const revByDept = await pool.query(
-      `SELECT COALESCE(d.code,'-') AS code, COALESCE(d.name,'(미지정)') AS name,
-              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
-              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
-              COUNT(*)::int AS bill_count
-         FROM billing b
-         JOIN visit v ON b.visit_id = v.id
-         LEFT JOIN department d ON v.department_id = d.id
-        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY d.code, d.name ORDER BY paid DESC`, P);
-
-    // 3c) 의사별 매출. 과별과 따로 뽑는다 — 상여·성과 산정은 사람 단위로 봐야 하고,
-    //     접수에서 고른 과로 묶으면 그 사람의 실적이 여러 과에 흩어진다.
-    const revByDoctor = await pool.query(
-      `SELECT s.name AS name,
-              COALESCE(SUM(b.net_paid),0)::numeric AS paid,
-              COALESCE(SUM(b.consult_fee+b.drug_total+b.procedure_total),0)::numeric AS gross,
-              COUNT(*)::int AS bill_count
-         FROM billing b
-         JOIN visit v ON b.visit_id = v.id
-         JOIN staff s ON v.doctor_id = s.id
-        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'
-        GROUP BY s.name ORDER BY paid DESC`, P);
+    // 3b) 진료과별·의사별 매출. Money goes to the visit that created the debt it
+    //     paid (paidByVisit, decision 9); charges (Facturé) and the receipt count
+    //     stay with each receipt's own visit. 과는 접수에서 고른 과, 의사는 담당의 —
+    //     한 의사가 여러 과의 진료를 볼 수 있고, 상여·성과는 사람 단위로 보므로
+    //     둘을 따로 묶는다. 과·의사 없는 방문은 code/name 이 null 인 한 줄.
+    const periodBills = (await pool.query(
+      `SELECT b.id, b.visit_id, ${ymd('v.visit_date')} AS visit_date, b.net_paid, b.total_due, b.billing_date,
+              b.consult_fee + b.drug_total + b.procedure_total AS gross,
+              ${settlementSql('b')} AS is_settlement
+         FROM billing b JOIN visit v ON v.id = b.visit_id
+        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled'`, P)).rows;
+    const paidVisit = await paidByVisit(periodBills);
+    const visitIds = Array.from(new Set(periodBills.map(function (b) { return b.visit_id; }).concat(Array.from(paidVisit.keys()))));
+    const visitInfo = new Map();
+    (await pool.query(
+      `SELECT v.id, d.id AS dept_id, ${DEPT_COLS}, s.id AS doctor_id, s.name AS doctor_name
+         FROM visit v LEFT JOIN department d ON v.department_id = d.id LEFT JOIN staff s ON v.doctor_id = s.id
+        WHERE v.id = ANY($1::int[])`, [visitIds])).rows.forEach(function (v) { visitInfo.set(v.id, v); });
+    function breakdown(keyOf, rowOf) {
+      const rows = new Map();
+      function row(visitId) {
+        const v = visitInfo.get(visitId) || {};
+        const k = keyOf(v);
+        if (!rows.has(k)) rows.set(k, Object.assign(rowOf(v), { paid: 0, gross: 0, billCount: 0 }));
+        return rows.get(k);
+      }
+      paidVisit.forEach(function (amount, visitId) { row(visitId).paid += amount; });
+      periodBills.forEach(function (b) {
+        const r = row(b.visit_id);
+        r.gross += Number(b.gross) || 0;
+        if (!b.is_settlement) r.billCount += 1;
+      });
+      return Array.from(rows.values()).map(function (r) {
+        return Object.assign(r, { paid: Math.round(r.paid), gross: Math.round(r.gross) });
+      }).sort(function (x, y) { return y.paid - x.paid; });
+    }
+    const revenueByDept = breakdown(function (v) { return v.dept_id == null ? 'none' : v.dept_id; },
+      function (v) { return { code: v.code || null, name: v.name || null, name_en: v.name_en || null, name_fr: v.name_fr || null }; });
+    const revenueByDoctor = breakdown(function (v) { return v.doctor_id == null ? 'none' : v.doctor_id; },
+      function (v) { return { doctor_id: v.doctor_id || null, name: v.doctor_name || null }; });
 
     // 4) 매출 (취소 제외, billing_date 기준)
     const rev = await pool.query(
@@ -87,28 +239,46 @@ router.get('/summary', async (req, res) => {
          COALESCE(SUM(procedure_total),0)::numeric AS procedure,
          COALESCE(SUM(consult_fee+drug_total+procedure_total),0)::numeric AS gross,
          COALESCE(SUM(net_paid),0)::numeric AS paid,
-         COUNT(*) FILTER (WHERE payment_status <> 'cancelled')::int AS bill_count,
-         COUNT(*) FILTER (WHERE payment_status = 'cancelled')::int AS cancelled_count
+         COUNT(*) FILTER (WHERE NOT ${settlementSql()})::int AS bill_count,
+         COUNT(*) FILTER (WHERE ${settlementSql()})::int AS settlement_count,
+         COUNT(DISTINCT visit_id) FILTER (WHERE consult_fee+drug_total+procedure_total > 0)::int AS billed_visits
        FROM billing
        WHERE billing_date BETWEEN $1 AND $2 AND payment_status <> 'cancelled'`, P);
 
     // 4b) 취소 영수 건수 (취소건은 위 WHERE에서 빠지므로 별도 집계)
+    //     Only receipts staff cancelled. A receipt a correction replaced
+    //     (replaced_by_id, migration 033) is not a cancellation in that sense: its
+    //     money moved to the new receipt, whose change is what went back - and that
+    //     is already out of the correction receipt's net_paid, so it is not counted
+    //     as a refund here either (item 20).
+    //     Refunded: the cash handed back when staff cancelled (refunded_amount),
+    //     on the day it was cancelled. NULL means nobody was asked - receipts
+    //     cancelled before 033 - so those are counted apart, not guessed.
     const voided = await pool.query(
-      `SELECT COUNT(*)::int AS cnt FROM billing
-       WHERE payment_status='cancelled' AND COALESCE(cancelled_at::date, billing_date) BETWEEN $1 AND $2`, P);
+      `SELECT COUNT(*)::int AS cnt,
+              COALESCE(SUM(refunded_amount), 0)::numeric AS refunded,
+              COUNT(*) FILTER (WHERE refunded_amount IS NULL AND net_paid > 0)::int AS refund_unknown
+         FROM billing
+        WHERE payment_status='cancelled' AND replaced_by_id IS NULL
+          AND COALESCE(cancelled_at::date, billing_date) BETWEEN $1 AND $2`, P);
 
-    // 4c) 서류/행정 수가 매출 (item_type='fee')
+    // 4c) 서류/행정 수가 매출 (item_type='fee'). The payment screen files these
+    //     under procedure_total (everything that is neither consultation nor
+    //     drug), so they are taken back out of `procedure` below — otherwise the
+    //     same money is drawn twice and the item bars add up to more than billed.
     const issuance = await pool.query(
       `SELECT COALESCE(SUM(bi.total_price),0)::numeric AS amount, COUNT(*)::int AS cnt
        FROM billing_item bi JOIN billing b ON bi.billing_id=b.id
        WHERE b.billing_date BETWEEN $1 AND $2 AND b.payment_status <> 'cancelled' AND bi.item_type='fee'`, P);
 
-    // 5) 미수 / 환불 (실시간 잔액, 기간 무관)
+    // 4d) 그날 현금 (cash_movement, move_date 기준).
+    const cash = await pool.query(`SELECT ${CASH_COLS} FROM cash_movement WHERE move_date BETWEEN $1 AND $2`, P);
+
+    // 5) 미수 / 환불 (실시간 잔액, 기간 무관). 계산식은 OWED_SQL / REFUND_SQL 참고.
     const bal = await pool.query(
-      `SELECT
-         COALESCE(SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid > 0),0)::numeric AS owed,
-         COALESCE(-SUM(total_due-net_paid) FILTER (WHERE total_due-net_paid < 0),0)::numeric AS refund
-       FROM billing WHERE payment_status <> 'cancelled'`);
+      `SELECT COALESCE(SUM(${OWED_SQL}),0)::numeric AS owed,
+              COALESCE(SUM(${REFUND_SQL}),0)::numeric AS refund
+         FROM billing WHERE payment_status <> 'cancelled'`);
 
     const r = rev.rows[0];
     const num = function (x) { return Math.round(Number(x) || 0); };
@@ -117,21 +287,27 @@ router.get('/summary', async (req, res) => {
       visits: visits.rows[0],
       byDept: byDept.rows,
       byDoctor: byDoctor.rows,
-      // numeric comes back from pg as a string; round it here so the client can render
-      // it straight into a bar without doing arithmetic on text.
-      revenueByDept: revByDept.rows.map(function (x) {
-        return { code: x.code, name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
-      }),
-      revenueByDoctor: revByDoctor.rows.map(function (x) {
-        return { name: x.name, paid: num(x.paid), gross: num(x.gross), billCount: x.bill_count };
-      }),
+      revenueByDept: revenueByDept,
+      revenueByDoctor: revenueByDoctor,
       revenue: {
         gross: num(r.gross), paid: num(r.paid),
-        consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure),
+        consult: num(r.consult), drug: num(r.drug), procedure: num(r.procedure - issuance.rows[0].amount),
         issuance: num(issuance.rows[0].amount), issuanceCount: issuance.rows[0].cnt,
-        billCount: r.bill_count, avg: r.bill_count > 0 ? num(r.paid / r.bill_count) : 0,
+        // Receipts for treatment only; balance settlements are counted apart.
+        billCount: r.bill_count, settlementCount: r.settlement_count,
+        // Average billed per visit (decision 14): Facturé over the visits that
+        // were charged something. Unlike cash over receipts, it does not move
+        // with unpaid bills, with old debts collected, or with a visit billed on
+        // several receipts.
+        billedVisits: r.billed_visits,
+        avgBilledPerVisit: r.billed_visits > 0 ? num(r.gross / r.billed_visits) : 0,
       },
+      // The period's cash: in, out (handed back: corrections, cancellations, change
+      // on a re-bill), net = in - out, and by kind.
+      cash: cashOf(cash.rows[0]),
       voidedCount: voided.rows[0].cnt,
+      refunded: num(voided.rows[0].refunded),
+      refundUnknownCount: voided.rows[0].refund_unknown,
       outstanding: { owed: num(bal.rows[0].owed), refund: num(bal.rows[0].refund) },
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -141,46 +317,122 @@ router.get('/summary', async (req, res) => {
 router.get('/monthly', async (req, res) => {
   try {
     const months = Math.min(Math.max(parseInt(req.query.months) || 6, 1), 24);
-    const v = await pool.query(
-      `SELECT to_char(date_trunc('month', visit_date),'YYYY-MM') AS ym, COUNT(*)::int AS visits
-       FROM visit WHERE visit_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
-       GROUP BY 1 ORDER BY 1`, [months - 1]);
-    const b = await pool.query(
-      `SELECT to_char(date_trunc('month', billing_date),'YYYY-MM') AS ym, COALESCE(SUM(net_paid),0)::numeric AS revenue
-       FROM billing WHERE payment_status <> 'cancelled'
-         AND billing_date >= (date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval)
-       GROUP BY 1 ORDER BY 1`, [months - 1]);
-    const map = {};
-    v.rows.forEach(function (x) { map[x.ym] = { ym: x.ym, visits: x.visits, revenue: 0 }; });
-    b.rows.forEach(function (x) { map[x.ym] = Object.assign(map[x.ym] || { ym: x.ym, visits: 0 }, { revenue: Math.round(Number(x.revenue) || 0) }); });
-    res.json(Object.values(map).sort(function (a, c) { return a.ym < c.ym ? -1 : 1; }));
+    // Every month in the window gets a row, zero or not. Built only from the
+    // months that had data, a quiet month simply vanished from the chart and
+    // the bars either side of it read as consecutive.
+    const r = await pool.query(
+      `WITH m AS (
+         SELECT to_char(g, 'YYYY-MM') AS ym
+           FROM generate_series(date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval,
+                                date_trunc('month', CURRENT_DATE), interval '1 month') g
+       ), v AS (
+         SELECT to_char(visit_date, 'YYYY-MM') AS ym, COUNT(*)::int AS visits
+           FROM visit WHERE status <> 'cancelled'
+            AND visit_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
+          GROUP BY 1
+       ), b AS (
+         -- The month's cash (net of what was handed back), not receipts: a
+         -- correction no longer moves money out of the month it was taken in.
+         SELECT to_char(move_date, 'YYYY-MM') AS ym, SUM(amount) AS revenue
+           FROM cash_movement
+          WHERE move_date >= date_trunc('month', CURRENT_DATE) - ($1 || ' months')::interval
+          GROUP BY 1
+       )
+       SELECT m.ym, COALESCE(v.visits, 0) AS visits, COALESCE(b.revenue, 0)::numeric AS revenue
+         FROM m LEFT JOIN v ON v.ym = m.ym LEFT JOIN b ON b.ym = m.ym
+        ORDER BY m.ym`, [months - 1]);
+    res.json(r.rows.map(function (x) { return { ym: x.ym, visits: x.visits, revenue: Math.round(Number(x.revenue) || 0) }; }));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/stats/cash?granularity=day|month|year&from&to — the till by day, month
+// or year: in, out, net and by kind, one row for every period in the range (zero
+// or not), and the range total. Same default ranges as the drug table.
+router.get('/cash', async (req, res) => {
+  try {
+    const gran = ['day', 'month', 'year'].includes(req.query.granularity) ? req.query.granularity : 'day';
+    const fmt = gran === 'day' ? 'YYYY-MM-DD' : (gran === 'year' ? 'YYYY' : 'YYYY-MM');
+    let { from, to } = req.query;
+    const badRange = badDateRange(from, to);
+    if (badRange) return res.status(400).json({ error: badRange });
+    if (!from || !to) {
+      const span = gran === 'day' ? "interval '29 days'" : (gran === 'year' ? "interval '4 years'" : "interval '11 months'");
+      const r = await pool.query(`SELECT ${ymd(`date_trunc('${gran}', CURRENT_DATE) - ${span}`)} AS f, ${ymd('CURRENT_DATE')} AS t`);
+      from = from || r.rows[0].f;
+      to = to || r.rows[0].t;
+    }
+    const rows = (await pool.query(
+      `WITH p AS (
+         SELECT DISTINCT to_char(g, '${fmt}') AS period
+           FROM generate_series($1::date, $2::date, interval '1 day') g
+       ), c AS (
+         SELECT to_char(move_date, '${fmt}') AS period, ${CASH_COLS}
+           FROM cash_movement WHERE move_date BETWEEN $1 AND $2
+          GROUP BY 1
+       )
+       SELECT p.period AS slot, c.* FROM p LEFT JOIN c ON c.period = p.period ORDER BY p.period`,
+      [from, to])).rows;
+    const periods = rows.map(function (r) { return Object.assign({ period: r.slot }, cashOf(r)); });
+    const total = (await pool.query(`SELECT ${CASH_COLS} FROM cash_movement WHERE move_date BETWEEN $1 AND $2`, [from, to])).rows[0];
+    res.json({ granularity: gran, from, to, periods, total: cashOf(total) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/stats/outstanding — 미수/환불 명단 (환자별: 누가·얼마·언제·연락처)
 router.get('/outstanding', async (req, res) => {
   try {
+    // Owed and refund are summed separately per patient, not netted against each
+    // other, so each list adds up to its card on the summary and matches the
+    // payment screen, which also shows the two side by side. per_bill spells out
+    // OWED_SQL / REFUND_SQL with the b. qualifier.
     const rows = await pool.query(
-      `WITH bal AS (
-         SELECT p.id, p.chart_no, p.last_name, p.first_name,
-                COALESCE(NULLIF(p.mobile,''), p.phone) AS contact,
-                SUM(b.total_due - b.net_paid) AS net,
-                MIN(b.billing_date) FILTER (WHERE b.total_due - b.net_paid > 0) AS owed_since,
-                MAX(b.billing_date) AS last_date,
-                COUNT(*) FILTER (WHERE (b.total_due - b.net_paid) <> 0) AS open_bills
-         FROM billing b JOIN patient p ON b.patient_id = p.id
-         WHERE b.payment_status <> 'cancelled'
-         GROUP BY p.id, p.chart_no, p.last_name, p.first_name, p.mobile, p.phone
+      `WITH per_bill AS (
+         SELECT b.patient_id, b.billing_date,
+                GREATEST(b.outstanding, 0) AS owed,
+                GREATEST(b.net_paid - b.total_due, 0) AS refund
+           FROM billing b
+          WHERE b.payment_status <> 'cancelled'
+       ), bal AS (
+         SELECT patient_id,
+                SUM(owed) AS owed, SUM(refund) AS refund,
+                ${ymd('MAX(billing_date)')} AS last_date,
+                COUNT(*) FILTER (WHERE owed > 0) AS owed_bills,
+                COUNT(*) FILTER (WHERE refund > 0) AS refund_bills
+           FROM per_bill GROUP BY patient_id
        )
-       SELECT * FROM bal WHERE ABS(net) > 0.5 ORDER BY net DESC`);
+       SELECT p.id, p.chart_no, p.last_name, p.first_name,
+              COALESCE(NULLIF(p.mobile,''), p.phone) AS contact, bal.*
+         FROM bal JOIN patient p ON p.id = bal.patient_id
+        WHERE bal.owed > 0.5 OR bal.refund > 0.5`);
+    // Since when: the date of the oldest treatment still unpaid. The receipt now
+    // holding a debt can be much younger than the debt — after a partial
+    // balance settlement (payment M2) or a carry-over, what is left sits on a
+    // receipt dated the day of that payment — so the date is taken from the
+    // unpaid pieces (debtPieces), not from the receipts that carry them.
+    const owing = (await pool.query(
+      `SELECT b.id, b.patient_id, b.visit_id, ${ymd('v.visit_date')} AS visit_date, b.net_paid, b.total_due, b.billing_date
+         FROM billing b JOIN visit v ON v.id = b.visit_id
+        WHERE b.payment_status <> 'cancelled' AND b.outstanding > 0`)).rows;
+    const split = await debtPieces(owing);
+    const since = new Map();
+    owing.forEach(function (b) {
+      const left = split(b.id).unpaid;
+      // outstanding and the pieces agree for any bill written by the payment
+      // screen; if an old row does not, fall back to the bill's own visit.
+      const dates = left.length ? left.map(function (p) { return p.visit_date; }) : [b.visit_date];
+      dates.forEach(function (d) {
+        if (d && (!since.has(b.patient_id) || d < since.get(b.patient_id))) since.set(b.patient_id, d);
+      });
+    });
     const owed = [], refund = [];
     rows.rows.forEach(function (r) {
-      const net = Math.round(Number(r.net) || 0);
       const base = { patient_id: r.id, chart_no: r.chart_no, name: (r.last_name || '') + ' ' + (r.first_name || ''),
-        contact: r.contact || '', last_date: r.last_date, open_bills: r.open_bills };
-      if (net > 0) owed.push(Object.assign({ amount: net, since: r.owed_since }, base));
-      else if (net < 0) refund.push(Object.assign({ amount: -net }, base));
+        contact: r.contact || '', last_date: r.last_date };
+      const o = Math.round(Number(r.owed) || 0), f = Math.round(Number(r.refund) || 0);
+      if (Number(r.owed) > 0.5) owed.push(Object.assign({ amount: o, since: since.get(r.id) || null, open_bills: r.owed_bills }, base));
+      if (Number(r.refund) > 0.5) refund.push(Object.assign({ amount: f, open_bills: r.refund_bills }, base));
     });
+    owed.sort(function (a, b) { return b.amount - a.amount; });
     refund.sort(function (a, b) { return b.amount - a.amount; });
     res.json({
       owed: owed, refund: refund,
@@ -203,51 +455,78 @@ router.get('/drug-usage', async (req, res) => {
     if (!from || !to) {
       const span = gran === 'day' ? "interval '29 days'" : (gran === 'year' ? "interval '4 years'" : "interval '11 months'");
       const trunc = gran === 'day' ? 'day' : (gran === 'year' ? 'year' : 'month');
-      const r = await pool.query(`SELECT (date_trunc('${trunc}', CURRENT_DATE) - ${span})::date AS f, CURRENT_DATE AS t`);
+      const r = await pool.query(`SELECT ${ymd(`date_trunc('${trunc}', CURRENT_DATE) - ${span}`)} AS f, ${ymd('CURRENT_DATE')} AS t`);
       from = from || r.rows[0].f;
       to = to || r.rows[0].t;
     }
 
-    const conds = ['v.visit_date BETWEEN $1 AND $2'];
+    // Two questions, two sets of rules (decision 18, 2026-09-29).
+    //  - All prescriptions: what doctors prescribed — by the day it was prescribed
+    //    (the visit date), in the quantity written.
+    //  - Dispensed: what left the pharmacy shelf — the same rules as the "out"
+    //    column of the pharmacy's monthly stock report, so the two screens agree
+    //    for the same month: by the day it was handed over (dispensed_at, clinic
+    //    time), in whole units as the stock is taken (Math.ceil in the pharmacy's
+    //    dispense), and only in-house lines of a drug the pharmacy stocks
+    //    (drug_id set). An outside prescription is marked dispensed too, but only
+    //    paper left the building. Grouped by the drug record, as the report is.
+    const dispensed = req.query.status === 'dispensed';
+    const dateCol = dispensed ? 'rx.dispensed_at::date' : 'v.visit_date';
+    const conds = [dateCol + ' BETWEEN $1 AND $2'];
     const P = [from, to];
-    if (req.query.status === 'dispensed') conds.push("rx.status = 'dispensed'");
-    else conds.push("rx.status <> 'cancelled'");
+    if (dispensed) {
+      conds.push("rx.status = 'dispensed'");
+      conds.push("rx.drug_id IS NOT NULL AND COALESCE(rx.dispense_type, 'internal') <> 'external'");
+    } else conds.push("rx.status <> 'cancelled'");
+    // A cancelled registration's prescriptions were never used — unless the
+    // pharmacy had already handed the drug over, in which case it left the
+    // shelf and counts (decision 12). Reception can now cancel only a waiting
+    // visit, so this concerns older records.
+    conds.push("(v.status <> 'cancelled' OR rx.status = 'dispensed')");
     if (req.query.dispense_type === 'internal' || req.query.dispense_type === 'external') {
       P.push(req.query.dispense_type);
       conds.push(`rx.dispense_type = $${P.length}`);
     }
 
     const result = await pool.query(
-      `SELECT to_char(v.visit_date, '${fmt}') AS period,
-              COALESCE(NULLIF(rx.drug_code,''),'-') AS drug_code,
-              rx.drug_name,
+      `SELECT to_char(${dateCol}, '${fmt}') AS period,
+              ${dispensed ? "COALESCE(NULLIF(d.code,''),'-')" : "COALESCE(NULLIF(rx.drug_code,''),'-')"} AS drug_code,
+              ${dispensed ? 'd.name' : 'rx.drug_name'} AS drug_name,
               COALESCE(d.category,'') AS category,
-              SUM(COALESCE(rx.total_qty,0))::numeric AS qty,
+              CASE WHEN rx.pack_unit THEN COALESCE(rx.pack_label, 'unit') END AS pack_label,
+              SUM(${dispensed ? 'CEIL(COALESCE(rx.total_qty,0))' : 'COALESCE(rx.total_qty,0)'})::numeric AS qty,
               COUNT(*)::int AS rx_count
          FROM prescription rx
          JOIN consultation c ON c.id = rx.consultation_id
          JOIN visit v ON v.id = c.visit_id
          LEFT JOIN drug d ON d.id = rx.drug_id
         WHERE ${conds.join(' AND ')}
-        GROUP BY period, rx.drug_code, rx.drug_name, d.category`,
+        GROUP BY 1, 2, 3, 4, 5`,
       P
     );
 
     const periods = Array.from(new Set(result.rows.map(r => r.period))).sort();
     const drugMap = {};
     for (const r of result.rows) {
-      const key = r.drug_code + '|' + r.drug_name;
-      if (!drugMap[key]) drugMap[key] = { drug_code: r.drug_code, drug_name: r.drug_name, category: r.category, total_qty: 0, total_count: 0, by_period: {} };
+      // A pack-unit line (a syrup, inhaler, cream... handed out by the bottle or
+      // tube, migration 025) counts bottles, not doses. The flag is copied onto
+      // each prescription line, so a drug switched to pack units later has old
+      // dose lines and new bottle lines: they stay separate rows, each with its
+      // unit, instead of adding tablets to bottles (item 19).
+      const key = r.drug_code + '|' + r.drug_name + '|' + (r.pack_label || '');
+      if (!drugMap[key]) drugMap[key] = { drug_code: r.drug_code, drug_name: r.drug_name, category: r.category, pack_label: r.pack_label || null, total_qty: 0, total_count: 0, by_period: {} };
       const g = drugMap[key];
       g.by_period[r.period] = (g.by_period[r.period] || 0) + Number(r.qty);
       g.total_qty += Number(r.qty);
       g.total_count += r.rx_count;
     }
     const drugs = Object.keys(drugMap).map(k => drugMap[k]).sort((a, b) => b.total_qty - a.total_qty);
-    const periodTotals = {};
-    periods.forEach(p => { periodTotals[p] = drugs.reduce((s, d) => s + (d.by_period[p] || 0), 0); });
 
-    res.json({ granularity: gran, from, to, periods, drugs, periodTotals, grandTotal: drugs.reduce((s, d) => s + d.total_qty, 0) });
+    // No total across drugs (decision 19 C-B, 2026-09-29): rows count different
+    // things — tablets, capsules, ampoules, bottles — so a sum over them has no
+    // unit and no meaning. Each drug keeps its own total; the table says how
+    // many drugs it lists.
+    res.json({ granularity: gran, basis: dispensed ? 'dispensed' : 'prescribed', from, to, periods, drugs });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

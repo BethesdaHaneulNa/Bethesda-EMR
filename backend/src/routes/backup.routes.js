@@ -1,27 +1,49 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, permMiddleware } = require('../middleware/auth');
+const { authMiddleware, permMiddleware, effectivePerms } = require('../middleware/auth');
 const backup = require('../services/backup');
+const { newestBackupVersion } = require('../services/backup-version');
+
+function summary(b) { return b ? { name: b.name, size: b.size, mtime: b.mtime } : null; }
 
 // Backup status + list (any authenticated user can see whether backups are on).
-router.get('/status', authMiddleware, (req, res) => {
+router.get('/status', authMiddleware, async (req, res) => {
   const c = backup.cfg();
-  const list = backup.listBackups();
+  const h = backup.health();
+  // pg_dump's own words on failure name hosts and databases; that is for whoever
+  // can act on it, not for every logged-in screen.
+  const canManage = effectivePerms(req.user).indexOf('settings') >= 0;
+  const last = h.lastAttempt ? {
+    at: h.lastAttempt.at, ok: h.lastAttempt.ok, trigger: h.lastAttempt.trigger,
+    file: h.lastAttempt.file || null, error: canManage ? (h.lastAttempt.error || null) : null,
+  } : null;
+  // Is the newest backup from this version of the app? (services/backup-version.js)
+  let version;
+  try { version = await newestBackupVersion(); }
+  catch (e) { version = { state: 'unknown', file: null, missing: [], extra: [] }; }
   res.json({
     enabled: c.enabled,
     custom: c.custom,
     hostPath: c.hostPath,
     retentionDays: c.retentionDays,
+    minKeep: c.minKeep,
+    staleHours: c.staleHours,
     time: c.time,
-    count: list.length,
-    last: list[0] ? { name: list[0].name, size: list[0].size, mtime: list[0].mtime } : null,
-    backups: list.map(b => ({ name: b.name, size: b.size, mtime: b.mtime })),
+    state: h.state,
+    running: h.running,
+    newestAgeHours: h.hours == null ? null : Math.round(h.hours),
+    lastAttempt: last,
+    count: h.count,
+    last: summary(h.newest),
+    backups: h.list.map(summary),
+    version,
   });
 });
 
-// Trigger a backup now (settings permission).
+// Trigger a backup now (settings permission). If one is already running - the nightly
+// one, or someone else's press - this waits for it and returns its result.
 router.post('/run', authMiddleware, permMiddleware('settings'), async (req, res) => {
-  const r = await backup.runBackup();
+  const r = await backup.runBackup('manual');
   if (!r.ok) return res.status(400).json(r);
   res.json(r);
 });
