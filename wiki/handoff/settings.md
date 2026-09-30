@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 금액 표기 (두 번째 통합 시험의 C) · 여러 칸 줄 확인 · theme 첫 프레임 관찰
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop merge 위). 통합 시험 중이라 `Settings.jsx`는 여섯 줄만.
+- **1 금액 표기** — `frontend/src/pages/settingsMoney.js`(새, 설정 파일): `seMoney(v, lang)` = 천 단위를 fr U+00A0 · ko/en 쉼표로, 「.00」 없음, 소수가 실제로 있으면 그 나라 소수점으로(fr 「0,50」, en 「0.50」). 수납·통계의 `fmtAmount`와 같은 모양이지만 반올림하지 않음(단가 0.50을 0으로 보이지 않게). 공용 금액 함수가 생기면 그것으로 바꾸면 됨(총괄 몫).
+  - 설정 → Codes d'actes 목록의 Prix, Médicaments 목록의 Prix unitaire, 약속처방 약 검색의 「Prix」.
+  - 편집 창의 입력 칸은 숫자만: `seMoneyInput` — 「15000.00」 → 15000, 「0.50」 → 0.5(타자 값은 그대로).
+  - 기록(Journal): `settingsAudit.js`의 `MONEY` 칸만 — `unit_price` · `price` · `price_clinic` · `total_due` · `amount_paid` · `refunded_amount` · `outstanding` · `refund`. 수량·일수·영수 번호는 그대로. 언어는 `auditChanges`의 `ctx.lang`.
+- **2 여러 칸 줄**: 끝난 진료의 처방 한 줄 고침(용량·횟수·일수·총량·단가가 한 줄에)을 격리 DB에 넣어 봄 — 칸마다 한 줄씩 「Dose: 3 → 4 / … / Prix unitaire: 300 → 47 300」, 옛 값 줄긋기, 읽기 좋음. 기록 탭은 바꿀 것 없음(4줄 → 1줄은 진료 세션 몫).
+- **3 관찰 — theme 첫 프레임**(디자인 세션 몫, 고치지 않음): 로그인 답의 `user.theme`은 `api/client.js` `saveAuth`가 `medconnect_user`에 저장만 하고 화면에 쓰지 않음. 화면 색은 `index.html`이 PC의 `medconnect_theme`으로 먼저 그리고, `TopBar.jsx`가 상단바가 뜬 뒤 `GET /api/theme`을 읽어 다르면 바꿈 → 첫 프레임은 PC의 마지막 색. 제안: `saveAuth`(또는 Login.jsx의 로그인 성공)에서 `user.theme`이 dark/light면 `theme.js` `setTheme(user.theme)`을 먼저 부르기 — 그러면 로그인 뒤 첫 화면부터 계정 색이고, TopBar의 `/theme` 읽기는 다른 PC에서 바꾼 경우만 맞춤.
+- **공용 파일 변경**: 없음(i18n 그대로).
+- **바꾼 파일**: `frontend/src/pages/settingsMoney.js`(새) · `frontend/src/pages/Settings.jsx` · `frontend/src/pages/settingsAudit.js` · 위키 3개
+- **확인한 방법**: `npm run build`. 스택 없이 `seMoney` 12가지(15000.00 fr/ko, 1234567 en, 0.50 fr/en, 0, 999, -2000, 12.999 → 13, 빈 값, null, 글자) + 기록 줄 풀기(fr·ko) 통과. 새 격리 스택(9187): drugprice 24 통과, 화면 fr — Codes d'actes 「15 000」(문자 코드로 U+00A0 확인), 편집 창 입력 「15000」, 약 목록 「0,50」(MED-0002를 0.5로 두고), 약 창 입력 「0.5」, 기록 「Prix: 5 000 → 6 000」·「Prix de base: 6 000 → 7 000」·「Prix unitaire: 300 → 47 300」. ko — 「15,000」, 「단가: 300 → 47,300」.
+
 ## 2026-09-30 — 투명도로 나타낸 「잠김·쓰지 않음」 세 곳을 잠긴 칸 이름표로 (디자인 세션이 넘긴 세 줄)
 
 - **상태**: 확인 요청
