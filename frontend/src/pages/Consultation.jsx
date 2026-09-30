@@ -217,6 +217,13 @@ export default function ConsultationPage() {
   // A short "saved" notice at the bottom (same look as the lab screen's), for the reading:
   // it was an alert that had to be clicked away (imaging-day test 2026-09-30).
   var tos = useState(''), toast = tos[0], setToast = tos[1];
+  // Transfer (전과): change the open visit's department and doctor without cancelling the
+  // registration (director, 2026-09-30). The server is reception's
+  // PUT /api/visits/:id/transfer {department_id, doctor_id, reason} (contract in
+  // wiki/handoff/coordinator.md, 「전과」): it changes the visit and its consultation's
+  // department in one go and writes one change-log line. Notes, prescriptions, orders and
+  // who wrote them stay as they are - another doctor's note stays theirs.
+  var trs = useState(null), transfer = trs[0], setTransfer = trs[1];   // {dept, doctor, reason, depts, doctors, busy}
   var toastTimer = useRef(null);
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
@@ -349,6 +356,52 @@ export default function ConsultationPage() {
     }, 30000);
     return function(){ clearInterval(timer); };
   },[consultId]);
+
+  async function openTransfer(){
+    if(!sel) return;
+    var st = { dept: sel.department_id ? String(sel.department_id) : '', doctor: sel.doctor_id ? String(sel.doctor_id) : '',
+      reason: '', depts: [], doctors: [], busy: false };
+    setTransfer(st);
+    try {
+      // The same two lists the reception screen picks from.
+      var ds = await api.get('/admin/departments'), docs = await api.get('/admin/doctors');
+      setTransfer(function(p){ return p ? Object.assign({}, p, { depts: ds||[], doctors: docs||[] }) : p; });
+    } catch(err){ alert(t.cs_errorPrefix+err.message); setTransfer(null); }
+  }
+  // The server's refusals in the screen's language. Matched on the words of the message,
+  // since the contract fixes the status codes (404 / 409 / 400) but not the sentences.
+  function transferError(msg){
+    var m = String(msg||'');
+    if(/cancel/i.test(m)) return t.cs_trCancelled;
+    if(/paid|receipt|bill|payment/i.test(m)) return t.cs_trPaid;
+    if(/nothing|no change|unchanged|same/i.test(m)) return t.cs_trNoChange;
+    if(/not found/i.test(m)) return t.cs_trNotFound;
+    if(/department|doctor/i.test(m)) return t.cs_trBad;
+    return t.cs_errorPrefix + m;
+  }
+  async function doTransfer(){
+    if(!transfer || !sel) return;
+    var vid = sel.id;
+    setTransfer(function(p){ return Object.assign({}, p, { busy: true }); });
+    try {
+      var v = await api.put('/visits/'+vid+'/transfer', {
+        department_id: transfer.dept ? parseInt(transfer.dept, 10) : null,
+        doctor_id: transfer.doctor ? parseInt(transfer.doctor, 10) : null,
+        reason: transfer.reason.trim() || undefined });
+      // The patient bar, today's chart header and the queue show the new department and
+      // doctor at once. Only these fields are taken: the note being typed, the
+      // prescriptions and the orders are not touched.
+      var keep = { department_id: v.department_id, doctor_id: v.doctor_id, dept_code: v.dept_code, dept_name: v.dept_name, doctor_name: v.doctor_name };
+      setSel(function(cur){ return cur && cur.id===vid ? Object.assign({}, cur, keep) : cur; });
+      setVisits(function(list){ return (list||[]).map(function(x){ return x.id===vid ? Object.assign({}, x, keep) : x; }); });
+      setConsult(function(c){ return c && c.visit_id===vid ? Object.assign({}, c, { department_id: v.department_id }) : c; });
+      setTransfer(null);
+      showToast(t.cs_trDone);
+    } catch(err){
+      alert(transferError(err.message));
+      setTransfer(function(p){ return p ? Object.assign({}, p, { busy: false }) : p; });
+    }
+  }
 
   async function pickPatient(v){
     // My note not saved yet: OK saves it and opens the other visit, Annuler stays.
@@ -999,6 +1052,7 @@ export default function ConsultationPage() {
           <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
+          {sel.status!=='cancelled' ? <button onClick={openTransfer} title={t.cs_trTitle} style={{background:'transparent',color:'#bfdbfe',border:'1px solid #3b5b85',borderRadius:4,padding:'1px 7px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
         </div>
@@ -1404,6 +1458,43 @@ export default function ConsultationPage() {
           </div>
         </div>
       ) : null}
+      {transfer && sel ? (function(){
+        var tr = transfer;
+        var deptName = function(d){ return (lang==='fr' ? d.name_fr : lang==='en' ? d.name_en : d.name) || d.name || ''; };
+        // The doctors of the chosen department, and those with none (a doctor without a
+        // department can see anyone). The doctor already on the visit stays in the list.
+        var docs = tr.doctors.filter(function(d){ return !tr.dept || !d.department_id || String(d.department_id)===tr.dept || String(d.id)===tr.doctor; });
+        var changed = tr.dept !== (sel.department_id ? String(sel.department_id) : '') || tr.doctor !== (sel.doctor_id ? String(sel.doctor_id) : '');
+        var fld = {width:'100%',boxSizing:'border-box',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:'var(--text)',fontSize:14,fontFamily:'inherit'};
+        var lab = {display:'block',fontSize:12,fontWeight:700,color:'var(--text-3)',margin:'10px 0 3px'};
+        return <div onClick={function(){ if(!tr.busy) setTransfer(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div role="dialog" aria-label={t.cs_trTitle} onClick={function(e){e.stopPropagation()}} style={{width:420,maxWidth:'92vw',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,padding:'14px 16px'}}>
+            <div style={{fontWeight:800,fontSize:15,color:'var(--text)'}}>⇄ {t.cs_trTitle}</div>
+            <div style={{fontSize:13,color:'var(--text-2)',marginTop:4}}>{sel.chart_no} · {sel.last_name} {sel.first_name} — {[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ') || '\u2014'}</div>
+            <label style={lab}>{t.cs_trDept}</label>
+            <select value={tr.dept} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
+                setTransfer(function(p){ var keepDoc = p.doctors.filter(function(d){ return String(d.id)===p.doctor && (!d.department_id || !dv || String(d.department_id)===dv); }).length > 0;
+                  return Object.assign({}, p, { dept: dv, doctor: keepDoc ? p.doctor : '' }); }); }} style={fld}>
+              <option value="">{'\u2014'}</option>
+              {tr.depts.map(function(d){ return <option key={d.id} value={String(d.id)}>{d.code} – {deptName(d)}</option>; })}
+            </select>
+            <label style={lab}>{t.cs_trDoctor}</label>
+            <select value={tr.doctor} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
+                setTransfer(function(p){ var doc = p.doctors.filter(function(d){ return String(d.id)===dv; })[0];
+                  return Object.assign({}, p, { doctor: dv, dept: p.dept || (doc && doc.department_id ? String(doc.department_id) : '') }); }); }} style={fld}>
+              <option value="">{'\u2014'}</option>
+              {docs.map(function(d){ return <option key={d.id} value={String(d.id)}>{(d.dept_code ? d.dept_code + ' – ' : '') + d.name}</option>; })}
+            </select>
+            <label style={lab}>{t.cs_trReason}</label>
+            <input value={tr.reason} disabled={tr.busy} maxLength={200} onChange={function(e){ var rv = e.target.value; setTransfer(function(p){ return Object.assign({}, p, { reason: rv }); }); }} style={fld}/>
+            <div style={{fontSize:12,color:'var(--text-3)',marginTop:10,lineHeight:1.5}}>{t.cs_trKeep}</div>
+            <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}>
+              <button onClick={function(){ setTransfer(null); }} disabled={tr.busy} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
+              <button onClick={doTransfer} disabled={!changed || tr.busy} style={{background:changed?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:changed?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:changed&&!tr.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.cs_trConfirm}</button>
+            </div>
+          </div>
+        </div>;
+      })() : null}
       {toast ? <div role="status" style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'var(--toast-bg)',color:'var(--toast-text)',border:'1px solid var(--toast-line)',boxShadow:'var(--toast-shadow)',borderRadius:6,padding:'10px 18px',fontSize:14,fontWeight:700,zIndex:1100}}>{toast}</div> : null}
       {readingsOpen && sel ? (
         <div onClick={function(){setReadingsOpen(false)}} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>

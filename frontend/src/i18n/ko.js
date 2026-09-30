@@ -396,6 +396,20 @@ export default {
   cs_noteEdited: "수정 {time}",
   cs_noPastVisit: "지난 내원 없음",
   cs_vitalsBy: "마지막 저장: {name} · {time}",
+  // Transfer: change the visit's department / doctor (2026-09-30)
+  cs_transfer: "전과",
+  cs_trTitle: "전과 — 과·의사 바꾸기",
+  cs_trDept: "과",
+  cs_trDoctor: "의사",
+  cs_trReason: "사유 (선택)",
+  cs_trConfirm: "바꾸기",
+  cs_trKeep: "진료 기록·처방·오더는 그대로입니다. 앞 의사의 기록은 그 의사 이름으로 남고 그 의사만 고칠 수 있습니다.",
+  cs_trDone: "과·의사를 바꿨습니다 ✓",
+  cs_trCancelled: "취소된 내원은 과·의사를 바꿀 수 없습니다.",
+  cs_trPaid: "이미 수납한 내원은 과·의사를 바꿀 수 없습니다.",
+  cs_trNoChange: "바뀐 것이 없습니다.",
+  cs_trBad: "고른 과나 의사를 쓸 수 없습니다(쉬는 과이거나 의사가 아닌 계정). 다시 고르세요.",
+  cs_trNotFound: "내원을 찾을 수 없습니다. 환자를 다시 여세요.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

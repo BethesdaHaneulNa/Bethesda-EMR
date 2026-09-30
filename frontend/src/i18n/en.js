@@ -405,6 +405,20 @@ export default {
   cs_noteEdited: "edited {time}",
   cs_noPastVisit: "No earlier visit",
   cs_vitalsBy: "Last saved: {name} · {time}",
+  // Transfer: change the visit's department / doctor (2026-09-30)
+  cs_transfer: "Transfer",
+  cs_trTitle: "Transfer — change department or doctor",
+  cs_trDept: "Department",
+  cs_trDoctor: "Doctor",
+  cs_trReason: "Reason (optional)",
+  cs_trConfirm: "Change",
+  cs_trKeep: "Notes, prescriptions and orders stay as they are. The previous doctor's note stays under their name, and only they can change it.",
+  cs_trDone: "Department and doctor changed ✓",
+  cs_trCancelled: "A cancelled visit cannot be transferred.",
+  cs_trPaid: "This visit is already paid: its department and doctor cannot be changed.",
+  cs_trNoChange: "Nothing was changed.",
+  cs_trBad: "That department or doctor cannot be used (inactive department, or not a doctor account). Choose again.",
+  cs_trNotFound: "Visit not found. Open the patient again.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 전과 단추 (화면 먼저, 접수의 서버 길 대기)
+
+- **상태**: 진행 중 — 화면은 끝남, 서버(`PUT /api/visits/:id/transfer`, 접수)가 develop에 오면 끝까지 시험
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `2028e87` 다음
+- **한 일**:
+  - 파란 줄의 「GEN Dr …」 이름표 옆 **⇄ Transfert**(ko 전과 · en Transfer). 취소된 내원에는 없음.
+  - 작은 창: **Service** → **Médecin**(그 과의 의사 + 과 없는 의사 + 지금 의사) → **Motif (facultatif)** → **Changer**. 지금 값이 골라져 있고, 바뀐 것이 없으면 Changer가 꺼짐. 목록은 접수 화면과 같은 `GET /admin/departments`·`GET /admin/doctors`.
+  - 확인 뒤: 답(그 내원 줄)의 과·의사 칸만 `sel`(파란 줄·오른쪽 오늘 머리)·대기 목록·`consult.department_id`에 합침. 내 기록 칸·처방·오더는 건드리지 않음(`pickPatient`를 부르지 않음 — 저장 안 된 글도 그대로). 성공은 잠깐 뜨는 알림.
+  - 거절 문장(ko·en·fr): 취소된 내원 · 수납이 끝난 내원 · 바뀐 것 없음 · 쓸 수 없는 과/의사 · 없는 내원. 약속이 문장을 정하지 않아 **낱말로 고름**(`transferError`) — 접수 커밋이 오면 실제 문장으로 다시 맞춤.
+  - 설명서 fr에 「Changer de médecin / de service」 절(§11과 §12 사이).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(cs_ 13개) · `wiki/modules/consultation.md`(2.7·3.1·8) · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **번역 키**: `cs_transfer`·`cs_trTitle`·`cs_trDept`·`cs_trDoctor`·`cs_trReason`·`cs_trConfirm`·`cs_trKeep`·`cs_trDone`·`cs_trCancelled`·`cs_trPaid`·`cs_trNoChange`·`cs_trBad`·`cs_trNotFound`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768 FR, 밝은·어두운 화면: 과·의사가 없는 내원에서 창을 열면 두 칸 「—」, Changer 꺼짐 → Service «GEN – Médecine Générale» → 의사 목록이 «Dr DEUX»(과 없음)·«GEN – S2 doctor»로 좁혀짐, Changer 켜짐 → 의사 고름. 서버 길이 아직 없어 **Changer는 누르지 않았습니다**.
+- **확인 못 한 것**: 서버와 이어진 전체(바뀐 뒤 화면 갱신, 거절 문장, 변경 기록 한 줄) — 접수 커밋 뒤.
+- **다른 세션에 부탁**: 접수 — 거절 문장(영어 원문)을 인계 노트에 적어 주시면 화면 쪽 매칭을 그 문장으로 맞춥니다.
+- **남은 일 · 알려진 문제**: 위 끝까지 시험.
+
 ## 2026-09-30 — 차트 머리줄(과 + 내원 의사)·탭 이름 문서 반영, 오늘 묶음의 의사 이름 대체
 
 - **상태**: 확인 요청
