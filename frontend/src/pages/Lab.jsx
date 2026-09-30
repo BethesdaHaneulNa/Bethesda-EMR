@@ -294,11 +294,11 @@ export default function LabPage() {
               <div style={{ padding: '8px 14px', borderBottom: '1px solid ' + bd, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {(sel.lab_orders || []).length > 1 ? (function () {
                   var on = view === 'all';
-                  return <button onClick={function () { loadView('all'); }} style={{ background: on ? cyan : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>{t.labAll || '전체'}</button>;
+                  return <button onClick={function () { loadView('all'); }} style={{ background: on ? 'var(--cyan-fill)' : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? 'var(--cyan-fill)' : bd2), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>{t.labAll || '전체'}</button>;
                 })() : null}
                 {(sel.lab_orders || []).map(function (o) {
                   var on = view === o.order_item_id;
-                  return <button key={o.order_item_id} onClick={function () { loadView(o.order_item_id); }} style={{ background: on ? cyan : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? cyan : bd2), borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>{o.order_name}{o.status === 'completed' ? ' ✓' : ''}</button>;
+                  return <button key={o.order_item_id} onClick={function () { loadView(o.order_item_id); }} style={{ background: on ? 'var(--cyan-fill)' : 'var(--chip)', color: on ? 'var(--on-cyan)' : t2, border: '1px solid ' + (on ? 'var(--cyan-fill)' : bd2), borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>{o.order_name}{o.status === 'completed' ? ' ✓' : ''}</button>;
                 })}
               </div>
               {/* item grid(s) */}
@@ -308,7 +308,7 @@ export default function LabPage() {
               </div>
               <div style={{ flexShrink: 0, padding: '10px 14px', borderTop: '1px solid ' + bd, background: 'var(--panel-2)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
                 {notice ? <div style={{ flex: 1, color: 'var(--ok-text-2)', fontSize: 13 }}>{notice}</div> : null}
-                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan),var(--cyan-strong))' : 'var(--chip)', color: totalItems ? 'var(--on-cyan)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
+                <button onClick={save} disabled={busy || totalItems === 0} style={{ background: totalItems ? 'linear-gradient(135deg,var(--cyan-fill),var(--cyan-fill-2))' : 'var(--chip)', color: totalItems ? 'var(--on-cyan)' : 'var(--text-max)', border: 'none', borderRadius: 6, padding: '9px 28px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 900 }}>✓ {t.labSave || '결과 저장 · 완료'}{view === 'all' && groups.length > 1 ? ' (' + t.labAll + ')' : ''}</button>
               </div>
             </>
           )}
