@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware, effectivePerms } = require('../middleware/auth');
 const { VISIT_TYPES, VISIT_STATUSES } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
+const { writeAudit, ACTIONS } = require('../utils/audit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -175,6 +176,102 @@ router.put('/:id/status', permMiddleware('registration'), async (req, res) => {
   }
 });
 
+// ── Transfer: another department or doctor for a visit already registered ──────────
+//
+// Asked by the office manager (2026-09-30): "the patient went in at reception, and then
+// the doctor must change - cancelling and registering again is too much". Reception
+// could already change department/doctor with PUT /:id, but (1) nothing was written to
+// the change log, (2) a consultation already opened kept the department it copied when
+// it was opened, so the chart bar showed the old one, and (3) a doctor could not do it.
+// Both paths now go through applyTransfer(): one change-log line, the consultation's
+// department follows. The notes, prescriptions, orders and their authors
+// (consultation.doctor_id included) are never touched - they stay who wrote them.
+
+// Visit row with the names the log and the answer need. `lock` takes the row lock so
+// two desks cannot move the same visit at once.
+async function visitForTransfer(db, id, lock) {
+  const r = await db.query(
+    `SELECT v.id, v.patient_id, v.status, v.department_id, v.doctor_id,
+            d.code AS dept_code, d.name AS dept_name, s.name AS doctor_name
+       FROM visit v
+       LEFT JOIN department d ON d.id = v.department_id
+       LEFT JOIN staff s ON s.id = v.doctor_id
+      WHERE v.id = $1` + (lock ? ' FOR UPDATE OF v' : ''), [id]);
+  return r.rows[0] || null;
+}
+function sameId(a, b) { return (a == null ? null : Number(a)) === (b == null ? null : Number(b)); }
+
+// After visit.department_id/doctor_id have been written in `client`'s transaction:
+// the consultation's copy of the department follows, and one change-log line records
+// before -> after. Does nothing when neither changed.
+async function applyTransfer(client, req, before, reason) {
+  const after = await visitForTransfer(client, before.id, false);
+  if (sameId(before.department_id, after.department_id) && sameId(before.doctor_id, after.doctor_id)) return after;
+  if (!sameId(before.department_id, after.department_id)) {
+    await client.query('UPDATE consultation SET department_id = $1 WHERE visit_id = $2', [after.department_id, before.id]);
+  }
+  const summary = [before.dept_code, before.doctor_name].filter(Boolean).join(' · ') + ' → ' +
+                  [after.dept_code, after.doctor_name].filter(Boolean).join(' · ');
+  await writeAudit(client, req, {
+    action: ACTIONS.VISIT_TRANSFER, patient_id: before.patient_id, visit_id: before.id,
+    entity: 'visit', entity_id: before.id, summary: summary,
+    // department_id is what the Settings Log already turns into "GEN - General
+    // Practice"; the doctor goes by name (the Log has no doctor lookup), the reason as typed.
+    before: { department_id: before.department_id, doctor: before.doctor_name || null, reason: null },
+    after:  { department_id: after.department_id,  doctor: after.doctor_name || null,  reason: reason || null },
+  });
+  return after;
+}
+
+// Refusals carry a code as well as the English message, so a screen can show its own
+// language (consultation's button and reception's form).
+function refuse(res, status, code, message, extra) {
+  return res.status(status).json(Object.assign({ error: message, code: code }, extra || {}));
+}
+
+// PUT /api/visits/:id/transfer  { department_id, doctor_id, reason? }
+// department_id: an active department (required). doctor_id: an active doctor, or null
+// for "no doctor chosen" (reception can register that way). Allowed until the visit is
+// paid: once a valid receipt exists the fee and the revenue by department/doctor are on
+// paper, so the move is refused (409 VISIT_BILLED) - payment corrects first if needed.
+// Answer: the visit row as in /today (dept_code, doctor_name, patient...).
+router.put('/:id/transfer', permMiddleware('registration', 'consultation'), async (req, res) => {
+  const body = req.body || {};
+  const intOrNull = (v) => (v === null || v === '' || v === undefined) ? null : (/^\d+$/.test(String(v)) ? Number(v) : NaN);
+  const deptId = intOrNull(body.department_id), doctorId = intOrNull(body.doctor_id);
+  if (deptId === null || Number.isNaN(deptId)) return refuse(res, 400, 'BAD_DEPARTMENT', 'department_id must be an active department');
+  if (Number.isNaN(doctorId)) return refuse(res, 400, 'BAD_DOCTOR', 'doctor_id must be an active doctor or null');
+  const reason = body.reason == null ? '' : String(body.reason).trim().slice(0, 300);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const before = await visitForTransfer(client, req.params.id, true);
+    if (!before) { await client.query('ROLLBACK'); return refuse(res, 404, 'VISIT_NOT_FOUND', 'Visit not found'); }
+    if (before.status === 'cancelled') { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_CANCELLED', 'A cancelled visit cannot be transferred'); }
+    const bill = await client.query(`SELECT receipt_no FROM billing WHERE visit_id = $1 AND payment_status <> 'cancelled' LIMIT 1`, [before.id]);
+    if (bill.rows.length) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_BILLED', 'The visit is already paid; it can no longer be transferred', { receipt_no: bill.rows[0].receipt_no }); }
+    const dept = await client.query('SELECT id FROM department WHERE id = $1 AND is_active IS NOT FALSE', [deptId]);
+    if (!dept.rows.length) { await client.query('ROLLBACK'); return refuse(res, 400, 'BAD_DEPARTMENT', 'department_id must be an active department'); }
+    if (doctorId !== null) {
+      const doc = await client.query(`SELECT id FROM staff WHERE id = $1 AND role = 'doctor' AND status = 'active'`, [doctorId]);
+      if (!doc.rows.length) { await client.query('ROLLBACK'); return refuse(res, 400, 'BAD_DOCTOR', 'doctor_id must be an active doctor or null'); }
+    }
+    if (sameId(before.department_id, deptId) && sameId(before.doctor_id, doctorId)) {
+      await client.query('ROLLBACK'); return refuse(res, 400, 'NO_CHANGE', 'Nothing to change: same department and doctor');
+    }
+    await client.query('UPDATE visit SET department_id = $1, doctor_id = $2, updated_at = NOW() WHERE id = $3', [deptId, doctorId, before.id]);
+    await applyTransfer(client, req, before, reason);
+    await client.query('COMMIT');
+    const row = await pool.query(QUEUE_SELECT + ' WHERE v.id = $1', [before.id]);
+    res.json(row.rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* already out of the transaction */ }
+    sendDbError(res, err);
+  } finally {
+    client.release();
+  }
+});
+
 // PUT /api/visits/:id
 // Only the fields present in the body are written. Reception sends what its form
 // shows; payment sends visit_type alone. department_id/doctor_id sent as null (or
@@ -214,13 +311,29 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
       sets.push(field + '=$' + params.length);
     }
     if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
-    params.push(req.params.id);
-    const result = await pool.query(
-      `UPDATE visit SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,
-      params
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
-    res.json(result.rows[0]);
+    // One transaction: when reception's form changes the department or doctor, the same
+    // change-log line and consultation update as PUT /:id/transfer (applyTransfer).
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const before = await visitForTransfer(client, req.params.id, true);
+      if (!before) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
+      params.push(req.params.id);
+      const result = await client.query(
+        `UPDATE visit SET ${sets.concat('updated_at=NOW()').join(', ')} WHERE id=$${params.length} RETURNING *`,
+        params
+      );
+      if (Object.prototype.hasOwnProperty.call(body, 'department_id') || Object.prototype.hasOwnProperty.call(body, 'doctor_id')) {
+        await applyTransfer(client, req, before, '');
+      }
+      await client.query('COMMIT');
+      res.json(result.rows[0]);
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (e) { /* already out of the transaction */ }
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     sendDbError(res, err);
   }

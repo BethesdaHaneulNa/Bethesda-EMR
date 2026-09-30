@@ -2,6 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 전과: `PUT /api/visits/:id/transfer` (실장님 요청, 총괄 약속대로)
+
+- **상태**: 확인 요청
+- **커밋**: session/reception — 이 항목을 추가한 커밋 하나 (`develop` `2028e87` ff 뒤)
+- **한 일**:
+  - **새 길** `PUT /api/visits/:id/transfer` `{department_id, doctor_id, reason?}` — registration 또는 consultation. 한 트랜잭션(내원 줄 `FOR UPDATE`): `visit.department_id`·`doctor_id` + 그 내원의 `consultation.department_id`. 진료 기록·처방·오더·`consultation.doctor_id`는 그대로
+  - **거절**(모두 `{error, code}`):
+    · 404 `VISIT_NOT_FOUND`
+    · 409 `VISIT_CANCELLED`
+    · 409 `VISIT_BILLED`(+`receipt_no`, 취소 안 된 영수가 있을 때 — 영수를 취소하면 다시 됨)
+    · 400 `BAD_DEPARTMENT`(없음·쉼·빠짐)
+    · 400 `BAD_DOCTOR`(의사가 아님·쉼·숫자 아님)
+    · 400 `NO_CHANGE`
+  - `doctor_id: null`(의사 없이)은 받음 — 접수가 의사 없이 등록할 수 있어서
+  - **답**: `/today`와 같은 내원 줄(`dept_code`·`doctor_name`·환자 칸·`has_active_bill`)
+  - **기록**: `audit.js` ACTIONS에 `VISIT_TRANSFER: 'visit.transfer'`(총괄 파일, 한 줄). `summary` «GEN · RABE Hery → PED · RAKOTO Aina», `before`/`after` = `{department_id, doctor, reason}`(바뀐 칸만). `department_id`는 기록 탭이 이미 과 이름으로 보여 줌
+  - **접수 화면의 저장**(`PUT /:id`): 한 트랜잭션으로 바꾸고, 과·의사가 실제로 바뀌면 같은 함수 `applyTransfer()` — 기록 한 줄 + `consultation.department_id`. 같은 값 저장은 0줄. 화면은 그대로(«Enregistrement modifié — …» 알림도 맞음)
+- **확인**(격리 스택, 새 DB):
+  - `reception.api.mjs` **187 통과 · 0 실패**(전과 19건 새로 — 역할 8개 권한, 답 모양, `NO_CHANGE`·`BAD_DEPARTMENT` 2·`BAD_DOCTOR` 2·404·`VISIT_CANCELLED`, 기록 줄 수·사유, `PUT /:id`의 기록 1줄·같은 값 0줄)
+  - DB로 본 것(격리 DB에 진료·영수를 직접 넣어): 의사 계정 전과 200 → `consultation.department_id`만 새 과, `doctor_id`·기록 그대로 / 유효한 영수 → 409 `VISIT_BILLED`, 영수 취소 → 다시 200 / 쉬는 과 → 400
+  - 화면: 접수에서 «GEN – RABE Hery»로 접수 → 줄을 골라 «PED – RAKOTO Aina»로 바꿔 저장 → 대기 줄 «PED · RAKOTO Aina», 기록 탭에 한 줄
+- **다른 세션에 부탁**:
+  - **설정**: 기록 탭 이름표 — 종류 `visit.transfer`(fr «Changement de service / médecin», ko «전과(과·의사 변경)», en «Visit transferred»), 칸 `doctor`(Médecin / 담당의 / Doctor), `reason`(Motif / 사유 / Reason). 지금은 «visit.transfer», «doctor», «reason»이 저장된 이름 그대로 보임
+  - **진료**: 단추가 부를 길은 위 모양 그대로. 거절은 `code`로 화면 언어 문장을 고르면 됨
+- **총괄에 물을 것**: 접수 화면의 저장(`PUT /:id`)은 **영수가 있어도** 과·의사를 바꿀 수 있음(전부터 그랬고, 약속에 막으라는 말이 없어 그대로 둠). 전과 길과 같게 막을지는 결정해 주세요
+- **바꾼 파일**: `backend/src/routes/visit.routes.js`, `backend/src/utils/audit.js`(한 줄), `backend/test/reception.api.mjs`, `wiki/modules/reception.md`(4절 두 표·변경 기록), `wiki/03-change-log.md`(1절 표 한 줄 + 전과 단락), 이 노트
+- **공용 파일 변경**: `audit.js` ACTIONS 한 줄
+
 ## 2026-09-30 — `GET /visits/patient/:id`에 성별·생년월일·알레르기 (진료 세션 부탁)
 
 - **상태**: 확인 요청
