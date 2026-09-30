@@ -60,6 +60,16 @@ export function getUser() {
 }
 
 export function logout() {
+  // The consultation screen keeps a doctor's unsaved note on this computer
+  // (cs_noteDraft:<account id>:<consultation id>, Consultation.jsx); signing out removes
+  // this account's, so a patient's text does not stay behind on a shared PC.
+  try {
+    const u = getUser(), prefix = 'cs_noteDraft:' + (u ? u.id : '') + ':';
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (u && k && k.indexOf(prefix) === 0) localStorage.removeItem(k);
+    }
+  } catch (e) { /* storage blocked: nothing kept either */ }
   localStorage.removeItem('medconnect_token');
   localStorage.removeItem('medconnect_user');
   window.location.href = '/login';

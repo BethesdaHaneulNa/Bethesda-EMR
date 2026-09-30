@@ -86,6 +86,20 @@ clinic — the middle column slid 135 px sideways and cut off the vital signs an
 the phrase dictionary's header now wraps, and the vital signs keep two columns down to
 1280. Times and days boxes no longer hide their number behind spin buttons.
 
+### Each doctor has their own note on a visit
+
+The note of a visit was one text: a second doctor opening the same visit typed into it,
+and nothing said who wrote what. Now each doctor has **one note per visit**, under their
+name. The box in the middle is *Ma note de consultation*; after **Sauver** it stays in the
+box and appears at the top of **Visites passées** under **Aujourd'hui**, with the doctor's
+name and time (and when it was last changed). Another doctor's note shows there under
+their name and can only be read — an administrator cannot change a doctor's note either.
+Opening another patient with an unsaved note asks first; unsaved text is kept on the
+computer until it is saved, the user signs out, or a day has passed. Vital signs stay one
+set per visit and may be left empty. Payment, pharmacy and reception show every doctor's
+note with their name. Old notes are moved to the doctor who opened the consultation
+(migration **038**).
+
 ### Smaller changes on the screen
 
 - A line whose price is 0 is marked **Sans prix** in the search and in the table.

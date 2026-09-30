@@ -179,7 +179,18 @@ export default function ConsultationPage() {
     return run;
   }
   var finishedRef = useRef(false);
+  // The note box is "my note for this visit" (decisions 2026-09-30): each doctor has one
+  // note per consultation (consultation_note), saved with PUT /consultations/:id/note, and
+  // the chart on the right lists every doctor's note under their name. `notes` is every
+  // note of the open consultation as the server has it; `mineSaved` my note as saved, so
+  // the box is "not saved" while it differs.
   var nts = useState(''), note = nts[0], setNote = nts[1];
+  var noteRef = useRef(''); noteRef.current = note;
+  var nls = useState([]), notes = nls[0], setNotes = nls[1];
+  var mss = useState(''), mineSaved = mss[0], setMineSaved = mss[1];
+  var mineSavedRef = useRef(''); mineSavedRef.current = mineSaved;
+  var dbs = useState(false), draftBack = dbs[0], setDraftBack = dbs[1];
+  var noteBoxRef = useRef(null);
   var vts = useState({ bp:'',temp:'',pulse:'',spo2:'',rr:'' }), vt = vts[0], setVt = vts[1];
   var ocs = useState(''), orderCode = ocs[0], setOrderCode = ocs[1];
   var oms = useState('all'), orderMode = oms[0], setOrderMode = oms[1];
@@ -297,7 +308,54 @@ export default function ConsultationPage() {
     setLoading(false);
   }
 
+  // Text typed in my note and not saved yet is kept in this browser (decision 2026-09-30,
+  // conditions from the coordinator): found only by this account's id + the
+  // consultation's id, dropped when saved, dropped when older than a day, and every one
+  // of this account's is removed at sign-out (api/client.js logout). A patient's text
+  // stays on a shared PC until then - wiki/modules/consultation.md 7.3.
+  var noteDraft = {
+    key: function(cid){ return 'cs_noteDraft:' + (user ? user.id : '') + ':' + cid; },
+    read: function(cid){
+      try {
+        var prefix = 'cs_noteDraft:' + (user ? user.id : '') + ':', now = Date.now();
+        for(var i = localStorage.length - 1; i >= 0; i--){
+          var k = localStorage.key(i);
+          if(k && k.indexOf(prefix) === 0){
+            var o = JSON.parse(localStorage.getItem(k) || 'null');
+            if(!o || !(now - o.at < 86400000)) localStorage.removeItem(k);
+          }
+        }
+        var d = JSON.parse(localStorage.getItem(noteDraft.key(cid)) || 'null');
+        return d ? d.text : null;
+      } catch(e){ return null; }
+    },
+    write: function(cid, text){ try { localStorage.setItem(noteDraft.key(cid), JSON.stringify({ text: text, at: Date.now() })); } catch(e){} },
+    drop: function(cid){ try { localStorage.removeItem(noteDraft.key(cid)); } catch(e){} },
+  };
+  var consultId = consult ? consult.id : null;
+  useEffect(function(){
+    if(!consultId) return;
+    if(note !== mineSaved) noteDraft.write(consultId, note); else noteDraft.drop(consultId);
+  },[note, mineSaved, consultId]);
+  // Two doctors on one visit: every 30 s the notes are read again, so the other doctor's
+  // appears. The box (what I am typing) is never touched.
+  useEffect(function(){
+    if(!consultId) return;
+    var timer = setInterval(function(){
+      if(document.hidden) return;
+      api.get('/consultations/'+consultId+'/notes').then(function(ns){
+        setNotes(function(cur){ return JSON.stringify(cur) === JSON.stringify(ns) ? cur : (ns||[]); });
+      }).catch(function(){});
+    }, 30000);
+    return function(){ clearInterval(timer); };
+  },[consultId]);
+
   async function pickPatient(v){
+    // My note not saved yet: OK saves it and opens the other visit, Annuler stays.
+    if(consult && noteRef.current !== mineSavedRef.current){
+      if(!window.confirm(t.cs_noteUnsavedSwitch)) return;
+      try { await pushNote(); } catch(err){ alert(t.cs_errorPrefix+err.message); return; }
+    }
     setSel(v); setQueueOpen(false); setPastView(null);
     // A visit picked through Trouver patient / Sélection visite comes from the visit-history
     // list, which carries no sex, birth date or allergies - the header then showed no
@@ -308,19 +366,29 @@ export default function ConsultationPage() {
       }).catch(function(){});
     }
     setDxList([]); setRxList([]); setOrderItems([]);
-    setNote(''); setVt({bp:'',temp:'',pulse:'',spo2:'',rr:''});
+    setNote(''); setNotes([]); setMineSaved(''); setDraftBack(false); setVt({bp:'',temp:'',pulse:'',spo2:'',rr:''});
     setOrderCode(''); setOrderSugg([]);
     try {
       // Check if consultation already exists for this visit
       // If not, start one
       var cData = await api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id });
+      // Read before anything renders with this consultation: the draft effect below drops
+      // the kept text while the box is still empty.
+      var draft = noteDraft.read(cData.id);
       setConsult(cData);
       // Load existing data
       var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
       setRxList(rememberRx(rx));
       var oi = await api.get('/consultations/'+cData.id+'/orders');
       setOrderItems(oi);
-      if(cData.note_text) setNote(cData.note_text);
+      // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
+      // this computer, see noteDraft) comes back instead, with a line saying so.
+      var ns = await api.get('/consultations/'+cData.id+'/notes');
+      var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
+      var mineText = mine ? mine.note_text : '';
+      setNotes(ns||[]); setMineSaved(mineText); mineSavedRef.current = mineText;
+      if(draft != null && draft !== mineText){ setNote(draft); setDraftBack(true); }
+      else { noteDraft.drop(cData.id); setNote(mineText); }
       // Every saved vital sign is loaded, with or without a blood pressure. This used to
       // load only when a BP was saved, so a temperature taken alone showed empty and the
       // next Sauver wrote it away (the change log caught it, 2026-09-29).
@@ -364,7 +432,7 @@ export default function ConsultationPage() {
           {vrows.map(function(r){return <div key={r[0]} style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'5px 10px'}}><span style={{fontSize: 12,color:t3,fontWeight:700,marginRight:6}}>{r[0]}</span><span style={{fontSize: 15,color:tx,fontFamily:'monospace'}}>{r[1]}</span></div>;})}
         </div>
         <div style={{fontWeight:700,fontSize: 13,color:'var(--accent-text)',marginBottom:4}}>{t.consultNote}</div>
-        <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'10px 12px',color:'var(--text-soft)',fontSize: 14,lineHeight:1.7,whiteSpace:'pre-wrap',marginBottom:14,minHeight:60}}>{c.note_text||c.subjective||'\u2014'}</div>
+        <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'8px 12px',marginBottom:14,minHeight:60}}>{notesBlock(c.notes, false)}</div>
         <div style={{fontWeight:700,fontSize: 13,color:'var(--ok-text)',marginBottom:4}}>{t.orders}</div>
         <div style={{background:pn,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
           {((pastView.rx||[]).length===0 && (pastView.orders||[]).length===0) ? <div style={{padding:14,textAlign:'center',color:t3,fontSize: 13}}>{'\u2014'}</div> : null}
@@ -387,20 +455,42 @@ export default function ConsultationPage() {
     </div>;
   }
 
+  // The vital signs: one set per visit, often left empty (the doctor writes them in the
+  // note) - an empty box is saved as nothing and never stops a save or Terminé.
+  function vitalsBody(){
+    var bpParts = (vt.bp||'').split('/');
+    return {
+      bp_systolic: parseInt(bpParts[0])||null,
+      bp_diastolic: parseInt(bpParts[1])||null,
+      temperature: parseFloat(vt.temp)||null,
+      pulse: parseInt(vt.pulse)||null,
+      spo2: parseInt(vt.spo2)||null,
+      respiratory_rate: parseInt(vt.rr)||null,
+    };
+  }
+  async function saveVitals(){
+    var c = await api.put('/consultations/'+consult.id, vitalsBody());
+    setConsult(function(p){ return p && p.id===c.id ? Object.assign({}, p, { vitals_by:c.vitals_by, vitals_at:c.vitals_at, vitals_by_name:c.vitals_by_name }) : p; });
+  }
+  // My note, if it changed. Empty text empties it (the server removes it from the chart).
+  async function pushNote(){
+    if(!consult) return;
+    var cid = consult.id, text = noteRef.current;
+    if(text === mineSavedRef.current) return;
+    var r = await api.put('/consultations/'+cid+'/note', { note_text: text });
+    var saved = r.note ? r.note.note_text : '';
+    mineSavedRef.current = saved; setMineSaved(saved);
+    setNotes(r.notes || []);
+    // Typed on while it was saving: that text stays kept on this computer.
+    if(noteRef.current === saved) noteDraft.drop(cid); else noteDraft.write(cid, noteRef.current);
+    setDraftBack(false);
+  }
   async function saveNote(){
     if(!consult) return;
-    var bpParts = (vt.bp||'').split('/');
     try {
-      await api.put('/consultations/'+consult.id,{
-        note_text: note,
-        bp_systolic: parseInt(bpParts[0])||null,
-        bp_diastolic: parseInt(bpParts[1])||null,
-        temperature: parseFloat(vt.temp)||null,
-        pulse: parseInt(vt.pulse)||null,
-        spo2: parseInt(vt.spo2)||null,
-        respiratory_rate: parseInt(vt.rr)||null,
-      });
-      alert(t.cs_noteSaved);
+      await saveVitals();
+      await pushNote();
+      showToast(t.cs_noteSaved);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
@@ -412,18 +502,10 @@ export default function ConsultationPage() {
     var noCount = rxList.filter(noPackQty);
     if(noCount.length && !window.confirm(String(t.cs_noPackConfirm||'').replace('{n}', noCount.length)
         .replace('{names}', noCount.map(function(r){ return r.drug_name; }).join(', ')))) return;
-    var bpParts = (vt.bp||'').split('/');
     try {
-      // 완료 전에 노트·바이탈을 먼저 저장 (저장을 안 누르고 완료해도 날아가지 않게)
-      await api.put('/consultations/'+consult.id,{
-        note_text: note,
-        bp_systolic: parseInt(bpParts[0])||null,
-        bp_diastolic: parseInt(bpParts[1])||null,
-        temperature: parseFloat(vt.temp)||null,
-        pulse: parseInt(vt.pulse)||null,
-        spo2: parseInt(vt.spo2)||null,
-        respiratory_rate: parseInt(vt.rr)||null,
-      });
+      // 완료 전에 바이탈과 내 기록을 먼저 저장 (저장을 안 누르고 완료해도 날아가지 않게)
+      await saveVitals();
+      await pushNote();
       await api.put('/consultations/'+consult.id+'/complete');
       await loadData();
       setSel(null); setConsult(null);
@@ -518,6 +600,43 @@ export default function ConsultationPage() {
     if(gone || !(tot > 0) || tot === (parseFloat(o.quantity)||0)) return null;
     return <div style={{fontSize:11.5,color:t2,marginTop:1}}>{String(t.cs_orderTotal||'').replace('{n}', fmtAmount(tot))}</div>;
   }
+  // ── Notes in the chart ──
+  function hhmm(x){
+    if(!x) return '';
+    var d = new Date(x);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  }
+  function isMine(n){ return !!(n && user && n.author_id != null && n.author_id === user.id); }
+  // "Dr RABE · 09:12 · modifiée 10:40" - the author, when the note was first saved, and
+  // when it was last changed.
+  function noteHead(n){
+    return [ (n.author_name || '?') + (isMine(n) ? ' ' + t.cs_noteYou : ''), hhmm(n.created_at),
+      n.updated_at ? String(t.cs_noteEdited||'').replace('{time}', hhmm(n.updated_at)) : '' ].filter(Boolean).join(' · ');
+  }
+  // Every doctor's note on one consultation. Mine has an accent edge; on today's visit
+  // (today) clicking it puts the cursor in the box, where it is edited. Another doctor's
+  // note is read only. compact: two lines, for the list of earlier visits.
+  function notesBlock(list, compact, today){
+    if(!list || !list.length) return <div style={{fontSize: 13,color:t3}}>{compact ? '\u2014' : t.cs_noteNone}</div>;
+    return list.map(function(n){
+      var mine = isMine(n);
+      return <div key={n.id} onClick={mine && today ? function(){ if(noteBoxRef.current) noteBoxRef.current.focus(); } : undefined}
+        style={{marginTop:4,paddingLeft:7,borderLeft:'3px solid '+(mine?'var(--accent)':'var(--line-soft)'),cursor:mine&&today?'pointer':'default'}}>
+        <div title={noteHead(n)} style={{fontSize: 12,fontWeight:700,color:mine?'var(--accent-text)':t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
+        <div style={Object.assign({fontSize: 13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}, compact ? {maxHeight:38,overflow:'hidden'} : {})}>{n.note_text}</div>
+      </div>;
+    });
+  }
+  // The name of who wrote a prescription or order line, only when lines on this visit
+  // come from more than one doctor (lines written before 2026-09-30 carry no name).
+  var lineAuthors = {};
+  rxList.forEach(function(r){ if(r.prescribed_by) lineAuthors[r.prescribed_by] = 1; });
+  orderItems.forEach(function(o){ if(o.ordered_by) lineAuthors[o.ordered_by] = 1; });
+  var manyAuthors = Object.keys(lineAuthors).length > 1;
+  function authorTag(name){
+    return manyAuthors && name ? <span style={{marginLeft:6,fontSize: 11,color:t3,whiteSpace:'nowrap'}}>{name}</span> : null;
+  }
+
   function cancelTitle(o){ return (t.cs_labCancelled||'') + (o.cancel_reason ? ' — ' + o.cancel_reason : ''); }
   function orderStatus(o){
     // Cancelled first, whatever the type: a cancelled imaging order may still say
@@ -663,7 +782,7 @@ export default function ConsultationPage() {
       rememberRx([updated]);
       setRxList(function(list){ return list.map(function(r){
         if(r.id!==rx.id) return r;
-        if(rxSnap(r) === snap) return updated;
+        if(rxSnap(r) === snap) return Object.assign({}, r, updated);
         // typed on after this save left: keep what is typed, take what the server worked out
         return Object.assign({}, r, { total_qty: updated.total_qty, status: updated.status, dosage_form: updated.dosage_form, pack_unit: updated.pack_unit, pack_label: updated.pack_label });
       }); });
@@ -693,7 +812,7 @@ export default function ConsultationPage() {
       savedOrd.current[o.id] = ordSnap(updated);
       setOrderItems(function(list){ return list.map(function(x){
         if(x.id!==o.id) return x;
-        if(ordSnap(x) === snap) return updated;
+        if(ordSnap(x) === snap) return Object.assign({}, x, updated);
         return Object.assign({}, x, { total_qty: updated.total_qty, status: updated.status });
       }); });
     } catch(err){
@@ -998,7 +1117,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 3px',color:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={rx.drug_code}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
+                          <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{authorTag(rx.prescribed_by_name)}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
                           {done ? <>
                             {roCell(rx.dose, t2)}
                             {roCell(rx.frequency, t2)}
@@ -1032,7 +1151,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 3px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,textDecoration:gone?'line-through':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={o.order_code}>{o.order_code}</td>
-                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{o.body_part ? <span style={{marginLeft:6,fontSize:12,color:t3,whiteSpace:'nowrap'}}>{o.body_part}</span> : null}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
+                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{authorTag(o.ordered_by_name)}{o.body_part ? <span style={{marginLeft:6,fontSize:12,color:t3,whiteSpace:'nowrap'}}>{o.body_part}</span> : null}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
                             {roCell(o.quantity == null ? 1 : o.quantity, t3)}
                             {roCell(o.frequency || 1, t3)}
@@ -1084,6 +1203,8 @@ export default function ConsultationPage() {
                       <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'5px 4px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
                     </div>;
                   })}
+                  {consult.vitals_at ? <div style={{gridColumn:'1 / -1',fontSize:11,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                    {String(t.cs_vitalsBy||'').replace('{name}', consult.vitals_by_name||'?').replace('{time}', (ymd(consult.vitals_at)===ymd(new Date()) ? '' : ymd(consult.vitals_at)+' ') + hhmm(consult.vitals_at))}</div> : null}
                 </div>
                 <div style={{width:118,flexShrink:0,display:'flex',flexDirection:'column',gap:6,justifyContent:'center'}}>
                   <button onClick={saveNote} style={{background:'linear-gradient(135deg,var(--accent),var(--accent-strong))',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 10px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save}</button>
@@ -1092,10 +1213,12 @@ export default function ConsultationPage() {
               </div>
               {/* Note */}
               <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd}}>
-                <span style={{fontWeight:700,fontSize: 13,color:tx}}>{t.consultNote}</span>
+                <span style={{fontWeight:700,fontSize: 13,color:tx}}>{t.cs_noteMineTitle}</span>
+                {note !== mineSaved ? <span style={{marginLeft:8,fontSize:12,fontWeight:700,color:'var(--warn-text)'}}>● {t.cs_noteUnsaved}</span> : null}
+                {draftBack ? <div style={{fontSize:12,color:'var(--warn-text)'}}>{t.cs_noteDraftBack}</div> : null}
               </div>
               <div style={{flex:1,padding:'6px 10px',minHeight:0}}>
-                <textarea value={note} onChange={function(e){setNote(e.target.value)}} placeholder={t.cs_notePlaceholder}
+                <textarea ref={noteBoxRef} value={note} onChange={function(e){setNote(e.target.value)}} placeholder={t.cs_notePlaceholder}
                   style={{width:'100%',height:'100%',background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'8px 10px',color:tx,fontSize: 14,resize:'none',outline:'none',fontFamily:'inherit',boxSizing:'border-box',lineHeight:1.7}}/>
               </div>
               {/* Phrase dict */}
@@ -1134,8 +1257,16 @@ export default function ConsultationPage() {
           </div>
           <div style={{flex:1,overflow:'auto',padding:'6px 8px'}}>
             {rightTab==='past'?(
-              sel?(
-                history.length>0?history.map(function(h,i){
+              sel?(<>
+                {consult ? <div style={{background:'var(--accent-a12)',borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid var(--accent-a40)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                    <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
+                    <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{t.cs_noteToday}</span>
+                    <span style={{fontSize: 12,color:t2}}>{sel.dept_code||''}</span>
+                  </div>
+                  {notesBlock(notes, false, true)}
+                </div> : null}
+                {history.length>0?history.map(function(h,i){
                 var active = pastView && pastView.c && pastView.c.id===h.id;
                 return <div key={i} onClick={function(){openPast(h)}} style={{background:active?'var(--accent-a15)':scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid '+(active?'var(--accent-a50)':bd),borderLeft:active?'3px solid var(--accent-ink)':'3px solid transparent',cursor:'pointer'}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
@@ -1143,10 +1274,10 @@ export default function ConsultationPage() {
                     <span style={{fontSize: 12,color:t2}}>{h.dept_code||''}</span>
                     <span style={{fontSize: 12,color:t2,marginLeft:'auto'}}>{h.doctor_name||''}</span>
                   </div>
-                  <div style={{fontSize: 13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>
+                  {notesBlock(h.notes, true)}
                 </div>;
-              }):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.noHistory}</div>
-            ):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.cs_selectPatient}</div>
+              }):<div style={{padding:'12px 10px',textAlign:'center',color:'var(--text-5)',fontSize: 13,fontStyle:'italic'}}>{t.cs_noPastVisit}</div>}
+            </>):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.cs_selectPatient}</div>
             ):(
               orderSets.length>0?osGrouped().map(function(grp,gi){
                 var gkey = grp.group||'\u0000';

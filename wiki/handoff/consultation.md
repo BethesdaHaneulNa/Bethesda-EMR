@@ -2,6 +2,35 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 의사마다의 진료 기록 (결정 (나)·(가)·바이탈 한 벌)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `42d0afe` 다음
+- **한 일** (설계 7.5 → 결정 반영, 자세히는 모듈 문서 2.2·3.1·3.2·4·7.3):
+  - **표** `consultation_note` — UNIQUE(consultation_id, author_id), 빈 글 금지. 마이그레이션 **`201_consultation_note.sql`**(총괄이 038로)이 옛 `note_text`를 옮깁니다(비어 있지 않은 S/O/A/P는 「S: …」로 앞에 붙임, `doctor_id`의 기록, 두 번 돌려도 같음). 같은 파일에 `prescription.prescribed_by`, `consultation.vitals_by`·`vitals_at`. `note_text` 칸은 남기고 읽지 않음.
+  - **서버**: `GET /:id/notes`, `PUT /:id/note`(내 것만 — 작성자는 토큰, 요청으로 남의 것을 가리킬 길 없음, `canEditNote` 한 함수, 빈 글 = 내 줄 지움, 끝난 진료면 기록 1줄). `PUT /:id`는 바이탈만, `note_text`가 오면 400. 바이탈이 바뀌면 `vitals_by`·`vitals_at`. 처방에 `prescribed_by`, 처방·오더 읽기에 작성자 이름.
+  - **화면**: 칸 = 「Ma note de consultation」(저장해도 비우지 않음, 다시 열면 그대로, 저장 전 「● Non enregistrée」). 오른쪽 맨 위 「Aujourd'hui」 블록에 의사마다 이름·시각(·modifiée)과 글, 내 것은 파란 선. 30초마다 남의 기록을 다시 읽고 내 칸은 건드리지 않음. 다른 환자를 열 때 묻기(확인 = 저장하고 열기). Terminé가 내 기록도 먼저 저장. 저장 알림은 잠깐 뜨는 알림. 줄 작성자는 둘 이상일 때만 작은 글자. 바이탈 밑 「Dernière saisie : 이름 · 시각」.
+  - **저장 안 된 글을 이 PC에**(총괄 조건 그대로): 키 `cs_noteDraft:<계정 id>:<진료 id>`, 저장하면 지움, 하루 지난 것은 열 때 지움, 로그아웃이 그 계정 것을 지움. 위키 7.3에 「공용 PC에 환자 글이 남음 — 떠날 때 로그아웃」.
+  - **바이탈이 비어도**: 저장·완료가 막히는 곳 없음(시험). 바이탈 칸 값을 읽는 곳은 화면 표시뿐 — 진료 과거 보기, `PatientChart`(수납·약국) 둘 다 빈 칸은 「—」. 문서 엔진·통계는 바이탈 칸을 읽지 않음.
+  - **탭 이름 제안**(바꾸지 않음): 오늘 것을 담으니 「Visites passées / 과거 내원 / Past visits」 → **「Dossier Patient」**(이미 있는 공용 키 `patientChart` — 수납·약국의 같은 탭이 쓰는 이름, ko·en에도 있음). 실장님 말씀의 「페이션트 차트」와 같습니다. 정해 주시면 진료 탭의 `t.pastVisits`를 `t.patientChart`로 바꾸는 한 줄입니다(새 키 없음).
+- **바꾼 파일**: `backend/sql/201_consultation_note.sql`(새) · `backend/src/routes/consult.routes.js` · `backend/src/routes/patient.routes.js`(history 쿼리만) · `frontend/src/pages/Consultation.jsx` · `frontend/src/api/client.js`(logout 한 덩이) · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(cs_ 10개) · 위키(모듈 2.2·2.5·3.1·3.2·4·7.3·7.5·8, manual-fr §3·§11, changelog-1.5.0)
+- **공용 파일 변경**:
+  - `backend/src/routes/patient.routes.js`(**접수 파일, 총괄 허락**) — `GET /:id/history`에 `notes` 배열 + `note_text`를 「— 이름 HH:MM」 머리를 붙인 기록들로 채움, S/O/A/P는 null로. 다른 라우트는 그대로.
+  - `frontend/src/api/client.js` — `logout()`이 `cs_noteDraft:<그 계정 id>:` 키를 지움(8줄).
+- **DB 마이그레이션**: `201_consultation_note.sql` — **데이터를 옮김**(옛 기록 → 새 표, 옛 칸은 지우지 않음). 총괄이 038로 바꿔 주세요.
+- **번역 키**: `cs_noteMineTitle`·`cs_noteUnsaved`·`cs_noteDraftBack`·`cs_noteUnsavedSwitch`·`cs_noteToday`·`cs_noteNone`·`cs_noteYou`·`cs_noteEdited`·`cs_noPastVisit`·`cs_vitalsBy` (ko·en·fr)
+- **확인한 방법**: `npm run build`, `node --check` 통과. 격리 스택(마이그레이션 적용 로그 확인).
+  - 옮기기: 글이 있던 진료 44건 → 기록 44건, 옛 S가 있던 것은 «S: toux sèche | P: Repos»처럼 붙음, `note_text`가 빠진 진료 0.
+  - `notes-e2e` 22항목 모두 통과: 같은 의사 두 번 → 1개(글·updated_at 바뀜) / 두 의사 → 2개 / 요청 몸에 남의 `author_id`·`id`를 넣어도 내 것만 바뀜 / `PUT /notes/:id` 길 없음(404) / 관리자(모든 권한)도 자기 것만 / 빈 글 → 내 줄 지움 / 간호사 GET·PUT 403 / 진행 중 진료 기록 0줄 / `PUT /:id` note_text 400 / 바이탈 모두 빈 채 저장 200·완료 200 / 바이탈 바꾼 의사가 `vitals_by` / 끝난 진료의 내 기록 수정 → 기록 1줄(entity `consultation_note`), 같은 글 다시 → 0줄 / 환자 기록 API의 `note_text` «— S2 doctor 11:08 … — Dr DEUX 11:08 …» / `prescribed_by`와 이름.
+  - 옛 `audit-e2e` 그대로 통과.
+  - 화면(1366×768 FR, 의사 둘 — 두 번째 의사는 API로): 오른쪽 맨 위 «Aujourd'hui · Dr DEUX · 17:09 …», 지난 내원(3일 전) 밑에. 내 글 입력 → «● Non enregistrée», `localStorage`에 `cs_noteDraft:3:200` → F5 → 칸에 돌아오고 «… a été repris.» → Sauver → 알림 «Enregistré ✓», 칸 그대로, 오른쪽에 «S2 doctor (vous) · 17:10», 키 지워짐. 칸에 더 쓰는 동안 Dr DEUX가 글을 고침 → 30초 뒤 오른쪽 «Dr DEUX · 17:09 · modifiée 17:10», 내 칸은 그대로. 저장 안 한 채 다른 환자 → 물음(문장 확인), 확인 → 서버에 저장된 뒤 열림. 두 의사가 처방 한 줄씩 → 이름 옆 «Dr DEUX»·«S2 doctor». 로그아웃 → 내 키만 지워지고 다른 계정 키(가짜로 넣은 것)는 남음. 이틀 전 `at`의 키 → 열 때 버려지고 서버 글이 칸에. 어두운 화면·KO(«내 진료 기록», «오늘», «(나) · 수정 17:11») 확인.
+- **확인 못 한 것**: 수납·약국 `PatientChart`와 접수 외래 내역 화면은 눈으로 보지 않았습니다 — API의 `note_text`(두 이름 머리)로 확인. 두 번째 의사를 실제 두 번째 브라우저로 쓰지는 않았습니다(API로 대신).
+- **다른 세션에 부탁**:
+  - 설정(급하지 않음) — `settingsAudit.js`의 `ENTITIES`에 `consultation_note` 이름표. 지금은 글자 그대로 보입니다. 필드 `note_text`의 이름표는 이미 있습니다.
+  - 수납(급하지 않음) — `PatientChart`가 `notes`로 의사마다 나눠 그리려면 그쪽 몫입니다. 지금은 `note_text` 한 칸으로 이름 머리와 함께 보입니다.
+  - 총괄 — 마이그레이션 번호 201 → 038. 탭 이름 제안(위)을 여쭤 주세요.
+- **남은 일 · 알려진 문제**: 창만 닫고 로그아웃하지 않으면 저장 안 된 글이 그 PC에 하루 남습니다(7.3).
+
 ## 2026-09-30 — 설계 메모: 「쓴 사람이 있는」 진료 기록 (코드 전)
 
 - **상태**: 확인 요청 (설계만 — 코드 없음)
