@@ -2,6 +2,45 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-09-30 — 빈 점 「· ·」 · 서류 발행 길 확인 · 설명서 마지막 점검
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `33a81d2` merge(처음 여는 PC는 프랑스어, 서류 발행·취소 기록, PatientFinder 방문 창)
+
+### 1. 빈 점
+
+- 대기 목록 줄(`{v.chart_no} · {v.dept_code||''} · {v.doctor_name||''}`)과 가운데 환자 머리(`PatientHeader`: `{p.chart_no} · {p.dept_code} · {p.doctor_name}`)가 과·의사가 없으면 「26-00030 · ·」였습니다.
+- 이제 빈 값을 빼고 잇습니다: `[…].filter(Boolean).join(' · ')`. 접수 `6f6f86a`, 공용 `PatientChart`과 같은 방식입니다.
+- 나머지 두 곳은 해당 없음:
+  - 수납 완료 상세 머리(`차트번호 · 이름 · 날짜`): 세 값이 늘 있음.
+  - 영수내역 카드: 진료과 하나만 따로 보여 줌.
+- 확인: 격리 스택에서 진료과 없는 내원 → 「26-00001」만(아래 3).
+
+### 2. 서류 발행·취소의 길
+
+- 수납 화면의 **Documents**와 **Ordonnance ext.** 단추는 공용 `components/DocumentModal.jsx`를 그대로 씁니다.
+  - 발행: `POST /api/documents`
+  - 취소: `POST /api/documents/:id/void`
+  - 기록: `GET /api/documents/patient/:id`
+- **수납만의 다른 길은 없습니다.** 영수증 인쇄(`Receipt.jsx`)는 서류 기록을 만들지 않습니다 — 영수는 `billing`에, 취소·정정은 이미 변경 기록(`payment.receipt.*`)에 남습니다.
+- 진료 세션이 붙이는 서류 기록이 그 라우트에 있으면 수납에서 낸 서류도 같이 남습니다.
+
+### 3. 설명서 `manual-fr/payment.md` 마지막 점검
+
+- 정정·취소·미수 수납·Caisse du jour·금액 표기를 이번 세션에서 격리 스택으로 본 화면 글자와 하나씩 맞췄습니다.
+  - 단추 · 꼬리표 · 창 문구 · 「5 000」 표기 모두 같습니다.
+  - 영수증 창 단추 「Fermer」 · 「🖨 Imprimer Reçu」도 확인했습니다.
+- 더한 것 세 줄:
+  - §7: 바뀐 영수는 보라 테두리.
+  - §8: 취소는 빨강 테두리.
+  - §12: 정정으로 바뀐 옛 영수증을 다시 뽑으면 종이에는 **ANNULÉ**가 찍힌다(새 영수증이 「Remplace le(s) reçu(s)」).
+- 최종본으로 묶어도 됩니다.
+
+### 기록
+
+- **바꾼 파일**: `frontend/src/pages/Payment.jsx`(두 줄), `wiki/manual-fr/payment.md`, `wiki/modules/payment.md`(8절 `78ee3c9` 채움 + 이 줄)
+- **공용 파일 · DB 마이그레이션 · 다른 세션에 부탁**: 없음
+
 ## 2026-09-30 — 다시 통합 시험의 수납 몫: 취소·바뀐 영수를 흐리게 하지 않음 · 설명서 §5
 
 - **상태**: 확인 요청
