@@ -21,8 +21,8 @@ doctor, the laboratory, the pharmacy and the till in French, with a partial paym
 settlement, a correction and a cancelled test; what did not hold was fixed and the day was
 run again. The staff guide in French (`wiki/manual-fr`) was written from those screens.
 
-The screen can now be light as well as dark, chosen by each person. The dark screen is
-unchanged.
+The screen can now be light as well as dark, chosen by each person, and the dark screen
+was brought up to the same contrast line as the light one - measured, not judged by eye.
 
 Migrations 019 to 037 are applied by the server when it starts. **Take a backup before
 updating and another one after**: a backup from before the update cannot be restored onto
