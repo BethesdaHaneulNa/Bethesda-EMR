@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 판독 보고서: 견본 그림 둘을 지금 서식으로 다시 뽑음 · 설명서를 맞춤 (문서만) · 검사 날짜에 대한 답
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `2e17872`를 ff로 당긴 뒤 — 마이그레이션 041 포함). 문서·그림만. **PACS 저장소** — 없음
+- **한 일**:
+  1. **견본 그림 둘**을 지금 서식으로 다시 뽑음 — `wiki/reference/design/imaging-report-sample-fr.png`(가짜 환자 RAKOTO Jean, Chest PA, 영상 2장), `…-sample-long-name-fr.png`(가짜 환자의 긴 이름 · 긴 병원 이름 · 긴 의사 이름). 둘 다 **검사 이름 옆 종류 코드 없음**(총괄 `2e17872`), **서류 번호 없음**(맨 아래 «Émis le 2026-10-01 13:53»만). 격리 EMR에서 「🖨 Émettre et imprimer」가 인쇄 창에 쓰는 HTML을 그대로 받아 → Chrome으로 PDF → 그림(909×1287, 전과 같은 크기). 받은 HTML에 `D26-`·`N° document`·`(CR)` 0건. 긴 이름 견본을 위해 격리 DB의 병원·의사 이름을 잠깐 길게 바꿨다가 되돌림.
+  2. **글**: 프랑스어 설명서 9절 2번(«le nom de l'examen (sans le code du type d'appareil ; en petit, qui l'a demandé et le nombre d'images)»), 모듈 위키 2.4.1 2번(검사 이름만 — 종류 코드 없음, 실장님 말씀; 맨 아래는 발행 일시만), 4절·P-32에서 「(AS)」를 말하던 두 곳, 8절. (설명서 9절과 2.4.1에는 「(CR)」이라는 글자가 원래 없었음 — 종이를 설명하는 문장만 맞춤.)
+- **바꾼 파일**: `wiki/reference/design/imaging-report-sample-fr.png`, `wiki/reference/design/imaging-report-sample-long-name-fr.png`, `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음. (`RadiologyReadings.jsx`의 `reportValues`는 `modality`를 아직 넘기지만 서식이 안 씀 — 그대로 둠.)
+- **확인한 방법**: 위 두 그림을 눈으로(제목·날짜·환자 칸·Examen 「Chest PA」·둘째 줄·Compte-rendu·맨 아래 병원·판독의·서명 줄·«Émis le …»·쪽 번호 1 / 1). 긴 이름: 이름 네 줄·병원 이름 두 줄·의사 이름 두 줄, 잘림 없음(전과 같은 모습).
+- **확인 못 한 것**: en·ko 견본(그림은 fr만 둠 — 전과 같음). 진짜 프린터.
+- **보고서 머리의 날짜에 대한 답 (짓지 않음 — 일의 양만)**:
+  - 지금: `reportValues`가 **영상이 EMR에 도착했다고 적힌 날**(`worklist_log.images_received_at`)을 쓰고, 영상 없이 판독만 있으면 내원일. 그래서 09-28에 낸 오더의 영상이 10-01에 들어오면 10-01. 실제 진료에서는 찍은 날 = 도착한 날이라 맞지만, 장비가 며칠 뒤에 몰아서 보내거나 영상 복원 뒤에는 어긋날 수 있음.
+  - **값싸게 됩니다 — 작은 일.** 브리지가 도착을 알릴 때 이미 Orthanc에서 받은 답(`/tools/find` Expand)에 `MainDicomTags.StudyDate`가 들어 있어 **Orthanc에 더 물을 것이 없음**.
+    1. PACS 저장소 `bridge.py`: `/study-arrived`에 `study_date` 한 줄(브리지 이미지 다시 빌드 — 올릴 때 브리지 컨테이너가 다시 뜸. USB 묶음 판).
+    2. EMR: 마이그레이션 8xx 하나(`worklist_log.image_study_date DATE`), `/study-arrived`가 `YYYYMMDD`일 때만 저장(3줄), `readings/patient`가 내주고(1줄), `reportValues`가 「영상의 날짜 → 도착한 날 → 내원일」 순으로(1줄), 되찾기(`pacs.relink.js`)도 같이 채움(2줄).
+    3. 섞여도 됨: 옛 브리지 + 새 EMR → 칸이 비어 지금처럼 도착한 날 / 새 브리지 + 옛 EMR → 모르는 칸은 무시.
+    4. 이미 도착한 검사는 칸이 비어 있음 → 지금처럼 도착한 날(원하면 영상 창을 열 때 되찾기의 한 번의 물음이 가져오는 답으로 채울 수 있음 — 몇 줄).
+    5. 시험: 장비 흉내가 이미 `STUDY_DATE`로 날짜를 정할 수 있어 격리에서 바로(다른 날짜·빈 날짜·형식이 틀린 날짜).
+  - **조심할 것**: 장비의 시계가 틀리면 그 날짜가 종이에 찍힘(지금은 EMR 서버의 날짜라 그럴 일이 없음). 영상에 StudyDate가 비어 있는 장비는 도착한 날로 떨어짐. 목록의 Date 칸(내원일)은 그대로 둘지 같이 정해야 함.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-10-01 — 순서서: Modality를 직접 입력하는 곳 · 판독 보고서의 「(AS)」「(ES)」 확인 (문서만)
 
 - **상태**: 확인 요청

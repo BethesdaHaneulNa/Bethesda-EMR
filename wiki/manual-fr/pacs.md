@@ -132,7 +132,7 @@ Une case grisée ne peut pas être cochée ; laissez la souris dessus pour lire 
 Quand un patient est adressé ailleurs, le compte-rendu part avec les images : une feuille A4 par examen.
 
 1. Ouvrez **🩻 Imagerie** (Consultation ou Paiement) et choisissez l'examen dans la liste.
-2. À droite, cliquez sur **🖨 Imprimer**. La feuille s'affiche : en haut le titre et la date de l'examen, le patient (nom, N° dossier, sexe et âge, date de naissance), l'examen, le compte-rendu en entier ; en bas le nom de la clinique, le médecin qui a lu et la place pour signer.
+2. À droite, cliquez sur **🖨 Imprimer**. La feuille s'affiche : en haut le titre et la date de l'examen, le patient (nom, N° dossier, sexe et âge, date de naissance), le nom de l'examen (sans le code du type d'appareil ; en petit, qui l'a demandé et le nombre d'images), le compte-rendu en entier ; en bas le nom de la clinique, le médecin qui a lu et la place pour signer.
 3. **Langue de la feuille** : **FR**, **EN** ou **KO**, en haut de la fenêtre. La feuille est en français au départ, quelle que soit la langue de l'écran. Le compte-rendu lui-même reste tel que le médecin l'a écrit.
 4. Cliquez sur **🖨 Émettre et imprimer**. L'impression est notée dans le dossier comme un document émis (historique de **Documents**, journal des modifications), comme les autres documents remis au patient. La feuille porte la date et l'heure d'émission, en bas à droite ; le numéro du document n'est pas imprimé — il reste dans l'EMR et s'affiche dans la fenêtre (**Émis : D26-…**).
 5. **Imprimer de nouveau** réimprime la même feuille sans l'émettre une seconde fois. Si vous changez de langue, une nouvelle feuille est émise.
