@@ -23,6 +23,17 @@ stayed black until the window was resized. Stone's own red line *Not for diagnos
 shown. The **PACS web/viewer address** field in Settings → Order Feed is kept but marked unused, so an
 older backup restores cleanly.
 
+### Comparing with an earlier exam
+
+Two chest films of different dates could not be put side by side: the image window was only allowed the
+one study of the order it was opened from. It may now also load the same patient's other imaging studies
+- only those the EMR linked to that patient's own orders, whose images carry the right patient number,
+and whose order was not cancelled (nine at most). Above the images a button, **⇆ Comparer avec … du …**,
+splits the screen in two with the opened exam on the left and the same exam from the time before on the
+right; a click on any exam in the left-hand list replaces the right-hand image. The reading box still
+belongs to the opened order. Another patient's images are refused exactly as before, and opening an exam
+replaces what the previous image window was allowed to load.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being

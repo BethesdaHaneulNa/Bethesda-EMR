@@ -9,7 +9,8 @@
 //
 // Who may: an iframe cannot send the EMR's bearer token, so GET /api/pacs/viewer-url
 // (JWT + consultation) sets a short-lived signed cookie naming the user and the
-// studies they opened. Every request here re-checks that cookie, that the account
+// studies of the order they opened last (its own study and the same patient's
+// others, to compare). Every request here re-checks that cookie, that the account
 // is still active with the consultation permission, and that the path is one the
 // Stone viewer needs for one of those studies - measured on the isolated stack:
 // all GET, and every data request carries the StudyInstanceUID in its path or in
@@ -17,6 +18,8 @@
 // list or open another patient's images.
 
 const express = require('express');
+const fs = require('fs');
+const pathLib = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const https = require('https');
@@ -31,7 +34,7 @@ const router = express.Router();
 const COOKIE = 'px_viewer';
 const COOKIE_PATH = '/api/pacs/viewer/';
 const COOKIE_MAX_AGE = 30 * 60;          // seconds
-const MAX_STUDIES = 5;                    // "open in a new tab" of recent ones still works
+const MAX_STUDIES = 12;                   // the opened study + the same patient's others (compare)
 const UID = '[0-9.]{1,64}';
 
 // A key of its own, derived from JWT_SECRET: the cookie cannot be turned into a
@@ -71,12 +74,14 @@ function readCookie(req) {
 }
 
 // Called by GET /api/pacs/viewer-url once it has checked the JWT and the
-// consultation permission: add this order's study to the viewer cookie.
+// consultation permission: the viewer cookie now opens this order's study and the
+// same patient's other studies that viewer-url listed (to compare) - nothing else.
+// Each call replaces the cookie: what was opened before (another patient, in
+// another tab) stops loading. It never added up in a browser anyway - the cookie's
+// path keeps it from being sent to /viewer-url - and one patient at a time is the
+// rule worth having now that a cookie carries a patient's set of studies.
 function grantViewerCookie(req, res, studyUids) {
-  const prev = verify(readCookie(req));
-  const kept = prev && prev.u === req.user.id ? prev.s : [];
-  const wanted = studyUids.filter(u => new RegExp('^' + UID + '$').test(u));
-  const studies = [...wanted, ...kept.filter(u => !wanted.includes(u))].slice(0, MAX_STUDIES);
+  const studies = studyUids.filter(u => new RegExp('^' + UID + '$').test(u)).slice(0, MAX_STUDIES);
   const token = sign({ u: req.user.id, s: studies, e: Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE });
   res.append('Set-Cookie', `${COOKIE}=${token}; Path=${COOKIE_PATH}; HttpOnly; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`);
 }
@@ -265,6 +270,16 @@ const VIEWER_CSP = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
 ].join('; ');
+// "Compare with an earlier exam": a small script of ours added to the Stone page
+// when the window opens with several studies of the same patient (viewer-url puts
+// them in ?study=A,B,...). Stone has no URL parameter or message for "split the
+// screen and put that study on the right", so the script calls Stone's own page
+// functions. It is browser code, kept in its own file and served from here.
+const COMPARE_PATH = '/px/compare.js';
+let COMPARE_JS = '';
+try { COMPARE_JS = fs.readFileSync(pathLib.join(__dirname, 'pacs.viewer.compare.js'), 'utf8'); } catch (e) { COMPARE_JS = ''; }
+const COMPARE_TAG = '<script src="../px/compare.js"></script>';
+
 function viewerHeaders(res) {
   res.removeHeader('Content-Security-Policy');
   res.setHeader('Content-Security-Policy', VIEWER_CSP);
@@ -280,9 +295,15 @@ router.all('*', async (req, res) => {
   const grant = verify(readCookie(req));
   if (!grant) return isPage(path) ? explain(res, 401, ...EXPIRED) : res.status(401).json({ error: 'Viewer session missing or expired' });
 
-  // Without ?study= Stone would list every study, which is refused anyway.
-  if (isPage(path) && !grant.s.includes(String(req.query.study || ''))) {
+  // Without ?study= Stone would list every study, which is refused anyway. The page
+  // may name several (the opened one first, then the same patient's others): each
+  // must be in the cookie.
+  const pageStudies = isPage(path) ? String(req.query.study || '').split(',') : [];
+  if (isPage(path) && (!pageStudies[0] || pageStudies.some(u => !grant.s.includes(u)))) {
     return explain(res, 403, ...NOT_OPENED);
+  }
+  if (path === COMPARE_PATH) {
+    return res.status(200).set({ 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'private, no-store' }).send(COMPARE_JS);
   }
   const study = studyOf(path, req.query);
   if (study === null || (study && !grant.s.includes(study))) {
@@ -307,8 +328,8 @@ router.all('*', async (req, res) => {
   } catch (e) { return isPage(path) ? explain(res, 200, ...UNREACHABLE) : res.status(PACS_DOWN).json({ error: 'Bad PACS address' }); }
 
   if (isPage(path)) {
-    const pics = await studyPictures(cfg, String(req.query.study));
-    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(String(req.query.study))) ? NOT_THERE : NOT_ARRIVED));
+    const pics = await studyPictures(cfg, pageStudies[0]);
+    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
     if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
   }
 
@@ -338,6 +359,21 @@ router.all('*', async (req, res) => {
     // An upstream 502-504 would be swapped by nginx for "backend not reachable";
     // pass it on as 424 so the log still says it was the image server.
     const code = up.statusCode || PACS_DOWN;
+    if (isPage(path) && code === 200 && pageStudies.length > 1 && COMPARE_JS) {
+      // Several studies: add our script to Stone's page (it is small; read it whole).
+      const chunks = [];
+      up.on('data', c => chunks.push(c));
+      up.on('end', () => {
+        let html = Buffer.concat(chunks).toString('utf8');
+        const at = html.lastIndexOf('</body>');
+        html = at >= 0 ? html.slice(0, at) + COMPARE_TAG + html.slice(at) : html + COMPARE_TAG;
+        delete headers['content-length']; delete headers['content-encoding'];
+        res.writeHead(200, headers);
+        res.end(html);
+      });
+      up.on('error', () => { if (!res.headersSent) explain(res, 200, ...UNREACHABLE); else res.destroy(); });
+      return;
+    }
     res.writeHead([502, 503, 504].includes(code) ? PACS_DOWN : code, headers);
     up.pipe(res);
   });
