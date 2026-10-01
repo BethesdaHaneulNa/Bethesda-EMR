@@ -1158,6 +1158,7 @@ export default {
   se_fld_moveKind: "Correction",
   se_mvk_move: "déplacement",
   se_mvk_swap: "échange",
+  se_mvk_reapply: "réappliquée après une restauration",
   se_fld_readingMoved: "Compte-rendu déplacé avec les images",
   se_fld_readingsExchanged: "Comptes-rendus échangés aussi",
   se_modListHint: "Avec une modalité et le Feed Worklist activé, cette demande part vers l'appareil et apparaît dans la liste Imagerie / comptes rendus, même si son type est « Acte ».",

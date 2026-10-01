@@ -1158,6 +1158,7 @@ export default {
   se_fld_moveKind: "옮긴 방식",
   se_mvk_move: "옮김",
   se_mvk_swap: "맞바꿈",
+  se_mvk_reapply: "복원 뒤 다시 적용",
   se_fld_readingMoved: "판독도 함께 옮김",
   se_fld_readingsExchanged: "판독도 맞바꿈",
   se_modListHint: "영상 종류를 넣고 워크리스트를 켜면 이 오더는 장비 목록으로 가고, 종류가 「처치」여도 영상/판독 목록에 나옵니다.",

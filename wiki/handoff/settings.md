@@ -2,6 +2,15 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 기록 탭: 영상 옮김의 세 번째 방식 「복원 뒤 다시 적용」 (`kind: reapply`)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `f162aec` merge 위)
+- **무엇을**: PACS `f60a13f`가 `pacs.study.move` 줄에 `kind: 'reapply'`(복원으로 옛 영상이 돌아왔을 때 영상 서버에서 바로잡기를 다시 함)를 쓰게 됨. 기록 탭이 그 값을 「복원 뒤 다시 적용 / re-applied after a restore / réappliquée après une restauration」로 읽고(프랑스어는 칸 이름 「Correction」에 맞춰 여성형), **요약 줄 앞에도** 그 말을 붙임: 「Réappliquée après une restauration — Carotid US (ACC…) → Abdomen US (ACC…)」.
+- **화살표**: reapply 줄은 옮김을 다시 한 것인지 맞바꿈을 다시 한 것인지 `kind`로는 알 수 없음. PACS가 맞바꿈일 때만 `before`에도 `image_count`를 적으므로, **양쪽에 영상 수가 있으면 ⇄, 아니면 →**.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 한 줄씩) · `wiki/03-change-log.md`(move 줄의 kind 값) · `wiki/modules/settings.md`(8절) · 이 노트
+- **확인한 방법**: `npm run build`. 격리 스택(9187)에는 영상 서버가 없어, `pacs.move.js`가 쓰는 모양 그대로의 줄 셋(다시 적용 — 옮김 / 다시 적용 — 맞바꿈 / 보통 맞바꿈)을 격리 DB에 넣고 기록 탭을 프랑스어·한국어로 읽음 — 값·요약·화살표 모두 맞음, 보통 맞바꿈 줄은 전과 같음. **실제 복원 뒤 다시 적용이 남긴 줄로는 보지 못했음.** 스택 `down -v`.
+
 ## 2026-10-01 — 권한 시험 표: 빠져 있던 길 19개 (화면 변화 없음)
 
 - **상태**: 확인 요청

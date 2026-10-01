@@ -123,7 +123,13 @@ export function auditSummary(t, row) {
     var b = row.before_value, a = row.after_value;
     if (b && a && b.order_name && a.order_name) {
       var one = function (o) { return o.order_name + (o.accession_no ? ' (' + o.accession_no + ')' : ''); };
-      return one(b) + (a.kind === 'swap' ? ' ⇄ ' : ' → ') + one(a);
+      // kind 'reapply' (PACS f60a13f): a correction made again on the image server after a
+      // restore brought the old images back. The line does not say which kind it was made
+      // again as; an exchange is the one that counts the images on both sides.
+      var again = a.kind === 'reapply';
+      var both = a.kind === 'swap' || (again && b.image_count != null);
+      var said = again && t.se_mvk_reapply ? t.se_mvk_reapply.charAt(0).toUpperCase() + t.se_mvk_reapply.slice(1) + ' — ' : '';
+      return said + one(b) + (both ? ' ⇄ ' : ' → ') + one(a);
     }
   }
   if (row.action === 'reception.patient.edit' && row.summary) {
@@ -174,8 +180,9 @@ export function auditValue(t, field, v, ctx) {
   // the language a document was printed in, in its own name
   if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
   if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
-  // moved images: put under the other order, or the two orders' images exchanged
-  if (field === 'kind' && (v === 'move' || v === 'swap')) return t['se_mvk_' + v] || v;
+  // moved images: put under the other order, the two orders' images exchanged, or the
+  // correction made again after a restore
+  if (field === 'kind' && (v === 'move' || v === 'swap' || v === 'reapply')) return t['se_mvk_' + v] || v;
   // A receipt's status in the payment screen's words (py_st*): paid / partial / unpaid /
   // cancelled / waived. A correction line lists one per receipt (an array, payment B4
   // ada48fa), next to receipts in the same order.
