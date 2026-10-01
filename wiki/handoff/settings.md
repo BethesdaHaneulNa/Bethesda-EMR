@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 로그 탭: 영상을 인쇄함 / 반출함 (`pacs.images.print` · `pacs.images.export`)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `a43cf92` merge 위 — PACS `346c904` 포함)
+- **무엇을**
+  - **종류**(종류 거르개에도): `pacs.images.print` 「영상을 인쇄함 / Images printed / Images imprimées」 · `pacs.images.export` 「영상을 반출함 (디스크 · 파일) / Images given out (disc / file) / Images remises (disque / fichier)」.
+  - **새 칸**: `per_page` 「종이 한 장의 영상 수 / Images per sheet / Images par feuille」 · `medium` 「매체 / Medium / Support」, 값 zip 「ZIP 파일 / ZIP file / fichier ZIP」 · disc 「디스크 (CD · DVD) / disc (CD / DVD) / disque (CD / DVD)」 · iso 「ISO 파일 / ISO file / fichier ISO」 · folder 「폴더 / folder / dossier」. 모르는 값은 저장된 글자 그대로.
+  - 이미 있던 칸: `order_name` · `accession_no` · `image_count` · `lang`(언어 — 그 언어의 이름으로).
+  - **요약 줄**: PACS가 영어로 적는 「4 image(s) of X (…) printed」 대신 「X (번호)」 — 낱말이 없어 어느 언어에서나 같고, 장수는 칸에 있음. 줄에 `order_name`이 없으면 적힌 요약 그대로.
+  - **칸 순서**: 「언어」(`lang`)를 영상 칸 뒤로 옮김 → 인쇄 줄이 검사 → 검사 번호 → 영상 수 → 한 장의 영상 수 → 언어. 서류 발행 줄(서류 번호 → 서류 → 언어)은 그대로인 것을 화면에서 확인.
+- **반출(export) 줄은 아직 쓰이지 않음**: PACS 설계안(`wiki/reference/image-print-export-design.md` 4-2절·8절)이 말하는 칸은 「어느 검사들 · 영상 몇 장 · 크기 · 매체」인데 **검사 수·크기의 칸 이름이 아직 코드에 없음**(`pacs.export.js`에는 인쇄 줄만). 그래서 종류의 글과 `medium`만 넣음. PACS가 칸 이름을 정하면(예: 검사 수, 크기) 이름표와 크기 표시(MB)를 붙일 것 — 그때까지 그 칸은 저장된 이름으로 보임.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 8줄씩) · `wiki/03-change-log.md`(두 줄) · `wiki/modules/settings.md`(8절) · 이 노트. 백엔드는 건드리지 않음.
+- **확인한 방법**: `npm run build`. 격리 스택(9187)에는 영상 서버가 없어 실제 인쇄를 할 수 없으므로, `pacs.export.js`가 쓰는 모양 그대로의 인쇄 줄 둘(검사 번호 있음·없음)과 설계안대로 지어낸 반출 줄 둘(disc · zip), 서류 발행 줄 하나를 격리 DB에 넣고 로그 탭을 프랑스어·한국어로 읽음. **실제 인쇄가 남긴 줄로는 보지 못했음.** 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-01 — 문서: 검사항목의 글자 결과 「고를 값」 목록 (임상병리 048)
 
 - **상태**: 확인 요청 — 문서만

@@ -32,6 +32,10 @@ export var AUDIT_ACTIONS = {
   // the images of one order put under another order of the same patient, or the images
   // of two orders exchanged (PACS, routes/pacs.move.js); the field "kind" says which
   'pacs.study.move': 'se_act_studyMove',
+  // an exam's images given out of the clinic: printed on paper, or copied to a disc or a file
+  // (PACS, routes/pacs.export.js; the copy is still to come when this was written)
+  'pacs.images.print': 'se_act_imagesPrint',
+  'pacs.images.export': 'se_act_imagesExport',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
@@ -78,7 +82,10 @@ var FIELDS = {
   // the tick of the order-code window, by its own label; on / off
   price_editable: 'se_priceEditable',
   // documents (document.routes.js): number, which document, its language; voiding
-  doc_no: 'se_fld_docNo', template_code: 'se_fld_template', lang: 'se_fld_docLang',
+  // (lang is listed further down, after the image fields: an issued document's line has
+  // nothing between its template and its language, and a printed exam reads exam, number,
+  // images, per sheet, language)
+  doc_no: 'se_fld_docNo', template_code: 'se_fld_template',
   voided: 'se_fld_voided', void_reason: 'se_fld_voidReason',
   // a visit's transfer: department_id (above, shown as the department) and the doctor by
   // name - the line keeps the name as it was, none is "—" - and the reason as typed
@@ -87,7 +94,12 @@ var FIELDS = {
   // number), moved or exchanged, how many images, whether the reading went with them
   accession_no: 'se_fld_accessionNo', kind: 'se_fld_moveKind',
   // pacs.study.relink: the study now linked, how many images, whose they say they are
-  study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount', image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
+  study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount',
+  // pacs.images.print / export: how many pictures on one sheet; what the copy was made on
+  per_page: 'se_fld_perPage', medium: 'se_fld_medium',
+  // the language a document or the image sheets were printed in
+  lang: 'se_fld_docLang',
+  image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
   reading_moved: 'se_fld_readingMoved', readings_exchanged: 'se_fld_readingsExchanged',
   // the reason typed for a transfer or for moved images: after what it explains
   reason: 'se_fld_reason',
@@ -135,6 +147,11 @@ export function auditSummary(t, row) {
       var said = again && t.se_mvk_reapply ? t.se_mvk_reapply.charAt(0).toUpperCase() + t.se_mvk_reapply.slice(1) + ' — ' : '';
       return said + one(b) + (both ? ' ⇄ ' : ' → ') + one(a);
     }
+  }
+  // Printed or copied images: the server's summary is an English sentence ("5 image(s) of X
+  // (..) printed"); the exam and its number say it in any language, the count is a field.
+  if ((row.action === 'pacs.images.print' || row.action === 'pacs.images.export') && row.after_value && row.after_value.order_name) {
+    return row.after_value.order_name + (row.after_value.accession_no ? ' (' + row.after_value.accession_no + ')' : '');
   }
   if (row.action === 'reception.patient.edit' && row.summary) {
     return row.summary.split(/,\s*/).map(function (f) { return auditFieldLabel(t, f); }).join(', ');
@@ -184,6 +201,8 @@ export function auditValue(t, field, v, ctx) {
   // the language a document was printed in, in its own name
   if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
   if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
+  // what a copy of the images was made on: zip (the EMR screen), disc / iso / folder (the CD program)
+  if (field === 'medium' && t['se_medium_' + v]) return t['se_medium_' + v];
   if (field === 'price_editable' && typeof v === 'boolean') return v ? (t.se_on || '✓') : (t.se_off || '✗');
   // moved images: put under the other order, the two orders' images exchanged, or the
   // correction made again after a restore
