@@ -42,5 +42,7 @@ export function ModalityField(props) {
 
 // Why the value matters, under the fields at full width (the field itself sits in a narrow column).
 export function ModalityHint(props) {
-  return <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}>{props.t.se_modHint}</div>;
+  // The second line: an order that goes to the worklist is treated as an imaging exam whatever
+  // its type (PACS, 2026-10-01) - a rectoscopy filed as a procedure still gets its reading.
+  return <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}>{props.t.se_modHint}<div style={{ marginTop: 4 }}>{props.t.se_modListHint}</div></div>;
 }

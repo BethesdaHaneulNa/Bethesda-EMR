@@ -1094,6 +1094,15 @@ export default {
   se_modOtherPh: "la valeur demandée par l'appareil (ex. AS)",
   se_modHint: "Un appareil ne reçoit que les demandes dont la modalité est exactement la sienne, lettre pour lettre. Si les patients n'apparaissent pas sur l'appareil, mettez ici la valeur Modality affichée par device-watch (dossier PACS).",
   se_errModality: "La modalité contient 1 à 16 lettres, chiffres ou tirets bas (par exemple US, CR, AS).",
+  se_act_studyRelink: "Images retrouvées par le numéro d'accession",
+  se_fld_studyUid: "N° d'étude (UID)",
+  se_fld_imageCount: "Images",
+  se_fld_imagePatientId: "N° patient dans les images",
+  se_fld_patientCheck: "Contrôle du patient",
+  se_pchk_match: "concorde",
+  se_pchk_mismatch: "ne concorde pas",
+  se_pchk_missing: "pas de numéro patient dans les images",
+  se_modListHint: "Avec une modalité et le Feed Worklist activé, cette demande part vers l'appareil et apparaît dans la liste Imagerie / comptes rendus, même si son type est « Acte ».",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

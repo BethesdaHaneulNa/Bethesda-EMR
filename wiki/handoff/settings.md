@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 기록 탭에 pacs.study.relink 이름표 · 오더 코드 창 안내 한 줄
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `988bda0` merge 위, Modality 마이그레이션은 040)
+- **기록 탭** (`settingsAudit.js`, i18n)
+  - 종류 `pacs.study.relink` → 「Images retrouvées par le numéro d'accession / 영상을 접수번호로 다시 연결 / Images found again by accession number」(총괄의 예 그대로 — 무슨 일이 있었는지를 말하고 「누가 고쳤다」로 읽히지 않음). 종류 거르기 목록에 나옴.
+  - 칸: `study_uid` 「N° d'étude (UID) / 영상 검사 번호(UID)」 · `image_count` 「Images / 영상 수」 · `image_patient_id` 「N° patient dans les images / 영상 속 환자 번호」 · `patient_check` 「Contrôle du patient / 환자 대조」.
+  - `patient_check` 값: match 「concorde / 맞음」 · mismatch 「ne concorde pas / 맞지 않음」 · missing 「pas de numéro patient dans les images / 영상에 환자 번호 없음」(키 `se_pchk_*`), 빈 값은 「—」.
+  - **모듈 거르기**: 기록 탭에는 모듈을 고르는 칸이 따로 없음(종류 목록 하나뿐, 서버는 `action=pacs`처럼 점 없는 값을 모듈로 받지만 화면이 보내지 않음) — 더할 것 없음.
+- **오더 코드 편집 창의 안내 한 줄** (`settingsModality.jsx` `ModalityHint`, `se_modListHint`): 「Avec une modalité et le Feed Worklist activé, cette demande part vers l'appareil et apparaît dans la liste Imagerie / comptes rendus, même si son type est « Acte ». / 영상 종류를 넣고 워크리스트를 켜면 이 오더는 장비 목록으로 가고, 종류가 「처치」여도 영상/판독 목록에 나옵니다.」 넣을 만하다고 봄 — 견본의 내시경 두 줄(E1·E2)이 바로 종류 「Acte」 + ES + 워크리스트이고, 직장경도 그렇게 넣게 될 것이라 「판독은 어디서 쓰나」의 답이 됨.
+- **위키**: `wiki/03-change-log.md` 1절 표에 한 줄(전과 줄 아래), 모듈 위키 8절.
+- **공용 파일 변경**: i18n `se_act_studyRelink`, `se_fld_studyUid`·`se_fld_imageCount`·`se_fld_imagePatientId`·`se_fld_patientCheck`, `se_pchk_match`·`se_pchk_mismatch`·`se_pchk_missing`, `se_modListHint`.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `settingsModality.jsx` · i18n 3개 · 위키 3개
+- **확인한 방법** (격리 9187): `npm run build`, login 시험. 되찾기를 실제로 일으키려면 영상 서버에서 검사 번호를 바꿔야 해서, `pacs.relink.js`의 `writeAudit` 모양대로 두 줄을 넣어 봄 — ① `study_uid`(64자 가까운 긴 값)·`image_count` 12 → 14·`patient_check` match → mismatch ② `image_patient_id` 「26-00017」 → 빈 값·match → missing. fr 「Images retrouvées par le numéro d'accession · 261001-3 - Abdomen US · RAKOTO Jean 26-00017 · N° d'étude (UID): 1.2.826… → 1.2.276… / Images: 12 → 14 / Contrôle du patient: concorde → ne concorde pas」, 둘째 줄 「N° patient dans les images: 26-00017 → — / … → pas de numéro patient dans les images」. ko 「영상을 접수번호로 다시 연결 … 영상 수: 12 → 14 / 환자 대조: 맞음 → 맞지 않음」. 긴 UID는 칸 안에서 줄이 바뀌고 표가 넘치지 않음. 오더 코드 창에 안내 두 줄.
+
 ## 2026-10-01 — 오더 코드의 영상 종류(Modality)를 목록에 없는 값도 (실장님 요청 — 직장경 장비의 AS)
 
 - **상태**: 확인 요청
