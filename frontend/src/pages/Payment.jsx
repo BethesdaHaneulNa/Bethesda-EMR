@@ -9,6 +9,7 @@ import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
+import { LabResultsWindow } from '../components/LabResults.jsx';
 import { ReceiptModal } from '../components/Receipt.jsx';
 import { packWord } from '../documents/rx-dosing.js';
 
@@ -123,6 +124,19 @@ export default function PaymentPage() {
   var rxs2 = useState(false), rxOpen = rxs2[0], setRxOpen = rxs2[1];
   var chs2 = useState(false), chartOpen = chs2[0], setChartOpen = chs2[1];
   var rdo2 = useState(false), readingsOpen = rdo2[0], setReadingsOpen = rdo2[1];
+  // the laboratory's results window (components/LabResults.jsx): the till prints a patient's
+  // blood results too (the director, 2026-10-01). The window is the laboratory's - this
+  // screen only opens it for the chosen patient.
+  var lbo = useState(false), labOpen = lbo[0], setLabOpen = lbo[1];
+  // The tool row with one more button no longer fits a 1366 px screen in French or English
+  // (40 and 63 px too long; Korean fits). When the row is longer than the screen its
+  // buttons drop their pictograph and keep their words - nothing becomes a riddle, and the
+  // colours still tell them apart. Measured, not guessed: full labels are drawn first and
+  // the row is checked before the browser paints. It is measured again whenever what the
+  // row holds changes (language, tab, patient, the pay buttons) or the window is resized.
+  var toolRowRef = useRef(null);
+  var tcs = useState(false), toolsTight = tcs[0], setToolsTight = tcs[1];
+  var tks = useState(0), setToolsTick = tks[1];
   var cps2 = useState({}), consultPrices = cps2[0], setConsultPrices = cps2[1];
   // Every button that writes money goes through once(): while one request is in
   // flight the others are refused and shown disabled. A second click used to store
@@ -188,6 +202,18 @@ export default function PaymentPage() {
   };
 
   useEffect(function(){ loadLists(); },[]);
+  useLayoutEffect(function(){ setToolsTight(false); }, [langCtx.lang, tab, sel ? sel.id : 0, !!billItems, viewingPast]);
+  useEffect(function(){
+    // full labels again, and a render even when they were already full, so the row is measured
+    function again(){ setToolsTight(false); setToolsTick(function(n){ return n + 1; }); }
+    window.addEventListener('resize', again);
+    return function(){ window.removeEventListener('resize', again); };
+  },[]);
+  useLayoutEffect(function(){
+    var el = toolRowRef.current;
+    if(el && !toolsTight && el.scrollWidth > el.clientWidth + 1) setToolsTight(true);
+  });
+  function pic(e){ return toolsTight ? '' : e + ' '; }
   // Quiet refresh (2026-10-01): the lists and the day follow the server every 30 s and
   // when the tab comes back, as reception and pharmacy do - a screen left open overnight
   // no longer shows yesterday as today. It does not touch the open patient or the bill
@@ -584,15 +610,16 @@ export default function PaymentPage() {
   return(
     <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,height:'100vh',display:'flex',flexDirection:'column',fontSize:16}}>
       <TopBar />
-      <div style={TOOL_ROW}>
+      <div ref={toolRowRef} style={TOOL_ROW}>
         <button onClick={function(){setTab('waiting')}} style={tabBtn(tab==='waiting','var(--accent-a20)','var(--accent-text)','var(--accent-a50)')}>{L.waitingPay} ({dayCount()})</button>
         <button onClick={function(){setTab('completed')}} style={tabBtn(tab==='completed','var(--ok-a20)','var(--ok-text-2)','var(--ok-a50)')}>{viewingPast ? t.py_paidOn.replace('{date}', workDate) : L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
         <button onClick={loadLists} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button>
-        <button onClick={function(){setFinderOpen(true)}} style={toolBtn()}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
-        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
-        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.imagingList||t.reading}</button>
+        <button onClick={function(){setFinderOpen(true)}} style={toolBtn()}>{pic('🔍')}{t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>{pic('📄')}{t.documents}</button>
+        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>{pic('💊')}{t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>{pic('📋')}{t.chartViewer||'차트뷰어'}</button>
+        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>{pic('🩻')}{t.imagingList||t.reading}</button>
+        <button onClick={function(){ if(sel) setLabOpen(true); }} disabled={!sel} style={{background:sel?'var(--cyan-fill)':'var(--chip)',color:sel?'var(--on-fill-cyan)':'var(--text-4)',border:'1px solid '+(sel?'var(--cyan-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>{pic('🧪')}{t.labResultsTitle||'검사결과'}</button>
         <div style={{flex:1}}></div>
         {tab==='waiting'&&sel&&billItems&&!sel.needs_refund&&sel.status!=='cancelled'?(nothingToCharge()?(
           <span style={{color:'var(--ok-text)',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
@@ -782,6 +809,7 @@ export default function PaymentPage() {
           </div>
         </div>
       ) : null}
+      {labOpen && sel ? <LabResultsWindow patient={{ id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name }} onClose={function(){ setLabOpen(false); }} /> : null}
     </div>
   );
 
