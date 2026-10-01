@@ -2,6 +2,44 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상을 다른 오더로 옮기기 ① 서버(옮기기) + 실패 시험
+
+- **상태**: 확인 요청 (① 서버 — 영상 없는 오더로 옮기기. **다음**: ② 맞바꾸기 · 화면 ③ PACS 저장소)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `716121a`를 ff로 당긴 뒤). **PACS 저장소** — 없음(③에서)
+- **결정 받아 적음**(설계 메모 맨 위): 실장님 — EMR 단추로 짓기, **의사와 관리자**(사유 필수), **판독은 영상과 함께**. 총괄 — Q3~Q8은 메모의 추천안, 시리즈·영상 번호 그대로, `pacs.move.js`, `pacs.study.move`, 세션 번호 마이그레이션.
+- **한 일**:
+  1. **`backend/src/routes/pacs.move.js`**(새) — 길 넷: `GET /api/pacs/move-targets?order_item_id=` · `POST /api/pacs/move` · `GET /api/pacs/moves/patient/:id` · `POST /api/pacs/move/resume`. 권한 `consultation` 또는 `settings`. 순서·되돌림·이어 가기·고치는 태그·미리 막는 것은 모듈 위키 4절 「영상을 다른 오더로 옮기기 — 서버」.
+  2. **마이그레이션 `801_pacs_study_move.sql`**(세션 번호 — 다시 매겨 주세요): 표 `pacs_study_move` 하나(+색인 둘). `IF NOT EXISTS`, 다른 표는 안 건드림.
+  3. **`pacs.routes.js`**: ① 피드가 끝나지 않은 바로잡기의 오더를 뺌 ② `/study-arrived`가 그런 오더의 보고를 409로 ③ `viewer-url`이 그런 오더(EMR에 영상 없음)의 주소를 안 줌 + `correction_in_progress` ④ `isExam`을 새 파일 **`pacs.exam.js`**로(같은 뜻, 두 파일이 가져다 씀) ⑤ `pacs.move.js`의 길을 붙임.
+  4. **`utils/audit.js`**: `PACS_STUDY_MOVE: 'pacs.study.move'` 한 줄(+주석).
+- **Keep 확인(총괄의 물음)**: 검사 번호를 **새 값으로 넣으면서** `Keep: [SeriesInstanceUID, SOPInstanceUID]` + `KeepSource: true` + `Force` — **400이 나지 않습니다**(`OverwriteInstances` false 그대로). 400은 Study까지 셋을 모두 지킬 때만. 원본과 새 검사가 같은 영상 번호로 나란히 있고(Orthanc 안의 id는 다름), 새 영상에 `ModifiedFrom`이 붙음. 그래서 **메모의 추천대로 Keep**.
+- **총괄의 한 번 쓰는 스크립트와 다르게 한 것**: ① 시리즈·영상 번호 유지 ② `StudyDescription`을 늘 오더 이름으로 바꾸지 않고, **영상이 잘못 고른 오더의 이름을 달고 있을 때만**(장비가 자기 말로 적은 이름은 둠) — 요청 태그(`RequestedProcedure…`, `RequestAttributesSequence`)도 같은 규칙으로 함께 고침 ③ **받을 오더에 판독이 있고 옮길 판독도 있으면 막음**(`TARGET_HAS_READING`) — 스크립트는 덮어썼음. 옮길 판독이 없으면 받을 오더의 판독은 그대로 ④ 원본 삭제 전에 새 검사가 여전히 온전한지 다시 봄.
+- **제가 정한 것(다르게 하시려면 말씀해 주세요)**: 위 ②의 규칙을 「모든 영상이 그 값일 때만」에서 **「그 값을 가진 영상이 하나라도 있고 다른 값을 가진 영상이 없을 때」**로 — Orthanc는 고친 태그를 검사의 모든 영상에 쓰므로, 일부 영상에만 요청 태그가 있는 검사에서 잘못된 번호가 남는 것보다 없던 영상에 맞는 값이 들어가는 편이 낫다고 봄(실장님 원칙 「자료가 맞아야」). / 위 ③.
+- **바꾼 파일**: `backend/src/routes/pacs.move.js`(새), `backend/src/routes/pacs.exam.js`(새), `backend/sql/801_pacs_study_move.sql`(새), `backend/src/routes/pacs.routes.js`, `backend/src/utils/audit.js`, `wiki/modules/pacs.md`(4절·DB 표·P-33·8절), `wiki/reference/study-reassign-design.md`(맨 위), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `backend/src/utils/audit.js` — `ACTIONS`에 한 줄.
+- **DB 마이그레이션**: `801_pacs_study_move.sql` (새 표 하나).
+- **번역 키**: 없음(화면은 ②에서).
+- **확인한 방법** (격리 EMR 9188 + PACS 9198 + 장비 흉내; 가짜 환자 5, 초음파 오더 여럿. 장비 흉내가 워크리스트의 요청 태그를 영상에 베끼게 함):
+  - **정상**: Carotid US(영상 3장·2시리즈·판독 있음) → Upper Abdomen US: 200 `done`, **0.19초**. 영상 서버 — 원본 없음, 새 검사 accession·이름·요청 태그가 Upper Abdomen의 것, **영상 번호·시리즈 번호 그대로, 그림 3장 해시 같음**, `SeriesDescription`·`BodyPartExamined`·환자·날짜 그대로. EMR — 받은 오더 `completed`·3장·`match`·**도착 시각 원래대로**·판독 옮겨짐 / 원래 오더 `scheduled`·영상 없음·판독 없음·**피드와 장비 목록에 다시 나옴**. 옮긴 기록 줄 `done`, `superseded`에 옛 검사 번호와 영상 번호 3개. 변경 기록 한 줄(누가·환자·「3 image(s): Carotid US (…-63) -> Upper Abdomen US (…-62)」·사유). 영상 창: 받은 오더 Stone, 원래 오더 「아직 오지 않았습니다」.
+  - **다시 찍기**: 장비 흉내가 원래 오더(같은 번호)로 다시 보냄 → 브리지 「study arrived … found by uid」 → 보통처럼 완료.
+  - **미리 막는 것 17가지**(수납 계정 403 둘 포함) 모두 기대한 `code` — 그 뒤 옮긴 기록 줄 수와 영상 서버의 검사 수가 그대로.
+  - **일부 영상에만 요청 태그가 있는 검사**: 세 장 모두 이름·요청 번호가 받을 오더의 것으로, 시퀀스가 없던 두 장은 없는 채로, 그림 같음.
+  - **되옮기기**: 바로 하면 `STILL_ARRIVING`, 1분 뒤 200 — 원래 자리로, 그림·영상 번호 처음과 같음.
+  - **같은 요청 둘을 동시에**: 하나 `done`, 하나 `BUSY`. 검사 하나, 3장.
+  - **실패 여섯 가지 + 다시 시작 둘**: 모듈 위키 4절의 마지막 줄 그대로 — 모든 경우 원본 3장의 해시가 처음과 같음. `cleanup-pending` 동안 80초 기다려도 브리지가 원본을 다시 붙이지 않음. 서버 다시 시작 20초 뒤 로그 「[pacs move] line 7 done」.
+  - **되찾기와**: 옮긴 뒤 그 환자의 여섯 오더를 열어도 `pacs.study.relink` 0줄. **회귀**: 중계 15/15, 비교 32/32, 체크 비교 23/23.
+- **확인 못 한 것**:
+  - 진짜 장비가 영상에 무엇을 베끼는지(설치 날 device-watch로).
+  - 큰 검사(수백 장)의 시간. 화면의 요청이 nginx에서 먼저 끊기는 경우(서버는 끝까지 함 — 화면은 ②에서 옮긴 기록을 다시 읽게).
+  - 그림 없는 자료(SR)가 섞인 검사(코드는 「그림을 같은 방식으로 못 읽으면 같은 것으로」).
+  - `failed` 상태(일으키지 못함).
+  - 설정 권한만 있고 진료 권한이 없는 계정(시험 계정에 없음 — 관리자 계정은 둘 다 가짐).
+  - 다섯 분 타이머 자체(시작 때 한 번과 `resume` 길로 같은 함수를 확인).
+- **알아 둘 것**:
+  - **영상 백업 디스크에는 옛 번호의 파일이 남습니다** — ③(PACS 저장소의 `replaced` 처리) 전에 실행 중 EMR에서 옮기면, 그 뒤 디스크로 복원할 때 옛 검사가 되살아납니다(총괄이 손으로 옮긴 오더 15 → 18도 같은 처지 — ③에서 그 건도 목록에 넣을 길을 생각하겠습니다).
+  - 변경 기록의 전 값에 `reason: null` 같은 빈 칸이 같이 적힘(공용 `writeAudit`가 뒤에만 있는 칸을 그렇게 적음) — 화면에서는 「— → 값」.
+- **다른 세션에 부탁**: **설정** — 변경 기록 화면에 `pacs.study.move`의 글과 칸 이름(`order_name`·`accession_no`는 이미 있음, `image_count`·`reading_moved`·`reason`(있음)), `wiki/03-change-log.md` 한 줄.
+
 ## 2026-10-01 — 판독 보고서: 검사 칸에 검사 이름만 — 서식 파일 정리 · 견본 그림 · 문서
 
 - **상태**: 확인 요청
