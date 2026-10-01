@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서: 영상 종류 목록이 코드만 보임 (총괄 `6bbfe9d` 뒤 맞춤)
+
+- **상태**: 확인 요청 — 문서와 주석만
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `6bbfe9d` 포함 merge 위)
+- **배경**: 실장님 「장비 모달리티 옆에 내시경·혈관경 이런 설명을 뭣하러 — 그냥 US, CR, AS 심플하게」 → 총괄이 `settingsModality.jsx`의 목록을 코드만 보이게 바꿈(풀이는 option의 title).
+- **맞춘 것**
+  - 설명서 「Ajouter ou corriger un acte」 3번: 「(US — échographie, CR — radiographie, ES — endoscopie…)」 → 「(la liste montre les codes seuls : US pour l'échographie, CR pour la radiographie, ES pour l'endoscopie…)」 — 관리자가 어느 코드가 무엇인지는 설명서에서 읽을 수 있게 남김.
+  - 4번의 **「Autre — saisir la valeur…」**: 화면의 글자(`se_modOther`)가 그대로라 바꾼 것 없음(굵은 글씨 대조 스크립트로 확인).
+  - 모듈 위키 2.9 표의 Modalité 줄과 3-9b의 화면 설명을 「코드만, 풀이는 올려 두면」으로.
+  - `settingsModality.jsx` 머리말 주석 두 줄(「each with a word on what it is」가 더는 맞지 않아서). 동작은 건드리지 않음.
+- **알아둘 것**: 풀이(title)는 마우스를 올려야 나오고, 펼친 목록 안에서는 브라우저에 따라 안 나올 수 있음. 「AS」가 무엇인지는 창 아래 안내(`se_modHint`)와 설명서 4번에 남아 있음.
+- **바꾼 파일**: `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · `frontend/src/pages/settingsModality.jsx`(주석) · 이 노트
+- **확인한 방법**: `npm run build`, 설명서 대조 스크립트. 화면은 총괄이 바꾼 것이라 다시 띄우지 않음.
+- **앞 항목과 엇갈린 것**: 총괄의 이 알림은 「합친 뒤 3)을 이어서」였는데 3)은 이미 `54c34f2`로 보고함(메시지가 엇갈림).
+
 ## 2026-10-01 — 오더 코드 창: 「수납에서 금액을 고칠 수 있음」 체크 (`price_editable`, 실장님 요청 3번)
 
 - **상태**: 확인 요청
