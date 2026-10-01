@@ -436,6 +436,10 @@ export default {
   cs_qfDefault: "기본값으로",
   cs_qfDefaultHint: "기본값: 의사 계정은 내 환자와 의사가 정해지지 않은 환자, 그 밖의 계정은 전체 환자.",
   cs_qfSaved: "대기 현황 설정을 저장했습니다",
+  // 환자를 열 때의 알레르기 경고 창 (실장님 2026-10-01)
+  cs_allergyTitle: "알레르기 주의",
+  cs_allergyLead: "이 환자에게 적혀 있는 알레르기:",
+  cs_allergyOk: "확인",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

@@ -163,6 +163,14 @@ export default function ConsultationPage() {
   var ops = useState(false), opened = ops[0], setOpened = ops[1];
   var startingRef = useRef(null);
   var sbs = useState(false), statusBusy = sbs[0], setStatusBusy = sbs[1];
+  // The open visit has a document or a bill (GET /consultations/visit/:id other_records):
+  // records this screen does not load, and with them there is no "back to waiting".
+  var ors = useState(false), otherRecords = ors[0], setOtherRecords = ors[1];
+  // The allergy warning shown when a patient is opened (director, 2026-10-01): the red tag
+  // in the patient bar stays, and opening an allergic patient also stops the doctor once
+  // with a window to acknowledge. {name, chart_no, text} or null.
+  var aws = useState(null), allergyWarn = aws[0], setAllergyWarn = aws[1];
+  function allergyText(a){ var x = String(a == null ? '' : a).trim(); return x && x.toLowerCase() !== 'none' ? x : ''; }
   var qs = useState(false), queueOpen = qs[0], setQueueOpen = qs[1];
   var cfs = useState(false), finderOpen = cfs[0], setFinderOpen = cfs[1];
   var hos = useState(false), histOpen = hos[0], setHistOpen = hos[1];
@@ -491,6 +499,8 @@ export default function ConsultationPage() {
     }
   }
 
+  // What GET /consultations/visit/:id says about the open visit, onto the screen.
+  function takeVisit(v, r){ setVisitStatus(v.id, r.visit_status); setOtherRecords(!!r.other_records); }
   // The visit's status on the open visit and on its row of the queue, together.
   function setVisitStatus(vid, status){
     setSel(function(cur){ return cur && cur.id===vid && cur.status!==status ? Object.assign({}, cur, { status: status }) : cur; });
@@ -555,7 +565,7 @@ export default function ConsultationPage() {
     try {
       var r = await api.get('/consultations/visit/'+v.id);
       if(!selRef.current || selRef.current.id !== v.id) return;
-      setVisitStatus(v.id, r.visit_status);
+      takeVisit(v, r);
       if(r.consultation){
         if(!consultRef.current || consultRef.current.id !== r.consultation.id) await showConsult(v, r.consultation, null, true);
         else {
@@ -630,8 +640,17 @@ export default function ConsultationPage() {
     // Read before the screen changes visit: the draft effect drops the kept text while
     // the box is still empty.
     var draft = noteDraft.read('v'+v.id);
+    // The allergy window: when ANOTHER visit is opened (from the queue, the patient finder
+    // or the visit list) - not when the open one is clicked again, and never on the
+    // screen's own re-reads. It changes nothing: opening only reads.
+    var another = !sel || sel.id !== v.id;
+    var warn = function(a){
+      if(another && allergyText(a)) setAllergyWarn({ name: [v.last_name, v.first_name].filter(Boolean).join(' '), chart_no: v.chart_no, text: allergyText(a) });
+    };
+    setAllergyWarn(null);
+    if(v.gender !== undefined) warn(v.allergies);
     selRef.current = v; consultRef.current = null; startingRef.current = null;
-    setOpened(false); setConsult(null);
+    setOpened(false); setConsult(null); setOtherRecords(false);
     setSel(v); setQueueOpen(false); setPastView(null);
     // A visit picked through Trouver patient / Sélection visite comes from the visit-history
     // list, which carries no sex, birth date or allergies - the header then showed no
@@ -639,6 +658,7 @@ export default function ConsultationPage() {
     if(v && v.patient_id && v.gender === undefined){
       api.get('/patients/'+v.patient_id).then(function(p){
         setSel(function(cur){ return cur && cur.id===v.id ? Object.assign({}, cur, {gender:p.gender, date_of_birth:p.date_of_birth, allergies:p.allergies}) : cur; });
+        if(selRef.current && selRef.current.id===v.id) warn(p.allergies);
       }).catch(function(){});
     }
     setDxList([]); setRxList([]); setOrderItems([]);
@@ -650,7 +670,7 @@ export default function ConsultationPage() {
       // a visit nobody started has no consultation.
       var r = await api.get('/consultations/visit/'+v.id);
       if(!selRef.current || selRef.current.id !== v.id) return;
-      setVisitStatus(v.id, r.visit_status);
+      takeVisit(v, r);
       if(r.consultation){
         // Text kept before 2026-10-01 was filed under the consultation's id.
         if(draft == null){ draft = noteDraft.read(r.consultation.id); noteDraft.drop(r.consultation.id); }
@@ -776,7 +796,7 @@ export default function ConsultationPage() {
   // After a save that may have started the visit on the server (startVisit): take the
   // status from the server instead of guessing it.
   function takeStatus(v){
-    return api.get('/consultations/visit/'+v.id).then(function(r){ setVisitStatus(v.id, r.visit_status); }).catch(function(){});
+    return api.get('/consultations/visit/'+v.id).then(function(r){ takeVisit(v, r); }).catch(function(){});
   }
   function rereadStatus(){
     var v = selRef.current;
@@ -1381,7 +1401,12 @@ export default function ConsultationPage() {
   var notStarted = !!sel && (sel.status==='waiting' || sel.status==='registered');
   var nothingRecorded = !consult || (consult.status!=='completed' && consult.status!=='signed' && !consult.vitals_at
     && notes.length===0 && rxList.length===0 && orderItems.length===0);
-  var canGoBack = !!sel && sel.status==='in_progress' && nothingRecorded && !visitBilled(sel);
+  var canGoBack = !!sel && sel.status==='in_progress' && nothingRecorded && !otherRecords && !visitBilled(sel);
+  // The visit's reception memo, for the box over the prescriptions. Reception is merging
+  // "chief complaint" and "reception memo" into one field kept in chief_complaint; until
+  // then a visit can carry both, shown one under the other (the same text twice, once).
+  var memoLines = sel ? [sel.chief_complaint, sel.reception_memo].map(function(x){ return String(x == null ? '' : x).trim(); })
+    .filter(function(x, i, all){ return x && all.indexOf(x) === i; }) : [];
   var SC={waiting:'accent',registered:'accent',in_progress:'warn',completed:'ok'};   // colour families (design): tint() and -ink make the colours
   var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
 
@@ -1414,8 +1439,9 @@ export default function ConsultationPage() {
             <span style={{color:'#fff',fontWeight:700,fontSize: 15,minWidth:0}}>{sel.last_name} {sel.first_name}</span>
           </span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
-          {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
-          {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
+          {allergyText(sel.allergies)?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {allergyText(sel.allergies)}</span>:null}
+          {/* The reception memo is no longer here (director, 2026-10-01: "it shows in the
+              middle - is it needed there?"): it has its own box over the prescriptions. */}
         </div>
       ):null}
 
@@ -1474,6 +1500,17 @@ export default function ConsultationPage() {
               style={{background:'var(--chip)',color:sel?t2:'var(--text-5)',border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:sel?'pointer':'not-allowed',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>📋 {t.outpatientHistory}</button>
           </div>
 
+          {/* The open visit's reception memo (director, 2026-10-01): under the queue buttons,
+              over the prescriptions. Read-only. Nothing at all when the visit has no memo.
+              A long memo shows four lines and scrolls inside the box, so the prescriptions
+              keep their room; it wraps and is never cut. Not shown while an earlier visit
+              is being read in the middle (the left column then only says so). */}
+          {sel && !pastView && memoLines.length ? (
+            <div data-cs="reception-memo" style={{padding:'5px 10px 6px',borderBottom:'1px solid '+bd,background:'var(--warn-a12)',display:'flex',gap:8,alignItems:'flex-start'}}>
+              <span style={{flexShrink:0,fontSize: 12,fontWeight:800,color:'var(--warn-ink)',whiteSpace:'nowrap',lineHeight:'19px'}}>📝 {t.receptionMemo}</span>
+              <div tabIndex={0} style={{flex:1,minWidth:0,maxHeight:76,overflowY:'auto',fontSize: 13,lineHeight:'19px',color:tx,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{memoLines.join('\n')}</div>
+            </div>
+          ) : null}
           {pastView?(
             <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-4)',fontSize: 14,fontStyle:'italic',textAlign:'center',padding:20,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{t.viewingPast}</div>
           ):sel&&opened?(
@@ -1810,7 +1847,7 @@ export default function ConsultationPage() {
       <PatientFinder open={histOpen} onClose={function(){setHistOpen(false)}} mode="visit"
         initialPatient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name } : null}
         onPickVisit={function(v){ pickPatient(v); }} />
-      <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"
+      <DocumentModal open={docOpen} onClose={function(){setDocOpen(false); rereadOpen(); }} category="document"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList }} />
       <DocumentModal open={chartOpen} onClose={function(){setChartOpen(false)}} category="chart"
@@ -1916,6 +1953,22 @@ export default function ConsultationPage() {
           </div>
         </div>;
       })() : null}
+      {/* The allergy warning. One button; Enter (the button has the focus) or a click
+          closes it. A click outside and Esc do not: it is there to be read. Over every
+          other window (zIndex), so nothing is prescribed behind it. */}
+      {allergyWarn ? (
+        <div style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1200,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div role="alertdialog" aria-modal="true" aria-label={t.cs_allergyTitle} style={{width:440,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:'var(--bg)',border:'2px solid var(--danger)',borderRadius:8,padding:'16px 18px',boxSizing:'border-box'}}>
+            <div style={{fontWeight:800,fontSize:17,color:'var(--danger-text)'}}>⚠ {t.cs_allergyTitle}</div>
+            <div style={{fontSize:14,color:'var(--text)',marginTop:8,overflowWrap:'anywhere'}}><span style={{fontFamily:'monospace',fontWeight:700,whiteSpace:'nowrap'}}>{allergyWarn.chart_no}</span> · <b>{allergyWarn.name}</b></div>
+            <div style={{fontSize:13,color:'var(--text-2)',marginTop:10}}>{t.cs_allergyLead}</div>
+            <div style={{marginTop:4,padding:'10px 12px',background:'var(--danger-a12)',border:'1px solid var(--danger-a40)',borderRadius:6,fontSize:16,fontWeight:800,color:'var(--text)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere',overflowY:'auto',minHeight:0}}>{allergyWarn.text}</div>
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
+              <button autoFocus onClick={function(){ setAllergyWarn(null); }} style={{background:'var(--danger)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'8px 26px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.cs_allergyOk}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {qfWin ? (function(){
         var w = qfWin, docs = qDoctors || [];
         var nothing = !w.unassigned && !w.all && !docs.some(function(d){ return w.ids[d.id]; });

@@ -436,6 +436,10 @@ export default {
   cs_qfDefault: "Par défaut",
   cs_qfDefaultHint: "Par défaut : un médecin voit ses patients et les patients sans médecin ; les autres comptes voient tous les patients.",
   cs_qfSaved: "Réglage de la file enregistré",
+  // Avertissement d'allergie à l'ouverture d'un patient (directeur, 2026-10-01)
+  cs_allergyTitle: "Attention : allergie",
+  cs_allergyLead: "Allergie notée pour ce patient :",
+  cs_allergyOk: "OK",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

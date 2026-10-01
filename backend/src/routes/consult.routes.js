@@ -5,7 +5,7 @@ const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { cancelWorklistForOrder } = require('./pacs.cancel');
-const { visitHasRecords, completeVisitConsultation } = require('./consult.visit');
+const { visitRecords, visitHasRecords, completeVisitConsultation } = require('./consult.visit');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -215,6 +215,8 @@ const CONSULT_FOR_SCREEN = `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id =
 
 // GET /api/consultations/visit/:visitId - what opening a patient reads: the visit's
 // status as it is now and its consultation, null when none was started. Changes nothing.
+// other_records: the visit has a document or a bill - records the screen does not load,
+// so it knows not to offer "back to waiting" (the server would refuse it).
 // A cancelled visit is refused as before (it could be picked from the patient's visits).
 router.get('/visit/:visitId', canConsult, async (req, res) => {
   try {
@@ -222,7 +224,9 @@ router.get('/visit/:visitId', canConsult, async (req, res) => {
     if (vis.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
     if (vis.rows[0].status === 'cancelled') return res.status(409).json({ error: VISIT_CANCELLED });
     const c = await pool.query(CONSULT_FOR_SCREEN, [req.params.visitId]);
-    res.json({ visit_status: vis.rows[0].status, consultation: c.rows[0] || null });
+    const rec = await visitRecords(pool, req.params.visitId);
+    res.json({ visit_status: vis.rows[0].status, consultation: c.rows[0] || null,
+      other_records: !!(rec && (rec.documents || rec.bills)) });
   } catch (err) { sendDbError(res, err); }
 });
 
