@@ -120,6 +120,9 @@ cancelled. Reception can do the same from its screen, and changes a department a
 
 ### Smaller changes on the screen
 
+- The patient bar's list of the patient's images and readings is called **Imagerie**
+  (*Imaging*; it was *Compte-rendu*). The reading box in the image window keeps the name
+  **Compte-rendu**.
 - A line whose price is 0 is marked **Sans prix** in the search and in the table.
 - Drugs hidden from the list are no longer prescribed through an order set; the set shows
   them struck through and the doctor is told which were left out.
