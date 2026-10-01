@@ -2,6 +2,64 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 접수와의 약속: 「적은 것이 있나」 판정과 완료 처리를 서버 함수로
+
+- **상태**: 확인 요청 (접수가 이 약속을 기다림)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `ad2f0b8` 다음
+- **왜**: 총괄 결정(2026-10-01, 접수 보고 `8abf011`). 이제 환자를 열어도 「대기」라서, 접수의 「← 대기로」「완료로 →」「대기 취소」가 진료 기록이 있는 「대기」 내원, 기록이 없는 「진료 중」 내원을 만나는 일이 늘었습니다. 판정과 완료를 진료와 접수가 **같은 함수**로 합니다.
+
+### 접수와의 약속 — `backend/src/routes/consult.visit.js` (진료 주관)
+
+```js
+const { visitRecords, visitHasRecords, completeVisitConsultation } = require('./consult.visit');
+```
+
+공통: 첫 인자 `db`는 **부르는 쪽 트랜잭션의 client**(읽기만이면 `pool`도 됨). 함수는 BEGIN·COMMIT·잠금을 하지 않습니다 — 판정한 뒤 그 답대로 고칠 것이면 부르는 쪽이 먼저 `SELECT … FROM visit WHERE id=$1 FOR UPDATE`로 내원을 잠급니다(진료의 「대기로」·시작·완료가 모두 그 행을 잠그므로 순서가 지켜짐). 오류는 던집니다(부르는 쪽의 catch/ROLLBACK).
+
+**1) `visitRecords(db, visitId)`** → 없는 내원이면 `null`, 아니면
+
+| 칸 | 참이 되는 때 |
+|---|---|
+| `consultation_id` | 그 내원의 진료 행 id. 시작한 적이 없으면 `null` |
+| `finished` | 의사가 Terminé를 누름(`consultation.status` `completed`·`signed`) — 아무것도 안 쓰고 끝냈어도 「본 것」 |
+| `notes` | 의사 기록(`consultation_note`, 어느 의사 것이든) 또는 옛 칸(`note_text`·S/O/A/P)에 글 |
+| `vitals` | 활력징후 여덟 칸 가운데 하나라도 값 |
+| `prescriptions` | 처방 줄(조제 여부와 무관) |
+| `orders` | 오더 줄 — **취소된 줄도**(결과의 기록으로 남는 것) |
+| `diagnoses` | 진단 줄 |
+| `documents` | 그 내원 또는 그 진료로 발급한 서류(`document_log`) — **발급 취소된 것도**, 진료를 시작하지 않고 발급한 것도 |
+| `bills` | 그 내원의 청구(`billing`) — **상태와 무관(취소된 것도)** |
+| `any` | 위 여덟 가운데 하나라도 참 |
+
+- **시작만 하고 아무것도 안 쓴 빈 진료 행은 기록이 아닙니다**: `consultation_id`는 있고 `any=false`.
+- 접수가 「청구는 빼고 진료 쪽만」 보고 싶으면 칸을 골라 쓰면 됩니다(예: `r.finished || r.notes || r.vitals || r.prescriptions || r.orders || r.diagnoses || r.documents`). 칸 이름은 바꾸지 않겠습니다. 칸이 **늘어날 수는** 있습니다(그때 `any`에도 들어감 — 알림).
+
+**2) `visitHasRecords(db, visitId)`** → `true`/`false`. `visitRecords().any`와 같고, 없는 내원은 `false`. 진료 화면의 「↩ 대기로」(`PUT /api/consultations/visit/:id/waiting`)가 쓰는 바로 그 판정입니다.
+
+**3) `completeVisitConsultation(db, visitId)`** → Terminé가 하는 일을 그 내원의 진료에:
+- `consultation.status='completed'`, `completed_at = COALESCE(completed_at, NOW())`(결정 L9 — 처음 끝낸 때를 지킴), `updated_at`; 그리고 `visit.status='completed'`, `updated_at`.
+- 돌려주는 값: `{ consultation_id, completed_at }`. **진료 행이 없는 내원이면 아무것도 바꾸지 않고 `null`** — 접수가 지금처럼 상태만 바꿉니다(`visit_type` 규칙 포함).
+- **완료에 조건은 없습니다**(진단·기록·용량이 비어 있어도 완료). 화면이 묻는 「하루 총량이 빈 약」 확인은 화면의 확인 창일 뿐 서버 거절이 아닙니다. 그래서 **거절 코드도 없습니다.** 조건이 생기면 이 약속을 먼저 고치고 알리겠습니다.
+- `visit_type`은 건드리지 않습니다. 취소된 내원인지는 보지 않습니다 — 부르는 쪽이 거릅니다(진료의 `PUT /:id/complete`는 409 `Visit was cancelled`).
+- 변경 기록(audit) 줄은 쓰지 않습니다(Terminé도 쓰지 않음). 접수가 자기 줄을 남기는 것은 접수가 정합니다.
+
+**접수 쪽에서 쓰는 모양(제안, 정하는 것은 접수)**
+- 대기 취소: `visitHasRecords`가 참이면 거절.
+- 대기 → 완료: `visitHasRecords`가 참이면 `visit_type`을 `none`으로 바꾸지 않음. 진료 행이 있으면 `completeVisitConsultation`.
+- 진료 중 → 완료: `completeVisitConsultation`; `null`이면 지금처럼 상태만.
+- 진료 중 → 대기: 기록이 없으면(`!any`) 진료의 「대기로」와 같게 하려면 `DELETE FROM consultation WHERE visit_id=$1` 뒤 `waiting`(빈 행이 환자 차트에 남지 않음). 기록이 있으면 접수 규칙대로.
+
+### 그 밖
+- **한 일**: 위 세 함수를 새 파일로. 「대기로」 라우트의 판정 SQL을 `visitHasRecords`로, `PUT /:id/complete`의 몸을 `completeVisitConsultation`으로 바꿈(하는 일은 같음). 하나 더: **취소된 내원의 Terminé는 409**(전에는 취소된 내원을 완료로 되살렸음 — 접수가 대기로 되돌린 뒤 취소한 내원이 의사 화면에 열려 있을 때). 화면은 안내 후 닫습니다(있던 키 `cs_visitCancelled`).
+- **바꾼 파일**: `backend/src/routes/consult.visit.js`(새) · `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx`(완료의 catch) · `wiki/modules/consultation.md`(3.2·4·8) · 이 노트
+- **공용 파일 변경**: 없음(새 파일은 진료 것, 접수가 불러 씀).
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `node --check`, `npm run build`. 격리 스택(9182): 앞 작업의 서버 시험 44개 다시 통과(「대기로」가 새 함수로도 같게 동작). 함수를 api 컨테이너 안에서 직접 불러 봄 — 바이탈만/오더만/기록만/완료만 있는 내원, 시작만 한 빈 내원(`any=false`), 열어만 본 내원, 없는 내원(`null`), 시작 없이 서류만 있는 내원, 취소된 청구, 취소된 오더; `completeVisitConsultation`이 진료 중 내원을 완료(`completed_at` 찍힘)하고 진료 행 없는 내원에는 `null`·무변경. 라우트: 취소된 내원 Terminé 409, 두 번 Terminé에 `completed_at` 유지, 없는 진료 404.
+- **확인 못 한 것**: 접수 라우트에서 부르는 것(접수 세션이 붙인 뒤). 화면에서 취소된 내원의 Terminé 안내(서버 응답만 확인).
+- **총괄 확인 요청**: 「기록」에 **청구와 서류를 넣은 것**이 접수의 쓰임(대기 취소 거절 등)에 맞는지. 맞지 않으면 접수는 칸을 골라 쓰면 됩니다.
+- **다른 세션에 부탁**: **접수** — 위 약속대로 `visit.routes.js`에서 불러 주세요. 모양을 바꿔야 하면 먼저 알려 주세요.
+- **남은 일 · 알려진 문제**: 진료대기 현황의 의사 선택(총괄 지시 ①)은 다음 커밋.
+
 ## 2026-10-01 — 환자를 여는 것만으로는 「진료 중」이 되지 않음 (실장님 결정 (다))
 
 - **상태**: 확인 요청
