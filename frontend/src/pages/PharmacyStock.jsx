@@ -8,6 +8,7 @@ import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
 import { packWord } from '../documents/rx-dosing.js';
+import { LIST_COL, LIST_SEARCH, ROW_EMPTY } from '../layout.js';
 
 // Exact texts from pharmacy.routes.js; the API client passes on only the message.
 var ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
@@ -177,10 +178,12 @@ export function PharmacyStock() {
   return (
     // Fills what the pharmacy screen leaves under its top bars; only the list, the
     // record and the report scroll (Pharmacy.jsx is a window-high column).
-    <div style={{ display: 'grid', gridTemplateColumns: '360px minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr)', flex: 1, minHeight: 0 }}>
+    // The drug list is as wide as the patient list of the other two tabs (layout.js), so
+    // the left column does not jump when the Stock tab is opened.
+    <div style={{ display: 'grid', gridTemplateColumns: LIST_COL + 'px minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr)', flex: 1, minHeight: 0 }}>
       <div style={{ borderRight: '1px solid ' + bd, display: 'flex', flexDirection: 'column', background: pn }}>
         <div style={{ padding: '7px 8px', borderBottom: '1px solid ' + bd, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.ph_stockSearch} style={Object.assign({}, IN, { width: '100%' })} />
+          <input autoComplete="off" value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.ph_stockSearch} aria-label={t.ph_stockSearch} style={LIST_SEARCH} />
           <button onClick={function () { setView('report'); }} style={{ background: view === 'report' ? 'var(--violet)' : 'var(--chip)', color: view === 'report' ? 'var(--on-fill)' : tx, border: '1px solid var(--violet-ink)', borderRadius: 5, padding: '6px 10px', cursor: 'pointer', fontSize: 15, fontWeight: 800, textAlign: 'left' }}>📊 {t.ph_reportTitle}</button>
           <select value={cat} onChange={function (e) { setCat(e.target.value); }} style={Object.assign({}, IN, { width: '100%' })}>
             <option value="">{t.ph_allCategories}</option>
@@ -190,6 +193,7 @@ export function PharmacyStock() {
         </div>
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 20, textAlign: 'center', color: t3 }}>{t.loading}</div> : null}
+          {!loading && drugs.length > 0 && shown.length === 0 && q.trim() ? <div style={Object.assign({}, ROW_EMPTY, { overflowWrap: 'anywhere' })}>{String(t.ph_stockSearchNone || '').replace('{q}', q.trim())}</div> : null}
           {shown.map(function (d) {
             var active = d.id === selId; var low = belowMin(d);
             return <div key={d.id} onClick={function () { setSelId(d.id); setView('drug'); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? 'var(--violet-a15)' : 'transparent', borderLeft: active ? '3px solid var(--violet-ink)' : '3px solid transparent', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
