@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 오더 코드의 영상 종류(Modality)를 목록에 없는 값도 (실장님 요청 — 직장경 장비의 AS)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `9050e50` merge 위)
+- **DB 마이그레이션**: `backend/sql/701_settings_modality_width.sql`(세션 번호 — 다시 매겨 주세요). `order_code.pacs_modality` · `order_item.pacs_modality` · `worklist_log.modality`를 VARCHAR(10) → VARCHAR(16). **값은 바꾸지 않음**, 다시 돌려도 됨. 부탁하신 16자(DICOM 규칙)를 받으려면 필요 — 지금 칸은 10자라 11자부터는 저장이 DB 오류가 됩니다. `order_item`·`worklist_log`는 진료·PACS의 표지만 오더 코드의 값이 그리로 복사되므로 셋을 같이 넓혔습니다(넓히기만 — 읽는 쪽에 영향 없음). 원치 않으시면 화면·서버의 한도를 10으로 줄이는 한 줄.
+- **1 화면**: 새 파일 `settingsModality.jsx` — `ModalityField`: 고르는 목록 **Aucune · US — échographie · CR · DX · CT · MR · ES — endoscopie · AS — angioscopie — ancien code (certains rectoscopes / endoscopes) · XA · RF · MG · NM · PT · ECG · SC · OT · Autre — saisir la valeur…** 맨 끝을 고르면 입력 칸(치는 대로 대문자·`A-Z 0-9 _`만·16자 — «as-1 xé» → `AS1X`). 목록에 없는 값이 저장돼 있으면 「Autre」가 열려 그 값을 보임. 두 칸 아래 온 폭으로 안내 「Un appareil ne reçoit que les demandes dont la modalité est exactement la sienne… device-watch (dossier PACS)」. `Settings.jsx`는 select 한 줄이 부품으로 바뀌고 안내 한 줄. select + 「기타」를 고른 까닭: 흔한 값은 눌러서 고르는 편이 오타가 없고(datalist는 브라우저마다 모양이 다르고 풀이를 보여 주기 어려움), 드문 값만 손으로.
+- **2 서버** `cleanModality`(오더 코드 POST·PUT): 앞뒤 빈칸 → 대문자 → 빈 값은 NULL → `^[A-Z0-9_]{1,16}$` 아니면 400 「Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)」 → 화면 언어로(`se_errModality`). DICOM은 안쪽 빈칸도 허용하지만 받지 않음(오타일 가능성이 큼) — 필요해지면 정규식 한 글자.
+- **3 다른 곳**(임의의 값을 견디는지): 모두 자료의 값을 그대로 씀 — 진료의 오더 저장(오더 코드 → `order_item` · `worklist_log`), `/pacs/worklist-feed`(`modality`, `?modality=`는 글자 그대로 비교), 영상/판독 창(종류 고르기 목록을 줄에서 만듦 — 격리에서 「Type : tous / ABCDEFGH_1234567 / US / AS」, 좁은 칸은 「ABC…」로 줄고 상세에 온 값), 판독지 인쇄, 진료 검색의 꼬리표. 통계에는 종류별 집계 없음. **고칠 곳 없음.**
+- **4 견본 자료**: 직장경 줄은 넣지 않음(현지 자료). 설명서 fr에 새 절 「Ajouter ou corriger un acte (code d'acte)」 — 5단계: 「Si le patient n'apparaît pas sur l'appareil : device-watch (dossier PACS) affiche la valeur Modality que l'appareil a demandée. Mettez cette valeur, telle quelle…」. 모듈 위키 2.9·3-9b는 `wiki/reference/device-connection-onsite.md`(PACS 순서서)를 가리킴. **PACS 세션께**: 그 순서서의 「목록 0명 — Modality 거르기」 줄에서 「설정 → 오더 코드 → Modalité → Autre」를 가리켜 주면 양쪽이 이어집니다.
+- **공용 파일 변경**: i18n(설정 표시 안) `se_mod_<값>` 15개, `se_modOther`·`se_modOtherPh`·`se_modHint`·`se_errModality`.
+- **바꾼 파일**: `backend/sql/701_settings_modality_width.sql`(새) · `backend/src/routes/admin.routes.js` · `settings.messages.js` · `frontend/src/pages/settingsModality.jsx`(새) · `Settings.jsx` · `settingsMessages.js` · i18n 3개 · `backend/test/settings.modality.mjs`(새) · 위키 3개
+- **확인한 방법** (격리 9187만 — 실행 중 EMR은 건드리지 않음)
+  - `node --check`, `npm run build`, messages(새 문구 포함).
+  - 마이그레이션: 새 스택에서 적용, 손으로 한 번 더 → 오류 없음, 세 칸 모두 16.
+  - `settings.modality.mjs` **20개** 통과: « as » → AS · us → US · 16자 저장 · 빈 값 NULL · 거절 다섯(하이픈·안쪽 빈칸·악센트·17자·문장부호) · 수정도 같은 규칙 · 틀린 값이면 저장된 값 그대로. 그리고 **AS 오더 코드 → 환자·내원·진료 → 오더(AS가 실림) → `/pacs/worklist-feed`에 `modality: "AS"`**, `?modality=AS`로 물으면 AS 줄만(US 줄은 안 옴), 소문자 `as`로 물으면 0줄(대문자로 저장하는 까닭), 16자 값도 피드까지 그대로. 브리지·장비는 PACS 몫이라 피드까지만.
+  - drugprice(오더 코드 PUT) · ordersets · access(1320) 통과.
+  - 화면 fr: 목록 17줄과 풀이, 「Autre」 → 입력 «as-1 xé» → `AS1X`, 저장 → 표의 꼬리표 `AS1X`, 다시 열면 「Autre」 + 값. ko: 「AS — 혈관경 — 옛 코드(일부 직장경·내시경 장비가 씀)」, 「기타 — 직접 입력…」, 안내 문장. 진료의 영상 창에서 세 값이 그대로.
+
 ## 2026-10-01 — .env를 손으로 고친 것을 상태 창이 알림 · Get-ComposeDir 고침(찾은 버그) · 문서
 
 - **상태**: 확인 요청

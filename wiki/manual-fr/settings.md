@@ -99,6 +99,16 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 
 **« ⚠ 2 médicament(s) absent(s) de la liste »** sur une ordonnance type : ces médicaments (barrés) ont été retirés de la liste des médicaments. Ils ne sont **pas prescrits** quand on applique l'ordonnance type en consultation. **Modifier** → ✕ sur la ligne barrée, ajoutez le bon médicament de la liste, **Sauver**.
 
+### Ajouter ou corriger un acte (code d'acte)
+
+Les **codes d'actes** sont ce que le médecin demande en consultation : frais de consultation, analyses, examens d'imagerie, actes.
+
+1. **Paramètres** → **Codes d'actes**. Les boutons **Tous · Frais · Laboratoire · Imagerie · Acte** filtrent la liste.
+2. **+ Ajouter**, ou **Modifier** sur une ligne. Remplissez **Code**, **Nom**, **Type**, **Groupe**, **Prix**, puis **Sauver**.
+3. Pour un examen fait sur un appareil (échographe, radio, endoscope…) : dans **Feed d'ordres / Modality**, choisissez la **Modalité** (US — échographie, CR — radiographie, ES — endoscopie…), la **Région**, et activez **Créer le Feed Worklist**. Le patient apparaît alors dans la liste de l'appareil.
+4. **La modalité doit être exactement celle que l'appareil demande, lettre pour lettre.** Si elle n'est pas dans la liste, choisissez **Autre — saisir la valeur…** et tapez-la (lettres, chiffres ; par exemple `AS` pour certains rectoscopes).
+5. Si le patient n'apparaît pas sur l'appareil : sur le PC serveur, **device-watch** (dossier PACS) affiche la valeur *Modality* que l'appareil a demandée. Mettez cette valeur, telle quelle, dans le code d'acte. Voir le guide PACS (connexion d'un appareil).
+
 ### Préparer les phrases types
 
 Les **phrases types** sont des phrases déjà écrites que le médecin ajoute à sa note d'un clic, dans l'écran de consultation.
