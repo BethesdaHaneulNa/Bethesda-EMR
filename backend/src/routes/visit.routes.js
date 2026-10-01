@@ -4,6 +4,8 @@ const { authMiddleware, permMiddleware, effectivePerms } = require('../middlewar
 const { VISIT_TYPES, VISIT_STATUSES } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
+// The consultation session's test of what a visit holds, and its "finish" (shared rule).
+const { visitRecords, completeVisitConsultation } = require('./consult.visit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -135,44 +137,77 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
   }
 });
 
-// PUT /api/visits/:id/status - update visit status
+// Refusals carry a code as well as the English message, so a screen can show its own
+// language (consultation's transfer button, reception's form and queue buttons).
+function refuse(res, status, code, message, extra) {
+  return res.status(status).json(Object.assign({ error: message, code: code }, extra || {}));
+}
+
+// PUT /api/visits/:id/status - reception's queue buttons: cancel, back to waiting, complete.
+//
+// Since 2026-10-01 opening a patient no longer starts the consultation, so a visit can be
+// "waiting" and yet carry records, or "in consultation" and carry none. The buttons used
+// to look at visit.status only; three things followed (reproduced on the isolated stack):
+// a visit with a consultation could be sent back to waiting and then cancelled, or then
+// completed as "no consultation" (fee type none), and completing from reception left the
+// consultation open. The coordinator's rule: judge by what is recorded on the visit, with
+// the consultation session's own test - visitRecords().any (consult.visit.js: a note,
+// vital sign, prescription, order, diagnosis, document or bill, or a consultation the
+// doctor finished; an empty started consultation is not a record) - and finish through
+// its completeVisitConsultation(), so both screens follow one rule.
+//
+//   -> cancelled   only from registered/waiting (409 VISIT_NOT_WAITING, as before), and
+//                  only when nothing is recorded (409 VISIT_HAS_RECORDS).
+//   -> waiting     from in_progress or completed: only when nothing is recorded (409
+//                  VISIT_HAS_RECORDS) - the same test as the consultation screen's
+//                  "Remettre en attente". The doctor reopens a finished visit instead.
+//   -> completed   from registered/waiting with nothing recorded: no consultation
+//                  happened, visit_type becomes 'none' (office manager, 2026-09-29, ⑳).
+//                  With records the type stays. In both cases a consultation row that
+//                  exists is finished the way Terminé does (status, completed_at - the
+//                  pharmacy's order, decision L9).
+// An empty consultation row left behind (started, nothing written) is deleted when the
+// visit goes back to waiting, is cancelled, or ends as "no consultation" - what the
+// consultation screen's own "back to waiting" does - so no blank line stays in the chart.
+// A cancelled visit is not judged: bringing it back is reception's correction, as before.
+// The answer is the visit row, plus has_records (what was found before the change).
 router.put('/:id/status', permMiddleware('registration'), async (req, res) => {
+  const status = String((req.body || {}).status);
+  if (!VISIT_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
+  }
+  const client = await pool.connect();
   try {
-    const { status } = req.body;
-    if (!VISIT_STATUSES.includes(String(status))) {
-      return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
+    await client.query('BEGIN');
+    // The row lock is what the consultation's start / back-to-waiting / finish take too.
+    const cur = await client.query('SELECT id, status FROM visit WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return refuse(res, 404, 'VISIT_NOT_FOUND', 'Visit not found'); }
+    const id = cur.rows[0].id, from = cur.rows[0].status;
+    const queued = from === 'registered' || from === 'waiting';
+    const rec = await visitRecords(client, id);
+    const dropEmpty = async () => { if (rec.consultation_id) await client.query('DELETE FROM consultation WHERE visit_id = $1', [id]); };
+    let noFee = false;
+    if (status === 'cancelled') {
+      if (!queued) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_NOT_WAITING', 'Only a waiting visit can be cancelled', { status: from }); }
+      if (rec.any) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_HAS_RECORDS', 'The visit has records; it cannot be cancelled', { status: from }); }
+      await dropEmpty();
+    } else if (status === 'waiting' && (from === 'in_progress' || from === 'completed')) {
+      if (rec.any) { await client.query('ROLLBACK'); return refuse(res, 409, 'VISIT_HAS_RECORDS', 'The visit has records; it cannot go back to waiting', { status: from }); }
+      await dropEmpty();
+    } else if (status === 'completed' && from !== 'cancelled') {
+      if (queued && !rec.any) { await dropEmpty(); noFee = true; }
+      else if (rec.consultation_id) await completeVisitConsultation(client, id);
     }
-    // Cancelling is only for a patient still in the queue. Reception's list does
-    // not refresh by itself, so the button can be pressed on a visit the doctor
-    // has since opened; cancelling that would orphan its consultation, orders and
-    // bill under a visit every other screen ignores.
-    //
-    // Sending a visit that is still waiting straight to "completed" means no
-    // consultation happened (the "Terminer →" button on the queue). The office manager
-    // decided (2026-09-29, ⑳) that such a visit carries no consultation fee, so its
-    // visit_type becomes 'none' in the same UPDATE - unless it has already been
-    // billed, where changing the type would put it back on the payment list.
-    // "in progress → completed" keeps its type: the doctor did see the patient.
-    // In SET, "status" is still the old value.
-    const result = await pool.query(
-      `UPDATE visit SET status = $1::varchar,
-              visit_type = CASE
-                WHEN $1::varchar = 'completed' AND status IN ('registered', 'waiting')
-                     AND NOT EXISTS (SELECT 1 FROM billing b WHERE b.visit_id = visit.id AND b.payment_status <> 'cancelled')
-                THEN 'none' ELSE visit_type END,
-              updated_at = NOW()
-        WHERE id = $2 AND ($1::varchar <> 'cancelled' OR status IN ('registered', 'waiting'))
-        RETURNING *`,
-      [status, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      const found = await pool.query('SELECT status FROM visit WHERE id = $1', [req.params.id]);
-      if (found.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
-      return res.status(409).json({ error: 'Only a waiting visit can be cancelled', status: found.rows[0].status });
-    }
-    res.json(result.rows[0]);
+    const result = await client.query(
+      `UPDATE visit SET status = $1::varchar, visit_type = CASE WHEN $3::boolean THEN 'none' ELSE visit_type END, updated_at = NOW()
+        WHERE id = $2 RETURNING *`, [status, id, noFee]);
+    await client.query('COMMIT');
+    res.json(Object.assign(result.rows[0], { has_records: !!rec.any }));
   } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* already out of the transaction */ }
     sendDbError(res, err);
+  } finally {
+    client.release();
   }
 });
 
@@ -228,12 +263,6 @@ async function applyTransfer(client, req, before, reason) {
     after:  { department_id: after.department_id,  doctor: after.doctor_name || null,  reason: reason || null },
   });
   return after;
-}
-
-// Refusals carry a code as well as the English message, so a screen can show its own
-// language (consultation's button and reception's form).
-function refuse(res, status, code, message, extra) {
-  return res.status(status).json(Object.assign({ error: message, code: code }, extra || {}));
 }
 
 // PUT /api/visits/:id/transfer  { department_id, doctor_id, reason? }
@@ -304,8 +333,11 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
     if (body.visit_type != null && !VISIT_TYPES.includes(String(body.visit_type))) {
       return res.status(400).json({ error: 'visit_type must be one of ' + VISIT_TYPES.join(', ') });
     }
-    if (body.status != null && !VISIT_STATUSES.includes(String(body.status))) {
-      return res.status(400).json({ error: 'status must be one of ' + VISIT_STATUSES.join(', ') });
+    // status is not written here any more (2026-10-01): it has its own route with its own
+    // rules (PUT /:id/status - cancel, back to waiting, complete, judged by what the
+    // visit holds). No screen sends it here; left open it was a way around those rules.
+    if (body.status != null) {
+      return refuse(res, 400, 'STATUS_NOT_HERE', 'status is changed with PUT /visits/:id/status');
     }
     const sets = [];
     const params = [];

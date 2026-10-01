@@ -467,6 +467,10 @@ export default function RegistrationPage() {
     // utils/dbError.js (22008). The only date this screen sends is the birth date.
     if (msg === 'A date field has a date that does not exist') return t.rc_dobInvalid;
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
+    // 409 VISIT_HAS_RECORDS from PUT /visits/:id/status: the visit carries a note, an
+    // order, a document, a bill... (the consultation session's test, visitRecords().any).
+    if (msg === 'The visit has records; it cannot be cancelled') return t.rc_hasRecordsNoCancel;
+    if (msg === 'The visit has records; it cannot go back to waiting') return t.rc_hasRecordsNoWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;
     // 409 VISIT_BILLED from PUT /visits/:id: paid while this form was open.
@@ -522,13 +526,19 @@ export default function RegistrationPage() {
     if (e) e.stopPropagation();
     var msg = v.has_active_bill ? t.rc_completeNoConsultBilled : t.rc_completeNoConsult;
     if (!confirm(fill(msg, { name: nameOf(v) }))) return;
-    changeStatus(v, 'completed');
+    // The dialog just said "no fee". If the server found records on the visit (the doctor
+    // wrote something although the visit still showed as waiting), it kept the type and
+    // closed the consultation: say so, the patient does go to the cashier.
+    changeStatus(v, 'completed').then(function (saved) {
+      if (saved && saved.has_records && saved.visit_type !== 'none' && !v.has_active_bill) alert(fill(t.rc_completeKeptType, { name: nameOf(v) }));
+    });
   }
   async function changeStatus(v, newStatus, e) {
     if (e) e.stopPropagation();
     try {
-      await api.put('/visits/' + v.id + '/status', { status: newStatus });
+      var saved = await api.put('/visits/' + v.id + '/status', { status: newStatus });
       await loadData();
+      return saved;
     } catch (err) { alert(errText(err)); loadData(); }
   }
 

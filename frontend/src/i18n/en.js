@@ -308,7 +308,7 @@ export default {
   rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   rc_visitCancelled: "Visit cancelled",
   rc_genderRequired: "Choose the sex (Male / Female).",
-  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\": nothing to pay, the patient does not need to go to the cashier.",
+  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\": nothing to pay, the patient does not need to go to the cashier. If the doctor has seen this patient, do not use this button: the doctor finishes on the Consultation screen, otherwise the consultation is not billed.",
   rc_workDate: "Work date",
   rc_prevDay: "Previous day",
   rc_nextDay: "Next day",
@@ -321,6 +321,9 @@ export default {
   rc_colVisitState: "Status",
   rc_billNothing: "Nothing to pay",
   rc_visitBilledNoMove: "This visit is already paid: its department and doctor can no longer change. Cancel the receipt on the Payment screen first.",
+  rc_hasRecordsNoCancel: "This visit already has records (consultation, document or receipt), so the waiting entry cannot be cancelled. The list has been refreshed.",
+  rc_hasRecordsNoWaiting: "This visit already has records (consultation, document or receipt), so it cannot go back to waiting. If something must be corrected, the doctor reopens the patient on the Consultation screen.",
+  rc_completeKeptType: "{name}: this visit already has consultation records, so its type was not changed. The consultation is still to be paid: send the patient to the cashier.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
