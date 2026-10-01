@@ -339,8 +339,19 @@ export default function PaymentPage() {
   function addFeeItem(codeId){
     var c = feeCodes.filter(function(x){ return String(x.id)===String(codeId); })[0];
     if(!c) return;
-    setExtraItems(function(p){ return p.concat([{ order_code_id:c.id, code:c.code, name:c.name, quantity:1, unit_price:parseFloat(c.price_clinic||c.price)||0 }]); });
+    var price = parseFloat(c.price_clinic||c.price)||0;
+    // price_editable (migration 305, the director 2026-10-01): the cashier may type this
+    // line's amount - the document fee depends on the document. list_price is the code's
+    // price, kept to show beside an amount that was changed.
+    setExtraItems(function(p){ return p.concat([{ order_code_id:c.id, code:c.code, name:c.name, quantity:1, unit_price:price, list_price:price, editable:!!c.price_editable }]); });
   }
+  // what is typed is kept as typed (an empty box while typing); sums read it as a number
+  function setFeePrice(idx, value){
+    var v = String(value).replace(/[^0-9.]/g, '');
+    setExtraItems(function(p){ return p.map(function(it,i){ return i===idx ? Object.assign({}, it, { unit_price:v }) : it; }); });
+  }
+  // an editable line left empty or at 0: nothing to bill on it
+  function feeWithoutAmount(){ return extraItems.filter(function(it){ return it.editable && !((parseFloat(it.unit_price)||0) > 0); }); }
   function removeFeeItem(idx){ setExtraItems(function(p){ return p.filter(function(_,i){ return i!==idx; }); }); }
 
   // viaConfirm: reached from the green confirm button with nothing in the cash box.
@@ -348,6 +359,8 @@ export default function PaymentPage() {
   async function doConfirmNow(status, viaConfirm){
     var mq = missingQtyRx();
     if(mq.length){ alert(t.py_qtyMissingBlock.replace('{names}', mq.map(function(r){ return r.drug_name; }).join(', '))); return; }
+    var nf = feeWithoutAmount();
+    if(nf.length){ alert(t.py_feeAmountMissing.replace('{names}', nf.map(function(it){ return it.name; }).join(', '))); return; }
     // only lines charged now: an additional charge does not ask again about lines already billed
     var zero = chargeRows().filter(function(r){ return r.item_type!=='consultation' && r.item_type!=='fee' && !(r.unit_price>0); }).map(function(r){ return r.item_name; });
     if(zero.length && !window.confirm(t.py_noPriceConfirm.replace('{n}', zero.length).replace('{names}', zero.join(', ')))) return;
@@ -833,7 +846,14 @@ export default function PaymentPage() {
               {extraItems.length? extraItems.map(function(it,idx){ return <tr key={idx} style={{borderTop:idx?'1px solid var(--line-soft)':'none'}}>
                 <td style={{padding:'7px 10px',color:t2,fontFamily:'monospace',width:60}}>{it.code}</td>
                 <td style={{padding:'7px 10px',color:tx}}>{it.name}</td>
-                <td style={{padding:'7px 10px',textAlign:'right',color:'var(--ok-text)',fontFamily:'monospace'}}>{fmtAr((parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1))} Ar</td>
+                {it.editable
+                  ? <td style={{padding:'5px 10px',textAlign:'right',whiteSpace:'nowrap'}}>
+                      {(parseFloat(it.unit_price)||0)!==it.list_price?<span title={t.py_feeListPrice} style={{fontSize:12,color:t3,fontFamily:'monospace',marginRight:6,textDecoration:'line-through'}}>{fmtAr(it.list_price)}</span>:null}
+                      <input type="text" inputMode="numeric" autoComplete="off" value={it.unit_price} onChange={function(e){setFeePrice(idx, e.target.value)}} onFocus={function(e){e.target.select()}} aria-label={t.py_feeAmount.replace('{name}', it.name)} title={t.py_feeAmount.replace('{name}', it.name)}
+                        style={{width:84,background:'var(--field)',border:'1px solid '+((parseFloat(it.unit_price)||0)>0?'var(--field-border)':'var(--danger-text)'),borderRadius:5,padding:'4px 6px',color:'var(--ok-text)',fontSize:15,fontFamily:'monospace',textAlign:'right',boxSizing:'border-box'}}/>
+                      <span style={{color:'var(--ok-text)',fontFamily:'monospace',marginLeft:4}}>Ar</span>
+                    </td>
+                  : <td style={{padding:'7px 10px',textAlign:'right',color:'var(--ok-text)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtAr((parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1))} Ar</td>}
                 <td style={{padding:'7px 10px',textAlign:'right',width:30}}><button onClick={function(){removeFeeItem(idx)}} style={{background:'transparent',border:'none',color:'var(--danger-text)',cursor:'pointer',fontSize:14}}>✕</button></td>
               </tr>; }) : <tr><td colSpan={4} style={{padding:10,color:t3,fontStyle:'italic',fontSize:13}}>{t.noAdminCharges}</td></tr>}
             </tbody></table>

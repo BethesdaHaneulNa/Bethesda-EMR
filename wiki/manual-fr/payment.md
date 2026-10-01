@@ -35,7 +35,7 @@ Encaisser un patient qui sort de consultation :
 2. Si le patient vous donne 20 000 Ar pour un total de 18 000 Ar : tapez `20000` dans **Montant Reçu**.
 3. **Monnaie** affiche **2 000 Ar**. Rendez 2 000 Ar.
 4. Cliquez sur **Confirmer**. Le reçu indique **Montant remis** 20 000 Ar et **Monnaie rendue** 2 000 Ar.
-5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**.
+5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**. Pour **Document Fee**, la ligne a une case de montant : elle propose 5 000, tapez le montant du document (par exemple `3000`). Le tarif des Paramètres reste affiché barré à côté. Si la case est vide, l'écran refuse d'encaisser (« Montant manquant pour : Document Fee ») : tapez un montant ou retirez la ligne avec **✕**. Le certificat et le CD gardent leur tarif.
 6. Pour une remise : tapez le montant dans **Remise** avant **Confirmer**.
 
 Le patient disparaît de **En attente** et apparaît dans **Payé aujourd’hui**.
