@@ -22,7 +22,7 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 ## En bref
 
 1. Cliquez sur **Paramètres** dans la barre du haut.
-2. À gauche, choisissez la partie : **Personnel**, **Médicaments**, **Ordonnances types**, **Items de test**, **Sauvegarde**, **Journal**…
+2. À gauche, choisissez la partie. Dans l'ordre du menu : **Personnel**, **Médicaments**, **Codes d'actes**, **Items de test**, **Phrases types**, **Services**, **Ordonnances types**, **Flux d'ordres**, **Sauvegarde**, **Journal**, **Établissement**.
 3. Pour ajouter : **+ Ajouter** (ou **Nouvel ensemble** pour une ordonnance type).
 4. Pour changer une ligne : **Modifier**, changez, puis **Sauver**.
 5. Regardez chaque jour le **petit point** en haut, juste avant l'heure : vert = tout va bien.
@@ -128,11 +128,13 @@ Les **phrases types** sont des phrases déjà écrites que le médecin ajoute à
 
 1. **Paramètres** → **Items de test**.
 2. **Panel** : choisissez l'analyse (par exemple L01 · CBC).
-3. Sur chaque ligne : **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »).
+3. Sur chaque ligne : **Unité** se choisit dans la liste (**— sans unité —** si l'item n'a pas d'unité), puis **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »).
 4. Pour des valeurs selon le sexe ou l'âge : **▸ Par sexe et âge** → **+ Ajouter une ligne**.
 5. **Sauver**. Si plusieurs tableaux **Par sexe et âge** sont ouverts, faites défiler vers le bas pour voir **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
 
 Les résultats déjà enregistrés gardent leur couleur et leur référence. Seuls les résultats enregistrés ensuite — ou enregistrés à nouveau — suivent les nouvelles valeurs.
+
+**Liste des unités.** À droite de **+ Nouveau panel**, **Liste des unités** ouvre la liste proposée dans la case **Unité**. Pour ajouter : écrivez l'unité dans **Nouvelle unité**, puis **+ Ajouter**. Pour changer l'ordre : **▲ ▼**. Pour retirer : **✕**. Cliquez sur **Sauver**. Retirer ou renommer une unité ne change pas les items ni les résultats qui l'utilisent : ils gardent leur unité, affichée **hors liste**. Deux unités qui ne diffèrent que par les majuscules ou les espaces sont la même unité.
 
 <!-- à revoir : onglet de la session Laboratoire ; les valeurs de référence sont en cours de validation par les médecins. -->
 
