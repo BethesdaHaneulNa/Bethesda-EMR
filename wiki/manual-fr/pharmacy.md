@@ -28,8 +28,8 @@ Au centre, chaque médicament a une ligne : **Médicament** · **Dose/jour** · 
 
 Ce qui peut apparaître en jaune ou en rouge :
 
-- **⚠ À vérifier avec le médecin (pas en demi-comprimés)** sous **Dose/prise** : la dose du jour ne se partage pas en comprimés entiers ou en demi-comprimés. Demandez au médecin.
-- **⚠ Nombre de prises absent — voir le médecin** sous **Fréq.** : le médecin n'a pas écrit combien de fois par jour. Vous pouvez remettre le médicament, mais demandez au médecin comment le prendre.
+- **⚠ À vérifier avec le médecin (pas en demi-comprimés)** sous le nom du médicament (un tiret jaune dans **Dose/prise**) : la dose du jour ne se partage pas en comprimés entiers ou en demi-comprimés. Demandez au médecin.
+- **⚠ Nombre de prises absent — voir le médecin** sous le nom du médicament (un tiret jaune dans **Fréq.**) : le médecin n'a pas écrit combien de fois par jour. Vous pouvez remettre le médicament, mais demandez au médecin comment le prendre.
 - **⚠ Quantité totale absente** dans **Qté** : le nombre total n'a pas été écrit. Ce médicament ne sortira pas du stock. Demandez au médecin.
 - **Ancien calcul (dose×fois×jours)** sous **Qté** : ordonnance enregistrée avant le changement de calcul. Le nombre affiché reste celui à remettre.
 - Un cadre rouge **⚠** sous le nom du médicament (exemple : « Même médicament prescrit il y a 3 j pour 7 j — encore 4 j de traitement ») : le patient a peut-être encore ce médicament. Vérifiez avec lui ou avec le médecin.

@@ -251,7 +251,10 @@ export default function PharmacyPage() {
     return isExternal(rx) || q === null ? sum : sum + q * (parseFloat(rx.unit_price) || 0);
   }, 0);
   var anyUnquantified = (sel && sel.prescriptions ? sel.prescriptions : []).some(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
-  var RX_COLS = '1.5fr .6fr .6fr .5fr .5fr .6fr .7fr 1fr';
+  // Fixed shares (minmax(0, ...)): with plain fr a column is never narrower than its
+  // longest word, and each row is its own grid - so on a 1366 laptop « Dose/prise » and
+  // « Posologie » squeezed the drug name to 117px and rows did not line up with the head.
+  var RX_COLS = 'minmax(0,1.9fr) minmax(0,.8fr) minmax(0,.85fr) minmax(0,.5fr) minmax(0,.5fr) minmax(0,.8fr) minmax(0,.85fr) minmax(0,.8fr)';
 
   var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
   var green='var(--ok)', violet='var(--violet)';
@@ -293,8 +296,11 @@ export default function PharmacyPage() {
         {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
+      {/* The patient chart on the right keeps about 320px on a 1366 laptop, where the
+          prescription table needs the room, and grows on wider screens (1600 -> 384,
+          1920 -> 420) so the doctor's follow-up line reads without opening the visit. */}
       {tab === 'stock' ? <PharmacyStock /> :
-      <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) 320px', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) clamp(320px, 24vw, 420px)', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
           <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
           <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
@@ -343,15 +349,15 @@ export default function PharmacyPage() {
 
             <div style={{ padding:16, overflow:'auto', flex:1, minHeight:0 }}>
               <div style={{ background:pn, border:'1px solid '+bd, borderRadius:8, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, color:t3, fontSize: 16, fontWeight:800 }}>
-                  {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 10px' }}>{h}</div>;})}
+                <div style={{ display:'grid', gridTemplateColumns:RX_COLS, gap:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, color:t3, fontSize: 14, fontWeight:800 }}>
+                  {[t.colDrugName,t.ph_colDaily,t.ph_colPerDose,t.colFreq,t.colDays,t.ph_colDirections,t.colQty,t.colMemo].map(function(h){return <div key={h} style={{ padding:'8px 7px' }}>{h}</div>;})}
                 </div>
                 {(sel.prescriptions||[]).map(function(rx){
                   var warn = refillWarn(rx.drug_code);
                   var total = storedTotal(rx);
                   var per = perDose(rx);
                   return <div key={rx.id} style={{ display:'grid', gridTemplateColumns:RX_COLS, borderBottom:'1px solid '+bd, fontSize: 16, background: warn?'var(--danger-a0d)':'transparent' }}>
-                    <div style={{ padding:'10px', fontWeight:800, color:tx }}>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', fontWeight:800, color:tx }}>
                       <div>{rx.drug_name}</div>
                       <div style={{ color:t3, fontSize: 16, marginTop:2 }}>{rx.drug_code}</div>
                       {tab==='pending' ? <div style={{ display:'inline-flex', marginTop:5, borderRadius:5, overflow:'hidden', border:'1px solid '+bd2 }}>
@@ -362,23 +368,26 @@ export default function PharmacyPage() {
                         })}
                       </div> : (rx.dispense_type==='external' ? <span style={{ display:'inline-block', marginTop:5, background:'var(--warn-a20)', color:'var(--warn-text)', borderRadius:4, padding:'2px 8px', fontSize:13, fontWeight:800 }}>{t.externalRx||'원외'}</span> : null)}
                       {warn? <div style={{ marginTop:4, color:'var(--danger-text-2)', background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'3px 7px', display:'inline-block', fontSize: 13, fontWeight:700 }}>⚠ {fill(t.ph_refillWarn, { ago: warn.daysAgo, supply: warn.priorDays, left: warn.daysLeft })}</div> : null}
+                      {/* The two "ask the doctor" notes sit here, under the name, where there is
+                          room; in their own narrow columns they wrapped a word a line. The cell
+                          itself keeps the amber dash. */}
+                      {per && !per.clean ? <div style={{ marginTop:4, color:'var(--warn-text)', fontSize: 13, fontWeight:700 }}>{t.ph_perDoseCheck}</div> : null}
+                      {missingTimes(rx) ? <div style={{ marginTop:4, color:'var(--warn-text)', fontSize: 13, fontWeight:700 }}>{t.ph_timesCheck}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
-                    <div style={{ padding:'10px', color: per && per.clean ? tx : isPack(rx) ? t3 : 'var(--warn-text)', fontWeight:800 }}>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color:t2 }}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : '-'}</div>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color: per && per.clean ? tx : isPack(rx) ? t3 : 'var(--warn-text)', fontWeight:800 }}>
                       {per && per.clean ? fmtAmount(per.value) : '—'}
-                      {per && !per.clean ? <div style={{ fontSize: 12, fontWeight:700, marginTop:2 }}>{t.ph_perDoseCheck}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color: missingTimes(rx) ? 'var(--warn-text)' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color: missingTimes(rx) ? 'var(--warn-text)' : t2, fontWeight: missingTimes(rx) ? 800 : 400 }}>
                       {rx.frequency || '-'}
-                      {missingTimes(rx) ? <div style={{ fontSize: 12, marginTop:2 }}>{t.ph_timesCheck}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.days || '-'}</div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.route || '-'}</div>
-                    <div style={{ padding:'10px', color: hasTotal(rx) ? t2 : 'var(--danger-text-2)', fontWeight: hasTotal(rx) ? 400 : 800 }}>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color:t2 }}>{rx.days || '-'}</div>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color:t2 }}>{rx.route || '-'}</div>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color: hasTotal(rx) ? t2 : 'var(--danger-text-2)', fontWeight: hasTotal(rx) ? 400 : 800 }}>
                       {hasTotal(rx) ? (isPack(rx) ? packWord(rx, lc.lang, total) : fmtAmount(total)) : t.ph_noTotal}
                       {isLegacyTotal(rx) ? <div style={{ fontSize: 12, color:'var(--warn-text)', fontWeight:700, marginTop:2 }}>{t.ph_legacyTotal}</div> : null}
                     </div>
-                    <div style={{ padding:'10px', color:t2 }}>{rx.memo || '-'}</div>
+                    <div style={{ padding:'10px 7px', overflowWrap:'anywhere', color:t2 }}>{rx.memo || '-'}</div>
                   </div>;
                 })}
               </div>
