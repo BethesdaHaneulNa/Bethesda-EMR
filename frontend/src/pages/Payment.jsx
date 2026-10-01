@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
+import { PAGE_COLS, TOOL_ROW, toolBtn, tabBtn } from '../layout.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
@@ -24,7 +25,6 @@ function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 // (28 % of its width) between 340 and 460 px, so a 1920 screen gets 460 and no more. The
 // amounts column keeps the five quick-amount buttons on one line down to 280 px (5 x 48
 // + gaps + padding); narrower, they wrap to a second line.
-var PAGE_COLS = '300px minmax(0,1fr) minmax(280px,clamp(340px,28vw,460px))';
 var BILL_COLS = 'minmax(0,1fr) minmax(230px,clamp(260px,20.8vw,300px))';
 
 export default function PaymentPage() {
@@ -526,21 +526,21 @@ export default function PaymentPage() {
   return(
     <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,height:'100vh',display:'flex',flexDirection:'column',fontSize:16}}>
       <TopBar />
-      <div style={{background:'var(--panel-2)',borderBottom:'1px solid '+bd,padding:'6px 8px',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
-        <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'var(--accent)':'var(--chip)',color:tab==='waiting'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='waiting'?'var(--accent-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({dayCount()})</button>
-        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'var(--ok)':'var(--chip)',color:tab==='completed'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='completed'?'var(--ok-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{viewingPast ? t.py_paidOn.replace('{date}', workDate) : L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
-        <button onClick={loadLists} style={{background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'6px 9px',fontSize:14,cursor:'pointer'}}>↻</button>
-        <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:'var(--text-soft)',border:'1px solid '+bd2,borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
-        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
-        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.imagingList||t.reading}</button>
+      <div style={TOOL_ROW}>
+        <button onClick={function(){setTab('waiting')}} style={tabBtn(tab==='waiting','var(--accent-a20)','var(--accent-text)','var(--accent-a50)')}>{L.waitingPay} ({dayCount()})</button>
+        <button onClick={function(){setTab('completed')}} style={tabBtn(tab==='completed','var(--ok-a20)','var(--ok-text-2)','var(--ok-a50)')}>{viewingPast ? t.py_paidOn.replace('{date}', workDate) : L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
+        <button onClick={loadLists} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button>
+        <button onClick={function(){setFinderOpen(true)}} style={toolBtn()}>🔍 {t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
+        <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
+        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 10px',fontSize:14,fontWeight:700,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.imagingList||t.reading}</button>
         <div style={{flex:1}}></div>
         {tab==='waiting'&&sel&&billItems&&!sel.needs_refund&&sel.status!=='cancelled'?(nothingToCharge()?(
           <span style={{color:'var(--ok-text)',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
         ):(<>
-          <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--danger-a20)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:6,padding:'6px 10px',cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
-          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':(amtPaidNum()>0?'partial':'unpaid'), true)}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'7px 16px',cursor:busy?'wait':'pointer',fontSize:15,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
+          <button onClick={function(){doConfirm('unpaid')}} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--danger-a20)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:6,padding:'6px 10px',minHeight:34,cursor:'pointer',fontSize:14,fontWeight:700}}>{L.leaveUnpaid}</button>
+          <button onClick={function(){doConfirm(amtPaidNum()>=totalDue()?'paid':(amtPaidNum()>0?'partial':'unpaid'), true)}} disabled={busy} style={{opacity:busy?0.5:1,background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'6px 16px',minHeight:34,cursor:busy?'wait':'pointer',fontSize:14,fontWeight:800}}>{busy?'…':t.confirmPayment}</button>
         </>)):null}
       </div>
 
@@ -560,7 +560,6 @@ export default function PaymentPage() {
               <button type="button" onClick={function(){chooseWorkDate(serverToday)}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{t.rc_backToToday}</button>
             </div>:null}
           </div>
-          <div style={{padding:'9px 12px',borderBottom:'1px solid '+bd,background:scBg,fontWeight:800,fontSize:16,color:viewingPast?'var(--warn-text)':tx}}>💰 {tab==='waiting'?L.waitingPay:(viewingPast?t.py_paidOn.replace('{date}', workDate):L.todayPaid)}</div>
           {tab==='completed'&&cashDay?<div style={{padding:'8px 12px',borderBottom:'1px solid '+bd,background:'var(--ok-a12)',fontSize:13}}>
             <div style={{fontWeight:800,color:'var(--ok-text)',marginBottom:3}}>💵 {viewingPast ? t.py_cashOn.replace('{date}', workDate) : t.py_cashDay}</div>
             <div style={{display:'flex',justifyContent:'space-between',gap:6,fontFamily:'monospace',flexWrap:'wrap'}}>
