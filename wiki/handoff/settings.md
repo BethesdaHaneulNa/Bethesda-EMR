@@ -2,6 +2,16 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 권한 시험 표: 환자 검사 결과 읽기에 수납 (화면 변화 없음)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `4588757` merge 위 — 임상병리 `cfc600f` 포함)
+- **무엇을**: `backend/test/settings.access.mjs` 표의 `GET /lab/patient/:id/results` 줄 [CONS, LAB] → **[CONS, LAB, PAY]**. 수납 화면의 「검사결과」 단추(실장님 요청)로 임상병리가 그 길에 payment 를 더했음 — 코드(`lab.routes.js` `permMiddleware('consultation', 'lab', 'payment')`)와 맞음.
+- **같이 본 것**: 백엔드의 모든 길과 표를 다시 대조 — 새로 빠진 길 없음(표에 넣지 않는 길 11개는 전과 같음).
+- **바꾼 파일**: `backend/test/settings.access.mjs`(한 줄 + 주석) · `wiki/modules/settings.md`(8절) · 이 노트
+- **확인한 방법**: `node --check`. 새 격리 스택(9187)에서 전체 실행 → 「139 routes x 11 accounts = 1529 requests / every route answered every role as the S2 table says」. 스택 `down -v`, 계정 파일 삭제.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-01 — 「수납에서 금액을 고칠 수 있음」을 켜고 끈 것도 로그에 (결정)
 
 - **상태**: 확인 요청
