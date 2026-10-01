@@ -521,7 +521,6 @@ export default {
   py_searchNone: "「{q}」: 이 목록에 맞는 환자가 없습니다",
   py_nonePaidThatDay: "이 날짜에 수납 완료된 건이 없습니다.",
   py_feeAmount: "{name} 금액 — 고칠 수 있습니다",
-  py_feeListPrice: "설정의 기본 금액",
   py_feeAmountMissing: "금액이 비어 있습니다: {names}. 금액을 넣거나 ✕ 로 그 줄을 지운 뒤 수납하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──

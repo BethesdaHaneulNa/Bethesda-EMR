@@ -530,7 +530,6 @@ export default {
   py_searchNone: "“{q}”: no patient in this list matches",
   py_nonePaidThatDay: "No completed payments on this date.",
   py_feeAmount: "{name} amount - can be changed",
-  py_feeListPrice: "The price set in Settings",
   py_feeAmountMissing: "No amount for: {names}. Type an amount, or remove the line with ✕, then bill.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
