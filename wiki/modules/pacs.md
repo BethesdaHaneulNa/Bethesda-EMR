@@ -169,6 +169,27 @@
 - **이 창이 하지 않는 것**: 한 검사 안에 두 검사의 영상이 섞인 경우, 다른 환자의 줄로 찍힌 경우 — 판독에 적고 관리자에게.
 
 
+### 2.4.3 영상 인쇄 — 영상을 종이로 뽑아 줄 때 (2026-10-01, 실장님 요청)
+
+환자가 다른 병원에 갈 때 **영상 자체를 A4 종이로** 뽑아 줍니다(실장님: 「마다 많은 병원이 그냥 프린터로 뽑아 주는 걸로 안다」). 판독 보고서(2.4.1)와는 다른 종이입니다 — 그쪽은 글, 이쪽은 그림. 견본(가짜 환자): [초음파 6장 배치](../reference/design/imaging-images-sample-6-fr.png) · [X-ray 2장 배치, 긴 이름](../reference/design/imaging-images-sample-2-long-name-fr.png).
+
+1. **🩻 Imagerie (영상/판독)** 창(진료·수납 모두)에서 검사를 고르고, 오른쪽 「Images」 줄 아래의 **🖨 Imprimer les images (영상 인쇄)** 를 누릅니다.
+2. 창 위쪽에 그 검사의 영상이 **작은 그림**으로 장비가 찍은 순서대로 나옵니다(「S1 · 3」 = 1번 시리즈의 3번 영상, 여러 프레임짜리는 「▶ 12」). **처음에는 앞의 12장이 체크**되어 있습니다. 눌러서 넣고 뺍니다. 「Tout cocher」 / 「Tout décocher」. 한 번에 **48장까지**(넘으면 「Cocher les 48 premières」 — 나머지는 한 번 더 인쇄).
+3. **Images par page (한 장에)**: 1 · 2 · 4 · 6 — 처음은 2. 그림은 비율 그대로 칸에 맞춰 들어갑니다(잘리지 않음, 작은 그림을 억지로 키우지 않음).
+4. **Clarté (밝기)**: Normale · + · ++ — 초음파·X-ray는 바탕이 검어서 흑백 레이저 프린터에서 뭉개집니다. 어두운 쪽을 밝게 올려 **종이에만** 그렇게 찍습니다(영상 자체는 안 바뀜). 미리보기에 바로 보입니다. 현지 프린터에서 어느 값이 맞는지는 뽑아 보고 정하세요.
+5. **Langue de la feuille (서류 언어)**: FR · EN · KO, 처음은 프랑스어(판독 보고서와 같은 규칙).
+6. 아래에 **종이가 그대로** 보입니다. 장마다: 병원 이름(작게 주소·전화)과 파란 **IMAGES** · 환자 칸(이름, 차트번호, 성별·나이) · 검사 이름과 검사 날짜 · 그림들(그림마다 아래에 「S1 · 3 — 시리즈 설명」, 여러 프레임짜리는 「(1re image de 12)」 — **첫 프레임만** 찍힘) · 맨 아래 왼쪽에 **「Images de référence — non destinées au diagnostic」**(참고용 — 진단용 아님), 오른쪽에 발행 일시와 쪽 번호(「1 / 4」).
+7. **🖨 Émettre et imprimer (발행하고 인쇄)** — ① 변경 기록에 「영상 인쇄」 한 줄(누가 · 환자 · 어느 검사 · 몇 장) ② 서류로 발행(📄 문서 창의 발급 이력) ③ 인쇄 창. **①이나 ②가 안 되면 인쇄하지 않습니다.** 종이에 서류 번호는 없고, 창 아래에 «Émis : D26-…»로 보입니다.
+8. **Imprimer de nouveau** 는 같은 종이를 다시 뽑습니다(다시 발행하지 않음). 고른 영상·배치·밝기·언어 가운데 하나라도 바꾸면 새로 발행됩니다.
+
+- **단추가 꺼져 있을 때**(마우스를 올리면 이유): 취소된 검사 / 영상이 없는 검사 / **환자 번호 경고가 있는 검사**(영상 속 번호가 차트와 다르거나 없음 — 다른 사람의 영상이 이 환자 이름으로 나갈 수 있어서 막음. 2.6절대로 바로잡은 뒤에) / 「다른 오더로 옮기는 중」인 검사(몇 분 뒤).
+- **그림이 아닌 자료**(장비가 보낸 보고서 등)는 작은 그림 줄에 나오지 않고, 「N élément(s) sans image … non affiché(s)」라고 알려 줍니다.
+- **긴 이름**은 잘리지 않습니다(글자가 작아지고 줄이 늘어남 — 판독 보고서와 같은 규칙). 머리 칸이 커지면 그림 칸이 그만큼 줄어듭니다.
+- **그림을 못 가져왔을 때**: 그 칸에 「Image indisponible」, 아래 줄에 「N image(s) n'ont pas pu être chargée(s)」 — 인쇄 단추가 꺼집니다. 그 영상의 체크를 풀거나 창을 닫았다 다시 엽니다. 영상 서버가 꺼져 있으면 창에 「Le serveur d'images ne répond pas」.
+- **발행한 뒤**: 📄 Documents 창의 발급 이력에 「Images de l'examen」으로 나옵니다. 거기서 열면 **영상 서버에서 그림을 다시 가져와** 같은 배치·밝기로 보여 주고, 다시 인쇄할 수 있습니다(그림이 다 뜬 뒤에 인쇄 단추를 누르세요). 기록에는 「어느 영상」만 있고 그림은 들어 있지 않으므로, 그 뒤에 영상이 지워졌으면 그 칸은 비어 나옵니다.
+- 브라우저 인쇄 창에서 **머리글과 바닥글**을 끄세요. 팝업이 막혀 있으면 「Le navigateur a bloqué la fenêtre d'impression」.
+- **총괄이 추천값으로 정함(2026-10-01 — 실장님이 바꿀 수 있음)**: 종이 아래 「참고용 — 진단용 아님」 넣음 / 수납도 인쇄 허용 / 환자 번호 경고가 있는 검사는 막음 / 기본 2장 배치, 한 번에 48장, 처음 12장 선택.
+
 ### 2.5 영상이 안 보일 때 — 순서대로
 
 1. **🩻 Imagerie (영상/판독)** 목록에서 그 검사 옆 글자를 봅니다.
@@ -301,6 +322,8 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. **`props.reload`**(숫자, 2026-10-01 총괄 `71dedec`): 화면이 이 값을 올리면 목록을 다시 읽음 — 같은 환자면 「Loading…」을 띄우지 않고(자리·스크롤 유지), 읽기에 실패해도 있던 목록을 지우지 않음. 진료 화면은 목록의 `onOpen`에서 목록을 닫지 않고(영상 창 z 1001이 목록 z 1000 위), 영상 창이 닫힐 때(`viewer`가 비고 목록이 열려 있으면) `readingsReload`를 올림. 수납 화면은 `reload`를 주지 않음(영상 창이 없음). 진료·수납 화면의 「🩻 Imagerie (영상/판독)」 창(키 `imagingList`, 2026-10-01 전에는 「🩻 판독소견」) 안에 들어갑니다. **체크 칸**(2026-10-01): **`props.onCompare(오더 번호 배열)`** 을 주면 줄마다 체크 칸과, 목록 위 줄의 맨 왼쪽(체크 칸 열 위)에 「⇆ Comparer (N)」·「🖨 Imprimer (N)」·「Tout décocher」 — 체크 상태는 **부품 안**에 있음(영상 창이 위에 떠 있는 동안 남고, 목록을 닫으면 부품과 함께 사라짐; 환자가 바뀌면 비움). 처음에는 `picked`·`onPick`으로 화면이 상태를 갖고 창 머리에 단추(`CompareChecked`)를 두었으나, 단추를 체크 칸 가까이로 옮기면서 부품 안으로 넣고 `Consultation.jsx`의 상태·단추를 뺌. 체크할 수 있는지는 `compareBlock(r, t)`(취소 · 영상 없음 · `patient_check ≠ match`면 이유 글, 아니면 빈 글 — 서버와 같은 규칙), 최대 9건. 목록이 다시 읽힌 뒤 체크할 수 없게 된 줄은 체크에서 빠짐. 수납 화면은 이 prop을 주지 않음(체크 칸·그 세 단추 없음). 종류 좁혀 보기는 `<select>`(진료 화면 상용구 분류 고르기와 같은 크기·글자). **두 칸 모양**(2026-10-01): 왼쪽 목록(격자 `26px 92px 42px 1fr 96px 150px`, 줄 높이 28px, 머리줄 sticky, `data-exam` = 오더 번호)과 오른쪽 상세. 고른 줄은 부품 안의 상태(`selId` — 없거나 걸러져 안 보이면 맨 위 줄), ↑↓는 목록 칸(`tabIndex=0`, 열리면 포커스)의 `onKeyDown`, 좁혀 보기(`kind`·`query`)도 부품 안. 조용한 다시 읽기(`reload`) 때 고른 줄·걸러 보기가 남고, 환자가 바뀌면 비움. 「영상보기」 단추는 상세 칸에(`onOpen`이 있을 때). 색은 모두 이름표(밝은·어두운 화면에서 글자 대비 4.8 이상). `GET /readings/patient/:id` 응답에 `ordered_by_name`(오더한 직원, 없으면 그 내원의 의사)·`dept_code`·`dept_name`(내원의 진료과)이 더해짐.
   - 같은 파일에서 **`PatientCheck({images, t, style})`** 와 **`imagesOfRow(row)`** 도 export합니다. `images`는 `viewer-url` 응답의 `images` 모양(`{patient_check, patient_id, patient_name}`, 도착 전에는 `null`)으로 통일했고, 판독 목록의 줄은 `imagesOfRow`로 그 모양으로 바꿔 넘깁니다. `style`은 바깥 상자(여백)만 덮어씀. 진료 화면의 뷰어 창이 이것을 가져다 쓰면 경고 모양·문구가 한 곳에서 관리됩니다.
 - 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다. iframe `src`와 「새 탭에서 열기」는 `viewer-url`의 `url`(EMR 자신의 상대 주소 `/api/pacs/viewer/…`)을 그대로 씀 — P-9 뒤에도 진료 파일은 바뀐 것 없음.
+- **`frontend/src/components/ImagesPrint.jsx`**(2026-10-01) — 영상 인쇄 창. `ImagesPrint({exam, examDate, now, patientId, t, onClose})`, `imagesBlock(row, t)`(단추가 꺼지는 이유 — 서버의 `examBlock`과 같은 규칙). 작은 그림은 3장씩 차례로 가져오고(브라우저는 한 서버에 6개까지만 동시에 — 종이의 그림이 작은 그림 300장 뒤에 줄 서지 않게), 종이의 그림은 `usePictures`가 가져옵니다. 인쇄 창은 그림이 모두 그려질 준비가 된 뒤에 `print()`를 부릅니다(공용 `printDocument`의 0.35초 대기로는 48장이 모자람 — 그래서 이 창은 자기 것을 씀). `RadiologyReadings.jsx`가 「Images」 줄 아래에 단추를 그리고 이 창을 엽니다(진료·수납 공통 — `onOpen`이 없어도 나옴).
+- **`frontend/src/documents/imaging-images.jsx`**(2026-10-01) — 영상 인쇄의 서식(`code: 'imaging-images'`, `category: 'imaging'`). `ImagingImagesLayout`: `values {exam_name, exam_date, order_item_id, per_page, clarity, images:[{id, series, number, frames, desc}]}`. 한 장 = 높이 264mm의 칸(머리 · 그림 격자 · 꼬리), 격자는 1×1 / 1×2 / 2×2 / 2×3. `props.pictures`(인쇄 창이 이미 가져온 것)가 없으면 스스로 가져옴(문서 이력에서 다시 열 때). `loadPicture`(로그인 토큰을 머리말에 실어 `GET /api/pacs/export/image` → `<img>`), `toPaper(img, clarity)`(캔버스에서 감마 곡선 1 / 1.45 / 2.0 → JPEG 자료 주소), `usePictures`, `forgetPictures`, `pictureLabel`, `pictureWidth`(1·2장 배치 1600, 4·6장 1000). `registry.js`에 등록(PACS가 직접 — 총괄 결정 ㄱ): `TEMPLATES`, 문서 창 이력(`HISTORY_ALSO.document`), 번호를 종이에 안 찍는 목록(`NO_NUMBER_ON_PAPER`). `imaging-report.jsx`의 `fitSize` · `linesAt`을 export해서 같이 씀.
 - 설정 → 오더 연동(Order Feed) 탭 — `Settings.jsx` 약 476~515줄, `savePacs`·`testPacs`.
 
 ### 서버 — `backend/src/routes/pacs.routes.js` (`/api/pacs`)
@@ -358,6 +381,21 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 **`images`** (`viewer-url` 응답) — 브리지가 보고하기 전에는 `null`(「아직 안 옴」과 「왔고 맞음」을 구분하려고). 보고 뒤: `{received_at, count, patient_id, patient_name, patient_check}`.
 
 **`patient_check`** — EMR이 정합니다(브리지가 보낸 판정을 믿지 않음). 영상 속 PatientID와 `patient.chart_no`를 앞뒤 공백 빼고 대소문자 무시로 비교: `match` / `mismatch` / `missing`(PatientID 없음). 잡는 것: 장비에서 손으로 치거나 고친 환자 정보. **못 잡는 것: 워크리스트에서 다른 환자를 고른 경우**(영상에 고른 환자의 정보가 그대로 들어감) — 그래서 끝난 환자를 목록에서 빼는 P-7이 짝입니다.
+
+### 서버 — `backend/src/routes/pacs.export.js` (`/api/pacs/export`, 2026-10-01 — 병원 밖으로 나가는 영상)
+
+지금은 **영상 인쇄**의 서버 쪽입니다(CD 반출의 길은 다음에 이 파일에 더함). 권한: **진료 또는 수납**. 그림은 Orthanc의 공식 REST(`/instances/{id}/rendered`)로 받아 그대로 넘깁니다 — Orthanc를 고치지 않고, EMR에 저장하지 않습니다.
+
+| 길 | 하는 일 |
+|---|---|
+| `GET /export/exam/:orderItemId` | 그 검사의 그림 목록: `{exam, images:[{id, series, desc, modality, number, frames}], skipped, max}`. 순서는 시리즈 번호 → 영상 번호(장비가 붙인 대로). 그림이 없는 시리즈(종류가 SR · KO · PR · DOC 등)는 빼고 `skipped`로 셈 |
+| `GET /export/image?order_item_id=&instance=&w=` | 그림 한 장(JPEG, 장비가 저장한 밝기 창으로). 여러 프레임이면 첫 프레임. 그림의 너비가 `w`(200~1600, 기본 1600)보다 크면 영상 서버가 줄여서, 작으면 그대로(키우지 않음). **그 영상이 그 오더의 검사 것이 아니면 403** |
+| `POST /export/printed` `{order_item_id, instances:[…], per_page, lang}` | 인쇄의 변경 기록 한 줄(`pacs.images.print`). 영상은 1~48장, 모두 그 검사의 것이어야 함. 줄을 못 적으면 500 `NOT_LOGGED` — 화면은 이것이 ok일 때만 서류를 발행하고 인쇄 |
+
+- **거절**(`{ok:false, code, error}` — 화면은 `code`로 자기 말을 고름, `px_imErr_<CODE>`): `NOT_FOUND`(영상 오더가 아님, 404) · `CANCELLED` · `NO_IMAGES` · `IDENTITY`(환자 번호 경고 — `patient_check`가 `match`가 아님) · `BUSY`(옮기는 중) · `NOT_PAIRED` · `UNREACHABLE` · `NOT_ON_SERVER`(404) · `NOT_OF_EXAM`(403) · `NOT_A_PICTURE`(415) · `BAD_REQUEST` · `TOO_MANY`(400) · `NOT_LOGGED`(500). 나머지는 409.
+- **영상 서버 무응답을 502·503·504로 답하지 않습니다**: EMR 앞의 nginx(`frontend/nginx.conf`)가 그 셋을 자기 글(「API backend is not reachable」)로 바꿔 버려서 `code`가 사라집니다(격리에서 겪음). 그래서 409.
+- **변경 기록 줄**: `entity: order_item`, 요약 `N image(s) of <검사> (<accession>) printed`, 값 `{order_name, accession_no, image_count, per_page, lang}`. 그림도, 어느 영상인지도 넣지 않습니다(어느 영상인지는 발행된 서류의 기록에).
+- **격리에서 확인한 것**(가짜 장비로 보낸 검사 — 초음파 컬러 800×600 18장 + 12프레임 1건 + 장비 보고서 1건 / 60장짜리 / 12비트 흉부 필름 2500×3000 2장 + 흑백이 뒤집힌 필름 1장): 목록 순서 · 보고서가 빠짐 · 필름이 1600×1920으로 줄어 옴(한 장 0.05초) · 작은 그림은 그대로 · 뒤집힌 필름도 바르게 · 다른 검사/다른 환자의 영상 번호를 넣으면 403 · 취소/경고/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 기록을 못 적게 하면(시험용 DB 트리거) 500이고 줄 없음 — 35가지.
 
 ### 서버 — `backend/src/routes/pacs.viewer.js` (`/api/pacs/viewer`, 영상 중계 — P-9 C)
 
@@ -731,3 +769,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | 현지 직원용 프랑스어 설명서 `wiki/manual-fr/pacs.md`, v1.5.0 변경 내역 초안 `wiki/reference/changelog-1.5.0/pacs.md`, 오더 연동 탭 오류 문구 번역(서버 검사 400 + `pxMessage`), 7절 P-9에 같은 출처 결정 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | **P-9 C: EMR이 영상을 중계**(`pacs.viewer.js`, 마이그레이션 035(세션 번호 803) `orthanc_url`·`orthanc_password`, 서명 쿠키, 허용 목록, 뷰어용 CSP). `pair-with-emr`가 Orthanc 비밀번호도 넣음, Orthanc 9090은 127.0.0.1만, Stone 시작 안내 끔. 2.3·2.5(로그인 없음, 안내 문구), 4절 중계, 6절 설정 칸, 6.1 순서, 7절 P-9 ✅(보안 시험·50MB 수치) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 영상 백업 만듦(6.2, PACS `image-backup.ps1` 등 5개, EMR `POST /image-backup-report`), 6.1을 새 도구(check-windows-ports·pair-with-emr·영상 복원) 기준 설치 순서로 다시 씀, 2.6에 취소 뒤 늦은 영상 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | **영상 인쇄**(2.4.3절): 검사의 영상을 A4에 1·2·4·6장씩 — 🩻 창의 「🖨 Imprimer les images」(진료·수납). 새 서버 파일 `pacs.export.js`(그림 목록 · 그림 한 장 · 인쇄 기록), 인쇄 창 `ImagesPrint.jsx`, 서식 `imaging-images.jsx`, 변경 기록 동작 `pacs.images.print`(+ 다음에 쓸 `pacs.images.export`). 번역 키 `px_im…` 29개 | EMR `session/pacs` |

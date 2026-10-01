@@ -2,6 +2,86 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 설계안 보탬: 영상 CD 반출 프로그램(④) · 총괄 몫의 결정 반영 (문서만)
+
+- **상태**: 확인 요청 — **결정 대기**(실장님 몫: 가 · 나 · 라 · 마 · 바 · 사 · 아 · 자 · 차). 짓지 않음.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop을 `git merge`로 합친 뒤 — ff가 안 됨). 문서만. **PACS 저장소** — 없음
+- **한 일**: `wiki/reference/image-print-export-design.md`에 실장님이 정하신 **따로 실행하는 「영상 CD 반출 프로그램」**(4-2절)을 넣음 — 화면 그림, 흐름(로그인 → 차트번호 조회 → 검사 체크 → 크기 → 빈 디스크 인식 → 「이 CD에 구울까요?」 → 굽기 → 확인 → 꺼냄), 디스크·드라이브의 경우 여덟, EMR을 거치는 자료 길, 권한, 기록(매체 칸), 이 PC에 남는 것, 뷰어를 넣는 길(프로그램 옆 `cd-viewer` 폴더), 드라이브 없이 확인할 수 있는 것과 없는 것. 「EMR 안의 반출 요청 대기함」은 만들지 않음. 총괄 몫 ㄱ~ㄹ은 「정해짐」으로, 「다(ZIP이냐 .iso냐)」는 「반출 프로그램이 답함」으로. 읽을거리 파일 이름을 `README.TXT`로(붙임표가 든 이름은 CD의 옛 이름 형식에서 바뀜 — 이 PC의 시험에서 봄).
+- **이 PC에서 확인한 것**(시스템을 바꾸지 않는 범위 — 읽기와 scratchpad에 파일 만들기뿐): Windows의 굽기 부품(IMAPI2) 있음 · **굽는 드라이브 0대** · 드라이브 없이 ISO 파일 만들기 됨(시험 폴더 → 79,872바이트, `CD001` 표시, 맨 위에 `DICOMDIR` · `INDEX.HTM` · `IMAGES` · `IHE_PDI`) · WinForms 있음 · Windows PowerShell 5.1.
+- **바꾼 파일**: `wiki/reference/image-print-export-design.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
+- **다른 세션에 부탁**: 없음
+
+## 2026-10-01 — ① 영상 인쇄: 검사의 영상을 A4에 1·2·4·6장씩
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(develop `da9bd2d`가 들어 있음 — 그 뒤 develop에 새 것 없음). **PACS 저장소** — 없음
+- **한 일**: 🩻 영상/판독 창의 검사 상세에 **「🖨 Imprimer les images」**(진료·수납 공통). 창에서 영상을 고르고(처음 12장, 한 번에 48장), 한 장에 1·2·4·6장, 밝기(Normale · + · ++ — 종이에만), 언어(FR 먼저). 종이: 병원 · 환자 · 검사 · 그림(시리즈·영상 번호) · 「Images de référence — non destinées au diagnostic」 · 발행 일시 · 쪽 번호. 인쇄 = 변경 기록 한 줄(`pacs.images.print`) → 서류 발행(`imaging-images`) → 인쇄 창. 앞의 둘 가운데 하나라도 안 되면 인쇄하지 않음.
+- **바꾼 파일**:
+  - 새로: `backend/src/routes/pacs.export.js`, `frontend/src/components/ImagesPrint.jsx`, `frontend/src/documents/imaging-images.jsx`, 견본 그림 둘(`wiki/reference/design/imaging-images-sample-*.png` — 가짜 환자)
+  - 고침: `backend/src/routes/pacs.routes.js`(라우터 걸기 3줄), `frontend/src/components/RadiologyReadings.jsx`(단추와 창 열기 — 주황색 「⇄」 단추는 그대로), `frontend/src/documents/imaging-report.jsx`(`fitSize` · `linesAt`에 `export`만)
+  - 위키: `modules/pacs.md`(2.4.3절, 4절 화면·서버, 8절), `manual-fr/pacs.md`(§11), `reference/changelog-1.5.0/pacs.md`, `reference/image-print-export-design.md`(시작 · 총괄이 정한 값 · 판독소견은 넣지 않음 · `D:\CD-TEST` · 차례)
+- **공용 파일 변경**:
+  - `backend/src/utils/audit.js` — 동작 둘: `PACS_IMAGES_PRINT: 'pacs.images.print'`, `PACS_IMAGES_EXPORT: 'pacs.images.export'`(뒤의 것은 ④에서 씀 — 총괄 결정 ㄴ)
+  - `frontend/src/documents/registry.js` — `imagingImages`를 `TEMPLATES` · `HISTORY_ALSO.document` · `NO_NUMBER_ON_PAPER`에(총괄 결정 ㄱ: PACS가 직접)
+  - `frontend/src/i18n/{ko,en,fr}.js` — pacs 구간 안에만
+- **DB 마이그레이션**: 없음
+- **번역 키**: `px_im…` 29개(ko/en/fr) — 단추 · 창 · 안내 16개, 거절 사유 `px_imErr_<CODE>` 13개. 판독 보고서의 `px_printLang` · `px_printGo` · `px_printAgain` · `px_printIssued` · `px_printFail` · `px_untickAll`을 같이 씀.
+- **확인한 방법**(격리 EMR 9188 + PACS 9198, 가짜 환자 · 가짜 장비로 보낸 검사):
+  - 서버(`imprint_api.py`) **35가지 통과**: 그림 목록의 순서 · 장비 보고서가 빠짐 · 큰 필름(2500×3000, 12비트)이 1600×1920으로 줄어 옴 · 작은 그림은 키우지 않음 · 12프레임 영상의 첫 프레임 · 흑백이 뒤집힌 필름 · 다른 검사/다른 환자의 영상 번호 → 403 · 취소/환자 번호 경고(다름·없음)/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 겹친 번호/빈 목록 400 · 기록을 못 적게 하면(시험용 트리거) 500이고 줄이 안 생김.
+  - 화면(브라우저, 인쇄 창의 HTML을 받아 Chrome으로 PDF를 만들어 봄): 2장 배치 12장 → 6쪽 / 4장 → 3쪽 / 6장 19장 → 4쪽 / 1장 → 1쪽 / 48장 6장 배치 → 8쪽. 긴 이름(84자) 세 줄로 잘리지 않음. FR · EN · KO. 밝기 + · ++가 종이에 반영됨. 60장짜리: 처음 12장, 「Cocher les 48 premières」, 49번째를 누르면 안내. 발행 기록(`document_log`)의 배치·장수가 종이와 같음. 「Imprimer de nouveau」는 다시 발행하지 않음(같은 번호). 팝업이 막히면 안내.
+  - 📄 문서 창의 이력에서 다시 열기: 그림을 영상 서버에서 다시 가져와 같은 배치·밝기로 나옴, 다시 인쇄됨.
+  - 수납 계정: 수납 화면의 🩻 창에 단추가 나오고 인쇄됨. 취소/경고 검사는 단추가 꺼지고 이유가 나옴. 옮기기·영상 보기 단추는 전처럼 수납에는 없음.
+  - 영상 서버를 끈 채: 창을 열면 「Le serveur d'images ne répond pas」 / 열어 둔 창에서 더 고르면 「7 image(s) n'ont pas pu être chargée(s)」, 인쇄 단추 꺼짐.
+  - 밝은 화면 · 영어 화면 · 한국어 화면(창의 글이 그 언어로, 종이는 프랑스어로 시작). 기존 회귀: 영상 중계 15 · 비교 32 · 체크 비교 23 통과.
+- **지으면서 고친 것**: 영상 서버 무응답을 502로 답했더니 EMR 앞의 nginx가 자기 글로 바꿔 버려 사유(`code`)가 사라짐 → 409로 답함(설명은 `modules/pacs.md` 4절).
+- **확인 못 한 것**: **진짜 프린터**(특히 흑백 레이저에서 밝기 값 — 화면과 PDF로만 봄) · 진짜 장비의 영상(가짜 장비가 만든 그림으로 봄 — 압축된 영상(JPEG 2000 등)과 아주 큰 영상은 안 해 봄) · 수백 장짜리 검사에서 작은 그림이 다 뜨는 시간(60장은 바로) · 문서 이력에서 다시 인쇄할 때는 공용 `printDocument`(0.35초 뒤 인쇄)를 씀 — 3장으로는 됐고, 48장은 안 해 봄(그림이 빠지면 영상 창에서 다시 뽑으면 됨).
+- **총괄이 추천값으로 정한 것**(실장님이 바꿀 수 있음 — 설계안 9절에 적음): 「참고용 — 진단용 아님」 넣음 · 수납도 인쇄 · 환자 번호 경고 검사는 막음 · 기본 2장/48장/처음 12장.
+- **다른 세션에 부탁**:
+  - **총괄/설정**: 변경 기록 탭이 새 동작을 화면 언어로 부르게 — `frontend/src/pages/settingsAudit.js`의 동작 이름표에 `'pacs.images.print'`(와 ④ 때 `'pacs.images.export'`), `se_act_…` 번역, `wiki/03-change-log.md`의 동작 표에 한 줄. 줄의 값은 이미 있는 이름표(`order_name` · `accession_no` · `image_count` · `lang`)를 쓰고, 새 것은 `per_page` 하나.
+  - 없으면 변경 기록 탭에 동작이 `pacs.images.print` 글자 그대로 나옵니다(기록 자체는 남음).
+- **다음**: ④ 영상 CD 반출 프로그램 — 「폴더에 저장」(`D:\CD-TEST`)부터.
+
+## 2026-10-01 — 설계안 고침: JPG 사본 없음 · 뷰어(Weasis)를 일찍 · 굽는 장치 연결됨 (문서만)
+
+- **상태**: 확인 요청 — **짓지 않음**(총괄: 「아직 짓지 말고 설계안만」). 실장님 답(가·라·마·사·아·차)과 시작 신호를 기다림.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋. develop(`da9bd2d`)은 **ff가 안 돼서 `git merge develop`으로 합침**(전에 올린 설계 커밋 둘이 아직 develop에 없어서 — 충돌 없음). 문서만. **PACS 저장소** — 없음
+- **한 일**: `wiki/reference/image-print-export-design.md`를 고침.
+  - **묶음**: `DICOMDIR` + `IMAGES` + `README.TXT` (+ `VIEWER` · `VOIR.BAT`). JPG 사본 · `INDEX.HTM` · `IHE_PDI`를 뺌. IHE 규격 이름 확인 숙제는 없어짐(그 규격을 내세우지 않음).
+  - **더 단순한 쪽**: EMR은 Orthanc의 ZIP을 **뜯지도 덧붙이지도 않고 그대로 넘김** — 직접 짓기로 했던 ZIP 쓰는 코드(ㄹ)가 필요 없어짐, 우리 쪽 4GB 한계도 없어짐. `README.TXT`는 반출 프로그램이 디스크에 씀. 반출 프로그램은 로그인 토큰으로 묶음을 받으므로 「한 번 쓰는 표」는 ②(브라우저 내려받기) 때.
+  - **차례**: ① 인쇄 → ④ 반출 프로그램(뷰어 없이 굽기까지) → ③ 뷰어를 넣어 한 장 → 되면 「뷰어 포함」 체크 → ② EMR 화면의 ZIP 내려받기(그 뒤 또는 필요해질 때).
+  - **정할 것에 더함**: 타(판독소견을 CD에 — PDF), 파(③ 때 Weasis 설치 파일을 내려받고 이 PC에 설치·풀어 봐도 되는지), 총괄 ㅅ·ㅇ·ㅈ(README를 프로그램이 씀 / 켜는 파일 이름 `VOIR.BAT` / Weasis 폴더는 저장소에 넣지 않음).
+- **Weasis를 설치 없이 폴더째 돌리는 길 — 원문에서 확인한 것**(설계안 5-2절. 소스는 GitHub `nroduit/Weasis` master):
+  - `IsoImageExport.java`: 「Add Weasis」는 **설치 폴더를 통째로** 디스크의 `viewer`로 복사하고 `AUTORUN.INF` · `RUN.BAT`를 씀. Windows에서만.
+  - `RUN.bat`: `start "" "viewer\Weasis.exe" "weasis://…"` — 풀면 `$dicom:get -p $weasis:config pro="weasis.portable.dir ."`.
+  - `DicomModel.java`: `-p`는 그 자리의 **`DICOMDIR`을 읽고**, 없으면 폴더 `dicom,DICOM,IMAGES,images`를 뒤짐(`ConfigData.java`의 기본값) → Orthanc의 모양(`DICOMDIR` + `IMAGES/`)이 그대로 맞음. 영상을 받는 PC의 임시 자리로 복사해 여는 것이 기본.
+  - 만든 사람(Nicolas Roduit, 2022-09-07): "To get a 'portable' version, just copy the installation directory." — 같은 OS·같은 CPU 종류여야 하고 파일 연결·웹 실행은 안 됨.
+  - 크기: MSI 54 636 544바이트, `weasis-native.zip` 60 534 420바이트(릴리스 v4.7.3).
+- **이 PC의 굽는 장치 — 읽기만 하는 조회로 확인함**(쓰지 않음, 트레이 안 움직임): `Slimtype DVD A DS8A3S`(USB, 펌웨어 HA28), `G:`, CD-R 빈 디스크, 359 844섹터 = 702.8MB.
+- **그 밖에 확인함**: EMR의 `backend/package.json` · `frontend/package.json`에 PDF·ZIP 라이브러리 없음(판독지는 브라우저 인쇄) → 「판독소견 PDF를 CD에」는 새 부품이 필요.
+- **바꾼 파일**: `wiki/reference/image-print-export-design.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: Weasis를 실제로 돌려 본 것은 없음 — 설치 폴더를 얻는 길(`msiexec /a`로 풀기만 해도 켜지는지), 폴더 크기, 디스크에서 켜지는 시간, 받는 PC에 남는 것(설정·임시 복사본), 설치 폴더에 라이선스 글이 있는지. Weasis 누리집 FAQ가 말하는 「portable archive」는 내려받기 쪽·릴리스에서 **찾지 못함**. 큰 묶음(수백 MB)이 nginx를 지나는지. `README.TXT`의 글자 형식.
+- **지킬 것**: 진짜로 굽기 전에는 **반드시 총괄에 먼저 알림**(디스크는 실장님 것 — 한 장씩). 그 전까지 ISO 저장으로. 트레이 동작도 굽기 시험 때만. 시험 차례는 설계안 4-2절(두 장이면 됨).
+- **다른 세션에 부탁**: 없음.
+
+## 2026-10-01 — 설계안: 영상 인쇄와 영상 내려받기(CD 반출) — 짓기 전 (문서만)
+
+- **상태**: 확인 요청 — **결정 대기**(설계안 9절: 실장님 몫 일곱, 총괄 몫 다섯). 짓지 않음.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `c9e4d88`을 ff로 당긴 뒤). 문서만. **PACS 저장소** — 없음
+- **한 일**: `wiki/reference/image-print-export-design.md` — 화면 그림(단추 자리·인쇄 창·내려받기 창), 인쇄 방식, 묶음의 폴더 구조, CD에 넣을 뷰어 조사(라이선스 원문), 기록·권한, 걸리는 것, 정할 것, 짓는 차례.
+- **격리에서 확인한 것**(Orthanc 26.6.1 — 실행 중과 같은 이미지):
+  - `GET /studies/{id}/media`와 `POST /tools/create-media-extended {Resources, Synchronous: true}`: ZIP 맨 위에 `DICOMDIR`, 그 옆 `IMAGES/IM0…`. 여러 검사를 한 `DICOMDIR`로. 검사 55건(83장)을 0.06초, 첫 바이트 0.01초. ZIP의 각 파일 크기가 머리에 적혀 있음(뒤에 붙는 형식이 아님) → EMR이 흘려보내며 자기 파일을 덧붙일 수 있음.
+  - `GET /instances/{id}/rendered`(Accept: image/jpeg, `?width=`): JPEG로 나옴, 한 장 2ms(작은 시험 그림). `/preview`도 PNG/JPEG.
+  - `GET /studies/{id}/statistics`: `DicomDiskSizeMB` 등 — 내려받기 전에 크기를 보여 줄 수 있음.
+  - EMR의 nginx(`frontend/nginx.conf`): `/api/`에 응답 크기 제한 없음, 읽기 시간 제한은 기본(바이트 사이 60초).
+- **뷰어 조사(원문)**: Weasis — `LICENSE`가 `EPL-2.0 OR Apache-2.0`, 다시 배포 가능. 4판부터 옛 portable zip은 없어지고 설치 파일에 Java 포함(MSI 52MB), CD에 넣어 실행은 Windows x86-64만·느림, 인증된 의료기기 아님. MicroDicom — EULA가 비상업용 무료·다른 사람에게 주는 것 불허. RadiAnt — 배포는 유료(검색 결과로 읽음). DWV — GPL-3.0, CD에는 맞지 않음. **추천: 뷰어 없이 `INDEX.HTM` + JPG로 먼저, Weasis는 ③에서 손으로 해 본 뒤.**
+- **바꾼 파일**: `wiki/reference/image-print-export-design.md`(새), `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: 큰 영상·큰 묶음의 시간, nginx를 지나는 수백 MB, 흑백 레이저의 밝기, Weasis의 풀어서 쓰는 묶음이 실제로 어느 파일인지와 CD에서 켜지는지, IHE 「휴대용 영상 자료」 규격의 파일 이름(기억으로 적음 — 짓기 전에 원문 확인), RadiAnt 조건의 원문 쪽.
+- **다른 세션에 부탁**: 없음(결정 뒤 — `registry.js` 등록은 진료/총괄, `audit.js` 두 줄은 총괄에 알림).
+
 ## 2026-10-01 — 영상 옮기기: 복원 뒤 다시 적용((나)) · 단추 여백
 
 - **상태**: 확인 요청

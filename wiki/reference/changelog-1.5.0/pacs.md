@@ -108,6 +108,19 @@ line in the change log, like every paper that leaves the clinic. Several ticked 
 go, one sheet each. A long reading runs onto further pages, each headed with the patient and the exam.
 Exams without a reading, and cancelled exams, cannot be printed. It works from the payment screen too.
 
+### Printing an exam's images on paper
+
+**🖨 Imprimer les images**, under the «Images» line of the chosen exam in the imaging list (consultation
+and payment), prints the pictures themselves on A4: 1, 2, 4 or 6 a page. The exam's pictures are shown
+small in the order of the device, the first twelve ticked; up to 48 go on one print. Each page is headed
+with the clinic, the patient and the exam, each picture carries its series and image number, and the foot
+says «Images de référence — non destinées au diagnostic». **Clarté** lightens dark pictures on the paper
+for a black-and-white laser printer - the image itself is not changed. Of a multi-frame image the first
+frame is printed; device reports that are not pictures are left out. Printing makes a line in the change
+log and issues the sheets as a document (listed in the documents history, where they can be drawn again
+from the image server and reprinted). A cancelled exam, an exam without images and an exam with an
+identity warning cannot be printed.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being

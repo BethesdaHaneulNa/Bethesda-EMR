@@ -60,7 +60,7 @@ function emWidth(text) {
 }
 // Lines `text` takes in a box `widthPt` wide at `sizePt`, the way the browser breaks it
 // (overflow-wrap: break-word): between words, and a word too wide for the box runs on.
-function linesAt(text, widthPt, sizePt, bold) {
+export function linesAt(text, widthPt, sizePt, bold) {
   var max = widthPt / (sizePt * (bold ? 1.08 : 1)), words = String(text || '').split(/\s+/).filter(Boolean);
   var lines = 1, cur = 0;
   for (var i = 0; i < words.length; i++) {
@@ -76,7 +76,7 @@ function linesAt(text, widthPt, sizePt, bold) {
 }
 // The largest of `sizes` at which `text` fits `maxLines` lines - first looking for a size
 // at which no word has to be broken, then accepting a broken word; the smallest if none.
-function fitSize(text, widthPt, maxLines, sizes, bold) {
+export function fitSize(text, widthPt, maxLines, sizes, bold) {
   var w = widthPt * 0.97, words = String(text || '').split(/\s+/).filter(Boolean), widest = 0;
   for (var k = 0; k < words.length; k++) widest = Math.max(widest, emWidth(words[k]));
   for (var pass = 0; pass < 2; pass++) {

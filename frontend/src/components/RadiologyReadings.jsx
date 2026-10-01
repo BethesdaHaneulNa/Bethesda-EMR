@@ -4,6 +4,7 @@ import { useLang } from '../i18n/index.jsx';
 import { printDocument } from '../documents/shared.jsx';
 import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
 import { MoveStudy, moveLine } from './MoveStudy.jsx';
+import { ImagesPrint, imagesBlock } from './ImagesPrint.jsx';
 
 // A timestamp (result_at, cancelled_at) reaches the browser in UTC, so cutting
 // at 'T' dated a reading written between local midnight and 03:00 the day
@@ -255,6 +256,7 @@ export function RadiologyReadings(props) {
   var mvs = useState(null), moving = mvs[0], setMoving = mvs[1];       // the row whose images are being put under another order
   var mls = useState([]), moved = mls[0], setMoved = mls[1];           // the patient's corrections (GET /pacs/moves/patient)
   var ags = useState(0), again = ags[0], setAgain = ags[1];            // raised to read the list again after a correction
+  var ims = useState(null), imaging = ims[0], setImaging = ims[1];     // the row whose images are being printed on paper
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
@@ -413,7 +415,13 @@ export function RadiologyReadings(props) {
                   : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}
                 {/* the images are another order's: put them under the right one (doctors, in the consultation screen) */}
                 {props.onOpen && r.images_received_at && !cancelled ? <button onClick={function () { setMoving(r); }} title={t.px_mvIntro}
-                  style={{ display: 'inline-block', margin: '3px 0 5px 10px', background: 'var(--warn-a18)', color: 'var(--warn-text)', border: '1px solid var(--warn-a40)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}</td></tr>
+                  style={{ display: 'inline-block', margin: '3px 0 5px 10px', background: 'var(--warn-a18)', color: 'var(--warn-text)', border: '1px solid var(--warn-a40)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}
+                {/* the images on paper, for the patient to take along (consultation and payment) */}
+                {r.images_received_at ? (function () {
+                  var no = imagesBlock(r, t);
+                  return <div><button disabled={!!no} onClick={function () { setImaging(r); }} title={no}
+                    style={{ margin: '3px 0 2px', background: 'var(--chip)', color: no ? t3 : 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 9px', cursor: no ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>🖨 {t.px_imButton}</button></div>;
+                })() : null}</td></tr>
               {r.accession_no ? <tr><td style={label}>{t.px_dAccession}</td><td style={{ fontFamily: 'monospace' }}>{r.accession_no}</td></tr> : null}
             </tbody></table>
             {cancelled && (r.cancel_reason || r.cancelled_at)
@@ -438,6 +446,8 @@ export function RadiologyReadings(props) {
         })()}
       </div>
       {printing ? <ReportPrint exams={printing} patientId={props.patientId} t={t} onClose={function () { setPrinting(null); }} /> : null}
+      {imaging ? <ImagesPrint exam={imaging} examDate={ymd(imaging.images_received_at) || ymd(imaging.visit_date)} now={ymdhm(new Date().toISOString())}
+        patientId={props.patientId} t={t} onClose={function () { setImaging(null); }} /> : null}
       {moving ? <MoveStudy exam={moving} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
     </div>
   );

@@ -170,6 +170,27 @@ Qui peut corriger : les médecins (écran **Consultation**) et l'administrateur.
 - Ce que cette fenêtre ne fait pas : un seul examen qui contient les images de deux examens (les deux parties faites à la suite sous la même ligne), et des images faites sous la ligne d'un **autre patient**. Dans ces deux cas, notez-le dans le compte-rendu et appelez (voir **Qui appeler**).
 
 
+### 11. Imprimer les images d'un examen
+
+Pour un patient qui va dans un autre hôpital, les images elles-mêmes peuvent être imprimées sur des feuilles A4. C'est une autre feuille que le compte-rendu (§ 9) : ici les images, là le texte.
+
+1. Ouvrez **🩻 Imagerie** (Consultation ou Paiement) et choisissez l'examen dans la liste.
+2. À droite, sous la ligne **Images**, cliquez sur **🖨 Imprimer les images**.
+3. En haut de la fenêtre, les images de l'examen sont montrées en petit, dans l'ordre de l'appareil (**S1 · 3** = série 1, image 3). Les **12 premières sont cochées**. Cliquez sur une image pour la cocher ou la décocher. **Tout cocher** et **Tout décocher** sont juste au-dessus. Au plus **48 images** par impression : pour le reste, imprimez une seconde fois.
+4. **Images par page** : **1**, **2**, **4** ou **6**. Une image n'est jamais coupée ni déformée.
+5. **Clarté** : **Normale**, **+** ou **++**. Les échographies et les radiographies sont sombres ; sur une imprimante laser noir et blanc, essayez **+** ou **++**. Seule la feuille change : l'image d'origine reste telle quelle.
+6. **Langue de la feuille** : **FR**, **EN** ou **KO**. La feuille est en français au départ.
+7. La feuille s'affiche en dessous telle qu'elle sera imprimée : la clinique, le patient (nom, N° dossier, sexe et âge), l'examen et sa date, les images avec leur numéro, et en bas **« Images de référence — non destinées au diagnostic »**, la date d'émission et le numéro de page.
+8. Cliquez sur **🖨 Émettre et imprimer**. L'impression est notée dans le journal des modifications et dans le dossier comme un document émis (historique de **Documents**). Le numéro du document n'est pas imprimé ; il s'affiche dans la fenêtre (**Émis : D26-…**).
+9. **Imprimer de nouveau** réimprime les mêmes feuilles. Si vous changez les images cochées, le nombre par page, la clarté ou la langue, de nouvelles feuilles sont émises.
+
+- **🖨 Imprimer les images** est grisé : l'examen est annulé, il n'a pas d'images, ou il porte un **avertissement d'identité** (cadre rouge ou jaune). Dans ce dernier cas, réglez d'abord l'avertissement : les images d'un autre patient ne doivent pas partir sous ce nom. Laissez la souris sur le bouton pour lire la raison.
+- D'une séquence (plusieurs images dans un seul fichier, marquée **▶**), seule la première image est imprimée.
+- Les rapports de l'appareil qui ne sont pas des images ne sont pas proposés.
+- **« … image(s) n'ont pas pu être chargée(s) »** : décochez ces images, ou fermez la fenêtre et rouvrez-la. Si le message est **« Le serveur d'images ne répond pas »**, réessayez dans un instant, puis prévenez l'administrateur.
+- Dans la fenêtre d'impression du navigateur, décochez **En-têtes et pieds de page**.
+- Ces feuilles sont des copies pour référence : elles ne remplacent pas les images d'origine, qui restent dans le PACS.
+
 ## Si ce message apparaît
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
