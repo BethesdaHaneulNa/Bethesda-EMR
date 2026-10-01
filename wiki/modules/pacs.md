@@ -150,7 +150,7 @@
 - 브라우저 인쇄 창에서 **머리글과 바닥글** 을 끄세요(켜져 있으면 날짜와 주소가 함께 찍힘).
 - 병원 이름·주소·전화는 **설정의 병원 정보**에서 옵니다(다른 서류와 같은 출처). 비어 있으면 그 줄 없이 인쇄됩니다.
 - **실장님 결정 (2026-10-01, 「지금 딱 좋다」)**: 원본 서식에 없는데 작게 넣은 항목들(주소·전화, 판독 일시·서명 줄, 발행번호, 의뢰 과·의사·영상 장수)은 **그대로 둠** / 환자 번호 경고가 있는 검사는 **인쇄 허용, 종이에 경고 없음** 그대로 / 한국어 서류의 이름표는 **영어 그대로**.
-- **알아 둘 것**: 발행된 판독 보고서는 변경 기록에는 남지만, **서류 창(Documents)의 발행 이력에는 아직 안 보입니다**(7절 P-30).
+- **발행한 뒤**: 발행된 판독 보고서는 변경 기록에 남고, **📄 Documents (문서) 창의 발급 이력**에도 나옵니다(2026-10-01, 진료 세션 `d853f7a`) — 거기서 같은 번호로 다시 인쇄(Réimprimer)하고 발급 취소(Annuler)할 수 있습니다. 새 판독 보고서는 문서 창이 아니라 이 영상/판독 창에서 뽑습니다.
 
 ### 2.5 영상이 안 보일 때 — 순서대로
 
@@ -351,7 +351,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
   - **연 검사가 먼저 뜨게** (`pacs.viewer.js` `openedFirst`): 여러 검사를 한 창에 열면 Stone은 **시리즈 정보(`…/metadata`)를 처음 받은 검사**를 첫 칸에 놓고, 그 정보를 **검사들의 시리즈 목록(`series?0020000D=`)이 돌아온 순서대로** 물음. 어느 검사를 먼저 띄울지 정하는 파라미터는 없음(재 보니 8번에 1번쯤 다른 검사가 먼저). 창 제목·판독 칸이 연 오더의 것이므로 중계가 **답을 내보내는 순서**를 정함: ① 연 검사의 시리즈 목록 → 다른 검사들의 시리즈 목록 ② 모든 목록이 나간 뒤에 연 검사의 `…/metadata`(Stone은 마지막 목록이 와야 검사 목록을 만들고, 그 전에 온 시리즈 정보는 아무것도 열지 못해 첫 칸이 빔) ③ 다른 검사들의 `…/metadata`. 기다림은 단계마다 최대 1.5초. 우리 답의 **시간만** 다룸 — 내용은 그대로. 고친 뒤 격리에서 두 검사 7번·세 검사 21번·여덟 검사 6번 모두 연 검사가 먼저, 세 검사 21번 모두 Stone이 연 검사의 정보를 먼저 물음(보장이 아니라 잰 결과). **2026-10-01 고침**: 처음에는 「다른 검사의 `…/metadata`만 붙잡기」였는데, 세 검사를 함께 열 때 Stone이 다른 검사를 먼저 물으면 1.5초 기다린 뒤 그 검사가 그대로 먼저 떴음(3번에 1번) — 시리즈 목록의 순서부터 잡아야 했음.
 
 - **판독 보고서 인쇄** (2026-10-01):
-  - 서식 `frontend/src/documents/imaging-report.jsx` — 서류 엔진의 템플릿 모양(`code: 'imaging-report'`, `category: 'imaging'`, `Layout`이 `values`·`patient`·`clinic`·`lang`·`docNo`·`dateStr`를 받음)으로 지었으나 **`registry.js`에는 등록하지 않음**(서류 엔진 파일을 건드리지 않으려고 — 7절 P-30). `values = {exam_name, modality, exam_date, image_count, dept, ordered_by, reading, read_by, read_at}`. 같은 폴더의 `shared.jsx`(`L`·`fmtDate`·`calcAge`·`clinicName`·`DOC_LABELS`)만 가져다 씀.
+  - 서식 `frontend/src/documents/imaging-report.jsx` — 서류 엔진의 템플릿 모양(`code: 'imaging-report'`, `category: 'imaging'`, `Layout`이 `values`·`patient`·`clinic`·`lang`·`docNo`·`dateStr`를 받음)으로 지음. `registry.js` 등록은 진료 세션이 함(`d853f7a` — 문서 창의 발급 이력에만 보임, 7절 P-30). `values = {exam_name, modality, exam_date, image_count, dept, ordered_by, reading, read_by, read_at}`. 같은 폴더의 `shared.jsx`(`L`·`fmtDate`·`calcAge`·`clinicName`·`DOC_LABELS`)만 가져다 씀.
   - 미리보기·발행·인쇄 `RadiologyReadings.jsx`의 `ReportPrint({exams, patientId, t, onClose})`와 `printBlock(r, t)`(인쇄할 수 없는 이유). 병원 정보 `GET /api/admin/clinic`, 환자 `GET /api/patients/:id` — 서류 창과 같은 출처. 인쇄는 `printDocument()`(A4, 여백 14mm — 영수증·서류와 같은 틀).
   - **발행** = `POST /api/documents`(서류 엔진의 길 그대로, 고치지 않음): `template_code: 'imaging-report'`, `template_name`(서류 언어의 이름), `patient_id`, `visit_id`(오더의 내원), `lang`, `payload: {values, patient(이름·차트번호·성별·생년월일만), clinic, lang, dateStr, order_item_id}` → `document_log` 한 줄 + 변경 기록 `documents.issue`(「D26-00009 Compte-rendu d'imagerie」, payload는 기록에 안 들어감). 권한은 서류 발행과 같음(진료·수납·약국).
   - 긴 판독: 서식이 표라서 브라우저가 **표 머리줄을 장마다 되풀이**(둘째 장부터의 「환자 · 차트번호 · 검사 · 날짜」; 첫 장에서는 큰 머리 상자가 그 줄을 덮음). 쪽 번호는 `@page { @bottom-right { content: counter(page) " / " counter(pages) } }` — 시험한 Chrome에서 찍힘(이 기능은 최근의 Chrome·Edge에 들어온 것이라, 지원하지 않는 옛 브라우저에서는 쪽 번호만 빠짐).
@@ -594,7 +594,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 동작 · 기타
 
-- **P-30 [결정 필요] 발행된 판독 보고서가 서류 창의 발행 이력에 안 보인다 (2026-10-01).** 서류 창(`DocumentModal`)은 자기 종류(서류/처방전/차트)의 템플릿만 이력에 보여 주고, 판독 보고서 템플릿은 `registry.js`에 등록하지 않았기 때문. 그래서 지금은 **다시 뽑으려면 영상/판독 창에서 새로 인쇄(새 번호)** 하고, **발행 취소(무효 표시)를 할 화면이 없음**. 보이게·같은 번호로 재출력·취소하게 하려면: `frontend/src/documents/registry.js`에 `import imagingReport from './imaging-report.jsx'`와 `TEMPLATES`에 한 항목(서류 엔진 파일 2줄) + 서류 창이 `category: 'imaging'`을 어디에 보일지(📄 Documents 목록에 함께, 또는 따로). 서식은 저장된 payload로 그대로 다시 그려짐(그 모양으로 지어 둠).
+- **P-30 ✅ 풀림 (2026-10-01, 진료 세션 `d853f7a`)** — 발행된 판독 보고서가 서류 창의 발행 이력에 안 보이고 발행 취소 화면이 없던 것. 진료 세션이 `documents/registry.js`에 `imaging-report`를 등록하고 📄 문서 창의 **발급 이력에만** 올림(`historyCodes` — 「새로 만들기」 목록에는 안 나옴). 이력에서 누르면 저장된 payload를 **PACS의 서식 파일(`imaging-report.jsx`) 그대로** 다시 그림 — 그래서 서식을 고칠 때는 **옛 payload로도 그려지는지**(값 이름 `values.exam_name` 등을 바꾸지 않기)를 지켜야 함. 수납의 문서 창도 같음. 발급 취소는 `documents.void`로 남음.
 
 - **P-28 [참고] 「이전 검사와 비교」는 Stone을 고치지 않고 짓는다 (2026-10-01, 라이선스).** 4절 「이전 검사와 비교」. 그래서 **화면 나누기와 끌어다 놓기는 의사가 Stone의 단추로** 합니다(나누기는 한 번 하면 기억됨). 한 번에 「누르면 나란히」가 되게 하려면 Stone 안쪽 함수를 불러야 하는데(처음에 그렇게 지었다가 걷어 냄 — 커밋 `2e7a738`), 그것은 직원에게 내주는 Stone을 배포판과 다르게 만드는 일이라 하지 않기로 함. Orthanc 이미지를 올린 뒤에는 `?study=A,B`가 여전히 두 검사를 여는지, 연 검사가 먼저 뜨는지 격리에서 다시 볼 것.
 - **P-29 [참고] 영상 쿠키는 「한 번에 한 환자」(2026-10-01).** 새 탭으로 한 환자의 영상을 띄워 둔 채 EMR에서 다른 환자의 검사를 열면, 먼저 띄운 탭은 새 영상을 더 불러오지 못함(이미 받은 것은 보임). 전에도 그랬고, 이제 문서·코드가 그렇게 말함.
