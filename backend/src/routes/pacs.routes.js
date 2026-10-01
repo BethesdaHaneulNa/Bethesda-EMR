@@ -7,6 +7,8 @@ const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pac
 const { ORDER_CANCELLED } = require('./pacs.cancel');
 const viewer = require('./pacs.viewer');
 const { relinkLostStudies, patientCheck } = require('./pacs.relink');
+const { isExam } = require('./pacs.exam');            // which orders are imaging exams
+const move = require('./pacs.move');                 // images put under another order
 const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
@@ -80,6 +82,8 @@ function configProblem(cfg) {
 
 // The viewer relay: its own auth (the cookie above), not the JWT.
 router.use('/viewer', viewer.router);
+// Moving the images of an order to another order of the same patient (pacs.move.js).
+router.use('/', move.router);
 
 // Settings UI. This carries the bridge token, which opens the patient feed, so
 // it is for the settings permission only -- not every member of staff.
@@ -149,16 +153,6 @@ const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_
 const ORDER_CANCEL_COLUMNS = `oi.status AS order_status,
        to_jsonb(oi)->>'cancelled_at' AS cancelled_at, to_jsonb(oi)->>'cancel_reason' AS cancel_reason`;
 
-// Which orders are imaging exams here - the one place that says it: those of the
-// imaging type, and any other order that carries a device type (pacs_modality, copied
-// from its order code when it was ordered). An endoscopy is priced as a procedure
-// (order codes E1, E2; the rectoscope on site, modality AS) and still sends pictures.
-// It is the consultation screen's own rule for the image button (code_type imaging or
-// pacs_modality), so whatever can be opened there is also in the patient's list, takes
-// a reading, can be compared and printed (2026-10-01; before, saving such a reading
-// answered "Imaging order not found" and the list left the exam out).
-const isExam = a => `(${a}.code_type = 'imaging' OR COALESCE(${a}.pacs_modality, '') <> '')`;
-
 function imagesOf(w) {
   if (!w || !w.images_received_at) return null;
   return {
@@ -211,6 +205,7 @@ async function comparableStudies(orderItemId) {
        JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true
       WHERE me.id = $1 AND oi.status IS DISTINCT FROM 'cancelled'
         AND wl.images_received_at IS NOT NULL AND wl.patient_check = 'match'
+        AND NOT ${move.OPEN_ON('oi.id')}
       ORDER BY v.visit_date DESC, oi.id DESC`, [orderItemId]);
   return r.rows.filter(x => x.study);
 }
@@ -236,7 +231,7 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     const base = '/api/pacs/viewer';
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     let order_status = '', cancelled_at = null, cancel_reason = '';
-    let others = [], prev = null, order_code = '', visit_date = null;
+    let others = [], prev = null, order_code = '', visit_date = null, correcting = false;
     // ?order_item_ids=a,b,c : the exams ticked in the list, opened together. Every one
     // must be an exam this route would offer for comparison anyway - same patient, not
     // cancelled, images arrived, patient number matching - or nothing opens (409): a
@@ -259,6 +254,12 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         // unless the device made up a new one.
         study = w.rows[0].image_study_uid || w.rows[0].study_instance_uid || ''; accession = w.rows[0].accession_no || '';
         images = imagesOf(w.rows[0]);
+        // Images are being moved to or from this order (pacs.move.js) and the EMR says it
+        // has none: what the image server holds under its number right now - the original
+        // not yet deleted, or a corrected study not yet checked - is not this order's.
+        // Two orders exchanging their images are both closed until it is finished.
+        const kind = study ? await move.openKindOn(pool, oid) : '';
+        if (kind && (!images || kind === 'swap')) { study = ''; correcting = true; }
       }
       const o = await pool.query(
         `SELECT oi.order_name, oi.order_code, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, v.visit_date, ${ORDER_CANCEL_COLUMNS}
@@ -312,7 +313,7 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     // order_item_id: whose reading this window writes (with ticks: the most recent one).
     res.json({ has_viewer: true, base, order_item_id: oid ? Number(oid) : null, picked: !!picked,
                study_instance_uid: study, accession, url, order_name, modality, visit_date, reading, images, compare,
-               no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
+               no_study: !study, correction_in_progress: correcting, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -380,7 +381,10 @@ router.get('/worklist-feed', async (req, res) => {
     const date = req.query.date || todayLocal();
     const params = [date];
     let idx = 2;
-    let where = `wl.scheduled_date = $1 AND wl.status = 'scheduled'`;
+    // Not while the images of another order are being put under this one (pacs.move.js):
+    // the device must not scan into a study number that is being filled, and the bridge
+    // must not report the half-made study as this order's own.
+    let where = `wl.scheduled_date = $1 AND wl.status = 'scheduled' AND NOT ${move.OPEN_ON('wl.order_item_id')}`;
     if (req.query.modality) { where += ` AND wl.modality = $${idx++}`; params.push(req.query.modality); }
     // station_ae is intentionally not used as a default filter. EMR exports the
     // modality/order; PACS/SmartServer and the existing worklist decide device routing.
@@ -517,6 +521,18 @@ router.post('/image-backup-report', async (req, res) => {
 // that patient's own details and look correct -- which is why finished entries
 // now leave the list. (patientCheck: pacs.relink.js, which makes the same check when
 // it finds a study again.)
+// For the PACS's image backup (bridge token): the image files that are no longer on the
+// image server because their images were put under another order (pacs.move.js). Study
+// and image numbers only - no patient data.
+router.get('/superseded-images', async (req, res) => {
+  try {
+    const cfg = await ensureConfig();
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
+    res.json({ items: await move.supersededNow() });
+  } catch (err) { console.error('[pacs] superseded images:', err.message); res.status(500).json({ error: 'Server error' }); }
+});
+
 router.post('/study-arrived', async (req, res) => {
   let cfg;
   try { cfg = await ensureConfig(); }
@@ -545,6 +561,10 @@ router.post('/study-arrived', async (req, res) => {
         WHERE wl.id = $1 FOR UPDATE OF wl`, [worklistId]);
     if (!w.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Worklist entry not found' }); }
     const row = w.rows[0];
+    // Images are being moved to or from this order: what is on the image server under
+    // its number right now is not an arrival. The bridge asks again on its next cycle.
+    const moving = await client.query(`SELECT 1 WHERE ${move.OPEN_ON('$1')}`, [row.order_item_id]);
+    if (moving.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'A correction is in progress for this order' }); }
     // The UID is the link; a report for some other study must not land here.
     // A study found by accession (the device made up its own UID, P-4) must
     // carry this entry's accession number, and its own UID is kept apart.

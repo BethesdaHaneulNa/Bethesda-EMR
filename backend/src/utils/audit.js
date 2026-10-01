@@ -53,6 +53,10 @@ const ACTIONS = {
   // number the EMR kept and were found again by accession (routes/pacs.relink.js). Done by the
   // EMR itself when the image window is opened; the line names who opened it.
   PACS_STUDY_RELINK:    'pacs.study.relink',
+  // PACS (2026-10-01): the images taken under one order were put under another order of the same
+  // patient, on the image server and in the EMR (routes/pacs.move.js): which orders, how many
+  // images, whether the reading went with them, the reason typed.
+  PACS_STUDY_MOVE:      'pacs.study.move',
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 
