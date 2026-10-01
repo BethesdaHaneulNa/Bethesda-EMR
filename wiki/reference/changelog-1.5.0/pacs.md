@@ -36,6 +36,11 @@ est celui de : …**) - always the exam that was opened. The reading box folds a
 be folded at any time (**Masquer le compte-rendu**). Another patient's images are refused exactly as
 before, and opening an exam replaces what the previous image window was allowed to load.
 
+The exams can also be chosen by hand: in the patient's imaging list each exam has a tick box, and
+**⇆ Comparer (N)** at the top of the list opens the ticked ones together (two to nine). The reading box is
+then the most recent ticked exam's. Exams that may not be compared (cancelled, no images yet, identity
+warning) cannot be ticked, and the server checks every one again.
+
 The Stone viewer is used exactly as Orthanc ships it: the EMR uses its documented URL parameters only,
 changes none of its files and adds no code to its pages.
 

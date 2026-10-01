@@ -107,6 +107,16 @@ Deux radios du thorax à deux dates : on peut les mettre côte à côte.
 7. **✕ Fin de la comparaison** : retour à l'examen seul, et le **Compte-rendu** revient.
 8. Pour comparer en grand : **Ouvrir dans un onglet ↗** pendant la comparaison ; le nouvel onglet contient les mêmes examens.
 
+**Choisir soi-même les examens à comparer** (depuis la liste **🩻 Imagerie**) :
+
+1. Dans la liste des examens du patient, cochez la case à gauche de chaque examen à comparer (deux ou plus, 9 au plus).
+2. En haut à droite de la liste, cliquez sur **⇆ Comparer (N)**. La visionneuse s'ouvre avec ces examens seulement, le **Compte-rendu** replié.
+3. Le titre de la fenêtre et le **Compte-rendu** sont ceux de l'examen **le plus récent** parmi ceux cochés ; il s'affiche en premier. La ligne **Le compte-rendu est celui de : …** le rappelle.
+4. Coupez l'écran et faites glisser les examens comme ci-dessus (4 et 5).
+5. **Fermer ✕** : vous revenez à la liste, les cases restent cochées — décochez-en une, cochez-en une autre, et comparez de nouveau. Les cases s'effacent quand vous fermez la liste.
+
+Une case grisée ne peut pas être cochée ; laissez la souris dessus pour lire pourquoi : examen annulé, images pas encore arrivées, ou avertissement d'identité sur les images.
+
 - **Masquer le compte-rendu / Afficher le compte-rendu** (en haut de la fenêtre) : replie ou montre la case du compte-rendu. Le texte déjà écrit n'est pas perdu.
 - Pas de ligne sous le titre : ce patient n'a pas d'autre examen avec images.
 - Ne sont pas proposés : les examens annulés, ceux dont les images ne sont pas arrivées, et ceux qui portent un avertissement d'identité (rouge ou jaune). Ceux-là s'ouvrent seulement depuis leur propre ligne. Au plus 9 autres examens, les plus récents.

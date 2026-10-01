@@ -1123,6 +1123,14 @@ export default {
   px_compareHint: "Split the screen with the ▦ button above the images, then drag an exam from the list on the left into a pane.",
   px_readingHide: "Hide the reading",
   px_readingShow: "Show the reading",
+  px_cmpGo: "Compare ({n})",
+  px_cmpNeedTwo: "Tick at least two exams (the box on the left of each line), then click here.",
+  px_cmpPick: "Tick to compare",
+  px_cmpNoImages: "No images have arrived: this exam cannot be compared.",
+  px_cmpCancelled: "Cancelled exam: it cannot be compared.",
+  px_cmpIdentity: "Identity warning on the images: this exam opens only with \"View image\".",
+  px_cmpMax: "9 exams at most in one comparison.",
+  px_cmpRefused: "These exams cannot be compared together (cancelled, no images, or another patient). Close the list and open it again.",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Screen colours (light / dark)",

@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상/판독 목록에서 검사를 체크해 한꺼번에 비교로 열기 + `openedFirst` 고침
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `e7fd445`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**:
+  1. **체크 칸** (`RadiologyReadings`): `onPick`을 받으면 줄 왼쪽에 체크 칸. 체크할 수 있는 것은 **영상 도착 · 취소 아님 · 환자 일치(`match`)** 인 줄만 — 나머지는 꺼져 있고 title에 이유(«Examen annulé : il ne peut pas être comparé.» / «Pas d'images arrivées : …» / «Avertissement d'identité sur les images : cet examen s'ouvre seulement avec « Voir image ».»). 최대 9건, 열 번째는 막고 알림 «9 examens au plus pour une comparaison.».
+  2. **「⇆ Comparer (N)」** (`CompareChecked`, 목록 창 머리의 닫기 왼쪽): 늘 보이고 **둘 이상 체크했을 때 켜짐**(꺼져 있을 때 title «Cochez au moins deux examens (la case à gauche de chaque ligne), puis cliquez ici.»).
+  3. **서버가 주소를 만듦** — `GET /api/pacs/viewer-url?order_item_ids=a,b,c`: 2~9개, 서로 다른 영상 오더, **한 환자**, **하나하나가 비교에 허락되는 검사**여야 하고, 아니면 **409 + 쿠키 없음**(체크로는 「비교 단추가 넣지 않는 검사」를 넣을 길이 없음). 응답은 보통의 `viewer-url`과 같은 모양 + `order_item_id`(연 검사) · `picked: true`, `compare.url` = 체크한 검사들만, **쿠키도 체크한 검사들만**.
+  4. **「연 검사」 = 체크한 것 가운데 가장 최근**(방문 날짜, 오더 번호). 이유: 오늘 사진을 전 것과 견주는 것이 보통이고, 「맨 먼저 체크한 것」으로 하면 누른 순서에 따라 판독 대상이 바뀌어 헷갈림(순서를 기억해야 함). 창 제목·판독 칸·첫 칸이 그 검사의 것이고, 비교 줄에 «🩻 Le compte-rendu est celui de : Chest PA · 2026-10-01». 판독 칸은 접힌 채로 열림.
+  5. 영상 창을 닫으면 목록으로 돌아오고 **체크는 남음**. 목록을 닫으면 사라짐. 목록이 다시 읽힌 뒤(영상 창을 닫을 때) 그새 취소된 줄은 체크에서 빠짐.
+  6. 한 줄의 「영상보기」와 그 안의 「⇆ Comparer avec les examens précédents」는 그대로. `ViewerCompare`는 「비교 중」을 자기 상태가 아니라 **지금 주소**로 판단하게 바꿈(체크로 바로 비교에 들어간 창도 같은 줄이 나오게).
+  7. 수납 화면 목록에는 체크 칸 없음(`Payment.jsx`는 prop을 주지 않음 — 안 바꿈).
+- **★ `openedFirst`를 고쳤습니다 — 앞 보고의 「20번 중 20번」은 충분하지 않았습니다.** 세 검사를 체크해 열자 3번에 1번 다른 검사(Hand X-Ray)가 첫 칸에 떴습니다. 원인: Stone은 시리즈 정보를 **검사들의 시리즈 목록이 돌아온 순서대로** 묻는데, 다른 검사의 목록이 먼저 돌아오면 그 검사를 먼저 묻고 — 우리가 그 답을 붙잡아도 1.5초 뒤 그대로 먼저 받았습니다. 이제 중계가 답의 순서를 **① 연 검사의 시리즈 목록 → 다른 검사들의 목록 ② (모든 목록이 나간 뒤) 연 검사의 시리즈 정보 ③ 다른 검사들의 시리즈 정보**로 잡습니다. 여전히 우리 답의 시간만 다룸(Stone 그대로). 고친 뒤: 두 검사 7번 · 세 검사 21번 · 여덟 검사 6번 모두 연 검사가 먼저, 세 검사 21번 모두 Stone이 연 검사의 정보를 먼저 물음. **보장이 아니라 잰 결과**입니다 — 느린 영상 서버에서 1.5초 한도에 걸리면 어긋날 수 있고, 그래서 비교 줄의 「판독 칸은 이 검사의 것」과 영상마다의 날짜가 함께 있습니다.
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `backend/src/routes/pacs.viewer.js`, `frontend/src/components/RadiologyReadings.jsx`, `frontend/src/pages/Consultation.jsx`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(8절 한 단락), `wiki/modules/pacs.md`(2.3.1, 4절, 8절), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 (진료 세션에 알려 주세요)**: `frontend/src/pages/Consultation.jsx` — ① import에 `CompareChecked` ② 상태 `readingsPicked` + 목록이 닫히면 비우는 `useEffect` 한 줄 ③ `openViewer(orderItemId, pickedIds)` — `pickedIds`가 있으면 `?order_item_ids=`로 묻고, 응답의 `order_item_id`를 연 검사로, 주소를 `compare.url`로, 판독 칸을 접은 채로; 409면 `px_cmpRefused` 알림 ④ 목록 창 머리에 `<CompareChecked … />`(닫기 단추의 `marginLeft:'auto'`를 이 단추로 옮김) ⑤ `<RadiologyReadings … picked onPick />`.
+- **DB 마이그레이션**: 없음
+- **번역 키** (px_ 구역, 새 키 8개 ko·en·fr): `px_cmpGo`(«Comparer ({n})» / 「비교하기 ({n})」), `px_cmpNeedTwo`, `px_cmpPick`, `px_cmpNoImages`, `px_cmpCancelled`, `px_cmpIdentity`, `px_cmpMax`, `px_cmpRefused`. 있던 키의 글은 안 바꿈.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 1366×768, 시험 환자 26-00002(검사 12줄) · 26-00001(29줄)):
+  - **둘 체크해 열기**(fr, 마우스로 단추): 10-01·09-28 Chest PA → «⇆ Comparer (2)» → 영상 창 주소에 검사 2개, Stone 목록에 두 검사, 첫 칸 10-01, 판독 칸 접힘, «Le compte-rendu est celui de : Chest PA · 2026-10-01».
+  - **셋**: Hand X-Ray 09-29를 더 체크 → 3개, 연 검사는 여전히 10-01.
+  - **체크 유지**: 영상 창을 닫음 → 목록 그대로·체크 2개 남음. 하나 빼면 단추가 (2). 목록을 닫았다 열면 체크 0.
+  - **꺼진 줄**: 취소 2줄·불일치 1줄·미도착 1줄의 칸이 꺼져 있고 이유 title(fr·ko 확인). 꺼진 칸을 눌러도 변화 없음.
+  - **9건 한도**: 검사가 많은 환자에서 열 개를 차례로 누름 → 9개만 체크, 알림 한 번, «⇆ Comparer (9)» → 열림(연 검사 = 가장 최근, 첫 칸).
+  - **ko**: 「🩻 영상/판독 | … | ⇆ 비교하기 (0) | 닫기 ✕」 한 줄, title 「비교할 검사를 둘 이상 체크한 뒤(각 줄 왼쪽의 칸) 누르세요.」, 꺼진 칸의 이유 셋.
+  - **서버 회귀 — 체크(23가지 통과)**: 둘·셋 체크(연 검사 = 가장 최근, 주소·쿠키는 체크한 것만, **체크하지 않은 같은 환자 검사 403**, 다른 환자 검사 403), 체크 순서 무관, **409 + 쿠키 없음**: 미도착·취소·불일치·다른 환자 검사가 섞임 / 하나뿐 / 같은 것 둘 / 없는 오더 / 숫자 아님 / 빈 값 / 10개. 9개는 열림. 수납 계정 403, 로그인 없음 401.
+  - **보안·회귀 32가지 통과**(앞의 것 그대로: Stone 페이지·`app.js` 바이트 동일 포함).
+- **확인 못 한 것**: 수납 화면은 코드로만(`Payment.jsx`가 prop을 안 줌). 밝은 화면. 진짜 장비의 큰 영상으로 9건.
+- **알아 둘 것**: 시험 자료에서 9건을 열었을 때 Stone 목록에는 8건 — 한 건은 격리 영상 서버에서 제가 지운(「도착 기록은 있는데 없음」 시험) 검사로 보이며 목록에 안 나옴. EMR은 도착했다고 알고 있어 체크할 수 있었음. 실제로는 영상 서버에서 영상이 사라진 경우에만.
+- **다른 세션에 부탁**: 진료 — 위 `Consultation.jsx` 변경(5군데).
+
 ## 2026-10-01 — 이전 검사와 비교: 누르면 그 환자의 검사를 모두 함께 (실장님 확정 방향)
 
 - **상태**: 확인 요청
