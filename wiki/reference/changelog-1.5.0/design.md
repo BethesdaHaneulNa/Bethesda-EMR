@@ -4,7 +4,7 @@ Until now the EMR had one look: dark. That suits a dim room, but the clinic's co
 
 ### The screen can be light or dark, and each person chooses
 
-Next to the language buttons in the top bar there is a new two-part switch: **🌙 Dark** and **☀ Light** (**Sombre** / **Clair** in French, **어둡게** / **밝게** in Korean). The chosen part is filled. Pressing the other changes every screen at once: registration, consultation, payment, pharmacy and stock, laboratory, statistics, settings, and the windows they open (patient search, chart, documents, imaging reports).
+Next to the language buttons in the top bar there is a new short list that shows the screen in use, for example **🌙 Dark ▾** (**Sombre** / **Clair** in French, **어둡게** / **밝게** in Korean). Opening it and choosing another line changes every screen at once: registration, consultation, payment, pharmacy and stock, laboratory, statistics, settings, and the windows they open (patient search, chart, documents, imaging reports).
 
 The choice belongs to the account, not to the PC. A nurse who chooses the light screen at the front desk finds it light at the pharmacy PC too, and the doctor who logs in after her on the same PC gets the screen the doctor chose. The login screen does not know who is coming, so it shows the screen that PC showed last.
 
