@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 약속처방 편집 창: 오더 줄의 용법은 글자 (진료 6ab6600 뒤)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `2e17872` merge 위, 기본 용법 마이그레이션은 041)
+- **물으신 것의 답**: 약속처방 편집 창은 오더 줄의 용법을 **숫자 칸으로 그리고 있지 않았습니다 — 아예 그리지 않았습니다**(오더 줄에는 Qté · Fois · Jours뿐). 그런데 **숫자 검사는 하고 있었습니다**: `osLineProblem`이 줄 종류와 상관없이 `dose`를 0~1000의 숫자로 봄. 그래서 진료 화면의 「약속처방으로 저장」이 처치 줄에 「PRN」을 넣은 세트는(6ab6600 뒤로 가능) 설정에서 열어 저장하면 「Vérifiez les nombres…」로 막히고, 고칠 칸도 보이지 않았을 것입니다.
+- **고친 것** (`Settings.jsx`만)
+  - `osLineProblem`: `dose`의 숫자 검사는 **약 줄에만**. 오더 줄은 20자 이하인지만.
+  - 처치 줄(`code_type` procedure) — 또는 용법이 이미 든 오더 줄 — 에 **Posologie** 글자 칸(`maxLength` 20, 진료 화면과 같은 이름 `cs_colSig`). 검사·영상 줄에는 없음.
+  - `osDir`: 숫자만인 값(옛 `1.000`)은 용법이 아니므로 빈 칸으로 보이고, 저장하면 NULL(오더 코드의 `cleanDirections`와 같은 규칙).
+  - 세트에 처치 오더 코드를 넣으면 그 코드의 기본 용법(오늘 생긴 칸)이 줄에 따라옴.
+  - 약 줄의 하루 총량(숫자)·Posologie(`route`, 10자)는 그대로.
+- **서버**: 약속처방 라우트(`orderset.routes.js`, 진료 세션)는 오더 줄의 `dose`를 검사 없이 받고 칸은 VARCHAR(20) — 고칠 것 없음. 약 줄에 글자를 보내면 여전히 400.
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `backend/test/settings.ordersets.mjs` · 위키 3개
+- **확인한 방법** (격리 9187): `npm run build`. ordersets 시험에 셋 더함 — 처치 줄 「PRN」 저장·되읽기 / 20자(«QD, PRN le matin tot») / 약 줄에 글자는 400 — 모두 통과. 화면: API로 진료 화면이 저장하듯 세트를 만듦(P01 처치 줄 `dose` 「PRN」, L01 검사 줄 `dose` 「1.000」, 약 줄 3·3·5·TID) → 설정에서 열면 P01에 「Posologie = PRN」(글자 칸, max 20)·경고 없음, L01에는 칸 없음, 약 줄은 「Dose/j 3 · Fois 3 · Jours 5 · Posologie TID」 → 용법을 「PRN si douleur」로 고쳐 Sauver → 「✓ Enregistré」, 저장된 값 P01 「PRN si douleur」 · L01 NULL(숫자 찌꺼기 비워짐) · 약 3.
+
 ## 2026-10-01 — 오더 코드의 기본 용법에 든 「1.000」을 없앰 (실장님: 「왜 용법도 자동으로 1이 입력돼?」)
 
 - **상태**: 확인 요청

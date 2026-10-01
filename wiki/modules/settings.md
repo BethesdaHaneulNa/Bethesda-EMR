@@ -478,6 +478,8 @@
 - **진료 쪽**: 화면이 숫자만인 값을 용법으로 베끼지 않게 하는 것은 진료 세션 몫(자료가 비었으므로 지금도 빈 칸으로 들어감 — 격리에서 확인).
 - **시험**: `backend/test/settings.ordercodes.mjs`(16개).
 
+- **약속처방 편집 창의 오더 줄**(같은 날, 진료 `6ab6600` 뒤 — 오더의 용법을 서버가 글자 20자로 받음): 약속처방 줄의 `dose` 칸은 약 줄에서는 **하루 총량(숫자)**, 검사·처치 줄에서는 **용법(글자)**. 편집 창은 오더 줄의 용법을 그리지 않으면서도 `osLineProblem`이 모든 줄의 `dose`를 숫자로 검사해, 진료 화면의 「약속처방으로 저장」이 「PRN」을 넣은 세트는 설정에서 다시 저장할 수 없었음(「Vérifiez les nombres」, 고칠 칸도 안 보임). → 숫자 검사는 약 줄에만, 오더 줄은 20자 이하인지만. **처치 줄**(또는 용법이 든 오더 줄)에 **Posologie** 글자 칸(20자). 숫자만인 값(옛 `1.000`)은 빈 칸으로 보이고 저장하면 비워짐(`osDir`). 처치 오더 코드를 세트에 넣으면 그 코드의 기본 용법이 줄에 따라옴.
+
 ### 3-10. 변경 기록 (2026-09-29)
 
 전체 설계와 모듈별 약속은 **`wiki/03-change-log.md`**(총괄). 표 `audit_log`(마이그레이션 022) · 쓰는 함수 `backend/src/utils/audit.js` `writeAudit()`. 설정의 몫은 세 가지입니다.
@@ -743,4 +745,5 @@
 | 2026-10-01 | 상태 창이 **EMR의 `.env`가 손으로 고쳐진 것**(줄 없음·DB 비밀번호가 실행 중 값과 다름)을 알림 — 값은 보이지 않음. 그 과정에서 찾은 것: **`Get-ComposeDir`가 PS 5.1에서 늘 비어 영상 백업 줄·브리지 파일 검사가 건너뛰어지던 것**을 고침. `DEPLOYMENT.md` 4절·설명서에 「`.env`의 두 줄은 손으로 바꾸지 않는다」 | `server-status.ps1` `Get-EnvFileCheck`·`Get-ComposeDir`·창 높이 740, `DEPLOYMENT.md`, 설명서 (2.10·3-6) | `b40dfdd` |
 | 2026-10-01 | **오더 코드의 영상 종류(Modality)를 목록에 없는 값도**(실장님 요청 — 직장경 장비의 AS): 흔한 값 15개에 풀이를 붙이고 「기타 — 직접 입력」, 서버가 같은 규칙으로 다듬어 저장, 세 칸을 16자로 | `settingsModality.jsx`(새), `Settings.jsx`, `admin.routes.js` `cleanModality`, `040_settings_modality_width.sql`, `settings.modality.mjs`(새), 설명서 (2.9·3-9b) | `a703ccb` |
 | 2026-10-01 | 기록 탭: **영상을 접수번호로 다시 연결**(`pacs.study.relink`, PACS) — 종류 「Images retrouvées par le numéro d'accession」, 칸 넷(검사 번호 UID · 영상 수 · 영상 속 환자 번호 · 환자 대조), 대조 값 「concorde / ne concorde pas / pas de numéro patient dans les images」. 오더 코드 창의 안내에 한 줄: 영상 종류 + 워크리스트면 종류가 「처치」여도 영상/판독 목록에 나옴 | `settingsAudit.js`, `settingsModality.jsx`, i18n `se_act_studyRelink`·`se_fld_studyUid` 등·`se_pchk_*`·`se_modListHint` (3-10) | `389f5b9` |
-| 2026-10-01 | **오더 코드의 기본 용법에 든 뜻 없는 「1.000」**(실장님: 「왜 용법도 자동으로 1이 입력돼?」): 칸의 기본값을 없애고 숫자만인 값을 비움, 새 오더 코드가 `1.000`을 싣지 않게, 처치 코드에 「Posologie par défaut (facultatif)」 칸 | `041_settings_order_code_default_dose.sql`, `admin.routes.js` `cleanDirections`, `Settings.jsx`, i18n `se_fDirections*`, `settings.ordercodes.mjs`(새) (2.9·3-9c) | (이 커밋) |
+| 2026-10-01 | **오더 코드의 기본 용법에 든 뜻 없는 「1.000」**(실장님: 「왜 용법도 자동으로 1이 입력돼?」): 칸의 기본값을 없애고 숫자만인 값을 비움, 새 오더 코드가 `1.000`을 싣지 않게, 처치 코드에 「Posologie par défaut (facultatif)」 칸 | `041_settings_order_code_default_dose.sql`, `admin.routes.js` `cleanDirections`, `Settings.jsx`, i18n `se_fDirections*`, `settings.ordercodes.mjs`(새) (2.9·3-9c) | `7f6eb9d` |
+| 2026-10-01 | 약속처방 편집 창: 처치 줄의 **용법(Posologie)을 글자 칸(20자)** 으로 — 전에는 그리지 않으면서 숫자로 검사해, 진료 화면에서 「PRN」으로 저장한 세트를 설정에서 다시 저장할 수 없었음 | `Settings.jsx` `osDir`·`osLineProblem`, `settings.ordersets.mjs` (3-9c) | (이 커밋) |
