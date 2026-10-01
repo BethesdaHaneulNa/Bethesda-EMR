@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상 창을 닫아도 목록이 남는 변경(총괄 `71dedec`): 격리 회귀 + 문서
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `71dedec`를 ff로 당긴 뒤). 문서만 — 코드는 고치지 않음(고칠 것이 보이지 않았음). **PACS 저장소** — 없음
+- **한 일**: 총괄이 고친 것(`Consultation.jsx` — 목록의 `onOpen`이 목록을 닫지 않음, 영상 창이 닫히면 `readingsReload`↑ / `RadiologyReadings.jsx` — 새 prop `reload`, 같은 환자면 조용히 다시 읽음)을 격리에서 확인하고 문서를 맞춤.
+  - `wiki/manual-fr/pacs.md` 6절 4·5번: 「**Voir image** ouvre la **Visionneuse** par-dessus la liste. Quand vous fermez l'image, la liste reste ouverte, au même endroit : vous pouvez ouvrir l'examen suivant tout de suite. Le compte-rendu que vous venez d'enregistrer y apparaît.」 / 「La liste se relit chaque fois que vous fermez une image. Sinon elle ne se met pas à jour toute seule …」
+  - `wiki/modules/pacs.md` 2.4(목록이 남음·자리 유지·방금 저장한 판독이 보임·처방 표의 🖼는 전처럼), 5절(`props.reload`의 뜻과 진료 화면이 쓰는 방법), 8절.
+- **바꾼 파일**: `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음. **번역 키**: 없음
+- **확인한 방법** (격리 EMR 9188 + 격리 PACS 9198, develop `71dedec`로 다시 지음, 1366×768 · fr · 어두운 화면, 시험 의사 계정, 영상 검사 28줄인 시험 환자):
+  - **(a) 판독 저장 → 닫기 → 목록에 그 글**: 목록 15번째 줄(Chest Lat)의 Voir image → 영상 창(그림 570×603, 환자 불일치 빨간 경고 그대로)에서 판독을 쓰고 💾 Enregistrer → «Compte-rendu enregistré ✓» → Fermer ✕ → 목록이 열린 채, 그 줄에 방금 쓴 글과 «Lu par: RABE Hery · 2026-10-01».
+  - **(b) 긴 목록의 자리**: 스크롤 1500px(전체 3210px)에서 열고 닫음 → 닫은 뒤 100ms·1.5초 모두 **1500px 그대로**, 스크롤 칸이 다시 만들어지지 않음, 「Loading…」 한 번도 안 뜸. 영상 창 바깥 어두운 곳을 눌러 닫아도 같음(목록까지 닫히지 않음).
+  - **이어 보기**: 목록에서 7건을 잇달아 열고 닫음 — 모두 열리고(그림 있는 5건은 그림, 그림 없는 자료만 온 SONO 2건은 「Cette demande n'a reçu que des données sans image (1) …」 안내), 닫을 때마다 목록이 남음. 중계 요청 60여 개 중 403 없음(섞인 검사의 그림 없는 시리즈 작은 그림 400 한 번 — 전부터 있던 것, Orthanc의 답).
+  - **(c) 처방 표의 🖼**: 목록을 닫고 처방 줄의 🖼 → 영상 창 → Fermer ✕ → **진료 화면**(목록은 열리지 않음).
+  - **(d) 중계 회귀** 11가지 통과: 자기 검사 페이지·데이터·시리즈 질의 200 / 남의 검사 데이터·페이지 403 / 쿠키 없음 401 / 걸러지지 않은 목록 403 / Orthanc REST 403 / `../`·`%2e%2e` 400 / 수납 계정의 `viewer-url` 403.
+- **확인 못 한 것**: 다시 읽기가 실패하는 경우(서버가 잠깐 끊김)에 목록이 남는지는 코드로만 봄(`catch`에서 조용한 읽기면 지우지 않음). 밝은 화면. 한국어·영어 화면(글자만 다름).
+- **알아 둘 것 (전부터 그런 것, 이번에 안 바꿈)**: «Images en attente»(아직 영상이 안 온) 줄에도 **Voir image**가 있고, 누르면 빈 영상 창(Stone)이 열림 — 워크리스트로 보낸 검사는 번호가 이미 있어서. 닫으면 목록으로 돌아옴. 「아직 영상이 오지 않았습니다」 한 줄 안내로 바꿀지는 총괄·실장님 결정(중계가 Orthanc에 그 검사가 없을 때 안내를 내면 됨 — PACS 몫 `pacs.viewer.js`만으로 가능).
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-01 — 단추 이름 «Imagerie (영상/판독)»에 문서를 맞춤 (코드 변경 없음)
 
 - **상태**: 확인 요청

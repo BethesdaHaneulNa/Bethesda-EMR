@@ -78,8 +78,8 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
    - **N image(s) reçue(s)** (vert) : toutes les images sont arrivées.
    - **Images en attente** (gris) : pas encore arrivées.
    - rien : l'examen ne part pas vers les appareils.
-4. **Voir image** ouvre la **Visionneuse**.
-5. La liste ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
+4. **Voir image** ouvre la **Visionneuse** par-dessus la liste. Quand vous fermez l'image, la liste reste ouverte, au même endroit : vous pouvez ouvrir l'examen suivant tout de suite. Le compte-rendu que vous venez d'enregistrer y apparaît.
+5. La liste se relit chaque fois que vous fermez une image. Sinon elle ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
 
 La caisse (**Paiement**) a le même bouton **🩻 Imagerie** : la même liste, en lecture seule, sans images.
 
