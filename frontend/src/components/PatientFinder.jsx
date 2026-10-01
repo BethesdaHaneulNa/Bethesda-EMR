@@ -161,7 +161,7 @@ export function PatientFinder(props){
                   <th style={TH}>{t.colReceptionTime}</th>
                   <th style={TH}>{t.department}</th>
                   <th style={TH}>{t.doctor}</th>
-                  <th style={TH}>{t.chiefComplaint}</th>
+                  <th style={TH}>{t.receptionMemo}</th>
                   <th style={TH}>{t.rc_colVisitState}</th>
                   <th style={TH}>{t.colBillStatus}</th>
                 </tr></thead>

@@ -103,10 +103,26 @@ router.get('/patient/:patientId', permMiddleware('registration', 'consultation',
   }
 });
 
+// One field since 2026-10-01 (director: "why two? keep the name reception memo and let it do
+// the complaint's job"): reception's memo is stored in visit.chief_complaint - the text the
+// queue, the patient's visit list and the consultation screen show. visit.reception_memo is
+// no longer written (the column stays; migration 101 moved what it held). A screen left
+// open from before the update still sends both: its memo is appended to the complaint
+// rather than dropped, once (a line already there is not added again).
+function withMemo(complaint, memo) {
+  const m = memo == null ? '' : String(memo).trim();
+  if (!m) return complaint;
+  const c = complaint == null ? '' : String(complaint);
+  if (!c.trim()) return m;
+  if (c.split('\n').some(function (line) { return line.trim() === m; })) return c;
+  return c.replace(/\s+$/, '') + '\n' + m;
+}
+
 // POST /api/visits - register new visit
 router.post('/', permMiddleware('registration'), async (req, res) => {
   try {
-    const { patient_id, visit_type, department_id, doctor_id, chief_complaint, reception_memo } = req.body;
+    const { patient_id, visit_type, department_id, doctor_id } = req.body;
+    const chief_complaint = withMemo(req.body.chief_complaint, req.body.reception_memo);
     // visit_type selects the consultation fee (newVisit -> C01, followUp -> C02 ...),
     // and the billing query falls back to the new-visit price for anything it does
     // not recognise, so an unknown value quietly overcharges the patient.
@@ -127,9 +143,9 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
     const now = new Date();
     const reception_time = now.toTimeString().split(' ')[0].substring(0,5);
     const result = await pool.query(
-      `INSERT INTO visit (patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, reception_memo, status, registered_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'waiting',$8) RETURNING *`,
-      [patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, reception_memo, req.user.id]
+      `INSERT INTO visit (patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, status, registered_by)
+       VALUES ($1,$2,$3,$4,$5,$6,'waiting',$7) RETURNING *`,
+      [patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, req.user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -341,7 +357,19 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
     }
     const sets = [];
     const params = [];
+    // reception_memo is not written any more (see withMemo): sent with the complaint it
+    // is folded into it; sent alone it is appended to the complaint already stored.
+    const oldMemo = body.reception_memo == null ? '' : String(body.reception_memo).trim();
+    if (oldMemo && Object.prototype.hasOwnProperty.call(body, 'chief_complaint')) {
+      body.chief_complaint = withMemo(body.chief_complaint, oldMemo);
+    } else if (oldMemo) {
+      params.push(oldMemo);
+      sets.push(`chief_complaint = CASE WHEN btrim(COALESCE(chief_complaint, '')) = '' THEN $${params.length}
+                                         WHEN $${params.length} = ANY (string_to_array(chief_complaint, E'\\n')) THEN chief_complaint
+                                         ELSE regexp_replace(chief_complaint, '\\s+$', '') || E'\\n' || $${params.length} END`);
+    }
     for (const field of VISIT_FIELDS) {
+      if (field === 'reception_memo') continue;
       if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
       let value = body[field];
       if ((field === 'visit_type' || field === 'status') && value == null) continue;

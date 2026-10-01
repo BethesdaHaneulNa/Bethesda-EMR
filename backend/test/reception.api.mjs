@@ -308,6 +308,25 @@ const formMissing = await call('PUT', '/visits/99999999', { chief_complaint: 'x'
 check('PUT /:id of a visit that does not exist → 404 VISIT_NOT_FOUND', formMissing.status === 404 && formMissing.data.code === 'VISIT_NOT_FOUND', { status: formMissing.status, data: formMissing.data });
 await call('PUT', '/visits/' + VT.id + '/status', { status: 'cancelled' }, A);
 
+// ── One field (2026-10-01): reception's memo is the visit's complaint. reception_memo is no
+// longer written; a screen from before the update that still sends it loses nothing. ──
+const PM = (await call('POST', '/patients', { last_name: 'Memo', first_name: 'M' + Date.now(), gender: 'M' }, A)).data;
+const m1 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', chief_complaint: 'Toux\nFièvre depuis 3 jours' }, T.frontdesk);
+check('memo: several lines are kept as typed, reception_memo stays empty', m1.status === 201 && m1.data.chief_complaint === 'Toux\nFièvre depuis 3 jours' && m1.data.reception_memo == null, { status: m1.status, cc: m1.data.chief_complaint, memo: m1.data.reception_memo });
+const m2 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', chief_complaint: 'Toux', reception_memo: 'Payer demain', allow_duplicate: true }, T.frontdesk);
+check('memo: an old screen sending both (POST) → memo appended to the complaint', m2.status === 201 && m2.data.chief_complaint === 'Toux\nPayer demain' && m2.data.reception_memo == null, { cc: m2.data.chief_complaint, memo: m2.data.reception_memo });
+const m3 = await call('PUT', '/visits/' + m2.data.id, { chief_complaint: 'Toux', reception_memo: 'Payer demain' }, T.frontdesk);
+const m4 = await call('PUT', '/visits/' + m2.data.id, { chief_complaint: 'Toux\nPayer demain', reception_memo: 'Payer demain' }, T.frontdesk);
+check('memo: … and the same save again (PUT) does not add the line twice', m3.status === 200 && m3.data.chief_complaint === 'Toux\nPayer demain' && m4.data.chief_complaint === 'Toux\nPayer demain' && m4.data.reception_memo == null, { m3: m3.data.chief_complaint, m4: m4.data.chief_complaint });
+const m5 = await call('PUT', '/visits/' + m1.data.id, { reception_memo: 'Rappeler la famille' }, T.frontdesk);
+const m6 = await call('PUT', '/visits/' + m1.data.id, { reception_memo: 'Rappeler la famille' }, T.frontdesk);
+check('memo: reception_memo sent alone is appended to the stored complaint, once', m5.status === 200 && m5.data.chief_complaint === 'Toux\nFièvre depuis 3 jours\nRappeler la famille' && m6.data.chief_complaint === m5.data.chief_complaint && m6.data.reception_memo == null, { m5: m5.data.chief_complaint, m6: m6.data.chief_complaint });
+const mDay = (await call('GET', '/visits/day', null, A)).data.visits.find(v => v.id === m1.data.id);
+const mToday = (await call('GET', '/visits/today', null, A)).data.find(v => v.id === m1.data.id);
+const mList = (await call('GET', '/visits/patient/' + PM.id, null, A)).data.find(v => v.id === m1.data.id);
+check('memo: /visits/day, /visits/today and /visits/patient/:id all give the text in chief_complaint', [mDay, mToday, mList].every(v => v && v.chief_complaint === m5.data.chief_complaint), { day: mDay && mDay.chief_complaint, today: mToday && mToday.chief_complaint, list: mList && mList.chief_complaint });
+for (const v of [m1.data, m2.data]) await call('PUT', '/visits/' + v.id + '/status', { status: 'cancelled' }, A);
+
 // ── Status buttons judge by what the visit holds (2026-10-01, with the consultation session's
 // consult.visit.js). A started consultation with nothing written is "empty"; a vital sign,
 // a document, a finished consultation... is a record. ──
@@ -345,7 +364,9 @@ check('status: started but empty → completed keeps the type and finishes the c
 const VB = await sv();
 const docB = await call('POST', '/documents', { template_code: 'certificate', template_name: 'Certificat médical', patient_id: PS.id, visit_id: VB.id, payload: {} }, A);
 const b0 = await st(VB.id, 'cancelled');
-check('status (A′) waiting with a record → cancel refused, 409 VISIT_HAS_RECORDS', docB.status === 201 && b0.status === 409 && b0.data.code === 'VISIT_HAS_RECORDS' && b0.data.error === 'The visit has records; it cannot be cancelled', { doc: docB.status, status: b0.status, data: b0.data });
+// (Issuing a document is about to move a waiting visit to "in consultation" - consultation
+// session, coordinator's decision. The cancel is refused either way; only the code differs.)
+check('status (A′) a visit with a document → cancel refused (409 VISIT_HAS_RECORDS, or VISIT_NOT_WAITING once the document starts the visit)', docB.status === 201 && b0.status === 409 && (b0.data.code === 'VISIT_HAS_RECORDS' || b0.data.code === 'VISIT_NOT_WAITING'), { doc: docB.status, status: b0.status, data: b0.data });
 const b1 = await st(VB.id, 'completed');
 check('status (B) waiting with a record → completed keeps visit_type (not none)', b1.status === 200 && b1.data.visit_type === 'newVisit' && b1.data.has_records === true, { status: b1.status, visit_type: b1.data && b1.data.visit_type });
 // No consultation at all: unchanged behaviour, and the mistake can be undone.

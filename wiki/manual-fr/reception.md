@@ -13,7 +13,7 @@ Enregistrer un patient qui arrive :
 3. Si le patient apparaît, cliquez sur son nom. Sinon, le message « Aucun patient trouvé pour « … » » s'affiche sous la case : cliquez sur **+ Nouveau patient** et remplissez au moins **Nom**, **Prénom** et **Sexe**.
 4. Dans **Service / Médecin**, choisissez le médecin.
 5. Vérifiez le **Type de Visite** : **Nouvelle**, **Suivi** ou **Sans frais**.
-6. Écrivez le **Motif** (la raison de la visite).
+6. Écrivez dans **Mémo Réception** la raison de la visite et ce qu'il faut savoir aujourd'hui (plusieurs lignes possibles).
 7. Cliquez sur **Enregistrer / Mettre en attente**.
 8. Le message « Patient mis en attente — RAKOTO Jean (N° dossier 26-00001) » confirme. Le patient apparaît à droite, dans **En Attente**.
 
@@ -45,7 +45,7 @@ Pendant l'enregistrement, le bouton affiche **Enregistrement…** et ne réagit 
 1. Tapez son nom (dans n'importe quel ordre : « RAKOTO Jean » ou « Jean RAKOTO »), son N° dossier ou son téléphone dans **Rechercher patient**, puis Entrée. Vous pouvez aussi cliquer sur **🔍 Trouver patient**.
 2. Cliquez sur le patient. Ses informations apparaissent à gauche, ses consultations au milieu.
 3. Corrigez les informations si elles ont changé.
-4. Choisissez le médecin, vérifiez le **Type de Visite**, écrivez le **Motif**, puis **Enregistrer / Mettre en attente**.
+4. Choisissez le médecin, vérifiez le **Type de Visite**, remplissez **Mémo Réception**, puis **Enregistrer / Mettre en attente**.
 
 ### 4. Type de Visite
 
@@ -90,12 +90,12 @@ En haut à droite : **En Attente**, **En cours**, **Terminé**. Le nombre entre 
 
 Les petits boutons **Terminer →** et **← En attente** sous chaque patient servent seulement dans les cas particuliers (voir 10).
 
-Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. Le **Motif**, lui, tient sur deux lignes au plus ; laissez la souris dessus pour le lire en entier.
+Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. Le **Mémo Réception**, lui, tient sur deux lignes au plus ; laissez la souris dessus pour le lire en entier.
 
 ### 9. Modifier un enregistrement ou annuler l'attente
 
 1. Cliquez sur le patient dans la file. Ses informations se chargent à gauche et le bouton devient **Modifier l'enregistrement**.
-2. Corrigez le médecin, le type de visite, le motif ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme.
+2. Corrigez le médecin, le type de visite ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme.
 3. Pour retirer un patient qui attend encore : **Annuler l'attente / Retirer**, puis confirmez.
 
 Si le médecin a déjà commencé la consultation, ou si la visite a déjà des données (note, ordonnance, examen, document, reçu), l'annulation est refusée et un message l'explique.
@@ -141,7 +141,7 @@ Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en m
 
 Si le dossier contient deux numéros de téléphone (« +261 34 … / +261 33 … »), ils s'affichent l'un sous l'autre dans la colonne **Téléphone**.
 
-Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Visites du patient**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Motif**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Motif** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
+Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Visites du patient**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Mémo Réception**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Mémo Réception** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
 
 ### 13. Dossier (vue)
 

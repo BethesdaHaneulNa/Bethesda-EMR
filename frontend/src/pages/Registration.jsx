@@ -104,7 +104,11 @@ export default function RegistrationPage() {
   var emptyForm = { chartNo: '', lastName: '', firstName: '', dob: '', gender: '', phone: '', bloodType: '', allergies: '', receptionNote: '' };
   var fs = useState(emptyForm), form = fs[0], setForm = fs[1];
 
-  var vfs = useState({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
+  // chiefComplaint is the one «접수 메모 / Mémo Réception» field (director, 2026-10-01: "why
+  // two? keep the name reception memo and let it do the complaint's job"). It is stored
+  // in visit.chief_complaint - the text the queue, the patient's visit list and the
+  // consultation screen show. visit.reception_memo is no longer written.
+  var vfs = useState({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '' });
   var visitForm = vfs[0], setVisitForm = vfs[1];
   // Where the visit type on screen came from:
   //   'auto'   - suggested by suggestedVisitType(); recalculated when the doctor or
@@ -119,7 +123,6 @@ export default function RegistrationPage() {
   // The same-name dialog: { list, resolve } while it is open (see askSimilar).
   var sms = useState(null), similarAsk = sms[0], setSimilarAsk = sms[1];
 
-  var ms = useState(''), memo = ms[0], setMemo = ms[1];
   var hs = useState([]), history = hs[0], setHistory = hs[1];
 
   // The queue refreshes itself every 30 s while the tab is visible (same rule as
@@ -289,7 +292,6 @@ export default function RegistrationPage() {
     setVisitTypeSource('auto');
     loadPastVisits(p.id);
     setForm(patientToForm(p));
-    setMemo('');
     loadHistory(p.id);
   }
 
@@ -380,9 +382,8 @@ export default function RegistrationPage() {
     setPatientResults([]);
     setPatientQuery('');
     setNotFoundFor('');
-    setMemo('');
     setForm(emptyForm);
-    setVisitForm({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '', receptionMemo: '' });
+    setVisitForm({ department: '', doctor: '', visitType: 'newVisit', chiefComplaint: '' });
     setVisitTypeSource('auto');
     setPastVisits([]);
   }
@@ -406,9 +407,7 @@ export default function RegistrationPage() {
     setVisitForm({
       department: v.department_id || '', doctor: v.doctor_id || '',
       visitType: v.visit_type || 'newVisit', chiefComplaint: v.chief_complaint || '',
-      receptionMemo: v.reception_memo || '',
     });
-    setMemo(v.reception_memo || '');
     setVisitTypeSource('loaded');
     loadPastVisits(v.patient_id);
     loadHistory(v.patient_id);
@@ -576,7 +575,6 @@ export default function RegistrationPage() {
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
             chief_complaint: visitForm.chiefComplaint,
-            reception_memo: memo,
           };
           if (visitTypeSource !== 'loaded' && !sel.has_active_bill) vbody.visit_type = visitForm.visitType;
           await api.put('/visits/' + sel.id, vbody);
@@ -588,7 +586,6 @@ export default function RegistrationPage() {
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
             chief_complaint: visitForm.chiefComplaint,
-            reception_memo: memo,
           }, nameOf({ last_name: form.lastName, first_name: form.firstName }));
           if (!registered) return;
           alert(fill(t.rc_registered, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }), chart: patient.chart_no || form.chartNo }));
@@ -763,8 +760,8 @@ export default function RegistrationPage() {
                 {!locked && !known ? <div style={{ fontSize: 13, color: t2, marginTop: 5 }}>{fill(t.rc_visitTypeOther, { type: t[shown] || shown })}</div> : null}
               </div>;
             })()}
-            <div><label style={labelStyle}>{t.chiefComplaint}</label><input value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} style={IS} /></div>
-            <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={memo} onChange={function (e) { setMemo(e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
+            {/* One field (2026-10-01): the label is «접수 메모», the text is the visit's complaint. */}
+            <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
             <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
             {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
             <button onClick={savePatientOnly} disabled={busy} style={{ background: 'var(--chip)', color: 'var(--text-soft)', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
