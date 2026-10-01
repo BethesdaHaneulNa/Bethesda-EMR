@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서: 「영상/판독」 목록에서 체크해 여러 검사를 함께 열기 (PACS 세션의 부품)
+
+- **상태**: 확인 요청 (문서만)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `978f5a8` 다음
+- **한 일**:
+  - 모듈 문서 3.1의 영상 창 단락에 PACS가 더 넣은 다섯 군데를 적음: import `CompareChecked`, 상태 `readingsPicked`와 목록이 닫히면 비우는 효과, `openViewer(orderItemId, pickedIds)`(`?order_item_ids=`, 응답의 `order_item_id`가 연 검사, 주소 `compare.url`, 판독 칸 접힘, 409 → `px_cmpRefused`), 목록 창 머리의 `<CompareChecked … />`, `<RadiologyReadings … picked onPick />`.
+  - 설명서 fr §9에 8번: 목록에서 체크 → «⇆ Comparer (N)» — PACS 설명서 §8 «Choisir soi-même les examens à comparer»를 보라고.
+- **바꾼 파일**: `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: develop `978f5a8`의 `Consultation.jsx`(10·258–280·1620–1623줄)와 `manual-fr/pacs.md` §8의 새 단락을 읽고 적음. 위키만이라 격리 확인은 하지 않았습니다.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 문서: 영상 창의 「전 검사와 비교」·판독 칸 접기 (PACS 세션의 부품)
 
 - **상태**: 확인 요청 (문서만)
