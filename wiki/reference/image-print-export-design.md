@@ -289,11 +289,55 @@ Weasis의 소스(GitHub `nroduit/Weasis`, 2026-10-01의 master)와 문서에서 
 
 1. **① 영상 인쇄 — 지었음(2026-10-01)**: 서버 길(그림 한 장) · 인쇄 창(고르기·배치·밝기·언어) · 서식 · 발급 기록·변경 기록 · 진료와(결정되면) 수납 화면 · 설명서 fr. 시험: 1·2·4·6 배치, 긴 이름, 여러 쪽, 그림 없는 자료(보고서 따위)는 건너뜀, 다른 환자의 영상 번호를 넣으면 거절.
 2. **④ 영상 CD 반출 프로그램 — 폴더 · ISO까지 지었음(2026-10-01), 진짜 굽기는 총괄에 알린 뒤**(PACS 저장소 + EMR의 길 둘): EMR 쪽 `pacs.export.js`에 「크기」와 「묶음(그대로 넘김)」 · 변경 기록. 프로그램: 로그인 · 조회 · 목록 · 크기 · 받기 · 풀기 · `README.TXT` · ISO/폴더 저장 → 디스크 알아보기 · 굽기 · 확인 · 꺼냄. README · 설명서 fr. **「폴더에 저장」부터 완성**합니다 — 시험 자리는 USB 메모리의 `D:\CD-TEST\` 아래(반출 한 번에 하위 폴더 하나, 예 `D:\CD-TEST\26-00001_20261001_1730\` — 그 폴더가 「디스크의 맨 위」). `D:`의 다른 것(실장님 파일)은 열지도 건드리지도 않습니다. 격리 스택의 가짜 환자로만. 그다음 ISO, 그 뒤에 **총괄에 알리고 1장** 굽습니다(4-2절의 차례).
-3. **③ 뷰어**: Weasis 폴더를 얻고(결정 파 — 설치하지 않고 풀기만), 먼저 **`D:\CD-TEST`의 폴더에서**(USB — CD보다 빠르니 「CD에서는 더 느림」을 적어 둠) `VOIR.BAT`로 켜지는지 · 켜지는 시간 · 폴더 전체 크기 · 받는 PC에 남는 것을 재고, 그 뒤 **총괄에 알리고 1장** 구워 같은 것을 잽니다. 결과를 보고합니다.
+3. **③ 뷰어 — 프로그램 쪽 준비는 됨(2026-10-02: `cd-viewer` 폴더가 있으면 체크 칸, `VIEWER\` + `VOIR.BAT`, 가짜 폴더로 확인). 진짜 Weasis는 아직**: Weasis 폴더를 얻고(결정 파 — 설치하지 않고 풀기만), 먼저 **`D:\CD-TEST`의 폴더에서**(USB — CD보다 빠르니 「CD에서는 더 느림」을 적어 둠) `VOIR.BAT`로 켜지는지 · 켜지는 시간 · 폴더 전체 크기 · 받는 PC에 남는 것을 재고, 그 뒤 **총괄에 알리고 1장** 구워 같은 것을 잽니다. 결과를 보고합니다.
 4. **③이 되면**: 반출 프로그램에 「☐ Ajouter la visionneuse」 체크 칸 · `README.TXT`의 뷰어 문단 · PACS README의 License 문단과 「`cd-viewer` 만드는 방법」.
 5. **② EMR 화면의 ZIP 내려받기**: 그 뒤, 또는 필요해질 때 — 「한 번 쓰는 표」 · 내려받기 창 · 설명서 fr. 묶음의 길은 ④에서 만든 것을 그대로 씁니다.
 
 각 단계마다 격리에서 확인하고 보고합니다. 실행 중 EMR·PACS는 건드리지 않습니다.
+
+## 11. 반출 프로그램을 「.exe」로 만드는 길 (조사만 — 짓지 않음)
+
+실장님(2026-10-01): 「뱃으로 만들기보다는 좀 더 제대로 프로그램처럼 만들어 줬으면. 뱃으로 기능 다 만들고 나중에 그렇게 할 수 있으면 지금 당장은 상관없지만.」 → 지금은 PowerShell + `.bat`로 기능을 끝까지 만들고, 그 뒤에 진짜 실행 파일로 옮깁니다. 아래에서 **「확인함」은 원문을 읽었거나 이 PC에서 해 본 것, 「추측」은 그렇지 않은 것**입니다.
+
+### 추천안 — Windows에 들어 있는 C# 컴파일러로 만든 WinForms 실행 파일 하나
+
+`cd-export.exe` 하나(+ 지금처럼 옆에 `cd-export.ini`, 원하면 `cd-viewer` 폴더). 아이콘이 있고, 검은 창이 없고, 「프로그램 추가/제거」에 등록하지 않으며, 지우려면 파일을 지우면 됩니다. 받는 PC에도, 만드는 PC에도 **아무것도 설치하지 않습니다**.
+
+| 물음 | 답 | 근거 |
+|---|---|---|
+| 받는 PC에 무엇이 있어야 하나 | 없음 — .NET Framework 4.8은 Windows 10(1903부터)과 Windows 11에 **들어 있음** | **확인함**(Microsoft Learn 「.NET Framework & Windows OS versions」의 표: 4.8 ✔ Windows 10 May 2019 Update(1903)~22H2, Windows 11 21H2 / 4.8.1 ✔ Windows 11 22H2~. 같은 글: ".NET Framework will continue to be included with Windows, with no plans to remove it."). 1809 이전의 Windows 10은 4.7.2가 들어 있음 → 4.7.2용으로 만들면 그것까지 됨 |
+| 무엇으로 만드나 | Windows에 들어 있는 `csc.exe`(`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\`) | **확인함**(Microsoft Learn: "The csc.exe executable file is usually located in the Microsoft.NET\Framework\<Version> folder under the Windows directory". 이 PC에 있음 — "Visual C# Compiler version 4.8.9221.0 for C# 5") |
+| 그 컴파일러의 한계 | **C# 5까지만** | **확인함**(컴파일러가 스스로 말함: "only supports language versions up to C# 5"). 지금 `cd-export-common.ps1` 안의 C# 조각도 바로 이 컴파일러로 실행 때마다 컴파일되고 있으므로 C# 5로 충분하다는 것은 이미 보인 셈 |
+| 정말 되나 | 됨 | **확인함**(이 PC, scratch에서만): 창 하나 + 굽는 부품(IMAPI2)을 부르는 15줄짜리를 `csc -target:winexe`로 컴파일 — **0.25초, 5 632바이트**, 실행되어 「recorders: 1」을 읽음. 제품 크기는 **추측**으로 수백 KB(코드 2천 줄 + 아이콘) |
+| IMAPI2를 C#에서 | 지금과 같은 방식 — 이름으로 불러 쓰기(`dynamic`), 형식 라이브러리나 Windows SDK 없이 | **확인함**(ISO 저장과 드라이브 알아보기는 이미 이 방식으로 돌고 있음). 굽기 자체는 진짜 굽기 시험 뒤에 확인됨 |
+| 진행 막대가 쉬워지나 | **쉬워지지 않음, 어려워지지도 않음** — 지금 방식을 그대로 옮김 | IMAPI2에는 진행을 알려 주는 신호(`DDiscFormat2DataEvents::Update` — "Implement this method to receive progress notification of the current write operation", **확인함**, Microsoft Learn)가 있지만, 그것을 받으려면 COM 인터페이스 선언을 손으로 쓰거나 형식 라이브러리에서 뽑아야 함(**추측**: 뽑는 도구 `tlbimp`는 Windows SDK에 있고 Windows에는 없음). 지금은 굽는 부품이 디스크 이미지를 **읽어 가는 양을 세어서** 진행률을 내고 있어(`CountingStream`) 신호 없이 됩니다 |
+| 화면 글자 · 설정 | 그대로 — 글자는 한 표(지금의 `$CdxText`), 설정은 `cd-export.ini` | 지금 구조가 이미 「화면」(`cd-export-ui.ps1`)과 「일」(`cd-export-common.ps1`)로 갈라져 있고, 사람에게 묻는 곳도 함수 네 개에 모여 있음 |
+
+**옮기는 일의 크기(추측)**: `cd-export-common.ps1`의 함수들이 그대로 C# 클래스가 됩니다 — EMR과의 통신(`HttpWebRequest` — 지금도 .NET의 같은 부품) · 묶음 풀기(`ZipFile` — 같음) · README · 폴더 저장과 비교 · 디스크 이미지/굽기(`DiscJob` — **이미 C#**) · 드라이브 알아보기. `cd-export-ui.ps1`의 창은 WinForms 코드로 한 줄씩 대응됩니다. 새로 생각할 것이 없는 옮겨 적기이고, 시험(`cdx_test` · `cdx_ui_test`)의 항목을 그대로 다시 돌려 맞춥니다.
+
+**빌드**: 저장소에 C# 소스(`cd-export/*.cs`)와 `build-cd-export.ps1`(csc 한 줄)을 둡니다. 실행 파일을 저장소에 넣을지, 설치 묶음(USB)을 만들 때 빌드할지는 총괄이 정할 것 — 소스에서 0.3초면 만들어지므로 **묶음을 만들 때 빌드**를 권합니다(저장소에 실행 파일을 넣지 않음).
+
+### 다른 길들
+
+| 길 | 판단 |
+|---|---|
+| **Docker의 .NET SDK로 빌드**(Windows에 SDK를 깔지 않고) | 최신 C#을 쓸 수 있다는 것 말고는 얻는 것이 없고, 리눅스 컨테이너에서 .NET Framework용 WinForms를 빌드하려면 참조 묶음을 따로 받아야 함(**추측** — 해 보지 않음). 인터넷이 필요. 추천하지 않음 |
+| **새 .NET(8 이상)으로 단일 파일** | 받는 PC에 런타임이 없으므로 런타임을 함께 싸야 하고 **수십~백수십 MB**가 됨(**추측**). 추천하지 않음 |
+| **PowerShell 스크립트를 exe로 싸는 도구**(PS2EXE 등) | **피합니다.** 그 도구의 저장소 이슈 목록에 백신 오탐 신고가 있음(**확인함**, 제목만: 「#153 EXE Trigger AV quarantine」, 「#103 Options DPIAware gives Script/Wacatac.b!ml virus warning」 등 16건 검색됨 — 얼마나 잦은지는 재지 않음). 또 그 도구의 설명서가 스스로 "One can simply decompile the script with the parameter -extract"라고 적음(**확인함**) — 싸는 것일 뿐 프로그램이 되는 것이 아님. 속은 여전히 PowerShell이라 시작도 느림(**추측**) |
+| **지금 그대로(.bat + PowerShell)에 바로가기 아이콘만** | 가장 싸지만 실장님이 바라신 「제대로 된 프로그램」이 아님. 창이 뜨기 전에 검은 창이 잠깐 보임 |
+
+### 서명 없는 실행 파일 — SmartScreen과 백신
+
+- **확인함**(Microsoft Learn 「Microsoft Defender SmartScreen overview」): SmartScreen은 "downloaded app or app installer"를 "a list of files that are well known and downloaded frequently"와 맞춰 보고 "If the file isn't on that list, Microsoft Defender SmartScreen shows a warning". 평판은 "the digital signature used to sign a file"로도 봅니다. 그리고 "SmartScreen protects against malicious files from the internet. It doesn't protect against malicious files on internal locations or network shares".
+- 그래서 **추측**: 우리 실행 파일은 인터넷에서 내려받는 것이 아니라 설치 USB로 들어가거나 그 자리에서 빌드되므로 「인터넷에서 온 파일」 표시가 붙지 않아 경고가 뜨지 않을 것입니다(이 PC에서 빌드한 시험 파일에는 그 표시가 없음 — **확인함**). **GitHub에서 zip으로 내려받아 푼 경우에는 표시가 따라올 수 있고**, 그때는 「Windows의 PC 보호」 창에서 「추가 정보 → 실행」을 눌러야 합니다. 지금의 `.bat` · `.ps1`도 같은 처지입니다.
+- 코드 서명 인증서는 해마다 돈이 듭니다. 무료 프로젝트라 **서명하지 않는 것**을 전제로 합니다.
+- 백신: 서명 없는 작은 .NET 프로그램을 백신이 어떻게 보는지는 **모릅니다**(현지 PC의 백신으로 확인). 스크립트를 싼 exe보다는 사정이 나을 것으로 **추측**.
+- 현지 PC가 스크립트 실행을 막아 둔 경우(정책), `.exe`는 그 영향을 받지 않습니다(**추측** — `.bat`은 지금 `-ExecutionPolicy Bypass`로 넘김).
+
+### 차례(제안)
+
+1. 지금: PowerShell + `.bat`로 폴더 저장 → Weasis → 굽기까지 완성하고 시험 항목을 고정.
+2. 그 뒤: 같은 시험 항목을 기준으로 C#으로 옮김 → `cd-export.exe`. `.bat` · `.ps1`은 그때 뺌.
 
 ## 조사에 쓴 곳
 
@@ -303,3 +347,4 @@ Weasis의 소스(GitHub `nroduit/Weasis`, 2026-10-01의 master)와 문서에서 
 - MicroDicom: <https://www.microdicom.com/eula.html>.
 - RadiAnt: <https://www.radiantviewer.com/products/radiant-dicom-viewer-cddvd/>, <https://www.radiantviewer.com/dicom-viewer-manual/cd_dvd_autorun_package.html>(검색 결과로 읽음 — 원문 쪽을 직접 열지는 못함).
 - DWV: <https://github.com/ivmartel/dwv>.
+- 「.exe로 만드는 길」: <https://learn.microsoft.com/en-us/dotnet/framework/install/versions-and-dependencies>, <https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/>, <https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/>, <https://learn.microsoft.com/en-us/windows/win32/api/imapi2/nn-imapi2-ddiscformat2dataevents>, <https://github.com/MScholtes/PS2EXE>(README · 이슈 목록), 이 PC의 `csc.exe`가 내는 글.

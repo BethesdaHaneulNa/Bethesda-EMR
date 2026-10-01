@@ -413,15 +413,18 @@ export function RadiologyReadings(props) {
               <tr><td style={label}>{t.px_colImages}</td><td style={{ color: r.images_received_at ? (cancelled ? t3 : 'var(--ok-text)') : t3, fontWeight: r.images_received_at ? 700 : 400 }}>
                 {r.images_received_at ? String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count) + ' · ' + ymdhm(r.images_received_at)
                   : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}
-                {/* the images are another order's: put them under the right one (doctors, in the consultation screen) */}
-                {props.onOpen && r.images_received_at && !cancelled ? <button onClick={function () { setMoving(r); }} title={t.px_mvIntro}
-                  style={{ display: 'inline-block', margin: '3px 0 5px 10px', background: 'var(--warn-a18)', color: 'var(--warn-text)', border: '1px solid var(--warn-a40)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}
-                {/* the images on paper, for the patient to take along (consultation and payment) */}
-                {r.images_received_at ? (function () {
-                  var no = imagesBlock(r, t);
-                  return <div><button disabled={!!no} onClick={function () { setImaging(r); }} title={no}
-                    style={{ margin: '3px 0 2px', background: 'var(--chip)', color: no ? t3 : 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 9px', cursor: no ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>🖨 {t.px_imButton}</button></div>;
-                })() : null}</td></tr>
+                {/* what can be done with these images, side by side under the line, with room below:
+                    put them under the right order (doctors, in the consultation screen - the orange
+                    button), print them on paper (consultation and payment) */}
+                {r.images_received_at ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '4px 0 7px' }}>
+                  {props.onOpen && !cancelled ? <button onClick={function () { setMoving(r); }} title={t.px_mvIntro}
+                    style={{ background: 'var(--warn-a18)', color: 'var(--warn-text)', border: '1px solid var(--warn-a40)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}
+                  {(function () {
+                    var no = imagesBlock(r, t);
+                    return <button disabled={!!no} onClick={function () { setImaging(r); }} title={no}
+                      style={{ background: 'var(--chip)', color: no ? t3 : 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 9px', cursor: no ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>🖨 {t.px_imButton}</button>;
+                  })()}
+                </div> : null}</td></tr>
               {r.accession_no ? <tr><td style={label}>{t.px_dAccession}</td><td style={{ fontFamily: 'monospace' }}>{r.accession_no}</td></tr> : null}
             </tbody></table>
             {cancelled && (r.cancel_reason || r.cancelled_at)
