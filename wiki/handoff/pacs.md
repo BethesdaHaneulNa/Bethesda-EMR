@@ -13,6 +13,29 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-01 — 설계안 고침: JPG 사본 없음 · 뷰어(Weasis)를 일찍 · 굽는 장치 연결됨 (문서만)
+
+- **상태**: 확인 요청 — **짓지 않음**(총괄: 「아직 짓지 말고 설계안만」). 실장님 답(가·라·마·사·아·차)과 시작 신호를 기다림.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋. develop(`da9bd2d`)은 **ff가 안 돼서 `git merge develop`으로 합침**(전에 올린 설계 커밋 둘이 아직 develop에 없어서 — 충돌 없음). 문서만. **PACS 저장소** — 없음
+- **한 일**: `wiki/reference/image-print-export-design.md`를 고침.
+  - **묶음**: `DICOMDIR` + `IMAGES` + `README.TXT` (+ `VIEWER` · `VOIR.BAT`). JPG 사본 · `INDEX.HTM` · `IHE_PDI`를 뺌. IHE 규격 이름 확인 숙제는 없어짐(그 규격을 내세우지 않음).
+  - **더 단순한 쪽**: EMR은 Orthanc의 ZIP을 **뜯지도 덧붙이지도 않고 그대로 넘김** — 직접 짓기로 했던 ZIP 쓰는 코드(ㄹ)가 필요 없어짐, 우리 쪽 4GB 한계도 없어짐. `README.TXT`는 반출 프로그램이 디스크에 씀. 반출 프로그램은 로그인 토큰으로 묶음을 받으므로 「한 번 쓰는 표」는 ②(브라우저 내려받기) 때.
+  - **차례**: ① 인쇄 → ④ 반출 프로그램(뷰어 없이 굽기까지) → ③ 뷰어를 넣어 한 장 → 되면 「뷰어 포함」 체크 → ② EMR 화면의 ZIP 내려받기(그 뒤 또는 필요해질 때).
+  - **정할 것에 더함**: 타(판독소견을 CD에 — PDF), 파(③ 때 Weasis 설치 파일을 내려받고 이 PC에 설치·풀어 봐도 되는지), 총괄 ㅅ·ㅇ·ㅈ(README를 프로그램이 씀 / 켜는 파일 이름 `VOIR.BAT` / Weasis 폴더는 저장소에 넣지 않음).
+- **Weasis를 설치 없이 폴더째 돌리는 길 — 원문에서 확인한 것**(설계안 5-2절. 소스는 GitHub `nroduit/Weasis` master):
+  - `IsoImageExport.java`: 「Add Weasis」는 **설치 폴더를 통째로** 디스크의 `viewer`로 복사하고 `AUTORUN.INF` · `RUN.BAT`를 씀. Windows에서만.
+  - `RUN.bat`: `start "" "viewer\Weasis.exe" "weasis://…"` — 풀면 `$dicom:get -p $weasis:config pro="weasis.portable.dir ."`.
+  - `DicomModel.java`: `-p`는 그 자리의 **`DICOMDIR`을 읽고**, 없으면 폴더 `dicom,DICOM,IMAGES,images`를 뒤짐(`ConfigData.java`의 기본값) → Orthanc의 모양(`DICOMDIR` + `IMAGES/`)이 그대로 맞음. 영상을 받는 PC의 임시 자리로 복사해 여는 것이 기본.
+  - 만든 사람(Nicolas Roduit, 2022-09-07): "To get a 'portable' version, just copy the installation directory." — 같은 OS·같은 CPU 종류여야 하고 파일 연결·웹 실행은 안 됨.
+  - 크기: MSI 54 636 544바이트, `weasis-native.zip` 60 534 420바이트(릴리스 v4.7.3).
+- **이 PC의 굽는 장치 — 읽기만 하는 조회로 확인함**(쓰지 않음, 트레이 안 움직임): `Slimtype DVD A DS8A3S`(USB, 펌웨어 HA28), `G:`, CD-R 빈 디스크, 359 844섹터 = 702.8MB.
+- **그 밖에 확인함**: EMR의 `backend/package.json` · `frontend/package.json`에 PDF·ZIP 라이브러리 없음(판독지는 브라우저 인쇄) → 「판독소견 PDF를 CD에」는 새 부품이 필요.
+- **바꾼 파일**: `wiki/reference/image-print-export-design.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: Weasis를 실제로 돌려 본 것은 없음 — 설치 폴더를 얻는 길(`msiexec /a`로 풀기만 해도 켜지는지), 폴더 크기, 디스크에서 켜지는 시간, 받는 PC에 남는 것(설정·임시 복사본), 설치 폴더에 라이선스 글이 있는지. Weasis 누리집 FAQ가 말하는 「portable archive」는 내려받기 쪽·릴리스에서 **찾지 못함**. 큰 묶음(수백 MB)이 nginx를 지나는지. `README.TXT`의 글자 형식.
+- **지킬 것**: 진짜로 굽기 전에는 **반드시 총괄에 먼저 알림**(디스크는 실장님 것 — 한 장씩). 그 전까지 ISO 저장으로. 트레이 동작도 굽기 시험 때만. 시험 차례는 설계안 4-2절(두 장이면 됨).
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-01 — 설계안: 영상 인쇄와 영상 내려받기(CD 반출) — 짓기 전 (문서만)
 
 - **상태**: 확인 요청 — **결정 대기**(설계안 9절: 실장님 몫 일곱, 총괄 몫 다섯). 짓지 않음.
