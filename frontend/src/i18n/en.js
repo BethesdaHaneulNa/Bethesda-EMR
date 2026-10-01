@@ -532,7 +532,7 @@ export default {
   ph_alreadyDispensed: "Someone else already dispensed this patient. Stock was deducted once. Reloading the list.",
   ph_typeLocked: "This drug has already been dispensed; in-house/outside can no longer be changed. Reloading the list.",
   ph_refillWarn: "Same drug prescribed {ago} days ago for {supply} days — {left} days still left",
-  ph_selGone: "This patient is no longer waiting. Someone else may already have dispensed them. Press Refresh before handing over any drugs.",
+  ph_selGone: "This patient is no longer waiting. Someone else may already have dispensed them. Press ↻ (Refresh) before handing over any drugs.",
   ph_category: "Category",
   ph_unitPrice: "Unit price",
   ph_stock: "Stock",

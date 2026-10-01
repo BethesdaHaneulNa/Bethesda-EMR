@@ -523,7 +523,7 @@ export default {
   ph_alreadyDispensed: "Ce patient a déjà été servi par quelqu'un d'autre. Le stock n'a été déduit qu'une fois. La liste est actualisée.",
   ph_typeLocked: "Ce médicament a déjà été délivré : interne/externe ne peut plus être changé. La liste est actualisée.",
   ph_refillWarn: "Même médicament prescrit il y a {ago} j pour {supply} j — encore {left} j de traitement",
-  ph_selGone: "Ce patient n'est plus en attente. Quelqu'un l'a peut-être déjà servi. Appuyez sur Rafraîchir avant de remettre les médicaments.",
+  ph_selGone: "Ce patient n'est plus en attente. Quelqu'un l'a peut-être déjà servi. Appuyez sur ↻ (Rafraîchir) avant de remettre les médicaments.",
   ph_category: "Catégorie",
   ph_unitPrice: "Prix unitaire",
   ph_stock: "Stock",

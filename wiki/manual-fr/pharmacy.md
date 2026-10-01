@@ -13,7 +13,7 @@ L'écran **Pharmacie** sert à remettre les médicaments prescrits par le médec
 7. Cliquez sur **✓ Terminer délivrance**, puis sur **OK**.
 8. Le patient passe dans **Délivré**. Passez au patient suivant.
 
-La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de suite, cliquez sur **Rafraîchir**.
+La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de suite, cliquez sur le bouton **↻** (Rafraîchir), à droite de **Délivré**.
 
 ## Pas à pas
 
@@ -125,7 +125,7 @@ Les médicaments de l'ancien logiciel de stock (codes **MED-…**) ont été imp
 | Message | Ce que cela veut dire | Que faire |
 |---|---|---|
 | « Ce patient a déjà été servi par quelqu'un d'autre. Le stock n'a été déduit qu'une fois. La liste est actualisée. » | Un collègue a terminé ce patient juste avant vous. | Rien à corriger. Vérifiez seulement que les médicaments n'ont pas été remis deux fois. |
-| « Ce patient n'est plus en attente. Quelqu'un l'a peut-être déjà servi… » (encadré jaune) | Le patient a été servi pendant que vous regardiez. | Cliquez sur **Rafraîchir** avant de remettre quoi que ce soit. |
+| « Ce patient n'est plus en attente. Quelqu'un l'a peut-être déjà servi… » (encadré jaune) | Le patient a été servi pendant que vous regardiez. | Cliquez sur **↻** avant de remettre quoi que ce soit. |
 | « Certains médicaments n'ont pas de quantité totale… » | Des lignes n'ont pas de **Qté** : elles ne sortiront pas du stock. | Demandez au médecin, puis **OK** ou **Annuler**. |
 | « Le stock enregistré était inférieur à la quantité délivrée — vérifiez le stock réel » | L'ordinateur avait moins que ce qui a été remis. Le chiffre apparaît dans **Manque au registre**. | Comptez le rayon et faites un **Inventaire**. |
 | « Ce médicament a déjà été délivré : interne/externe ne peut plus être changé… » | La ligne a déjà été remise. | Rien : la liste se met à jour. |
