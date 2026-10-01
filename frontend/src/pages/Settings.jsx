@@ -337,10 +337,14 @@ export default function SettingsPage() {
   // consultation screen showed it). Lines added in this editor come from the list.
   function osGone(it){ return it.kind==='drug' && it.drug_active!==undefined && it.drug_active!==true; }
   function osGoneCount(items){ return (items||[]).filter(osGone).length; }
+  // The directions of an exam / procedure line: words (QD, PRN - 20 characters, as the
+  // consultation server takes them since 6ab6600), never a bare number: a stored "1.000"
+  // was the old column default and reads as nothing.
+  function osDir(v){ var x = v==null ? '' : String(v).trim(); return /^[0-9]+([.,][0-9]*)?$/.test(x) ? '' : x; }
   function osOpen(s){
     setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
       items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
-        dose:osNum(it.dose), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity)), drug_active:it.drug_active}; }) });
+        dose:(it.kind==='drug' ? osNum(it.dose) : osDir(it.dose)), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity)), drug_active:it.drug_active}; }) });
     setOsQ(''); setOsResults([]); setOsKind('drug');
   }
   function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; return n; }); }
@@ -357,7 +361,7 @@ export default function SettingsPage() {
       // decided here, in the set - not copied from the drug, which no longer has them).
       // An exam / procedure line starts 1 x 1 x 1.
       if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:'', frequency:'', days:'', route:'', quantity:1, drug_active:true});
-      else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, code_type:r.code_type, dose:'', frequency:'1', days:'1', quantity:1});
+      else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, code_type:r.code_type, dose:(r.code_type==='procedure' ? osDir(r.default_dose) : ''), frequency:'1', days:'1', quantity:1});
       n.items=items; return n;
     });
   }
@@ -375,7 +379,10 @@ export default function SettingsPage() {
   function osLineProblem(it){
     var blank=function(v){ return v==null || String(v).trim()===''; };
     var num=function(v,min,max,whole){ var n=Number(v); return isFinite(n) && n>=min && n<=max && (!whole || Number.isInteger(n)); };
-    if(!blank(it.dose) && !num(it.dose,0,1000,false)) return 'bad';
+    // dose: a number on a drug line; on an exam / procedure line it holds the directions
+    // (words). It was checked as a number on every line, so a set saved from the
+    // consultation screen with "PRN" on a procedure could not be saved again here.
+    if(it.kind==='drug' ? (!blank(it.dose) && !num(it.dose,0,1000,false)) : String(it.dose==null?'':it.dose).trim().length>20) return 'bad';
     if(!blank(it.frequency) && !num(it.frequency,1,24,true)) return 'bad';
     if(!blank(it.days) && !num(it.days,1,365,true)) return 'bad';
     if(String(it.route||'').length>10) return 'bad';
@@ -402,7 +409,7 @@ export default function SettingsPage() {
       var items=its.map(function(it){ var trim=function(v){ return v==null ? '' : String(v).trim(); };
         var c={kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name,
           dose:trim(it.dose)||null, frequency:trim(it.frequency)||null, days:trim(it.days)||null, route:trim(it.route)||null, quantity:it.quantity};
-        if(it.kind!=='drug'){ c.frequency=c.frequency||1; c.days=c.days||1; c.quantity=trim(it.quantity)||1; }
+        if(it.kind!=='drug'){ c.dose=osDir(it.dose)||null; c.frequency=c.frequency||1; c.days=c.days||1; c.quantity=trim(it.quantity)||1; }
         return c; });
       var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:items };
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
@@ -678,7 +685,13 @@ export default function SettingsPage() {
                             ] : [
                               fld(t.se_setColQty,'quantity',58),
                               fld(t.cs_colTimes,'frequency',46),
-                              fld(t.cs_colDays,'days',46)
+                              fld(t.cs_colDays,'days',46),
+                              (it.code_type==='procedure' || String(it.dose||'').trim()) ? (
+                                <label key="dir" title={t.se_fDirectionsHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:t3}}>
+                                  <span style={{whiteSpace:'nowrap'}}>{t.cs_colSig}</span>
+                                  <input value={it.dose==null?'':it.dose} maxLength={20} onChange={function(e){osItem(idx,'dose',e.target.value)}}
+                                    style={Object.assign({},IS,{width:110,padding:'3px 5px'})}/></label>
+                              ) : null
                             ]}
                             {pk ? <label title={t.se_setPackQtyHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:'var(--warn-text)'}}>
                               <span style={{whiteSpace:'nowrap'}}>{t['ph_pack_'+pk]}</span>

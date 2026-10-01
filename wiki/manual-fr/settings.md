@@ -94,7 +94,7 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
    - **Posologie** : l'abréviation (par exemple BID).
    Le total délivré est **Dose/j × Jours** (ici 4 × 3 = 12 comprimés).
 5. Pour un médicament délivré par flacon ou tube, une case de plus apparaît (**Flacon**, **Tube**…) : le nombre de flacons.
-6. Pour un examen : **Qté**, **Fois**, **Jours** (1, 1, 1 en général).
+6. Pour un examen : **Qté**, **Fois**, **Jours** (1, 1, 1 en général). Pour un **acte**, une case **Posologie** en plus : des mots (PRN, QD…), 20 caractères au plus ; elle peut rester vide.
 7. **Sauver**. Si **Dose/j** ou **Jours** manque sur une ligne de médicament, la case devient rouge et l'enregistrement est refusé : complétez-la.
 
 **« ⚠ 2 médicament(s) absent(s) de la liste »** sur une ordonnance type : ces médicaments (barrés) ont été retirés de la liste des médicaments. Ils ne sont **pas prescrits** quand on applique l'ordonnance type en consultation. **Modifier** → ✕ sur la ligne barrée, ajoutez le bon médicament de la liste, **Sauver**.

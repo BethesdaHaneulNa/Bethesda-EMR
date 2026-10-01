@@ -56,6 +56,24 @@ r = await call('PUT', '/order-sets/' + id, { name, items: [line(syrup, ''), line
 g = await get(id);
 check('empty still means 1', r.status === 200 && g.items.every(i => Number(i.quantity) === 1), g.items);
 
+// A procedure line's `dose` holds its directions - words (the consultation server takes
+// them as text since 6ab6600, and "save as set" writes them into the set). The Settings
+// editor shows them as text and must be able to save the set again: the order-set route
+// keeps words on an order line, and still wants a number on a drug line.
+const codes = (await call('GET', '/admin/order-codes', null, T)).data;
+const proc = codes.find(c => c.code_type === 'procedure');
+if (!proc) throw new Error('needs a procedure order code');
+const ordLine = (dose) => ({ kind: 'order', order_code_id: proc.id, code: proc.code, name: proc.name, dose, frequency: 1, days: 1, quantity: 1 });
+r = await call('PUT', '/order-sets/' + id, { name, items: [ordLine('PRN'), line(tab, 1)] }, T);
+g = await get(id);
+check('words as directions on a procedure line are kept (PRN)', r.status === 200 && g.items.find(i => i.kind === 'order').dose === 'PRN', g.items);
+const twenty = 'QD, PRN le matin tot';   // 20 characters: the column's and the editor's limit
+r = await call('PUT', '/order-sets/' + id, { name, items: [ordLine(twenty)] }, T);
+g = await get(id);
+check('20 characters fit', twenty.length === 20 && r.status === 200 && g.items[0].dose === twenty, g.items);
+r = await call('PUT', '/order-sets/' + id, { name, items: [{ ...line(tab, 1), dose: 'PRN' }] }, T);
+check('words as the dose of a drug line are still refused (400)', r.status === 400, r);
+
 await call('DELETE', '/order-sets/' + id, null, T);
 await call('PUT', '/admin/drugs/' + syrup.id, { ...syrup, ...wasPack }, T);
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
