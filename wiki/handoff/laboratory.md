@@ -2,6 +2,51 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 검사결과 창: 날짜 체크 → 결과지 인쇄 · 종류 · 찾기 · 창 틀 통일
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `998afd6` (출발점 `develop` `2985823`, fast-forward 뒤)
+- **계기**: 실장님(2026-10-01, 총괄 전달) — 「검사결과도 영상판독 쪽처럼」 → 총괄 제안 「표는 그대로, 좋은 점만」 → 승인.
+- **지킨 것**: 날짜 × 항목 표는 그대로. 검사실 화면 오른쪽 칸의 표도 그대로(체크·인쇄 없음).
+- **붙인 것** (창에서만 — `LabResults` 의 `tools`)
+  1. **인쇄**: 날짜 열 머리의 체크 칸 → `[🖨 Imprimer (n)]` → 미리보기(FR/EN/KO, 프랑스어 먼저) → `[🖨 Émettre et imprimer]`. 서식 `documents/lab-results.jsx` — 판독지와 같은 틀(A4, 머리 상자: 제목·날짜 | 이름·차트번호·성별/나이·생년월일, 표, 아래에 병원·입력자·서명·«Émis le …»). **서류 번호 없음.** 긴 이름은 글자를 줄여(12→9pt) 자르지 않음. `registry.js` 에 올림 → 📄 Documents 창의 기록에 나오고 다시 열기·다시 인쇄·취소가 됨, 「새 서류」에는 안 나옴.
+  2. **종류**: `Type : tous / CBC / Liver Function / …` — 그 환자에게 결과가 있는 패널만(둘 이상일 때).
+  3. **찾기**: 항목·패널 이름 → 그 줄만, 날짜 → 그 열만, 화면에서.
+  4. **창 틀**: `LabResultsWindow`(이 파일)로 옮김 — 영상/판독 창과 같은 크기(88vw × 86vh)·제목 줄·닫기. 도구 줄 차례 `[인쇄 (n)] [모두 해제] | [종류] [찾기]`.
+- **정한 것 (보고)**
+  1. **여러 날짜 = 한 표에 날짜 열을 나란히, 한 장에 4개까지, 넘으면 장을 나눔**(총괄 권고대로). 장마다 「Feuille 1 / 2」, 그 장에 값이 있는 줄만.
+  2. **인쇄 한 번 = 서류 하나**(번호 하나·변경 기록 한 줄) — 판독지는 검사마다 한 장·한 번호지만, 결과지는 고른 날짜들이 한 묶음이라.
+  3. **무엇이 인쇄되나**: 체크한 날짜 × **고른 종류**. 찾기 칸의 글자는 인쇄를 좁히지 않음(자리를 찾는 도구). 미리보기가 인쇄될 그대로.
+  4. **취소된 검사(✕ 열)는 체크할 수 없고 인쇄되지 않음**(판독지에서 취소된 검사와 같은 원칙).
+  5. **종이의 표시 = H / L / \*** (높음 / 낮음 / 글자 결과 이상) + 아래 뜻풀이 — 흑백 인쇄, ▲▼ 가 없는 글꼴 대비. 값은 적힌 그대로(`12 500`, `1,5`).
+  6. **참고치 칸** = 인쇄되는 결과 중 가장 최근 것의 참고치. 다른 참고치로 판정된 값은 **그 값 아래 「réf. 12 – 16」**. (화면의 「F · ≥18y」 같은 기준 이름은 종이에 안 넣음 — 받는 병원에 뜻이 없음.)
+  7. **입력자**: 「Résultats saisis par : A (날짜들) · B (날짜들)」 — 한 사람이면 이름만. 이를 위해 `GET /lab/patient/:id/results` 에 `result_by_name`.
+  8. **창에서는 표를 열 너비만큼만 그림**(전에는 창 너비에 늘림) — 날짜 열이 참고치 열 바로 옆에 와서 체크 칸에서 인쇄 단추까지 약 240px(1366×768). 표의 내용·순서는 같음.
+  9. 한국어 종이는 판독지처럼 라벨이 영어(NAME, ID, Reference range …).
+- **여쭐 것**: **검사실 화면에서도 이 창을 열어 인쇄하게 할지.** 지금은 진료 화면에서만 열림. 검사실에서 열면 서류 발행 권한이 걸림 — `document.routes.js` 의 발행은 consultation · payment · pharmacy 권한만(결정 S2), lab 만 가진 계정은 403. 간호사 기본 권한에는 pharmacy 가 있어 되지만, 정하실 일이라 손대지 않음.
+- **바꾼 파일**: `frontend/src/components/LabResults.jsx` · `frontend/src/documents/lab-results.jsx`(새) · `frontend/src/documents/registry.js` · `frontend/src/pages/Consultation.jsx` · `backend/src/routes/lab.routes.js` · `frontend/src/i18n/{ko,en,fr}.js`(lab 블록) · `wiki/modules/laboratory.md`(2절 「진료 화면의 검사결과 창」, 3.5, 4절, 8절) · `wiki/reference/changelog-1.5.0/laboratory.md` · `wiki/reference/design/lab-results-sample-*.png`(3장) · 이 노트
+- **공용·남의 파일 변경 (알려 주세요)**
+  - `frontend/src/pages/Consultation.jsx`(진료 세션) — **줄이는 쪽**: import `LabResults` → `LabResultsWindow`, 검사결과 창 블록 13줄 → `<LabResultsWindow patient={…} onClose={…} />` 한 줄(+주석 2줄). 다른 곳은 안 건드림.
+  - `frontend/src/documents/registry.js`(서류 공용) — 4군데: import, `TEMPLATES` 끝에 `labResults`, `HISTORY_ALSO.document` 와 `NO_NUMBER_ON_PAPER` 에 `'lab-results'`.
+- **DB 마이그레이션**: 없음 · **번역 키**: `lb_rPrintN` `lb_rUntickAll` `lb_rNeedTick` `lb_rTick` `lb_rTickCancelled` `lb_rKind` `lb_rKindAll` `lb_rSearch` `lb_rNoMatch` `lb_rPrintTitle` `lb_rPrintLang` `lb_rPrintGo` `lb_rPrintAgain` `lb_rPrintNote` `lb_rPrintIssued` `lb_rPrintFail` (16개, 영상/판독의 `px_` 와 같은 말)
+- **다른 세션에 부탁**
+  - PACS 세션: 긴 이름 계산(`emWidth` · `linesAt` · `fitSize`)을 `imaging-report.jsx` 에서 `lab-results.jsx` 로 **옮겨 적었음**(남의 파일이라 export 를 붙이지 않음). 둘 중 하나를 고칠 일이 생기면 `documents/shared.jsx` 로 옮겨 같이 쓰기.
+  - 진료 세션(설명서 `manual-fr/consultation.md`, 그대로 써도 됨):
+    > **Résultats labo.** Dans la fenêtre **🧪 Résultats labo**, **Type : tous** montre un seul type d'analyse et **Chercher : analyse ou date…** trouve une analyse ou une date. Pour imprimer une feuille de résultats (patient adressé à un autre hôpital) : cochez la case en tête de chaque date à imprimer, cliquez sur **🖨 Imprimer (n)**, choisissez la langue de la feuille, puis **🖨 Émettre et imprimer**. Les dates cochées sont côte à côte (quatre par feuille). Sur la feuille, **H** = élevé, **L** = bas, **\*** = anormal. La feuille est enregistrée dans **📄 Documents**, où on peut la réimprimer ou l'annuler. Une analyse annulée (**✕**) ne s'imprime pas.
+- **본 것** (격리 스택 9185, develop `2985823` + 이 변경, 1366×768; 가짜 환자 RAKOTO Jean — 날짜 6개(5/12·6/20·7/6·8/15·9/18·오늘), 패널 5개, 같은 날 재검 (1)(2), 취소 1건, 입력자 둘; 86자 이름 환자 — 날짜 2개)
+  - 창: 틀 1202×660(88vw×86vh), 제목 「🧪 Résultats labo · 26-00001 · RAKOTO Jean」, 닫기. 86자 이름은 제목과 닫기 사이에서 줄바꿈, 둘 다 한 줄.
+  - 체크: 날짜 칸 8개 중 ✕ 칸은 꺼짐(툴팁). 체크 0 → 인쇄 단추 꺼짐(툴팁 「Cochez les dates…」). 3개 체크 → 「Imprimer (3)」. 미리보기를 닫아도 체크 유지, 「Tout décocher」.
+  - 미리보기·발행: 세 날짜 나란히, H 표시, 종이에 번호 없음. 발행 → 「Émis : D26-00001」, 단추 「Imprimer de nouveau」(다시 눌러도 서류는 하나), 언어를 EN 으로 → 라벨 영어, 다시 「Émettre et imprimer」. `GET /documents/patient` 에 `lab-results · Résultats d'analyses · fr`. 인쇄 창 제목 = 서식 이름. (인쇄 창은 가짜로 받아 내용만 확인)
+  - 7개 체크 → 두 장(4 + 3), 「Feuille 1 / 2 · 2 / 2」, 장마다 입력자·날짜. 취소 결과(25 · 6.0)는 종이에 없음.
+  - 종류 Liver Function 을 고르고 인쇄 → 간 기능 줄만. 📄 Documents 창의 기록에서 D26-00001 을 열면 같은 종이가 다시 그려짐(「새 서류」 목록에는 Lettre de référence 뿐).
+  - 참고치를 바꾼 뒤(Hb 12–16) 넣은 결과: 화면 ▲16.5, 종이 「16.5 H / réf. 12 – 16」, 줄의 참고치 13.0 – 17.0.
+  - 걸러 보기: Liver → 열 3개·줄 5개, Malaria RDT → 열 3개, `alt` → ALT 줄만, `2026-07` → 그 열만, `kidney` → 그 패널, `zzz` → 「Aucun résultat ne correspond.」, 지우면 전체(열 8·줄 21).
+  - 세 테마: 도구 줄 단추 9.4~10.4:1(꺼진 단추 4.98), 종류·찾기 칸 15:1, 날짜 머리 6.8~7.1, 체크한 열의 값 6.0~10.9, 제목 5.65~11.3. ko/en/fr: 도구 줄 글자가 한 줄에 들어감, 찾기 칸 placeholder 가 안 잘림.
+  - 검사실 화면 오른쪽 칸: 체크 칸 0, 도구 줄 없음, 표 그대로.
+  - 견본 그림 3장(헤드리스 크롬, A4): 여러 날(H·L·\*·입력자 둘) · 하루 · 긴 이름.
+  - 빌드 · `node --check` · `lab.flag.mjs` 851건.
+- **안 본 것**: 실제 프린터·브라우저 인쇄 대화상자(내용은 인쇄 창에 써지는 HTML 로 확인). 표가 **한 쪽을 넘길 만큼 긴** 경우의 머리 줄 반복(코드는 판독지와 같은 방식 — 보통 결과지는 한 쪽). 서류 **취소**(📄 창의 기능 그대로). 발행 권한이 없는 계정의 403 문구. 영어·한국어 종이는 머리 라벨만 확인.
+
 ## 2026-10-01 — 임상병리 왼쪽 목록에 검색 칸 (수납·약국과 같은 것)
 
 - **상태**: 확인 요청

@@ -746,6 +746,23 @@ export default {
   // lab screen: the search box over the list
   lb_searchPh: "Patient / Chart No. / Test",
   lb_searchNone: "“{q}”: no patient in this list matches",
+  // the lab results window: ticking days, printing them, narrowing the table (same words as the imaging list)
+  lb_rPrintN: "Print ({n})",
+  lb_rUntickAll: "Untick all",
+  lb_rNeedTick: "Tick the dates to print (the box at the head of each date column).",
+  lb_rTick: "Tick to print",
+  lb_rTickCancelled: "A cancelled test's result is not printed.",
+  lb_rKind: "Kind of test",
+  lb_rKindAll: "Type: all",
+  lb_rSearch: "Find: test or date…",
+  lb_rNoMatch: "No result matches.",
+  lb_rPrintTitle: "Laboratory results",
+  lb_rPrintLang: "Language of the sheet",
+  lb_rPrintGo: "Issue and print",
+  lb_rPrintAgain: "Print again",
+  lb_rPrintNote: "Printing is recorded as an issued document.",
+  lb_rPrintIssued: "Issued: {x}",
+  lb_rPrintFail: "The document could not be issued: ",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

@@ -6,13 +6,15 @@ import { doseSentence, isLegacyTotal } from './rx-dosing.js';
 import externalRx from './external-rx.jsx';
 import { CHART_TEMPLATES } from './surgical-records.jsx';
 import imagingReport from './imaging-report.jsx';
+import labResults from './lab-results.jsx';
 
 // imagingReport (category 'imaging') is issued from the imaging list, where the exam and
 // its reading are chosen - not from a documents window, so no window offers it under
 // "new" (templatesByCategory never returns it). It is registered so that a sheet
 // already issued can be drawn again from its saved payload, named in the history and in
 // the change log, reprinted and voided like any other paper.
-export var TEMPLATES = [referral, externalRx].concat(CHART_TEMPLATES).concat([imagingReport]);
+// labResults (category 'lab') is the same kind of paper, issued from the lab results window.
+export var TEMPLATES = [referral, externalRx].concat(CHART_TEMPLATES).concat([imagingReport, labResults]);
 
 export function getTemplate(code) {
   for (var i = 0; i < TEMPLATES.length; i++) {
@@ -33,7 +35,7 @@ export function templatesByCategory(cat) {
 // another screen that belong with them. The imaging report goes with the letters and
 // certificates (the 📄 Documents window of consultation and payment): it leaves the
 // clinic with the patient like a referral letter.
-var HISTORY_ALSO = { document: ['imaging-report'] };
+var HISTORY_ALSO = { document: ['imaging-report', 'lab-results'] };
 export function historyCodes(cat) {
   cat = cat || 'document';
   return templatesByCategory(cat).map(function (t) { return t.code; }).concat(HISTORY_ALSO[cat] || []);
@@ -44,7 +46,7 @@ export function historyCodes(cat) {
 // carries its number there, as it does in its own text; the imaging report does not show
 // its number on the sheet at all (director, 2026-10-01: it goes to another hospital), so
 // it is titled by its name, as when it is first printed from the imaging list.
-var NO_NUMBER_ON_PAPER = ['imaging-report'];
+var NO_NUMBER_ON_PAPER = ['imaging-report', 'lab-results'];   // the lab results sheet follows the imaging report
 export function printTitle(doc, lang) {
   if (!doc) return 'document';
   var tpl = getTemplate(doc.template_code);
