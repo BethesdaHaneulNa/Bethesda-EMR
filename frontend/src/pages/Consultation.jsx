@@ -435,10 +435,6 @@ export default function ConsultationPage() {
       // Read before anything renders with this consultation: the draft effect below drops
       // the kept text while the box is still empty.
       var draft = noteDraft.read(cData.id);
-      // The day on this PC's clock when the visit was opened: if the screen stays open past
-      // midnight the clock's date moves on, and the chart stops calling the visit "Today"
-      // (the server said it was today's at that moment - visit_is_today).
-      cData.client_day = ymd(new Date());
       setConsult(cData);
       // Load existing data
       var rx = await api.get('/consultations/'+cData.id+'/prescriptions');

@@ -36,7 +36,7 @@ Voir un patient de la file :
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
 2. Écrivez la consultation dans **Ma note de consultation** (S, O, A, P dans la même case). C'est **votre** note pour cette visite : chaque médecin a la sienne.
 3. Pour ajouter une phrase toute prête : cliquez dessus dans le **Dictionnaire**. Les boutons **Tout**, **Général**, **Médecine**, **Chirurgie**… et la case **Rechercher** servent à trouver la phrase.
-4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite, en haut de **Dossier Patient**, sous **Aujourd'hui** avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
+4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite, en haut de **Dossier Patient**, sous la date de la visite (suivie du service et du médecin), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
 5. Deux médecins sur la même visite : la note de l'autre médecin s'affiche à droite sous son nom (mise à jour toutes les 30 secondes). Vous ne pouvez modifier que **votre** note — l'administrateur non plus ne peut pas modifier la note d'un médecin.
 6. Si vous ouvrez un autre patient sans avoir enregistré, un message le demande : **OK** enregistre puis ouvre l'autre patient, **Annuler** reste.
 7. Coupure de courant ou F5 : le texte non enregistré est gardé sur cet ordinateur et revient quand vous rouvrez la visite (« Le texte non enregistré gardé sur cet ordinateur a été repris. »). Il est effacé quand vous enregistrez, quand vous vous déconnectez, et après un jour. **Déconnectez-vous** en quittant un ordinateur partagé.
@@ -121,7 +121,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 
 ### 11. Dossier Patient
 
-1. À droite, onglet **Dossier Patient** : en haut, la visite ouverte avec la note de chaque médecin — **Aujourd'hui** si c'est la visite du jour, **Cette visite** si vous avez ouvert une visite d'un autre jour ; en dessous, les autres visites. Cliquez sur une date passée.
+1. À droite, onglet **Dossier Patient** : en haut, la visite ouverte — sa date, le service et le médecin (« 2026-09-30 GEN Dr … ») — avec la note de chaque médecin ; en dessous, les autres visites. Cliquez sur une date passée.
 2. Au milieu s'affiche **Dossier passé · lecture seule** : signes vitaux, notes (avec le nom de chaque médecin), prescriptions de ce jour-là.
 3. Cliquez sur **← Retour à l'actuel** pour revenir à la visite du jour.
 
@@ -132,7 +132,7 @@ Le patient a été enregistré chez un autre médecin (ou dans un autre service)
 1. Dans la barre bleue du patient, cliquez sur **⇄ Transfert** : c'est le dernier bouton, juste avant « GEN Dr … » (le service et le médecin de la visite), suivi du numéro de dossier et du nom.
 2. Choisissez le **Médecin** : la liste montre tous les médecins avec leur service (« PED – Dr … »), ceux du service actuel en haut. Il n'y a pas de case « Service » : **le service suit le médecin choisi**, et une ligne le dit quand il change (« Le service change aussi : GEN → PED. »). Le médecin actuel est déjà choisi ; **Changer** reste gris tant qu'un autre médecin n'est pas choisi. Pour changer seulement le service d'une visite, passez par l'accueil.
 3. Écrivez un **Motif** si vous voulez (facultatif), puis **Changer**.
-4. La barre bleue, l'en-tête **Aujourd'hui** du **Dossier Patient** et la file d'attente montrent tout de suite le nouveau service et le nouveau médecin. Le changement est noté dans le journal des modifications.
+4. La barre bleue, l'en-tête de la visite dans le **Dossier Patient** et la file d'attente montrent tout de suite le nouveau service et le nouveau médecin. Le changement est noté dans le journal des modifications.
 
 Ce qui ne change pas : les notes, les prescriptions et les examens. La note du médecin précédent reste à son nom, et lui seul peut la modifier. Votre note non enregistrée reste dans la case.
 
