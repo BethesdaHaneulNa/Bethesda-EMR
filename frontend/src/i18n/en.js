@@ -490,6 +490,12 @@ export default {
   py_cashIn: "In",
   py_cashOut: "Out",
   py_cashNet: "Net",
+  py_workDatePast: "You are looking at a past date ({date}). A payment taken now is dated today ({today}) - receipt and cash of the day.",
+  py_pastToDo: "Earlier days to settle ({n})",
+  py_paidOn: "Paid {date}",
+  py_noneThatDay: "Nothing to bill on this date.",
+  py_cashOn: "Cash on {date}",
+  py_paidOnHint: "Review payments completed on {date}.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",

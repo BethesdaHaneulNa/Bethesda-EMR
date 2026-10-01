@@ -22,6 +22,7 @@ Encaisser un patient qui sort de consultation :
 
 ### 1. L'écran
 
+- *Tout en haut à gauche* — **Date de travail** : le jour dont l'écran montre les visites. Elle est sur aujourd'hui ; **◀** et **▶** changent de jour (voir 10). La liste se recharge toute seule toutes les 30 secondes ; **↻** la recharge tout de suite.
 - *En haut* — **En attente (N)** : les patients à encaisser. **Payé aujourd’hui (N)** : les reçus du jour ; en haut de cette liste, **💵 Caisse du jour** montre **Encaissé**, **Rendu** et **Net** du jour (à comparer avec l’argent du tiroir en fin de journée). **🔍 Trouver patient** : chercher un patient qui n'est pas dans la liste.
 - *À gauche* — la liste. Sous chaque nom, un badge : **En Attente** (pas encore payé), **Supplément** (articles ajoutés après paiement, voir 6), **Correction** (articles retirés après paiement, voir 7), **Re-facturer** (reçu annulé, voir 9).
 - *Au milieu* — ce qui est facturé : **Consultation** (le type : **Nouvelle**, **Suivi** ou **Sans frais**), **Ordonnances** (médicaments donnés par la pharmacie de la clinique), **Examens / Actes**, **Délivrance / Autres** (certificat, CD… ajoutés à la caisse avec **+ Ajouter**).
@@ -104,9 +105,26 @@ N'annulez un reçu que si le reçu lui-même est faux (mauvais patient, par exem
    - Si vous aviez répondu **Oui** (argent rendu), **Montant Reçu** est vide : encaissez normalement.
 3. Cliquez sur **Confirmer**.
 
-### 10. Visite d'un jour passé (📅)
+### 10. Date de travail et visites des jours passés (📅)
 
-Une ligne jaune **📅 2026-09-28 · visite d’un jour passé · pas encore encaissée** signale un patient vu un jour précédent et jamais encaissé (par exemple une visite de la veille terminée ce matin par l'accueil). Encaissez-le comme d'habitude ; le reçu est daté d'aujourd'hui. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) apparaissent ainsi.
+Les listes montrent seulement les visites de la **Date de travail** (en haut à gauche). Elle est sur aujourd'hui et passe toute seule au nouveau jour après minuit. On ne peut pas choisir une date future.
+
+**Ce qui reste des jours passés.** Quand il reste quelque chose à traiter d'un jour précédent, une ligne jaune apparaît en haut de **En attente** : **▸ 📅 Jours passés à traiter (3)**. Cliquez dessus : les patients s'affichent avec leur date (📅 2026-09-30) et un bord jaune à gauche. On y trouve :
+
+- les visites jamais encaissées — **📅 2026-09-30 · visite d’un jour passé · pas encore encaissée** (par exemple une visite de la veille terminée ce matin par l'accueil) ;
+- les **Supplément**, **Correction** et **Re-facturer** de ces jours.
+
+Traitez-les comme d'habitude ; le reçu est daté d'aujourd'hui. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) apparaissent ainsi. Quand tout est traité, la ligne jaune disparaît.
+
+**Regarder un autre jour.** Cliquez sur **◀**, ou choisissez la date. Le haut de la liste devient jaune : « Date passée (2026-09-30) : un encaissement fait maintenant est daté d’aujourd’hui (2026-10-01) — reçu et caisse du jour. »
+
+- **En attente** : ce qui reste à traiter pour les visites de ce jour. S'il n'y a rien : « Rien à encaisser à cette date. »
+- **Payé le 2026-09-30** : les reçus faits ce jour-là et **💵 Caisse du 2026-09-30**.
+- Vous pouvez encaisser une visite de ce jour. Le reçu et la caisse sont **à la date d'aujourd'hui**, parce que l'argent entre aujourd'hui : après **Confirmer**, le reçu se trouve dans **Payé aujourd’hui**, pas dans la liste du jour passé.
+- **Aujourd’hui** : revenir à aujourd'hui.
+- Si vous changez de date, le patient ouvert se ferme.
+
+Un patient ouvert avec **🔍 Trouver patient** dont la visite n'est pas d'aujourd'hui porte la date de la visite (📅) à droite de son nom.
 
 ### 11. Articles sans prix, quantité manquante
 
