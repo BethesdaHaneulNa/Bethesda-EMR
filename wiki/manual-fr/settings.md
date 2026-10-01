@@ -105,6 +105,7 @@ Les **codes d'actes** sont ce que le médecin demande en consultation : frais de
 
 1. **Paramètres** → **Codes d'actes**. Les boutons **Tous · Frais · Laboratoire · Imagerie · Acte** filtrent la liste.
 2. **+ Ajouter**, ou **Modifier** sur une ligne. Remplissez **Code**, **Nom**, **Type**, **Groupe**, **Prix**, puis **Sauver**.
+   - Pour le type **Acte**, la case **Posologie par défaut (facultatif)** peut rester vide. Si vous y écrivez des mots (QD, PRN…), ils sont recopiés dans la colonne **Posologie** quand l'acte est demandé en consultation. N'y mettez pas un nombre.
 3. Pour un examen fait sur un appareil (échographe, radio, endoscope…) : dans **Feed d'ordres / Modality**, choisissez la **Modalité** (US — échographie, CR — radiographie, ES — endoscopie…), la **Région**, et activez **Créer le Feed Worklist**. Le patient apparaît alors dans la liste de l'appareil.
 4. **La modalité doit être exactement celle que l'appareil demande, lettre pour lettre.** Si elle n'est pas dans la liste, choisissez **Autre — saisir la valeur…** et tapez-la (lettres, chiffres ; par exemple `AS` pour certains rectoscopes).
 5. Si le patient n'apparaît pas sur l'appareil : sur le PC serveur, **device-watch** (dossier PACS) affiche la valeur *Modality* que l'appareil a demandée. Mettez cette valeur, telle quelle, dans le code d'acte. Voir le guide PACS (connexion d'un appareil).

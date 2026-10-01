@@ -1104,6 +1104,9 @@ export default {
   se_pchk_mismatch: "ne concorde pas",
   se_pchk_missing: "pas de numéro patient dans les images",
   se_modListHint: "Avec une modalité et le Feed Worklist activé, cette demande part vers l'appareil et apparaît dans la liste Imagerie / comptes rendus, même si son type est « Acte ».",
+  se_fDirections: "Posologie par défaut (facultatif)",
+  se_fDirectionsPh: "ex. QD, PRN — peut rester vide",
+  se_fDirectionsHint: "Mots recopiés dans la colonne « Posologie » quand cet acte est demandé en consultation. Un nombre seul n'est pas conservé.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Afficher",

@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 오더 코드의 기본 용법에 든 「1.000」을 없앰 (실장님: 「왜 용법도 자동으로 1이 입력돼?」)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `8fdadc6` merge 위)
+- **원인 — 둘 다 화면에 보이지 않던 곳**
+  1. 칸의 기본값: `order_code.default_dose VARCHAR(20) DEFAULT '1.000'`(001_schema.sql). 견본 자료(003)의 INSERT는 이 칸을 적지 않음 → 41개 모두 기본값으로 `1.000`.
+  2. 설정의 「+ Ajouter」: 새 오더 코드에 `default_dose:'1.000'`을 미리 실어 보냄. **편집 창에는 이 칸이 아예 없어서** 보이지도 고쳐지지도 않았음 → 실장님이 새로 만든 ZT1에도 들어간 까닭(총괄의 시험 코드를 고쳐 쓴 것이 아니어도 그렇게 됨).
+- **① 견본 자료를 고치지 않고 마이그레이션으로** — `001_schema.sql`·`003_seed_data.sql`은 **적용된 마이그레이션이라 고치지 않았습니다**(규칙, 서버가 지문을 확인). 대신 새 마이그레이션이 칸의 기본값을 없앱니다: 새 설치에서는 003이 여전히 `1.000`을 받고 바로 뒤에 이 마이그레이션이 비우므로 결과가 같습니다. 그래도 001을 고치길 원하시면 총괄이 정해 주세요.
+- **② 마이그레이션** `backend/sql/701_settings_order_code_default_dose.sql`(세션 번호 → 041): `ALTER COLUMN default_dose DROP DEFAULT` + 숫자만(`^[0-9]+([.,][0-9]*)?$`)이거나 빈칸뿐인 값을 NULL로. **값을 바꾸는 마이그레이션**입니다(부탁받은 범위) — 글자가 든 값은 그대로, `default_freq`·`default_days`·`drug` 표는 건드리지 않음, 다시 돌려도 같음.
+  - 올리기 전에 볼 것(읽기만): `SELECT default_dose, count(*) FROM order_code GROUP BY 1 ORDER BY 2 DESC;` — `1.000` 41(+ZT1) 말고 글자 값이 있으면 그 줄은 남습니다.
+- **③ 설정 화면**
+  - 새 오더 코드의 미리 채운 `1.000`을 없앰(빈 값).
+  - 종류가 **Acte(처치)** 일 때(또는 글자 값이 이미 있는 코드) 새 칸 **Posologie par défaut (facultatif) / 기본 용법 (선택)**, 자리 글자 「ex. QD, PRN — peut rester vide」, 안내 「Mots recopiés dans la colonne « Posologie » quand cet acte est demandé en consultation. Un nombre seul n'est pas conservé.」 — 「기본 용법(글자)」이라는 뜻이 화면에서 보이게. 진료비·검사·영상 코드에는 보이지 않음(진료 화면이 그 종류에는 베끼지 않음).
+  - 서버 `cleanDirections`: 비었거나 숫자만이면 NULL로 저장(거절하지 않음 — 고치기 전에 열려 있던 화면이 `1.000`을 돌려보내도 저장이 막히지 않게).
+- **④** `default_freq`·`default_days`의 1은 그대로(마이그레이션·서버·화면 모두 손대지 않음).
+- **공용 파일 변경**: i18n `se_fDirections`·`se_fDirectionsPh`·`se_fDirectionsHint`.
+- **바꾼 파일**: `backend/sql/701_settings_order_code_default_dose.sql`(새) · `backend/src/routes/admin.routes.js` · `frontend/src/pages/Settings.jsx` · i18n 3개 · `backend/test/settings.ordercodes.mjs`(새) · 위키 3개
+- **확인한 방법** (격리 9187만 — 실행 중 EMR은 건드리지 않음)
+  - 새 스택에서 마이그레이션 적용. 그 DB에 값을 섞어 넣고(`1.000` · `1` · ` 2,5 ` · 빈칸 · `1.0` · `QD` · `1 fois` · `PRN x3`) **두 번** 돌림 → 숫자·빈칸 다섯은 NULL, 글자 셋은 그대로, 두 번째도 같음, 숫자만인 값 0, 횟수·일수가 1이 아닌 줄 0, **`drug` 표의 지문(md5)이 앞뒤 같음**, 칸의 기본값 「none」.
+  - `settings.ordercodes.mjs` **16개** 통과: 견본 코드에 숫자만인 값 없음 · 횟수·일수 1 · `default_dose` 없이 만들면 NULL(칸 기본값이 없어진 증거) · 빈 값 NULL · `1.000`/`1`/` 2,5 `/빈칸 → NULL(거절 없이) · «  PRN » → PRN · «1 fois» 그대로 · 수정으로 QD 넣기 / `1.000` 돌려보내면 NULL / 지우기.
+  - drugprice · modality · access(1320) 통과.
+  - **새로 만들기 흐름을 화면에서**: 설정 → Codes d'actes → + Ajouter → Type «Acte» → 「Posologie par défaut」 칸이 **빈 채로** 나옴(진료비 종류일 때는 칸 없음) → Code ZT1 · Nom Rectoscopie → Sauver → API로 보니 `default_dose: null`, 횟수·일수 1. **진료 화면**에서 ZT1을 오더로 넣음 → 줄의 수량·횟수·일수 1 · 1 · 1, **용법 칸은 빈 칸**.
+- **진료 세션 몫으로 남은 것**: 화면이 숫자만인 값을 용법으로 베끼지 않게 하는 것(자료가 비었으므로 급하지 않음 — 누가 DB에 직접 숫자를 넣었을 때의 안전망).
+
 ## 2026-10-01 — 기록 탭에 pacs.study.relink 이름표 · 오더 코드 창 안내 한 줄
 
 - **상태**: 확인 요청

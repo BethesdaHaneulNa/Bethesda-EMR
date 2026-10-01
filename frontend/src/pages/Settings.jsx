@@ -541,7 +541,7 @@ export default function SettingsPage() {
                 return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?tint(c,'20'):'transparent',color:ocFilter===f?'var(--'+c+'-ink)':t3,border:ocFilter===f?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{f==='All'?t.se_all:t['se_type_'+f]}</button>;
               })}
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'1.000',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
+              <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'var(--chip)'}}>
@@ -1189,6 +1189,17 @@ export default function SettingsPage() {
                 <Fld label={t.se_fType}><select value={editItem.code_type||'fee'} onChange={function(e){ue('code_type',e.target.value)}} style={IS}>{['fee','lab','imaging','procedure'].map(function(c){return <option key={c} value={c}>{t['se_type_'+c]}</option>;})}</select></Fld>
                 <Fld label={t.se_fGroup}><select value={editItem.group_name||''} onChange={function(e){ue('group_name',e.target.value)}} style={IS}>{'Consultation,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
               </div>
+              {/* Default directions: words the consultation screen copies onto a procedure
+                  order (its Posologie column). The column existed without a field here and
+                  every code held '1.000' unseen (2026-10-01). Shown for procedures, and for
+                  any code that already has some. */}
+              {editItem.code_type==='procedure' || (editItem.default_dose && !/^[0-9]+([.,][0-9]*)?$/.test(String(editItem.default_dose).trim())) ? (
+                <Fld label={t.se_fDirections}>
+                  <input value={/^[0-9]+([.,][0-9]*)?$/.test(String(editItem.default_dose||'').trim()) ? '' : (editItem.default_dose||'')} maxLength={20} placeholder={t.se_fDirectionsPh}
+                    onChange={function(e){ue('default_dose',e.target.value)}} style={IS}/>
+                  <div style={{fontSize:12,color:t3,marginTop:4,lineHeight:1.5}}>{t.se_fDirectionsHint}</div>
+                </Fld>
+              ) : null}
               <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6}}>
                 <Fld label={t.price||"가격 (Price)"}><input type="number" value={seMoneyInput(editItem.price_clinic!=null?editItem.price_clinic:editItem.price)||0} onChange={function(e){ var v=Number(e.target.value); ue('price_clinic',v); ue('price',v); }} style={IS}/></Fld>
               </div>

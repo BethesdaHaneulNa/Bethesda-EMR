@@ -263,6 +263,18 @@ router.delete('/drugs/:id', permMiddleware('settings'), async (req, res) => {
 // on site. So any DICOM code string is accepted, not a fixed list (the director,
 // 2026-10-01): trimmed, upper-cased, 1-16 of A-Z 0-9 _ (VR CS; no inner spaces - a typed
 // space is far more likely a mistake than a value). Empty means "no modality".
+// An order code's default_dose is its default *directions* - words (QD, PRN) the
+// consultation screen copies onto a procedure order. It is a text column that used to
+// default to '1.000', and every code carried that (the director, 2026-10-01: "why do the
+// directions fill in with 1 by themselves?"; migration 701 cleared them). A bare number
+// or blanks are not directions: stored as NULL, without refusing - an older screen still
+// open somewhere sends back the '1.000' it loaded.
+function cleanDirections(raw) {
+  const v = String(raw == null ? '' : raw).trim();
+  if (!v || /^[0-9]+([.,][0-9]*)?$/.test(v)) return null;
+  return v;
+}
+
 function cleanModality(raw) {
   const v = String(raw == null ? '' : raw).trim().toUpperCase();
   if (!v) return { value: null };
@@ -297,7 +309,7 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
     const result = await pool.query(
       `INSERT INTO order_code (code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo]
+      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
@@ -323,7 +335,7 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
       `UPDATE order_code SET code=$1, name=$2, name_en=$3, code_type=$4, group_name=$5, default_dose=$6, default_freq=$7,
        default_days=$8, price=$9, price_clinic=$10, pacs_modality=$11, worklist_enabled=$12, station_ae=$13, body_part=$14, memo=$15, updated_at=NOW()
        WHERE id=$16 RETURNING *`,
-      [code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo, req.params.id]
+      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo, req.params.id]
     );
     if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
     await auditPrice(client, req, ACTIONS.ORDER_PRICE, 'order_code', was.rows[0], result.rows[0],
