@@ -458,8 +458,8 @@ export default function SettingsPage() {
   var TC={fee:'accent',lab:'warn',imaging:'violet',procedure:'ok'};
 
   var TABS = [
-    {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},
-    {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
+    {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},
+    {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
   ];
 
   return(
