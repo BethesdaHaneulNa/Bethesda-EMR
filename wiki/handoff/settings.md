@@ -2,6 +2,17 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서 정리: 메뉴 순서 · 단위 목록 · 종이색 (코드 변경 없음)
+
+- **상태**: 확인 요청 — 위키만
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5df6672` merge 위)
+- **임상병리 `0ddf201`(044) — 관리자 설명서** `manual-fr/settings.md` 「Régler les valeurs de référence des analyses」: 3번에 「**Unité** se choisit dans la liste (**— sans unité —** …)」, 절 끝에 「**Liste des unités.** …」 단락 — 임상병리가 `wiki/handoff/laboratory.md` 맨 위에 적어 둔 문장 그대로. 화면 글자(Liste des unités · — sans unité — · Nouvelle unité · hors liste · + Nouveau panel)는 `fr.js`와 대조.
+- **메뉴 순서**(총괄이 「검사항목」을 「오더 코드」 아래로): 설명서 「En bref」 2번의 메뉴 나열을 화면 순서 그대로 열한 개로(Personnel · Médicaments · Codes d'actes · Items de test · Phrases types · Services · Ordonnances types · Flux d'ordres · Sauvegarde · Journal · Établissement). 모듈 위키 2.3 표도 같은 순서로 — 그 표에 **「Journal」 줄이 빠져 있던 것**을 넣고, 검사항목·오더 코드·상용구 줄의 설명을 오늘 것에 맞춤.
+- **종이색**(디자인 043): 설정 문서의 테마 언급은 한 곳 — 4절 API 표의 `/auth/me` 줄 「`theme`(`dark`/`light`)」 → 「`dark`/`light`/`paper` — 어둡게·밝게·종이색, 037·043」. 관리자 설명서에는 테마 이야기가 없음(직원용은 `manual-fr/design.md`).
+- **예고 받은 것**: PACS 「영상을 다른 오더로 옮기기」(`pacs.study.move`, 칸 image_count · reading_moved · readings_exchanged)가 합쳐지면 기록 탭의 글·칸 이름과 03-change-log 한 줄 — 알림이 오면 함. `image_count`는 이미 「Images / 영상 수」.
+- **바꾼 파일**: `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · 이 노트
+- **확인한 방법**: `Settings.jsx` `TABS`의 순서와 `fr.js`의 글자를 읽어 대조(설명서의 굵은 글씨·«» 인용을 화면 문자열에서 찾는 스크립트 — 새로 넣은 화면 글자는 모두 찾음; 단락 머리 「Liste des unités.」만 마침표 때문에 따로 잡힘). 스택은 띄우지 않음(코드 변경 없음).
+
 ## 2026-10-01 — 약속처방 편집 창: 오더 줄의 용법은 글자 (진료 6ab6600 뒤)
 
 - **상태**: 확인 요청

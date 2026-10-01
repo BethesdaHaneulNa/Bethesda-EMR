@@ -52,17 +52,20 @@
 
 ### 2.3 설정 화면의 탭
 
+왼쪽 메뉴의 순서 그대로입니다(2026-10-01: 「검사항목」이 「오더 코드」 바로 아래로 — 총괄).
+
 | 탭 (프랑스어 화면) | 한국어 화면 | 하는 일 | 담당 |
 |---|---|---|---|
 | 👥 **Personnel** | 직원 | 직원 계정·권한 (2.4 ~ 2.6) | 설정 |
 | 💊 **Médicaments** | 약품 | 약 목록·단가·재고 | 약국 (`pharmacy.md`) |
-| 📋 **Codes d'actes** | 오더 코드 | 진료비·검사·영상·처치 코드와 가격 (2.9) | 설정 |
-| 📝 **Phrases types** | 상용구 | 진료 기록 상용구 (2.9) | 설정 |
+| 📋 **Codes d'actes** | 오더 코드 | 진료비·검사·영상·처치 코드와 가격, 영상 종류, 처치의 기본 용법 (2.9) | 설정 |
+| 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치. 단위는 목록에서 고르고, 「+ Nouveau panel」 옆 **Liste des unités (단위 목록)** 창에서 단위를 더하고·순서를 바꾸고·뺌(2026-10-01, 마이그레이션 044) | 임상병리 (`laboratory.md` 2절 「단위 목록」) |
+| 📝 **Phrases types** | 상용구 | 진료 기록 상용구와 그 분류 (2.9) | 설정 |
 | 🏥 **Services** | 진료과 | 진료과 (2.9) | 설정 |
 | 🧪 **Ordonnances types** | 약속처방 | 약·검사 묶음 (2.9) | 설정 |
-| 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치 | 임상병리 (`laboratory.md`) |
 | 🔗 **Flux d'ordres** | 오더 연동 | 영상 장비 워크리스트 연결 | PACS (`pacs.md`) |
 | 💾 **Sauvegarde** | 백업 | 백업 확인·지금 백업·내려받기 (2.7) | 설정 |
+| 📜 **Journal** | 기록 | 누가 무엇을 고쳤는지 (2.14) | 설정 |
 | 🏢 **Établissement** | 병원 정보 | 편지지 머리글·앱 제목 (2.8) | 설정 |
 
 ### 2.4 직원 추가하기
@@ -535,7 +538,7 @@
 | `POST /api/auth/setup` | 없음 (관리자 없을 때만) | 첫 관리자 생성, 토큰 반환 |
 | `POST /api/auth/login` | 없음 | `{token, user}` |
 | `POST /api/auth/password` | 로그인 (권한 필요 없음, 비활성이면 401) | 자기 비밀번호 바꾸기 `{current_password, new_password}` → `{success}`. 지금 비밀번호가 틀리면 400 (3-3절) |
-| `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29). **`theme`**(`dark`/`light`, 037)도 — 로그인·첫 설치의 `user`에도 있음(2026-09-30, 디자인 세션 부탁: 같은 PC에서 다른 사람이 로그인할 때 앞 사람의 화면이 먼저 보이지 않게). 직원 목록(`/admin/staff`)에는 없음 — 바꾸는 곳은 `/api/theme`(자기 계정만) |
+| `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29). **`theme`**(`dark`/`light`/`paper` — 어둡게·밝게·**종이색**, 037·043)도 — 로그인·첫 설치의 `user`에도 있음(2026-09-30, 디자인 세션 부탁: 같은 PC에서 다른 사람이 로그인할 때 앞 사람의 화면이 먼저 보이지 않게). 직원 목록(`/admin/staff`)에는 없음 — 바꾸는 곳은 `/api/theme`(자기 계정만) |
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `phrase-categories` · `clinic` | 로그인 | 목록 (다른 화면도 씀). 상용구·분류의 모양은 3-9절 |
 | `POST /api/admin/phrase-categories` · `PUT /:id` · `PUT /order` · `DELETE /:id[?move_to=]` | settings | 상용구 분류 만들기·이름·순서·지우기 (3-9절) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
@@ -746,4 +749,5 @@
 | 2026-10-01 | **오더 코드의 영상 종류(Modality)를 목록에 없는 값도**(실장님 요청 — 직장경 장비의 AS): 흔한 값 15개에 풀이를 붙이고 「기타 — 직접 입력」, 서버가 같은 규칙으로 다듬어 저장, 세 칸을 16자로 | `settingsModality.jsx`(새), `Settings.jsx`, `admin.routes.js` `cleanModality`, `040_settings_modality_width.sql`, `settings.modality.mjs`(새), 설명서 (2.9·3-9b) | `a703ccb` |
 | 2026-10-01 | 기록 탭: **영상을 접수번호로 다시 연결**(`pacs.study.relink`, PACS) — 종류 「Images retrouvées par le numéro d'accession」, 칸 넷(검사 번호 UID · 영상 수 · 영상 속 환자 번호 · 환자 대조), 대조 값 「concorde / ne concorde pas / pas de numéro patient dans les images」. 오더 코드 창의 안내에 한 줄: 영상 종류 + 워크리스트면 종류가 「처치」여도 영상/판독 목록에 나옴 | `settingsAudit.js`, `settingsModality.jsx`, i18n `se_act_studyRelink`·`se_fld_studyUid` 등·`se_pchk_*`·`se_modListHint` (3-10) | `389f5b9` |
 | 2026-10-01 | **오더 코드의 기본 용법에 든 뜻 없는 「1.000」**(실장님: 「왜 용법도 자동으로 1이 입력돼?」): 칸의 기본값을 없애고 숫자만인 값을 비움, 새 오더 코드가 `1.000`을 싣지 않게, 처치 코드에 「Posologie par défaut (facultatif)」 칸 | `041_settings_order_code_default_dose.sql`, `admin.routes.js` `cleanDirections`, `Settings.jsx`, i18n `se_fDirections*`, `settings.ordercodes.mjs`(새) (2.9·3-9c) | `7f6eb9d` |
-| 2026-10-01 | 약속처방 편집 창: 처치 줄의 **용법(Posologie)을 글자 칸(20자)** 으로 — 전에는 그리지 않으면서 숫자로 검사해, 진료 화면에서 「PRN」으로 저장한 세트를 설정에서 다시 저장할 수 없었음 | `Settings.jsx` `osDir`·`osLineProblem`, `settings.ordersets.mjs` (3-9c) | (이 커밋) |
+| 2026-10-01 | 약속처방 편집 창: 처치 줄의 **용법(Posologie)을 글자 칸(20자)** 으로 — 전에는 그리지 않으면서 숫자로 검사해, 진료 화면에서 「PRN」으로 저장한 세트를 설정에서 다시 저장할 수 없었음 | `Settings.jsx` `osDir`·`osLineProblem`, `settings.ordersets.mjs` (3-9c) | `0b4ebee` |
+| 2026-10-01 | 문서만: 설정 메뉴 순서(「검사항목」이 「오더 코드」 아래 — 총괄), 검사항목의 단위 고르기·「단위 목록」 창(임상병리 `0ddf201`, 044), 세 번째 화면 「종이색」(디자인 043)을 설명서·위키에 맞춤. 2.3 표에 빠져 있던 「Journal」 줄 | `manual-fr/settings.md`, 이 문서 (2.3·4) | (이 커밋) |
