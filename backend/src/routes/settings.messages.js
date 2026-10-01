@@ -25,6 +25,14 @@ const MSG = Object.freeze({
   LAST_ADMIN: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
   REACTIVATE_ADMIN_ONLY: 'Only an administrator can reactivate a staff account.',
   SETUP_ADMIN_KEPT: 'The administrator account created during setup cannot be deactivated.',
+  // phrases and their categories (admin.routes.js, 2026-10-01)
+  PHRASE_TEXT_REQUIRED: 'Phrase text is required',
+  PHRASE_CATEGORY_REQUIRED: 'Choose a category for the phrase',
+  CATEGORY_NAME_REQUIRED: 'Category name is required',
+  CATEGORY_NAME_LONG: 'Category name is too long (60 characters at most)',
+  CATEGORY_EXISTS: 'A category with that name already exists',
+  CATEGORY_MOVE_TARGET: 'Choose another category to move the phrases to',
+  CATEGORY_ORDER: 'ids must list every category once',
 });
 
 // These name the field they are about, so they are built rather than fixed; the
@@ -36,4 +44,10 @@ const fieldMsg = Object.freeze({
   notOneOf: (field, allowed) => field + ' must be one of ' + allowed.join(', '),
 });
 
-module.exports = { MSG, fieldMsg };
+// A category that still holds phrases is not removed silently: the number is part of the
+// message ("... has 3 phrase(s) ..."), and the screen matches it by shape.
+const phraseMsg = Object.freeze({
+  categoryInUse: n => 'This category has ' + n + ' phrase(s). Move them to another category or delete them first.',
+});
+
+module.exports = { MSG, fieldMsg, phraseMsg };

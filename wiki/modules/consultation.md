@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 문서: 내원 목록 단추 자리 — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 상용구 — 설정 약속에 맞춰 끝까지 확인, 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -8,7 +8,7 @@
 그 밖에 한 화면 안에서 다음을 합니다.
 
 - **약속처방(오더 세트)** — 미리 묶어 둔 약·검사를 한 번에 추가
-- **문장사전** — 자주 쓰는 소견 문장을 진료 기록에 끼워 넣기
+- **상용구**(전에는 「문장사전」) — 자주 쓰는 소견 문장을 진료 기록에 끼워 넣기
 - **과거 내원** 기록 보기 (읽기 전용)
 - **문서/의뢰서**(진료의뢰서) · **차트기록**(수술기록지 12종 + 수술 동의서) 작성·발급·재출력
 - 이 환자의 **검사결과** 보기(임상병리 세션 부품) · 영상 **판독소견** 보기/쓰기(PACS 세션 부품)
@@ -20,7 +20,7 @@
 ## 2. 화면 사용법 (직원용)
 
 > 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼·칸 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR**로 바꿉니다.
-> 대기 목록의 상태, 문장사전 분류, 검색 목록의 종류 표시, 바이탈 이름까지 화면 언어를 따릅니다. 약·검사는 **한 표**입니다(결정 29 — 나누지 않음). 첫 숫자 칸의 머리는 **Dose/j (일총투여)** 하나입니다.
+> 대기 목록의 상태, 검색 목록의 종류 표시, 바이탈 이름까지 화면 언어를 따릅니다(상용구의 분류 이름과 문장은 설정에 적은 그대로 — 2026-10-01부터). 약·검사는 **한 표**입니다(결정 29 — 나누지 않음). 첫 숫자 칸의 머리는 **Dose/j (일총투여)** 하나입니다.
 
 ### 2.1 환자 부르기
 
@@ -39,7 +39,7 @@
 
 1. 바이탈 칸에 적습니다. 프랑스어 화면에서는 **TA** (BP, 혈압, `120/80`처럼) · **T°** (BT, 체온) · **FC** (PR, 맥박) · **FR** (RR, 호흡수) · **SpO2**입니다.
 2. **Ma note de consultation (내 진료 기록)** 칸에 S·O·A·P를 적습니다. **이 내원의 내 기록**입니다. 의사마다 한 내원에 기록이 하나씩 있고(2026-09-30 실장님 결정 (나)), 다시 열면 내 글이 그대로 있어 이어 씁니다. 바이탈 칸은 비워도 되고(저장·완료가 막히지 않음), 혈압·체온을 기록 글에 적어도 됩니다.
-3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
+3. 아래 **Phrases types (상용구)**(2026-10-01부터 이 이름 — 설정 화면과 같음; 전에는 「Dictionnaire / 문장사전」)에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. **분류 고르기**(「Catégorie : toutes ▾」 — 누르면 목록이 뜨고, 전체 + 분류들 가운데 하나를 고름; 2026-10-01부터, 전에는 낱말 단추 한 줄이라 분류가 많아지면 넘쳤음)와 **Rechercher** 칸으로 좁힐 수 있습니다(둘이 함께 걸러짐). 고른 분류는 그 PC·그 계정에서 기억되어 다음 환자에서도 그대로입니다. 분류는 **설정에서 만든 것**이 그 순서·그 이름 그대로 나옵니다(화면 언어를 바꿔도 같은 이름). 상용구가 아직 없는 분류를 고르면 「Aucune phrase dans cette catégorie.」 한 줄이 보입니다. 문장은 언어별이 아니라 하나입니다. 설정에서 분류나 상용구를 바꾼 뒤에는 진료 화면을 새로 열어야(F5) 보입니다.
 4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Dossier Patient (환자 차트)**의 **지금 연 내원 묶음**(굵은 파란 띠와 「● Dossier ouvert」 꼬리표, 머리줄 = 날짜와 과·의사, 예 «2026-09-30 GEN Dr. Grace») 안에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
    - **다른 의사의 기록**은 오른쪽에 그 의사 이름으로 따로 보이고 **읽기만** 됩니다(관리자도 남의 기록은 못 고침 — 결정 (가)). 두 의사가 같은 내원을 열어 두면 30초마다 상대 기록을 다시 읽습니다. 내가 쓰고 있는 칸은 건드리지 않습니다.
    - 저장하지 않고 **다른 환자**를 열면 묻습니다: 확인 = 저장하고 열기, 취소 = 머물기.
@@ -262,6 +262,7 @@
 - **전과 창은 의사만**(2026-10-01, 실장님 요청): `transfer` 상태 = `{doctor, reason, doctors, busy}`, 목록은 `GET /admin/doctors` 하나(과 목록은 읽지 않음). 서버에는 전처럼 둘 다 보냄 — `department_id = transferDept(doc)`(고른 의사의 과, 과 없는 의사면 내원의 지금 과), `doctor_id`. 확인은 **지금과 다른 의사를 골랐을 때만** 켜짐(의사 없는 내원은 「—」가 골라져 있고 의사를 골라야 함 — 과만 바꾸는 길은 없앰). 고른 의사의 과가 내원의 과와 다르면 `cs_trDeptFollows`(「과도 바뀝니다: GEN → PED」) 한 줄. 의사에게도 내원에도 과가 없으면 보낼 과가 없어 `cs_trNoDept` 한 줄과 함께 확인 꺼짐(서버는 과 없이 받지 않음). 제목·알림은 의사 기준(`cs_trTitle` «Changer de médecin», `cs_trDone` «Médecin changé ✓»). `cs_trDept`·`cs_trPickDoctor`는 지움. **아래 「전과」 줄의 과 칸·의사 칸 순서 설명은 그 전(09-30) 모양**이고, 정렬(내원의 과 의사 → 과 없는 의사 → 나머지)·거절 code·수납된 내원의 꺼진 단추·답 합치기는 그대로입니다.
 - **전과**(2026-09-30, 접수의 `PUT /api/visits/:id/transfer {department_id, doctor_id, reason}` — 약속은 `wiki/handoff/coordinator.md` 「전과」): 파란 줄의 과·의사 이름표(총괄이 `[sel.dept_code, sel.doctor_name]`으로 바꿈, `2028e87`) 옆 **⇄ 단추**(`cs_transfer`, 취소된 내원에는 없음, 파란 띠 안이라 원래의 띠 색). `openTransfer()`가 접수 화면과 같은 목록 `GET /admin/departments`·`GET /admin/doctors`(registration·consultation 권한)를 읽고 `transfer` 상태(과·의사·사유·목록·busy)로 작은 창(`role="dialog"`)을 그림. **의사 칸이 먼저**(2026-09-30 총괄 부탁 — 「의사만 바꾸기」가 가장 흔한데, 과로 좁힌 목록에서는 다른 과의 의사를 고르려면 과부터 바꿔야 했음): 모든 활성 의사를 「과 – 이름」으로, 순서는 **이 내원의 과** 의사 → 과 없는 의사 → 나머지(과 코드·이름 순) — 창에서 고른 과가 아니라 내원의 과로 정렬해서 고르는 동안 목록이 뒤섞이지 않음. 의사를 고르면 과가 그 의사의 과로 따라가고(과 없는 의사는 과 그대로). 과를 바꾸면 목록은 좁히지 않고, 고른 의사가 그 과가 아니면(과 없는 의사는 유지) 의사 칸만 「— Choisissez le médecin —」(`cs_trPickDoctor`)로 비움 — 확인 꺼짐. 과 칸의 「—」는 과가 없는 내원에서만. 바뀐 것이 없으면 확인 단추가 꺼짐. `doTransfer()`: 답(그 내원 줄)에서 **과·의사 다섯 칸만** `sel`·대기 목록(`visits`)·`consult.department_id`에 합침 — 칸의 글(내 기록)·처방·오더는 건드리지 않고 `pickPatient`도 부르지 않으므로 저장 안 된 기록도 그대로. 거절은 서버의 `{error, code}`(`visit.routes.js`, 접수 `c4a63f5`)를 **code로** 고름 — `TRANSFER_REFUSALS`: `VISIT_NOT_FOUND`→`cs_trNotFound`, `VISIT_CANCELLED`→`cs_trCancelled`, `VISIT_BILLED`→`cs_trPaid`(`{receipt}` = 답의 `receipt_no`), `BAD_DEPARTMENT`→`cs_trBadDept`, `BAD_DOCTOR`→`cs_trBadDoctor`, `NO_CHANGE`→`cs_trNoChange`. 모르는 code는 서버 문장 그대로(`cs_errorPrefix`). code를 받으려고 `api/client.js`가 오류에 `status`·`code`·`data`를 붙임(공용, 기존 `message`는 그대로). 성공은 잠깐 뜨는 알림 `cs_trDone`. **결정 확정**(2026-09-30): 접수 직원과 의사 둘 다, **수납이 끝나기 전까지** — `visitBilled(sel)`(대기 목록 줄의 `has_active_bill`, 내원 목록으로 연 내원은 `billing_id`+`bill_status ≠ cancelled`)이면 단추를 끄고 이유를 title로(`cs_trBilledTitle`). 꺼진 모양은 opacity가 아니라 파란 띠의 흐린 글자·테두리색(`#6f8db3`·`#2b4568` — 띠는 고정 색 예외, 디자인 규칙: 잠금·취소에 opacity를 쓰지 않음). **의사를 비우지 않음**: 과는 꼭 골라야 하고(서버 `BAD_DEPARTMENT`), 의사가 있는 내원은 의사도 골라야 확인이 켜짐(과를 바꿔 그 과의 의사가 아니게 되면 비워지고 확인이 꺼짐). 의사가 없는 내원만 「—」가 있어 과만 바꿀 수 있음. 답의 `has_active_bill`도 합침. 다른 의사에게 옮기면 그 환자는 내 대기 목록에서 빠짐(목록은 로그인한 의사와 의사 없는 내원만 보여 줌).
 - **파란 줄의 순서**(실장님 2026-10-01 「변동성 없는 것을 가운데로, 있는 것을 오른쪽으로 … 전과 박스 크기도 왼쪽과 맞춰」, 총괄 `5076ed5`): 단추 → **⇄ 전과**(padding `4px 12px`·13px, 다른 단추와 같은 높이; 수납된 내원은 흐린 색) → 「GEN Dr. Grace」 → 차트번호 → 이름 → 성별/생년월일 → 알레르기 → 메모. 단추는 넷: 문서/의뢰서 · 검사결과 · 영상/판독 · 차트기록 — **「내원 목록」(`t.outpatientHistory`, `setHistOpen`)은 파란 줄에서 빠져** 그 아래 줄의 「환자 찾기」 오른쪽으로 감(총괄, `33282ea` 계열): 두 이웃 단추와 같은 chip 모양, `sel`이 없으면 `disabled`(글자 `--text-5`, title `cs_selectPatient`).
+- **상용구(전에는 「문장사전」)**(2026-10-01 실장님 — 이름 통일·분류는 설정에서 만든 자료·분류 고르기; 서버와 설정 화면은 설정 세션, 마이그레이션 039): 머리 한 줄 = 제목 **`t.se_phraseName`**(공용 키 — ko 상용구 · fr Phrases types · en Phrases) · **고르기**(`<select>`, `aria-label` `cs_phraseCat`, 첫 항목 `cs_phraseCatAll` «Catégorie : toutes», 값 `''` = 전체, 그 밖에는 분류 **id**) · 검색 칸. `<select>`를 쓴 까닭: 목록이 페이지 위에 떠서 가운데 칸(`overflow:hidden`)에 잘리지 않고, 분류가 많아도 스스로 스크롤하고, 키보드로 됨. 두 칸 모두 `minWidth:0`, 1366에서 409px 한 줄(제목 10–95 · 고르기 101–251 · 검색 257–399). **분류 목록** = `GET /admin/phrase-categories`(`[{id, name, sort_order, phrase_count}]`, 설정의 순서 그대로, 상용구가 없는 분류도 나옴; 읽지 못하면 문장들의 `category_id`·`category`로). **분류 이름은 자료 그대로**(번역 없음 — 언어를 바꿔도 같은 말). 문장은 `text` 하나(`text_fr`·`text_en`은 오지 않음, `phraseText(p)` = `p.text`). 걸러내기는 `category_id`로. 고른 분류는 `localStorage` `cs_phraseCat:<계정 id>`에 **id로** 기억 — 설정에서 이름을 바꿔도 따라가고, 분류를 지우면(또는 예전에 이름으로 기억해 둔 값이면) 전체(`phraseCatShown`). 빈 목록: 분류를 골랐는데 상용구가 없으면 `cs_phraseCatEmpty`, 검색에 맞는 것이 없으면 `cs_phraseNoMatch`. 문장 앞 꼬리표는 최대 96px·말줄임·title(60자 이름 확인). 지운 것: `PHRASE_CATS`·`PHRASE_CAT_KEY`, 키 `phraseDict`·`cs_pc*`(ko·en·fr). 상용구·분류는 진료 화면을 열 때(`loadData`) 읽습니다 — 설정에서 바꾼 것은 화면을 새로 열면(F5) 보입니다.
 - **환자 차트는 날짜순, 지금 연 내원은 제자리에서 강조**(2026-10-01 실장님): `history`는 이제 지금 연 진료를 빼지 않고(`setHistory(h)`), `chartItems()`가 날짜(`ymd`, 지금 연 것은 `sel.visit_date`) ↓ → `created_at` ↓ → `id` ↓로 정렬 — 같은 날 두 내원도 순서가 고정. history에 지금 연 진료가 없으면(읽기 실패 등) 끼워 넣음. 지금 연 것은 `consult.id`와 같은 줄에서 **살아 있는 묶음**을 그림: 바탕 `--accent-chip`, 테두리 2px·왼쪽 띠 6px `--accent`, 꼬리표 `cs_chartOpen`(`--accent` 바탕에 `--on-fill`), `notesBlock(notes, false, true)`(줄임 없음, 내 기록 누르면 칸에 초점). 묶음 안 글자는 `--text`(어두운 화면에서 `--text-2`가 그 바탕 위 4.49:1로 기준 바로 아래라서). 다른 내원은 전의 차분한 카드(`notesBlock(h.notes, true)`), 누르면 `openPast` — 읽고 있는 카드(`pastView`)는 `--warn-ink` 점선 테두리·왼쪽 띠 3px와 꼬리표 `cs_chartReading`(전에는 파란 표시라 「지금 연 내원」과 같은 색이었음). 과거 보기 중에 파란 묶음을 누르면 `closePast`. **스크롤**: `pickPatient`가 history를 넣을 때 `chartWantScroll`을 세우고, 효과(`[history, consultId, rightTab]`)가 묶음(`openCardRef`)을 목록(`chartScrollRef`) 가운데로 한 번 옮김(묶음이 목록보다 크면 위에 맞춤) — 30초 새로고침은 `notes`만 바꾸므로 스크롤하지 않음. 환자를 바꿀 때 `setHistory([])`로 앞 환자의 카드를 먼저 비움. 대비(계산된 색, 1366×768): 묶음 안 글자 밝은 12.65·어두운 9.33, 날짜·내 기록 머리 5.42·4.52, 꼬리표 5.17, 「읽는 중」 꼬리표 4.68·7.91, 파란 띠와 목록 바탕 5.17·3.5.
 - **오른쪽 맨 위 묶음의 머리줄**(2026-10-01): **날짜와 과·의사만** — «2026-09-30 GEN Dr. Grace». 같은 날 잠깐 「오늘 / 이 내원」을 붙였다가(지난 날의 내원이 «오늘»로 나오던 것을 고치며, `7191deb`) 실장님이 「그냥 날짜만」으로 정해 글자를 뺌(총괄 `9a7eb55`). 그에 딸린 것도 지움: 키 `cs_noteToday`·`cs_noteThisVisit`, `consult.client_day`, `POST /consultations` 응답의 `visit_is_today`. `notesBlock(…, today)`의 셋째 인자는 「지금 연 진료」(내 기록을 누르면 칸에 초점)라는 뜻으로 남아 있습니다.
 - **총괄이 넣은 것**(2026-09-30, `3890b90`·`fbf7d0b`): 파란 줄의 과 이름표 = `[sel.dept_code, sel.doctor_name]`(「GEN Dr. Grace」). 처방 표 「일총투여(Dose/j)」 머리는 11px·`nowrap`(1366에서 두 줄로 꺾이던 것). `GET /patients/:id/history`의 과(`dept_code`)도 **내원의 과**(`COALESCE(visit.department_id, consultation.department_id)`) — 의사 이름과 같은 규칙.
@@ -283,7 +284,7 @@
 - 영상 판독: `openViewer` → `GET /pacs/viewer-url`, `saveReading` → `PUT /pacs/reading/:id`. 저장되면 **잠깐 뜨는 알림**(`showToast`, 3초, 임상병리 화면과 같은 `--toast-*` 색, zIndex 1100으로 영상 창 위; 2026-09-30 영상 시험 — 전에는 `alert`). `images.linked_by === 'accession'`이면 머리에 `px_linkedByAccession` 한 줄(목록 `RadiologyReadings`와 같은 문장, 2026-09-30). 오더 줄의 **촬영 부위**(`body_part`)는 이름 옆 작은 글자로 보이고 Unité 칸은 `memo`만(전에는 `memo || body_part`라 «CHES»로 잘렸음; 칸의 title은 memo 전체). 판독 칸은 `canRead`(권한 `consultation` 보유, 50줄)일 때만 쓸 수 있습니다. `viewer-url`의 `cancelled`면 머리에 `px_cancelledViewer`+이유 한 줄, 판독 칸은 읽기만(저장 단추 없음). `url`이 비고 `no_study`이며 `has_viewer`가 참이면 영상 자리에 `px_noStudy`(P-18), `has_viewer`가 거짓일 때만 「뷰어 주소가 설정되지 않음」. 판독 저장이 409 `Imaging order was cancelled`면 `px_readingOnCancelled`를 알리고 창과 오더 표를 다시 불러옵니다. 판독 날짜(「Lu par … · 날짜」)는 `result_at`(timestamptz)을 **브라우저 현지 날짜**로 보여 줍니다(파일 위쪽 `ymd`, `LabResults.jsx`와 같은 규칙). 전에는 ISO 문자열을 T 앞에서 잘라 UTC 날짜라, 현지 00~03시 판독이 전날로 보였습니다(PACS P-22, 2026-09-29).
 - **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, PACS 세션의 `PatientCheck`(`RadiologyReadings.jsx`에서 export)를 뷰어 머리 아래에 `style={{margin:'8px 14px 0'}}`으로 씁니다 — `mismatch` 빨강, `missing` 노랑. 처음에는 export되지 않아 이 파일에 복제본(`ImagePatientCheck`)을 뒀다가, PACS가 export한 뒤 지웠습니다.
 
-**화면 글자의 번역**(⑯, 2026-09-29) — 저장값은 그대로 두고 보여 줄 때만 `cs_` 키로 바꿉니다. 파일 위쪽의 `VISIT_STATUS_KEY`(대기 목록 상태), `PHRASE_CAT_KEY`(문장사전 분류, 버튼과 문장 옆 표시), `CODE_TYPE_KEY`(검색 목록의 `lab`·`procedure`·`imaging` 표시, 약은 `cs_badgeDrug`), 컴포넌트 안의 `label(map, v)`(키가 없으면 값 그대로). 문장은 `phraseText(p)` — fr이면 `text_fr`, en이면 `text_en`, 없거나 ko면 `text`. 검색과 끼워 넣기도 이 글자로 합니다. 분류 버튼은 `PHRASE_CATS` 다음에 문장들에 실제로 쓰인 다른 분류를 붙입니다(`phraseCats`) — 전에는 새 분류가 「All」에서만 보였습니다. 그 밖에 진료 기록 안내 글(`cs_notePlaceholder`, 전에는 JSX 속성이라 `\n`이 글자로 보였음), 오류 알림 머리(`cs_errorPrefix`), 환자를 고르기 전 안내(`cs_selectPatient`, 전에는 접수 화면 문구), 바이탈 이름(`cs_vBP` 등 — 프랑스어는 TA · T° · FC · FR). **약 처방 칸 이름(`qty`·`tms`·`day`·`usage`·`unit`)과 도움말은 일부러 손대지 않았습니다** — 용량 칸이 1회량인지 하루 총량인지 결정(약국 C)을 기다리는 중.
+**화면 글자의 번역**(⑯, 2026-09-29) — 저장값은 그대로 두고 보여 줄 때만 `cs_` 키로 바꿉니다. 파일 위쪽의 `VISIT_STATUS_KEY`(대기 목록 상태), (`PHRASE_CAT_KEY` — 상용구 분류의 번역 — 은 2026-10-01에 없앰: 분류 이름은 자료 그대로) `CODE_TYPE_KEY`(검색 목록의 `lab`·`procedure`·`imaging` 표시, 약은 `cs_badgeDrug`), 컴포넌트 안의 `label(map, v)`(키가 없으면 값 그대로). 문장은 `phraseText(p)` = `text` 하나(2026-10-01부터 — 전에는 fr이면 `text_fr`, en이면 `text_en`). 검색과 끼워 넣기도 이 글자로 합니다. 그 밖에 진료 기록 안내 글(`cs_notePlaceholder`, 전에는 JSX 속성이라 `\n`이 글자로 보였음), 오류 알림 머리(`cs_errorPrefix`), 환자를 고르기 전 안내(`cs_selectPatient`, 전에는 접수 화면 문구), 바이탈 이름(`cs_vBP` 등 — 프랑스어는 TA · T° · FC · FR). **약 처방 칸 이름(`qty`·`tms`·`day`·`usage`·`unit`)과 도움말은 일부러 손대지 않았습니다** — 용량 칸이 1회량인지 하루 총량인지 결정(약국 C)을 기다리는 중.
 
 ### 3.2 서버 — `backend/src/routes/consult.routes.js` (`/api/consultations`)
 
@@ -506,7 +507,7 @@
 |---|---|
 | **약품** (`drug`) — 코드, 이름, 기본 용량·횟수·일수·용법, 단가, 단위 | 약 자동완성·약 검색, 처방 추가 시 기본값 |
 | **오더 코드** (`order_code`) — 종류(`lab`·`imaging`·`procedure`·`fee`), 가격(`price_clinic`), 모달리티, 워크리스트 사용, 부위, 기본값 | 검사·영상 자동완성(`fee`는 제외), 오더 단가, 워크리스트 생성 |
-| **문장사전** (`phrase_dictionary`) | 진료 기록 문장. 분류 버튼은 기본 분류(General · Internal · Surgery · Peds · OBGYN, 화면 언어로 표시) 다음에 설정에서 만든 다른 분류가 이름 그대로 붙습니다. 문장에 프랑스어(`text_fr`)·영어(`text_en`)가 적혀 있으면 그 화면에서 그것을 씁니다 |
+| **상용구** (`phrase_dictionary` · `phrase_category`, 039) | 진료 기록에 끼워 넣는 문장. 분류(이름·순서)와 문장 모두 설정에서 만든 그대로 — 진료 화면은 `GET /admin/phrase-categories`·`GET /admin/phrases`를 읽기만 합니다 |
 | **약속처방** (`order_set`) | 오른쪽 약속처방 탭 |
 | **오더연동 → PACS** (`pacs_config.auto_create_worklist`, `pacs_viewer_url`) | 워크리스트 자동 생성 여부, 영상 뷰어 주소 |
 | **병원 정보** (`clinic` — 이름 ko/en/fr, 주소, 전화, 이메일) | 모든 인쇄 문서의 머리 |
@@ -704,7 +705,9 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | 문서: 「내원 목록」 단추가 파란 줄에서 「환자 찾기」 오른쪽으로(총괄이 옮김) — 2.7·3.1, 설명서 fr §1·§2. 단추 이름은 바뀔 예정이라 그대로 둠 | (이 커밋) |
+| 2026-10-01 | **상용구 — 설정의 약속에 맞춤** — 제목 `se_phraseName`(상용구 / Phrases types), 분류는 `GET /admin/phrase-categories`의 이름·순서 그대로(빈 분류도, 「상용구가 없습니다」 한 줄), 문장은 `text` 하나, 고른 분류를 id로 기억(이름 바꿔도 따라감·지우면 전체). `phraseDict`·`cs_pc*` 키와 `PHRASE_CATS` 지움 | (이 커밋) |
+| 2026-10-01 | **상용구 분류 고르기(화면 먼저)** — 낱말 단추 한 줄 대신 「Catégorie : toutes ▾」 하나(목록에서 고름, 스무 개여도 스크롤), 검색과 함께 걸러짐, 고른 분류를 그 PC·계정에 기억, 꼬리표 말줄임. 이름 통일·자료 분류·한 문장은 설정의 약속이 오면 | `4f7f98f` |
+| 2026-10-01 | 문서: 「내원 목록」 단추가 파란 줄에서 「환자 찾기」 오른쪽으로(총괄이 옮김) — 2.7·3.1, 설명서 fr §1·§2. 단추 이름은 바뀔 예정이라 그대로 둠 | `a506ea0` |
 | 2026-10-01 | **환자 차트: 날짜순, 지금 연 내원은 제자리에서 강조** — 맨 위 고정을 없앰, 굵은 파란 띠·테두리·바탕 + 「● Dossier ouvert」 꼬리표, 열 때 그 묶음으로 스크롤(30초 새로고침은 안 움직임), 읽는 과거 카드는 주황 점선 + 「En lecture」, 같은 날 두 내원 순서 고정 | `c1132a5` |
 | 2026-10-01 | 문서: 파란 줄의 「판독소견」 단추와 그 목록 창 제목이 **「영상/판독 / Imagerie / Imaging」**(총괄 `e3e68cb`, 키 `imagingList`) — 2.3·2.7과 설명서 fr 두 곳, changelog 초안. 판독 칸의 Compte-rendu는 그대로 | `05411e6` |
 | 2026-10-01 | 오른쪽 맨 위 묶음 머리줄은 **날짜와 과·의사만**(실장님 결정, 총괄 `9a7eb55`) — 안 쓰게 된 `cs_noteToday`·`cs_noteThisVisit`·`client_day`·`visit_is_today`와 주석을 지우고 문서를 맞춤 | `35126c9` |

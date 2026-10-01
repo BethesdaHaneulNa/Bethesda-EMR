@@ -12,6 +12,7 @@ import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../docum
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 import { seMoney, seMoneyInput, seNumber } from './settingsMoney.js';
 import { getTemplate } from '../documents/registry.js';
+import { PhrasesTab } from './settingsPhrases.jsx';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -20,7 +21,6 @@ export default function SettingsPage() {
   var stS = useState([]), staff = stS[0], setStaff = stS[1];
   var drS = useState([]), drugs = drS[0], setDrugs = drS[1];
   var ocS = useState([]), orderCodes = ocS[0], setOrderCodes = ocS[1];
-  var phS = useState([]), phrases = phS[0], setPhrases = phS[1];
   var dpS = useState([]), depts = dpS[0], setDepts = dpS[1];
   var edS = useState(null), editItem = edS[0], setEditItem = edS[1];
   var edT = useState(''), editType = edT[0], setEditType = edT[1];
@@ -97,7 +97,7 @@ export default function SettingsPage() {
   async function loadAll(){
     var jobs = [
       ['/admin/staff', setStaff], ['/admin/drugs', setDrugs], ['/admin/order-codes', setOrderCodes],
-      ['/admin/phrases', setPhrases], ['/admin/departments', setDepts], ['/pacs/config', setPacsConfig],
+      ['/admin/departments', setDepts], ['/pacs/config', setPacsConfig],
       ['/admin/clinic', setClinic], ['/order-sets', setOrderSets],
     ];
     var results = await Promise.all(jobs.map(function(j){
@@ -286,10 +286,6 @@ export default function SettingsPage() {
         if(item.id) await api.put('/admin/order-codes/'+item.id, item);
         else await api.post('/admin/order-codes', item);
         setOrderCodes(await api.get('/admin/order-codes'));
-      } else if(editType==='phrase'){
-        if(item.id) await api.put('/admin/phrases/'+item.id, item);
-        else await api.post('/admin/phrases', item);
-        setPhrases(await api.get('/admin/phrases'));
       } else if(editType==='dept'){
         if(item.id) await api.put('/admin/departments/'+item.id, item);
         else await api.post('/admin/departments', item);
@@ -315,7 +311,6 @@ export default function SettingsPage() {
       if(type==='staff') await api.del('/admin/staff/'+id);
       else if(type==='drug') await api.del('/admin/drugs/'+id);
       else if(type==='order') await api.del('/admin/order-codes/'+id);
-      else if(type==='phrase') await api.del('/admin/phrases/'+id);
       await loadAll();
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
@@ -456,7 +451,7 @@ export default function SettingsPage() {
 
   var TABS = [
     {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},
-    {key:'phrase',label:'📝 '+t.se_tabPhrases},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
+    {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
   ];
 
   return(
@@ -571,23 +566,8 @@ export default function SettingsPage() {
             </table></div>
           </div>):null}
 
-          {/* PHRASES */}
-          {activeTab==='phrase'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
-            <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
-              <span style={{fontWeight:700,fontSize: 14,color:tx}}>📝 {t.se_tabPhrases}</span><div style={{flex:1}}></div>
-              <button onClick={function(){openEdit('phrase',{category:'General',text:''})}} style={{background:'var(--warn-a20)',color:'var(--warn-text)',border:'1px solid var(--warn-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
-            </div>
-            <div style={{flex:1,overflow:'auto'}}>
-              {phrases.map(function(p){ return <div key={p.id} style={{padding:'7px 14px',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:8}}>
-                <span style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600,flexShrink:0}}>{p.category}</span>
-                {/* The same choice the consultation screen makes, so the list shows what doctors will see. */}
-                <span style={{flex:1,fontSize: 14,color:'var(--text-soft)'}}>{(langCtx.lang==='fr'&&p.text_fr)||(langCtx.lang==='en'&&p.text_en)||p.text}
-                  {' '}{p.text_fr?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px'}}>FR</span>:null}{p.text_en?<span style={{fontSize:10,color:t3,border:'1px solid '+bd2,borderRadius:3,padding:'0 3px',marginLeft:3}}>EN</span>:null}</span>
-                <button onClick={function(){openEdit('phrase',p)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
-                <button onClick={function(){deleteItem('phrase',p.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>
-              </div>; })}
-            </div>
-          </div>):null}
+          {/* PHRASES - settingsPhrases.jsx: one sentence per phrase, categories as data (2026-10-01) */}
+          {activeTab==='phrase'?<PhrasesTab t={t} onSaved={function(){ showToast(t.se_saved); }}/>:null}
 
           {/* DEPARTMENTS */}
           {activeTab==='dept'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
@@ -1227,18 +1207,6 @@ export default function SettingsPage() {
                   <div style={{fontSize: 12,color:t3,lineHeight:1.4}}>{t.aeTitleNote}</div>
                 </div>
               </div>
-            </div>):null}
-
-            {editType==='phrase'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <Fld label={t.se_fCategory}><select value={editItem.category||'General'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{'General,Internal,Surgery,Peds,OBGYN,Custom'.split(',').map(function(c){return <option key={c}>{c}</option>})}</select></Fld>
-              {/* The consultation screen shows text_fr on a French screen and text_en on an
-                  English one, falling back to text (Consultation.jsx phraseText). The API
-                  has always stored all three; only text had a field here, so a phrase could
-                  never be given its French wording from the clinic. */}
-              <Fld label={t.se_fTextDefault}><textarea value={editItem.text||''} onChange={function(e){ue('text',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
-              <Fld label={t.se_fTextFr}><textarea value={editItem.text_fr||''} onChange={function(e){ue('text_fr',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
-              <Fld label={t.se_fTextEn}><textarea value={editItem.text_en||''} onChange={function(e){ue('text_en',e.target.value)}} rows={3} style={Object.assign({},IS,{resize:'vertical'})}/></Fld>
-              <div style={{fontSize:12,color:t3,lineHeight:1.5}}>{t.se_phraseLangHint}</div>
             </div>):null}
 
             {editType==='dept'?(<div style={{display:'flex',flexDirection:'column',gap:8}}>

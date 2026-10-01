@@ -120,19 +120,17 @@ function noPackQty(rx){ return isPack(rx) && !(parseFloat(rx.total_qty) > 0); }
 function packCount(rx){ return rx.total_qty == null ? '' : String(parseFloat(rx.total_qty)); }
 
 // Stored values the screen shows, and the translation key for each. The values
-// themselves (visit.status, phrase_dictionary.category, order_code.code_type) are what
-// the database and the other screens use, so they never change - only what is shown.
+// themselves (visit.status, order_code.code_type) are what the database and the other
+// screens use, so they never change - only what is shown. (Phrase categories are not
+// among them any more: they are made in Settings and shown by their own name.)
 var VISIT_STATUS_KEY = { registered:'cs_vsRegistered', waiting:'cs_vsWaiting', in_progress:'cs_vsInProgress', completed:'cs_vsCompleted', cancelled:'cs_vsCancelled' };
-var PHRASE_CATS = ['General','Internal','Surgery','Peds','OBGYN'];
-var PHRASE_CAT_KEY = { All:'cs_pcAll', General:'cs_pcGeneral', Internal:'cs_pcInternal', Surgery:'cs_pcSurgery', Peds:'cs_pcPeds', OBGYN:'cs_pcObgyn' };
 var CODE_TYPE_KEY = { lab:'cs_badgeLab', procedure:'cs_badgeProc', imaging:'cs_badgeImg' };
 
 export default function ConsultationPage() {
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
   function label(map, v){ var k = map[v]; return (k && t[k]) || v; }
-  // A phrase in the screen language when Settings has one (text_fr / text_en), else
-  // the phrase as entered. Korean uses the main text.
-  function phraseText(p){ return (lang==='fr' && p.text_fr) || (lang==='en' && p.text_en) || p.text || ''; }
+  // A phrase has one text (Settings, migration 039): no per-language variants any more.
+  function phraseText(p){ return p.text || ''; }
   var user = getUser();
   var vs = useState([]), visits = vs[0], setVisits = vs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
@@ -201,7 +199,18 @@ export default function ConsultationPage() {
   var drs = useState([]), allDrugs = drs[0], setAllDrugs = drs[1];
   var ocs2 = useState([]), allOrderCodes = ocs2[0], setAllOrderCodes = ocs2[1];
   var phs = useState([]), phrases = phs[0], setPhrases = phs[1];
-  var pcs = useState('All'), phraseCat = pcs[0], setPhraseCat = pcs[1];
+  // Phrase categories are made in Settings (name and order): GET /admin/phrase-categories,
+  // [{id, name, sort_order, phrase_count}] in order. Shown by their own name in every
+  // screen language.
+  var pcr = useState([]), phraseCatRows = pcr[0], setPhraseCatRows = pcr[1];
+  // The category shown in the phrase list: '' = all, else the category's id. Chosen from a
+  // drop-down (director, 2026-10-01: a row of word buttons overflows once there are
+  // many). The choice is kept for this account on this PC, so it is still there for the
+  // next patient - by id, so renaming the category keeps it; a kept category that was
+  // removed shows all.
+  var phraseCatKey = 'cs_phraseCat:' + (user ? user.id : '');
+  var pcs = useState(function(){ try { return localStorage.getItem(phraseCatKey) || ''; } catch(e){ return ''; } }), phraseCat = pcs[0], setPhraseCatState = pcs[1];
+  function setPhraseCat(c){ setPhraseCatState(c); try { if(c) localStorage.setItem(phraseCatKey, c); else localStorage.removeItem(phraseCatKey); } catch(e){} }
   var pqs = useState(''), phraseQ = pqs[0], setPhraseQ = pqs[1];
   var rts = useState('chart'), rTab = rts[0], setRTab = rts[1];
   var his = useState([]), history = his[0], setHistory = his[1];
@@ -325,6 +334,7 @@ export default function ConsultationPage() {
       setAllOrderCodes(ocData);
       var phData = await api.get('/admin/phrases');
       setPhrases(phData);
+      try { setPhraseCatRows(await api.get('/admin/phrase-categories') || []); } catch(e){ setPhraseCatRows([]); }
       try { var osData = await api.get('/order-sets'); setOrderSets(osData||[]); } catch(e){ setOrderSets([]); }
     } catch(err){ console.error(err); }
     setLoading(false);
@@ -1057,20 +1067,23 @@ export default function ConsultationPage() {
     return r.length;
   },[visits,user]);
 
+  // The categories of the drop-down: Settings' list in its order, including a category
+  // with no phrase yet. If that list could not be read, the categories the phrases carry.
+  var phraseCats = useMemo(function(){
+    if(phraseCatRows.length) return phraseCatRows.map(function(c){ return { id: String(c.id), name: c.name || '' }; });
+    var seen = {}, out = [];
+    (phrases||[]).forEach(function(p){ var id = p.category_id == null ? '' : String(p.category_id); if(id && !seen[id]){ seen[id] = 1; out.push({ id: id, name: p.category || '' }); } });
+    return out;
+  },[phraseCatRows, phrases]);
+  // The kept choice only counts while that category exists (kept by id: a rename keeps it).
+  var phraseCatShown = phraseCats.some(function(c){ return c.id===phraseCat; }) ? phraseCat : '';
+  var phraseCatName = phraseCatShown ? phraseCats.filter(function(c){ return c.id===phraseCatShown; })[0].name : '';
   var filteredPhrases = useMemo(function(){
     var r=phrases;
-    if(phraseCat!=='All') r=r.filter(function(p){return p.category===phraseCat;});
+    if(phraseCatShown) r=r.filter(function(p){return String(p.category_id)===phraseCatShown;});
     if(phraseQ){var s=phraseQ.toLowerCase();r=r.filter(function(p){return phraseText(p).toLowerCase().indexOf(s)>=0;});}
     return r;
-  },[phrases,phraseCat,phraseQ,lang]);
-
-  // The fixed categories first, then any other category Settings has used - before,
-  // a phrase filed under a new category could only be found under "All".
-  var phraseCats = useMemo(function(){
-    var extra = [];
-    (phrases||[]).forEach(function(p){ if(p.category && PHRASE_CATS.indexOf(p.category)<0 && extra.indexOf(p.category)<0) extra.push(p.category); });
-    return ['All'].concat(PHRASE_CATS, extra);
-  },[phrases]);
+  },[phrases,phraseCatShown,phraseQ]);
 
   var drugResults = useMemo(function(){
     if(!drugQ) return allDrugs;
@@ -1341,23 +1354,30 @@ export default function ConsultationPage() {
               </div>
               {/* Phrase dict */}
               <div style={{borderTop:'1px solid '+bd,height:'30%',minHeight:100,display:'flex',flexDirection:'column'}}>
-                {/* The title, the category buttons and the search box wrap onto a second line
-                    when the column is narrow. On one line they were ~546px in a 409px column
-                    at 1366 wide (French): focusing the search box scrolled the whole middle
-                    column sideways and cut the vital signs and the note on the left. */}
-                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',flexWrap:'wrap',alignItems:'center',gap:'3px 4px'}}>
-                  <span style={{fontWeight:700,fontSize: 13,color:'var(--warn-ink)',whiteSpace:'nowrap'}}>{t.phraseDict}</span>
-                  {phraseCats.map(function(c){
-                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'var(--warn-a20)':'transparent',color:phraseCat===c?'var(--warn-text)':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{label(PHRASE_CAT_KEY, c)}</button>;
-                  })}
-                  <input autoComplete="off" value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',flex:'1 1 100px',minWidth:90,maxWidth:160,boxSizing:'border-box'}}/>
+                {/* One line: the title, the category drop-down and the search box. A native
+                    select: its list opens over the page (the column clips anything drawn
+                    inside it), scrolls by itself with twenty categories, and works from the
+                    keyboard. Closed, it reads "Catégorie : toutes" or the chosen name, cut
+                    with "…" when long. minWidth 0 on the two boxes so the line never grows
+                    wider than the column (that pushed the whole middle column sideways). */}
+                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6}}>
+                  <span style={{fontWeight:700,fontSize: 13,color:'var(--warn-ink)',whiteSpace:'nowrap',flexShrink:0}}>{t.se_phraseName}</span>
+                  <select aria-label={t.cs_phraseCat} title={phraseCatName || t.cs_phraseCat} value={phraseCatShown} onChange={function(e){setPhraseCat(e.target.value)}}
+                    style={{flex:'0 1 150px',minWidth:0,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 4px',color:phraseCatShown?'var(--warn-text)':tx,fontSize: 12,fontWeight:phraseCatShown?700:400,fontFamily:'inherit',textOverflow:'ellipsis'}}>
+                    <option value="">{t.cs_phraseCatAll}</option>
+                    {phraseCats.map(function(c){ return <option key={c.id} value={c.id}>{c.name}</option>; })}
+                  </select>
+                  <input autoComplete="off" value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',flex:'1 1 90px',minWidth:0,boxSizing:'border-box'}}/>
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
+                  {/* Nothing to show: a category with no phrase yet says so (Settings lists
+                      empty categories too); a search that finds nothing says that. */}
+                  {filteredPhrases.length===0 ? <div style={{padding:'10px',fontSize: 13,color:t3,fontStyle:'italic'}}>{phraseCatShown && !phraseQ ? t.cs_phraseCatEmpty : t.cs_phraseNoMatch}</div> : null}
                   {filteredPhrases.map(function(p){
                     return <div key={p.id} onClick={function(){insertPhrase(phraseText(p))}} style={{padding:'4px 10px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:6}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--hover-row)'}}
                       onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <span style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0}}>{label(PHRASE_CAT_KEY, p.category)}</span>
+                      <span title={p.category || ''} style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0,maxWidth:96,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',alignSelf:'flex-start'}}>{p.category}</span>
                       <span style={{fontSize: 13,color:'var(--text-soft)'}}>{phraseText(p)}</span>
                     </div>;
                   })}

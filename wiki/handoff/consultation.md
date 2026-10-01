@@ -2,6 +2,53 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 상용구: 설정의 약속(039)에 맞춰 마무리, 끝까지 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `89217b1` 다음
+- **한 일**:
+  - ① 제목 = 공용 키 `t.se_phraseName`(ko 상용구 · fr Phrases types · en Phrases).
+  - ② 분류 목록 = `GET /admin/phrase-categories`의 이름·순서 그대로. **상용구가 0개인 분류도 목록에 보이고**, 고르면 «Aucune phrase dans cette catégorie.»(`cs_phraseCatEmpty`). 검색에 맞는 것이 없으면 «Aucune phrase trouvée.»(`cs_phraseNoMatch`). 분류 목록을 못 읽으면 문장들의 `category_id`·`category`로 대신.
+  - ③ 분류 이름은 자료 그대로(목록·문장 앞 꼬리표). `PHRASE_CATS`·`PHRASE_CAT_KEY` 지움.
+  - ④ 문장은 `text` 하나(`phraseText(p)` = `p.text`).
+  - ⑤ 고른 분류는 **id로** 기억(`cs_phraseCat:<계정 id>`). 이름을 바꾸면 새 이름으로 그대로 골라져 있고, 지우면 전체로. 앞 커밋(`4f7f98f`)이 이름으로 적어 둔 값은 숫자 id가 아니라 맞는 분류가 없어 전체가 됩니다(오류 없음).
+  - 지운 키(ko·en·fr): `phraseDict`, `cs_pcAll`·`cs_pcGeneral`·`cs_pcInternal`·`cs_pcSurgery`·`cs_pcPeds`·`cs_pcObgyn` — 다른 쓰임 grep 0건. 더한 키: `cs_phraseCatEmpty`·`cs_phraseNoMatch`.
+  - 문서: 모듈 1·2절 머리·2.2·3.1·5절 표·8, 설명서 fr §1·§3-3, changelog 초안에 절 하나.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: i18n의 공용 키 `phraseDict`를 지움(ko·en·fr, 총괄 지시 — 쓰는 곳 0건) · **DB 마이그레이션**: 없음
+- **번역 키**: 더함 `cs_phraseCatEmpty`·`cs_phraseNoMatch` · 뺌 `phraseDict`·`cs_pc*` 여섯
+- **확인한 방법**: `npm run build` 통과. 격리 스택(039 적용 로그 확인, 옛 분류 19개가 그대로 분류 자료로).
+  - **설정 쪽은 API로** 만들었습니다(설정 화면이 아니라 `POST /admin/phrase-categories` 등 — 관리자 계정): 60자 이름 «Suivi des maladies chroniques et éducation thérapeutique 60c»(상용구 1), «Vide (sans phrase)»(0), «Diabète»(1), 그리고 순서를 Diabète → 60자 → 나머지로. 의사 계정 `GET /admin/phrase-categories` 200.
+  - 진료 화면(1366×768 FR): 제목 «Phrases types», 목록 «Catégorie : toutes | Diabète | Suivi des … 60c | General | Internal | …»(설정의 순서, 23항목), 머리 409px 한 줄(제목 10–95 · 고르기 101–251 · 검색 257–399, 넘침 없음).
+  - 60자 분류: 닫힌 고르기 150px·말줄임, 문장 앞 꼬리표 96px·말줄임(전체 이름은 title), 한 문장이 보임.
+  - 빈 분류: «Aucune phrase dans cette catégorie.» / 검색 «zzz»: «Aucune phrase trouvée.»
+  - «Diabète»를 골라 문장을 누르면 기록 칸에 «Diabète équilibré, poursuivre le traitement. Revoir dans 3 mois.»가 들어감. 기억된 값 = `22`(id).
+  - **이름 바꾸기**(API로 Diabète → Diabétologie) 뒤 새로 열기: «Diabétologie»가 골라진 채, 그 문장이 보임.
+  - **지우기**(상용구를 General로 옮기며) 뒤 새로 열기: «Catégorie : toutes», 목록에서 사라짐, 그 문장은 꼬리표 «General»로.
+  - KO 어두운 화면: 제목 «상용구», «분류: 전체», 분류 이름은 자료 그대로(«General»…), 60자 분류 말줄임 — 그림 확인. FR 밝은 화면 그림 확인.
+- **확인 못 한 것**: 설정 **화면**에서 누르는 길(분류·상용구는 API로 만듦). EN 화면은 문구만(키 값) 확인.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 설정에서 바꾼 분류·상용구는 진료 화면을 새로 열어야 보입니다(화면을 열 때 한 번 읽음 — 전부터 그랬음).
+
+## 2026-10-01 — 상용구(문장사전) 분류 고르기 (화면 먼저, 설정의 약속 대기)
+
+- **상태**: 진행 중 — 화면은 끝남. 설정 세션의 약속(목록·분류 API, 공용 키)이 오면 이름·자료 분류·한 문장을 맞추고 끝까지 시험
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `dce2807` 다음
+- **한 일**:
+  - 분류의 낱말 단추 한 줄(전체·일반·내과·외과·소아·산부인과 + 새 분류) → **고르기 하나**: 「Catégorie : toutes / 분류: 전체 / Category: all」, 누르면 목록(전체 + 분류들). `<select>`라 목록이 가운데 칸에 잘리지 않고, 분류가 많아도 스스로 스크롤, 키보드로 됨.
+  - 검색 칸은 그대로, 분류와 함께 걸러짐. 고른 분류는 `localStorage` `cs_phraseCat:<계정 id>`에 기억(다음 환자·새로 고침 뒤에도). 그 분류가 없어지면 전체로.
+  - 머리는 한 줄(제목 · 고르기 · 검색), 두 칸 `minWidth:0`. 문장 앞 꼬리표는 최대 96px·말줄임·title.
+  - **약속이 오면 고칠 것**(지금은 일부러 그대로): ① 제목 키(`t.phraseDict` «문장사전» → 설정이 정하는 공용 키 «상용구») ② 분류 목록을 문장에서 뽑는 대신 분류 API의 이름·순서로 ③ 분류 이름은 번역(`cs_pc*`)이 아니라 자료 그대로, `cs_pc*` 키 지움 ④ 문장은 `text_fr`/`text_en` 고르기 없이 한 문장. 지금 ③④를 먼저 바꾸면 설정 쪽이 들어오기 전까지 프랑스어 화면에 «General / Internal»과 영어 문장이 보이게 되어 미뤘습니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(`cs_phraseCat`·`cs_phraseCatAll`) · `wiki/modules/consultation.md`(2.2·3.1·8) · `wiki/manual-fr/consultation.md`(§3-3) · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 더함 `cs_phraseCat`·`cs_phraseCatAll`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768(분류 19개·문장 52개로 늘려 봄).
+  - 머리: 409px 한 줄 — 제목 10–85, 고르기 91–241, 검색 247–399, 높이 33px, 넘침 없음(가운데 칸 `scrollWidth` = `clientWidth`).
+  - 목록 20항목(«Catégorie : toutes» + 19). «Soins palliatifs»를 고르면 2문장, `localStorage`에 기억, 새로 고침 뒤 다른 환자에서도 그대로. «Général» + 검색 «follow» → 1문장. 문장을 누르면 기록 칸 끝에 들어감.
+  - KO «분류: 전체 | 일반 | 내과 | 외과 | 소아 | 산부인과», 어두운 화면·FR 밝은 화면 그림.
+- **확인 못 한 것**: 아주 긴 분류 이름(지금 `category` 칸이 짧아 긴 이름은 저장되지 않음 — 설정의 새 자료에서 다시 봄). 설정에서 분류를 새로 만들어 진료에 뜨는 끝까지의 길(약속 뒤).
+- **다른 세션에 부탁**: 설정 — 약속에 ① 문장 목록의 분류 칸 이름(지금 `category` 글자) ② 분류 목록의 길·모양(이름·순서·쉬는 분류) ③ 제목의 공용 키 이름을 적어 주세요.
+- **남은 일 · 알려진 문제**: 위 「약속이 오면 고칠 것」 넷과 끝까지 시험.
+
 ## 2026-10-01 — 문서: 「외래 내역 선택」 단추가 파란 줄에서 「환자 찾기」 오른쪽으로
 
 - **상태**: 확인 요청 (문서만)

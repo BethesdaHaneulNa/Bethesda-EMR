@@ -2,6 +2,58 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — .env를 손으로 고친 것을 상태 창이 알림 · Get-ComposeDir 고침(찾은 버그) · 문서
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `89217b1` merge 위, 상용구 마이그레이션은 039)
+- **⚠ 찾은 버그(고침) — `server-status.ps1` `Get-ComposeDir`가 Windows PowerShell 5.1에서 늘 빈 값**: docker 템플릿 `{{index .Config.Labels "com.docker.compose.project.working_dir"}}`의 안쪽 큰따옴표를 PS 5.1이 떼어 내 docker가 「function "com" not defined」로 거절 → `Invoke-Docker`가 `$null`. 그래서 폴더에서 시작하는 검사가 **조용히 건너뛰어졌습니다**: 영상 백업 줄(`Get-ImageBackupCheck` — PACS 폴더의 `logs\image-backup-status.json`)과 브리지 `.heartbeat` 파일(`Get-BridgeHeartbeatCheck`). 즉 **지금 설치된 상태 창에는 영상 백업 줄이 나오지 않고, 브리지가 멈춰도(컨테이너는 running) 빨강이 되지 않습니다.** 앞서 이 두 줄을 「확인했다」고 적은 것은 pwsh 7이나 함수만 따로 부른 시험이었던 것으로 보입니다 — PS 5.1로 스크립트 전체를 돌린 확인이 아니었습니다(제 잘못). `{{json .Config.Labels}}`를 받아 JSON에서 읽게 고쳤고(`Get-MountSource`가 같은 까닭으로 쓰는 방식), **`powershell.exe`(5.1)로** 스크립트 전체를 돌려 확인: 이 PC에서 브리지 줄이 「OK」 → 「signal il y a 7 s」(파일을 읽음). 영상 백업 줄은 이 PC의 PACS 폴더에 상태 파일이 없어 여전히 없음(맞음).
+  - **총괄께**: 이 고침은 `C:\Bethesda-EMR`의 `server-status.ps1`을 새 것으로 바꿔야 적용됩니다. EMR 백업 복사 줄(`Get-EmrCopyCheck`)과 영상 주소 줄은 DB에서 읽으므로 영향이 없었습니다.
+- **1 상태 창 — `.env` 검사** (`Get-EnvFileCheck`, 문제가 있을 때만 줄 **Fichier .env de l'EMR**)
+  - 앱 컨테이너의 compose 폴더의 `.env`에서 `DB_PASSWORD`·`JWT_SECRET` 줄이 **없거나 비었는지**.
+  - `DB_PASSWORD`가 **실행 중인 앱 컨테이너가 받은 값**과 같은지(`docker inspect <api> --format '{{json .Config.Env}}'`). 앱은 그 값으로 DB에 붙어 돌고 있으므로 그것이 「실행 중 DB와 맞는 값」입니다. DB에 직접 비밀번호를 넣어 보는 방법은 쓰지 않음 — 명령줄에 값이 지나가지 않게.
+  - **값은 찍지 않음**: 메모리에서 글자 그대로 비교만, 줄에는 「다르다」만. 따옴표로 감싼 같은 값은 같게 봄.
+  - 안내: 「… a ete modifie a la main. Ne redemarrez pas et ne mettez pas a jour l'EMR … Prevenez le responsable (DEPLOYMENT.md, partie 4)」. ko·en·fr. 창 높이 720 → 740.
+  - `JWT_SECRET`이 실행 중 값과 **다른** 것은 보지 않음(다시 시작하면 모두 로그아웃될 뿐 EMR은 뜸) — 줄이 없는 것만.
+- **2 문서**
+  - `DEPLOYMENT.md` 4절 「Secrets (.env)」에 세 항목: 두 줄을 손으로 바꾸지 않는다(진짜 비밀번호는 저장 공간에 — 파일만 바꾸면 다음 시작 때 DB에 못 붙음, `JWT_SECRET`이 없으면 시작이 멈춤, 돌고 있는 동안은 티가 안 남), 바꾸려던 것은 다른 곳(직원 비밀번호 = 설정 화면, 영상 서버 = PACS 폴더 `.env` + `pair-with-emr`), 실수했으면 **다시 시작하지 말고** 실행 중 컨테이너의 값으로 되돌린다.
+  - `manual-fr/settings.md`: 「À ne pas faire」에 한 줄, 메시지 표에 상태 창의 두 문구(→ 다시 시작하지 말고 담당자에게). 모듈 위키 2.10·3-6.
+- **바꾼 파일**: `server-status.ps1`(BOM·CRLF 유지) · `DEPLOYMENT.md` · 위키 3개
+- **확인한 방법** (격리 9187만 — 실행 중 EMR·그 `.env`는 건드리지 않음. 이 작업공간의 `.env`도 고치지 않고 스크래치 사본으로)
+  - PowerShell 파서 오류 0. **`powershell.exe` 5.1**로 스크립트 사본(컨테이너 이름과 `.env` 경로만 바꿈) 전체를 일곱 번: 그대로 → 줄 없음 / 따옴표로 감싼 같은 값 → 줄 없음 / `JWT_SECRET` 줄 없음 → 「ligne(s) absente(s) ou vide(s) : JWT_SECRET」 / `DB_PASSWORD` 바뀜(en) → 「DB_PASSWORD is not the one the running EMR uses」 / 둘 다 → 두 문구 한 줄에 / `DB_PASSWORD=` 빈 값 → 「… : DB_PASSWORD」 / 파일 없음 → 「fichier .env introuvable」. 경고마다 안내 줄. 어느 출력에도 값 없음.
+  - 처음에는 일곱 번 모두 줄이 없었음 → 따라가 보니 위의 `Get-ComposeDir` 버그.
+  - 고친 `Get-ComposeDir`로 영상 백업 줄도 되는지: 진짜 조회(`bethesda-pacs`의 폴더 = `C:Bethesda-PACS`)가 값을 돌려준 뒤, 상태 파일만 스크래치 폴더의 것(`ok`, 512.4 / 931.5 GB)으로 바꾼 사본을 PS 5.1로 → 「Sauvegarde des images (disque) ok il y a 0 h - 512 Go libres sur 932 Go」. 고치기 전에는 이 줄이 나올 수 없었음.
+
+## 2026-10-01 — 상용구: 한 이름 · 문장 하나 · 분류를 자료로 (실장님 요청)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `dce2807` merge 위)
+- **DB 마이그레이션**: `backend/sql/701_settings_phrase_category.sql`(세션 번호 — 총괄이 039로 다시 매김). 표 `phrase_category`와 `phrase_dictionary.category_id`·인덱스를 더하고, **값을 바꾸는 곳은 하나**: 기본 문장(`text`)이 비어 있고 프랑스어/영어 문장만 있는 줄에 그 글을 기본 문장으로 넣음(프랑스어 먼저). 그 밖의 값·`text_fr`·`text_en`은 그대로. 여러 번 돌려도 같은 결과.
+  - 올리기 전에 실행 중 EMR에서 볼 것(읽기만): `SELECT count(*) FILTER (WHERE btrim(text) = '') AS empty_text, count(*) FILTER (WHERE COALESCE(btrim(text_fr),'') <> '' OR COALESCE(btrim(text_en),'') <> '') AS has_fr_en, count(DISTINCT lower(btrim(category))) AS categories FROM phrase_dictionary;` — `empty_text`가 0이면 옮겨지는 글이 없음. `has_fr_en`이 0이 아니면 그 줄들은 **프랑스어 화면에서 프랑스어 문장 대신 기본 문장이 보이게 됩니다**(문장 하나라는 결정의 결과 — 자료는 남음).
+- **1 이름**: 새 키 `se_phraseName`(ko 상용구 / fr Phrases types / en Phrases) — 설정 메뉴·화면 제목이 읽음, 창 제목은 전부터 「Nouvelle phrase type / 새 상용구」. 옛 `se_tabPhrases`는 지움(같은 값이었음). 진료 화면 머리는 진료가 이 키로 바꿈(약속에 적음). fr·en을 이렇게 고른 까닭은 약속 절에.
+- **2 문장 하나**: 편집 창 = 분류 + **Phrase / 문장** 한 칸 + 안내 「한 번만 적는다 — 화면 언어와 상관없이 그대로 나온다」. `GET /admin/phrases`가 `text_fr`·`text_en`을 **보내지 않음** → 진료 화면의 `phraseText`가 코드 변경 없이 늘 `text`를 씀. `POST`·`PUT`은 그 두 칸을 받아도 버림. 안 쓰게 된 키 `se_fTextDefault`·`se_fTextFr`·`se_fTextEn`·`se_phraseLangHint`는 지움.
+- **3 분류를 자료로**: 지금까지 분류는 화면에 박힌 다섯 글자(General·Internal·Surgery·Peds·OBGYN, 설정 창에는 Custom까지)였고 번역은 진료 화면의 `cs_pc*` 키였음. 표 `phrase_category`로 옮김 — 이름은 지금 자료의 말(영어) 그대로 한 가지. API `/admin/phrase-categories`: 더하기 · 이름 바꾸기(상용구의 옛 글자 칸도 같이) · 순서(`PUT /order`) · 지우기.
+  - **지울 때**: 상용구가 있으면 409 「This category has N phrase(s)…」 — 화면은 그 전에 「⚠ N개가 이 분류에 있습니다. 옮길 분류: […] 옮기고 분류 지우기」를 보여 주고 `?move_to=`로 보냄. 옮길 다른 분류가 없으면 「먼저 상용구를 지우거나 새 분류를 만드세요」. 빈 분류는 확인 한 번.
+  - **변경 기록**: `settings.phrase.category` — 만들기·이름 바꾸기·지우기(옮긴 곳·개수). 순서와 상용구 글 수정은 남기지 않음(다른 설정 목록 — 진료과·오더 코드의 가격 아닌 칸 — 도 남기지 않는 것과 맞춤).
+- **4 설정 화면**: 새 파일 `settingsPhrases.jsx` — 제목 옆 **분류 고르기 목록**(«Toutes les catégories (25) / General (7) …»), **🗂 Catégories**(분류 줄: ▲▼ · 이름 칸 · Enregistrer le nom · 개수 · Supprimer · 새 분류), **+ Ajouter**(지금 고른 분류가 기본값, 분류가 하나도 없으면 분류 줄을 엶). 꼬리표는 분류 이름 그대로. `Settings.jsx`에서는 상용구 탭이 부품 한 줄이 됨(상태·저장·삭제의 상용구 갈래와 공용 편집 창의 상용구 칸을 뺌).
+- **5 약속**: `wiki/handoff/coordinator.md` 맨 아래 「상용구 약속」 — 공용 키, 분류 목록 API, 상용구 목록 API의 새 모양, 지금의 진료 화면에서 깨지지 않는 것과 진료가 고칠 것(박힌 다섯 단추 `PHRASE_CATS`·`PHRASE_CAT_KEY` → 분류 목록, 누르면 열리는 목록).
+- **공용 파일 변경** (확인해 주세요)
+  - `backend/src/utils/audit.js`: `PHRASE_CATEGORY: 'settings.phrase.category'` **한 줄**(총괄 파일 — 이 이름이 없으면 `writeAudit`이 줄을 쓰지 않아서 넣음).
+  - `wiki/03-change-log.md`: 표에 한 줄. `wiki/handoff/coordinator.md`: 「상용구 약속」 절(부탁받은 것).
+  - i18n(설정 표시 안): 새 키 31개(`se_phraseName`, `se_fPhraseText`, `se_phraseOneHint`, `se_phEmpty`, `se_phCat*` 15, `se_errPhrase*`·`se_errCat*` 8, `se_act_phraseCategory`, `se_fld_phrasesMovedTo`·`se_fld_phrasesMoved`), 지운 키 5개.
+- **바꾼 파일**: `backend/sql/701_settings_phrase_category.sql`(새) · `backend/src/routes/admin.routes.js` · `settings.messages.js` · `utils/audit.js` · `frontend/src/pages/settingsPhrases.jsx`(새) · `Settings.jsx` · `settingsMessages.js` · `settingsAudit.js` · i18n 3개 · `backend/test/settings.phrases.mjs`(새) · `settings.access.mjs` · `settings.messages.mjs` · 위키 5개
+- **확인한 방법** (격리 9187만 — 실행 중 EMR은 건드리지 않음)
+  - `node --check`, `npm run build`.
+  - **마이그레이션**: 새 스택에서 「applying 701…」. 버리는 DB(`mig701`)에 001 모양의 표와 까다로운 줄(「Custom」, 앞뒤 빈칸·소문자 ` peds `, 손으로 넣은 「Urgences」, 지운 상용구만 가진 「Ancien」, 기본 문장이 비고 영어만 / 프랑스어+영어 / 아무것도 없는 줄)을 넣고 **세 번** 돌림 — 분류 8개(다섯 + Ancien·Custom·Urgences), ` peds ` → Peds, 빈 문장은 «Only English»·«Français d'abord»(프랑스어 먼저)로, 아무것도 없는 줄은 그대로, 두 번째 뒤 지문 같음, **General의 이름을 바꾼 뒤 세 번째에도 General이 되살아나지 않음**.
+  - `settings.phrases.mjs` **41개** 통과(새 스택; 분류를 손으로 바꾼 스택에서는 「다섯 분류」 검사만 알림으로 바뀌고 나머지는 그대로): 다섯 분류와 순서, 모든 상용구의 `category_id`, `text_fr`/`text_en` 없음, 진료가 읽는 칸(id·category·text), 더하기·겹침 409·빈 이름 400·61자 400, 문장 하나(다른 칸 무시)·이름으로 보낸 분류·빈 문장 400·모르는 분류 400, 이름 바꾸면 상용구가 따라옴, `?category=`·`?category_id=`, 순서(빠진 id 400), **지우기 409 + 개수 → 그대로 남음**, 자기에게 옮기기 400, `move_to`로 옮기고 지움(상용구 남음), 지운 이름 다시 쓰기, 빈 분류 지우기, 변경 기록 3줄(만듦·이름·지움+옮긴 곳·개수), 의사 계정은 읽기 200·쓰기 일곱 가지 403.
+  - access **1320**요청(120 × 11) · audit · drugprice · ordersets · messages(새 문구 9) · status 통과.
+  - 화면 fr: 분류 줄에서 «Urgences» 더하기 → Peds를 «Pédiatrie»로(Enter) → Surgery(4개) 지우기 → 「⚠ 4 phrase(s) type(s) sont dans cette catégorie. Les déplacer vers : [Urgences]」 → 옮기고 지움 → 꼬리표 Surgery 0·Urgences 4, 합계 24 그대로 → ▲로 순서 → 「Nouvelle phrase type」 창(분류 + Phrase 한 칸) 저장 → 「✓ Enregistré」, 25. 기록 탭 「Catégorie de phrases types modifiée — Nom: Peds → Pédiatrie」·「Phrases déplacées vers: — → Urgences / Phrases déplacées: — → 4 / Statut: actif → inactif」. ko: 메뉴·제목 「상용구」, 「모든 분류 (25)」, 「상용구 7개」, 창 「새 상용구 — 분류 · 문장」.
+  - **진료 화면(고치지 않은 지금 코드)**: 환자·내원을 만들어 열어 봄 — 상용구 25줄이 한 문장으로 뜸. 머리는 아직 «Dictionnaire», 분류 단추는 박힌 다섯 + 나머지(«Chirurgie»는 비고 «Pédiatrie»가 둘) — 약속에 적은 진료 몫.
+- **알아 둘 것**
+  - 지운 상용구만 가진 옛 분류(위 시험의 「Ancien」)도 빈 분류로 옮겨집니다 — 설정에서 한 번 눌러 지우면 됨. 실행 중 EMR(클린 설치)은 시드 다섯 분류뿐이라 해당 없음.
+  - 분류 이름은 60자까지, 상용구의 옛 글자 칸은 30자라 긴 이름은 그 칸에 잘려 들어가지만, API 답의 `category`는 늘 분류의 온 이름입니다.
+  - 상용구의 **줄 순서**(분류 안에서)는 그대로(`sort_order`, 지금은 넣은 순서) — 요청에 없어 손대지 않음.
+  - 프랑스어 설명서에 「Préparer les phrases types」 절을 더함(전에는 상용구 절이 없었음).
+
 ## 2026-09-30 — 기록 탭에 전과(visit.transfer) 이름표
 
 - **상태**: 확인 요청
