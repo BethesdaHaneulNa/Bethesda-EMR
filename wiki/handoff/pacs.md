@@ -2,6 +2,47 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 판독 보고서 인쇄: 다른 병원으로 보낼 때 (실장님 병원 서식)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `c53e612`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **먼저 읽은 것**: 서류 엔진(`DocumentModal.jsx`, `documents/shared.jsx`·`registry.js`, `document.routes.js`), 영수증(`Receipt.jsx`), 변경 기록 결정(`wiki/03-change-log.md` 「서류」). 총괄이 준 서식 그림(실제 사람의 자료가 있어 **읽기만 하고 어디에도 복사하지 않음**).
+- **서류 엔진에서 바꾼 것: 없음.** 있는 것을 그대로 씀 — `POST /api/documents`(발행·번호·변경 기록), `printDocument()`(A4·여백 14mm), `shared.jsx`의 글자 고르기·나이 계산·병원 이름. 새 파일 하나만 그 폴더에 더함: `frontend/src/documents/imaging-report.jsx`(서식 — 엔진의 템플릿 모양).
+- **한 일**:
+  1. **「🖨 Imprimer」** — 영상/판독 창 오른쪽 상세에(「Voir image」 왼쪽). 판독이 없으면 꺼짐(«Pas de compte-rendu : rien à imprimer.»), 취소된 검사도 꺼짐(«Examen annulé : son compte-rendu ne s'imprime pas.»). 환자 번호 경고가 있는 검사는 인쇄됨.
+  2. **서식** (A4 세로, 검은 가는 선의 표 — 그림 그대로): ① 머리 상자 140pt — 왼쪽 55% 큰 파란 굵은 제목 + 검사 날짜(굵게 14pt), 오른쪽 네 줄(이름표 굵게 · 값 가운데, 성별·나이 칸은 둘로) ② 가운데 굵은 띠 + 검사 이름(왼쪽) ③ 가운데 굵은 띠 + 판독 글(9.5pt, 줄바꿈 그대로, 상자는 글 길이만큼) ④ 종이 맨 아래 병원 이름(굵게 16pt) + 오른쪽에 판독의.
+     - 이름표: fr «COMPTE-RENDU · NOM · N° dossier · Sexe, Âge · Né(e) le · Examen · Compte-rendu», en "REPORT · NAME · ID · Sex,Age · Birthday · Exam · Reading", ko는 영어 이름표 그대로(성별 남/여, 「판독의:」만 한글).
+     - 그림에 없는데 넣은 것(작게): 병원 이름 아래 주소·전화·메일 한 줄 / 「Médecin lecteur : 이름」 아래 판독 일시와 서명 줄 / 맨 아래 「N° document : D26-… · Émis le …」 / 검사 이름 옆 「(CR)」과 둘째 줄 「Demandé par : GEN · 의사 — N image(s)」 / 둘째 장부터 머리줄(환자 · 차트번호 · 검사 · 날짜) / 쪽 번호(「2 / 3」).
+     - 「Saved Report」 띠는 권하신 대로 «Examen» / "Exam".
+  3. **서류 언어**: 미리보기 창 위의 FR · EN · KO, **처음은 늘 FR**(화면 언어와 따로). 판독 글은 그대로.
+  4. **발행 기록**: 「🖨 Émettre et imprimer」 = 서류 엔진으로 발행(`template_code: 'imaging-report'`) → 번호(D26-…)가 종이에 찍히고 변경 기록에 `documents.issue` 한 줄(「D26-00009 Compte-rendu d'imagerie」). payload(판독 글 포함)는 `document_log`에만, 변경 기록에는 안 들어감(결정 그대로). 같은 창의 「Imprimer de nouveau」는 같은 번호로 다시 인쇄, 언어를 바꾸거나 창을 다시 열면 새 번호.
+  5. **여러 검사 한꺼번에**: 진료 화면에서 체크 → 목록 위 「🖨 Imprimer (N)」 → 검사마다 한 장·번호 하나, 한 번의 인쇄. 체크한 것 중 판독 없는 검사는 빠지고 단추 title에 「1 examen(s) coché(s) sans compte-rendu : non imprimé(s).」
+  6. **수납 화면**: 같은 부품이라 같은 단추(한 건씩 — 수납 화면에는 체크 칸이 없음). 권한: 수납 계정으로 `POST /api/documents` 201 확인(서류 발행 권한 = 진료·수납·약국).
+- **바꾼 파일**: `frontend/src/documents/imaging-report.jsx`(새), `frontend/src/components/RadiologyReadings.jsx`(`ReportPrint`·`printBlock`, 단추 둘), `backend/src/routes/pacs.routes.js`(목록 응답에 `visit_id`), `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(새 9절), `wiki/modules/pacs.md`(새 2.4.1, 4절, P-30, 8절), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/reference/design/imaging-report-sample-fr.png`(가짜 환자 견본), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `frontend/src/documents/imaging-report.jsx` — **서류 엔진 폴더에 새 파일 하나**(있던 파일은 안 바꿈). `Consultation.jsx`·`Payment.jsx`·`DocumentModal.jsx`·`registry.js`·`document.routes.js`는 안 바꿈.
+- **DB 마이그레이션**: 없음(`document_log`·`generate_doc_no()` 그대로 씀)
+- **번역 키** (px_ 구역, 새 키 12개 ko·en·fr): `px_print`, `px_printN`, `px_printNoReading`, `px_printCancelled`, `px_printSkipped`, `px_printTitle`, `px_printLang`, `px_printGo`(«Émettre et imprimer» / 「발행하고 인쇄」), `px_printAgain`, `px_printNote`, `px_printIssued`, `px_printFail`. 서식 안의 이름표는 서식 파일에(서류 언어를 따르므로 화면 번역 파일이 아님 — 다른 서류 템플릿과 같은 방식).
+- **확인한 방법** (격리 EMR 9188. 인쇄 창에 쓰이는 HTML을 그대로 받아 **Chrome 헤드리스로 A4 PDF**를 만들어 쪽마다 그림으로 봄 — 총괄의 서식 그림과 나란히):
+  - **짧은 판독(fr·en)**: 한 장. 머리 상자·환자 칸·두 띠·판독 상자·맨 아래 병원/판독의가 그림과 같은 자리. 쪽 번호 「1 / 1」.
+  - **긴 판독(44줄, fr·ko)**: 3쪽 — 1쪽은 머리부터, 2쪽 맨 위에 「RAKOTO Jean · 26-00001 · Chest Lat · 2026-09-30」과 이어지는 글, 쪽 번호 「2 / 3」. 글이 2쪽 끝 가까이에서 끝나서 **3쪽에는 병원 이름·판독의·발행번호 줄만** 들어감.
+  - **ko**: 이름표 영어, 성별 「남」, 「판독의: …」, 「발행번호: … · 발행 …」, 병원 이름은 설정의 한국어 이름.
+  - **여러 건**: 세 줄 체크(둘은 판독 있음, 하나 없음) → 「🖨 Imprimer (2)」 → 4쪽(1쪽 + 3쪽), 번호 둘(D26-00005, D26-00006), 검사마다 새 쪽에서 시작.
+  - **병원 정보가 비었을 때**(격리 DB의 병원 줄을 잠깐 비우고 되돌림): 병원 이름·주소 없이 판독의·번호만 찍힘, 오류 없음.
+  - **발행 기록**: `document_log`에 `imaging-report` 줄(언어, 내원, payload 있음), 변경 기록에 `documents.issue | D26-00009 Compte-rendu d'imagerie`. 「다시 인쇄」는 번호를 새로 만들지 않음(같은 번호로 한 번 더 인쇄됨).
+  - 꺼진 단추: 판독 없는 줄·취소된 줄의 title 확인.
+  - 회귀: 체크 23가지 · 보안 32가지 통과.
+- **확인 못 한 것**: **진짜 프린터**(헤드리스 PDF로만 봄 — 여백·글꼴은 프린터와 PC에 깔린 글꼴에 따라 조금 다를 수 있음). 수납 화면에서 단추를 **화면으로** 누르지는 않음(같은 부품 + 수납 계정의 발행 권한만 확인). 밝은 화면의 미리보기 창(종이는 늘 흰색). 옛 브라우저에서의 쪽 번호(시험한 Chrome에서는 찍힘 — 지원하지 않는 브라우저에서는 쪽 번호만 빠짐).
+- **실장님 결정이 필요할 수 있는 것 (지어 놓았고, 바꾸기 쉬움)**:
+  1. **인쇄 = 발행**(번호 하나, 변경 기록 한 줄). 시험 삼아 뽑아도 번호가 하나 씁니다. 「발행하지 않고 미리 뽑기」 단추를 따로 둘지.
+  2. **서류 창(📄 Documents)의 발행 이력에 안 보임 · 발행 취소 화면 없음**(위키 7절 P-30) — 보이게 하려면 `documents/registry.js`에 2줄(서류 엔진 파일)과 「어느 목록에 보일지」 결정.
+  3. **검사 날짜** = 영상이 도착한 날(없으면 처방일). 장비의 촬영 날짜는 EMR에 없음.
+  4. **그림에 없는데 넣은 것들**(위 2번의 「작게」 목록) — 빼거나 더 키울 것.
+  5. **환자 번호 경고가 있는 검사**: 인쇄는 되고 **종이에는 경고가 없음**. 종이에도 한 줄 넣을지, 아예 막을지.
+  6. **여러 건 인쇄의 쪽 번호**는 인쇄 작업 전체로 매겨짐(「3 / 4」) — 서류마다 따로가 아님.
+  7. **한국어 서류**의 이름표는 영어(실장님 병원 서식대로). 한글 이름표로 바꿀지.
+  8. 판독의 **면허번호** 칸은 없음(직원 자료에 면허번호가 없음 — 그림의 원본도 판독 글 끝에 손으로 적은 것).
+- **다른 세션에 부탁**: (결정 2가 「보이게」면) 서류 엔진 맡은 세션 — `registry.js`에 `imaging-report` 등록과 서류 창의 종류 처리.
+
 ## 2026-10-01 — 「영상/판독」 창을 두 칸으로: 왼쪽 목록(한 줄씩), 오른쪽 고른 검사의 판독
 
 - **상태**: 확인 요청

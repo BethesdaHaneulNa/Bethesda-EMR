@@ -1138,6 +1138,18 @@ export default {
   px_dAccession: "N° d'accession",
   px_identityShort: "identité à vérifier",
   px_pickHint: "Cliquez sur un examen dans la liste.",
+  px_print: "Imprimer",
+  px_printN: "Imprimer ({n})",
+  px_printNoReading: "Pas de compte-rendu : rien à imprimer.",
+  px_printCancelled: "Examen annulé : son compte-rendu ne s'imprime pas.",
+  px_printSkipped: "{n} examen(s) coché(s) sans compte-rendu : non imprimé(s).",
+  px_printTitle: "Compte-rendu d'imagerie",
+  px_printLang: "Langue de la feuille",
+  px_printGo: "Émettre et imprimer",
+  px_printAgain: "Imprimer de nouveau",
+  px_printNote: "L'impression est enregistrée comme un document émis (un numéro par feuille). Les images ne sont pas sur la feuille.",
+  px_printIssued: "Émis : {x}",
+  px_printFail: "Le document n'a pas pu être émis : ",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",

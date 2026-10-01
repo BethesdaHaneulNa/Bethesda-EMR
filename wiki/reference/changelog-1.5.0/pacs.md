@@ -54,6 +54,17 @@ whole reading. A click or the arrow keys choose a line; the list can be narrowed
 word of the name or date. **Voir image** is next to the chosen exam. The payment screen has the same
 window, read-only.
 
+### Printing an imaging report for another hospital
+
+When a patient is referred elsewhere the reading goes with the images. **🖨 Imprimer**, next to the chosen
+exam in the imaging list, prints it on one A4 sheet: a large title and the exam date, the patient (name,
+chart number, sex and age, date of birth), the exam, the whole reading, and at the foot of the page the
+clinic, who read it and when, and room to sign. The sheet's language is chosen in the preview - French
+first, whatever the screen's language. Printing issues the sheet as a document: it gets a number and one
+line in the change log, like every paper that leaves the clinic. Several ticked exams can be printed in one
+go, one sheet each. A long reading runs onto further pages, each headed with the patient and the exam.
+Exams without a reading, and cancelled exams, cannot be printed. It works from the payment screen too.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being
