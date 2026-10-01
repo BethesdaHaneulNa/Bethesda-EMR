@@ -2,6 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 상용구: 설정의 약속(039)에 맞춰 마무리, 끝까지 확인
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `89217b1` 다음
+- **한 일**:
+  - ① 제목 = 공용 키 `t.se_phraseName`(ko 상용구 · fr Phrases types · en Phrases).
+  - ② 분류 목록 = `GET /admin/phrase-categories`의 이름·순서 그대로. **상용구가 0개인 분류도 목록에 보이고**, 고르면 «Aucune phrase dans cette catégorie.»(`cs_phraseCatEmpty`). 검색에 맞는 것이 없으면 «Aucune phrase trouvée.»(`cs_phraseNoMatch`). 분류 목록을 못 읽으면 문장들의 `category_id`·`category`로 대신.
+  - ③ 분류 이름은 자료 그대로(목록·문장 앞 꼬리표). `PHRASE_CATS`·`PHRASE_CAT_KEY` 지움.
+  - ④ 문장은 `text` 하나(`phraseText(p)` = `p.text`).
+  - ⑤ 고른 분류는 **id로** 기억(`cs_phraseCat:<계정 id>`). 이름을 바꾸면 새 이름으로 그대로 골라져 있고, 지우면 전체로. 앞 커밋(`4f7f98f`)이 이름으로 적어 둔 값은 숫자 id가 아니라 맞는 분류가 없어 전체가 됩니다(오류 없음).
+  - 지운 키(ko·en·fr): `phraseDict`, `cs_pcAll`·`cs_pcGeneral`·`cs_pcInternal`·`cs_pcSurgery`·`cs_pcPeds`·`cs_pcObgyn` — 다른 쓰임 grep 0건. 더한 키: `cs_phraseCatEmpty`·`cs_phraseNoMatch`.
+  - 문서: 모듈 1·2절 머리·2.2·3.1·5절 표·8, 설명서 fr §1·§3-3, changelog 초안에 절 하나.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: i18n의 공용 키 `phraseDict`를 지움(ko·en·fr, 총괄 지시 — 쓰는 곳 0건) · **DB 마이그레이션**: 없음
+- **번역 키**: 더함 `cs_phraseCatEmpty`·`cs_phraseNoMatch` · 뺌 `phraseDict`·`cs_pc*` 여섯
+- **확인한 방법**: `npm run build` 통과. 격리 스택(039 적용 로그 확인, 옛 분류 19개가 그대로 분류 자료로).
+  - **설정 쪽은 API로** 만들었습니다(설정 화면이 아니라 `POST /admin/phrase-categories` 등 — 관리자 계정): 60자 이름 «Suivi des maladies chroniques et éducation thérapeutique 60c»(상용구 1), «Vide (sans phrase)»(0), «Diabète»(1), 그리고 순서를 Diabète → 60자 → 나머지로. 의사 계정 `GET /admin/phrase-categories` 200.
+  - 진료 화면(1366×768 FR): 제목 «Phrases types», 목록 «Catégorie : toutes | Diabète | Suivi des … 60c | General | Internal | …»(설정의 순서, 23항목), 머리 409px 한 줄(제목 10–95 · 고르기 101–251 · 검색 257–399, 넘침 없음).
+  - 60자 분류: 닫힌 고르기 150px·말줄임, 문장 앞 꼬리표 96px·말줄임(전체 이름은 title), 한 문장이 보임.
+  - 빈 분류: «Aucune phrase dans cette catégorie.» / 검색 «zzz»: «Aucune phrase trouvée.»
+  - «Diabète»를 골라 문장을 누르면 기록 칸에 «Diabète équilibré, poursuivre le traitement. Revoir dans 3 mois.»가 들어감. 기억된 값 = `22`(id).
+  - **이름 바꾸기**(API로 Diabète → Diabétologie) 뒤 새로 열기: «Diabétologie»가 골라진 채, 그 문장이 보임.
+  - **지우기**(상용구를 General로 옮기며) 뒤 새로 열기: «Catégorie : toutes», 목록에서 사라짐, 그 문장은 꼬리표 «General»로.
+  - KO 어두운 화면: 제목 «상용구», «분류: 전체», 분류 이름은 자료 그대로(«General»…), 60자 분류 말줄임 — 그림 확인. FR 밝은 화면 그림 확인.
+- **확인 못 한 것**: 설정 **화면**에서 누르는 길(분류·상용구는 API로 만듦). EN 화면은 문구만(키 값) 확인.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 설정에서 바꾼 분류·상용구는 진료 화면을 새로 열어야 보입니다(화면을 열 때 한 번 읽음 — 전부터 그랬음).
+
 ## 2026-10-01 — 상용구(문장사전) 분류 고르기 (화면 먼저, 설정의 약속 대기)
 
 - **상태**: 진행 중 — 화면은 끝남. 설정 세션의 약속(목록·분류 API, 공용 키)이 오면 이름·자료 분류·한 문장을 맞추고 끝까지 시험

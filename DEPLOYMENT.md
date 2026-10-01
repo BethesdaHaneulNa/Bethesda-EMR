@@ -67,6 +67,19 @@ is up**, with no manual steps.
 - Re-running `setup` will **not** overwrite an existing `.env` (your secrets are kept).
 - These secrets are generated per-install, so no two deployments share the same keys, and
   none of them are the public defaults from this repository.
+- **Do not change `DB_PASSWORD` or `JWT_SECRET` by hand.** The database's real password was
+  set when the database was first created and lives in its storage (the Docker volume), not
+  in this file: changing the line does not change the password, it only makes the EMR unable
+  to open its database at the next start. Without the `JWT_SECRET` line the next start stops
+  (`JWT_SECRET is missing`). Nothing looks wrong while the containers keep running - it shows
+  at the next restart or update. The server status window (`server-status`) warns when one of
+  the two lines is missing or `DB_PASSWORD` is not the one the running EMR was started with.
+- What people usually meant to change is somewhere else: a **staff password** is changed in
+  the EMR (Settings → Staff, or the person's own name in the top bar); the **image server
+  (PACS) password** is in the `.env` of the *PACS* folder, followed by `pair-with-emr` there.
+- If the file was changed by mistake and the EMR is still running, **do not restart it**: the
+  running containers still hold the values they were started with, and the person in charge
+  can put them back in the file from there (`docker inspect bethesda-emr-api`).
 
 ## 5. Backups (on by default)
 

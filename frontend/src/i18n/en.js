@@ -37,7 +37,6 @@ export default {
   consultNote: "Consultation Note", diagnosis: "Diagnosis",
   orders: "Prescription / Orders", vitals: "Vitals",
   patientChart: "Patient Chart", prevRx: "Previous Rx",
-  phraseDict: "Phrase Dictionary",
   // Payment
   billDetails: "Bill Details", consultFee: "Consultation Fee",
   drugCost: "Medication", procedures: "Procedures",
@@ -341,12 +340,6 @@ export default {
   cs_vsInProgress: "In consultation",
   cs_vsCompleted: "Done",
   cs_vsCancelled: "Cancelled",
-  cs_pcAll: "All",
-  cs_pcGeneral: "General",
-  cs_pcInternal: "Internal",
-  cs_pcSurgery: "Surgery",
-  cs_pcPeds: "Peds",
-  cs_pcObgyn: "OB/GYN",
   cs_badgeDrug: "DRUG",
   cs_badgeLab: "LAB",
   cs_badgeProc: "PROC",
@@ -426,6 +419,8 @@ export default {
   cs_trNoChange: "Nothing was changed.",
   cs_trNotFound: "Visit not found. Open the patient again.",
   // Phrase list: category drop-down (2026-10-01)
+  cs_phraseCatEmpty: "No phrase in this category.",
+  cs_phraseNoMatch: "No phrase found.",
   cs_phraseCat: "Category",
   cs_phraseCatAll: "Category: all",
   // ── end consultation ──

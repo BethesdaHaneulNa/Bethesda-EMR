@@ -121,6 +121,15 @@ prescriptions and orders stay as they are, and each doctor's note stays theirs. 
 written to the change log. Not possible once the visit is paid (the button is greyed) or
 cancelled. Reception can do the same from its screen, and changes a department alone.
 
+### Phrases types: one name, categories from Settings
+
+The list of ready-made phrases under the note is called **Phrases types** (*상용구*), the
+same name as in Settings (it was *Dictionnaire*). Its categories are the ones the clinic
+makes in Settings, shown in their order and under their own name, and are chosen from a
+drop-down (**Catégorie : toutes**) instead of a row of buttons, so any number of
+categories fits. The choice is remembered for the account on that computer. A phrase has
+one text, whatever the screen language.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**
