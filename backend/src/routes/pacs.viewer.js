@@ -7,9 +7,16 @@
 // this router relays each request to Orthanc, adding that login here, on the
 // server. Staff never see it, and the clinic network no longer needs port 9090.
 //
+// Stone is served exactly as Orthanc ships it. This relay never changes a byte of
+// its pages or files and never adds code that calls into it (Orthanc and Stone are
+// AGPLv3; the clinic uses them unmodified). What the EMR may use is Stone's own URL
+// parameters (?study=A,B) and Stone's own buttons. The only pages of ours are the
+// short notices sent INSTEAD of Stone when it has nothing to show.
+//
 // Who may: an iframe cannot send the EMR's bearer token, so GET /api/pacs/viewer-url
 // (JWT + consultation) sets a short-lived signed cookie naming the user and the
-// studies they opened. Every request here re-checks that cookie, that the account
+// studies of the order they opened last (its own study and the same patient's
+// others, to compare). Every request here re-checks that cookie, that the account
 // is still active with the consultation permission, and that the path is one the
 // Stone viewer needs for one of those studies - measured on the isolated stack:
 // all GET, and every data request carries the StudyInstanceUID in its path or in
@@ -31,7 +38,7 @@ const router = express.Router();
 const COOKIE = 'px_viewer';
 const COOKIE_PATH = '/api/pacs/viewer/';
 const COOKIE_MAX_AGE = 30 * 60;          // seconds
-const MAX_STUDIES = 5;                    // "open in a new tab" of recent ones still works
+const MAX_STUDIES = 12;                   // the opened study + the same patient's others (compare)
 const UID = '[0-9.]{1,64}';
 
 // A key of its own, derived from JWT_SECRET: the cookie cannot be turned into a
@@ -71,12 +78,14 @@ function readCookie(req) {
 }
 
 // Called by GET /api/pacs/viewer-url once it has checked the JWT and the
-// consultation permission: add this order's study to the viewer cookie.
+// consultation permission: the viewer cookie now opens this order's study and the
+// same patient's other studies that viewer-url listed (to compare) - nothing else.
+// Each call replaces the cookie: what was opened before (another patient, in
+// another tab) stops loading. It never added up in a browser anyway - the cookie's
+// path keeps it from being sent to /viewer-url - and one patient at a time is the
+// rule worth having now that a cookie carries a patient's set of studies.
 function grantViewerCookie(req, res, studyUids) {
-  const prev = verify(readCookie(req));
-  const kept = prev && prev.u === req.user.id ? prev.s : [];
-  const wanted = studyUids.filter(u => new RegExp('^' + UID + '$').test(u));
-  const studies = [...wanted, ...kept.filter(u => !wanted.includes(u))].slice(0, MAX_STUDIES);
+  const studies = studyUids.filter(u => new RegExp('^' + UID + '$').test(u)).slice(0, MAX_STUDIES);
   const token = sign({ u: req.user.id, s: studies, e: Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE });
   res.append('Set-Cookie', `${COOKIE}=${token}; Path=${COOKIE_PATH}; HttpOnly; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`);
 }
@@ -265,6 +274,31 @@ const VIEWER_CSP = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
 ].join('; ');
+// Two exams in one window (?study=OPENED,OTHER, to compare): Stone puts in its first
+// pane whichever exam's series description (.../metadata) arrives first, and it has
+// no parameter to say which - measured, the other exam came up first once in eight.
+// The window's title and its reading box belong to the opened order, so that exam
+// must be the one that comes up. The other exam's descriptions are therefore held
+// until one of the opened exam's has been sent for this page (1.5 s at most, so a
+// problem here can only cost that long). Only the timing of our own answers changes:
+// Stone is served as it is and nothing calls into it. (Holding the other exam's list
+// queries instead emptied the first pane - Stone rebuilds its list when they arrive.)
+const openedFirst = {
+  pages: new Map(),                       // user:openedStudy -> { page: ms, sent: ms }
+  page(key) {
+    if (this.pages.size > 200) this.pages.clear();
+    this.pages.set(key, { page: Date.now(), sent: 0 });
+  },
+  sent(key) { const p = this.pages.get(key); if (p) p.sent = Date.now(); },
+  async wait(key) {
+    const p = this.pages.get(key);
+    if (!p) return;
+    const until = Date.now() + 1500;
+    while (p.sent < p.page && Date.now() < until) await new Promise(r => setTimeout(r, 40));
+    await new Promise(r => setTimeout(r, 60));
+  },
+};
+
 function viewerHeaders(res) {
   res.removeHeader('Content-Security-Policy');
   res.setHeader('Content-Security-Policy', VIEWER_CSP);
@@ -280,8 +314,11 @@ router.all('*', async (req, res) => {
   const grant = verify(readCookie(req));
   if (!grant) return isPage(path) ? explain(res, 401, ...EXPIRED) : res.status(401).json({ error: 'Viewer session missing or expired' });
 
-  // Without ?study= Stone would list every study, which is refused anyway.
-  if (isPage(path) && !grant.s.includes(String(req.query.study || ''))) {
+  // Without ?study= Stone would list every study, which is refused anyway. The page
+  // may name several - the opened one first, then the same patient's exam to compare
+  // it with (Stone's own ?study=A,B): each must be in the cookie.
+  const pageStudies = isPage(path) ? String(req.query.study || '').split(',') : [];
+  if (isPage(path) && (!pageStudies[0] || pageStudies.some(u => !grant.s.includes(u)))) {
     return explain(res, 403, ...NOT_OPENED);
   }
   const study = studyOf(path, req.query);
@@ -291,6 +328,10 @@ router.all('*', async (req, res) => {
     console.log('[pacs viewer] refused', req.method, path.replace(/[0-9.]{6,}/g, '<uid>'));
     return res.status(403).json({ error: 'Not allowed' });
   }
+
+  // Two exams in one window: the opened one must come up first (see openedFirst).
+  const examKey = grant.u + ':' + grant.s[0];
+  if (study && study !== grant.s[0] && path.endsWith('/metadata')) await openedFirst.wait(examKey);
 
   let cfg;
   try {
@@ -307,8 +348,9 @@ router.all('*', async (req, res) => {
   } catch (e) { return isPage(path) ? explain(res, 200, ...UNREACHABLE) : res.status(PACS_DOWN).json({ error: 'Bad PACS address' }); }
 
   if (isPage(path)) {
-    const pics = await studyPictures(cfg, String(req.query.study));
-    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(String(req.query.study))) ? NOT_THERE : NOT_ARRIVED));
+    if (pageStudies.length > 1) openedFirst.page(examKey);
+    const pics = await studyPictures(cfg, pageStudies[0]);
+    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
     if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
   }
 
@@ -339,6 +381,7 @@ router.all('*', async (req, res) => {
     // pass it on as 424 so the log still says it was the image server.
     const code = up.statusCode || PACS_DOWN;
     res.writeHead([502, 503, 504].includes(code) ? PACS_DOWN : code, headers);
+    if (study === grant.s[0] && path.endsWith('/metadata')) up.on('end', () => openedFirst.sent(examKey));
     up.pipe(res);
   });
   // Connect within 5 s (Orthanc down should say so quickly); once connected a

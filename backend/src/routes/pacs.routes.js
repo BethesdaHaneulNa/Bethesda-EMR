@@ -162,6 +162,40 @@ function imagesOf(w) {
   };
 }
 
+// The same patient's other imaging studies, to put next to the one being opened
+// (director, 2026-10-01: two chest films of different dates must be comparable).
+// Only what the EMR itself linked to this patient's orders, and only when it is
+// sure whose images they are: arrived, the patient number in the images matches
+// the chart (patient_check = 'match'), and the order was not cancelled. A study
+// flagged as another patient's would sit in the viewer's list with no warning on
+// it, so it is left out; it still opens from its own order, with its warning.
+// Most recent first. `older` = ordered before the one being opened.
+const MAX_COMPARE = 9;
+async function comparableStudies(orderItemId) {
+  const r = await pool.query(
+    `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, v.visit_date, wl.body_part,
+            COALESCE(wl.image_study_uid, wl.study_instance_uid) AS study,
+            (v.visit_date, oi.id) < (mv.visit_date, me.id) AS older
+       FROM order_item me
+       JOIN visit mv ON mv.id = me.visit_id
+       JOIN order_item oi ON oi.patient_id = me.patient_id AND oi.id <> me.id AND oi.code_type = 'imaging'
+       JOIN visit v ON v.id = oi.visit_id
+       JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true
+      WHERE me.id = $1 AND oi.status IS DISTINCT FROM 'cancelled'
+        AND wl.images_received_at IS NOT NULL AND wl.patient_check = 'match'
+      ORDER BY v.visit_date DESC, oi.id DESC`, [orderItemId]);
+  return r.rows.filter(x => x.study);
+}
+// Which of them the "compare" button offers first: the same exam (order code) just
+// before this one; failing that the same exam just after; then the same device type
+// and body part, before or after. null when nothing is alike - the doctor picks.
+function previousAlike(me, others) {
+  const same = x => x.order_code && x.order_code === me.order_code;
+  const near = x => x.pacs_modality && x.pacs_modality === me.pacs_modality && x.body_part && x.body_part === me.body_part;
+  const older = others.filter(x => x.older), newer = others.filter(x => !x.older).reverse();
+  return older.find(same) || newer.find(same) || older.find(near) || newer.find(near) || null;
+}
+
 // Resolve the PACS viewer URL + reading for an imaging order (Stone Web Viewer by StudyInstanceUID).
 // Only the consultation screen opens the viewer; the payment screen's readings
 // list shows text and has no image button.
@@ -174,10 +208,11 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     const base = '/api/pacs/viewer';
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     let order_status = '', cancelled_at = null, cancel_reason = '';
+    let others = [], prev = null, order_code = '';
     if (req.query.order_item_id) {
       const oid = req.query.order_item_id;
       const w = await pool.query(
-        `SELECT ${WL_COLUMNS} FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
+        `SELECT ${WL_COLUMNS}, body_part FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
       if (w.rows[0]) {
         // Open the study the images really carry (P-4); it is the worklist's own UID
         // unless the device made up a new one.
@@ -185,12 +220,23 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         images = imagesOf(w.rows[0]);
       }
       const o = await pool.query(
-        `SELECT oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, ${ORDER_CANCEL_COLUMNS}
+        `SELECT oi.order_name, oi.order_code, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, ${ORDER_CANCEL_COLUMNS}
            FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1`, [oid]);
       if (o.rows[0]) {
-        order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || '';
+        order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || ''; order_code = o.rows[0].order_code || '';
         order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
+      }
+      if (study && o.rows[0]) {
+        // A list that cannot be read never stops the image window: it opens alone.
+        try {
+          const all = (await comparableStudies(oid)).filter(x => x.study !== study);
+          prev = previousAlike({ order_code, pacs_modality: o.rows[0].pacs_modality, body_part: w.rows[0].body_part }, all);
+          // The offered one is always kept; the rest are the most recent, in date order.
+          const kept = [...(prev ? [prev] : []), ...all.filter(x => x !== prev)]
+            .filter((x, i, a) => a.findIndex(y => y.study === x.study) === i).slice(0, MAX_COMPARE);
+          others = all.filter(x => kept.includes(x));
+        } catch (e) { others = []; prev = null; }
       }
     }
     // (A bare ?study=<UID> used to be accepted too. Nothing calls it, and with the
@@ -200,10 +246,21 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     // every patient in the PACS -- inside one patient's chart (P-18). has_viewer
     // is always true now (the EMR is the viewer), so the screen shows "nothing to
     // show for this order" rather than the old "no viewer address set".
-    const url = study ? `${base}/stone-webviewer/index.html?study=${encodeURIComponent(study)}` : '';
-    if (study) viewer.grantViewerCookie(req, res, [study]);
+    // The window opens on the order's own study, as it always did. The cookie also
+    // opens the same patient's other studies, and `compare` hands the screen one
+    // ready address per study: Stone's own ?study=OPENED,OTHER puts both in its list
+    // (the doctor splits the screen with Stone's layout button). Stone itself is never
+    // changed or scripted - only its URL parameters are used (see pacs.viewer.js).
+    const page = `${base}/stone-webviewer/index.html?study=`;
+    const url = study ? page + encodeURIComponent(study) : '';
+    if (study) viewer.grantViewerCookie(req, res, [study, ...others.map(x => x.study)]);
+    const shown = x => ({ order_name: x.order_name, modality: x.pacs_modality || '', visit_date: x.visit_date,
+      same_exam: x.order_code === order_code, url: page + [study, x.study].map(encodeURIComponent).join(',') });
+    // prev: the one the button offers; others: every one, most recent first.
+    const compare = { count: others.length, prev: prev ? shown(prev) : null,
+      others: others.map(shown) };
     // A cancelled order's images stay viewable: they are part of the record.
-    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images,
+    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images, compare,
                no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

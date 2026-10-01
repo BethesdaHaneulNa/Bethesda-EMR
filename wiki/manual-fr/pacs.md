@@ -50,7 +50,7 @@ Médecin :
 
 1. Sur la ligne d'imagerie, cliquez sur **🖼** (**Voir image**). La **Visionneuse** s'ouvre : les images à gauche, le **Compte-rendu** à droite. En haut : le N° dossier et le nom du patient de l'EMR.
 2. Les petites images à gauche sont les séries. Cliquez sur une série pour l'afficher au milieu. La première s'affiche toute seule.
-3. Pour voir plus grand : **Ouvrir dans un onglet ↗**.
+3. Pour voir plus grand : **Ouvrir dans un onglet ↗**. Pour comparer avec un examen d'une autre date : voir 8.
 4. Écrivez dans **Saisir le compte-rendu radiologique...**, puis cliquez sur **💾 Enregistrer**. Au-dessus apparaît **Lu par** : votre nom et la date.
 5. Cliquez sur **Fermer ✕**.
 
@@ -58,7 +58,7 @@ Attention : un clic sur la zone sombre **autour** de la fenêtre la ferme, et un
 
 Corriger un compte-rendu remplace l'ancien texte (l'ancien n'est pas gardé).
 
-La fenêtre montre seulement les images de la demande ouverte. Après 30 minutes, elle affiche **La session d'affichage a expiré** : fermez-la et cliquez de nouveau sur **🖼**.
+La fenêtre s'ouvre sur les images de la demande ouverte ; un autre examen du même patient ne vient que si vous demandez une comparaison (8). Jamais les images d'un autre patient. Après 30 minutes, elle affiche **La session d'affichage a expiré** : fermez-la et cliquez de nouveau sur **🖼**.
 
 ### 5. « Not for diagnostic usage » : qu'est-ce que c'est ?
 
@@ -93,6 +93,24 @@ Un examen qui a déjà des images ou un compte-rendu ne peut pas être retiré ;
 4. Les images et le compte-rendu restent au dossier. Dans la **Visionneuse**, la ligne **⊘ Images d'une demande annulée** apparaît ; on peut regarder, mais pas enregistrer de nouveau compte-rendu.
 5. L'annulation est définitive. En cas d'erreur, demandez l'examen de nouveau.
 6. Si l'examen était déjà payé, la caisse fait le remboursement.
+
+### 8. Médecin — comparer avec un examen précédent
+
+Deux radios du thorax à deux dates : on peut les mettre côte à côte.
+
+1. Ouvrez l'examen le plus récent (**🖼** ou **Voir image**).
+2. Si le patient a d'autres examens d'imagerie, une ligne apparaît sous le titre de la fenêtre : le bouton violet **⇆ Comparer avec … (date)** — le même examen, celui d'avant — et la liste **Autre examen… (N)**.
+3. Cliquez sur le bouton, ou choisissez un examen dans la liste. Le **Compte-rendu** se replie pour laisser la place aux images, et les deux examens sont maintenant dans la liste de gauche de la visionneuse. L'examen ouvert s'affiche en premier.
+4. La première fois : en haut des images, cliquez sur le bouton **▦** (la grille, tout à gauche des outils) et choisissez **deux cases côte à côte**. La visionneuse s'en souvient : les fois suivantes, la fenêtre s'ouvre déjà en deux cases.
+5. Faites glisser l'autre examen de la liste de gauche vers la case vide (**[ drop a series here ]**). Le nom et la date de l'examen sont écrits en haut à droite de chaque image.
+6. **✕ Fin de la comparaison** : retour à l'examen seul, et le **Compte-rendu** revient.
+7. Pour comparer en grand : **Ouvrir dans un onglet ↗** pendant la comparaison ; le nouvel onglet contient les deux examens.
+
+- **Afficher le compte-rendu / Masquer le compte-rendu** (en haut de la fenêtre) : replie ou montre la case du compte-rendu. Le texte déjà écrit n'est pas perdu.
+- Le **Compte-rendu** reste celui de l'examen ouvert (son nom est dans le titre de la fenêtre), même si vous regardez l'autre examen.
+- Pas de ligne sous le titre : ce patient n'a pas d'autre examen avec images.
+- Ne sont pas proposés : les examens annulés, ceux dont les images ne sont pas arrivées, et ceux qui portent un avertissement d'identité (rouge ou jaune). Ceux-là s'ouvrent seulement depuis leur propre ligne.
+- Une fenêtre qui s'ouvre coupée en deux avec une case vide **[ drop a series here ]** : c'est la disposition gardée par la visionneuse. Pour revenir à une seule image : bouton **▦** → une seule case.
 
 ## Si ce message apparaît
 

@@ -7,7 +7,7 @@ import { tint } from '../theme.js';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
-import { RadiologyReadings, PatientCheck } from '../components/RadiologyReadings.jsx';
+import { RadiologyReadings, PatientCheck, ViewerCompare } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
 // The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
 // in the search lists where the default sig used to be (decision B retired default doses).
@@ -246,6 +246,9 @@ export default function ConsultationPage() {
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
   var rdo = useState(false), readingsOpen = rdo[0], setReadingsOpen = rdo[1];
+  // The reading box can be folded away to give the images the whole window (two exams
+  // side by side are small at 1366 px). The text typed stays; each window opens unfolded.
+  var rfo = useState(false), readFolded = rfo[0], setReadFolded = rfo[1];
   // The image window opens over the list (director, 2026-10-01: closing it went back to
   // the consultation screen, and the list had to be opened again for the next exam).
   // Now the list stays underneath; when the image window closes the list reads itself
@@ -261,7 +264,10 @@ export default function ConsultationPage() {
       // the server leaves url empty). cancelled: the order was cancelled - its images and
       // reading stay as the record, but no new reading is taken.
       setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', no_study:!!r.no_study,
-        cancelled:!!r.cancelled, cancel_reason:r.cancel_reason||'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null });
+        cancelled:!!r.cancelled, cancel_reason:r.cancel_reason||'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null,
+        // compare: the same patient's other exams (PACS, ViewerCompare); base_url: this exam alone.
+        base_url:r.has_viewer?r.url:'', compare:r.compare||null });
+      setReadFolded(false);
       setReadText(r.reading?r.reading.result_text:'');
     } catch(e){ alert(t.cs_errorPrefix+e.message); }
   }
@@ -1520,7 +1526,8 @@ export default function ConsultationPage() {
               <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🖼 {t.imageViewer||'영상 뷰어'}</span>
               <span style={{color:'var(--text-soft)',fontSize:14,fontWeight:700}}>{viewer.order_name}</span>
               {sel?<span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>:null}
-              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{marginLeft:'auto',background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:<div style={{marginLeft:'auto'}}></div>}
+              <button onClick={function(){setReadFolded(!readFolded)}} style={{marginLeft:'auto',background:'var(--chip)',color:'var(--text-soft)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>{readFolded ? '◂ '+t.px_readingShow : t.px_readingHide+' ▸'}</button>
+              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:null}
               <button onClick={function(){setViewer(null)}} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
             {/* What the arrived images say about the patient (viewer-url -> images): red when
@@ -1533,11 +1540,16 @@ export default function ConsultationPage() {
             {viewer.cancelled ? <div style={{margin:'8px 14px 0',padding:'7px 12px',borderRadius:6,background:'var(--notice)',border:'1px solid var(--notice-line)',color:'var(--text-soft)',fontSize:13,fontWeight:700}}>
               ⊘ {t.px_cancelledViewer}{viewer.cancel_reason ? <span style={{fontWeight:400,color:t2}}>{' — '+(t.px_cancelReason||'')+' : '+viewer.cancel_reason}</span> : null}
             </div> : null}
+            {/* Compare with the same patient's earlier exam (PACS's component): it swaps the
+                image window's address; Stone itself is not touched. Comparing folds the
+                reading box away - two images need the width, and with the box shown Stone's
+                own toolbar (its layout button) slides under its logo at 1366 px. */}
+            <ViewerCompare viewer={viewer} t={t} style={{margin:'8px 14px'}} onUrl={function(u){ setViewer(function(p){ return p ? Object.assign({}, p, { url:u }) : p; }); setReadFolded(u !== viewer.base_url); }} />
             <div style={{flex:1,display:'flex',overflow:'hidden'}}>
               {viewer.url
                 ? <iframe src={viewer.url} title="PACS Viewer" style={{flex:1,border:0,background:'#000'}}></iframe>
                 : <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--viewer-text)',fontSize:14,textAlign:'center',padding:20,background:'#000'}}>{viewer.has_viewer && viewer.no_study ? t.px_noStudy : (t.noViewerUrl||'PACS 뷰어 주소가 설정되지 않았습니다 (설정 → 오더연동 → PACS 웹/뷰어 주소). 영상 없이 판독만 입력할 수 있습니다.')}</div>}
-              <div style={{width:380,borderLeft:'1px solid var(--border-2)',background:'var(--bg-col)',display:'flex',flexDirection:'column',padding:12,boxSizing:'border-box'}}>
+              <div style={{width:380,borderLeft:'1px solid var(--border-2)',background:'var(--bg-col)',display:readFolded?'none':'flex',flexDirection:'column',padding:12,boxSizing:'border-box'}}>
                 <div style={{fontWeight:800,fontSize:15,color:'var(--violet-text)',marginBottom:6}}>🩻 {t.reading||'판독소견'}</div>
                 {viewer.reading&&viewer.reading.result_at?<div style={{fontSize:12,color:'var(--text-3)',marginBottom:8}}>{t.lastReadBy||'판독'}: {viewer.reading.result_by_name||''} · {ymd(viewer.reading.result_at)}</div>:null}
                 {canRead && !viewer.cancelled ? <>

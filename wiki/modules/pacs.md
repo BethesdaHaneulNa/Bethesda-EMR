@@ -65,6 +65,7 @@
 2. **🖼 Visionneuse (영상 뷰어)** 창이 열립니다. 왼쪽이 영상, 오른쪽이 **🩻 Compte-rendu (판독소견)** 칸입니다. 창 맨 위에 EMR에서 고른 환자의 차트번호·이름이 보입니다.
 3. 오른쪽 칸 **Saisir le compte-rendu radiologique... (판독 소견을 입력하세요...)** 에 판독을 쓰고 **💾 Enregistrer (판독 저장)** 을 누릅니다. 위에 **Lu par (판독)** : 쓴 사람 · 날짜가 나옵니다.
 4. 영상을 크게 보려면 **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 를 누릅니다.
+   - **다른 날짜 검사와 나란히 비교**하려면 아래 「2.3.1 이전 검사와 비교」.
 5. 다 봤으면 **Fermer ✕ (닫기)** 를 누릅니다.
 
 > ⚠ **판독을 쓰는 중에 창 바깥의 어두운 곳을 누르면 창이 닫히고, 저장하지 않은 판독은 사라집니다.** 먼저 **Enregistrer** 를 누르세요.
@@ -74,6 +75,27 @@
 > 영상 창은 **아이디·비밀번호를 묻지 않습니다**(P-9, EMR이 대신 영상 서버에 들어감). 창을 연 오더의 영상만 보이고, 30분이 지나면 창 안에 **La session d'affichage a expiré… (영상 보기 시간이 끝났습니다)** 가 나옵니다 — **Fermer ✕** 로 닫고 **🖼** 로 다시 여세요.
 >
 > 영상 칸 왼쪽 위의 빨간 글씨 *For patients, researchers and quality assurance. Not for diagnostic usage.* 는 영상 프로그램(Stone)이 늘 붙이는 문구입니다. 진단에 쓰는 전용 판독 프로그램이 아니라는 뜻입니다.
+
+### 2.3.1 이전 검사와 비교 (2026-10-01, 실장님 요청)
+
+같은 환자가 다른 날짜에 찍은 검사(예: 흉부 사진 두 장)를 영상 창에서 나란히 봅니다.
+
+1. 최근 검사를 엽니다(**🖼** 또는 목록의 **Voir image**). 처음에는 전과 똑같이 그 검사 하나만 보입니다.
+2. 이 환자에게 영상이 있는 다른 검사가 있으면 창 제목 아래에 한 줄이 생깁니다: 보라색 단추 **⇆ Comparer avec Chest PA 2026-09-28 (이전 검사와 비교: …)** 와 목록 **Autre examen… (N) (다른 검사… (N))**.
+3. 단추를 누르거나 목록에서 검사를 고릅니다. **판독 칸이 접히고**(영상 자리를 넓히려고), 영상 프로그램의 왼쪽 목록에 **두 검사**가 나옵니다. 지금 연 검사가 먼저 뜹니다.
+4. **처음 한 번만**: 영상 위 도구 줄 맨 왼쪽의 **▦** 단추에서 **두 칸(좌우)** 을 고릅니다. 영상 프로그램이 이것을 기억해서 다음부터는 창이 처음부터 두 칸으로 열립니다.
+5. 왼쪽 목록에서 다른 검사를 빈 칸(**[ drop a series here ]**)으로 **끌어다 놓습니다**. 각 영상 오른쪽 위에 검사 이름과 날짜가 적혀 있습니다.
+6. **✕ Fin de la comparaison (비교 끝내기)** — 연 검사 하나로 돌아가고 판독 칸이 다시 나옵니다.
+7. 더 크게 비교하려면 비교 중에 **Ouvrir dans un onglet ↗** — 새 탭에 두 검사가 함께 열립니다.
+
+- **Masquer le compte-rendu ▸ / ◂ Afficher le compte-rendu (판독 칸 접기 / 펴기)** — 창 제목 줄의 단추. 비교가 아니어도 영상을 크게 보려고 접을 수 있습니다. 쓰던 판독은 지워지지 않습니다. 창을 새로 열면 늘 펴진 채로 열립니다.
+- 같은 검사가 다른 날짜에 없으면 보라색 단추 없이 목록만 나옵니다. 같은 검사가 없어도 같은 장비 종류·같은 부위(예: Chest PA ↔ Chest Lat)가 있으면 그것을 단추로 권합니다.
+- 줄이 안 생기면 이 환자에게 영상이 있는 다른 검사가 없는 것입니다.
+- **판독 칸은 처음에 연 검사의 것 그대로**입니다(창 제목에 그 검사 이름). 다른 검사를 보고 있어도 판독은 연 검사에 저장됩니다.
+- **비교 목록에 넣지 않는 것**: 취소된 검사, 영상이 아직 안 온 검사, 환자 번호 경고(빨강·노랑)가 붙은 검사. 이런 검사는 자기 줄에서만 열립니다 — 영상 프로그램 안에서는 경고를 보여 줄 수 없어서, 다른 환자 것일 수 있는 영상을 경고 없이 나란히 놓지 않으려는 것.
+- 한 번에 최대 9건(최근 것부터, 권하는 검사는 늘 포함).
+- **창이 두 칸으로 열리고 한쪽이 「[ drop a series here ]」로 비어 있는 것**: 영상 프로그램이 마지막으로 고른 화면 나누기를 기억하기 때문입니다(4번). 한 칸으로 되돌리려면 **▦** 단추에서 한 칸짜리를 고릅니다.
+- 1366×768에서: 판독 칸이 펴져 있으면 영상 프로그램의 도구 줄이 좁아져 **▦ 단추가 Orthanc 글자 밑에 겹쳐** 잘 안 보입니다. 비교를 시작하면 판독 칸이 접히므로 보입니다. 접은 상태에서 두 칸으로 나누면 영상 하나가 약 469×550입니다.
 
 ### 2.4 환자의 영상 검사 한눈에 보기
 
@@ -234,7 +256,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | (`PUT /config`의 답에) | | **`orthanc_check`** — 저장한 `orthanc_url`(없으면 기본)로 연 검사 결과 `{url, state, version?, code?}`. 저장은 결과와 관계없이 됨. 검사는 **설정 세션의 `services/pacs-probe.js` `probeOrthanc` 하나** — 상태 줄 `pacs_relay`(「Visionneuse → serveur d'images」)와 같은 함수·같은 답. `state`: `ok`(`version`) / `refused` / `unknownHost` / `timeout` / `unauthorized` / `notOrthanc`(`code`) / `badAddress`. 화면(`Settings.jsx` `pxRelayCheck`)은 상태 점의 문장 `se_sys_pacsRelay_<state>`를 그대로 써서 두 곳이 같은 말을 함(2026-09-30 합침 — 그 전에는 PACS 세션의 두 번째 검사가 `pacs.viewer.js`에 있었음). 기본 주소도 그 파일의 `DEFAULT_URL` 하나(중계도 씀) |
 
 **오더 연동 탭의 오류 문구** (2026-09-29): 위 서버 문구(`pacs.routes.js` `CONFIG_MSG`·`configProblem`)와 `tcpCheck`의 문구(`TCP connection succeeded`, `Connection timed out`, Node의 `ECONNREFUSED`·`ENOTFOUND`·`EHOSTUNREACH`…)를 `Settings.jsx` `pxMessage`가 `px_err*`·`px_test*` 문구로 바꿈 — **서버 문구를 바꾸면 거기도**. 모르는 글자는 설정 세션의 `seMessage`로 넘기고, 그래도 모르면 그대로 보임. 연결 시험 줄에는 시험한 `호스트:포트`를 괄호로 붙임. 전에는 DB 원문(`value too long for type character varying(50)`)이나 `connect ECONNREFUSED …`가 그대로 보였고, 70000 같은 포트가 저장된 뒤 연결 시험이 500으로 깨졌음.
-| `GET /viewer-url?order_item_id=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). `url` = **`/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`**(상대 주소, P-9) + 그 스터디를 여는 **뷰어 쿠키**(아래 중계). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`**, 쿠키 없음. `has_viewer`는 이제 늘 `true`. 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18). **`?study=<UID>`로 여는 길은 없앰** — 쿠키가 생긴 뒤로는 아무 스터디나 열 수 있게 되므로, 오더로만 |
+| `GET /viewer-url?order_item_id=` | `consultation` 권한 (수납 화면의 판독 목록에는 영상 버튼이 없음) | 뷰어 주소 + 오더 이름 + 판독 + **`images`**(아래). `url` = **`/api/pacs/viewer/stone-webviewer/index.html?study=<UID>`**(상대 주소, P-9) + 그 스터디를 여는 **뷰어 쿠키**(아래 중계). **2026-10-01 비교**: `url`은 전처럼 연 검사 하나(`?study=<연 검사>`). 그 환자의 다른 검사가 있으면 쿠키가 그것들도 열고, 응답에 `compare: {count, prev, others: [...]}` — 각 항목 `{order_name, modality, visit_date, same_exam, url}`, `url` = `…/index.html?study=<연 검사>,<그 검사>`(Stone의 공식 파라미터 — 두 검사를 한 창에). `prev`는 단추로 권하는 하나, `others`는 전부(최근 것부터). 화면(`ViewerCompare`)은 이 주소로 영상 창 주소를 바꾸기만 함. 고르는 규칙(`comparableStudies`·`previousAlike`): 같은 환자의 영상 오더 중 **취소 아님 · `images_received_at` 있음 · `patient_check = 'match'`** 인 것(검사 번호는 `image_study_uid` 우선), 방문 날짜·오더 번호 내림차순, 최대 9건. 권하는 검사 = 같은 오더 코드의 바로 전 것 → 없으면 같은 코드의 바로 뒤 것 → 같은 modality+부위의 전 것 → 뒤 것 → 없음. 목록을 읽지 못하면 연 검사 하나만(영상 창을 막지 않음). 보일 스터디(UID)가 없으면 **`url`은 빈 값, `no_study: true`**, 쿠키 없음. `has_viewer`는 이제 늘 `true`. 전에는 뷰어 첫 화면(모든 환자 목록)을 돌려줬음(P-18). **`?study=<UID>`로 여는 길은 없앰** — 쿠키가 생긴 뒤로는 아무 스터디나 열 수 있게 되므로, 오더로만 |
 | `PUT /reading/:orderItemId` | `consultation` 권한 | `order_item`(code_type='imaging')의 result_text·result_by·result_at 덮어쓰기. 이력 없음. **취소된 오더는 409** `Imaging order was cancelled`(`pacs.cancel.js`의 `ORDER_CANCELLED`) — 조건을 UPDATE 안에 넣어 동시에 들어온 취소를 덮지 않음 |
 | `GET /readings/patient/:patientId` | `consultation` 또는 `payment` 권한 | 환자의 영상 오더 전부(취소된 것 포함) + 판독 + 최신 accession/UID + images_received_at·image_count·image_patient_id·image_patient_name·patient_check + `order_status`·`cancelled_at`·`cancel_reason` |
 | `GET /worklist-feed?format=json\|csv&date=&modality=&station_ae=` | **브리지 토큰** (`X-Bridge-Token` 헤더, 옛 브리지용으로 `?token=`도 받음) | 브리지용 피드. 기본 날짜 `todayLocal()`, `status='scheduled'`만 |
@@ -254,12 +276,12 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 직원 브라우저는 Orthanc(9090)에 직접 가지 않고 **EMR에 영상을 달라고 하고, EMR이 Orthanc에 `admin`으로 들어가 받아 그대로 흘려 줍니다**. 직원은 Orthanc 비밀번호를 모르고, Orthanc 9090은 서버 PC 안(127.0.0.1)에만 엽니다.
 
-- **뷰어 쿠키 `px_viewer`** — `viewer-url`이 줌. 내용 `{u: 직원 id, s: [스터디 UID 최대 5개], e: 만료}` + HMAC-SHA256 서명. 서명 열쇠는 `JWT_SECRET`에서 갈라 낸 값(`HMAC(JWT_SECRET, 'bethesda-pacs-viewer-cookie-v1')`) — 따로 비밀값을 두지 않음. `HttpOnly; SameSite=Strict; Path=/api/pacs/viewer/; Max-Age=1800`(30분). 같은 직원이 다른 오더를 열면 앞의 스터디를 이어 붙임(최근 5개).
+- **뷰어 쿠키 `px_viewer`** — `viewer-url`이 줌. 내용 `{u: 직원 id, s: [스터디 UID 최대 12개 — 연 검사 + 같은 환자의 비교 검사], e: 만료}` + HMAC-SHA256 서명. 서명 열쇠는 `JWT_SECRET`에서 갈라 낸 값(`HMAC(JWT_SECRET, 'bethesda-pacs-viewer-cookie-v1')`) — 따로 비밀값을 두지 않음. `HttpOnly; SameSite=Strict; Path=/api/pacs/viewer/; Max-Age=1800`(30분). **오더를 열 때마다 쿠키를 새로 씀**(2026-10-01) — 전에 연 것(다른 환자, 다른 탭)은 더 불러오지 못함. 「이어 붙임(최근 5개)」이라고 적혀 있었으나 브라우저는 이 쿠키를 `/viewer-url`로 보내지 않아(Path) 실제로는 늘 새로 써졌고, 격리 브라우저에서 확인함(환자 1의 검사를 연 뒤 환자 2의 검사를 열면 환자 1 검사는 403). 쿠키 하나가 한 환자의 검사 묶음을 여는 지금은 「한 번에 한 환자」가 맞는 규칙이라 코드도 그렇게 고침.
 - **요청마다 검사** (순서대로):
   1. GET·HEAD만(아니면 405).
   2. 경로를 **한 번 풀고**(`decodeURIComponent`) `\`·`%`(이중 인코딩)·NUL·`//`·`.`·`..` 조각이 있으면 400.
   3. 쿠키 서명·만료(아니면 401, `index.html`이면 「영상 보기 시간이 끝났습니다」 안내 쪽).
-  3′. `index.html`인데 `?study=`가 쿠키의 검사가 아니거나 없으면 403 안내 쪽 「Cette image n'a pas été ouverte depuis une demande d'imagerie…」(2026-09-30, 통합 시험 — 전에는 데이터만 403이라 검은 화면에 점 하나).
+  3′. `index.html`인데 `?study=`(쉼표로 여럿 — 맨 앞이 연 검사)의 **하나라도** 쿠키의 검사가 아니거나, 맨 앞이 비었거나, 없으면 403 안내 쪽 「Cette image n'a pas été ouverte depuis une demande d'imagerie…」(2026-09-30, 통합 시험 — 전에는 데이터만 403이라 검은 화면에 점 하나).
   4. **허용 목록**: `/stone-webviewer/<파일>`, `/system`(Stone이 부름), `/dicom-web/studies/<UID>[/series/<UID>[/instances/<UID>]][/metadata|/rendered|/thumbnail|/frames/<n,…>[/rendered]]`, 그리고 `/dicom-web/studies|series|instances?0020000D=<UID>`(QIDO — **스터디 UID로 거른 것만**). UID는 쿠키에 있는 것만. 아니면 403(로그에는 UID를 가린 경로 모양만). Orthanc REST(`/patients`, `/tools/find` …)·Explorer 2·걸러지지 않은 목록은 모두 403.
   5. 계정: DB에서 `status='active'`이고 `consultation` 권한이 있어야(30초 캐시) — 아니면 401(페이지면 안내 쪽 「Ce compte ne peut plus ouvrir les images…」).
   6. `pacs_config.orthanc_password`가 없으면 「짝이 맞지 않았습니다」 안내(페이지는 200, 데이터 요청은 **424**).
@@ -280,6 +302,12 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 `ensureConfig()`가 요청마다 `CREATE TABLE IF NOT EXISTS pacs_config` + `ALTER … ADD COLUMN IF NOT EXISTS`를 실행합니다(오래된 DB 호환용, 마이그레이션과 중복).
 
 **권한** (실장님 결정 S2, 2026-09-29): 서버도 화면 권한대로 막습니다. 표의 권한은 **그 API를 부르는 화면**의 권한이고(관리자는 7개 다 있음), 로그인하지 않았으면 401, 권한이 없으면 403. 브리지 토큰으로 들어오는 세 경로(피드·heartbeat·study-arrived)는 로그인과 관계없음. 계정 상태·권한은 요청마다 DB에서 읽으므로(S1) 권한을 빼면 바로 적용됩니다. 간호사 기본 권한(약국·임상병리·접수)으로는 PACS API를 하나도 안 부릅니다.
+
+- **이전 검사와 비교 — Stone을 고치지 않는 방식** (2026-10-01).
+  - **지키는 선 (라이선스)**: Orthanc·Stone은 AGPLv3이고 병원은 **공식 배포판 그대로** 씁니다. 중계는 Stone이 내주는 페이지·파일을 **한 바이트도 바꾸지 않고**(격리에서 `index.html`·`app.js`를 Orthanc에서 직접 받은 것과 바이트 단위로 같음을 확인), Stone 안쪽 함수를 부르는 코드를 더하지도 않습니다. 쓰는 것은 **Stone의 공식 주소 파라미터**(`?study=A,B`)와 **Stone 자신의 단추**(화면 나누기 ▦, 끌어다 놓기)뿐. Stone 대신 우리 안내 쪽을 보내는 것(영상 없음 등)은 Stone을 고치는 것이 아님. 고쳐야 할 일이 생기면 먼저 총괄·실장님께 알림.
+  - **조사**: Stone의 `app.js`를 읽음 — 주소 파라미터는 `study`(쉼표로 여럿)·`series`·`patient`·`selectedStudies`·`menu`·`token`뿐, `postMessage`는 OsiriX 주석용 하나뿐. 「화면을 나누고 저 검사를 오른쪽에」를 밖에서 시키는 공식 길은 없음 → 나누기와 놓기는 의사가 Stone의 단추로 함(나누기는 Stone이 `localStorage.layout`에 기억하므로 한 번).
+  - **화면** (`frontend/src/components/RadiologyReadings.jsx`의 `ViewerCompare`, 진료 화면 `Consultation.jsx`가 영상 창 제목 아래에 놓음): `props.viewer = {order_item_id, base_url, compare}`, `props.onUrl(주소)`. 단추 「⇆ Comparer avec …」(=`compare.prev.url`), 목록 「Autre examen… (N)」(=`compare.others[].url`), 비교 중에는 「✕ Fin de la comparaison」(=`base_url`)과 한 줄 안내(`px_compareHint`). 진료 화면은 `onUrl`에서 iframe 주소를 바꾸고 **판독 칸을 접음**(끝내면 폄). 「새 탭에서 열기」는 지금 주소를 쓰므로 비교 중이면 두 검사가 함께 열림.
+  - **연 검사가 먼저 뜨게** (`pacs.viewer.js` `openedFirst`): 두 검사를 한 창에 열면 Stone은 **시리즈 정보(`…/metadata`)가 먼저 도착한 검사**를 첫 칸에 놓는데, 어느 것인지 정하는 파라미터가 없음(재 보니 8번에 1번은 다른 검사가 먼저). 창 제목·판독 칸이 연 오더의 것이므로, 중계가 **다른 검사의 `…/metadata` 답을 연 검사의 것이 하나 나간 뒤까지 잠깐 붙잡음**(최대 1.5초, 보통 0.07초). 우리 답의 **시간만** 다룸 — 내용은 그대로. 격리에서 20번 중 20번 연 검사가 먼저. (다른 검사의 목록 질의를 늦추는 방법은 첫 칸이 비게 됨 — Stone이 목록을 다시 만들면서.)
 
 ### 서버 — `backend/src/routes/worklist.routes.js` (`/api/worklist`)
 
@@ -517,6 +545,9 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 동작 · 기타
 
+- **P-28 [참고] 「이전 검사와 비교」는 Stone을 고치지 않고 짓는다 (2026-10-01, 라이선스).** 4절 「이전 검사와 비교」. 그래서 **화면 나누기와 끌어다 놓기는 의사가 Stone의 단추로** 합니다(나누기는 한 번 하면 기억됨). 한 번에 「누르면 나란히」가 되게 하려면 Stone 안쪽 함수를 불러야 하는데(처음에 그렇게 지었다가 걷어 냄 — 커밋 `2e7a738`), 그것은 직원에게 내주는 Stone을 배포판과 다르게 만드는 일이라 하지 않기로 함. Orthanc 이미지를 올린 뒤에는 `?study=A,B`가 여전히 두 검사를 여는지, 연 검사가 먼저 뜨는지 격리에서 다시 볼 것.
+- **P-29 [참고] 영상 쿠키는 「한 번에 한 환자」(2026-10-01).** 새 탭으로 한 환자의 영상을 띄워 둔 채 EMR에서 다른 환자의 검사를 열면, 먼저 띄운 탭은 새 영상을 더 불러오지 못함(이미 받은 것은 보임). 전에도 그랬고, 이제 문서·코드가 그렇게 말함.
+
 - **P-11 [낮음] ✅ 고침 (2026-09-29)** — 값 검사(400), 없는 항목 404, 한 트랜잭션, `scheduled`→order_item `sent`. 누가 부를 수 있는지(로그인만)는 그대로 — 지금 쓰는 곳이 없어 권한은 쓰임새가 생길 때 정함. **원래 문제**: `PUT /api/worklist/:id/status`에 값 검사·트랜잭션 없음. `worklist.routes.js:45-61` — 예: `scheduled`는 worklist_log엔 들어가지만 order_item의 CHECK에 걸려 둘이 어긋남. 로그인만 있으면 누구나 호출 가능. 지금 쓰는 곳 없음.
 - **P-15 [낮음] 판독을 덮어쓰면 이전 판독이 사라짐(이력 없음).** `pacs.routes.js:100`. 서명·확정 개념도 없음.
 - **P-16 [낮음] 뷰어 창 바깥을 누르면 저장 안 한 판독이 사라짐.** `Consultation.jsx:693`(진료 세션 파일).
@@ -559,6 +590,8 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | **이전 검사와 비교를 Stone을 고치지 않는 방식으로 다시 지음**(라이선스 — Stone 페이지에 스크립트를 끼우던 `pacs.viewer.compare.js`를 걷어 냄): 비교 단추·목록은 EMR 영상 창 쪽(`ViewerCompare`), 주소 `?study=연 검사,비교 검사`, 나누기·놓기는 Stone의 단추, 판독 칸 접기, 연 검사가 먼저 뜨게(`openedFirst`). 2.3.1·4절·P-28, 프랑스어 설명서 8절 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | **이전 검사와 비교**(2.3.1, 4절 `viewer-url`·쿠키·`pacs.viewer.compare.js`, 7절 P-28·P-29): 영상 창이 같은 환자의 다른 검사(취소·경고·미도착 제외, 최대 9건)를 함께 열 수 있고, 영상 위 단추 하나로 좌우 나란히. 쿠키는 오더를 열 때마다 새로 씀. 프랑스어 설명서 8절 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 4절 중계 7·2.5: 영상이 아직 안 온 검사를 열면 빈 영상 창 대신 「아직 오지 않았습니다」 안내, 도착 기록은 있는데 영상 서버에 없으면 「관리자에게」 안내(fr·ko·en). 프랑스어 설명서 메시지 표 두 줄, 6.2 표 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 2.4·5절: 영상 창을 닫으면 **목록이 그대로 남음**(총괄 `71dedec` — `Consultation.jsx`, `RadiologyReadings.jsx`의 `reload`). PACS 세션은 격리에서 회귀를 보고 문서를 맞춤 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 단추 이름: 환자의 영상 검사 목록을 여는 단추·창 제목이 **🩻 Imagerie (영상/판독)**(공용 키 `imagingList`, 총괄 `b828129`). 2.4·2.5·2.6·4·5절과 프랑스어 설명서·순서서의 이름을 맞춤. 판독 칸 «Compte-rendu»는 그대로 | EMR `session/pacs` (인계 노트 참고) |

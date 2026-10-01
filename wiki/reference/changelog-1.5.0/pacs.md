@@ -23,6 +23,22 @@ stayed black until the window was resized. Stone's own red line *Not for diagnos
 shown. The **PACS web/viewer address** field in Settings → Order Feed is kept but marked unused, so an
 older backup restores cleanly.
 
+### Comparing with an earlier exam
+
+Two chest films of different dates could not be put side by side: the image window was only allowed the
+one study of the order it was opened from. It may now also load the same patient's other imaging studies
+- only those the EMR linked to that patient's own orders, whose images carry the right patient number,
+and whose order was not cancelled (nine at most). Under the window's title a button, **⇆ Comparer avec …**
+(the same exam, the time before), and a list of the patient's other exams reopen the viewer with both
+exams in its list; the doctor then splits the screen with the viewer's own layout button (it remembers the
+choice) and drags the other exam into the empty pane. The reading box folds away while comparing and can
+be folded at any time (**Masquer le compte-rendu**); it still belongs to the opened order. Another
+patient's images are refused exactly as before, and opening an exam replaces what the previous image
+window was allowed to load.
+
+The Stone viewer is used exactly as Orthanc ships it: the EMR uses its documented URL parameters only,
+changes none of its files and adds no code to its pages.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being
