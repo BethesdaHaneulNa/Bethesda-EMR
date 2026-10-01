@@ -380,7 +380,7 @@
 | `GET /visit/:visitId/orders` | lab | 한 내원의 검사 오더(취소 제외, 완료 포함). 없으면 `null`. 환자 찾기에서 씀 |
 | `GET /order/:orderItemId/items` | lab | 한 오더의 입력 줄 — 패널 항목 정의 + 이미 넣은 값(3.6절). `{order, has_master, items}` |
 | `POST /order/:orderItemId/results` | lab | 결과 저장 + 오더 완료 (3.4절). 본문 `{results:[{lab_test_item_id,name,value,unit,ref_low,ref_high,ref_text,comment}]}` |
-| `GET /patient/:patientId/results` | consultation 또는 lab | 환자의 모든 결과 + `panel_code`·`panel_name` · `result_by_name`(입력한 사람 — 결과지에 찍힘) |
+| `GET /patient/:patientId/results` | consultation · lab · **payment** | 환자의 모든 결과 + `panel_code`·`panel_name` · `result_by_name`(입력한 사람 — 결과지에 찍힘). payment 는 2026-10-01 추가 — 수납 화면도 검사결과 창을 열어 결과지를 뽑아 줌(실장님). 읽기만: 검사실 목록(`/day`)·결과 저장은 여전히 lab 만 |
 | `GET /test-items?order_code_id=` | lab 또는 settings | 패널의 항목 정의. 없으면 전체. 항목마다 `result_count` — 입력 화면이 그 항목 아래 보여줄 저장 결과 수(id로 연결된 것 + 같은 패널에서 연결이 끊긴 같은 이름의 것) 항목마다 `ranges`(그 항목의 `lab_ref_range` 줄 배열)도 줌. |
 | `POST /test-items/save` | settings | 패널의 항목 목록 저장. `id`가 있는 줄은 **그 자리에서 고치고**, 없는 줄은 새로 넣고, 목록에서 빠진 항목만 지움(6절). 본문 `{order_code_id, items:[{id?, name, unit, ref_low, ref_high, ref_text}]}` → 저장된 목록(`result_count` 포함) 항목마다 `ranges` 배열을 함께 받아 그 항목의 줄을 **지우고 다시 넣음**(항목 id가 유지되고 줄 id를 참조하는 곳이 없어 안전). 쓰기 전에 모든 항목의 줄을 검사해 하나라도 틀리면 **400**(겹침·나이 순서·하한>상한·빈 줄 — 영어 문구). |
 | `GET /units` | lab 또는 settings | 단위 목록(`lab_unit`), 순서대로. 줄마다 `item_count` — 그 단위를 **글자 그대로** 쓰는 검사항목 수 |
@@ -570,3 +570,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-10-01 | `POST /units/save`: 본문에 `units` 목록이 없으면 400(전에는 목록을 통째로 비움) — `unitNamesOf()`, `lab.flag.mjs` 에 10건 | `c9ba24e` |
 | 2026-10-01 | 왼쪽 목록에 검색 칸(수납·약국과 같은 것, `layout.js` `LIST_SEARCH`): 이름·차트번호·검사 이름으로 화면에서 거름, 맞는 것이 없을 때 안내 — `lb_searchPh`·`lb_searchNone` | `e8150a5` |
 | 2026-10-01 | 검사결과 창(진료 화면)에 영상/판독 창의 좋은 점 넷 — 날짜 체크 → 결과지 인쇄(`documents/lab-results.jsx`, 발행 기록), 종류 select, 찾기, 창 틀을 `LabResultsWindow` 로(영상/판독과 같은 틀). 표는 그대로. `GET /patient/:id/results` 에 `result_by_name`, `lb_r…` 16개 | `998afd6` |
+| 2026-10-01 | `GET /patient/:id/results` 에 payment 권한(읽기) — 수납 화면에서 검사결과 창을 열어 결과지를 뽑게(단추는 수납 세션) | (이 커밋) |
