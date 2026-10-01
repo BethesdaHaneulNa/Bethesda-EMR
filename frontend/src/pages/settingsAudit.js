@@ -33,6 +33,8 @@ export var AUDIT_ACTIONS = {
   // price only, before -> after (decision 2026-09-30 (나)); no patient
   'settings.drug.price': 'se_act_drugPrice',
   'settings.order.price': 'se_act_orderPrice',
+  // a phrase category made, renamed or removed (name, status, phrases moved)
+  'settings.phrase.category': 'se_act_phraseCategory',
   // documents (decision 2026-09-30 (다)): issued and voided; the document's content never comes here
   'documents.issue': 'se_act_docIssue',
   'documents.void': 'se_act_docVoid',
@@ -71,6 +73,8 @@ var FIELDS = {
   // a visit's transfer: department_id (above, shown as the department) and the doctor by
   // name - the line keeps the name as it was, none is "—" - and the reason as typed
   doctor: 'se_fld_doctor', reason: 'se_fld_reason',
+  // a removed phrase category: where its phrases went
+  phrases_moved_to: 'se_fld_phrasesMovedTo', phrases_moved: 'se_fld_phrasesMoved',
   pack_label: 'se_fld_packLabel',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',

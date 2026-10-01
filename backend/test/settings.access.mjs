@@ -138,6 +138,7 @@ const ROUTES = [
   ['GET',  '/admin/order-codes',            [ALL]],
   ['GET',  '/admin/departments',            [ALL]],
   ['GET',  '/admin/phrases',                [ALL]],
+  ['GET',  '/admin/phrase-categories',      [ALL]],
   ['GET',  '/admin/clinic',                 [ALL]],
   ['GET',  '/admin/doctors',                [REG, CONS]],
   ['GET',  '/admin/staff',                  [SET]],
@@ -157,6 +158,11 @@ const ROUTES = [
   ['POST', '/admin/phrases',                [SET], {}],
   ['PUT',  '/admin/phrases/' + X,           [SET], {}],
   ['DELETE', '/admin/phrases/' + X,         [SET]],
+  // phrase categories (701): the empty bodies are 400s, the unknown id a 404 - nothing changes
+  ['POST', '/admin/phrase-categories',      [SET], {}],
+  ['PUT',  '/admin/phrase-categories/order', [SET], {}],
+  ['PUT',  '/admin/phrase-categories/' + X, [SET], {}],
+  ['DELETE', '/admin/phrase-categories/' + X, [SET]],
   // settings, and the admin role on top (U2); every account holding settings here is an admin
   ['POST', '/admin/staff/' + X + '/reactivate', [SET], {}],
   // backup / status / version / auth (settings)

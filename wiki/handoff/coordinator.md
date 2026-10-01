@@ -881,3 +881,50 @@ DB의 칸은 지우지 않습니다(쓰지 않을 뿐).
 - 변경 기록 한 줄(`visit.transfer`, 앞·뒤의 과·의사 이름, 사유). 접수 화면의 기존 저장도 과·의사가 바뀌면 같은 줄을 남김.
 - 답: 그 내원(dept_code·doctor_name 포함).
 - **결정됨(2026-09-30, 결정 세션 경유)**: (1) 접수 직원과 의사 둘 다 — 권한으로는 registration 또는 consultation(간호사 계정은 접수 권한이 있으므로 포함) (2) 수납이 끝나기 전까지. 기본값 그대로라 바꿀 것 없음.
+
+## 상용구 약속 (설정 → 진료, 2026-10-01 — 설정 세션이 적음)
+
+실장님 요청(이름 통일 · 문장 하나 · 분류를 자료로 · 진료 화면은 목록에서 고르기) 가운데 **서버·DB·설정 화면·이름**은 설정이 했습니다(마이그레이션 `701_settings_phrase_category.sql` — 총괄이 번호를 다시 매김). **진료 화면의 분류 고르기**가 진료 몫입니다. 진료 화면은 **지금 그대로도 돌아갑니다**(아래 「깨지지 않는 것」) — 고칠 것은 이름과 분류 단추 둘입니다.
+
+### 공용 키 (이름 하나)
+
+| 키 | ko | fr | en |
+|---|---|---|---|
+| `t.se_phraseName` | 상용구 | Phrases types | Phrases |
+
+- 설정 메뉴·화면 제목·「새 상용구 / 상용구 수정」 창이 이 키(와 `se_newTitle_phrase`·`se_editTitle_phrase`)를 씁니다.
+- **진료가 할 일**: `Consultation.jsx` 문장사전 머리의 `{t.phraseDict}` → `{t.se_phraseName}`. 옛 공용 키 `phraseDict`(ko 문장사전 / fr Dictionnaire / en Phrase Dictionary)는 그 뒤로 쓰는 곳이 없습니다 — 지우는 것은 총괄 몫(설정은 `se_` 키만 만짐).
+- 고른 까닭: fr «Phrases types»는 설정 화면과 프랑스어 설명서가 이미 쓰는 말이고 「미리 써 둔 문장」이라는 뜻이 그대로입니다(«Dictionnaire»는 낱말 사전으로 읽힘). en "Phrases"는 짧고, "Dictionary"가 주는 낱말 사전 느낌이 없습니다.
+
+### 분류 목록 API (새로 생김)
+
+`GET /api/admin/phrase-categories` — 로그인만 있으면 됨(권한 없음, 상용구 목록과 같음).
+
+```json
+[ { "id": 1, "name": "General", "sort_order": 1, "phrase_count": 6 },
+  { "id": 2, "name": "Internal", "sort_order": 2, "phrase_count": 6 } ]
+```
+
+- 쓰는 분류만, **보여 줄 순서대로**(`sort_order`, 그다음 `id`). `name`은 **한 이름뿐**(언어별 이름 없음 — 번역하지 말고 그대로 보일 것). `phrase_count`는 그 분류의 쓰는 상용구 수(0일 수 있음 — 빈 분류를 목록에서 뺄지는 진료가 정함).
+- 바꾸는 길(`POST` · `PUT /:id` · `PUT /order` · `DELETE /:id[?move_to=]`)은 설정 권한 — 진료 화면은 쓰지 않습니다.
+
+### 상용구 목록 API (모양이 조금 바뀜)
+
+`GET /api/admin/phrases` — 로그인만 있으면 됨. `?category_id=<id>`(새로) 또는 `?category=<이름>`(전부터)으로 거를 수 있음.
+
+```json
+{ "id": 12, "category_id": 3, "category": "Surgery", "category_sort": 3,
+  "text": "Wound clean, no signs of infection. Dressing changed.",
+  "sort_order": 0, "is_active": true, "created_by": null, "created_at": "…" }
+```
+
+- **문장은 `text` 하나.** `text_fr`·`text_en`은 **답에 없습니다**(DB 칸과 옛 자료는 남아 있고, 읽지도 쓰지도 않음).
+- `category`(이름)는 전처럼 옵니다 — 분류 이름을 바꾸면 같이 바뀝니다. 새로: `category_id`, `category_sort`(분류의 순서).
+- 순서: 분류의 순서 → 상용구의 `sort_order` → `id`. (전에는 분류 **이름**의 가나다순이었음.)
+
+### 깨지지 않는 것 / 바뀌는 것 (지금의 `Consultation.jsx` 기준, 격리에서 확인)
+
+- **깨지지 않음**: `phraseText(p)`는 `text_fr`·`text_en`이 없으니 늘 `p.text`를 씁니다 → 언어별 고르기 없이 한 문장(실장님 요청 그대로, 코드 변경 없이). 목록 25줄이 그대로 뜨고 눌러 넣기도 그대로.
+- **바뀌는 것 — 진료가 고칠 곳**: 분류 단추가 코드에 박힌 다섯(`PHRASE_CATS`)과 그 번역(`PHRASE_CAT_KEY`, `cs_pc*`)이라, 설정에서 분류를 바꾸면 어긋납니다. 격리에서 Peds → «Pédiatrie»로 이름을 바꾸고 Surgery를 지우고 «Urgences»를 만들었더니: 단추가 「Tout · Général · Médecine · **Chirurgie**(비어 있음) · **Pédiatrie**(박힌 Peds의 번역 — 비어 있음) · Gynéco-obst. · **Pédiatrie**(진짜) · Urgences」. → `PHRASE_CATS`·`PHRASE_CAT_KEY`를 없애고 `GET /admin/phrase-categories`의 목록으로, 이름은 번역 없이 `name` 그대로, 거르기는 `p.category_id === 고른 id`(또는 이름). 꼬리표(줄 앞의 분류)도 `p.category` 그대로.
+- 실장님 말씀의 나머지: 분류가 많아지면 단추 줄이 넘치니 **누르면 목록이 열려 거기서 고르게**(전체 + 분류들). 설정 화면의 상용구 탭도 같은 까닭으로 `<select>`를 썼습니다(«Toutes les catégories (25) / General (7) / …»).
+- 「전체」에 해당하는 말은 진료 키 `cs_pcAll`을 그대로 쓰면 됩니다(설정은 `se_phCatAll` «Toutes les catégories / 모든 분류»).

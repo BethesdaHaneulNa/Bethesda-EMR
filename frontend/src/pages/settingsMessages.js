@@ -28,6 +28,14 @@ var EXACT = {
   'The current password is not correct': 'se_errCurrentPw',
   'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.': 'se_errLastAdmin',
   'The administrator account created during setup cannot be deactivated.': 'se_errSetupAdminKept',
+  // phrases and their categories (settings.messages.js MSG, 2026-10-01)
+  'Phrase text is required': 'se_errPhraseText',
+  'Choose a category for the phrase': 'se_errPhraseCategory',
+  'Category name is required': 'se_errCatName',
+  'Category name is too long (60 characters at most)': 'se_errCatNameLong',
+  'A category with that name already exists': 'se_errCatExists',
+  'Choose another category to move the phrases to': 'se_errCatMoveTarget',
+  'ids must list every category once': 'se_errCatOrder',
   // utils/dbError.js
   'A record with that code or ID already exists': 'se_errDuplicate',
   'Referenced record does not exist': 'se_errMissingRef',
@@ -75,9 +83,14 @@ var ORDERSET_ITEM = {
   'quantity must be a positive number': 'se_osErrQuantity',
 };
 
+// settings.messages.js phraseMsg.categoryInUse(n): the number of phrases is part of the message.
+var CATEGORY_IN_USE = /^This category has (\d+) phrase\(s\)\. Move them to another category or delete them first\.$/;
+
 export function seMessage(t, text) {
   var s = String(text || '');
   if (EXACT[s] && t[EXACT[s]]) return t[EXACT[s]];
+  var inUse = s.match(CATEGORY_IN_USE);
+  if (inUse && t.se_errCatInUse) return t.se_errCatInUse.replace('{n}', inUse[1]);
   var it = s.match(/^items\[(\d+)\]\.(.+)$/);
   if (it && ORDERSET_ITEM[it[2]] && t[ORDERSET_ITEM[it[2]]]) return t[ORDERSET_ITEM[it[2]]].replace('{n}', Number(it[1]) + 1);
   // api/client.js: the server or the proxy in front of it did not answer properly.
