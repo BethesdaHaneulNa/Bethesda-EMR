@@ -166,7 +166,9 @@ export function ImagingReportLayout(props) {
               {/* 2. the exam */}
               <div style={band}>{L(T.exam, lang)}</div>
               <div style={{ border: LINE, borderTop: 'none', padding: '5px 6px 7px', minHeight: '40pt' }}>
-                <div style={{ fontSize: '13pt', overflowWrap: 'break-word' }}>{v.exam_name || ''}{v.modality ? <span style={{ fontSize: '10pt', color: '#333' }}>{'   (' + v.modality + ')'}</span> : null}</div>
+                {/* The exam's name alone (director, 2026-10-01): the modality code beside it - «(CR)» -
+                    said nothing to the hospital that receives the report; the form it follows has none. */}
+                <div style={{ fontSize: '13pt', overflowWrap: 'break-word' }}>{v.exam_name || ''}</div>
                 {small ? <div style={{ fontSize: '8.5pt', color: '#444', marginTop: 3, overflowWrap: 'break-word' }}>{small}</div> : null}
               </div>
               {/* 3. the reading - the box is as tall as the text */}
