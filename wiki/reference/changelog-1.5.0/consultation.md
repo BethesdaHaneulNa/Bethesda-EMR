@@ -108,14 +108,15 @@ headed by the department and the doctor the visit was registered with at recepti
 «GEN Dr. Grace», not «GEN» alone; a visit registered without a doctor shows the account
 that opened the consultation. Who wrote each note is shown on the note itself.
 
-### Change the department or doctor of a visit (Transfert)
+### Change the doctor of a visit (Transfert)
 
-A visit registered to the wrong department or doctor no longer has to be cancelled and
-registered again. **⇄ Transfert** on the patient bar opens a small window: doctor (every
-doctor; the department follows the one chosen), department, optional reason. The patient bar, the chart and the queue change at once; notes,
+A visit registered to the wrong doctor no longer has to be cancelled and registered
+again. **⇄ Transfert** on the patient bar opens a small window: the doctor (every doctor,
+with their department) and an optional reason. The department follows the chosen doctor,
+and a line says so when it changes. The patient bar, the chart and the queue change at once; notes,
 prescriptions and orders stay as they are, and each doctor's note stays theirs. It is
 written to the change log. Not possible once the visit is paid (the button is greyed) or
-cancelled. Reception can do the same from its screen.
+cancelled. Reception can do the same from its screen, and changes a department alone.
 
 ### Smaller changes on the screen
 

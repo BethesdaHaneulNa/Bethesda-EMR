@@ -223,7 +223,11 @@ export default function ConsultationPage() {
   // wiki/handoff/coordinator.md, 「전과」): it changes the visit and its consultation's
   // department in one go and writes one change-log line. Notes, prescriptions, orders and
   // who wrote them stay as they are - another doctor's note stays theirs.
-  var trs = useState(null), transfer = trs[0], setTransfer = trs[1];   // {dept, doctor, reason, depts, doctors, busy}
+  // The window asks for the doctor only (director, 2026-10-01: at this clinic a doctor
+  // belongs to one department, so a separate department box only confused - changing it
+  // emptied the doctor box and switched Change off). The department sent is the chosen
+  // doctor's; a doctor with no department keeps the visit's.
+  var trs = useState(null), transfer = trs[0], setTransfer = trs[1];   // {doctor, reason, doctors, busy}
   var toastTimer = useRef(null);
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
@@ -363,15 +367,15 @@ export default function ConsultationPage() {
   function visitBilled(v){ return !!(v && (v.has_active_bill || (v.billing_id && v.bill_status && v.bill_status !== 'cancelled'))); }
   async function openTransfer(){
     if(!sel) return;
-    var st = { dept: sel.department_id ? String(sel.department_id) : '', doctor: sel.doctor_id ? String(sel.doctor_id) : '',
-      reason: '', depts: [], doctors: [], busy: false };
-    setTransfer(st);
+    setTransfer({ doctor: sel.doctor_id ? String(sel.doctor_id) : '', reason: '', doctors: [], busy: false });
     try {
-      // The same two lists the reception screen picks from.
-      var ds = await api.get('/admin/departments'), docs = await api.get('/admin/doctors');
-      setTransfer(function(p){ return p ? Object.assign({}, p, { depts: ds||[], doctors: docs||[] }) : p; });
+      // The doctors the reception screen picks from (each with its department).
+      var docs = await api.get('/admin/doctors');
+      setTransfer(function(p){ return p ? Object.assign({}, p, { doctors: docs||[] }) : p; });
     } catch(err){ alert(t.cs_errorPrefix+err.message); setTransfer(null); }
   }
+  // The department that goes with a doctor: theirs, or the visit's when they have none.
+  function transferDept(doc){ return doc && doc.department_id ? doc.department_id : (sel ? sel.department_id : null) || null; }
   // The server's refusals ({error, code}, visit.routes.js) in the screen's language,
   // picked by code; a code this screen does not know shows the server's sentence.
   var TRANSFER_REFUSALS = { VISIT_NOT_FOUND:'cs_trNotFound', VISIT_CANCELLED:'cs_trCancelled', VISIT_BILLED:'cs_trPaid',
@@ -386,9 +390,10 @@ export default function ConsultationPage() {
     var vid = sel.id;
     setTransfer(function(p){ return Object.assign({}, p, { busy: true }); });
     try {
+      var doc = transfer.doctors.filter(function(d){ return String(d.id)===transfer.doctor; })[0];
       var v = await api.put('/visits/'+vid+'/transfer', {
-        department_id: transfer.dept ? parseInt(transfer.dept, 10) : null,
-        doctor_id: transfer.doctor ? parseInt(transfer.doctor, 10) : null,
+        department_id: transferDept(doc),
+        doctor_id: parseInt(transfer.doctor, 10),
         reason: transfer.reason.trim() || undefined });
       // The patient bar, today's chart header and the queue show the new department and
       // doctor at once. Only these fields are taken: the note being typed, the
@@ -1478,53 +1483,42 @@ export default function ConsultationPage() {
       ) : null}
       {transfer && sel ? (function(){
         var tr = transfer;
-        var deptName = function(d){ return (lang==='fr' ? d.name_fr : lang==='en' ? d.name_en : d.name) || d.name || ''; };
-        // Every active doctor, "GEN – Dr. Grace": the most frequent change is the doctor alone
-        // (Dr. Grace -> Dr. Bill, director 2026-09-30), and with the list narrowed to the
-        // department a doctor of another department could not be picked without changing
-        // the department first. The visit's department's doctors come first, then doctors
-        // with no department, then the others by department - ordered by the visit, not by
-        // what is picked in the window, so the list does not reshuffle while choosing.
+        // Every active doctor, "GEN – Dr. Grace": the visit's department's doctors first, then
+        // doctors with no department, then the others by department - ordered by the visit,
+        // so the list does not move while choosing.
         var visitDept = sel.department_id ? String(sel.department_id) : '';
         var rank = function(d){ return d.department_id && String(d.department_id)===visitDept ? 0 : !d.department_id ? 1 : 2; };
         var docs = tr.doctors.slice().sort(function(a, b){
           return rank(a) - rank(b) || String(a.dept_code||'').localeCompare(String(b.dept_code||'')) || String(a.name||'').localeCompare(String(b.name||''));
         });
-        var changed = tr.dept !== (sel.department_id ? String(sel.department_id) : '') || tr.doctor !== (sel.doctor_id ? String(sel.doctor_id) : '');
-        // Decided 2026-09-30: the consultation screen never empties the doctor. A visit
-        // without one can have its department changed alone; a visit with one needs a
-        // doctor. The department is required (the server's BAD_DEPARTMENT).
-        var noDoctorOk = !sel.doctor_id;
-        changed = changed && !!tr.dept && (!!tr.doctor || noDoctorOk);
+        var doc = tr.doctors.filter(function(d){ return String(d.id)===tr.doctor; })[0];
+        var picked = !!doc && tr.doctor !== (sel.doctor_id ? String(sel.doctor_id) : '');
+        // The department follows the doctor; said in a line when it changes. A doctor with
+        // no department on a visit with none has no department to send (the server needs
+        // one): Change stays off and the line says where to set it.
+        var newDept = transferDept(doc);
+        var deptMoves = picked && doc.department_id && String(doc.department_id) !== visitDept;
+        var noDept = picked && !newDept;
         var fld = {width:'100%',boxSizing:'border-box',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:'var(--text)',fontSize:14,fontFamily:'inherit'};
         var lab = {display:'block',fontSize:12,fontWeight:700,color:'var(--text-3)',margin:'10px 0 3px'};
+        var ok = picked && !noDept;
         return <div onClick={function(){ if(!tr.busy) setTransfer(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div role="dialog" aria-label={t.cs_trTitle} onClick={function(e){e.stopPropagation()}} style={{width:420,maxWidth:'92vw',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,padding:'14px 16px'}}>
             <div style={{fontWeight:800,fontSize:15,color:'var(--text)'}}>⇄ {t.cs_trTitle}</div>
             <div style={{fontSize:13,color:'var(--text-2)',marginTop:4}}>{sel.chart_no} · {sel.last_name} {sel.first_name} — {[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ') || '\u2014'}</div>
-            {/* The doctor first: choosing one moves the department to theirs (a doctor with no
-                department leaves it as it is). Changing the department afterwards keeps the
-                doctor if they belong to it (or to none), else the doctor box asks for one. */}
             <label style={lab}>{t.cs_trDoctor}</label>
-            <select value={tr.doctor} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
-                setTransfer(function(p){ var doc = p.doctors.filter(function(d){ return String(d.id)===dv; })[0];
-                  return Object.assign({}, p, { doctor: dv, dept: doc && doc.department_id ? String(doc.department_id) : p.dept }); }); }} style={fld}>
-              {noDoctorOk || !tr.doctor ? <option value="">{noDoctorOk ? '\u2014' : t.cs_trPickDoctor}</option> : null}
+            <select value={tr.doctor} disabled={tr.busy} onChange={function(e){ var dv = e.target.value; setTransfer(function(p){ return Object.assign({}, p, { doctor: dv }); }); }} style={fld}>
+              {!tr.doctor ? <option value="">{'\u2014'}</option> : null}
               {docs.map(function(d){ return <option key={d.id} value={String(d.id)}>{(d.dept_code ? d.dept_code + ' – ' : '') + d.name}</option>; })}
             </select>
-            <label style={lab}>{t.cs_trDept}</label>
-            <select value={tr.dept} disabled={tr.busy} onChange={function(e){ var dv = e.target.value;
-                setTransfer(function(p){ var keepDoc = p.doctors.filter(function(d){ return String(d.id)===p.doctor && (!d.department_id || String(d.department_id)===dv); }).length > 0;
-                  return Object.assign({}, p, { dept: dv, doctor: keepDoc ? p.doctor : '' }); }); }} style={fld}>
-              {!tr.dept ? <option value="">{'\u2014'}</option> : null}
-              {tr.depts.map(function(d){ return <option key={d.id} value={String(d.id)}>{d.code} – {deptName(d)}</option>; })}
-            </select>
+            {deptMoves ? <div style={{fontSize:13,fontWeight:700,color:'var(--accent-text)',marginTop:6}}>{String(t.cs_trDeptFollows||'').replace('{from}', sel.dept_code || '\u2014').replace('{to}', doc.dept_code || '')}</div> : null}
+            {noDept ? <div style={{fontSize:13,fontWeight:700,color:'var(--warn-text)',marginTop:6}}>{t.cs_trNoDept}</div> : null}
             <label style={lab}>{t.cs_trReason}</label>
             <input value={tr.reason} disabled={tr.busy} maxLength={200} onChange={function(e){ var rv = e.target.value; setTransfer(function(p){ return Object.assign({}, p, { reason: rv }); }); }} style={fld}/>
             <div style={{fontSize:12,color:'var(--text-3)',marginTop:10,lineHeight:1.5}}>{t.cs_trKeep}</div>
             <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}>
               <button onClick={function(){ setTransfer(null); }} disabled={tr.busy} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
-              <button onClick={doTransfer} disabled={!changed || tr.busy} style={{background:changed?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:changed?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:changed&&!tr.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.cs_trConfirm}</button>
+              <button onClick={doTransfer} disabled={!ok || tr.busy} style={{background:ok?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:ok?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:ok&&!tr.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.cs_trConfirm}</button>
             </div>
           </div>
         </div>;

@@ -125,12 +125,12 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 2. Au milieu s'affiche **Dossier passé · lecture seule** : signes vitaux, notes (avec le nom de chaque médecin), prescriptions de ce jour-là.
 3. Cliquez sur **← Retour à l'actuel** pour revenir à la visite du jour.
 
-### Changer de médecin / de service
+### Changer de médecin
 
-Le patient a été enregistré au mauvais service ou chez un autre médecin : inutile d'annuler l'enregistrement.
+Le patient a été enregistré chez un autre médecin (ou dans un autre service) : inutile d'annuler l'enregistrement.
 
 1. Dans la barre bleue du patient, cliquez sur **⇄ Transfert** : c'est le dernier bouton, juste avant « GEN Dr … » (le service et le médecin de la visite), suivi du numéro de dossier et du nom.
-2. Choisissez le **Médecin** : la liste montre tous les médecins (« PED – Dr … »), ceux du service actuel en haut. **Pour changer seulement de médecin, choisissez-le : le service suit tout seul.** Changez le **Service** en dessous seulement si besoin ; si le médecin choisi n'est pas de ce service, la case médecin demande « — Choisissez le médecin — ». Le service et le médecin actuels sont déjà choisis ; **Changer** reste gris tant que rien ne change. Si la visite a déjà un médecin, il faut en choisir un ; si elle n'en a pas, vous pouvez changer seulement le service.
+2. Choisissez le **Médecin** : la liste montre tous les médecins avec leur service (« PED – Dr … »), ceux du service actuel en haut. Il n'y a pas de case « Service » : **le service suit le médecin choisi**, et une ligne le dit quand il change (« Le service change aussi : GEN → PED. »). Le médecin actuel est déjà choisi ; **Changer** reste gris tant qu'un autre médecin n'est pas choisi. Pour changer seulement le service d'une visite, passez par l'accueil.
 3. Écrivez un **Motif** si vous voulez (facultatif), puis **Changer**.
 4. La barre bleue, l'en-tête **Aujourd'hui** du **Dossier Patient** et la file d'attente montrent tout de suite le nouveau service et le nouveau médecin. Le changement est noté dans le journal des modifications.
 
