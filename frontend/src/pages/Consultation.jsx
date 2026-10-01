@@ -1177,9 +1177,12 @@ export default function ConsultationPage() {
               var isSel=sel&&sel.id===v.id;
               var sc2=SC[v.status]||'text-2';
               return <div key={v.id} onClick={function(){pickPatient(v)}} style={{padding:'7px 10px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent'}}>
-                <div style={{display:'flex',justifyContent:'space-between',marginBottom:1}}>
-                  <span style={{fontWeight:600,fontSize: 14,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
-                  <span style={{background:tint(sc2,'18'),color:SC[v.status]?'var(--'+sc2+'-ink)':t2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600}}>{label(VISIT_STATUS_KEY, v.status)}</span>
+                {/* The status tag keeps its width and stays on one line: beside a long name
+                    (two lines) it was squeezed and «대기» broke into 대 / 기 (director, 2026-10-01).
+                    The name takes what is left and wraps between words. */}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:1}}>
+                  <span style={{fontWeight:600,fontSize: 14,color:'var(--text-strong)',minWidth:0,overflowWrap:'anywhere'}}>{v.last_name} {v.first_name}</span>
+                  <span style={{background:tint(sc2,'18'),color:SC[v.status]?'var(--'+sc2+'-ink)':t2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600,whiteSpace:'nowrap',flexShrink:0,marginTop:2}}>{label(VISIT_STATUS_KEY, v.status)}</span>
                 </div>
                 <div style={{fontSize: 12,color:t2}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                 <div style={{fontSize: 12,color:t3,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||''}</div>
