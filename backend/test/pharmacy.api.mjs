@@ -139,6 +139,27 @@ async function scenario(label, lines) {
   check('T4 both dispensers named', rows[0] && /Test Admin/.test(rows[0].dispensed_by_name) && /Test Pharmacist/.test(rows[0].dispensed_by_name), rows[0] && rows[0].dispensed_by_name);
 }
 
+// T5 — work date: both lists take ?date=YYYY-MM-DD, today when it is left out
+{
+  const day = await call('GET', '/pharmacy/day', null, B);
+  check('T5 /day gives the server\'s today and the dispensing limit',
+    day.status === 200 && /^\d{4}-\d{2}-\d{2}$/.test(day.data.today) && day.data.past_days === 7, day.data);
+  const ids = r => JSON.stringify((r.data || []).map(g => g.consultation_id));
+  const s = await scenario('T5', [['ZINC', 1]]);
+  const pDef = await call('GET', '/pharmacy/pending', null, B);
+  const pToday = await call('GET', '/pharmacy/pending?date=' + day.data.today, null, B);
+  check('T5 pending without a date is today\'s', ids(pDef) === ids(pToday) && pDef.data.some(g => g.consultation_id === s.c.id));
+  const pOld = await call('GET', '/pharmacy/pending?date=2000-01-01', null, B);
+  check('T5 pending of another day does not hold today\'s visits', pOld.status === 200 && pOld.data.length === 0, pOld.data.length);
+  await call('PUT', '/pharmacy/consultations/' + s.c.id + '/dispense', {}, B);
+  const cToday = await call('GET', '/pharmacy/completed?date=' + day.data.today, null, B);
+  const cOld = await call('GET', '/pharmacy/completed?date=2000-01-01', null, B);
+  check('T5 completed lists what was dispensed that day', cToday.data.some(g => g.consultation_id === s.c.id) && cOld.data.length === 0);
+  const bad = await Promise.all(['2026-02-31', 'yesterday', '01/10/2026'].flatMap(d =>
+    ['pending', 'completed'].map(l => call('GET', '/pharmacy/' + l + '?date=' + encodeURIComponent(d), null, B))));
+  check('T5 a date that is not a day → 400', bad.every(r => r.status === 400), bad.map(r => r.status));
+}
+
 // Leave a few waiting patients for the screen check
 if (process.argv.includes('--ui')) {
   await scenario('ALG-Screen', [['AMOX500', 21], ['PCM500', 15], ['SALB', 1]]);

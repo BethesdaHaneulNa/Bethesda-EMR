@@ -91,6 +91,14 @@ drug list and in the Stock tab alike, instead of a fixed "below 20".
   from prescriptions of the last 7 days; older ones are shown but refused, with the
   instruction to see the doctor. The *Dispensed* tab lists what was handed out today,
   whatever day it was prescribed, one row per patient.
+- **A work date, as on the reception and payment screens.** The pharmacy lists showed
+  today and nothing else. The same control now sits at the top of the list: today by
+  default, one day back or forward, or any earlier date. *Waiting* is that day's visits
+  with something still to hand out; *Dispensed* is what was handed out that day. A
+  dispense done while an earlier date is on screen is still stamped with the real time,
+  in the stock record and in today's *Dispensed* list, and the screen says so. The 7-day
+  limit stays: an older prescription can be looked at, and the button is greyed with the
+  reason. "Today" is the server's date, not the PC's clock.
 - **The queue keeps its order.** It used to follow the last save of the consultation, so
   a doctor correcting a note moved the patient down; it now follows the moment the
   consultation was first finished. It also refreshes itself every 30 seconds and warns

@@ -48,6 +48,42 @@ export default function PharmacyPage() {
   // search brings their own waiting prescriptions from the last few days with them:
   // { pid, name, days, groups, older } - see GET /pharmacy/patient/:id/pending.
   var pps = useState(null), past = pps[0], setPast = pps[1];
+  // Work date (2026-10-01, the director: the same on every desk - as on the reception and
+  // payment screens). The two lists show one day, today by default: waiting = that day's
+  // visits with something still to hand out, dispensed = what was handed out that day.
+  // "Today" comes from the server (GET /pharmacy/day), never the PC's clock. While the
+  // screen follows today a reload after midnight moves on; a date staff picked stays put.
+  // Nothing else changes: a dispense done while a past date is shown is stamped now (stock
+  // record, dispensed_at), and the server's limit on old prescriptions still applies.
+  var wds = useState(''), workDate = wds[0], setWorkDate = wds[1];
+  var tds = useState(''), serverToday = tds[0], setServerToday = tds[1];
+  var pds = useState(0), pastDays = pds[0], setPastDays = pds[1];
+  var workRef = useRef({ date: '', follow: true });
+  var viewingPast = !!(workDate && serverToday && workDate < serverToday);
+  function chooseWorkDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))) return;
+    if(serverToday && date > serverToday) date = serverToday;   // no visit is ahead of today
+    workRef.current = { date: date, follow: date === serverToday };
+    setWorkDate(date);
+    setSel(null);   // a patient of the other day is not left open
+    loadData();
+  }
+  function shiftWorkDate(days){
+    var d = new Date((workDate || serverToday) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    chooseWorkDate(d.toLocaleDateString('en-CA'));
+  }
+  // Today from the server, then the two lists of the work date.
+  async function fetchLists(){
+    var day = await api.get('/pharmacy/day');
+    var today = (day && day.today) || '';
+    if(workRef.current.follow || !workRef.current.date) workRef.current = { date: today, follow: true };
+    var wd = workRef.current.date;
+    var qs = wd ? '?date=' + wd : '';
+    var p = await api.get('/pharmacy/pending' + qs);
+    var c = await api.get('/pharmacy/completed' + qs);
+    return { today: today, pastDays: (day && day.past_days) || 0, wd: wd, p: p, c: c };
+  }
   // Read by the auto-refresh timer, which is set up once and would otherwise
   // only ever see the state of the first render.
   var live = useRef({});
@@ -121,11 +157,13 @@ export default function PharmacyPage() {
     var s = live.current;
     if(document.hidden || s.busy || s.loading || switching.current || s.docOpen || s.chartViewOpen || s.phFinderOpen) return;
     try {
-      var p = await api.get('/pharmacy/pending');
-      var c = await api.get('/pharmacy/completed');
+      var L = await fetchLists();
+      var p = L.p, c = L.c;
       var pastNow = s.past ? await fetchPast(s.past.pid) : null;
       var now = live.current; // may have changed while we waited
       if(now.busy || now.loading || switching.current) return;
+      if(workRef.current.date !== L.wd) return;   // the date was changed meanwhile: that load owns the lists
+      setServerToday(L.today); setPastDays(L.pastDays); setWorkDate(L.wd);
       setPending(p); setCompleted(c);
       if(pastNow && now.past && now.past.pid === s.past.pid) setPast(Object.assign({}, now.past, pastNow));
       if(now.sel){
@@ -169,23 +207,32 @@ export default function PharmacyPage() {
   async function loadData(){
     setLoading(true);
     try {
-      var p = await api.get('/pharmacy/pending');
-      var c = await api.get('/pharmacy/completed');
+      var L = await fetchLists();
+      var p = L.p, c = L.c;
       var cur = live.current;
       var pastNow = cur.past ? await fetchPast(cur.past.pid) : null;
-      setPending(p); setCompleted(c);
-      if(pastNow) setPast(Object.assign({}, cur.past, pastNow));
-      if(cur.sel){
-        var pool = cur.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
-        var next = pool.find(function(x){ return x.consultation_id === cur.sel.consultation_id; });
-        setSel(next || null);
+      // the date may have been changed while this was read: the later load owns the lists
+      if(workRef.current.date === L.wd){
+        setServerToday(L.today); setPastDays(L.pastDays); setWorkDate(L.wd);
+        setPending(p); setCompleted(c);
+        if(pastNow) setPast(Object.assign({}, cur.past, pastNow));
+        if(cur.sel){
+          var pool = cur.tab === 'pending' ? p.concat(pastNow ? pastNow.groups : []) : c;
+          var next = pool.find(function(x){ return x.consultation_id === cur.sel.consultation_id; });
+          setSel(next || null);
+        }
       }
     } catch(err){ alert('Error: ' + err.message); }
     setLoading(false);
   }
 
+  // Older than the server allows to be dispensed (PAST_RX_DAYS): with the work date such
+  // a prescription can be looked at, so the screen says it cannot be handed out instead
+  // of letting the button fail.
+  var tooOld = !!(sel && tab === 'pending' && pastDays > 0 && Number(sel.days_ago) > pastDays);
+
   async function dispense(){
-    if(!sel || busy) return;
+    if(!sel || busy || tooOld) return;
     // A line with no stored total takes nothing off the shelf (the server reads the
     // total, it does not work one out), so say so before the pharmacist confirms.
     var unquantified = (sel.prescriptions||[]).filter(function(rx){ return !isExternal(rx) && !hasTotal(rx); });
@@ -208,7 +255,7 @@ export default function PharmacyPage() {
       setSel(null);
     } catch(err){
       if(err.message === ERR_TOO_OLD){
-        alert(fill(t.ph_tooOld, { n: past ? past.days : '' }));
+        alert(fill(t.ph_tooOld, { n: pastDays || (past ? past.days : '') }));
         await loadData();
         setSel(null);
       } else if(err.message === ERR_NOTHING_PENDING){
@@ -295,7 +342,7 @@ export default function PharmacyPage() {
         <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
         </> : null}
         <div style={{ flex:1 }}></div>
-        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:5, padding:'6px 18px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:800 }}>✓ {t.dispenseComplete}</button> : null}
+        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy || tooOld} style={{ background:tooOld?'var(--chip)':'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:tooOld?'var(--text-4)':'var(--on-fill)', border:tooOld?'1px solid '+bd2:'none', borderRadius:5, padding:'6px 18px', cursor:tooOld?'not-allowed':busy?'wait':'pointer', fontSize: 16, fontWeight:800, whiteSpace:'nowrap' }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
       {/* The patient chart on the right keeps about 320px on a 1366 laptop, where the
@@ -304,7 +351,20 @@ export default function PharmacyPage() {
       {tab === 'stock' ? <PharmacyStock /> :
       <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) clamp(320px, 24vw, 420px)', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
-          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16 }}>💊 {t.pharmacy}</div>
+          {/* Work date: the same control, in the same place, as on the payment screen. */}
+          <div style={{ flexShrink:0, padding:'7px 9px', borderBottom:'1px solid '+bd, background:viewingPast?'var(--warn-a14)':'var(--panel-2)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <span style={{ fontSize:12, fontWeight:700, color:viewingPast?'var(--warn-text)':t2, whiteSpace:'nowrap' }}>{t.rc_workDate}</span>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function(){shiftWorkDate(-1)}} disabled={!workDate} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 5px', cursor:'pointer', fontSize:13 }}>◀</button>
+              <input type="date" value={workDate} max={serverToday||undefined} onChange={function(e){chooseWorkDate(e.target.value)}} style={{ flex:1, minWidth:0, background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'4px 4px', color:tx, fontSize:13, colorScheme:'var(--scheme)' }} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function(){shiftWorkDate(1)}} disabled={!workDate||!serverToday||workDate>=serverToday} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 5px', cursor:'pointer', fontSize:13, opacity:(!workDate||workDate>=serverToday)?0.4:1 }}>▶</button>
+            </div>
+            {viewingPast ? <div style={{ display:'flex', alignItems:'flex-start', gap:6, marginTop:6 }}>
+              <div style={{ flex:1, fontSize:12, color:'var(--warn-text)', lineHeight:1.4 }}>{fill(t.ph_workDatePast, { date: workDate, today: serverToday })}</div>
+              <button type="button" onClick={function(){chooseWorkDate(serverToday)}} style={{ background:'var(--accent-a20)', color:'var(--accent-text)', border:'1px solid var(--accent-a40)', borderRadius:5, padding:'4px 8px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>{t.rc_backToToday}</button>
+            </div> : null}
+          </div>
+          <div style={{ flexShrink:0, padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16, color:viewingPast?'var(--warn-text)':tx }}>💊 {t.pharmacy}</div>
           <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
             <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
           </div>
@@ -340,6 +400,7 @@ export default function PharmacyPage() {
                   {sel.allergies ? <div style={{ marginTop:6, color:'var(--danger-text-2)', background:'var(--danger-a20)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
                   {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
                   {selGone ? <div style={{ marginTop:6, color:'var(--warn-text-3)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
+                  {tooOld ? <div style={{ marginTop:6, color:'var(--danger-text-2)', background:'var(--danger-a20)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {fill(t.ph_tooOld, { n: pastDays })}</div> : null}
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0, whiteSpace:'nowrap' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
@@ -396,7 +457,7 @@ export default function PharmacyPage() {
             </div>
 
             {tab==='pending' ? <div style={{ flexShrink:0, padding:'10px 16px', borderTop:'1px solid '+bd, background:'var(--panel-2)', display:'flex', justifyContent:'flex-end' }}>
-              <button onClick={dispense} disabled={busy} style={{ background:'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:'var(--on-fill)', border:'none', borderRadius:6, padding:'9px 28px', cursor:busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
+              <button onClick={dispense} disabled={busy || tooOld} style={{ background:tooOld?'var(--chip)':'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:tooOld?'var(--text-4)':'var(--on-fill)', border:tooOld?'1px solid '+bd2:'none', borderRadius:6, padding:'9px 28px', cursor:tooOld?'not-allowed':busy?'wait':'pointer', fontSize: 16, fontWeight:900 }}>✓ {t.dispenseComplete}</button>
             </div> : null}
           </>}
         </div>

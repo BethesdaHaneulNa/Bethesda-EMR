@@ -152,11 +152,39 @@ function pendingQuery(where) {
        GROUP BY c.id, v.id, p.id, s.name`;
 }
 
-// GET /api/pharmacy/pending - completed consultations with undispensed prescriptions
+// The work date (2026-10-01, as on the reception and payment screens): the lists show
+// one day, today unless the screen asks for another with ?date=YYYY-MM-DD. "Today" is
+// the database's CURRENT_DATE, never the PC's clock - GET /day hands it to the screen.
+// Returns the date string, null for "today", or false when it is not a date.
+function workDate(req) {
+  const d = req.query.date;
+  if (d === undefined || d === '') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return false;
+  // a real day: 2026-02-31 must not reach the database as a date
+  const t = new Date(d + 'T00:00:00Z');
+  if (isNaN(t.getTime()) || t.toISOString().slice(0, 10) !== d) return false;
+  return String(d);
+}
+const BAD_DATE = 'date must be YYYY-MM-DD';
+
+// GET /api/pharmacy/day - the clinic's today, and how many days back a prescription can
+// still be dispensed (the screen says so on older dates instead of letting the button fail).
+router.get('/day', canDispense, async (req, res) => {
+  try {
+    const r = await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today");
+    res.json({ today: r.rows[0].today, past_days: PAST_RX_DAYS });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/pharmacy/pending?date= - completed consultations of the work date's visits
+// that still have undispensed prescriptions
 router.get('/pending', canDispense, async (req, res) => {
+  const day = workDate(req);
+  if (day === false) return res.status(400).json({ error: BAD_DATE });
   try {
     const result = await pool.query(
-      pendingQuery('v.visit_date = CURRENT_DATE') + ' ORDER BY c.completed_at ASC NULLS LAST, c.id ASC'
+      pendingQuery('v.visit_date = COALESCE($1::date, CURRENT_DATE)') + ' ORDER BY c.completed_at ASC NULLS LAST, c.id ASC',
+      [day]
     );
     res.json(result.rows);
   } catch (err) {
@@ -191,8 +219,13 @@ router.get('/patient/:patientId/pending', canDispense, async (req, res) => {
   }
 });
 
-// GET /api/pharmacy/completed - prescription groups dispensed today
+// GET /api/pharmacy/completed?date= - prescription groups dispensed on the work date
+// (today by default). By the day they were handed out, as the payment screen lists what
+// was paid that day: a dispense done while an earlier date is on screen is stamped now,
+// so it is found under today.
 router.get('/completed', canDispense, async (req, res) => {
+  const day = workDate(req);
+  if (day === false) return res.status(400).json({ error: BAD_DATE });
   try {
     const result = await pool.query(
       `SELECT
@@ -240,12 +273,14 @@ router.get('/completed', canDispense, async (req, res) => {
        LEFT JOIN staff s ON s.id = c.doctor_id
        JOIN prescription rx ON rx.consultation_id = c.id AND rx.status = 'dispensed'
        LEFT JOIN staff ds ON ds.id = rx.dispensed_by
-       -- Dispensed today, whatever day the visit was: a prescription from three
+       -- Dispensed that day, whatever day the visit was: a prescription from three
        -- days ago handed out this morning belongs on today's list.
-       WHERE rx.dispensed_at >= CURRENT_DATE
+       WHERE rx.dispensed_at >= COALESCE($1::date, CURRENT_DATE)
+         AND rx.dispensed_at <  COALESCE($1::date, CURRENT_DATE) + 1
        GROUP BY c.id, v.id, p.id, s.name
        ORDER BY MAX(rx.dispensed_at) DESC NULLS LAST
-       LIMIT 50`
+       LIMIT 300`,
+      [day]
     );
     res.json(result.rows);
   } catch (err) {
