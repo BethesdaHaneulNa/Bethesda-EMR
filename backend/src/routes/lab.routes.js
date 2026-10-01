@@ -26,65 +26,97 @@ async function patientForOrder(db, orderItemId) {
   return r.rows[0] || {};
 }
 
-// ── PENDING lab orders (lab) — today's visits with un-resulted lab orders ──
-// An order shows up as soon as the doctor places it, not when the consultation
-// is completed: the patient usually goes to the lab mid-consultation and comes
-// back with the result (director's decision 2026-09-29, decisions.md). The
-// screen marks a consultation still open as "in consultation". Only today's
-// visits, also by decision -- an earlier day's test is found through patient
-// search. A visit cancelled at reception is left out: cancelling is limited to
-// queued visits, but a visit can be set back to waiting and then cancelled,
-// and older data predates that limit.
-router.get('/pending', permMiddleware('lab'), async (req, res) => {
+// ── the lab's lists for one work date (lab) ──
+// The screen has a work date like reception and payment (director, 2026-10-01): both
+// lists hold the lab orders of the visits of that day, today by default.
+//   pending   -- orders with no result yet. An order shows up as soon as the doctor
+//                places it, not when the consultation is completed: the patient usually
+//                goes to the lab mid-consultation and comes back with the result
+//                (decision 2026-09-29). The screen marks a consultation still open.
+//   completed -- orders with a result, whenever it was entered. (Until the work date
+//                this list was "results entered today", whatever the visit's day: a
+//                test of yesterday finished today is now found under yesterday.)
+// A visit cancelled at reception is left out of both: cancelling is limited to queued
+// visits, but a visit can be set back to waiting and then cancelled, and older data
+// predates that limit. A test of any day is also reached through patient search.
+// "Today" is the database's CURRENT_DATE -- the day visit_date defaults to -- never the
+// PC's clock; GET /day says which day it answered for and what today is.
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+async function dbToday(db) {
+  return (await db.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
+}
+// the day asked for, or today; false when it is not a date
+async function askedDay(db, asked) {
+  if (asked === undefined || asked === '') return dbToday(db);
+  const s = String(asked);
+  if (!DAY_RE.test(s)) return false;
+  // a real day of the calendar (2026-13-45 has the right form and is not one)
+  const d = new Date(s + 'T00:00:00Z');
+  return !isNaN(d) && d.toISOString().slice(0, 10) === s ? s : false;
+}
+async function listPending(db, day) {
+  const r = await db.query(
+    `SELECT c.id AS consultation_id, c.updated_at AS consultation_time, c.status AS consultation_status,
+            v.id AS visit_id, v.visit_date,
+            p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth, p.allergies,
+            s.name AS doctor_name,
+            JSON_AGG(JSON_BUILD_OBJECT(
+              'order_item_id', o.id, 'order_code', o.order_code, 'order_name', o.order_name,
+              'order_code_id', o.order_code_id, 'status', o.status
+            ) ORDER BY o.id) AS lab_orders
+       FROM consultation c
+       JOIN visit v ON v.id = c.visit_id
+       JOIN patient p ON p.id = c.patient_id
+       LEFT JOIN staff s ON s.id = c.doctor_id
+       JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab'
+            AND o.status NOT IN ('completed','cancelled')
+      WHERE v.visit_date = $1::date AND v.status <> 'cancelled'
+      GROUP BY c.id, v.id, p.id, s.name
+      ORDER BY MIN(o.created_at) ASC, c.id ASC`, [day]);
+  return r.rows;
+}
+async function listCompleted(db, day) {
+  const r = await db.query(
+    `SELECT c.id AS consultation_id, c.status AS consultation_status, v.id AS visit_id, v.visit_date,
+            p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth, p.allergies,
+            s.name AS doctor_name,
+            JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code,
+              'order_name', o.order_name, 'order_code_id', o.order_code_id, 'status', o.status,
+              'result_at', o.result_at) ORDER BY o.id) AS lab_orders
+       FROM consultation c
+       JOIN visit v ON v.id = c.visit_id
+       JOIN patient p ON p.id = c.patient_id
+       LEFT JOIN staff s ON s.id = c.doctor_id
+       JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab' AND o.status = 'completed'
+      WHERE v.visit_date = $1::date AND v.status <> 'cancelled'
+      GROUP BY c.id, v.id, p.id, s.name
+      ORDER BY MAX(o.result_at) DESC NULLS LAST, c.id DESC`, [day]);
+  return r.rows;
+}
+
+// GET /api/lab/day?date=YYYY-MM-DD -> { date, today, pending, completed } (what the screen reads)
+router.get('/day', permMiddleware('lab'), async (req, res) => {
   try {
-    const r = await pool.query(
-      `SELECT c.id AS consultation_id, c.updated_at AS consultation_time, c.status AS consultation_status,
-              v.id AS visit_id, v.visit_date,
-              p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth, p.allergies,
-              s.name AS doctor_name,
-              JSON_AGG(JSON_BUILD_OBJECT(
-                'order_item_id', o.id, 'order_code', o.order_code, 'order_name', o.order_name,
-                'order_code_id', o.order_code_id, 'status', o.status
-              ) ORDER BY o.id) AS lab_orders
-         FROM consultation c
-         JOIN visit v ON v.id = c.visit_id
-         JOIN patient p ON p.id = c.patient_id
-         LEFT JOIN staff s ON s.id = c.doctor_id
-         JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab'
-              AND o.status NOT IN ('completed','cancelled')
-        WHERE v.visit_date = CURRENT_DATE AND v.status <> 'cancelled'
-        GROUP BY c.id, v.id, p.id, s.name
-        ORDER BY MIN(o.created_at) ASC, c.id ASC`
-    );
-    res.json(r.rows);
+    const day = await askedDay(pool, req.query.date);
+    if (!day) return res.status(400).json({ error: 'date must be a date in YYYY-MM-DD form' });
+    const got = await Promise.all([dbToday(pool), listPending(pool, day), listCompleted(pool, day)]);
+    res.json({ date: day, today: got[0], pending: got[1], completed: got[2] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── lab orders resulted today (lab) ──
-// "Today" here is the day the result was entered, not the visit day: a sample
-// from yesterday that is finished today through patient search belongs to
-// today's finished work, and the pending list (today's visits only) never
-// shows it. For today's visits the two are the same.
+// The two lists on their own (same rows, same optional ?date=).
+router.get('/pending', permMiddleware('lab'), async (req, res) => {
+  try {
+    const day = await askedDay(pool, req.query.date);
+    if (!day) return res.status(400).json({ error: 'date must be a date in YYYY-MM-DD form' });
+    res.json(await listPending(pool, day));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 router.get('/completed', permMiddleware('lab'), async (req, res) => {
   try {
-    const r = await pool.query(
-      `SELECT c.id AS consultation_id, c.status AS consultation_status, v.id AS visit_id, v.visit_date,
-              p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender, p.date_of_birth,
-              s.name AS doctor_name,
-              JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code,
-                'order_name', o.order_name, 'order_code_id', o.order_code_id, 'status', o.status,
-                'result_at', o.result_at) ORDER BY o.id) AS lab_orders
-         FROM consultation c
-         JOIN visit v ON v.id = c.visit_id
-         JOIN patient p ON p.id = c.patient_id
-         LEFT JOIN staff s ON s.id = c.doctor_id
-         JOIN order_item o ON o.consultation_id = c.id AND o.code_type = 'lab' AND o.status = 'completed'
-              AND o.result_at >= CURRENT_DATE AND o.result_at < CURRENT_DATE + 1
-        WHERE v.status <> 'cancelled'
-        GROUP BY c.id, v.id, p.id, s.name
-        ORDER BY MAX(o.result_at) DESC NULLS LAST`
-    );
-    res.json(r.rows);
+    const day = await askedDay(pool, req.query.date);
+    if (!day) return res.status(400).json({ error: 'date must be a date in YYYY-MM-DD form' });
+    res.json(await listCompleted(pool, day));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
