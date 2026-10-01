@@ -263,7 +263,7 @@ export default function PharmacyPage() {
     var active = sel && sel.consultation_id === v.consultation_id;
     var badge = pastBadge(v);
     return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
         {/* A long name (50 characters and more are common here) wraps between words and is
             never cut; the status tag beside it keeps its one line instead of folding. */}
         <div style={{ fontWeight:800, color:tx, fontSize: 16, minWidth:0, overflowWrap:'anywhere' }}>{patientName(v)}</div>
