@@ -270,6 +270,16 @@ export default function ConsultationPage() {
   // emptied the doctor box and switched Change off). The department sent is the chosen
   // doctor's; a doctor with no department keeps the visit's.
   var trs = useState(null), transfer = trs[0], setTransfer = trs[1];   // {doctor, reason, doctors, busy}
+  // Which doctors' patients the waiting list shows (director, 2026-10-01: "does each
+  // doctor see everyone? let them set it - a settings button on the waiting list, the
+  // doctors' list, and they tick"). Kept per account on the server
+  // (/consultations/queue-filter), so it follows the person to another PC.
+  // queuePref null = the rule the screen always had: a doctor account sees its own
+  // patients and the patients with no doctor; any other account sees all.
+  // Otherwise { all, ids: {doctorId: true}, unassigned }.
+  var qps = useState(null), queuePref = qps[0], setQueuePref = qps[1];
+  var qds = useState(null), qDoctors = qds[0], setQDoctors = qds[1];   // active doctors; null until read
+  var qws = useState(null), qfWin = qws[0], setQfWin = qws[1];         // the settings window: {all, ids, unassigned, busy}
   var toastTimer = useRef(null);
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
@@ -373,6 +383,8 @@ export default function ConsultationPage() {
       setPhrases(phData);
       try { setPhraseCatRows(await api.get('/admin/phrase-categories') || []); } catch(e){ setPhraseCatRows([]); }
       try { var osData = await api.get('/order-sets'); setOrderSets(osData||[]); } catch(e){ setOrderSets([]); }
+      try { setQDoctors(await api.get('/admin/doctors') || []); } catch(e){ setQDoctors([]); }
+      try { setQueuePref(prefFromServer(await api.get('/consultations/queue-filter'))); } catch(e){ setQueuePref(null); }
     } catch(err){ console.error(err); }
     setLoading(false);
   }
@@ -1253,20 +1265,89 @@ export default function ConsultationPage() {
   function insertPhrase(text){ setNote(function(prev){ return prev?(prev+'\n'+text):text; }); }
   function uvt(k,v){ setVt(function(o){var n={};for(var x in o)n[x]=o[x];n[k]=v;return n;}); }
 
+  // ── The waiting list's doctors ──
+  function prefFromServer(r){
+    if(!r || !r.custom) return null;
+    var ids = {}; (r.doctor_ids||[]).forEach(function(id){ ids[id] = true; });
+    return { all: !!r.all_doctors, ids: ids, unassigned: !!r.unassigned };
+  }
+  var isDoctorAccount = !!(user && user.role==='doctor' && user.id);
+  // The choice in force. A saved choice that can show nobody any more - its doctors'
+  // accounts were closed and it does not include the patients without a doctor - falls
+  // back to the default instead of leaving an empty list with nothing to explain it.
+  var queueRule = useMemo(function(){
+    var p = queuePref;
+    if(p && !p.all && !p.unassigned && qDoctors && !qDoctors.some(function(d){ return p.ids[d.id]; })) p = null;
+    return p;
+  },[queuePref, qDoctors]);
+  function queueShows(v){
+    if(queueRule) return v.doctor_id ? (queueRule.all || !!queueRule.ids[v.doctor_id]) : queueRule.unassigned;
+    if(isDoctorAccount) return !v.doctor_id || v.doctor_id===user.id;
+    return true;
+  }
+  // What the window starts from when nothing is saved: the default rule, as ticks.
+  function defaultTicks(){
+    var ids = {};
+    if(isDoctorAccount) ids[user.id] = true;
+    return { all: !isDoctorAccount, ids: ids, unassigned: true };
+  }
+  // One line under the search box saying whose patients are listed.
+  function queueSummary(){
+    var p = queueRule || defaultTicks();
+    if(p.all) return p.unassigned ? t.cs_qfEveryone : t.cs_qfAllDoctors;
+    var names = (qDoctors||[]).filter(function(d){ return p.ids[d.id]; }).map(function(d){ return d.name + (user && d.id===user.id ? ' ' + t.cs_noteYou : ''); });
+    if(p.unassigned) names.push(t.cs_qfNoDoctor);
+    return names.join(', ');
+  }
+  function openQueueFilter(){
+    var p = queueRule || defaultTicks();
+    setQfWin({ all: p.all, ids: Object.assign({}, p.ids), unassigned: p.unassigned, busy: false });
+    // The doctors as they are now (one may have been added since the screen was opened).
+    api.get('/admin/doctors').then(function(d){ setQDoctors(d||[]); }).catch(function(){});
+  }
+  function qfTicked(w, d){ return w.all || !!w.ids[d.id]; }
+  function qfToggle(d){
+    setQfWin(function(w){
+      var ids = {};
+      (qDoctors||[]).forEach(function(x){ if(qfTicked(w, x)) ids[x.id] = true; });
+      if(ids[d.id]) delete ids[d.id]; else ids[d.id] = true;
+      // Every doctor ticked is kept as "all": a doctor added later is then shown too.
+      var all = (qDoctors||[]).length > 0 && (qDoctors||[]).every(function(x){ return ids[x.id]; });
+      return Object.assign({}, w, { all: all, ids: ids });
+    });
+  }
+  function qfToggleAll(){
+    setQfWin(function(w){ return Object.assign({}, w, { all: !w.all, ids: {} }); });
+  }
+  async function saveQueueFilter(reset){
+    var w = qfWin; if(!w) return;
+    setQfWin(Object.assign({}, w, { busy: true }));
+    try {
+      var r = reset ? await api.del('/consultations/queue-filter')
+        : await api.put('/consultations/queue-filter', { all_doctors: w.all, unassigned: w.unassigned,
+            doctor_ids: w.all ? [] : (qDoctors||[]).filter(function(d){ return w.ids[d.id]; }).map(function(d){ return d.id; }) });
+      setQueuePref(prefFromServer(r));
+      setQfWin(null);
+      showToast(t.cs_qfSaved);
+    } catch(err){
+      alert(t.cs_errorPrefix+err.message);
+      setQfWin(function(p){ return p ? Object.assign({}, p, { busy: false }) : p; });
+    }
+  }
+
   var filteredQueue = useMemo(function(){
     var r=visits;
     if(qTab==='waiting') r=r.filter(function(v){return v.status==='waiting'||v.status==='registered'||v.status==='in_progress';});
     else if(qTab==='completed') r=r.filter(function(v){return v.status==='completed';});
-    if(user&&user.role==='doctor'&&user.id) r=r.filter(function(v){return !v.doctor_id||v.doctor_id===user.id;});
+    r=r.filter(queueShows);
     if(qFilter){var s=qFilter.toLowerCase();r=r.filter(function(v){return (v.first_name+' '+v.last_name).toLowerCase().indexOf(s)>=0||v.chart_no.indexOf(s)>=0;});}
     return r;
-  },[visits,qTab,qFilter,user]);
+  },[visits,qTab,qFilter,user,queueRule]);
 
   var waitingCount = useMemo(function(){
     var r=visits.filter(function(v){return v.status==='waiting'||v.status==='registered'||v.status==='in_progress';});
-    if(user&&user.role==='doctor'&&user.id) r=r.filter(function(v){return !v.doctor_id||v.doctor_id===user.id;});
-    return r.length;
-  },[visits,user]);
+    return r.filter(queueShows).length;
+  },[visits,user,queueRule]);
 
   // The categories of the drop-down: Settings' list in its order, including a category
   // with no phrase yet. If that list could not be read, the categories the phrases carry.
@@ -1349,9 +1430,14 @@ export default function ConsultationPage() {
               var c=k==='waiting'?'accent':'ok';
               return <button key={k} onClick={function(){setQTab(k)}} style={{flex:1,background:qTab===k?tint(c,'18'):'transparent',color:qTab===k?'var(--'+c+'-ink)':t3,border:qTab===k?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:4,padding:'3px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>{t[k]||k}</button>;
             })}
+            {/* Whose patients this list shows: the doctors ticked in the window this opens. */}
+            <button onClick={openQueueFilter} title={t.cs_qfTitle} aria-label={t.cs_qfTitle} style={{flexShrink:0,background:queueRule?'var(--accent-a20)':'var(--chip)',color:queueRule?'var(--accent-text)':t2,border:'1px solid '+(queueRule?'var(--accent-a40)':bd2),borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize: 13,fontWeight:700}}>⚙</button>
           </div>
           <div style={{padding:'5px 8px',borderBottom:'1px solid '+bd}}>
             <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+            {/* One line, cut with "…" (the full list is the tooltip): a long doctor name must
+                not push the list down. */}
+            <div data-cs="queue-shown" title={queueSummary()} style={{fontSize: 12,color:t2,marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{String(t.cs_qfShown||'').replace('{list}', queueSummary())}</div>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {filteredQueue.map(function(v){
@@ -1826,6 +1912,42 @@ export default function ConsultationPage() {
             <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}>
               <button onClick={function(){ setTransfer(null); }} disabled={tr.busy} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
               <button onClick={doTransfer} disabled={!ok || tr.busy} style={{background:ok?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:ok?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:ok&&!tr.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.cs_trConfirm}</button>
+            </div>
+          </div>
+        </div>;
+      })() : null}
+      {qfWin ? (function(){
+        var w = qfWin, docs = qDoctors || [];
+        var nothing = !w.unassigned && !w.all && !docs.some(function(d){ return w.ids[d.id]; });
+        var row = {display:'flex',alignItems:'flex-start',gap:8,padding:'6px 8px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',fontSize:14,color:'var(--text)'};
+        var box = {marginTop:3,flexShrink:0};
+        return <div onClick={function(){ if(!w.busy) setQfWin(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div role="dialog" aria-label={t.cs_qfTitle} onClick={function(e){e.stopPropagation()}} style={{width:420,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,padding:'14px 16px',boxSizing:'border-box'}}>
+            <div style={{fontWeight:800,fontSize:15,color:'var(--text)'}}>⚙ {t.cs_qfTitle}</div>
+            <div style={{fontSize:13,color:'var(--text-2)',marginTop:4,lineHeight:1.5}}>{t.cs_qfHint}</div>
+            {/* The list scrolls inside the window; a long name wraps, its department tag stays whole. */}
+            <div style={{marginTop:10,border:'1px solid var(--border)',borderRadius:6,overflow:'auto',minHeight:0,flex:'1 1 auto',background:'var(--panel)'}}>
+              <label style={Object.assign({}, row, {fontWeight:700,background:'var(--panel-head)'})}>
+                <input type="checkbox" checked={w.all} disabled={w.busy || docs.length===0} onChange={qfToggleAll} style={box}/>
+                <span>{t.cs_qfAllDoctors}</span>
+              </label>
+              {docs.map(function(d){
+                return <label key={d.id} style={row}>
+                  <input type="checkbox" checked={qfTicked(w, d)} disabled={w.busy} onChange={function(){ qfToggle(d); }} style={box}/>
+                  <span style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}>{d.name}{user && d.id===user.id ? <span style={{color:'var(--accent-text)',fontWeight:700}}> {t.cs_noteYou}</span> : null}</span>
+                  {d.dept_code ? <span style={{flexShrink:0,whiteSpace:'nowrap',fontSize:12,color:'var(--text-2)',background:'var(--chip)',borderRadius:3,padding:'1px 6px',marginTop:1}}>{d.dept_code}</span> : null}
+                </label>;
+              })}
+              <label style={Object.assign({}, row, {borderBottom:'none',fontWeight:700})}>
+                <input type="checkbox" checked={w.unassigned} disabled={w.busy} onChange={function(){ setQfWin(function(p){ return Object.assign({}, p, { unassigned: !p.unassigned }); }); }} style={box}/>
+                <span>{t.cs_qfUnassigned}</span>
+              </label>
+            </div>
+            {nothing ? <div style={{fontSize:13,fontWeight:700,color:'var(--warn-text)',marginTop:8}}>{t.cs_qfNone}</div> : null}
+            <div style={{display:'flex',gap:8,marginTop:14,alignItems:'center'}}>
+              <button onClick={function(){ saveQueueFilter(true); }} disabled={w.busy} title={t.cs_qfDefaultHint} style={{background:'var(--chip)',color:'var(--text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>{t.cs_qfDefault}</button>
+              <button onClick={function(){ setQfWin(null); }} disabled={w.busy} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
+              <button onClick={function(){ saveQueueFilter(false); }} disabled={nothing || w.busy} style={{background:!nothing?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:!nothing?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:!nothing&&!w.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.save}</button>
             </div>
           </div>
         </div>;

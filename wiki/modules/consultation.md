@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 접수와 같이 쓰는 서버 함수(판정·완료) — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 진료대기 현황에 보일 의사 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -28,7 +28,12 @@
 2. 왼쪽 위 **☰ File d'Attente (진료대기 현황)**를 누르면 오늘 환자 목록이 왼쪽에서 나옵니다. 괄호 안 숫자는 기다리는 환자 수입니다.
    - **En Attente (대기)** 탭: 아직 진료가 끝나지 않은 환자
    - **Terminé (완료)** 탭: 진료를 마친 환자
-   - 의사 계정이면 **자기 앞으로 접수된 환자와 담당의가 없는 환자**만 보입니다.
+   - **누구의 환자가 보이나**: 검색 칸 아래 한 줄(«Affichés : …» / 「표시: …」)에 적혀 있습니다. 손대지 않은 계정은 전과 같습니다 — 의사 계정은 **자기 앞으로 접수된 환자와 담당의가 없는 환자**, 그 밖의 계정은 전체.
+   - **⚙ (탭 오른쪽)** — 「Médecins affichés dans la file / 대기 현황에 보일 의사」(실장님, 2026-10-01): 재직 중인 의사 목록과 맨 아래 「Patients sans médecin (의사가 정해지지 않은 환자)」에 체크합니다. **Sauver**를 누르면 체크한 의사의 환자만 목록과 단추의 숫자에 나옵니다. 맨 위 「Tous les médecins (의사 전체)」는 한 번에 모두 체크/해제 — 모두 체크해 두면 나중에 새로 온 의사의 환자도 보입니다.
+     - **내 계정에 기억**되어 다른 PC에서 로그인해도 같습니다. 다른 사람의 설정은 바뀌지 않습니다.
+     - 하나도 체크하지 않으면 「Cochez au moins une ligne pour enregistrer.」가 뜨고 저장이 꺼집니다(빈 목록이 되지 않게).
+     - **Par défaut (기본값으로)**: 처음 상태로 되돌립니다. 설정을 바꾼 계정은 ⚙가 파랗게 보입니다.
+     - 대기·완료 두 탭에 같이 적용됩니다. 이미 열어 둔 환자는 그대로입니다.
    - 목록은 15초마다 저절로 새로 고쳐집니다. 위의 **Rechercher (검색)** 칸에 이름이나 차트번호를 치면 좁혀집니다.
 3. 환자 이름을 누르면 그 환자의 차트가 **열립니다. 여는 것만으로는 진료가 시작되지 않습니다**(실장님 결정 (다), 2026-10-01) — 잘못 눌렀다가 나와도 접수 화면에서는 그대로 「대기」이고, 접수가 그 접수를 취소할 수도 있습니다.
    - 가운데 맨 위 줄에 지금 상태가 글자로 보입니다: **En attente (대기)** / **En consultation (진료 중)** / **Terminé (완료)**.
@@ -251,7 +256,7 @@
 | 부분 | 줄 | 내용 |
 |---|---|---|
 | 환자 막대 | 392-406 | 선택한 내원(`sel`) 정보, 모달 여는 버튼 5개 |
-| 대기 서랍 | 410-436 | `filteredQueue` (356-363). 대기 탭 = status `waiting`·`registered`·`in_progress`. role이 `doctor`면 `doctor_id`가 없거나 자기인 것만 |
+| 대기 서랍 | 410-436 | `filteredQueue` (356-363). 대기 탭 = status `waiting`·`registered`·`in_progress`. 보일 의사는 `queueShows(v)` — 저장된 설정(`queueRule`)이 있으면 그것, 없으면 전의 규칙(role이 `doctor`면 `doctor_id`가 없거나 자기인 것만, 그 밖은 전부). 머리의 ⚙와 검색 칸 아래 한 줄(`data-cs="queue-shown"`) |
 | 왼쪽 42% | 438-534 | 오더 입력(자동완성) + 처방·오더 표 |
 | 가운데 | 536-591 | 바이탈 5칸, 저장/완료, 진료 기록 textarea, 문장사전 |
 | 오른쪽 28% | 593-641 | 과거 내원 / 약속처방 탭 |
@@ -260,6 +265,7 @@
 **상태 흐름**
 
 - 첫 로드 `loadData()` (75-89): `/visits/today`, `/admin/drugs`, `/admin/order-codes`, `/admin/phrases`, `/order-sets`를 **순서대로** 받아 둡니다. 자동완성은 전부 브라우저 안에서 거릅니다(서버 검색 없음). 약속처방은 **진료과 필터 없이 전부** 받습니다(API는 `?department_id=`를 지원).
+- **대기 현황에 보일 의사**(실장님, 2026-10-01): `queuePref`(서버에서 읽은 내 설정, 없으면 `null`) → `queueRule`(쓸 규칙) → `queueShows(v)`가 `filteredQueue`와 `waitingCount`를 같이 거릅니다. `queueRule`은 저장값이 **아무도 보여 줄 수 없게 된 경우**(전체 아님 + 미지정 아님 + 체크한 의사가 재직 목록에 하나도 없음 — 퇴직·삭제)에 `null`로 돌아가 기본 규칙을 씁니다. 창(`qfWin`)은 `/admin/doctors`(재직 의사)를 열 때마다 다시 읽고, 모두 체크하면 `all`로 저장합니다(나중에 온 의사 포함). 저장은 `PUT /consultations/queue-filter`, 「기본값으로」는 `DELETE`. 창은 420px·최대 92vw·86vh, 목록만 스크롤, 긴 이름은 줄바꿈·과 꼬리표는 한 줄. 검색 칸 아래 요약 줄은 한 줄·말줄임·전체는 `title`.
 - **여는 것과 시작하는 것**(결정 (다), 2026-10-01): `sel` = 열린 내원, `consult` = 그 내원의 진료 — **시작 전에는 `null`**. `opened`는 읽는 동안 false(그동안 가운데·왼쪽 칸을 그리지 않음).
   - `pickPatient(v)`: **`GET /consultations/visit/:id`**(읽기만) → `{visit_status, consultation}`. 상태를 `setVisitStatus`로 `sel`과 대기 목록 줄에 같이 넣고, 진료가 있으면 `showConsult`(처방·오더·기록·바이탈), 없으면 빈 화면. 응답이 늦게 와도 그 사이 다른 환자를 열었으면 버립니다(`selRef`).
   - `needConsult()`: 쓸 진료를 돌려줍니다. 없으면 `POST /consultations`(만들고 「진료 중」) — **「시작」 단추와 안전망이 같은 길**. 동시에 한 번만(`startingRef`). `saveVitals`·`pushNote`·`completeConsult`·`addDrugRx`·`addExamOrder`(약속처방 포함)가 쓰기 전에 부릅니다. 아무것도 치지 않은 Sauver는 부르지 않습니다(`anyVital()`·기록 같음 → `cs_nothingToSave`).
@@ -314,6 +320,7 @@
 ### 3.2 서버 — `backend/src/routes/consult.routes.js` (`/api/consultations`)
 
 - **권한 (S2, 2026-09-29 실장님 결정 「서버도 화면 권한대로」)**: 쓰기(POST·PUT·DELETE)는 전부 `permMiddleware('consultation')`(`canConsult`). 읽기는 부르는 화면의 권한만 — 처방·오더 읽기(`GET /visit/:visitId/prescriptions`·`/:id/prescriptions`·`/:id/orders`)는 `canReadRx` = consultation·payment·pharmacy(진료 화면, 수납·약국의 `PatientChart`와 문서 창), 진단 읽기는 consultation. 임상병리·접수는 문서 창을 읽기 전용·내원 없이 열어서 이 라우트를 부르지 않습니다. 라우트별 표는 `wiki/handoff/settings.md` 「S2」. 서버는 요청마다 DB에서 계정 상태·권한을 읽으므로(S1) 권한을 바꾸면 바로 적용됩니다.
+- **대기 현황에 보일 의사**(`consultation_queue_filter`, 2026-10-01) — `GET /queue-filter` → `{custom:false}` 또는 `{custom:true, all_doctors, doctor_ids, unassigned}`; `PUT /queue-filter {all_doctors, doctor_ids, unassigned}`(의사 계정이 아닌 id는 버림; 전체도 아니고 남은 의사도 없고 미지정도 아니면 400 `Choose at least one doctor`; `doctor_ids`가 목록·양의 정수가 아니면 400); `DELETE /queue-filter` → 기본값. 계정 id는 토큰에서만. 테마처럼 변경 기록에 쓰지 않습니다. **`PUT /:id`보다 앞에 선언**되어 있어야 합니다(뒤에 두면 `/:id`가 가로챔).
 - **대기 / 진료 중 규칙**(결정 (다), 2026-10-01): 여는 것은 읽기, 시작은 `POST /` 또는 첫 기록, 되돌리기는 아무것도 없을 때만.
   - `GET /visit/:visitId` — 여는 화면이 읽는 것. `{visit_status, consultation|null}`. **아무것도 바꾸지 않음.** 없는 내원 404, 취소된 내원 409 `Visit was cancelled`.
   - `PUT /visit/:visitId/waiting` — 대기로. 내원을 `FOR UPDATE`로 잠그고, `in_progress`가 아니면 409 `Visit is not in consultation`, 기록이 하나라도 있으면 409 `Consultation has records`(완료·서명된 진료, 옛 기록·SOAP 글, 바이탈 어느 칸, `consultation_note`, 처방, 오더, 진단, `document_log`(진료 또는 내원), `billing`(내원)). 통과하면 **빈 진료 행을 지우고** 내원을 `waiting`으로. 변경 기록 줄은 쓰지 않음(잃는 기록이 없고, 로그에 상태 변경 동작이 없음).
@@ -463,6 +470,7 @@
 
 | 메서드 · 경로 | 권한 | 하는 일 |
 |---|---|---|
+| `GET` · `PUT` · `DELETE /api/consultations/queue-filter` | `consultation` | 내 계정의 「대기 현황에 보일 의사」 읽기·저장·기본값으로 |
 | `GET /api/consultations/visit/:visitId` | `consultation` | 여는 화면이 읽음: `{visit_status, consultation|null}`. 아무것도 바꾸지 않음 |
 | `POST /api/consultations` | `consultation` | 진료 **시작**(없으면 만들고 내원을 「진료 중」으로) `{visit_id, patient_id, department_id}` |
 | `PUT /api/consultations/visit/:visitId/waiting` | `consultation` | 대기로: 아무것도 기록되지 않은 「진료 중」 내원만. 빈 진료 행 삭제. 아니면 **409** |
@@ -508,6 +516,7 @@
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
 | `order_set_item` | `set_id`(CASCADE), `kind` ∈ `drug`·`order`, `drug_id`, `order_code_id`, `code`, `name`, `dose`, `frequency`, `days`, `route`, `quantity`, `sort_order` | 단가 없음 |
+| `consultation_queue_filter` (042) | `staff_id`(PK, CASCADE), `all_doctors`, `doctor_ids INTEGER[]`, `unassigned`, `updated_at`. **행이 없으면 기본 규칙.** `staff` 표의 칸이 아니라 따로 둔 이유: `GET /admin/staff`가 `staff.*`를 돌려주어 칸을 더하면 설정 화면으로 실려 감 |
 | `consultation_note` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `author_id`, `note_text`(빈 글 금지), `created_at`, `updated_at`(고친 때, 안 고쳤으면 NULL), **UNIQUE(consultation_id, author_id)** | 038(세션 번호 201) — 의사마다 한 내원 한 기록. 옛 `consultation.note_text`(와 S/O/A/P를 「S: …」로 앞에 붙여)를 `doctor_id`의 기록으로 옮김, 두 번 돌려도 같음 |
 | `document_log` | `doc_no`(UNIQUE, `D26-00001`), `template_code`, `template_name`, `patient_id`, `visit_id`, `consultation_id`, `lang`, `payload JSONB`, `issued_by/at`, `voided`, `void_reason`, `voided_at/by` | 010 · `generate_doc_no()` · `document_no_seq` |
 | `phrase_dictionary` | `category`, `text`, `text_en`, `text_fr`, `sort_order`, `is_active` | 설정 소유, 진료는 읽기만 |
@@ -751,7 +760,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | **접수와 같이 쓰는 서버 함수**(`consult.visit.js`) — 「이 내원에 적은 것이 있나」(`visitRecords`·`visitHasRecords`)와 완료(`completeVisitConsultation`)를 함수로 내보냄. 「대기로」와 Terminé가 그 함수를 씀. 취소된 내원의 Terminé는 409 | (이 커밋) |
+| 2026-10-01 | **진료대기 현황에 보일 의사**(실장님) — 대기 서랍 머리의 ⚙ → 의사 목록 + 「의사 미지정」 체크, 계정마다 서버에 기억(`consultation_queue_filter`, `/queue-filter`), 손대지 않은 계정은 전과 같음, 검색 칸 아래 「표시: …」 한 줄 | (이 커밋) |
+| 2026-10-01 | **접수와 같이 쓰는 서버 함수**(`consult.visit.js`) — 「이 내원에 적은 것이 있나」(`visitRecords`·`visitHasRecords`)와 완료(`completeVisitConsultation`)를 함수로 내보냄. 「대기로」와 Terminé가 그 함수를 씀. 취소된 내원의 Terminé는 409 | `6264cc1` |
 | 2026-10-01 | **환자를 여는 것만으로는 「진료 중」이 되지 않음**(실장님 결정 (다)) — 열기는 `GET /visit/:id`(읽기만, 진료 행을 만들지 않음), 「▶ 진료 시작」 단추(`POST /`), 첫 저장이 시작하는 안전망(`needConsult` + 서버 `startVisit`), 아무것도 없을 때만 「↩ 대기로」(`PUT /visit/:id/waiting`, 빈 행 삭제), 가운데 맨 위 상태 줄, 초안 키를 내원 id로 | `9713494` |
 | 2026-10-01 | **긴 이름 훑기**(50자·85자) — 파란 줄의 차트번호를 이름과 한 덩어리로, 영상 창 제목 줄의 제목·단추가 꺾이지 않게, 서류 환자 표의 차트번호 칸 nowrap. 그 밖의 자리는 그대로 좋음 | `30e1df8` |
 | 2026-10-01 | **오더 줄의 용법에 「1.000」이 저절로 들어가던 것** — 영상 종류가 있는 시술도 검사처럼 1·1·1·용법 비움, 그 밖의 시술은 숫자뿐인 `default_dose`를 베끼지 않음(`orderSig`), 서버는 오더의 `dose`를 20자 글자로(`badOrderSig` — 전에는 숫자만 받아 「PRN」이 400), 옛 「1.000」은 「1」로 보임. **오더 이름 옆 촬영 부위를 뺌**(실장님) | `6ab6600` |
