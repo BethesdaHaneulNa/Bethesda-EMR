@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 로그 탭: 영상 반출 줄의 칸 (`pacs.images.export`, PACS `f7daaac` 뒤)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5c369e0` merge 위)
+- **PACS가 쓰는 줄**(`pacs.export.js` 묶음 길): entity `patient`, `after` = `{ medium, exam_count, image_count, size_mb, exams }`. `size_mb`는 소수 한 자리 숫자, **`exams`는 목록이 아니라 한 글자열** 「이름 (번호); 이름 (번호)」(번호 없는 검사는 이름만). 요약은 영어 문장 「2 exam(s), 30 image(s), 12.3 MB given out (folder): …」.
+- **무엇을**
+  - **칸 이름**: `exam_count` 「검사 수 / Exams / Examens」 · `size_mb` 「크기 / Size / Taille」 · `exams` 「검사 목록 / Exams given out / Examens remis」. `medium` · `image_count`는 앞 커밋의 것.
+  - **크기 값**: 화면 언어의 소수점과 단위로 — 「12.3 MB」 · 「12,3 Mo」 · 「1 234,5 Mo」(`seNumber`, 백업 탭의 크기 표시와 같은 방식). 이름표에 (MB)를 붙이지 않고 값에 단위를 붙임.
+  - **칸 순서**: 매체 → 검사 수 → 영상 수 → 크기 → 검사 목록. 이를 위해 `medium`을 영상 수 앞으로 옮김(인쇄·옮김·되찾기 줄의 순서는 그대로).
+  - **요약 줄**: 영어 문장 대신 **첫 검사 + 「+ n」**(「Knee R (ACC260005) + 2」) — 검사가 많아도 한 줄이고 낱말이 없음. 전체는 「검사 목록」 칸에. `exams`가 없는 줄이면 적힌 요약 그대로.
+- **알아둘 것**: 검사 이름에 「; 」이 들어 있으면 요약의 「+ n」 셈이 하나 틀릴 수 있음(목록 칸은 글자 그대로라 영향 없음). 지금 오더 코드 이름에 그런 것은 없음.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 4줄씩) · `wiki/03-change-log.md`(export 줄) · `wiki/modules/settings.md`(8절) · 이 노트. 백엔드는 건드리지 않음.
+- **확인한 방법**: `npm run build`. 격리 스택(9187)에는 영상 서버가 없어 실제 반출을 할 수 없으므로, `pacs.export.js`가 쓰는 모양 그대로의 반출 줄 셋(검사 1 · disc · 8 MB / 검사 3 · iso · 1234.5 MB · 번호 없는 검사 포함 / 검사 2 · folder · 12.3 MB)과 인쇄 줄 하나를 격리 DB에 넣고 로그 탭을 프랑스어·한국어로 읽음. **실제 반출이 남긴 줄로는 보지 못했음.** 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-01 — 로그 탭: 영상을 인쇄함 / 반출함 (`pacs.images.print` · `pacs.images.export`)
 
 - **상태**: 확인 요청

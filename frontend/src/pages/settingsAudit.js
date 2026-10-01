@@ -8,7 +8,7 @@
 // its labels are added. Add a line here (and the se_ key in ko/en/fr) when a module
 // logs a new field.
 import { MODULES } from '../modules.js';
-import { seMoney } from './settingsMoney.js';
+import { seMoney, seNumber } from './settingsMoney.js';
 
 // Fields that hold an amount in ariary: shown grouped, without ".00" (settingsMoney.js).
 // Quantities, days and numbers of receipts are not amounts and stay as stored.
@@ -93,10 +93,13 @@ var FIELDS = {
   // pacs.study.move: from which order to which (order_name, above, and its accession
   // number), moved or exchanged, how many images, whether the reading went with them
   accession_no: 'se_fld_accessionNo', kind: 'se_fld_moveKind',
+  // pacs.images.export (one line when the bundle is fetched): what the copy was made on,
+  // how many exams; then, below, how many pictures, its size, and which exams
+  medium: 'se_fld_medium', exam_count: 'se_fld_examCount',
   // pacs.study.relink: the study now linked, how many images, whose they say they are
   study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount',
-  // pacs.images.print / export: how many pictures on one sheet; what the copy was made on
-  per_page: 'se_fld_perPage', medium: 'se_fld_medium',
+  // pacs.images.print: how many pictures on one sheet. export: megabytes, the exams by name
+  per_page: 'se_fld_perPage', size_mb: 'se_fld_sizeMb', exams: 'se_fld_exams',
   // the language a document or the image sheets were printed in
   lang: 'se_fld_docLang',
   image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
@@ -149,9 +152,16 @@ export function auditSummary(t, row) {
     }
   }
   // Printed or copied images: the server's summary is an English sentence ("5 image(s) of X
-  // (..) printed"); the exam and its number say it in any language, the count is a field.
-  if ((row.action === 'pacs.images.print' || row.action === 'pacs.images.export') && row.after_value && row.after_value.order_name) {
+  // (..) printed", "2 exam(s), 30 image(s), 12.3 MB given out (disc): X (..); Y (..)"); the
+  // exam and its number say it in any language, the counts are fields.
+  if (row.action === 'pacs.images.print' && row.after_value && row.after_value.order_name) {
     return row.after_value.order_name + (row.after_value.accession_no ? ' (' + row.after_value.accession_no + ')' : '');
+  }
+  // An export names its exams in one string, "X (..); Y (..)" (pacs.export.js): the first
+  // one here, "+ n" for the others - the whole list is the field "exams".
+  if (row.action === 'pacs.images.export' && row.after_value && row.after_value.exams) {
+    var list = String(row.after_value.exams).split('; ');
+    return list[0] + (list.length > 1 ? ' + ' + (list.length - 1) : '');
   }
   if (row.action === 'reception.patient.edit' && row.summary) {
     return row.summary.split(/,\s*/).map(function (f) { return auditFieldLabel(t, f); }).join(', ');
@@ -203,6 +213,8 @@ export function auditValue(t, field, v, ctx) {
   if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
   // what a copy of the images was made on: zip (the EMR screen), disc / iso / folder (the CD program)
   if (field === 'medium' && t['se_medium_' + v]) return t['se_medium_' + v];
+  // megabytes, with the decimal mark of the screen's language and its unit (Mo in French)
+  if (field === 'size_mb' && isFinite(Number(v))) return seNumber(Number(v), ctx && ctx.lang) + ' ' + (t.se_unitMb || 'MB');
   if (field === 'price_editable' && typeof v === 'boolean') return v ? (t.se_on || '✓') : (t.se_off || '✗');
   // moved images: put under the other order, the two orders' images exchanged, or the
   // correction made again after a restore
