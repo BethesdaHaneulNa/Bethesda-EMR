@@ -29,6 +29,9 @@ export var AUDIT_ACTIONS = {
   // images whose study number was changed on the image server, found again by accession
   // number when the viewer was opened (PACS, routes/pacs.relink.js)
   'pacs.study.relink': 'se_act_studyRelink',
+  // the images of one order put under another order of the same patient, or the images
+  // of two orders exchanged (PACS, routes/pacs.move.js); the field "kind" says which
+  'pacs.study.move': 'se_act_studyMove',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
@@ -75,9 +78,15 @@ var FIELDS = {
   voided: 'se_fld_voided', void_reason: 'se_fld_voidReason',
   // a visit's transfer: department_id (above, shown as the department) and the doctor by
   // name - the line keeps the name as it was, none is "—" - and the reason as typed
-  doctor: 'se_fld_doctor', reason: 'se_fld_reason',
+  doctor: 'se_fld_doctor',
+  // pacs.study.move: from which order to which (order_name, above, and its accession
+  // number), moved or exchanged, how many images, whether the reading went with them
+  accession_no: 'se_fld_accessionNo', kind: 'se_fld_moveKind',
   // pacs.study.relink: the study now linked, how many images, whose they say they are
   study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount', image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
+  reading_moved: 'se_fld_readingMoved', readings_exchanged: 'se_fld_readingsExchanged',
+  // the reason typed for a transfer or for moved images: after what it explains
+  reason: 'se_fld_reason',
   // a removed phrase category: where its phrases went
   phrases_moved_to: 'se_fld_phrasesMovedTo', phrases_moved: 'se_fld_phrasesMoved',
   pack_label: 'se_fld_packLabel',
@@ -107,6 +116,16 @@ export function auditEntityText(t, row) {
 // is the list of changed field names ("gender, mobile"), shown as their labels.
 export function auditSummary(t, row) {
   if ((row.entity === 'consultation' || row.entity === 'consultation_note') && row.summary === 'note') return '';
+  // Moved images: the line is written with an English summary ("5 image(s): A (..) -> B (..)").
+  // The same thing is said here without words - order (accession) → order (accession),
+  // ⇄ for an exchange - and the number of images is among the fields.
+  if (row.action === 'pacs.study.move') {
+    var b = row.before_value, a = row.after_value;
+    if (b && a && b.order_name && a.order_name) {
+      var one = function (o) { return o.order_name + (o.accession_no ? ' (' + o.accession_no + ')' : ''); };
+      return one(b) + (a.kind === 'swap' ? ' ⇄ ' : ' → ') + one(a);
+    }
+  }
   if (row.action === 'reception.patient.edit' && row.summary) {
     return row.summary.split(/,\s*/).map(function (f) { return auditFieldLabel(t, f); }).join(', ');
   }
@@ -154,7 +173,9 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'template_code') return (ctx && ctx.templateName && ctx.templateName(v)) || v;
   // the language a document was printed in, in its own name
   if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
-  if (field === 'voided' && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
+  if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
+  // moved images: put under the other order, or the two orders' images exchanged
+  if (field === 'kind' && (v === 'move' || v === 'swap')) return t['se_mvk_' + v] || v;
   // A receipt's status in the payment screen's words (py_st*): paid / partial / unpaid /
   // cancelled / waived. A correction line lists one per receipt (an array, payment B4
   // ada48fa), next to receipts in the same order.
