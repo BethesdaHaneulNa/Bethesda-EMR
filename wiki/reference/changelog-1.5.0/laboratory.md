@@ -93,6 +93,17 @@ number on the paper. Printing issues the sheet like any document that leaves the
 it is in the documents history and the change log, and can be reprinted or voided there.
 The window itself now has the same frame as the imaging list's.
 
+### A result written as a word is picked from a list
+
+Negative, Positive and the like were typed by hand, so the same result was spelled several
+ways and a typo changed nothing visible. For a test whose reference is a word, the result
+box is now a list to pick from — Negative / Positive unless the clinic sets another list
+for that test in Settings (Negative / Trace / + / ++ / +++, say), where the usual sets are
+one click away. "Type it" at the end of the list gives the text box back. The judgement is
+the same rule as before: a value equal to the reference is normal, any other abnormal.
+Results already saved are not touched; an older spelling that is not in the list is shown
+as it was typed.
+
 ### Units are picked from a list the clinic keeps
 
 The unit of a test item was typed by hand on every row, so the same unit ended up
@@ -130,6 +141,7 @@ unit the clinic's items already use, spelled the way the clinic spelled them.
 - In the lab's entry table a very long unit or item name put that row's boxes out of
   line with the others; it now wraps inside its cell.
 - A migration adds the `lab_unit` table (the unit list). It changes no existing row.
+- A migration adds `lab_test_item.choices` (the values to pick from). It changes no existing row.
 - Migration `024_lab_ref_ranges.sql` adds the `lab_ref_range` table and
   `lab_result.ref_label`. It only adds; nothing existing is changed.
 

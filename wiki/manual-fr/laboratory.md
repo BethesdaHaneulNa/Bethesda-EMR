@@ -49,11 +49,14 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
   - **rouge** = au-dessus de la **Référence** (haut).
 - À droite de la case apparaît aussi le même signe que dans le tableau des résultats : **▲** haut, **▼** bas, **!** texte anormal. Vous pouvez donc lire le résultat même sans les couleurs.
 
-### Écrire un résultat en texte
+### Choisir un résultat en texte
 
-- Pour les tests dont la référence est un mot (exemple : **Negative** pour le paludisme ou la bandelette urinaire), écrivez le résultat en toutes lettres : **Positive**, **Négatif**, **Trace**, **1+**…
-- **Négatif**, **Neg**, **-** sont compris comme **Negative** (normal).
-- Tout autre mot (**Positive**, **Trace**, **1+**…) s'affiche en **rouge** : résultat anormal. <!-- à revoir : « Trace » pourra devenir normal après avis du médecin -->
+- Pour les tests dont le résultat est un mot (paludisme, bandelette urinaire…), la case **Valeur** est une **liste** : cliquez dessus et choisissez **Negative**, **Positive**…
+- Au clavier : dans la case, tapez la première lettre (**n**, **p**) ou utilisez **↑ ↓**, puis **Tab** pour passer à la suite.
+- Si le mot à écrire n'est pas dans la liste, choisissez **Saisir au clavier…** tout en bas : la case redevient une case de texte. Le bouton **☰** à côté ramène à la liste.
+- Un résultat égal à la **Référence** reste en noir (normal). Tout autre résultat (**Positive**, **Trace**, **++**…) s'affiche en **rouge** avec **!** : résultat anormal. <!-- à revoir : « Trace » pourra devenir normal après avis du médecin -->
+- En texte libre, **Négatif**, **Neg**, **-** sont compris comme **Negative** (normal).
+- La liste est préparée par l'administrateur. S'il manque une valeur que vous écrivez souvent, demandez-lui de l'ajouter.
 
 ### Corriger un résultat déjà enregistré
 
