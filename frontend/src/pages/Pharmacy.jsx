@@ -7,6 +7,7 @@ import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { storedTotal, hasTotal, perDose, fmtAmount, isLegacyTotal, isPack, packWord, missingTimes } from '../documents/rx-dosing.js';
 import { PharmacyStock } from './PharmacyStock.jsx';
+import { PAGE_COLS, TOOL_ROW, toolBtn, tabBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, ROW_EMPTY, rowTag, EMPTY_ICON, EMPTY_TEXT, EMPTY_SUB, SIDE_HEAD } from '../layout.js';
 
 // Thousands: 12,300 in Korean and English, 12 300 in French (integration test C).
 function fmt(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
@@ -309,17 +310,17 @@ export default function PharmacyPage() {
   function rxCard(v, where){
     var active = sel && sel.consultation_id === v.consultation_id;
     var badge = pastBadge(v);
-    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
+    return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:ROW_PAD, borderBottom:'1px solid var(--line-soft)', cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
         {/* A long name (50 characters and more are common here) wraps between words and is
             never cut; the status tag beside it keeps its one line instead of folding. */}
-        <div style={{ fontWeight:800, color:tx, fontSize: 16, minWidth:0, overflowWrap:'anywhere' }}>{patientName(v)}</div>
-        <div style={{ fontSize: 16, color:tab==='pending'?'var(--warn-text)':'var(--ok-text-2)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>{tab==='pending'?t.waiting:t.completed}</div>
+        <div style={Object.assign({}, ROW_NAME, { minWidth:0, overflowWrap:'anywhere' })}>{patientName(v)}</div>
+        <div style={tab==='pending'?rowTag('var(--warn-a18)','var(--warn-ink)'):rowTag('var(--ok-a18)','var(--ok-text)')}>{tab==='pending'?t.waiting:t.completed}</div>
       </div>
-      <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
+      <div style={Object.assign({}, ROW_SUB, { marginTop:3 })}>{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
       {badge ? <div style={{ display:'inline-block', marginTop:4, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a50)', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
-      <div style={{ color:t2, fontSize: 16, marginTop:3 }}>{timeText(v, locale)}</div>
-      <div style={{ color:t3, fontSize: 16, marginTop:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
+      <div style={Object.assign({}, ROW_NOTE, { color:t3, marginTop:2 })}>{timeText(v, locale)}</div>
+      <div style={Object.assign({}, ROW_NOTE, { color:t3, marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' })}>{(v.prescriptions||[]).map(function(r){return r.drug_name;}).join(', ')}</div>
     </div>;
   }
 
@@ -331,25 +332,25 @@ export default function PharmacyPage() {
     <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontSize: 16 }}>
       <TopBar />
 
-      <div style={{ flexShrink:0, background:'var(--panel-2)', borderBottom:'1px solid '+bd, padding:'5px 12px', display:'flex', alignItems:'center', gap:8 }}>
-        <button onClick={function(){setTab('pending'); setSel(null);}} style={{ background:tab==='pending'?'var(--violet-a20)':'transparent', color:tab==='pending'?'var(--violet-text-4)':t3, border:'1px solid '+(tab==='pending'?'var(--violet-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingPending} {pending.length}</button>
-        <button onClick={function(){setTab('completed'); setSel(null);}} style={{ background:tab==='completed'?'var(--ok-a20)':'transparent', color:tab==='completed'?'var(--ok-text-2)':t3, border:'1px solid '+(tab==='completed'?'var(--ok-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>{t.dispensingCompleted} {completed.length}</button>
-        <button onClick={function(){setTab('stock'); setSel(null);}} style={{ background:tab==='stock'?'var(--warn-a20)':'transparent', color:tab==='stock'?'var(--warn-text-2)':t3, border:'1px solid '+(tab==='stock'?'var(--warn-a50)':'transparent'), borderRadius:5, padding:'4px 12px', cursor:'pointer', fontSize: 16, fontWeight:700 }}>📦 {t.ph_tabStock}</button>
+      <div style={TOOL_ROW}>
+        <button onClick={function(){setTab('pending'); setSel(null);}} style={tabBtn(tab==='pending','var(--violet-a20)','var(--violet-text-4)','var(--violet-a50)')}>{t.dispensingPending} ({pending.length})</button>
+        <button onClick={function(){setTab('completed'); setSel(null);}} style={tabBtn(tab==='completed','var(--ok-a20)','var(--ok-text-2)','var(--ok-a50)')}>{t.dispensingCompleted} ({completed.length})</button>
+        <button onClick={function(){setTab('stock'); setSel(null);}} style={tabBtn(tab==='stock','var(--warn-a20)','var(--warn-text-2)','var(--warn-a50)')}>📦 {t.ph_tabStock}</button>
         {tab !== 'stock' ? <>
-        <button onClick={loadData} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>{t.refresh}</button>
-        <button onClick={function(){setPhFinderOpen(true);}} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:5, padding:'4px 10px', cursor:'pointer', fontSize: 16 }}>🔍 {t.findPatient}</button>
-        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'var(--warn-strong)':'var(--chip)', color:sel?'var(--on-fill-amber)':'var(--text-4)', border:'1px solid '+(sel?'var(--warn-ink)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>💊 {t.outsideRx}</button>
-        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:5, padding:'4px 12px', cursor:sel?'pointer':'not-allowed', fontSize: 16, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
+        <button onClick={loadData} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button>
+        <button onClick={function(){setPhFinderOpen(true);}} style={toolBtn()}>🔍 {t.findPatient}</button>
+        <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'var(--warn-strong)':'var(--chip)', color:sel?'var(--on-fill-amber)':'var(--text-4)', border:'1px solid '+(sel?'var(--warn-ink)':bd2), borderRadius:6, padding:'6px 10px', cursor:sel?'pointer':'not-allowed', fontSize: 14, fontWeight:700 }}>💊 {t.outsideRx}</button>
+        <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:6, padding:'6px 10px', cursor:sel?'pointer':'not-allowed', fontSize: 14, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
         </> : null}
         <div style={{ flex:1 }}></div>
-        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy || tooOld} style={{ background:tooOld?'var(--chip)':'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:tooOld?'var(--text-4)':'var(--on-fill)', border:tooOld?'1px solid '+bd2:'none', borderRadius:5, padding:'6px 18px', cursor:tooOld?'not-allowed':busy?'wait':'pointer', fontSize: 16, fontWeight:800, whiteSpace:'nowrap' }}>✓ {t.dispenseComplete}</button> : null}
+        {sel && tab==='pending' ? <button onClick={dispense} disabled={busy || tooOld} style={{ background:tooOld?'var(--chip)':'linear-gradient(135deg,var(--ok),var(--ok-strong))', color:tooOld?'var(--text-4)':'var(--on-fill)', border:tooOld?'1px solid '+bd2:'none', borderRadius:6, padding:'6px 16px', minHeight:34, cursor:tooOld?'not-allowed':busy?'wait':'pointer', fontSize: 14, fontWeight:800, whiteSpace:'nowrap' }}>✓ {t.dispenseComplete}</button> : null}
       </div>
 
       {/* The patient chart on the right keeps about 320px on a 1366 laptop, where the
           prescription table needs the room, and grows on wider screens (1600 -> 384,
           1920 -> 420) so the doctor's follow-up line reads without opening the visit. */}
       {tab === 'stock' ? <PharmacyStock /> :
-      <div style={{ display:'grid', gridTemplateColumns:'300px minmax(0,1fr) clamp(320px, 24vw, 420px)', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
+      <div style={{ display:'grid', gridTemplateColumns:PAGE_COLS, gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
           {/* Work date: the same control, in the same place, as on the payment screen. */}
           <div style={{ flexShrink:0, padding:'7px 9px', borderBottom:'1px solid '+bd, background:viewingPast?'var(--warn-a14)':'var(--panel-2)' }}>
@@ -364,13 +365,12 @@ export default function PharmacyPage() {
               <button type="button" onClick={function(){chooseWorkDate(serverToday)}} style={{ background:'var(--accent-a20)', color:'var(--accent-text)', border:'1px solid var(--accent-a40)', borderRadius:5, padding:'4px 8px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>{t.rc_backToToday}</button>
             </div> : null}
           </div>
-          <div style={{ flexShrink:0, padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 16, color:viewingPast?'var(--warn-text)':tx }}>💊 {t.pharmacy}</div>
-          <div style={{ padding:'7px 8px', borderBottom:'1px solid '+bd }}>
-            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={{ background:'var(--field-3)', border:'1px solid var(--field-border)', borderRadius:5, padding:'6px 9px', color:tx, outline:'none', width:'100%', boxSizing:'border-box', fontSize: 16 }}/>
+          <div style={LIST_SEARCH_WRAP}>
+            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={LIST_SEARCH}/>
           </div>
           <div style={{ flex:1, minHeight:0, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
-            {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
+            {!loading && filtered.length === 0 ? <div style={ROW_EMPTY}>{t.noRxToShow}</div> : null}
             {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
                 <div style={{ flex:1, minWidth:0, overflowWrap:'anywhere', fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
@@ -387,9 +387,9 @@ export default function PharmacyPage() {
         <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 }}>
           {!sel ? <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:t3 }}>
             <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize: 49, opacity:.35, marginBottom:10 }}>💊</div>
-              <div style={{ fontSize: 18, fontWeight:800, color:t2 }}>{t.selectRxPatient}</div>
-              <div style={{ fontSize: 16, marginTop:6 }}>{t.pharmacyOnlyCompleted}</div>
+              <div style={EMPTY_ICON}>💊</div>
+              <div style={EMPTY_TEXT}>{t.selectRxPatient}</div>
+              <div style={EMPTY_SUB}>{t.pharmacyOnlyCompleted}</div>
             </div>
           </div> : <>
             <div style={{ flexShrink:0, padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
@@ -463,7 +463,7 @@ export default function PharmacyPage() {
         </div>
 
         <div style={{ borderLeft:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, overflow:'hidden' }}>
-          <div style={{ padding:'8px 12px', borderBottom:'1px solid '+bd, background:scBg, fontWeight:800, fontSize: 15, color:'var(--accent-text)' }}>{t.patientChart}</div>
+          <div style={Object.assign({}, SIDE_HEAD, { color:'var(--accent-text)' })}>{t.patientChart}</div>
           <div style={{ flex:1, minHeight:0, overflow:'auto' }}><PatientChart patientId={sel?sel.patient_id:(viewPid||null)} /></div>
         </div>
       </div>}
