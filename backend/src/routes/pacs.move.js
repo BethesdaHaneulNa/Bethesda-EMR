@@ -363,7 +363,7 @@ async function finish(move) {
         return 'cleanup-pending';
       }
     }
-    await setState(move.id, 'cleanup-pending', 4, { superseded: [{ study_uid: d.old_study_uid, instances: d.source_sops || [] }] });
+    await setState(move.id, 'cleanup-pending', 4, { superseded: [{ study_uid: d.old_study_uid, instances: d.source_sops || [], replaced_by: d.new_study_uid }] });
   }
   // 5. The exam of the order the images left has not been done: back on the device list
   //    (the feed lists today's 'scheduled' lines).
@@ -613,7 +613,8 @@ async function recordSwapInEmr(req, move) {
       before: { order_name: o1.order_name, accession_no: o1.accession_no, image_count: d.a.count },
       after: { order_name: o2.order_name, accession_no: o2.accession_no, image_count: d.b.count, readings_exchanged: readings, reason: move.reason },
     });
-    const superseded = [{ study_uid: d.a.uid, instances: d.a.sops }, { study_uid: d.b.uid, instances: d.b.sops }, { study_uid: d.tmp_uid, instances: d.a.sops }];
+    const superseded = [{ study_uid: d.a.uid, instances: d.a.sops, replaced_by: d.o2.uid }, { study_uid: d.b.uid, instances: d.b.sops, replaced_by: d.o1.uid },
+                        { study_uid: d.tmp_uid, instances: d.a.sops, replaced_by: d.o2.uid }];
     await client.query(
       `UPDATE pacs_study_move SET state = 'done', step = 7, reading_moved = $2, superseded = $3::jsonb, error = NULL, updated_at = NOW(), finished_at = NOW() WHERE id = $1`,
       [move.id, readings, JSON.stringify(superseded)]);
@@ -776,6 +777,45 @@ async function resumePending() {
 setTimeout(() => { resumePending(); }, 20000).unref();
 setInterval(() => { resumePending(); }, 5 * 60000).unref();
 
+// ── for the image backup: which image files are no longer on the image server ──
+// The backup disk keeps one file per image, under its study number
+// (images/<StudyInstanceUID>/<SOPInstanceUID>.dcm), and never deletes. After a correction
+// the files under the old number would bring the wrong study back at a restore, so the
+// backup sets them aside (PACS repository: image-backup.ps1, restore-image-backup.ps1).
+// The corrections are replayed in order: what one supersedes is gone, what one makes is
+// there again - images moved away and later moved back are not in the answer.
+// [{ study_uid, all, instances, replaced_by }] - `all` = every file under that number (a
+// line put in by hand without the image numbers); `replaced_by` = the study number the
+// images were given (the backup sets a file aside only when its replacement is on the disk).
+async function supersededNow() {
+  const r = await pool.query(`SELECT kind, detail, superseded FROM pacs_study_move WHERE superseded <> '[]'::jsonb ORDER BY id`);
+  const gone = new Map(), whole = new Set(), now = new Map();
+  const uidOk = u => /^[0-9.]{1,64}$/.test(String(u || ''));
+  for (const m of r.rows) {
+    const d = m.detail || {};
+    for (const e of (Array.isArray(m.superseded) ? m.superseded : [])) {
+      if (!e || !uidOk(e.study_uid)) continue;
+      if (uidOk(e.replaced_by)) now.set(e.study_uid, e.replaced_by);
+      const sops = (Array.isArray(e.instances) ? e.instances : []).filter(uidOk);
+      if (!sops.length) { whole.add(e.study_uid); continue; }
+      if (!gone.has(e.study_uid)) gone.set(e.study_uid, new Set());
+      sops.forEach(x => gone.get(e.study_uid).add(x));
+    }
+    const made = m.kind === 'swap'
+      ? [[d.o1 && d.o1.uid, d.b && d.b.sops], [d.o2 && d.o2.uid, d.a && d.a.sops]]
+      : [[d.new_study_uid, d.source_sops]];
+    for (const [uid, sops] of made) {
+      if (!uid) continue;
+      whole.delete(uid);
+      if (gone.has(uid)) (sops || []).forEach(x => gone.get(uid).delete(x));
+    }
+  }
+  const items = [];
+  whole.forEach(uid => items.push({ study_uid: uid, all: true, instances: [], replaced_by: now.get(uid) || '' }));
+  gone.forEach((set, uid) => { if (set.size && !whole.has(uid)) items.push({ study_uid: uid, all: false, instances: [...set], replaced_by: now.get(uid) || '' }); });
+  return items;
+}
+
 // ── routes (/api/pacs/...) ───────────────────────────────────────────────────
 // The orders the images of one order could go to, each with what stands in the way.
 router.get('/move-targets', authMiddleware, mayMove, async (req, res) => {
@@ -828,4 +868,4 @@ router.post('/move/resume', authMiddleware, mayMove, async (req, res) => {
   catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-module.exports = { router, moveImages, resumePending, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };
+module.exports = { router, moveImages, resumePending, supersededNow, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };

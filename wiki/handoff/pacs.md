@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상을 다른 오더로 옮기기 ③ 영상 백업·복원 · device-watch · README
+
+- **상태**: 확인 요청 (①②③ 모두 끝 — 올릴 때 **EMR과 PACS 폴더를 함께**)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (② `c8206ac` 위). **PACS 저장소** `session/pacs` **`fd095b2`** (`main` `b4ba4a3` 위 한 개)
+- **한 일**:
+  1. **EMR** `GET /api/pacs/superseded-images`(브리지 토큰): 영상을 옮겨서 영상 서버에서 없어진 영상의 (검사 번호, 영상 번호) 목록. `pacs.move.js` `supersededNow()`가 옮긴 기록을 차례로 다시 따라가 계산(옮겼다가 되옮긴 것은 빠짐). 옮긴 기록의 `superseded`에 `replaced_by`(영상이 간 검사 번호)를 함께 적음.
+  2. **PACS `image-backup.ps1`**: 새 영상을 복사한 뒤 그 목록의 파일을 `BethesdaPACS/replaced/<날짜>/<검사 번호>/`로 **옮김**(지우지 않음). 조건 둘 — Orthanc에 그 번호 아래 그 영상이 없음 · 고친 영상이 디스크에 있음. EMR에 물을 수 없으면 그날은 건너뜀(백업은 성공). `state.json`의 파일 수도 맞춤.
+  3. **PACS `restore-image-backup.ps1`**: `replaced`는 안 올림. 옛 디스크면 EMR에 물어 짝이 있는 옛 파일을 올리기 전에 치움. **옛 번호로만 있는 그림은 그대로 올리고 경고**. 다시 돌릴 때 짝이 Orthanc에 있는 옛 영상은 Orthanc에서 지움. `-Verify`는 아직 안 치워진 파일 수를 알림. 새 인자 `-EmrSupersededUrl`(기본 `http://localhost:9080/api/pacs/superseded-images`).
+  4. **PACS `device-watch.ps1`**: 장비가 보낸 것이 아니라 EMR이 옮겨 만든 영상은 「영상 N장 — EMR에서 다른 오더로 옮긴 영상(장비가 보낸 것이 아님)」(ko/fr/en). 맞바꾸기의 임시 검사는 말하지 않음.
+  5. **PACS `README.md`**: 영상 백업 절 한 문단, License에 한 문장(영상 서버의 자료를 Orthanc의 공식 REST로 고치는 것은 Orthanc를 쓰는 것), device-watch 설명 한 문장. `CHANGELOG.md`는 안 건드림(v1.1.0 뒤의 것들처럼 다음 판을 낼 때).
+- **바꾼 파일**: EMR `backend/src/routes/pacs.move.js`, `pacs.routes.js`, `wiki/modules/pacs.md`(4절 길 표 · 6.2 · P-33 · 8절), `wiki/reference/study-reassign-design.md`, `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`. PACS `image-backup-common.ps1`, `image-backup.ps1`, `restore-image-backup.ps1`, `device-watch.ps1`, `README.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 시험 폴더를 디스크로(`-SearchRoots`), 빈 Orthanc를 127.0.0.1:9196에 잠깐. 예약 작업·실제 디스크는 안 씀):
+  - 백업(처음): 81개, 디스크의 (검사 번호, 영상 번호) 쌍 = 서버의 쌍.
+  - 옮기기 1건(3장) + 맞바꾸기 1건(3장 ↔ 2장) → 백업 전 디스크와 서버가 정확히 8쌍 어긋남 → **백업**: 「set aside 8 image file(s)…」·「copied=8」, `images` 81 · `replaced` 8(세 옛 번호 폴더에 3·2·3), `state.json` 81, **디스크 = 서버**.
+  - **빈 Orthanc에 복원**: 「81 image files (+ 8 set aside in replaced)」·「Uploaded: 81 new」 → 복원된 서버 = 디스크 = 원래 서버. **옛 번호의 검사가 되살아나지 않음.**
+  - **옛 디스크**(바로잡기 전의 사본)를 빈 Orthanc에 복원(EMR에 물을 수 있음): 경고 「8 image(s) … only under their OLD study number … uploaded as they are」, 81장 올림, 디스크에서 치운 것 0 → 이어서 새 디스크를 같은 Orthanc에 복원: 새 8장 올림 → 「Removed from Orthanc 8 image(s)…」 → 89 → 81, 서버와 같음.
+  - 되옮긴 뒤(옮기기·맞바꾸기를 한 번씩 더) 백업: 다시 「copied=8」·「set aside 8」, `replaced` 16, 디스크 = 서버. `-Verify`: VERIFIED.
+  - EMR 주소를 닿지 않는 곳으로: 「could not ask the EMR which images were put under another order; nothing set aside this run」, 「finished: ok=True」, exit 0.
+  - `superseded-images`: 토큰 없이 401. 목록의 쌍이 서버에 하나도 없고(백업의 물음), 서버의 쌍이 목록에 하나도 없음(디스크 = 서버로 확인).
+  - device-watch(ko): 옮기기 → 「영상 3장 — EMR에서 다른 오더로 옮긴 영상(장비가 보낸 것이 아님) · 환자번호 … · 검사번호 261001-68 / ↳ EMR 오더와 연결됨 … / ↳ 환자번호 맞음 / ↳ EMR에 기록됨」, 맞바꾸기 → 두 줄(임시 검사는 안 나옴).
+  - 네 스크립트 모두 PowerShell 파서 오류 0.
+- **찾아서 고친 것**: 복원의 「Orthanc에서 지우기」가 처음에 아무것도 못 지움 — Windows PowerShell이 JSON 배열을 한 덩어리로 넘겨 `@(Invoke-RestMethod …)`가 「목록 하나짜리 목록」이 됨. 변수에 먼저 받게 고침(주석을 남김).
+- **확인 못 한 것**: 진짜 USB 디스크·예약 작업(이 PC에는 등록하지 않음). `.sh` 쪽(영상 백업은 Windows 스크립트뿐). 큰 디스크에서 짝 찾기의 시간(목록이 비면 아무 일도 안 함 — 목록이 있을 때만 검사 폴더들을 훑음). fr·en의 device-watch 줄(ko만 봄). 손으로 넣은 줄(`all`)의 실제 동작(코드: 밤 백업은 Orthanc에 물어 처리, 복원은 건드리지 않고 한 줄 알림).
+- **총괄이 손으로 옮긴 건(실행 중 EMR의 오더 15 → 18)**: 옮긴 기록 표에 없어서 백업이 모릅니다. 그때 영상 번호(SOP)를 새로 만들었으므로 「같은 영상 번호의 짝」으로는 못 찾습니다. 넣는다면 한 줄(값은 실행 중 DB에서):
+  `INSERT INTO pacs_study_move (kind, state, step, patient_id, from_order_item_id, to_order_item_id, from_order_name, to_order_name, from_accession, to_accession, image_count, reading_moved, reason, detail, superseded, staff_name, finished_at) VALUES ('move', 'done', 5, <환자>, 15, 18, '<오더 15 이름>', '<오더 18 이름>', '<accession 15>', '<accession 18>', 2, true, 'moved by hand before the feature existed', '{"old_study_uid":"<오더 15의 검사 번호>","new_study_uid":"<오더 18의 검사 번호>","source_sops":[]}', '[{"study_uid":"<오더 15의 검사 번호>","instances":[],"replaced_by":"<오더 18의 검사 번호>"}]', '<이름>', NOW());`
+  영상 번호가 비어 있으면 「그 번호 아래 전부」(`all`)로 읽혀, 밤 백업이 Orthanc에 없는 파일만 치웁니다(오더 15를 나중에 다시 찍어 같은 번호로 새 영상이 와도 그것은 Orthanc에 있으므로 남음). 그 영상이 아직 한 번도 백업되지 않았다면 넣을 필요가 없습니다. 화면의 옮긴 기록에도 한 줄 보이게 됩니다.
+- **올릴 때**: EMR(마이그레이션 801 포함)과 PACS 폴더(스크립트 넷 + README)를 함께. PACS 컨테이너는 다시 만들 필요 없음(브리지·compose 안 바뀜). 예약 작업은 같은 `image-backup.ps1`을 부르므로 다시 등록할 필요 없음. USB 묶음에는 PACS 폴더가 들어가므로 판이 올라갑니다.
+- **다른 세션에 부탁**: 없음(①②에 적은 설정·진료 몫 그대로).
+
 ## 2026-10-01 — 영상을 다른 오더로 옮기기 ② 맞바꾸기 · 화면
 
 - **상태**: 확인 요청 (**다음**: ③ PACS 저장소 — 영상 백업·복원의 `replaced`, device-watch, README)

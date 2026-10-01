@@ -41,6 +41,11 @@ at server start and every five minutes. One line per correction is kept (table `
 migration 801 of the PACS session) and written to the change log (`pacs.study.move`); both orders show it.
 Not covered: one exam holding the images of two, and images taken under another patient's line.
 
+The nightly image backup follows: the files of the original study, still on the backup disk, would bring
+the wrong study back at a restore, so the backup asks the EMR which images were corrected and sets those
+files aside in a `replaced` folder (never deleted, and only once the corrected images are on the disk too);
+a restore does not upload that folder.
+
 
 ### Images found again after a study was changed in Orthanc; endoscopies in the imaging list
 

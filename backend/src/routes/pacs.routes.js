@@ -521,6 +521,18 @@ router.post('/image-backup-report', async (req, res) => {
 // that patient's own details and look correct -- which is why finished entries
 // now leave the list. (patientCheck: pacs.relink.js, which makes the same check when
 // it finds a study again.)
+// For the PACS's image backup (bridge token): the image files that are no longer on the
+// image server because their images were put under another order (pacs.move.js). Study
+// and image numbers only - no patient data.
+router.get('/superseded-images', async (req, res) => {
+  try {
+    const cfg = await ensureConfig();
+    const denied = bridgeDenied(cfg, req);
+    if (denied) return res.status(401).json({ error: denied });
+    res.json({ items: await move.supersededNow() });
+  } catch (err) { console.error('[pacs] superseded images:', err.message); res.status(500).json({ error: 'Server error' }); }
+});
+
 router.post('/study-arrived', async (req, res) => {
   let cfg;
   try { cfg = await ensureConfig(); }
