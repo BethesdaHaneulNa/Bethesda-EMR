@@ -407,6 +407,8 @@ export default function SettingsPage() {
   // consultation server takes them since 6ab6600), never a bare number: a stored "1.000"
   // was the old column default and reads as nothing.
   function osDir(v){ var x = v==null ? '' : String(v).trim(); return /^[0-9]+([.,][0-9]*)?$/.test(x) ? '' : x; }
+  // Where a fee code is used: the payment screen's own words for its section and its list.
+  function feeHint(){ return String(t.se_feeHint||'').split('{pay}').join(t.payment||'').split('{section}').join(t.adminCharges||'').split('{add}').join(t.addCharge||''); }
   function osOpen(s){
     setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
       items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
@@ -611,11 +613,14 @@ export default function SettingsPage() {
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>📋 {t.se_tabOrderCodes}</span>
               {['All','fee','lab','imaging','procedure'].map(function(f){
                 var c=TC[f]||'accent';
-                return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?tint(c,'20'):'transparent',color:ocFilter===f?'var(--'+c+'-ink)':t3,border:ocFilter===f?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600}}>{f==='All'?t.se_all:t['se_type_'+f]}</button>;
+                return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?tint(c,'20'):'transparent',color:ocFilter===f?'var(--'+c+'-ink)':t3,border:ocFilter===f?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{f==='All'?t.se_all:(t['se_typeLong_'+f]||t['se_type_'+f])}</button>;
               })}
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
               <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
+            {/* Document and other fees live under the fee type, next to the consultation fees:
+                the director looked for them and did not find them (2026-10-01). */}
+            {ocFilter==='fee'?<div style={{padding:'6px 14px',fontSize:12,color:t3,borderBottom:'1px solid '+bd,lineHeight:1.5}}>{feeHint()}</div>:null}
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'var(--chip)'}}>
                 {[t.se_colCode,t.se_colName,t.se_colType,t.se_colGroup,t.se_colPrice,t.se_colModality,t.se_colWorklist,t.se_colBodyPart,''].map(function(h,i){return <th key={i} style={{padding:'5px 6px',textAlign:i===4?'right':'left',color:t3,fontSize: 11,borderBottom:'1px solid '+bd}}>{h}</th>})}
@@ -1304,9 +1309,12 @@ export default function SettingsPage() {
               </div>
               <Fld label={t.se_fNameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.se_fType}><select value={editItem.code_type||'fee'} onChange={function(e){ue('code_type',e.target.value)}} style={IS}>{['fee','lab','imaging','procedure'].map(function(c){return <option key={c} value={c}>{t['se_type_'+c]}</option>;})}</select></Fld>
-                <Fld label={t.se_fGroup}><select value={editItem.group_name||''} onChange={function(e){ue('group_name',e.target.value)}} style={IS}>{'Consultation,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
+                <Fld label={t.se_fType}><select value={editItem.code_type||'fee'} onChange={function(e){ue('code_type',e.target.value)}} style={IS}>{['fee','lab','imaging','procedure'].map(function(c){return <option key={c} value={c}>{t['se_typeLong_'+c]||t['se_type_'+c]}</option>;})}</select></Fld>
+                <Fld label={t.se_fGroup}><select value={editItem.group_name||''} onChange={function(e){ue('group_name',e.target.value)}} style={IS}>{/* Issuance: the group of the document fees (CDR, CERT, DOC). It was not in the list, so their
+                    window showed "Consultation". A group the list does not know is shown as it is stored. */}
+                {'Consultation,Issuance,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').concat(editItem.group_name && 'Consultation,Issuance,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').indexOf(editItem.group_name)<0 ? [editItem.group_name] : []).map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
               </div>
+              {(editItem.code_type||'fee')==='fee'?<div style={{fontSize:12,color:t3,lineHeight:1.5}}>{feeHint()}</div>:null}
               {/* Default directions: words the consultation screen copies onto a procedure
                   order (its Posologie column). The column existed without a field here and
                   every code held '1.000' unseen (2026-10-01). Shown for procedures, and for

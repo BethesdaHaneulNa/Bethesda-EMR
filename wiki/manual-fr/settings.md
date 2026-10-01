@@ -103,7 +103,8 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 
 Les **codes d'actes** sont ce que le médecin demande en consultation : frais de consultation, analyses, examens d'imagerie, actes.
 
-1. **Paramètres** → **Codes d'actes**. Les boutons **Tous · Frais · Laboratoire · Imagerie · Acte** filtrent la liste.
+1. **Paramètres** → **Codes d'actes**. Les boutons **Tous · Frais (consultation, documents) · Laboratoire · Imagerie · Acte** filtrent la liste.
+   - Les frais de documents (copie de CD, certificat, document…) sont des codes du type **Frais (consultation, documents)**, groupe **Issuance**. Ce sont eux que l'écran **Paiement** propose dans **Délivrance / Autres** → **+ Ajouter** ; les consultations (C01 à C04) n'y sont pas. Pour en ajouter un ou changer son prix, c'est ici.
 2. **+ Ajouter**, ou **Modifier** sur une ligne. Remplissez **Code**, **Nom**, **Type**, **Groupe**, **Prix**, puis **Sauver**.
    - Pour le type **Acte**, la case **Posologie par défaut (facultatif)** peut rester vide. Si vous y écrivez des mots (QD, PRN…), ils sont recopiés dans la colonne **Posologie** quand l'acte est demandé en consultation. N'y mettez pas un nombre.
 3. Pour un examen fait sur un appareil (échographe, radio, endoscope…) : dans **Feed d'ordres / Modality**, choisissez la **Modalité** (US — échographie, CR — radiographie, ES — endoscopie…), la **Région**, et activez **Créer le Feed Worklist**. Le patient apparaît alors dans la liste de l'appareil.

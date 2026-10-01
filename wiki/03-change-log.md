@@ -15,8 +15,8 @@
 | 영수를 취소함 / 정정함 | `payment.receipt.cancel` · `payment.receipt.correct` | 수납 |
 | 환자 인적사항을 고침 | `reception.patient.edit` | 접수 |
 | 내원의 과·의사를 바꿈(전과 — 진료 화면의 단추든 접수 화면의 저장이든, 실제로 바뀔 때만) | `visit.transfer` | 접수 (`visit.routes.js` `applyTransfer`) |
-| 영상을 접수번호로 다시 이음(영상 서버에서 검사 번호가 바뀌어 끊긴 연결을 영상 창을 열 때 EMR이 되찾음 — 사람이 누른 것이 아니라 EMR이 한 일, 그 환자 줄로) | `pacs.study.relink` | PACS (`pacs.relink.js`) · 기록 탭 이름표는 설정(2026-10-01: 「Images retrouvées par le numéro d'accession」, 칸 `study_uid`·`image_count`·`image_patient_id`·`patient_check`) |
-| 영상을 같은 환자의 다른 오더로 옮김 / 두 오더의 영상을 맞바꿈(장비에서 다른 줄을 골라 찍었을 때 — 의사·관리자가 영상 창에서. 기록 줄을 못 쓰면 옮기지도 않음) | `pacs.study.move` | PACS (`pacs.move.js`, 046) · 기록 탭 이름표는 설정(2026-10-01: 「Images déplacées vers une autre demande / échangées」, 칸 `order_name`·`accession_no`·`kind`(move 옮김 / swap 맞바꿈 / reapply 복원 뒤 다시 적용 — 요약 줄 앞에도 그 말)·`image_count`·`reading_moved`·`readings_exchanged`·`reason`) |
+| 영상을 접수번호로 다시 이음(영상 서버에서 검사 번호가 바뀌어 끊긴 연결을 영상 창을 열 때 EMR이 되찾음 — 사람이 누른 것이 아니라 EMR이 한 일, 그 환자 줄로) | `pacs.study.relink` | PACS (`pacs.relink.js`) · 로그 탭 이름표는 설정(2026-10-01: 「Images retrouvées par le numéro d'accession」, 칸 `study_uid`·`image_count`·`image_patient_id`·`patient_check`) |
+| 영상을 같은 환자의 다른 오더로 옮김 / 두 오더의 영상을 맞바꿈(장비에서 다른 줄을 골라 찍었을 때 — 의사·관리자가 영상 창에서. 기록 줄을 못 쓰면 옮기지도 않음) | `pacs.study.move` | PACS (`pacs.move.js`, 046) · 로그 탭 이름표는 설정(2026-10-01: 「Images déplacées vers une autre demande / échangées」, 칸 `order_name`·`accession_no`·`kind`(move 옮김 / swap 맞바꿈 / reapply 복원 뒤 다시 적용 — 요약 줄 앞에도 그 말)·`image_count`·`reading_moved`·`readings_exchanged`·`reason`) |
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
 | 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
@@ -36,19 +36,19 @@
 - 환자와 관계없는 줄이라 `patient_id`·`visit_id`는 비웁니다.
 - **오더 코드(진료비·검사·영상·처치) 가격도 같은 모양으로 남깁니다**(2026-09-30 실장님 결정, (나)): `entity` = `order_code`, `summary` = 코드와 이름, `before`/`after` = 가격 칸만. 남기는 범위는 여덟 가지.
 
-**서류 (2026-09-30 실장님 결정, (다) 발행과 취소 모두)**: 총괄 추천은 「취소만」이었으나 실장님은 둘 다를 고르심 — 기록 탭 한 곳에서 나간 서류를 모두 보시려는 뜻. 「처음 입력은 남기지 않는다」는 규칙의 예외입니다.
+**서류 (2026-09-30 실장님 결정, (다) 발행과 취소 모두)**: 총괄 추천은 「취소만」이었으나 실장님은 둘 다를 고르심 — 로그 탭 한 곳에서 나간 서류를 모두 보시려는 뜻. 「처음 입력은 남기지 않는다」는 규칙의 예외입니다.
 - `entity` = `document`, `entity_id` = `document_log.id`, `summary` = 서류 번호와 서류 이름(`D26-00012 Certificat médical`), 환자·내원을 채움.
 - 발행: `after` = `{ doc_no, template_code, lang }`. 취소: `before` = `{ voided: false }`, `after` = `{ voided: true, void_reason }`.
-- **서류의 내용(payload)은 기록에 넣지 않습니다** — 진단·소견이 들어 있어 기록 탭(설정 권한)에 보일 것이 아닙니다.
-- 발행 줄이 많아지므로 기록 탭의 종류 거르기에 두 action이 나와야 합니다.
+- **서류의 내용(payload)은 기록에 넣지 않습니다** — 진단·소견이 들어 있어 로그 탭(설정 권한)에 보일 것이 아닙니다.
+- 발행 줄이 많아지므로 로그 탭의 종류 거르기에 두 action이 나와야 합니다.
 - 남기는 범위는 열 가지.
 
 **전과 — 내원의 과·의사를 바꿈 (2026-09-30 실장님 요청)**: `visit.transfer`. 모듈 칸(`module`)은 `visit`.
 - 두 길이 같은 함수(`visit.routes.js` `applyTransfer`)로 씀: `PUT /api/visits/:id/transfer`(진료·접수가 부르는 전과), 그리고 접수 화면의 저장 `PUT /api/visits/:id`에서 과·의사가 **실제로** 바뀔 때. 같은 값으로 저장하면 0줄.
 - 수납 뒤(취소 안 된 영수가 있으면)에는 두 길 모두 409 `VISIT_BILLED`로 거절하므로 줄도 없음(2026-09-30 실장님 결정 「수납이 끝나기 전까지」).
 - `entity` = `visit`, `entity_id` = 내원 id, 환자·내원을 채움. `summary` = `GEN · RABE Hery → PED · RAKOTO Aina`(과 코드 · 의사 이름).
-- `before`/`after` = `{ department_id, doctor, reason }` — 바뀐 칸만 남음. `department_id`는 기록 탭이 과 이름으로 바꿔 보여 주는 칸(직원 계정 줄과 같음), `doctor`는 의사 이름(글자), `reason`은 전과 사유(없으면 비움, 300자까지).
-- 기록 탭 이름표(설정 세션, 2026-09-30 붙음): 종류 「Changement de service / médecin / 전과(과·의사 변경) / Visit transferred」(종류 거르기에도), 칸 `department_id` 「Service / 진료과」(과 이름으로) · `doctor` 「Médecin / 담당의」(없음은 「—」) · `reason` 「Motif / 사유」. 사유 없이 옮기면 사유 줄이 아예 없음(바뀐 칸만 남으므로).
+- `before`/`after` = `{ department_id, doctor, reason }` — 바뀐 칸만 남음. `department_id`는 로그 탭이 과 이름으로 바꿔 보여 주는 칸(직원 계정 줄과 같음), `doctor`는 의사 이름(글자), `reason`은 전과 사유(없으면 비움, 300자까지).
+- 로그 탭 이름표(설정 세션, 2026-09-30 붙음): 종류 「Changement de service / médecin / 전과(과·의사 변경) / Visit transferred」(종류 거르기에도), 칸 `department_id` 「Service / 진료과」(과 이름으로) · `doctor` 「Médecin / 담당의」(없음은 「—」) · `reason` 「Motif / 사유」. 사유 없이 옮기면 사유 줄이 아예 없음(바뀐 칸만 남으므로).
 - 남기는 범위는 열한 가지.
 
 ## 2. 한 줄에 들어가는 것
@@ -62,7 +62,7 @@
 
 ## 3. 어디서 보나
 
-설정 → 「기록」 탭 (설정 권한이 있는 관리자만). — **설정 세션이 만드는 중.**
+설정 → 「로그」 탭 (설정 권한이 있는 관리자만). — **설정 세션이 만드는 중.**
 
 ## 4. 개발자용 — 기록을 붙이는 법
 
@@ -100,11 +100,11 @@ await writeAudit(client, req, {
 | 접수 | 환자 인적사항 수정 | `f0b3e3b` | 고침 1줄, 같은 값 0줄, 안 고치고 접수 0줄(빈 칸 `''`와 NULL을 같게 봄), 롤백 0줄 |
 | 임상병리 | 결과 수정 · 지움 | `8661ec5` | 처음 입력 0줄, 같은 값 0줄, 값 수정 1줄(바뀐 칸만), 지움 1줄 |
 | 진료 | 오더 취소·삭제, 처방 삭제, **끝난** 진료의 수정 | `d7cee75` | 오늘 진료의 저장 0줄, 삭제·취소 각 1줄, 끝난 뒤 수정은 바뀐 칸만, 롤백 0줄 |
-| 설정 | 직원 계정·권한·비밀번호, 「기록」 탭 | 작업 중 | — |
+| 설정 | 직원 계정·권한·비밀번호, 「로그」 탭 | 작업 중 | — |
 
 - **「끝난 진료」의 기준**(진료 세션): 진료 상태가 완료·서명이거나, 내원 날짜가 오늘이 아님. 오늘 열려 있는 진료를 몇 번씩 저장하는 것은 남기지 않는다.
 - 빈 글자 `''`와 NULL은 같은 값으로 본다(화면이 빈 칸을 `''`로 보내기 때문) — 접수·진료 공통.
-- **끝난 진료 기록을 고침(`consultation.record.edit`)의 대상**(`entity` — 기록 탭에서 문장 뒤에 붙음): `consultation`(기록·활력징후) · **`consultation_note`**(의사마다 한 줄인 진료 기록, 마이그레이션 038 — 칸 `note_text`, 자기 기록을 쓰거나 고치거나 지울 때, 요약 `note`; 기록 탭 「note du médecin / 의사의 진료 기록」, 2026-09-30) · `diagnosis` · `prescription` · `order_item`.
+- **끝난 진료 기록을 고침(`consultation.record.edit`)의 대상**(`entity` — 로그 탭에서 문장 뒤에 붙음): `consultation`(기록·활력징후) · **`consultation_note`**(의사마다 한 줄인 진료 기록, 마이그레이션 038 — 칸 `note_text`, 자기 기록을 쓰거나 고치거나 지울 때, 요약 `note`; 로그 탭 「note du médecin / 의사의 진료 기록」, 2026-09-30) · `diagnosis` · `prescription` · `order_item`.
 - 실행 중 EMR에는 2026-09-29에 모두 올라갔고, 그때 기록은 0줄(아직 아무도 고치지 않음).
 
 ## 5. 총괄이 확인한 것 (2026-09-29, 버리는 시험용 DB에서)
