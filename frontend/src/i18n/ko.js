@@ -1272,7 +1272,7 @@ export default {
   px_mvReadingGoes: "판독도 영상과 함께 옮겨집니다.",
   px_mvReadingsSwap: "판독도 영상과 함께 서로 바뀝니다.",
   px_mvBackToList: "「{a}」은(는) 다시 촬영 대기가 되어 장비 목록에 나옵니다.",
-  px_mvLogged: "이 일은 변경 기록에 남습니다.",
+  px_mvLogged: "이 일은 로그에 남습니다.",
   px_mvGoMove: "영상 옮기기",
   px_mvGoSwap: "영상 맞바꾸기",
   px_mvNeed: "맞는 오더를 고르세요.",
