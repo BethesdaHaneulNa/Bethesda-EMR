@@ -734,6 +734,23 @@ export default {
   // lab screen: the search box over the list
   lb_searchPh: "Patient / N° dossier / Analyse",
   lb_searchNone: "« {q} » : aucun patient de cette liste ne correspond",
+  // the lab results window: ticking days, printing them, narrowing the table (same words as the imaging list)
+  lb_rPrintN: "Imprimer ({n})",
+  lb_rUntickAll: "Tout décocher",
+  lb_rNeedTick: "Cochez les dates à imprimer (la case en tête de chaque colonne de date).",
+  lb_rTick: "Cocher pour imprimer",
+  lb_rTickCancelled: "Le résultat d'une analyse annulée ne s'imprime pas.",
+  lb_rKind: "Type d'analyse",
+  lb_rKindAll: "Type : tous",
+  lb_rSearch: "Chercher : analyse ou date…",
+  lb_rNoMatch: "Aucun résultat ne correspond.",
+  lb_rPrintTitle: "Résultats d'analyses",
+  lb_rPrintLang: "Langue de la feuille",
+  lb_rPrintGo: "Émettre et imprimer",
+  lb_rPrintAgain: "Imprimer de nouveau",
+  lb_rPrintNote: "L'impression est enregistrée dans le dossier comme un document émis.",
+  lb_rPrintIssued: "Émis : {x}",
+  lb_rPrintFail: "Le document n'a pas pu être émis : ",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

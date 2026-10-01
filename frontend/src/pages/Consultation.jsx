@@ -7,7 +7,7 @@ import { tint } from '../theme.js';
 import { TOOL_BTN, toolBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, rowTag } from '../layout.js';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
-import { LabResults } from '../components/LabResults.jsx';
+import { LabResultsWindow } from '../components/LabResults.jsx';
 import { RadiologyReadings, PatientCheck, ViewerCompare } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
 // The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
@@ -1831,18 +1831,9 @@ export default function ConsultationPage() {
       <DocumentModal open={chartOpen} onClose={function(){setChartOpen(false)}} category="chart"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList }} />
-      {labOpen && sel ? (
-        <div onClick={function(){setLabOpen(false)}} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div onClick={function(e){e.stopPropagation()}} style={{width:'90vw',height:'88vh',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid var(--border-2)',background:'var(--panel-head)'}}>
-              <span style={{fontWeight:800,fontSize:15,color:'var(--cyan-text)'}}>🧪 {t.labResultsTitle||'검사결과'}</span>
-              <span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>
-              <button onClick={function(){setLabOpen(false)}} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
-            </div>
-            <div style={{flex:1,overflow:'hidden'}}><LabResults patientId={sel.patient_id} /></div>
-          </div>
-        </div>
-      ) : null}
+      {/* the lab results window: its frame and tools live with the table (components/LabResults.jsx,
+          laboratory session, 2026-10-01) - the same window whichever screen opens it */}
+      {labOpen && sel ? <LabResultsWindow patient={{ id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name }} onClose={function(){setLabOpen(false)}} /> : null}
       {viewer ? (
         <div onClick={function(){setViewer(null)}} style={{position:'fixed',inset:0,background:'var(--scrim-70)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div onClick={function(e){e.stopPropagation()}} style={{width:'94vw',height:'92vh',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>

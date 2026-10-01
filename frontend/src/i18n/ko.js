@@ -734,6 +734,23 @@ export default {
   // lab screen: the search box over the list
   lb_searchPh: "환자명 / 차트번호 / 검사명 검색",
   lb_searchNone: "「{q}」: 이 목록에 맞는 환자가 없습니다",
+  // the lab results window: ticking days, printing them, narrowing the table (same words as the imaging list)
+  lb_rPrintN: "인쇄 ({n})",
+  lb_rUntickAll: "모두 해제",
+  lb_rNeedTick: "인쇄할 날짜를 체크하세요(날짜 칸 머리의 체크 칸).",
+  lb_rTick: "인쇄에 넣기",
+  lb_rTickCancelled: "취소된 검사의 결과는 인쇄하지 않습니다.",
+  lb_rKind: "검사 종류",
+  lb_rKindAll: "종류: 전체",
+  lb_rSearch: "찾기: 항목 이름·날짜…",
+  lb_rNoMatch: "맞는 결과가 없습니다.",
+  lb_rPrintTitle: "검사 결과지",
+  lb_rPrintLang: "서류 언어",
+  lb_rPrintGo: "발행하고 인쇄",
+  lb_rPrintAgain: "다시 인쇄",
+  lb_rPrintNote: "인쇄하면 발행 기록이 남습니다.",
+  lb_rPrintIssued: "발행: {x}",
+  lb_rPrintFail: "서류를 발행하지 못했습니다: ",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
