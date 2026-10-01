@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, getUser } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
-import { TEMPLATES, getTemplate, autofillValue, templatesByCategory } from '../documents/registry.js';
+import { TEMPLATES, getTemplate, autofillValue, templatesByCategory, historyCodes } from '../documents/registry.js';
 import { L, fmtDate, printDocument } from '../documents/shared.jsx';
 
 var UI = {
@@ -65,6 +65,9 @@ export function DocumentModal(props) {
   var category = props.category || 'document';
   var visible = templatesByCategory(category);
   var visibleCodes = visible.map(function (t) { return t.code; });
+  // The history also lists papers issued on another screen (the imaging report, printed
+  // from the imaging list): they can be opened, reprinted and voided here, never started.
+  var listedCodes = historyCodes(category);
 
   var [lang, setLang] = useState(langCtx.lang || 'fr');
   var [code, setCode] = useState(visible[0] ? visible[0].code : '');
@@ -126,7 +129,7 @@ export function DocumentModal(props) {
     api.get('/documents/patient/' + props.patient.id).then(function (h) {
       setHistory(h || []);
       if (props.readOnly) {
-        var vis = (h || []).filter(function (d) { return visibleCodes.indexOf(d.template_code) >= 0; });
+        var vis = (h || []).filter(function (d) { return listedCodes.indexOf(d.template_code) >= 0; });
         if (vis.length) openSaved(vis[0]);
       }
     }).catch(function () {});
@@ -138,8 +141,11 @@ export function DocumentModal(props) {
   }
 
   function newDoc() {
+    // After viewing a paper this window cannot start (an imaging report), "new" goes back
+    // to the window's first template - not to an empty form of that paper.
+    var tpl = visibleCodes.indexOf(template.code) >= 0 ? template : visible[0];
     setMode('new'); setViewed(null);
-    setValues(buildValues(template));
+    if (tpl) { setCode(tpl.code); setValues(buildValues(tpl)); }
   }
 
   function setField(k, val) {
@@ -225,7 +231,7 @@ export function DocumentModal(props) {
       ? (props.readOnly ? { ko: '차트뷰어', en: 'Chart Viewer', fr: 'Dossier clinique' } : { ko: '차트기록', en: 'Chart Record', fr: 'Dossier clinique' })
       : UI.title;
   var catIcon = category === 'prescription' ? '💊' : category === 'chart' ? '📋' : '📄';
-  var histList = history.filter(function (d) { return visibleCodes.indexOf(d.template_code) >= 0; });
+  var histList = history.filter(function (d) { return listedCodes.indexOf(d.template_code) >= 0; });
 
   var dk = 'var(--panel-head)', bd = 'var(--border-2)', tx = 'var(--text)', t2 = 'var(--text-2)';
   var btn = { border: 'none', borderRadius: 5, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700 };

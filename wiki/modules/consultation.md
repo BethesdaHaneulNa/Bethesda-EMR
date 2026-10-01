@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 문서: 체크해서 비교하기 — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 영상 판독 보고서를 문서 이력에 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -199,6 +199,7 @@
 ### 2.11 발급 이력 · 다시 인쇄 · 발급 취소
 
 - 문서 창 오른쪽 **Historique (발급 이력)**에 이 환자에게 발급한 문서가 최근 것부터 나옵니다. 누르면 그 문서가 열리고 **🖨 Réimprimer**로 다시 인쇄할 수 있습니다.
+- **영상 판독 보고서**(Compte-rendu d'imagerie — 「영상/판독」 목록의 🖨 인쇄로 발행하는 A4 한 장, PACS)는 문서 창의 양식 목록에는 없지만(영상/판독 창에서만 만듦 — 검사와 판독을 골라야 하므로) **발급 이력에는 다른 문서와 같이 나옵니다**(2026-10-01). 누르면 다시 보이고, 다시 인쇄·발급 취소가 됩니다. 수납 화면의 문서 창에서도 같습니다.
 - 잘못 발급한 문서는 열어서 **Annuler (발급 취소)**를 누르고 사유(**Motif d'annulation**)를 적습니다.
   - 문서는 지워지지 않습니다. **ANNULÉ (취소됨)** 도장이 찍힌 채 이력에 남습니다.
   - 발급과 취소는 설정의 **기록** 탭에 한 줄씩 남습니다(문서 번호·이름·사유 — 문서 내용은 남기지 않음). 이미 취소한 문서를 다시 취소해도 처음 사유가 그대로입니다.
@@ -333,6 +334,7 @@
 ### 3.5 공용 문서 엔진 (진료 주관)
 
 - `documents/registry.js` — `TEMPLATES = [referral, externalRx, ...CHART_TEMPLATES]`. `templatesByCategory('document'|'prescription'|'chart')`로 화면마다 보이는 양식을 거릅니다. `autofillValue(src, ctx, lang)`는 `doctor`·`note`·`meds` 세 가지. `meds`(의뢰서 「현재 투약」)는 줄마다 `· 약 이름 — ` + `rx-dosing.js`의 `doseSentence`이고, 예전 계산 줄에는 `(예전 계산 / old calculation / ancien calcul)`을 붙입니다.
+- **다른 화면에서 발행하는 서류를 이력에 올리기**(2026-10-01, PACS의 영상 판독 보고서 `imaging-report` — PACS 위키 P-30): `registry.js`의 `TEMPLATES`에 `imagingReport`(`documents/imaging-report.jsx`, PACS의 서식 — 고칠 일은 PACS와 맞춤)를 넣어 `getTemplate`이 찾게 함 → 저장된 payload로 다시 그리고, 이력과 설정의 기록 탭(`Settings.jsx`가 `getTemplate(code).name`을 씀)에 이름이 나옴. 그 서식의 `category`는 `'imaging'`이라 어느 창의 「새로 만들기」(`templatesByCategory`)에도 안 나옴. 이력은 **`historyCodes(cat)`** = 그 창의 양식들 + `HISTORY_ALSO[cat]`(`document: ['imaging-report']`) — `DocumentModal`의 `listedCodes`가 이력 목록과 읽기 전용 창의 첫 문서 고르기에 씀. 보고 있던 문서가 이 창에서 만들 수 없는 종류면 `newDoc()`이 창의 첫 양식으로 돌아감(빈 판독 보고서 양식이 열리지 않게). 발급 취소·다시 인쇄는 엔진의 것 그대로(`POST /documents/:id/void` → `documents.void`). 서버·통계에서 `template_code` 목록을 세는 곳은 없음(쓰는 곳은 `document.routes.js`의 원외 처방 확인과 기록 탭의 이름 표시뿐). 다른 화면에서 발행하는 서류가 또 생기면 `TEMPLATES`와 `HISTORY_ALSO` 두 곳.
 - `components/DocumentModal.jsx` — 양식 목록 / 입력 칸 / 미리보기 / 발급 이력의 네 칸. 입력 종류는 `text`, `textarea`, `checks`(체크 여러 개를 `", "`로 이어 한 문자열로 저장). `checks`의 다음 값은 파일 위쪽 `nextChecks(f, cur, opt, on)`이 정합니다 — 필드에 `single: true`면 한 개만(새 체크가 앞의 것을 바꿈), `noneOption: 'None'`이면 None과 나머지가 서로 배타, 둘 다 없으면 아무 조합(옵션 순서로 정렬). 저장 형식은 그대로라 예전에 두 개 저장된 문서도 그대로 열리고 인쇄됩니다(데이터는 고치지 않음). `text`·`textarea` 칸에 `[...]`(60자 이내, 줄바꿈 없음 — `openBrackets`)가 남아 있으면 칸 아래 경고를 보이고, **발급할 때만** `window.confirm`으로 묻습니다(초안 출력은 「미발급(초안)」 표시가 있어 묻지 않음). 문구는 이 파일의 `UI` 사전(`bracketHint`·`bracketConfirm`) — 문서 언어를 따릅니다. `readOnly`면 입력 칸을 숨기고 가장 최근 발급 문서를 엽니다(수납·약국·임상병리·접수의 「차트뷰어」).
 - **저장된 문서는 값만 가지고, 인쇄할 때 지금 코드의 `Layout`으로 다시 그립니다**(157-161). 그래서
   - 양식 코드를 고치면 **이미 발급한 문서의 재출력 모양도 바뀝니다.**
@@ -707,7 +709,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | 문서: 「영상/판독」 목록에서 검사를 체크해 함께 열기(PACS `4e77ef7` — 이 파일 다섯 군데 더)를 3.1의 같은 단락에, 설명서 fr §9에 8번 | (이 커밋) |
+| 2026-10-01 | **영상 판독 보고서를 문서 창의 발급 이력에** — `registry.js`에 등록(`TEMPLATES` + `historyCodes`/`HISTORY_ALSO`), 「새로 만들기」에는 안 나옴, 다시 보기·다시 인쇄·발급 취소, 수납의 문서 창도 같음, `newDoc`이 만들 수 없는 종류에서 첫 양식으로 | (이 커밋) |
+| 2026-10-01 | 문서: 「영상/판독」 목록에서 검사를 체크해 함께 열기(PACS `4e77ef7` — 이 파일 다섯 군데 더)를 3.1의 같은 단락에, 설명서 fr §9에 8번 | `6e2df26` |
 | 2026-10-01 | 문서: 영상 창의 「전 검사와 비교」·판독 칸 접기(PACS 세션의 부품, `0530f5f` — 이 파일 여섯 군데)를 3.1에, 설명서 fr §9가 PACS 설명서 §8을 가리키게. 격리에서 제목 줄 한 줄 확인 | `04024d6` |
 | 2026-10-01 | **상용구 — 설정의 약속에 맞춤** — 제목 `se_phraseName`(상용구 / Phrases types), 분류는 `GET /admin/phrase-categories`의 이름·순서 그대로(빈 분류도, 「상용구가 없습니다」 한 줄), 문장은 `text` 하나, 고른 분류를 id로 기억(이름 바꿔도 따라감·지우면 전체). `phraseDict`·`cs_pc*` 키와 `PHRASE_CATS` 지움 | `e88299f` |
 | 2026-10-01 | **상용구 분류 고르기(화면 먼저)** — 낱말 단추 한 줄 대신 「Catégorie : toutes ▾」 하나(목록에서 고름, 스무 개여도 스크롤), 검색과 함께 걸러짐, 고른 분류를 그 PC·계정에 기억, 꼬리표 말줄임. 이름 통일·자료 분류·한 문장은 설정의 약속이 오면 | `4f7f98f` |

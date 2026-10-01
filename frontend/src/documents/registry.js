@@ -5,8 +5,14 @@ import referral from './referral.jsx';
 import { doseSentence, isLegacyTotal } from './rx-dosing.js';
 import externalRx from './external-rx.jsx';
 import { CHART_TEMPLATES } from './surgical-records.jsx';
+import imagingReport from './imaging-report.jsx';
 
-export var TEMPLATES = [referral, externalRx].concat(CHART_TEMPLATES);
+// imagingReport (category 'imaging') is issued from the imaging list, where the exam and
+// its reading are chosen - not from a documents window, so no window offers it under
+// "new" (templatesByCategory never returns it). It is registered so that a sheet
+// already issued can be drawn again from its saved payload, named in the history and in
+// the change log, reprinted and voided like any other paper.
+export var TEMPLATES = [referral, externalRx].concat(CHART_TEMPLATES).concat([imagingReport]);
 
 export function getTemplate(code) {
   for (var i = 0; i < TEMPLATES.length; i++) {
@@ -21,6 +27,16 @@ export function getTemplate(code) {
 export function templatesByCategory(cat) {
   cat = cat || 'document';
   return TEMPLATES.filter(function (t) { return (t.category || 'document') === cat; });
+}
+
+// The documents a window lists in its history: its own kinds, and the kinds issued on
+// another screen that belong with them. The imaging report goes with the letters and
+// certificates (the 📄 Documents window of consultation and payment): it leaves the
+// clinic with the patient like a referral letter.
+var HISTORY_ALSO = { document: ['imaging-report'] };
+export function historyCodes(cat) {
+  cat = cat || 'document';
+  return templatesByCategory(cat).map(function (t) { return t.code; }).concat(HISTORY_ALSO[cat] || []);
 }
 
 // Medication lines for a letter use the pharmacy's wording (rx-dosing.js doseSentence),
