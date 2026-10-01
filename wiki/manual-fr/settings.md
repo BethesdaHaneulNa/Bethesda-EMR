@@ -180,6 +180,7 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Ligne 2 : la dose par jour doit être supérieure à 0. (et autres « Ligne n : … ») | Une ligne d'ordonnance type a un nombre refusé | Corrigez la ligne indiquée |
 | … phrase(s) type(s) sont dans cette catégorie. Déplacez-les vers une autre catégorie ou supprimez-les d'abord. | On supprime une catégorie qui contient encore des phrases | Choisissez où les déplacer, ou supprimez d'abord les phrases |
 | Une catégorie porte déjà ce nom. | Deux catégories ne peuvent pas avoir le même nom | Prenez un autre nom |
+| Fenêtre d'état : « Fichier .env de l'EMR — ligne(s) absente(s) … » ou « DB_PASSWORD n'est pas celui de l'EMR en marche » | Le fichier .env de l'EMR a été modifié à la main | **Ne redémarrez pas** le PC serveur ni l'EMR ; prévenez tout de suite le responsable |
 | Le serveur ne répond pas… | Le serveur est arrêté ou lent | Regardez la fenêtre d'état sur le PC serveur ; prévenez le responsable |
 | Fenêtre d'état : « Autres programmes sur les ports — port 9080 : DownloadServer … » | Un autre programme (téléchargement, serveur web…) écoute un port de l'EMR ou du PACS ; l'écran peut s'ouvrir alors que la liste de travail des appareils ne marche plus | Fermez ou désinstallez ce programme, redémarrez le PC ; sinon prévenez le responsable |
 
@@ -190,6 +191,7 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 - Ne changez pas le stock en dehors de **Pharmacie** → **Stock**.
 - Ne laissez pas le bandeau de **Sauvegarde** jaune ou rouge plusieurs jours.
 - N'écrivez pas les mots de passe sur un papier collé à l'écran.
+- Ne modifiez pas à la main le fichier **.env** du dossier de l'EMR sur le PC serveur (lignes `DB_PASSWORD` et `JWT_SECRET`). Changer ces lignes ne change aucun mot de passe : au prochain démarrage, l'EMR ne pourrait plus ouvrir sa base. Pour le mot de passe d'une personne : **Paramètres** → **Personnel**. Pour le mot de passe du serveur d'images : le responsable le change dans le dossier PACS, puis lance **pair-with-emr**.
 
 ## Qui appeler
 

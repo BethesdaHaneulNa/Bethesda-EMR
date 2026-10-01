@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — .env를 손으로 고친 것을 상태 창이 알림 · Get-ComposeDir 고침(찾은 버그) · 문서
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `89217b1` merge 위, 상용구 마이그레이션은 039)
+- **⚠ 찾은 버그(고침) — `server-status.ps1` `Get-ComposeDir`가 Windows PowerShell 5.1에서 늘 빈 값**: docker 템플릿 `{{index .Config.Labels "com.docker.compose.project.working_dir"}}`의 안쪽 큰따옴표를 PS 5.1이 떼어 내 docker가 「function "com" not defined」로 거절 → `Invoke-Docker`가 `$null`. 그래서 폴더에서 시작하는 검사가 **조용히 건너뛰어졌습니다**: 영상 백업 줄(`Get-ImageBackupCheck` — PACS 폴더의 `logs\image-backup-status.json`)과 브리지 `.heartbeat` 파일(`Get-BridgeHeartbeatCheck`). 즉 **지금 설치된 상태 창에는 영상 백업 줄이 나오지 않고, 브리지가 멈춰도(컨테이너는 running) 빨강이 되지 않습니다.** 앞서 이 두 줄을 「확인했다」고 적은 것은 pwsh 7이나 함수만 따로 부른 시험이었던 것으로 보입니다 — PS 5.1로 스크립트 전체를 돌린 확인이 아니었습니다(제 잘못). `{{json .Config.Labels}}`를 받아 JSON에서 읽게 고쳤고(`Get-MountSource`가 같은 까닭으로 쓰는 방식), **`powershell.exe`(5.1)로** 스크립트 전체를 돌려 확인: 이 PC에서 브리지 줄이 「OK」 → 「signal il y a 7 s」(파일을 읽음). 영상 백업 줄은 이 PC의 PACS 폴더에 상태 파일이 없어 여전히 없음(맞음).
+  - **총괄께**: 이 고침은 `C:\Bethesda-EMR`의 `server-status.ps1`을 새 것으로 바꿔야 적용됩니다. EMR 백업 복사 줄(`Get-EmrCopyCheck`)과 영상 주소 줄은 DB에서 읽으므로 영향이 없었습니다.
+- **1 상태 창 — `.env` 검사** (`Get-EnvFileCheck`, 문제가 있을 때만 줄 **Fichier .env de l'EMR**)
+  - 앱 컨테이너의 compose 폴더의 `.env`에서 `DB_PASSWORD`·`JWT_SECRET` 줄이 **없거나 비었는지**.
+  - `DB_PASSWORD`가 **실행 중인 앱 컨테이너가 받은 값**과 같은지(`docker inspect <api> --format '{{json .Config.Env}}'`). 앱은 그 값으로 DB에 붙어 돌고 있으므로 그것이 「실행 중 DB와 맞는 값」입니다. DB에 직접 비밀번호를 넣어 보는 방법은 쓰지 않음 — 명령줄에 값이 지나가지 않게.
+  - **값은 찍지 않음**: 메모리에서 글자 그대로 비교만, 줄에는 「다르다」만. 따옴표로 감싼 같은 값은 같게 봄.
+  - 안내: 「… a ete modifie a la main. Ne redemarrez pas et ne mettez pas a jour l'EMR … Prevenez le responsable (DEPLOYMENT.md, partie 4)」. ko·en·fr. 창 높이 720 → 740.
+  - `JWT_SECRET`이 실행 중 값과 **다른** 것은 보지 않음(다시 시작하면 모두 로그아웃될 뿐 EMR은 뜸) — 줄이 없는 것만.
+- **2 문서**
+  - `DEPLOYMENT.md` 4절 「Secrets (.env)」에 세 항목: 두 줄을 손으로 바꾸지 않는다(진짜 비밀번호는 저장 공간에 — 파일만 바꾸면 다음 시작 때 DB에 못 붙음, `JWT_SECRET`이 없으면 시작이 멈춤, 돌고 있는 동안은 티가 안 남), 바꾸려던 것은 다른 곳(직원 비밀번호 = 설정 화면, 영상 서버 = PACS 폴더 `.env` + `pair-with-emr`), 실수했으면 **다시 시작하지 말고** 실행 중 컨테이너의 값으로 되돌린다.
+  - `manual-fr/settings.md`: 「À ne pas faire」에 한 줄, 메시지 표에 상태 창의 두 문구(→ 다시 시작하지 말고 담당자에게). 모듈 위키 2.10·3-6.
+- **바꾼 파일**: `server-status.ps1`(BOM·CRLF 유지) · `DEPLOYMENT.md` · 위키 3개
+- **확인한 방법** (격리 9187만 — 실행 중 EMR·그 `.env`는 건드리지 않음. 이 작업공간의 `.env`도 고치지 않고 스크래치 사본으로)
+  - PowerShell 파서 오류 0. **`powershell.exe` 5.1**로 스크립트 사본(컨테이너 이름과 `.env` 경로만 바꿈) 전체를 일곱 번: 그대로 → 줄 없음 / 따옴표로 감싼 같은 값 → 줄 없음 / `JWT_SECRET` 줄 없음 → 「ligne(s) absente(s) ou vide(s) : JWT_SECRET」 / `DB_PASSWORD` 바뀜(en) → 「DB_PASSWORD is not the one the running EMR uses」 / 둘 다 → 두 문구 한 줄에 / `DB_PASSWORD=` 빈 값 → 「… : DB_PASSWORD」 / 파일 없음 → 「fichier .env introuvable」. 경고마다 안내 줄. 어느 출력에도 값 없음.
+  - 처음에는 일곱 번 모두 줄이 없었음 → 따라가 보니 위의 `Get-ComposeDir` 버그.
+  - 고친 `Get-ComposeDir`로 영상 백업 줄도 되는지: 진짜 조회(`bethesda-pacs`의 폴더 = `C:Bethesda-PACS`)가 값을 돌려준 뒤, 상태 파일만 스크래치 폴더의 것(`ok`, 512.4 / 931.5 GB)으로 바꾼 사본을 PS 5.1로 → 「Sauvegarde des images (disque) ok il y a 0 h - 512 Go libres sur 932 Go」. 고치기 전에는 이 줄이 나올 수 없었음.
+
 ## 2026-10-01 — 상용구: 한 이름 · 문장 하나 · 분류를 자료로 (실장님 요청)
 
 - **상태**: 확인 요청
