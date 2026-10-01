@@ -7,7 +7,7 @@ import { tint } from '../theme.js';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
-import { RadiologyReadings, PatientCheck, ViewerCompare } from '../components/RadiologyReadings.jsx';
+import { RadiologyReadings, PatientCheck, ViewerCompare, CompareChecked } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
 // The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
 // in the search lists where the default sig used to be (decision B retired default doses).
@@ -255,21 +255,28 @@ export default function ConsultationPage() {
   // again, so a reading just saved shows.
   var rrl = useState(0), readingsReload = rrl[0], setReadingsReload = rrl[1];
   useEffect(function(){ if(!viewer && readingsOpen) setReadingsReload(function(n){ return n+1; }); }, [viewer]);
+  // Exams ticked in that list, to open together (PACS: RadiologyReadings, CompareChecked).
+  // The ticks stay while the image window is open over the list; closing the list drops them.
+  var rpk = useState([]), readingsPicked = rpk[0], setReadingsPicked = rpk[1];
+  useEffect(function(){ if(!readingsOpen) setReadingsPicked([]); }, [readingsOpen]);
   var canRead = (user && Array.isArray(user.permissions)) ? user.permissions.indexOf('consultation')>=0 : (user && user.role==='doctor')||(user&&user.role==='admin');
 
-  async function openViewer(orderItemId){
+  // pickedIds: exams ticked in the list - the server opens them together and says which
+  // one the window (title, reading box) is about: the most recent (r.order_item_id).
+  async function openViewer(orderItemId, pickedIds){
     try {
-      var r = await api.get('/pacs/viewer-url?order_item_id='+orderItemId);
+      var r = await api.get(pickedIds ? '/pacs/viewer-url?order_item_ids='+pickedIds.join(',') : '/pacs/viewer-url?order_item_id='+orderItemId);
+      if(pickedIds) orderItemId = r.order_item_id;
       // no_study: an order that never went to the worklist has nothing to show (P-18;
       // the server leaves url empty). cancelled: the order was cancelled - its images and
       // reading stay as the record, but no new reading is taken.
-      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?r.url:'', no_study:!!r.no_study,
+      setViewer({ order_item_id:orderItemId, has_viewer:r.has_viewer, url:r.has_viewer?(pickedIds&&r.compare&&r.compare.url?r.compare.url:r.url):'', no_study:!!r.no_study,
         cancelled:!!r.cancelled, cancel_reason:r.cancel_reason||'', order_name:r.order_name, accession:r.accession, reading:r.reading, images:r.images||null,
         // compare: the same patient's other exams (PACS, ViewerCompare); base_url: this exam alone.
         base_url:r.has_viewer?r.url:'', compare:r.compare||null });
-      setReadFolded(false);
+      setReadFolded(!!pickedIds);
       setReadText(r.reading?r.reading.result_text:'');
-    } catch(e){ alert(t.cs_errorPrefix+e.message); }
+    } catch(e){ alert(pickedIds && e && e.message==='These exams cannot be compared together' ? t.px_cmpRefused : t.cs_errorPrefix+e.message); }
   }
   async function saveReading(){
     if(!viewer) return;
@@ -1610,9 +1617,10 @@ export default function ConsultationPage() {
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid var(--border-2)',background:'var(--panel-head)'}}>
               <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🩻 {t.imagingList||t.reading}</span>
               <span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>
-              <button onClick={function(){setReadingsOpen(false)}} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
+              <CompareChecked ids={readingsPicked} t={t} style={{marginLeft:'auto'}} onGo={function(){ openViewer(null, readingsPicked); }} />
+              <button onClick={function(){setReadingsOpen(false)}} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
-            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} reload={readingsReload} onOpen={function(oid){ openViewer(oid); }} /></div>
+            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} reload={readingsReload} onOpen={function(oid){ openViewer(oid); }} picked={readingsPicked} onPick={setReadingsPicked} /></div>
           </div>
         </div>
       ) : null}

@@ -1114,6 +1114,14 @@ export default {
   px_compareHint: "영상 위의 ▦ 단추에서 화면을 나누고, 왼쪽 목록의 그림을 칸에 끌어다 놓으세요.",
   px_readingHide: "판독 칸 접기",
   px_readingShow: "판독 칸 펴기",
+  px_cmpGo: "비교하기 ({n})",
+  px_cmpNeedTwo: "비교할 검사를 둘 이상 체크한 뒤(각 줄 왼쪽의 칸) 누르세요.",
+  px_cmpPick: "비교에 넣기",
+  px_cmpNoImages: "도착한 영상이 없어 비교에 넣을 수 없습니다.",
+  px_cmpCancelled: "취소된 검사는 비교에 넣을 수 없습니다.",
+  px_cmpIdentity: "영상의 환자 번호 경고가 있는 검사입니다 — 「영상보기」로만 엽니다.",
+  px_cmpMax: "한 번에 비교할 수 있는 검사는 9건까지입니다.",
+  px_cmpRefused: "이 검사들은 함께 비교할 수 없습니다(취소됨·영상 없음·다른 환자). 목록을 닫았다가 다시 여세요.",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "화면 색 (밝게 / 어둡게)",

@@ -171,6 +171,23 @@ function imagesOf(w) {
 // it, so it is left out; it still opens from its own order, with its warning.
 // Most recent first. `older` = ordered before the one being opened.
 const MAX_COMPARE = 9;
+// Exams ticked in the patient's imaging list, to open together (director, 2026-10-01).
+const MAX_PICKED = 9;
+const PICK_REFUSED = 'These exams cannot be compared together';
+// The ticked order items -> the one that is "opened": the most recent of them (visit
+// date, then order number). The window's title, the reading box and the first pane
+// are that exam's - a doctor compares today's film with earlier ones, and it does not
+// depend on the order of the ticks. null when the list is not 2..9 imaging orders of
+// one and the same patient.
+async function pickedOrders(raw) {
+  const ids = [...new Set(String(raw || '').split(',').map(x => x.trim()).filter(Boolean))];
+  if (ids.length < 2 || ids.length > MAX_PICKED || ids.some(x => !/^[0-9]{1,9}$/.test(x))) return null;
+  const r = await pool.query(
+    `SELECT oi.id, oi.patient_id FROM order_item oi JOIN visit v ON v.id = oi.visit_id
+      WHERE oi.id = ANY($1::int[]) AND oi.code_type = 'imaging' ORDER BY v.visit_date DESC, oi.id DESC`, [ids.map(Number)]);
+  if (r.rows.length !== ids.length || r.rows.some(x => x.patient_id !== r.rows[0].patient_id)) return null;
+  return { opened: r.rows[0].id, others: r.rows.slice(1).map(x => x.id) };
+}
 async function comparableStudies(orderItemId) {
   const r = await pool.query(
     `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, v.visit_date, wl.body_part,
@@ -209,8 +226,17 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     let order_status = '', cancelled_at = null, cancel_reason = '';
     let others = [], prev = null, order_code = '', visit_date = null;
-    if (req.query.order_item_id) {
-      const oid = req.query.order_item_id;
+    // ?order_item_ids=a,b,c : the exams ticked in the list, opened together. Every one
+    // must be an exam this route would offer for comparison anyway - same patient, not
+    // cancelled, images arrived, patient number matching - or nothing opens (409): a
+    // tick cannot bring in what the compare button would not.
+    let picked = null;
+    if (req.query.order_item_ids !== undefined) {
+      picked = await pickedOrders(req.query.order_item_ids);
+      if (!picked) return res.status(409).json({ error: PICK_REFUSED });
+    }
+    const oid = picked ? picked.opened : req.query.order_item_id;
+    if (oid) {
       const w = await pool.query(
         `SELECT ${WL_COLUMNS}, body_part FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
       if (w.rows[0]) {
@@ -227,7 +253,13 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
-      if (study && o.rows[0]) {
+      if (picked) {
+        const mine = w.rows[0] || {};
+        const okMine = study && o.rows[0] && o.rows[0].order_status !== 'cancelled' && mine.images_received_at && mine.patient_check === 'match';
+        const all = okMine ? (await comparableStudies(oid)).filter(x => x.study !== study) : [];
+        others = all.filter(x => picked.others.includes(x.id));
+        if (!okMine || others.length !== picked.others.length) return res.status(409).json({ error: PICK_REFUSED });
+      } else if (study && o.rows[0]) {
         // A list that cannot be read never stops the image window: it opens alone.
         try {
           const all = (await comparableStudies(oid)).filter(x => x.study !== study);
@@ -262,7 +294,9 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     const compare = { count: others.length, url: others.length ? page + [study, ...others.map(x => x.study)].map(encodeURIComponent).join(',') : '',
       opened: { order_name, visit_date }, prev: prev ? shown(prev) : null, others: others.map(shown) };
     // A cancelled order's images stay viewable: they are part of the record.
-    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, visit_date, reading, images, compare,
+    // order_item_id: whose reading this window writes (with ticks: the most recent one).
+    res.json({ has_viewer: true, base, order_item_id: oid ? Number(oid) : null, picked: !!picked,
+               study_instance_uid: study, accession, url, order_name, modality, visit_date, reading, images, compare,
                no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

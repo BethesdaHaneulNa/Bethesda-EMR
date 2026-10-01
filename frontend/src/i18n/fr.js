@@ -1114,6 +1114,14 @@ export default {
   px_compareHint: "Bouton ▦ en haut des images : coupez l'écran en cases, puis faites glisser un examen de la liste de gauche dans une case.",
   px_readingHide: "Masquer le compte-rendu",
   px_readingShow: "Afficher le compte-rendu",
+  px_cmpGo: "Comparer ({n})",
+  px_cmpNeedTwo: "Cochez au moins deux examens (la case à gauche de chaque ligne), puis cliquez ici.",
+  px_cmpPick: "Cocher pour comparer",
+  px_cmpNoImages: "Pas d'images arrivées : cet examen ne peut pas être comparé.",
+  px_cmpCancelled: "Examen annulé : il ne peut pas être comparé.",
+  px_cmpIdentity: "Avertissement d'identité sur les images : cet examen s'ouvre seulement avec « Voir image ».",
+  px_cmpMax: "9 examens au plus pour une comparaison.",
+  px_cmpRefused: "Ces examens ne peuvent pas être comparés ensemble (examen annulé, images absentes ou autre patient). Fermez la liste et rouvrez-la.",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",

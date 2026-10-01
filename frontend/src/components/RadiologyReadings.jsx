@@ -55,14 +55,16 @@ export function PatientCheck(props) {
 // The window opens on the exam alone - the reading box belongs to that order, and a
 // list full of other dates invites reading the wrong film. While comparing, the bar
 // says whose reading it is.
-//   props.viewer  { order_item_id, base_url, compare }   base_url = the exam alone
+//   props.viewer  { url, base_url, compare }   url = what the iframe shows now,
+//                                               base_url = the exam alone
 //   props.onUrl(address)  the screen puts it in the iframe (and "open in a new tab")
+// "Comparing" is read from the address, not kept here: a window opened straight into
+// a comparison (exams ticked in the list, CompareChecked) shows the same bar.
 export function ViewerCompare(props) {
   var t = props.t, v = props.viewer || {}, c = v.compare;
-  var ps = useState(false), on = ps[0], setOn = ps[1];
-  useEffect(function () { setOn(false); }, [v.order_item_id]);
   if (!c || !c.count || !c.url || !v.base_url) return null;
-  function go(compare) { setOn(compare); props.onUrl(compare ? c.url : v.base_url); }
+  var on = v.url === c.url;
+  function go(compare) { props.onUrl(compare ? c.url : v.base_url); }
   function name(x) { return x ? x.order_name + ' · ' + ymd(x.visit_date) : ''; }
   var btn = { background: 'var(--violet-deep)', color: 'var(--on-fill-violet)', border: '1px solid var(--violet-ink)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
   var off = { background: 'var(--btn-neutral-2)', color: 'var(--text)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
@@ -76,7 +78,33 @@ export function ViewerCompare(props) {
   </div>;
 }
 
+// Why an exam of the list cannot be ticked for a comparison ('' = it can). The same
+// rule as the server's (viewer-url): images arrived, not cancelled, and the patient
+// number in the images matches the chart - an exam flagged as possibly another
+// patient's would sit next to this patient's films with no warning on it.
+export function compareBlock(r, t) {
+  if (!r) return t.px_cmpNoImages;
+  if (r.order_status === 'cancelled') return t.px_cmpCancelled;
+  if (!r.images_received_at || !(r.image_study_uid || r.study_instance_uid)) return t.px_cmpNoImages;
+  if (r.patient_check !== 'match') return t.px_cmpIdentity;
+  return '';
+}
+
+// "Compare (N)" in the header of the patient's imaging list: opens the ticked exams
+// together (director, 2026-10-01). Off until two are ticked; its title says what to do.
+//   props.ids  the ticked order items     props.onGo()  the screen opens them
+export function CompareChecked(props) {
+  var t = props.t, n = (props.ids || []).length, ok = n >= 2;
+  return <button disabled={!ok} onClick={function () { if (ok) props.onGo(); }} title={ok ? t.px_compareHint : t.px_cmpNeedTwo}
+    style={Object.assign({ background: ok ? 'var(--violet-deep)' : 'var(--chip)', color: ok ? 'var(--on-fill-violet)' : 'var(--text-3)', border: '1px solid ' + (ok ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 5, padding: '6px 14px', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }, props.style)}>⇆ {String(t.px_cmpGo || '').replace('{n}', n)}</button>;
+}
+
+var MAX_PICKED = 9;   // the server's limit (pacs.routes.js)
+
 // Read-only list of a patient's imaging orders + radiology readings.
+//   props.picked / props.onPick(ids)  the screen keeps which exams are ticked for a
+//   comparison (so its header can show CompareChecked); without onPick there are no
+//   tick boxes - the payment screen has no image window.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
@@ -98,6 +126,20 @@ export function RadiologyReadings(props) {
 
   var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--violet-text)';
 
+  var picked = props.picked || [];
+  // The list reads itself again when the image window closes: an exam cancelled in
+  // the meantime drops out of the ticks.
+  useEffect(function () {
+    if (!props.onPick || !picked.length || loading) return;
+    var still = picked.filter(function (id) { return rows.some(function (r) { return r.id === id && !compareBlock(r, t); }); });
+    if (still.length !== picked.length) props.onPick(still);
+  }, [rows]);
+  function tick(r) {
+    if (picked.indexOf(r.id) >= 0) return props.onPick(picked.filter(function (id) { return id !== r.id; }));
+    if (picked.length >= MAX_PICKED) return alert(t.px_cmpMax);
+    props.onPick(picked.concat([r.id]));
+  }
+
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
   if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
 
@@ -112,6 +154,11 @@ export function RadiologyReadings(props) {
         var cancelled = r.order_status === 'cancelled';
         return <div key={r.id} style={{ background: 'var(--panel-2)', border: '1px ' + (cancelled ? 'dashed' : 'solid') + ' ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            {props.onPick ? (function () {
+              var why = compareBlock(r, t);
+              return <input type="checkbox" checked={picked.indexOf(r.id) >= 0} disabled={!!why} onChange={function () { tick(r); }} title={why || t.px_cmpPick}
+                style={{ width: 17, height: 17, margin: 0, flex: 'none', cursor: why ? 'not-allowed' : 'pointer', accentColor: 'var(--violet-strong)' }} />;
+            })() : null}
             <span style={{ fontFamily: 'monospace', color: cancelled ? t3 : 'var(--ok-text)', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
             <span style={{ background: cancelled ? 'var(--btn-neutral-2)' : 'var(--accent-chip)', color: cancelled ? 'var(--text-soft-2)' : 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
             <span style={{ color: cancelled ? t3 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>

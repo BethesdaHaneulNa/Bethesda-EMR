@@ -274,28 +274,51 @@ const VIEWER_CSP = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
 ].join('; ');
-// Two exams in one window (?study=OPENED,OTHER, to compare): Stone puts in its first
-// pane whichever exam's series description (.../metadata) arrives first, and it has
-// no parameter to say which - measured, the other exam came up first once in eight.
-// The window's title and its reading box belong to the opened order, so that exam
-// must be the one that comes up. The other exam's descriptions are therefore held
-// until one of the opened exam's has been sent for this page (1.5 s at most, so a
-// problem here can only cost that long). Only the timing of our own answers changes:
-// Stone is served as it is and nothing calls into it. (Holding the other exam's list
-// queries instead emptied the first pane - Stone rebuilds its list when they arrive.)
+// Several exams in one window (?study=OPENED,OTHER,... to compare): Stone puts in its
+// first pane the first series whose description (.../metadata) it receives, it asks
+// for the descriptions in the order the exams' series lists (series?0020000D=) came
+// back, and it has no parameter to say which exam comes first. Measured: another exam
+// came up first about once in eight, and holding only its descriptions was not enough
+// (when Stone asks for that one first it simply waits, then shows it).
+// The window's title and its reading box belong to the opened order, so that exam must
+// be the one that comes up. For a page with several exams the relay therefore answers
+// in this order:
+//   1. the opened exam's series list, then the other exams' series lists;
+//   2. the opened exam's descriptions - but only once every list has gone out (Stone
+//      builds its list of exams when the last one arrives; a description that arrives
+//      before that opens nothing and the first pane stays empty);
+//   3. the other exams' descriptions.
+// Each wait is 1.5 s at most, so a problem here costs seconds, never the images. Only
+// the timing of our own answers changes: Stone is served as it is, nothing is added
+// to it and nothing calls into it.
 const openedFirst = {
-  pages: new Map(),                       // user:openedStudy -> { page: ms, sent: ms }
-  page(key) {
+  pages: new Map(),                       // user:openedStudy -> { studies, listed:Set, described:bool }
+  page(key, studies) {
     if (this.pages.size > 200) this.pages.clear();
-    this.pages.set(key, { page: Date.now(), sent: 0 });
+    this.pages.set(key, { studies, listed: new Set(), described: false });
   },
-  sent(key) { const p = this.pages.get(key); if (p) p.sent = Date.now(); },
-  async wait(key) {
+  async until(test) {
+    const end = Date.now() + 1500;
+    while (!test() && Date.now() < end) await new Promise(r => setTimeout(r, 15));
+  },
+  // Before answering: wait for what must go out first.
+  async before(key, study, path) {
     const p = this.pages.get(key);
-    if (!p) return;
-    const until = Date.now() + 1500;
-    while (p.sent < p.page && Date.now() < until) await new Promise(r => setTimeout(r, 40));
-    await new Promise(r => setTimeout(r, 60));
+    if (!p || p.studies.length < 2 || !study) return;
+    const opened = p.studies[0];
+    if (path === '/dicom-web/series') {
+      if (study !== opened) await this.until(() => p.listed.has(opened));
+    } else if (path.endsWith('/metadata')) {
+      if (study === opened) await this.until(() => p.studies.every(u => p.listed.has(u)));
+      else { await this.until(() => p.described); await new Promise(r => setTimeout(r, 40)); }
+    }
+  },
+  // After an answer has gone out.
+  after(key, study, path) {
+    const p = this.pages.get(key);
+    if (!p || !study) return;
+    if (path === '/dicom-web/series') p.listed.add(study);
+    else if (path.endsWith('/metadata') && study === p.studies[0]) p.described = true;
   },
 };
 
@@ -332,9 +355,9 @@ router.all('*', async (req, res) => {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  // Two exams in one window: the opened one must come up first (see openedFirst).
+  // Several exams in one window: the opened one must come up first (see openedFirst).
   const examKey = grant.u + ':' + grant.s[0];
-  if (study && study !== grant.s[0] && path.endsWith('/metadata')) await openedFirst.wait(examKey);
+  await openedFirst.before(examKey, study, path);
 
   let cfg;
   try {
@@ -351,7 +374,7 @@ router.all('*', async (req, res) => {
   } catch (e) { return isPage(path) ? explain(res, 200, ...UNREACHABLE) : res.status(PACS_DOWN).json({ error: 'Bad PACS address' }); }
 
   if (isPage(path)) {
-    if (pageStudies.length > 1) openedFirst.page(examKey);
+    openedFirst.page(examKey, pageStudies);
     const pics = await studyPictures(cfg, pageStudies[0]);
     if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
     if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
@@ -384,7 +407,7 @@ router.all('*', async (req, res) => {
     // pass it on as 424 so the log still says it was the image server.
     const code = up.statusCode || PACS_DOWN;
     res.writeHead([502, 503, 504].includes(code) ? PACS_DOWN : code, headers);
-    if (study === grant.s[0] && path.endsWith('/metadata')) up.on('end', () => openedFirst.sent(examKey));
+    up.on('end', () => openedFirst.after(examKey, study, path));
     up.pipe(res);
   });
   // Connect within 5 s (Orthanc down should say so quickly); once connected a
