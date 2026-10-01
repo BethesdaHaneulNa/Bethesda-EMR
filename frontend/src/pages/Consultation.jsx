@@ -1336,7 +1336,7 @@ export default function ConsultationPage() {
                     {/* "Today" only for a visit of today (the server's date when it was opened, and
                         this PC's date not having changed since); otherwise "This visit" - an
                         earlier day's visit opened from the visit list was headed "Today". */}
-                    <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{consult.visit_is_today && ymd(new Date()) === consult.client_day ? t.cs_noteToday : t.cs_noteThisVisit}</span>
+                    {/* The date alone (director, 2026-10-01): no «today» / «this visit» word beside it. */}
                     {/* Whose chart: department and the doctor the visit was registered with
                         (director, 2026-09-30 - «GEN» alone did not say which chart). */}
                     {/* No doctor on the visit: the account that opened the consultation, the same
