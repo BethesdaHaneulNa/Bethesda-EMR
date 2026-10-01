@@ -349,7 +349,7 @@ export default function PharmacyPage() {
           prescription table needs the room, and grows on wider screens (1600 -> 384,
           1920 -> 420) so the doctor's follow-up line reads without opening the visit. */}
       {tab === 'stock' ? <PharmacyStock /> :
-      <div style={{ display:'grid', gridTemplateColumns:'330px minmax(0,1fr) clamp(320px, 24vw, 420px)', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'300px minmax(0,1fr) clamp(320px, 24vw, 420px)', gridTemplateRows:'minmax(0,1fr)', flex:1, minHeight:0 }}>
         <div style={{ borderRight:'1px solid '+bd, display:'flex', flexDirection:'column', background:pn, minHeight:0 }}>
           {/* Work date: the same control, in the same place, as on the payment screen. */}
           <div style={{ flexShrink:0, padding:'7px 9px', borderBottom:'1px solid '+bd, background:viewingPast?'var(--warn-a14)':'var(--panel-2)' }}>

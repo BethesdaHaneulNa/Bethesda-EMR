@@ -24,7 +24,7 @@ function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 // (28 % of its width) between 340 and 460 px, so a 1920 screen gets 460 and no more. The
 // amounts column keeps the five quick-amount buttons on one line down to 280 px (5 x 48
 // + gaps + padding); narrower, they wrap to a second line.
-var PAGE_COLS = 'minmax(230px,280px) minmax(0,1fr) minmax(280px,clamp(340px,28vw,460px))';
+var PAGE_COLS = '300px minmax(0,1fr) minmax(280px,clamp(340px,28vw,460px))';
 var BILL_COLS = 'minmax(0,1fr) minmax(230px,clamp(260px,20.8vw,300px))';
 
 export default function PaymentPage() {
