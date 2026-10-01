@@ -2,6 +2,18 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영어 상태 낱말 «In progress» (접수와 같게)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `0b5bc16` 다음
+- **한 일**: 총괄 결정(fr «En cours» · en «In progress» · ko 「진료 중」)대로 진료 쪽 영어를 맞춤 — `cs_vsInProgress` «In consultation» → «In progress», 그 낱말을 가리키는 안내문 둘(`cs_startHint`, `cs_backNotStarted`). ko는 이미 「진료 중」, fr은 `c6eaf63`에서 맞춤.
+- **바꾼 파일**: `frontend/src/i18n/en.js`(`cs_` 세 글자) · `wiki/modules/consultation.md`(8) · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 새 키 없음(글자만)
+- **확인한 방법**: `npm run build` 통과. 글자만 바뀌어 격리 스택은 올리지 않았습니다.
+- **확인 못 한 것**: 영어 화면에서 눈으로 보는 것.
+- **접수 메모**: 접수 `29f6bce`(045)로 한 칸이 되었습니다. 진료 화면의 칸은 그대로 맞습니다(공용 키 `receptionMemo`, `chief_complaint`를 줄바꿈 살려 표시; `reception_memo`는 이제 늘 비어 있어 읽어도 해가 없음).
+- **다른 세션에 부탁**: 없음 · **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 「+ 약 검색」 단추를 없앰 · 프랑스어 상태 낱말 «En cours»
 
 - **상태**: 확인 요청
