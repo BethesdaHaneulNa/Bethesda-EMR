@@ -44,6 +44,16 @@ warning) cannot be ticked, and the server checks every one again.
 The Stone viewer is used exactly as Orthanc ships it: the EMR uses its documented URL parameters only,
 changes none of its files and adds no code to its pages.
 
+### The patient's imaging list: a list on the left, the reading on the right
+
+The window that lists a patient's imaging exams showed one card per exam with its whole reading, so a
+patient with many exams filled the screen with three or four of them. It is now a list - one line per exam
+(date, device type, exam, images, reading), most recent first, nineteen lines on a 1366x768 screen - and
+the chosen exam on the right: when and by whom it was ordered, the images, who read it and when, and the
+whole reading. A click or the arrow keys choose a line; the list can be narrowed by device type or by a
+word of the name or date. **Voir image** is next to the chosen exam. The payment screen has the same
+window, read-only.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being

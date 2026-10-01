@@ -2,6 +2,41 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「영상/판독」 창을 두 칸으로: 왼쪽 목록(한 줄씩), 오른쪽 고른 검사의 판독
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `8f37398`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일** (`frontend/src/components/RadiologyReadings.jsx`의 `RadiologyReadings`를 다시 짬 — prop은 그대로):
+  - **왼쪽 목록**: 한 줄에 한 검사, 최근 것부터 — [체크 칸] · Date · Type · Examen · Images · Compte-rendu. 줄 높이 28px, 머리줄 고정. **1366×768에서 19줄**(진료·수납 모두), 1920×1080에서 29줄이 스크롤 없이.
+    - Images: «N image(s)»(초록) / «en attente» / «—». Compte-rendu: «✓ 판독의» / «pas encore». 취소: 이름에 줄 + «Annulé». 환자 번호 경고: «⚠ identité à vérifier»(다름 = 빨강, 없음 = 노랑).
+  - **고르기**: 줄을 누르거나 **↑ ↓**(창이 열리면 바로 됨, 끝에서 멈춤, 화면 밖이면 따라 스크롤). 처음엔 맨 위. **체크 칸을 누르면 체크만**(고른 줄은 그대로).
+  - **오른쪽 상세**: 종류 · 검사 이름 · (Annulé) · **🖼 Voir image** / Demandé le · Demandé par(진료과 · 의사) · Images(장수 + 도착 일시, 또는 대기) · N° d'accession / 취소 사유 · 환자 번호 경고(전체 문장) · accession 연결 안내 / **🩻 Compte-rendu** — «Lu par: 이름 · 날짜 시각» + **판독 글 전체**(줄바꿈 그대로, 길면 그 칸 안에서 스크롤).
+  - **좁혀 보기**(값싸게 되어 넣음): 위에 «Tous / CR / US …»(종류가 둘 이상일 때만)와 «Chercher : nom ou date…» 한 칸, 오른쪽에 「16 / 29」.
+  - 영상 창을 닫으면 이 창으로 — **고른 줄·스크롤·체크·걸러 보기 그대로**, 방금 저장한 판독이 왼쪽 ✓와 오른쪽 글에 보임.
+  - 체크해서 비교(«⇆ Comparer (N)»)는 그대로 — 왼쪽 줄의 체크 칸.
+  - 수납 화면: 같은 두 칸, 체크 칸·«Voir image» 없음(prop을 안 주므로).
+  - 판독은 이 창에서 고치지 않음.
+- **서버**: `GET /api/pacs/readings/patient/:id` 응답에 `ordered_by_name`(오더한 직원 `order_item.ordered_by`, 없으면 그 내원의 의사) · `dept_code` · `dept_name`(내원의 진료과)을 더함. 있던 값은 그대로.
+- **바꾼 파일**: `frontend/src/components/RadiologyReadings.jsx`, `backend/src/routes/pacs.routes.js`(목록 질의에 세 값), `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(6절 다시 씀), `wiki/modules/pacs.md`(2.4 다시 씀, 4절, 8절), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: **없음** — `Consultation.jsx`·`Payment.jsx`는 안 바꿨습니다(창 크기 88vw×86vh · 80vw×84vh 그대로로 두 칸이 들어감).
+- **DB 마이그레이션**: 없음
+- **번역 키** (px_ 구역, 새 키 16개 ko·en·fr): `px_colDate`·`px_colType`·`px_colExam`·`px_colImages`·`px_colReading`(머리줄), `px_imgShort`(«{n} image(s)» / 「{n}장」), `px_imgWaitShort`(«en attente» / 「대기」), `px_readNone`(«pas encore» / 「없음」), `px_filterAll`, `px_filterSearch`, `px_noMatch`, `px_dOrdered`(«Demandé le» / 「처방일」), `px_dOrderedBy`(«Demandé par» / 「처방」), `px_dAccession`, `px_identityShort`(«identité à vérifier» / 「환자 확인 필요」), `px_pickHint`. 있던 키의 글은 안 바꿈. 이제 이 부품이 쓰지 않는 키: 없음(`px_imagesArrived`·`px_imagesWaiting`은 상세 칸이 씀).
+- **확인한 방법** (격리 EMR 9188 + PACS 9198. 시험 환자 26-00001 — 영상 검사 **29줄**: 판독 있는 것·없는 것, 취소 2, 환자 번호 경고 여럿, 대기 1, 줄 44개짜리 긴 판독 하나):
+  - **1366×768 · fr · 어두운 화면(진료)**: 29줄 중 19줄이 보임, 잘린 칸 없음, 맨 위가 골라져 있고 목록에 포커스. 긴 판독을 고름 → 글 칸 438px 안에서 스크롤(글 높이 1901px), 창은 안 늘어남, 줄바꿈 44줄 그대로, «Lu par: RABE Hery · 2026-10-01 10:58».
+  - **↑↓**: 아래 둘 → 위 하나 → 아래 24번(27번째 줄, 화면 안으로 따라 스크롤) → 끝에서 멈춤.
+  - **체크**: 체크 칸을 눌러도 고른 줄 그대로, «⇆ Comparer (1)».
+  - **좁혀 보기**: `US` → 16줄(「16 / 29」, 맨 위 US가 골라짐), `lat` → Chest Lat 4줄, `zzz` → «Aucun examen ne correspond.» + 오른쪽 «Cliquez sur un examen dans la liste.», 지우면 29줄.
+  - **영상보기 → 판독 저장 → 닫기**: 다섯째 줄에서 «🖼 Voir image» → 영상 창에서 두 줄짜리 판독 저장 → 닫음 → 같은 줄이 골라진 채, 왼쪽 «pas encore» → «✓ RABE Hery», 오른쪽에 그 글, 스크롤 그대로.
+  - 취소된 줄(사유 «Motif : Demandé par erreur»)·환자 번호 없는 줄(노란 상자 전체 문장)의 상세.
+  - **ko · 밝은 화면**: 머리줄 「날짜 | 종류 | 검사 | 영상 | 판독」, 「1장」「없음」「✓ RABE Hery」, 상세 「처방일 · 처방 · 영상 1장 도착 · 검사 번호(Accession)」, 「찾기: 검사 이름·날짜…」.
+  - **글자 대비**(밝은·어두운, 고른 줄·보통 줄·취소 줄·경고 칩·머리줄·상세 이름표·빈 판독): 최저 **4.8**(밝은 화면의 초록 날짜), 나머지 5.2 이상 — 처음에 4.4였던 「없음」 글자를 한 단계 진하게 고침.
+  - **1920×1080**: 29줄 모두 보임, 목록 978px · 상세 709px, 가로 넘침 없음.
+  - **수납 화면**(시험 수납 계정, 1366×768 · fr): 같은 두 칸, 19줄, 체크 칸 0개, «Voir image» 없음, 머리 「🩻 Imagerie | 26-00001 · RAKOTO Jean | Fermer ✕」, 줄을 누르면 상세가 바뀜.
+  - 회귀: 체크 23가지 · 보안 32가지 통과. 목록 API — 진료·수납 계정 200(29줄), 로그인 없음 401.
+- **확인 못 한 것**: 검사 이름이 아주 긴 경우(칸에서 …로 잘리고 title에 전체가 나오게는 했음 — 긴 이름 자료로 보지는 않음). 검사가 100건 넘는 환자(줄을 모두 그림 — 수백 건까지는 문제없을 것으로 봄). en 화면(키만 넣음).
+- **알아 둘 것**: 「오더한 과·의사」는 **그 내원의 진료과**와 **오더를 낸 직원**(없으면 내원의 의사)입니다. 전과(Transfert)로 내원의 과가 바뀌면 옛 오더도 지금 과로 보입니다.
+- **다른 세션에 부탁**: 없음(진료·수납 파일을 안 바꿈 — 두 세션에는 「창 안의 모양이 바뀌었다」만 알리면 됨. 프랑스어 설명서 `consultation.md`·`payment.md`를 봄: 이 창은 단추 이름으로만 나오고 모양을 설명한 곳이 없어 고칠 것 없음).
+
 ## 2026-10-01 — Stone 왼쪽 목록을 날짜 내림차순으로 할 수 있는가: 안 됨 (문서만)
 
 - **상태**: 확인 요청

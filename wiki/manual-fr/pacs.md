@@ -73,15 +73,19 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
 ### 6. Tous les examens d'imagerie du patient
 
 1. Dans la barre bleue de **Consultation**, cliquez sur **🩻 Imagerie**. (Ne pas confondre : **Imagerie** ouvre la liste des examens du patient ; **Compte-rendu** est la case où le médecin écrit, à droite des images.)
-2. La liste montre tous les examens d'imagerie du patient, le plus récent en haut : date, appareil (`US`, `CR`…), nom de l'examen, compte-rendu.
-3. À côté du nom de l'examen :
-   - **N image(s) reçue(s)** (vert) : toutes les images sont arrivées.
-   - **Images en attente** (gris) : pas encore arrivées.
-   - rien : l'examen ne part pas vers les appareils.
-4. **Voir image** ouvre la **Visionneuse** par-dessus la liste. Quand vous fermez l'image, la liste reste ouverte, au même endroit : vous pouvez ouvrir l'examen suivant tout de suite. Le compte-rendu que vous venez d'enregistrer y apparaît.
-5. La liste se relit chaque fois que vous fermez une image. Sinon elle ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
+2. **À gauche, la liste** : une ligne par examen, le plus récent en haut — **Date**, **Type** (`CR`, `US`…), **Examen**, **Images**, **Compte-rendu**.
+   - **Images** : **N image(s)** (vert) = arrivées ; **en attente** = pas encore arrivées ; **—** = l'examen ne part pas vers les appareils.
+   - **Compte-rendu** : **✓** et le nom du médecin = écrit ; **pas encore** = pas de compte-rendu.
+   - **Annulé** (nom barré, gris) : examen annulé. **⚠ identité à vérifier** (rouge ou jaune) : les images portent un autre numéro de patient, ou aucun.
+3. **À droite, l'examen choisi** : cliquez sur une ligne (ou les flèches **↑ ↓** du clavier). Le plus récent est choisi à l'ouverture. On y lit : la date de la demande, le service et le médecin qui a demandé, les images (nombre, date et heure d'arrivée), le N° d'accession, **Lu par** (médecin, date et heure) et le **compte-rendu en entier**. Un compte-rendu long défile dans sa case. Pour un examen annulé : le motif. Pour un avertissement d'identité : le message complet.
+4. **🖼 Voir image** (à droite, en haut) ouvre la **Visionneuse** par-dessus la liste. Quand vous fermez l'image, la liste est toujours là, sur le même examen ; le compte-rendu que vous venez d'enregistrer y apparaît.
+5. Beaucoup d'examens : en haut de la liste, les boutons **Tous** / `CR` / `US`… ne montrent qu'un type d'appareil, et la case **Chercher : nom ou date…** ne garde que les examens dont le nom ou la date contient ce que vous écrivez (par exemple `chest` ou `2026-09`). Le nombre à droite indique combien de lignes sont affichées.
+6. Les cases à cocher à gauche des lignes et le bouton **⇆ Comparer (N)** : voir 8.
+7. La liste se relit chaque fois que vous fermez une image. Sinon elle ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
 
-La caisse (**Paiement**) a le même bouton **🩻 Imagerie** : la même liste, en lecture seule, sans images.
+On n'écrit pas le compte-rendu dans cette fenêtre : il s'écrit dans la **Visionneuse** (4).
+
+La caisse (**Paiement**) a le même bouton **🩻 Imagerie** : la même liste et les mêmes comptes-rendus, en lecture seule — sans images, sans cases à cocher.
 
 ### 7. Un examen d'imagerie annulé
 

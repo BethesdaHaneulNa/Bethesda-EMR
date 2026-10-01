@@ -101,28 +101,49 @@ export function CompareChecked(props) {
 
 var MAX_PICKED = 9;   // the server's limit (pacs.routes.js)
 
-// Read-only list of a patient's imaging orders + radiology readings.
-//   props.picked / props.onPick(ids)  the screen keeps which exams are ticked for a
-//   comparison (so its header can show CompareChecked); without onPick there are no
-//   tick boxes - the payment screen has no image window.
+// A timestamp as the clinic's local date and time, "2026-10-01 10:32".
+function ymdhm(d) {
+  if (!d) return '';
+  var x = new Date(String(d));
+  if (isNaN(x.getTime())) return ymd(d);
+  return x.toLocaleDateString('en-CA') + ' ' + ('0' + x.getHours()).slice(-2) + ':' + ('0' + x.getMinutes()).slice(-2);
+}
+
+// A patient's imaging orders and their readings (read-only): the list on the left,
+// one line per exam, and the chosen exam's reading on the right (director, 2026-10-01:
+// with many exams, cards stacked down the window - each with its whole reading - hid
+// when which exam was done; the hospital's own EMR shows a list, and a click shows
+// the reading). The most recent exam is chosen when the window opens; ↑ ↓ move.
+//   props.patientId
+//   props.reload                      a number the screen raises to read the list again
+//   props.onOpen(orderItemId)         shows "View image" (the consultation screen)
+//   props.picked / props.onPick(ids)  tick boxes for a comparison (CompareChecked);
+//                                     without onPick there are none - the payment
+//                                     screen has no image window.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
-  var lastPatient = useRef(null);
+  var ss = useState(null), selId = ss[0], setSelId = ss[1];
+  var ks = useState(''), kind = ks[0], setKind = ks[1];       // '' = every device type
+  var qs = useState(''), query = qs[0], setQuery = qs[1];
+  var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
     if (!props.patientId) { setRows([]); return; }
     // props.reload: a number the screen raises to read the list again without taking it
     // off the screen - after the image window closes, a reading saved there shows here
-    // and the list keeps its place (no «Loading…», no jump to the top).
+    // and the list keeps its place (no «Loading…», no jump to the top, same exam chosen).
     var quiet = lastPatient.current === props.patientId;
     lastPatient.current = props.patientId;
-    if (!quiet) setLoading(true);
+    if (!quiet) { setLoading(true); setSelId(null); setKind(''); setQuery(''); }
     api.get('/pacs/readings/patient/' + props.patientId)
       .then(function (r) { setRows(r || []); }).catch(function () { if (!quiet) setRows([]); })
       .then(function () { setLoading(false); });
   }, [props.patientId, props.reload]);
+
+  // The arrow keys work as soon as the list is on the screen.
+  useEffect(function () { if (!loading && listRef.current) listRef.current.focus(); }, [loading]);
 
   var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--violet-text)';
 
@@ -143,44 +164,117 @@ export function RadiologyReadings(props) {
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
   if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
 
+  // Narrowing the list: by device type (only offered when there are several) and by a
+  // word of the exam's name or a piece of its date.
+  var kinds = rows.map(function (r) { return r.pacs_modality || ''; }).filter(function (k, i, a) { return k && a.indexOf(k) === i; });
+  var word = query.trim().toLowerCase();
+  var shown = rows.filter(function (r) {
+    if (kind && (r.pacs_modality || '') !== kind) return false;
+    return !word || (String(r.order_name || '') + ' ' + ymd(r.visit_date)).toLowerCase().indexOf(word) >= 0;
+  });
+  var sel = shown.filter(function (r) { return r.id === selId; })[0] || shown[0] || null;
+
+  function move(step) {
+    if (!sel) return;
+    var next = shown[Math.max(0, Math.min(shown.length - 1, shown.indexOf(sel) + step))];
+    if (!next) return;
+    setSelId(next.id);
+    var el = listRef.current && listRef.current.querySelector('[data-exam="' + next.id + '"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+  function keys(e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+  }
+
+  var COLS = (props.onPick ? '26px ' : '') + '92px 42px minmax(120px, 1fr) 96px minmax(90px, 150px)';
+  var cell = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+  var chip = { borderRadius: 3, padding: '0 6px', fontSize: 11, fontWeight: 700, marginLeft: 6, verticalAlign: 'middle' };
+  var kindBtn = function (on) { return { background: on ? 'var(--violet-deep)' : 'var(--chip)', color: on ? 'var(--on-fill-violet)' : 'var(--text-soft)', border: '1px solid ' + (on ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }; };
+  var label = { color: t3, fontSize: 12, whiteSpace: 'nowrap', paddingRight: 10, verticalAlign: 'top' };
+
   return (
-    <div style={{ overflow: 'auto', height: '100%', padding: 12 }}>
-      {rows.map(function (r) {
-        // A cancelled order (decision 3-B) stays in the list: its images and
-        // reading are part of the record, including why it was cancelled. It is
-        // told apart by grey text, the struck-out name, the "Annulé" tag and a
-        // dashed border - not by opacity, which dimmed every line of it below
-        // the contrast floor (design 3.3.1; 2.5-3.0 light, 2.9-4.4 dark).
-        var cancelled = r.order_status === 'cancelled';
-        return <div key={r.id} style={{ background: 'var(--panel-2)', border: '1px ' + (cancelled ? 'dashed' : 'solid') + ' ' + bd, borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            {props.onPick ? (function () {
-              var why = compareBlock(r, t);
-              return <input type="checkbox" checked={picked.indexOf(r.id) >= 0} disabled={!!why} onChange={function () { tick(r); }} title={why || t.px_cmpPick}
-                style={{ width: 17, height: 17, margin: 0, flex: 'none', cursor: why ? 'not-allowed' : 'pointer', accentColor: 'var(--violet-strong)' }} />;
-            })() : null}
-            <span style={{ fontFamily: 'monospace', color: cancelled ? t3 : 'var(--ok-text)', fontSize: 13, fontWeight: 700 }}>{ymd(r.visit_date)}</span>
-            <span style={{ background: cancelled ? 'var(--btn-neutral-2)' : 'var(--accent-chip)', color: cancelled ? 'var(--text-soft-2)' : 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
-            <span style={{ color: cancelled ? t3 : tx, fontSize: 15, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
-            {cancelled ? <span title={r.cancel_reason || ''} style={{ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
-            {r.images_received_at
-              ? <span style={{ color: cancelled ? t3 : 'var(--ok-text)', fontSize: 12, fontWeight: 700 }}>{String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count)}</span>
-              : (r.study_instance_uid && !cancelled ? <span style={{ color: t3, fontSize: 12 }}>{t.px_imagesWaiting}</span> : null)}
-            {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} title={t.viewImage || '영상보기'} style={{ marginLeft: 'auto', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
+    <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+      {/* the list */}
+      <div style={{ flex: '1 1 58%', minWidth: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid ' + bd }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid ' + bd, flexWrap: 'wrap' }}>
+          {kinds.length > 1 ? <button onClick={function () { setKind(''); }} style={kindBtn(!kind)}>{t.px_filterAll}</button> : null}
+          {kinds.length > 1 ? kinds.map(function (k) { return <button key={k} onClick={function () { setKind(k); }} style={kindBtn(kind === k)}>{k}</button>; }) : null}
+          <input value={query} onChange={function (e) { setQuery(e.target.value); }} onKeyDown={keys} placeholder={t.px_filterSearch}
+            style={{ flex: '0 1 220px', minWidth: 120, background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '3px 8px', outline: 'none' }} />
+          <span style={{ marginLeft: 'auto', color: t3, fontSize: 12 }}>{shown.length === rows.length ? rows.length : shown.length + ' / ' + rows.length}</span>
+        </div>
+        <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
+            {props.onPick ? <span></span> : null}
+            <span>{t.px_colDate}</span><span>{t.px_colType}</span><span>{t.px_colExam}</span><span>{t.px_colImages}</span><span>{t.px_colReading}</span>
           </div>
-          {cancelled && (r.cancel_reason || r.cancelled_at)
-            ? <div style={{ fontSize: 12, color: t2, margin: '2px 0 6px' }}>{t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
-            : null}
-          <PatientCheck images={imagesOfRow(r)} t={t} />
-          {r.image_study_uid && r.image_study_uid !== r.study_instance_uid
-            ? <div style={{ fontSize: 12, color: 'var(--warn-text)', margin: '0 0 6px' }}>{t.px_linkedByAccession}</div>
-            : null}
-          <div style={{ fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: 'var(--bg)', border: '1px solid ' + bd, borderRadius: 6, padding: '8px 10px', minHeight: 24 }}>
-            {r.result_text || (t.noReading || '판독 소견 없음')}
-          </div>
-          {r.result_at ? <div style={{ fontSize: 12, color: t3, marginTop: 4 }}>{t.lastReadBy || '판독'}: {r.result_by_name || ''} · {ymd(r.result_at)}</div> : null}
-        </div>;
-      })}
+          {!shown.length ? <div style={{ padding: 14, color: t3, fontSize: 13 }}>{t.px_noMatch}</div> : null}
+          {shown.map(function (r) {
+            // A cancelled order (decision 3-B) stays in the list - its images and reading
+            // are part of the record. Told apart by grey text, the struck-out name and
+            // the "Annulé" tag, not by opacity (design 3.3.1: contrast).
+            var cancelled = r.order_status === 'cancelled', on = sel && r.id === sel.id;
+            var flagged = r.images_received_at && (r.patient_check === 'mismatch' || r.patient_check === 'missing');
+            var why = props.onPick ? compareBlock(r, t) : '';
+            return <div key={r.id} data-exam={r.id} onClick={function () { setSelId(r.id); }}
+              style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '0 10px', height: 28, cursor: 'pointer', fontSize: 13,
+                borderBottom: '1px solid ' + bd, borderLeft: '3px solid ' + (on ? 'var(--violet-strong)' : 'transparent'), background: on ? 'var(--violet-a20)' : 'transparent' }}>
+              {props.onPick ? <input type="checkbox" checked={picked.indexOf(r.id) >= 0} disabled={!!why} title={why || t.px_cmpPick}
+                onClick={function (e) { e.stopPropagation(); }} onChange={function () { tick(r); }}
+                style={{ width: 16, height: 16, margin: 0, cursor: why ? 'not-allowed' : 'pointer', accentColor: 'var(--violet-strong)' }} /> : null}
+              <span style={Object.assign({ fontFamily: 'monospace', fontWeight: 700, color: cancelled ? t3 : 'var(--ok-text)' }, cell)}>{ymd(r.visit_date)}</span>
+              <span style={Object.assign({ color: cancelled ? t3 : 'var(--accent-text-2)', fontWeight: 700, fontSize: 12 }, cell)}>{r.pacs_modality || ''}</span>
+              <span style={cell} title={r.order_name}>
+                <span style={{ color: cancelled ? t3 : tx, fontWeight: 700, textDecoration: cancelled ? 'line-through' : 'none' }}>{r.order_name}</span>
+                {cancelled ? <span style={Object.assign({ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)' }, chip)}>{t.px_orderCancelled}</span> : null}
+                {flagged ? <span style={Object.assign(r.patient_check === 'mismatch' ? { background: 'var(--danger-chip)', color: 'var(--danger-text-2)' } : { background: 'var(--warn-chip)', color: 'var(--warn-text-2)' }, chip)}>⚠ {t.px_identityShort}</span> : null}
+              </span>
+              <span style={Object.assign({ fontSize: 12, fontWeight: r.images_received_at ? 700 : 400, color: r.images_received_at && !cancelled ? 'var(--ok-text)' : t2 }, cell)}>
+                {r.images_received_at ? String(t.px_imgShort || '').replace('{n}', r.image_count == null ? '?' : r.image_count) : (r.study_instance_uid && !cancelled ? t.px_imgWaitShort : '—')}</span>
+              <span style={Object.assign({ fontSize: 12, color: r.result_text ? tx : t2 }, cell)} title={r.result_text ? (r.result_by_name || '') + ' · ' + ymd(r.result_at) : ''}>
+                {r.result_text ? '✓ ' + (r.result_by_name || '') : t.px_readNone}</span>
+            </div>;
+          })}
+        </div>
+      </div>
+
+      {/* the chosen exam */}
+      <div style={{ flex: '1 1 42%', minWidth: 300, display: 'flex', flexDirection: 'column', padding: 14, boxSizing: 'border-box', minHeight: 0, background: 'var(--bg-col)' }}>
+        {!sel ? <div style={{ color: t3, fontSize: 14 }}>{t.px_pickHint}</div> : (function () {
+          var r = sel, cancelled = r.order_status === 'cancelled';
+          return <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ background: cancelled ? 'var(--btn-neutral-2)' : 'var(--accent-chip)', color: cancelled ? 'var(--text-soft-2)' : 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
+              <span style={{ color: cancelled ? t3 : tx, fontSize: 17, fontWeight: 800, textDecoration: cancelled ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.order_name}</span>
+              {cancelled ? <span style={{ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
+              {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} style={{ marginLeft: 'auto', flex: 'none', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
+            </div>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, color: tx, marginBottom: 8 }}><tbody>
+              <tr><td style={label}>{t.px_dOrdered}</td><td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{ymd(r.visit_date)}</td></tr>
+              {r.dept_code || r.dept_name || r.ordered_by_name ? <tr><td style={label}>{t.px_dOrderedBy}</td><td>{[r.dept_code || r.dept_name, r.ordered_by_name].filter(Boolean).join(' · ')}</td></tr> : null}
+              <tr><td style={label}>{t.px_colImages}</td><td style={{ color: r.images_received_at ? (cancelled ? t3 : 'var(--ok-text)') : t3, fontWeight: r.images_received_at ? 700 : 400 }}>
+                {r.images_received_at ? String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count) + ' · ' + ymdhm(r.images_received_at)
+                  : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}</td></tr>
+              {r.accession_no ? <tr><td style={label}>{t.px_dAccession}</td><td style={{ fontFamily: 'monospace' }}>{r.accession_no}</td></tr> : null}
+            </tbody></table>
+            {cancelled && (r.cancel_reason || r.cancelled_at)
+              ? <div style={{ fontSize: 13, color: t2, margin: '0 0 8px' }}>⊘ {t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
+              : null}
+            <PatientCheck images={imagesOfRow(r)} t={t} style={{ margin: '0 0 8px' }} />
+            {r.image_study_uid && r.image_study_uid !== r.study_instance_uid
+              ? <div style={{ fontSize: 12, color: 'var(--warn-text)', margin: '0 0 8px' }}>{t.px_linkedByAccession}</div>
+              : null}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '4px 0 6px' }}>
+              <span style={{ fontWeight: 800, fontSize: 14, color: cyan }}>🩻 {t.reading || '판독소견'}</span>
+              {r.result_at ? <span style={{ fontSize: 12, color: t3 }}>{t.lastReadBy || '판독'}: {r.result_by_name || ''} · {ymdhm(r.result_at)}</span> : null}
+            </div>
+            <div style={{ flex: 1, minHeight: 60, overflow: 'auto', fontSize: 14, color: r.result_text ? tx : t3, whiteSpace: 'pre-wrap', lineHeight: 1.6, background: 'var(--bg)', border: '1px solid ' + bd, borderRadius: 6, padding: '10px 12px' }}>
+              {r.result_text || (t.noReading || '판독 소견 없음')}
+            </div>
+          </>;
+        })()}
+      </div>
     </div>
   );
 }
