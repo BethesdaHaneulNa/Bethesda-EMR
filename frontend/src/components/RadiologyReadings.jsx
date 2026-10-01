@@ -413,7 +413,7 @@ export function RadiologyReadings(props) {
                   : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}
                 {/* the images are another order's: put them under the right one (doctors, in the consultation screen) */}
                 {props.onOpen && r.images_received_at && !cancelled ? <button onClick={function () { setMoving(r); }} title={t.px_mvIntro}
-                  style={{ display: 'inline-block', margin: '3px 0 5px 10px', background: 'transparent', color: 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '1px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}</td></tr>
+                  style={{ display: 'inline-block', margin: '3px 0 5px 10px', background: 'var(--warn-a18)', color: 'var(--warn-text)', border: '1px solid var(--warn-a40)', borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⇄ {t.px_mvButton}</button> : null}</td></tr>
               {r.accession_no ? <tr><td style={label}>{t.px_dAccession}</td><td style={{ fontFamily: 'monospace' }}>{r.accession_no}</td></tr> : null}
             </tbody></table>
             {cancelled && (r.cancel_reason || r.cancelled_at)
