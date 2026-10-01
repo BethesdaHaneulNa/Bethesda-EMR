@@ -90,6 +90,8 @@ En haut à droite : **En Attente**, **En cours**, **Terminé**. Le nombre entre 
 
 Les petits boutons **Terminer →** et **← En attente** sous chaque patient servent seulement dans les cas particuliers (voir 10).
 
+Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. Le **Motif**, lui, tient sur deux lignes au plus ; laissez la souris dessus pour le lire en entier.
+
 ### 9. Modifier un enregistrement ou annuler l'attente
 
 1. Cliquez sur le patient dans la file. Ses informations se chargent à gauche et le bouton devient **Modifier l'enregistrement**.
