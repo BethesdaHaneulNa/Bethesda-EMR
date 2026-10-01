@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 순서서: Modality를 직접 입력하는 곳 · 판독 보고서의 「(AS)」「(ES)」 확인 (문서만)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `24e5003`을 ff로 당긴 뒤). 문서만. **PACS 저장소** — 없음
+- **한 일**:
+  1. `wiki/reference/device-connection-onsite.md` — 「→ 0명 — 장비가 CR 검사만 물음」 줄과 「EMR 쪽 설정」 줄이 **Paramètres → Codes d'actes → Modalité → « Autre — saisir la valeur… »**(설정 → 오더 코드 → 장비 (Modality) → 기타 — 직접 입력…)를 가리키게. 화면의 글자는 `fr.js`·`ko.js`의 `se_tabOrderCodes`·`se_fModality`·`se_modOther` 그대로. 시술 종류 오더 코드도 된다는 한 문장.
+  2. 판독 보고서 확인(격리, 미리보기): 시술 종류 **AS** — 「Rectoscopie (acte) (AS) / Demandé par : GEN · RABE Hery — 2 image(s)」(앞 항목), 시술 종류 **ES** — 「Gastroscopy (GFS) (ES) / … — 2 image(s)」(이번, 수납 계정의 목록에서). 둘 다 컬러(RGB, VL Endoscopic) 영상 2장 — 장수가 맞음.
+- **바꾼 파일**: `wiki/reference/device-connection-onsite.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: 설정 화면에서 「Autre — saisir la valeur…」를 직접 눌러 보는 것(설정 세션의 것 — 글자만 번역 파일에서 확인). ko·en 판독 보고서의 AS·ES(같은 칸).
+- **알림**: `isExam`의 뜻은 `bfd8804`(총괄이 `24e5003`으로 합침)에서 「imaging 또는 영상 종류가 있는 오더」 — 진료 화면의 🖼 조건과 같음.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-10-01 — 「영상 검사」의 뜻을 한 곳에서: 종류가 imaging 또는 영상 종류가 있는 오더 (시술 + AS·ES)
 
 - **상태**: 확인 요청
