@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 판독 보고서: 검사 칸에 검사 이름만 — 서식 파일 정리 · 견본 그림 · 문서
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `b8f3f30`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**: 총괄이 `imaging-report.jsx`에서 검사 칸의 둘째 줄(«Demandé par : … — N image(s)»)을 뺀 뒤(실장님, `b8f3f30`)의 정리.
+  1. `frontend/src/documents/imaging-report.jsx` — 안 쓰게 된 이름표 `T.orderedBy`·`T.images`, 변수 `who`·`colon`·`small`을 지움. 머리 주석: 종이에 찍히는 값은 `exam_name`·`exam_date`·`reading`·`read_by`·`read_at`; `modality`·`image_count`·`dept`·`ordered_by`는 목록이 여전히 넘기고 **발행 기록(document_log의 payload)에만 남음**. 모양은 안 바뀜(총괄이 뺀 그대로).
+  2. `RadiologyReadings.jsx` — `reportValues` 주석 한 줄(같은 뜻). 값은 그대로 넘김: 발행 기록에 「어느 과·누가 낸 검사, 영상 몇 장」이 남는 편이 나음 — 빼기를 원하시면 네 칸만 지우면 됨.
+  3. **견본 그림 둘**을 다시 뽑음(가짜 환자 그대로, 같은 방법): 검사 칸에 「Chest PA」만.
+  4. 프랑스어 설명서 9절 2번(«le nom de l'examen»), 모듈 위키 2.4.1(2번·실장님 결정 줄 — 무엇을 차례로 뺐는지)·8절.
+- **바꾼 파일**: `frontend/src/documents/imaging-report.jsx`, `frontend/src/components/RadiologyReadings.jsx`(주석만), `wiki/reference/design/imaging-report-sample-fr.png`, `wiki/reference/design/imaging-report-sample-long-name-fr.png`, `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인한 방법** (격리 EMR 9188): 빌드 뒤 두 검사를 「Émettre et imprimer」 → 인쇄 창의 내용에 `Demandé par`·`image(s)`·`(CR)`·`D26-`·`N° document` 0건, 미리보기 「Examen / Chest PA / Compte-rendu」. PDF 한 쪽씩. 두 그림을 눈으로: 검사 칸에 이름만, 나머지는 전과 같음(긴 이름·긴 병원 이름·긴 의사 이름 잘림 없음).
+- **확인 못 한 것**: en·ko 종이. 긴 판독(여러 쪽) — 둘째 줄이 빠져 첫 쪽이 한 줄만큼 더 들어감, 다시 재지 않음. 진짜 프린터.
+- **알아 둘 것**: 검사 칸의 높이(최소 40pt)는 그대로라 이름 한 줄 아래에 빈 자리가 조금 있음(견본 그림 참고) — 줄이려면 한 값.
+- **다른 세션에 부탁**: 없음
+
 ## 2026-10-01 — 판독 보고서: 견본 그림 둘을 지금 서식으로 다시 뽑음 · 설명서를 맞춤 (문서만) · 검사 날짜에 대한 답
 
 - **상태**: 확인 요청

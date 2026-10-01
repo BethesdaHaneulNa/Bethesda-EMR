@@ -9,8 +9,9 @@
 // like every paper that leaves the clinic, but it is printed from the imaging list
 // (components/RadiologyReadings.jsx), not from the documents window - there is nothing
 // to fill in: every value comes from the exam.
-//   values { exam_name, modality, exam_date, image_count, dept, ordered_by,
-//            reading, read_by, read_at }
+//   values { exam_name, exam_date, reading, read_by, read_at } are printed. The list also
+//   passes modality, image_count, dept and ordered_by: they stay in the issued record
+//   (document_log) and are not on the sheet - the director took them off (2026-10-01).
 import { L, fmtDate, calcAge, clinicName, DOC_LABELS } from './shared.jsx';
 
 // The labels are the form's own. Korean keeps the English labels of the original sheet.
@@ -22,8 +23,6 @@ var T = {
   dob:       { fr: 'Né(e) le', en: 'Birthday', ko: 'Birthday' },
   exam:      { fr: 'Examen', en: 'Exam', ko: 'Exam' },
   reading:   { fr: 'Compte-rendu', en: 'Reading', ko: 'Reading' },
-  orderedBy: { fr: 'Demandé par', en: 'Ordered by', ko: '의뢰' },
-  images:    { fr: '{n} image(s)', en: '{n} image(s)', ko: '영상 {n}장' },
   reader:    { fr: 'Médecin lecteur :', en: 'Read by:', ko: '판독의:' },
   issued:    { fr: 'Émis le', en: 'Issued', ko: '발행' },
 };
@@ -102,9 +101,6 @@ export function ImagingReportLayout(props) {
   var fullName = ((p.last_name || '') + ' ' + (p.first_name || '')).trim();
   var sex = p.gender === 'M' ? L(DOC_LABELS.male, lang) : p.gender === 'F' ? L(DOC_LABELS.female, lang) : '';
   var age = calcAge(p.date_of_birth);
-  var who = [v.dept, v.ordered_by].filter(Boolean).join(' · ');
-  var colon = lang === 'fr' ? ' : ' : ': ';   // French puts a space before the colon
-  var small = [who ? L(T.orderedBy, lang) + colon + who : '', v.image_count ? L(T.images, lang).replace('{n}', v.image_count) : ''].filter(Boolean).join('   —   ');
   var contact = [clinic.address, clinic.phone ? 'Tel: ' + clinic.phone : '', clinic.email].filter(Boolean).join('  ·  ');
   var hospital = clinic.name || clinic.name_en || clinic.name_fr ? clinicName(clinic, lang) : '';
 
