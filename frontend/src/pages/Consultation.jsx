@@ -201,7 +201,13 @@ export default function ConsultationPage() {
   var drs = useState([]), allDrugs = drs[0], setAllDrugs = drs[1];
   var ocs2 = useState([]), allOrderCodes = ocs2[0], setAllOrderCodes = ocs2[1];
   var phs = useState([]), phrases = phs[0], setPhrases = phs[1];
-  var pcs = useState('All'), phraseCat = pcs[0], setPhraseCat = pcs[1];
+  // The category shown in the phrase list: '' = all. Chosen from a drop-down (director,
+  // 2026-10-01: categories are made in Settings now, and a row of word buttons overflows
+  // once there are many). The choice is kept for this account on this PC, so it is still
+  // there for the next patient; a kept category that no longer exists shows all.
+  var phraseCatKey = 'cs_phraseCat:' + (user ? user.id : '');
+  var pcs = useState(function(){ try { return localStorage.getItem(phraseCatKey) || ''; } catch(e){ return ''; } }), phraseCat = pcs[0], setPhraseCatState = pcs[1];
+  function setPhraseCat(c){ setPhraseCatState(c); try { if(c) localStorage.setItem(phraseCatKey, c); else localStorage.removeItem(phraseCatKey); } catch(e){} }
   var pqs = useState(''), phraseQ = pqs[0], setPhraseQ = pqs[1];
   var rts = useState('chart'), rTab = rts[0], setRTab = rts[1];
   var his = useState([]), history = his[0], setHistory = his[1];
@@ -1057,20 +1063,21 @@ export default function ConsultationPage() {
     return r.length;
   },[visits,user]);
 
+  // The categories of the drop-down, in order: the five the list started with, then any
+  // other category the phrases use (in the order the server sends them).
+  var phraseCats = useMemo(function(){
+    var seen = [];
+    (phrases||[]).forEach(function(p){ if(p.category && seen.indexOf(p.category)<0) seen.push(p.category); });
+    return PHRASE_CATS.filter(function(c){ return seen.indexOf(c)>=0; }).concat(seen.filter(function(c){ return PHRASE_CATS.indexOf(c)<0; }));
+  },[phrases]);
+  // The kept choice only counts while that category exists.
+  var phraseCatShown = phraseCats.indexOf(phraseCat)>=0 ? phraseCat : '';
   var filteredPhrases = useMemo(function(){
     var r=phrases;
-    if(phraseCat!=='All') r=r.filter(function(p){return p.category===phraseCat;});
+    if(phraseCatShown) r=r.filter(function(p){return p.category===phraseCatShown;});
     if(phraseQ){var s=phraseQ.toLowerCase();r=r.filter(function(p){return phraseText(p).toLowerCase().indexOf(s)>=0;});}
     return r;
-  },[phrases,phraseCat,phraseQ,lang]);
-
-  // The fixed categories first, then any other category Settings has used - before,
-  // a phrase filed under a new category could only be found under "All".
-  var phraseCats = useMemo(function(){
-    var extra = [];
-    (phrases||[]).forEach(function(p){ if(p.category && PHRASE_CATS.indexOf(p.category)<0 && extra.indexOf(p.category)<0) extra.push(p.category); });
-    return ['All'].concat(PHRASE_CATS, extra);
-  },[phrases]);
+  },[phrases,phraseCatShown,phraseQ,lang]);
 
   var drugResults = useMemo(function(){
     if(!drugQ) return allDrugs;
@@ -1341,23 +1348,27 @@ export default function ConsultationPage() {
               </div>
               {/* Phrase dict */}
               <div style={{borderTop:'1px solid '+bd,height:'30%',minHeight:100,display:'flex',flexDirection:'column'}}>
-                {/* The title, the category buttons and the search box wrap onto a second line
-                    when the column is narrow. On one line they were ~546px in a 409px column
-                    at 1366 wide (French): focusing the search box scrolled the whole middle
-                    column sideways and cut the vital signs and the note on the left. */}
-                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',flexWrap:'wrap',alignItems:'center',gap:'3px 4px'}}>
-                  <span style={{fontWeight:700,fontSize: 13,color:'var(--warn-ink)',whiteSpace:'nowrap'}}>{t.phraseDict}</span>
-                  {phraseCats.map(function(c){
-                    return <button key={c} onClick={function(){setPhraseCat(c)}} style={{background:phraseCat===c?'var(--warn-a20)':'transparent',color:phraseCat===c?'var(--warn-text)':t3,border:'none',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{label(PHRASE_CAT_KEY, c)}</button>;
-                  })}
-                  <input autoComplete="off" value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',marginLeft:'auto',flex:'1 1 100px',minWidth:90,maxWidth:160,boxSizing:'border-box'}}/>
+                {/* One line: the title, the category drop-down and the search box. A native
+                    select: its list opens over the page (the column clips anything drawn
+                    inside it), scrolls by itself with twenty categories, and works from the
+                    keyboard. Closed, it reads "Catégorie : toutes" or the chosen name, cut
+                    with "…" when long. minWidth 0 on the two boxes so the line never grows
+                    wider than the column (that pushed the whole middle column sideways). */}
+                <div style={{padding:'4px 10px',background:scBg,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6}}>
+                  <span style={{fontWeight:700,fontSize: 13,color:'var(--warn-ink)',whiteSpace:'nowrap',flexShrink:0}}>{t.phraseDict}</span>
+                  <select aria-label={t.cs_phraseCat} title={phraseCatShown ? label(PHRASE_CAT_KEY, phraseCatShown) : t.cs_phraseCat} value={phraseCatShown} onChange={function(e){setPhraseCat(e.target.value)}}
+                    style={{flex:'0 1 150px',minWidth:0,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 4px',color:phraseCatShown?'var(--warn-text)':tx,fontSize: 12,fontWeight:phraseCatShown?700:400,fontFamily:'inherit',textOverflow:'ellipsis'}}>
+                    <option value="">{t.cs_phraseCatAll}</option>
+                    {phraseCats.map(function(c){ return <option key={c} value={c}>{label(PHRASE_CAT_KEY, c)}</option>; })}
+                  </select>
+                  <input autoComplete="off" value={phraseQ} onChange={function(e){setPhraseQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:3,padding:'2px 6px',color:tx,fontSize: 12,outline:'none',flex:'1 1 90px',minWidth:0,boxSizing:'border-box'}}/>
                 </div>
                 <div style={{flex:1,overflow:'auto'}}>
                   {filteredPhrases.map(function(p){
                     return <div key={p.id} onClick={function(){insertPhrase(phraseText(p))}} style={{padding:'4px 10px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:6}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--hover-row)'}}
                       onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <span style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0}}>{label(PHRASE_CAT_KEY, p.category)}</span>
+                      <span title={label(PHRASE_CAT_KEY, p.category)} style={{background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:2,padding:'0 4px',fontSize: 11,fontWeight:600,flexShrink:0,maxWidth:96,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',alignSelf:'flex-start'}}>{label(PHRASE_CAT_KEY, p.category)}</span>
                       <span style={{fontSize: 13,color:'var(--text-soft)'}}>{phraseText(p)}</span>
                     </div>;
                   })}

@@ -416,6 +416,9 @@ export default {
   cs_trBadDoctor: "고른 의사를 쓸 수 없습니다(쉬는 계정이거나 의사가 아님). 다시 고르세요.",
   cs_trNoChange: "바뀐 것이 없습니다.",
   cs_trNotFound: "내원을 찾을 수 없습니다. 환자를 다시 여세요.",
+  // Phrase list: category drop-down (2026-10-01)
+  cs_phraseCat: "분류",
+  cs_phraseCatAll: "분류: 전체",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
