@@ -597,6 +597,24 @@ async function recordSwapInEmr(req, move) {
     await client.query('SELECT id FROM worklist_log WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[d.from_wl_id, d.to_wl_id]]);
     const o1 = await orderRow(client, move.from_order_item_id), o2 = await orderRow(client, move.to_order_item_id);
     if (!o1 || !o2 || o1.wl_id !== d.from_wl_id || o2.wl_id !== d.to_wl_id) { await client.query('ROLLBACK'); return 'the orders are not what they were'; }
+    const setAside = [{ study_uid: d.a.uid, instances: d.a.sops, replaced_by: d.o2.uid }, { study_uid: d.b.uid, instances: d.b.sops, replaced_by: d.o1.uid },
+                            { study_uid: d.tmp_uid, instances: d.a.sops, replaced_by: d.o2.uid }];
+    if (d.server_only) {
+      // An exchange made again on the image server after a restore: the EMR's records
+      // already say it. Only the change-log line - and no line, not finished.
+      const noted = await writeAudit(client, req || { user: { id: move.staff_id, name: move.staff_name } }, {
+        action: ACTIONS.PACS_STUDY_MOVE, patient_id: move.patient_id, visit_id: o2.visit_id, entity: 'order_item', entity_id: o2.id,
+        summary: `${REAPPLIED}: ${d.a.count} image(s) <-> ${d.b.count} image(s): ${o1.order_name} (${o1.accession_no}) <-> ${o2.order_name} (${o2.accession_no})`,
+        before: { order_name: o1.order_name, accession_no: o1.accession_no, image_count: d.a.count },
+        after: { order_name: o2.order_name, accession_no: o2.accession_no, kind: 'reapply', image_count: d.b.count },
+      });
+      if (!noted) throw new Error('the change-log line could not be written');
+      await client.query(
+        `UPDATE pacs_study_move SET state = 'done', step = 7, superseded = $2::jsonb, error = NULL, updated_at = NOW(), finished_at = NOW() WHERE id = $1`,
+        [move.id, JSON.stringify(setAside)]);
+      await client.query('COMMIT');
+      return '';
+    }
     const put = (row, study, id, other) => client.query(
       `UPDATE worklist_log
           SET completed_at = $2, images_received_at = $3, orthanc_study_id = $4, image_count = $5,
@@ -621,8 +639,7 @@ async function recordSwapInEmr(req, move) {
                            blank(move.reason) ? {} : { reason: move.reason }),
     });
     if (!logged) throw new Error('the change-log line could not be written');
-    const superseded = [{ study_uid: d.a.uid, instances: d.a.sops, replaced_by: d.o2.uid }, { study_uid: d.b.uid, instances: d.b.sops, replaced_by: d.o1.uid },
-                        { study_uid: d.tmp_uid, instances: d.a.sops, replaced_by: d.o2.uid }];
+    const superseded = setAside;
     await client.query(
       `UPDATE pacs_study_move SET state = 'done', step = 7, reading_moved = $2, superseded = $3::jsonb, error = NULL, updated_at = NOW(), finished_at = NOW() WHERE id = $1`,
       [move.id, readings, JSON.stringify(superseded)]);
@@ -739,6 +756,175 @@ async function swapImages(req, cfg, from, to, reason) {
     console.error('[pacs move] line', move.id, e.message);
     return fail('NOT_CORRECTED', { move_id: move.id, state: 'unknown' });
   } finally { working.delete(move.id); }
+}
+
+// ── after a restore from a backup disk older than a correction ───────────────
+// The image backup runs at night. If the image server is lost and restored from the
+// disk before a backup ran after a correction, the pictures come back under their OLD
+// study number (restore-image-backup.ps1 uploads them rather than lose them), while
+// the EMR - restored from its own backup - says the corrected order has them. There is
+// nobody on site to repair that by hand, so the EMR does it when the patient's images
+// are next opened: the image server's part of the correction is made again - corrected
+// study, checked, original deleted. Only when everything matches what the correction's
+// line recorded:
+//   - the line is finished and is the latest one for both of its orders (a correction
+//     that was later undone by moving the images back is never applied again);
+//   - the EMR still says what the correction left: the order(s) have their images under
+//     the number(s) the correction gave them;
+//   - the image server is exactly in the state before the correction: the old study
+//     number(s) hold exactly the image numbers the line recorded, the corrected one is
+//     not there.
+// Anything else: nothing is touched and the image window says what it said before.
+// It runs as a line of its own in pacs_study_move (detail.server_only, reapply_of), so
+// that an interruption is finished like any other, and writes its own change-log line.
+const REAPPLIED = 'Re-applied after a restore';
+
+async function startReapply(req, m, kind, detail, count) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM worklist_log WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[detail.from_wl_id, detail.to_wl_id].filter(Boolean)]);
+    if (await openMoveOn(client, [m.from_order_item_id, m.to_order_item_id].filter(Boolean))) { await client.query('ROLLBACK'); return null; }
+    const line = (await client.query(
+      `INSERT INTO pacs_study_move (kind, state, step, patient_id, from_order_item_id, to_order_item_id, from_order_name, to_order_name,
+                                    from_accession, to_accession, image_count, reason, detail, staff_id, staff_name)
+       VALUES ($1, 'started', 0, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [kind, m.patient_id, m.from_order_item_id, m.to_order_item_id, m.from_order_name, m.to_order_name, m.from_accession, m.to_accession, count,
+       REAPPLIED, JSON.stringify(detail), (req.user && req.user.id) || null, (req.user && (req.user.name || req.user.login_id)) || null])).rows[0];
+    await client.query('COMMIT');
+    return line;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[pacs move] starting a re-apply:', e.message);
+    return null;
+  } finally { client.release(); }
+}
+
+// A correction of the "move" kind, made again on the image server.
+async function reapplyMove(req, cfg, m) {
+  const d = m.detail || {};
+  const to = await orderRow(pool, m.to_order_item_id);
+  if (!to || !to.images_received_at || linkOf(to) !== d.new_study_uid) return 0;
+  const made = await studyUnder(cfg, d.new_study_uid);
+  if (made !== null) return 0;                                   // it is there (or the server cannot be asked)
+  const old = await studyUnder(cfg, d.old_study_uid);
+  if (!old || !old.stable || !sameSops(old.instances, d.source_sops || [])) return 0;
+  // What the images are renamed to, decided again from the images themselves.
+  const tags = [];
+  if (old.instances.length <= MAX_TAGS_READ) for (const i of old.instances) {
+    const t = await ox(cfg, 'GET', '/instances/' + i.id + '/tags?simplify');
+    if (t.status !== 200 || !t.json) return 0;
+    tags.push(t.json);
+  }
+  const replace = replacements({ order_name: m.from_order_name, accession_no: m.from_accession }, to, tags);
+  const from = m.from_order_item_id ? await orderRow(pool, m.from_order_item_id) : null;
+  const line = await startReapply(req, m, 'move', {
+    server_only: true, reapply_of: m.id, from_wl_id: from ? from.wl_id : null, to_wl_id: to.wl_id,
+    old_study_uid: d.old_study_uid, new_study_uid: d.new_study_uid, old_orthanc_id: old.id,
+    image_count: old.instances.length, source_instances: old.instances.map(i => i.id), source_sops: old.instances.map(i => i.sop),
+    replaced: Object.keys(replace),
+  }, old.instances.length);
+  if (!line) return 0;
+  working.add(line.id);
+  try {
+    const r = await makeChecked(cfg, d.old_study_uid, line.detail.source_sops, replace, d.new_study_uid, to.accession_no, old.patient_id);
+    if (!r.id) { await undo(line, r.wait || r.bad); return 0; }
+    line.step = 2; line.detail.new_orthanc_id = r.id;
+    await setState(line.id, 'started', 2, { detail: { new_orthanc_id: r.id } });
+    // The EMR already says the right thing about the order that has the images. The
+    // order they left may have been given the restored study again by the bridge: it is
+    // emptied again. And the change-log line - no line, nothing re-applied.
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      if (from && from.wl_id) {
+        await client.query(
+          `UPDATE worklist_log SET images_received_at = NULL, orthanc_study_id = NULL, image_count = NULL, image_patient_id = NULL,
+                                   image_patient_name = NULL, patient_check = NULL, image_study_uid = NULL
+            WHERE id = $1 AND images_received_at IS NOT NULL AND COALESCE(image_study_uid, study_instance_uid) = $2`, [from.wl_id, d.old_study_uid]);
+      }
+      const logged = await writeAudit(client, req, {
+        action: ACTIONS.PACS_STUDY_MOVE, patient_id: m.patient_id, visit_id: to.visit_id, entity: 'order_item', entity_id: to.id,
+        summary: `${REAPPLIED}: ${old.instances.length} image(s): ${m.from_order_name} (${m.from_accession}) -> ${m.to_order_name} (${m.to_accession})`,
+        before: { order_name: m.from_order_name, accession_no: m.from_accession },
+        after: { order_name: m.to_order_name, accession_no: m.to_accession, kind: 'reapply', image_count: old.instances.length },
+      });
+      if (!logged) throw new Error('the change-log line could not be written');
+      await client.query(`UPDATE pacs_study_move SET state = 'emr-done', step = 3, error = NULL, updated_at = NOW() WHERE id = $1`, [line.id]);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('[pacs move] re-apply, EMR part:', e.message);
+      await undo(line, 'the EMR part of the re-apply could not be written');
+      return 0;
+    } finally { client.release(); }
+    line.step = 3; line.state = 'emr-done';
+    await finish(line);
+    say('correction', m.id, 're-applied after a restore -', old.instances.length, 'image(s) back under', m.to_accession);
+    return 1;
+  } catch (e) {
+    console.error('[pacs move] re-apply line', line.id, e.message);
+    return 0;
+  } finally { working.delete(line.id); }
+}
+
+// An exchange, made again on the image server (the EMR's records already say it).
+async function reapplySwap(req, cfg, m) {
+  const d = m.detail || {};
+  if (!d.a || !d.b || !d.o1 || !d.o2) return 0;
+  const o1 = await orderRow(pool, m.from_order_item_id), o2 = await orderRow(pool, m.to_order_item_id);
+  if (!o1 || !o2 || !o1.images_received_at || !o2.images_received_at || linkOf(o1) !== d.o1.uid || linkOf(o2) !== d.o2.uid) return 0;
+  const A = await studyUnder(cfg, d.a.uid), B = await studyUnder(cfg, d.b.uid);
+  if (!A || !B || !A.stable || !B.stable || !sameSops(A.instances, d.a.sops || []) || !sameSops(B.instances, d.b.sops || [])) return 0;
+  const pack = (study, was) => Object.assign({}, was, { orthanc_id: study.id, count: study.instances.length, ids: study.instances.map(i => i.id), sops: study.instances.map(i => i.sop),
+                                                        patient_id: study.patient_id, patient_name: study.patient_name });
+  const detail = {
+    server_only: true, reapply_of: m.id, from_wl_id: o1.wl_id, to_wl_id: o2.wl_id, a: pack(A, d.a), b: pack(B, d.b), o1: d.o1, o2: d.o2,
+    replace_a: d.replace_a, replace_b: d.replace_b,
+  };
+  const line = await startReapply(req, m, 'swap', detail, A.instances.length);
+  if (!line) return 0;
+  const tmp = tmpUid(line.id);
+  Object.assign(line.detail, { tmp_uid: tmp, tmp_accession: 'TMP-' + line.id, new_study_uid: tmp, old_orthanc_id: A.id, image_count: A.instances.length, source_instances: line.detail.a.ids });
+  await pool.query('UPDATE pacs_study_move SET detail = $2::jsonb WHERE id = $1', [line.id, JSON.stringify(line.detail)]);
+  working.add(line.id);
+  try {
+    const state = await advanceSwap(req, line);
+    if (state === 'done') say('exchange', m.id, 're-applied after a restore');
+    return state === 'done' ? 1 : 0;
+  } catch (e) {
+    console.error('[pacs move] re-apply line', line.id, e.message);
+    return 0;
+  } finally { working.delete(line.id); }
+}
+
+// Called before the image window of an order opens (pacs.routes.js). Looks only when
+// the patient has a finished correction; touches something only under the conditions
+// above. Never in the way: any failure leaves things as they were.
+async function reapplyAfterRestore(req, orderItemId) {
+  try {
+    if (!/^[0-9]{1,9}$/.test(String(orderItemId))) return 0;
+    const r = await pool.query(
+      `SELECT m.* FROM pacs_study_move m JOIN order_item oi ON oi.patient_id = m.patient_id
+        WHERE oi.id = $1 AND m.state <> 'rolled-back' ORDER BY m.id DESC LIMIT 200`, [orderItemId]);
+    if (!r.rows.length || r.rows.some(m => OPEN_STATES.includes(m.state))) return 0;
+    const cfg = await config();
+    if (!cfg.orthanc_password) return 0;
+    // The latest line of each order.
+    const latest = new Map();
+    for (const m of r.rows) for (const o of [m.from_order_item_id, m.to_order_item_id]) if (o && !latest.has(o)) latest.set(o, m);
+    let n = 0;
+    for (const m of new Set(latest.values())) {
+      if (m.state !== 'done' || working.has(m.id)) continue;
+      const mine = [m.from_order_item_id, m.to_order_item_id].filter(Boolean);
+      if (mine.some(o => latest.get(o) !== m)) continue;         // one of its orders was corrected again since
+      n += m.kind === 'swap' ? await reapplySwap(req, cfg, m) : await reapplyMove(req, cfg, m);
+    }
+    return n;
+  } catch (e) {
+    console.error('[pacs move] re-apply after a restore:', e.message);
+    return 0;
+  }
 }
 
 // ── what a failure, a restart or a power cut left ────────────────────────────
@@ -865,7 +1051,9 @@ router.get('/moves/patient/:patientId', authMiddleware, permMiddleware('consulta
     const r = await pool.query(
       `SELECT id, kind, state, from_order_item_id, to_order_item_id, from_order_name, to_order_name, from_accession, to_accession,
               image_count, (detail->'b'->>'count')::int AS other_image_count, reading_moved, reason, staff_name, created_at, finished_at, error
-         FROM pacs_study_move WHERE patient_id = $1 ORDER BY id DESC LIMIT 100`, [req.params.patientId]);
+         FROM pacs_study_move
+        WHERE patient_id = $1 AND COALESCE(detail->>'server_only', '') <> 'true'   -- a re-apply after a restore is not a correction of its own
+        ORDER BY id DESC LIMIT 100`, [req.params.patientId]);
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
@@ -876,4 +1064,4 @@ router.post('/move/resume', authMiddleware, mayMove, async (req, res) => {
   catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-module.exports = { router, moveImages, resumePending, supersededNow, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };
+module.exports = { router, moveImages, resumePending, reapplyAfterRestore, supersededNow, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };
