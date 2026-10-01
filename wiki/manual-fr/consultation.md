@@ -19,7 +19,8 @@ Voir un patient de la file :
 
 ### 1. L'écran
 
-- *En haut* — une barre bleue : les boutons **Sélection visite**, **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
+- *En haut* — une barre bleue : les boutons **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
+- *Juste en dessous, à gauche* — trois boutons : **☰ File d'Attente**, **🔍 Trouver patient** et **📋 Sélection visite** (les autres visites du patient ouvert ; gris tant qu'aucun patient n'est ouvert).
 - *À gauche* — **Prescriptions** : les médicaments en haut, les examens et actes en dessous, dans le même tableau.
 - *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et le **Dictionnaire** (phrases toutes prêtes).
 - *À droite* — **Dossier Patient** et **Ordonnances types**.
@@ -30,6 +31,7 @@ Voir un patient de la file :
 2. Onglet **En Attente** : les patients à voir. Onglet **Terminé** : les patients déjà vus aujourd'hui (on peut les rouvrir).
 3. Tapez un nom ou un N° dossier dans **Rechercher** pour filtrer, puis cliquez sur le patient.
 4. Un patient qui n'est pas dans la file du jour : cliquez sur **🔍 Trouver patient**, cherchez-le, puis choisissez la visite.
+5. Une autre visite du patient déjà ouvert : cliquez sur **📋 Sélection visite**, à droite de **Trouver patient**, puis choisissez la date.
 
 ### 3. Signes vitaux et note
 
