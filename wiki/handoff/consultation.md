@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 전과 창에서 「과」 칸을 뺌: 의사만 고르기
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `47ce599` 다음
+- **한 일** (실장님: 「원장님이 과에 묶여 나오는데 닥터만 있으면 되는 것 아니냐」 — 과를 바꾸자 의사 칸이 비고 Change가 꺼진 상태가 헷갈렸음):
+  - 창에는 **의사**(「과 – 이름」, 모든 활성 의사, 내원의 과 의사가 위)와 **사유**만. 과 칸·과 목록 읽기를 없앰.
+  - 서버에는 전처럼 `department_id`·`doctor_id`를 같이 보냄: 과 = 고른 의사의 과, 과 없는 의사면 내원의 지금 과.
+  - 고른 의사의 과가 지금과 다르면 한 줄: «Le service change aussi : GEN → PED.» / «과도 바뀝니다: GEN → PED» / «The department also changes: GEN → PED.»
+  - 확인은 지금과 **다른 의사를 골랐을 때만** 켜짐. 의사 없는 내원은 「—」가 골라져 있고 의사를 골라야 함(과만 바꾸는 길 없음 — 접수 화면에서).
+  - **생각해 둔 구석**: 의사에게도 내원에도 과가 없으면 보낼 과가 없습니다(서버는 과 없이 받지 않음). 그때는 확인을 끄고 «Ni ce médecin ni cette visite n'ont de service. Indiquez le service à l'accueil.» 한 줄.
+  - 제목·알림을 의사 기준으로: «Changer de médecin» / «전과 — 의사 바꾸기», «Médecin changé ✓». 거절 문장의 「과·의사」도 「의사」로. 쉬는 과 거절(`BAD_DEPARTMENT`)은 「그 의사의 과를 쓸 수 없음 — 접수에서 확인」.
+  - 지운 키: `cs_trDept`·`cs_trPickDoctor`. 더한 키: `cs_trDeptFollows`·`cs_trNoDept`.
+  - 설명서 fr 절 이름 「Changer de médecin」(2번 고침), 모듈 문서 2.7·3.1·8, changelog 초안.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음
+- **번역 키**: 더함 `cs_trDeptFollows`·`cs_trNoDept` · 뺌 `cs_trDept`·`cs_trPickDoctor` · 글 바꿈 `cs_trTitle`·`cs_trDone`·`cs_trCancelled`(ko)·`cs_trPaid`·`cs_trBadDept`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768.
+  - 창: 칸은 의사 하나(`select` 1개), 라벨 «Médecin / Motif (facultatif)», 지금 의사가 골라져 있고 Changer 꺼짐.
+  - GEN · S2 doctor → «PED – Dr PEDIA»: «Le service change aussi : GEN → PED.», Changer → «Médecin changé ✓», 파란 줄 «PED Dr PEDIA». DB PED · Dr PEDIA, 기록 한 줄.
+  - GEN · S2 doctor → «Dr DEUX»(과 없음): 한 줄 없음, 파란 줄 «GEN Dr DEUX». DB 과 GEN 그대로.
+  - GEN · 의사 없음: «—»에 Changer 꺼짐 → S2 doctor를 고르면 «—»가 목록에서 빠지고 켜짐 → «GEN S2 doctor». 기록 «GEN → GEN · S2 doctor».
+  - 과도 의사도 없는 내원: Dr DEUX(과 없음) → 「과가 없습니다」 한 줄, 꺼짐. S2 doctor → «Le service change aussi : — → GEN.», 켜짐.
+  - EN·KO 문장 확인(창 전체 글), KO 어두운 화면·FR 밝은 화면 그림 확인. ko 한 줄은 조사가 과 코드에 따라 어색해(「GEN로」) 「과도 바뀝니다: A → B」로 고침.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 오른쪽 맨 위 묶음의 「오늘」: 오늘의 내원일 때만
 
 - **상태**: 확인 요청
