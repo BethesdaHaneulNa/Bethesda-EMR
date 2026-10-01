@@ -45,7 +45,7 @@ Le patient disparaît de **En attente** et apparaît dans **Payé aujourd’hui*
 - **Il paie une partie** (par exemple 10 000 Ar sur 18 000 Ar) : tapez `10000` dans **Montant Reçu**, puis **Confirmer**. Les 8 000 Ar restent **impayés** sur son compte. Le reçu indique **Reste à payer**.
 - **Il ne paie rien** : cliquez sur **Impayé** (en haut à droite). Tout le total reste impayé.
 
-Le patient quitte la liste **En attente**. Pour encaisser le reste plus tard, voir 4.
+Le patient quitte la liste **En attente**. Pour encaisser le reste plus tard, voir 4. En fin de journée, c'est ainsi qu'on vide la liste (voir 14).
 
 ### 4. Encaisser un impayé plus tard
 
@@ -117,7 +117,7 @@ Les listes montrent seulement les visites de la **Date de travail** (en haut à 
 
 Si vous connaissez le patient, **🔍 Trouver patient** l'ouvre directement, quelle que soit la date (voir 13).
 
-L'écran ne signale pas qu'il reste quelque chose d'un jour passé. En fin de journée, vérifiez que **En attente** est vide ; s'il reste des patients, ouvrez la date d'hier le lendemain matin. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) restent dans la liste d'un jour passé.
+L'écran ne signale pas qu'il reste quelque chose d'un jour passé. C'est pourquoi on vide **En attente** chaque soir (voir 14) ; s'il est resté des patients, ouvrez la date d'hier le lendemain matin. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) restent dans la liste d'un jour passé.
 
 **Regarder un autre jour.** Cliquez sur **◀**, ou choisissez la date. Le haut de la liste devient jaune : « Date passée (2026-09-30) : un encaissement fait maintenant est daté d’aujourd’hui (2026-10-01) — reçu et caisse du jour. »
 
@@ -143,6 +143,19 @@ Un patient ouvert avec **🔍 Trouver patient** dont la visite n'est pas d'aujou
 ### 13. Le patient n'est pas dans la liste
 
 Cliquez sur **🔍 Trouver patient**, cherchez le nom, choisissez la visite. La visite s'ouvre quelle que soit la **Date de travail** ; si elle n'est pas d'aujourd'hui, sa date (📅) est affichée à droite du nom. Une visite avec une **Correction** ou un **Re-facturer** en attente s'ouvre directement sur cet écran. Si la visite a été annulée à l'accueil, l'écran le dit et il n'y a rien à encaisser.
+
+### 14. En fin de journée
+
+La caisse se clôture chaque jour : en partant, la liste **En attente** doit être vide.
+
+1. Cliquez sur **En attente**. Pour chaque patient qui reste et qui est parti sans payer : cliquez sur son nom, vérifiez le **Total**, laissez **Montant Reçu** vide, puis cliquez sur **Impayé** (en haut à droite).
+2. Le reçu s'ouvre : **Fermer**. Tout le total reste **impayé** sur le compte du patient, et le patient quitte la liste.
+3. S'il reste une ligne **Supplément**, **Correction** ou **Re-facturer**, traitez-la comme d'habitude (voir 6, 7 et 9).
+4. Quand **En attente** est vide, cliquez sur **Payé aujourd’hui** et comparez le **Net** de **💵 Caisse du jour** avec l'argent du tiroir.
+
+L'impayé n'est pas perdu : quand le patient revient, il s'ajoute tout seul à son prochain paiement (**+ Solde antérieur dû: N Ar** dans la liste, et il est compris dans le **Total**). S'il vient seulement payer sa dette, encaissez-la depuis **Reçus** (voir 4).
+
+Si un patient est resté dans la liste d'un jour passé, il n'apparaît plus aujourd'hui : voir 10.
 
 ## Si ce message apparaît
 
