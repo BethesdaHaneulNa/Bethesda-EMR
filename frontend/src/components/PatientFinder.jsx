@@ -2,6 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 
+// The phone field often holds two numbers («+261 34 99 888 77 / +261 33 45 678 90»,
+// home / mobile - up to 50 characters). In a table they go one under the other, each
+// on one line, so the column stays one number wide and the name keeps its room; on one
+// line a 37-character phone took more of the table than the name. A piece too long to
+// be a number (no separator at all) may break anywhere rather than widen the column.
+function phoneParts(s) { return String(s || '').split(/\s*[\/;,]\s*/).filter(Boolean); }
+export function phoneLines(s) {
+  var parts = phoneParts(s);
+  if (!parts.length) return '—';
+  return parts.map(function (p, i) {
+    return <div key={i} style={p.length > 22 ? { overflowWrap: 'anywhere', maxWidth: 170 } : { whiteSpace: 'nowrap' }}>{p}</div>;
+  });
+}
+// The same for running text: the spaces inside a number do not break, the « / » between
+// two numbers does.
+export function phoneText(s) {
+  return phoneParts(s).map(function (p) { return p.length > 22 ? p : p.replace(/ /g, '\u00A0'); }).join(' / ');
+}
+
 // 공용 환자 찾기 팝업: 1) 수진자 찾기 → 2) 외래 내역 선택
 // props:
 //   open, onClose
@@ -118,7 +137,7 @@ export function PatientFinder(props){
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
                       <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)',whiteSpace:'nowrap'}}>{p.chart_no}</td>
                       <td style={Object.assign({padding:'9px 12px',color:tx,fontWeight:700},WRAP)}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{phoneLines(p.mobile || p.phone)}</td>
                       <td style={{padding:'9px 12px',color:t2,whiteSpace:'nowrap'}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;

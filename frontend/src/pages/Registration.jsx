@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
-import { PatientFinder } from '../components/PatientFinder.jsx';
+import { PatientFinder, phoneLines, phoneText } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
@@ -662,7 +662,12 @@ export default function RegistrationPage() {
               {patientResults.map(function (p) {
                 return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: selectedPatient && selectedPatient.id === p.id ? 'var(--accent-a18)' : 'var(--bg-row)' }}>
                   <div style={{ fontWeight: 800, fontSize: 15, overflowWrap: 'anywhere' }}>{p.last_name} {p.first_name}</div>
-                  <div style={{ fontSize: 13, color: t2, overflowWrap: 'anywhere' }}>{[p.chart_no, p.phone || p.mobile, p.date_of_birth ? p.date_of_birth.split('T')[0] : ''].filter(Boolean).join(' · ')}</div>
+                  {/* Chart number and birth date never break (a long phone used to leave
+                      «1992-» at the end of one line and «11-02» on the next); the phone
+                      breaks only between two numbers (phoneText). */}
+                  <div style={{ fontSize: 13, color: t2, overflowWrap: 'anywhere' }}>{[[p.chart_no, true], [phoneText(p.phone || p.mobile), false], [p.date_of_birth ? p.date_of_birth.split('T')[0] : '', true]].filter(function (x) { return x[0]; }).map(function (x, i) {
+                    return <span key={i}>{i ? ' · ' : ''}<span style={x[1] ? { whiteSpace: 'nowrap' } : null}>{x[0]}</span></span>;
+                  })}</div>
                 </div>;
               })}
             </div> : null}
@@ -869,7 +874,7 @@ export default function RegistrationPage() {
                       <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>{p.chart_no}</td>
                       <td style={{ padding: '9px 12px', color: tx, fontWeight: 700, overflowWrap: 'anywhere' }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
-                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{phoneLines(p.mobile || p.phone)}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
                       <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a60)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
                     </tr>;
