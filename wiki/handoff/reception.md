@@ -2,6 +2,18 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 📌 칸의 이름: 「접수과 메모」 → 「환자 메모(늘 보임)」
+
+- **상태**: 확인 요청
+- **왜**: 총괄 결정(접수 제안). 「접수 메모」 한 칸이 생긴 뒤 같은 양식 위쪽의 📌 칸(환자에 늘 붙는 메모)이 한국어 · 영어에서 거의 같은 이름이었음
+- **바꾼 것**: 공용 키 `receptionDeskNote`의 글만 — ko 「환자 메모(늘 보임)」, en "Patient note (always shown)", fr «Note permanente du patient». 키 이름 · 칸(`patient.reception_note`) · 동작은 그대로. 이 키를 쓰는 곳은 접수 양식뿐
+- **지시 밖 한 줄**: fr 안내 글자(`receptionDeskNoteHint`)가 바로 «Note permanente du patient»여서 이름과 안내가 같은 글이 됨 → «Ce qu'il faut toujours savoir (ex. : vient avec un accompagnant)»로. ko · en 안내는 그대로
+- **다른 세션에 알릴 것**: 설정의 기록 탭은 같은 칸을 자기 키 `se_fld_receptionNote`로 부름 — 「접수 메모 / Reception note / Note d'accueil」. 한국어 「접수 메모」는 이제 내원의 그 한 칸 이름이라, 기록 탭에서 환자 메모를 고친 줄이 「접수 메모」로 보임. 설정 세션이 「환자 메모 / Patient note / Note permanente du patient」로 맞추면 됨(접수는 se_ 키를 고치지 않음)
+- **확인** (격리 9181, 1366×768, 스택 내림): 양식의 📌 이름표가 ko · en · fr 모두 한 줄, 아래 「접수 메모 / Reception Memo / Mémo Réception」와 구분됨, 안내 글자가 칸 안에 들어감. `npm run build` 통과
+- **문서**: `modules/reception.md` 2절 표 · 3절 「접수 메모 한 칸」 · DB 표 · 변경표, `manual-fr/reception.md` 두 곳(«📌 Note d'accueil» → «📌 Note permanente du patient»)
+- **공유 파일**: i18n `ko/en/fr.js`의 공용 키 한 줄씩(총괄 지시), fr는 안내 글자 한 줄 더
+- **바꾼 파일**: `frontend/src/i18n/{ko,en,fr}.js`, `wiki/modules/reception.md`, `wiki/manual-fr/reception.md`, 이 노트
+
 ## 2026-10-01 — 「주호소」와 「접수 메모」를 「접수 메모」 한 칸으로
 
 - **상태**: 확인 요청

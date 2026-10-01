@@ -167,7 +167,7 @@ export default {
   savePatientOnly: "Save patient info",
   savePatientDone: "Patient info saved",
   in_progress: "In progress",
-  receptionDeskNote: "Reception note",
+  receptionDeskNote: "Patient note (always shown)",
   receptionDeskNoteHint: "Permanent note for this patient (e.g. needs interpreter)",
   toWaiting: "← To waiting",
   toCompleted: "Complete →",
