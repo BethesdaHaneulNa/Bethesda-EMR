@@ -1216,8 +1216,9 @@ export default {
   px_printFail: "The document could not be issued: ",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "Screen colours (light / dark)",
+  ds_themeSwitch: "Screen colours (dark / light / paper)",
   ds_themeLight: "Light",
+  ds_themePaper: "Paper",
   ds_themeDark: "Dark",
   // ── end design ──
 };

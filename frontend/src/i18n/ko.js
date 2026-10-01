@@ -1207,8 +1207,9 @@ export default {
   px_printFail: "서류를 발행하지 못했습니다: ",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "화면 색 (밝게 / 어둡게)",
+  ds_themeSwitch: "화면 색 (어둡게 / 밝게 / 종이색)",
   ds_themeLight: "밝게",
+  ds_themePaper: "종이색",
   ds_themeDark: "어둡게",
   // ── end design ──
 };

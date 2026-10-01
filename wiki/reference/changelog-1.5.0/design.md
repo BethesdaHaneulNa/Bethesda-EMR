@@ -10,7 +10,11 @@ The choice belongs to the account, not to the PC. A nurse who chooses the light 
 
 Every account starts on the dark screen, so nothing changes for anyone until they press the switch.
 
-### What stays the same on both screens
+### A third screen: warm paper
+
+Beside dark and light there is a third choice, **📄 Paper** (**Papier**, **종이색**): the light screen on a warm, slightly yellow ground, like paper. It glares less than white, which some eyes prefer for a long day. The director asked for it after looking at the first mockups again (2026-10-01). It works exactly like the other two: one press, remembered with the account, on every screen and on the login screen. Its text and outlines were deepened until they meet the same contrast line as the light screen, because paper is a little darker than white. Dark stays the screen every account starts with.
+
+### What stays the same on every screen
 
 - **Anything on paper.** Receipts, prescriptions, surgical records, referral letters and their previews are white sheets as before, and the letterhead preview in Settings too. Printing is untouched.
 - **The patient band** on the consultation screen: the dark blue row with the patient's name, chart number and allergy. It is the one thing a doctor must find without looking, so it does not move or change colour.

@@ -1,7 +1,9 @@
 // The colour tokens of the app: dark = the values the screens had before themes existed
-// (must never change), light = proposal A chosen by the director on 2026-09-29.
+// (changed only by the director's decisions of 2026-09-30), light = proposal A chosen by the
+// director on 2026-09-29, paper = proposal B ("warm paper"), asked for as a third screen on
+// 2026-10-01. The tables below hold dark and light; the paper values are in PAPER, further down.
 // Prints the <style id="bethesda-theme"> block for frontend/index.html and checks the
-// light values against WCAG AA.   Run: node tokens.mjs            (prints CSS + report)
+// light and the paper values against WCAG AA.   Run: node tokens.mjs            (prints CSS + report)
 //                                       node tokens.mjs --check    (report only, exit 1 on a miss)
 // (design session - tooling only, not part of the app)
 import fs from 'fs';
@@ -192,38 +194,90 @@ export const OTHER = [
 
 export const dark = () => Object.fromEntries([...all, ...TINT, ...OTHER].map(t => [t[0], t[1]]));
 
+// ── paper: the third screen (proposal B of 2026-09-29, "warm paper") ──
+// Surfaces, lines and greys are the warm values of the mockup the director saw. A token not
+// named here starts from its light value. Text, coloured text and the outline of an input
+// are then deepened, a step at a time, until they meet the same line the light screen is
+// checked against (paper is a little darker than white, so most of them move slightly):
+// the result is what the block in index.html holds.
+const PAPER_SET = {
+  'bg': '#f3efe6', 'bg-2': '#f3efe6', 'bg-col': '#faf7f0', 'bg-deep': '#e6dfd0',
+  'panel': '#fffdf8', 'panel-2': '#f1ece1', 'panel-head': '#e9e3d6', 'panel-head-2': '#e1dacb', 'panel-head-3': '#e3dccd',
+  'chip': '#e8e2d5', 'field-locked': '#f1ece1', 'bg-row': '#faf7f0', 'bg-group': '#efeadc', 'bg-col-2': '#faf7f0',
+  'notice': '#f1ece1', 'notice-line': '#b3aa96', 'line-soft-2': '#ebe5d8', 'line-soft-3': '#ebe5d8',
+  'btn-neutral': '#d8d0bf', 'btn-neutral-2': '#d8d0bf', 'line-soft': '#e6dfd0', 'border': '#d8d0bf', 'border-2': '#c9c0ac',
+  'field-border': '#8f8672',
+  'text-max': '#17140f', 'text-strong': '#17140f', 'text-strong-2': '#17140f', 'text': '#26221b',
+  'text-soft': '#3a342a', 'text-soft-2': '#3a342a', 'text-2': '#544d40', 'text-3': '#635b4c',
+  'text-4': '#6e6656', 'text-5': '#6e6656', 'text-faint': '#6e6656', 'text-locked': '#635b4c',
+  'status-off': '#635b4c',
+};
+const PAPER_OTHER = {
+  'scrim': 'rgba(41,33,20,0.45)', 'scrim-30': 'rgba(41,33,20,0.2)', 'scrim-40': 'rgba(41,33,20,0.3)', 'scrim-50': 'rgba(41,33,20,0.4)', 'scrim-70': 'rgba(41,33,20,0.5)',
+  'shadow-30': 'rgba(41,33,20,0.10)', 'shadow-40': 'rgba(41,33,20,0.12)', 'shadow-50': 'rgba(41,33,20,0.15)', 'shadow-60': 'rgba(41,33,20,0.18)', 'shadow-70': 'rgba(41,33,20,0.20)',
+  'hover-row': 'rgba(41,33,20,0.04)', 'hover-row-2': 'rgba(41,33,20,0.05)',
+  'toast-shadow': '0 6px 20px rgba(41,33,20,0.18)',
+};
+const MAIN = ['bg', 'bg-col', 'panel', 'panel-2', 'panel-head'];
+const deepen = c => c.map(v => v * 0.97);   // one step darker, hue kept
+function paperValues() {
+  const P = {}; for (const t of all) P[t[0]] = PAPER_SET[t[0]] || t[2];
+  const V = n => rgb(P[n].slice(1));
+  const surfNames = NEUTRAL.filter(t => t[3] === 's' && !/^btn-neutral/.test(t[0])).map(t => t[0]);
+  const passes = t => {
+    const c = V(t[0]);
+    if (t[3] === 'f') return contrast(c, V('field')) >= 3 && MAIN.every(n => contrast(c, V(n)) >= 3);
+    if (t[3] !== 't') return true;
+    if (!surfNames.every(n => contrast(c, V(n)) >= 4.5)) return false;
+    if (NEUTRAL.indexOf(t) >= 0) return true;
+    // coloured text: also on its family's pale tints (made from the family's own paper value)
+    const fam = t[0].split('-')[0];
+    return TINT.filter(x => x[3].split('-')[0] === fam && x[4] <= 0x20 / 255).every(x => MAIN.every(n => contrast(c, over(V(x[3]), lightAlpha(x[4]), V(n))) >= 4.5));
+  };
+  // three rounds: deepening a text colour that is also the base of a tint (--accent-text,
+  // --warn-text ...) moves that tint, and with it what the other texts of the family stand on
+  for (let round = 0; round < 3; round++) for (const t of all) { let i = 0; while (!passes(t) && i++ < 60) P[t[0]] = '#' + hex(deepen(V(t[0]))); }
+  for (const x of TINT) P[x[0]] = 'rgba(' + V(x[3]).join(',') + ',' + (+lightAlpha(x[4]).toFixed(3)) + ')';
+  for (const o of OTHER) P[o[0]] = PAPER_OTHER[o[0]] || o[2];
+  P.placeholder = P['text-4'];
+  return P;
+}
+export const PAPER = paperValues();
+
 export function css() {
   const line = (list, i) => list.map(t => '      --' + t[0] + ': ' + t[i] + ';').join('\n');
   return '    :root {\n' + line([...all, ...TINT, ...OTHER], 1) + '\n    }\n' +
-    '    :root[data-theme="light"] {\n' + line([...all, ...TINT, ...OTHER], 2) + '\n      color-scheme: light;\n    }';
+    '    :root[data-theme="light"] {\n' + line([...all, ...TINT, ...OTHER], 2) + '\n      color-scheme: light;\n    }\n' +
+    '    :root[data-theme="paper"] {\n' + [...all, ...TINT, ...OTHER].map(t => '      --' + t[0] + ': ' + PAPER[t[0]] + ';').join('\n') + '\n      color-scheme: light;\n    }';
 }
 
-// ── checks (light values) ──
-export function check() {
+// ── checks: the light values, or the paper values with check('paper') ──
+export function check(theme) {
+  const V = name => rgb((theme === 'paper' ? PAPER[name] : byName[name][2]).slice(1));
   const out = []; let bad = 0;
   const surfaces = NEUTRAL.filter(t => t[3] === 's' && !/^btn-neutral/.test(t[0]));
   const add = (what, ratio, need, where) => { const ok = ratio >= need; if (!ok) bad++; out.push((ok ? 'ok  ' : 'MISS') + ' ' + what.padEnd(16) + ratio.toFixed(2).padStart(6) + '  (>= ' + need + ')  ' + where); };
   const worst = (c, list) => list.map(s => [contrast(c, s[1]), s[0]]).sort((a, b) => a[0] - b[0])[0];
-  const surf = surfaces.map(s => [s[0], rgb(s[2].slice(1))]);
-  for (const t of NEUTRAL.filter(t => t[3] === 't')) { const w = worst(rgb(t[2].slice(1)), surf); add(t[0], w[0], 4.5, 'on --' + w[1]); }
+  const surf = surfaces.map(s => [s[0], V(s[0])]);
+  for (const t of NEUTRAL.filter(t => t[3] === 't')) { const w = worst(V(t[0]), surf); add(t[0], w[0], 4.5, 'on --' + w[1]); }
   for (const t of COLOR) {
-    const c = rgb(t[2].slice(1));
+    const c = V(t[0]);
     if (t[3] === 'c') { add(t[0], contrast([255, 255, 255], c), 4.5, 'white text on it'); continue; }
     const w = worst(c, surf); add(t[0], w[0], 4.5, 'as text on --' + w[1]);
     // on its own family's background tints (alpha up to 0x20), over the darkest surface
     const fam = t[0].split('-')[0];   // danger-strong tints count for the danger family
     const tints = TINT.filter(x => x[3].split('-')[0] === fam && x[4] <= 0x20 / 255);
     const main = surf.filter(s => ['bg', 'bg-col', 'panel', 'panel-2', 'panel-head'].indexOf(s[0]) >= 0);
-    let lo = null; for (const x of tints) for (const s of main) { const bg = over(rgb(byName[x[3]][2].slice(1)), lightAlpha(x[4]), s[1]); const r = contrast(c, bg); if (!lo || r < lo[0]) lo = [r, x[0] + ' over --' + s[0]]; }
+    let lo = null; for (const x of tints) for (const s of main) { const bg = over(V(x[3]), lightAlpha(x[4]), s[1]); const r = contrast(c, bg); if (!lo || r < lo[0]) lo = [r, x[0] + ' over --' + s[0]]; }
     if (lo) add(t[0], lo[0], 4.5, 'on --' + lo[1]);
   }
-  const fb = NEUTRAL.find(t => t[0] === 'field-border'); add('field-border', contrast(rgb(fb[2].slice(1)), rgb(byName.field[2].slice(1))), 3, 'against --field');
-  { const w = worst(rgb(fb[2].slice(1)), surf.filter(s => ['bg', 'bg-col', 'panel', 'panel-2', 'panel-head'].indexOf(s[0]) >= 0)); add('field-border', w[0], 3, 'against --' + w[1] + ' around the field'); }
+  const fb = V('field-border'); add('field-border', contrast(fb, V('field')), 3, 'against --field');
+  { const w = worst(fb, surf.filter(s => ['bg', 'bg-col', 'panel', 'panel-2', 'panel-head'].indexOf(s[0]) >= 0)); add('field-border', w[0], 3, 'against --' + w[1] + ' around the field'); }
   return { out, bad };
 }
 
 if ((process.argv[1] || '').endsWith('tokens.mjs')) {
-  const r = check();
+  const r = check(), rp = check('paper');
   const wi = process.argv.indexOf('--write');
   if (wi >= 0) { // replace the block in index.html
     const f = process.argv[wi + 1]; let h = fs.readFileSync(f, 'utf8'); const crlf = h.includes('\r\n'); if (crlf) h = h.replace(/\r\n/g, '\n');
@@ -231,7 +285,9 @@ if ((process.argv[1] || '').endsWith('tokens.mjs')) {
     h = h.slice(0, a) + '<style id="bethesda-theme">\n' + css() + '\n  ' + h.slice(b); fs.writeFileSync(f, crlf ? h.replace(/\n/g, '\r\n') : h); console.log('wrote ' + f);
   }
   if (process.argv.indexOf('--check') < 0 && wi < 0) console.log(css() + '\n');
-  console.log(r.out.join('\n')); console.log(r.bad ? r.bad + ' below the line' : 'all light values pass');
+  if (process.argv.indexOf('--quiet') < 0) { console.log('light\n' + r.out.join('\n')); console.log('paper\n' + rp.out.join('\n')); }
+  console.log(r.bad ? r.bad + ' below the line (light)' : 'all light values pass');
+  console.log(rp.bad ? rp.bad + ' below the line (paper):\n' + rp.out.filter(l => l.startsWith('MISS')).join('\n') : 'all paper values pass');
   console.log(all.length + ' colours, ' + TINT.length + ' tints');
-  process.exit(r.bad ? 1 : 0);
+  process.exit(r.bad || rp.bad ? 1 : 0);
 }

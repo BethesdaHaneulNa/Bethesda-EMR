@@ -2,6 +2,37 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 세 번째 화면 「종이색」(시안 B)을 넣음
+
+- **상태**: 확인 요청
+- **커밋**: session/design (이 항목과 같은 커밋). develop `ad2f0b8` 을 먼저 합침
+- **근거**: 총괄의 전달 — 실장님 2026-10-01 「디자인 세션이 만든 따뜻한 종이색 테마도 넣고 싶은데 가능할까?」. 「따뜻한 종이색」 = 시안 B(이름 그대로라 다시 여쭙지 않음)
+- **한 일**: 어두운 화면(기본) · 밝은 화면은 그대로 두고 종이색을 세 번째 선택으로.
+  1. 색: `tokens.mjs` 에 `PAPER_SET`(시안 B 의 바탕 · 판 · 줄 · 회색 글자) → `index.html` 에 `:root[data-theme="paper"]` 블록. 글자 · 색 글자 · 입력 칸 테두리는 밝은 화면과 같은 검사를 통과할 때까지 조금 짙게(위키 3.8 에 달라진 값).
+  2. 단추: 두 칸 → **세 칸**(🌙 | ☀ | 📄). 프랑스어 1366×768 에서 들어감(묶음 239px, 왼쪽과 359px 여유).
+  3. 값: `theme.js` 에 `THEMES` · `isTheme()` — 상단바, `api/client.js` 의 `saveAuth`, 첫 화면 스크립트, `?theme=paper`.
+  4. 서버: `/api/theme` 가 `paper` 를 받음. 마이그레이션 **`902_design_staff_theme_paper.sql`**(세션 번호 — **다시 매겨 주세요**): `staff_theme_check` 를 세 값으로.
+- **바꾼 파일**: `frontend/src/theme.js` · `backend/src/routes/theme.routes.js` · `backend/test/design.theme.mjs` · `wiki/reference/design/tokens.mjs` · `tour-in-browser.js`(종이색도 점검)
+- **공용 파일 변경**:
+  - `frontend/index.html` — 종이색 블록 221줄을 **더함**(어두운 · 밝은 블록은 한 글자도 안 바뀜), 첫 화면 스크립트가 `paper` 도 받음(3줄), 주석
+  - `frontend/src/components/TopBar.jsx` — 단추 한 칸, `isTheme()` 로 바꾼 2줄, import
+  - `frontend/src/api/client.js` — `saveAuth` 의 한 줄(`isTheme(user.theme)`)과 import. **총괄이 넣은 줄을 고쳤습니다** — 이것이 없으면 종이색 계정이 로그인할 때 앞사람 화면으로 잠깐 보임
+  - `frontend/src/i18n/ko.js` · `en.js` · `fr.js` — `ds_themePaper` 새로, `ds_themeSwitch` 문구
+- **DB 마이그레이션**: 902(위). 제약만 바꿈 — 칸 · 기본값 · 있는 값 그대로, 여러 번 돌려도 됨
+- **번역 키**: `ds_themePaper`(ko 종이색 / en Paper / fr Papier)
+- **확인한 방법**(격리 스택 9189, 프랑스어 1366×768, 오늘 날짜 시험 자료):
+  - `node tokens.mjs --check` — 밝은 화면 · 종이색 모두 통과.
+  - `__walk()` 61가지 상태, 멈출 때마다 세 화면 `__audit()`: **종이색 6가지 — 모두 그림 글자(💰 💊 🔎 ✅)와 눌리지 않는 ▶**. 밝은 6 · 어두운 7 도 같은 종류. 로그인 화면은 세 화면 모두 0.
+  - 📄 Papier 를 누름 → 화면 · `localStorage` · `GET /api/theme` 모두 `paper`, 단추는 `aria-pressed=true`. 계정 값이 dark 일 때 `?theme=paper` 로 연 뒤 로그인하면 계정 값(dark)으로 돌아옴(지금 규칙 그대로).
+  - `backend/test/design.theme.mjs` 통과(종이색 저장 · 읽기, `Paper` · `papier` 는 400). 마이그레이션 902 가 격리 DB 에 적용됨(로그).
+  - 눈으로: 로그인 · 접수 · 진료(빈 화면) · 종이색. 노랑 메모 상자, 파랑 · 초록 꼬리표, 빨강 단추가 구분됨.
+  - 직접 색 grep: 전과 같은 곳뿐(환자 띠 · 영상 창 · 종이 · 책상 · 판독 인쇄 미리보기 · 설정의 머리글 미리보기). **다른 세션이 새로 직접 적은 색 없음 — 넘길 목록 없음.**
+- **확인 못 한 것**: 한국어 · 영어 화면은 돌지 않음(단추 글자가 더 짧아 폭은 문제없을 것으로 봄). 문서 창 · 판독 창 · 환자 찾기를 종이색에서 눈으로 열어 보지는 않음(대비 점검에는 포함, 종이는 직접 색이라 그대로). 둘러보기가 못 밟는 곳(앞 항목의 목록 + 오늘 바뀐 진료 · 접수 · 수납의 새 창)은 대비 점검에 없음 — 이름표만 쓰고 있어 종이색 값이 기준을 통과하면 따라옴. 시험 자료에 오늘 검사 결과가 없어 「결과가 있는 검사실 화면」은 이번에 못 봄
+- **위키**: `modules/design.md` 2.1 · 3.2 · **3.8 새로** · 4 · 8, `changelog-1.5.0/design.md`, `manual-fr/design.md`
+- **총괄 확인 요청**: 902 번호 다시 매김 · 합침. `client.js` 한 줄 확인. 실장님께 보여 드릴 때는 실제 EMR 에서 📄 를 눌러 보시는 것이 가장 빠름
+- **다른 세션에 부탁**: 없음
+- **남은 일 · 알려진 문제**: 프랑스어 설명서 PDF 를 다시 만들 때 「세 단추」로 바뀐 것 반영(원문 `manual-fr/design.md` 는 고침)
+
 ## 2026-09-30 — 검사실 단추: 실장님 결정 「가」대로 어두운 값 셋을 바꿈 (총괄 할 일 1~4)
 
 - **상태**: 확인 요청

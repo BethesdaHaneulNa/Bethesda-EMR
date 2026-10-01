@@ -1207,8 +1207,9 @@ export default {
   px_printFail: "Le document n'a pas pu être émis : ",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",
+  ds_themeSwitch: "Couleurs de l'écran (sombre / clair / papier)",
   ds_themeLight: "Clair",
+  ds_themePaper: "Papier",
   ds_themeDark: "Sombre",
   // ── end design ──
 };

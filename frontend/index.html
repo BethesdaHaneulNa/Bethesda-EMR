@@ -6,7 +6,8 @@
   <title>Bethesda EMR</title>
   <!-- Theme (design session, wiki/modules/design.md 3.3). :root is the dark screen: the
        values the screens have always had, which must never change. [data-theme="light"]
-       is the light screen (proposal A, chosen 2026-09-29). This block is generated -
+       is the light screen (proposal A, chosen 2026-09-29) and [data-theme="paper"] the
+       warm paper one (proposal B, added 2026-10-01). This block is generated -
        edit the table in wiki/reference/design/tokens.mjs and run it, do not edit here. -->
   <style id="bethesda-theme">
     :root {
@@ -450,28 +451,249 @@
       --focus-ring: #1d4ed8;
       color-scheme: light;
     }
+    :root[data-theme="paper"] {
+      --bg: #f3efe6;
+      --bg-2: #f3efe6;
+      --bg-col: #faf7f0;
+      --bg-deep: #e6dfd0;
+      --panel: #fffdf8;
+      --panel-2: #f1ece1;
+      --panel-head: #e9e3d6;
+      --panel-head-2: #e1dacb;
+      --panel-head-3: #e3dccd;
+      --chip: #e8e2d5;
+      --field: #ffffff;
+      --field-2: #ffffff;
+      --field-3: #ffffff;
+      --field-4: #ffffff;
+      --field-5: #ffffff;
+      --field-6: #ffffff;
+      --field-locked: #f1ece1;
+      --bg-row: #faf7f0;
+      --bg-group: #efeadc;
+      --bg-col-2: #faf7f0;
+      --accent-chip: #dbeafe;
+      --danger-box: #fee2e2;
+      --notice: #f1ece1;
+      --notice-line: #b3aa96;
+      --line-soft-2: #ebe5d8;
+      --line-soft-3: #ebe5d8;
+      --btn-neutral: #d8d0bf;
+      --btn-neutral-2: #d8d0bf;
+      --line-soft: #e6dfd0;
+      --border: #d8d0bf;
+      --border-2: #c9c0ac;
+      --field-border: #877e6c;
+      --text-max: #17140f;
+      --text-strong: #17140f;
+      --text-strong-2: #17140f;
+      --text: #26221b;
+      --text-soft: #3a342a;
+      --text-soft-2: #3a342a;
+      --text-2: #544d40;
+      --text-3: #635b4c;
+      --text-4: #655d4f;
+      --text-5: #655d4f;
+      --text-faint: #655d4f;
+      --text-locked: #635b4c;
+      --on-fill: #ffffff;
+      --on-bright: #ffffff;
+      --on-fill-blue: #dbeafe;
+      --on-fill-blue-2: #bfdbfe;
+      --on-fill-teal: #ccfbf1;
+      --on-fill-cyan: #cffafe;
+      --on-fill-violet: #ede9fe;
+      --on-fill-violet-2: #ddd6fe;
+      --on-fill-violet-3: #c4b5fd;
+      --on-fill-amber: #fde68a;
+      --on-fill-red: #fecaca;
+      --on-cyan: #ffffff;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-ink: #124dca;
+      --accent-text: #124dca;
+      --accent-text-2: #1e40af;
+      --accent-text-3: #1e40af;
+      --ok: #047857;
+      --ok-strong: #046c4e;
+      --ok-2: #15803d;
+      --ok-2-strong: #166534;
+      --ok-3: #15803d;
+      --ok-bar: #047857;
+      --accent-bar: #2563eb;
+      --ok-ink: #046348;
+      --ok-text: #046348;
+      --ok-text-2: #065f46;
+      --ok-text-3: #065f46;
+      --warn: #b45309;
+      --warn-strong: #92400e;
+      --warn-ink: #904207;
+      --warn-text: #904207;
+      --warn-text-2: #854008;
+      --warn-text-3: #854008;
+      --danger: #dc2626;
+      --danger-strong: #b91c1c;
+      --danger-deep: #991b1b;
+      --danger-ink: #a61a1a;
+      --danger-text: #a61a1a;
+      --danger-text-2: #991b1b;
+      --danger-text-3: #991b1b;
+      --violet: #7c3aed;
+      --violet-2: #9333ea;
+      --violet-strong: #6d28d9;
+      --violet-ink: #6621dd;
+      --violet-text: #6621dd;
+      --violet-text-2: #6b21a8;
+      --violet-text-3: #5b21b6;
+      --violet-text-4: #5b21b6;
+      --cyan: #0e7490;
+      --cyan-strong: #155e75;
+      --cyan-fill: #0e7490;
+      --cyan-fill-2: #155e75;
+      --cyan-ink: #0b5f75;
+      --cyan-text: #0b5f75;
+      --cyan-text-2: #0b5f75;
+      --teal: #0f766e;
+      --accent-deep: #1e4fa0;
+      --teal-deep: #0f766e;
+      --cyan-deep: #0e7490;
+      --violet-deep: #5b21b6;
+      --teal-ink: #0c625c;
+      --status-ok: #166534;
+      --status-warn: #854008;
+      --status-down: #b01c1c;
+      --status-off: #635b4c;
+      --ok-strong-a15: rgba(4,108,78,0.103);
+      --cyan-a12: rgba(14,116,144,0.088);
+      --cyan-a15: rgba(14,116,144,0.103);
+      --cyan-a20: rgba(14,116,144,0.157);
+      --cyan-a30: rgba(14,116,144,0.235);
+      --cyan-a50: rgba(14,116,144,0.392);
+      --cyan-a55: rgba(14,116,144,0.417);
+      --cyan-deep-a22: rgba(14,116,144,0.167);
+      --ok-a08: rgba(4,120,87,0.039);
+      --ok-a12: rgba(4,120,87,0.088);
+      --ok-a15: rgba(4,120,87,0.103);
+      --ok-a18: rgba(4,120,87,0.118);
+      --ok-a20: rgba(4,120,87,0.157);
+      --ok-a30: rgba(4,120,87,0.235);
+      --ok-a40: rgba(4,120,87,0.314);
+      --ok-a50: rgba(4,120,87,0.392);
+      --teal-a15: rgba(15,118,110,0.103);
+      --ok-2-a15: rgba(21,128,61,0.103);
+      --ok-2-a40: rgba(21,128,61,0.314);
+      --ok-text-a14: rgba(4,99,72,0.098);
+      --ok-text-a18: rgba(4,99,72,0.118);
+      --ok-text-a40: rgba(4,99,72,0.314);
+      --ok-text-a55: rgba(4,99,72,0.417);
+      --accent-a08: rgba(37,99,235,0.039);
+      --accent-a12: rgba(37,99,235,0.088);
+      --accent-a15: rgba(37,99,235,0.103);
+      --accent-a18: rgba(37,99,235,0.118);
+      --accent-a20: rgba(37,99,235,0.157);
+      --accent-a30: rgba(37,99,235,0.235);
+      --accent-a40: rgba(37,99,235,0.314);
+      --accent-a50: rgba(37,99,235,0.392);
+      --accent-a60: rgba(37,99,235,0.471);
+      --accent-a80: rgba(37,99,235,0.627);
+      --accent-text-a15: rgba(18,77,202,0.103);
+      --text-3-a18: rgba(99,91,76,0.118);
+      --text-3-a22: rgba(99,91,76,0.167);
+      --text-3-a55: rgba(99,91,76,0.417);
+      --violet-strong-a22: rgba(109,40,217,0.167);
+      --violet-strong-a55: rgba(109,40,217,0.417);
+      --violet-a15: rgba(124,58,237,0.103);
+      --violet-a20: rgba(124,58,237,0.157);
+      --violet-a30: rgba(124,58,237,0.235);
+      --violet-a40: rgba(124,58,237,0.314);
+      --violet-a50: rgba(124,58,237,0.392);
+      --text-2-a15: rgba(84,77,64,0.103);
+      --text-2-a18: rgba(84,77,64,0.118);
+      --text-2-a30: rgba(84,77,64,0.235);
+      --violet-text-a18: rgba(102,33,221,0.118);
+      --violet-text-a40: rgba(102,33,221,0.314);
+      --violet-2-a14: rgba(147,51,234,0.098);
+      --violet-2-a18: rgba(147,51,234,0.118);
+      --violet-2-a50: rgba(147,51,234,0.392);
+      --danger-strong-a10: rgba(185,28,28,0.078);
+      --danger-strong-a20: rgba(185,28,28,0.157);
+      --danger-strong-a30: rgba(185,28,28,0.235);
+      --danger-strong-a40: rgba(185,28,28,0.314);
+      --danger-a0d: rgba(220,38,38,0.064);
+      --danger-a12: rgba(220,38,38,0.088);
+      --danger-a15: rgba(220,38,38,0.103);
+      --danger-a18: rgba(220,38,38,0.118);
+      --danger-a20: rgba(220,38,38,0.157);
+      --danger-a30: rgba(220,38,38,0.235);
+      --danger-a40: rgba(220,38,38,0.314);
+      --danger-a50: rgba(220,38,38,0.392);
+      --danger-a55: rgba(220,38,38,0.417);
+      --danger-a60: rgba(220,38,38,0.471);
+      --warn-a0d: rgba(180,83,9,0.064);
+      --warn-a12: rgba(180,83,9,0.088);
+      --warn-a14: rgba(180,83,9,0.098);
+      --warn-a15: rgba(180,83,9,0.103);
+      --warn-a18: rgba(180,83,9,0.118);
+      --warn-a20: rgba(180,83,9,0.157);
+      --warn-a30: rgba(180,83,9,0.235);
+      --warn-a40: rgba(180,83,9,0.314);
+      --warn-a45: rgba(180,83,9,0.338);
+      --warn-a50: rgba(180,83,9,0.392);
+      --warn-a55: rgba(180,83,9,0.417);
+      --warn-a60: rgba(180,83,9,0.471);
+      --warn-a66: rgba(180,83,9,0.5);
+      --danger-text-a14: rgba(166,26,26,0.098);
+      --danger-text-a55: rgba(166,26,26,0.417);
+      --warn-text-a14: rgba(144,66,7,0.098);
+      --warn-text-a55: rgba(144,66,7,0.417);
+      --scrim: rgba(41,33,20,0.45);
+      --scrim-30: rgba(41,33,20,0.2);
+      --scrim-40: rgba(41,33,20,0.3);
+      --scrim-50: rgba(41,33,20,0.4);
+      --scrim-70: rgba(41,33,20,0.5);
+      --shadow-30: rgba(41,33,20,0.10);
+      --shadow-40: rgba(41,33,20,0.12);
+      --shadow-50: rgba(41,33,20,0.15);
+      --shadow-60: rgba(41,33,20,0.18);
+      --shadow-70: rgba(41,33,20,0.20);
+      --hover-filter: brightness(0.95);
+      --hover-row: rgba(41,33,20,0.04);
+      --hover-row-2: rgba(41,33,20,0.05);
+      --warn-chip: rgba(180,83,9,0.14);
+      --danger-chip: rgba(220,38,38,0.12);
+      --scheme: light;
+      --toast-bg: #ecfdf5;
+      --toast-text: #065f46;
+      --toast-line: #047857;
+      --toast-shadow: 0 6px 20px rgba(41,33,20,0.18);
+      --fade-85: 1;
+      --viewer-text: #8290a3;
+      --placeholder: #655d4f;
+      --focus-ring: #1d4ed8;
+      color-scheme: light;
+    }
   </style>
   <script>
-    // Runs before the first paint so a light screen does not flash dark first. The value
+    // Runs before the first paint so a light or paper screen does not flash dark first. The value
     // is only this PC's last choice; storage can be blocked, and then the screen is dark.
     //
     // Preview (coordinator, 2026-09-29): until the switch is in the top bar, opening the
-    // EMR with ?theme=light or ?theme=dark at the end of the address sets this PC's choice.
+    // EMR with ?theme=light, ?theme=paper or ?theme=dark at the end of the address sets this PC's choice.
     // The part is then taken out of the address, so a reload or a bookmark does not set it
     // again. Staff who do not know of it cannot meet it; it does no harm once the switch
     // exists.
     (function () {
       try {
-        var m = /[?&]theme=(light|dark)(?:&|$)/.exec(location.search);
+        var m = /[?&]theme=(light|dark|paper)(?:&|$)/.exec(location.search);
         if (m) {
           localStorage.setItem('medconnect_theme', m[1]);
-          var rest = location.search.replace(/([?&])theme=(?:light|dark)(&|$)/, function (all, lead, tail) { return tail ? lead : ''; });
+          var rest = location.search.replace(/([?&])theme=(?:light|dark|paper)(&|$)/, function (all, lead, tail) { return tail ? lead : ''; });
           history.replaceState(null, '', location.pathname + rest + location.hash);
         }
       } catch (e) {}
       try {
         var t = localStorage.getItem('medconnect_theme');
-        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        if (t === 'light' || t === 'dark' || t === 'paper') document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     })();
   </script>
