@@ -208,7 +208,7 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     const base = '/api/pacs/viewer';
     let study = '', accession = '', order_name = '', modality = '', reading = null, images = null;
     let order_status = '', cancelled_at = null, cancel_reason = '';
-    let others = [], prev = null, order_code = '';
+    let others = [], prev = null, order_code = '', visit_date = null;
     if (req.query.order_item_id) {
       const oid = req.query.order_item_id;
       const w = await pool.query(
@@ -220,10 +220,10 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         images = imagesOf(w.rows[0]);
       }
       const o = await pool.query(
-        `SELECT oi.order_name, oi.order_code, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, ${ORDER_CANCEL_COLUMNS}
-           FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by WHERE oi.id = $1`, [oid]);
+        `SELECT oi.order_name, oi.order_code, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, v.visit_date, ${ORDER_CANCEL_COLUMNS}
+           FROM order_item oi LEFT JOIN staff s ON s.id = oi.result_by LEFT JOIN visit v ON v.id = oi.visit_id WHERE oi.id = $1`, [oid]);
       if (o.rows[0]) {
-        order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || ''; order_code = o.rows[0].order_code || '';
+        order_name = o.rows[0].order_name || ''; modality = o.rows[0].pacs_modality || ''; order_code = o.rows[0].order_code || ''; visit_date = o.rows[0].visit_date;
         order_status = o.rows[0].order_status || ''; cancelled_at = o.rows[0].cancelled_at; cancel_reason = o.rows[0].cancel_reason || '';
         reading = { result_text: o.rows[0].result_text || '', result_by_name: o.rows[0].result_by_name || '', result_at: o.rows[0].result_at };
       }
@@ -247,20 +247,22 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     // is always true now (the EMR is the viewer), so the screen shows "nothing to
     // show for this order" rather than the old "no viewer address set".
     // The window opens on the order's own study, as it always did. The cookie also
-    // opens the same patient's other studies, and `compare` hands the screen one
-    // ready address per study: Stone's own ?study=OPENED,OTHER puts both in its list
-    // (the doctor splits the screen with Stone's layout button). Stone itself is never
-    // changed or scripted - only its URL parameters are used (see pacs.viewer.js).
+    // opens the same patient's other studies, and `compare.url` is the address that
+    // shows them all in Stone's list: its own ?study=OPENED,OTHER,... (director,
+    // 2026-10-01, after trying Stone's ?patient= on the server: "that works well -
+    // make this possible"). The doctor then splits the screen with Stone's layout
+    // button and drags the exams into the panes. Never ?patient=: that asks Orthanc for
+    // every study carrying that number, including ones the EMR flagged or never linked.
+    // Stone itself is not changed or scripted - only its URL parameters are used.
     const page = `${base}/stone-webviewer/index.html?study=`;
     const url = study ? page + encodeURIComponent(study) : '';
     if (study) viewer.grantViewerCookie(req, res, [study, ...others.map(x => x.study)]);
-    const shown = x => ({ order_name: x.order_name, modality: x.pacs_modality || '', visit_date: x.visit_date,
-      same_exam: x.order_code === order_code, url: page + [study, x.study].map(encodeURIComponent).join(',') });
-    // prev: the one the button offers; others: every one, most recent first.
-    const compare = { count: others.length, prev: prev ? shown(prev) : null,
-      others: others.map(shown) };
+    const shown = x => ({ order_name: x.order_name, modality: x.pacs_modality || '', visit_date: x.visit_date, same_exam: x.order_code === order_code });
+    // prev: the one worth naming (same exam, the time before); others: all, most recent first.
+    const compare = { count: others.length, url: others.length ? page + [study, ...others.map(x => x.study)].map(encodeURIComponent).join(',') : '',
+      opened: { order_name, visit_date }, prev: prev ? shown(prev) : null, others: others.map(shown) };
     // A cancelled order's images stay viewable: they are part of the record.
-    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images, compare,
+    res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, visit_date, reading, images, compare,
                no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -2,6 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 이전 검사와 비교: 누르면 그 환자의 검사를 모두 함께 (실장님 확정 방향)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `45f4127`을 ff로 당긴 뒤 — 앞의 `0530f5f`가 합쳐진 것 위). **PACS 저장소** — 없음(`b4ba4a3` README 줄은 앞 보고에 있음)
+- **한 일** (선은 그대로 — Stone 파일을 바꾸지 않고, 안쪽 함수를 부르지 않음):
+  1. **「비교」를 누르면 그 환자의 허락된 검사(같은 환자 · 취소 아님 · 도착 · `match` · 최대 9건)를 모두 `?study=연 검사,다른 검사,…`로 함께 엶.** Stone의 왼쪽 목록에 날짜와 함께 다 나오고, 의사가 ▦로 나눠 끌어다 놓음 — 실장님이 서버에서 `?patient=`로 해 보신 그 모양. `viewer-url` 응답: `compare: {count, url, opened, prev, others}`(앞의 `prev.url`·`others[].url`은 없앰 — 주소는 `compare.url` 하나).
+  2. **기본은 연 검사만**, 창 제목 아래 «⇆ Comparer avec les examens précédents (7)» + (같은 검사가 다른 날짜에 있으면) «Même examen : Chest PA · 2026-09-30». 목록 고르기(select)는 뺌 — 검사 고르기는 Stone의 목록에서.
+  3. **비교 중임과 판독 대상이 보이게**: «✕ Fin de la comparaison» + 노란 칸 «🩻 Le compte-rendu est celui de : Chest PA · 2026-10-01» + 안내 한 줄.
+  4. **안내 한 줄** (비교 중 줄에, 그리고 비교 단추의 title에): fr «Bouton ▦ en haut des images : coupez l'écran en cases, puis faites glisser un examen de la liste de gauche dans une case.» / ko 「영상 위의 ▦ 단추에서 화면을 나누고, 왼쪽 목록의 그림을 칸에 끌어다 놓으세요.」 / en "Split the screen with the ▦ button above the images, then drag an exam from the list on the left into a pane."
+  5. **`?patient=`는 통과시키지 않음**: 페이지 주소에 `patient=`가 있으면 403 안내 쪽(전에는 페이지는 뜨고 그 질의만 403이었음). 검사 번호는 전처럼 하나하나 쿠키와 대조.
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `backend/src/routes/pacs.viewer.js`, `frontend/src/components/RadiologyReadings.jsx`(`ViewerCompare`), `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(8절), `wiki/modules/pacs.md`(2.3.1, 4절, 8절), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음(`Consultation.jsx`는 이번에 안 바꿈 — `ViewerCompare`의 props는 그대로 `viewer`·`onUrl`·`t`·`style`).
+- **DB 마이그레이션**: 없음
+- **번역 키** (px_ 구역): **글을 바꾼 키** `px_compareWith`(«Comparer avec {x}» → «Comparer avec les examens précédents ({n})» / 「이전 검사와 비교 ({n}건)」 — 자리표시가 `{x}`에서 `{n}`으로), `px_compareHint`(위 4번의 글로). **새 키** `px_comparePrev`(«Même examen : {x}» / 「같은 검사: {x}」), `px_compareReading`(«Le compte-rendu est celui de : {x}» / 「판독 칸은 이 검사의 것: {x}」). **뺀 키** `px_compareOther`(목록 고르기를 없애서). `px_compareEnd`·`px_readingHide`·`px_readingShow`는 그대로.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 1366×768 · fr · 어두운 화면, 시험 환자 26-00002):
+  - 10-01 Chest PA를 엶 → 검사 하나, 줄에 «⇆ Comparer avec les examens précédents (7)» · «Même examen : Chest PA · 2026-09-30». 단추를 **마우스로** 누름 → Stone 목록에 8건(날짜순), 첫 칸에 10-01, 판독 칸 접힘, 줄에 «🩻 Le compte-rendu est celui de : Chest PA · 2026-10-01». Stone의 ▦ → 두 칸 → 09-28 Chest PA 그림을 오른쪽 칸에 끌어다 놓음 → **왼쪽 10-01 · 오른쪽 09-28**.
+  - 비교 끝내기 → 검사 하나·판독 칸 돌아옴. 비교 중 새 탭 주소에 8건.
+  - **연 검사가 먼저**: 8건을 함께 여는 것을 10번 — 10번 모두 첫 칸에 연 검사. 8건의 요청 59개가 약 0.9초(격리, 작은 시험 영상).
+  - 한국어 화면: 「⇆ 이전 검사와 비교 (7건)」 「같은 검사: Chest PA · 2026-09-30」 「✕ 비교 끝내기」 「🩻 판독 칸은 이 검사의 것: Chest PA · 2026-10-01」.
+  - 검사 하나뿐인 환자: 줄 없음.
+  - **보안·회귀 32가지 통과**: 앞의 30가지(Stone 페이지·`app.js` 바이트 동일, 불일치·취소·다른 환자 403, 목록·REST 403, 쿠키 없음 401, 경로 우회 400 …) + `?patient=`가 붙은 페이지 403 둘.
+- **확인 못 한 것**: 진짜 장비의 큰 영상으로 9건을 함께 열 때의 속도(목록의 검사는 작은 그림과 목록 정보만 먼저 받고, 본 영상은 칸에 놓을 때 받음). 밝은 화면.
+- **알아 둘 것**:
+  - 시험 자료에서 본 것: 영상 서버에 **같은 검사 번호가 두 환자 이름으로 두 번** 들어 있으면(옛 시험에서 다른 환자 번호로 다시 보낸 것) 그 검사는 Stone 목록에는 나오지만 검사 정보 요청(`/studies/<번호>/metadata`)이 404가 됨(Orthanc의 답 — 번호 하나에 검사가 둘이라). 실제로는 장비가 같은 검사 번호를 다른 환자 번호로 또 보낸 경우에만 생김 — 드묾, 이번에 안 건드림.
+  - `openedFirst`(연 검사가 먼저 뜨게 — 다른 검사의 `…/metadata` 답을 잠깐 붙잡음)는 앞 보고대로 들어 있고, 검사가 여럿이어도 같은 방식. 빼라고 하시면 세 줄.
+  - 실행 중 자료(26-00001: Chest PA 09-28·09-30, Hand 09-30)에서는 09-30 Chest PA를 열면 «⇆ Comparer avec les examens précédents (2)» · «Même examen : Chest PA · 2026-09-28»이 나와야 함(둘 다 `match`·취소 아님일 때).
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-01 — 이전 검사와 비교를 「Stone을 고치지 않는」 방식으로 다시 지음 (라이선스)
 
 - **상태**: 확인 요청

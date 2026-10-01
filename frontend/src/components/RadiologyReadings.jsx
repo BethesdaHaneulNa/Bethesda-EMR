@@ -42,37 +42,37 @@ export function PatientCheck(props) {
     border: '1px solid ' + (mismatch ? 'var(--danger-deep)' : 'var(--warn-strong)') }, props.style)}>⚠ {text}</div>;
 }
 
-// "Compare with an earlier exam": the bar under the image window's header (director,
-// 2026-10-01 - two chest films of different dates must be seen side by side).
-// GET /api/pacs/viewer-url returns `compare`: the same patient's other studies the
-// cookie also opens, each with a ready address ?study=OPENED,OTHER, and `prev`, the
-// one worth offering first (same exam, the time before). This bar only swaps the
-// image window's address between the exam alone and one of those; Stone then lists
-// both exams and the doctor splits the screen with Stone's own layout button - which
-// Stone remembers for the next window. Stone is used as shipped (its URL parameters
-// only): nothing is added to its page and nothing calls into it.
+// "Compare with earlier exams": the bar under the image window's header (director,
+// 2026-10-01 - two chest films of different dates must be seen side by side; he tried
+// Stone's own patient view on the server and asked for exactly that in the EMR).
+// GET /api/pacs/viewer-url returns `compare`: { count, url, opened, prev, others }.
+// `url` is Stone's own ?study=OPENED,OTHER,... for the same patient's exams the cookie
+// also opens (not cancelled, arrived, patient number matching - never ?patient=).
+// This bar only swaps the image window's address between the exam alone and that one.
+// Stone then lists all those exams; the doctor splits the screen with Stone's layout
+// button (Stone remembers it) and drags exams into the panes. Stone is used as
+// shipped: nothing is added to its page and nothing calls into it.
+// The window opens on the exam alone - the reading box belongs to that order, and a
+// list full of other dates invites reading the wrong film. While comparing, the bar
+// says whose reading it is.
 //   props.viewer  { order_item_id, base_url, compare }   base_url = the exam alone
 //   props.onUrl(address)  the screen puts it in the iframe (and "open in a new tab")
 export function ViewerCompare(props) {
   var t = props.t, v = props.viewer || {}, c = v.compare;
-  var ps = useState(''), picked = ps[0], setPicked = ps[1];   // '' = the exam alone
-  useEffect(function () { setPicked(''); }, [v.order_item_id]);
-  if (!c || !c.count || !v.base_url) return null;
-  function go(address) { setPicked(address); props.onUrl(address || v.base_url); }
-  function name(x) { return x.order_name + ' ' + ymd(x.visit_date); }
+  var ps = useState(false), on = ps[0], setOn = ps[1];
+  useEffect(function () { setOn(false); }, [v.order_item_id]);
+  if (!c || !c.count || !c.url || !v.base_url) return null;
+  function go(compare) { setOn(compare); props.onUrl(compare ? c.url : v.base_url); }
+  function name(x) { return x ? x.order_name + ' · ' + ymd(x.visit_date) : ''; }
   var btn = { background: 'var(--violet-deep)', color: 'var(--on-fill-violet)', border: '1px solid var(--violet-ink)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
   var off = { background: 'var(--btn-neutral-2)', color: 'var(--text)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
-  return <div style={Object.assign({ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13 }, props.style)}>
-    {picked
-      ? <button onClick={function () { go(''); }} style={off}>✕ {t.px_compareEnd}</button>
-      : (c.prev ? <button onClick={function () { go(c.prev.url); }} style={btn}>⇆ {String(t.px_compareWith || '').replace('{x}', name(c.prev))}</button> : null)}
-    {picked || !c.prev || c.count > 1
-      ? <select value={picked} onChange={function (e) { go(e.target.value); }} style={{ background: 'var(--field)', color: 'var(--text)', border: '1px solid var(--field-border)', borderRadius: 5, padding: '4px 6px', fontSize: 13, maxWidth: 300 }}>
-          <option value="">{String(t.px_compareOther || '').replace('{n}', c.count)}</option>
-          {c.others.map(function (x) { return <option key={x.url} value={x.url}>{ymd(x.visit_date) + ' · ' + (x.modality ? x.modality + ' · ' : '') + x.order_name}</option>; })}
-        </select>
-      : null}
-    {picked ? <span style={{ color: 'var(--text-2)', flex: 1, minWidth: 260, lineHeight: 1.4 }}>{t.px_compareHint}</span> : null}
+  return <div style={Object.assign({ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13 }, props.style)}>
+    {on
+      ? <button onClick={function () { go(false); }} style={off}>✕ {t.px_compareEnd}</button>
+      : <button onClick={function () { go(true); }} title={t.px_compareHint} style={btn}>⇆ {String(t.px_compareWith || '').replace('{n}', c.count)}</button>}
+    {!on && c.prev && c.prev.same_exam ? <span style={{ color: 'var(--text-2)' }}>{String(t.px_comparePrev || '').replace('{x}', name(c.prev))}</span> : null}
+    {on ? <span style={{ background: 'var(--notice)', border: '1px solid var(--notice-line)', color: 'var(--text)', borderRadius: 5, padding: '3px 9px', fontWeight: 700, whiteSpace: 'nowrap' }}>🩻 {String(t.px_compareReading || '').replace('{x}', name(c.opened))}</span> : null}
+    {on ? <span style={{ color: 'var(--text-2)', flex: 1, minWidth: 260, lineHeight: 1.4 }}>{t.px_compareHint}</span> : null}
   </div>;
 }
 
