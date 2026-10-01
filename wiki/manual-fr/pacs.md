@@ -140,6 +140,7 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 
 - **🖨 Imprimer** est grisé : l'examen n'a pas de compte-rendu, ou il est annulé (laissez la souris sur le bouton pour lire pourquoi).
 - Un compte-rendu long continue sur la page suivante ; le nom du patient, le N° dossier et l'examen sont rappelés en haut de chaque page, et le numéro de page est en bas.
+- Un nom long n'est jamais coupé : il est écrit plus petit et sur plusieurs lignes, et la case s'agrandit s'il le faut. De même pour un long nom d'examen, de clinique ou de médecin.
 - Les images ne sont pas sur la feuille : elles sont remises à part.
 - Dans la fenêtre d'impression du navigateur, décochez **En-têtes et pieds de page** : sinon la date et l'adresse du site s'impriment aussi.
 - Le nom, l'adresse et le téléphone de la clinique viennent de **Paramètres**. S'ils sont vides, la feuille s'imprime sans eux.

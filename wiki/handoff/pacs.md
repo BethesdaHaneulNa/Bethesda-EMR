@@ -2,6 +2,33 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 판독 보고서: 긴 이름이 잘리지 않게 (실장님 물음)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `5ae8d8a`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일** (`frontend/src/documents/imaging-report.jsx`만):
+  - **이름 칸**: 글자 크기를 길이에 따라 12 → 10.5 → 9.5 → 9pt(그보다 작게는 안 함 — 남이 읽는 이름). 끊는 자리는 낱말 사이, 낱말 하나가 칸보다 길 때만 그 낱말 가운데서(먼저 「낱말을 끊지 않아도 되는 크기」를 찾고, 없을 때만 끊음). **자르지 않음**(… 없음). 네 줄의 높이는 늘 같음 — 35pt 안에 들어가면 머리 상자 140pt 그대로, 9pt로도 넘치면 **네 줄이 함께** 높아짐.
+  - **둘째 장 머리줄**: `nowrap + ellipsis`를 없앰 — 잘리지 않고 필요하면 두 줄(이름 · 차트번호 · 검사 · 날짜 전부).
+  - **검사 이름**: 그 칸에서 줄이 바뀜. **병원 이름**: 16 → 14 → 12.5 → 11 → 10pt, 두 줄까지. **판독의 이름**: 줄이 바뀜. 종이 아래에 비워 두는 자리는 그 내용만큼 커짐(판독 글과 겹치지 않게).
+  - 방법: 서식이 자기 크기를 잴 수 없어 **글자 폭을 어림**해서 줄 수를 셈(실제 글꼴 Segoe UI·Arial에서 잰 폭 중 넓은 쪽). 어림이 넉넉한 쪽이라 드물게 칸이 필요보다 조금 높아질 수 있음 — 넘치지는 않음.
+- **실장님 결정 셋을 위키 2.4.1에 적음**: 작게 넣은 항목 그대로 / 환자 번호 경고 검사 인쇄 허용(종이에 경고 없음) / 한국어 서류 이름표는 영어.
+- **바꾼 파일**: `frontend/src/documents/imaging-report.jsx`, `wiki/manual-fr/pacs.md`(9절 한 줄), `wiki/modules/pacs.md`(2.4.1, 4절, 8절), `wiki/reference/design/imaging-report-sample-long-name-fr.png`(새 견본 — 가짜 환자·가짜 병원 이름), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: `frontend/src/documents/imaging-report.jsx`(서류 폴더의 PACS 서식 파일 — develop `5ae8d8a`의 것 위에서 고침). **DB 마이그레이션**: 없음. **번역 키**: 없음
+- **확인한 방법** (격리 EMR 9188, 가짜 환자 넷 — 미리보기 창에서 잰 값과, 인쇄 창의 HTML을 Chrome 헤드리스로 A4 PDF로 만든 것 둘 다):
+  | 이름 | 글자 수 | 크기 | 줄 | 네 줄 높이 | 머리 상자 |
+  |---|---|---|---|---|---|
+  | `RAKOTONDRAZAFY Andrianantenaina` | 31 | 12pt | 2 (성 / 이름) | 35pt씩 | 140pt |
+  | `RAZAFINDRAKOTO Andriamihaja Jean Baptiste Emmanuel` | 50 | 9pt | 2 | 35pt씩 | 140pt |
+  | `ANDRIANTSIMBAZAFINDRAKOTOARISOA Hery` (낱말 하나 31자) | 36 | 10.5pt | 2 (`…FINDRAK / OTOARISOA Hery` — 그 낱말만 가운데서) | 35pt씩 | 140pt |
+  | `RANDRIANAMBININTSOA RAKOTOMALALA Andrianjafimanantsoa Marie Clémentine Hanitriniaina` | 84 | 9pt | 4 | 46pt씩(같이 늘어남) | 185pt |
+  - 넷 모두 이름 글자가 칸 안에 있고(넘침 없음) 종이 가로 넘침 없음. fr·en·ko 서류.
+  - **여러 장**(45줄 판독, 3쪽): 2·3쪽 머리줄에 이름 전체 — 84자 이름 + 131자 검사 이름은 두 줄(「RANDRIANAMBININTSOA … Hanitriniaina · 26-00007 · Échographie rénale, vésicale et prostatique avec mesure du résidu … · 2026-10-01」), 50자·31자 이름은 한 줄.
+  - **긴 검사 이름**(131자): 검사 칸에서 줄이 바뀜. **긴 병원 이름**(99자, 가짜): 10pt 두 줄, 종이 안. **긴 판독의 이름**(56자, 가짜): 두 줄. 판독 글·서명 줄과 겹치지 않음.
+  - 시험에 쓰려고 격리 DB의 병원 이름·의사 이름·오더 이름을 잠깐 바꿨다가 되돌림.
+- **확인 못 한 것**: 진짜 프린터. Segoe UI가 없는 PC(어림은 Arial 폭까지 넉넉히 잡음). 100자를 넘는 이름(같은 규칙으로 줄이 더 늘어남 — 시험은 84자까지). 중계·목록 코드는 안 바꿔 그 회귀(체크 23·보안 32)는 이번에 돌리지 않음.
+- **알아 둘 것**: 50자 이름이 9pt 두 줄로 나옴 — 어림은 세 줄로 셌고(9pt 세 줄이 35pt에 들어감) 실제는 두 줄. 넉넉히 잡은 결과이고 넘치지 않음.
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-01 — 판독 보고서 인쇄: 다른 병원으로 보낼 때 (실장님 병원 서식)
 
 - **상태**: 확인 요청
