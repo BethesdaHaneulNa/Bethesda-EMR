@@ -34,8 +34,8 @@ the change); it compares the patient number in the images with the chart again, 
 change log (`pacs.study.relink`). Nothing is written to the image server. The manual still says not to use
 that screen.
 
-An order sent to the devices is now an imaging exam whatever its billing type: endoscopies (order codes of
-type *procedure* with a modality) could be opened with the image button but their reading could not be saved,
+An order that carries a device type (modality) is now an imaging exam whatever its billing type: endoscopies
+(order codes of type *procedure* with a modality) could be opened with the image button but their reading could not be saved,
 and they were missing from the patient's imaging list and from comparisons. A modality the EMR had never
 seen ("AS", a rectoscope on site) was checked from the order to the viewer: nothing filters on its value.
 
