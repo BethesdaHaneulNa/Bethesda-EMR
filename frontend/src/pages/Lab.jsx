@@ -213,13 +213,18 @@ export default function LabPage() {
   var list = tab === 'pending' ? pending : completed;
   var totalItems = groups.reduce(function (a, g) { return a + g.items.length; }, 0);
 
+  // Every row is a grid of its own, so the columns are given as shares that the content
+  // cannot widen (minmax(0, ...)): with plain "fr" one long word -- a 30-letter unit, a
+  // long item name -- widened that row's column and put its boxes out of line with the
+  // header and the other rows. Long text wraps inside its cell instead.
+  var COLS = 'minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1.15fr) minmax(0,1.25fr)';
   function itemGrid(gi, g, showHeader) {
     return <div key={g.order_item_id} style={{ marginBottom: 14 }}>
       {showHeader ? <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--cyan-text)', marginBottom: 5 }}>{g.order_name}</div> : null}
       {!g.has_master && g.items.length ? <div style={{ color: 'var(--warn-text)', fontSize: 13, padding: '0 2px 5px' }}>{t.lb_noItemsDefined}</div> : null}
       {g.items.length === 0 ? <div style={{ color: t3, fontSize: 13, padding: '4px 2px' }}>{t.lb_noItems}</div> : (
         <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1.15fr 1.25fr', background: 'var(--panel-2)', color: t3, fontSize: 13, fontWeight: 800 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, background: 'var(--panel-2)', color: t3, fontSize: 13, fontWeight: 800 }}>
             {[t.testName || '검사명', t.refRange || '참고치', t.unit || '단위', t.labValue || '결과값', t.labComment || '비고'].map(function (h) { return <div key={h} style={{ padding: '8px 10px' }}>{h}</div>; })}
           </div>
           {g.items.map(function (it, ii) {
@@ -230,10 +235,10 @@ export default function LabPage() {
             var glyph = fl === 'high' ? '▲' : fl === 'low' ? '▼' : fl === 'abnormal' ? '!' : '';
             var word = fl === 'high' ? t.lb_flagHigh : fl === 'low' ? t.lb_flagLow : fl === 'abnormal' ? t.lb_flagAbnormal : '';
             var flagId = 'lb-flag-' + g.order_item_id + '-' + ii;
-            return <div key={ii} style={{ display: 'grid', gridTemplateColumns: '1.4fr .9fr .7fr 1.15fr 1.25fr', borderTop: '1px solid ' + bd, alignItems: 'center' }}>
-              <div style={{ padding: '7px 10px', fontWeight: 600 }}>{it.name}</div>
-              <div style={{ padding: '7px 10px', color: t3, fontSize: 13 }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</div>
-              <div style={{ padding: '7px 10px', color: t2, fontSize: 13 }}>{it.unit || ''}</div>
+            return <div key={ii} style={{ display: 'grid', gridTemplateColumns: COLS, borderTop: '1px solid ' + bd, alignItems: 'center' }}>
+              <div style={{ padding: '7px 10px', fontWeight: 600, overflowWrap: 'anywhere' }}>{it.name}</div>
+              <div style={{ padding: '7px 10px', color: t3, fontSize: 13, overflowWrap: 'anywhere' }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</div>
+              <div style={{ padding: '7px 10px', color: t2, fontSize: 13, overflowWrap: 'anywhere' }}>{it.unit || ''}</div>
               <div style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
                 {/* The place is kept even when empty, so the box does not jump while typing. */}

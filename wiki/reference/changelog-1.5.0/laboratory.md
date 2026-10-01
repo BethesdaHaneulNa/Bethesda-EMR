@@ -67,6 +67,18 @@ the doctors' decision. A table of the ranges used by Korean laboratories, with s
 is in `wiki/reference/lab-reference-ranges-kr.md`, and a one-page questionnaire for the
 doctors in `wiki/reference/lab-reference-questions.md`.
 
+### Units are picked from a list the clinic keeps
+
+The unit of a test item was typed by hand on every row, so the same unit ended up
+written several ways. In Settings → Lab Test Items the unit is now picked from a list,
+and a *Unit list* button beside *New panel* opens the list itself: add, rename, reorder,
+remove. The list is only what the box offers. An item keeps its unit as text and a result
+keeps its own copy, so removing or renaming a unit changes no item and no result — the
+window says how many items use it before saving, and those items go on showing their
+unit, marked *not in the list*. Two names that differ only by capitals or spaces count as
+the same unit and the second is refused. The list starts with the common units and every
+unit the clinic's items already use, spelled the way the clinic spelled them.
+
 ### Less visible
 
 - A result cannot be saved into an order the consultation room has cancelled; that
@@ -89,6 +101,9 @@ doctors in `wiki/reference/lab-reference-questions.md`.
 - In Settings → Lab Test Items the list now scrolls. With a few sex and age tables open,
   the Save button sat below a 1366×768 window, where it could not be reached.
 - The French screen no longer shows Korean text where a translation was missing.
+- In the lab's entry table a very long unit or item name put that row's boxes out of
+  line with the others; it now wraps inside its cell.
+- A migration adds the `lab_unit` table (the unit list). It changes no existing row.
 - Migration `024_lab_ref_ranges.sql` adds the `lab_ref_range` table and
   `lab_result.ref_label`. It only adds; nothing existing is changed.
 
