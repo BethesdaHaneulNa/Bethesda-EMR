@@ -66,8 +66,15 @@ function ymd(d){
 // Decision 3-B (2026-09-29): a lab or imaging order that already has a result (values,
 // a reading, a study taken) is not deleted but can be marked cancelled - the ✕ on it
 // asks for that instead of showing a lock. Imaging since the PACS merge (decision 38-3):
-// the server cancels its worklist entry with it. Procedures keep the lock.
-function cancellable(o){ return (o.code_type==='lab' || o.code_type==='imaging') && o.status!=='cancelled' && orderLocked(o); }
+// the server cancels its worklist entry with it. A procedure with nothing to do with
+// the devices keeps the lock.
+// An imaging exam is an order of type imaging OR any order that went to the device
+// worklist - an endoscopy or a rectoscopy is a procedure with a modality, and its images
+// arrive like an X-ray's (PACS treats it so: pacs.routes.js isExam). Before 2026-10-01
+// only the type was looked at, so such an order with images could be neither deleted
+// (it has a result) nor cancelled.
+function isImagingOrder(o){ return o.code_type==='imaging' || !!o.worklist_sent_at; }
+function cancellable(o){ return (o.code_type==='lab' || isImagingOrder(o)) && o.status!=='cancelled' && orderLocked(o); }
 
 // A quantity or dose as the database returns it ("1.000", DECIMAL(10,3)) is shown without
 // the trailing zeros ("1", "1.5"); at 1366 wide "1.000" was cut to "1.00(". Only an exact
@@ -1039,7 +1046,7 @@ export default function ConsultationPage() {
     } catch(err){
       // A result (or a reading, a study taken) arrived after the row was drawn: offer to
       // cancel instead.
-      if(err && err.message==='Order already has a result' && (o.code_type==='lab' || o.code_type==='imaging')){ cancelOrder(o); return; }
+      if(err && err.message==='Order already has a result' && (o.code_type==='lab' || isImagingOrder(o))){ cancelOrder(o); return; }
       if(!lockAlert(err)) alert(err.message);
     }
   }
@@ -1049,7 +1056,7 @@ export default function ConsultationPage() {
   // Cancel/Esc does nothing. The text says what happens to the result (for imaging: the
   // images, the reading and the device worklist) and to a bill already paid.
   async function cancelOrder(o){
-    var promptText = o.code_type==='imaging' ? t.cs_cancelPromptImg : t.cs_cancelPrompt;
+    var promptText = isImagingOrder(o) ? t.cs_cancelPromptImg : t.cs_cancelPrompt;
     var reason = window.prompt(String(promptText||'').replace('{name}', o.order_name||''), '');
     if(reason === null) return;
     try {

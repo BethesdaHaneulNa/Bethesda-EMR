@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 장비로 가는 시술 오더를 영상 오더처럼 · 판독 보고서 다시 인쇄의 제목
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `988bda0` 다음
+- **한 일**:
+  - **1) 시술 종류 + 워크리스트 오더**(내시경 E1·E2, 직장경): `Consultation.jsx`에 `isImagingOrder(o)` = `code_type==='imaging' || !!worklist_sent_at`(PACS의 `isExam`과 같은 뜻). `cancellable`, 삭제가 거절된 뒤의 취소 제안, 취소 문장(`cs_cancelPromptImg`) 세 곳이 이것을 씀. 영상이 온 시술 오더가 🔒(지울 수도 취소할 수도 없음)에서 **✕(취소)**로.
+    - 상태 글자·🖼 단추·판독 칸·30초 새로고침은 원래 `worklist_sent_at`/`pacs_modality`를 봐서 그대로였음.
+    - **서버는 고칠 곳이 없었습니다**: 취소(`POST /order/:id/cancel`)·삭제(`DELETE /order/:id`)는 `code_type`으로 가르지 않고 `orderProduced`(검사값·판독·워크리스트 in_progress/completed)만 봄. `cancelWorklistForOrder`도 종류와 무관.
+    - 그대로 둔 것: 오더를 넣을 때의 처음 값(`addExamOrder`의 `exam` — 검사·영상은 1·1·1·용량 없음, 시술은 오더 코드의 값). 장비로 가는 시술도 시술의 규칙 그대로입니다 — 바꾸려면 알려 주세요.
+  - **2) 문서**: PACS가 줄인 목록 창(`48a45a8` — `CompareChecked`·`readingsPicked` 빠지고 `onCompare`)을 모듈 3.1에, 설명서 fr의 «⇆ Comparer (N)» 자리를 「체크 칸 바로 위」로.
+  - **3) 다시 인쇄의 창 제목**: `registry.js`에 `printTitle(doc, lang)`. **판독 보고서는 서류 이름**(«Compte-rendu d'imagerie», 종이의 언어를 따름), **다른 서류는 지금대로 서류 번호**.
+    - 판단: 다른 서류는 본문에 이미 번호가 찍히고(의뢰서·수술기록지), PDF로 저장하면 창 제목이 파일 이름이 되어 번호로 찾을 수 있어 그대로 두었습니다. 판독 보고서만 「번호를 종이에 안 찍는 서류」로 따로(`NO_NUMBER_ON_PAPER`). 모두 이름으로 하시려면 그 목록 대신 늘 이름을 돌려주면 됩니다(한 줄).
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/documents/registry.js` · `frontend/src/components/DocumentModal.jsx` · `wiki/modules/consultation.md`(2.3 표·3.1·3.5·8) · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: `registry.js`·`DocumentModal.jsx`(진료 주관) — 다시 인쇄의 창 제목 한 줄
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768 FR. 오더 코드 E1 Gastroscopy(`procedure`, modality ES, 워크리스트)로 오더 둘 — 하나는 영상 도착(DB로 워크리스트 `completed`), 하나는 대기.
+  - 영상이 온 줄: ✕(title «A un résultat - cliquer pour le marquer comme annulé»), WL «🖼 Réalisé». 누르면 영상 문장(«… a déjà un compte-rendu ou un examen réalisé …») → 사유 «Demandé par erreur» → 줄이 ⊘·«Annulé». DB `status cancelled`, 워크리스트는 `completed` 그대로(찍은 영상은 기록), 기록 `consultation.order.cancel` 1줄.
+  - 대기 중인 줄: ✕ → «Retirer … ?» → 지워짐, 워크리스트 줄도 사라짐, 기록 `consultation.order.delete` 1줄.
+  - 다시 인쇄의 제목(인쇄 창을 흉내 내어 `<title>`을 읽음): 판독 보고서 FR «Compte-rendu d'imagerie», 종이 언어 EN이면 «Imaging report», 의뢰서 «D26-00137».
+- **확인 못 한 것**: 실제 장비·PACS(격리 스택에 없음), 실제 종이의 머리글.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 영상 판독 보고서가 문서 창의 발급 이력·발급 취소에 보이게 (서류 엔진)
 
 - **상태**: 확인 요청

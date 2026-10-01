@@ -39,6 +39,19 @@ export function historyCodes(cat) {
   return templatesByCategory(cat).map(function (t) { return t.code; }).concat(HISTORY_ALSO[cat] || []);
 }
 
+// The title of the print window - what the browser prints in the page header when its
+// "headers and footers" are on, and the file name when the page is saved as PDF. A paper
+// carries its number there, as it does in its own text; the imaging report does not show
+// its number on the sheet at all (director, 2026-10-01: it goes to another hospital), so
+// it is titled by its name, as when it is first printed from the imaging list.
+var NO_NUMBER_ON_PAPER = ['imaging-report'];
+export function printTitle(doc, lang) {
+  if (!doc) return 'document';
+  var tpl = getTemplate(doc.template_code);
+  if (tpl && NO_NUMBER_ON_PAPER.indexOf(tpl.code) >= 0) return (tpl.name && (tpl.name[lang] || tpl.name.fr)) || doc.template_name || 'document';
+  return doc.doc_no || 'document';
+}
+
 // Medication lines for a letter use the pharmacy's wording (rx-dosing.js doseSentence),
 // so the referral, the outside prescription and the screens read the same:
 // "Paracetamol 500mg Tab — 1 tab × 3 times/day for 7 days (total 21)". A total saved

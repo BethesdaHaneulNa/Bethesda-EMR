@@ -91,7 +91,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 
 - Cliquez sur le ✕ rouge au début de la ligne. Le message **Retirer « … » ?** demande confirmation. Une ligne retirée ne revient pas.
 - Si la ligne est **déjà payée**, le message ajoute **Cette ligne est déjà encaissée : si vous la retirez, la caisse devra rembourser le patient.** Envoyez alors le patient à la caisse.
-- Un examen qui a **déjà un résultat** (ou une image, ou un compte-rendu) ne peut pas être retiré. Le ✕ propose alors de le **marquer comme annulé** :
+- Un examen qui a **déjà un résultat** (ou une image, ou un compte-rendu) ne peut pas être retiré. Le ✕ propose alors de le **marquer comme annulé** — cela vaut aussi pour un **acte fait sur un appareil** (endoscopie, rectoscopie…) : il est traité comme un examen d'imagerie :
   1. Cliquez sur ✕. Un message explique que le résultat reste au dossier.
   2. Écrivez le motif (facultatif), puis **OK**. **Annuler** ne change rien.
   3. La ligne devient grise et barrée, avec **⊘** et **Annulé**. Elle sort de la facture.
@@ -108,7 +108,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 5. Toutes les images et tous les comptes-rendus du patient : bouton **Imagerie** dans la barre bleue.
 6. Séries, **Ouvrir dans un onglet ↗**, session expirée : voir le guide PACS, section 4.
 7. Comparer avec un examen précédent (**⇆ Comparer avec …**, sous le titre de la fenêtre) et replier le compte-rendu (**Masquer le compte-rendu ▸**) : voir le guide PACS, section 8.
-8. Comparer plusieurs examens choisis par vous : bouton **Imagerie** de la barre bleue, cochez les examens dans la liste, puis **⇆ Comparer (N)** en haut à droite — voir le guide PACS, section 8, « Choisir soi-même les examens à comparer ».
+8. Comparer plusieurs examens choisis par vous : bouton **Imagerie** de la barre bleue, cochez les examens dans la liste, puis **⇆ Comparer (N)** juste au-dessus des cases à cocher — voir le guide PACS, section 8, « Choisir soi-même les examens à comparer ».
 
 ### 10. Compte-rendu opératoire et lettre de référence
 
