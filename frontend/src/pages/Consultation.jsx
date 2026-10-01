@@ -232,6 +232,12 @@ export default function ConsultationPage() {
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
   var rdo = useState(false), readingsOpen = rdo[0], setReadingsOpen = rdo[1];
+  // The image window opens over the list (director, 2026-10-01: closing it went back to
+  // the consultation screen, and the list had to be opened again for the next exam).
+  // Now the list stays underneath; when the image window closes the list reads itself
+  // again, so a reading just saved shows.
+  var rrl = useState(0), readingsReload = rrl[0], setReadingsReload = rrl[1];
+  useEffect(function(){ if(!viewer && readingsOpen) setReadingsReload(function(n){ return n+1; }); }, [viewer]);
   var canRead = (user && Array.isArray(user.permissions)) ? user.permissions.indexOf('consultation')>=0 : (user && user.role==='doctor')||(user&&user.role==='admin');
 
   async function openViewer(orderItemId){
@@ -1528,7 +1534,7 @@ export default function ConsultationPage() {
               <span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>
               <button onClick={function(){setReadingsOpen(false)}} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
-            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} onOpen={function(oid){ setReadingsOpen(false); openViewer(oid); }} /></div>
+            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} reload={readingsReload} onOpen={function(oid){ openViewer(oid); }} /></div>
           </div>
         </div>
       ) : null}

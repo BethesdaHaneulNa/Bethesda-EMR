@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서: 파란 줄의 「판독소견」 단추가 「영상/판독 / Imagerie」
+
+- **상태**: 확인 요청 (문서만)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `e3e68cb` 다음
+- **한 일**: 총괄이 바꾼 단추 이름(공용 키 `imagingList` — ko 영상/판독 · fr Imagerie · en Imaging, 파란 줄 단추와 그 목록 창 제목)을 진료 문서에 맞췄습니다.
+  - `wiki/manual-fr/consultation.md`: 「L'écran」의 파란 줄 설명 — **Compte-rendu** → **Imagerie**, 빠져 있던 **⇄ Transfert**를 넣고 지금 순서대로(단추 여섯 → 과·의사 → N° dossier → 이름 …). §9-5 «bouton **Imagerie** dans la barre bleue».
+  - `wiki/modules/consultation.md`: 2.7 단추 표(이름과 바뀐 까닭, 판독 칸은 그대로라는 것), 2.3 영상 창의 「Imagerie 목록에도 같은 줄」, 8절.
+  - changelog 초안 「Smaller changes」에 한 줄.
+  - 그대로 둔 것: 영상 창 오른쪽 판독 칸과 저장 알림의 Compte-rendu, 수술 기록의 Compte-rendu opératoire.
+- **바꾼 파일**: `wiki/manual-fr/consultation.md` · `wiki/modules/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: develop `e3e68cb`의 `Consultation.jsx`(단추 1056줄·목록 창 제목 1527줄)와 `imagingList` 키(ko·en·fr)를 읽고 문서의 Compte-rendu를 모두 훑음. 위키만이라 격리 확인은 하지 않았습니다.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 정리: 차트 머리줄은 날짜와 과·의사만 (「오늘 / 이 내원」에 딸린 것 지움)
 
 - **상태**: 확인 요청

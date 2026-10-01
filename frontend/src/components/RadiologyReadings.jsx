@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
 
@@ -47,14 +47,20 @@ export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
+  var lastPatient = useRef(null);
 
   useEffect(function () {
     if (!props.patientId) { setRows([]); return; }
-    setLoading(true);
+    // props.reload: a number the screen raises to read the list again without taking it
+    // off the screen - after the image window closes, a reading saved there shows here
+    // and the list keeps its place (no «Loading…», no jump to the top).
+    var quiet = lastPatient.current === props.patientId;
+    lastPatient.current = props.patientId;
+    if (!quiet) setLoading(true);
     api.get('/pacs/readings/patient/' + props.patientId)
-      .then(function (r) { setRows(r || []); }).catch(function () { setRows([]); })
+      .then(function (r) { setRows(r || []); }).catch(function () { if (!quiet) setRows([]); })
       .then(function () { setLoading(false); });
-  }, [props.patientId]);
+  }, [props.patientId, props.reload]);
 
   var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--violet-text)';
 
