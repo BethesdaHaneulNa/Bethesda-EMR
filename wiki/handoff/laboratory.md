@@ -5,7 +5,7 @@
 ## 2026-10-01 — 임상병리 왼쪽 목록에 검색 칸 (수납·약국과 같은 것)
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `15bd48c` — 디자인 세션의 `Lab.jsx` 배치 `ff1ccaf` 위에서)
+- **커밋**: session/laboratory `e8150a5` (출발점 `develop` `15bd48c` — 디자인 세션의 `Lab.jsx` 배치 `ff1ccaf` 위에서)
 - **계기**: 실장님(2026-10-01, 총괄 전달) — 「임상병리 검색 칸도 넣어줘」.
 - **만든 것**: 작업일자 줄 바로 아래, 목록 위에 검색 칸. `layout.js` 의 `LIST_SEARCH_WRAP` · `LIST_SEARCH` 그대로(글자 15px, 높이 33px, 너비 281px — 약국과 재 보니 같음). 제목 줄 없음. placeholder `lb_searchPh`: 「환자명 / 차트번호 / 검사명 검색」 · 「Patient / N° dossier / Analyse」 · 「Patient / Chart No. / Test」.
 - **동작**: 서버 요청 없이 **화면의 목록만** 거름 — 그 날짜의 결과 대기 / 입력 완료 둘 다. 찾는 것: 환자 이름(성 이름·이름 성 두 순서, 부분 일치) · 차트번호 · **그 줄의 검사 이름과 코드**(`CBC`, `malaria`, `L04`). 대소문자 무시, 앞뒤 공백 무시.

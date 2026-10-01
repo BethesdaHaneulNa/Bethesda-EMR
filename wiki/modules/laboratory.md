@@ -547,4 +547,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-10-01 | 설정 검사항목: 단위를 목록에서 고름 + 「단위 목록」 창(넣기·이름·순서·빼기) — `lab_unit` 표(마이그레이션 502), `GET /units` · `POST /units/save`, `lb_` 14개 · 목록에 없는 단위를 가진 항목은 그대로 · 검사실 입력 표 열을 `minmax(0, fr)` 로(긴 단위에서 줄이 어긋나던 것) | `a7f5f87` |
 | 2026-10-01 | 작업일자(접수·수납과 같은 것): 목록 맨 위 ◀ 날짜 ▶, 두 목록과 숫자가 그 날짜 내원의 검사만 — `GET /lab/day`(`{date, today, pending, completed}`), `/pending`·`/completed` 에 `?date=` · 「입력 완료」가 「오늘 결과를 넣은 것」에서 「그 날짜 내원의 결과 들어간 것」으로 · `lb_workDatePast`·`lb_noCompletedOn` | `254f0d9` |
 | 2026-10-01 | `POST /units/save`: 본문에 `units` 목록이 없으면 400(전에는 목록을 통째로 비움) — `unitNamesOf()`, `lab.flag.mjs` 에 10건 | `c9ba24e` |
-| 2026-10-01 | 왼쪽 목록에 검색 칸(수납·약국과 같은 것, `layout.js` `LIST_SEARCH`): 이름·차트번호·검사 이름으로 화면에서 거름, 맞는 것이 없을 때 안내 — `lb_searchPh`·`lb_searchNone` | (이 커밋) |
+| 2026-10-01 | 왼쪽 목록에 검색 칸(수납·약국과 같은 것, `layout.js` `LIST_SEARCH`): 이름·차트번호·검사 이름으로 화면에서 거름, 맞는 것이 없을 때 안내 — `lb_searchPh`·`lb_searchNone` | `e8150a5` |
