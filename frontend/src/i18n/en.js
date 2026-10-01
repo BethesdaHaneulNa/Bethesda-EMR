@@ -818,6 +818,8 @@ export default {
   se_role_lab: "Lab",
   se_role_admin: "Admin",
   se_type_fee: "Fee",
+  se_typeLong_fee: "Fees (consultation, documents)",
+  se_feeHint: "On the {pay} screen, the “+ {add}” list under “{section}” offers the codes of this type, except the consultation fees (C01–C04). Document fees and the like are added and edited here.",
   se_type_lab: "Lab",
   se_type_imaging: "Imaging",
   se_type_procedure: "Procedure",

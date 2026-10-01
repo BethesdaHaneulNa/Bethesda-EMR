@@ -809,6 +809,8 @@ export default {
   se_role_lab: "Laboratoire",
   se_role_admin: "Administrateur",
   se_type_fee: "Frais",
+  se_typeLong_fee: "Frais (consultation, documents)",
+  se_feeHint: "Dans {pay}, la liste « + {add} » de « {section} » propose les codes de ce type, sauf les consultations (C01 à C04). Les frais de documents et autres s'ajoutent et se corrigent ici.",
   se_type_lab: "Laboratoire",
   se_type_imaging: "Imagerie",
   se_type_procedure: "Acte",

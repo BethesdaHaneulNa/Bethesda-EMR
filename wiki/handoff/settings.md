@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「기록」 → 「로그」 · 오더 코드의 「진료비 · 발급비」 (실장님 요청, 수납 세션이 전함)
+
+- **상태**: 확인 요청 — 1)·2). 3)(수납에서 금액을 고칠 수 있음 체크, `price_editable`)은 수납의 마이그레이션이 develop에 들어온 뒤에.
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `b591b9e` merge 위)
+- **실장님 말씀**(수납 세션 화면에서, 총괄이 전함): 「설정에 기록이라 하지 말고 로그라 해줘」 · 「수납의 발급/기타 항목을 설정에서 추가·수정할 수 있는 거야? 안 보이는데?」
+
+### 1) 한국어 「기록」 → 「로그」 — 바꾼 것 목록
+
+| 어디 | 전 | 후 |
+|---|---|---|
+| 왼쪽 메뉴와 탭 제목 (`se_tabAudit`) | 📜 기록 | 📜 로그 |
+| 탭 머리의 안내 (`se_logIntro`) | … 이 기록은 누구도 고치거나 지울 수 없습니다. | … 이 로그는 누구도 … |
+| 줄이 없을 때 (`se_logEmpty`) | 이 조건에 맞는 기록이 없습니다. | 이 조건에 맞는 로그가 없습니다. |
+
+- 영어 「Log」 · 프랑스어 「Journal」은 그대로(말씀 없음).
+- **그대로 둔 「기록」**(탭 이름이 아니라 다른 뜻): 「끝난 진료 기록을 고침」·「의사의 진료 기록」·「기록·활력징후」(진료 기록), 「환자 기록 (DB)」(상태 점), 직원 비활성 물음의 「기록은 남습니다」(그 직원이 한 일).
+- **설정 것이 아니라 손대지 않은 것**: PACS 화면의 `px_mvLogged` 「이 일은 변경 기록에 남습니다.」 — 이 탭을 가리키는 말이므로 「로그에 남습니다」로 맞추면 좋음(PACS 몫).
+- **위키**: `wiki/modules/settings.md` 1~7절의 탭 이름(2.3 표·2.14 제목 등)과 `wiki/03-change-log.md`의 「기록 탭」을 「로그 탭」으로, 2.14에 이름이 바뀐 날과 까닭 한 줄. 8절의 옛 줄·인계 노트(지난 일의 기록)는 그대로. **다른 모듈 문서**에 남은 「기록 탭」: `modules/consultation.md` 7 · `laboratory.md` 2 · `payment.md` 2 · `reception.md` 2 · `pharmacy.md` 1 · `decisions.md` 4 — 각 주인 몫이라 건드리지 않음. 프랑스어 설명서는 「Journal」이라 바뀐 것 없음.
+
+### 2) 발급/기타 항목을 찾기 쉽게
+
+- **종류 이름**: 거르개 단추와 편집 창의 종류 선택 — ko 「진료비 · 발급비」 · en 「Fees (consultation, documents)」 · fr 「Frais (consultation, documents)」(새 키 `se_typeLong_fee`). 목록 줄의 작은 종류 표시와 로그의 값(`se_type_fee`)은 ko 「진료비 · 발급비」, en·fr은 짧은 「Fee」·「Frais」 그대로(줄마다 긴 이름이 되풀이되지 않게 — 프랑스어 「Frais」는 본래 발급비도 포함하는 말).
+- **안내 한 줄**(`se_feeHint`): 거르개에서 이 종류를 골랐을 때 목록 위에, 그리고 이 종류의 코드를 여는 편집 창의 종류 칸 아래에. 「수납 화면의 「발급/기타」에서 「+ 항목 추가」로 고르는 목록에는 이 종류 가운데 진료비(C01~C04)를 뺀 항목이 나옵니다. 발급비 같은 항목은 여기서 더하고 고칩니다.」 — 「수납」·「발급/기타」·「항목 추가」는 수납 화면의 글자(`payment`·`adminCharges`·`addCharge`)를 그대로 끼워 넣어, 수납이 이름을 바꾸면 따라감.
+- **같이 고친 것 — 분류(Groupe) 목록에 「Issuance」**: CDR·CERT·DOC의 분류는 Issuance인데 편집 창의 목록에 없어서 창이 「Consultation」으로 보였음(저장된 값은 그대로였고, 분류 칸을 건드리지 않고 저장하면 Issuance가 유지됨 — 건드리면 잃음). 목록에 넣었고, 목록에 없는 값이 저장돼 있으면 그 값 그대로 보이게 함. 새 발급비 코드를 만들 때 Issuance를 고를 수 있음.
+- **설명서**: 「Ajouter ou corriger un acte」 1번의 단추 이름과, 발급비가 어느 종류·분류인지·수납 어디에 나오는지 한 줄.
+
+- **바꾼 파일**: `frontend/src/pages/Settings.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역) · `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · `wiki/03-change-log.md` · 이 노트. 백엔드·DB 변경 없음.
+- **확인한 방법**: `npm run build`. 격리 스택(9187), 1280 폭 — 한국어: 메뉴·제목 「📜 로그」, 안내 글, 거르개 「진료비 · 발급비」를 고르면 C01~C04·CDR·CERT·DOC 일곱 줄과 안내 한 줄, DOC 편집 창의 종류 「진료비 · 발급비」·분류 「Issuance」·안내. 프랑스어: 「Tous · Frais (consultation, documents) · Laboratoire · Imagerie · Acte」(한 줄, 가로 넘침 없음), 줄의 표시는 「Frais」, 안내 「Dans Paiement, la liste « + Ajouter » de « Délivrance / Autres » …」, 메뉴 「Journal」 그대로. 설명서의 굵은 글씨 대조 스크립트. 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음(위 두 말씀은 수납 세션 화면에서 하신 것).
+
 ## 2026-10-01 — 기록 탭: 영상 옮김의 세 번째 방식 「복원 뒤 다시 적용」 (`kind: reapply`)
 
 - **상태**: 확인 요청
