@@ -246,6 +246,9 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
       // Images the server no longer has under the number noted here (a study corrected
       // in Orthanc's own screen gets a new one) are found again by accession first, for
       // this order and the patient's others - what follows reads the corrected lines.
+      // A correction of this patient's images (pacs.move.js) that a restore from an older
+      // backup disk undid on the image server is made again there first.
+      await move.reapplyAfterRestore(req, oid);
       await relinkLostStudies(req, oid);
       const w = await pool.query(
         `SELECT ${WL_COLUMNS}, body_part FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
