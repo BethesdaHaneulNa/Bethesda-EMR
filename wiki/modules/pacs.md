@@ -215,6 +215,7 @@
 - **로그인이 만료되면** 로그인 화면으로 돌아갑니다(「La session a expiré」).
 - **받는 도중 끊기면** 「La connexion a été coupée… Rien n'a été copié」 — 반쪽짜리를 온전한 것처럼 남기지 않습니다. 다시 하면 됩니다.
 - 화면 언어: 프랑스어(기본), `cd-export.bat -Lang ko`, `-Lang en`. `README.TXT`는 늘 프랑스어 + 영어.
+- **뷰어(Weasis)를 디스크에 함께 넣기 — 준비만 됨(2026-10-02)**: 프로그램 옆에 `cd-viewer` 폴더(그 안에 `Weasis.exe`)가 있으면 창에 **「☐ Ajouter la visionneuse d'images au disque (+ … Mo)」** 체크 칸이 나옵니다(없으면 안 나옴 — 지금 배포되는 모습). 체크하면 그 폴더가 디스크의 `VIEWER\`로 그대로 복사되고 맨 위에 `VOIR.BAT`(뷰어를 켜는 파일 하나 — Weasis가 자기 CD에 쓰는 것과 같은 한 줄)가 생기며, `README.TXT`에 「Sans logiciel d'imagerie : double-cliquez sur VOIR.BAT」 문단이 들어갑니다. 자동 실행 파일은 쓰지 않습니다. 디스크 이미지에는 긴 이름·깊은 폴더를 위해 UDF를 함께 넣습니다. **진짜 Weasis로는 아직 해 보지 않았습니다** — 모양이 비슷한 가짜 폴더(파일 123개, 긴 이름, 12단 깊이)로 복사 · `VOIR.BAT` · README · 폴더 저장 · ISO까지만 확인. Weasis를 받아 실제로 켜 보는 것은 실장님의 허락 뒤.
 
 ### 2.5 영상이 안 보일 때 — 순서대로
 
@@ -489,6 +490,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
   - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
   - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬). 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
+  - 뷰어: `Get-ViewerInfo`(`cd-viewer`에 `Weasis.exe`가 있는지, 파일 수와 크기) · `Add-DiscViewer`(`VIEWER\`로 복사 + `VOIR.BAT`) · `Get-DiscFileSystems`(뷰어가 있으면 ISO 9660 + Joliet + UDF). `cd-export.ps1 -ViewerDir`(기본: 프로그램 옆 `cd-viewer`).
   - `cd-export-ui.ps1` — 창(WinForms). 글은 `$CdxText`(fr · ko · en). 사람에게 묻는 것(안내 · 예/아니오 · 폴더 고르기 · 파일 이름)은 함수 네 개에 모아 둠 — 시험이 사람 대신 답할 수 있게.
   - **EMR만 부릅니다**(로그인 · `GET /api/pacs/export/patient` · `GET /api/pacs/export/bundle`). Orthanc에 직접 가지 않으므로 영상 서버 비밀번호가 프로그램에 없습니다.
 
@@ -805,3 +807,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | 영상 백업 만듦(6.2, PACS `image-backup.ps1` 등 5개, EMR `POST /image-backup-report`), 6.1을 새 도구(check-windows-ports·pair-with-emr·영상 복원) 기준 설치 순서로 다시 씀, 2.6에 취소 뒤 늦은 영상 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | **영상 인쇄**(2.4.3절): 검사의 영상을 A4에 1·2·4·6장씩 — 🩻 창의 「🖨 Imprimer les images」(진료·수납). 새 서버 파일 `pacs.export.js`(그림 목록 · 그림 한 장 · 인쇄 기록), 인쇄 창 `ImagesPrint.jsx`, 서식 `imaging-images.jsx`, 변경 기록 동작 `pacs.images.print`(+ 다음에 쓸 `pacs.images.export`). 번역 키 `px_im…` 29개 | EMR `session/pacs` |
 | 2026-10-01 | **영상 CD 반출 프로그램**(2.4.4절) — PACS 폴더의 `cd-export.bat`: EMR 계정으로 로그인 → 차트번호 조회 → 검사 체크 → 크기 → 폴더 / ISO / 디스크. EMR에 길 둘(`GET /export/patient`, `GET /export/bundle` — Orthanc의 묶음을 그대로 넘김, 기록 `pacs.images.export`). **폴더 · ISO까지 확인, 진짜 굽기는 아직** | EMR `session/pacs` · PACS `session/pacs` |
+| 2026-10-02 | 영상/판독 창의 상세: 「⇄ 다른 오더로 옮기기…」와 「🖨 영상 인쇄」를 한 줄에 나란히, 아래에 여백(총괄 요청). 반출 프로그램에 **뷰어 넣기 준비**(`cd-viewer` 폴더가 있을 때만 체크 칸 — 가짜 폴더로만 확인). 설계안에 「.exe로 만드는 길」(11절) | EMR `session/pacs` · PACS `session/pacs` |
