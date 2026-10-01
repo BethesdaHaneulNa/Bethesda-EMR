@@ -275,6 +275,19 @@ function cleanDirections(raw) {
   return v;
 }
 
+// order_code.price_editable (047, payment): the cashier may type the amount of this code's
+// line at the till (the director, 2026-10-01: the document fee depends on the document).
+// Only fee codes are offered at the till, so any other type stores FALSE whatever is sent.
+// For a fee code: true / false as sent; not sent at all -> null, which keeps what is stored
+// on an edit (a Settings screen opened before this field existed does not send it, and
+// must not untick DOC by saving something else) and is FALSE on a new code.
+function cleanPriceEditable(raw, codeType) {
+  if (String(codeType) !== 'fee') return false;
+  if (raw === true || raw === 'true' || raw === 1 || raw === '1') return true;
+  if (raw === false || raw === 'false' || raw === 0 || raw === '0') return false;
+  return null;
+}
+
 function cleanModality(raw) {
   const v = String(raw == null ? '' : raw).trim().toUpperCase();
   if (!v) return { value: null };
@@ -307,9 +320,10 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
     const modality = cleanModality(pacs_modality);
     if (modality.error) return res.status(400).json({ error: modality.error });
     const result = await pool.query(
-      `INSERT INTO order_code (code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo]
+      `INSERT INTO order_code (code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo, price_editable)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo,
+       cleanPriceEditable(req.body.price_editable, code_type) === true]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
@@ -333,9 +347,11 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
     const was = await client.query('SELECT id, code, name, price, price_clinic FROM order_code WHERE id = $1 FOR UPDATE', [req.params.id]);
     const result = await client.query(
       `UPDATE order_code SET code=$1, name=$2, name_en=$3, code_type=$4, group_name=$5, default_dose=$6, default_freq=$7,
-       default_days=$8, price=$9, price_clinic=$10, pacs_modality=$11, worklist_enabled=$12, station_ae=$13, body_part=$14, memo=$15, updated_at=NOW()
+       default_days=$8, price=$9, price_clinic=$10, pacs_modality=$11, worklist_enabled=$12, station_ae=$13, body_part=$14, memo=$15,
+       price_editable=COALESCE($17::boolean, price_editable), updated_at=NOW()
        WHERE id=$16 RETURNING *`,
-      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo, req.params.id]
+      [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo, req.params.id,
+       cleanPriceEditable(req.body.price_editable, code_type)]
     );
     if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
     await auditPrice(client, req, ACTIONS.ORDER_PRICE, 'order_code', was.rows[0], result.rows[0],
