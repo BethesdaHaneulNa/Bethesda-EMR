@@ -1167,6 +1167,7 @@ export default {
   se_fld_moveKind: "Correction",
   se_mvk_move: "moved",
   se_mvk_swap: "exchanged",
+  se_mvk_reapply: "re-applied after a restore",
   se_fld_readingMoved: "Reading moved with the images",
   se_fld_readingsExchanged: "Readings exchanged too",
   se_modListHint: "With a modality and the worklist feed on, this order goes to the device and appears in the imaging / reading list, even when its type is \"Procedure\".",
