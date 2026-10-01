@@ -171,6 +171,21 @@ const NO_PICTURE = [
   "Cette demande n'a reçu que des données sans image ({n}) — par exemple un rapport ou des mesures envoyés par l'appareil. Il n'y a rien à afficher ; le compte-rendu peut être saisi à droite.",
   '이 검사에는 그림이 없는 자료만 왔습니다({n}개) — 장비가 보낸 보고서·측정값 같은 것. 보여 줄 영상이 없습니다. 판독은 오른쪽에 쓸 수 있습니다.',
   'Only data without a picture arrived for this order ({n}) — for example a report or measurements sent by the device. There is nothing to show; the reading can be written on the right.'];
+// The image server has nothing under this order's study number: the exam is not done
+// or not sent yet. Stone would open an empty window, which reads as a fault - and the
+// list of the patient's exams now stays open under the image window, so a doctor
+// going down it meets this often (2026-10-01).
+const NOT_ARRIVED = [
+  "Les images de cette demande ne sont pas encore arrivées. Elles apparaîtront ici quand l'examen aura été fait et envoyé par l'appareil : fermez cette fenêtre et rouvrez-la plus tard. Le compte-rendu peut être saisi à droite.",
+  '이 검사의 영상이 아직 오지 않았습니다. 장비에서 촬영해 보내면 여기에 나옵니다 — 이 창을 닫았다가 나중에 다시 여세요. 판독은 오른쪽에 쓸 수 있습니다.',
+  'The images for this order have not arrived yet. They will show here once the exam is done and sent by the device: close this window and open it again later. The reading can be written on the right.'];
+// Same finding, but the EMR did note the arrival of these images: they were on the
+// image server and are not any more (an EMR restored before its images, a PACS
+// installed anew). "Not arrived yet" would contradict the list's «N image(s) reçue(s)».
+const NOT_THERE = [
+  "L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas. Prévenez l'administrateur : elles sont peut-être à restaurer depuis la sauvegarde des images.",
+  'EMR에는 이 검사의 영상이 도착했다고 적혀 있는데, 영상 서버에는 그 영상이 없습니다. 관리자에게 알려 주세요 — 영상 백업에서 되살려야 할 수 있습니다.',
+  'The EMR noted that these images arrived, but the image server does not have them. Tell the administrator: they may have to be restored from the image backup.'];
 function isPage(path) { return path === '/stone-webviewer/index.html'; }
 
 // A small JSON call to Orthanc with the stored login, for the viewer's own checks.
@@ -204,10 +219,12 @@ function orthancJson(cfg, path, method, body, timeoutMs) {
 
 // Does any object of this study carry a picture? Orthanc records PixelDataOffset for
 // every stored instance that has pixel data. Returns { picture: bool, count } or
-// null when it cannot tell (then the viewer opens as usual). Looks at 30 objects at
-// most: a study with a picture usually shows one among the first.
+// null when it cannot tell (then the viewer opens as usual). count 0 = Orthanc
+// answered and has no such study. Looks at 30 objects at most: a study with a
+// picture usually shows one among the first.
 async function studyPictures(cfg, studyUid) {
   const ids = await orthancJson(cfg, '/tools/find', 'POST', { Level: 'Study', Query: { StudyInstanceUID: studyUid } });
+  if (Array.isArray(ids) && ids.length === 0) return { picture: false, count: 0 };
   if (!Array.isArray(ids) || ids.length !== 1) return null;
   const instances = await orthancJson(cfg, '/studies/' + ids[0] + '/instances');
   if (!Array.isArray(instances) || !instances.length) return null;
@@ -217,6 +234,16 @@ async function studyPictures(cfg, studyUid) {
     if (meta.PixelDataOffset) return { picture: true, count: instances.length };
   }
   return { picture: false, count: instances.length };
+}
+
+// Did the bridge report images for this study number? false when it cannot tell.
+async function arrivalNoted(studyUid) {
+  try {
+    const r = await pool.query(
+      `SELECT 1 FROM worklist_log
+        WHERE (study_instance_uid = $1 OR image_study_uid = $1) AND images_received_at IS NOT NULL LIMIT 1`, [studyUid]);
+    return r.rows.length > 0;
+  } catch (e) { return false; }
 }
 
 // The EMR's helmet() gives every API response `script-src 'self'`, which stops
@@ -281,6 +308,7 @@ router.all('*', async (req, res) => {
 
   if (isPage(path)) {
     const pics = await studyPictures(cfg, String(req.query.study));
+    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(String(req.query.study))) ? NOT_THERE : NOT_ARRIVED));
     if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
   }
 

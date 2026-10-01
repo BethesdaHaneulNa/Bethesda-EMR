@@ -2,6 +2,32 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상이 아직 안 온 검사를 열면 빈 영상 창 대신 한 줄 안내
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `8615838`을 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**: 영상 중계(`backend/src/routes/pacs.viewer.js`)가 영상 창 페이지를 열 때 하던 물음(`studyPictures`)에서, **Orthanc가 답했고 그 검사가 0건**이면 Stone 대신 안내 쪽(200)을 보냄. 그림 없는 자료 안내와 같은 방식(서버가 보내는 세 언어 쪽).
+  - 보통(EMR에 도착 기록 없음) — `NOT_ARRIVED`:
+    - fr 「Les images de cette demande ne sont pas encore arrivées. Elles apparaîtront ici quand l'examen aura été fait et envoyé par l'appareil : fermez cette fenêtre et rouvrez-la plus tard. Le compte-rendu peut être saisi à droite.」
+    - ko 「이 검사의 영상이 아직 오지 않았습니다. 장비에서 촬영해 보내면 여기에 나옵니다 — 이 창을 닫았다가 나중에 다시 여세요. 판독은 오른쪽에 쓸 수 있습니다.」
+    - en 「The images for this order have not arrived yet. …」
+  - **시키신 것에 더한 것 하나** — EMR에는 도착이 적혀 있는데(`worklist_log.images_received_at`) 영상 서버에 없을 때 — `NOT_THERE`: fr 「L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas. Prévenez l'administrateur : elles sont peut-être à restaurer depuis la sauvegarde des images.」(ko·en 함께). 이유: 이 경우(PACS를 새로 깔았거나 영상 백업을 아직 안 되살림 — 위키 6.2 표에 있던 「목록은 N image(s) reçue(s)인데 영상 창은 빈 화면」)에 「아직 오지 않았습니다」라고 하면 목록과 어긋나고, 기다려도 오지 않음. 빼라고 하시면 한 줄(`arrivalNoted`)만 지우면 됨.
+  - **물을 수 없을 때**(Orthanc가 느림·오류)는 전처럼 Stone을 엶 — 막지 않음. 꺼져 있으면 전처럼 「Le serveur d'images ne répond pas」.
+  - 처방 표의 🖼든 목록의 Voir image든 같은 주소라 같은 안내. 목록의 Voir image 단추는 흐리게 하지 않음(총괄 결정).
+- **바꾼 파일**: `backend/src/routes/pacs.viewer.js`, `wiki/manual-fr/pacs.md`(메시지 표 두 줄), `wiki/modules/pacs.md`(2.5, 4절 중계 7, 6.2 표, 8절), `wiki/reference/changelog-1.5.0/pacs.md`(Smaller changes 한 줄), `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음(읽기만: `worklist_log`). **번역 키**: 없음(서버가 보내는 쪽 — 다른 영상 창 안내와 같은 자리)
+- **확인한 방법** (격리 EMR 9188 + 격리 PACS 9198 + 장비 흉내 컨테이너의 진짜 C-STORE, 1366×768 · fr · 어두운 화면):
+  - **(a) 영상 없는 오더 → 안내**: 오늘 낸 Chest PA(목록 «Images en attente»). 처방 표의 🖼로 열어도, 목록의 Voir image로 열어도 영상 칸에 안내 세 줄. 응답 약 7ms.
+  - **(c) 판독 칸**: 안내가 떠 있는 채로 판독을 쓰고 💾 Enregistrer → «Compte-rendu enregistré ✓», 닫으면 목록의 그 줄에 글과 «Lu par».
+  - **(b) 영상이 온 뒤**: 장비 흉내가 2장 보냄 → **보낸 직후**(EMR이 도착을 적기 전) 다시 열어도 Stone(그림), 75초 뒤 목록이 «2 image(s) reçue(s)», 화면에서 다시 열면 그림(570×603), 먼저 쓴 판독 그대로.
+  - **도착 기록은 있는데 영상 서버에 없음**: 격리 Orthanc에서 시험 검사 하나를 지움 → 「L'EMR a noté l'arrivée …」 안내(약 6ms).
+  - **물을 수 없음**: 격리 Orthanc를 멈춤 → 「Le serveur d'images ne répond pas」(전과 같음). 다시 켬.
+  - 그림 있는 검사 → Stone, 그림 없는 자료만 온 검사 → 「données sans image」 안내 — 전과 같음.
+  - **(d) 중계 회귀** 15가지 통과: 자기 검사 페이지·데이터·시리즈 질의 200 / 남의 검사 데이터·페이지 403 / 쿠키에 없는 번호·번호 없는 페이지 403 / 쿠키 없음(페이지·데이터) 401 / 걸러지지 않은 목록·Orthanc REST·`tools/find` 403 / `../`·`%2e%2e` 400 / 수납 계정의 `viewer-url` 403.
+- **확인 못 한 것**: Orthanc가 **3초 넘게 느린** 경우(코드로는 물음을 포기하고 Stone을 엶 — 멈춘 경우만 시험). 밝은 화면(안내 쪽은 늘 검정 바탕). 진짜 장비.
+- **알아 둘 것**: 장비가 **자기 검사 번호**로 보낸 영상(accession으로 잇는 경우)은 브리지가 이어 줄 때까지(1~2분) EMR이 아는 번호로는 영상 서버에 없으므로, 그 사이에 열면 「아직 오지 않았습니다」가 나옴 — 전에는 빈 영상 창이었고, 이어진 뒤 다시 열면 그림.
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-01 — 영상 창을 닫아도 목록이 남는 변경(총괄 `71dedec`): 격리 회귀 + 문서
 
 - **상태**: 확인 요청
