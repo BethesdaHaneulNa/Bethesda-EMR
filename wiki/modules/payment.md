@@ -42,6 +42,7 @@
 | **💊 Ordonnance ext. (원외 처방전)** | 밖에서 사는 약의 처방전 출력 |
 | **📋 Dossier (vue) (차트뷰어)** | 진료 기록 보기(고칠 수 없음) |
 | **🩻 Imagerie (영상/판독)** | 이 환자의 영상 검사 목록(판독 소견 포함) 보기. 2026-10-01 이름 바뀜 — 전에는 「Compte-rendu (판독소견)」, 문구 키 `imagingList` |
+| **🧪 Résultats labo (검사결과)** | 이 환자의 검사 결과 창(날짜 × 항목 표). 날짜 칸을 체크하고 **🖨 Imprimer** 를 누르면 병원 양식의 결과지가 미리보기로 뜨고, **Émettre et imprimer** 로 발행 · 인쇄합니다. 발행한 결과지는 **Documents** 의 기록(HISTORIQUE)에 남습니다. 2026-10-01, 실장님 요청 — 창은 임상병리의 것(진료 화면과 같은 창) |
 | **Impayé (미수 처리)** · **Confirmer (수납 확정)** | 수납 저장(2.2) |
 | **↻** | 목록 새로 불러오기. 누르지 않아도 **30초마다**, 그리고 다른 창에서 돌아올 때 목록이 조용히 새로 읽힙니다(2026-10-01) — 열어 둔 환자와 치고 있던 금액은 그대로입니다 |
 
@@ -457,6 +458,8 @@
 - `DocumentModal.jsx`(진료 주관) — 수납 화면에서 `category="document"` · `"prescription"` · `"chart"(readOnly)`로 3번 씀.
 - `PatientFinder.jsx`(접수 주관) — `mode="visit"`로 다른 날 내원을 찾아 수납.
 - `RadiologyReadings.jsx`(PACS 주관) — 판독 소견 창.
+- `LabResults.jsx`의 `LabResultsWindow`(임상병리 주관) — 검사결과 창. 수납은 `patient {id, chart_no, last_name, first_name}`와 `onClose`만 넘겨 엽니다(내원은 넘기지 않음 — 창이 그 환자의 모든 날짜를 보여 주고 발행할 내원도 스스로 정함). 읽기 `GET /api/lab/patient/:id/results`는 `payment` 권한도 통과(임상병리 `80f93a7`), 발행은 문서 엔진 `POST /api/documents`(payment 권한 포함).
+- **도구 줄이 화면보다 길 때**(2026-10-01): 단추가 하나 늘어 프랑스어 · 영어 1366 폭에서 줄이 40 · 63px 넘쳤습니다(「Confirmer」가 잘림). 줄이 넘칠 때만 단추의 **그림 문자를 빼고 글자는 남깁니다**(`toolsTight` · `pic()`). 글자 길이를 재서 정하므로 한국어 1366 폭과 1920 폭에서는 그림 문자가 그대로 보입니다. 언어 · 탭 · 환자 · 창 크기가 바뀔 때마다 다시 잽니다.
 
 ### DB 테이블
 
@@ -632,4 +635,5 @@
 | 2026-10-01 | 목록 검색을 임상병리와 같은 동작으로 — 검색으로 다 가려지면 따로 안내, 앞뒤 빈칸 무시, 이름을 두 순서로 · 지난 날짜의 빈 「수납 완료」 목록이 「오늘 …없습니다」 대신 「이 날짜에 …없습니다」 | `Payment.jsx` `matches` · `baseCount` · `foundCount`, `layout.js`의 `LIST_SEARCH*` · `ROW_EMPTY` 읽어 씀, `py_searchPh` · `py_searchNone` · `py_nonePaidThatDay`, 위키 2.1, 프랑스어 설명서 §1 | `d44a503` |
 | 2026-10-01 | 시험 자료용: 내원 하나를 화면이 하는 그대로 수납하는 스크립트(총괄 부탁 — 실장님 「시험 차트 30개로 모든 상황을」) | `wiki/reference/tools/pay-visit.js`, 위키 4절 | `9600bd5` |
 | 2026-10-01 | Document Fee 줄의 금액을 수납 화면에서 바로 고침(실장님 요청) — 다른 발급비는 설정의 금액 그대로 | 마이그레이션 047(세션 번호 305) `order_code.price_editable`, `Payment.jsx` 발급/기타 줄, `py_feeAmount*`, `pay-visit.js` `--fee=CODE:금액`, 위키 2.2 · 2.3 · 4 · 7절, 프랑스어 설명서 §2 | `1e4fe87` |
-| 2026-10-01 | 금액 칸에 치는 숫자가 「6,000」으로 보임(발급비 · 할인 · 받은 금액 · 미수 수납 창) · 고친 발급비 옆의 줄 그은 기본 금액을 뺌(실장님 요청) | `Payment.jsx` `MoneyInput` · `moneyText` · `moneyRaw`, `py_feeListPrice` 지움, 위키 2.2 · 2.3 · 4절, 프랑스어 설명서 §2 | (이 커밋) |
+| 2026-10-01 | 금액 칸에 치는 숫자가 「6,000」으로 보임(발급비 · 할인 · 받은 금액 · 미수 수납 창) · 고친 발급비 옆의 줄 그은 기본 금액을 뺌(실장님 요청) | `Payment.jsx` `MoneyInput` · `moneyText` · `moneyRaw`, `py_feeListPrice` 지움, 위키 2.2 · 2.3 · 4절, 프랑스어 설명서 §2 | `b4858ec` |
+| 2026-10-01 | 도구 줄에 「🧪 검사결과」 — 수납에서 검사 결과지를 뽑음(실장님 요청) · 도구 줄이 화면보다 길면 단추의 그림 문자를 뺌 | `Payment.jsx` `labOpen` · `toolsTight`, 임상병리의 `LabResultsWindow`를 엶, 위키 2.1 · 4절, 프랑스어 설명서 §1 · §15 | (이 커밋) |

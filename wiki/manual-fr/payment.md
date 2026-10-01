@@ -157,6 +157,16 @@ L'impayé n'est pas perdu : quand le patient revient, il s'ajoute tout seul à s
 
 Si un patient est resté dans la liste d'un jour passé, il n'apparaît plus aujourd'hui : voir 10.
 
+### 15. Imprimer les résultats d'analyses
+
+1. Choisissez le patient (dans la liste, ou avec **🔍 Trouver patient**).
+2. Cliquez sur **Résultats labo** dans la barre du haut. Une fenêtre montre les résultats du patient : une colonne par date.
+3. Cochez la case de la date (ou des dates) à imprimer. Le bouton devient **🖨 Imprimer (1)** ; cliquez dessus.
+4. La feuille **Résultats d'analyses** s'affiche. Cliquez sur **Émettre et imprimer**, puis imprimez. Si le navigateur bloque la fenêtre, autorisez les fenêtres pop-up pour ce site.
+5. La feuille émise reçoit un numéro (D26-…) et se retrouve dans **Documents** → **HISTORIQUE**.
+
+Sur un petit écran, les boutons de la barre du haut n'ont pas leur dessin (📄, 🧪…) : le texte et la couleur sont les mêmes.
+
 ## Si ce message apparaît
 
 | Message | Ce que cela veut dire | Que faire |
