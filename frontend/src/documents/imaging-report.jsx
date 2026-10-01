@@ -35,6 +35,62 @@ var LINE = '1.5px solid #000';
 // a little less, so that rounding never pushes the foot onto a page of its own.
 var PAGE = '264mm';
 
+// ── long names ───────────────────────────────────────────────────────────────
+// A Malagasy name easily runs to forty or sixty letters. The sheet is read in another
+// hospital, so a name is never cut ("…"): it gets smaller letters and more lines, broken
+// between words - inside a word only when that one word is wider than its box.
+// The sheet is laid out before it is printed and cannot measure itself, so the width of
+// a text is estimated from its letters (capitals wide, i and l narrow, Korean a full em).
+function emWidth(text) {
+  // Per letter, in em - measured on Segoe UI and Arial, the wider of the two.
+  var w = 0, s = String(text || '');
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charAt(i), code = s.charCodeAt(i);
+    if (code > 0x2E80) w += 1;
+    else if (c === ' ') w += 0.28;
+    else if (c === 'M') w += 0.9;
+    else if (c === 'W') w += 0.95;
+    else if (c === 'I') w += 0.28;
+    else if (c >= 'A' && c <= 'Z') w += 0.68;
+    else if (c === 'm') w += 0.86;
+    else if (c === 'w') w += 0.73;
+    else if ("ilj.,:;'’·".indexOf(c) >= 0) w += 0.26;
+    else if ('tfr-()'.indexOf(c) >= 0) w += 0.35;
+    else w += 0.56;
+  }
+  return w;
+}
+// Lines `text` takes in a box `widthPt` wide at `sizePt`, the way the browser breaks it
+// (overflow-wrap: break-word): between words, and a word too wide for the box runs on.
+function linesAt(text, widthPt, sizePt, bold) {
+  var max = widthPt / (sizePt * (bold ? 1.08 : 1)), words = String(text || '').split(/\s+/).filter(Boolean);
+  var lines = 1, cur = 0;
+  for (var i = 0; i < words.length; i++) {
+    var ww = emWidth(words[i]);
+    if (ww > max) {
+      if (cur > 0) lines++;
+      lines += Math.ceil(ww / max) - 1;
+      cur = ww % max || max;
+    } else if (cur > 0 && cur + 0.28 + ww > max) { lines++; cur = ww; }
+    else cur += (cur > 0 ? 0.28 : 0) + ww;
+  }
+  return lines;
+}
+// The largest of `sizes` at which `text` fits `maxLines` lines - first looking for a size
+// at which no word has to be broken, then accepting a broken word; the smallest if none.
+function fitSize(text, widthPt, maxLines, sizes, bold) {
+  var w = widthPt * 0.97, words = String(text || '').split(/\s+/).filter(Boolean), widest = 0;
+  for (var k = 0; k < words.length; k++) widest = Math.max(widest, emWidth(words[k]));
+  for (var pass = 0; pass < 2; pass++) {
+    for (var i = 0; i < sizes.length; i++) {
+      var whole = widest * sizes[i] * (bold ? 1.08 : 1) <= w;
+      if ((whole || pass === 1) && linesAt(text, w, sizes[i], bold) <= maxLines(sizes[i])) return sizes[i];
+    }
+  }
+  return sizes[sizes.length - 1];
+}
+var SHEET = 516;      // 182 mm, the printed width, in points
+
 function stamp(d) {
   if (!d) return '';
   var x = new Date(String(d));
@@ -53,26 +109,46 @@ export function ImagingReportLayout(props) {
   var contact = [clinic.address, clinic.phone ? 'Tel: ' + clinic.phone : '', clinic.email].filter(Boolean).join('  ·  ');
   var hospital = clinic.name || clinic.name_en || clinic.name_fr ? clinicName(clinic, lang) : '';
 
-  var lab = { border: LINE, fontWeight: 700, fontSize: '12.5pt', textAlign: 'center', padding: '0 4px', whiteSpace: 'nowrap' };
-  var val = { border: LINE, fontSize: '12pt', textAlign: 'center', padding: '0 6px', wordBreak: 'break-word' };
+  // The name's box is 29% of the sheet wide and one of four equal rows of the head box
+  // (35pt each). Letters shrink 12 -> 9pt as the name needs two, then three lines - no
+  // smaller: it is read by strangers. A name that still does not fit makes the four
+  // rows grow together, never one alone.
+  var nameW = SHEET * 0.29 - 14, rowPt = 35;
+  var nameSize = fitSize(fullName, nameW, function (pt) { return Math.floor((rowPt - 3) / (pt * 1.18)); }, [12, 10.5, 9.5, 9]);
+  var nameLines = linesAt(fullName, nameW * 0.97, nameSize);
+  rowPt = Math.max(rowPt, Math.ceil(nameLines * nameSize * 1.18 + 3));
+  // The line repeated at the top of every following page: as many lines as it needs.
+  var runText = [fullName, p.chart_no, v.exam_name, v.exam_date].filter(Boolean).join('   ·   ');
+  var runPx = 10 + 12 * Math.min(4, linesAt(runText, (SHEET - 4) * 0.97, 8.5));
+  // The foot of the page: the clinic's name shrinks before it takes a third line, and
+  // the room kept for the foot grows with what is in it.
+  var footL = SHEET * 0.55 - 14, footR = SHEET * 0.45;
+  var clinicSize = fitSize(hospital, footL, function () { return 2; }, [16, 14, 12.5, 11, 10], true);
+  var footPt = Math.max(
+    linesAt(hospital, footL * 0.97, clinicSize, true) * clinicSize * 1.2 + (contact ? linesAt(contact, footL * 0.97, 8) * 8 * 1.35 + 2 : 0),
+    linesAt(L(T.reader, lang) + ' ' + (v.read_by || ''), footR * 0.97, 9.5) * 9.5 * 1.4 + 8.5 * 1.4 + 16 + 14) + 6 + 12 + 14;
+
+  var lab = { border: LINE, fontWeight: 700, fontSize: '12.5pt', textAlign: 'center', padding: '0 4px', whiteSpace: 'nowrap', height: rowPt + 'pt' };
+  var val = { border: LINE, fontSize: '12pt', textAlign: 'center', padding: '0 6px', overflowWrap: 'break-word', wordBreak: 'normal' };
+  var nameCell = Object.assign({}, val, { fontSize: nameSize + 'pt', lineHeight: 1.18, padding: '2px 6px' });
   var band = { border: LINE, borderTop: 'none', textAlign: 'center', fontWeight: 700, fontSize: '17pt', padding: '4px 6px', lineHeight: 1.3 };
 
   return (
-    <div style={{ position: 'relative', minHeight: PAGE, paddingBottom: '27mm', boxSizing: 'border-box', background: '#fff', color: '#000', fontFamily: FONT, pageBreakAfter: props.last === false ? 'always' : 'auto', breakAfter: props.last === false ? 'page' : 'auto' }}>
+    <div style={{ position: 'relative', minHeight: PAGE, paddingBottom: Math.max(76, Math.ceil(footPt)) + 'pt', boxSizing: 'border-box', background: '#fff', color: '#000', fontFamily: FONT, pageBreakAfter: props.last === false ? 'always' : 'auto', breakAfter: props.last === false ? 'page' : 'auto' }}>
       {/* A table, so that its head line is printed again at the top of every following
           page of a long reading (the browser repeats a table's head): patient, chart
           number, exam. On the first page the big box is pulled up over it. */}
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <thead>
-          <tr><td style={{ height: 22, padding: '0 2px 4px', fontSize: '8.5pt', color: '#333', verticalAlign: 'bottom', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-            {[fullName, p.chart_no, v.exam_name, v.exam_date].filter(Boolean).join('   ·   ')}
+          <tr><td style={{ height: runPx, padding: '0 2px 4px', fontSize: '8.5pt', lineHeight: '12px', color: '#333', verticalAlign: 'bottom', overflowWrap: 'break-word' }}>
+            {runText}
           </td></tr>
         </thead>
         <tbody>
           <tr><td style={{ padding: 0 }}>
-            <div style={{ marginTop: -22, position: 'relative', background: '#fff' }}>
+            <div style={{ marginTop: -runPx, position: 'relative', background: '#fff' }}>
               {/* 1. title and exam date | the patient */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', height: '140pt' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', height: (rowPt * 4) + 'pt' }}>
                 <colgroup><col style={{ width: '55%' }} /><col style={{ width: '16%' }} /><col style={{ width: '14.5%' }} /><col style={{ width: '14.5%' }} /></colgroup>
                 <tbody>
                   <tr>
@@ -81,7 +157,7 @@ export function ImagingReportLayout(props) {
                       <div style={{ fontWeight: 700, fontSize: '14pt', marginTop: 6 }}>{v.exam_date || ''}</div>
                     </td>
                     <td style={lab}>{L(T.name, lang)}</td>
-                    <td colSpan={2} style={val}>{fullName}</td>
+                    <td colSpan={2} style={nameCell}>{fullName}</td>
                   </tr>
                   <tr><td style={lab}>{L(T.id, lang)}</td><td colSpan={2} style={val}>{p.chart_no || ''}</td></tr>
                   <tr><td style={lab}>{L(T.sexAge, lang)}</td><td style={val}>{sex}</td><td style={val}>{age === '' ? '' : age}</td></tr>
@@ -91,8 +167,8 @@ export function ImagingReportLayout(props) {
               {/* 2. the exam */}
               <div style={band}>{L(T.exam, lang)}</div>
               <div style={{ border: LINE, borderTop: 'none', padding: '5px 6px 7px', minHeight: '40pt' }}>
-                <div style={{ fontSize: '13pt' }}>{v.exam_name || ''}{v.modality ? <span style={{ fontSize: '10pt', color: '#333' }}>{'   (' + v.modality + ')'}</span> : null}</div>
-                {small ? <div style={{ fontSize: '8.5pt', color: '#444', marginTop: 3 }}>{small}</div> : null}
+                <div style={{ fontSize: '13pt', overflowWrap: 'break-word' }}>{v.exam_name || ''}{v.modality ? <span style={{ fontSize: '10pt', color: '#333' }}>{'   (' + v.modality + ')'}</span> : null}</div>
+                {small ? <div style={{ fontSize: '8.5pt', color: '#444', marginTop: 3, overflowWrap: 'break-word' }}>{small}</div> : null}
               </div>
               {/* 3. the reading - the box is as tall as the text */}
               <div style={band}>{L(T.reading, lang)}</div>
@@ -104,11 +180,11 @@ export function ImagingReportLayout(props) {
       {/* 4. the foot of the page: the clinic, and who read it */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
-          <div style={{ flex: '1 1 55%', textAlign: 'right' }}>
-            <div style={{ fontWeight: 800, fontSize: '16pt', lineHeight: 1.2 }}>{hospital}</div>
+          <div style={{ flex: '0 0 55%', minWidth: 0, textAlign: 'right', overflowWrap: 'break-word' }}>
+            <div style={{ fontWeight: 800, fontSize: clinicSize + 'pt', lineHeight: 1.2 }}>{hospital}</div>
             {contact ? <div style={{ fontSize: '8pt', color: '#333', marginTop: 2 }}>{contact}</div> : null}
           </div>
-          <div style={{ flex: '1 1 45%', fontSize: '9.5pt' }}>
+          <div style={{ flex: '1 1 0', minWidth: 0, fontSize: '9.5pt', overflowWrap: 'break-word' }}>
             <div><span style={{ fontWeight: 700 }}>{L(T.reader, lang)}</span> {v.read_by || ''}</div>
             <div style={{ color: '#333', fontSize: '8.5pt' }}>{stamp(v.read_at)}</div>
             <div style={{ marginTop: 16, borderTop: '1px solid #000', paddingTop: 2, fontSize: '8pt', color: '#333' }}>{L(DOC_LABELS.signature, lang)}</div>
