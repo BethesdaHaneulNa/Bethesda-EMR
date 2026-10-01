@@ -5,7 +5,7 @@
 ## 2026-10-01 — 긴 이름에서 검사실 목록·환자 머리·환자 찾기 창
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `e8db948`, fast-forward 뒤)
+- **커밋**: session/laboratory `8765401` (출발점 `develop` `e8db948`, fast-forward 뒤)
 - **본 자리** (격리 스택, 1366×768, 프랑스어·한국어, 이름 50자 `RAZAFINDRAKOTO Andriamihaja Jean Baptiste Emmanuel` · 86자 `ANDRIANAMPOINIMERINATOMPOKOINDRINDRA Hery Nomenjanahary Tsiorintsoa Fanomezantsoa Mamy`(36자 한 낱말 포함) · 짧은 이름):
   | 자리 | 고치기 전 | 고친 뒤 |
   |---|---|---|
