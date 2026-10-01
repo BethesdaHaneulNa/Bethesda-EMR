@@ -158,7 +158,7 @@ export default {
   savePatientOnly: "환자 정보 저장",
   savePatientDone: "환자 정보가 저장되었습니다",
   in_progress: "진료중",
-  receptionDeskNote: "접수과 메모",
+  receptionDeskNote: "환자 메모(늘 보임)",
   receptionDeskNoteHint: "환자에게 계속 남는 메모 (예: 한국말 못함, 보호자 동반)",
   toWaiting: "← 대기로",
   toCompleted: "완료로 →",

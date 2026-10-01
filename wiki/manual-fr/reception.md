@@ -35,7 +35,7 @@ L'écran a trois parties :
 4. **Sexe** : cliquez sur **Masculin** ou **Féminin**. Au départ, aucun n'est choisi : il faut cliquer, sinon l'enregistrement est refusé. Au clavier : touche **Tab** jusqu'à **Masculin**, puis les flèches **←** **→** pour choisir (ou la barre d'espace).
 5. **Date de Naissance** : tapez l'année (**AAAA**, 4 chiffres), puis le mois (**MM**, 2 chiffres), puis le jour (**JJ**, 2 chiffres), par exemple `1990` `05` `03`. Le curseur passe tout seul à la case suivante. Vous pouvez aussi coller une date entière (`19900503`, `1990-05-03` ou `03/05/1990`, jour d'abord) : elle se range toute seule dans les trois cases. Si la date est inconnue, laissez les trois cases vides.
 6. Remplissez si possible **Téléphone**, **Groupe Sanguin** et **Allergies** (les allergies s'affichent en rouge chez le médecin).
-7. Dans **📌 Note d'accueil**, écrivez ce qu'il faut toujours savoir sur ce patient (par exemple : « vient avec un accompagnant »). Cette note reste attachée au patient pour toutes ses visites.
+7. Dans **📌 Note permanente du patient**, écrivez ce qu'il faut toujours savoir sur ce patient (par exemple : « vient avec un accompagnant »). Cette note reste attachée au patient pour toutes ses visites.
 8. Continuez à l'étape 4 de « En bref ». Le **N° dossier** est créé automatiquement quand vous enregistrez.
 
 Pendant l'enregistrement, le bouton affiche **Enregistrement…** et ne réagit plus : n'appuyez pas deux fois. Si un message d'erreur apparaît, corrigez puis appuyez de nouveau sur le même bouton : le même patient sera utilisé, aucun deuxième dossier n'est créé.
@@ -180,7 +180,7 @@ Quand un patient est choisi, **📋 Dossier (vue)** montre les documents déjà 
 - N'appuyez pas deux fois sur **Enregistrer / Mettre en attente** : attendez le message.
 - Ne laissez pas **Suivi** si le patient vient pour un autre problème : choisissez **Nouvelle**.
 - N'utilisez pas **Terminer →** pour un patient qui doit voir le médecin.
-- N'écrivez pas dans **📌 Note d'accueil** ce qui ne concerne que la visite du jour : utilisez **Mémo Réception**.
+- N'écrivez pas dans **📌 Note permanente du patient** ce qui ne concerne que la visite du jour : utilisez **Mémo Réception**.
 - Ne confirmez pas « Enregistrer une seconde visite ? » par habitude : regardez d'abord la file.
 
 ## Qui appeler

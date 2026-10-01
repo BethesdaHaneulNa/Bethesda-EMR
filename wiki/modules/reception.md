@@ -42,7 +42,7 @@
 | **Nouvelle (초진)** · **Suivi (재진)** · **Sans frais (진료비 없음)** | 내원구분 — 진료비 종류. EMR이 먼저 골라 두고, 맞지 않으면 누름(2.4) |
 | 창 안의 **Choisir ce patient (이 환자로)** · **Nouveau dossier quand même (그래도 새로 등록)** · **Annuler (취소)** | 같은 이름 환자가 있을 때 뜨는 창의 단추(2.2) |
 
-> 환자 인적사항(이름·생년월일·성별·전화·알레르기·접수과 메모 등)을 **고치면** 누가 무엇을 무엇으로 바꿨는지 뒤에서 기록됩니다(관리자만 설정 → 기록에서 봄). 화면에는 아무 표시가 없고, 처음 등록할 때나 고친 것이 없을 때는 기록되지 않습니다.
+> 환자 인적사항(이름·생년월일·성별·전화·알레르기·환자 메모 등)을 **고치면** 누가 무엇을 무엇으로 바꿨는지 뒤에서 기록됩니다(관리자만 설정 → 기록에서 봄). 화면에는 아무 표시가 없고, 처음 등록할 때나 고친 것이 없을 때는 기록되지 않습니다.
 
 ### 2.2 처음 온 환자 접수하기
 
@@ -83,7 +83,7 @@
 
 | 칸 | 뜻 |
 |---|---|
-| **📌 Note d'accueil (접수과 메모)** 노란 상자 | 늘 기억해야 할 사항(예: 보호자 동반 필요, 통역 필요). 오늘만이 아니라 **환자에게 계속** 붙어 다니며, 다음에 이 환자를 고르면 다시 보입니다 |
+| **📌 Note permanente du patient (환자 메모 — 늘 보임)** 노란 상자 | 늘 기억해야 할 사항(예: 보호자 동반 필요, 통역 필요). 오늘만이 아니라 **환자에게 계속** 붙어 다니며, 다음에 이 환자를 고르면 다시 보입니다 |
 | **N° dossier (차트번호)** | `26-00001` 처럼 연도 두 자리 + 그 해의 번호. **해가 바뀌면 1번부터**(2027년 첫 환자는 `27-00001`). **처음 저장할 때 자동으로** 생기고 고칠 수 없습니다. 진료·수납·약국·검사·영상 장비가 모두 이 번호로 환자를 찾습니다 |
 | **Nom (성)** · **Prénom (이름)** | 둘 다 있어야 저장됩니다 |
 | **Date de Naissance (생년월일)** | **AAAA (연도 4자리) · MM (월 2자리) · JJ (일 2자리)**. 칸이 차면 다음 칸으로 넘어갑니다. 예: `1990` `05` `03`. 날짜 전체를 **붙여넣어도** 세 칸으로 나뉩니다 — `19900503`, `1990-05-03`, `03/05/1990`(일/월/연 — 현지 쓰는 순서). **모르면 세 칸 모두 비워 둡니다** — 일부만 쓰면 저장되지 않습니다 |
@@ -98,7 +98,7 @@
 |---|---|
 | **Service / Médecin (진료과 / 담당의사)** | 의사를 고르면 진료과는 그 의사의 소속과로 **자동으로** 정해집니다(목록에 `SUR – Dr …` 처럼 과 약자가 앞에 붙음). 모르면 **—** 로 두어도 접수됩니다 |
 | **Type de Visite (내원구분)** | **Nouvelle (초진)** · **Suivi (재진)** · **Sans frais (진료비 없음)** 중 하나. 수납할 때 진료비가 이것으로 정해집니다(초진 C01, 재진 C02, 진료비 없음 0). **재진은 「같은 진료를 이어서 받는 것」** 입니다 — 두 번째 방문이라도 다른 병이면 초진입니다.<br>EMR이 먼저 골라 둡니다: 고른 의사의 진료과에 **전에 온 적이 있으면 Suivi**(아래에 「Déjà venu en GS : Suivi présélectionné…」 안내), 처음이거나 다른 과면 **Nouvelle**. 취소된 접수는 안 셉니다. **Sans frais** 는 저절로 골라지지 않습니다.<br>맞지 않으면 **단추를 눌러 바꾸세요.** 한 번 누른 값은 의사를 바꿔도 그대로 남습니다.<br>수납이 끝난 접수는 단추가 잠기고 「Déjà encaissé…」가 보입니다 — 수납 화면에서 바꿉니다 |
-| **Mémo Réception (접수 메모)** | 환자가 온 이유와 오늘 접수에 붙는 메모를 **한 칸에**(여러 줄). 의사 화면 · 대기 목록 · 내원 목록에 보입니다. 2026-10-01 전에는 「Motif (주호소)」와 「Mémo Réception」 두 칸이었음 — 옛 접수의 두 글은 이 칸에 줄을 바꿔 이어져 있습니다. 늘 필요한 내용은 위의 **Note d'accueil** 에 적습니다 |
+| **Mémo Réception (접수 메모)** | 환자가 온 이유와 오늘 접수에 붙는 메모를 **한 칸에**(여러 줄). 의사 화면 · 대기 목록 · 내원 목록에 보입니다. 2026-10-01 전에는 「Motif (주호소)」와 「Mémo Réception」 두 칸이었음 — 옛 접수의 두 글은 이 칸에 줄을 바꿔 이어져 있습니다. 늘 필요한 내용은 위의 **📌 Note permanente du patient (환자 메모)** 에 적습니다 |
 
 > 응급·의뢰는 따로 고르지 않습니다(실장님 결정 2026-09-29). 예전 접수에 응급·의뢰가 들어 있으면 단추 아래에 「Valeur actuelle : Urgence…」처럼 지금 값이 보이고, 단추를 누르면 그 값으로 바뀝니다.
 
@@ -290,7 +290,7 @@
 - **`reception_memo`**: 서버가 더 쓰지 않음(칸은 남김). 업데이트 전에 열어 둔 화면이 두 값을 같이 보내도 글이 사라지지 않게 `withMemo(complaint, memo)`(`visit.routes.js`)가 주호소 뒤에 줄을 바꿔 이어 붙임 — 같은 줄이 이미 있으면 다시 붙이지 않아, 그 화면이 여러 번 저장해도 한 번만.
 - **기존 자료**: `backend/sql/045_reception_memo_into_complaint.sql`. `reception_memo`에 글이 있는 내원마다 `chief_complaint` 뒤에 줄을 바꿔 붙이고(주호소가 비었으면 그 글만, 같은 줄이 이미 있으면 붙이지 않음) `reception_memo`를 비움 → 두 번 돌려도 한 번만. `updated_at`은 건드리지 않음. 두 칸 모두 TEXT라 길이 제한 없음.
 - **공용 키 `chiefComplaint`**(「주호소 / Chief Complaint / Motif」)는 이제 어느 화면도 쓰지 않음 — 지우지 않고 둠(공용 블록).
-- **헷갈릴 수 있는 이름**: 같은 양식 위쪽의 📌 칸(환자에 늘 붙는 `patient.reception_note`, 키 `receptionDeskNote`)이 「접수과 메모 / Reception note / Note d'accueil」 — 한국어 · 영어는 「접수 메모 / Reception Memo」와 거의 같음. 이름을 바꿀지는 총괄 · 실장님 결정(7절).
+- **양식 위쪽 📌 칸의 이름**(환자에 늘 붙는 `patient.reception_note`, 키 `receptionDeskNote`): 「환자 메모(늘 보임) / Patient note (always shown) / Note permanente du patient」(총괄 결정 2026-10-01). 전에는 「접수과 메모 / Reception note / Note d'accueil」라 한국어 · 영어에서 「접수 메모 / Reception Memo」와 거의 같았음. 설정의 기록 탭은 같은 칸을 자기 키 `se_fld_receptionNote`(「접수 메모 / Reception note / Note d'accueil」)로 부름 — 설정 세션 몫, 맞추지 않으면 기록 탭에서만 옛 이름.
 
 ### 환자 찾기 창 (`PatientFinder.jsx`, 공용)
 
@@ -383,7 +383,7 @@
 | `address` / `city` / `region` | TEXT / VARCHAR(100) | 화면 입력 칸 없음. 문서 양식은 `address`를 인쇄함 |
 | `blood_type` | VARCHAR(5) | 화면: A± B± AB± O± |
 | `allergies` | TEXT | 진료 화면에 빨간 경고로 뜸 |
-| `reception_note` | TEXT | 접수과 메모 (환자에 영구히 붙음) |
+| `reception_note` | TEXT | 환자 메모 — 환자에 영구히 붙음. 양식의 📌 칸(키 `receptionDeskNote`: 「환자 메모(늘 보임) / Patient note (always shown) / Note permanente du patient」, 2026-10-01 전에는 「접수과 메모 / Reception note / Note d'accueil」) |
 | `is_active` | BOOLEAN DEFAULT TRUE | 검색에서만 걸러냄. **끄는 곳이 없음** |
 | `created_at` / `updated_at` | TIMESTAMPTZ | |
 
@@ -544,4 +544,5 @@
 | 2026-10-01 | 전화 칸에 두 번호가 들어 있어도(37자) 환자 찾기 표와 같은 이름 확인 창에서 번호가 위아래 두 줄로 — 이름 칸이 좁아지지 않음. 검색 결과 목록에서 생년월일이 중간에서 끊기지 않음 (실장님이 시험 차트에 긴 전화번호를 넣으심) | `phoneLines()` · `phoneText()`(`PatientFinder.jsx`), `Registration.jsx` 두 곳 (3절 「긴 이름」) | `2da0abd` |
 | 2026-10-01 | 환자 찾기 표와 같은 이름 확인 창이 보이는 전화번호를 접수 양식이 고치는 번호와 같게(`phone` 먼저, 없으면 `mobile`) — 양식에서 고친 번호가 표에 안 보이는 일이 없게 (총괄 결정) | `PatientFinder.jsx` · `Registration.jsx` 각 한 줄 | `3d08332` |
 | 2026-10-01 | 접수의 「대기 취소」「← 대기로」「완료로 →」가 내원에 적힌 것으로 판정 — 진료 기록(또는 서류 · 영수)이 있는 내원은 취소도 대기로 되돌리기도 안 되고, 「완료로 →」는 진료비 없음으로 바꾸지 않으며 진료 기록을 같이 닫음(약국 순서가 찍힘). 판정과 완료는 진료 세션의 함수 그대로. 일반 저장으로 상태를 바꾸던 옆문을 닫음 (총괄 결정, 진료의 「열기만 해서는 진료 중이 아님」과 함께) | `PUT /visits/:id/status`(4절), `consult.visit.js`, `rc_hasRecordsNoCancel` · `rc_hasRecordsNoWaiting` · `rc_completeKeptType`, `rc_completeNoConsult` 문구, 시험 12건 | `cc52b9b` |
-| 2026-10-01 | 접수 양식의 「주호소」와 「접수 메모」를 「접수 메모」 한 칸으로(여러 줄). 글은 주호소 칸(`chief_complaint`)에 저장되어 대기 목록 · 내원 목록 · 진료 화면에 그대로 보임. 옛 접수 메모는 주호소 뒤에 줄을 바꿔 옮김 (실장님 결정) | `Registration.jsx`, `PatientFinder.jsx` 머리글, `withMemo()`, 마이그레이션 `045_reception_memo_into_complaint.sql`, 시험 5건 (3절 「접수 메모 한 칸」) | (이 커밋) |
+| 2026-10-01 | 접수 양식의 「주호소」와 「접수 메모」를 「접수 메모」 한 칸으로(여러 줄). 글은 주호소 칸(`chief_complaint`)에 저장되어 대기 목록 · 내원 목록 · 진료 화면에 그대로 보임. 옛 접수 메모는 주호소 뒤에 줄을 바꿔 옮김 (실장님 결정) | `Registration.jsx`, `PatientFinder.jsx` 머리글, `withMemo()`, 마이그레이션 `045_reception_memo_into_complaint.sql`, 시험 5건 (3절 「접수 메모 한 칸」) | `29f6bce` |
+| 2026-10-01 | 양식 위쪽 📌 칸의 이름을 「접수과 메모」 → 「환자 메모(늘 보임)」로(fr «Note permanente du patient», en "Patient note (always shown)") — 「접수 메모」 한 칸과 이름이 거의 같아 헷갈리던 것 (총괄 결정) | 공용 키 `receptionDeskNote`의 글, fr 안내 글자 `receptionDeskNoteHint` | (이 커밋) |
