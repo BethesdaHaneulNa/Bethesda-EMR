@@ -68,12 +68,14 @@ function ymd(d){
 // asks for that instead of showing a lock. Imaging since the PACS merge (decision 38-3):
 // the server cancels its worklist entry with it. A procedure with nothing to do with
 // the devices keeps the lock.
-// An imaging exam is an order of type imaging OR any order that went to the device
-// worklist - an endoscopy or a rectoscopy is a procedure with a modality, and its images
-// arrive like an X-ray's (PACS treats it so: pacs.routes.js isExam). Before 2026-10-01
-// only the type was looked at, so such an order with images could be neither deleted
-// (it has a result) nor cancelled.
-function isImagingOrder(o){ return o.code_type==='imaging' || !!o.worklist_sent_at; }
+// An imaging exam is an order of type imaging OR any order with an imaging modality - an
+// endoscopy or a rectoscopy is a procedure with a modality, and its images arrive like an
+// X-ray's. The same words as the image button below and as PACS (pacs.routes.js isExam,
+// bfd8804): whatever opens in the image window and takes a reading is an imaging order
+// here too - also one whose order code has the worklist switched off. Before 2026-10-01
+// only the type was looked at, so such an order with images or a reading could be
+// neither deleted (it has a result) nor cancelled.
+function isImagingOrder(o){ return o.code_type==='imaging' || !!o.pacs_modality; }
 function cancellable(o){ return (o.code_type==='lab' || isImagingOrder(o)) && o.status!=='cancelled' && orderLocked(o); }
 
 // A quantity or dose as the database returns it ("1.000", DECIMAL(10,3)) is shown without
@@ -1056,7 +1058,9 @@ export default function ConsultationPage() {
   // Cancel/Esc does nothing. The text says what happens to the result (for imaging: the
   // images, the reading and the device worklist) and to a bill already paid.
   async function cancelOrder(o){
-    var promptText = isImagingOrder(o) ? t.cs_cancelPromptImg : t.cs_cancelPrompt;
+    // An imaging order that never went to a device list (worklist off for its code) has a
+    // reading and nothing else: its sentence does not speak of images or of the worklist.
+    var promptText = !isImagingOrder(o) ? t.cs_cancelPrompt : o.worklist_sent_at ? t.cs_cancelPromptImg : t.cs_cancelPromptRead;
     var reason = window.prompt(String(promptText||'').replace('{name}', o.order_name||''), '');
     if(reason === null) return;
     try {

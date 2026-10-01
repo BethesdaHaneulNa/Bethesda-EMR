@@ -2,6 +2,25 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「영상 오더」의 뜻을 PACS와 글자 그대로 (영상 종류가 있는 오더)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `a6284f7` 다음
+- **읽어 본 것** (영상 종류 있음 + 워크리스트 꺼짐 + 판독이 쓰인 오더):
+  - 그 오더는 `worklist_sent_at`이 없고 `worklist_status`는 처음부터 `completed`. 판독이 쓰이면 `orderLocked`(판독 = 결과) → 앞 커밋의 `isImagingOrder`(워크리스트로 간 오더)로는 영상 오더가 아니어서 **🔒 — 지울 수도 취소할 수도 없었습니다**.
+  - 서버는 판독이 있으면 삭제를 거절(`Order already has a result`)하고 취소는 받습니다(`orderProduced` — 종류를 보지 않음). 그러니 화면만 맞추면 됩니다.
+- **한 일**:
+  - `isImagingOrder(o)` = `code_type==='imaging' || !!pacs_modality` — PACS의 `isExam`, 이 화면의 🖼 조건과 같은 글자. 영상 창이 열리고 판독을 쓸 수 있는 오더는 모두 영상 오더로 취소됩니다.
+  - 취소 문장을 경우에 맞게: 워크리스트로 간 오더는 전의 `cs_cancelPromptImg`(영상·판독·「아직 촬영 전이면 장비 목록에서 빠짐」), **워크리스트로 가지 않은 오더는 새 `cs_cancelPromptRead`** — 「이미 판독이 있어 … 판독은 기록으로 남고 영상 창에서 계속 볼 수 있음, 청구에서 빠짐」(영상·장비 목록 말 없음). ko·en·fr.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(`cs_cancelPromptRead`) · `wiki/modules/consultation.md`(3.1·8) · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 더함 `cs_cancelPromptRead`
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768 FR. 오더 코드 E2 Colonoscopy(`procedure`, modality ES)의 워크리스트를 격리 DB에서 끄고 오더 둘 — 하나에 판독을 저장(`PUT /pacs/reading` 200).
+  - 판독이 있는 줄: ✕(«A un résultat - cliquer pour le marquer comme annulé»), WL 칸은 🖼만(워크리스트 상태 글자 없음). 누르면 «« Colonoscopy » a déjà un compte-rendu et ne peut pas être retiré. … Le compte-rendu reste au dossier … la demande sort de la facture. …» → 사유 → ⊘ «Annulé — Erreur de patient». DB `cancelled`, 판독 그대로, 기록 `consultation.order.cancel` 1줄.
+  - 판독이 없는 줄: 잠기지 않아 ✕는 지우기 그대로.
+  - 앞 보고의 E1(워크리스트로 간 시술)은 그대로 영상 문장(`cs_cancelPromptImg`) — 같은 화면에서 확인.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 장비로 가는 시술 오더를 영상 오더처럼 · 판독 보고서 다시 인쇄의 제목
 
 - **상태**: 확인 요청
