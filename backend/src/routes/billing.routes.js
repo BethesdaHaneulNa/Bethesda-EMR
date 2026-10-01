@@ -165,6 +165,28 @@ async function consultPrices(db) {
   return out;
 }
 
+// Counter fees saved on a visit and not billed yet (billing_saved_fee, the director
+// 2026-10-01: "a Save button - one may have to wait instead of confirming right away").
+// Not money until a receipt is made: POST / turns the lines into billing_item rows and
+// deletes them here in the same transaction. A visit with saved lines has something to
+// bill, so GET /pending lists it - as a supplement when it already has a receipt.
+// price_editable is the code's flag now (the screen opens the amount box by it); the
+// amount is the one saved.
+const SAVED_CHANGED = 'SAVED_FEES_CHANGED';
+async function savedFees(db, visitId) {
+  const r = await db.query(
+    `SELECT f.id, f.order_code_id, f.item_code, f.item_name, f.quantity, f.unit_price, f.saved_at,
+            s.name AS saved_by_name, COALESCE(oc.price_editable, FALSE) AS price_editable
+       FROM billing_saved_fee f
+       LEFT JOIN staff s ON s.id = f.saved_by
+       LEFT JOIN order_code oc ON oc.id = f.order_code_id
+      WHERE f.visit_id = $1 ORDER BY f.id`,
+    [visitId]
+  );
+  return r.rows;
+}
+function intList(v) { return (Array.isArray(v) ? v : []).map(function (x) { return parseInt(x, 10); }).filter(function (x) { return Number.isInteger(x); }).sort(function (a, b) { return a - b; }); }
+
 // Something to bill on a visit: a consultation fee, a drug given here or an order.
 // A visit reception closed without a consultation ('none', no lines) has nothing.
 function HAS_CHARGES_SQL(visitRef) {
@@ -191,7 +213,10 @@ router.get('/pending', canPay, async (req, res) => {
            COALESCE((SELECT SUM(b.consult_fee+b.drug_total+b.procedure_total) FROM billing b WHERE b.visit_id=v.id AND b.payment_status<>'cancelled'),0)
            - COALESCE((SELECT SUM(bi.total_price) FROM billing_item bi JOIN billing b ON b.id = bi.billing_id
                         WHERE b.visit_id=v.id AND b.payment_status<>'cancelled' AND ${counterFeeCond('bi', 'v.id')}),0) AS billed_total,
-           EXISTS(SELECT 1 FROM billing b2 WHERE b2.visit_id=v.id AND b2.payment_status<>'cancelled') AS has_active_bill
+           EXISTS(SELECT 1 FROM billing b2 WHERE b2.visit_id=v.id AND b2.payment_status<>'cancelled') AS has_active_bill,
+           -- counter fees saved at the till and not billed yet (billing_saved_fee)
+           (SELECT COUNT(*)::int FROM billing_saved_fee sf WHERE sf.visit_id=v.id) AS saved_count,
+           COALESCE((SELECT SUM(sf.quantity*sf.unit_price) FROM billing_saved_fee sf WHERE sf.visit_id=v.id),0)::numeric(12,2) AS saved_total
          FROM visit v WHERE v.status='completed'
        )
        SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
@@ -208,9 +233,13 @@ router.get('/pending', canPay, async (req, res) => {
        GREATEST(${HELD_SQL('v.id')}, 0) as prior_paid,
        ${MISSING_QTY_SQL('v.id')} as missing_qty,
        (v.visit_date < CURRENT_DATE AND NOT EXISTS (SELECT 1 FROM billing bp WHERE bp.visit_id = v.id)) as past_unbilled,
-       (l.has_active_bill AND (l.live_total - l.billed_total) > 0.01) as needs_additional,
+       -- a billed visit with saved counter fees is a supplement too - unless items were
+       -- removed (needs_refund): the correction comes first, the saved lines wait
+       (l.has_active_bill AND (l.billed_total - l.live_total) <= 0.01
+         AND ((l.live_total - l.billed_total) > 0.01 OR l.saved_count > 0)) as needs_additional,
        (l.has_active_bill AND (l.billed_total - l.live_total) > 0.01) as needs_refund,
-       GREATEST(l.live_total - l.billed_total, 0) as extra_due,
+       GREATEST(l.live_total - l.billed_total, 0) + l.saved_total as extra_due,
+       l.saved_count as saved_fee_count, l.saved_total as saved_fee_total,
        GREATEST(l.billed_total - l.live_total, 0) as refund_due,
        (SELECT id FROM billing WHERE visit_id = v.id AND payment_status <> 'cancelled' ORDER BY created_at DESC, id DESC LIMIT 1) as active_bill_id,
        COALESCE((SELECT SUM(net_paid) FROM billing WHERE visit_id = v.id AND payment_status <> 'cancelled'),0) as active_paid
@@ -231,12 +260,14 @@ router.get('/pending', canPay, async (req, res) => {
          -- till. Only when there is something to bill.
          OR ( v.visit_date < CURRENT_DATE
               AND NOT EXISTS (SELECT 1 FROM billing bn WHERE bn.visit_id = v.id)
-              AND ${HAS_CHARGES_SQL('v')} )
+              AND (${HAS_CHARGES_SQL('v')} OR l.saved_count > 0) )
          OR ( EXISTS (SELECT 1 FROM billing bc WHERE bc.visit_id = v.id AND bc.payment_status = 'cancelled')
               AND NOT EXISTS (SELECT 1 FROM billing ba WHERE ba.visit_id = v.id AND ba.payment_status <> 'cancelled') )
          OR ( l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01 )
+         -- saved counter fees on a visit that already has its receipt: a supplement to take
+         OR ( l.has_active_bill AND l.saved_count > 0 )
        )
-       ORDER BY (l.has_active_bill AND ABS(l.live_total - l.billed_total) > 0.01) DESC, needs_rebill DESC, v.visit_date DESC, v.updated_at DESC`
+       ORDER BY (l.has_active_bill AND (ABS(l.live_total - l.billed_total) > 0.01 OR l.saved_count > 0)) DESC, needs_rebill DESC, v.visit_date DESC, v.updated_at DESC`
     );
     // M8 (2026-09-29): a visit flagged for correction shows what the correction will
     // actually do - money back, balance left, or no money difference - worked out by
@@ -372,9 +403,89 @@ router.get('/visit/:visitId/items', canPay, async (req, res) => {
       // consultation fee per code, from the one place the list and the correction read (L2)
       consult_prices: await consultPrices(pool),
       // what the screen is billing against; POST / refuses if this has changed
-      active_bill_ids: await activeBillIds(pool, req.params.visitId)
+      active_bill_ids: await activeBillIds(pool, req.params.visitId),
+      // counter fees saved for this visit and not billed yet
+      saved_fees: await savedFees(pool, req.params.visitId)
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/billing/visit/:visitId/saved-fees - the counter fees kept on a visit until its
+// receipt is made. The body carries the whole list as the screen shows it:
+//   items [{ id?, order_code_id, unit_price }]  - id: a line already saved, kept
+//   expected_saved_ids [...]                     - the saved lines the screen had loaded
+// Lines saved before and not in the list are removed. A new line must be an active fee
+// code other than the consultation codes; its name and code come from the code table.
+// Amount: what was typed when the code's amount may be changed at the till (> 0), else the
+// code's price for a new line and the saved amount for a kept one. If another screen
+// changed the saved lines meanwhile nothing is written (409).
+router.put('/visit/:visitId/saved-fees', canPay, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const visitId = parseInt(req.params.visitId, 10);
+    const items = Array.isArray(req.body.items) ? req.body.items : null;
+    if (!items || !Array.isArray(req.body.expected_saved_ids)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'items and expected_saved_ids are required' });
+    }
+    const vr = await client.query('SELECT patient_id, status FROM visit WHERE id = $1', [visitId]);
+    if (!vr.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
+    if (vr.rows[0].status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'VISIT_CANCELLED: this visit was cancelled at reception' });
+    }
+    await lockPatient(client, vr.rows[0].patient_id);
+    const now = await savedFees(client, visitId);
+    if (now.map(function (x) { return x.id; }).join(',') !== intList(req.body.expected_saved_ids).join(',')) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: SAVED_CHANGED + ': the saved lines of this visit were changed on another screen' });
+    }
+    const byId = {};
+    now.forEach(function (x) { byId[x.id] = x; });
+    const keep = [], add = [];
+    for (const it of items) {
+      const kept = it && it.id != null ? byId[parseInt(it.id, 10)] : null;
+      if (it && it.id != null && !kept) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: SAVED_CHANGED + ': the saved lines of this visit were changed on another screen' });
+      }
+      const codeId = kept ? kept.order_code_id : parseInt(it && it.order_code_id, 10);
+      const code = codeId ? (await client.query('SELECT id, code, name, code_type, price, price_clinic, price_editable, is_active FROM order_code WHERE id = $1', [codeId])).rows[0] : null;
+      if (!kept && (!code || !code.is_active || code.code_type !== 'fee' || CONSULT_CODES.includes(code.code))) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'not a counter fee code' });
+      }
+      let price;
+      if (code && code.price_editable) {
+        price = parseFloat(it.unit_price);
+        if (!isFinite(price) || price <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'FEE_AMOUNT_MISSING: ' + (kept ? kept.item_name : code.name) });
+        }
+      } else {
+        price = kept ? Number(kept.unit_price) : (Number(code.price_clinic != null ? code.price_clinic : code.price) || 0);
+      }
+      if (kept) keep.push({ id: kept.id, unit_price: price, changed: Math.abs(price - Number(kept.unit_price)) > 0.005 });
+      else add.push({ order_code_id: code.id, item_code: code.code, item_name: code.name, unit_price: price });
+    }
+    await client.query('DELETE FROM billing_saved_fee WHERE visit_id = $1 AND NOT (id = ANY($2::int[]))', [visitId, keep.map(function (k) { return k.id; })]);
+    for (const k of keep) {
+      if (k.changed) await client.query('UPDATE billing_saved_fee SET unit_price = $2, saved_by = $3, saved_at = NOW() WHERE id = $1', [k.id, k.unit_price, req.user.id]);
+    }
+    for (const a of add) {
+      await client.query('INSERT INTO billing_saved_fee (visit_id, order_code_id, item_code, item_name, quantity, unit_price, saved_by) VALUES ($1,$2,$3,$4,1,$5,$6)',
+        [visitId, a.order_code_id, a.item_code, a.item_name, a.unit_price, req.user.id]);
+    }
+    const out = await savedFees(client, visitId);
+    await client.query('COMMIT');
+    res.json({ saved_fees: out });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // POST /api/billing - create billing record
@@ -385,7 +496,7 @@ router.post('/', canPay, async (req, res) => {
     const { visit_id, patient_id, consult_fee, drug_total, procedure_total, subtotal,
             discount_amount, discount_type, discount_value, previous_balance, total_due,
             amount_paid, change_amount, outstanding, payment_status, note, items,
-            expected_active_bill_ids } = req.body;
+            expected_active_bill_ids, saved_fee_ids } = req.body;
 
     // A receipt is a financial record, so refuse impossible figures here rather
     // than storing them. The payment screen already clamps these, but a stale
@@ -493,6 +604,19 @@ router.post('/', canPay, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: BILL_CHANGED + ': this visit was billed while the screen was open' });
     }
+    // The saved counter-fee lines the screen had loaded for this visit (billing_saved_fee):
+    // they go with this receipt - billed if the cashier left them on the bill, dropped if
+    // the cashier took them off - and are deleted below. If one of them is no longer there,
+    // another screen changed them and what this screen showed is stale: nothing is written.
+    // Lines saved elsewhere that this screen never loaded are not in the list and stay.
+    const savedIds = intList(saved_fee_ids);
+    if (savedIds.length) {
+      const have = await client.query('SELECT id FROM billing_saved_fee WHERE visit_id = $1 AND id = ANY($2::int[])', [visit_id, savedIds]);
+      if (have.rows.length !== savedIds.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: SAVED_CHANGED + ': the saved lines of this visit were changed on another screen' });
+      }
+    }
     // The previous balance must still be there to carry. If another bill already
     // absorbed it, adding it again would charge the same debt twice.
     const carriedIn = parseFloat(previous_balance) || 0;
@@ -535,6 +659,7 @@ router.post('/', canPay, async (req, res) => {
       }
       await stampPackLabels(client, billing.id, visit_id);
     }
+    if (savedIds.length) await client.query('DELETE FROM billing_saved_fee WHERE visit_id = $1 AND id = ANY($2::int[])', [visit_id, savedIds]);
 
     // Absorb the carried-forward balance. `previous_balance` was added to this
     // bill's total_due, so the older bills it came from must stop carrying it —

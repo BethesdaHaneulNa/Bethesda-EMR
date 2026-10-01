@@ -75,6 +75,12 @@
    - 금액 칸을 비우거나 0으로 두면 수납이 되지 않습니다(「Montant manquant pour : Document Fee…」) — 금액을 넣거나 **✕** 로 줄을 지웁니다.
    - 진단서(Medical Certificate) · CD(CD Copy)는 설정의 금액 그대로이고 여기서 고칠 수 없습니다.
    - **항목을 더하거나 금액을 바꾸는 곳**: **Paramètres (설정) → Codes d’actes (오더 코드)** 에서 종류 **Frais (진료비)** 를 고르면 진료비 C01~C04와 함께 CDR · CERT · DOC 가 있습니다. 새 발급비는 거기서 **종류 = Frais** 로 추가하면 수납의 **+ Ajouter** 에 나옵니다.
+   - **💾 Enregistrer (저장)** — 발급/기타에 넣은 줄을 **수납 확정 없이 그 내원에 남겨 둡니다**(2026-10-01, 실장님 요청: 「추가해 놓고 바로 확정이 아니라 기다릴 수도 있다」). 줄을 더하거나 빼거나 금액을 고치면 노란 「Non enregistré — cliquez sur Enregistrer…(저장 안 됨)」과 함께 단추가 켜지고, 누르면 「✓ Enregistré · 16:47 · 이름(저장됨)」으로 바뀝니다.
+     - 저장한 줄은 다른 환자를 보다 돌아와도, **다른 PC에서 열어도** 그대로 있습니다. 저장하지 않은 줄은 전처럼 다른 환자로 가면 사라집니다.
+     - 저장한 것은 **돈이 아닙니다**: 영수증 · 미수 · 금고 · 통계 어디에도 없습니다. **Confirmer / Impayé** 를 누를 때 그 영수증에 들어가고, 저장된 것은 지워집니다(두 번 청구되지 않음).
+     - 빼려면 그 줄의 **✕** 를 누르고 다시 **Enregistrer**.
+     - 저장되는 것은 발급/기타 줄과 고친 금액뿐입니다. 진료 종류 · 할인 · 받은 금액은 수납할 때 정합니다.
+     - **이미 수납이 끝난 환자**에게 저장하면 그 내원이 수납 대기 목록에 **Supplément (추가 청구)** 로 다시 뜹니다(받을 것이 생겼으므로).
 5. 할인이 있으면 **Remise (할인)** 칸에 **금액**을 넣습니다.
 6. **Montant Reçu (받은 금액)** 칸에 환자가 낸 돈을 넣습니다. 아래 버튼 **Exact (정확히)** 는 총액 그대로, **5,000 · 10,000 · 20,000 · 50,000** 은 그 금액을 넣습니다.
 7. 위쪽 초록 버튼 **Confirmer (수납 확정)** 를 누릅니다.
@@ -114,7 +120,8 @@
 | 표시 | 뜻 | 할 일 |
 |---|---|---|
 | **En Attente (대기)** | 아직 수납하지 않음 | 2.2 보통 수납 |
-| **Supplément (추가 청구)** + `➕ Charge suppl.: N Ar` | 수납한 뒤에 진료실이 약·검사를 더함 | 2.5 |
+| **Supplément (추가 청구)** + `➕ Charge suppl.: N Ar` | 수납한 뒤에 진료실이 약·검사를 더함, 또는 수납이 끝난 내원에 창구에서 발급비를 **저장**해 둠 | 2.5 |
+| `📎 N frais enregistré(s) · N Ar` (발급 N건 저장됨) | 그 내원에 저장해 둔 발급비가 있음(아직 청구 전) | 열어서 수납하거나, 필요 없으면 줄을 ✕ 로 빼고 저장 |
 | **Correction (정정)** + 아래 중 한 줄 | 수납한 뒤에 약·검사가 줄었거나, 같은 내원에 영수증이 두 장. 창구에서 받은 발급비(진단서·CD 등)는 이 판정에 들어가지 않습니다. 줄의 금액은 정정 화면과 **같은 계산**입니다: `↩ À rembourser: N Ar`(돌려줄 돈) · `↩ Reste impayé: N Ar`(정정 뒤 남을 미수 — 돌려줄 돈 없음) · `↩ Sans différence d’argent`(영수증만 새로) · `↩ Ouvrir pour voir la correction`(정정이 막힌 경우 — 눌러서 안내 확인) | 2.6 |
 | 노란 `📅 날짜 · visite d’un jour passé · pas encore encaissée` | **지난 날** 진료했는데 아직 한 번도 수납하지 않은 내원 — 접수가 작업일자로 어제 남은 내원을 오늘 정리한 경우 등. **◀ 로 그날을 고르면** 그날 목록에 보임(오늘 목록에는 없음) | 2.2 보통 수납. 영수증은 오늘 날짜 |
 | 노란 `📅 날짜`(추가 청구 · 정정 줄 아래) | 지난 날짜를 골라 보고 있음 — 그 줄의 내원이 오늘 것이 아님 | 표시만 — 처리는 같음 |
@@ -418,8 +425,9 @@
 | `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 **유효(취소 안 된) 영수가 없는** 내원(L7 — 부분·미수 영수가 있어도 빠짐) + **지난 날 내원 중 영수가 한 장도 없고 청구할 것이 있는 것**(진료비 있음, 원내 처방이나 취소 안 된 오더 있음 — `HAS_CHARGES_SQL`, 2026-09-29 접수 작업일자) + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `missing_qty`, `past_unbilled`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid`, 정정 표시된 줄에는 `corr` |
 | `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함**. 줄마다 `replaced_by_receipt_no`(정정으로 바뀐 영수면 새 영수번호 — 「바뀜」과 「취소」를 나눔), `carried_into_receipt_no`(미수가 넘어간 영수) |
 | `GET /:billingId/detail` | 영수 1장 + `billing_item` + `carried_from`(이 영수가 미수를 넘겨받은 옛 영수: `receipt_no` · `billing_date` · `amount`). 영수에는 `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date` · `replaced_by_receipt_no`도 붙음(영수증용, 2026-09-29) |
-| `GET /visit/:visitId/items` | 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 진료비 `consult_prices`(`{C01: 15000, …}`, 행이 있는 코드만), 살아 있는 영수 id `active_bill_ids` |
-| `POST /` | 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
+| `PUT /visit/:visitId/saved-fees` | 발급비 줄을 영수증 없이 내원에 저장(위 「저장해 둔 발급비」). 409 `SAVED_FEES_CHANGED` · `VISIT_CANCELLED`, 400 `FEE_AMOUNT_MISSING` |
+| `GET /visit/:visitId/items` | (+ `saved_fees` — 저장해 둔 발급비) 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 진료비 `consult_prices`(`{C01: 15000, …}`, 행이 있는 코드만), 살아 있는 영수 id `active_bill_ids` |
+| `POST /` | (`saved_fee_ids` — 이 영수가 가져가는 저장 줄, 같은 트랜잭션에서 지움) 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
 | `GET /patient/:patientId/history?from&to` | 환자의 모든 영수(취소 포함). `replaced_by_receipt_no`, `carried_into_receipt_no` 같이 |
 | `PUT /:billingId/void` | 영수 취소 `{reason, refunded}` — 받은 돈이 있으면 `refunded`(true/false) 필수, 없으면 400. 이미 취소됐으면 404 (3.5) |
 | `GET /visit/:visitId/correction` | 정정하면 기록될 새 영수 미리보기 (DB는 안 바꿈). `items`, `subtotal`, `discount_amount`, `previous_balance`, `total_due`, `paid_so_far`, `refund`, `outstanding`, `payment_status`, `active_bill_ids`, `replaces`, **`changes`**(바뀌는 줄마다 `item_name`·`item_code`·`item_type`·`pack_label`·`qty_before`→`qty_after`·`amount_before`→`amount_after`·`difference`·`cancelled_order` — 진료실이 취소한 오더면 true; 차액 합 = −환불 또는 +미수 변화, 2026-09-29 통합 시험 B3). 약 줄 `items`에 `pack_label`. 이월된 영수면 409 `BILL_CARRIED` |
@@ -428,6 +436,18 @@
 | `POST /settle` | 미수 수납 `{bill_ids, amount, expected_outstanding}` → 오늘 날짜의 새 영수(3.4). 예전 `POST /:id/pay`는 2026-09-29 삭제 |
 
 그 밖에 수납 화면이 부르는 것: `GET /api/admin/order-codes?code_type=fee`(발급비 목록 — 사용 중인 코드만. 진료비는 여기서 읽지 않음), `PUT /api/visits/:id`(진료 종류 저장).
+
+### 저장해 둔 발급비 — `billing_saved_fee` (2026-10-01, 실장님 요청 · 결정 「둘 다 제안대로」)
+
+- **무엇**: 수납 창구에서 발급/기타에 넣은 줄을 영수증을 만들기 전까지 그 내원에 남겨 두는 표(마이그레이션 306 — 세션 번호). 한 줄 = 발급비 한 줄(`visit_id`, `order_code_id`, `item_code`, `item_name`, `quantity`, `unit_price`, `saved_by`, `saved_at`).
+- **돈이 아님**: 영수 · 미수 · 현금 기록 · 통계는 이 표를 읽지 않습니다. `POST /`가 영수증을 만들 때 화면이 넘긴 `saved_fee_ids`의 줄을 **같은 트랜잭션에서 지웁니다**. 화면은 자기가 불러온 저장 줄 전부를 넘깁니다 — 영수증에 넣은 것은 청구되고, 수납 직원이 ✕로 뺀 것은 청구 없이 지워집니다.
+- **저장** `PUT /visit/:visitId/saved-fees` `{items:[{id?, order_code_id, unit_price}], expected_saved_ids}` — 화면의 목록 전체로 바꿔 씁니다. 새 줄은 살아 있는 fee 코드여야 하고(진료비 C01~C04 · 다른 종류 · 지운 코드는 400), 이름 · 코드는 코드 표에서 가져옵니다. 금액은 **금액을 고칠 수 있는 코드면 친 금액(0 · 빈칸은 400 `FEE_AMOUNT_MISSING`), 아니면 새 줄은 코드의 금액 · 있던 줄은 저장된 금액 그대로**(화면이 보낸 값은 쓰지 않음). 취소된 내원은 409 `VISIT_CANCELLED`.
+- **두 화면**: `expected_saved_ids`가 서버의 것과 다르면 409 `SAVED_FEES_CHANGED`(저장), `POST /`도 넘긴 줄이 하나라도 없으면 같은 409 — 아무것도 쓰지 않고 화면이 지금 저장된 것을 다시 보여 줍니다. 저장 전에 내원을 열어 둔 화면이 저장 줄을 모르는 채 확정하면 그 영수에는 안 들어가고 **저장 줄은 남아** 그 내원이 「추가 청구」로 보입니다. 같은 내원을 두 번 확정하는 것은 전처럼 `BILL_CHANGED`가 막습니다.
+- **수납 대기 목록**(`GET /pending`): 저장 줄이 있는 내원은 「청구할 것이 있는」 내원입니다 — 지난 날 내원이 진료비 · 약 · 오더가 없어도 뜨고, 영수가 있는 내원은 `needs_additional`(추가 청구)로 뜨며 `extra_due`에 저장 금액이 더해집니다. 줄마다 `saved_fee_count` · `saved_fee_total`. **정정이 걸린 내원은 정정이 먼저**입니다(`needs_refund`가 참이면 `needs_additional`은 거짓 — 정정한 뒤 추가 청구로 바뀜). 저장 줄이 없을 때의 결과는 전과 같습니다(같은 자료 41줄로 앞뒤 비교).
+- **설정이 나중에 바뀌면**: 저장 줄은 저장할 때의 금액을 지닙니다(처방 줄이 처방 때 가격을 지니는 것과 같음). 코드의 금액을 바꿔도, 「수납에서 금액을 고칠 수 있음」을 꺼도 저장된 금액은 그대로이고, 끈 뒤에는 그 줄의 금액 칸이 닫힙니다. 줄을 빼고 다시 넣으면 새 금액입니다.
+- **내원이 취소되거나 날짜가 넘어가면**: 저장 줄은 내원에 남습니다. 취소된 내원은 목록에 안 뜨고 수납도 저장도 안 됩니다. 날짜가 넘어가면 그 내원은 **그 날짜의** 대기 목록에 있습니다(◀) — 저녁에 대기를 비울 때 수납(미수 처리)하거나 줄을 뺍니다(2.1). 내원을 지우면 같이 지워집니다.
+- **로그**: 저장 · 빼기는 변경 기록에 남기지 않습니다. 줄마다 누가 · 언제 저장했는지(`saved_by` · `saved_at`)가 있고, 무엇을 받았는지는 영수증이 기록입니다(총괄과 같은 판단).
+- 화면: `Payment.jsx` `savedFees` · `takeSaved` · `feesDirty` · `saveFees` · `savedStamp`.
 
 ### 발급비 금액을 수납에서 고치기 (2026-10-01, 실장님 요청)
 
@@ -442,6 +462,7 @@
 내원 하나를 **수납 화면이 하는 그대로** 수납하는 스크립트입니다(시험 차트를 여러 상태로 만들 때). 화면(`Payment.jsx`)의 계산 — 항목 만들기(`chargeRows`) · 할인 · 이월 · 총액 · 거스름돈 · 상태 — 을 그대로 옮겨, 같은 본문을 같은 경로(`POST /billing` · `/correct` · `/void` · `/settle`)로 보냅니다. DB에 직접 쓰지 않습니다. **화면의 계산을 바꾸면 이 파일도 같이 바꿉니다.**
 
 - 실행: api 컨테이너 안에서 `node pay-visit.js <visit_id> <mode> [값] [옵션]`. 관리자(또는 `--as=login_id`) 토큰을 스스로 만듭니다.
+- 저장해 둔 발급비는 화면처럼 청구에 들어갑니다(모든 수납 mode). `save-fee CODE[:금액][,CODE…]`가 화면의 「저장」(`save-fee none`은 다 빼기).
 - mode: `paid`(Exact 후 확정) · `partial <받은 돈>` · `overpay <받은 돈>`(거스름돈) · `unpaid`(미수 처리) · `discount <금액|n%> [paid|partial …|overpay …|unpaid]` · `correct`(정정 적용) · `void <billing_id> <refunded|kept> [사유]` · `settle`(그 환자의 미수 전부, 내원마다 영수 한 장) · `settle-bill <billing_id> [금액]` · `show`(쓰지 않고 보기만).
 - 옵션: `--type=newVisit|followUp|none`(진료 종류 고르기) · `--fee=CERT,CDR`(창구 발급비) · `--fee=DOC:3000`(금액을 고칠 수 있는 발급비에 친 금액 — 다른 코드에는 거절) · `--yes-zero-price`(「가격 없는 항목 — 그래도 수납?」에 예) · `--as=` · `--port=`.
 - 이미 수납한 내원에 항목이 늘었으면 같은 명령으로 **추가분만** 청구됩니다(Supplément). 영수증을 취소한 내원도 같은 명령으로 재수납됩니다.
@@ -501,6 +522,7 @@
 | `033_payment_cancel_refund.sql` | `billing.refunded_amount` · `replaced_by_id` — 취소 때 돌려줬는지, 정정으로 대체됐는지(M6). 옛 정정은 새 영수 비고로 채움. 금액 변경 없음 |
 | `031_payment_item_pack_label.sql` | `billing_item.pack_label` — 영수증의 「2 flacons」. 옛 영수 줄은 처방에서 채움(실행 중 EMR은 표시된 약이 없어 0줄). 금액 변경 없음 |
 | `047_payment_fee_price_editable.sql` | `order_code.price_editable` — TRUE인 발급비는 수납 화면에서 금액을 고칠 수 있음. `DOC`만 TRUE. 이미 있는 영수 · 금액은 바뀌지 않음 |
+| `306_payment_saved_fee.sql`(세션 번호 — 총괄이 048로) | **`billing_saved_fee`** — 수납 확정 전에 내원에 저장해 둔 발급비 줄. 돈이 아님(영수 · 현금 기록과 무관). 기존 자료는 바뀌지 않음 |
 
 ## 5. 다른 모듈과의 연결
 
@@ -636,4 +658,5 @@
 | 2026-10-01 | 시험 자료용: 내원 하나를 화면이 하는 그대로 수납하는 스크립트(총괄 부탁 — 실장님 「시험 차트 30개로 모든 상황을」) | `wiki/reference/tools/pay-visit.js`, 위키 4절 | `9600bd5` |
 | 2026-10-01 | Document Fee 줄의 금액을 수납 화면에서 바로 고침(실장님 요청) — 다른 발급비는 설정의 금액 그대로 | 마이그레이션 047(세션 번호 305) `order_code.price_editable`, `Payment.jsx` 발급/기타 줄, `py_feeAmount*`, `pay-visit.js` `--fee=CODE:금액`, 위키 2.2 · 2.3 · 4 · 7절, 프랑스어 설명서 §2 | `1e4fe87` |
 | 2026-10-01 | 금액 칸에 치는 숫자가 「6,000」으로 보임(발급비 · 할인 · 받은 금액 · 미수 수납 창) · 고친 발급비 옆의 줄 그은 기본 금액을 뺌(실장님 요청) | `Payment.jsx` `MoneyInput` · `moneyText` · `moneyRaw`, `py_feeListPrice` 지움, 위키 2.2 · 2.3 · 4절, 프랑스어 설명서 §2 | `b4858ec` |
-| 2026-10-01 | 도구 줄에 「🧪 검사결과」 — 수납에서 검사 결과지를 뽑음(실장님 요청) · 도구 줄이 화면보다 길면 단추의 그림 문자를 뺌 | `Payment.jsx` `labOpen` · `toolsTight`, 임상병리의 `LabResultsWindow`를 엶, 위키 2.1 · 4절, 프랑스어 설명서 §1 · §15 | (이 커밋) |
+| 2026-10-01 | 도구 줄에 「🧪 검사결과」 — 수납에서 검사 결과지를 뽑음(실장님 요청) · 도구 줄이 화면보다 길면 단추의 그림 문자를 뺌 | `Payment.jsx` `labOpen` · `toolsTight`, 임상병리의 `LabResultsWindow`를 엶, 위키 2.1 · 4절, 프랑스어 설명서 §1 · §15 | `3236c06` |
+| 2026-10-01 | 발급/기타에 「저장」 — 넣은 줄을 수납 확정 없이 내원에 남김, 다른 PC에서도 보임, 영수증에 들어갈 때 지워짐 · 수납이 끝난 내원에 저장하면 「추가 청구」로 다시 뜸(실장님 요청 · 결정) | 마이그레이션 306 `billing_saved_fee`, `PUT /visit/:id/saved-fees`, `POST /`의 `saved_fee_ids`, `GET /pending`의 판정, `Payment.jsx` 저장 단추, `pay-visit.js` `save-fee`, 위키 2.2 · 2.4 · 4절, 프랑스어 설명서 §2 · §16 | (이 커밋) |

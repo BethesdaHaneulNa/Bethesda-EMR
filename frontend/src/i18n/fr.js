@@ -522,6 +522,12 @@ export default {
   py_nonePaidThatDay: "Aucun paiement à cette date.",
   py_feeAmount: "Montant de {name} — modifiable",
   py_feeAmountMissing: "Montant manquant pour : {names}. Saisissez un montant, ou retirez la ligne avec ✕, puis encaissez.",
+  py_save: "Enregistrer",
+  py_savedOk: "Enregistré",
+  py_savedNot: "Non enregistré — cliquez sur Enregistrer pour garder ces changements",
+  py_savedLine: "{n} frais enregistré(s) · {amount} Ar",
+  py_saveFeesHint: "Garde les lignes ajoutées ici sur cette visite sans confirmer le paiement. Les autres postes les voient aussi.",
+  py_savedChanged: "Les frais enregistrés de cette visite ont été modifiés sur un autre poste. Ce qui est enregistré maintenant est affiché de nouveau — vérifiez et recommencez.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

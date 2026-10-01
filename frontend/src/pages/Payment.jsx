@@ -84,6 +84,12 @@ export default function PaymentPage() {
   var qs = useState(''), q = qs[0], setQ = qs[1];
   var vts = useState('newVisit'), vType = vts[0], setVType = vts[1];
   var exs = useState([]), extraItems = exs[0], setExtraItems = exs[1];
+  // Counter fees saved for the open visit (billing_saved_fee, the director 2026-10-01: a
+  // Save button - one may add a line and wait instead of confirming). savedFees is what
+  // the server holds; extraItems is what the screen shows. A saved line carries saved_id.
+  // Saved lines are not money: they become bill lines when the receipt is made, and the
+  // server deletes them in that transaction.
+  var sfs = useState([]), savedFees = sfs[0], setSavedFees = sfs[1];
   var fcs = useState([]), feeCodes = fcs[0], setFeeCodes = fcs[1];
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
@@ -169,6 +175,15 @@ export default function PaymentPage() {
     if(String(err && err.message).indexOf('VISIT_CANCELLED')===0){ alert(t.py_visitCancelled); return; }
     if(String(err && err.message).indexOf('QTY_MISSING')===0){
       alert(t.py_qtyMissingBlock.replace('{names}', String(err.message).replace(/^QTY_MISSING:\s*/,'')));
+      return;
+    }
+    if(String(err && err.message).indexOf('SAVED_FEES_CHANGED')===0){
+      alert(t.py_savedChanged);
+      setSel(null); setBillItems(null); loadLists();
+      return;
+    }
+    if(String(err && err.message).indexOf('FEE_AMOUNT_MISSING')===0){
+      alert(t.py_feeAmountMissing.replace('{names}', String(err.message).replace(/^FEE_AMOUNT_MISSING:\s*/,'')));
       return;
     }
     if(String(err && err.message).indexOf('BILL_CHANGED')===0){
@@ -294,13 +309,14 @@ export default function PaymentPage() {
   async function selectVisit(v){
     setSel(v); setDoneBill(null);
     setDiscount({type:'amount',value:0}); setPayNote('');
-    setExtraItems([]);
+    setExtraItems([]); setSavedFees([]);
     // 영수취소 후 재수납이면, 취소분에서 이미 받은 금액을 이월(중복 청구 방지)
     var carried = (v && v.needs_rebill) ? (parseFloat(v.prior_paid)||0) : 0;
     setAmountPaid(carried>0 ? String(carried) : '');
     try {
       var bi = await api.get('/billing/visit/'+v.id+'/items');
       setBillItems(bi);
+      takeSaved(bi && bi.saved_fees);
       setConsultPrices((bi && bi.consult_prices) || {});
       if(v && v.needs_refund) loadCorrection(v.id); else setCorr(null);
       setVType((bi && bi.visit_type) || v.visit_type || 'newVisit');
@@ -416,6 +432,49 @@ export default function PaymentPage() {
   // an editable line left empty or at 0: nothing to bill on it
   function feeWithoutAmount(){ return extraItems.filter(function(it){ return it.editable && !((parseFloat(it.unit_price)||0) > 0); }); }
   function removeFeeItem(idx){ setExtraItems(function(p){ return p.filter(function(_,i){ return i!==idx; }); }); }
+  // the server's saved lines become the screen's lines (on opening the visit, after a save)
+  function takeSaved(list){
+    list = list || [];
+    setSavedFees(list);
+    setExtraItems(list.map(function(f){ return { saved_id:f.id, order_code_id:f.order_code_id, code:f.item_code, name:f.item_name, quantity:parseFloat(f.quantity)||1, unit_price:String(parseFloat(f.unit_price)||0), editable:!!f.price_editable }; }));
+  }
+  // do the lines on screen differ from what is saved? (which lines, and their amounts)
+  function feeKey(id, price){ return String(id)+':'+(Math.round((parseFloat(price)||0)*100)/100); }
+  function feesDirty(){
+    if(extraItems.length !== savedFees.length) return true;
+    var want = savedFees.map(function(f){ return feeKey(f.id, f.unit_price); }).sort().join('|');
+    var have = extraItems.map(function(it){ return it.saved_id ? feeKey(it.saved_id, it.unit_price) : 'new'; }).sort().join('|');
+    return want !== have;
+  }
+  function saveFees(){ return once(saveFeesNow); }
+  async function saveFeesNow(){
+    if(!sel) return;
+    var nf = feeWithoutAmount();
+    if(nf.length){ alert(t.py_feeAmountMissing.replace('{names}', nf.map(function(it){ return it.name; }).join(', '))); return; }
+    try {
+      var r = await api.put('/billing/visit/'+sel.id+'/saved-fees', {
+        items: extraItems.map(function(it){ return { id: it.saved_id || null, order_code_id: it.order_code_id, unit_price: parseFloat(it.unit_price)||0 }; }),
+        expected_saved_ids: savedFees.map(function(f){ return f.id; }),
+      });
+      takeSaved(r && r.saved_fees);
+      loadLists(true);   // the waiting list's "saved" line and the supplement mark
+    } catch(err){
+      if(String(err && err.message).indexOf('SAVED_FEES_CHANGED')===0){
+        // another screen saved or removed lines for this visit: show what is there now
+        alert(t.py_savedChanged);
+        try { var bi = await api.get('/billing/visit/'+sel.id+'/items'); setBillItems(bi); takeSaved(bi && bi.saved_fees); } catch(e){}
+        return;
+      }
+      showError(err);
+    }
+  }
+  function savedStamp(){
+    if(!savedFees.length) return '';
+    var last = savedFees.slice().sort(function(a,b){ return String(a.saved_at) < String(b.saved_at) ? 1 : -1; })[0];
+    var d = new Date(last.saved_at);
+    var hm = isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    return [t.py_savedOk, hm, last.saved_by_name].filter(Boolean).join(' \u00b7 ');
+  }
 
   // viaConfirm: reached from the green confirm button with nothing in the cash box.
   function doConfirm(status, viaConfirm){ return once(function(){ return doConfirmNow(status, viaConfirm); }); }
@@ -450,6 +509,7 @@ export default function PaymentPage() {
         outstanding:unpaid?totalDue():(status==='paid'?0:outstandingAmt()), payment_status:status,
         note:payNote, items:items,
         expected_active_bill_ids:(billItems && billItems.active_bill_ids) || [],
+        saved_fee_ids: savedFees.map(function(f){ return f.id; }),
       });
       // 수납에서 바꾼 진료비 종류를 내원 기록에도 반영 — only once the bill is saved, so a
       // refused payment does not leave the visit's type changed (L4).
@@ -673,6 +733,7 @@ export default function PaymentPage() {
                 {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
                 {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'var(--accent-text)',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
+                {tab==='waiting'&&(v.saved_fee_count>0)?<div style={{fontSize:12,color:t2,marginTop:2}}>📎 {t.py_savedLine.replace('{n}', v.saved_fee_count).replace('{amount}', fmtAr(v.saved_fee_total))}</div>:null}
                 {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'var(--violet-text-2)',marginTop:2,fontFamily:'monospace'}}>↩ {corrLine(v)}</div>:null}
                 {tab==='waiting'&&!v.past_unbilled&&!v.needs_rebill&&serverToday&&dayOf(v)&&dayOf(v)!==serverToday?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {dayOf(v)}</div>:null}
                 {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
@@ -907,6 +968,14 @@ export default function PaymentPage() {
                 {feeCodes.map(function(c){ return <option key={c.id} value={c.id}>{c.name} ({fmtAr(c.price_clinic||c.price)} Ar)</option>; })}
               </select>
             </div>
+            {/* The state of the saved lines and the Save button share one row under the head (the head
+                has no room for a third thing in French). Nothing added and nothing saved: no row. */}
+            {feesDirty() || savedFees.length ? <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 12px',borderBottom:'1px solid '+bd,background:feesDirty()?'var(--warn-a12)':'transparent'}}>
+              {feesDirty()
+                ? <span style={{flex:1,minWidth:0,fontSize:12,fontWeight:700,color:'var(--warn-text)'}}>{t.py_savedNot}</span>
+                : <span style={{flex:1,minWidth:0,fontSize:12,color:'var(--ok-text)',overflowWrap:'anywhere'}}>✓ {savedStamp()}</span>}
+              <button onClick={saveFees} disabled={busy||!feesDirty()} title={t.py_saveFeesHint} style={{flexShrink:0,whiteSpace:'nowrap',opacity:busy?0.5:1,background:feesDirty()?'var(--accent)':'var(--chip)',color:feesDirty()?'var(--on-fill)':'var(--text-4)',border:'1px solid '+(feesDirty()?'var(--accent-text)':bd2),borderRadius:5,padding:'4px 10px',fontSize:13,fontWeight:800,cursor:feesDirty()?'pointer':'default'}}>💾 {t.py_save}</button>
+            </div> : null}
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>
               {extraItems.length? extraItems.map(function(it,idx){ return <tr key={idx} style={{borderTop:idx?'1px solid var(--line-soft)':'none'}}>
                 <td style={{padding:'7px 10px',color:t2,fontFamily:'monospace',width:60}}>{it.code}</td>

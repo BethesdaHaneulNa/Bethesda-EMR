@@ -522,6 +522,12 @@ export default {
   py_nonePaidThatDay: "이 날짜에 수납 완료된 건이 없습니다.",
   py_feeAmount: "{name} 금액 — 고칠 수 있습니다",
   py_feeAmountMissing: "금액이 비어 있습니다: {names}. 금액을 넣거나 ✕ 로 그 줄을 지운 뒤 수납하세요.",
+  py_save: "저장",
+  py_savedOk: "저장됨",
+  py_savedNot: "저장 안 됨 — 「저장」을 눌러야 바꾼 것이 남습니다",
+  py_savedLine: "발급 {n}건 저장됨 · {amount} Ar",
+  py_saveFeesHint: "발급/기타에 넣은 항목을 수납 확정 없이 이 내원에 남겨 둡니다. 다른 PC에서도 보입니다.",
+  py_savedChanged: "이 내원의 저장된 발급 항목이 다른 화면에서 바뀌었습니다. 지금 저장된 것을 다시 보여 드립니다 — 확인한 뒤 다시 하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

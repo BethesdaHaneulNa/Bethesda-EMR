@@ -35,7 +35,7 @@ Encaisser un patient qui sort de consultation :
 2. Si le patient vous donne 20 000 Ar pour un total de 18 000 Ar : tapez `20000` dans **Montant Reçu**.
 3. **Monnaie** affiche **2 000 Ar**. Rendez 2 000 Ar.
 4. Cliquez sur **Confirmer**. Le reçu indique **Montant remis** 20 000 Ar et **Monnaie rendue** 2 000 Ar.
-5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**. Pour **Document Fee**, la ligne a une case de montant : elle propose 5 000, tapez le montant du document (par exemple `3000`). Ce que vous tapez s'affiche avec l'espace des milliers (« 3 000 »), comme dans **Montant Reçu** et **Remise**. Si la case est vide, l'écran refuse d'encaisser (« Montant manquant pour : Document Fee ») : tapez un montant ou retirez la ligne avec **✕**. Le certificat et le CD gardent leur tarif.
+5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**. Pour **Document Fee**, la ligne a une case de montant : elle propose 5 000, tapez le montant du document (par exemple `3000`). Ce que vous tapez s'affiche avec l'espace des milliers (« 3 000 »), comme dans **Montant Reçu** et **Remise**. Si la case est vide, l'écran refuse d'encaisser (« Montant manquant pour : Document Fee ») : tapez un montant ou retirez la ligne avec **✕**. Le certificat et le CD gardent leur tarif. Pour garder ces lignes sans encaisser tout de suite, voir 16.
 6. Pour une remise : tapez le montant dans **Remise** avant **Confirmer**.
 
 Le patient disparaît de **En attente** et apparaît dans **Payé aujourd’hui**.
@@ -167,6 +167,21 @@ Si un patient est resté dans la liste d'un jour passé, il n'apparaît plus auj
 
 Sur un petit écran, les boutons de la barre du haut n'ont pas leur dessin (📄, 🧪…) : le texte et la couleur sont les mêmes.
 
+### 16. Garder des frais sans encaisser tout de suite (Enregistrer)
+
+Quand un patient demande un certificat ou un CD mais ne paie pas tout de suite :
+
+1. Choisissez le patient, puis ajoutez la ligne dans **Délivrance / Autres** → **+ Ajouter** (pour **Document Fee**, tapez le montant).
+2. Une bande jaune indique **Non enregistré**. Cliquez sur **💾 Enregistrer**. Elle devient **✓ Enregistré · heure · votre nom**.
+3. Vous pouvez ouvrir un autre patient : la ligne reste sur cette visite, aussi sur les autres postes. Dans la liste, le patient porte **📎 1 frais enregistré(s) · 8 000 Ar**.
+4. Quand le patient paie : ouvrez-le, la ligne est là. Encaissez comme d'habitude (**Confirmer**) ; elle est sur le reçu.
+5. S'il ne la veut plus : cliquez sur **✕** à droite de la ligne, puis sur **Enregistrer**.
+
+- Une ligne enregistrée n'est pas encore de l'argent : elle n'est sur aucun reçu et ne compte pas dans la caisse tant que vous n'avez pas cliqué sur **Confirmer** ou **Impayé**.
+- Si le patient a **déjà payé** sa visite, il revient dans **En attente** avec le badge **Supplément** et le montant des frais enregistrés.
+- Sans **Enregistrer**, une ligne ajoutée est perdue quand vous ouvrez un autre patient.
+- En fin de journée, un patient qui a encore des frais enregistrés reste dans **En attente** : encaissez-le (ou **Impayé**), ou retirez les lignes (voir 14).
+
 ## Si ce message apparaît
 
 | Message | Ce que cela veut dire | Que faire |
@@ -183,6 +198,8 @@ Sur un petit écran, les boutons de la barre du haut n'ont pas leur dessin (📄
 | « Le solde de ce reçu a déjà été reporté sur le reçu R-… Encaissez-le sur ce reçu. » | Cet impayé est maintenant sur un autre reçu. | Utilisez **Encaisser impayé** sur le reçu indiqué. |
 | « Cette visite a été annulée à l’accueil — rien à encaisser. » | Visite annulée. | Rien à encaisser. |
 | « Le navigateur a bloqué la fenêtre d'impression… » | Le navigateur a bloqué la fenêtre du reçu. | Autorisez les fenêtres pop-up pour ce site, puis **Imprimer Reçu** de nouveau. |
+| « Les frais enregistrés de cette visite ont été modifiés sur un autre poste… » | Un autre poste a enregistré ou retiré des lignes pour ce patient pendant que vous l'aviez ouvert. Rien n'a été encaissé. | L'écran montre ce qui est enregistré maintenant ; vérifiez et recommencez. |
+| « Montant manquant pour : Document Fee… » | La case du montant est vide ou à 0. | Tapez le montant, ou retirez la ligne avec **✕**. |
 
 ## À ne pas faire
 
