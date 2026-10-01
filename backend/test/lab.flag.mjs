@@ -115,5 +115,32 @@ for (const b of bodies) {
   check('unit list body ' + JSON.stringify(b[0]), JSON.stringify(b[1]), JSON.stringify(server.unitNamesOf(b[0])));
 }
 
+// ---- the values a text result can take: the default pair for a reference text, and which
+// lists are refused (Settings shows the default and checks the list before the server does) ----
+const choiceCode = slice(settingsJsx, '  function choiceName(v){', '  function choiceServerError', 'the choices rules in Settings.jsx');
+const tc = { lb_errChoiceMany: 'many', lb_errChoiceEmpty: 'empty', lb_errChoiceLong: 'long {u}', lb_errChoiceDup: 'dup {u}' };
+const screenChoices = new Function('t', choiceCode + '\nreturn { defaultChoices: defaultChoices, choiceProblem: choiceProblem };')(tc);
+const refTexts = ['Negative', 'negative', 'NEGATIVE', ' Negative ', 'Négatif', 'NEGATIF', '음성', 'Non-reactive', 'non réactif',
+  'Positive', 'Clear', 'Normal', '', '   ', null, undefined, '-'];
+for (const r of refTexts) {
+  n++;
+  check('default choices ' + JSON.stringify(r), JSON.stringify(server.defaultChoices(r)), JSON.stringify(screenChoices.defaultChoices(r)));
+}
+const lists = [[], ['Negative', 'Positive'], ['Negative', 'negative'], ['Negative', ' NEGATIVE '], ['+', '++', '+++'], ['a', ''], ['a', '  '],
+  ['x'.repeat(60)], ['x'.repeat(61)], Array.from({ length: 20 }, (_, i) => 'v' + i), Array.from({ length: 21 }, (_, i) => 'v' + i),
+  ['Non  reactive', 'Non reactive']];
+const ckind = function (r) { return !r ? 'ok' : /dup/.test(r) ? 'dup' : /long/.test(r) ? 'long' : /many/.test(r) ? 'many' : 'empty'; };
+for (const l of lists) {
+  n++;
+  check('choice list ' + JSON.stringify(l).slice(0, 60), ckind(server.choiceListError(l)), ckind(screenChoices.choiceProblem(l)));
+}
+// the default never changes the flag: its first value is the reference itself, so it is normal
+for (const r of refTexts) {
+  const d = server.defaultChoices(r);
+  if (!d.length) continue;
+  n++;
+  check('default pair holds a normal value ' + JSON.stringify(r), true, d.some(function (v) { return server.flagFor(v, null, null, r) === 'normal'; }));
+}
+
 console.log(n + ' cases, ' + bad + ' mismatches');
 process.exit(bad ? 1 : 0);

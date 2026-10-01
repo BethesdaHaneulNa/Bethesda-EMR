@@ -2,6 +2,40 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 글자 결과(Negative / Positive 류)를 목록에서 고르기
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `6d386b1`, fast-forward 뒤)
+- **계기**: 실장님(2026-10-01, 총괄 전달) — 「결과 적을 때 네거티브 포지티브 적는 애들은 … 써야 하나?」 → 총괄 제안 → 승인.
+- **만든 것**
+  1. **검사실 결과 입력**: 문자 참고치가 있는 항목의 결과 칸이 고르는 칸 — 빈 값 · 값들 · 「Saisir au clavier… / 직접 입력…」. 「직접 입력」을 고르면 글자 칸 + 커서, 옆 **☰** 로 목록으로. 숫자 항목은 그대로. 키보드: 칸에서 첫 글자(`p` → Positive)·↑↓, Tab 으로 다음.
+  2. **설정 검사항목**: 문자 참고치 칸 옆 **☰** 단추(목록이 있으면 개수) → 창 「Valeurs à choisir — 항목」: 묶음 단추, 넣기·이름·▲▼·✕, OK. 페이지의 Sauver 로 항목과 함께 저장.
+  3. **판정은 그대로**: `flagFor` 를 건드리지 않음. 목록은 「무엇을 고를 수 있나」뿐.
+- **정한 것 (보고)**
+  1. **기존 항목의 목록을 채우지 않음.** 마이그레이션은 열 하나(`lab_test_item.choices`, NULL)만 더함 — 기존 줄 변경 0, 여러 번 돌려도 안전(`ADD COLUMN IF NOT EXISTS`). 대신 **문자 참고치가 있고 자기 목록이 없는 항목은 화면이 물을 때 기본 묶음을 계산**: 지금 DB 의 다섯 항목(Malaria RDT, Protein, Glucose, Leukocytes, Blood — 모두 `Negative`)은 바로 「Negative / Positive」. 나중에 만드는 항목도 같음. 설정에서 목록을 저장하면 그것이 쓰이고, 비우면 다시 기본.
+  2. **기본 묶음 규칙**: 참고치 글자 그대로 + 같은 언어·같은 대소문자의 짝 — `Negative`→Negative / Positive, `NEGATIVE`→NEGATIVE / POSITIVE, `Négatif`→Négatif / Positif, `음성`→음성 / 양성, `Non-reactive`→Non-reactive / Reactive. 그 밖의 글자(`Clear`)→ 그 글자 + Negative / Positive(총괄 말씀대로). 성별·나이별 줄에 문자 참고치가 따로 있으면 **그 환자에게 적용되는 것**으로 계산.
+  3. **묶음 단추 넷**: `Negative / Positive` · `Négatif / Positif`(현장이 프랑스어라 더함) · `Negative / Trace / + / ++ / +++` · `Non-reactive / Reactive`. 누르면 목록을 **그 묶음으로 바꿈**(더하는 것이 아님 — 취소로 되돌림).
+  4. **목록에 없는 저장 값**(옛 표기, 자유 글)은 다시 열면 **글자 칸에 그 글자 그대로**(글자 그대로 같을 때만 목록의 값으로 봄 — `negative` 와 `Negative` 는 다른 글자). 그대로 저장하면 한 글자도 안 바뀜.
+  5. **제한**: 값 60자(`lab_result.value` 와 같음) · 20개 · 대소문자·공백만 다른 중복 거절. 화면과 서버 둘 다 검사.
+  6. **문자 참고치가 없어도** 목록을 정해 두면 고르는 칸이 됨(판정 없이, 예: 혈액형; 숫자 참고치가 있는 항목에 목록을 두면 고른 숫자가 전처럼 숫자로 판정됨). 문자 참고치도 목록도 없는 글자 결과는 지금처럼 글자 칸.
+  7. 창의 **OK 는 저장이 아님** — 성별·나이별 표처럼 페이지의 Sauver 가 항목과 함께 저장(창에 그 안내 한 줄). 새 항목은 아직 id 가 없어 따로 저장할 수 없기 때문.
+  8. 값은 번역하지 않음(병원이 적은 그대로).
+- **달라지지 않는 것(확인)**: 저장되는 것은 전과 같이 글자(`lab_result.value`) → 검사결과 표·결과지(`lab-results.jsx`)·진료 화면 표시는 그대로. `POST /order/:id/results` 는 안 바꿈.
+- **바꾼 파일**: `backend/sql/503_lab_item_choices.sql`(새) · `backend/src/utils/labFlag.js` · `backend/src/routes/lab.routes.js` · `backend/test/lab.flag.mjs`(893건) · `frontend/src/pages/Lab.jsx` · `frontend/src/pages/Settings.jsx`(검사항목 탭만) · `frontend/src/i18n/{ko,en,fr}.js`(lab 블록) · `wiki/modules/laboratory.md`(2절 두 군데, 3.3.1, 4절, 6절, 8절) · `wiki/manual-fr/laboratory.md` · `wiki/reference/changelog-1.5.0/laboratory.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: `503_lab_item_choices.sql`(세션 번호 — 다시 매겨 주세요; 열 하나 + 「배열이어야 한다」 제약 하나)
+- **번역 키**(13개): `lb_valueType` `lb_valueList` `lb_choices` `lb_choicesHint` `lb_choicesSets` `lb_choicesEmptyDefault` `lb_choicesEmptyNone` `lb_choiceNew` `lb_choicesApplyNote` `lb_errChoiceDup` `lb_errChoiceLong` `lb_errChoiceEmpty` `lb_errChoiceMany` (▲▼·✕ 의 이름표는 단위 목록의 `lb_unitUp/Down/Remove` 를 같이 씀)
+- **다른 세션에 부탁 — 설정 세션(관리자 설명서 `manual-fr/settings.md`, 그대로 써도 됨)**:
+  > **Résultats en texte.** Un item qui a une **Réf. texte** (par exemple **Negative**) se saisit au laboratoire en choisissant dans une liste : **Negative / Positive** par défaut. Pour une autre liste, cliquez sur **☰** à côté de **Réf. texte** : **Remplir avec une série** (par exemple **Negative / Trace / + / ++ / +++**), ou écrivez une valeur puis **+ Ajouter** ; **▲ ▼** pour l'ordre, **✕** pour retirer. Cliquez sur **OK**, puis sur **Sauver** en bas de la page. Le jugement ne change pas : une valeur égale à la **Réf. texte** est normale, une autre est anormale. Les résultats déjà enregistrés ne changent pas.
+- **본 것** (격리 스택 9185, develop `6d386b1` + 이 변경, 1366×768)
+  - 마이그레이션: 새 DB 적용 → 항목 26개 중 자기 목록 0개. 파일을 다시 돌려도 「이미 있음」 뿐, 저장한 목록 그대로.
+  - API: 결과 칸이 보여 줄 값 — Malaria RDT·Protein·Glucose·Leukocytes·Blood `["Negative","Positive"]`, pH·CBC `[]`. Protein 에 목록 저장 → 그 목록. 중복·빈 이름·61자·21개 → 400, 거절 뒤 그대로. `choices` 칸 없이 저장 → 목록 유지, `[]` 로 저장 → 다시 기본. 결과 저장: Positive→abnormal, Negative→normal, `++`→abnormal, 자유 글 `positif (traces)`→abnormal·글자 그대로, `Négatif`→normal·글자 그대로.
+  - 검사실 화면(프랑스어): 문자 항목 6개가 고르는 칸, CBC 5개는 글자 칸, 칸 너비 같음. **키보드로** `p` → Positive(빨강 !), Tab Tab `6` → 6.0, `+` ↓ → ++, `n` → Negative. 「Saisir au clavier…」 → 글자 칸에 커서, 글자를 치고 저장 → 다시 열면 글자 칸에 그대로. ☰ 로 돌아갈 때 목록의 값이면 유지, 아니면 비움. 목록에 없는 저장 값(`positif (traces)`, `Négatif`)은 글자 칸으로 열리고, 그대로 다시 저장해도 값·판정 그대로(API 로 확인).
+  - 설정: ☰ 단추(개수) · 창(설명·묶음 넷·기본 안내) · 묶음으로 채우기 · 중복(`TRACE`)·빈 이름 문구 · 29자 값 · ▲ · OK → 「☰ 6」 → Sauver → DB 에 그 순서로. 격자 넘침 없음.
+  - 29자 값을 고른 검사실 칸: 닫힌 칸에서는 말줄임(툴팁·펼친 목록에 전체), 줄 높이·열 너비 그대로.
+  - 세 테마: 고르는 칸의 글자 6.8~15.8:1, 테두리 3.8~4.0. ko/en/fr: 「직접 입력… / Type it… / Saisir au clavier…」, 설정 창(한국어·밝은 화면) 글자 4.5:1 이상.
+  - `lab.flag.mjs` 893건 0 불일치(기본 묶음·목록 검사의 화면/서버 대조, 기본 묶음에 정상 값이 들어 있는지) · `node --check` · 빌드.
+- **안 본 것**: 실행 중 EMR 의 실제 항목(같은 기본 자료로만). 결과지 인쇄는 다시 뽑아 보지 않음(저장되는 글자가 전과 같아 달라질 것이 없음 — 오른쪽 결과 표에 고른 값이 그대로 나오는 것은 봄). 영어 화면은 문구만. 성별·나이별 줄에 문자 참고치가 있는 경우의 기본 묶음(코드로만).
+
 ## 2026-10-01 — 수납 화면에서 검사결과 창을 열 수 있게: 결과 읽기에 payment 권한
 
 - **상태**: 확인 요청

@@ -8,7 +8,7 @@ router.use(authMiddleware);
 
 // The flag rule and the reference-range rules live in utils/labFlag.js (shared,
 // with a checker against the screen's copies: backend/test/lab.flag.mjs).
-const { flagFor, refFor, rangeError, nullInt, unitNamesOf, unitListError } = require('../utils/labFlag');
+const { flagFor, refFor, rangeError, nullInt, unitNamesOf, unitListError, choiceNames, choiceListError, choicesFor } = require('../utils/labFlag');
 
 async function rangesFor(db, itemIds) {
   if (!itemIds.length) return {};
@@ -184,6 +184,9 @@ router.get('/order/:orderItemId/items', permMiddleware('lab'), async (req, res) 
         lab_test_item_id: m.id, name: m.name, unit: m.unit,
         ref_low: ref.ref_low, ref_high: ref.ref_high, ref_text: ref.ref_text, ref_label: ref.ref_label,
         value: prev.value != null ? prev.value : '', comment: prev.comment || '', flag: prev.flag || '', sort_order: i,
+        // the values the result box offers ([] = a plain box): the item's own list, or
+        // the default pair for a reference text. Only an offer - any text can be saved.
+        choices: choicesFor(m.choices, ref.ref_text),
       };
     });
     existing.rows.forEach(function (e) {
@@ -389,6 +392,11 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
     for (let i = 0; i < arr.length; i++) {
       const bad = rangeError(arr[i].name, arr[i].ranges);
       if (bad) return res.status(400).json({ error: bad });
+      // an item's list of values to pick from, when the screen sends one
+      if (Array.isArray(arr[i].choices)) {
+        const cbad = choiceListError(choiceNames(arr[i].choices));
+        if (cbad) return res.status(400).json({ error: cbad });
+      }
     }
     await client.query('BEGIN');
     const keep = [];
@@ -398,21 +406,28 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
         it.ref_low != null && it.ref_low !== '' ? it.ref_low : null,
         it.ref_high != null && it.ref_high !== '' ? it.ref_high : null,
         it.ref_text || null, i];
+      // The list of values to pick from: replaced when the screen sends one (an empty
+      // list = none of its own, the default applies again), left as it is when the
+      // request does not carry the field at all.
+      const sent = Array.isArray(it.choices);
+      const names = sent ? choiceNames(it.choices) : [];
+      const choices = names.length ? JSON.stringify(names) : null;
       const id = parseInt(it.id, 10);
       let row = null;
       if (id && keep.indexOf(id) < 0) {
         // order_code_id in the WHERE: an id from another panel is treated as new
         const u = await client.query(
-          `UPDATE lab_test_item SET name=$1, unit=$2, ref_low=$3, ref_high=$4, ref_text=$5, sort_order=$6
+          `UPDATE lab_test_item SET name=$1, unit=$2, ref_low=$3, ref_high=$4, ref_text=$5, sort_order=$6,
+                  choices = CASE WHEN $9 THEN $10::jsonb ELSE choices END
             WHERE id=$7 AND order_code_id=$8 RETURNING id`,
-          vals.concat([id, order_code_id]));
+          vals.concat([id, order_code_id, sent, choices]));
         row = u.rows[0];
       }
       if (!row) {
         const n = await client.query(
-          `INSERT INTO lab_test_item (name, unit, ref_low, ref_high, ref_text, sort_order, order_code_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-          vals.concat([order_code_id]));
+          `INSERT INTO lab_test_item (name, unit, ref_low, ref_high, ref_text, sort_order, order_code_id, choices)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id`,
+          vals.concat([order_code_id, choices]));
         row = n.rows[0];
       }
       keep.push(row.id);
