@@ -759,6 +759,20 @@ export default {
   lb_rPrintNote: "L'impression est enregistrée dans le dossier comme un document émis.",
   lb_rPrintIssued: "Émis : {x}",
   lb_rPrintFail: "Le document n'a pas pu être émis : ",
+  // a text result picked from a list: the lab screen's box, and the list in Settings > lab test items
+  lb_valueType: "Saisir au clavier…",
+  lb_valueList: "Revenir à la liste",
+  lb_choices: "Valeurs à choisir",
+  lb_choicesHint: "Les valeurs que le laboratoire peut choisir pour le résultat de cet item, au lieu de l'écrire. Le jugement ne change pas : une valeur égale à la référence texte est normale, une autre est anormale. « Saisir au clavier » reste possible.",
+  lb_choicesSets: "Remplir avec une série :",
+  lb_choicesEmptyDefault: "Liste vide. L'écran du laboratoire propose {list}, d'après la référence texte.",
+  lb_choicesEmptyNone: "Liste vide. Le résultat s'écrit au clavier.",
+  lb_choiceNew: "Nouvelle valeur (ex. Trace)",
+  lb_choicesApplyNote: "Après OK, cliquez sur « Sauver » en bas de la page pour enregistrer.",
+  lb_errChoiceDup: "« {u} » est déjà dans la liste (les majuscules et les espaces ne comptent pas).",
+  lb_errChoiceLong: "« {u} » : une valeur a 60 caractères au maximum.",
+  lb_errChoiceEmpty: "Une valeur n'a pas de nom. Écrivez-le ou retirez la ligne avec ✕.",
+  lb_errChoiceMany: "Une liste a 20 valeurs au maximum.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

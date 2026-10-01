@@ -175,7 +175,64 @@ function unitListError(names) {
   return null;
 }
 
+// ── the values a text result can take (Settings > Lab test items, the lab screen) ──
+// An item's list (lab_test_item.choices) is only what the result box offers; the flag
+// rule above is untouched. Names are kept as the clinic writes them - they are not
+// translated - and two that differ only by capitals or spaces are the same value.
+var CHOICE_MAX = 60;    // lab_result.value is VARCHAR(60)
+var CHOICES_MAX = 20;   // a list to pick from, not a dictionary
+function choiceName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+function choiceKey(v) { return choiceName(v).toLowerCase(); }
+// The names of a list as sent or stored, or [] when there is none.
+function choiceNames(list) {
+  return (Array.isArray(list) ? list : []).map(function (c) { return choiceName(c && typeof c === 'object' ? c.name : c); });
+}
+// What is wrong with a list, as a code the screen translates, or null.
+function choiceListError(names) {
+  if (names.length > CHOICES_MAX) return 'lab_choice_too_many';
+  var seen = {};
+  for (var i = 0; i < names.length; i++) {
+    var n = choiceName(names[i]);
+    if (!n) return 'lab_choice_empty';
+    if (n.length > CHOICE_MAX) return 'lab_choice_too_long:' + n;
+    if (seen[choiceKey(n)]) return 'lab_choice_duplicate:' + n;
+    seen[choiceKey(n)] = true;
+  }
+  return null;
+}
+// The pair offered for an item that has a reference text and no list of its own: the
+// reference as the clinic wrote it, and its usual opposite in the same language and the
+// same capitals. A reference that is none of these is offered with Negative / Positive.
+// Same table as defaultChoices() in Settings.jsx.
+var OPPOSITE = [
+  ['negative', 'positive'], ['n\u00e9gatif', 'positif'], ['negatif', 'positif'], ['\uc74c\uc131', '\uc591\uc131'],
+  ['non-reactive', 'reactive'], ['non reactive', 'reactive'], ['non r\u00e9actif', 'r\u00e9actif'], ['non reactif', 'reactif'],
+];
+function defaultChoices(refText) {
+  var ref = choiceName(refText);
+  if (!ref) return [];
+  var low = ref.toLowerCase();
+  for (var i = 0; i < OPPOSITE.length; i++) {
+    if (OPPOSITE[i][0] === low) {
+      var o = OPPOSITE[i][1];
+      if (ref === ref.toUpperCase() && ref !== low) o = o.toUpperCase();
+      else if (ref.charAt(0) !== low.charAt(0)) o = o.charAt(0).toUpperCase() + o.slice(1);
+      return [ref, o];
+    }
+  }
+  if (low === 'positive') return ['Negative', ref];
+  return [ref, 'Negative', 'Positive'];
+}
+// What the result box of an item offers: its own list, else the default for its
+// reference text (the one that applies to this patient), else nothing (a plain box).
+function choicesFor(stored, refText) {
+  var own = choiceNames(stored).filter(Boolean);
+  return own.length ? own : defaultChoices(refText);
+}
+
 module.exports = {
+  CHOICE_MAX: CHOICE_MAX, CHOICES_MAX: CHOICES_MAX, choiceName: choiceName, choiceNames: choiceNames,
+  choiceListError: choiceListError, defaultChoices: defaultChoices, choicesFor: choicesFor,
   UNIT_MAX: UNIT_MAX, unitName: unitName, unitKey: unitKey, unitNamesOf: unitNamesOf, unitListError: unitListError,
   readNumber, normWord, sameText, num, flagFor, SAME_WORDS,
   AGE_DAYS, ageIn, nullInt, rangeApplies, rangeLabel, refFor, rangeError,

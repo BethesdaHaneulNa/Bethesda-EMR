@@ -59,7 +59,7 @@
 | 👥 **Personnel** | 직원 | 직원 계정·권한 (2.4 ~ 2.6) | 설정 |
 | 💊 **Médicaments** | 약품 | 약 목록·단가·재고 | 약국 (`pharmacy.md`) |
 | 📋 **Codes d'actes** | 오더 코드 | 진료비·검사·영상·처치 코드와 가격, 영상 종류, 처치의 기본 용법 (2.9) | 설정 |
-| 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치. 단위는 목록에서 고르고, 「+ Nouveau panel」 옆 **Liste des unités (단위 목록)** 창에서 단위를 더하고·순서를 바꾸고·뺌(2026-10-01, 마이그레이션 044) | 임상병리 (`laboratory.md` 2절 「단위 목록」) |
+| 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치. 단위는 목록에서 고르고, 「+ Nouveau panel」 옆 **Liste des unités (단위 목록)** 창에서 단위를 더하고·순서를 바꾸고·뺌(2026-10-01, 마이그레이션 044). **글자 결과의 「고를 값」**(2026-10-01, 048): 문자 참고치(Réf. texte) 칸 옆 **☰** → 창 「Valeurs à choisir」에서 묶음 단추(Negative / Positive 등)로 채우거나 값을 넣고·순서를 바꾸고·뺌 → OK → 페이지의 Sauver. 검사실의 결과 칸이 그 목록에서 고르는 칸이 됨(목록을 비워 두면 문자 참고치에서 기본 묶음). 판정은 그대로 | 임상병리 (`laboratory.md` 2절 「단위 목록」·글자 결과, 3.3.1) |
 | 📝 **Phrases types** | 상용구 | 진료 기록 상용구와 그 분류 (2.9) | 설정 |
 | 🏥 **Services** | 진료과 | 진료과 (2.9) | 설정 |
 | 🧪 **Ordonnances types** | 약속처방 | 약·검사 묶음 (2.9) | 설정 |
@@ -762,4 +762,6 @@
 | 2026-10-01 | **한국어 화면의 「기록」 탭 → 「로그」**(실장님 요청, 수납 세션이 전함). **오더 코드의 종류 「진료비」 → 「진료비 · 발급비」**(거르개·종류 선택은 fr 「Frais (consultation, documents)」 · en 「Fees (consultation, documents)」), 그 종류에 「수납의 발급/기타 → + 항목 추가에는 C01~C04를 뺀 항목이 나옴」 안내, 분류 목록에 빠져 있던 **Issuance** | i18n `se_tabAudit`·`se_logIntro`·`se_logEmpty`(ko) · `se_type_fee`(ko) · `se_typeLong_fee` · `se_feeHint`, `Settings.jsx` `feeHint`, 설명서, `03-change-log.md` (2.9·2.14) | `f0cf560` |
 | 2026-10-01 | **오더 코드 창에 「수납에서 금액을 고칠 수 있음」 체크**(실장님: Document Fee 는 수납에서 바로 금액을 고칠 수 있게 — 칸은 수납 047): 진료비 · 발급비 종류(C01~C04 제외)에서만 보임, 목록에 꼬리표, 서버가 받아 저장(fee가 아니면 FALSE, 안 보내면 유지). 안내 글에 「분류와는 상관없습니다」(실장님이 이 세션에 물으심) | `admin.routes.js` `cleanPriceEditable`, `Settings.jsx`, i18n `se_priceEditable*`·`se_feeHint`, `settings.ordercodes.mjs`(+15), 설명서 (2.9·3-9c) | `54c34f2` |
 | 2026-10-01 | 문서만: 영상 종류 목록이 **코드만**(US, CR, AS — 실장님 요청, 총괄 `6bbfe9d`) 보이게 된 것을 설명서·위키에 맞춤. 「Autre — saisir la valeur…」 줄은 화면 그대로라 바꾼 것 없음 | `manual-fr/settings.md`, 이 문서 (2.9·3-9b), `settingsModality.jsx` 머리말 | `bdc4608` |
-| 2026-10-01 | **「수납에서 금액을 고칠 수 있음」을 켜고 끈 것이 로그에**(결정): 바뀔 때만 한 줄(누가 · 어느 코드 · 꺼짐 → 켜짐), 로그 탭의 글·칸·값. 같이 고친 것 — 로그 읽기 API의 종류 거르기가 **밑줄이 든 action 이름**을 받지 않아 거르지 않고 모든 줄을 주던 것 | `utils/audit.js` `ORDER_PRICE_EDITABLE`, `admin.routes.js` `auditPriceEditable`·`/audit`, `settingsAudit.js`, i18n `se_act_orderPriceEditable`, `settings.ordercodes.mjs`(37), `03-change-log.md`, 설명서 (3-9c·3-10) | (이 커밋) |
+| 2026-10-01 | **「수납에서 금액을 고칠 수 있음」을 켜고 끈 것이 로그에**(결정): 바뀔 때만 한 줄(누가 · 어느 코드 · 꺼짐 → 켜짐), 로그 탭의 글·칸·값. 같이 고친 것 — 로그 읽기 API의 종류 거르기가 **밑줄이 든 action 이름**을 받지 않아 거르지 않고 모든 줄을 주던 것 | `utils/audit.js` `ORDER_PRICE_EDITABLE`, `admin.routes.js` `auditPriceEditable`·`/audit`, `settingsAudit.js`, i18n `se_act_orderPriceEditable`, `settings.ordercodes.mjs`(37), `03-change-log.md`, 설명서 (3-9c·3-10) | `cf074a8` |
+| 2026-10-01 | (화면 변화 없음) 권한 시험 표: `GET /lab/patient/:id/results`에 **수납(payment)** — 수납 화면의 「검사결과」 단추(실장님 요청, 임상병리 `cfc600f`). 139개 × 11 = 1529건 모두 표와 같음 | `settings.access.mjs` (4절) | `544472b` |
+| 2026-10-01 | 문서만: 검사항목의 **글자 결과 「고를 값」 목록**(임상병리 `16e1759`, 048)을 관리자 설명서와 2.3 표에. 권한 시험 표는 바꿀 것 없음(`/lab/test-items/save`의 권한은 그대로 settings — 다시 돌려 확인) | `manual-fr/settings.md`, 이 문서 (2.3) | (이 커밋) |

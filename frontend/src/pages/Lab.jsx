@@ -30,6 +30,17 @@ function readNumber(v) {
   if ((s.match(/,/g) || []).length === 1) s = s.replace(/(\d),(\d)/, '$1.$2');
   return parseFloat(s);
 }
+// A result written as a word (Negative, Positive ...) is picked from the item's list
+// (director, 2026-10-01): the server sends `choices` - the list kept in Settings, or the
+// default pair for a reference text; [] for a plain box. The list is only an offer: the
+// last entry of the box, "type it", gives the text box back, and a value already saved
+// that is not in the list (an older spelling, a free remark) opens as typed text and is
+// saved back letter for letter. The flag rule does not know about the list.
+var TYPE_IT = '\u0000type';   // the value of the "type it" entry: no result can be this
+function typedValue(it) {
+  var v = it.value == null ? '' : String(it.value);
+  return v !== '' && (it.choices || []).indexOf(v) < 0;
+}
 function hasEntry(it) {
   return (it.value != null && String(it.value).trim() !== '') || (it.comment != null && String(it.comment).trim() !== '');
 }
@@ -196,7 +207,7 @@ export default function LabPage() {
     var targets = v === 'all' ? orders : orders.filter(function (o) { return o.order_item_id === v; });
     Promise.all(targets.map(function (o) {
       return api.get('/lab/order/' + o.order_item_id + '/items')
-        .then(function (d) { return { order_item_id: o.order_item_id, order_name: o.order_name, has_master: d.has_master !== false, items: (d.items || []).map(function (x) { return Object.assign({}, x); }) }; })
+        .then(function (d) { return { order_item_id: o.order_item_id, order_name: o.order_name, has_master: d.has_master !== false, items: (d.items || []).map(function (x) { return Object.assign({}, x, { _free: typedValue(x) }); }) }; })
         .catch(function () { return { order_item_id: o.order_item_id, order_name: o.order_name, has_master: true, items: [] }; });
     })).then(function (gr) { if (seq === viewSeq.current) setGroups(gr); });
   }
@@ -290,7 +301,23 @@ export default function LabPage() {
               <div style={{ padding: '7px 10px', color: t3, fontSize: 13, overflowWrap: 'anywhere' }}>{ref}{it.ref_label ? <span title={t.lb_refByPatient} style={{ display: 'block', fontSize: 10, color: 'var(--cyan-text)' }}>{it.ref_label}</span> : null}</div>
               <div style={{ padding: '7px 10px', color: t2, fontSize: 13, overflowWrap: 'anywhere' }}>{it.unit || ''}</div>
               <div style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input value={it.value || ''} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />
+                {(it.choices || []).length && !it._free
+                  ? <select value={it.value || ''} title={it.value || ''} aria-describedby={glyph ? flagId : undefined}
+                      onChange={function (e) {
+                        var v = e.target.value;
+                        if (v === TYPE_IT) { setVal(gi, ii, 'value', ''); setVal(gi, ii, '_free', true); setVal(gi, ii, '_focus', true); }
+                        else setVal(gi, ii, 'value', v);
+                      }}
+                      style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 2px', outline: 'none', fontFamily: 'inherit', textOverflow: 'ellipsis' }}>
+                      <option value=""></option>
+                      {it.choices.map(function (c) { return <option key={c} value={c}>{c}</option>; })}
+                      <option value={TYPE_IT}>{t.lb_valueType}</option>
+                    </select>
+                  : <input value={it.value || ''} autoFocus={!!it._focus} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />}
+                {/* back to the list from "type it": what was typed is dropped unless it is one of the list */}
+                {(it.choices || []).length && it._free ? <button type="button" title={t.lb_valueList} aria-label={t.lb_valueList}
+                  onClick={function () { if (it.choices.indexOf(it.value) < 0) setVal(gi, ii, 'value', ''); setVal(gi, ii, '_free', false); setVal(gi, ii, '_focus', false); }}
+                  style={{ flexShrink: 0, background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 4, padding: '4px 5px', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>☰</button> : null}
                 {/* The place is kept even when empty, so the box does not jump while typing. */}
                 <span id={flagId} role={glyph ? 'img' : undefined} aria-label={word || undefined} aria-hidden={glyph ? undefined : true} title={word || undefined} style={{ width: 12, flexShrink: 0, textAlign: 'center', color: vc, fontSize: 13, fontWeight: 800 }}>{glyph}</span>
               </div>

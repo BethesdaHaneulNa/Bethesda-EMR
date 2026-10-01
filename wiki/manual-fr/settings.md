@@ -136,6 +136,8 @@ Les **phrases types** sont des phrases déjà écrites que le médecin ajoute à
 
 Les résultats déjà enregistrés gardent leur couleur et leur référence. Seuls les résultats enregistrés ensuite — ou enregistrés à nouveau — suivent les nouvelles valeurs.
 
+**Résultats en texte.** Un item qui a une **Réf. texte** (par exemple **Negative**) se saisit au laboratoire en choisissant dans une liste : **Negative / Positive** par défaut. Pour une autre liste, cliquez sur **☰** à côté de **Réf. texte** : **Remplir avec une série** (par exemple **Negative / Trace / + / ++ / +++**), ou écrivez une valeur puis **+ Ajouter** ; **▲ ▼** pour l'ordre, **✕** pour retirer. Cliquez sur **OK**, puis sur **Sauver** en bas de la page. Le jugement ne change pas : une valeur égale à la **Réf. texte** est normale, une autre est anormale. Les résultats déjà enregistrés ne changent pas.
+
 **Liste des unités.** À droite de **+ Nouveau panel**, **Liste des unités** ouvre la liste proposée dans la case **Unité**. Pour ajouter : écrivez l'unité dans **Nouvelle unité**, puis **+ Ajouter**. Pour changer l'ordre : **▲ ▼**. Pour retirer : **✕**. Cliquez sur **Sauver**. Retirer ou renommer une unité ne change pas les items ni les résultats qui l'utilisent : ils gardent leur unité, affichée **hors liste**. Deux unités qui ne diffèrent que par les majuscules ou les espaces sont la même unité.
 
 <!-- à revoir : onglet de la session Laboratoire ; les valeurs de référence sont en cours de validation par les médecins. -->
