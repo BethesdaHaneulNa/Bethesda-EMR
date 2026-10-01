@@ -335,9 +335,10 @@ export default function PharmacyPage() {
       <div style={TOOL_ROW}>
         <button onClick={function(){setTab('pending'); setSel(null);}} style={tabBtn(tab==='pending','var(--violet-a20)','var(--violet-text-4)','var(--violet-a50)')}>{t.dispensingPending} ({pending.length})</button>
         <button onClick={function(){setTab('completed'); setSel(null);}} style={tabBtn(tab==='completed','var(--ok-a20)','var(--ok-text-2)','var(--ok-a50)')}>{t.dispensingCompleted} ({completed.length})</button>
+        {/* right after the two tabs, as on the payment and laboratory screens */}
+        {tab !== 'stock' ? <button onClick={loadData} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button> : null}
         <button onClick={function(){setTab('stock'); setSel(null);}} style={tabBtn(tab==='stock','var(--warn-a20)','var(--warn-text-2)','var(--warn-a50)')}>📦 {t.ph_tabStock}</button>
         {tab !== 'stock' ? <>
-        <button onClick={loadData} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button>
         <button onClick={function(){setPhFinderOpen(true);}} style={toolBtn()}>🔍 {t.findPatient}</button>
         <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{ background:sel?'var(--warn-strong)':'var(--chip)', color:sel?'var(--on-fill-amber)':'var(--text-4)', border:'1px solid '+(sel?'var(--warn-ink)':bd2), borderRadius:6, padding:'6px 10px', cursor:sel?'pointer':'not-allowed', fontSize: 14, fontWeight:700 }}>💊 {t.outsideRx}</button>
         <button onClick={function(){ if(sel) setChartViewOpen(true); }} disabled={!sel} style={{ background:sel?'var(--chip)':'var(--chip)', color:sel?'var(--violet-text-3)':'var(--text-4)', border:'1px solid '+(sel?'var(--violet-2)':bd2), borderRadius:6, padding:'6px 10px', cursor:sel?'pointer':'not-allowed', fontSize: 14, fontWeight:700 }}>📋 {t.chartViewer||'차트뷰어'}</button>
