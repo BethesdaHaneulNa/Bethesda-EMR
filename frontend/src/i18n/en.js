@@ -425,6 +425,9 @@ export default {
   cs_trBadDoctor: "That doctor cannot be used (inactive, or not a doctor account). Choose again.",
   cs_trNoChange: "Nothing was changed.",
   cs_trNotFound: "Visit not found. Open the patient again.",
+  // Phrase list: category drop-down (2026-10-01)
+  cs_phraseCat: "Category",
+  cs_phraseCatAll: "Category: all",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

@@ -416,6 +416,9 @@ export default {
   cs_trBadDoctor: "Ce médecin ne peut pas être choisi (compte inactif, ou qui n'est pas médecin). Choisissez à nouveau.",
   cs_trNoChange: "Rien n'a été changé.",
   cs_trNotFound: "Visite introuvable. Rouvrez le patient.",
+  // Phrase list: category drop-down (2026-10-01)
+  cs_phraseCat: "Catégorie",
+  cs_phraseCatAll: "Catégorie : toutes",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

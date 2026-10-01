@@ -37,7 +37,7 @@ Voir un patient de la file :
 
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
 2. Écrivez la consultation dans **Ma note de consultation** (S, O, A, P dans la même case). C'est **votre** note pour cette visite : chaque médecin a la sienne.
-3. Pour ajouter une phrase toute prête : cliquez dessus dans le **Dictionnaire**. Les boutons **Tout**, **Général**, **Médecine**, **Chirurgie**… et la case **Rechercher** servent à trouver la phrase.
+3. Pour ajouter une phrase toute prête : cliquez dessus dans le **Dictionnaire**. Pour la trouver : la liste **Catégorie : toutes** (cliquez, puis choisissez **Général**, **Médecine**, **Chirurgie**… — toutes les catégories créées dans les paramètres y sont) et la case **Rechercher**, qui s'ajoutent l'une à l'autre. La catégorie choisie reste la même pour le patient suivant, sur cet ordinateur et pour votre compte.
 4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite dans **Dossier Patient**, dans le cadre bleu de la visite ouverte (**● Dossier ouvert**), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
 5. Deux médecins sur la même visite : la note de l'autre médecin s'affiche à droite sous son nom (mise à jour toutes les 30 secondes). Vous ne pouvez modifier que **votre** note — l'administrateur non plus ne peut pas modifier la note d'un médecin.
 6. Si vous ouvrez un autre patient sans avoir enregistré, un message le demande : **OK** enregistre puis ouvre l'autre patient, **Annuler** reste.
