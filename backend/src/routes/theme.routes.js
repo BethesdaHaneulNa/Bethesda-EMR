@@ -1,4 +1,5 @@
-// The screen a member of staff chose: dark or light (design session, migration 037).
+// The screen a member of staff chose: dark, light or paper (design session, migrations
+// 037 and 902; paper was added on 2026-10-01).
 //
 // Decided by the director on 2026-09-29: remembered per account, so the choice follows
 // the person from one PC to the next. Anyone signed in may read and change their own -
@@ -13,9 +14,9 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
-const THEMES = ['dark', 'light'];
+const THEMES = ['dark', 'light', 'paper'];
 
-// GET /api/theme -> { theme: 'dark' | 'light' }
+// GET /api/theme -> { theme: 'dark' | 'light' | 'paper' }
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const r = await pool.query('SELECT theme FROM staff WHERE id = $1', [req.user.id]);
@@ -28,13 +29,13 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/theme { theme } -> { theme }
-// Anything but the two known values is refused rather than stored: the first-paint
+// Anything but the known values is refused rather than stored: the first-paint
 // script in index.html ignores unknown values, so a stored one would silently leave the
 // account on dark while the database said otherwise.
 router.put('/', authMiddleware, async (req, res) => {
   const theme = req.body ? req.body.theme : undefined;
   if (typeof theme !== 'string' || THEMES.indexOf(theme) < 0) {
-    return res.status(400).json({ error: "theme must be 'dark' or 'light'" });
+    return res.status(400).json({ error: "theme must be 'dark', 'light' or 'paper'" });
   }
   try {
     // updated_at is left alone: it says when the account itself was last changed.

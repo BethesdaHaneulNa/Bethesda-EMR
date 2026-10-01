@@ -4,7 +4,7 @@
 // /api/theme (design session, migration 037): the screen an account chose.
 //  1. Only when signed in.
 //  2. A new account starts dark.
-//  3. Only 'dark' and 'light' are stored; anything else is 400 and changes nothing.
+//  3. Only 'dark', 'light' and 'paper' are stored; anything else is 400 and changes nothing.
 //  4. One's own account only: an id in the request is ignored, another account is untouched.
 //  5. Nothing is written to the change log.
 //  6. What /admin/staff answers (reported, not judged - see the hand-off note).
@@ -55,7 +55,7 @@ check('a new account starts dark', first.status === 200 && first.data.theme === 
 
 // 3
 await call('PUT', '/theme', { theme: 'dark' }, A);
-for (const bad of [{ theme: 'purple' }, { theme: '' }, { theme: null }, { theme: 1 }, { theme: ['light'] }, { theme: { a: 1 } }, { theme: 'Light' }, { theme: ' light' }, {}, { colour: 'light' }]) {
+for (const bad of [{ theme: 'purple' }, { theme: '' }, { theme: null }, { theme: 1 }, { theme: ['light'] }, { theme: { a: 1 } }, { theme: 'Light' }, { theme: ' light' }, { theme: 'Paper' }, { theme: 'papier' }, {}, { colour: 'light' }]) {
   const r = await call('PUT', '/theme', bad, A);
   check('refused: ' + JSON.stringify(bad), r.status === 400, r.status);
 }
@@ -64,6 +64,10 @@ const set = await call('PUT', '/theme', { theme: 'light' }, A);
 check('light is stored', set.status === 200 && set.data.theme === 'light', set.data);
 check('and read back', (await call('GET', '/theme', undefined, A)).data.theme === 'light');
 check('a new login reads the same', (await call('GET', '/theme', undefined, (await call('POST', '/auth/login', { login_id: process.env.DS_TEST_LOGIN, password: process.env.DS_TEST_PASSWORD })).data.token)).data.theme === 'light');
+const setP = await call('PUT', '/theme', { theme: 'paper' }, A);
+check('paper is stored (the check of migration 902 allows it)', setP.status === 200 && setP.data.theme === 'paper', setP.data);
+check('and read back', (await call('GET', '/theme', undefined, A)).data.theme === 'paper');
+await call('PUT', '/theme', { theme: 'light' }, A);
 
 // 4
 check('the other account is untouched', (await call('GET', '/theme', undefined, B)).data.theme === 'dark');

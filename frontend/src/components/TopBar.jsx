@@ -8,7 +8,7 @@ import { PasswordDialog } from '../pages/settingsPassword.jsx';
 // Settings session: the status dot (U3), for accounts with the settings permission.
 import { StatusDot } from '../pages/settingsStatus.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
-import { tint, getTheme, setTheme } from '../theme.js';
+import { tint, getTheme, setTheme, isTheme } from '../theme.js';
 
 // Injected by Vite from package.json (see vite.config.js). Guarded so the component still
 // renders if it is ever loaded outside a Vite build.
@@ -49,7 +49,7 @@ export function TopBar() {
   var showVerState = useState(false); var showVer = showVerState[0]; var setShowVer = showVerState[1];
   var canSeeUpdate = user && userPerms(user).indexOf('settings') >= 0;
   var pwState = useState(false); var showPw = pwState[0]; var setShowPw = pwState[1];
-  // Design session: dark or light screen. The page already wears this PC's last choice
+  // Design session: dark, light or paper screen. The page already wears this PC's last choice
   // (index.html sets it before the first paint); the account's own choice is read below.
   var themeState = useState(getTheme()); var theme = themeState[0]; var setThemeShown = themeState[1];
 
@@ -68,11 +68,11 @@ export function TopBar() {
       // still on the way, is older than the choice on screen: it would turn the screen
       // back. On a slow line that is a real gap, and every screen asks again when it opens.
       if (Date.now() - themeChosenAt < 5000) return;
-      if (r && (r.theme === 'light' || r.theme === 'dark') && r.theme !== getTheme()) setThemeShown(setTheme(r.theme));
+      if (r && isTheme(r.theme) && r.theme !== getTheme()) setThemeShown(setTheme(r.theme));
     }).catch(function () {});
     // The same account open in another tab of this browser: follow its switch.
     function onStorage(e) {
-      if (e.key === 'medconnect_theme' && (e.newValue === 'light' || e.newValue === 'dark') && e.newValue !== getTheme()) setThemeShown(setTheme(e.newValue));
+      if (e.key === 'medconnect_theme' && isTheme(e.newValue) && e.newValue !== getTheme()) setThemeShown(setTheme(e.newValue));
     }
     window.addEventListener('storage', onStorage);
     return function () { window.removeEventListener('storage', onStorage); };
@@ -165,7 +165,7 @@ export function TopBar() {
             })}
           </div>
           <div role="group" aria-label={t.ds_themeSwitch} title={t.ds_themeSwitch} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
-            {[['dark', '🌙', t.ds_themeDark], ['light', '☀', t.ds_themeLight]].map(function (i) {
+            {[['dark', '🌙', t.ds_themeDark], ['light', '☀', t.ds_themeLight], ['paper', '📄', t.ds_themePaper]].map(function (i) {
               return <button key={i[0]} aria-pressed={theme === i[0]} onClick={function () { chooseTheme(i[0]); }} style={{ background: theme === i[0] ? 'var(--accent)' : 'var(--chip)', color: theme === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{i[1]} {i[2]}</button>;
             })}
           </div>

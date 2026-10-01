@@ -1,4 +1,4 @@
-import { setTheme } from '../theme.js';
+import { setTheme, isTheme } from '../theme.js';
 const BASE = '/api';
 
 function getToken() {
@@ -58,7 +58,7 @@ export function saveAuth(token, user) {
   // The account's own screen (dark / light) comes with the login answer: wear it now,
   // before the first screen is drawn, so the previous person's choice on this PC is
   // never shown first. The top bar still reads /api/theme afterwards.
-  if (user && (user.theme === 'light' || user.theme === 'dark')) setTheme(user.theme);
+  if (user && isTheme(user.theme)) setTheme(user.theme);
 }
 
 export function getUser() {
