@@ -79,7 +79,8 @@
 
 > **단추 이름 (2026-10-01, 실장님 결정·총괄 `b828129`)**: 이 목록을 여는 단추와 창 제목은 **🩻 Imagerie (영상/판독)** 입니다(공용 키 `imagingList` — fr «Imagerie» · ko 「영상/판독」 · en "Imaging"). 병원의 PACS 단추처럼 「그 환자가 찍은 것들의 목록」으로 읽히게 하려는 것. 전에는 «Compte-rendu (판독소견)»였음. **영상 창 오른쪽의 판독 칸**은 그대로 **🩻 Compte-rendu (판독소견)**(키 `reading`) — 둘은 다른 것입니다. 이 위키의 아래 절들에서 「판독 목록」이라고 쓴 것은 이 **Imagerie** 목록을 뜻합니다. 영상 서버의 모든 영상을 보여 주는 목록은 EMR에 만들지 않음(Orthanc 관리 화면으로).
 
-- **Consultation (진료)** 화면 위쪽의 **🩻 Imagerie (영상/판독)** 버튼 → 이 환자의 모든 영상 검사가 최근 것부터 나옵니다. 줄마다 날짜 · 종류(US, CR …) · 검사 이름 · 판독 내용이 보이고, **🖼 Voir image (영상보기)** 를 누르면 2.3의 영상 창이 열립니다.
+- **Consultation (진료)** 화면 위쪽의 **🩻 Imagerie (영상/판독)** 버튼 → 이 환자의 모든 영상 검사가 최근 것부터 나옵니다. 줄마다 날짜 · 종류(US, CR …) · 검사 이름 · 판독 내용이 보이고, **🖼 Voir image (영상보기)** 를 누르면 2.3의 영상 창이 **목록 위에** 열립니다.
+- **영상 창을 닫으면 목록이 그대로 남아 있습니다**(2026-10-01, 실장님 — 전에는 진료 화면으로 돌아가서, 여러 영상을 이어 보려면 단추를 또 눌러야 했음). 보던 자리(스크롤)도 그대로라 바로 다음 검사의 **Voir image**를 누르면 됩니다. 영상 창에서 방금 저장한 판독도 목록의 그 줄에 바로 보입니다. 처방 표의 **🖼**로 연 영상 창은 전처럼 진료 화면으로 닫힙니다.
 - 검사 이름 옆에 영상이 왔는지 나옵니다.
   - **N image(s) reçue(s) (영상 N장 도착)** — 초록. 영상이 모두 들어왔습니다.
   - **Images en attente (영상 대기 중)** — 회색. 아직 안 왔습니다(2.5 참고).
@@ -87,7 +88,7 @@
 - 영상 검사가 하나도 없으면 **Aucune imagerie (영상검사 내역이 없습니다)**, 판독이 없으면 **Aucun compte-rendu (판독 소견 없음)** 이 나옵니다.
 - **취소된 영상 검사**는 흐리게, 검사 이름에 줄이 그어지고 **Annulé (취소됨)** 이 붙습니다. 그 아래 *Annulé · 날짜 — Motif : 이유* 한 줄. 영상 도착 표시·환자 번호 경고·판독은 **그대로 보이고**, **🖼 Voir image (영상보기)** 로 영상도 볼 수 있습니다(기록이라서). 취소된 검사에는 판독을 새로 저장할 수 없습니다.
 - **Paiement (수납)** 화면에도 **🩻 Imagerie (영상/판독)** 버튼이 있습니다. 여기서는 **읽기만** 할 수 있고 영상 창은 열리지 않습니다.
-- 창을 닫았다가 다시 열면 새로 불러옵니다. 영상이 도착했는지 다시 보려면 닫고 다시 여세요.
+- 목록은 **영상 창을 닫을 때마다** 조용히 다시 읽습니다(「Loading…」 없이, 자리 그대로). 그 밖에는 저절로 바뀌지 않으니, 영상이 도착했는지 다시 보려면 목록을 닫고 다시 여세요.
 
 ### 2.5 영상이 안 보일 때 — 순서대로
 
@@ -217,7 +218,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 ### 화면
 
-- `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. 진료·수납 화면의 「🩻 Imagerie (영상/판독)」 창(키 `imagingList`, 2026-10-01 전에는 「🩻 판독소견」) 안에 들어갑니다.
+- `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. **`props.reload`**(숫자, 2026-10-01 총괄 `71dedec`): 화면이 이 값을 올리면 목록을 다시 읽음 — 같은 환자면 「Loading…」을 띄우지 않고(자리·스크롤 유지), 읽기에 실패해도 있던 목록을 지우지 않음. 진료 화면은 목록의 `onOpen`에서 목록을 닫지 않고(영상 창 z 1001이 목록 z 1000 위), 영상 창이 닫힐 때(`viewer`가 비고 목록이 열려 있으면) `readingsReload`를 올림. 수납 화면은 `reload`를 주지 않음(영상 창이 없음). 진료·수납 화면의 「🩻 Imagerie (영상/판독)」 창(키 `imagingList`, 2026-10-01 전에는 「🩻 판독소견」) 안에 들어갑니다.
   - 같은 파일에서 **`PatientCheck({images, t, style})`** 와 **`imagesOfRow(row)`** 도 export합니다. `images`는 `viewer-url` 응답의 `images` 모양(`{patient_check, patient_id, patient_name}`, 도착 전에는 `null`)으로 통일했고, 판독 목록의 줄은 `imagesOfRow`로 그 모양으로 바꿔 넘깁니다. `style`은 바깥 상자(여백)만 덮어씀. 진료 화면의 뷰어 창이 이것을 가져다 쓰면 경고 모양·문구가 한 곳에서 관리됩니다.
 - 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다. iframe `src`와 「새 탭에서 열기」는 `viewer-url`의 `url`(EMR 자신의 상대 주소 `/api/pacs/viewer/…`)을 그대로 씀 — P-9 뒤에도 진료 파일은 바뀐 것 없음.
 - 설정 → 오더 연동(Order Feed) 탭 — `Settings.jsx` 약 476~515줄, `savePacs`·`testPacs`.
@@ -556,6 +557,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | 2.4·5절: 영상 창을 닫으면 **목록이 그대로 남음**(총괄 `71dedec` — `Consultation.jsx`, `RadiologyReadings.jsx`의 `reload`). PACS 세션은 격리에서 회귀를 보고 문서를 맞춤 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 단추 이름: 환자의 영상 검사 목록을 여는 단추·창 제목이 **🩻 Imagerie (영상/판독)**(공용 키 `imagingList`, 총괄 `b828129`). 2.4·2.5·2.6·4·5절과 프랑스어 설명서·순서서의 이름을 맞춤. 판독 칸 «Compte-rendu»는 그대로 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 4절 중계 7: 그림 없는 자료만 온 검사는 영상 창에 빈 칸 대신 한 줄 안내(fr·ko·en). 프랑스어 설명서 메시지 표·순서서 ④ | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.3: 모르는 영상 종류도 받음(`ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED`, 총괄 결정) — 격리 시험·영상 창에서 보이는 것·되돌리기. device-watch: 전용 종류·그림 없는 자료 알림, 「영상 서버 알림」을 DICOM 스레드로 좁힘(W001 뺌) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
