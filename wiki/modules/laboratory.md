@@ -570,4 +570,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-10-01 | `POST /units/save`: 본문에 `units` 목록이 없으면 400(전에는 목록을 통째로 비움) — `unitNamesOf()`, `lab.flag.mjs` 에 10건 | `c9ba24e` |
 | 2026-10-01 | 왼쪽 목록에 검색 칸(수납·약국과 같은 것, `layout.js` `LIST_SEARCH`): 이름·차트번호·검사 이름으로 화면에서 거름, 맞는 것이 없을 때 안내 — `lb_searchPh`·`lb_searchNone` | `e8150a5` |
 | 2026-10-01 | 검사결과 창(진료 화면)에 영상/판독 창의 좋은 점 넷 — 날짜 체크 → 결과지 인쇄(`documents/lab-results.jsx`, 발행 기록), 종류 select, 찾기, 창 틀을 `LabResultsWindow` 로(영상/판독과 같은 틀). 표는 그대로. `GET /patient/:id/results` 에 `result_by_name`, `lb_r…` 16개 | `998afd6` |
-| 2026-10-01 | `GET /patient/:id/results` 에 payment 권한(읽기) — 수납 화면에서 검사결과 창을 열어 결과지를 뽑게(단추는 수납 세션) | (이 커밋) |
+| 2026-10-01 | `GET /patient/:id/results` 에 payment 권한(읽기) — 수납 화면에서 검사결과 창을 열어 결과지를 뽑게(단추는 수납 세션) | `d740fb0` |

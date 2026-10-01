@@ -5,7 +5,7 @@
 ## 2026-10-01 — 수납 화면에서 검사결과 창을 열 수 있게: 결과 읽기에 payment 권한
 
 - **상태**: 확인 요청
-- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `9f64a19`, fast-forward 뒤)
+- **커밋**: session/laboratory `d740fb0` (출발점 `develop` `9f64a19`, fast-forward 뒤)
 - **계기**: 실장님(2026-10-01, 총괄 전달) — 검사실 화면에서 이 창을 여는 것은 「굳이 필요 없음」(안 넣음, lab 의 서류 발행 권한도 그대로). 대신 「수납에도 이 버튼 필요해 — 피검사 결과 뽑아 줄 일이 분명히 있을 거야」. 단추는 수납 세션이 답니다.
 - **고친 것**: `GET /api/lab/patient/:patientId/results` 가 `consultation` · `lab` 에 더해 **`payment`** 도 통과(읽기). 그 밖의 검사실 길(`/lab/day`, 결과 저장 등)은 그대로 lab 만.
 - **수납 세션께 — 쓰는 법**
