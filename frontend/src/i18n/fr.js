@@ -331,7 +331,7 @@ export default {
   cs_wsCancelled: "Annulé",
   cs_vsRegistered: "Enregistré",
   cs_vsWaiting: "En attente",
-  cs_vsInProgress: "En consultation",
+  cs_vsInProgress: "En cours",
   cs_vsCompleted: "Terminé",
   cs_vsCancelled: "Annulé",
   cs_badgeDrug: "MÉD",
@@ -420,12 +420,12 @@ export default {
   cs_phraseCatAll: "Catégorie : toutes",
   // Commencer la consultation / remettre en attente (décision (다), 2026-10-01) : ouvrir un patient ne commence pas la consultation
   cs_start: "Commencer la consultation",
-  cs_startHint: "Ouvrir un patient ne commence pas la consultation. Ce bouton, ou le premier enregistrement, met la visite « En consultation ».",
+  cs_startHint: "Ouvrir un patient ne commence pas la consultation. Ce bouton, ou le premier enregistrement, met la visite « En cours ».",
   cs_back: "Remettre en attente",
   cs_backHint: "Remet en attente une consultation commencée par erreur. Possible seulement tant que rien n'est enregistré.",
   cs_backDone: "Remis en attente",
   cs_backHasRecords: "Cette consultation contient déjà des données (note, constantes, prescription, examen, document ou facture) : elle ne peut pas être remise en attente.",
-  cs_backNotStarted: "Cette visite n'est plus « En consultation ». L'écran a été relu.",
+  cs_backNotStarted: "Cette visite n'est plus « En cours ». L'écran a été relu.",
   cs_nothingToSave: "Rien à enregistrer",
   // Médecins affichés dans la file d'attente (directeur, 2026-10-01)
   cs_qfTitle: "Médecins affichés dans la file",
@@ -443,6 +443,9 @@ export default {
   cs_allergyTitle: "Attention : allergie",
   cs_allergyLead: "Allergie notée pour ce patient :",
   cs_allergyOk: "OK",
+  // Quand la liste sous la case ne peut pas tout afficher (le bouton « + Recherche médicament » a été retiré, 2026-10-01)
+  cs_moreAll: "… {n} autres. Tapez plus de lettres, ou choisissez « Médicament » ou « Examen / Imagerie » au-dessus.",
+  cs_moreOne: "… {n} autres. Tapez plus de lettres pour préciser.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

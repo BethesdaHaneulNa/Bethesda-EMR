@@ -443,6 +443,9 @@ export default {
   cs_allergyTitle: "알레르기 주의",
   cs_allergyLead: "이 환자에게 적혀 있는 알레르기:",
   cs_allergyOk: "확인",
+  // 코드 칸 아래 목록이 다 못 보여 줄 때 (「+ 약 검색」 단추를 없애면서, 2026-10-01)
+  cs_moreAll: "… {n}개 더 있습니다. 글자를 더 치거나 위에서 「약」 또는 「검사/영상」을 고르세요.",
+  cs_moreOne: "… {n}개 더 있습니다. 글자를 더 쳐서 좁히세요.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

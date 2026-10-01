@@ -230,8 +230,8 @@ export default function ConsultationPage() {
   var oms = useState('all'), orderMode = oms[0], setOrderMode = oms[1];
   var oss = useState([]), orderSugg = oss[0], setOrderSugg = oss[1];
   var osi = useState(-1), oSelIdx = osi[0], setOSelIdx = osi[1];
-  var dms = useState(false), drugModal = dms[0], setDrugModal = dms[1];
-  var dqs = useState(''), drugQ = dqs[0], setDrugQ = dqs[1];
+  // How many matches the list under the code box left out (see buildOrderSuggestions).
+  var oms2 = useState(0), orderMore = oms2[0], setOrderMore = oms2[1];
   var drs = useState([]), allDrugs = drs[0], setAllDrugs = drs[1];
   var ocs2 = useState([]), allOrderCodes = ocs2[0], setAllOrderCodes = ocs2[1];
   var phs = useState([]), phrases = phs[0], setPhrases = phs[1];
@@ -830,27 +830,37 @@ export default function ConsultationPage() {
   // Drug / exam order autocomplete
   function itemText(it){ return ((it.code||it.order_code||it.drug_code||'')+' '+(it.name||it.order_name||it.drug_name||'')).toLowerCase(); }
 
+  // The list under the code box. It is the only way to find a drug now: the green
+  // "+ Recherche médicament" button and its window were removed (director, 2026-10-01 -
+  // the box does the same). What only the window did was show EVERY match: this list
+  // stopped at 8 drugs. So with "Médicament" (or "Examen") chosen the list now goes up to
+  // SUGG_ONE; under "Tout" it stays short (8 drugs, 12 lines in all). Whatever is left
+  // out is counted, and the list ends with a line saying how many.
+  var SUGG_ONE = 50;
   function buildOrderSuggestions(val, mode){
     var s=(val||'').toLowerCase();
-    if(s.length<2) return [];
-    var out=[];
-    if(mode==='all'||mode==='drug'){
-      out=out.concat(allDrugs.filter(function(d){return itemText(d).indexOf(s)>=0;}).slice(0,8).map(function(d){var n={};for(var k in d)n[k]=d[k];n.kind='drug';return n;}));
-    }
-    if(mode==='all'||mode==='exam'){
-      out=out.concat(allOrderCodes.filter(function(o){return o.code_type!=='fee' && itemText(o).indexOf(s)>=0;}).slice(0,12).map(function(o){var n={};for(var k in o)n[k]=o[k];n.kind='order';return n;}));
-    }
-    return out.slice(0,12);
+    if(s.length<2) return { list: [], more: 0 };
+    var copy = function(kind){ return function(d){ var n={}; for(var k in d) n[k]=d[k]; n.kind=kind; return n; }; };
+    var drugs = (mode==='all'||mode==='drug') ? allDrugs.filter(function(d){return itemText(d).indexOf(s)>=0;}) : [];
+    var orders = (mode==='all'||mode==='exam') ? allOrderCodes.filter(function(o){return o.code_type!=='fee' && itemText(o).indexOf(s)>=0;}) : [];
+    var out = mode==='all'
+      ? drugs.slice(0,8).map(copy('drug')).concat(orders.map(copy('order'))).slice(0,12)
+      : drugs.map(copy('drug')).concat(orders.map(copy('order'))).slice(0,SUGG_ONE);
+    return { list: out, more: drugs.length + orders.length - out.length };
+  }
+  function showSuggestions(val, mode){
+    var r = buildOrderSuggestions(val, mode);
+    setOrderSugg(r.list); setOrderMore(r.more);
   }
 
   function handleOrderCodeChange(val){
     setOrderCode(val); setOSelIdx(-1);
-    setOrderSugg(buildOrderSuggestions(val, orderMode));
+    showSuggestions(val, orderMode);
   }
 
   function changeOrderMode(mode){
     setOrderMode(mode);
-    setOrderSugg(buildOrderSuggestions(orderCode, mode));
+    showSuggestions(orderCode, mode);
   }
 
   function handleOrderCodeKey(e){
@@ -1387,12 +1397,6 @@ export default function ConsultationPage() {
     return r;
   },[phrases,phraseCatShown,phraseQ]);
 
-  var drugResults = useMemo(function(){
-    if(!drugQ) return allDrugs;
-    var s=drugQ.toLowerCase();
-    return allDrugs.filter(function(d){return d.name.toLowerCase().indexOf(s)>=0||d.code.toLowerCase().indexOf(s)>=0;});
-  },[allDrugs,drugQ]);
-
   finishedRef.current = !!(consult && (consult.status==='completed' || consult.status==='signed' ||
     (sel && sel.visit_date && ymd(sel.visit_date) !== ymd(new Date()))));
   // The status line over the vital signs. Start: a visit still waiting. Back to waiting:
@@ -1519,7 +1523,6 @@ export default function ConsultationPage() {
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                 <div style={{padding:'5px 10px',background:scBg,display:'flex',justifyContent:'space-between',borderBottom:'1px solid '+bd,alignItems:'center'}}>
                   <span style={{fontWeight:700,fontSize: 14,color:tx}}>{t.orders}{noDoseRows.length ? <span title={t.cs_noDoseHint} style={{marginLeft:8,color:'var(--danger-text)',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noDoseCount||'').replace('{n}', noDoseRows.length)}</span> : null}{noPackRows.length ? <span title={t.cs_packQtyHint} style={{marginLeft:8,color:'var(--danger-text)',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPackQtyCount||'').replace('{n}', noPackRows.length)}</span> : null}{noPriceCount ? <span title={t.cs_noPriceHint} style={{marginLeft:8,color:'var(--warn-text)',fontSize:12,fontWeight:700,cursor:'help'}}>⚠ {String(t.cs_noPriceCount||'').replace('{n}', noPriceCount)}</span> : null}</span>
-                  <button onClick={function(){setDrugModal(true)}} style={{background:'var(--ok-a20)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>+ {t.drugSearch}</button>
                 </div>
                 {/* Code input */}
                 <div style={{padding:'5px 10px',borderBottom:'1px solid '+bd,position:'relative'}}>
@@ -1545,6 +1548,7 @@ export default function ConsultationPage() {
                           {!isOrder ? <span style={{fontSize: 12,color:(parseInt(d.stock_qty,10)||0)>0?t3:'var(--danger-text)',fontWeight:600,whiteSpace:'nowrap',minWidth:64,textAlign:'right'}}>{String(t.cs_stock||'').replace('{n}', parseInt(d.stock_qty,10)||0)}</span> : null}
                         </div>;
                       })}
+                      {orderMore>0 ? <div style={{padding:'5px 10px',fontSize: 12,color:t2,fontStyle:'italic'}}>{String((orderMode==='all' ? t.cs_moreAll : t.cs_moreOne)||'').replace('{n}', orderMore)}</div> : null}
                     </div>
                   ):(orderCode.trim().length>=2 ? (
                     // Two letters typed and nothing matches: say so, instead of showing nothing
@@ -1815,33 +1819,6 @@ export default function ConsultationPage() {
         </div>
       </div>
 
-      {/* Drug search modal */}
-      {drugModal?(
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'var(--scrim)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'var(--panel-head)',borderRadius:10,border:'1px solid '+bd,width:500,maxHeight:'70vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px var(--shadow-50)'}}>
-            <div style={{padding:'10px 14px',borderBottom:'1px solid '+bd,display:'flex',justifyContent:'space-between'}}>
-              <span style={{fontWeight:700,fontSize: 15,color:tx}}>{t.drugSearch}</span>
-              <button onClick={function(){setDrugModal(false);setDrugQ('')}} style={{background:'transparent',border:'none',color:t2,cursor:'pointer',fontSize: 18}}>✕</button>
-            </div>
-            <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd}}>
-              <input autoComplete="off" value={drugQ} onChange={function(e){setDrugQ(e.target.value)}} placeholder={t.search} autoFocus style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 10px',color:tx,fontSize: 14,outline:'none',width:'100%',boxSizing:'border-box'}}/>
-            </div>
-            <div style={{flex:1,overflow:'auto',maxHeight:300}}>
-              {drugQ && drugResults.length===0 ? <div style={{padding:'10px 14px',fontSize:13,color:t2}}>{t.cs_noResults}</div> : null}
-              {drugResults.map(function(d){
-                return <div key={d.id} onClick={function(){addDrugRx(d);setDrugModal(false);setDrugQ('')}} style={{padding:'7px 14px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',display:'flex',gap:8}}
-                  onMouseEnter={function(e){e.currentTarget.style.background='var(--hover-row-2)'}}
-                  onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                  <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:600,width:76,whiteSpace:'nowrap'}}>{d.code}</span>
-                  <span style={{fontSize: 14,color:tx,flex:1}}>{d.name}</span>
-                  <span style={{fontSize: 12,color:'var(--warn-ink)',fontWeight:600}}>{formLabel(t, d.dosage_form)}</span>
-                  <span style={{fontSize: 12,color:(parseInt(d.stock_qty,10)||0)>0?t3:'var(--danger-text)',fontWeight:600,whiteSpace:'nowrap',minWidth:64,textAlign:'right'}}>{String(t.cs_stock||'').replace('{n}', parseInt(d.stock_qty,10)||0)}</span>
-                </div>;
-              })}
-            </div>
-          </div>
-        </div>
-      ):null}
       <PatientFinder open={finderOpen} onClose={function(){setFinderOpen(false)}} mode="visit"
         onPickVisit={function(v){ pickPatient(v); }} />
       <PatientFinder open={histOpen} onClose={function(){setHistOpen(false)}} mode="visit"

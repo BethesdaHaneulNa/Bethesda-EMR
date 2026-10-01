@@ -41,11 +41,11 @@ Voir un patient de la file :
 
 **Ouvrir n'est pas commencer.** Cliquer sur un patient ouvre son dossier pour le lire : à l'accueil, il reste **En attente**. Si vous avez cliqué par erreur, ouvrez simplement un autre patient : rien n'a changé.
 
-En haut de la colonne du milieu, une ligne indique l'état de la visite : **En attente**, **En consultation** ou **Terminé**.
+En haut de la colonne du milieu, une ligne indique l'état de la visite : **En attente**, **En cours** ou **Terminé**.
 
-- **▶ Commencer la consultation** (visible quand la visite est **En attente**) : la visite passe **En consultation**, à l'accueil aussi (onglet **En cours**).
-- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen, ou un **document émis** — la visite passe toute seule **En consultation**. **Terminé** fonctionne aussi directement.
-- **↩ Remettre en attente** (visible seulement si la visite est **En consultation** et que **rien** n'est enregistré) : pour une consultation commencée par erreur. La visite redevient **En attente**. Dès qu'il y a une note, une constante, un médicament, un examen, un document ou une facture, ce bouton n'existe plus.
+- **▶ Commencer la consultation** (visible quand la visite est **En attente**) : la visite passe **En cours**, à l'accueil aussi (onglet **En cours**).
+- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen, ou un **document émis** — la visite passe toute seule **En cours**. **Terminé** fonctionne aussi directement.
+- **↩ Remettre en attente** (visible seulement si la visite est **En cours** et que **rien** n'est enregistré) : pour une consultation commencée par erreur. La visite redevient **En attente**. Dès qu'il y a une note, une constante, un médicament, un examen, un document ou une facture, ce bouton n'existe plus.
 - **Sauver** sans rien avoir saisi affiche « Rien à enregistrer » et ne change pas l'état.
 
 ### 3. Signes vitaux et note
@@ -63,6 +63,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
 ### 4. Prescrire un médicament
 
 1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom, la forme (**Comprimé**, **Gélule**, **Sirop**…) et le **Stock** (en rouge s'il est à 0). Deux médicaments du même nom se distinguent par leur code et leur stock. Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Si rien ne correspond, la liste affiche **Aucun résultat**. Vous pouvez aussi utiliser **+ Recherche médicament**.
+   - Si la liste se termine par **… 22 autres**, tapez plus de lettres, ou cliquez sur **Médicament** au-dessus de la case : la liste montre alors tous les médicaments trouvés (jusqu'à 50) et se fait défiler. Le bouton vert **+ Recherche médicament** n'existe plus : cette case fait la même chose.
 2. Appuyez sur Entrée (ou cliquez). La ligne arrive **vide**, avec l'étiquette rouge **Indiquez dose/jour, fois et jours**.
 3. Remplissez les cases, à la manière de la clinique :
    - **Dose/j** : la dose **totale par jour** (par exemple `3` = 3 comprimés par jour).
@@ -185,7 +186,7 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 | **Non ajouté(s) - retiré(s) de la liste des médicaments : …** | L'ordonnance type contient un médicament retiré | Cherchez un autre médicament |
 | **Il reste des champs [ ] à compléter : … Émettre quand même ?** | Des crochets restent dans le document | **Annuler**, remplacez les crochets, puis **Émettre** |
 | **Cette consultation contient déjà des données … : elle ne peut pas être remise en attente.** | Vous cliquez sur **↩ Remettre en attente**, mais un autre médecin a écrit entre-temps, ou il y a un document ou une facture | Rien à faire : l'écran est relu et le bouton disparaît. Pour finir, cliquez sur **Terminé** |
-| **Cette visite n'est plus « En consultation ». L'écran a été relu.** | Quelqu'un l'a déjà remise en attente ou terminée | Rien à faire |
+| **Cette visite n'est plus « En cours ». L'écran a été relu.** | Quelqu'un l'a déjà remise en attente ou terminée | Rien à faire |
 | **Cette visite a été annulée à l'accueil : la consultation ne peut pas être ouverte.** | La visite a été annulée à l'accueil | Faites réenregistrer le patient à l'accueil |
 | **Erreur : …** | Le serveur a refusé l'enregistrement | Vérifiez la case (un chiffre là où il faut un chiffre) et recommencez |
 
