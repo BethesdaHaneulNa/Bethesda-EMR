@@ -103,6 +103,31 @@ export default function LabPage() {
 
   var viewSeq = useRef(0);   // numbers each loadView, so only the latest one may fill the grid
 
+  // Work date (director, 2026-10-01), as on the reception and payment screens: both
+  // lists hold the lab orders of one day's visits, today by default. "Today" comes from
+  // the server (GET /lab/day answers with it), never the PC's clock. While the screen
+  // follows today, a refresh after midnight moves to the new day; a date staff picked
+  // stays put. What is left from an earlier day is found by going to that day or with
+  // the patient finder -- there is no "earlier days" line (the director, about the
+  // payment screen: the work date is enough).
+  var wds = useState(''), workDate = wds[0], setWorkDate = wds[1];
+  var tds = useState(''), serverToday = tds[0], setServerToday = tds[1];
+  var workRef = useRef({ date: '', follow: true });
+  var viewingPast = !!(workDate && serverToday && workDate < serverToday);
+  function chooseWorkDate(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+    if (serverToday && date > serverToday) date = serverToday;   // no visit is dated ahead
+    workRef.current = { date: date, follow: date === serverToday };
+    setWorkDate(date);
+    setSel(null); setView(null); setGroups([]); setNotice('');   // a visit of the other day is not left open
+    loadData();
+  }
+  function shiftWorkDate(days) {
+    var d = new Date((workDate || serverToday) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    chooseWorkDate(d.toLocaleDateString('en-CA'));
+  }
+
   // The lists refresh themselves every 30 s (while the tab is visible), so a
   // consultation the doctor just finished shows up without pressing ↻. Only the
   // left lists are refreshed; what the lab is typing in the centre is untouched.
@@ -111,15 +136,24 @@ export default function LabPage() {
     var timer = setInterval(function () { if (!document.hidden) loadData(true); }, 30000);
     return function () { clearInterval(timer); };
   }, []);
+  // quiet === true: the 30 s refresh. (The refresh button passes nothing.)
   function loadData(quiet) {
+    quiet = quiet === true;
     if (!quiet) setLoading(true);
-    Promise.all([
-      api.get('/lab/pending').catch(function () { return null; }),
-      api.get('/lab/completed').catch(function () { return null; }),
-    ]).then(function (r) {
+    var w = workRef.current, asked = w.follow || !w.date ? '' : w.date;
+    api.get('/lab/day' + (asked ? '?date=' + asked : '')).then(function (r) {
+      var now = workRef.current;
+      // the date was changed while this was read: the later read owns the lists
+      if ((now.follow || !now.date ? '' : now.date) !== asked) return;
+      if (now.follow || !now.date) workRef.current = { date: r.today, follow: true };
+      setServerToday(r.today);
+      setWorkDate(workRef.current.date);
+      setPending(r.pending || []);
+      setCompleted(r.completed || []);
+      setLoading(false);
+    }).catch(function () {
       // a failed background refresh keeps the lists it had instead of emptying them
-      if (r[0] || !quiet) setPending(r[0] || []);
-      if (r[1] || !quiet) setCompleted(r[1] || []);
+      if (!quiet) { setPending([]); setCompleted([]); }
       setLoading(false);
     });
   }
@@ -271,9 +305,23 @@ export default function LabPage() {
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* LEFT: pending consultations */}
-        <div style={{ width: 300, borderRight: '1px solid ' + bd, background: pn, overflow: 'auto', flexShrink: 0 }}>
+        <div style={{ width: 300, borderRight: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+          {/* work date: same strip as the payment screen's (Payment.jsx), at the top of the list */}
+          <div style={{ flexShrink: 0, padding: '7px 9px', borderBottom: '1px solid ' + bd, background: viewingPast ? 'var(--warn-a14)' : 'var(--panel-2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: viewingPast ? 'var(--warn-text)' : t2, whiteSpace: 'nowrap' }}>{t.rc_workDate}</span>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '4px 5px', cursor: 'pointer', fontSize: 13 }}>◀</button>
+              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={{ flex: 1, minWidth: 0, background: 'var(--field-3)', border: '1px solid var(--field-border)', borderRadius: 5, padding: '4px 4px', color: tx, fontSize: 13, colorScheme: 'var(--scheme)' }} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '4px 5px', cursor: 'pointer', fontSize: 13, opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 }}>▶</button>
+            </div>
+            {viewingPast ? <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 6 }}>
+              <div style={{ flex: 1, fontSize: 12, color: 'var(--warn-text)', lineHeight: 1.4 }}>{t.lb_workDatePast.replace('{date}', workDate)}</div>
+              <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', borderRadius: 5, padding: '4px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t.rc_backToToday}</button>
+            </div> : null}
+          </div>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 16, color: t3 }}>{t.loading || 'Loading…'}</div> : null}
-          {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? t.lb_noPending : t.lb_noCompleted}</div> : null}
+          {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? t.lb_noPending : (viewingPast ? t.lb_noCompletedOn : t.lb_noCompleted)}</div> : null}
           {list.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
             return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
@@ -288,6 +336,7 @@ export default function LabPage() {
               <div style={{ fontSize: 12, color: cyan, marginTop: 2, overflowWrap: 'anywhere' }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
             </div>;
           })}
+          </div>
         </div>
 
         {/* CENTER: entry */}

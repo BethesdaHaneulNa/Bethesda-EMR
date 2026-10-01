@@ -719,6 +719,9 @@ export default {
   lb_errUnitDup: "« {u} » est déjà dans la liste (les majuscules et les espaces ne comptent pas).",
   lb_errUnitLong: "« {u} » : une unité a 30 caractères au maximum.",
   lb_errUnitEmpty: "Une unité n'a pas de nom. Écrivez-le ou retirez la ligne avec ✕.",
+  // lab screen: work date (the label and the day buttons are reception's rc_ keys)
+  lb_workDatePast: "Date passée ({date}) : un résultat saisi maintenant reste classé à cette date.",
+  lb_noCompletedOn: "Aucune analyse terminée à cette date",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

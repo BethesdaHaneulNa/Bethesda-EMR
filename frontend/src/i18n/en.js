@@ -728,6 +728,9 @@ export default {
   lb_errUnitDup: "“{u}” is already in the list (capitals and spaces do not count).",
   lb_errUnitLong: "“{u}”: a unit has 30 characters at most.",
   lb_errUnitEmpty: "A unit has no name. Type one or remove the row with ✕.",
+  // lab screen: work date (the label and the day buttons are reception's rc_ keys)
+  lb_workDatePast: "You are looking at a past date ({date}). A result entered now is still filed under that date.",
+  lb_noCompletedOn: "No completed tests on this date",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

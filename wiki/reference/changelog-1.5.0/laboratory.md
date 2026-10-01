@@ -29,10 +29,8 @@ safely: add a differently named row and remove the old one.
 The lab's list used to show an order only once the doctor had closed the consultation,
 but patients usually go to the lab in the middle of it and come back with the result.
 An order now appears as soon as it is placed, marked *In consultation* while the
-consultation is open. The list still shows today's visits only — an earlier test is
-opened through patient search, which already allowed it — and it refreshes itself every
-30 seconds. *Completed* now means results entered today, so yesterday's sample finished
-this morning is found there. Visits cancelled at reception no longer appear.
+consultation is open. The list refreshes itself every 30 seconds. Visits cancelled at
+reception no longer appear. (Which day the lists show: see the work date, below.)
 
 Saving on *All* used to stop at the first test with nothing typed in, after the tests
 before it were already completed. Only the tests with something entered are saved now;
@@ -66,6 +64,18 @@ the ranges later never changes how an old result was judged.
 the doctors' decision. A table of the ranges used by Korean laboratories, with sources,
 is in `wiki/reference/lab-reference-ranges-kr.md`, and a one-page questionnaire for the
 doctors in `wiki/reference/lab-reference-questions.md`.
+
+### A work date, as at reception and payment
+
+The lab's lists showed today and nothing else; a test left from an earlier day could only
+be reached by searching for the patient. The screen now has the same work date as the
+reception and payment screens, at the top of the list: step back a day or pick a date,
+and *Pending* and *Completed*, with their counts, are those of that day's visits. A past
+date is shown in amber with a button back to today; "today" is the server's, not the
+PC's clock. A result entered while a past date is shown is filed under the visit's date,
+as before. *Completed* now means the tests of that day's visits that have a result — it
+used to mean the results entered today, whatever the visit's day. The patient search
+still opens a test of any day.
 
 ### Units are picked from a list the clinic keeps
 

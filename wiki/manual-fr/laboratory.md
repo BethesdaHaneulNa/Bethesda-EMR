@@ -7,7 +7,7 @@ L'écran **Laboratoire** sert à saisir les résultats des analyses demandées p
 ## En bref
 
 1. En haut, cliquez sur **Laboratoire**.
-2. À gauche, vérifiez que **En attente** est sélectionné. Le chiffre indique le nombre de patients qui attendent un résultat.
+2. En haut à gauche, vérifiez que **Date de travail** montre la date d'aujourd'hui et que **En attente** est sélectionné. Le chiffre indique le nombre de patients qui attendent un résultat.
 3. Cliquez sur le nom du patient (exemple : **RAKOTO Jean**).
 4. Au centre, saisissez chaque résultat dans la colonne **Valeur**.
 5. En bas, cliquez sur **✓ Enregistrer · Terminer**.
@@ -21,7 +21,7 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 
 1. Cliquez sur **Laboratoire**, puis sur **En attente**.
    - Un patient apparaît dès que le médecin a demandé l'analyse, même si la consultation n'est pas finie. Dans ce cas, **En consultation** est écrit en jaune à côté de son nom. Vous pouvez quand même saisir et enregistrer.
-   - Seuls les patients venus **aujourd'hui** sont dans cette liste. Pour un jour précédent, voir « Ouvrir une analyse d'un autre jour ».
+   - La liste montre les patients venus à la **Date de travail** (aujourd'hui, sauf si vous l'avez changée). Pour un jour précédent, voir « Ouvrir une analyse d'un autre jour ».
 2. Cliquez sur le nom du patient. Au centre, les analyses demandées apparaissent en boutons (exemple : **CBC**, **Malaria RDT**).
    - S'il y a plusieurs analyses, le bouton **Tout** est déjà choisi : toutes les lignes sont affichées ensemble.
    - Pour une seule analyse, cliquez sur son bouton. Une analyse déjà enregistrée porte un **✓**.
@@ -51,16 +51,29 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 
 ### Corriger un résultat déjà enregistré
 
-1. Cliquez sur **Terminé**. Les patients dont vous avez enregistré un résultat aujourd'hui apparaissent.
+1. Cliquez sur **Terminé**. Les patients venus à la **Date de travail** et dont un résultat est enregistré apparaissent. Pour un patient venu un autre jour, changez d'abord la date (voir ci-dessous).
 2. Cliquez sur le patient, corrigez la valeur, puis cliquez sur **✓ Enregistrer · Terminer**.
 3. L'écran garde seulement la nouvelle valeur. La correction est notée dans le **Journal**, que seul l'administrateur peut lire. Une première saisie n'est pas notée.
 
 ### Ouvrir une analyse d'un autre jour
 
+La liste ne montre qu'un seul jour : la **Date de travail**, en haut à gauche. C'est la même date de travail que sur les écrans **Enregistrement** et **Paiement**.
+
+**Si vous connaissez le jour**
+
+1. À côté de **Date de travail**, cliquez sur **◀** pour reculer d'un jour, ou cliquez sur la date pour en choisir une. On ne peut pas choisir une date après aujourd'hui.
+2. La ligne devient **orange** et affiche **Date passée (…) : un résultat saisi maintenant reste classé à cette date.** Les listes **En attente** et **Terminé**, et leurs chiffres, sont ceux de ce jour-là.
+3. Cliquez sur le patient, saisissez et enregistrez comme d'habitude. Le résultat reste classé à la date de la visite ; le patient passe dans **Terminé** de ce jour-là.
+4. Quand vous avez fini, cliquez sur **Aujourd'hui**.
+
+**Si vous ne connaissez pas le jour**
+
 1. Cliquez sur **🔍 Trouver patient**.
 2. Tapez le nom ou le numéro de dossier (exemple : **26-00001**) dans **Nom / n° dossier**, puis cliquez sur **Rechercher**.
 3. Cliquez sur le patient. La fenêtre **Visites du patient** montre ses visites par date. Cliquez sur la bonne date.
-4. Saisissez et enregistrez comme d'habitude. Le résultat apparaît aujourd'hui dans **Terminé**.
+4. Saisissez et enregistrez comme d'habitude. Le patient passe dans **Terminé** du jour de sa visite.
+
+L'écran d'aujourd'hui ne signale pas les analyses restées en attente un autre jour : pour les voir, reculez la **Date de travail**.
 
 ### Lire le tableau des résultats (à droite)
 
@@ -76,7 +89,7 @@ Le tableau **Résultats labo** montre tous les résultats du patient, une colonn
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
 |---|---|---|
-| **Aucune analyse en attente de résultat** | Personne n'attend de résultat aujourd'hui. | Rien. Attendez ou cliquez sur **↻**. |
+| **Aucune analyse en attente de résultat** | Personne n'attend de résultat à la **Date de travail**. | Rien. Attendez ou cliquez sur **↻**. Vérifiez que la **Date de travail** est bien celle d'aujourd'hui. |
 | **Rien n'a été saisi. Saisissez au moins une valeur ou une note.** | Vous avez cliqué sur Enregistrer sans rien écrire. | Écrivez au moins un résultat, puis enregistrez. |
 | **La demande de cet examen a été supprimée en consultation. La liste est rechargée.** | Le médecin a supprimé cette analyse pendant que vous la saisissiez. | Rien à refaire. Les autres analyses du patient sont bien enregistrées. |
 | **Cet examen a été annulé en consultation. La liste est rechargée.** | Le médecin a annulé cette analyse (résultat déjà présent). | Rien à refaire. Si vous pensez que c'est une erreur, parlez au médecin. |
@@ -87,7 +100,7 @@ Le tableau **Résultats labo** montre tous les résultats du patient, une colonn
 
 ## À ne pas faire
 
-- Ne changez pas d'écran (par exemple vers **Pharmacie**) avant d'avoir cliqué sur **✓ Enregistrer · Terminer** : ce qui n'est pas enregistré est perdu. La liste **En attente**, elle, reste.
+- Ne changez pas d'écran (par exemple vers **Pharmacie**) ni de **Date de travail** avant d'avoir cliqué sur **✓ Enregistrer · Terminer** : ce qui n'est pas enregistré est perdu. La liste **En attente**, elle, reste.
 - N'écrivez pas un résultat dans une autre unité que celle de la colonne **Unité**.
 - N'enregistrez pas une analyse « pour la vider » : une analyse enregistrée est considérée comme **terminée**.
 - N'écrivez pas le résultat d'un patient sur la fiche d'un autre : vérifiez le nom et le numéro de dossier en haut du centre avant d'enregistrer.

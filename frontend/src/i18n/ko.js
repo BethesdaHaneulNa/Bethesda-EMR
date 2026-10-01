@@ -719,6 +719,9 @@ export default {
   lb_errUnitDup: "「{u}」: 같은 단위가 이미 목록에 있습니다 (대소문자·띄어쓰기만 다른 것도 같은 단위로 봅니다).",
   lb_errUnitLong: "「{u}」: 단위는 30자까지입니다.",
   lb_errUnitEmpty: "이름이 빈 단위가 있습니다. 적거나 ✕ 로 빼세요.",
+  // lab screen: work date (the label and the day buttons are reception's rc_ keys)
+  lb_workDatePast: "지난 날짜({date})의 검사를 보는 중입니다. 지금 넣는 결과도 그 날짜의 검사로 저장됩니다.",
+  lb_noCompletedOn: "이 날짜에 입력 완료된 검사가 없습니다",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
