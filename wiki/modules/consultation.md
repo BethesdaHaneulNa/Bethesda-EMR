@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 상용구 — 설정 약속에 맞춰 끝까지 확인, 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 문서: 영상 창 비교·접기 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -281,6 +281,7 @@
 - **하루 총량 없음 표시**(2026-09-29, 약국이 찾은 빈틈): 파일 위쪽 `noDose(rx)`(`dose`가 0보다 크지 않거나 `days`가 0보다 크지 않음). 줄 `NoDoseBadge`(`cs_noDose`, 도움말 `cs_noDoseHint`), 제목 옆 `noDoseRows.length`(`cs_noDoseCount`), `completeConsult` 첫머리의 `window.confirm`(`cs_noDoseConfirm`, 약 이름 나열 — 취소하면 완료하지 않음). 서버는 그대로(총량 0 저장). 이유: `rxTotal`이 하루 총량 없으면 0을 저장하고, 0은 조제·청구를 조용히 통과합니다. 약국은 총량 0을 「총량 없음」으로 표시합니다(약국 세션).
 - `applySet(set)` (317-333): 세트 항목을 **하나씩 차례로** `addExamOrder`/`addDrugRx`에 넘깁니다. 한 항목이 실패하면 alert 후 다음 항목을 계속합니다. 단가는 세트 저장 값이 아니라 **지금의 약품·오더코드 단가**(`orderset.routes.js` `attachItems`)입니다. **감춘 약**(2026-09-29, 7.2 ㉕): `drug_active === false`(약 줄이 가리키는 `drug.is_active`가 거짓)인 약 줄은 넣지 않고 모아서 끝에 한 번 알립니다(`cs_setSkippedHidden`). 세트 카드의 코드 목록에서는 그 약을 흐리게 줄 긋고 도움말 `cs_setHiddenDrug`. 검사·처치 줄은 그대로.
 - 과거 보기 `openPast`/`renderPast` (114-163): 처방·오더를 읽어 가운데에 보여 주고, 왼쪽 오더 칸은 가립니다. 읽기 전용은 **이 화면에서만**이고, 「내원 목록」으로 과거 내원을 열면 편집 상태로 열립니다(7절 ⑫).
+- **영상 창의 비교·판독 칸 접기는 PACS 세션의 부품**(2026-10-01, PACS `0530f5f`, 총괄 허락으로 이 파일 여섯 군데): ① import에 `ViewerCompare`(`components/RadiologyReadings.jsx`) ② 상태 `readFolded` ③ `openViewer`가 viewer에 `base_url`(이 검사만의 주소)·`compare`(`viewer-url`이 주는 같은 환자의 다른 검사 — `prev`·`others`·`count`)를 넣고 `setReadFolded(false)` ④ 제목 줄의 접기 단추(`px_readingHide` «Masquer le compte-rendu ▸» / `px_readingShow`) ⑤ 제목 아래 `<ViewerCompare viewer t onUrl />` — 누르면 iframe 주소를 `?study=A,B`로 바꾸고(Stone은 고치지 않음) 판독 칸을 접음, 「✕ Fin de la comparaison」이면 `base_url`로 돌아오고 판독 칸이 다시 보임 ⑥ 판독 칸 `display: readFolded ? 'none' : 'flex'`(접어도 쓰던 글은 남음). 판독은 늘 **연 검사**의 것. 이 부분을 고칠 일이 있으면 PACS 세션과 맞춥니다. 진료 쪽에서 본 것(격리, 1366×768 FR): 제목 줄 한 줄(48px, 넘침 없음 — Visionneuse · 검사 이름 · 환자 · 접기 · 새 탭 · 닫기), 그 아래 비교 줄 29px(비교 중 36px), 비교 → 판독 칸 접힘 → 「Afficher」로 다시 보임 → 비교 끝 → 돌아옴. 직원용 설명은 `manual-fr/pacs.md` §8.
 - 영상 판독: `openViewer` → `GET /pacs/viewer-url`, `saveReading` → `PUT /pacs/reading/:id`. 저장되면 **잠깐 뜨는 알림**(`showToast`, 3초, 임상병리 화면과 같은 `--toast-*` 색, zIndex 1100으로 영상 창 위; 2026-09-30 영상 시험 — 전에는 `alert`). `images.linked_by === 'accession'`이면 머리에 `px_linkedByAccession` 한 줄(목록 `RadiologyReadings`와 같은 문장, 2026-09-30). 오더 줄의 **촬영 부위**(`body_part`)는 이름 옆 작은 글자로 보이고 Unité 칸은 `memo`만(전에는 `memo || body_part`라 «CHES»로 잘렸음; 칸의 title은 memo 전체). 판독 칸은 `canRead`(권한 `consultation` 보유, 50줄)일 때만 쓸 수 있습니다. `viewer-url`의 `cancelled`면 머리에 `px_cancelledViewer`+이유 한 줄, 판독 칸은 읽기만(저장 단추 없음). `url`이 비고 `no_study`이며 `has_viewer`가 참이면 영상 자리에 `px_noStudy`(P-18), `has_viewer`가 거짓일 때만 「뷰어 주소가 설정되지 않음」. 판독 저장이 409 `Imaging order was cancelled`면 `px_readingOnCancelled`를 알리고 창과 오더 표를 다시 불러옵니다. 판독 날짜(「Lu par … · 날짜」)는 `result_at`(timestamptz)을 **브라우저 현지 날짜**로 보여 줍니다(파일 위쪽 `ymd`, `LabResults.jsx`와 같은 규칙). 전에는 ISO 문자열을 T 앞에서 잘라 UTC 날짜라, 현지 00~03시 판독이 전날로 보였습니다(PACS P-22, 2026-09-29).
 - **영상 환자 확인**(PACS 부탁, 2026-09-29): `viewer-url` 응답의 `images`(`received_at`·`count`·`patient_id`·`patient_name`·`patient_check`, 영상이 도착하기 전에는 `null`)를 뷰어 상태에 넣고, PACS 세션의 `PatientCheck`(`RadiologyReadings.jsx`에서 export)를 뷰어 머리 아래에 `style={{margin:'8px 14px 0'}}`으로 씁니다 — `mismatch` 빨강, `missing` 노랑. 처음에는 export되지 않아 이 파일에 복제본(`ImagePatientCheck`)을 뒀다가, PACS가 export한 뒤 지웠습니다.
 
@@ -705,7 +706,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | **상용구 — 설정의 약속에 맞춤** — 제목 `se_phraseName`(상용구 / Phrases types), 분류는 `GET /admin/phrase-categories`의 이름·순서 그대로(빈 분류도, 「상용구가 없습니다」 한 줄), 문장은 `text` 하나, 고른 분류를 id로 기억(이름 바꿔도 따라감·지우면 전체). `phraseDict`·`cs_pc*` 키와 `PHRASE_CATS` 지움 | (이 커밋) |
+| 2026-10-01 | 문서: 영상 창의 「전 검사와 비교」·판독 칸 접기(PACS 세션의 부품, `0530f5f` — 이 파일 여섯 군데)를 3.1에, 설명서 fr §9가 PACS 설명서 §8을 가리키게. 격리에서 제목 줄 한 줄 확인 | (이 커밋) |
+| 2026-10-01 | **상용구 — 설정의 약속에 맞춤** — 제목 `se_phraseName`(상용구 / Phrases types), 분류는 `GET /admin/phrase-categories`의 이름·순서 그대로(빈 분류도, 「상용구가 없습니다」 한 줄), 문장은 `text` 하나, 고른 분류를 id로 기억(이름 바꿔도 따라감·지우면 전체). `phraseDict`·`cs_pc*` 키와 `PHRASE_CATS` 지움 | `e88299f` |
 | 2026-10-01 | **상용구 분류 고르기(화면 먼저)** — 낱말 단추 한 줄 대신 「Catégorie : toutes ▾」 하나(목록에서 고름, 스무 개여도 스크롤), 검색과 함께 걸러짐, 고른 분류를 그 PC·계정에 기억, 꼬리표 말줄임. 이름 통일·자료 분류·한 문장은 설정의 약속이 오면 | `4f7f98f` |
 | 2026-10-01 | 문서: 「내원 목록」 단추가 파란 줄에서 「환자 찾기」 오른쪽으로(총괄이 옮김) — 2.7·3.1, 설명서 fr §1·§2. 단추 이름은 바뀔 예정이라 그대로 둠 | `a506ea0` |
 | 2026-10-01 | **환자 차트: 날짜순, 지금 연 내원은 제자리에서 강조** — 맨 위 고정을 없앰, 굵은 파란 띠·테두리·바탕 + 「● Dossier ouvert」 꼬리표, 열 때 그 묶음으로 스크롤(30초 새로고침은 안 움직임), 읽는 과거 카드는 주황 점선 + 「En lecture」, 같은 날 두 내원 순서 고정 | `c1132a5` |
