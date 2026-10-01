@@ -1113,6 +1113,9 @@ export default {
   se_pchk_mismatch: "does not match",
   se_pchk_missing: "no patient number in the images",
   se_modListHint: "With a modality and the worklist feed on, this order goes to the device and appears in the imaging / reading list, even when its type is \"Procedure\".",
+  se_fDirections: "Default directions (optional)",
+  se_fDirectionsPh: "e.g. QD, PRN — may stay empty",
+  se_fDirectionsHint: "Words put into the \"Directions\" column when this order is added in a consultation. A bare number is not kept.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

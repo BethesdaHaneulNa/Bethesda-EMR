@@ -1104,6 +1104,9 @@ export default {
   se_pchk_mismatch: "맞지 않음",
   se_pchk_missing: "영상에 환자 번호 없음",
   se_modListHint: "영상 종류를 넣고 워크리스트를 켜면 이 오더는 장비 목록으로 가고, 종류가 「처치」여도 영상/판독 목록에 나옵니다.",
+  se_fDirections: "기본 용법 (선택)",
+  se_fDirectionsPh: "예: QD, PRN — 비워 둬도 됩니다",
+  se_fDirectionsHint: "진료 화면에서 이 오더를 넣을 때 「용법」 칸에 미리 들어갈 글자입니다. 숫자만 적으면 저장되지 않습니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

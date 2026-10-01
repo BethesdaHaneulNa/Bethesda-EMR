@@ -169,6 +169,7 @@
   | **Groupe** (분류) | Consultation, Laboratory… — 목록 묶음. 저장되는 값이라 영어 그대로 |
   | **Prix** (가격) | 청구 금액 |
   | **Modalité · Région** (장비·부위) | 영상 코드만. **Modalité**는 목록에서 고르거나(US — échographie · CR · DX · CT · MR · ES — endoscopie · **AS — 옛 코드, 일부 직장경** · XA · RF · MG · NM · PT · ECG · SC · OT) 맨 아래 **Autre — saisir la valeur… (기타 — 직접 입력)** 로 장비가 쓰는 값을 그대로 적습니다(2026-10-01). 적는 글자는 저절로 대문자가 되고 영문·숫자·밑줄만, 16자까지. **장비는 자기 종류와 글자까지 같은 오더만 목록으로 받으므로**, 장비 목록에 환자가 안 뜨면 PACS 폴더의 `device-watch`가 보여 주는 Modality 값을 여기에 그대로 넣습니다(`wiki/reference/device-connection-onsite.md`). / ABDOMEN… |
+  | **Posologie par défaut (facultatif)** (기본 용법 — 선택) | 종류가 **Acte(처치)** 일 때만 보이는 칸(2026-10-01). 비워 둬도 됩니다. QD·PRN 같은 **글자**를 적으면 진료 화면에서 이 오더를 넣을 때 「Posologie(용법)」 칸에 미리 들어갑니다. **숫자만 적으면 저장되지 않습니다** — 전에는 모든 오더 코드에 뜻 없는 「1.000」이 들어 있어 진료 화면 용법 칸에 저절로 떴습니다(마이그레이션으로 비움). |
   | **Créer le Feed Worklist** — Activé/Désactivé | 켜야 이 영상 오더가 **영상 장비 목록(워크리스트)** 에 올라갑니다 |
 
   **Supprimer** 하면 목록에서 숨겨지고, 이미 들어간 오더·청구 기록은 남습니다.
@@ -467,6 +468,16 @@
 - **그 값이 가는 곳**(훑어봄 — 모두 자료의 값을 그대로 씀): 진료의 오더 저장(`consult.routes.js` — 오더 코드의 값을 `order_item`·`worklist_log`에 복사), 작업목록 피드(`/pacs/worklist-feed`의 `modality`, `?modality=` 거르기는 글자 그대로 비교), 영상/판독 창(`RadiologyReadings.jsx` — 종류 고르기 목록을 줄들의 값에서 만듦, 좁은 칸에서는 긴 값이 「ABC…」로 줄고 상세에는 온 값), 판독지 인쇄(`imaging-report.jsx`), 진료 화면의 검색 꼬리표. 통계에는 종류별 집계가 없음.
 - **시험**: `backend/test/settings.modality.mjs`(20개) — 다듬기·16자·거절 다섯 가지·수정, 그리고 AS 오더 코드 → 진료에서 오더 → `/pacs/worklist-feed`에 `modality: AS`, `?modality=AS`로 물으면 그 줄만, 소문자 `as`로 물으면 0줄.
 
+### 3-9c. 오더 코드의 기본 용법(`default_dose`) — 글자이거나 비어 있음 (2026-10-01)
+
+- **무슨 일**: 실장님이 직장경 오더 코드를 만들어 진료에 넣으니 용법 칸에 「1.000」이 저절로 들어감. 실행 중 DB의 오더 코드 41개 모두 `default_dose`가 글자 `1.000`.
+- **원인 둘**: ① `order_code.default_dose`는 `VARCHAR(20) DEFAULT '1.000'`(001_schema.sql) — 견본 자료(003)는 이 칸을 적지 않았는데 **칸의 기본값**이 채움. ② 설정의 「+ Ajouter」가 새 오더 코드에 `default_dose: '1.000'`을 **보이지 않게** 실어 보냄(편집 창에는 이 칸이 아예 없었음). 약(`drug.default_dose`)은 이름만 같은 다른 칸(용량)이라 무관.
+- **마이그레이션** `701_settings_order_code_default_dose.sql`(총괄이 번호를 다시 매김): 칸의 기본값을 없애고(`DROP DEFAULT`), 숫자만(`1`·`1.000`·`2,5`)이거나 빈칸뿐인 값을 NULL로. 글자가 든 값(QD·`1 fois`·`PRN x3`)은 그대로. `default_freq`·`default_days`의 1과 `drug` 표는 건드리지 않음. **001·003은 고치지 않음**(적용된 마이그레이션은 고치지 않는다는 규칙 — 서버가 지문을 봄): 새 설치에서는 003이 여전히 `1.000`을 받고 이 마이그레이션이 뒤이어 비움.
+- **서버** `cleanDirections`(오더 코드 POST·PUT): 앞뒤 빈칸을 떼고, 비었거나 숫자만이면 NULL(거절하지 않음 — 이미 열려 있던 옛 화면이 `1.000`을 그대로 돌려보내도 400이 나지 않게).
+- **화면**: 새 오더 코드의 미리 채운 값을 없앰. 종류가 처치일 때(또는 글자 값이 이미 있을 때) **Posologie par défaut (facultatif)** 칸과 안내를 보임 — 전에는 이 값을 설정에서 볼 수도 고칠 수도 없었음.
+- **진료 쪽**: 화면이 숫자만인 값을 용법으로 베끼지 않게 하는 것은 진료 세션 몫(자료가 비었으므로 지금도 빈 칸으로 들어감 — 격리에서 확인).
+- **시험**: `backend/test/settings.ordercodes.mjs`(16개).
+
 ### 3-10. 변경 기록 (2026-09-29)
 
 전체 설계와 모듈별 약속은 **`wiki/03-change-log.md`**(총괄). 표 `audit_log`(마이그레이션 022) · 쓰는 함수 `backend/src/utils/audit.js` `writeAudit()`. 설정의 몫은 세 가지입니다.
@@ -559,7 +570,7 @@
 | `staff` | 계정. `login_id` UNIQUE, `password_hash`, `role` CHECK, `permissions TEXT[]`, `department_id`, `status` CHECK(`active`/`inactive`), `last_login` | 001, 013, **020**(`nurse` 역할 허용, 세션에서는 701) |
 | `department` | `code` UNIQUE, 이름 3개 국어, `head_doctor_id` → staff | 001, 002(기본 9개 과) |
 | `clinic` | 한 줄(id=1). 이름 3개 국어, 주소·전화·이메일·진료시간, `app_title` | 001, 002, 011 |
-| `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸(`pacs_modality` VARCHAR(16) — 2026-10-01에 10 → 16, `order_item.pacs_modality`·`worklist_log.modality`도 같이) | 001, 009, 701(영상 종류 폭) |
+| `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, 기본 용법 `default_dose`(글자 — 2026-10-01부터 칸 기본값 없음, 숫자만인 값은 NULL), PACS 칸(`pacs_modality` VARCHAR(16) — 2026-10-01에 10 → 16, `order_item.pacs_modality`·`worklist_log.modality`도 같이) | 001, 009, 701(영상 종류 폭) |
 | `phrase_dictionary` | 상용구 — 문장은 `text` 하나(`text_en`·`text_fr`는 2026-10-01부터 쓰지 않음), `category_id` → `phrase_category` | 001, 701 |
 | `phrase_category` | 상용구 분류(이름·순서·쓰는지) | 701 |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
@@ -731,4 +742,5 @@
 | 2026-10-01 | **상용구**(실장님 요청): 진료 화면과 한 이름(`se_phraseName`), 문장은 하나(프랑스어·영어 칸 없앰), **분류를 자료로** — 만들기·이름·순서·지우기(상용구가 있으면 옮길 곳을 물음), 분류로 거르기, 분류 변경은 Journal에 | 마이그레이션 `701_settings_phrase_category.sql`, `admin.routes.js`, `settingsPhrases.jsx`(새), `Settings.jsx`, `settings.messages.js`, `utils/audit.js` 한 줄, `settings.phrases.mjs`(새) (2.9·3-9) | `9d58a65` |
 | 2026-10-01 | 상태 창이 **EMR의 `.env`가 손으로 고쳐진 것**(줄 없음·DB 비밀번호가 실행 중 값과 다름)을 알림 — 값은 보이지 않음. 그 과정에서 찾은 것: **`Get-ComposeDir`가 PS 5.1에서 늘 비어 영상 백업 줄·브리지 파일 검사가 건너뛰어지던 것**을 고침. `DEPLOYMENT.md` 4절·설명서에 「`.env`의 두 줄은 손으로 바꾸지 않는다」 | `server-status.ps1` `Get-EnvFileCheck`·`Get-ComposeDir`·창 높이 740, `DEPLOYMENT.md`, 설명서 (2.10·3-6) | `b40dfdd` |
 | 2026-10-01 | **오더 코드의 영상 종류(Modality)를 목록에 없는 값도**(실장님 요청 — 직장경 장비의 AS): 흔한 값 15개에 풀이를 붙이고 「기타 — 직접 입력」, 서버가 같은 규칙으로 다듬어 저장, 세 칸을 16자로 | `settingsModality.jsx`(새), `Settings.jsx`, `admin.routes.js` `cleanModality`, `040_settings_modality_width.sql`, `settings.modality.mjs`(새), 설명서 (2.9·3-9b) | `a703ccb` |
-| 2026-10-01 | 기록 탭: **영상을 접수번호로 다시 연결**(`pacs.study.relink`, PACS) — 종류 「Images retrouvées par le numéro d'accession」, 칸 넷(검사 번호 UID · 영상 수 · 영상 속 환자 번호 · 환자 대조), 대조 값 「concorde / ne concorde pas / pas de numéro patient dans les images」. 오더 코드 창의 안내에 한 줄: 영상 종류 + 워크리스트면 종류가 「처치」여도 영상/판독 목록에 나옴 | `settingsAudit.js`, `settingsModality.jsx`, i18n `se_act_studyRelink`·`se_fld_studyUid` 등·`se_pchk_*`·`se_modListHint` (3-10) | (이 커밋) |
+| 2026-10-01 | 기록 탭: **영상을 접수번호로 다시 연결**(`pacs.study.relink`, PACS) — 종류 「Images retrouvées par le numéro d'accession」, 칸 넷(검사 번호 UID · 영상 수 · 영상 속 환자 번호 · 환자 대조), 대조 값 「concorde / ne concorde pas / pas de numéro patient dans les images」. 오더 코드 창의 안내에 한 줄: 영상 종류 + 워크리스트면 종류가 「처치」여도 영상/판독 목록에 나옴 | `settingsAudit.js`, `settingsModality.jsx`, i18n `se_act_studyRelink`·`se_fld_studyUid` 등·`se_pchk_*`·`se_modListHint` (3-10) | `389f5b9` |
+| 2026-10-01 | **오더 코드의 기본 용법에 든 뜻 없는 「1.000」**(실장님: 「왜 용법도 자동으로 1이 입력돼?」): 칸의 기본값을 없애고 숫자만인 값을 비움, 새 오더 코드가 `1.000`을 싣지 않게, 처치 코드에 「Posologie par défaut (facultatif)」 칸 | `701_settings_order_code_default_dose.sql`, `admin.routes.js` `cleanDirections`, `Settings.jsx`, i18n `se_fDirections*`, `settings.ordercodes.mjs`(새) (2.9·3-9c) | (이 커밋) |
