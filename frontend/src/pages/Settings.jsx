@@ -13,6 +13,7 @@ import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditCha
 import { seMoney, seMoneyInput, seNumber } from './settingsMoney.js';
 import { getTemplate } from '../documents/registry.js';
 import { PhrasesTab } from './settingsPhrases.jsx';
+import { ModalityField, ModalityHint } from './settingsModality.jsx';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -1194,9 +1195,10 @@ export default function SettingsPage() {
               <div style={{background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:6,padding:'10px'}}>
                 <div style={{fontSize: 13,fontWeight:700,color:'var(--violet-ink)',marginBottom:6}}>📡 {t.orderFeedModality}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                  <Fld label={t.se_fModality}><select value={editItem.pacs_modality||''} onChange={function(e){ue('pacs_modality',e.target.value)}} style={IS}><option value="">{t.se_none}</option><option value="US">US</option><option value="CR">CR</option><option value="CT">CT</option><option value="MR">MR</option><option value="ES">ES</option><option value="OT">OT</option></select></Fld>
+                  <Fld label={t.se_fModality}><ModalityField t={t} value={editItem.pacs_modality||''} onChange={function(v){ue('pacs_modality',v)}} style={IS}/></Fld>
                   <Fld label={t.se_fBodyPart}><input value={editItem.body_part||''} onChange={function(e){ue('body_part',e.target.value)}} style={IS} placeholder="ABDOMEN"/></Fld>
                 </div>
+                <ModalityHint t={t}/>
                 <div style={{marginTop:6}}>
                   <Fld label={t.worklistFeedCreate}>
                     <div className="pressable" onClick={function(){ue('worklist_enabled',!editItem.worklist_enabled)}} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>

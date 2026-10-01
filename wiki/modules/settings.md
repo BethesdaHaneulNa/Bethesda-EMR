@@ -168,7 +168,7 @@
   | **Type** (종류) | Frais (진료비) · Laboratoire (검사) · Imagerie (영상) · Acte (처치) |
   | **Groupe** (분류) | Consultation, Laboratory… — 목록 묶음. 저장되는 값이라 영어 그대로 |
   | **Prix** (가격) | 청구 금액 |
-  | **Modalité · Région** (장비·부위) | 영상 코드만. US·CR… / ABDOMEN… |
+  | **Modalité · Région** (장비·부위) | 영상 코드만. **Modalité**는 목록에서 고르거나(US — échographie · CR · DX · CT · MR · ES — endoscopie · **AS — 옛 코드, 일부 직장경** · XA · RF · MG · NM · PT · ECG · SC · OT) 맨 아래 **Autre — saisir la valeur… (기타 — 직접 입력)** 로 장비가 쓰는 값을 그대로 적습니다(2026-10-01). 적는 글자는 저절로 대문자가 되고 영문·숫자·밑줄만, 16자까지. **장비는 자기 종류와 글자까지 같은 오더만 목록으로 받으므로**, 장비 목록에 환자가 안 뜨면 PACS 폴더의 `device-watch`가 보여 주는 Modality 값을 여기에 그대로 넣습니다(`wiki/reference/device-connection-onsite.md`). / ABDOMEN… |
   | **Créer le Feed Worklist** — Activé/Désactivé | 켜야 이 영상 오더가 **영상 장비 목록(워크리스트)** 에 올라갑니다 |
 
   **Supprimer** 하면 목록에서 숨겨지고, 이미 들어간 오더·청구 기록은 남습니다.
@@ -458,6 +458,15 @@
 - **화면**: `frontend/src/pages/settingsPhrases.jsx`(새 파일 — 목록·분류 고르기·분류 줄·편집 창을 모두 가짐). `Settings.jsx`에서는 상용구 탭이 이 부품 한 줄이 되고, 공용 편집 창의 상용구 갈래와 `phrases` 상태를 뺌.
 - **시험**: `backend/test/settings.phrases.mjs`(41개), `settings.access.mjs`에 분류 길 다섯, `settings.messages.mjs`에 새 문구.
 
+### 3-9b. 오더 코드의 영상 종류(Modality) — 고정 목록이 아니라 장비의 값 (2026-10-01)
+
+- **왜**: 실장님 말씀 — 현지의 직장경 장비가 Modality 「AS」였던 것으로 기억. 편집 창은 여섯 값(US·CR·CT·MR·ES·OT)만 고를 수 있었음. 장비는 워크리스트를 **자기 Modality로 걸러** 묻고 글자까지 같은 줄만 받으며, 옛 장비가 무슨 값을 쓰는지는 가 봐야 앎.
+- **화면** `frontend/src/pages/settingsModality.jsx`(새): `ModalityField` — 흔한 값 15개(값 — 풀이, 풀이는 `se_mod_<값>`)와 맨 끝 「Autre — saisir la valeur…」 → 입력 칸(치는 대로 대문자, `A-Z 0-9 _`만, 16자). 목록에 없는 값이 저장돼 있으면 「Autre」가 열린 채로 그 값을 보임. 안내(`ModalityHint`)는 두 칸 아래 온 폭으로.
+- **서버** `admin.routes.js` `cleanModality`(오더 코드 POST·PUT): 앞뒤 빈칸을 떼고 대문자로, 빈 값은 `NULL`, `^[A-Z0-9_]{1,16}$`가 아니면 400 「Modality must be 1 to 16 letters, digits or underscores…」(`se_errModality`). 안쪽 빈칸은 DICOM이 허용하지만 받지 않음 — 값보다 오타일 가능성이 큼.
+- **DB** 마이그레이션 `040_settings_modality_width.sql`(총괄이 번호를 다시 매김): `order_code.pacs_modality`·`order_item.pacs_modality`·`worklist_log.modality`를 VARCHAR(10) → **16**(DICOM 코드 문자열의 길이). 값은 그대로, 다시 돌려도 됨. 오더·작업목록 표는 진료·PACS의 것이지만 값이 오더 코드에서 그리로 복사되므로 셋을 같이 넓힘.
+- **그 값이 가는 곳**(훑어봄 — 모두 자료의 값을 그대로 씀): 진료의 오더 저장(`consult.routes.js` — 오더 코드의 값을 `order_item`·`worklist_log`에 복사), 작업목록 피드(`/pacs/worklist-feed`의 `modality`, `?modality=` 거르기는 글자 그대로 비교), 영상/판독 창(`RadiologyReadings.jsx` — 종류 고르기 목록을 줄들의 값에서 만듦, 좁은 칸에서는 긴 값이 「ABC…」로 줄고 상세에는 온 값), 판독지 인쇄(`imaging-report.jsx`), 진료 화면의 검색 꼬리표. 통계에는 종류별 집계가 없음.
+- **시험**: `backend/test/settings.modality.mjs`(20개) — 다듬기·16자·거절 다섯 가지·수정, 그리고 AS 오더 코드 → 진료에서 오더 → `/pacs/worklist-feed`에 `modality: AS`, `?modality=AS`로 물으면 그 줄만, 소문자 `as`로 물으면 0줄.
+
 ### 3-10. 변경 기록 (2026-09-29)
 
 전체 설계와 모듈별 약속은 **`wiki/03-change-log.md`**(총괄). 표 `audit_log`(마이그레이션 022) · 쓰는 함수 `backend/src/utils/audit.js` `writeAudit()`. 설정의 몫은 세 가지입니다.
@@ -550,7 +559,7 @@
 | `staff` | 계정. `login_id` UNIQUE, `password_hash`, `role` CHECK, `permissions TEXT[]`, `department_id`, `status` CHECK(`active`/`inactive`), `last_login` | 001, 013, **020**(`nurse` 역할 허용, 세션에서는 701) |
 | `department` | `code` UNIQUE, 이름 3개 국어, `head_doctor_id` → staff | 001, 002(기본 9개 과) |
 | `clinic` | 한 줄(id=1). 이름 3개 국어, 주소·전화·이메일·진료시간, `app_title` | 001, 002, 011 |
-| `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸 | 001, 009 |
+| `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸(`pacs_modality` VARCHAR(16) — 2026-10-01에 10 → 16, `order_item.pacs_modality`·`worklist_log.modality`도 같이) | 001, 009, 701(영상 종류 폭) |
 | `phrase_dictionary` | 상용구 — 문장은 `text` 하나(`text_en`·`text_fr`는 2026-10-01부터 쓰지 않음), `category_id` → `phrase_category` | 001, 701 |
 | `phrase_category` | 상용구 분류(이름·순서·쓰는지) | 701 |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
@@ -720,4 +729,5 @@
 | 2026-09-30 | 기록 탭: 끝난 진료의 **의사별 진료 기록**(`consultation_note`, 038) 줄에 대상 이름 「note du médecin / 의사의 진료 기록」, 요약 `note`는 숨김(옛 `consultation`과 같게) | `settingsAudit.js` `ENTITIES`, i18n `se_ent_consultation_note` (3-10) | `3566d4c` |
 | 2026-09-30 | 기록 탭: **전과**(`visit.transfer`, 접수) — 종류 「Changement de service / médecin」, 칸 「Médecin」(없음은 「—」)·「Motif」, 과는 이미 과 이름으로 | `settingsAudit.js`, i18n `se_act_visitTransfer`·`se_fld_doctor`·`se_fld_reason` (3-10) | `5bfd3df` |
 | 2026-10-01 | **상용구**(실장님 요청): 진료 화면과 한 이름(`se_phraseName`), 문장은 하나(프랑스어·영어 칸 없앰), **분류를 자료로** — 만들기·이름·순서·지우기(상용구가 있으면 옮길 곳을 물음), 분류로 거르기, 분류 변경은 Journal에 | 마이그레이션 `701_settings_phrase_category.sql`, `admin.routes.js`, `settingsPhrases.jsx`(새), `Settings.jsx`, `settings.messages.js`, `utils/audit.js` 한 줄, `settings.phrases.mjs`(새) (2.9·3-9) | `9d58a65` |
-| 2026-10-01 | 상태 창이 **EMR의 `.env`가 손으로 고쳐진 것**(줄 없음·DB 비밀번호가 실행 중 값과 다름)을 알림 — 값은 보이지 않음. 그 과정에서 찾은 것: **`Get-ComposeDir`가 PS 5.1에서 늘 비어 영상 백업 줄·브리지 파일 검사가 건너뛰어지던 것**을 고침. `DEPLOYMENT.md` 4절·설명서에 「`.env`의 두 줄은 손으로 바꾸지 않는다」 | `server-status.ps1` `Get-EnvFileCheck`·`Get-ComposeDir`·창 높이 740, `DEPLOYMENT.md`, 설명서 (2.10·3-6) | (이 커밋) |
+| 2026-10-01 | 상태 창이 **EMR의 `.env`가 손으로 고쳐진 것**(줄 없음·DB 비밀번호가 실행 중 값과 다름)을 알림 — 값은 보이지 않음. 그 과정에서 찾은 것: **`Get-ComposeDir`가 PS 5.1에서 늘 비어 영상 백업 줄·브리지 파일 검사가 건너뛰어지던 것**을 고침. `DEPLOYMENT.md` 4절·설명서에 「`.env`의 두 줄은 손으로 바꾸지 않는다」 | `server-status.ps1` `Get-EnvFileCheck`·`Get-ComposeDir`·창 높이 740, `DEPLOYMENT.md`, 설명서 (2.10·3-6) | `b40dfdd` |
+| 2026-10-01 | **오더 코드의 영상 종류(Modality)를 목록에 없는 값도**(실장님 요청 — 직장경 장비의 AS): 흔한 값 15개에 풀이를 붙이고 「기타 — 직접 입력」, 서버가 같은 규칙으로 다듬어 저장, 세 칸을 16자로 | `settingsModality.jsx`(새), `Settings.jsx`, `admin.routes.js` `cleanModality`, `040_settings_modality_width.sql`, `settings.modality.mjs`(새), 설명서 (2.9·3-9b) | (이 커밋) |

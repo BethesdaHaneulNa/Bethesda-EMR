@@ -33,6 +33,8 @@ const MSG = Object.freeze({
   CATEGORY_EXISTS: 'A category with that name already exists',
   CATEGORY_MOVE_TARGET: 'Choose another category to move the phrases to',
   CATEGORY_ORDER: 'ids must list every category once',
+  // an order code's imaging modality (admin.routes.js cleanModality)
+  MODALITY_FORMAT: 'Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)',
 });
 
 // These name the field they are about, so they are built rather than fixed; the

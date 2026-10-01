@@ -36,6 +36,7 @@ var EXACT = {
   'A category with that name already exists': 'se_errCatExists',
   'Choose another category to move the phrases to': 'se_errCatMoveTarget',
   'ids must list every category once': 'se_errCatOrder',
+  'Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)': 'se_errModality',
   // utils/dbError.js
   'A record with that code or ID already exists': 'se_errDuplicate',
   'Referenced record does not exist': 'se_errMissingRef',
