@@ -93,7 +93,7 @@
 ### 2.5 영상이 안 보일 때 — 순서대로
 
 1. **🩻 Imagerie (영상/판독)** 목록에서 그 검사 옆 글자를 봅니다.
-2. **Images en attente (영상 대기 중)** 이면 영상이 아직 PACS에 안 왔습니다.
+2. **Images en attente (영상 대기 중)** 이면 영상이 아직 PACS에 안 왔습니다. 이때 **🖼 Voir image**를 누르면 빈 영상 창 대신 **Les images de cette demande ne sont pas encore arrivées… (이 검사의 영상이 아직 오지 않았습니다)** 안내가 나옵니다. 판독은 오른쪽 칸에 먼저 써도 됩니다.
    1. 방사선사가 전송한 지 **2분이 안 됐으면** 기다렸다가 목록을 닫고 다시 엽니다. 전송이 끝나고 1분쯤 새 영상이 없어야 「도착」으로 바뀝니다.
    2. 몇 분이 지나도 그대로면 방사선사에게 묻습니다 — 전송했는지, **워크리스트에서 이 환자를 골라** 찍었는지. 환자 이름을 장비에 손으로 쳐서 찍었으면 이 검사와 연결되지 않습니다. 관리자에게 알립니다(연결하는 기능은 아직 없음, 7절 P-4).
    3. 방사선사가 제대로 보냈다고 하면 관리자(실장님)에게 알립니다.
@@ -101,6 +101,7 @@
    1. 창 안에 **Le serveur d'images n'est pas encore relié à ce dossier… (영상 서버가 EMR과 아직 짝이 맞지 않았습니다)** 가 보이면 관리자에게 알립니다. 관리자는 PACS 폴더에서 `pair-with-emr.ps1` 을 실행합니다(6.1). EMR 백업을 되살린 뒤에도 이렇게 됩니다. 그동안에도 판독은 쓸 수 있습니다.
    2. **Le serveur d'images ne répond pas (영상 서버가 응답하지 않습니다)** 가 보이면 PACS 서버가 꺼졌거나 멈춘 것입니다. 관리자에게 알립니다(관리자는 서버 상태 창의 **Imagerie (PACS)** 줄을 봅니다).
    3. **La session d'affichage a expiré (영상 보기 시간이 끝났습니다)** 이면 창을 닫고 **🖼** 로 다시 엽니다.
+   - **L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas (EMR에는 도착했다고 적혀 있는데 영상 서버에 없습니다)** 가 보이면 관리자에게 알립니다. 영상 서버를 새로 깔았거나 영상 백업을 아직 되살리지 않은 경우입니다(6.2의 영상 복원).
    4. 영상 목록(왼쪽 작은 그림)은 보이는데 가운데 칸만 까맣다면, 브라우저 창 크기를 한 번 바꾸거나 **Ouvrir dans un onglet ↗ (새 탭에서 열기)** 로 엽니다. 그래도 까맣다면 관리자에게 알립니다.
    5. 아이디·비밀번호를 묻는 창이 뜨면 정상이 아닙니다. 아무것도 넣지 말고 관리자에게 알립니다.
 4. 목록에 도착 여부가 아예 나오지 않으면 워크리스트로 보내지 않는 검사입니다. 설정에서 그 검사 코드를 확인해야 합니다 — 관리자에게 알립니다.
@@ -263,6 +264,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
   5. 계정: DB에서 `status='active'`이고 `consultation` 권한이 있어야(30초 캐시) — 아니면 401(페이지면 안내 쪽 「Ce compte ne peut plus ouvrir les images…」).
   6. `pacs_config.orthanc_password`가 없으면 「짝이 맞지 않았습니다」 안내(페이지는 200, 데이터 요청은 **424**).
   7. 영상 창 페이지(`index.html`)이면 그 검사에 **그림이 있는 객체가 하나라도 있는지** Orthanc에 물음(`studyPictures`: `/tools/find` → `/studies/<id>/instances` → 앞의 30개까지 `/instances/<id>/metadata?expand`의 `PixelDataOffset`). 하나도 없으면 Stone 대신 안내 쪽 「Cette demande n'a reçu que des données sans image ({n}) — par exemple un rapport ou des mesures envoyés par l'appareil …」(ko·en, 200). 그림이 섞여 있으면·물을 수 없으면(3초 제한) 보통처럼 Stone. 2026-09-30 — 모르는 영상 종류를 받게 한 뒤 그림 없는 자료만 온 검사가 「Réalisé · 1 image(s) reçue(s)」인데 빈 칸으로 보였기 때문. 격리: 그림 없음만 → 안내, 보통·그림 있는 전용 종류·섞인 검사 → Stone, 더해진 시간 약 20ms.
+     - **그 검사가 영상 서버에 아예 없으면**(`/tools/find`가 답했고 0건, 2026-10-01): 빈 Stone 창 대신 안내 쪽. `worklist_log`에 그 번호(`study_instance_uid` 또는 `image_study_uid`)의 `images_received_at`이 **없으면** 「Les images de cette demande ne sont pas encore arrivées. Elles apparaîtront ici quand l'examen aura été fait et envoyé par l'appareil : fermez cette fenêtre et rouvrez-la plus tard. Le compte-rendu peut être saisi à droite.」(`NOT_ARRIVED`), **있으면** 「L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas. Prévenez l'administrateur : elles sont peut-être à restaurer depuis la sauvegarde des images.」(`NOT_THERE` — 목록은 「N image(s) reçue(s)」인데 「아직 안 왔다」고 하면 서로 어긋나므로). 둘 다 ko·en 함께, 200. **물을 수 없으면**(Orthanc가 느림·오류·꺼짐) 전처럼 Stone 쪽으로 가고, 꺼져 있으면 「Le serveur d'images ne répond pas」. 처방 표의 🖼로 열든 목록의 Voir image로 열든 같은 안내(같은 주소). 격리: 영상 없는 오더 → 안내(약 7ms), 장비가 보낸 직후(EMR이 도착을 적기 전)에도 다시 열면 그림, 판독 칸은 그대로 저장됨.
 - **Orthanc로 보냄**: `orthanc_url` + 같은 경로·쿼리, `Authorization: Basic admin:<orthanc_password>`, `Accept`만 넘김. 답은 **스트림으로 그대로**(크기 제한 없음). Orthanc의 `Set-Cookie`·`WWW-Authenticate`·연결용 헤더는 버림, `Cache-Control: private, no-store`. Orthanc가 401이면 「짝이 맞지 않았습니다」(비밀번호가 다름 — 다른 PC 백업을 복원한 경우), 연결 안 됨·502~504는 「영상 서버가 응답하지 않습니다」/424. 연결 5초, 전체 120초. 브라우저가 끊으면 Orthanc 요청도 끊음.
 - **왜 424·200인가**: nginx `/api/`가 502·503·504를 「API backend is not reachable」로 바꿔 버리므로(`proxy_intercept_errors`) 그 셋을 쓰지 않음.
 - **CSP**: EMR 전체는 helmet의 `script-src 'self'`인데, Stone은 WebAssembly와 `new Function`·인라인 스크립트를 씀 → **중계 응답에만** `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'`, `frame-ancestors 'self'`. EMR 화면·다른 API는 그대로 엄격.
@@ -397,7 +399,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | `worklist_scp_host`·`orthanc_url` = 옛 PC 기준 | 연결 시험 실패, 영상 창 「응답하지 않습니다」 | ②-5 |
 | `service_heartbeat`(브리지·영상 백업의 마지막 보고) | 짝 맞추기·첫 백업 전까지 「보고 없음」 | 저절로 갱신 |
 | `worklist_log`의 `scheduled` 줄 | 피드는 **오늘 날짜만** — 지난 날 줄은 장비에 안 감. 복원한 날 만든 시험 오더만 주의 | ②-8 |
-| `worklist_log`의 **영상 도착 기록** | 영상을 옮기기 전에는 판독 목록 「N image(s) reçue(s)」인데 영상 창은 빈 화면 | ②-6 영상 복원 → 「missing from Orthanc」가 0인지 |
+| `worklist_log`의 **영상 도착 기록** | 영상을 옮기기 전에는 판독 목록 「N image(s) reçue(s)」인데 영상 창은 「L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas …」 안내(2026-10-01 전에는 빈 화면) | ②-6 영상 복원 → 「missing from Orthanc」가 0인지 |
 | `order_item`·순번 | 이어서 늘어남 → 새 AccessionNumber·UID가 옛것과 안 겹침 | 없음 |
 
 ### 6.2 영상 백업 (결정 41 — 매일 밤 외장 USB 디스크) · EMR 백업도 같은 디스크로
@@ -557,6 +559,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | 4절 중계 7·2.5: 영상이 아직 안 온 검사를 열면 빈 영상 창 대신 「아직 오지 않았습니다」 안내, 도착 기록은 있는데 영상 서버에 없으면 「관리자에게」 안내(fr·ko·en). 프랑스어 설명서 메시지 표 두 줄, 6.2 표 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 2.4·5절: 영상 창을 닫으면 **목록이 그대로 남음**(총괄 `71dedec` — `Consultation.jsx`, `RadiologyReadings.jsx`의 `reload`). PACS 세션은 격리에서 회귀를 보고 문서를 맞춤 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 단추 이름: 환자의 영상 검사 목록을 여는 단추·창 제목이 **🩻 Imagerie (영상/판독)**(공용 키 `imagingList`, 총괄 `b828129`). 2.4·2.5·2.6·4·5절과 프랑스어 설명서·순서서의 이름을 맞춤. 판독 칸 «Compte-rendu»는 그대로 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 4절 중계 7: 그림 없는 자료만 온 검사는 영상 창에 빈 칸 대신 한 줄 안내(fr·ko·en). 프랑스어 설명서 메시지 표·순서서 ④ | EMR `session/pacs` (인계 노트 참고) |

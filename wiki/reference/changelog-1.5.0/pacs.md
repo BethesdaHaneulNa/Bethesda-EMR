@@ -90,6 +90,10 @@ PACS unreachable in September while its container still looked healthy.
 
 ### Smaller changes
 
+- Opening an order whose images have not arrived shows one line saying so ("Les images de cette demande
+  ne sont pas encore arrivées…") instead of an empty image window; the reading can still be written. If
+  the EMR noted the arrival but the image server no longer has the images, the line says to tell the
+  administrator (images to restore from the backup).
 - The bridge reports in its heartbeat when it cannot ask Orthanc about arrivals; the status screen turns
   yellow instead of staying green.
 - `PUT /api/worklist/:id/status` validates the status, returns 404 for an unknown entry and updates both
