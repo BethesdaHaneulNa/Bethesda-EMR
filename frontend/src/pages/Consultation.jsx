@@ -1091,7 +1091,6 @@ export default function ConsultationPage() {
           the colours in this block are fixed on purpose and are not tokens. */}
       {sel?(
         <div style={{background:'#0c2d6b',borderBottom:'1px solid #1e4fa0',padding:'5px 12px',display:'flex',alignItems:'center',gap:14,fontSize: 14,flexWrap:'wrap'}}>
-          <button onClick={function(){setHistOpen(true)}} style={{background:'#1e4fa0',color:'#dbeafe',border:'1px solid #3b6fd0',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>📋 {t.outpatientHistory}</button>
           <button onClick={function(){setDocOpen(true)}} style={{background:'#0f766e',color:'#ccfbf1',border:'1px solid #14b8a6',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>📄 {t.documents}</button>
           <button onClick={function(){setLabOpen(true)}} style={{background:'#0e7490',color:'#cffafe',border:'1px solid #06b6d4',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>🧪 {t.labResultsTitle||'검사결과'}</button>
           <button onClick={function(){setReadingsOpen(true)}} style={{background:'#5b21b6',color:'#ede9fe',border:'1px solid #8b5cf6',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>🩻 {t.imagingList||t.reading}</button>
@@ -1153,6 +1152,11 @@ export default function ConsultationPage() {
               {queueOpen?'✕':'☰'} {t.patientQueue} ({waitingCount})
             </button>
             <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:'pointer',fontSize:13,fontWeight:600}}>🔍 {t.findPatient}</button>
+            {/* The open patient's other visits, beside the finder (director, 2026-10-01: it
+                was the first button of the blue bar and was not seen as "this patient's other
+                days"). Same look as its two neighbours; off until a patient is open. */}
+            <button onClick={function(){ if(sel) setHistOpen(true); }} disabled={!sel} title={sel ? undefined : t.cs_selectPatient}
+              style={{background:'var(--chip)',color:sel?t2:'var(--text-5)',border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:sel?'pointer':'not-allowed',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>📋 {t.outpatientHistory}</button>
           </div>
 
           {pastView?(
