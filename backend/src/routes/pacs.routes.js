@@ -325,7 +325,7 @@ router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation
 router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consultation', 'payment'), async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
+      `SELECT oi.id, oi.visit_id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
               COALESCE(ob.name, vd.name) AS ordered_by_name, d.code AS dept_code, d.name AS dept_name,
               wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,

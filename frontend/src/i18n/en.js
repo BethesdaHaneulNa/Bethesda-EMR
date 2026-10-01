@@ -1147,6 +1147,18 @@ export default {
   px_dAccession: "Accession no.",
   px_identityShort: "check identity",
   px_pickHint: "Click an exam in the list.",
+  px_print: "Print",
+  px_printN: "Print ({n})",
+  px_printNoReading: "No reading: nothing to print.",
+  px_printCancelled: "Cancelled exam: its reading is not printed.",
+  px_printSkipped: "{n} ticked exam(s) without a reading: not printed.",
+  px_printTitle: "Imaging report",
+  px_printLang: "Language of the sheet",
+  px_printGo: "Issue and print",
+  px_printAgain: "Print again",
+  px_printNote: "Printing is recorded as an issued document (one number per sheet). The images are not on the sheet.",
+  px_printIssued: "Issued: {x}",
+  px_printFail: "The document could not be issued: ",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Screen colours (light / dark)",

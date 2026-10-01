@@ -127,6 +127,23 @@ Une case grisée ne peut pas être cochée ; laissez la souris dessus pour lire 
 - Ne sont pas proposés : les examens annulés, ceux dont les images ne sont pas arrivées, et ceux qui portent un avertissement d'identité (rouge ou jaune). Ceux-là s'ouvrent seulement depuis leur propre ligne. Au plus 9 autres examens, les plus récents.
 - Une fenêtre qui s'ouvre coupée en deux avec une case vide **[ drop a series here ]** : c'est la disposition gardée par la visionneuse. Pour revenir à une seule image : bouton **▦** → une seule case.
 
+### 9. Imprimer un compte-rendu pour un autre hôpital
+
+Quand un patient est adressé ailleurs, le compte-rendu part avec les images : une feuille A4 par examen.
+
+1. Ouvrez **🩻 Imagerie** (Consultation ou Paiement) et choisissez l'examen dans la liste.
+2. À droite, cliquez sur **🖨 Imprimer**. La feuille s'affiche : en haut le titre et la date de l'examen, le patient (nom, N° dossier, sexe et âge, date de naissance), l'examen, le compte-rendu en entier ; en bas le nom de la clinique, le médecin qui a lu et la place pour signer.
+3. **Langue de la feuille** : **FR**, **EN** ou **KO**, en haut de la fenêtre. La feuille est en français au départ, quelle que soit la langue de l'écran. Le compte-rendu lui-même reste tel que le médecin l'a écrit.
+4. Cliquez sur **🖨 Émettre et imprimer**. La feuille reçoit un numéro de document (en bas à droite) et l'impression est notée dans le journal des modifications, comme les autres documents remis au patient.
+5. **Imprimer de nouveau** réimprime la même feuille, avec le même numéro. Si vous changez de langue, une nouvelle feuille est émise, avec un nouveau numéro.
+6. Plusieurs examens d'un coup (en Consultation) : cochez-les dans la liste, puis **🖨 Imprimer (N)** en haut de la liste. Une feuille et un numéro par examen. Un examen coché qui n'a pas de compte-rendu est laissé de côté.
+
+- **🖨 Imprimer** est grisé : l'examen n'a pas de compte-rendu, ou il est annulé (laissez la souris sur le bouton pour lire pourquoi).
+- Un compte-rendu long continue sur la page suivante ; le nom du patient, le N° dossier et l'examen sont rappelés en haut de chaque page, et le numéro de page est en bas.
+- Les images ne sont pas sur la feuille : elles sont remises à part.
+- Dans la fenêtre d'impression du navigateur, décochez **En-têtes et pieds de page** : sinon la date et l'adresse du site s'impriment aussi.
+- Le nom, l'adresse et le téléphone de la clinique viennent de **Paramètres**. S'ils sont vides, la feuille s'imprime sans eux.
+
 ## Si ce message apparaît
 
 | Message à l'écran | Ce que cela veut dire | Que faire |

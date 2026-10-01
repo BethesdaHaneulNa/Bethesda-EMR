@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
+import { printDocument } from '../documents/shared.jsx';
+import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
 
 // A timestamp (result_at, cancelled_at) reaches the browser in UTC, so cutting
 // at 'T' dated a reading written between local midnight and 03:00 the day
@@ -99,6 +101,123 @@ export function CompareChecked(props) {
     style={Object.assign({ background: ok ? 'var(--violet-deep)' : 'var(--chip)', color: ok ? 'var(--on-fill-violet)' : 'var(--text-3)', border: '1px solid ' + (ok ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 5, padding: '6px 14px', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }, props.style)}>⇆ {String(t.px_cmpGo || '').replace('{n}', n)}</button>;
 }
 
+// Why an exam's reading cannot be printed ('' = it can): there must be a reading, and
+// a cancelled exam's reading is not sent out.
+export function printBlock(r, t) {
+  if (!r) return t.px_printNoReading;
+  if (r.order_status === 'cancelled') return t.px_printCancelled;
+  if (!String(r.result_text || '').trim()) return t.px_printNoReading;
+  return '';
+}
+
+// What the report sheet says about one exam (documents/imaging-report.jsx `values`).
+// The exam date is the day its images arrived; an exam read without images keeps the
+// day it was ordered.
+function reportValues(r) {
+  return {
+    exam_name: r.order_name || '', modality: r.pacs_modality || '',
+    exam_date: ymd(r.images_received_at) || ymd(r.visit_date),
+    image_count: r.images_received_at ? r.image_count : null,
+    dept: r.dept_code || r.dept_name || '', ordered_by: r.ordered_by_name || '',
+    reading: r.result_text || '', read_by: r.result_by_name || '', read_at: r.result_at || null,
+  };
+}
+
+// Preview and print of the imaging report - one A4 sheet per exam (director,
+// 2026-10-01: the reading goes with the images when a patient is referred elsewhere).
+// The sheet's language is chosen here, French first: it is read in another hospital,
+// whatever language this screen is in. Printing issues the paper through the document
+// engine (POST /api/documents, one number and one change-log line per sheet) - it is a
+// patient document leaving the clinic. The number is then on the sheet; printing the
+// same sheets again does not issue them again, changing the language does.
+//   props.exams      the rows to print (each must pass printBlock)
+//   props.patientId  props.t  props.onClose()
+export function ReportPrint(props) {
+  var t = props.t, exams = props.exams || [];
+  var lg = useState('fr'), lang = lg[0], setLang = lg[1];
+  var cs = useState(null), clinic = cs[0], setClinic = cs[1];
+  var ps = useState(null), patient = ps[0], setPatient = ps[1];
+  var ns = useState(null), issued = ns[0], setIssued = ns[1];    // { examId: doc_no } once issued
+  var bs = useState(false), busy = bs[0], setBusy = bs[1];
+  var go = useState(0), printNow = go[0], setPrintNow = go[1];
+  var sheet = useRef(null);
+  var now = useRef(ymdhm(new Date().toISOString()));
+
+  useEffect(function () {
+    api.get('/admin/clinic').then(setClinic).catch(function () { setClinic({}); });
+    api.get('/patients/' + props.patientId).then(setPatient).catch(function () { setPatient(null); });
+  }, [props.patientId]);
+  // The numbers are on the sheets only after React has drawn them: print then.
+  useEffect(function () {
+    if (printNow && sheet.current) printDocument(sheet.current, (issued && exams[0] && issued[exams[0].id]) || 'Compte-rendu', lang);
+  }, [printNow]);
+
+  // On the sheet and in the record: who the patient is, never how to reach them.
+  var who = patient ? { id: patient.id, chart_no: patient.chart_no, last_name: patient.last_name, first_name: patient.first_name, gender: patient.gender, date_of_birth: patient.date_of_birth } : null;
+  var ready = !!who && !!clinic;
+
+  async function issueAndPrint() {
+    if (!ready || busy) return;
+    if (issued) { setPrintNow(printNow + 1); return; }
+    setBusy(true);
+    var done = {};
+    try {
+      for (var i = 0; i < exams.length; i++) {
+        var r = exams[i];
+        var saved = await api.post('/documents', {
+          template_code: 'imaging-report', template_name: IMAGING_REPORT_NAME[lang] || IMAGING_REPORT_NAME.fr,
+          patient_id: props.patientId, visit_id: r.visit_id || null, lang: lang,
+          payload: { values: reportValues(r), patient: who, clinic: clinic, lang: lang, dateStr: now.current, order_item_id: r.id },
+        });
+        done[r.id] = saved.doc_no;
+      }
+      setIssued(done); setPrintNow(printNow + 1);
+    } catch (e) {
+      // Sheets issued before the failure keep their numbers; nothing is printed half-done.
+      if (Object.keys(done).length) setIssued(null);
+      alert(t.px_printFail + (e && e.message ? e.message : ''));
+    }
+    setBusy(false);
+  }
+
+  var btn = { border: 'none', borderRadius: 5, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700 };
+  return (
+    <div onClick={props.onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim-70)', zIndex: 1002, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={function (e) { e.stopPropagation(); }} style={{ width: 'min(860px, 96vw)', height: '94vh', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderBottom: '1px solid var(--border-2)', background: 'var(--panel-head)', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--violet-text)' }}>🖨 {t.px_printTitle}{exams.length > 1 ? ' (' + exams.length + ')' : ''}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-2)' }}>{t.px_printLang}</span>
+          {['fr', 'en', 'ko'].map(function (l) {
+            return <button key={l} disabled={busy} onClick={function () { if (l !== lang) { setLang(l); setIssued(null); } }}
+              style={Object.assign({}, btn, { padding: '4px 10px', background: lang === l ? 'var(--violet-deep)' : 'var(--chip)', color: lang === l ? 'var(--on-fill-violet)' : 'var(--text-soft)', border: '1px solid ' + (lang === l ? 'var(--violet-ink)' : 'var(--border-2)') })}>{l.toUpperCase()}</button>;
+          })}
+          <button onClick={props.onClose} style={Object.assign({}, btn, { background: 'var(--btn-neutral-2)', color: 'var(--text)' })}>{t.close || '닫기'} ✕</button>
+        </div>
+        {/* the paper: white whatever the screen's theme, at the printed width (A4 less the margins) */}
+        <div style={{ flex: 1, overflow: 'auto', background: 'var(--bg-deep)', padding: 16 }}>
+          <div style={{ width: '182mm', margin: '0 auto', background: '#fff', padding: '0', boxShadow: '0 0 0 1px #9993' }}>
+            {!ready ? <div style={{ padding: 40, color: '#475569', fontFamily: 'system-ui,sans-serif' }}>{t.loading || 'Loading…'}</div> :
+              <div ref={sheet}>
+                {/* page numbers at the foot of every printed page, where the browser can */}
+                <style>{'@page{@bottom-right{content:counter(page) " / " counter(pages);font:8pt sans-serif;color:#444}}'}</style>
+                {exams.map(function (r, i) {
+                  return <ImagingReportLayout key={r.id} values={reportValues(r)} patient={who} clinic={clinic} lang={lang}
+                    docNo={issued ? issued[r.id] : ''} dateStr={now.current} last={i === exams.length - 1} />;
+                })}
+              </div>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderTop: '1px solid var(--border-2)', background: 'var(--panel-head)' }}>
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+            {issued ? String(t.px_printIssued || '').replace('{x}', exams.map(function (r) { return issued[r.id]; }).join(', ')) : t.px_printNote}</span>
+          <button onClick={issueAndPrint} disabled={!ready || busy} style={Object.assign({}, btn, { background: ready && !busy ? 'var(--violet-deep)' : 'var(--chip)', color: ready && !busy ? 'var(--on-fill-violet)' : 'var(--text-3)', border: '1px solid ' + (ready && !busy ? 'var(--violet-ink)' : 'var(--border-2)') })}>
+            🖨 {issued ? t.px_printAgain : t.px_printGo}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 var MAX_PICKED = 9;   // the server's limit (pacs.routes.js)
 
 // A timestamp as the clinic's local date and time, "2026-10-01 10:32".
@@ -127,6 +246,7 @@ export function RadiologyReadings(props) {
   var ss = useState(null), selId = ss[0], setSelId = ss[1];
   var ks = useState(''), kind = ks[0], setKind = ks[1];       // '' = every device type
   var qs = useState(''), query = qs[0], setQuery = qs[1];
+  var prs = useState(null), printing = prs[0], setPrinting = prs[1];   // the rows whose report is being printed
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
@@ -187,6 +307,9 @@ export function RadiologyReadings(props) {
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
   }
 
+  // Ticked exams can be printed together, one sheet each: those with a reading.
+  var tickedToPrint = rows.filter(function (r) { return picked.indexOf(r.id) >= 0 && !printBlock(r, t); });
+
   var COLS = (props.onPick ? '26px ' : '') + '92px 42px minmax(120px, 1fr) 96px minmax(90px, 150px)';
   var cell = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
   var chip = { borderRadius: 3, padding: '0 6px', fontSize: 11, fontWeight: 700, marginLeft: 6, verticalAlign: 'middle' };
@@ -203,6 +326,9 @@ export function RadiologyReadings(props) {
           <input value={query} onChange={function (e) { setQuery(e.target.value); }} onKeyDown={keys} placeholder={t.px_filterSearch}
             style={{ flex: '0 1 220px', minWidth: 120, background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '3px 8px', outline: 'none' }} />
           <span style={{ marginLeft: 'auto', color: t3, fontSize: 12 }}>{shown.length === rows.length ? rows.length : shown.length + ' / ' + rows.length}</span>
+          {props.onPick && picked.length ? <button disabled={!tickedToPrint.length} onClick={function () { setPrinting(tickedToPrint); }}
+            title={tickedToPrint.length === picked.length ? '' : String(t.px_printSkipped || '').replace('{n}', picked.length - tickedToPrint.length)}
+            style={{ background: 'var(--chip)', color: tickedToPrint.length ? 'var(--text-soft)' : t3, border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 9px', cursor: tickedToPrint.length ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 700 }}>🖨 {String(t.px_printN || '').replace('{n}', tickedToPrint.length)}</button> : null}
         </div>
         <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
@@ -248,7 +374,12 @@ export function RadiologyReadings(props) {
               <span style={{ background: cancelled ? 'var(--btn-neutral-2)' : 'var(--accent-chip)', color: cancelled ? 'var(--text-soft-2)' : 'var(--accent-text-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{r.pacs_modality || ''}</span>
               <span style={{ color: cancelled ? t3 : tx, fontSize: 17, fontWeight: 800, textDecoration: cancelled ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.order_name}</span>
               {cancelled ? <span style={{ background: 'var(--btn-neutral-2)', color: 'var(--text-soft-2)', borderRadius: 3, padding: '1px 7px', fontSize: 12, fontWeight: 700 }}>{t.px_orderCancelled}</span> : null}
-              {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} style={{ marginLeft: 'auto', flex: 'none', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
+              {(function () {
+                var why = printBlock(r, t);
+                return <button disabled={!!why} onClick={function () { setPrinting([r]); }} title={why}
+                  style={{ marginLeft: 'auto', flex: 'none', background: 'var(--chip)', color: why ? t3 : 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '5px 12px', cursor: why ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>🖨 {t.px_print}</button>;
+              })()}
+              {r.study_instance_uid && props.onOpen ? <button onClick={function () { props.onOpen(r.id); }} style={{ flex: 'none', background: 'var(--violet-strong-a22)', color: cyan, border: '1px solid var(--violet-strong-a55)', borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🖼 {t.viewImage || '영상보기'}</button> : null}
             </div>
             <table style={{ borderCollapse: 'collapse', fontSize: 13, color: tx, marginBottom: 8 }}><tbody>
               <tr><td style={label}>{t.px_dOrdered}</td><td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{ymd(r.visit_date)}</td></tr>
@@ -275,6 +406,7 @@ export function RadiologyReadings(props) {
           </>;
         })()}
       </div>
+      {printing ? <ReportPrint exams={printing} patientId={props.patientId} t={t} onClose={function () { setPrinting(null); }} /> : null}
     </div>
   );
 }

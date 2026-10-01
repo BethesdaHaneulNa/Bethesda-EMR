@@ -1138,6 +1138,18 @@ export default {
   px_dAccession: "검사 번호(Accession)",
   px_identityShort: "환자 확인 필요",
   px_pickHint: "목록에서 검사를 누르세요.",
+  px_print: "인쇄",
+  px_printN: "인쇄 ({n})",
+  px_printNoReading: "판독이 없어 인쇄할 것이 없습니다.",
+  px_printCancelled: "취소된 검사의 판독은 인쇄하지 않습니다.",
+  px_printSkipped: "체크한 검사 중 {n}건은 판독이 없어 빠집니다.",
+  px_printTitle: "영상 판독 보고서",
+  px_printLang: "서류 언어",
+  px_printGo: "발행하고 인쇄",
+  px_printAgain: "다시 인쇄",
+  px_printNote: "인쇄하면 발행한 서류로 기록됩니다(한 장에 번호 하나). 영상은 이 종이에 들어가지 않습니다.",
+  px_printIssued: "발행: {x}",
+  px_printFail: "서류를 발행하지 못했습니다: ",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "화면 색 (밝게 / 어둡게)",
