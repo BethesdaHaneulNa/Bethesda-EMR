@@ -2,6 +2,18 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서: 검사항목의 글자 결과 「고를 값」 목록 (임상병리 048)
+
+- **상태**: 확인 요청 — 문서만
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `6c0fb5a` merge 위 — 임상병리 `16e1759`, 마이그레이션 048 포함)
+- **무엇을**
+  - **관리자 설명서** `manual-fr/settings.md` 「Régler les valeurs de référence des analyses」: 「**Résultats en texte.** …」 문단을 임상병리가 `wiki/handoff/laboratory.md` 맨 위에 적어 둔 글자 그대로, 「Liste des unités.」 문단 앞에 넣음. 굵은 글씨(Réf. texte · ☰ · Remplir avec une série · + Ajouter · OK · Sauver)는 `fr.js`의 화면 글자와 대조.
+  - **모듈 위키** 2.3 표의 검사항목 줄에 「고를 값」 한 문장(자세한 것은 `laboratory.md`를 가리킴), 8절 한 줄.
+- **권한 시험 표**(`settings.access.mjs`): **바꿀 것 없음.** `POST /lab/test-items/save`의 권한은 그대로 settings 이고, 표가 보내는 본문(`{order_code_id: 없는 id, items: []}`)도 전과 같이 답함 — 새 격리 스택에서 전체를 다시 돌려 확인(아래).
+- **바꾼 파일**: `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · 이 노트
+- **확인한 방법**: 설명서 대조 스크립트. 새 격리 스택(9187, 048 적용)에서 `settings.access.mjs` 전체 — 139 × 11 = 1529건 모두 표와 같음. 화면은 임상병리가 본 것이라 다시 띄우지 않음. 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-01 — 권한 시험 표: 환자 검사 결과 읽기에 수납 (화면 변화 없음)
 
 - **상태**: 확인 요청
