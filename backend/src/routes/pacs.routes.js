@@ -205,6 +205,7 @@ async function comparableStudies(orderItemId) {
        JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true
       WHERE me.id = $1 AND oi.status IS DISTINCT FROM 'cancelled'
         AND wl.images_received_at IS NOT NULL AND wl.patient_check = 'match'
+        AND NOT ${move.OPEN_ON('oi.id')}
       ORDER BY v.visit_date DESC, oi.id DESC`, [orderItemId]);
   return r.rows.filter(x => x.study);
 }
@@ -256,7 +257,9 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         // Images are being moved to or from this order (pacs.move.js) and the EMR says it
         // has none: what the image server holds under its number right now - the original
         // not yet deleted, or a corrected study not yet checked - is not this order's.
-        if (study && !images && (await pool.query(`SELECT 1 WHERE ${move.OPEN_ON('$1::int')}`, [oid])).rows.length) { study = ''; correcting = true; }
+        // Two orders exchanging their images are both closed until it is finished.
+        const kind = study ? await move.openKindOn(pool, oid) : '';
+        if (kind && (!images || kind === 'swap')) { study = ''; correcting = true; }
       }
       const o = await pool.query(
         `SELECT oi.order_name, oi.order_code, oi.pacs_modality, oi.result_text, oi.result_at, s.name AS result_by_name, v.visit_date, ${ORDER_CANCEL_COLUMNS}

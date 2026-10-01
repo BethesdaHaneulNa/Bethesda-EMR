@@ -145,6 +145,31 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 - Dans la fenêtre d'impression du navigateur, décochez **En-têtes et pieds de page** : sinon la date et l'adresse du site s'impriment aussi.
 - Le nom, l'adresse et le téléphone de la clinique viennent de **Paramètres**. S'ils sont vides, la feuille s'imprime sans eux.
 
+### 10. Les images sont sous la mauvaise demande
+
+Sur l'appareil, le manipulateur a choisi une autre ligne du même patient : par exemple **Carotid US** au lieu de **Upper Abdomen US**. Les images de l'abdomen sont alors rangées sous « Carotid US », dans l'EMR et sur le serveur d'images. Rien ne le signale : le patient est le bon. C'est le médecin qui le voit en ouvrant les images.
+
+Qui peut corriger : les médecins (écran **Consultation**) et l'administrateur. Un motif est toujours demandé.
+
+1. Ouvrez **🩻 Imagerie** et choisissez l'examen dont les images ne sont pas les bonnes.
+2. À droite, sur la ligne **Images**, cliquez sur **⇄ Corriger la demande…**.
+3. Regardez d'abord les images (**🖼 Voir image**) pour être sûr de ce qui a été fait.
+4. Sous **Ces images sont en réalité celles de :**, cochez la bonne demande. Seules les demandes du même patient et du même type d'appareil peuvent être choisies ; pour les autres, la raison est écrite sur la ligne.
+   - **→ déplacer ici** : la bonne demande n'a pas encore d'images. Les images y passent, et la demande qu'elles quittent redevient **en attente** : elle réapparaît sur la liste de l'appareil, pour être faite.
+   - **⇄ échanger avec celle-ci** : les deux examens ont été faits, chacun sous la ligne de l'autre. Les deux demandes échangent leurs images.
+5. Écrivez le **Motif**, lisez la phrase qui dit ce qui va se passer, puis cliquez sur **⇄ Déplacer les images** (ou **⇄ Échanger les images**). Ne fermez pas la fenêtre pendant **Correction en cours…** — quelques secondes.
+6. **C'est fait** : la liste se met à jour. Le compte-rendu suit les images. Sur les deux demandes, une ligne rappelle la correction (qui, quand, pourquoi) ; elle est aussi dans **Paramètres → Journal**.
+
+À savoir :
+
+- Le numéro et le nom de l'examen sont corrigés **dans les images elles-mêmes**, sur le serveur d'images : si elles sont envoyées à un autre hôpital, elles portent le bon nom. Les images ne sont pas modifiées.
+- **Vous vous êtes trompé de demande ?** Refaites la même chose dans l'autre sens. Attendez une minute entre deux corrections des mêmes images (**Les images sont encore en cours d'arrivée…**).
+- Si la bonne demande **a déjà son propre compte-rendu** et que l'examen à corriger en a un aussi, la ligne ne peut pas être cochée : effacez d'abord le compte-rendu écrit sans images, puis recommencez.
+- Si le compte-rendu a déjà été **imprimé** pour un autre hôpital, un avertissement donne son numéro : la feuille déjà remise ne change pas ; réimprimez-la après la correction.
+- **La correction est enregistrée. Le serveur d'images termine le rangement tout seul** : la correction est faite ; le serveur d'images était occupé ou arrêté, et le reste se fait sans vous dans les minutes qui suivent.
+- Ce que cette fenêtre ne fait pas : un seul examen qui contient les images de deux examens (les deux parties faites à la suite sous la même ligne), et des images faites sous la ligne d'un **autre patient**. Dans ces deux cas, notez-le dans le compte-rendu et appelez (voir **Qui appeler**).
+
+
 ## Si ce message apparaît
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
@@ -161,6 +186,7 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 | **Le serveur d'images ne répond pas. Prévenez l'administrateur.** | Le PACS est arrêté ou bloqué. | Prévenez l'administrateur. |
 | **Cette image n'a pas été ouverte depuis une demande d'imagerie. Ouvrez-la avec le bouton 🖼 dans l'écran Consultation.** | L'adresse a été copiée, ou l'onglet est ancien (après plusieurs examens ouverts). | Fermez l'onglet, puis cliquez sur **🖼** dans **Consultation**. |
 | **Les images de cette demande ne sont pas encore arrivées. Elles apparaîtront ici quand l'examen aura été fait et envoyé par l'appareil…** | Vous avez ouvert une demande dont les images ne sont pas encore au PACS (dans la liste : **Images en attente**). | Fermez la fenêtre et rouvrez-la plus tard. Vous pouvez déjà écrire le compte-rendu à droite. Si le manipulateur dit avoir envoyé depuis plus de 2 minutes, voir la ligne **Images en attente** ci-dessus. |
+| **Les images de cette demande sont en cours de correction (déplacement vers une autre demande)…** | Quelqu'un vient de corriger la demande de ces images (voir 10) et le serveur d'images n'a pas fini. | Fermez la fenêtre et rouvrez-la dans quelques minutes. Si le message reste plus d'un quart d'heure, prévenez l'administrateur. |
 | **L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas. Prévenez l'administrateur…** | Les images étaient arrivées, mais elles ne sont plus sur le serveur d'images (PACS réinstallé, sauvegarde des images pas encore restaurée), ou l'examen vient d'être modifié dans Orthanc (voir **À ne pas faire**). | Fermez, attendez une minute et rouvrez une fois. Si le message reste, prévenez l'administrateur : il doit restaurer les images depuis la sauvegarde. |
 | **Cette demande n'a reçu que des données sans image (…) — par exemple un rapport ou des mesures envoyés par l'appareil.** | L'appareil a envoyé des données, mais aucune image (rapport, mesures). C'est normal pour certains appareils. | Écrivez le compte-rendu à droite comme d'habitude. Pour voir les images, regardez sur l'appareil. |
 | **Ce compte ne peut plus ouvrir les images (compte désactivé ou sans accès à la consultation). Prévenez l'administrateur.** | Le compte a été désactivé ou n'a plus l'accès **Consultation**. | Prévenez l'administrateur. |
@@ -174,7 +200,7 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 - N'écrivez pas de compte-rendu tant qu'un cadre rouge ou jaune n'a pas été vérifié.
 - Ne cliquez pas autour de la **Visionneuse** avant d'avoir enregistré le compte-rendu.
 - L'absence de cadre rouge ne prouve pas que ce sont les bonnes images : si le manipulateur a choisi un autre patient dans la liste, rien ne s'affiche. Si l'image ne ressemble pas au patient, vérifiez.
-- **Administrateur — ne modifiez pas un examen avec « Modify » dans l'écran d'administration d'Orthanc.** Le choix coché d'avance, *Modify the original study (generating new DICOM UIDs)*, donne un nouveau numéro à l'examen : l'EMR ne retrouve plus les images (la liste dit toujours **N image(s)**, mais **Voir image** affiche **L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas**). Le choix *keeping the original DICOM UIDs* échoue sur ce serveur (**Unexpected error during modification**) et ne change rien. Le choix *Create a modified copy* laisse une copie inutile sur le serveur. Le nom de l'examen affiché dans l'EMR vient de la demande : le changer dans Orthanc ne le change pas dans l'EMR. Si des images sont sur la mauvaise demande (le manipulateur a choisi une autre ligne du même patient), ne corrigez rien à la main : notez-le dans le compte-rendu et signalez-le (voir **Qui appeler**). Si un examen a quand même été modifié avec le choix coché d'avance : attendez une minute, puis rouvrez-le avec **Voir image**. L'EMR retrouve les images par le numéro d'accession et affiche au-dessus d'elles **Ces images ne portent pas le numéro d'étude donné par cette demande…** ; l'opération est notée dans le journal des modifications (**Paramètres → Journal**). Si le message **…le serveur d'images ne les a pas** reste, c'est que deux examens portent le même numéro d'accession sur le serveur (une copie a été créée) ou qu'il n'y en a plus aucun : appelez (voir **Qui appeler**).
+- **Administrateur — ne modifiez pas un examen avec « Modify » dans l'écran d'administration d'Orthanc.** Le choix coché d'avance, *Modify the original study (generating new DICOM UIDs)*, donne un nouveau numéro à l'examen : l'EMR ne retrouve plus les images (la liste dit toujours **N image(s)**, mais **Voir image** affiche **L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas**). Le choix *keeping the original DICOM UIDs* échoue sur ce serveur (**Unexpected error during modification**) et ne change rien. Le choix *Create a modified copy* laisse une copie inutile sur le serveur. Le nom de l'examen affiché dans l'EMR vient de la demande : le changer dans Orthanc ne le change pas dans l'EMR. Si des images sont sous la mauvaise demande (le manipulateur a choisi une autre ligne du même patient), ne corrigez rien dans Orthanc : le médecin le fait dans l'EMR (voir **10. Les images sont sous la mauvaise demande**). Si un examen a quand même été modifié avec le choix coché d'avance : attendez une minute, puis rouvrez-le avec **Voir image**. L'EMR retrouve les images par le numéro d'accession et affiche au-dessus d'elles **Ces images ne portent pas le numéro d'étude donné par cette demande…** ; l'opération est notée dans le journal des modifications (**Paramètres → Journal**). Si le message **…le serveur d'images ne les a pas** reste, c'est que deux examens portent le même numéro d'accession sur le serveur (une copie a été créée) ou qu'il n'y en a plus aucun : appelez (voir **Qui appeler**).
 - Ne débranchez pas le disque de sauvegarde du serveur, ne le prêtez pas et ne l'utilisez pas pour autre chose : il contient, sans chiffrement, les images des patients **et la copie de tout le dossier EMR**. Il doit rester rangé sous clé.
 
 ## Qui appeler

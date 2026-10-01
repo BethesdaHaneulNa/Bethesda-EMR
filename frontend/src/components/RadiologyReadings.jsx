@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
 import { printDocument } from '../documents/shared.jsx';
 import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
+import { MoveStudy, moveLine } from './MoveStudy.jsx';
 
 // A timestamp (result_at, cancelled_at) reaches the browser in UTC, so cutting
 // at 'T' dated a reading written between local midnight and 03:00 the day
@@ -239,6 +240,9 @@ function ymdhm(d) {
 //                                     the payment screen has no image window.
 // The ticks live here: they stay while the image window is open over the list and go
 // when the list is closed.
+// Where there is an image window (props.onOpen) the chosen exam also offers "the images
+// are under the wrong order" (MoveStudy.jsx), and every exam shows the corrections it
+// was part of.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
@@ -248,6 +252,9 @@ export function RadiologyReadings(props) {
   var qs = useState(''), query = qs[0], setQuery = qs[1];
   var prs = useState(null), printing = prs[0], setPrinting = prs[1];   // the rows whose report is being printed
   var pks = useState([]), picked = pks[0], setPicked = pks[1];         // the ticked order items
+  var mvs = useState(null), moving = mvs[0], setMoving = mvs[1];       // the row whose images are being put under another order
+  var mls = useState([]), moved = mls[0], setMoved = mls[1];           // the patient's corrections (GET /pacs/moves/patient)
+  var ags = useState(0), again = ags[0], setAgain = ags[1];            // raised to read the list again after a correction
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
@@ -261,7 +268,11 @@ export function RadiologyReadings(props) {
     api.get('/pacs/readings/patient/' + props.patientId)
       .then(function (r) { setRows(r || []); }).catch(function () { if (!quiet) setRows([]); })
       .then(function () { setLoading(false); });
-  }, [props.patientId, props.reload]);
+    // The corrections: a line of history on both orders. An EMR without them shows none.
+    api.get('/pacs/moves/patient/' + props.patientId)
+      .then(function (r) { setMoved((r || []).filter(function (m) { return m.state !== 'rolled-back' && m.state !== 'failed'; })); })
+      .catch(function () { setMoved([]); });
+  }, [props.patientId, props.reload, again]);
 
   // The arrow keys work as soon as the list is on the screen.
   useEffect(function () { if (!loading && listRef.current) listRef.current.focus(); }, [loading]);
@@ -399,13 +410,20 @@ export function RadiologyReadings(props) {
               {r.dept_code || r.dept_name || r.ordered_by_name ? <tr><td style={label}>{t.px_dOrderedBy}</td><td>{[r.dept_code || r.dept_name, r.ordered_by_name].filter(Boolean).join(' · ')}</td></tr> : null}
               <tr><td style={label}>{t.px_colImages}</td><td style={{ color: r.images_received_at ? (cancelled ? t3 : 'var(--ok-text)') : t3, fontWeight: r.images_received_at ? 700 : 400 }}>
                 {r.images_received_at ? String(t.px_imagesArrived || '').replace('{n}', r.image_count == null ? '?' : r.image_count) + ' · ' + ymdhm(r.images_received_at)
-                  : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}</td></tr>
+                  : (r.study_instance_uid && !cancelled ? t.px_imagesWaiting : '—')}
+                {/* the images are another order's: put them under the right one (doctors, in the consultation screen) */}
+                {props.onOpen && r.images_received_at && !cancelled ? <button onClick={function () { setMoving(r); }} title={t.px_mvIntro}
+                  style={{ marginLeft: 10, background: 'transparent', color: 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '1px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⇄ {t.px_mvButton}</button> : null}</td></tr>
               {r.accession_no ? <tr><td style={label}>{t.px_dAccession}</td><td style={{ fontFamily: 'monospace' }}>{r.accession_no}</td></tr> : null}
             </tbody></table>
             {cancelled && (r.cancel_reason || r.cancelled_at)
               ? <div style={{ fontSize: 13, color: t2, margin: '0 0 8px' }}>⊘ {t.px_orderCancelled}{r.cancelled_at ? ' · ' + ymd(r.cancelled_at) : ''}{r.cancel_reason ? ' — ' + (t.px_cancelReason || '') + ' : ' + r.cancel_reason : ''}</div>
               : null}
             <PatientCheck images={imagesOfRow(r)} t={t} style={{ margin: '0 0 8px' }} />
+            {/* the corrections this exam was part of - the two most recent (they are rare) */}
+            {moved.filter(function (m) { return m.from_order_item_id === r.id || m.to_order_item_id === r.id; }).slice(0, 2).map(function (m) {
+              return <div key={m.id} style={{ fontSize: 12, color: t2, margin: '0 0 6px', lineHeight: 1.45 }}>⇄ {moveLine(t, m)}</div>;
+            })}
             {r.image_study_uid && r.image_study_uid !== r.study_instance_uid
               ? <div style={{ fontSize: 12, color: 'var(--warn-text)', margin: '0 0 8px' }}>{t.px_linkedByAccession}</div>
               : null}
@@ -420,6 +438,7 @@ export function RadiologyReadings(props) {
         })()}
       </div>
       {printing ? <ReportPrint exams={printing} patientId={props.patientId} t={t} onClose={function () { setPrinting(null); }} /> : null}
+      {moving ? <MoveStudy exam={moving} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
     </div>
   );
 }

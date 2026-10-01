@@ -19,6 +19,7 @@
 const { pool } = require('../config/database');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { orthancJson } = require('./pacs.viewer');
+const { OPEN_ON } = require('./pacs.exam');
 
 const MAX_ASKED = 60;        // studies of one patient asked about in one go
 const ASK_MS = 2000;         // an image server that is switched off must not hold the window long
@@ -63,6 +64,7 @@ async function relinkLostStudies(req, orderItemId) {
          JOIN order_item oi ON oi.patient_id = me.patient_id
          JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true
         WHERE me.id = $1 AND wl.images_received_at IS NOT NULL
+          AND NOT ${OPEN_ON('oi.id')}       -- images being moved (pacs.move.js) are not "lost"
         ORDER BY (oi.id = me.id) DESC, oi.id DESC LIMIT ${MAX_ASKED}`, [orderItemId]);
     const rows = r.rows.filter(w => linkOf(w));
     if (!rows.length) return 0;

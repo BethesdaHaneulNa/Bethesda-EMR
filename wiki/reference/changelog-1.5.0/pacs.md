@@ -23,6 +23,25 @@ stayed black until the window was resized. Stone's own red line *Not for diagnos
 shown. The **PACS web/viewer address** field in Settings → Order Feed is kept but marked unused, so an
 older backup restores cleanly.
 
+### Images taken under the wrong order can be put under the right one
+
+A technician can pick another line of the same patient on the device - "Carotid US" instead of "Upper
+Abdomen US". The images then carry that order's study number, accession and name, in the EMR and on the
+image server, and nothing can notice it: the patient is right. A doctor (or an administrator) now
+corrects it from the imaging list: **⇄ Corriger la demande…** on the exam, the right order chosen from the
+same patient's orders of the same device type, a reason typed. If the right order has no images they move
+there and the order they left goes back on the device's list; if it has images too, the two orders
+exchange them. The reading goes with the images.
+
+The image server's own data is corrected - the study number, accession and names inside the images -
+through Orthanc's REST API (the Orthanc program is not changed): a corrected study is made, checked
+against the original (same images, same pictures), the EMR's records follow, and only then the original is
+deleted. A failure before the EMR is changed is undone; after that the correction is finished by itself,
+at server start and every five minutes. One line per correction is kept (table `pacs_study_move`,
+migration 801 of the PACS session) and written to the change log (`pacs.study.move`); both orders show it.
+Not covered: one exam holding the images of two, and images taken under another patient's line.
+
+
 ### Images found again after a study was changed in Orthanc; endoscopies in the imaging list
 
 Correcting a study in Orthanc's own administration screen (**Modify**, with its default choice) gives it a new

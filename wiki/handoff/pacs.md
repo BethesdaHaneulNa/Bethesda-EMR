@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상을 다른 오더로 옮기기 ② 맞바꾸기 · 화면
+
+- **상태**: 확인 요청 (**다음**: ③ PACS 저장소 — 영상 백업·복원의 `replaced`, device-watch, README)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (① `b9027e4` 위). **PACS 저장소** — 없음(③에서)
+- **한 일**:
+  1. **맞바꾸기**(`pacs.move.js`): 받을 오더에도 영상이 있으면 `POST /pacs/move`가 스스로 맞바꿈(`kind: swap`). 임시 번호를 거치는 일곱 단계(모듈 위키 4절) — A를 지우기 전에 실패하면 되돌리고, 그 뒤에는 앞으로만. 판독도 맞바뀜. 그동안 두 오더는 영상 창·비교·되찾기·브리지에서 빠짐.
+  2. **화면**(새 파일 `frontend/src/components/MoveStudy.jsx`): 영상/판독 창 상세의 **Images 줄**에 「⇄ Corriger la demande… / 다른 오더로 옮기기…」(영상이 있고 취소가 아닌 검사, 진료 화면에서만). 창: 지금 오더 + 「🖼 Voir image」 → 같은 환자의 영상 오더 목록(→ 옮기기 / ⇄ 맞바꾸기 / 못 고르는 이유) → 사유(필수) → 일어날 일 한 문단 → 단추. 끝나면 목록을 다시 읽음. 발행된 판독 보고서가 있으면 번호·날짜와 경고.
+  3. `RadiologyReadings.jsx`: 단추, 두 오더의 상세에 **옮긴 기록 줄**(최근 둘), 목록 다시 읽기.
+  4. `pacs.routes.js`: 맞바꾸는 중인 두 오더는 영상이 있어도 영상 창을 열지 않음 / 비교 허락 목록에서 빠짐. `pacs.relink.js`: 바로잡는 중인 오더는 되찾기가 보지 않음. `pacs.exam.js`에 그 SQL 조각(`OPEN_ON`).
+  5. **`Consultation.jsx` 두 군데**(아래 공용 파일).
+- **바꾼 파일**: `backend/src/routes/pacs.move.js`, `pacs.routes.js`, `pacs.relink.js`, `pacs.exam.js`, `frontend/src/components/MoveStudy.jsx`(새), `frontend/src/components/RadiologyReadings.jsx`, `frontend/src/pages/Consultation.jsx`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/modules/pacs.md`(2.4.2 새 절·4절·P-33·8절), `wiki/manual-fr/pacs.md`(10절 새로·메시지 표 한 줄·«À ne pas faire»), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/reference/study-reassign-design.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 (진료 세션에 알려 주세요)**: `frontend/src/pages/Consultation.jsx` — 두 군데, 한 줄씩: ① `setViewer({… no_study:!!r.no_study,` 뒤에 `correcting:!!r.correction_in_progress,` ② 영상 창의 「보여 줄 것이 없음」 글이 `viewer.correcting`이면 `t.px_mvViewerBusy`. 다른 것은 안 건드림.
+- **DB 마이그레이션**: 없음(①의 801 그대로 — 표를 안 바꿈).
+- **번역 키** (px_ 구역, 새 키 46개 × ko/en/fr): `px_mvButton` · `px_mvTitle` · `px_mvIntro` · `px_mvFrom` · `px_mvLook` · `px_mvPick` · `px_mvNone` · `px_mvKindMove` · `px_mvKindSwap` · `px_mvReason` · `px_mvReasonPh` · `px_mvConfirmMove` · `px_mvConfirmSwap` · `px_mvReadingGoes` · `px_mvReadingsSwap` · `px_mvBackToList` · `px_mvLogged` · `px_mvGoMove` · `px_mvGoSwap` · `px_mvNeed` · `px_mvBusyNow` · `px_mvDone` · `px_mvDoneLater` · `px_mvCheckList` · `px_mvIssued` · `px_mvLogMove` · `px_mvLogSwap` · `px_mvLogPending` · `px_mvViewerBusy` · `px_mvErr_<CODE>` 17개(서버의 `code`마다). 글을 바꾼 기존 키 없음.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 가짜 환자 5):
+  - **맞바꾸기 정상**: Upper Abdomen US(3장·판독) ↔ Prostate US(2장·판독): 200 `done`, **0.39초**. 두 번호 아래의 그림이 서로 바뀜(해시), 영상 번호 그대로, accession·이름·요청 태그가 각 오더의 것, 임시 검사 0건, EMR의 장수·도착 시각·판독이 서로 바뀜, 변경 기록 한 줄, 두 오더 모두 Stone으로 열림.
+  - **맞바꾸기 실패 다섯** (시험용 중계로 고장): 첫 사본 500 → `rolled-back` / 둘째 사본 500(A는 이미 지워짐) → 답 200 `cleanup-pending` · EMR 그대로 · 두 오더 영상 창 닫힘 · 그동안 다른 바로잡기는 `BUSY` → resume → `done` / 가운데 삭제 500 → 대기 → resume → `done` / 둘째 사본 뒤 영상 서버 무응답 + **EMR 서버 다시 시작** → 스스로 `done` / EMR 기록 실패(DB 오류 주입) → 대기(step 6) → resume → `done`(변경 기록의 사람은 처음 누른 사람). **매 단계 두 검사의 그림이 온전한 검사 안에 있음**(해시).
+  - **화면**(1366×768, fr): 옮기기 — 검사 68을 고르고 단추 → 창(목록 9줄: 「⇄ échanger avec celle-ci」·「→ déplacer ici」·「autre type d'appareil」) → Carotid US 선택 → 사유 → 확인 글 「Les 3 image(s) passent de « … » à « Carotid US ». « … » redevient en attente et réapparaît sur la liste de l'appareil. La correction est notée dans le journal des modifications.」 → 「✓ C'est fait : les images sont sous la bonne demande.」, 뒤 목록이 바뀜(68 en attente / 63 3 image(s)), 두 오더 상세에 기록 줄. **ko**: 맞바꾸기 — 「⇄ 다른 오더로 옮기기…」 → 「⇄ 이 오더와 맞바꾸기」 → 「「Upper Abdomen US」(영상 2장)와 「Prostate US」(영상 3장)의 영상이 서로 바뀝니다. 판독도 영상과 함께 서로 바뀝니다. …」 → 「✓ 끝났습니다…」, 기록 줄 「… 영상을 맞바꿈 — 사유: …」.
+  - **바로잡는 중**(원본 삭제를 실패시켜 대기 상태로 둠): 원래 오더의 기록 줄 끝에 「— correction en cours, elle se termine toute seule」, 그 오더에는 단추 없음(영상 없음), 영상 창에 「Les images de cette demande sont en cours de correction…」. resume 뒤 `done`.
+  - **끝난 뒤 일관성**: 바로잡기 21건(옮기기 12 · 맞바꾸기 9, 그중 되돌린 것 6) 뒤 — 열린 줄 0, `failed` 0, 임시·잘못된 검사 0, 일곱 오더 모두 「EMR의 장수 = 영상 서버의 그 번호 아래 장수, accession·이름 일치」.
+  - **회귀**: 중계 15/15, 비교 32/32, 체크 비교 23/23. ①의 「미리 막는 것」 가운데 `SWAP_LATER`는 없어짐(이제 맞바꿈).
+- **확인 못 한 것**: en 화면. 밝은 테마. 수납 화면에 단추가 없는 것(코드: `props.onOpen`이 없으면 안 그림 — 수납은 그 prop을 안 줌). 「La correction est enregistrée…」(대기 답)을 **창에서** 보는 것(답의 상태는 API로). 받을 오더의 영상에 환자 번호 경고가 있을 때의 `IDENTITY`(코드만). 큰 검사. 진짜 장비.
+- **알아 둘 것**: 영상 백업 디스크의 옛 파일 — ③ 전까지 그대로(①에 적은 것과 같음). 맞바꾸기의 `superseded`에는 임시 번호도 들어 있음(백업이 그 사이에 돌았을 경우를 위해).
+- **다른 세션에 부탁**: 진료 — 위 `Consultation.jsx` 두 줄. 설정 — 변경 기록의 `pacs.study.move` 칸 이름에 `readings_exchanged` 추가(①에서 부탁한 것에 더해).
+
 ## 2026-10-01 — 영상을 다른 오더로 옮기기 ① 서버(옮기기) + 실패 시험
 
 - **상태**: 확인 요청 (① 서버 — 영상 없는 오더로 옮기기. **다음**: ② 맞바꾸기 · 화면 ③ PACS 저장소)

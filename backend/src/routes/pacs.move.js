@@ -22,8 +22,8 @@
 // changed). From 3 on the correction is finished forward: resumePending() - at server
 // start and every five minutes - picks up what a failure or a power cut left.
 //
-// This file: moving to an order that has no images. Exchanging the images of two orders
-// (both have some) follows.
+// Moving to an order that has no images is the above. When the other order has images
+// too the two are exchanged, through a temporary number - see "exchanging" below.
 
 const express = require('express');
 const crypto = require('crypto');
@@ -33,7 +33,7 @@ const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 const { patientCheck } = require('./pacs.relink');
-const { isExam } = require('./pacs.exam');
+const { isExam, OPEN_ON } = require('./pacs.exam');
 
 const router = express.Router();
 
@@ -53,7 +53,6 @@ const WHY = {
   IDENTITY:           'The images of this order carry a patient warning; settle whose they are first',
   NO_WORKLIST:        'The other order was never sent to the devices',
   TARGET_HAS_READING: 'The other order already has a reading of its own',
-  SWAP_LATER:         'The other order has images too (exchanging two orders is not available yet)',
   BUSY:               'A correction is already in progress for one of these orders',
   REASON:             'A reason is required',
   UNREACHABLE:        'The image server is not answering',
@@ -144,17 +143,22 @@ function targetBlock(from, to) {
   // orders of different types cannot be mixed up on it (director, 2026-10-01).
   if (!typeOf(from) || typeOf(from) !== typeOf(to)) return 'OTHER_TYPE';
   if (!to.wl_id || !to.study_instance_uid || !to.accession_no) return 'NO_WORKLIST';
-  if (to.images_received_at) return 'SWAP_LATER';
-  // The reading goes with the images (director). A reading already written on the other
-  // order would be overwritten: it has to be dealt with by a person first.
+  // The other order has images too: the two are exchanged, readings with them. Its
+  // images must be the patient's beyond doubt as well.
+  if (to.images_received_at) return to.patient_check === 'match' && linkOf(to) ? null : 'IDENTITY';
+  // The reading goes with the images (director). A reading already written on an order
+  // without images would be overwritten: it has to be dealt with by a person first.
   if (!blank(from.result_text) && !blank(to.result_text)) return 'TARGET_HAS_READING';
   return null;
 }
 const OPEN_STATES = ['started', 'emr-done', 'cleanup-pending', 'undo-pending'];
-// SQL: "a correction that is not finished involves this order item" (the feed and the
-// arrival report use it). The four states are the table's own.
-const OPEN_ON = col => `EXISTS (SELECT 1 FROM pacs_study_move pm WHERE pm.state IN ('started', 'emr-done', 'cleanup-pending', 'undo-pending')
-                                 AND (pm.from_order_item_id = ${col} OR pm.to_order_item_id = ${col}))`;
+// The kind of the unfinished correction this order is part of: 'move', 'swap' or ''.
+async function openKindOn(db, orderItemId) {
+  const r = await db.query(
+    `SELECT kind FROM pacs_study_move WHERE state = ANY($1::text[]) AND (from_order_item_id = $2 OR to_order_item_id = $2) ORDER BY id DESC LIMIT 1`,
+    [OPEN_STATES, orderItemId]);
+  return r.rows[0] ? r.rows[0].kind : '';
+}
 async function openMoveOn(db, ids) {
   const r = await db.query(
     `SELECT id FROM pacs_study_move WHERE state = ANY($1::text[]) AND (from_order_item_id = ANY($2::int[]) OR to_order_item_id = ANY($2::int[])) LIMIT 1`,
@@ -395,6 +399,7 @@ async function moveImages(req, fromId, toId, reason) {
   let from = await orderRow(pool, fromId), to = await orderRow(pool, toId);
   let why = sourceBlock(from) || targetBlock(from, to) || ((await openMoveOn(pool, [from.id, to.id])) ? 'BUSY' : null);
   if (why) return fail(why);
+  if (to.images_received_at) return swapImages(req, cfg, from, to, reason);
 
   // What the image server has. Nothing has been touched yet.
   const src = await findStudies(cfg, { StudyInstanceUID: linkOf(from) });
@@ -495,6 +500,238 @@ async function moveImages(req, fromId, toId, reason) {
   } finally { working.delete(move.id); }
 }
 
+// ── exchanging the images of two orders ──────────────────────────────────────
+// Both orders have images, each the other's (the technician did the two exams with the
+// lines the wrong way round). A study cannot simply take the other's number - Orthanc
+// would pour the images into the study that is already there - so the first one goes
+// through a temporary number:
+//
+//   1  A (under order 1) -> temporary T, checked      2  A deleted
+//   3  B (under order 2) -> order 1's number, checked 4  B deleted
+//   5  T -> order 2's number, checked                 6  T deleted
+//   7  one EMR transaction: the two arrival records and the two readings change places
+//
+// Every deletion comes after the copy it is replaced by has been checked, so each
+// picture is at every moment in at least one checked study. Until A is deleted (2) a
+// failure is undone; after that the exchange is finished forward - the two orders stay
+// closed to the image window, the bridge and comparisons until it is.
+const tmpUid = id => '1.2.826.0.1.3680043.9.7307.' + id + '.' + Date.now();
+
+// The study under `uid`: { id, instances, patient_id, patient_name, stable } - null when
+// it is not there exactly once, undefined when the image server cannot be asked.
+async function studyUnder(cfg, uid) {
+  const r = await findStudies(cfg, { StudyInstanceUID: uid });
+  if (r.status !== 200 || !Array.isArray(r.json)) return undefined;
+  if (r.json.length !== 1) return null;
+  const instances = await instancesOf(cfg, r.json[0].ID);
+  if (!instances) return undefined;
+  const pat = r.json[0].PatientMainDicomTags || {};
+  return { id: String(r.json[0].ID), instances, stable: !!r.json[0].IsStable, accession: (r.json[0].MainDicomTags || {}).AccessionNumber || '',
+           patient_id: String(pat.PatientID || '').trim().slice(0, 64), patient_name: String(pat.PatientName || '').trim().slice(0, 200) };
+}
+const sameSops = (instances, sops) => instances.length === sops.length && instances.every(i => sops.includes(i.sop));
+
+// Make the study `wantUid` out of the study `srcUid` and check it. Safe to call again
+// after an interruption: a copy that is already there is checked, an unfinished one is
+// removed and made again. Returns { id } | { wait: why } (try again later) | { bad: why }.
+async function makeChecked(cfg, srcUid, sops, replace, wantUid, wantAcc, patientId) {
+  const dest = await studyUnder(cfg, wantUid);
+  if (dest === undefined) return { wait: 'image server not answering' };
+  const src = await studyUnder(cfg, srcUid);
+  if (src === undefined) return { wait: 'image server not answering' };
+  const want = { study_uid: wantUid, accession: wantAcc, patient_id: patientId };
+  if (dest) {
+    if (src) {
+      const wrong = await checkCorrected(cfg, src.instances, dest.id, want);
+      if (!wrong) return { id: dest.id };
+      // An unfinished copy of ours: its source is whole, so it goes and is made again.
+      if (!sameSops(src.instances, sops)) return { bad: 'the source study is not the one this exchange started with' };
+      const del = await ox(cfg, 'DELETE', '/studies/' + dest.id, null, { timeout: 60000 });
+      if (del.status !== 200 && del.status !== 404) return { wait: 'an unfinished copy could not be removed (' + del.status + ')' };
+    } else {
+      // The source is gone: it was deleted after this copy had been checked.
+      return sameSops(dest.instances, sops) && dest.accession === wantAcc ? { id: dest.id } : { bad: 'the source is gone and the copy is not whole' };
+    }
+  }
+  if (!src) return { bad: 'the source study is not on the image server' };
+  if (!sameSops(src.instances, sops)) return { bad: 'the source study is not the one this exchange started with' };
+  const mod = await ox(cfg, 'POST', '/studies/' + src.id + '/modify',
+    { Replace: replace, Keep: ['SeriesInstanceUID', 'SOPInstanceUID'], Force: true, KeepSource: true, Synchronous: true }, { timeout: 10 * 60000 });
+  if (!mod.status) return { wait: 'image server not answering' };
+  if (mod.status !== 200 || !mod.json || !mod.json.ID) return { wait: 'the image server did not make the copy (' + mod.status + ')' };
+  const wrong = await checkCorrected(cfg, src.instances, String(mod.json.ID), want);
+  if (wrong) {
+    await ox(cfg, 'DELETE', '/studies/' + mod.json.ID, null, { timeout: 60000 });
+    return { wait: 'the copy did not check out: ' + wrong };
+  }
+  return { id: String(mod.json.ID) };
+}
+
+// Delete the study under `uid` - only while the copy `keepId` holds `count` images.
+// Returns '' or why not (try again later).
+async function deleteReplaced(cfg, uid, keepId, count) {
+  const kept = await instancesOf(cfg, keepId);
+  if (!kept || kept.length !== count) return kept ? 'the copy is not whole; nothing is deleted' : 'image server not answering';
+  const old = await findStudies(cfg, { StudyInstanceUID: uid });
+  if (old.status !== 200 || !Array.isArray(old.json)) return 'image server not answering';
+  for (const s of old.json) {
+    if (String(s.ID) === keepId) continue;
+    const del = await ox(cfg, 'DELETE', '/studies/' + s.ID, null, { timeout: 60000 });
+    const gone = del.status === 200 || del.status === 404 ? await ox(cfg, 'GET', '/studies/' + s.ID) : { status: 0 };
+    if (gone.status !== 404) return 'a replaced study could not be deleted (' + del.status + ')';
+  }
+  return '';
+}
+
+// 7. The EMR's records: the two orders exchange arrival record and reading.
+async function recordSwapInEmr(req, move) {
+  const d = move.detail;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM worklist_log WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[d.from_wl_id, d.to_wl_id]]);
+    const o1 = await orderRow(client, move.from_order_item_id), o2 = await orderRow(client, move.to_order_item_id);
+    if (!o1 || !o2 || o1.wl_id !== d.from_wl_id || o2.wl_id !== d.to_wl_id) { await client.query('ROLLBACK'); return 'the orders are not what they were'; }
+    const put = (row, study, id, other) => client.query(
+      `UPDATE worklist_log
+          SET completed_at = $2, images_received_at = $3, orthanc_study_id = $4, image_count = $5,
+              image_patient_id = $6, image_patient_name = $7, patient_check = $8, image_study_uid = NULL
+        WHERE id = $1`,
+      [row.wl_id, other.completed_at, other.images_received_at, id, study.count, study.patient_id || null, study.patient_name || null, patientCheck(study.patient_id, row.chart_no)]);
+    await put(o1, d.b, d.b1_id, o2);     // order 1 now has what was under order 2
+    await put(o2, d.a, d.a2_id, o1);
+    const readings = !blank(o1.result_text) || !blank(o2.result_text);
+    if (readings) {
+      const say1 = [o2.result_text, o2.result_by, o2.result_at], say2 = [o1.result_text, o1.result_by, o1.result_at];
+      await client.query('UPDATE order_item SET result_text = $2, result_by = $3, result_at = $4, updated_at = NOW() WHERE id = $1', [o1.id].concat(say1));
+      await client.query('UPDATE order_item SET result_text = $2, result_by = $3, result_at = $4, updated_at = NOW() WHERE id = $1', [o2.id].concat(say2));
+    }
+    await writeAudit(client, req || { user: { id: move.staff_id, name: move.staff_name } }, {
+      action: ACTIONS.PACS_STUDY_MOVE, patient_id: move.patient_id, visit_id: o2.visit_id,
+      entity: 'order_item', entity_id: o2.id,
+      summary: `${d.a.count} image(s) <-> ${d.b.count} image(s): ${o1.order_name} (${o1.accession_no}) <-> ${o2.order_name} (${o2.accession_no})`,
+      before: { order_name: o1.order_name, accession_no: o1.accession_no, image_count: d.a.count },
+      after: { order_name: o2.order_name, accession_no: o2.accession_no, image_count: d.b.count, readings_exchanged: readings, reason: move.reason },
+    });
+    const superseded = [{ study_uid: d.a.uid, instances: d.a.sops }, { study_uid: d.b.uid, instances: d.b.sops }, { study_uid: d.tmp_uid, instances: d.a.sops }];
+    await client.query(
+      `UPDATE pacs_study_move SET state = 'done', step = 7, reading_moved = $2, superseded = $3::jsonb, error = NULL, updated_at = NOW(), finished_at = NOW() WHERE id = $1`,
+      [move.id, readings, JSON.stringify(superseded)]);
+    await client.query('COMMIT');
+    return '';
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[pacs move] EMR records (exchange):', e.message);
+    return 'the EMR records could not be written';
+  } finally { client.release(); }
+}
+
+// From where the line says it stopped, to the end. Returns the line's state.
+async function advanceSwap(req, move) {
+  const d = move.detail, cfg = await config();
+  const o1 = d.o1, o2 = d.o2;
+  const stop = async (why, bad) => {
+    // Before A is deleted nothing is lost by going back; after, only forward.
+    if (move.step < 2) return undo(move, why);
+    const state = bad ? 'failed' : 'cleanup-pending';
+    await setState(move.id, state, move.step, { error: why });
+    if (bad) say('line', move.id, 'needs a person:', why);
+    return state;
+  };
+  const made = async (step, key, r) => {
+    if (r.wait || r.bad) return stop(r.wait || r.bad, !!r.bad);
+    d[key] = r.id; move.step = step;
+    await setState(move.id, 'started', step, { detail: { [key]: r.id } });
+    return '';
+  };
+  const gone = async (step, why) => {
+    if (why) return stop(why, false);
+    move.step = step;
+    await setState(move.id, 'started', step);
+    return '';
+  };
+  let out;
+  if (move.step < 1 && (out = await made(1, 't_id', await makeChecked(cfg, d.a.uid, d.a.sops, { StudyInstanceUID: d.tmp_uid, AccessionNumber: d.tmp_accession }, d.tmp_uid, d.tmp_accession, d.a.patient_id)))) return out;
+  if (move.step < 2 && (out = await gone(2, await deleteReplaced(cfg, d.a.uid, d.t_id, d.a.count)))) return out;
+  if (move.step < 3 && (out = await made(3, 'b1_id', await makeChecked(cfg, d.b.uid, d.b.sops, d.replace_b, o1.uid, o1.accession, d.b.patient_id)))) return out;
+  if (move.step < 4 && (out = await gone(4, await deleteReplaced(cfg, d.b.uid, d.b1_id, d.b.count)))) return out;
+  if (move.step < 5 && (out = await made(5, 'a2_id', await makeChecked(cfg, d.tmp_uid, d.a.sops, d.replace_a, o2.uid, o2.accession, d.a.patient_id)))) return out;
+  if (move.step < 6 && (out = await gone(6, await deleteReplaced(cfg, d.tmp_uid, d.a2_id, d.a.count)))) return out;
+  const emr = await recordSwapInEmr(req, move);
+  if (emr) return stop(emr, false);
+  say('line', move.id, 'done - exchanged', d.a.count, 'and', d.b.count, 'image(s)', move.from_accession, '<->', move.to_accession);
+  return 'done';
+}
+
+async function swapImages(req, cfg, from, to, reason) {
+  // What the image server has. Nothing has been touched yet.
+  const A = await studyUnder(cfg, linkOf(from)), B = await studyUnder(cfg, linkOf(to));
+  if (A === undefined || B === undefined) return fail('UNREACHABLE');
+  if (!A || !B || !A.instances.length || !B.instances.length) return fail('NOT_ON_SERVER');
+  if (!A.stable || !B.stable) return fail('STILL_ARRIVING');
+  const read = async study => {
+    const tags = [];
+    if (study.instances.length <= MAX_TAGS_READ) for (const i of study.instances) {
+      const t = await ox(cfg, 'GET', '/instances/' + i.id + '/tags?simplify');
+      if (t.status !== 200 || !t.json) return null;
+      tags.push(t.json);
+    }
+    return tags;
+  };
+  const tagsA = await read(A), tagsB = await read(B);
+  if (!tagsA || !tagsB) return fail('UNREACHABLE');
+
+  let move;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM worklist_log WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[from.wl_id, to.wl_id]]);
+    const f = await orderRow(client, from.id), t = await orderRow(client, to.id);
+    const why = sourceBlock(f) || targetBlock(f, t) || (linkOf(f) !== linkOf(from) || linkOf(t) !== linkOf(to) || !t.images_received_at ? 'CHANGED_MEANWHILE' : null)
+      || ((await openMoveOn(client, [f.id, t.id])) ? 'BUSY' : null);
+    if (why) { await client.query('ROLLBACK'); return fail(why); }
+    const pack = (study, uid) => ({ uid, orthanc_id: study.id, count: study.instances.length, ids: study.instances.map(i => i.id), sops: study.instances.map(i => i.sop),
+                                    patient_id: study.patient_id, patient_name: study.patient_name });
+    const ins = await client.query(
+      `INSERT INTO pacs_study_move (kind, state, step, patient_id, from_order_item_id, to_order_item_id, from_order_name, to_order_name,
+                                    from_accession, to_accession, image_count, reason, detail, staff_id, staff_name)
+       VALUES ('swap', 'started', 0, $1, $2, $3, $4, $5, $6, $7, $8, $9, '{}', $10, $11) RETURNING *`,
+      [f.patient_id, f.id, t.id, f.order_name, t.order_name, f.accession_no, t.accession_no, A.instances.length,
+       String(reason).trim().slice(0, 500), req.user.id || null, req.user.name || req.user.login_id || null]);
+    move = ins.rows[0];
+    const a = pack(A, linkOf(f)), b = pack(B, linkOf(t)), tmp = tmpUid(move.id);
+    move.detail = {
+      from_wl_id: f.wl_id, to_wl_id: t.wl_id, a, b,
+      o1: { uid: f.study_instance_uid, accession: f.accession_no }, o2: { uid: t.study_instance_uid, accession: t.accession_no },
+      tmp_uid: tmp, tmp_accession: 'TMP-' + move.id,
+      // A's images take order 2's names, B's take order 1's.
+      replace_a: replacements(f, t, tagsA), replace_b: replacements(t, f, tagsB),
+      // what undo() looks at, should it stop before A is deleted
+      new_study_uid: tmp, old_orthanc_id: a.orthanc_id, image_count: a.count, source_instances: a.ids,
+    };
+    await client.query('UPDATE pacs_study_move SET detail = $2::jsonb WHERE id = $1', [move.id, JSON.stringify(move.detail)]);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[pacs move] starting an exchange:', e.message);
+    return fail('NOT_CORRECTED');
+  } finally { client.release(); }
+
+  working.add(move.id);
+  try {
+    const state = await advanceSwap(req, move);
+    if (state === 'done' || state === 'cleanup-pending') {
+      return { ok: true, move_id: move.id, state, kind: 'swap', image_count: move.detail.a.count, other_image_count: move.detail.b.count,
+               reading_moved: !blank(from.result_text) || !blank(to.result_text),
+               from: { order_item_id: from.id, order_name: from.order_name }, to: { order_item_id: to.id, order_name: to.order_name } };
+    }
+    return fail('NOT_CORRECTED', { move_id: move.id, state });
+  } catch (e) {
+    console.error('[pacs move] line', move.id, e.message);
+    return fail('NOT_CORRECTED', { move_id: move.id, state: 'unknown' });
+  } finally { working.delete(move.id); }
+}
+
 // ── what a failure, a restart or a power cut left ────────────────────────────
 // 'started' / 'undo-pending': the EMR was not changed -> the corrected study is removed.
 // 'emr-done' / 'cleanup-pending': the EMR is right -> the original is deleted and the
@@ -510,7 +747,21 @@ async function resumePending() {
       if (working.has(move.id)) continue;
       working.add(move.id);
       try {
-        const state = (move.state === 'started' || move.state === 'undo-pending') ? await undo(move, move.error || 'interrupted') : await finish(move);
+        let state;
+        if (move.kind === 'swap') {
+          // Undone only while the first study (A) is still whole; once it has been deleted
+          // the exchange can only be finished.
+          let back = move.step < 2;
+          if (back) {
+            const A = await studyUnder(await config(), move.detail.a.uid);
+            if (A === undefined) { out.push({ id: move.id, was: move.state, state: move.state }); continue; }
+            back = !!A && A.instances.length === move.detail.a.count && A.instances.every(i => move.detail.a.sops.includes(i.sop));
+            if (!back) move.step = Math.max(move.step, 1);
+          }
+          state = back ? await undo(move, move.error || 'interrupted') : await advanceSwap(null, move);
+        } else {
+          state = (move.state === 'started' || move.state === 'undo-pending') ? await undo(move, move.error || 'interrupted') : await finish(move);
+        }
         out.push({ id: move.id, was: move.state, state });
       } catch (e) {
         console.error('[pacs move] resuming line', move.id, e.message);
@@ -565,7 +816,7 @@ router.get('/moves/patient/:patientId', authMiddleware, permMiddleware('consulta
   try {
     const r = await pool.query(
       `SELECT id, kind, state, from_order_item_id, to_order_item_id, from_order_name, to_order_name, from_accession, to_accession,
-              image_count, reading_moved, reason, staff_name, created_at, finished_at, error
+              image_count, (detail->'b'->>'count')::int AS other_image_count, reading_moved, reason, staff_name, created_at, finished_at, error
          FROM pacs_study_move WHERE patient_id = $1 ORDER BY id DESC LIMIT 100`, [req.params.patientId]);
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
@@ -577,4 +828,4 @@ router.post('/move/resume', authMiddleware, mayMove, async (req, res) => {
   catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-module.exports = { router, moveImages, resumePending, OPEN_ON, _test: { replacements, sourceBlock, targetBlock } };
+module.exports = { router, moveImages, resumePending, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };
