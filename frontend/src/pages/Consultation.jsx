@@ -1050,14 +1050,18 @@ export default function ConsultationPage() {
           <button onClick={function(){setLabOpen(true)}} style={{background:'#0e7490',color:'#cffafe',border:'1px solid #06b6d4',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>🧪 {t.labResultsTitle||'검사결과'}</button>
           <button onClick={function(){setReadingsOpen(true)}} style={{background:'#5b21b6',color:'#ede9fe',border:'1px solid #8b5cf6',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>🩻 {t.reading||'판독소견'}</button>
           <button onClick={function(){setChartOpen(true)}} style={{background:'#7c3aed',color:'#ede9fe',border:'1px solid #a855f7',borderRadius:5,padding:'4px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>📋 {t.chartRecord||'차트기록'}</button>
+          {/* Order (director, 2026-10-01): what never changes width first - the buttons, then
+              the transfer button and the chart's department and doctor - and what does
+              (chart number, name, birth date, allergy, memo) to the right, so a long
+              name no longer moves the button. The transfer button has the size of the
+              buttons on its left. Paid visit: the band's faint text and border instead
+              of opacity (design rule: no opacity for locked or cancelled states). */}
+          {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
+            style={{background:visitBilled(sel)?'#16294a':'#334155',color:visitBilled(sel)?'#6f8db3':'#e2e8f0',border:'1px solid '+(visitBilled(sel)?'#2b4568':'#64748b'),borderRadius:5,padding:'4px 12px',cursor:visitBilled(sel)?'not-allowed':'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
+          <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
           <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace'}}>{sel.chart_no}</span>
           <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
-          <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
-          {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
-            // Paid: the band's faint text and border instead of opacity (design rule: no
-            // opacity for locked or cancelled states). The band keeps its fixed colours.
-            style={{background:'transparent',color:visitBilled(sel)?'#6f8db3':'#bfdbfe',border:'1px solid '+(visitBilled(sel)?'#2b4568':'#3b5b85'),borderRadius:4,padding:'1px 7px',cursor:visitBilled(sel)?'not-allowed':'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
         </div>
