@@ -521,7 +521,6 @@ export default {
   py_searchNone: "« {q} » : aucun patient de cette liste ne correspond",
   py_nonePaidThatDay: "Aucun paiement à cette date.",
   py_feeAmount: "Montant de {name} — modifiable",
-  py_feeListPrice: "Tarif des Paramètres",
   py_feeAmountMissing: "Montant manquant pour : {names}. Saisissez un montant, ou retirez la ligne avec ✕, puis encaissez.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──

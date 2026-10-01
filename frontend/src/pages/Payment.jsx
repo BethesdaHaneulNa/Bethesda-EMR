@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -13,10 +13,48 @@ import { ReceiptModal } from '../components/Receipt.jsx';
 import { packWord } from '../documents/rx-dosing.js';
 
 // Amounts: French puts a non-breaking space between thousands (« 108 850 »), as the
-// receipt and the pharmacy screen do; Korean and English a comma. What is typed in
-// an amount box is left as typed.
+// receipt and the pharmacy screen do; Korean and English a comma. An amount box shows
+// what is typed the same way (MoneyInput below).
 function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
+
+// A box for an amount of money (2026-10-01, the director: "6,000, not 6000"). The value
+// the screen keeps is plain digits ("6000"), as before; the box shows it with the
+// thousands separator of the screen language while it is typed. Formatting moves the
+// characters, so the caret is put back after the same digit it stood behind - typing or
+// deleting in the middle of a number does not throw it to the end.
+function moneyRaw(text){
+  var v = String(text).replace(/[^0-9.]/g, '');
+  var i = v.indexOf('.');
+  return i < 0 ? v : v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, '');
+}
+function moneyText(raw, lang){
+  raw = String(raw == null ? '' : raw);
+  if(raw === '') return '';
+  var parts = raw.split('.');
+  var whole = parts[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ',');
+  return parts.length > 1 ? whole + '.' + parts[1] : whole;
+}
+function MoneyInput(p){
+  var lang = useLang().lang;
+  var ref = useRef(null);
+  var caret = useRef(null);   // how many digits stood left of the caret when a key was typed
+  useLayoutEffect(function(){
+    if(caret.current == null || !ref.current) return;
+    var el = ref.current, want = caret.current, pos = 0, seen = 0;
+    caret.current = null;
+    while(pos < el.value.length && seen < want){ if(/[0-9.]/.test(el.value.charAt(pos))) seen++; pos++; }
+    try { el.setSelectionRange(pos, pos); } catch(e){}
+  });
+  return <input ref={ref} type="text" inputMode="numeric" autoComplete="off" autoFocus={!!p.autoFocus}
+    value={moneyText(p.value, lang)} aria-label={p.label} title={p.label} style={p.style}
+    onFocus={p.selectOnFocus ? function(e){ e.target.select(); } : undefined}
+    onChange={function(e){
+      var el = e.target, at = el.selectionStart == null ? el.value.length : el.selectionStart;
+      caret.current = el.value.slice(0, at).replace(/[^0-9.]/g, '').length;
+      p.onChange(moneyRaw(el.value));
+    }} />;
+}
 
 // Column widths (2026-10-01, the director): the cashier reads the doctor's notes often
 // ("control in 3 days"), so the patient chart on the right is wider and the receipt in the
@@ -340,15 +378,14 @@ export default function PaymentPage() {
     var c = feeCodes.filter(function(x){ return String(x.id)===String(codeId); })[0];
     if(!c) return;
     var price = parseFloat(c.price_clinic||c.price)||0;
-    // price_editable (migration 305, the director 2026-10-01): the cashier may type this
-    // line's amount - the document fee depends on the document. list_price is the code's
-    // price, kept to show beside an amount that was changed.
-    setExtraItems(function(p){ return p.concat([{ order_code_id:c.id, code:c.code, name:c.name, quantity:1, unit_price:price, list_price:price, editable:!!c.price_editable }]); });
+    // price_editable (migration 047, the director 2026-10-01): the cashier may type this
+    // line's amount - the document fee depends on the document. Any fee code ticked in
+    // Settings (order codes) gets the box, not only DOC.
+    setExtraItems(function(p){ return p.concat([{ order_code_id:c.id, code:c.code, name:c.name, quantity:1, unit_price:price, editable:!!c.price_editable }]); });
   }
   // what is typed is kept as typed (an empty box while typing); sums read it as a number
   function setFeePrice(idx, value){
-    var v = String(value).replace(/[^0-9.]/g, '');
-    setExtraItems(function(p){ return p.map(function(it,i){ return i===idx ? Object.assign({}, it, { unit_price:v }) : it; }); });
+    setExtraItems(function(p){ return p.map(function(it,i){ return i===idx ? Object.assign({}, it, { unit_price:moneyRaw(value) }) : it; }); });
   }
   // an editable line left empty or at 0: nothing to bill on it
   function feeWithoutAmount(){ return extraItems.filter(function(it){ return it.editable && !((parseFloat(it.unit_price)||0) > 0); }); }
@@ -682,7 +719,7 @@ export default function PaymentPage() {
             <div style={{fontSize:13,color:t2,marginBottom:12}}>{settleBill.receipt_no} · {ymd(settleBill.billing_date)}</div>
             <div style={{display:'flex',justifyContent:'space-between',fontSize:14,marginBottom:6,fontFamily:'monospace'}}><span style={{color:t2}}>{t.outstanding}</span><span style={{color:'var(--danger-ink)',fontWeight:800}}>{fmtAr(settleBill.outstanding)} Ar</span></div>
             <label style={{fontSize:12,color:t3,fontWeight:700}}>{t.amountReceived||'받은 금액'}</label>
-            <input type="number" value={settleAmt} onChange={function(e){setSettleAmt(e.target.value)}} autoFocus style={{width:'100%',boxSizing:'border-box',background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:7,padding:'10px 12px',color:tx,fontSize:18,fontFamily:'monospace',marginTop:4}} />
+            <MoneyInput value={settleAmt} onChange={setSettleAmt} autoFocus label={t.amountPaid} style={{width:'100%',boxSizing:'border-box',background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:7,padding:'10px 12px',color:tx,fontSize:18,fontFamily:'monospace',marginTop:4}} />
             <div style={{display:'flex',gap:6,marginTop:8}}>
               <button onClick={function(){ setSettleAmt(String(Math.round(parseFloat(settleBill.outstanding)||0))); }} style={{flex:1,background:'var(--ok-a18)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:6,padding:'7px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.fullAmount||'전액'}</button>
               {[5000,10000,50000].map(function(v){ return <button key={v} onClick={function(){ setSettleAmt(String((parseFloat(settleAmt)||0)+v)); }} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'7px',cursor:'pointer',fontSize:13}}>+{fmtAr(v)}</button>; })}
@@ -848,9 +885,8 @@ export default function PaymentPage() {
                 <td style={{padding:'7px 10px',color:tx}}>{it.name}</td>
                 {it.editable
                   ? <td style={{padding:'5px 10px',textAlign:'right',whiteSpace:'nowrap'}}>
-                      {(parseFloat(it.unit_price)||0)!==it.list_price?<span title={t.py_feeListPrice} style={{fontSize:12,color:t3,fontFamily:'monospace',marginRight:6,textDecoration:'line-through'}}>{fmtAr(it.list_price)}</span>:null}
-                      <input type="text" inputMode="numeric" autoComplete="off" value={it.unit_price} onChange={function(e){setFeePrice(idx, e.target.value)}} onFocus={function(e){e.target.select()}} aria-label={t.py_feeAmount.replace('{name}', it.name)} title={t.py_feeAmount.replace('{name}', it.name)}
-                        style={{width:84,background:'var(--field)',border:'1px solid '+((parseFloat(it.unit_price)||0)>0?'var(--field-border)':'var(--danger-text)'),borderRadius:5,padding:'4px 6px',color:'var(--ok-text)',fontSize:15,fontFamily:'monospace',textAlign:'right',boxSizing:'border-box'}}/>
+                      <MoneyInput value={it.unit_price} onChange={function(v){setFeePrice(idx, v)}} selectOnFocus label={t.py_feeAmount.replace('{name}', it.name)}
+                        style={{width:92,background:'var(--field)',border:'1px solid '+((parseFloat(it.unit_price)||0)>0?'var(--field-border)':'var(--danger-text)'),borderRadius:5,padding:'4px 6px',color:'var(--ok-text)',fontSize:15,fontFamily:'monospace',textAlign:'right',boxSizing:'border-box'}}/>
                       <span style={{color:'var(--ok-text)',fontFamily:'monospace',marginLeft:4}}>Ar</span>
                     </td>
                   : <td style={{padding:'7px 10px',textAlign:'right',color:'var(--ok-text)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtAr((parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1))} Ar</td>}
@@ -871,13 +907,13 @@ export default function PaymentPage() {
           }
           <SumRow label={isAdditional()?t.additionalHint:t.subtotal} amount={subtotal()} bold />
           <div style={{height:1,background:bd,margin:'8px 0'}}></div>
-          <div style={{display:'grid',gridTemplateColumns:'90px 1fr',gap:6,alignItems:'center',marginBottom:6}}><span style={{fontSize:13,color:t2}}>{t.discount}</span><input type="number" value={discount.value} onChange={function(e){setDiscount({type:'amount',value:e.target.value})}} style={inputStyle()} /></div>
+          <div style={{display:'grid',gridTemplateColumns:'90px 1fr',gap:6,alignItems:'center',marginBottom:6}}><span style={{fontSize:13,color:t2}}>{t.discount}</span><MoneyInput value={discount.value} onChange={function(v){setDiscount({type:'amount',value:v})}} selectOnFocus label={t.discount} style={inputStyle()} /></div>
           {prevBal()>0?<SumRow label={t.prevOutstanding} amount={prevBal()} color="var(--danger-ink)" />:null}
           {patBalance.refund>0?
             <div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:6,padding:'8px 10px',margin:'8px 0',fontSize:13}}><span style={{color:'var(--accent-text)',fontWeight:800}}>{t.refundDue}: </span><span style={{color:'var(--accent-text)',fontFamily:'monospace',fontWeight:800}}>{fmtAr(patBalance.refund)} Ar</span><div style={{color:t3,fontSize:11,marginTop:2}}>{t.refundHint}</div></div>
             :null}
           <div style={{background:'linear-gradient(135deg,var(--ok-a15),var(--ok-strong-a15))',border:'2px solid var(--ok-a40)',borderRadius:6,padding:12,marginTop:10}}><div style={{fontSize:13,color:'var(--ok-text)',fontWeight:800}}>{t.totalDue}</div><div style={{fontSize:26,fontWeight:900,color:'var(--ok-ink)',fontFamily:'monospace',textAlign:'right',whiteSpace:'nowrap'}}>{fmtAr(totalDue())} Ar</div></div>
-          <div style={{marginTop:12}}><div style={{fontSize:13,color:t2,marginBottom:4}}>💵 {t.amountPaid}</div><input type="number" value={amountPaid} onChange={function(e){setAmountPaid(e.target.value)}} style={{...inputStyle(),fontSize:20,color:'var(--ok-ink)',fontWeight:800,padding:9}} /></div>
+          <div style={{marginTop:12}}><div style={{fontSize:13,color:t2,marginBottom:4}}>💵 {t.amountPaid}</div><MoneyInput value={amountPaid} onChange={setAmountPaid} label={t.amountPaid} style={{...inputStyle(),fontSize:20,color:'var(--ok-ink)',fontWeight:800,padding:9}} /></div>
           <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>{[totalDue(),5000,10000,20000,50000].map(function(a,i){return <button key={i} onClick={function(){setAmountPaid(String(a))}} style={{flex:'1 0 48px',background:'var(--chip)',border:'1px solid '+bd2,borderRadius:4,padding:'5px 2px',color:t2,cursor:'pointer',fontSize:12}}>{i===0?L.exact:fmtAr(a)}</button>;})}</div>
           {amtPaidNum()>=totalDue()&&amtPaidNum()>0?<InfoLine label={t.change} amount={changeAmt()} color="var(--accent-text)" tint="accent-text" />:null}
           {amtPaidNum()>0&&amtPaidNum()<totalDue()?<InfoLine label={t.outstanding} amount={outstandingAmt()} color="var(--danger-ink)" tint="danger" />:null}
