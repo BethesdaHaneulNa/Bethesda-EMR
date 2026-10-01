@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 전과 창 의사만 — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 차트 머리줄 날짜만 — 정리 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -40,7 +40,7 @@
 1. 바이탈 칸에 적습니다. 프랑스어 화면에서는 **TA** (BP, 혈압, `120/80`처럼) · **T°** (BT, 체온) · **FC** (PR, 맥박) · **FR** (RR, 호흡수) · **SpO2**입니다.
 2. **Ma note de consultation (내 진료 기록)** 칸에 S·O·A·P를 적습니다. **이 내원의 내 기록**입니다. 의사마다 한 내원에 기록이 하나씩 있고(2026-09-30 실장님 결정 (나)), 다시 열면 내 글이 그대로 있어 이어 씁니다. 바이탈 칸은 비워도 되고(저장·완료가 막히지 않음), 혈압·체온을 기록 글에 적어도 됩니다.
 3. 아래 **Dictionnaire (문장사전)**에서 문장을 누르면 진료 기록 맨 아래 줄에 붙습니다. 분류 버튼 **Tout (전체) · Général (일반) · Médecine (내과) · Chirurgie (외과) · Pédiatrie (소아) · Gynéco-obst. (산부인과)**과 **Rechercher** 칸으로 좁힐 수 있습니다. 설정에서 새로 만든 분류는 그 뒤에 이름 그대로 붙습니다. 설정에 프랑스어 문장(text_fr)이 적혀 있으면 프랑스어 화면에서는 그 문장이 보이고 그대로 들어갑니다.
-4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Dossier Patient (환자 차트)** 맨 위 **Aujourd'hui (오늘)** 밑에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
+4. **Sauver (저장)**를 누르면 바이탈과 내 기록이 저장됩니다. 글은 칸에 그대로 있고, 오른쪽 **Dossier Patient (환자 차트)** 맨 위, 이 내원의 묶음(머리줄 = 날짜와 과·의사, 예 «2026-09-30 GEN Dr. Grace») 밑에 내 이름·시각과 함께 올라갑니다. 저장 전에는 제목 옆에 **● Non enregistrée (저장 안 됨)**.
    - **다른 의사의 기록**은 오른쪽에 그 의사 이름으로 따로 보이고 **읽기만** 됩니다(관리자도 남의 기록은 못 고침 — 결정 (가)). 두 의사가 같은 내원을 열어 두면 30초마다 상대 기록을 다시 읽습니다. 내가 쓰고 있는 칸은 건드리지 않습니다.
    - 저장하지 않고 **다른 환자**를 열면 묻습니다: 확인 = 저장하고 열기, 취소 = 머물기.
    - 저장하지 않은 글은 **이 PC의 브라우저**에 남아 F5·정전 뒤 같은 내원을 열면 돌아옵니다(「이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.」). 저장·로그아웃·하루가 지나면 지워집니다(7.3).
@@ -123,7 +123,7 @@
 
 ### 2.5 Dossier Patient — 환자 차트 (오른쪽)
 
-1. **Dossier Patient (환자 차트)** 탭(2026-09-30 결정 (가) — 전에는 「Visites passées」, 수납·약국도 같은 이름) 맨 위에 **오늘 진료**(Aujourd'hui — 의사마다 이름·시각·고친 시각과 글), 그 밑에 지난 진료가 날짜순으로 나옵니다. 지난 진료도 의사마다 이름과 첫 두 줄입니다.
+1. **Dossier Patient (환자 차트)** 탭(2026-09-30 결정 (가) — 전에는 「Visites passées」, 수납·약국도 같은 이름) 맨 위에 **지금 연 내원**(머리줄은 날짜와 과·의사 — 「오늘」 같은 말은 붙이지 않음, 2026-10-01 실장님: 「그냥 날짜만」; 의사마다 이름·시각·고친 시각과 글), 그 밑에 지난 진료가 날짜순으로 나옵니다. 지난 진료도 의사마다 이름과 첫 두 줄입니다.
 2. 날짜를 누르면 가운데에 그날의 바이탈·진료 기록·처방이 **Dossier passé · lecture seule (과거 기록 · 읽기 전용)**으로 나옵니다.
 3. **← Retour à l'actuel (← 현재 진료로)**를 누르면 오늘 진료로 돌아옵니다.
 
@@ -256,7 +256,7 @@
 - **전과 창은 의사만**(2026-10-01, 실장님 요청): `transfer` 상태 = `{doctor, reason, doctors, busy}`, 목록은 `GET /admin/doctors` 하나(과 목록은 읽지 않음). 서버에는 전처럼 둘 다 보냄 — `department_id = transferDept(doc)`(고른 의사의 과, 과 없는 의사면 내원의 지금 과), `doctor_id`. 확인은 **지금과 다른 의사를 골랐을 때만** 켜짐(의사 없는 내원은 「—」가 골라져 있고 의사를 골라야 함 — 과만 바꾸는 길은 없앰). 고른 의사의 과가 내원의 과와 다르면 `cs_trDeptFollows`(「과도 바뀝니다: GEN → PED」) 한 줄. 의사에게도 내원에도 과가 없으면 보낼 과가 없어 `cs_trNoDept` 한 줄과 함께 확인 꺼짐(서버는 과 없이 받지 않음). 제목·알림은 의사 기준(`cs_trTitle` «Changer de médecin», `cs_trDone` «Médecin changé ✓»). `cs_trDept`·`cs_trPickDoctor`는 지움. **아래 「전과」 줄의 과 칸·의사 칸 순서 설명은 그 전(09-30) 모양**이고, 정렬(내원의 과 의사 → 과 없는 의사 → 나머지)·거절 code·수납된 내원의 꺼진 단추·답 합치기는 그대로입니다.
 - **전과**(2026-09-30, 접수의 `PUT /api/visits/:id/transfer {department_id, doctor_id, reason}` — 약속은 `wiki/handoff/coordinator.md` 「전과」): 파란 줄의 과·의사 이름표(총괄이 `[sel.dept_code, sel.doctor_name]`으로 바꿈, `2028e87`) 옆 **⇄ 단추**(`cs_transfer`, 취소된 내원에는 없음, 파란 띠 안이라 원래의 띠 색). `openTransfer()`가 접수 화면과 같은 목록 `GET /admin/departments`·`GET /admin/doctors`(registration·consultation 권한)를 읽고 `transfer` 상태(과·의사·사유·목록·busy)로 작은 창(`role="dialog"`)을 그림. **의사 칸이 먼저**(2026-09-30 총괄 부탁 — 「의사만 바꾸기」가 가장 흔한데, 과로 좁힌 목록에서는 다른 과의 의사를 고르려면 과부터 바꿔야 했음): 모든 활성 의사를 「과 – 이름」으로, 순서는 **이 내원의 과** 의사 → 과 없는 의사 → 나머지(과 코드·이름 순) — 창에서 고른 과가 아니라 내원의 과로 정렬해서 고르는 동안 목록이 뒤섞이지 않음. 의사를 고르면 과가 그 의사의 과로 따라가고(과 없는 의사는 과 그대로). 과를 바꾸면 목록은 좁히지 않고, 고른 의사가 그 과가 아니면(과 없는 의사는 유지) 의사 칸만 「— Choisissez le médecin —」(`cs_trPickDoctor`)로 비움 — 확인 꺼짐. 과 칸의 「—」는 과가 없는 내원에서만. 바뀐 것이 없으면 확인 단추가 꺼짐. `doTransfer()`: 답(그 내원 줄)에서 **과·의사 다섯 칸만** `sel`·대기 목록(`visits`)·`consult.department_id`에 합침 — 칸의 글(내 기록)·처방·오더는 건드리지 않고 `pickPatient`도 부르지 않으므로 저장 안 된 기록도 그대로. 거절은 서버의 `{error, code}`(`visit.routes.js`, 접수 `c4a63f5`)를 **code로** 고름 — `TRANSFER_REFUSALS`: `VISIT_NOT_FOUND`→`cs_trNotFound`, `VISIT_CANCELLED`→`cs_trCancelled`, `VISIT_BILLED`→`cs_trPaid`(`{receipt}` = 답의 `receipt_no`), `BAD_DEPARTMENT`→`cs_trBadDept`, `BAD_DOCTOR`→`cs_trBadDoctor`, `NO_CHANGE`→`cs_trNoChange`. 모르는 code는 서버 문장 그대로(`cs_errorPrefix`). code를 받으려고 `api/client.js`가 오류에 `status`·`code`·`data`를 붙임(공용, 기존 `message`는 그대로). 성공은 잠깐 뜨는 알림 `cs_trDone`. **결정 확정**(2026-09-30): 접수 직원과 의사 둘 다, **수납이 끝나기 전까지** — `visitBilled(sel)`(대기 목록 줄의 `has_active_bill`, 내원 목록으로 연 내원은 `billing_id`+`bill_status ≠ cancelled`)이면 단추를 끄고 이유를 title로(`cs_trBilledTitle`). 꺼진 모양은 opacity가 아니라 파란 띠의 흐린 글자·테두리색(`#6f8db3`·`#2b4568` — 띠는 고정 색 예외, 디자인 규칙: 잠금·취소에 opacity를 쓰지 않음). **의사를 비우지 않음**: 과는 꼭 골라야 하고(서버 `BAD_DEPARTMENT`), 의사가 있는 내원은 의사도 골라야 확인이 켜짐(과를 바꿔 그 과의 의사가 아니게 되면 비워지고 확인이 꺼짐). 의사가 없는 내원만 「—」가 있어 과만 바꿀 수 있음. 답의 `has_active_bill`도 합침. 다른 의사에게 옮기면 그 환자는 내 대기 목록에서 빠짐(목록은 로그인한 의사와 의사 없는 내원만 보여 줌).
 - **파란 줄의 순서**(실장님 2026-10-01 「변동성 없는 것을 가운데로, 있는 것을 오른쪽으로 … 전과 박스 크기도 왼쪽과 맞춰」, 총괄 `5076ed5`): 단추 다섯 → **⇄ 전과**(padding `4px 12px`·13px, 다른 단추와 같은 높이; 수납된 내원은 흐린 색) → 「GEN Dr. Grace」 → 차트번호 → 이름 → 성별/생년월일 → 알레르기 → 메모.
-- **오른쪽 맨 위 묶음의 말**(2026-10-01): 오늘의 내원이면 「Aujourd'hui」(`cs_noteToday`), 아니면 「Cette visite / 이 내원 / This visit」(`cs_noteThisVisit`). 지난 날의 내원을 「Trouver patient」·「Sélection visite」로 열면 «2026-09-30 오늘»로 나오던 것. 판단: `POST /consultations` 응답의 **`visit_is_today`**(서버가 `visit_date = todayLocal()`로 계산 — PC 시계가 틀려도 맞음) **그리고** 연 뒤로 이 PC의 날짜가 바뀌지 않았을 것(`consult.client_day` = 열 때의 `ymd(new Date())`) — 화면을 켜 둔 채 자정을 넘기면 15·30초 새로고침의 다시 그리기에서 「Cette visite」로 바뀜.
+- **오른쪽 맨 위 묶음의 머리줄**(2026-10-01): **날짜와 과·의사만** — «2026-09-30 GEN Dr. Grace». 같은 날 잠깐 「오늘 / 이 내원」을 붙였다가(지난 날의 내원이 «오늘»로 나오던 것을 고치며, `7191deb`) 실장님이 「그냥 날짜만」으로 정해 글자를 뺌(총괄 `9a7eb55`). 그에 딸린 것도 지움: 키 `cs_noteToday`·`cs_noteThisVisit`, `consult.client_day`, `POST /consultations` 응답의 `visit_is_today`. `notesBlock(…, today)`의 셋째 인자는 「지금 연 진료」(내 기록을 누르면 칸에 초점)라는 뜻으로 남아 있습니다.
 - **총괄이 넣은 것**(2026-09-30, `3890b90`·`fbf7d0b`): 파란 줄의 과 이름표 = `[sel.dept_code, sel.doctor_name]`(「GEN Dr. Grace」). 처방 표 「일총투여(Dose/j)」 머리는 11px·`nowrap`(1366에서 두 줄로 꺾이던 것). `GET /patients/:id/history`의 과(`dept_code`)도 **내원의 과**(`COALESCE(visit.department_id, consultation.department_id)`) — 의사 이름과 같은 규칙.
 - **탭 이름**(결정 (가), 2026-09-30, 총괄이 넣음): 진료·수납·약국 모두 `t.pastVisits` → `t.patientChart`(fr «Dossier Patient», en·ko «Patient Chart»).
 - **의사마다의 진료 기록**(2026-09-30 결정 (나)·(가)·바이탈 한 벌): 칸 = 「이 내원의 내 기록」(`note`), 서버의 내 기록 = `mineSaved`, 다르면 「Non enregistrée」. `notes` = 이 진료의 모든 의사 기록(`GET /:id/notes`, `mine` 표시). 저장은 `saveVitals`(`PUT /:id`, 바이탈만) + `pushNote`(`PUT /:id/note`, 바뀐 때만). Terminé도 같은 둘을 먼저. `pickPatient`는 저장 안 된 글이 있으면 `window.confirm(cs_noteUnsavedSwitch)` → 확인이면 저장 후 열기. 오른쪽 목록은 오늘 진료 블록(`notesBlock(notes)`) + 지난 진료(`h.notes`, 두 줄로 줄임), 과거 보기(`renderPast`)도 `notesBlock(c.notes)`. 내 기록은 왼쪽 파란 선, 누르면 칸에 초점. 30초마다 `GET /:id/notes`(칸은 안 건드림). 저장 안 된 글: `noteDraft` — `localStorage` 키 `cs_noteDraft:<계정 id>:<진료 id>` `{text, at}`, 칸이 서버와 다르면 쓰고 같으면 지움, 진료를 열 때 이 계정의 하루 지난 것은 모두 지움, **진료를 연 직후(첫 그리기 전) 읽음** — 칸이 빈 채 그려진 뒤 읽으면 지우는 효과가 먼저 돎. 로그아웃(`api/client.js logout`)이 이 계정 것을 지움. 줄 작성자: `prescribed_by_name`·`ordered_by_name`, 이 내원의 작성자 id가 둘 이상일 때만 `authorTag`. 저장된 줄은 `Object.assign(옛 줄, 응답)`으로 이름 칸을 지킴. 서류 엔진의 `ctx.note` = 칸 = 내 기록.
@@ -697,8 +697,9 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | **전과 창에서 과 칸을 뺌** — 의사와 사유만, 과는 고른 의사의 과로(과 없는 의사는 내원의 과), 과가 바뀌면 한 줄로 알림, 의사 없는 내원도 의사를 골라야 함. 키 `cs_trDept`·`cs_trPickDoctor` 지움, `cs_trDeptFollows`·`cs_trNoDept` 더함 | (이 커밋) |
-| 2026-10-01 | 오른쪽 맨 위 묶음 「오늘」은 오늘의 내원일 때만(서버 `visit_is_today` + 자정 넘김), 아니면 「이 내원」. 파란 줄 순서(총괄 `5076ed5`) 문서 반영 | `7191deb` |
+| 2026-10-01 | 오른쪽 맨 위 묶음 머리줄은 **날짜와 과·의사만**(실장님 결정, 총괄 `9a7eb55`) — 안 쓰게 된 `cs_noteToday`·`cs_noteThisVisit`·`client_day`·`visit_is_today`와 주석을 지우고 문서를 맞춤 | (이 커밋) |
+| 2026-10-01 | **전과 창에서 과 칸을 뺌** — 의사와 사유만, 과는 고른 의사의 과로(과 없는 의사는 내원의 과), 과가 바뀌면 한 줄로 알림, 의사 없는 내원도 의사를 골라야 함. 키 `cs_trDept`·`cs_trPickDoctor` 지움, `cs_trDeptFollows`·`cs_trNoDept` 더함 | `cb5315f` |
+| 2026-10-01 | (같은 날 뒤에 뺌 — 위 줄) 오른쪽 맨 위 묶음 「오늘」은 오늘의 내원일 때만, 아니면 「이 내원」. 파란 줄 순서(총괄 `5076ed5`) 문서 반영 | `7191deb` |
 | 2026-09-30 | **전과 손질** — 의사 칸 먼저·모든 의사(내원의 과 의사 위)·의사를 고르면 과가 따라감·과를 바꾸면 맞지 않는 의사만 「골라 주세요」, 수납된 내원의 꺼진 단추는 opacity 대신 띠의 흐린 색 | `a0e830b` |
 | 2026-09-30 | **전과 — 접수 서버와 이어 끝까지** — 거절을 code로(6개, `cs_trBad` → `cs_trBadDept`·`cs_trBadDoctor`, 영수증 번호), 수납된 내원은 단추 끔, 의사를 비우지 않음(의사 없는 내원만 과만), `api/client.js` 오류에 `code`. 총괄이 넣은 파란 줄 이름표·「Dose/j」 머리·history 과 규칙 문서 반영 | `7877337` |
 | 2026-09-30 | **전과 단추(화면 먼저)** — 파란 줄 「⇄ Transfert」, 과·의사·사유 창, 답으로 `sel`·대기 목록·`consult`만 갱신(기록·처방·오더·쓰던 글 그대로), 거절 문장 cs_ 키 5개 | `fe2c993` |
