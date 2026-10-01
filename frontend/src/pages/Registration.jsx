@@ -646,13 +646,14 @@ export default function RegistrationPage() {
 
         {/* LEFT: Search + Patient Info */}
         <div style={{ borderRight: '1px solid ' + bd, overflow: 'auto', background: pn }}>
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid ' + bd, background: viewingPast ? 'var(--warn-a14)' : 'var(--panel-2)' }}>
-            <label style={Object.assign({}, labelStyle, { color: viewingPast ? 'var(--warn-text)' : t2 })}>{t.rc_workDate}</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={Object.assign({}, smallBtn, { background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', padding: '6px 10px' })}>◀</button>
-              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={Object.assign({}, IS, { width: 'auto', flex: 1, minWidth: 0, padding: '6px 8px', fontSize: 16, colorScheme: 'var(--scheme)' })} />
-              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={Object.assign({}, smallBtn, { background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', padding: '6px 10px', opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 })}>▶</button>
-              {viewingPast ? <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={Object.assign({}, smallBtn, { background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', padding: '6px 10px' })}>{t.rc_backToToday}</button> : null}
+          <div style={{ padding: '7px 16px', borderBottom: '1px solid ' + bd, background: viewingPast ? 'var(--warn-a14)' : 'var(--panel-2)' }}>
+            {/* one row, as on the payment screen: label, previous day, date, next day */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: viewingPast ? 'var(--warn-text)' : t2, whiteSpace: 'nowrap' }}>{t.rc_workDate}</span>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function () { shiftWorkDate(-1); }} disabled={!workDate} style={{ background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 5px', cursor: 'pointer', fontSize: 13 }}>◀</button>
+              <input type="date" value={workDate} max={serverToday || undefined} onChange={function (e) { chooseWorkDate(e.target.value); }} style={{ flex: 1, minWidth: 0, background: 'var(--field-3)', border: '1px solid var(--field-border)', borderRadius: 5, padding: '4px 4px', color: tx, fontSize: 13, colorScheme: 'var(--scheme)' }} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function () { shiftWorkDate(1); }} disabled={!workDate || !serverToday || workDate >= serverToday} style={{ background: 'var(--chip)', color: t2, border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 5px', cursor: 'pointer', fontSize: 13, opacity: (!workDate || workDate >= serverToday) ? 0.4 : 1 }}>▶</button>
+              {viewingPast ? <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', borderRadius: 5, padding: '4px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t.rc_backToToday}</button> : null}
             </div>
             {viewingPast ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 6, lineHeight: 1.4 }}>{fill(t.rc_pastDateBanner, { date: workDate })}</div> : null}
           </div>
