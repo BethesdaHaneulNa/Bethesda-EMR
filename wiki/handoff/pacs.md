@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 설계안: 영상 인쇄와 영상 내려받기(CD 반출) — 짓기 전 (문서만)
+
+- **상태**: 확인 요청 — **결정 대기**(설계안 9절: 실장님 몫 일곱, 총괄 몫 다섯). 짓지 않음.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `c9e4d88`을 ff로 당긴 뒤). 문서만. **PACS 저장소** — 없음
+- **한 일**: `wiki/reference/image-print-export-design.md` — 화면 그림(단추 자리·인쇄 창·내려받기 창), 인쇄 방식, 묶음의 폴더 구조, CD에 넣을 뷰어 조사(라이선스 원문), 기록·권한, 걸리는 것, 정할 것, 짓는 차례.
+- **격리에서 확인한 것**(Orthanc 26.6.1 — 실행 중과 같은 이미지):
+  - `GET /studies/{id}/media`와 `POST /tools/create-media-extended {Resources, Synchronous: true}`: ZIP 맨 위에 `DICOMDIR`, 그 옆 `IMAGES/IM0…`. 여러 검사를 한 `DICOMDIR`로. 검사 55건(83장)을 0.06초, 첫 바이트 0.01초. ZIP의 각 파일 크기가 머리에 적혀 있음(뒤에 붙는 형식이 아님) → EMR이 흘려보내며 자기 파일을 덧붙일 수 있음.
+  - `GET /instances/{id}/rendered`(Accept: image/jpeg, `?width=`): JPEG로 나옴, 한 장 2ms(작은 시험 그림). `/preview`도 PNG/JPEG.
+  - `GET /studies/{id}/statistics`: `DicomDiskSizeMB` 등 — 내려받기 전에 크기를 보여 줄 수 있음.
+  - EMR의 nginx(`frontend/nginx.conf`): `/api/`에 응답 크기 제한 없음, 읽기 시간 제한은 기본(바이트 사이 60초).
+- **뷰어 조사(원문)**: Weasis — `LICENSE`가 `EPL-2.0 OR Apache-2.0`, 다시 배포 가능. 4판부터 옛 portable zip은 없어지고 설치 파일에 Java 포함(MSI 52MB), CD에 넣어 실행은 Windows x86-64만·느림, 인증된 의료기기 아님. MicroDicom — EULA가 비상업용 무료·다른 사람에게 주는 것 불허. RadiAnt — 배포는 유료(검색 결과로 읽음). DWV — GPL-3.0, CD에는 맞지 않음. **추천: 뷰어 없이 `INDEX.HTM` + JPG로 먼저, Weasis는 ③에서 손으로 해 본 뒤.**
+- **바꾼 파일**: `wiki/reference/image-print-export-design.md`(새), `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: 큰 영상·큰 묶음의 시간, nginx를 지나는 수백 MB, 흑백 레이저의 밝기, Weasis의 풀어서 쓰는 묶음이 실제로 어느 파일인지와 CD에서 켜지는지, IHE 「휴대용 영상 자료」 규격의 파일 이름(기억으로 적음 — 짓기 전에 원문 확인), RadiAnt 조건의 원문 쪽.
+- **다른 세션에 부탁**: 없음(결정 뒤 — `registry.js` 등록은 진료/총괄, `audit.js` 두 줄은 총괄에 알림).
+
 ## 2026-10-01 — 영상 옮기기: 복원 뒤 다시 적용((나)) · 단추 여백
 
 - **상태**: 확인 요청
