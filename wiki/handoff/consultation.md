@@ -2,6 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 진료 화면을 긴 이름(50자·85자)으로 훑음: 고친 곳 셋
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `e8db948` 다음
+- **시험 자료**(격리): 환자 `RAZAFINDRAKOTO Andriamihaja Jean Baptiste Emmanuel`(50자), `RAKOTONDRAMANANA-RAZAFIMAHATRATRA Andrianantenaina Herinirina Jean Chrysostome Fidèle`(85자), 의사 `Dr RAKOTOARIMANANA Andrianjafy Hery Tiana`(41자), 알레르기 «Pénicilline, Aspirine», 접수 메모 49자, 지난 내원 하나, 영상 오더 + 판독.
+- **본 자리와 결과** (1366×768, FR 밝은 화면 · KO 어두운 화면):
+  | 자리 | 결과 |
+  |---|---|
+  | 대기 목록의 줄(En Attente) | 좋음 — 이름이 낱말 사이에서 2·4줄로 접히고 꼬리표 한 줄(총괄 `e8db948`) |
+  | 완료 탭의 줄(Terminé) | 좋음 — 같은 줄 모양, 꼬리표 50×15 |
+  | **파란 환자 줄** | **고침** — 줄이 접힐 때 차트번호가 첫 줄 끝에 남고 이름만 둘째 줄로 갔음 → 번호와 이름을 한 덩어리로. 페이지가 옆으로 넘치지 않음 |
+  | 전과 창 | 좋음 — 환자·과·의사 줄이 세 줄로 접힘, 의사 목록의 긴 이름은 칸 안에서 말줄임(고르기) |
+  | **영상 창 제목 줄** | **고침** — 긴 이름이 «🖼 Visionneuse»·검사 이름·세 단추를 눌러 각각 두 줄로 꺾임(65px) → 제목·단추는 한 줄, 이름이 남은 폭에서 접힘(51px) |
+  | 영상/판독 목록 창 머리 | 좋음(한 줄 46px) |
+  | 검사결과 창 머리 | 좋음(한 줄 46px) |
+  | 문서 창·차트기록 창 머리 | 좋음(한 줄 48px) |
+  | **서류(의뢰서)의 환자 표** | **고침** — 이름이 길면 차트번호 칸이 좁아져 «26-» / «00197»로 꺾임 → 그 칸 `nowrap`(공용 `PatientBox` — 의뢰서·수술기록지 모두) |
+  | Patient Chart 묶음 머리 | 좋음 — 날짜, 다음 줄에 «GEN Dr RAKOTOARIMANANA …», 꼬리표. 기록의 「의사 · 시각」은 한 줄·말줄임·title |
+- **`overflowWrap:'anywhere'`**: 대기 목록에서 낱말 가운데가 끊기는 것은 보이지 않았습니다(280px 칸에서 낱말 사이로 접힘, 33자짜리 하이픈 성은 하이픈에서 접힘). 그대로 두었습니다.
+- **알아 둘 것**: 85자 이름 + 알레르기 + 긴 접수 메모면 파란 줄이 **세 줄**(109px)이 됩니다 — 전에는 번호가 첫 줄에 남아 두 줄이었습니다. 번호를 이름 곁에 두는 쪽을 골랐습니다. 50자 이름은 두 줄입니다.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx`(파란 줄, 영상 창 제목 줄) · `frontend/src/documents/shared.jsx`(`PatientBox` 한 칸) · `wiki/modules/consultation.md`(3.1·8) · 이 노트
+- **공용 파일 변경**: `documents/shared.jsx`(진료 주관) — 환자 표의 차트번호 칸 `nowrap`. 영상 창 제목 줄에는 PACS가 넣은 접기 단추가 있는데, 그 단추의 style에 `whiteSpace:'nowrap', flexShrink:0`만 더했습니다(동작은 그대로).
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택에서 위 표의 자리를 크기를 재어 봄(머리 높이·`scrollWidth`), 고친 세 곳은 다시 열어 확인.
+- **확인 못 한 것**: 수술기록지의 환자 표(같은 `PatientBox`라 의뢰서로 봄), 판독 보고서 서식(PACS 것).
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 오더 줄의 용법에 「1.000」이 저절로 들어가던 것 · 이름 옆 촬영 부위를 뺌
 
 - **상태**: 확인 요청
