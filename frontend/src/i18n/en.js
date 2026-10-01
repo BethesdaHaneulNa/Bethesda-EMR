@@ -1103,6 +1103,15 @@ export default {
   se_modOtherPh: "the value the device asks for (e.g. AS)",
   se_modHint: "A device only receives the orders whose modality is exactly its own, letter for letter. If patients do not appear on the device, put here the Modality value that device-watch (PACS folder) shows.",
   se_errModality: "The modality is 1 to 16 letters, digits or underscores (for example US, CR, AS).",
+  se_act_studyRelink: "Images found again by accession number",
+  se_fld_studyUid: "Study number (UID)",
+  se_fld_imageCount: "Images",
+  se_fld_imagePatientId: "Patient number in the images",
+  se_fld_patientCheck: "Patient check",
+  se_pchk_match: "matches",
+  se_pchk_mismatch: "does not match",
+  se_pchk_missing: "no patient number in the images",
+  se_modListHint: "With a modality and the worklist feed on, this order goes to the device and appears in the imaging / reading list, even when its type is \"Procedure\".",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "Show",

@@ -1094,6 +1094,15 @@ export default {
   se_modOtherPh: "장비가 묻는 값 (예: AS)",
   se_modHint: "장비는 자기 종류와 글자까지 같은 오더만 목록으로 받습니다. 장비 목록에 환자가 안 뜨면 PACS 폴더의 device-watch가 보여 주는 Modality 값을 여기에 그대로 넣으세요.",
   se_errModality: "영상 종류(Modality)는 영문·숫자·밑줄 1~16자입니다 (예: US, CR, AS).",
+  se_act_studyRelink: "영상을 접수번호로 다시 연결",
+  se_fld_studyUid: "영상 검사 번호(UID)",
+  se_fld_imageCount: "영상 수",
+  se_fld_imagePatientId: "영상 속 환자 번호",
+  se_fld_patientCheck: "환자 대조",
+  se_pchk_match: "맞음",
+  se_pchk_mismatch: "맞지 않음",
+  se_pchk_missing: "영상에 환자 번호 없음",
+  se_modListHint: "영상 종류를 넣고 워크리스트를 켜면 이 오더는 장비 목록으로 가고, 종류가 「처치」여도 영상/판독 목록에 나옵니다.",
   // ── end settings ──
   // ── begin pacs (px_) ──
   px_show: "보기",

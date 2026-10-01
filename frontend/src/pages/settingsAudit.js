@@ -26,6 +26,9 @@ export var AUDIT_ACTIONS = {
   'reception.patient.edit': 'se_act_patientEdit',
   // a visit moved to another department or doctor (reception, visit.routes.js applyTransfer)
   'visit.transfer': 'se_act_visitTransfer',
+  // images whose study number was changed on the image server, found again by accession
+  // number when the viewer was opened (PACS, routes/pacs.relink.js)
+  'pacs.study.relink': 'se_act_studyRelink',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
@@ -73,6 +76,8 @@ var FIELDS = {
   // a visit's transfer: department_id (above, shown as the department) and the doctor by
   // name - the line keeps the name as it was, none is "—" - and the reason as typed
   doctor: 'se_fld_doctor', reason: 'se_fld_reason',
+  // pacs.study.relink: the study now linked, how many images, whose they say they are
+  study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount', image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
   // a removed phrase category: where its phrases went
   phrases_moved_to: 'se_fld_phrasesMovedTo', phrases_moved: 'se_fld_phrasesMoved',
   pack_label: 'se_fld_packLabel',
@@ -141,6 +146,9 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'pack_label') return t['ph_pack_' + v] || v;
   if (field === 'diagnosis_type') return t['se_dx_' + v] || v;
   if (field === 'gender') return t['se_gender_' + v] || v;
+  // does the patient number written in the images agree with this patient's chart number
+  // (pacs: match / mismatch / missing)
+  if (field === 'patient_check') return t['se_pchk_' + v] || v;
   // a document's template code as the document engine names it (ctx.templateName, given
   // by Settings.jsx from documents/registry.js); the code itself when it is unknown
   if (field === 'template_code') return (ctx && ctx.templateName && ctx.templateName(v)) || v;

@@ -15,6 +15,7 @@
 | 영수를 취소함 / 정정함 | `payment.receipt.cancel` · `payment.receipt.correct` | 수납 |
 | 환자 인적사항을 고침 | `reception.patient.edit` | 접수 |
 | 내원의 과·의사를 바꿈(전과 — 진료 화면의 단추든 접수 화면의 저장이든, 실제로 바뀔 때만) | `visit.transfer` | 접수 (`visit.routes.js` `applyTransfer`) |
+| 영상을 접수번호로 다시 이음(영상 서버에서 검사 번호가 바뀌어 끊긴 연결을 영상 창을 열 때 EMR이 되찾음 — 사람이 누른 것이 아니라 EMR이 한 일, 그 환자 줄로) | `pacs.study.relink` | PACS (`pacs.relink.js`) · 기록 탭 이름표는 설정(2026-10-01: 「Images retrouvées par le numéro d'accession」, 칸 `study_uid`·`image_count`·`image_patient_id`·`patient_check`) |
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
 | 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
