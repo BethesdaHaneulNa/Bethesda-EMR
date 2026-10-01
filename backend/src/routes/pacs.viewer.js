@@ -315,10 +315,13 @@ router.all('*', async (req, res) => {
   if (!grant) return isPage(path) ? explain(res, 401, ...EXPIRED) : res.status(401).json({ error: 'Viewer session missing or expired' });
 
   // Without ?study= Stone would list every study, which is refused anyway. The page
-  // may name several - the opened one first, then the same patient's exam to compare
-  // it with (Stone's own ?study=A,B): each must be in the cookie.
+  // may name several - the opened one first, then the same patient's other exams to
+  // compare it with (Stone's own ?study=A,B,...): each must be in the cookie.
+  // ?patient= (Stone's "every study of this patient number") is never served: it is
+  // Orthanc's answer, not the EMR's list - it would bring in studies the EMR flagged
+  // as another patient's, cancelled ones, and any that merely carry the number.
   const pageStudies = isPage(path) ? String(req.query.study || '').split(',') : [];
-  if (isPage(path) && (!pageStudies[0] || pageStudies.some(u => !grant.s.includes(u)))) {
+  if (isPage(path) && (!pageStudies[0] || pageStudies.some(u => !grant.s.includes(u)) || req.query.patient !== undefined)) {
     return explain(res, 403, ...NOT_OPENED);
   }
   const study = studyOf(path, req.query);

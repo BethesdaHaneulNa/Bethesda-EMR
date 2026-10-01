@@ -28,13 +28,13 @@ older backup restores cleanly.
 Two chest films of different dates could not be put side by side: the image window was only allowed the
 one study of the order it was opened from. It may now also load the same patient's other imaging studies
 - only those the EMR linked to that patient's own orders, whose images carry the right patient number,
-and whose order was not cancelled (nine at most). Under the window's title a button, **⇆ Comparer avec …**
-(the same exam, the time before), and a list of the patient's other exams reopen the viewer with both
-exams in its list; the doctor then splits the screen with the viewer's own layout button (it remembers the
-choice) and drags the other exam into the empty pane. The reading box folds away while comparing and can
-be folded at any time (**Masquer le compte-rendu**); it still belongs to the opened order. Another
-patient's images are refused exactly as before, and opening an exam replaces what the previous image
-window was allowed to load.
+and whose order was not cancelled (nine at most). Under the window's title a button, **⇆ Comparer avec
+les examens précédents (N)**, reopens the viewer with all of them in its list, each with its date; the
+doctor then splits the screen with the viewer's own layout button (it remembers the choice) and drags
+exams into the panes. While comparing, the window says whose reading is being written (**Le compte-rendu
+est celui de : …**) - always the exam that was opened. The reading box folds away while comparing and can
+be folded at any time (**Masquer le compte-rendu**). Another patient's images are refused exactly as
+before, and opening an exam replaces what the previous image window was allowed to load.
 
 The Stone viewer is used exactly as Orthanc ships it: the EMR uses its documented URL parameters only,
 changes none of its files and adds no code to its pages.
