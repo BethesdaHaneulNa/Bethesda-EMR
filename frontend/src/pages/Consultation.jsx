@@ -21,6 +21,8 @@ var LOCK_MESSAGES = {
   'Order already has a result': 'cs_orderLocked',
   'Visit was cancelled': 'cs_visitCancelled',
   'Order is cancelled': 'cs_orderIsCancelled',
+  'Visit is not in consultation': 'cs_backNotStarted',
+  'Consultation has records': 'cs_backHasRecords',
   'pack_qty must be a whole number of at least 1': 'cs_packQtyWhole',
 };
 
@@ -151,7 +153,24 @@ export default function ConsultationPage() {
   var user = getUser();
   var vs = useState([]), visits = vs[0], setVisits = vs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
+  // Opening a visit only reads it (decision (다), 2026-10-01): `sel` is the open visit,
+  // `consult` its consultation - null until the consultation is started (the button, or
+  // the first thing saved: needConsult below). sel.status is the visit's status as the
+  // server last said it. `opened` is false while the visit is still being read.
   var cs = useState(null), consult = cs[0], setConsult = cs[1];
+  var consultRef = useRef(null); consultRef.current = consult;
+  var selRef = useRef(null); selRef.current = sel;
+  var ops = useState(false), opened = ops[0], setOpened = ops[1];
+  var startingRef = useRef(null);
+  var sbs = useState(false), statusBusy = sbs[0], setStatusBusy = sbs[1];
+  // The open visit has a document or a bill (GET /consultations/visit/:id other_records):
+  // records this screen does not load, and with them there is no "back to waiting".
+  var ors = useState(false), otherRecords = ors[0], setOtherRecords = ors[1];
+  // The allergy warning shown when a patient is opened (director, 2026-10-01): the red tag
+  // in the patient bar stays, and opening an allergic patient also stops the doctor once
+  // with a window to acknowledge. {name, chart_no, text} or null.
+  var aws = useState(null), allergyWarn = aws[0], setAllergyWarn = aws[1];
+  function allergyText(a){ var x = String(a == null ? '' : a).trim(); return x && x.toLowerCase() !== 'none' ? x : ''; }
   var qs = useState(false), queueOpen = qs[0], setQueueOpen = qs[1];
   var cfs = useState(false), finderOpen = cfs[0], setFinderOpen = cfs[1];
   var hos = useState(false), histOpen = hos[0], setHistOpen = hos[1];
@@ -259,6 +278,16 @@ export default function ConsultationPage() {
   // emptied the doctor box and switched Change off). The department sent is the chosen
   // doctor's; a doctor with no department keeps the visit's.
   var trs = useState(null), transfer = trs[0], setTransfer = trs[1];   // {doctor, reason, doctors, busy}
+  // Which doctors' patients the waiting list shows (director, 2026-10-01: "does each
+  // doctor see everyone? let them set it - a settings button on the waiting list, the
+  // doctors' list, and they tick"). Kept per account on the server
+  // (/consultations/queue-filter), so it follows the person to another PC.
+  // queuePref null = the rule the screen always had: a doctor account sees its own
+  // patients and the patients with no doctor; any other account sees all.
+  // Otherwise { all, ids: {doctorId: true}, unassigned }.
+  var qps = useState(null), queuePref = qps[0], setQueuePref = qps[1];
+  var qds = useState(null), qDoctors = qds[0], setQDoctors = qds[1];   // active doctors; null until read
+  var qws = useState(null), qfWin = qws[0], setQfWin = qws[1];         // the settings window: {all, ids, unassigned, busy}
   var toastTimer = useRef(null);
   function showToast(text){ clearTimeout(toastTimer.current); setToast(text); toastTimer.current = setTimeout(function(){ setToast(''); }, 3000); }
   var rds = useState(''), readText = rds[0], setReadText = rds[1];
@@ -362,13 +391,15 @@ export default function ConsultationPage() {
       setPhrases(phData);
       try { setPhraseCatRows(await api.get('/admin/phrase-categories') || []); } catch(e){ setPhraseCatRows([]); }
       try { var osData = await api.get('/order-sets'); setOrderSets(osData||[]); } catch(e){ setOrderSets([]); }
+      try { setQDoctors(await api.get('/admin/doctors') || []); } catch(e){ setQDoctors([]); }
+      try { setQueuePref(prefFromServer(await api.get('/consultations/queue-filter'))); } catch(e){ setQueuePref(null); }
     } catch(err){ console.error(err); }
     setLoading(false);
   }
 
   // Text typed in my note and not saved yet is kept in this browser (decision 2026-09-30,
   // conditions from the coordinator): found only by this account's id + the
-  // consultation's id, dropped when saved, dropped when older than a day, and every one
+  // visit's id ('v' + id - a visit only opened has no consultation yet), dropped when saved, dropped when older than a day, and every one
   // of this account's is removed at sign-out (api/client.js logout). A patient's text
   // stays on a shared PC until then - wiki/modules/consultation.md 7.3.
   var noteDraft = {
@@ -391,10 +422,11 @@ export default function ConsultationPage() {
     drop: function(cid){ try { localStorage.removeItem(noteDraft.key(cid)); } catch(e){} },
   };
   var consultId = consult ? consult.id : null;
+  var draftKey = sel ? 'v' + sel.id : null;
   useEffect(function(){
-    if(!consultId) return;
-    if(note !== mineSaved) noteDraft.write(consultId, note); else noteDraft.drop(consultId);
-  },[note, mineSaved, consultId]);
+    if(!draftKey || !opened) return;
+    if(note !== mineSaved) noteDraft.write(draftKey, note); else noteDraft.drop(draftKey);
+  },[note, mineSaved, draftKey, opened]);
   // Two doctors on one visit: every 30 s the notes are read again, so the other doctor's
   // appears. The box (what I am typing) is never touched.
   useEffect(function(){
@@ -467,12 +499,158 @@ export default function ConsultationPage() {
     }
   }
 
+  // What GET /consultations/visit/:id says about the open visit, onto the screen.
+  function takeVisit(v, r){ setVisitStatus(v.id, r.visit_status); setOtherRecords(!!r.other_records); }
+  // The visit's status on the open visit and on its row of the queue, together.
+  function setVisitStatus(vid, status){
+    setSel(function(cur){ return cur && cur.id===vid && cur.status!==status ? Object.assign({}, cur, { status: status }) : cur; });
+    setVisits(function(list){ return (list||[]).map(function(x){ return x.id===vid && x.status!==status ? Object.assign({}, x, { status: status }) : x; }); });
+  }
+  // Puts a consultation on the screen: its lines, every doctor's note, the vital signs.
+  // `draft` is my unsaved text kept on this computer (null: none) - it goes in the box
+  // instead of my saved note. keepBox: the box is being typed in, leave it alone.
+  async function showConsult(v, cData, draft, keepBox){
+    consultRef.current = cData; setConsult(cData);
+    var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
+    var oi = await api.get('/consultations/'+cData.id+'/orders');
+    var ns = await api.get('/consultations/'+cData.id+'/notes');
+    if(!selRef.current || selRef.current.id !== v.id) return;
+    setRxList(rememberRx(rx));
+    setOrderItems(oi);
+    // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
+    // this computer, see noteDraft) comes back instead, with a line saying so.
+    var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
+    var mineText = mine ? mine.note_text : '';
+    setNotes(ns||[]); setMineSaved(mineText); mineSavedRef.current = mineText;
+    if(!keepBox){
+      if(draft != null && draft !== mineText){ setNote(draft); setDraftBack(true); }
+      else setNote(mineText);
+      // Every saved vital sign is loaded, with or without a blood pressure. This used to
+      // load only when a BP was saved, so a temperature taken alone showed empty and the
+      // next Sauver wrote it away (the change log caught it, 2026-09-29).
+      setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
+    }
+  }
+  // The consultation to write on. A visit only opened has none: this starts it (POST
+  // /consultations makes the row and puts the visit in consultation) - the "Commencer"
+  // button, and the safety net before the first thing saved. One request at a time.
+  async function needConsult(){
+    if(consultRef.current) return consultRef.current;
+    var v = selRef.current;
+    if(!v) throw new Error(t.cs_selectPatient);
+    if(!startingRef.current){
+      startingRef.current = api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id })
+        .then(function(c){
+          startingRef.current = null;
+          if(selRef.current && selRef.current.id === v.id){
+            consultRef.current = c; setConsult(c);
+            // A finished consultation is returned as it is, and its visit may stay finished:
+            // the status is then taken from the server.
+            if(c.status!=='completed' && c.status!=='signed') setVisitStatus(v.id, 'in_progress'); else takeStatus(v);
+          }
+          return c;
+        }, function(err){ startingRef.current = null; throw err; });
+    }
+    return startingRef.current;
+  }
+  // Reads the open visit again: its status and whether a consultation exists - after
+  // another screen changed it (a second doctor started it or put it back to waiting,
+  // reception changed its status). The note box and the vital-sign boxes are not touched.
+  // The notes are read again too (another doctor's note is a record: no "back to waiting"
+  // then); the lines only when asked (withLines) - a row being typed in is left alone on
+  // the 15 s check.
+  async function rereadOpen(withLines){
+    var v = selRef.current;
+    if(!v) return;
+    try {
+      var r = await api.get('/consultations/visit/'+v.id);
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      takeVisit(v, r);
+      if(r.consultation){
+        if(!consultRef.current || consultRef.current.id !== r.consultation.id) await showConsult(v, r.consultation, null, true);
+        else {
+          consultRef.current = r.consultation; setConsult(r.consultation);
+          var ns = await api.get('/consultations/'+r.consultation.id+'/notes');
+          if(selRef.current && selRef.current.id === v.id) setNotes(ns||[]);
+          if(withLines) reloadItems();
+        }
+      } else if(consultRef.current){
+        // Put back to waiting elsewhere: the empty consultation is gone. What is typed in
+        // the box stays (kept on this computer) and the next save starts the visit again.
+        consultRef.current = null; setConsult(null);
+        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+      }
+    } catch(err){
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+    }
+  }
+  // The "Commencer la consultation" button.
+  async function startConsult(){
+    if(statusBusy) return;
+    setStatusBusy(true);
+    var v = selRef.current;
+    try {
+      // Always asks the server: a consultation can already be there on a visit still
+      // waiting (reception put the visit back to waiting) - POST starts that one again.
+      var c = await api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id });
+      if(selRef.current && selRef.current.id === v.id){
+        if(!consultRef.current || consultRef.current.id !== c.id) await showConsult(v, c, null, true);
+        await takeStatus(v);
+      }
+    } catch(err){
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+      else alert(t.cs_errorPrefix+err.message);
+    }
+    setStatusBusy(false);
+  }
+  // "Remettre en attente": a consultation started by mistake, with nothing recorded.
+  // The server checks again (a note, a line, a vital sign, a document or a bill -> 409).
+  async function backToWaiting(){
+    var v = selRef.current;
+    if(!v || statusBusy) return;
+    setStatusBusy(true);
+    try {
+      await api.put('/consultations/visit/'+v.id+'/waiting');
+      if(selRef.current && selRef.current.id === v.id){
+        consultRef.current = null; setConsult(null);
+        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+        setVisitStatus(v.id, 'waiting');
+        showToast(t.cs_backDone);
+      }
+    } catch(err){
+      alert(LOCK_MESSAGES[err && err.message] ? t[LOCK_MESSAGES[err.message]] : t.cs_errorPrefix+err.message);
+      rereadOpen(true);
+    }
+    setStatusBusy(false);
+  }
+  // The queue is read again every 15 s: when it says another status for the open visit
+  // than this screen has, the visit is read again (see rereadOpen).
+  useEffect(function(){
+    if(!sel || !opened) return;
+    var row = (visits||[]).filter(function(x){ return x.id===sel.id; })[0];
+    if(row && row.status !== sel.status) rereadOpen();
+  },[visits]);
+
   async function pickPatient(v){
     // My note not saved yet: OK saves it and opens the other visit, Annuler stays.
-    if(consult && noteRef.current !== mineSavedRef.current){
+    if(sel && noteRef.current !== mineSavedRef.current){
       if(!window.confirm(t.cs_noteUnsavedSwitch)) return;
       try { await pushNote(); } catch(err){ alert(t.cs_errorPrefix+err.message); return; }
     }
+    // Read before the screen changes visit: the draft effect drops the kept text while
+    // the box is still empty.
+    var draft = noteDraft.read('v'+v.id);
+    // The allergy window: when ANOTHER visit is opened (from the queue, the patient finder
+    // or the visit list) - not when the open one is clicked again, and never on the
+    // screen's own re-reads. It changes nothing: opening only reads.
+    var another = !sel || sel.id !== v.id;
+    var warn = function(a){
+      if(another && allergyText(a)) setAllergyWarn({ name: [v.last_name, v.first_name].filter(Boolean).join(' '), chart_no: v.chart_no, text: allergyText(a) });
+    };
+    setAllergyWarn(null);
+    if(v.gender !== undefined) warn(v.allergies);
+    selRef.current = v; consultRef.current = null; startingRef.current = null;
+    setOpened(false); setConsult(null); setOtherRecords(false);
     setSel(v); setQueueOpen(false); setPastView(null);
     // A visit picked through Trouver patient / Sélection visite comes from the visit-history
     // list, which carries no sex, birth date or allergies - the header then showed no
@@ -480,6 +658,7 @@ export default function ConsultationPage() {
     if(v && v.patient_id && v.gender === undefined){
       api.get('/patients/'+v.patient_id).then(function(p){
         setSel(function(cur){ return cur && cur.id===v.id ? Object.assign({}, cur, {gender:p.gender, date_of_birth:p.date_of_birth, allergies:p.allergies}) : cur; });
+        if(selRef.current && selRef.current.id===v.id) warn(p.allergies);
       }).catch(function(){});
     }
     setDxList([]); setRxList([]); setOrderItems([]);
@@ -487,32 +666,21 @@ export default function ConsultationPage() {
     setHistory([]);   // the chart is this patient's only: no cards of the patient before while it loads
     setOrderCode(''); setOrderSugg([]);
     try {
-      // Check if consultation already exists for this visit
-      // If not, start one
-      var cData = await api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id });
-      // Read before anything renders with this consultation: the draft effect below drops
-      // the kept text while the box is still empty.
-      var draft = noteDraft.read(cData.id);
-      setConsult(cData);
-      // Load existing data
-      var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
-      setRxList(rememberRx(rx));
-      var oi = await api.get('/consultations/'+cData.id+'/orders');
-      setOrderItems(oi);
-      // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
-      // this computer, see noteDraft) comes back instead, with a line saying so.
-      var ns = await api.get('/consultations/'+cData.id+'/notes');
-      var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
-      var mineText = mine ? mine.note_text : '';
-      setNotes(ns||[]); setMineSaved(mineText); mineSavedRef.current = mineText;
-      if(draft != null && draft !== mineText){ setNote(draft); setDraftBack(true); }
-      else { noteDraft.drop(cData.id); setNote(mineText); }
-      // Every saved vital sign is loaded, with or without a blood pressure. This used to
-      // load only when a BP was saved, so a temperature taken alone showed empty and the
-      // next Sauver wrote it away (the change log caught it, 2026-09-29).
-      setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
+      // Opening reads; it starts nothing (GET, not POST): the visit keeps its status, and
+      // a visit nobody started has no consultation.
+      var r = await api.get('/consultations/visit/'+v.id);
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      takeVisit(v, r);
+      if(r.consultation){
+        // Text kept before 2026-10-01 was filed under the consultation's id.
+        if(draft == null){ draft = noteDraft.read(r.consultation.id); noteDraft.drop(r.consultation.id); }
+        await showConsult(v, r.consultation, draft, false);
+      } else if(draft != null && draft !== ''){ setNote(draft); setDraftBack(true); }
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      setOpened(true);
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
+      if(!selRef.current || selRef.current.id !== v.id) return;
       // The open consultation stays in the list: the chart shows every visit in date order
       // and marks the open one where it belongs (it used to be taken out and pinned on top).
       setHistory(h);
@@ -589,34 +757,54 @@ export default function ConsultationPage() {
       respiratory_rate: parseInt(vt.rr)||null,
     };
   }
+  function anyVital(){ var b = vitalsBody(); return Object.keys(b).some(function(k){ return b[k] != null; }); }
   async function saveVitals(){
+    // A visit not started and no vital sign typed: nothing to save, and nothing to start.
+    if(!consultRef.current && !anyVital()) return;
+    var consult = await needConsult();
     var c = await api.put('/consultations/'+consult.id, vitalsBody());
     setConsult(function(p){ return p && p.id===c.id ? Object.assign({}, p, { vitals_by:c.vitals_by, vitals_at:c.vitals_at, vitals_by_name:c.vitals_by_name }) : p; });
   }
   // My note, if it changed. Empty text empties it (the server removes it from the chart).
   async function pushNote(){
-    if(!consult) return;
-    var cid = consult.id, text = noteRef.current;
-    if(text === mineSavedRef.current) return;
+    var v = selRef.current, text = noteRef.current;
+    if(!v || text === mineSavedRef.current) return;
+    // Saving a note on a visit not started starts it (the safety net).
+    var cid = (await needConsult()).id, key = 'v' + v.id;
     var r = await api.put('/consultations/'+cid+'/note', { note_text: text });
+    if(!selRef.current || selRef.current.id !== v.id) return;
     var saved = r.note ? r.note.note_text : '';
     mineSavedRef.current = saved; setMineSaved(saved);
     setNotes(r.notes || []);
     // Typed on while it was saving: that text stays kept on this computer.
-    if(noteRef.current === saved) noteDraft.drop(cid); else noteDraft.write(cid, noteRef.current);
+    if(noteRef.current === saved) noteDraft.drop(key); else noteDraft.write(key, noteRef.current);
     setDraftBack(false);
   }
   async function saveNote(){
-    if(!consult) return;
+    if(!sel) return;
+    // Sauver with nothing typed on a visit not started: nothing is saved and the visit
+    // stays waiting.
+    if(!consultRef.current && !anyVital() && noteRef.current === mineSavedRef.current){ showToast(t.cs_nothingToSave); return; }
     try {
       await saveVitals();
       await pushNote();
       showToast(t.cs_noteSaved);
+      // Vital signs saved on a consultation whose visit was still waiting start it too.
+      rereadStatus();
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
+  }
+  // After a save that may have started the visit on the server (startVisit): take the
+  // status from the server instead of guessing it.
+  function takeStatus(v){
+    return api.get('/consultations/visit/'+v.id).then(function(r){ takeVisit(v, r); }).catch(function(){});
+  }
+  function rereadStatus(){
+    var v = selRef.current;
+    if(v && (v.status==='waiting' || v.status==='registered')) takeStatus(v);
   }
 
   async function completeConsult(){
-    if(!consult) return;
+    if(!sel) return;
     var missing = rxList.filter(noDose);
     if(missing.length && !window.confirm(String(t.cs_noDoseConfirm||'').replace('{n}', missing.length)
         .replace('{names}', missing.map(function(r){ return r.drug_name; }).join(', ')))) return;
@@ -627,11 +815,16 @@ export default function ConsultationPage() {
       // 완료 전에 바이탈과 내 기록을 먼저 저장 (저장을 안 누르고 완료해도 날아가지 않게)
       await saveVitals();
       await pushNote();
-      await api.put('/consultations/'+consult.id+'/complete');
+      // Terminé on a visit not started: it is started, then finished.
+      await api.put('/consultations/'+(await needConsult()).id+'/complete');
       await loadData();
       setSel(null); setConsult(null);
       alert(t.cs_consultDone);
-    } catch(err){ alert(t.cs_errorPrefix+err.message); }
+    } catch(err){
+      // Cancelled at reception while it was open here: say so and close it.
+      if(err && err.message==='Visit was cancelled'){ alert(t.cs_visitCancelled); setSel(null); setConsult(null); loadData(); }
+      else alert(t.cs_errorPrefix+err.message);
+    }
   }
 
   // Drug / exam order autocomplete
@@ -672,8 +865,9 @@ export default function ConsultationPage() {
   }
 
   async function addDrugRx(drug){
-    if(!consult) return;
+    if(!sel) return;
     try {
+      var consult = await needConsult();
       // Decision B (2026-09-29): a drug has a price, not a default dose. From the search
       // the daily dose, times, days and sig start EMPTY for the doctor to write; only an
       // order set brings its own (fromSet). The drug's old default_* columns are not read.
@@ -689,6 +883,7 @@ export default function ConsultationPage() {
       });
       rememberRx([rx]);
       setRxList(function(p){ return p.concat([rx]); });
+      rereadStatus();
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
@@ -703,9 +898,10 @@ export default function ConsultationPage() {
     return true;
   }
   async function reloadItems(){
-    if(!consult) return;
-    try { setRxList(rememberRx(await api.get('/consultations/'+consult.id+'/prescriptions'))); } catch(e){}
-    try { setOrderItems(await api.get('/consultations/'+consult.id+'/orders')); } catch(e){}
+    var c = consultRef.current;
+    if(!c) return;
+    try { setRxList(rememberRx(await api.get('/consultations/'+c.id+'/prescriptions'))); } catch(e){}
+    try { setOrderItems(await api.get('/consultations/'+c.id+'/orders')); } catch(e){}
   }
 
   // The status cell of an order row. worklist_status only means something for an order
@@ -723,11 +919,14 @@ export default function ConsultationPage() {
   }
   // Every visit of the chart, newest first: by the visit's date, then by when the
   // consultation was opened, then by id - so two visits of one day keep one order.
+  var OPEN_CARD = -1;
   function chartItems(){
     var items = history.slice();
-    var openId = consult ? consult.id : null;
-    if(consult && sel && !items.some(function(h){ return h.id===openId; }))
-      items.push({ id: openId, consult_date: sel.visit_date || consult.consult_date, created_at: consult.created_at });
+    // A visit not started has no consultation: its card is filed under OPEN_CARD, first
+    // of its day.
+    var openId = consult ? consult.id : OPEN_CARD;
+    if(sel && !items.some(function(h){ return h.id===openId; }))
+      items.push({ id: openId, consult_date: sel.visit_date || (consult && consult.consult_date), created_at: consult ? consult.created_at : '\uffff' });
     var day = function(h){ return h.id===openId && sel ? ymd(sel.visit_date || h.consult_date) : ymd(h.consult_date); };
     return items.sort(function(a, b){
       var da = day(a), db = day(b); if(da !== db) return da < db ? 1 : -1;
@@ -987,7 +1186,7 @@ export default function ConsultationPage() {
 
 
   async function addExamOrder(oc){
-    if(!consult) return;
+    if(!sel) return;
     // Lab and imaging orders always start 1 · 1 · 1 (director's instruction, 2026-09-29):
     // with ⑭ the days multiply the bill, and repeating an exam on several days is a thing
     // the doctor writes on purpose. A procedure (an injection course) starts with its
@@ -1001,6 +1200,7 @@ export default function ConsultationPage() {
     // No sig on an exam line. On a procedure line the order code's (or the set's) sig is
     // copied only when it is one - never a bare number (orderSig, above).
     try {
+      var consult = await needConsult();
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
         dose:exam ? '' : orderSig(oc.default_dose), frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
@@ -1010,13 +1210,14 @@ export default function ConsultationPage() {
         unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
       });
       setOrderItems(function(p){ return p.concat([item]); });
+      rereadStatus();
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   // 약속처방 세트 적용: 세트 항목을 현재 진료에 한 번에 추가
   async function applySet(set){
-    if(!consult){ alert(t.cs_selectPatient); return; }
+    if(!sel){ alert(t.cs_selectPatient); return; }
     if(pastView) setPastView(null);
     var items = (set && set.items) ? set.items : [];
     // A drug hidden from the list (drug_active false, orderset.routes.js) is not put in:
@@ -1084,20 +1285,89 @@ export default function ConsultationPage() {
   function insertPhrase(text){ setNote(function(prev){ return prev?(prev+'\n'+text):text; }); }
   function uvt(k,v){ setVt(function(o){var n={};for(var x in o)n[x]=o[x];n[k]=v;return n;}); }
 
+  // ── The waiting list's doctors ──
+  function prefFromServer(r){
+    if(!r || !r.custom) return null;
+    var ids = {}; (r.doctor_ids||[]).forEach(function(id){ ids[id] = true; });
+    return { all: !!r.all_doctors, ids: ids, unassigned: !!r.unassigned };
+  }
+  var isDoctorAccount = !!(user && user.role==='doctor' && user.id);
+  // The choice in force. A saved choice that can show nobody any more - its doctors'
+  // accounts were closed and it does not include the patients without a doctor - falls
+  // back to the default instead of leaving an empty list with nothing to explain it.
+  var queueRule = useMemo(function(){
+    var p = queuePref;
+    if(p && !p.all && !p.unassigned && qDoctors && !qDoctors.some(function(d){ return p.ids[d.id]; })) p = null;
+    return p;
+  },[queuePref, qDoctors]);
+  function queueShows(v){
+    if(queueRule) return v.doctor_id ? (queueRule.all || !!queueRule.ids[v.doctor_id]) : queueRule.unassigned;
+    if(isDoctorAccount) return !v.doctor_id || v.doctor_id===user.id;
+    return true;
+  }
+  // What the window starts from when nothing is saved: the default rule, as ticks.
+  function defaultTicks(){
+    var ids = {};
+    if(isDoctorAccount) ids[user.id] = true;
+    return { all: !isDoctorAccount, ids: ids, unassigned: true };
+  }
+  // One line under the search box saying whose patients are listed.
+  function queueSummary(){
+    var p = queueRule || defaultTicks();
+    if(p.all) return p.unassigned ? t.cs_qfEveryone : t.cs_qfAllDoctors;
+    var names = (qDoctors||[]).filter(function(d){ return p.ids[d.id]; }).map(function(d){ return d.name + (user && d.id===user.id ? ' ' + t.cs_noteYou : ''); });
+    if(p.unassigned) names.push(t.cs_qfNoDoctor);
+    return names.join(', ');
+  }
+  function openQueueFilter(){
+    var p = queueRule || defaultTicks();
+    setQfWin({ all: p.all, ids: Object.assign({}, p.ids), unassigned: p.unassigned, busy: false });
+    // The doctors as they are now (one may have been added since the screen was opened).
+    api.get('/admin/doctors').then(function(d){ setQDoctors(d||[]); }).catch(function(){});
+  }
+  function qfTicked(w, d){ return w.all || !!w.ids[d.id]; }
+  function qfToggle(d){
+    setQfWin(function(w){
+      var ids = {};
+      (qDoctors||[]).forEach(function(x){ if(qfTicked(w, x)) ids[x.id] = true; });
+      if(ids[d.id]) delete ids[d.id]; else ids[d.id] = true;
+      // Every doctor ticked is kept as "all": a doctor added later is then shown too.
+      var all = (qDoctors||[]).length > 0 && (qDoctors||[]).every(function(x){ return ids[x.id]; });
+      return Object.assign({}, w, { all: all, ids: ids });
+    });
+  }
+  function qfToggleAll(){
+    setQfWin(function(w){ return Object.assign({}, w, { all: !w.all, ids: {} }); });
+  }
+  async function saveQueueFilter(reset){
+    var w = qfWin; if(!w) return;
+    setQfWin(Object.assign({}, w, { busy: true }));
+    try {
+      var r = reset ? await api.del('/consultations/queue-filter')
+        : await api.put('/consultations/queue-filter', { all_doctors: w.all, unassigned: w.unassigned,
+            doctor_ids: w.all ? [] : (qDoctors||[]).filter(function(d){ return w.ids[d.id]; }).map(function(d){ return d.id; }) });
+      setQueuePref(prefFromServer(r));
+      setQfWin(null);
+      showToast(t.cs_qfSaved);
+    } catch(err){
+      alert(t.cs_errorPrefix+err.message);
+      setQfWin(function(p){ return p ? Object.assign({}, p, { busy: false }) : p; });
+    }
+  }
+
   var filteredQueue = useMemo(function(){
     var r=visits;
     if(qTab==='waiting') r=r.filter(function(v){return v.status==='waiting'||v.status==='registered'||v.status==='in_progress';});
     else if(qTab==='completed') r=r.filter(function(v){return v.status==='completed';});
-    if(user&&user.role==='doctor'&&user.id) r=r.filter(function(v){return !v.doctor_id||v.doctor_id===user.id;});
+    r=r.filter(queueShows);
     if(qFilter){var s=qFilter.toLowerCase();r=r.filter(function(v){return (v.first_name+' '+v.last_name).toLowerCase().indexOf(s)>=0||v.chart_no.indexOf(s)>=0;});}
     return r;
-  },[visits,qTab,qFilter,user]);
+  },[visits,qTab,qFilter,user,queueRule]);
 
   var waitingCount = useMemo(function(){
     var r=visits.filter(function(v){return v.status==='waiting'||v.status==='registered'||v.status==='in_progress';});
-    if(user&&user.role==='doctor'&&user.id) r=r.filter(function(v){return !v.doctor_id||v.doctor_id===user.id;});
-    return r.length;
-  },[visits,user]);
+    return r.filter(queueShows).length;
+  },[visits,user,queueRule]);
 
   // The categories of the drop-down: Settings' list in its order, including a category
   // with no phrase yet. If that list could not be read, the categories the phrases carry.
@@ -1125,6 +1395,18 @@ export default function ConsultationPage() {
 
   finishedRef.current = !!(consult && (consult.status==='completed' || consult.status==='signed' ||
     (sel && sel.visit_date && ymd(sel.visit_date) !== ymd(new Date()))));
+  // The status line over the vital signs. Start: a visit still waiting. Back to waiting:
+  // a visit in consultation with nothing recorded as far as this screen knows (the server
+  // also looks for a document and a bill).
+  var notStarted = !!sel && (sel.status==='waiting' || sel.status==='registered');
+  var nothingRecorded = !consult || (consult.status!=='completed' && consult.status!=='signed' && !consult.vitals_at
+    && notes.length===0 && rxList.length===0 && orderItems.length===0);
+  var canGoBack = !!sel && sel.status==='in_progress' && nothingRecorded && !otherRecords && !visitBilled(sel);
+  // The visit's reception memo, for the box over the prescriptions. Reception is merging
+  // "chief complaint" and "reception memo" into one field kept in chief_complaint; until
+  // then a visit can carry both, shown one under the other (the same text twice, once).
+  var memoLines = sel ? [sel.chief_complaint, sel.reception_memo].map(function(x){ return String(x == null ? '' : x).trim(); })
+    .filter(function(x, i, all){ return x && all.indexOf(x) === i; }) : [];
   var SC={waiting:'accent',registered:'accent',in_progress:'warn',completed:'ok'};   // colour families (design): tint() and -ink make the colours
   var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
 
@@ -1149,11 +1431,17 @@ export default function ConsultationPage() {
           {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
             style={{background:visitBilled(sel)?'#16294a':'#334155',color:visitBilled(sel)?'#6f8db3':'#e2e8f0',border:'1px solid '+(visitBilled(sel)?'#2b4568':'#64748b'),borderRadius:5,padding:'4px 12px',cursor:visitBilled(sel)?'not-allowed':'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
-          <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace'}}>{sel.chart_no}</span>
-          <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
+          {/* The chart number and the name are one piece: with a long name the bar wraps, and the
+              number used to stay at the end of the first line while the name went to the second
+              (long-name check, 2026-10-01). The name itself is never cut - it wraps. */}
+          <span style={{display:'inline-flex',alignItems:'baseline',flexWrap:'wrap',gap:'2px 14px',minWidth:0}}>
+            <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace',whiteSpace:'nowrap'}}>{sel.chart_no}</span>
+            <span style={{color:'#fff',fontWeight:700,fontSize: 15,minWidth:0}}>{sel.last_name} {sel.first_name}</span>
+          </span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
-          {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
-          {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
+          {allergyText(sel.allergies)?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {allergyText(sel.allergies)}</span>:null}
+          {/* The reception memo is no longer here (director, 2026-10-01: "it shows in the
+              middle - is it needed there?"): it has its own box over the prescriptions. */}
         </div>
       ):null}
 
@@ -1162,24 +1450,32 @@ export default function ConsultationPage() {
         {/* Slide-out queue. Closed, it is only moved off screen, so its tabs and search box
             stayed in the Tab order and the focus vanished into it: inert (Chrome 102+) takes
             the closed drawer out of it (integration test, 2026-09-30). */}
-        <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
+        <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:340,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-350px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
           <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:3,flexWrap:'wrap'}}>
             {['waiting','completed'].map(function(k){
               var c=k==='waiting'?'accent':'ok';
               return <button key={k} onClick={function(){setQTab(k)}} style={{flex:1,background:qTab===k?tint(c,'18'):'transparent',color:qTab===k?'var(--'+c+'-ink)':t3,border:qTab===k?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:4,padding:'3px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>{t[k]||k}</button>;
             })}
+            {/* Whose patients this list shows: the doctors ticked in the window this opens. */}
+            <button onClick={openQueueFilter} title={t.cs_qfTitle} aria-label={t.cs_qfTitle} style={{flexShrink:0,background:queueRule?'var(--accent-a20)':'var(--chip)',color:queueRule?'var(--accent-text)':t2,border:'1px solid '+(queueRule?'var(--accent-a40)':bd2),borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize: 13,fontWeight:700}}>⚙</button>
           </div>
           <div style={{padding:'5px 8px',borderBottom:'1px solid '+bd}}>
             <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+            {/* One line, cut with "…" (the full list is the tooltip): a long doctor name must
+                not push the list down. */}
+            <div data-cs="queue-shown" title={queueSummary()} style={{fontSize: 12,color:t2,marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{String(t.cs_qfShown||'').replace('{list}', queueSummary())}</div>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {filteredQueue.map(function(v){
               var isSel=sel&&sel.id===v.id;
               var sc2=SC[v.status]||'text-2';
               return <div key={v.id} onClick={function(){pickPatient(v)}} style={{padding:'7px 10px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent'}}>
-                <div style={{display:'flex',justifyContent:'space-between',marginBottom:1}}>
-                  <span style={{fontWeight:600,fontSize: 14,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
-                  <span style={{background:tint(sc2,'18'),color:SC[v.status]?'var(--'+sc2+'-ink)':t2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600}}>{label(VISIT_STATUS_KEY, v.status)}</span>
+                {/* The status tag keeps its width and stays on one line: beside a long name
+                    (two lines) it was squeezed and «대기» broke into 대 / 기 (director, 2026-10-01).
+                    The name takes what is left and wraps between words. */}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:1}}>
+                  <span style={{fontWeight:600,fontSize: 14,color:'var(--text-strong)',minWidth:0,overflowWrap:'anywhere'}}>{v.last_name} {v.first_name}</span>
+                  <span style={{background:tint(sc2,'18'),color:SC[v.status]?'var(--'+sc2+'-ink)':t2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600,whiteSpace:'nowrap',flexShrink:0,marginTop:2}}>{label(VISIT_STATUS_KEY, v.status)}</span>
                 </div>
                 <div style={{fontSize: 12,color:t2}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                 <div style={{fontSize: 12,color:t3,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||''}</div>
@@ -1204,9 +1500,20 @@ export default function ConsultationPage() {
               style={{background:'var(--chip)',color:sel?t2:'var(--text-5)',border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:sel?'pointer':'not-allowed',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>📋 {t.outpatientHistory}</button>
           </div>
 
+          {/* The open visit's reception memo (director, 2026-10-01): under the queue buttons,
+              over the prescriptions. Read-only. Nothing at all when the visit has no memo.
+              A long memo shows four lines and scrolls inside the box, so the prescriptions
+              keep their room; it wraps and is never cut. Not shown while an earlier visit
+              is being read in the middle (the left column then only says so). */}
+          {sel && !pastView && memoLines.length ? (
+            <div data-cs="reception-memo" style={{padding:'5px 10px 6px',borderBottom:'1px solid '+bd,background:'var(--warn-a12)',display:'flex',gap:8,alignItems:'flex-start'}}>
+              <span style={{flexShrink:0,fontSize: 12,fontWeight:800,color:'var(--warn-ink)',whiteSpace:'nowrap',lineHeight:'19px'}}>📝 {t.receptionMemo}</span>
+              <div tabIndex={0} style={{flex:1,minWidth:0,maxHeight:76,overflowY:'auto',fontSize: 13,lineHeight:'19px',color:tx,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{memoLines.join('\n')}</div>
+            </div>
+          ) : null}
           {pastView?(
             <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-4)',fontSize: 14,fontStyle:'italic',textAlign:'center',padding:20,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{t.viewingPast}</div>
-          ):consult?(
+          ):sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -1349,8 +1656,18 @@ export default function ConsultationPage() {
         {/* minWidth 0: a flex item otherwise grows to its content, and anything too wide
             in here pushed the column sideways (design session, 2026-09-29). */}
         <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--bg-col)',borderRight:'1px solid '+bd}}>
-          {pastView?renderPast():consult?(
+          {pastView?renderPast():sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+              {/* The visit's status, in words, and the one button that changes it (decision
+                  (다), 2026-10-01): opening a patient no longer starts the consultation.
+                  Waiting -> «Commencer»; in consultation with nothing recorded -> «Remettre
+                  en attente»; otherwise the status alone. The line keeps its height, so
+                  nothing under it moves when a button comes or goes. */}
+              <div data-cs="visit-status" style={{padding:'0 10px',height:36,flexShrink:0,boxSizing:'border-box',borderBottom:'1px solid '+bd,background:tint(SC[sel.status]||'accent','12'),display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:tint(SC[sel.status]||'accent','20'),color:SC[sel.status]?'var(--'+SC[sel.status]+'-ink)':t2,borderRadius:3,padding:'1px 8px',fontSize: 13,fontWeight:800,whiteSpace:'nowrap'}}>{label(VISIT_STATUS_KEY, sel.status)}</span>
+                {notStarted ? <button onClick={startConsult} disabled={statusBusy} title={t.cs_startHint} style={{marginLeft:'auto',flexShrink:0,background:'var(--accent)',color:'var(--on-fill)',border:'1px solid var(--accent)',borderRadius:5,padding:'3px 12px',cursor:statusBusy?'wait':'pointer',fontSize: 13,fontWeight:800,whiteSpace:'nowrap'}}>▶ {t.cs_start}</button> : null}
+                {canGoBack ? <button onClick={backToWaiting} disabled={statusBusy} title={t.cs_backHint} style={{marginLeft:'auto',flexShrink:0,background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:5,padding:'3px 12px',cursor:statusBusy?'wait':'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>↩ {t.cs_back}</button> : null}
+              </div>
               {/* Vitals */}
               <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:10,alignItems:'stretch',background:scBg}}>
                 {/* Two columns when there is room, one when the middle column is narrow (a
@@ -1369,7 +1686,7 @@ export default function ConsultationPage() {
                       <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'5px 4px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
                     </div>;
                   })}
-                  {consult.vitals_at ? <div style={{gridColumn:'1 / -1',fontSize:11,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                  {consult && consult.vitals_at ? <div style={{gridColumn:'1 / -1',fontSize:11,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                     {String(t.cs_vitalsBy||'').replace('{name}', consult.vitals_by_name||'?').replace('{time}', (ymd(consult.vitals_at)===ymd(new Date()) ? '' : ymd(consult.vitals_at)+' ') + hhmm(consult.vitals_at))}</div> : null}
                 </div>
                 <div style={{width:118,flexShrink:0,display:'flex',flexDirection:'column',gap:6,justifyContent:'center'}}>
@@ -1433,7 +1750,7 @@ export default function ConsultationPage() {
               sel?(<>
                 {chartItems().map(function(h){
                   var who = function(dept, doctor, strong){ return <span style={{fontSize: 12,color:strong?tx:t2}}>{[dept, doctor].filter(Boolean).join(' ')}</span>; };
-                  if(consult && h.id===consult.id){
+                  if(h.id===(consult ? consult.id : OPEN_CARD)){
                     // The open visit: a thick band, a clear border and ground, and a tag in
                     // words - not colour alone. It is the live record: every note in full, my
                     // note puts the cursor in the box. While an earlier visit is being read in
@@ -1444,8 +1761,8 @@ export default function ConsultationPage() {
                         {/* The date, then whose chart: department and the doctor the visit was registered
                             with; with no doctor on the visit, the account that opened the consultation -
                             the same fallback as the other visits (GET /patients/:id/history). */}
-                        <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
-                        {who(sel.dept_code, sel.doctor_name || consult.opened_by_name, true)}
+                        <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || (consult && consult.consult_date))}</span>
+                        {who(sel.dept_code, sel.doctor_name || (consult && consult.opened_by_name), true)}
                         <span style={{marginLeft:'auto',background:'var(--accent)',color:'var(--on-fill)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>● {t.cs_chartOpen}</span>
                       </div>
                       {notesBlock(notes, false, true)}
@@ -1530,7 +1847,7 @@ export default function ConsultationPage() {
       <PatientFinder open={histOpen} onClose={function(){setHistOpen(false)}} mode="visit"
         initialPatient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name } : null}
         onPickVisit={function(v){ pickPatient(v); }} />
-      <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"
+      <DocumentModal open={docOpen} onClose={function(){setDocOpen(false); rereadOpen(); }} category="document"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList }} />
       <DocumentModal open={chartOpen} onClose={function(){setChartOpen(false)}} category="chart"
@@ -1552,12 +1869,16 @@ export default function ConsultationPage() {
         <div onClick={function(){setViewer(null)}} style={{position:'fixed',inset:0,background:'var(--scrim-70)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div onClick={function(e){e.stopPropagation()}} style={{width:'94vw',height:'92vh',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid var(--border-2)',background:'var(--panel-head)'}}>
-              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🖼 {t.imageViewer||'영상 뷰어'}</span>
-              <span style={{color:'var(--text-soft)',fontSize:14,fontWeight:700}}>{viewer.order_name}</span>
-              {sel?<span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>:null}
-              <button onClick={function(){setReadFolded(!readFolded)}} style={{marginLeft:'auto',background:'var(--chip)',color:'var(--text-soft)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>{readFolded ? '◂ '+t.px_readingShow : t.px_readingHide+' ▸'}</button>
-              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:null}
-              <button onClick={function(){setViewer(null)}} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
+              {/* A long patient name squeezed everything else: «Visionneuse», the exam name and
+                  the three buttons each broke onto two lines (long-name check, 2026-10-01).
+                  They keep one line; the exam name and the patient's name share what is left
+                  and wrap. */}
+              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)',whiteSpace:'nowrap',flexShrink:0}}>🖼 {t.imageViewer||'영상 뷰어'}</span>
+              <span style={{color:'var(--text-soft)',fontSize:14,fontWeight:700,minWidth:0}}>{viewer.order_name}</span>
+              {sel?<span style={{color:'var(--text-2)',fontSize:13,flex:'1 1 0',minWidth:0}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>:null}
+              <button onClick={function(){setReadFolded(!readFolded)}} style={{whiteSpace:'nowrap',flexShrink:0,marginLeft:'auto',background:'var(--chip)',color:'var(--text-soft)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>{readFolded ? '◂ '+t.px_readingShow : t.px_readingHide+' ▸'}</button>
+              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{whiteSpace:'nowrap',flexShrink:0,background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:null}
+              <button onClick={function(){setViewer(null)}} style={{whiteSpace:'nowrap',flexShrink:0,background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
             {/* What the arrived images say about the patient (viewer-url -> images): red when
                 they name another patient, amber when they name nobody. PACS's component. */}
@@ -1628,6 +1949,58 @@ export default function ConsultationPage() {
             <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}>
               <button onClick={function(){ setTransfer(null); }} disabled={tr.busy} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
               <button onClick={doTransfer} disabled={!ok || tr.busy} style={{background:ok?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:ok?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:ok&&!tr.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.cs_trConfirm}</button>
+            </div>
+          </div>
+        </div>;
+      })() : null}
+      {/* The allergy warning. One button; Enter (the button has the focus) or a click
+          closes it. A click outside and Esc do not: it is there to be read. Over every
+          other window (zIndex), so nothing is prescribed behind it. */}
+      {allergyWarn ? (
+        <div style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1200,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div role="alertdialog" aria-modal="true" aria-label={t.cs_allergyTitle} style={{width:440,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:'var(--bg)',border:'2px solid var(--danger)',borderRadius:8,padding:'16px 18px',boxSizing:'border-box'}}>
+            <div style={{fontWeight:800,fontSize:17,color:'var(--danger-text)'}}>⚠ {t.cs_allergyTitle}</div>
+            <div style={{fontSize:14,color:'var(--text)',marginTop:8,overflowWrap:'anywhere'}}><span style={{fontFamily:'monospace',fontWeight:700,whiteSpace:'nowrap'}}>{allergyWarn.chart_no}</span> · <b>{allergyWarn.name}</b></div>
+            <div style={{fontSize:13,color:'var(--text-2)',marginTop:10}}>{t.cs_allergyLead}</div>
+            <div style={{marginTop:4,padding:'10px 12px',background:'var(--danger-a12)',border:'1px solid var(--danger-a40)',borderRadius:6,fontSize:16,fontWeight:800,color:'var(--text)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere',overflowY:'auto',minHeight:0}}>{allergyWarn.text}</div>
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
+              <button autoFocus onClick={function(){ setAllergyWarn(null); }} style={{background:'var(--danger)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'8px 26px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.cs_allergyOk}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {qfWin ? (function(){
+        var w = qfWin, docs = qDoctors || [];
+        var nothing = !w.unassigned && !w.all && !docs.some(function(d){ return w.ids[d.id]; });
+        var row = {display:'flex',alignItems:'flex-start',gap:8,padding:'6px 8px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',fontSize:14,color:'var(--text)'};
+        var box = {marginTop:3,flexShrink:0};
+        return <div onClick={function(){ if(!w.busy) setQfWin(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div role="dialog" aria-label={t.cs_qfTitle} onClick={function(e){e.stopPropagation()}} style={{width:420,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,padding:'14px 16px',boxSizing:'border-box'}}>
+            <div style={{fontWeight:800,fontSize:15,color:'var(--text)'}}>⚙ {t.cs_qfTitle}</div>
+            <div style={{fontSize:13,color:'var(--text-2)',marginTop:4,lineHeight:1.5}}>{t.cs_qfHint}</div>
+            {/* The list scrolls inside the window; a long name wraps, its department tag stays whole. */}
+            <div style={{marginTop:10,border:'1px solid var(--border)',borderRadius:6,overflow:'auto',minHeight:0,flex:'1 1 auto',background:'var(--panel)'}}>
+              <label style={Object.assign({}, row, {fontWeight:700,background:'var(--panel-head)'})}>
+                <input type="checkbox" checked={w.all} disabled={w.busy || docs.length===0} onChange={qfToggleAll} style={box}/>
+                <span>{t.cs_qfAllDoctors}</span>
+              </label>
+              {docs.map(function(d){
+                return <label key={d.id} style={row}>
+                  <input type="checkbox" checked={qfTicked(w, d)} disabled={w.busy} onChange={function(){ qfToggle(d); }} style={box}/>
+                  <span style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}>{d.name}{user && d.id===user.id ? <span style={{color:'var(--accent-text)',fontWeight:700}}> {t.cs_noteYou}</span> : null}</span>
+                  {d.dept_code ? <span style={{flexShrink:0,whiteSpace:'nowrap',fontSize:12,color:'var(--text-2)',background:'var(--chip)',borderRadius:3,padding:'1px 6px',marginTop:1}}>{d.dept_code}</span> : null}
+                </label>;
+              })}
+              <label style={Object.assign({}, row, {borderBottom:'none',fontWeight:700})}>
+                <input type="checkbox" checked={w.unassigned} disabled={w.busy} onChange={function(){ setQfWin(function(p){ return Object.assign({}, p, { unassigned: !p.unassigned }); }); }} style={box}/>
+                <span>{t.cs_qfUnassigned}</span>
+              </label>
+            </div>
+            {nothing ? <div style={{fontSize:13,fontWeight:700,color:'var(--warn-text)',marginTop:8}}>{t.cs_qfNone}</div> : null}
+            <div style={{display:'flex',gap:8,marginTop:14,alignItems:'center'}}>
+              <button onClick={function(){ saveQueueFilter(true); }} disabled={w.busy} title={t.cs_qfDefaultHint} style={{background:'var(--chip)',color:'var(--text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>{t.cs_qfDefault}</button>
+              <button onClick={function(){ setQfWin(null); }} disabled={w.busy} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.cancel}</button>
+              <button onClick={function(){ saveQueueFilter(false); }} disabled={nothing || w.busy} style={{background:!nothing?'linear-gradient(135deg,var(--accent),var(--accent-strong))':'var(--btn-neutral-2)',color:!nothing?'var(--on-fill)':'var(--text-3)',border:'none',borderRadius:5,padding:'7px 14px',cursor:!nothing&&!w.busy?'pointer':'default',fontSize:13,fontWeight:800}}>{t.save}</button>
             </div>
           </div>
         </div>;

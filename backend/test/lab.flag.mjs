@@ -84,5 +84,25 @@ for (const rs of rangeCases) {
   check('ranges ' + JSON.stringify(rs), s, c);
 }
 
+// ---- the unit list: which names are "the same unit", and which lists are refused ----
+// (Settings checks before the server does; the unique index of lab_unit has the last word.)
+const unitCode = slice(settingsJsx, '  function unitName(v){', '  function loadLabUnits', 'unitName/unitKey in Settings.jsx');
+const unitProblemCode = slice(settingsJsx, '  function unitProblem(names){', '\n  }\n', 'unitProblem in Settings.jsx') + '\n  }';
+const tu = { lb_errUnitEmpty: 'empty', lb_errUnitLong: 'long {u}', lb_errUnitDup: 'dup {u}' };
+const screenUnits = new Function('t', unitCode + unitProblemCode + '\nreturn { unitKey: unitKey, unitName: unitName, unitProblem: unitProblem };')(tu);
+const unitNames = ['mg/dL', 'MG/DL', ' mg / dL ', 'mg/dl', 'g/dL', 'µmol/L', 'μmol/L', '10^9/L', '10^9 /l',
+  '', '   ', '%', 'mL/min/1.73m²', 'x'.repeat(30), 'x'.repeat(31), 'mm / h', null];
+for (const u of unitNames) {
+  n++;
+  check('unit key ' + JSON.stringify(u), server.unitKey(u), screenUnits.unitKey(u));
+  check('unit name ' + JSON.stringify(u), server.unitName(u), screenUnits.unitName(u));
+}
+const kind = function (r) { return !r ? 'ok' : /dup/.test(r) ? 'dup' : /long/.test(r) ? 'long' : 'empty'; };
+for (const a of unitNames) for (const b of unitNames) {
+  n++;
+  const list = [a == null ? '' : a, b == null ? '' : b];
+  check('unit list ' + JSON.stringify(list), kind(server.unitListError(list)), kind(screenUnits.unitProblem(list)));
+}
+
 console.log(n + ' cases, ' + bad + ' mismatches');
 process.exit(bad ? 1 : 0);

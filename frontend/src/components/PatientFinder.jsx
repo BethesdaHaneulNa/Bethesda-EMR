@@ -2,6 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 
+// The phone field often holds two numbers («+261 34 99 888 77 / +261 33 45 678 90»,
+// home / mobile - up to 50 characters). In a table they go one under the other, each
+// on one line, so the column stays one number wide and the name keeps its room; on one
+// line a 37-character phone took more of the table than the name. A piece too long to
+// be a number (no separator at all) may break anywhere rather than widen the column.
+function phoneParts(s) { return String(s || '').split(/\s*[\/;,]\s*/).filter(Boolean); }
+export function phoneLines(s) {
+  var parts = phoneParts(s);
+  if (!parts.length) return '—';
+  return parts.map(function (p, i) {
+    return <div key={i} style={p.length > 22 ? { overflowWrap: 'anywhere', maxWidth: 170 } : { whiteSpace: 'nowrap' }}>{p}</div>;
+  });
+}
+// The same for running text: the spaces inside a number do not break, the « / » between
+// two numbers does.
+export function phoneText(s) {
+  return phoneParts(s).map(function (p) { return p.length > 22 ? p : p.replace(/ /g, '\u00A0'); }).join(' / ');
+}
+
 // 공용 환자 찾기 팝업: 1) 수진자 찾기 → 2) 외래 내역 선택
 // props:
 //   open, onClose
@@ -80,14 +99,20 @@ export function PatientFinder(props){
   function ymd(d){ return d?String(d).split('T')[0]:''; }
   function hm(s){ if(!s) return ''; return String(s).substring(0,5); }
 
+  // Long names (50-80 letters are ordinary here) take the room that is left and wrap;
+  // the short columns - chart number, phone, dates, state - stay on one line. Before,
+  // the name column squeezed them and «26-00005» folded into 26- / 00005.
+  var TH = {textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12,whiteSpace:'nowrap'};
+  var WRAP = {overflowWrap:'anywhere'};
+
   return (
     <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}} onClick={function(e){ if(e.target===e.currentTarget && props.onClose) props.onClose(); }}>
       <div style={{background:pn,border:'1px solid '+bd2,borderRadius:12,width:900,maxWidth:'94vw',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{padding:'12px 16px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontWeight:800,fontSize:16,color:tx}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
-          {selPatient?<span style={{fontSize:13,color:t2}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
+          <span style={{fontWeight:800,fontSize:16,color:tx,whiteSpace:'nowrap',flexShrink:0}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
+          {selPatient?<span style={{fontSize:13,color:t2,minWidth:0,overflowWrap:'anywhere'}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
           <div style={{flex:1}}></div>
-          <button onClick={props.onClose} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>✕ {t.close}</button>
+          <button onClick={props.onClose} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap',flexShrink:0}}>✕ {t.close}</button>
         </div>
 
         {!selPatient ? (
@@ -100,20 +125,20 @@ export function PatientFinder(props){
             <div style={{flex:1,overflow:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
                 <thead><tr style={{position:'sticky',top:0,background:scBg}}>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.chartNo}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.name||'Name'}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.phone||'Phone'}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.dob||'DOB'}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.gender||'Sex'}</th>
+                  <th style={TH}>{t.chartNo}</th>
+                  <th style={TH}>{t.name||'Name'}</th>
+                  <th style={TH}>{t.phone||'Phone'}</th>
+                  <th style={TH}>{t.dob||'DOB'}</th>
+                  <th style={TH}>{t.gender||'Sex'}</th>
                 </tr></thead>
                 <tbody>
                   {results.map(function(p){
                     return <tr key={p.id} onClick={function(){pickPatient(p)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer'}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)'}}>{p.chart_no}</td>
-                      <td style={{padding:'9px 12px',color:tx,fontWeight:700}}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{p.mobile || p.phone || '—'}</td>
-                      <td style={{padding:'9px 12px',color:t2}}>{ymd(p.date_of_birth)}</td>
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)',whiteSpace:'nowrap'}}>{p.chart_no}</td>
+                      <td style={Object.assign({padding:'9px 12px',color:tx,fontWeight:700},WRAP)}>{p.last_name} {p.first_name}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{phoneLines(p.phone || p.mobile)}</td>
+                      <td style={{padding:'9px 12px',color:t2,whiteSpace:'nowrap'}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;
                   })}
@@ -132,13 +157,13 @@ export function PatientFinder(props){
             <div style={{flex:1,overflow:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
                 <thead><tr style={{position:'sticky',top:0,background:scBg}}>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.visitDate||'Date'}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.colReceptionTime}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.department}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.doctor}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.chiefComplaint}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.rc_colVisitState}</th>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.colBillStatus}</th>
+                  <th style={TH}>{t.visitDate||'Date'}</th>
+                  <th style={TH}>{t.colReceptionTime}</th>
+                  <th style={TH}>{t.department}</th>
+                  <th style={TH}>{t.doctor}</th>
+                  <th style={TH}>{t.chiefComplaint}</th>
+                  <th style={TH}>{t.rc_colVisitState}</th>
+                  <th style={TH}>{t.colBillStatus}</th>
                 </tr></thead>
                 <tbody>
                   {visits.map(function(v){
@@ -155,9 +180,9 @@ export function PatientFinder(props){
                       <td style={{padding:'9px 12px',fontFamily:'monospace',color:cancelled?t3:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none',whiteSpace:'nowrap'}}>{ymd(v.visit_date)}
                         {cancelled?<span style={{marginLeft:8,fontFamily:'system-ui,sans-serif',fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',borderRadius:4,padding:'1px 7px',display:'inline-block',textDecoration:'none'}}>{t.rc_visitCancelled}</span>:null}
                       </td>
-                      <td style={{padding:'9px 12px',color:cancelled?t3:t2,fontFamily:'monospace'}}>{hm(v.reception_time)}</td>
-                      <td style={{padding:'9px 12px',color:cancelled?t3:tx}}>{v.dept_code||''}</td>
-                      <td style={{padding:'9px 12px',color:cancelled?t3:t2,whiteSpace:'nowrap'}}>{v.doctor_name||''}</td>
+                      <td style={{padding:'9px 12px',color:cancelled?t3:t2,fontFamily:'monospace',whiteSpace:'nowrap'}}>{hm(v.reception_time)}</td>
+                      <td style={{padding:'9px 12px',color:cancelled?t3:tx,whiteSpace:'nowrap'}}>{v.dept_code||''}</td>
+                      <td style={Object.assign({padding:'9px 12px',color:cancelled?t3:t2},WRAP)}>{v.doctor_name||''}</td>
                       <td title={v.chief_complaint||''} style={{padding:'9px 12px',color:cancelled?t3:tx,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||'—'}</td>
                       <td style={{padding:'9px 12px',whiteSpace:'nowrap'}}>{st?<span style={{fontSize:12,fontWeight:800,color:st[1]}}>{st[0]}</span>:null}</td>
                       <td style={{padding:'9px 12px',whiteSpace:'nowrap'}}>{noCharge?<span style={{fontSize:11,color:t3,fontStyle:'italic'}}>{t.rc_billNothing}</span>:billBadge(v.bill_status)}</td>

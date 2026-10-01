@@ -16,7 +16,7 @@
   window.__walkResult = null;
   window.__walk = async function (prefix) {
     window.__walkResult = null;
-    var dumps = [], light = {}, dark = {}, log = [], n = 0;
+    var dumps = [], light = {}, dark = {}, paper = {}, log = [], n = 0;
     var was = root.getAttribute('data-theme');
     var snap = async function (label) {
       if (document.activeElement) document.activeElement.blur();
@@ -27,6 +27,8 @@
       var d = window.__audit(); if (d.length) dark[name] = d;
       root.setAttribute('data-theme', 'light'); await wait(120);
       var l = window.__audit(); if (l.length) light[name] = l;
+      root.setAttribute('data-theme', 'paper'); await wait(120);
+      var p = window.__audit(); if (p.length) paper[name] = p;
       root.removeAttribute('data-theme'); await wait(60);
     };
     try {
@@ -74,7 +76,7 @@
     } catch (e) { log.push('stopped: ' + String(e)); }
     if (was) root.setAttribute('data-theme', was);
     var flat = function (o) { var all = {}; for (var k in o) o[k].forEach(function (x) { (all[x] = all[x] || []).push(k); }); return Object.keys(all).sort().map(function (x) { return x + '  <- ' + all[x].length + ' stops, first ' + all[x][0]; }); };
-    window.__walkResult = { stops: n, dumps: dumps.length, log: log, light: flat(light), dark: flat(dark) };
+    window.__walkResult = { stops: n, dumps: dumps.length, log: log, light: flat(light), dark: flat(dark), paper: flat(paper) };
     return window.__walkResult;
   };
 })();

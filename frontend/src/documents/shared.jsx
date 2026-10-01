@@ -104,7 +104,8 @@ export function PatientBox(props) {
           <td style={head}>{L(DOC_LABELS.name, lang)}</td>
           <td style={cell}>{(p.last_name || '') + ' ' + (p.first_name || '')}</td>
           <td style={head}>{L(DOC_LABELS.chartNo, lang)}</td>
-          <td style={cell}>{p.chart_no || ''}</td>
+          {/* nowrap: beside a long name the narrow cell broke the number at its hyphen (26- / 00197) */}
+          <td style={Object.assign({}, cell, { whiteSpace: 'nowrap' })}>{p.chart_no || ''}</td>
         </tr>
         <tr>
           <td style={head}>{L(DOC_LABELS.dob, lang)}</td>

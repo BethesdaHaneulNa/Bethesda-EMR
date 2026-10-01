@@ -6,7 +6,7 @@ Every figure on the Statistics screen was checked against a hand calculation on 
 
 The takings used to be the receipts issued that day. When a receipt was corrected or cancelled on a later day, the first day's figure dropped to zero and the whole amount reappeared on the day of the correction. So the statistics never matched the day's cash, and a day already closed kept changing. Take a receipt of 18 000 paid on Monday and corrected on Tuesday with 3 000 handed back: Monday showed 0 and Tuesday 15 000, while the till had +18 000 and −3 000.
 
-The payment screen now records every movement of cash as it happens (migration 036). The statistics read that record. The **Cash** card shows what came into the till minus what was handed back, with **In** and **Out** beneath, and a new **Cash by period** table gives it by day, month or year, with its CSV. A past day no longer changes when a receipt is corrected or cancelled later, and a day with more handed back than taken shows negative. The monthly trend follows the till too. Days before this release show exactly what the statistics showed before (the receipts then in force).
+The payment screen now records every movement of cash as it happens (migration 036). The statistics read that record. The **Cash** card shows what came into the till minus what was handed back, with **In** and **Out** beneath, and a new **Cash by period** table gives it by day, month or year, newest first, with its CSV. A past day no longer changes when a receipt is corrected or cancelled later, and a day with more handed back than taken shows negative. The monthly trend follows the till too. Days before this release show exactly what the statistics showed before (the receipts then in force).
 
 Department and doctor revenue still follow the receipts, because they answer whose treatment the money paid for. Their titles now say "by receipt" and show their total, which can differ from the till on days with corrections. Billed amounts, the average per visit and the balances are unchanged. The billed amount now sits under the treatment receipt count.
 
@@ -38,7 +38,7 @@ The Voided card counted both receipts cancelled by staff and receipts replaced b
 
 ### Drug usage
 
-- The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years.
+- The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years. The newest period is the first column, next to the drug name, so the latest day is visible without scrolling sideways.
 - **Dispensed** now follows the same rules as the pharmacy's new monthly stock report: it counts by the day the drug was handed over, in-house drugs only, rounded up to whole units. The two screens now give the same figure for the same month. **All prescriptions** still counts what was prescribed, by visit date. A line under the table says which rules apply.
 - Outside prescriptions no longer count as dispensed. The dispense button marks them dispensed, but only a paper prescription left the building.
 - Prescriptions of a cancelled registration are no longer counted, unless the pharmacy had already handed the drug over.

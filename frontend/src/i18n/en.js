@@ -308,7 +308,7 @@ export default {
   rc_dupVisitOther: "{name} is already registered today (perhaps just now at another desk). Register a second visit?",
   rc_visitCancelled: "Visit cancelled",
   rc_genderRequired: "Choose the sex (Male / Female).",
-  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\": nothing to pay, the patient does not need to go to the cashier.",
+  rc_completeNoConsult: "Complete {name} without a consultation? The visit type becomes \"No fee\": nothing to pay, the patient does not need to go to the cashier. If the doctor has seen this patient, do not use this button: the doctor finishes on the Consultation screen, otherwise the consultation is not billed.",
   rc_workDate: "Work date",
   rc_prevDay: "Previous day",
   rc_nextDay: "Next day",
@@ -321,6 +321,9 @@ export default {
   rc_colVisitState: "Status",
   rc_billNothing: "Nothing to pay",
   rc_visitBilledNoMove: "This visit is already paid: its department and doctor can no longer change. Cancel the receipt on the Payment screen first.",
+  rc_hasRecordsNoCancel: "This visit already has records (consultation, document or receipt), so the waiting entry cannot be cancelled. The list has been refreshed.",
+  rc_hasRecordsNoWaiting: "This visit already has records (consultation, document or receipt), so it cannot go back to waiting. If something must be corrected, the doctor reopens the patient on the Consultation screen.",
+  rc_completeKeptType: "{name}: this visit already has consultation records, so its type was not changed. The consultation is still to be paid: send the patient to the cashier.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Remove “{name}”?",
@@ -424,6 +427,31 @@ export default {
   cs_phraseNoMatch: "No phrase found.",
   cs_phraseCat: "Category",
   cs_phraseCatAll: "Category: all",
+  // Start consultation / back to waiting (decision (다), 2026-10-01): opening a patient does not start the consultation
+  cs_start: "Start consultation",
+  cs_startHint: "Opening a patient does not start the consultation. This button, or the first thing you save, puts the visit in consultation.",
+  cs_back: "Back to waiting",
+  cs_backHint: "Puts a consultation started by mistake back on the waiting list. Only while nothing is recorded.",
+  cs_backDone: "Back on the waiting list",
+  cs_backHasRecords: "This consultation already has records (note, vital signs, prescription, order, document or bill): it cannot go back to waiting.",
+  cs_backNotStarted: "This visit is not in consultation any more. The screen has been read again.",
+  cs_nothingToSave: "Nothing to save",
+  // Doctors shown in the waiting list (director, 2026-10-01)
+  cs_qfTitle: "Doctors shown in the waiting list",
+  cs_qfHint: "Only the patients of the doctors you tick appear in your waiting list. The choice is kept for your account, on every computer.",
+  cs_qfAllDoctors: "All doctors",
+  cs_qfUnassigned: "Patients with no doctor",
+  cs_qfNoDoctor: "no doctor",
+  cs_qfEveryone: "all patients",
+  cs_qfShown: "Shown: {list}",
+  cs_qfNone: "Tick at least one line to save.",
+  cs_qfDefault: "Default",
+  cs_qfDefaultHint: "Default: a doctor sees their own patients and the patients with no doctor; other accounts see all patients.",
+  cs_qfSaved: "Waiting list setting saved",
+  // Allergy warning when a patient is opened (director, 2026-10-01)
+  cs_allergyTitle: "Allergy warning",
+  cs_allergyLead: "Allergy recorded for this patient:",
+  cs_allergyOk: "OK",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
@@ -685,6 +713,21 @@ export default {
   lb_flagHigh: "high",
   lb_flagLow: "low",
   lb_flagAbnormal: "abnormal",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "Unit list",
+  lb_unitListHint: "The units offered in the Unit box of a test item. Removing or renaming one here does not change the items and results that already use it.",
+  lb_unitListEmpty: "The list is empty.",
+  lb_unitNone: "— no unit —",
+  lb_unitNotListed: "not in the list",
+  lb_unitNew: "New unit (e.g. mg/dL)",
+  lb_unitUsedBy: "used by {n} item(s)",
+  lb_unitLeavesNote: "“{u}”: used by {n} item(s). Those items keep their unit; it only leaves the list.",
+  lb_unitUp: "Move up",
+  lb_unitDown: "Move down",
+  lb_unitRemove: "Remove from the list",
+  lb_errUnitDup: "“{u}” is already in the list (capitals and spaces do not count).",
+  lb_errUnitLong: "“{u}”: a unit has 30 characters at most.",
+  lb_errUnitEmpty: "A unit has no name. Type one or remove the row with ✕.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",
@@ -1243,8 +1286,9 @@ export default {
   px_mvErr_CHANGED_MEANWHILE: "One of the orders changed in the meantime. The images are unchanged; open the list again.",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "Screen colours (light / dark)",
+  ds_themeSwitch: "Screen colours (dark / light / paper)",
   ds_themeLight: "Light",
+  ds_themePaper: "Paper",
   ds_themeDark: "Dark",
   // ── end design ──
 };

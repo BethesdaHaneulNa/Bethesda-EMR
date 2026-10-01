@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
   rc_visitCancelled: "접수 취소",
   rc_genderRequired: "성별을 고르세요 (남 / 여).",
-  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌고 받을 돈이 없어 수납에 가지 않아도 됩니다. 계속할까요?",
+  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌고 받을 돈이 없어 수납에 가지 않아도 됩니다. 의사가 이 환자를 봤다면 누르지 마세요 — 의사가 진료 화면에서 끝내야 진료비가 청구됩니다. 계속할까요?",
   rc_workDate: "작업일자",
   rc_prevDay: "하루 전",
   rc_nextDay: "하루 뒤",
@@ -312,6 +312,9 @@ export default {
   rc_colVisitState: "상태",
   rc_billNothing: "받을 돈 없음",
   rc_visitBilledNoMove: "이미 수납된 내원은 과·의사를 바꿀 수 없습니다. 수납에서 영수를 취소한 뒤 바꾸세요.",
+  rc_hasRecordsNoCancel: "이 내원에는 진료 기록(또는 서류·영수)이 있어 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
+  rc_hasRecordsNoWaiting: "이 내원에는 진료 기록(또는 서류·영수)이 있어 「대기」로 되돌릴 수 없습니다. 고칠 것이 있으면 의사가 진료 화면에서 이 환자를 다시 열어 고칩니다.",
+  rc_completeKeptType: "{name}: 이 내원에는 진료 기록이 있어 내원구분을 바꾸지 않았습니다. 진료비가 그대로 청구되니 환자를 수납으로 안내하세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",
@@ -415,6 +418,31 @@ export default {
   cs_phraseNoMatch: "찾는 상용구가 없습니다.",
   cs_phraseCat: "분류",
   cs_phraseCatAll: "분류: 전체",
+  // 진료 시작 / 대기로 (결정 다, 2026-10-01): 환자를 여는 것만으로는 진료가 시작되지 않음
+  cs_start: "진료 시작",
+  cs_startHint: "환자를 열기만 해서는 진료가 시작되지 않습니다. 이 단추를 누르거나 무언가를 처음 저장하면 「진료 중」이 됩니다.",
+  cs_back: "대기로",
+  cs_backHint: "잘못 시작한 진료를 대기 목록으로 되돌립니다. 아무것도 기록하지 않았을 때만 됩니다.",
+  cs_backDone: "대기로 되돌렸습니다",
+  cs_backHasRecords: "이 진료에는 이미 기록(기록·바이탈·처방·오더·서류·수납)이 있어서 대기로 되돌릴 수 없습니다.",
+  cs_backNotStarted: "이 내원은 지금 「진료 중」이 아닙니다. 화면을 다시 읽었습니다.",
+  cs_nothingToSave: "저장할 것이 없습니다",
+  // 진료대기 현황에 보일 의사 (실장님 2026-10-01)
+  cs_qfTitle: "대기 현황에 보일 의사",
+  cs_qfHint: "체크한 의사의 환자만 내 진료대기 현황에 나옵니다. 이 설정은 내 계정에 기억되어 다른 PC에서도 같습니다.",
+  cs_qfAllDoctors: "의사 전체",
+  cs_qfUnassigned: "의사가 정해지지 않은 환자",
+  cs_qfNoDoctor: "의사 미지정",
+  cs_qfEveryone: "전체 환자",
+  cs_qfShown: "표시: {list}",
+  cs_qfNone: "한 줄 이상 체크해야 저장할 수 있습니다.",
+  cs_qfDefault: "기본값으로",
+  cs_qfDefaultHint: "기본값: 의사 계정은 내 환자와 의사가 정해지지 않은 환자, 그 밖의 계정은 전체 환자.",
+  cs_qfSaved: "대기 현황 설정을 저장했습니다",
+  // 환자를 열 때의 알레르기 경고 창 (실장님 2026-10-01)
+  cs_allergyTitle: "알레르기 주의",
+  cs_allergyLead: "이 환자에게 적혀 있는 알레르기:",
+  cs_allergyOk: "확인",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",
@@ -676,6 +704,21 @@ export default {
   lb_flagHigh: "높음",
   lb_flagLow: "낮음",
   lb_flagAbnormal: "이상",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "단위 목록",
+  lb_unitListHint: "검사항목의 「단위」 칸에서 고를 수 있는 단위입니다. 여기서 빼거나 이름을 고쳐도, 이미 그 단위를 쓰는 검사항목과 결과는 바뀌지 않습니다.",
+  lb_unitListEmpty: "목록이 비어 있습니다.",
+  lb_unitNone: "— 단위 없음 —",
+  lb_unitNotListed: "목록에 없음",
+  lb_unitNew: "새 단위 (예: mg/dL)",
+  lb_unitUsedBy: "항목 {n}개가 사용",
+  lb_unitLeavesNote: "「{u}」: 검사항목 {n}개가 쓰고 있습니다. 그 항목들의 단위는 그대로 남고, 목록에서만 빠집니다.",
+  lb_unitUp: "위로",
+  lb_unitDown: "아래로",
+  lb_unitRemove: "목록에서 빼기",
+  lb_errUnitDup: "「{u}」: 같은 단위가 이미 목록에 있습니다 (대소문자·띄어쓰기만 다른 것도 같은 단위로 봅니다).",
+  lb_errUnitLong: "「{u}」: 단위는 30자까지입니다.",
+  lb_errUnitEmpty: "이름이 빈 단위가 있습니다. 적거나 ✕ 로 빼세요.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
@@ -1234,8 +1277,9 @@ export default {
   px_mvErr_CHANGED_MEANWHILE: "그 사이 오더가 바뀌었습니다. 영상은 그대로입니다 — 목록을 다시 여세요.",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "화면 색 (밝게 / 어둡게)",
+  ds_themeSwitch: "화면 색 (어둡게 / 밝게 / 종이색)",
   ds_themeLight: "밝게",
+  ds_themePaper: "종이색",
   ds_themeDark: "어둡게",
   // ── end design ──
 };

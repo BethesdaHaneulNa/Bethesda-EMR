@@ -5,6 +5,7 @@ const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { cancelWorklistForOrder } = require('./pacs.cancel');
+const { visitRecords, visitHasRecords, completeVisitConsultation } = require('./consult.visit');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -125,7 +126,128 @@ async function orderProduced(client, orderId, resultText) {
   return r.rows[0].yes;
 }
 
-// POST /api/consultations - start or reopen consultation
+// ── The waiting list's doctors (director, 2026-10-01) ──
+// Which doctors' patients the signed-in account's waiting list shows (migration
+// consultation_queue_filter). No row = the rule the screen always had: a doctor sees
+// their own patients and the patients with no doctor, any other account sees all.
+// Only ever the signed-in account's: the id comes from the token. A preference, like
+// the theme - not written to the change log.
+// These paths are declared before PUT /:id, which would otherwise take them.
+function queueFilterBody(row) {
+  if (!row) return { custom: false };
+  return { custom: true, all_doctors: row.all_doctors, doctor_ids: row.doctor_ids || [], unassigned: row.unassigned };
+}
+
+// GET /api/consultations/queue-filter -> { custom:false } | { custom:true, all_doctors, doctor_ids, unassigned }
+router.get('/queue-filter', canConsult, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT all_doctors, doctor_ids, unassigned FROM consultation_queue_filter WHERE staff_id = $1', [req.user.id]);
+    res.json(queueFilterBody(r.rows[0]));
+  } catch (err) { sendDbError(res, err); }
+});
+
+// PUT /api/consultations/queue-filter { all_doctors, doctor_ids: [id], unassigned }
+// Ids that are not a doctor's account are dropped (a doctor removed since the window was
+// opened). A choice that would show nobody - no doctor and not the patients without a
+// doctor - is refused (400): the list would be empty with nothing on screen to say why.
+router.put('/queue-filter', canConsult, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const all = b.all_doctors === true;
+    const unassigned = b.unassigned === true;
+    const ids = Array.isArray(b.doctor_ids) ? b.doctor_ids : null;
+    if (!ids || ids.length > 500 || ids.some((x) => !Number.isInteger(x) || x <= 0)) {
+      return res.status(400).json({ error: 'doctor_ids must be a list of staff ids' });
+    }
+    const known = all ? { rows: [] }
+      : await pool.query("SELECT id FROM staff WHERE id = ANY($1::int[]) AND role = 'doctor' ORDER BY id", [ids]);
+    const kept = known.rows.map((r) => r.id);
+    if (!all && kept.length === 0 && !unassigned) return res.status(400).json({ error: 'Choose at least one doctor' });
+    const r = await pool.query(
+      `INSERT INTO consultation_queue_filter (staff_id, all_doctors, doctor_ids, unassigned)
+       VALUES ($1, $2, $3::int[], $4)
+       ON CONFLICT (staff_id) DO UPDATE SET all_doctors = EXCLUDED.all_doctors, doctor_ids = EXCLUDED.doctor_ids,
+                                            unassigned = EXCLUDED.unassigned, updated_at = NOW()
+       RETURNING all_doctors, doctor_ids, unassigned`,
+      [req.user.id, all, kept, unassigned]);
+    res.json(queueFilterBody(r.rows[0]));
+  } catch (err) { sendDbError(res, err); }
+});
+
+// DELETE /api/consultations/queue-filter - back to the default rule.
+router.delete('/queue-filter', canConsult, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM consultation_queue_filter WHERE staff_id = $1', [req.user.id]);
+    res.json({ custom: false });
+  } catch (err) { sendDbError(res, err); }
+});
+
+// ── Waiting / in consultation (decision (다), 2026-10-01) ──
+//
+// Opening a patient no longer starts anything. The director, with the clinic's staff on
+// the running EMR: a visit only clicked on - and left - read "in consultation" from then
+// on, with nothing recorded, and reception could neither tell nor cancel it. Now:
+//   - opening reads (GET /visit/:visitId, below): no consultation row is made and the
+//     visit keeps its status;
+//   - the doctor starts the consultation (POST /, the "Commencer" button), or the first
+//     thing saved starts it (the screen calls POST / before its first write; startVisit()
+//     in the write routes covers a consultation that exists on a visit still waiting);
+//   - a consultation started by mistake goes back to waiting while NOTHING is recorded
+//     (PUT /visit/:visitId/waiting): its empty row is removed, so nothing is left in the
+//     patient's history, and reception can cancel the visit again.
+const VISIT_NOT_STARTED = 'Visit is not in consultation';
+const VISIT_HAS_RECORDS = 'Consultation has records';
+
+// The first record on a visit still waiting puts it in consultation.
+async function startVisit(db, consultationId) {
+  await db.query(
+    `UPDATE visit SET status = 'in_progress', updated_at = NOW()
+      WHERE id = (SELECT visit_id FROM consultation WHERE id = $1) AND status IN ('registered', 'waiting')`,
+    [consultationId]);
+}
+
+const CONSULT_FOR_SCREEN = `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id = c.vitals_by) AS vitals_by_name,
+              (SELECT s.name FROM staff s WHERE s.id = c.doctor_id) AS opened_by_name
+         FROM consultation c
+        WHERE c.visit_id = $1
+        ORDER BY c.created_at DESC, c.id DESC
+        LIMIT 1`;
+
+// GET /api/consultations/visit/:visitId - what opening a patient reads: the visit's
+// status as it is now and its consultation, null when none was started. Changes nothing.
+// other_records: the visit has a document or a bill - records the screen does not load,
+// so it knows not to offer "back to waiting" (the server would refuse it).
+// A cancelled visit is refused as before (it could be picked from the patient's visits).
+router.get('/visit/:visitId', canConsult, async (req, res) => {
+  try {
+    const vis = await pool.query('SELECT id, status FROM visit WHERE id = $1', [req.params.visitId]);
+    if (vis.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
+    if (vis.rows[0].status === 'cancelled') return res.status(409).json({ error: VISIT_CANCELLED });
+    const c = await pool.query(CONSULT_FOR_SCREEN, [req.params.visitId]);
+    const rec = await visitRecords(pool, req.params.visitId);
+    res.json({ visit_status: vis.rows[0].status, consultation: c.rows[0] || null,
+      other_records: !!(rec && (rec.documents || rec.bills)) });
+  } catch (err) { sendDbError(res, err); }
+});
+
+// PUT /api/consultations/visit/:visitId/waiting - back to the waiting list.
+// Only a visit in consultation with nothing recorded: no note, prescription, order,
+// diagnosis, vital sign, document or bill - visitHasRecords (consult.visit.js), the one
+// test reception's status buttons use too. Anything recorded -> 409 (finish or cancel is
+// the way then). The empty consultation row goes with it. No change-log line: nothing
+// that was recorded is lost, and the log has no action for a status change.
+router.put('/visit/:visitId/waiting', canConsult, (req, res) => inTx(res, async (client) => {
+  const vis = await client.query('SELECT id, status FROM visit WHERE id = $1 FOR UPDATE', [req.params.visitId]);
+  if (vis.rows.length === 0) return [404, { error: 'Visit not found' }];
+  if (vis.rows[0].status !== 'in_progress') return [409, { error: VISIT_NOT_STARTED }];
+  if (await visitHasRecords(client, req.params.visitId)) return [409, { error: VISIT_HAS_RECORDS }];
+  await client.query('DELETE FROM consultation WHERE visit_id = $1', [req.params.visitId]);
+  const r = await client.query("UPDATE visit SET status = 'waiting', updated_at = NOW() WHERE id = $1 RETURNING id, status", [req.params.visitId]);
+  return [200, r.rows[0]];
+}));
+
+// POST /api/consultations - START the consultation of a visit (or reopen it for writing):
+// makes the consultation row when there is none and puts the visit in consultation.
 router.post('/', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -147,20 +269,16 @@ router.post('/', canConsult, async (req, res) => {
 
     // Reuse an existing consultation for this visit instead of creating duplicates
     // every time the doctor clicks the same waiting patient.
-    const existing = await client.query(
-      // opened_by_name: the account that opened the consultation first - the chart header's
-      // fallback when the visit has no doctor, as GET /patients/:id/history does.
-      `SELECT c.*, (SELECT s.name FROM staff s WHERE s.id = c.vitals_by) AS vitals_by_name,
-              (SELECT s.name FROM staff s WHERE s.id = c.doctor_id) AS opened_by_name
-         FROM consultation c
-        WHERE c.visit_id = $1
-        ORDER BY c.created_at DESC, c.id DESC
-        LIMIT 1`,
-      [visit_id]
-    );
+    // opened_by_name: the account that opened the consultation first - the chart header's
+    // fallback when the visit has no doctor, as GET /patients/:id/history does.
+    const existing = await client.query(CONSULT_FOR_SCREEN, [visit_id]);
 
     if (existing.rows.length > 0) {
-      if (existing.rows[0].status !== 'completed' && existing.rows[0].status !== 'signed') {
+      // A finished consultation leaves its visit finished (opening one from the Terminé
+      // tab must not reopen it) - unless reception put that visit back to waiting: then
+      // the doctor's start puts it in consultation like any waiting visit.
+      const waiting = vis.rows[0].status === 'registered' || vis.rows[0].status === 'waiting';
+      if (waiting || (existing.rows[0].status !== 'completed' && existing.rows[0].status !== 'signed')) {
         await client.query("UPDATE visit SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [visit_id]);
       }
       await client.query('COMMIT');
@@ -212,6 +330,7 @@ router.put('/:id', canConsult, (req, res) => inTx(res, async (client) => {
       'UPDATE consultation SET vitals_by = $1, vitals_at = NOW() WHERE id = $2 RETURNING *', [req.user.id, req.params.id]);
   }
   result.rows[0].vitals_by_name = await staffName(client, result.rows[0].vitals_by);
+  if (vitalsSent.length && vitalsChanged) await startVisit(client, req.params.id);
   // Both sides are read back from the table, so '36.5' and 36.5 do not count as a change.
   await recordEdit(client, req, await consultOf(client, req.params.id), 'consultation', prev.rows[0], 'note',
     pick(prev.rows[0], sent), pick(result.rows[0], sent));
@@ -225,13 +344,13 @@ router.put('/:id/complete', canConsult, async (req, res) => {
     await client.query('BEGIN');
     const consult = await client.query('SELECT visit_id FROM consultation WHERE id = $1', [req.params.id]);
     if (consult.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    // completed_at (decision L9: the pharmacy lists patients in the order their
-    // consultations were finished) is the FIRST time Terminé was pressed: finishing
-    // again after reopening and editing keeps it, so the patient keeps their place.
-    await client.query(
-      "UPDATE consultation SET status = 'completed', completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() WHERE id = $1",
-      [req.params.id]);
-    await client.query("UPDATE visit SET status = 'completed', updated_at = NOW() WHERE id = $1", [consult.rows[0].visit_id]);
+    // A visit reception cancelled stays cancelled: a waiting visit can carry a consultation
+    // (reception put it back to waiting), be cancelled, and still be open on a doctor's screen.
+    const vis = await client.query('SELECT status FROM visit WHERE id = $1 FOR UPDATE', [consult.rows[0].visit_id]);
+    if (vis.rows.length && vis.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return res.status(409).json({ error: VISIT_CANCELLED }); }
+    // Finishing is one function (consult.visit.js): reception's "in consultation ->
+    // finished" button goes the same way, so completed_at (decision L9) is set there too.
+    await completeVisitConsultation(client, consult.rows[0].visit_id);
     await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {
@@ -318,6 +437,7 @@ router.put('/:id/note', canConsult, (req, res) => inTx(res, async (client) => {
     mine = i.rows[0];
     await recordEdit(client, req, c, 'consultation_note', mine, 'note', null, { note_text: text });
   }
+  if (mine && mine !== prev) await startVisit(client, req.params.id);
   const notes = await notesOf(client, req.params.id, req.user.id);
   return [200, { note: mine ? notes.filter(function (n) { return n.id === mine.id; })[0] : null, notes: notes }];
 }));
@@ -344,6 +464,7 @@ router.post('/:id/diagnoses', canConsult, (req, res) => inTx(res, async (client)
   );
   const dx = result.rows[0];
   await recordEdit(client, req, c, 'diagnosis', dx, dxLabel(dx), null, pick(dx, DX_LOG));
+  await startVisit(client, req.params.id);
   return [201, dx];
 }));
 
@@ -468,6 +589,7 @@ router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (cli
   );
   const rx = result.rows[0];
   await recordEdit(client, req, c, 'prescription', rx, rx.drug_name, null, pick(rx, RX_LOG));
+  await startVisit(client, req.params.id);
   return [201, await withForm(client, rx)];
 }));
 
@@ -634,6 +756,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
     }
 
     await recordEdit(client, req, consult, 'order_item', orderItem, orderLabel(orderItem), null, pick(orderItem, ORDER_LOG));
+    await startVisit(client, req.params.id);
     await client.query('COMMIT');
     orderItem.ordered_by_name = req.user.name || null;
     res.status(201).json(orderItem);

@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   rc_visitCancelled: "Visite annulée",
   rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
-  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse.",
+  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse. Si le médecin a vu ce patient, n’utilisez pas ce bouton : c’est le médecin qui termine à l’écran Consultation, sinon la consultation n’est pas facturée.",
   rc_workDate: "Date de travail",
   rc_prevDay: "Jour précédent",
   rc_nextDay: "Jour suivant",
@@ -312,6 +312,9 @@ export default {
   rc_colVisitState: "État",
   rc_billNothing: "Rien à payer",
   rc_visitBilledNoMove: "Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement.",
+  rc_hasRecordsNoCancel: "Cette visite a déjà des données (consultation, document ou reçu) : impossible d’annuler l’attente. La liste a été actualisée.",
+  rc_hasRecordsNoWaiting: "Cette visite a déjà des données (consultation, document ou reçu) : impossible de la remettre en attente. S’il faut corriger, le médecin rouvre le patient à l’écran Consultation.",
+  rc_completeKeptType: "{name} : cette visite a déjà des données de consultation, son type n’a pas changé. La consultation reste à payer : envoyez le patient à la caisse.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",
@@ -415,6 +418,31 @@ export default {
   cs_phraseNoMatch: "Aucune phrase trouvée.",
   cs_phraseCat: "Catégorie",
   cs_phraseCatAll: "Catégorie : toutes",
+  // Commencer la consultation / remettre en attente (décision (다), 2026-10-01) : ouvrir un patient ne commence pas la consultation
+  cs_start: "Commencer la consultation",
+  cs_startHint: "Ouvrir un patient ne commence pas la consultation. Ce bouton, ou le premier enregistrement, met la visite « En consultation ».",
+  cs_back: "Remettre en attente",
+  cs_backHint: "Remet en attente une consultation commencée par erreur. Possible seulement tant que rien n'est enregistré.",
+  cs_backDone: "Remis en attente",
+  cs_backHasRecords: "Cette consultation contient déjà des données (note, constantes, prescription, examen, document ou facture) : elle ne peut pas être remise en attente.",
+  cs_backNotStarted: "Cette visite n'est plus « En consultation ». L'écran a été relu.",
+  cs_nothingToSave: "Rien à enregistrer",
+  // Médecins affichés dans la file d'attente (directeur, 2026-10-01)
+  cs_qfTitle: "Médecins affichés dans la file",
+  cs_qfHint: "Seuls les patients des médecins cochés apparaissent dans votre file d'attente. Le choix est gardé pour votre compte, sur tous les ordinateurs.",
+  cs_qfAllDoctors: "Tous les médecins",
+  cs_qfUnassigned: "Patients sans médecin",
+  cs_qfNoDoctor: "sans médecin",
+  cs_qfEveryone: "tous les patients",
+  cs_qfShown: "Affichés : {list}",
+  cs_qfNone: "Cochez au moins une ligne pour enregistrer.",
+  cs_qfDefault: "Par défaut",
+  cs_qfDefaultHint: "Par défaut : un médecin voit ses patients et les patients sans médecin ; les autres comptes voient tous les patients.",
+  cs_qfSaved: "Réglage de la file enregistré",
+  // Avertissement d'allergie à l'ouverture d'un patient (directeur, 2026-10-01)
+  cs_allergyTitle: "Attention : allergie",
+  cs_allergyLead: "Allergie notée pour ce patient :",
+  cs_allergyOk: "OK",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
@@ -676,6 +704,21 @@ export default {
   lb_flagHigh: "élevé",
   lb_flagLow: "bas",
   lb_flagAbnormal: "anormal",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "Liste des unités",
+  lb_unitListHint: "Les unités proposées dans la case « Unité » d'un item. Retirer ou renommer une unité ici ne change pas les items et les résultats qui l'utilisent déjà.",
+  lb_unitListEmpty: "La liste est vide.",
+  lb_unitNone: "— sans unité —",
+  lb_unitNotListed: "hors liste",
+  lb_unitNew: "Nouvelle unité (ex. mg/dL)",
+  lb_unitUsedBy: "{n} item(s)",
+  lb_unitLeavesNote: "« {u} » : utilisée par {n} item(s). Ces items gardent leur unité ; elle sort seulement de la liste.",
+  lb_unitUp: "Monter",
+  lb_unitDown: "Descendre",
+  lb_unitRemove: "Retirer de la liste",
+  lb_errUnitDup: "« {u} » est déjà dans la liste (les majuscules et les espaces ne comptent pas).",
+  lb_errUnitLong: "« {u} » : une unité a 30 caractères au maximum.",
+  lb_errUnitEmpty: "Une unité n'a pas de nom. Écrivez-le ou retirez la ligne avec ✕.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",
@@ -1234,8 +1277,9 @@ export default {
   px_mvErr_CHANGED_MEANWHILE: "Une des demandes a changé entre-temps. Les images n'ont pas changé ; rouvrez la liste.",
   // ── end pacs ──
   // ── begin design (ds_) ──
-  ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",
+  ds_themeSwitch: "Couleurs de l'écran (sombre / clair / papier)",
   ds_themeLight: "Clair",
+  ds_themePaper: "Papier",
   ds_themeDark: "Sombre",
   // ── end design ──
 };

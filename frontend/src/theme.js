@@ -1,7 +1,8 @@
 // Theme helpers (design session - wiki/modules/design.md 3.3).
 //
 // The colour values live in index.html (<style id="bethesda-theme">): :root is the dark
-// screen, :root[data-theme="light"] the light one. The screens are styled with inline
+// screen, :root[data-theme="light"] the light one, :root[data-theme="paper"] the warm
+// paper one (added 2026-10-01). The screens are styled with inline
 // objects, so a colour is written as the name of its token:
 //
 //   cv('panel')           -> 'var(--panel)'
@@ -18,15 +19,22 @@ export function tint(name, alpha) { return 'var(--' + name + '-a' + alpha + ')';
 
 var KEY = 'medconnect_theme';
 
+// The screens there are. Anything else - a value from an older or newer version, a
+// blocked storage - is the dark screen, which is what every account starts with.
+export var THEMES = ['dark', 'light', 'paper'];
+
+export function isTheme(v) { return THEMES.indexOf(v) >= 0; }
+
 export function getTheme() {
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  var t = document.documentElement.getAttribute('data-theme');
+  return isTheme(t) ? t : 'dark';
 }
 
 // Changes the screen at once. localStorage keeps this PC's last choice for the login
 // screen and the first paint (index.html reads it); it can be blocked, and that must not
 // stop the screen from changing.
 export function setTheme(theme) {
-  var t = theme === 'light' ? 'light' : 'dark';
+  var t = isTheme(theme) ? theme : 'dark';
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem(KEY, t); } catch (e) { /* storage blocked: the choice lasts until reload */ }
   return t;

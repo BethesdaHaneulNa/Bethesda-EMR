@@ -20,6 +20,7 @@ Voir un patient de la file :
 ### 1. L'écran
 
 - *En haut* — une barre bleue : les boutons **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
+- *À gauche, sous les boutons* — **📝 Mémo Réception** : le mémo saisi à l'accueil pour cette visite (et le motif). Il n'apparaît que s'il y a un mémo ; un long mémo se fait défiler dans son cadre.
 - *Juste en dessous, à gauche* — trois boutons : **☰ File d'Attente**, **🔍 Trouver patient** et **📋 Visites du patient** (les autres visites du patient ouvert ; gris tant qu'aucun patient n'est ouvert).
 - *À gauche* — **Prescriptions** : les médicaments en haut, les examens et actes en dessous, dans le même tableau.
 - *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et les **Phrases types** (phrases toutes prêtes).
@@ -29,9 +30,23 @@ Voir un patient de la file :
 
 1. Cliquez sur **☰ File d'Attente**. Le nombre entre parenthèses est le nombre de patients qui attendent. La liste se met à jour toute seule.
 2. Onglet **En Attente** : les patients à voir. Onglet **Terminé** : les patients déjà vus aujourd'hui (on peut les rouvrir).
+   - Sous la case **Rechercher**, la ligne **Affichés : …** dit de quels médecins vous voyez les patients. Sans réglage : un médecin voit ses patients et les patients sans médecin ; les autres comptes voient tous les patients.
+   - Pour changer : cliquez sur **⚙** (à droite des onglets), cochez les médecins voulus — et **Patients sans médecin** si vous voulez les voir —, puis **Sauver**. **Tous les médecins** coche tout d'un coup. Il faut au moins une ligne cochée. **Par défaut** revient au réglage de départ.
+   - Le réglage est gardé pour **votre compte** : il est le même sur un autre ordinateur, et ne change rien pour les autres.
 3. Tapez un nom ou un N° dossier dans **Rechercher** pour filtrer, puis cliquez sur le patient.
 4. Un patient qui n'est pas dans la file du jour : cliquez sur **🔍 Trouver patient**, cherchez-le, puis choisissez la visite.
 5. Une autre visite du patient déjà ouvert : cliquez sur **📋 Visites du patient**, à droite de **Trouver patient**, puis choisissez la date.
+
+**Allergie.** Quand vous ouvrez un patient qui a une allergie notée, une fenêtre rouge **⚠ Attention : allergie** s'affiche avec son nom et l'allergie. Lisez-la, puis cliquez sur **OK** (ou touche Entrée) : elle ne se ferme pas autrement. Elle s'affiche une fois à chaque ouverture d'un autre patient ou d'une autre visite. L'étiquette rouge reste en haut pendant toute la consultation.
+
+**Ouvrir n'est pas commencer.** Cliquer sur un patient ouvre son dossier pour le lire : à l'accueil, il reste **En attente**. Si vous avez cliqué par erreur, ouvrez simplement un autre patient : rien n'a changé.
+
+En haut de la colonne du milieu, une ligne indique l'état de la visite : **En attente**, **En consultation** ou **Terminé**.
+
+- **▶ Commencer la consultation** (visible quand la visite est **En attente**) : la visite passe **En consultation**, à l'accueil aussi (onglet **En cours**).
+- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen, ou un **document émis** — la visite passe toute seule **En consultation**. **Terminé** fonctionne aussi directement.
+- **↩ Remettre en attente** (visible seulement si la visite est **En consultation** et que **rien** n'est enregistré) : pour une consultation commencée par erreur. La visite redevient **En attente**. Dès qu'il y a une note, une constante, un médicament, un examen, un document ou une facture, ce bouton n'existe plus.
+- **Sauver** sans rien avoir saisi affiche « Rien à enregistrer » et ne change pas l'état.
 
 ### 3. Signes vitaux et note
 
@@ -150,6 +165,7 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 2. Cliquez sur le bouton vert **Terminé** (au milieu, sous **Sauver** — pas l'onglet **Terminé** de la file).
 3. S'il reste des cases vides, un message le demande. Choisissez **Annuler** et complétez, sauf si c'est voulu.
 4. La pharmacie et la caisse voient le patient seulement après **Terminé**.
+   - **Cliquez toujours sur Terminé quand vous avez vu le patient**, même sans rien écrire. Une visite restée **En attente** que l'accueil ferme avec **Terminer →** est comptée comme « sans consultation » : pas de frais de consultation.
 5. On peut rouvrir un patient terminé (onglet **Terminé** de la file) et ajouter une ligne : la pharmacie la reçoit de nouveau.
 
 ## Si ce message apparaît
@@ -168,6 +184,8 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 | **Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.** | La demande a été annulée pendant que vous écriviez | La visionneuse se rouvre ; le compte-rendu n'est pas enregistré |
 | **Non ajouté(s) - retiré(s) de la liste des médicaments : …** | L'ordonnance type contient un médicament retiré | Cherchez un autre médicament |
 | **Il reste des champs [ ] à compléter : … Émettre quand même ?** | Des crochets restent dans le document | **Annuler**, remplacez les crochets, puis **Émettre** |
+| **Cette consultation contient déjà des données … : elle ne peut pas être remise en attente.** | Vous cliquez sur **↩ Remettre en attente**, mais un autre médecin a écrit entre-temps, ou il y a un document ou une facture | Rien à faire : l'écran est relu et le bouton disparaît. Pour finir, cliquez sur **Terminé** |
+| **Cette visite n'est plus « En consultation ». L'écran a été relu.** | Quelqu'un l'a déjà remise en attente ou terminée | Rien à faire |
 | **Cette visite a été annulée à l'accueil : la consultation ne peut pas être ouverte.** | La visite a été annulée à l'accueil | Faites réenregistrer le patient à l'accueil |
 | **Erreur : …** | Le serveur a refusé l'enregistrement | Vérifiez la case (un chiffre là où il faut un chiffre) et recommencez |
 

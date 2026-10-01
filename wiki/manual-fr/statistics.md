@@ -64,10 +64,10 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 
 1. Sous **Recettes**, dans **Caisse par période**, cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années.
 2. Pour une autre période, saisissez les deux dates à droite.
-3. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
+3. **Le jour le plus récent est en haut** : aujourd'hui se lit sans descendre. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
 4. La ligne **Total** donne la période entière.
 5. Le **Net** d'un jour doit être égal à l'argent de la caisse ce jour-là. Si ce n'est pas le cas, prévenez l'administrateur.
-6. Cliquez sur **⬇ CSV** pour télécharger le tableau.
+6. Cliquez sur **⬇ CSV** pour télécharger le tableau (même ordre : le plus récent en haut, le total à la fin).
 
 ### Médicaments : « Usage médicaments »
 
@@ -77,7 +77,7 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 4. Choisissez **Toutes Rx** ou **Dispensé**. La phrase en petit au-dessus du tableau rappelle la règle :
    - **Toutes Rx** : ce que les médecins ont prescrit, à la date de la visite, en quantité prescrite.
    - **Dispensé** : ce que la pharmacie a remis, à la date de remise, médicaments internes seulement, arrondi à l'unité. **C'est le même chiffre que les sorties du rapport de stock de la pharmacie.** Avec **Externe**, le tableau est donc vide.
-5. Une ligne par médicament. La colonne **Total** est le total de ce médicament sur la période. Il n'y a pas de total de tous les médicaments (comprimés et flacons ne s'additionnent pas).
+5. Une ligne par médicament. **La période la plus récente est la première colonne**, juste à côté du nom ; les plus anciennes sont à droite. La colonne **Total**, tout à droite, est le total de ce médicament sur la période. Il n'y a pas de total de tous les médicaments (comprimés et flacons ne s'additionnent pas).
 6. Un mot jaune à côté du nom (**Flacon**, **Tube**, **Inhalateur**, **Unité**) : la quantité est un nombre de flacons, tubes… et non de comprimés. Le même médicament peut avoir deux lignes : une ancienne en doses, une en flacons.
 7. Cliquez sur **⬇ CSV** pour télécharger le tableau (s'ouvre dans Excel ; la colonne « unit » donne le flacon/tube).
 

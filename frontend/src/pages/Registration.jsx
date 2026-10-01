@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
-import { PatientFinder } from '../components/PatientFinder.jsx';
+import { PatientFinder, phoneLines, phoneText } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
@@ -467,6 +467,10 @@ export default function RegistrationPage() {
     // utils/dbError.js (22008). The only date this screen sends is the birth date.
     if (msg === 'A date field has a date that does not exist') return t.rc_dobInvalid;
     if (msg === 'Only a waiting visit can be cancelled') return t.rc_cancelNotWaiting;
+    // 409 VISIT_HAS_RECORDS from PUT /visits/:id/status: the visit carries a note, an
+    // order, a document, a bill... (the consultation session's test, visitRecords().any).
+    if (msg === 'The visit has records; it cannot be cancelled') return t.rc_hasRecordsNoCancel;
+    if (msg === 'The visit has records; it cannot go back to waiting') return t.rc_hasRecordsNoWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;
     // 409 VISIT_BILLED from PUT /visits/:id: paid while this form was open.
@@ -522,13 +526,19 @@ export default function RegistrationPage() {
     if (e) e.stopPropagation();
     var msg = v.has_active_bill ? t.rc_completeNoConsultBilled : t.rc_completeNoConsult;
     if (!confirm(fill(msg, { name: nameOf(v) }))) return;
-    changeStatus(v, 'completed');
+    // The dialog just said "no fee". If the server found records on the visit (the doctor
+    // wrote something although the visit still showed as waiting), it kept the type and
+    // closed the consultation: say so, the patient does go to the cashier.
+    changeStatus(v, 'completed').then(function (saved) {
+      if (saved && saved.has_records && saved.visit_type !== 'none' && !v.has_active_bill) alert(fill(t.rc_completeKeptType, { name: nameOf(v) }));
+    });
   }
   async function changeStatus(v, newStatus, e) {
     if (e) e.stopPropagation();
     try {
-      await api.put('/visits/' + v.id + '/status', { status: newStatus });
+      var saved = await api.put('/visits/' + v.id + '/status', { status: newStatus });
       await loadData();
+      return saved;
     } catch (err) { alert(errText(err)); loadData(); }
   }
 
@@ -661,8 +671,13 @@ export default function RegistrationPage() {
             {patientResults.length > 0 ? <div style={{ border: '1px solid ' + bd, borderRadius: 8, overflow: 'hidden', maxHeight: 170, overflowY: 'auto' }}>
               {patientResults.map(function (p) {
                 return <div key={p.id} onClick={function () { fillPatient(p); }} style={{ padding: '9px 10px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: selectedPatient && selectedPatient.id === p.id ? 'var(--accent-a18)' : 'var(--bg-row)' }}>
-                  <div style={{ fontWeight: 800, fontSize: 15 }}>{p.last_name} {p.first_name}</div>
-                  <div style={{ fontSize: 13, color: t2 }}>{[p.chart_no, p.phone || p.mobile, p.date_of_birth ? p.date_of_birth.split('T')[0] : ''].filter(Boolean).join(' · ')}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15, overflowWrap: 'anywhere' }}>{p.last_name} {p.first_name}</div>
+                  {/* Chart number and birth date never break (a long phone used to leave
+                      «1992-» at the end of one line and «11-02» on the next); the phone
+                      breaks only between two numbers (phoneText). */}
+                  <div style={{ fontSize: 13, color: t2, overflowWrap: 'anywhere' }}>{[[p.chart_no, true], [phoneText(p.phone || p.mobile), false], [p.date_of_birth ? p.date_of_birth.split('T')[0] : '', true]].filter(function (x) { return x[0]; }).map(function (x, i) {
+                    return <span key={i}>{i ? ' · ' : ''}<span style={x[1] ? { whiteSpace: 'nowrap' } : null}>{x[0]}</span></span>;
+                  })}</div>
                 </div>;
               })}
             </div> : null}
@@ -762,14 +777,21 @@ export default function RegistrationPage() {
         <div style={{ borderRight: '1px solid ' + bd, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-col)' }}>
           {(sel || selectedPatient) ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ padding: '13px 16px', background: scBg, borderBottom: '1px solid ' + bd, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: 'var(--accent-a20)', borderRadius: 8, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, fontWeight: 800, color: 'var(--accent-text)' }}>{(form.firstName || '?')[0]}</div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text-strong)' }}>{form.lastName} {form.firstName}</div>
-                  <div style={{ fontSize: 14, color: t2 }}>{form.chartNo || t.newPatientInput} {sel ? '· ' + (sel.dept_code || '') + ' · ' + (sel.doctor_name || '') : ''}</div>
+              <div style={{ padding: '13px 16px', background: scBg, borderBottom: '1px solid ' + bd, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 12px' }}>
+                {/* Long names (50-80 letters are ordinary here): the name and the department ·
+                    doctor line wrap, also inside one long word; the initial and the balance
+                    box keep their size instead of being squeezed. When the name does not
+                    fit beside the balance box, the box goes to its own line (flexWrap) -
+                    otherwise the name was left a 230px column, eight lines tall. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
+                  <div style={{ background: 'var(--accent-a20)', borderRadius: 8, width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, fontWeight: 800, color: 'var(--accent-text)' }}>{(form.firstName || '?')[0]}</div>
+                  <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                    <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text-strong)', lineHeight: 1.25 }}>{form.lastName} {form.firstName}</div>
+                    <div style={{ fontSize: 14, color: t2 }}>{form.chartNo || t.newPatientInput} {sel ? '· ' + (sel.dept_code || '') + ' · ' + (sel.doctor_name || '') : ''}</div>
+                  </div>
                 </div>
                 {(patBal.owed>0||patBal.refund>0)?
-                  <div style={{ marginLeft:'auto', textAlign:'right' }}>
+                  <div style={{ marginLeft:'auto', textAlign:'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.owed, langCtx.lang)} Ar</span></div>:null}
                     {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.refund, langCtx.lang)} Ar</span></div>:null}
                   </div>
@@ -779,8 +801,8 @@ export default function RegistrationPage() {
               <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
                 {history.length > 0 ? history.map(function (h, i) {
                   return <div key={i} style={{ background: scBg, borderRadius: 8, padding: '12px 14px', marginBottom: 9, border: '1px solid ' + bd }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent-text)' }}>{h.consult_date ? h.consult_date.split('T')[0] : ''}</span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 8, marginBottom: 6, overflowWrap: 'anywhere' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>{h.consult_date ? h.consult_date.split('T')[0] : ''}</span>
                       <span style={{ fontSize: 13, color: t2 }}>{h.dept_code}</span>
                       <span style={{ fontSize: 13, color: t2 }}>{h.doctor_name}</span>
                     </div>
@@ -806,7 +828,7 @@ export default function RegistrationPage() {
             {['waiting', 'in_progress', 'completed'].map(function (k) {
               var c = k === 'waiting' ? 'accent' : (k === 'in_progress' ? 'warn' : 'ok');
               var n = visits.filter(function (v) { return k === 'waiting' ? (v.status === 'waiting' || v.status === 'registered') : (k === 'in_progress' ? v.status === 'in_progress' : v.status === 'completed'); }).length;
-              return <button key={k} onClick={function () { setTab(k); }} style={{ background: tab === k ? tint(c, '18') : 'transparent', color: tab === k ? 'var(--' + c + '-ink)' : t3, border: tab === k ? '1px solid ' + tint(c, '40') : '1px solid transparent', borderRadius: 7, padding: '8px 10px', cursor: 'pointer', fontSize: 14, fontWeight: 800, flex: 1 }}>{t[k]} ({n})</button>;
+              return <button key={k} onClick={function () { setTab(k); }} style={{ background: tab === k ? tint(c, '18') : 'transparent', color: tab === k ? 'var(--' + c + '-ink)' : t3, border: tab === k ? '1px solid ' + tint(c, '40') : '1px solid transparent', borderRadius: 7, padding: '8px 10px', cursor: 'pointer', fontSize: 14, fontWeight: 800, flex: 1, whiteSpace: 'nowrap' }}>{t[k]} ({n})</button>;
             })}
           </div>
           <div style={{ padding: '8px 10px', borderBottom: '1px solid ' + bd }}>
@@ -817,12 +839,18 @@ export default function RegistrationPage() {
               filteredVisits.map(function (v) {
                 var isSel = sel && sel.id === v.id;
                 return <div key={v.id} onClick={function () { selectVisit(v); }} style={{ padding: '12px 13px', cursor: 'pointer', borderBottom: '1px solid var(--line-soft)', background: isSel ? 'var(--accent-a12)' : 'transparent' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-strong)' }}>{v.last_name} {v.first_name}</span>
-                    <span style={{ background: tint(v.status === 'completed' ? 'ok' : (v.status === 'in_progress' ? 'warn' : 'accent'), '18'), color: v.status === 'completed' ? 'var(--ok-ink)' : (v.status === 'in_progress' ? 'var(--warn-ink)' : 'var(--accent-ink)'), borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 800 }}>{v.status === 'completed' ? t.completed : (v.status === 'in_progress' ? t.in_progress : t.waiting)}</span>
+                  {/* The status tag keeps its width on one line; beside a long name it was squeezed
+                      and «En Attente» folded in two (director, 2026-10-01 - same as the
+                      consultation queue). The name is never cut: it wraps between words, and
+                      inside a word when one word is wider than the column (that used to push
+                      the whole list sideways). */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-strong)', minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25 }}>{v.last_name} {v.first_name}</span>
+                    <span style={{ background: tint(v.status === 'completed' ? 'ok' : (v.status === 'in_progress' ? 'warn' : 'accent'), '18'), color: v.status === 'completed' ? 'var(--ok-ink)' : (v.status === 'in_progress' ? 'var(--warn-ink)' : 'var(--accent-ink)'), borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}>{v.status === 'completed' ? t.completed : (v.status === 'in_progress' ? t.in_progress : t.waiting)}</span>
                   </div>
-                  <div style={{ fontSize: 14, color: t2 }}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
-                  <div style={{ fontSize: 13, color: t3, marginTop: 3 }}>{v.chief_complaint || ''}</div>
+                  <div style={{ fontSize: 14, color: t2, overflowWrap: 'anywhere' }}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
+                  {/* The complaint is a note, not an identity: two lines at most, all of it in the tooltip. */}
+                  <div title={v.chief_complaint || undefined} style={{ fontSize: 13, color: t3, marginTop: 3, overflowWrap: 'anywhere', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{v.chief_complaint || ''}</div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }} onClick={function (e) { e.stopPropagation(); }}>
                     {(v.status === 'waiting' || v.status === 'registered') ? <button onClick={function (e) { completeWithoutConsult(v, e); }} style={mb('ok')}>{t.toCompleted}</button> : null}
                     {v.status === 'in_progress' ? <button onClick={function (e) { changeStatus(v, 'waiting', e); }} style={mb('accent')}>{t.toWaiting}</button> : null}
@@ -840,7 +868,7 @@ export default function RegistrationPage() {
         context={{}} />
       {similarAsk ? (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
-          <div role="dialog" aria-modal="true" style={{ background: pn, border: '1px solid var(--border-2)', borderRadius: 12, width: 760, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div role="dialog" aria-modal="true" style={{ background: pn, border: '1px solid var(--border-2)', borderRadius: 12, width: 900, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid ' + bd, background: scBg }}>
               <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--warn-text)' }}>⚠ {t.rc_similarTitle}</div>
               <div style={{ fontSize: 14, color: t2, marginTop: 4 }}>{t.rc_similarHint}</div>
@@ -848,15 +876,15 @@ export default function RegistrationPage() {
             <div style={{ overflow: 'auto', flex: 1 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead><tr style={{ background: scBg }}>
-                  {[t.chartNo, t.name, t.dob, t.phone, t.rc_lastVisit, ''].map(function (h, i) { return <th key={i} style={{ textAlign: 'left', padding: '8px 12px', color: t3, fontWeight: 700, fontSize: 12 }}>{h}</th>; })}
+                  {[t.chartNo, t.name, t.dob, t.phone, t.rc_lastVisit, ''].map(function (h, i) { return <th key={i} style={{ textAlign: 'left', padding: '8px 12px', color: t3, fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>; })}
                 </tr></thead>
                 <tbody>
                   {similarAsk.list.map(function (p) {
                     return <tr key={p.id} style={{ borderTop: '1px solid var(--line-soft)' }}>
                       <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>{p.chart_no}</td>
-                      <td style={{ padding: '9px 12px', color: tx, fontWeight: 700 }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
+                      <td style={{ padding: '9px 12px', color: tx, fontWeight: 700, overflowWrap: 'anywhere' }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
-                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{phoneLines(p.phone || p.mobile)}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
                       <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a60)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
                     </tr>;

@@ -146,7 +146,29 @@ function rangeError(itemName, ranges) {
   return null;
 }
 
+// ── the unit list (Settings > Lab test items) ──
+// Two units are the same when they differ only by capitals, spaces, or the two
+// letters for micro (µ U+00B5 and μ U+03BC look alike). Same rule as the unique
+// index of lab_unit (044_lab_units.sql) and as unitKey() in Settings.jsx.
+var UNIT_MAX = 30;   // lab_test_item.unit is VARCHAR(30)
+function unitName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+function unitKey(v) { return unitName(v).replace(/\u03bc/g, '\u00b5').replace(/ /g, '').toLowerCase(); }
+// What is wrong with a list of unit names, as a code the screen translates, or null.
+function unitListError(names) {
+  var seen = {};
+  for (var i = 0; i < names.length; i++) {
+    var n = unitName(names[i]);
+    if (!n) return 'lab_unit_empty';
+    if (n.length > UNIT_MAX) return 'lab_unit_too_long:' + n;
+    var k = unitKey(n);
+    if (seen[k]) return 'lab_unit_duplicate:' + n;
+    seen[k] = true;
+  }
+  return null;
+}
+
 module.exports = {
+  UNIT_MAX: UNIT_MAX, unitName: unitName, unitKey: unitKey, unitListError: unitListError,
   readNumber, normWord, sameText, num, flagFor, SAME_WORDS,
   AGE_DAYS, ageIn, nullInt, rangeApplies, rangeLabel, refFor, rangeError,
 };

@@ -85,10 +85,12 @@ Choisissez le patient, corrigez, puis cliquez sur **💾 Enregistrer le patient*
 En haut à droite : **En Attente**, **En cours**, **Terminé**. Le nombre entre parenthèses est le nombre de patients. **Rechercher dans la file** filtre par nom ou N° dossier.
 
 - **En Attente** — enregistré, attend le médecin.
-- **En cours** — le médecin a ouvert la consultation (automatique).
+- **En cours** — le médecin a commencé la consultation : il a cliqué sur **Commencer la consultation** ou enregistré une première donnée (automatique). Ouvrir le patient ne suffit plus : tant que le médecin n'a rien commencé, le patient reste **En Attente**.
 - **Terminé** — le médecin a fini (automatique). Le patient apparaît alors à la caisse.
 
 Les petits boutons **Terminer →** et **← En attente** sous chaque patient servent seulement dans les cas particuliers (voir 10).
+
+Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. Le **Motif**, lui, tient sur deux lignes au plus ; laissez la souris dessus pour le lire en entier.
 
 ### 9. Modifier un enregistrement ou annuler l'attente
 
@@ -96,15 +98,21 @@ Les petits boutons **Terminer →** et **← En attente** sous chaque patient se
 2. Corrigez le médecin, le type de visite, le motif ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme.
 3. Pour retirer un patient qui attend encore : **Annuler l'attente / Retirer**, puis confirmez.
 
-Si le médecin a déjà commencé la consultation, l'annulation est refusée et un message l'explique.
+Si le médecin a déjà commencé la consultation, ou si la visite a déjà des données (note, ordonnance, examen, document, reçu), l'annulation est refusée et un message l'explique.
 
 ### 10. Terminer sans consultation
 
 Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n'a pas à passer à la caisse. » Confirmez seulement si c'est bien le cas. Une visite **Sans frais** n'apparaît pas dans la liste de la caisse : il n'y a rien à encaisser.
 
+**Attention : si le médecin a vu le patient, n'utilisez pas ce bouton.** Un patient reste **En Attente** tant que le médecin n'a rien commencé ni enregistré, même s'il l'a examiné. C'est le médecin qui termine à l'écran Consultation ; sinon la consultation n'est pas facturée. Le message de confirmation le rappelle.
+
 Si la visite a déjà un reçu (payée avant la consultation), le message dit « Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite. »
 
-Pour un patient **En cours**, **Terminer →** ne change pas le type de visite : il a vu le médecin.
+Si le médecin avait déjà écrit quelque chose pour cette visite, son type ne change pas non plus et un message vous dit d'envoyer le patient à la caisse.
+
+Pour un patient **En cours**, **Terminer →** ne change pas le type de visite : il a vu le médecin. La consultation est terminée comme si le médecin avait cliqué sur **Terminé**.
+
+**← En attente** (onglets **En cours** et **Terminé**) ne fonctionne que si rien n'a été écrit pour la visite. Sinon l'écran refuse : c'est le médecin qui rouvre le patient à l'écran Consultation.
 
 ### 11. Date de travail — voir un autre jour
 
@@ -131,6 +139,8 @@ Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en m
 2. Cliquez sur le patient.
 3. **Fermer** ferme la fenêtre.
 
+Si le dossier contient deux numéros de téléphone (« +261 34 … / +261 33 … »), ils s'affichent l'un sous l'autre dans la colonne **Téléphone**.
+
 Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Visites du patient**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Motif**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Motif** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
 
 ### 13. Dossier (vue)
@@ -151,6 +161,9 @@ Quand un patient est choisi, **📋 Dossier (vue)** montre les documents déjà 
 | … est déjà enregistré(e) aujourd'hui (…). Enregistrer une seconde visite ? | Le patient est déjà dans la file | **OK** seulement s'il revient pour autre chose |
 | Terminer … sans consultation ? | Le patient part sans voir le médecin | Confirmez seulement si c'est le cas |
 | La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. | Le médecin l'a déjà pris | Parlez au médecin si l'annulation est nécessaire |
+| Cette visite a déjà des données (consultation, document ou reçu) : impossible d'annuler l'attente. | Le médecin a déjà écrit quelque chose, ou un document ou un reçu existe | La visite reste ; parlez au médecin ou à la caisse |
+| Cette visite a déjà des données (consultation, document ou reçu) : impossible de la remettre en attente. S'il faut corriger, le médecin rouvre le patient à l'écran Consultation. | Vous avez cliqué sur **← En attente** pour une visite qui a déjà des données | Rien à faire à l'accueil : le médecin rouvre le patient |
+| … : cette visite a déjà des données de consultation, son type n'a pas changé. La consultation reste à payer : envoyez le patient à la caisse. | Vous avez terminé une visite **En Attente** que le médecin avait déjà commencée | Envoyez le patient à la caisse |
 | Vous consultez une date passée (…) | La Date de travail n'est pas aujourd'hui | Rangez, puis **Aujourd'hui** pour enregistrer |
 | À une date passée, on ne peut ni créer ni modifier un enregistrement. | Idem | Cliquez sur **Aujourd'hui** |
 | Déjà encaissé : le type de visite se change à l'écran Paiement. | La visite est payée | Demandez à la caisse |
