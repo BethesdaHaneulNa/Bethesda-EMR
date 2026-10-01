@@ -153,6 +153,14 @@ function rangeError(itemName, ranges) {
 var UNIT_MAX = 30;   // lab_test_item.unit is VARCHAR(30)
 function unitName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
 function unitKey(v) { return unitName(v).replace(/\u03bc/g, '\u00b5').replace(/ /g, '').toLowerCase(); }
+// The names in the body of a "save the unit list" request, or null when the body has no
+// list at all. A body without `units` (or with something that is not a list) used to be
+// read as an empty list and emptied the whole table; only a list is a list. An empty
+// list is allowed: the window lets every row be removed.
+function unitNamesOf(units) {
+  if (!Array.isArray(units)) return null;
+  return units.map(function (u) { return unitName(u && typeof u === 'object' ? u.name : u); });
+}
 // What is wrong with a list of unit names, as a code the screen translates, or null.
 function unitListError(names) {
   var seen = {};
@@ -168,7 +176,7 @@ function unitListError(names) {
 }
 
 module.exports = {
-  UNIT_MAX: UNIT_MAX, unitName: unitName, unitKey: unitKey, unitListError: unitListError,
+  UNIT_MAX: UNIT_MAX, unitName: unitName, unitKey: unitKey, unitNamesOf: unitNamesOf, unitListError: unitListError,
   readNumber, normWord, sameText, num, flagFor, SAME_WORDS,
   AGE_DAYS, ageIn, nullInt, rangeApplies, rangeLabel, refFor, rangeError,
 };

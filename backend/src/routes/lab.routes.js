@@ -8,7 +8,7 @@ router.use(authMiddleware);
 
 // The flag rule and the reference-range rules live in utils/labFlag.js (shared,
 // with a checker against the screen's copies: backend/test/lab.flag.mjs).
-const { flagFor, refFor, rangeError, nullInt, unitName, unitListError } = require('../utils/labFlag');
+const { flagFor, refFor, rangeError, nullInt, unitNamesOf, unitListError } = require('../utils/labFlag');
 
 async function rangesFor(db, itemIds) {
   if (!itemIds.length) return {};
@@ -457,8 +457,9 @@ router.get('/units', permMiddleware('lab', 'settings'), async (req, res) => {
 // The whole list at once, in the order sent. Since nothing refers to a row, the list is
 // simply replaced: that also lets two names be swapped without tripping the unique index.
 router.post('/units/save', permMiddleware('settings'), async (req, res) => {
-  const names = (Array.isArray(req.body.units) ? req.body.units : [])
-    .map(function (u) { return unitName(u && typeof u === 'object' ? u.name : u); });
+  // no list in the body is a mistake, not "an empty list" (it used to empty the table)
+  const names = unitNamesOf(req.body && req.body.units);
+  if (!names) return res.status(400).json({ error: 'lab_unit_list_required' });
   const bad = unitListError(names);
   if (bad) return res.status(400).json({ error: bad });
   const client = await pool.connect();
