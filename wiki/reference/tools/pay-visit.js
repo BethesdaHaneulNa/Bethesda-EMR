@@ -32,6 +32,9 @@
 // Options:
 //   --type=newVisit|followUp|none   the consultation selector (default: what the visit has)
 //   --fee=CODE[,CODE]               counter fees added at the till (certificate, CD ...), one each
+//   --fee=CODE:amount               ... with the amount typed by the cashier - only for a code whose
+//                                   amount the screen lets the cashier change (order_code.price_editable,
+//                                   the document fee DOC)
 //   --as=login_id                   the cashier (default: the first active admin account)
 //   --yes-zero-price                answer "yes" to "N item(s) without a price - bill anyway?"
 //   --port=3000                     the api's port (default: PORT, then 3000)
@@ -146,10 +149,19 @@ async function billVisit(visitId, words) {
   let extraItems = [];
   if (opt.fee) {
     const fc = (await call('GET', '/admin/order-codes?code_type=fee')).filter(function (c) { return CONSULT_FEE_CODES.indexOf(c.code) < 0; });
-    extraItems = String(opt.fee).split(',').map(function (want) {
-      const c = fc.find(function (x) { return x.code === want.trim(); });
+    extraItems = String(opt.fee).split(',').map(function (wantRaw) {
+      const parts = wantRaw.trim().split(':');
+      const want = parts[0];
+      const c = fc.find(function (x) { return x.code === want; });
       if (!c) throw new Refused(0, 'no counter fee with code ' + want + ' (have: ' + fc.map(function (x) { return x.code; }).join(', ') + ')');
-      return { order_code_id: c.id, code: c.code, name: c.name, quantity: 1, unit_price: num(c.price_clinic || c.price) };
+      let price = num(c.price_clinic || c.price);
+      if (parts.length > 1) {
+        // the amount box exists only on a line whose code is price_editable; empty or 0 is refused
+        if (!c.price_editable) throw new Refused(0, 'the amount of ' + c.code + ' cannot be changed at the till (its code is not price_editable)');
+        price = parseFloat(String(parts[1]).replace(/[^0-9.]/g, '')) || 0;
+      }
+      if (c.price_editable && !(price > 0)) throw new Refused(0, 'no amount for ' + c.name + ' - the screen asks for an amount or for the line to be removed');
+      return { order_code_id: c.id, code: c.code, name: c.name, quantity: 1, unit_price: price };
     });
   }
 
