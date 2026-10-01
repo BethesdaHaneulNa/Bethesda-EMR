@@ -28,7 +28,7 @@ export function ModalityField(props) {
         if (v === OTHER) { setOther(true); props.onChange(''); } else { setOther(false); props.onChange(v); }
       }}>
         <option value="">{t.se_none}</option>
-        {MODALITIES.map(function (m) { return <option key={m} value={m}>{m + ' — ' + (t['se_mod_' + m] || m)}</option>; })}
+        {MODALITIES.map(function (m) { return <option key={m} value={m} title={t['se_mod_' + m] || m}>{m}</option>; })}
         <option value={OTHER}>{t.se_modOther}</option>
       </select>
       {other ? (
