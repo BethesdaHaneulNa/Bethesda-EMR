@@ -104,5 +104,16 @@ for (const a of unitNames) for (const b of unitNames) {
   check('unit list ' + JSON.stringify(list), kind(server.unitListError(list)), kind(screenUnits.unitProblem(list)));
 }
 
+// ---- the body of "save the unit list": no list is refused, an empty list is a list ----
+const bodies = [
+  [undefined, null], [null, null], ['mg/dL', null], [{ 0: 'mg/dL' }, null], [{ units: [] }, null], [0, null],
+  [[], []], [['mg/dL', ' g / dL ']], [[{ name: 'U/L' }, 'fL']], [[null]],
+];
+bodies[7][1] = ['mg/dL', 'g / dL']; bodies[8][1] = ['U/L', 'fL']; bodies[9][1] = [''];
+for (const b of bodies) {
+  n++;
+  check('unit list body ' + JSON.stringify(b[0]), JSON.stringify(b[1]), JSON.stringify(server.unitNamesOf(b[0])));
+}
+
 console.log(n + ' cases, ' + bad + ' mismatches');
 process.exit(bad ? 1 : 0);

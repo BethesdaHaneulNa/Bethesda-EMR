@@ -354,7 +354,7 @@
 | `GET /test-items?order_code_id=` | lab 또는 settings | 패널의 항목 정의. 없으면 전체. 항목마다 `result_count` — 입력 화면이 그 항목 아래 보여줄 저장 결과 수(id로 연결된 것 + 같은 패널에서 연결이 끊긴 같은 이름의 것) 항목마다 `ranges`(그 항목의 `lab_ref_range` 줄 배열)도 줌. |
 | `POST /test-items/save` | settings | 패널의 항목 목록 저장. `id`가 있는 줄은 **그 자리에서 고치고**, 없는 줄은 새로 넣고, 목록에서 빠진 항목만 지움(6절). 본문 `{order_code_id, items:[{id?, name, unit, ref_low, ref_high, ref_text}]}` → 저장된 목록(`result_count` 포함) 항목마다 `ranges` 배열을 함께 받아 그 항목의 줄을 **지우고 다시 넣음**(항목 id가 유지되고 줄 id를 참조하는 곳이 없어 안전). 쓰기 전에 모든 항목의 줄을 검사해 하나라도 틀리면 **400**(겹침·나이 순서·하한>상한·빈 줄 — 영어 문구). |
 | `GET /units` | lab 또는 settings | 단위 목록(`lab_unit`), 순서대로. 줄마다 `item_count` — 그 단위를 **글자 그대로** 쓰는 검사항목 수 |
-| `POST /units/save` | settings | 단위 목록 전체 저장(`{units:[이름…]}`, 보낸 순서가 순서). 이름은 앞뒤·연속 공백 정리, 빈 이름 `lab_unit_empty` · 30자 초과 `lab_unit_too_long:이름` · 같은 단위 `lab_unit_duplicate:이름` 이면 400(화면이 번역). 아무것도 `lab_unit` 을 가리키지 않으므로 목록을 통째로 바꿔 넣음 — **검사항목·결과는 건드리지 않음** |
+| `POST /units/save` | settings | 단위 목록 전체 저장(`{units:[이름…]}`, 보낸 순서가 순서). **`units` 가 목록(배열)이 아니면 400 `lab_unit_list_required`** — 본문에 `units` 칸이 없거나 글자·`null` 이면 거절(전에는 「빈 목록」으로 읽어 표를 통째로 비웠음, 2026-10-01 설정 세션이 권한 시험 중 발견). 빈 배열 `[]` 은 받음(창에서 마지막 줄까지 뺄 수 있으므로 「전부 빼기」는 정상 동작). 이름은 앞뒤·연속 공백 정리, 빈 이름 `lab_unit_empty` · 30자 초과 `lab_unit_too_long:이름` · 같은 단위 `lab_unit_duplicate:이름` 이면 400(화면이 번역). 아무것도 `lab_unit` 을 가리키지 않으므로 목록을 통째로 바꿔 넣음 — **검사항목·결과는 건드리지 않음** |
 
 목록 API 세 개의 한 줄 모양: `consultation_id, visit_id, visit_date, patient_id, chart_no, last_name, first_name, gender, date_of_birth, (allergies), doctor_name, lab_orders:[{order_item_id, order_code, order_name, order_code_id, status, (result_at)}]`
 
@@ -537,3 +537,4 @@ PUT /api/consultations/:id/complete        → order_item.status='completed'
 | 2026-10-01 | 문제 27: 긴 이름(50자·86자)에서 목록 줄·환자 머리·환자 찾기 창이 깨지던 것 — 이름은 줄바꿈, 날짜·꼬리표·차트번호·제목·닫기 단추는 한 줄 | `8765401` |
 | 2026-10-01 | 설정 검사항목: 단위를 목록에서 고름 + 「단위 목록」 창(넣기·이름·순서·빼기) — `lab_unit` 표(마이그레이션 502), `GET /units` · `POST /units/save`, `lb_` 14개 · 목록에 없는 단위를 가진 항목은 그대로 · 검사실 입력 표 열을 `minmax(0, fr)` 로(긴 단위에서 줄이 어긋나던 것) | `a7f5f87` |
 | 2026-10-01 | 작업일자(접수·수납과 같은 것): 목록 맨 위 ◀ 날짜 ▶, 두 목록과 숫자가 그 날짜 내원의 검사만 — `GET /lab/day`(`{date, today, pending, completed}`), `/pending`·`/completed` 에 `?date=` · 「입력 완료」가 「오늘 결과를 넣은 것」에서 「그 날짜 내원의 결과 들어간 것」으로 · `lb_workDatePast`·`lb_noCompletedOn` | `254f0d9` |
+| 2026-10-01 | `POST /units/save`: 본문에 `units` 목록이 없으면 400(전에는 목록을 통째로 비움) — `unitNamesOf()`, `lab.flag.mjs` 에 10건 | `c9ba24e` |
