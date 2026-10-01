@@ -164,11 +164,15 @@ export function TopBar() {
               return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? 'var(--accent)' : 'var(--chip)', color: lang === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{i[1]}</button>;
             })}
           </div>
-          <div role="group" aria-label={t.ds_themeSwitch} title={t.ds_themeSwitch} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
+          {/* One list instead of three buttons (director, 2026-10-01: the row was getting long).
+              A plain <select>, like the other lists of the EMR: the keyboard works by itself
+              and the open list is drawn by the browser. Its rows take their colours from the
+              tokens so that the list is paper-coloured on the paper screen. */}
+          <select aria-label={t.ds_themeSwitch} title={t.ds_themeSwitch} value={theme} onChange={function (e) { chooseTheme(e.target.value); }} style={{ background: 'var(--chip)', color: 'var(--text-2)', border: '1px solid var(--field-border)', borderRadius: 5, padding: '3px 4px', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
             {[['dark', '🌙', t.ds_themeDark], ['light', '☀', t.ds_themeLight], ['paper', '📄', t.ds_themePaper]].map(function (i) {
-              return <button key={i[0]} aria-pressed={theme === i[0]} onClick={function () { chooseTheme(i[0]); }} style={{ background: theme === i[0] ? 'var(--accent)' : 'var(--chip)', color: theme === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{i[1]} {i[2]}</button>;
+              return <option key={i[0]} value={i[0]} style={{ background: 'var(--panel)', color: 'var(--text)' }}>{i[1]} {i[2]}</option>;
             })}
-          </div>
+          </select>
           {user ? (
             <span onClick={function () { setShowPw(true); }} title={t.se_pwOpen} style={{ background: tint(ri.tint, '15'), border: '1px solid ' + tint(ri.tint, '30'), borderRadius: 5, padding: '3px 8px', fontSize: 14, color: ri.color, fontWeight: 600, cursor: 'pointer' }}>{ri.icon} {user.name} 🔑</span>
           ) : null}

@@ -4,11 +4,11 @@ L'EMR peut s'afficher sur **fond sombre** (comme avant) ou sur **fond clair**. C
 
 ## En bref
 
-1. Regardez en haut de l'écran, à droite des boutons de langue **EN** **KO** **FR**. Il y a trois boutons : **🌙 Sombre**, **☀ Clair** et **📄 Papier**.
-2. Cliquez sur **☀ Clair** : tout l'écran passe sur fond clair, tout de suite.
-3. Cliquez sur **📄 Papier** : l'écran passe sur un fond couleur papier, un peu jaune. C'est comme le fond clair, mais il éblouit moins.
-4. Cliquez sur **🌙 Sombre** pour revenir au fond sombre.
-5. Le bouton choisi est en bleu.
+1. Regardez en haut de l'écran, à droite des boutons de langue **EN** **KO** **FR**. Il y a une petite liste qui montre le fond choisi, par exemple **🌙 Sombre ▾**. Cliquez dessus : elle s'ouvre avec trois lignes, **🌙 Sombre**, **☀ Clair** et **📄 Papier**.
+2. Choisissez **☀ Clair** : tout l'écran passe sur fond clair, tout de suite.
+3. Choisissez **📄 Papier** : l'écran passe sur un fond couleur papier, un peu jaune. C'est comme le fond clair, mais il éblouit moins.
+4. Choisissez **🌙 Sombre** pour revenir au fond sombre.
+5. La liste fermée montre toujours le fond choisi.
 6. Votre choix est gardé **avec votre compte**. Vous le retrouvez sur un autre ordinateur dès que vous êtes connecté.
 
 ## Pas à pas
@@ -16,7 +16,7 @@ L'EMR peut s'afficher sur **fond sombre** (comme avant) ou sur **fond clair**. C
 ### 1. Passer au fond clair ou au fond sombre
 
 1. Connectez-vous comme d'habitude.
-2. En haut à droite, cliquez sur **☀ Clair**, sur **📄 Papier** ou sur **🌙 Sombre**.
+2. En haut à droite, ouvrez la liste et choisissez **☀ Clair**, **📄 Papier** ou **🌙 Sombre**.
 3. L'écran change tout de suite. Il n'y a rien à enregistrer.
 4. Vous pouvez changer aussi souvent que vous voulez, même au milieu d'une consultation : rien de ce que vous avez saisi n'est perdu.
 
