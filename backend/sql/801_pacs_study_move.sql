@@ -5,7 +5,8 @@
 -- and name, and nothing can notice it. The EMR corrects the image server's own data
 -- (Orthanc's REST: a corrected study is made, checked, and only then the original is
 -- deleted) and then its own records. Director, 2026-10-01: a button in the EMR, for
--- doctors and administrators, with a reason; the reading goes with the images.
+-- doctors and administrators; the reading goes with the images; a reason may be typed
+-- and need not be (reason = '' then) - the change-log line is always written.
 --
 -- One line per correction. It is
 --   1. what an interrupted correction is finished from (state, step);

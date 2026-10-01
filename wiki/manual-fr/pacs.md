@@ -149,7 +149,7 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 
 Sur l'appareil, le manipulateur a choisi une autre ligne du même patient : par exemple **Carotid US** au lieu de **Upper Abdomen US**. Les images de l'abdomen sont alors rangées sous « Carotid US », dans l'EMR et sur le serveur d'images. Rien ne le signale : le patient est le bon. C'est le médecin qui le voit en ouvrant les images.
 
-Qui peut corriger : les médecins (écran **Consultation**) et l'administrateur. Un motif est toujours demandé.
+Qui peut corriger : les médecins (écran **Consultation**) et l'administrateur. La correction est toujours notée dans le journal des modifications (qui, quand, quelles demandes) ; le motif est facultatif.
 
 1. Ouvrez **🩻 Imagerie** et choisissez l'examen dont les images ne sont pas les bonnes.
 2. À droite, sur la ligne **Images**, cliquez sur **⇄ Corriger la demande…**.
@@ -157,8 +157,8 @@ Qui peut corriger : les médecins (écran **Consultation**) et l'administrateur.
 4. Sous **Ces images sont en réalité celles de :**, cochez la bonne demande. Seules les demandes du même patient et du même type d'appareil peuvent être choisies ; pour les autres, la raison est écrite sur la ligne.
    - **→ déplacer ici** : la bonne demande n'a pas encore d'images. Les images y passent, et la demande qu'elles quittent redevient **en attente** : elle réapparaît sur la liste de l'appareil, pour être faite.
    - **⇄ échanger avec celle-ci** : les deux examens ont été faits, chacun sous la ligne de l'autre. Les deux demandes échangent leurs images.
-5. Écrivez le **Motif**, lisez la phrase qui dit ce qui va se passer, puis cliquez sur **⇄ Déplacer les images** (ou **⇄ Échanger les images**). Ne fermez pas la fenêtre pendant **Correction en cours…** — quelques secondes.
-6. **C'est fait** : la liste se met à jour. Le compte-rendu suit les images. Sur les deux demandes, une ligne rappelle la correction (qui, quand, pourquoi) ; elle est aussi dans **Paramètres → Journal**.
+5. Écrivez le **Motif** si vous le souhaitez (facultatif), lisez la phrase qui dit ce qui va se passer, puis cliquez sur **⇄ Déplacer les images** (ou **⇄ Échanger les images**). Ne fermez pas la fenêtre pendant **Correction en cours…** — quelques secondes.
+6. **C'est fait** : la liste se met à jour. Le compte-rendu suit les images. Sur les deux demandes, une ligne rappelle la correction (qui, quand, et le motif s'il a été écrit) ; elle est aussi dans **Paramètres → Journal**.
 
 À savoir :
 

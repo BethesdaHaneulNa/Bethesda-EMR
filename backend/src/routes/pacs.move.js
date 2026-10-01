@@ -38,7 +38,9 @@ const { isExam, OPEN_ON } = require('./pacs.exam');
 const router = express.Router();
 
 // Who (director, 2026-10-01): doctors and administrators - the consultation permission
-// or the settings permission. A reason is always required.
+// or the settings permission. A reason may be typed and need not be ("no need to always
+// write why - but the log must always be there"): the change-log line is written in the
+// same transaction as the EMR's records, and if it cannot be written nothing is moved.
 const mayMove = permMiddleware('consultation', 'settings');
 
 // What the screen is told. `code` is what it translates; `error` is the same in plain
@@ -54,7 +56,6 @@ const WHY = {
   NO_WORKLIST:        'The other order was never sent to the devices',
   TARGET_HAS_READING: 'The other order already has a reading of its own',
   BUSY:               'A correction is already in progress for one of these orders',
-  REASON:             'A reason is required',
   UNREACHABLE:        'The image server is not answering',
   NOT_PAIRED:         'The image server is not paired with the EMR',
   NOT_ON_SERVER:      'The image server does not have these images',
@@ -284,13 +285,17 @@ async function recordInEmr(req, move, made) {
         [to.id, from.result_text, from.result_by, from.result_at]);
       await client.query('UPDATE order_item SET result_text = NULL, result_by = NULL, result_at = NULL, updated_at = NOW() WHERE id = $1', [from.id]);
     }
-    await writeAudit(client, req, {
+    // The log line is part of the correction: no line, no correction (writeAudit never
+    // throws - it answers whether the line was written).
+    const logged = await writeAudit(client, req, {
       action: ACTIONS.PACS_STUDY_MOVE, patient_id: to.patient_id, visit_id: to.visit_id,
       entity: 'order_item', entity_id: to.id,
       summary: `${made.count} image(s): ${from.order_name} (${from.accession_no}) -> ${to.order_name} (${to.accession_no})`,
       before: { order_name: from.order_name, accession_no: from.accession_no },
-      after: { order_name: to.order_name, accession_no: to.accession_no, image_count: made.count, reading_moved: reading, reason: move.reason },
+      after: Object.assign({ order_name: to.order_name, accession_no: to.accession_no, kind: 'move', image_count: made.count, reading_moved: reading },
+                           blank(move.reason) ? {} : { reason: move.reason }),
     });
+    if (!logged) throw new Error('the change-log line could not be written');
     await client.query(
       `UPDATE pacs_study_move SET state = 'emr-done', step = 3, reading_moved = $2, error = NULL, updated_at = NOW() WHERE id = $1`, [move.id, reading]);
     await client.query('COMMIT');
@@ -390,8 +395,8 @@ async function finish(move) {
 // ── the whole of it, for one request ─────────────────────────────────────────
 const working = new Set();     // move ids being worked on in this process
 
-async function moveImages(req, fromId, toId, reason) {
-  if (blank(reason)) return fail('REASON');
+async function moveImages(req, fromId, toId, reasonTyped) {
+  const reason = String(reasonTyped || '').trim().slice(0, 500);     // optional
   const cfg = await config();
   if (!cfg.orthanc_password) return fail('NOT_PAIRED');
 
@@ -446,7 +451,7 @@ async function moveImages(req, fromId, toId, reason) {
                                     from_accession, to_accession, image_count, reason, detail, staff_id, staff_name)
        VALUES ('move', 'started', 0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [from.patient_id, from.id, to.id, from.order_name, to.order_name, from.accession_no, to.accession_no, source.length,
-       String(reason).trim().slice(0, 500), JSON.stringify(detail), req.user.id || null, req.user.name || req.user.login_id || null])).rows[0];
+       reason, JSON.stringify(detail), req.user.id || null, req.user.name || req.user.login_id || null])).rows[0];
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
@@ -606,13 +611,16 @@ async function recordSwapInEmr(req, move) {
       await client.query('UPDATE order_item SET result_text = $2, result_by = $3, result_at = $4, updated_at = NOW() WHERE id = $1', [o1.id].concat(say1));
       await client.query('UPDATE order_item SET result_text = $2, result_by = $3, result_at = $4, updated_at = NOW() WHERE id = $1', [o2.id].concat(say2));
     }
-    await writeAudit(client, req || { user: { id: move.staff_id, name: move.staff_name } }, {
+    // No log line, no exchange of the records (it is tried again later).
+    const logged = await writeAudit(client, req || { user: { id: move.staff_id, name: move.staff_name } }, {
       action: ACTIONS.PACS_STUDY_MOVE, patient_id: move.patient_id, visit_id: o2.visit_id,
       entity: 'order_item', entity_id: o2.id,
       summary: `${d.a.count} image(s) <-> ${d.b.count} image(s): ${o1.order_name} (${o1.accession_no}) <-> ${o2.order_name} (${o2.accession_no})`,
       before: { order_name: o1.order_name, accession_no: o1.accession_no, image_count: d.a.count },
-      after: { order_name: o2.order_name, accession_no: o2.accession_no, image_count: d.b.count, readings_exchanged: readings, reason: move.reason },
+      after: Object.assign({ order_name: o2.order_name, accession_no: o2.accession_no, kind: 'swap', image_count: d.b.count, readings_exchanged: readings },
+                           blank(move.reason) ? {} : { reason: move.reason }),
     });
+    if (!logged) throw new Error('the change-log line could not be written');
     const superseded = [{ study_uid: d.a.uid, instances: d.a.sops, replaced_by: d.o2.uid }, { study_uid: d.b.uid, instances: d.b.sops, replaced_by: d.o1.uid },
                         { study_uid: d.tmp_uid, instances: d.a.sops, replaced_by: d.o2.uid }];
     await client.query(
@@ -698,7 +706,7 @@ async function swapImages(req, cfg, from, to, reason) {
                                     from_accession, to_accession, image_count, reason, detail, staff_id, staff_name)
        VALUES ('swap', 'started', 0, $1, $2, $3, $4, $5, $6, $7, $8, $9, '{}', $10, $11) RETURNING *`,
       [f.patient_id, f.id, t.id, f.order_name, t.order_name, f.accession_no, t.accession_no, A.instances.length,
-       String(reason).trim().slice(0, 500), req.user.id || null, req.user.name || req.user.login_id || null]);
+       reason, req.user.id || null, req.user.name || req.user.login_id || null]);
     move = ins.rows[0];
     const a = pack(A, linkOf(f)), b = pack(B, linkOf(t)), tmp = tmpUid(move.id);
     move.detail = {
@@ -846,7 +854,7 @@ router.post('/move', authMiddleware, mayMove, async (req, res) => {
     const b = req.body || {};
     const out = await moveImages(req, b.from_order_item_id, b.to_order_item_id, b.reason);
     if (out.ok) return res.json(out);
-    const status = out.code === 'NOT_FOUND' ? 404 : out.code === 'REASON' ? 400 : ['UNREACHABLE', 'NOT_PAIRED'].includes(out.code) ? 424 : 409;
+    const status = out.code === 'NOT_FOUND' ? 404 : ['UNREACHABLE', 'NOT_PAIRED'].includes(out.code) ? 424 : 409;
     res.status(status).json(out);
   } catch (err) { console.error('[pacs move]', err.message); res.status(500).json({ error: 'Server error' }); }
 });

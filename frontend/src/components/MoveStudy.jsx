@@ -5,7 +5,8 @@ import { api } from '../api/client.js';
 // patient on the device. This window puts them under the right order - on the image
 // server itself (the study number, accession and names inside the images) and in the
 // EMR (director, 2026-10-01; server: backend/src/routes/pacs.move.js). Doctors and
-// administrators, always with a reason; the reading goes with the images.
+// administrators; the reading goes with the images. A reason may be typed and need not
+// be - the correction is written in the change log either way.
 //   - the other order has no images -> the images move there, and the order they left
 //     goes back on the device's list;
 //   - the other order has images too -> the two orders exchange images and readings.
@@ -34,8 +35,10 @@ export function moveWhy(t, code, fallback) {
 export function moveLine(t, m) {
   var open = m.state !== 'done' && m.state !== 'rolled-back' && m.state !== 'failed';
   var text = fill(m.kind === 'swap' ? t.px_mvLogSwap : t.px_mvLogMove,
-    { who: m.staff_name || '', n: m.image_count == null ? '?' : m.image_count, m: m.other_image_count == null ? '?' : m.other_image_count, a: m.from_order_name || '', b: m.to_order_name || '', why: m.reason || '' });
-  return ymd(m.created_at) + ' — ' + text + (open ? ' — ' + t.px_mvLogPending : '');
+    { who: m.staff_name || '', n: m.image_count == null ? '?' : m.image_count, m: m.other_image_count == null ? '?' : m.other_image_count, a: m.from_order_name || '', b: m.to_order_name || '' });
+  // The reason only when one was typed.
+  var why = String(m.reason || '').trim();
+  return ymd(m.created_at) + ' — ' + text + (why ? ' — ' + fill(t.px_mvLogWhy, { why: why }) : '') + (open ? ' — ' + t.px_mvLogPending : '');
 }
 
 export function MoveStudy(props) {
@@ -55,7 +58,7 @@ export function MoveStudy(props) {
 
   var src = data && data.source;
   var chosen = data && target ? data.targets.filter(function (x) { return x.order_item_id === target; })[0] : null;
-  var ready = !!chosen && chosen.can && reason.trim() !== '' && !busy && !outcome;
+  var ready = !!chosen && chosen.can && !busy && !outcome;
 
   async function go() {
     if (!ready) return;
@@ -126,7 +129,7 @@ export function MoveStudy(props) {
                 </label>;
               })}
             </div>
-            {/* 3. why */}
+            {/* 3. why - optional */}
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{t.px_mvReason}</span>
               <input value={reason} disabled={busy || !!outcome} maxLength={300} onChange={function (e) { setReason(e.target.value); }} placeholder={t.px_mvReasonPh}

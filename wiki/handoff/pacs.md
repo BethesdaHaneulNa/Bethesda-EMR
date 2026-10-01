@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상 옮기기: 사유는 선택 · 변경 기록은 필수 · develop 합침 · en/밝은 화면/긴 이름
+
+- **상태**: 확인 요청 (①②③과 함께 읽어 주세요)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋. 그 앞에 **develop `d18d590`을 합친 커밋 `1bf7b69`**(ff가 안 되어 `git merge develop` — 충돌 없음). **PACS 저장소** — 없음(`fd095b2` 그대로)
+- **실장님 결정**: 「누가에서 사유를 반드시 적을 필요는 없어. 다만 로그는 무조건 남아야겠지」.
+- **한 일**:
+  1. 서버(`pacs.move.js`): 사유 없이도 통과(`reason`은 빈 글로 저장 — 표의 NOT NULL 그대로), 답 `REASON` 없앰. **변경 기록 줄을 못 쓰면 옮기지 않음**: 공용 `writeAudit`는 실패해도 던지지 않고 거짓을 돌려주므로, 그 답을 보고 트랜잭션을 되돌림. 줄의 내용: 누가 · 환자 · 요약(영상 장수와 두 오더의 이름·accession) · `kind`(move/swap) · `image_count` · `reading_moved`/`readings_exchanged` · 사유가 있으면 `reason`(없으면 그 칸 자체가 없음).
+  2. 화면(`MoveStudy.jsx`): 사유 칸 «Motif (facultatif)» / 「사유 (선택)」 / "Reason (optional)", 오더만 고르면 단추가 켜짐. 옮긴 기록 줄은 사유가 있을 때만 「— motif : …」.
+  3. develop을 합친 뒤 `Consultation.jsx`의 두 줄(`correcting:…`, `px_mvViewerBusy`)이 그대로 있는지 확인 — 있음(315줄 · 1901줄), 빌드됨.
+- **바꾼 파일**: `backend/src/routes/pacs.move.js`, `backend/sql/801_pacs_study_move.sql`(주석만), `frontend/src/components/MoveStudy.jsx`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(10절), `wiki/modules/pacs.md`(2.4.2·4절·8절), `wiki/reference/study-reassign-design.md`, `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션**: 없음(801은 주석만 — 아직 develop에 없는 파일).
+- **번역 키** (px_ 구역; 모두 ②에서 넣은 것 — 아직 합쳐지지 않음): 글 바꿈 `px_mvReason` · `px_mvNeed` · `px_mvLogMove` · `px_mvLogSwap`(사유 부분을 뺌) / 새 키 `px_mvLogWhy` / 뺀 키 `px_mvErr_REASON`.
+- **변경 기록의 칸 이름(설정 세션에 한 번에)**: `order_name` · `accession_no`(이미 있음) · **`kind`** · **`image_count`** · **`reading_moved`** · **`readings_exchanged`** · `reason`(이미 있음). 동작 `pacs.study.move`, module `pacs`.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 가짜 환자):
+  - **기록을 못 쓰게 하고**(변경 기록 표에 그 동작의 INSERT를 거절하는 트리거를 잠깐): 옮기기 → 409 `NOT_CORRECTED`, 줄 `rolled-back`, 영상은 제자리·그림 같음, 다른 번호 아래 검사 없음, EMR 그대로, 변경 기록 0줄. 맞바꾸기 → 영상 서버 쪽은 끝났지만 EMR 기록은 안 바뀌고 `cleanup-pending`(6단계), 트리거를 없애고 resume → `done`, 그때 한 줄.
+  - **사유 없이 옮기기**: 200 `done`. 변경 기록 줄 — 사람 · 환자 · 「3 image(s): Urinary US (Renal+Bladder) (261001-68) -> Carotid US (261001-63)」 · `kind: move` · `image_count: 3` · `reading_moved: false`, **`reason` 칸 없음**. 옮긴 기록의 `reason`은 빈 글.
+  - **사유를 적고**: 변경 기록 줄의 `reason`에 그대로.
+  - **화면 — en · 밝은 테마 · 1366×768 · 긴 이름**(환자 이름 네 낱말 80자쯤, 검사 이름 131자): 「⇄ Correct the order…」 → 창 "The images are under the wrong order", 목록의 긴 검사 이름은 한 줄에서 「…」로 줄고(마우스를 올리면 전부), 「Reason (optional)」, 오더만 고르자 단추가 켜짐, 확인 글에는 긴 이름이 **전부** 두 줄로, 「✓ Done: the images are under the right order.」, 뒤 목록 바뀜, 받은 오더의 상세에 「⇄ 2026-10-01 — RABE Hery moved 2 image(s) from "SONO(5)" to "Échographie rénale, … (bilatérale)"」(사유 부분 없음). 받은 오더에 있던 자기 판독은 그대로(옮길 판독이 없었으므로).
+  - **요청이 끊겼을 때 화면**: 코드 — 실패든 성공이든 답이 오면(또는 요청이 오류로 끝나면) 목록과 옮긴 기록을 다시 읽고, 서버의 `code`가 없는 오류(네트워크·nginx)면 「Regardez la liste : la ligne d'historique de l'examen dit si la correction a eu lieu」를 덧붙임. 실제로 nginx에서 끊기게 해 보지는 못함(작은 검사는 0.2~0.4초).
+  - **회귀**(develop을 합친 코드에서): 중계 15/15, 비교 32/32, 체크 비교 23/23. 열린 바로잡기 줄 0, `failed` 0.
+- **확인 못 한 것**: nginx 시간 초과를 실제로 일으키는 것. ko·fr 밝은 화면(en만). 「종이(paper)」 테마.
+- **다른 세션에 부탁**: 설정 — 위 칸 이름. 진료 — `Consultation.jsx` 두 줄(②에 적은 것 그대로).
+
 ## 2026-10-01 — 영상을 다른 오더로 옮기기 ③ 영상 백업·복원 · device-watch · README
 
 - **상태**: 확인 요청 (①②③ 모두 끝 — 올릴 때 **EMR과 PACS 폴더를 함께**)

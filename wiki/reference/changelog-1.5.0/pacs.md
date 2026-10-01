@@ -29,7 +29,8 @@ A technician can pick another line of the same patient on the device - "Carotid 
 Abdomen US". The images then carry that order's study number, accession and name, in the EMR and on the
 image server, and nothing can notice it: the patient is right. A doctor (or an administrator) now
 corrects it from the imaging list: **⇄ Corriger la demande…** on the exam, the right order chosen from the
-same patient's orders of the same device type, a reason typed. If the right order has no images they move
+same patient's orders of the same device type (a reason may be typed; the change log gets its line
+either way). If the right order has no images they move
 there and the order they left goes back on the device's list; if it has images too, the two orders
 exchange them. The reading goes with the images.
 
