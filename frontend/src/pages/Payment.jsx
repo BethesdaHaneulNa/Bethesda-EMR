@@ -516,8 +516,10 @@ export default function PaymentPage() {
         <button onClick={loadLists} style={{background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',flex:1,minHeight:0}}>
-        <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn}}>
+      {/* one row as tall as the space left, and the left column clipped like the other two:
+          a long list scrolls inside its column instead of stretching the whole page */}
+      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',gridTemplateRows:'minmax(0,1fr)',flex:1,minHeight:0}}>
+        <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn,overflow:'hidden',minHeight:0}}>
           <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd,background:viewingPast?'var(--warn-a14)':'var(--panel-2)'}}>
             <div style={{display:'flex',alignItems:'center',gap:5}}>
               <span style={{fontSize:12,fontWeight:700,color:viewingPast?'var(--warn-text)':t2,whiteSpace:'nowrap'}}>{t.rc_workDate}</span>
