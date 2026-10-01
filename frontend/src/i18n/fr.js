@@ -424,6 +424,18 @@ export default {
   cs_backHasRecords: "Cette consultation contient déjà des données (note, constantes, prescription, examen, document ou facture) : elle ne peut pas être remise en attente.",
   cs_backNotStarted: "Cette visite n'est plus « En consultation ». L'écran a été relu.",
   cs_nothingToSave: "Rien à enregistrer",
+  // Médecins affichés dans la file d'attente (directeur, 2026-10-01)
+  cs_qfTitle: "Médecins affichés dans la file",
+  cs_qfHint: "Seuls les patients des médecins cochés apparaissent dans votre file d'attente. Le choix est gardé pour votre compte, sur tous les ordinateurs.",
+  cs_qfAllDoctors: "Tous les médecins",
+  cs_qfUnassigned: "Patients sans médecin",
+  cs_qfNoDoctor: "sans médecin",
+  cs_qfEveryone: "tous les patients",
+  cs_qfShown: "Affichés : {list}",
+  cs_qfNone: "Cochez au moins une ligne pour enregistrer.",
+  cs_qfDefault: "Par défaut",
+  cs_qfDefaultHint: "Par défaut : un médecin voit ses patients et les patients sans médecin ; les autres comptes voient tous les patients.",
+  cs_qfSaved: "Réglage de la file enregistré",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",

@@ -126,6 +126,62 @@ async function orderProduced(client, orderId, resultText) {
   return r.rows[0].yes;
 }
 
+// ── The waiting list's doctors (director, 2026-10-01) ──
+// Which doctors' patients the signed-in account's waiting list shows (migration
+// consultation_queue_filter). No row = the rule the screen always had: a doctor sees
+// their own patients and the patients with no doctor, any other account sees all.
+// Only ever the signed-in account's: the id comes from the token. A preference, like
+// the theme - not written to the change log.
+// These paths are declared before PUT /:id, which would otherwise take them.
+function queueFilterBody(row) {
+  if (!row) return { custom: false };
+  return { custom: true, all_doctors: row.all_doctors, doctor_ids: row.doctor_ids || [], unassigned: row.unassigned };
+}
+
+// GET /api/consultations/queue-filter -> { custom:false } | { custom:true, all_doctors, doctor_ids, unassigned }
+router.get('/queue-filter', canConsult, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT all_doctors, doctor_ids, unassigned FROM consultation_queue_filter WHERE staff_id = $1', [req.user.id]);
+    res.json(queueFilterBody(r.rows[0]));
+  } catch (err) { sendDbError(res, err); }
+});
+
+// PUT /api/consultations/queue-filter { all_doctors, doctor_ids: [id], unassigned }
+// Ids that are not a doctor's account are dropped (a doctor removed since the window was
+// opened). A choice that would show nobody - no doctor and not the patients without a
+// doctor - is refused (400): the list would be empty with nothing on screen to say why.
+router.put('/queue-filter', canConsult, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const all = b.all_doctors === true;
+    const unassigned = b.unassigned === true;
+    const ids = Array.isArray(b.doctor_ids) ? b.doctor_ids : null;
+    if (!ids || ids.length > 500 || ids.some((x) => !Number.isInteger(x) || x <= 0)) {
+      return res.status(400).json({ error: 'doctor_ids must be a list of staff ids' });
+    }
+    const known = all ? { rows: [] }
+      : await pool.query("SELECT id FROM staff WHERE id = ANY($1::int[]) AND role = 'doctor' ORDER BY id", [ids]);
+    const kept = known.rows.map((r) => r.id);
+    if (!all && kept.length === 0 && !unassigned) return res.status(400).json({ error: 'Choose at least one doctor' });
+    const r = await pool.query(
+      `INSERT INTO consultation_queue_filter (staff_id, all_doctors, doctor_ids, unassigned)
+       VALUES ($1, $2, $3::int[], $4)
+       ON CONFLICT (staff_id) DO UPDATE SET all_doctors = EXCLUDED.all_doctors, doctor_ids = EXCLUDED.doctor_ids,
+                                            unassigned = EXCLUDED.unassigned, updated_at = NOW()
+       RETURNING all_doctors, doctor_ids, unassigned`,
+      [req.user.id, all, kept, unassigned]);
+    res.json(queueFilterBody(r.rows[0]));
+  } catch (err) { sendDbError(res, err); }
+});
+
+// DELETE /api/consultations/queue-filter - back to the default rule.
+router.delete('/queue-filter', canConsult, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM consultation_queue_filter WHERE staff_id = $1', [req.user.id]);
+    res.json({ custom: false });
+  } catch (err) { sendDbError(res, err); }
+});
+
 // ── Waiting / in consultation (decision (다), 2026-10-01) ──
 //
 // Opening a patient no longer starts anything. The director, with the clinic's staff on

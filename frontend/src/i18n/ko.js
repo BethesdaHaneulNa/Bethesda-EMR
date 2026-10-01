@@ -424,6 +424,18 @@ export default {
   cs_backHasRecords: "이 진료에는 이미 기록(기록·바이탈·처방·오더·서류·수납)이 있어서 대기로 되돌릴 수 없습니다.",
   cs_backNotStarted: "이 내원은 지금 「진료 중」이 아닙니다. 화면을 다시 읽었습니다.",
   cs_nothingToSave: "저장할 것이 없습니다",
+  // 진료대기 현황에 보일 의사 (실장님 2026-10-01)
+  cs_qfTitle: "대기 현황에 보일 의사",
+  cs_qfHint: "체크한 의사의 환자만 내 진료대기 현황에 나옵니다. 이 설정은 내 계정에 기억되어 다른 PC에서도 같습니다.",
+  cs_qfAllDoctors: "의사 전체",
+  cs_qfUnassigned: "의사가 정해지지 않은 환자",
+  cs_qfNoDoctor: "의사 미지정",
+  cs_qfEveryone: "전체 환자",
+  cs_qfShown: "표시: {list}",
+  cs_qfNone: "한 줄 이상 체크해야 저장할 수 있습니다.",
+  cs_qfDefault: "기본값으로",
+  cs_qfDefaultHint: "기본값: 의사 계정은 내 환자와 의사가 정해지지 않은 환자, 그 밖의 계정은 전체 환자.",
+  cs_qfSaved: "대기 현황 설정을 저장했습니다",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

@@ -156,6 +156,16 @@ anything and without pressing **Terminé** stays *En attente*, and reception's
 **Terminer →** on a waiting visit closes it without the consultation fee. Doctors should
 press **Terminé** for every patient they see.
 
+### Each account chooses whose patients its waiting list shows
+
+A doctor's waiting list showed that doctor's patients and the patients registered with
+no doctor; every other account saw everyone, and nobody could change it. A **⚙** button
+at the top of the waiting list now opens the list of doctors: tick the ones whose
+patients you want to see, and whether to include the patients with no doctor. The count
+on the waiting-list button follows. The choice is kept for the account, so it is the
+same on another computer; accounts that never open it see what they saw before. A line
+under the search box always says whose patients are listed.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**

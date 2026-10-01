@@ -433,6 +433,18 @@ export default {
   cs_backHasRecords: "This consultation already has records (note, vital signs, prescription, order, document or bill): it cannot go back to waiting.",
   cs_backNotStarted: "This visit is not in consultation any more. The screen has been read again.",
   cs_nothingToSave: "Nothing to save",
+  // Doctors shown in the waiting list (director, 2026-10-01)
+  cs_qfTitle: "Doctors shown in the waiting list",
+  cs_qfHint: "Only the patients of the doctors you tick appear in your waiting list. The choice is kept for your account, on every computer.",
+  cs_qfAllDoctors: "All doctors",
+  cs_qfUnassigned: "Patients with no doctor",
+  cs_qfNoDoctor: "no doctor",
+  cs_qfEveryone: "all patients",
+  cs_qfShown: "Shown: {list}",
+  cs_qfNone: "Tick at least one line to save.",
+  cs_qfDefault: "Default",
+  cs_qfDefaultHint: "Default: a doctor sees their own patients and the patients with no doctor; other accounts see all patients.",
+  cs_qfSaved: "Waiting list setting saved",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
