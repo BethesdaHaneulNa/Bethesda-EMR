@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 오른쪽 「Dossier Patient」 안쪽이 바뀐 뒤 약국 화면 확인 + 문서 맞춤 (develop `96c960e`)
+
+- **상태**: 확인 요청. develop `96c960e`를 merge(ff)한 뒤 위키만. 코드 변경 없음.
+- **한 일**: 수납 세션이 바꾼 공용 `PatientChart`(카드 머리 「날짜 + 과 의사」, 의사별 기록, 처음 세 줄 + … + 마지막 줄)를 약국 화면에서 확인하고, 그 칸 설명을 지금 모양으로 맞춤.
+- **바꾼 파일**: `wiki/modules/pharmacy.md` 2.1 표(오른쪽 칸 설명), 5절 `PatientChart.jsx` 줄 · `wiki/manual-fr/pharmacy.md` 「Remettre les médicaments」 2단계(카드 = 날짜·과·의사 + 기록의 처음과 **마지막 줄**, 「Contrôle dans 3 jours」를 약을 줄 때 환자에게 다시 말해 주기, 카드를 누르면 전체 · **← Retour**).
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**(격리 9184, 1366×768, FR, 가짜 환자 RAKOTO Jean — 내원 3건: 6일 전·3일 전(의사 둘이 적음)·오늘 조제 대기, 기록은 5줄씩이고 마지막 줄이 재진 안내):
+  - 오른쪽 칸 폭 319px, 가로 넘침 없음(카드 301 = scrollWidth), 세 카드가 스크롤 없이 다 보임(칸 높이 609 = scrollHeight). 문서 높이 768 그대로.
+  - 카드마다 마지막 줄이 통째로 보임: « Prochain rendez-vous dans 1 mois, apporter le carnet. »(두 줄로 접힘) · « Revenir si la fièvre reprend. » / « Contrôle de la tension dans 2 semaines. »(의사 둘, 각자 「이름 · 시각」 머리) · « Contrôle dans 3 jours. »
+  - 조제 흐름과 겹치지 않음: 칸은 x 1046–1366, 아래 **✓ Terminer délivrance** 는 오른쪽 끝 1030 · 아래 끝 758. 카드를 눌러 지난 내원을 연 채로도 가운데 처방 표와 단추는 그대로이고, 그 상태에서 조제 완료 → 확인 창 « Terminer la délivrance pour RAKOTO Jean ? » → Délivré로 넘어감.
+- **폭 제안(바꾸지 않음)**: **1366에서는 320px 그대로**가 좋겠습니다. 한 줄에 45자쯤 들어가고 마지막 줄은 두 줄(90자쯤)까지 보이므로 「3일 뒤 재진」 같은 안내는 다 보입니다. 넓히면 가운데 처방 표(지금 716px, 여덟 칸 — 「Quantité totale absente」가 이미 세 줄로 접힘)가 먼저 좁아집니다. 더 넓은 화면에서만 넓히고 싶다면 격자를 `330px minmax(0,1fr) clamp(320px, 24vw, 420px)`로(1366 → 328, 1600 → 384, 1920 → 420) — 필요하면 말씀 주세요.
+- **확인 못 한 것**: 과(dept)가 붙은 의사(머리 「GEN Dr. …」) — 격리 시험 계정에 과가 없어 머리에 이름만 나왔음. 마지막 줄이 90자를 넘는 긴 안내가 잘리는 모양. 밝은 화면에서 이 칸.
+
 ## 2026-09-30 — 오른쪽 칸 이름 「Dossier Patient」에 문서 맞춤 (총괄 `e4df1d8`)
 
 - **상태**: 확인 요청. develop `e4df1d8`을 merge(ff)한 뒤 위키만.
