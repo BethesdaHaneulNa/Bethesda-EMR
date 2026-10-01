@@ -424,6 +424,18 @@
 
 그 밖에 수납 화면이 부르는 것: `GET /api/admin/order-codes?code_type=fee`(발급비 목록 — 사용 중인 코드만. 진료비는 여기서 읽지 않음), `PUT /api/visits/:id`(진료 종류 저장).
 
+### 시험 자료용 도구 — `wiki/reference/tools/pay-visit.js` (2026-10-01)
+
+내원 하나를 **수납 화면이 하는 그대로** 수납하는 스크립트입니다(시험 차트를 여러 상태로 만들 때). 화면(`Payment.jsx`)의 계산 — 항목 만들기(`chargeRows`) · 할인 · 이월 · 총액 · 거스름돈 · 상태 — 을 그대로 옮겨, 같은 본문을 같은 경로(`POST /billing` · `/correct` · `/void` · `/settle`)로 보냅니다. DB에 직접 쓰지 않습니다. **화면의 계산을 바꾸면 이 파일도 같이 바꿉니다.**
+
+- 실행: api 컨테이너 안에서 `node pay-visit.js <visit_id> <mode> [값] [옵션]`. 관리자(또는 `--as=login_id`) 토큰을 스스로 만듭니다.
+- mode: `paid`(Exact 후 확정) · `partial <받은 돈>` · `overpay <받은 돈>`(거스름돈) · `unpaid`(미수 처리) · `discount <금액|n%> [paid|partial …|overpay …|unpaid]` · `correct`(정정 적용) · `void <billing_id> <refunded|kept> [사유]` · `settle`(그 환자의 미수 전부, 내원마다 영수 한 장) · `settle-bill <billing_id> [금액]` · `show`(쓰지 않고 보기만).
+- 옵션: `--type=newVisit|followUp|none`(진료 종류 고르기) · `--fee=CERT,CDR`(창구 발급비) · `--yes-zero-price`(「가격 없는 항목 — 그래도 수납?」에 예) · `--as=` · `--port=`.
+- 이미 수납한 내원에 항목이 늘었으면 같은 명령으로 **추가분만** 청구됩니다(Supplément). 영수증을 취소한 내원도 같은 명령으로 재수납됩니다.
+- 화면에 없는 것은 넣지 않았습니다: 할인 칸은 금액만 받으므로 `n%`는 소계의 n%를 반올림해 **금액으로** 넣고, 메모 칸은 없으므로 메모는 늘 빈칸입니다.
+- 마지막 줄: `영수번호 · total · received · change · unpaid · 상태`. 거절되면 `REFUSED <코드> <글>`과 종료 코드 1.
+- 확인(격리, 2026-10-01): 모든 mode를 한 번씩 돌렸고, 똑같은 내원 둘을 하나는 스크립트로 하나는 화면에서 수납해 `billing` · `billing_item` · `cash_movement` 줄이 **같음**을 봤습니다. 뒤이어 장부 식 16명 틀림 0.
+
 ### 공용 부품
 
 - `frontend/src/components/PatientChart.jsx` — **수납 주관**, 수납·약국이 씀. 읽기 전용 과거 진료 패널: `GET /api/patients/:id/history`(진료 목록) → 누르면 `GET /api/consultations/:id/prescriptions`, `/orders`로 그날 노트·바이탈·처방·오더를 보여줌. 돈과는 관계없음. 오더 줄의 상태는 진료 화면(`Consultation.jsx` `orderStatus`)과 **같은 규칙·같은 글자**(`cs_lab*`·`cs_ws*` 키): 검사(lab)는 결과 대기/결과 있음/취소, 영상 워크리스트로 보낸 오더는 전송 전/전송됨/촬영 중/촬영 완료/취소, 그 밖의 오더는 표시 없음. 처방 줄은 약국 소유의 `documents/rx-dosing.js` `doseSentence()`로 약국·진료 화면과 같은 문장(「1 cp × 3 fois/jour pendant 7 jours (total 21)」, 1회량이 나눠지지 않으면 「… par jour en N prises …」), 예전 계산식으로 저장된 줄은 노랗게 「total enregistré N (ancien calcul)」(`isLegacyTotal`, 진료 `cs_rxStoredTotal` 키) — dose가 2026-09-29부터 하루 총량이라 예전 「용량×횟수×일수d」 표시는 뜻이 틀려짐(진료 부탁). 오더 상태: 워크리스트가 없는 오더는 처음부터 `worklist_status='completed'`로 저장되어, 예전처럼 그대로 보이면 결과 없는 검사에 영어 「completed」가 붙었음(2026-09-29, PACS 세션 부탁).
@@ -603,4 +615,5 @@
 | 2026-10-01 | 접힌 줄 「지난 날 처리할 것 (N)」을 뺌 — 목록은 고른 작업일자의 내원만(실장님 결정, 앞의 (가)를 바꾸심) · 환자 찾기가 「수납 완료」 탭에서도 열리고, 정정 · 재수납이 걸린 내원을 그 화면으로 엶 · 날짜 칸 글자가 잘리지 않음 | `Payment.jsx` `listRows` · `openPicked` · `pickRef`, `py_pastToDo` 지움, 위키 2.1 · 2.4, 프랑스어 설명서 §10 · §13 | `ceccbf5` |
 | 2026-10-01 | 설명서에 「하루를 마칠 때」 한 절 — 남은 환자는 Impayé로 넘겨 대기를 비우고 금고를 맞춤(실장님: 결산은 그날그날) | 프랑스어 설명서 §14(+ §3 · §10에서 가리킴), 위키 2.1 | `b44055d` |
 | 2026-10-01 | 긴 이름(50~89자, 띄어쓰기 없는 41자)에서 목록 꼬리표가 늘어나거나 접히지 않고, 이름이 잘리지 않음 · 영수증의 환자 표가 종이 폭을 넘지 않음 · 환자 차트 카드 머리의 의사 이름이 「…」로 잘리지 않음 | `Payment.jsx` 목록 줄 · 꼬리표 · 환자 머리 · 수납 상세 머리, `Receipt.jsx` `nameCell`, 공용 `PatientChart.jsx` 카드 머리, 위키 2.1 | `f42c253` |
-| 2026-10-01 | 목록 검색을 임상병리와 같은 동작으로 — 검색으로 다 가려지면 따로 안내, 앞뒤 빈칸 무시, 이름을 두 순서로 · 지난 날짜의 빈 「수납 완료」 목록이 「오늘 …없습니다」 대신 「이 날짜에 …없습니다」 | `Payment.jsx` `matches` · `baseCount` · `foundCount`, `layout.js`의 `LIST_SEARCH*` · `ROW_EMPTY` 읽어 씀, `py_searchPh` · `py_searchNone` · `py_nonePaidThatDay`, 위키 2.1, 프랑스어 설명서 §1 | (이 커밋) |
+| 2026-10-01 | 목록 검색을 임상병리와 같은 동작으로 — 검색으로 다 가려지면 따로 안내, 앞뒤 빈칸 무시, 이름을 두 순서로 · 지난 날짜의 빈 「수납 완료」 목록이 「오늘 …없습니다」 대신 「이 날짜에 …없습니다」 | `Payment.jsx` `matches` · `baseCount` · `foundCount`, `layout.js`의 `LIST_SEARCH*` · `ROW_EMPTY` 읽어 씀, `py_searchPh` · `py_searchNone` · `py_nonePaidThatDay`, 위키 2.1, 프랑스어 설명서 §1 | `d44a503` |
+| 2026-10-01 | 시험 자료용: 내원 하나를 화면이 하는 그대로 수납하는 스크립트(총괄 부탁 — 실장님 「시험 차트 30개로 모든 상황을」) | `wiki/reference/tools/pay-visit.js`, 위키 4절 | (이 커밋) |

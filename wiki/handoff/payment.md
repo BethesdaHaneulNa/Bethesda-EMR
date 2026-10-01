@@ -2,6 +2,60 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 내원 하나를 화면이 하는 그대로 수납하는 스크립트 (총괄 부탁)
+
+- **상태**: 확인 요청
+- **커밋**: session/payment (이 항목과 같은 커밋) · develop `2985823` 위
+- **파일**: `wiki/reference/tools/pay-visit.js` — 쓰는 법은 파일 머리와 모듈 문서 4절.
+- **까닭**: 실장님 「시험 차트 30개로 모든 상황을 다 만들어 놔 봐」. 총괄이 실행 중 EMR에서 직접 돌립니다(수납 세션은 실행 중 EMR을 건드리지 않음).
+
+### 어떻게 만들었나
+
+- `Payment.jsx`의 계산을 줄 단위로 옮겼습니다: `rxQty` · `orderQty` · `chargeRows`(이미 청구된 것을 코드 · 수량으로 빼고 남은 것만) · 할인 · 이월 미수 · 총액 · 거스름돈 · 상태 고르기(`doConfirmNow`) · 정정(`confirmCorrectionNow`) · 취소(`voidConfirmNow`) · 미수 수납(`settleConfirmNow` · `settleAllNow`).
+- 서버에는 화면과 같은 경로로 같은 본문을 보냅니다. DB에 직접 쓰는 것은 없습니다(읽기만: 내원의 환자 번호, 관리자 계정, 영수증의 내원).
+- 화면이 수납 전에 막거나 묻는 것도 같게: 총량 없는 처방은 거절, 가격 0인 항목은 `--yes-zero-price`가 있어야 진행, 이미 다 수납된 내원은 거절, 정정 표시된 내원은 `correct`로만.
+- 수납 뒤 화면이 하는 `PUT /visits/:id {visit_type}`도 그대로 합니다.
+- 화면에 없는 것은 넣지 않았습니다. 할인 칸은 금액만 받으므로 `discount 10%`는 소계의 10%를 반올림해 금액으로 넣습니다. 메모 칸이 없으므로 메모는 빈칸입니다.
+
+### 격리에서 돌려 본 것 (api 컨테이너 안에서 실행)
+
+| 명령 | 마지막 줄 |
+|---|---|
+| `1 paid` | R-…0001 · total 102300 · received 102300 · change 0 · unpaid 0 · paid |
+| `2 partial 50000` | total 102300 · received 50000 · unpaid 52300 · partial |
+| `3 unpaid` | total 102300 · received 0 · unpaid 102300 · unpaid |
+| `4 discount 2300` | total 100000 · received 100000 · paid |
+| `5 discount 10% partial 40000` | total 92070 · received 40000 · unpaid 52070 · partial |
+| `6 overpay 110000` | total 102300 · received 110000 · change 7700 · paid |
+| `11 paid --fee=CERT,CDR` | total 120300 · paid |
+| `12 paid --type=none` | total 7300(진료비 없음) · paid |
+| `13 paid` → `13 paid --yes-zero-price` | 거절(가격 없는 항목) → total 15000 · paid |
+| `14 paid` | 거절(총량 없는 처방) |
+| `7 paid`(수납 뒤 약이 늘어난 내원) | supplement · total 7000 · paid |
+| `8 paid` → `8 correct`(수납 뒤 약이 빠진 내원) | 거절(정정으로) → correction · total 96000 · received 102300 · change 6300 |
+| `9 void 12 kept …` → `9 paid` | cancelled → re-bill · total 102300 · paid |
+| `10 void 13 refunded …` → `10 unpaid` | cancelled → re-bill · unpaid 102300 |
+| `15 paid`(부분 수납 환자의 새 내원) | total 62300(진료비 10000 + 이월 52300) · paid |
+| `3 settle-bill 3 30000` → `3 settle` | settlement · received 30000 · unpaid 72300 → settlement · 72300 · paid |
+| 틀린 쓰임(다른 내원의 영수 취소, 미수보다 큰 금액, 모르는 mode) | 거절 또는 쓰는 법 |
+
+- 위 표는 할인 `n%`를 금액으로 바꾸고 메모 옵션을 빼기 **전** 판으로 돌린 것입니다(바뀐 곳은 할인 · 메모 두 줄뿐). 바꾼 뒤 커밋한 파일로 다시 돌린 것: `16 discount 2300 partial 50000 --fee=CERT`(아래 비교), `18 discount 10% overpay 100000`(total 91170 · change 8830 · paid), `19 discount 10% unpaid`(unpaid 91170). 컨테이너에서 돌린 파일과 커밋한 파일이 같은 것을 확인했습니다.
+- **화면과 같은가**: 똑같은 내원 둘(진료비 + 약 + 처치 80 000)을 하나는 스크립트(`discount 2300 partial 50000 --fee=CERT`), 하나는 화면에서 같은 순서로 수납 — `billing` 18칸, `billing_item`, `cash_movement`, 내원의 진료 종류가 **모두 같음**.
+- 화면의 「수납 완료」 목록(21줄)과 상세: 스크립트가 찍은 영수번호 · 총액 · 상태와 같음. 넘어간 영수는 「Reporté → solde réglé sur le reçu …」.
+- 장부 식(`inv.mjs`): 16명 틀림 0.
+- 보지 않은 것: 실행 중 EMR에서는 돌리지 않았습니다(총괄 몫). `--as`(다른 수납 직원)와 `--port`는 돌려 보지 않았습니다.
+
+### 총괄께 — 수납 전에 알아 둘 순서
+
+1. **조제와 수납은 서로 기다리지 않습니다.** 조제 전이든 후든 수납됩니다. 다만 약국에서 **원내 ↔ 원외를 바꾸면** 청구 대상이 달라집니다(원외 처방은 청구하지 않음) — 수납 **전에** 정해 두세요. 수납 뒤에 바꾸면 그 내원이 「정정」 또는 「추가 청구」로 뜹니다.
+2. **수납 뒤에 처방 · 오더를 더하면 「추가 청구」, 빼거나 오더를 취소하면 「정정」**이 됩니다. 이 두 상태를 일부러 만들 때 이 순서를 쓰세요(추가 → 같은 명령으로 `paid`, 빼기 → `correct`). 그대로 두면 대기 목록에 그 꼬리표로 남습니다.
+3. **총량 없는 처방**(`total_qty`가 비어 있음)이 하나라도 있으면 수납이 막힙니다. `show`로 먼저 보면 「MISSING QUANTITY」가 나옵니다.
+4. **가격 0인 약 · 오더**는 `--yes-zero-price` 없이는 거절됩니다(화면은 한 번 묻습니다).
+5. **한 번 수납한 내원은 다시 수납되지 않습니다**(부분 · 미수여도). 남은 돈은 `settle` / `settle-bill`로 받습니다. 그 환자의 **다음 내원**을 수납하면 미수가 자동으로 이월됩니다(`15 paid`처럼) — 단, 그 내원이 수납 대기 목록에 있을 때(진료 완료)만 이월 금액이 붙습니다. 진료가 끝나지 않은 내원을 수납하면 화면의 환자 찾기와 같이 이월 없이 그 내원 것만 청구됩니다.
+6. **영수 취소**: 미수가 뒤 영수로 넘어간 영수는 먼저 뒤 영수를 취소해야 합니다(`REFUSED 409 BILL_CARRIED: R-…`). 돈을 받은 영수는 `refunded`(돌려줌) / `kept`(금고에 둠) 중 하나를 꼭 적습니다 — `kept`면 재수납 때 그 돈이 이어집니다.
+7. **날짜**: 영수증과 현금 기록은 늘 서버의 오늘입니다. 지난 날짜 영수는 만들 수 없습니다(현금 기록은 덧붙이기만 됨).
+8. **수납 직원**: 기본은 첫 관리자 계정. 영수증의 「Caissier」를 수납 직원 이름으로 하려면 `--as=login_id`(수납 권한이 있는 계정).
+
 ## 2026-10-01 — 목록 검색을 임상병리와 같은 동작으로 (총괄 부탁, 실장님 「통일할 것은 통일」)
 
 - **상태**: 확인 요청
