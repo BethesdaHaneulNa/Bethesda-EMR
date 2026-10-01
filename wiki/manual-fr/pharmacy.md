@@ -38,7 +38,9 @@ Ce qui peut apparaître en jaune ou en rouge :
 
 1. Cliquez sur **Pharmacie**, puis sur **En attente**. Seuls les patients dont la consultation est **terminée aujourd'hui** sont dans la liste, dans l'ordre où le médecin a terminé.
    - Pour trouver vite un patient, tapez une partie du nom, du numéro de dossier ou du médicament dans **Patient / N° dossier / Médicament**.
-2. Cliquez sur le patient. Lisez l'encadré **Allergies** s'il y en a un. À droite, **Dossier Patient** montre ses consultations précédentes.
+2. Cliquez sur le patient. Lisez l'encadré **Allergies** s'il y en a un.
+   - À droite, **Dossier Patient** montre une carte par consultation : la date, le service et le médecin, puis le début de la note et sa dernière ligne. C'est sur cette dernière ligne que le médecin écrit en général la suite (exemple : « Contrôle dans 3 jours »). Rappelez-la au patient en lui remettant ses médicaments.
+   - Pour lire toute la note, cliquez sur la carte ; **← Retour** revient à la liste. Rien ne se modifie ici.
 3. Sous chaque médicament, choisissez :
    - **Interne** : le médicament est remis ici. Il sort du stock et le patient le paie à la caisse.
    - **Externe** : le patient l'achète dans une pharmacie extérieure. Il ne sort pas du stock et n'est pas facturé ici.
