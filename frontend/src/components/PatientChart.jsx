@@ -71,7 +71,7 @@ export function PatientChart(props){
     return list.map(function(n, i){
       if(bare) return <div key={n.id || i}>{shortNote(n.note_text, rows)}</div>;
       return <div key={n.id || i} style={{marginTop:i?6:0,paddingLeft:7,borderLeft:'3px solid var(--line-soft)'}}>
-        <div title={noteHead(n)} style={{fontSize:12,fontWeight:700,color:t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
+        <div style={{fontSize:12,fontWeight:700,color:t2,overflowWrap:'anywhere'}}>{noteHead(n)}</div>
         {compact ? shortNote(n.note_text, rows) : <div style={noteText}>{n.note_text}</div>}
       </div>;
     });
@@ -153,9 +153,9 @@ export function PatientChart(props){
   return <div style={{padding:'6px 8px'}}>
     {history.length>0?history.map(function(h,i){
       return <div key={i} onClick={function(){openPast(h)}} style={{background:scBg,borderRadius:5,padding:'8px 10px',marginBottom:8,border:'1px solid '+bd,cursor:'pointer'}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:5,paddingBottom:4,borderBottom:'1px solid var(--line-soft)'}}>
+        <div style={{display:'flex',alignItems:'baseline',flexWrap:'wrap',gap:'0 8px',marginBottom:5,paddingBottom:4,borderBottom:'1px solid var(--line-soft)'}}>
           <span style={{fontFamily:'monospace',fontSize:14,color:'var(--accent-text)',fontWeight:800,whiteSpace:'nowrap'}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
-          <span style={{fontSize:13,fontWeight:700,color:tx,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
+          <span style={{fontSize:13,fontWeight:700,color:tx,minWidth:0,overflowWrap:'anywhere'}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
         </div>
         {hasNotes(h) ? notesBlock(h.notes, true, h.doctor_name)
           : shortNote(h.note_text||h.subjective, 3)}

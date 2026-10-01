@@ -118,6 +118,10 @@ export function ReceiptDoc(props) {
 
   var cell = { border: '1px solid #999', padding: '4px 8px', fontSize: 12, verticalAlign: 'top' };
   var head = Object.assign({}, cell, { background: '#f0f0f0', fontWeight: 700, whiteSpace: 'nowrap' });
+  // A name is printed whole. It wraps between words, and a word with no space that is wider
+  // than its cell (a 41-letter surname pushed this table past the page) breaks inside. Only
+  // the two cells that hold names: the chart number and the date keep their one line.
+  var nameCell = Object.assign({}, cell, { overflowWrap: 'anywhere' });
   var th = { borderBottom: '1.5px solid #111', padding: '5px 6px', fontSize: 12, textAlign: 'left', background: '#f0f0f0' };
   var td = { borderBottom: '1px solid #ddd', padding: '4px 6px', fontSize: 12, verticalAlign: 'top' };
   var right = { textAlign: 'right', whiteSpace: 'nowrap' };
@@ -155,7 +159,7 @@ export function ReceiptDoc(props) {
         <tbody>
           <tr>
             <td style={head}>{L(RL.patient, lang)}</td>
-            <td style={cell}>{(b.last_name || '') + ' ' + (b.first_name || '')}</td>
+            <td style={nameCell}>{(b.last_name || '') + ' ' + (b.first_name || '')}</td>
             <td style={head}>{L(DOC_LABELS.chartNo, lang)}</td>
             <td style={cell}>{b.chart_no || ''}</td>
           </tr>
@@ -163,7 +167,7 @@ export function ReceiptDoc(props) {
             <td style={head}>{L(RL.visitDate, lang)}</td>
             <td style={cell} colSpan={service ? 1 : 3}>{fmtDate(b.visit_date)}{VISIT_TYPE[b.visit_type] ? ' — ' + L(VISIT_TYPE[b.visit_type], lang) : ''}</td>
             {service ? <td style={head}>{L(RL.service, lang)}</td> : null}
-            {service ? <td style={cell}>{service}</td> : null}
+            {service ? <td style={nameCell}>{service}</td> : null}
           </tr>
         </tbody>
       </table>
@@ -211,7 +215,7 @@ export function ReceiptDoc(props) {
         <table style={{ borderCollapse: 'collapse', minWidth: 320 }}>
           <tbody>
             {/* Names the receipt when this block is pushed alone onto a second page. */}
-            <tr><td colSpan={2} style={{ fontSize: 10.5, color: '#666', paddingBottom: 4, textAlign: 'right' }}>{b.receipt_no} · {(b.last_name || '') + ' ' + (b.first_name || '')}</td></tr>
+            <tr><td colSpan={2} style={{ fontSize: 10.5, color: '#666', paddingBottom: 4, textAlign: 'right', overflowWrap: 'anywhere' }}>{b.receipt_no} · {(b.last_name || '') + ' ' + (b.first_name || '')}</td></tr>
             {settlement ? null : <Row label={L(RL.subtotal, lang)} value={money(b.subtotal)} />}
             {num(b.discount_amount) > 0 ? <Row label={L(RL.discount, lang)} value={'− ' + money(b.discount_amount)} /> : null}
             {num(b.previous_balance) > 0 && !settlement ? <Row label={L(RL.prevBalance, lang) + (from.length ? ' (' + from.map(function (f) { return L(RL.receiptOf, lang) + ' ' + f.receipt_no + ' ' + L(RL.of, lang) + ' ' + fmtDate(f.billing_date); }).join(', ') + ')' : '')} value={money(b.previous_balance)} /> : null}
