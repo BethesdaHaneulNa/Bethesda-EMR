@@ -531,6 +531,12 @@ export default {
   py_nonePaidThatDay: "No completed payments on this date.",
   py_feeAmount: "{name} amount - can be changed",
   py_feeAmountMissing: "No amount for: {names}. Type an amount, or remove the line with ✕, then bill.",
+  py_save: "Save",
+  py_savedOk: "Saved",
+  py_savedNot: "Not saved - press Save to keep these changes",
+  py_savedLine: "{n} fee line(s) saved · {amount} Ar",
+  py_saveFeesHint: "Keeps the lines added here on this visit without confirming payment. Other PCs see them too.",
+  py_savedChanged: "The saved fee lines of this visit were changed on another screen. What is saved now is shown again - check and retry.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
@@ -762,6 +768,20 @@ export default {
   lb_rPrintNote: "Printing is recorded as an issued document.",
   lb_rPrintIssued: "Issued: {x}",
   lb_rPrintFail: "The document could not be issued: ",
+  // a text result picked from a list: the lab screen's box, and the list in Settings > lab test items
+  lb_valueType: "Type it…",
+  lb_valueList: "Back to the list",
+  lb_choices: "Values to pick",
+  lb_choicesHint: "The values the lab can pick for this item's result instead of typing it. The judgement does not change: a value equal to the text reference is normal, any other is abnormal. \"Type it\" stays possible.",
+  lb_choicesSets: "Fill with a set:",
+  lb_choicesEmptyDefault: "The list is empty. The lab screen offers {list}, from the text reference.",
+  lb_choicesEmptyNone: "The list is empty. The result is typed.",
+  lb_choiceNew: "New value (e.g. Trace)",
+  lb_choicesApplyNote: "After OK here, press Save at the bottom of the page to keep it.",
+  lb_errChoiceDup: "“{u}” is already in the list (capitals and spaces do not count).",
+  lb_errChoiceLong: "“{u}”: a value has 60 characters at most.",
+  lb_errChoiceEmpty: "A value has no name. Type one or remove the row with ✕.",
+  lb_errChoiceMany: "A list has 20 values at most.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

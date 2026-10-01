@@ -522,6 +522,12 @@ export default {
   py_nonePaidThatDay: "이 날짜에 수납 완료된 건이 없습니다.",
   py_feeAmount: "{name} 금액 — 고칠 수 있습니다",
   py_feeAmountMissing: "금액이 비어 있습니다: {names}. 금액을 넣거나 ✕ 로 그 줄을 지운 뒤 수납하세요.",
+  py_save: "저장",
+  py_savedOk: "저장됨",
+  py_savedNot: "저장 안 됨 — 「저장」을 눌러야 바꾼 것이 남습니다",
+  py_savedLine: "발급 {n}건 저장됨 · {amount} Ar",
+  py_saveFeesHint: "발급/기타에 넣은 항목을 수납 확정 없이 이 내원에 남겨 둡니다. 다른 PC에서도 보입니다.",
+  py_savedChanged: "이 내원의 저장된 발급 항목이 다른 화면에서 바뀌었습니다. 지금 저장된 것을 다시 보여 드립니다 — 확인한 뒤 다시 하세요.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",
@@ -753,6 +759,20 @@ export default {
   lb_rPrintNote: "인쇄하면 발행 기록이 남습니다.",
   lb_rPrintIssued: "발행: {x}",
   lb_rPrintFail: "서류를 발행하지 못했습니다: ",
+  // a text result picked from a list: the lab screen's box, and the list in Settings > lab test items
+  lb_valueType: "직접 입력…",
+  lb_valueList: "목록에서 고르기",
+  lb_choices: "고를 값",
+  lb_choicesHint: "검사실 화면에서 이 항목의 결과를 적는 대신 고를 수 있는 값입니다. 판정은 그대로입니다: 문자 참고치와 같은 값은 정상, 다른 값은 이상. 목록에 없는 글자도 「직접 입력」으로 적을 수 있습니다.",
+  lb_choicesSets: "묶음으로 넣기:",
+  lb_choicesEmptyDefault: "목록이 비어 있습니다. 검사실 화면은 문자 참고치에 따라 {list} 를 보여 줍니다.",
+  lb_choicesEmptyNone: "목록이 비어 있습니다. 결과는 글자 칸에 직접 적습니다.",
+  lb_choiceNew: "새 값 (예: Trace)",
+  lb_choicesApplyNote: "여기서 OK 를 누른 뒤, 화면 아래 「저장」을 눌러야 저장됩니다.",
+  lb_errChoiceDup: "「{u}」: 같은 값이 이미 목록에 있습니다 (대소문자·띄어쓰기만 다른 것도 같은 값으로 봅니다).",
+  lb_errChoiceLong: "「{u}」: 값은 60자까지입니다.",
+  lb_errChoiceEmpty: "이름이 빈 값이 있습니다. 적거나 ✕ 로 빼세요.",
+  lb_errChoiceMany: "값은 20개까지입니다.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",

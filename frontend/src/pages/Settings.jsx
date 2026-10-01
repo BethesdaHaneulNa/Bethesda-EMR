@@ -54,6 +54,7 @@ export default function SettingsPage() {
   var loS = useState([]), labOrig = loS[0], setLabOrig = loS[1];   // item list as last loaded/saved (with result_count)
   var lwS = useState(null), labWarn = lwS[0], setLabWarn = lwS[1]; // {changed, sameName} while asking before a save
   var luS = useState([]), labUnits = luS[0], setLabUnits = luS[1];  // the units offered for a lab item (lab_unit), with item_count
+  var cwS = useState(null), choiceWin = cwS[0], setChoiceWin = cwS[1]; // {i, rows:[{name}], add, err} while an item's "values to pick" window is open
   var uwS = useState(null), unitWin = uwS[0], setUnitWin = uwS[1]; // {rows:[{name}], add, err} while the Unit list window is open
   var npS = useState(false), newPanelOpen = npS[0], setNewPanelOpen = npS[1];
   var npfS = useState({code:'',name:'',price:''}), newPanel = npfS[0], setNewPanel = npfS[1];
@@ -242,7 +243,73 @@ export default function SettingsPage() {
       setLabOrig(saved||[]);
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
       showToast(t.lb_saved);
-    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+    } catch(err){ alert(choiceServerError(err.message) || ((t.se_error)+': '+seMessage(t,err.message))); }
+  }
+  // The values a text result can take (director, 2026-10-01): each item can carry a list
+  // the lab screen offers instead of typing (Negative / Positive ...). The list is only
+  // an offer - the flag rule is untouched: a value equal to the reference text is normal,
+  // any other abnormal - and it is saved with the item, by the page's Save button.
+  // An item with a reference text and no list is offered a default pair worked out from
+  // that text; defaultChoices() says which, same table as backend/src/utils/labFlag.js
+  // (backend/test/lab.flag.mjs checks the two agree).
+  function choiceName(v){ return String(v==null?'':v).replace(/\s+/g,' ').trim(); }
+  var OPPOSITE = [
+    ['negative', 'positive'], ['n\u00e9gatif', 'positif'], ['negatif', 'positif'], ['\uc74c\uc131', '\uc591\uc131'],
+    ['non-reactive', 'reactive'], ['non reactive', 'reactive'], ['non r\u00e9actif', 'r\u00e9actif'], ['non reactif', 'reactif'],
+  ];
+  function defaultChoices(refText){
+    var ref=choiceName(refText);
+    if(!ref) return [];
+    var low=ref.toLowerCase();
+    for(var i=0;i<OPPOSITE.length;i++){
+      if(OPPOSITE[i][0]===low){
+        var o=OPPOSITE[i][1];
+        if(ref===ref.toUpperCase() && ref!==low) o=o.toUpperCase();
+        else if(ref.charAt(0)!==low.charAt(0)) o=o.charAt(0).toUpperCase()+o.slice(1);
+        return [ref,o];
+      }
+    }
+    if(low==='positive') return ['Negative',ref];
+    return [ref,'Negative','Positive'];
+  }
+  function choiceProblem(names){
+    if(names.length>20) return t.lb_errChoiceMany;
+    var seen={};
+    for(var i=0;i<names.length;i++){
+      var n=choiceName(names[i]);
+      if(!n) return t.lb_errChoiceEmpty;
+      if(n.length>60) return t.lb_errChoiceLong.replace('{u}',n);
+      if(seen[n.toLowerCase()]) return t.lb_errChoiceDup.replace('{u}',n);
+      seen[n.toLowerCase()]=true;
+    }
+    return '';
+  }
+  function choiceServerError(msg){
+    var m=String(msg||''), u=m.split(':').slice(1).join(':');
+    return m.indexOf('lab_choice_duplicate')===0 ? t.lb_errChoiceDup.replace('{u}',u)
+      : m.indexOf('lab_choice_too_long')===0 ? t.lb_errChoiceLong.replace('{u}',u)
+      : m.indexOf('lab_choice_empty')===0 ? t.lb_errChoiceEmpty
+      : m.indexOf('lab_choice_too_many')===0 ? t.lb_errChoiceMany : '';
+  }
+  // the usual sets, put in with one click (they replace what the list holds)
+  var CHOICE_SETS = [['Negative','Positive'], ['N\u00e9gatif','Positif'], ['Negative','Trace','+','++','+++'], ['Non-reactive','Reactive']];
+  function openChoiceWin(i){ setChoiceWin({ i:i, rows:(labItems[i].choices||[]).map(function(n){ return { name:n }; }), add:'', err:'' }); }
+  function cwRows(fn){ setChoiceWin(function(w){ var rows=w.rows.slice(); fn(rows); return Object.assign({},w,{rows:rows,err:''}); }); }
+  function addChoice(){
+    var n=choiceName(choiceWin.add); if(!n) return;
+    var bad=choiceProblem(choiceWin.rows.map(function(r){ return r.name; }).concat([n]));
+    if(bad){ setChoiceWin(Object.assign({},choiceWin,{err:bad})); return; }
+    setChoiceWin(Object.assign({},choiceWin,{rows:choiceWin.rows.concat([{name:n}]),add:'',err:''}));
+  }
+  // OK: the list goes onto the item (a value still in the "new value" box counts); the
+  // page's Save button keeps it.
+  function applyChoices(){
+    var names=choiceWin.rows.map(function(r){ return choiceName(r.name); });
+    if(choiceName(choiceWin.add)) names.push(choiceName(choiceWin.add));
+    var bad=choiceProblem(names);
+    if(bad){ setChoiceWin(Object.assign({},choiceWin,{err:bad})); return; }
+    uli(choiceWin.i,'choices',names);
+    setChoiceWin(null);
   }
   // The unit of a lab item is picked from a list the clinic keeps in the "Unit list"
   // window (director, 2026-10-01). The list is only what the box offers: an item keeps
@@ -928,7 +995,11 @@ export default function SettingsPage() {
                 </select>
                 <input type="number" value={it.ref_low!=null?it.ref_low:''} onChange={function(e){uli(i,'ref_low',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_high!=null?it.ref_high:''} onChange={function(e){uli(i,'ref_high',e.target.value)}} style={IS}/>
-                <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={IS}/>
+                <div style={{display:'flex',gap:4,minWidth:0}}>
+                  <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                  {(function(){ var nc=(it.choices||[]).length; return <button type="button" onClick={function(){openChoiceWin(i)}} title={t.lb_choices+(nc?' ('+nc+')':'')} aria-label={t.lb_choices+(nc?' ('+nc+')':'')}
+                    style={{flexShrink:0,background:nc?'var(--cyan-deep-a22)':'var(--chip)',color:nc?'var(--cyan-text)':t2,border:'1px solid '+(nc?'var(--cyan-a55)':bd2),borderRadius:4,padding:'6px 6px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>☰{nc?' '+nc:''}</button>; })()}
+                </div>
                 <button onClick={function(){toggleRanges(i)}} title={t.lb_rangesHint} style={{background:nr?'var(--cyan-deep-a22)':'var(--chip)',color:nr?'var(--cyan-text)':t2,border:'1px solid '+(nr?'var(--cyan-a55)':bd2),borderRadius:4,padding:'6px 4px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{it._open?'▾':'▸'} {t.lb_ranges} ({nr})</button>
                 <button onClick={function(){delLi(i)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'6px 0',cursor:'pointer',fontSize: 13}}>✕</button>
               </div>
@@ -956,6 +1027,46 @@ export default function SettingsPage() {
                 <button onClick={function(){ saveLabItems(); }} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
             </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
+            {choiceWin?(function(){
+              var item=labItems[choiceWin.i]||{}, dflt=defaultChoices(item.ref_text);
+              var mv={background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px 0',width:28,cursor:'pointer',fontSize:11,flexShrink:0};
+              return <div onClick={function(){ setChoiceWin(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div role="dialog" aria-label={t.lb_choices} onClick={function(e){ e.stopPropagation(); }} style={{width:460,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:scBg,border:'1px solid '+bd2,borderRadius:8,color:tx}}>
+                  <div style={{padding:'14px 18px 8px'}}>
+                    <div style={{fontWeight:800,fontSize:15,marginBottom:6,overflowWrap:'anywhere'}}>{t.lb_choices} — {item.name||''}</div>
+                    <div style={{fontSize:13,color:t3,lineHeight:1.5}}>{t.lb_choicesHint}</div>
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center',marginTop:8}}>
+                      <span style={{fontSize:12,color:t2}}>{t.lb_choicesSets}</span>
+                      {CHOICE_SETS.map(function(set,k){ return <button key={k} type="button" onClick={function(){ setChoiceWin(Object.assign({},choiceWin,{rows:set.map(function(n){ return {name:n}; }),add:'',err:''})); }}
+                        style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:600,whiteSpace:'nowrap'}}>{set.join(' / ')}</button>; })}
+                    </div>
+                  </div>
+                  <div style={{flex:1,minHeight:0,overflow:'auto',padding:'4px 18px'}}>
+                    {choiceWin.rows.length===0?<div style={{fontSize:13,color:t3,fontStyle:'italic',padding:'8px 0',lineHeight:1.5,overflowWrap:'anywhere'}}>{dflt.length?t.lb_choicesEmptyDefault.replace('{list}',dflt.join(' / ')):t.lb_choicesEmptyNone}</div>:null}
+                    {choiceWin.rows.map(function(r,i){
+                      return <div key={i} style={{display:'flex',gap:5,alignItems:'center',marginBottom:5}}>
+                        <button onClick={function(){ if(i>0) cwRows(function(a){ var x=a[i-1]; a[i-1]=a[i]; a[i]=x; }); }} disabled={i===0} title={t.lb_unitUp} aria-label={t.lb_unitUp} style={Object.assign({},mv,i===0?{color:'var(--text-4)',cursor:'default'}:null)}>▲</button>
+                        <button onClick={function(){ if(i<choiceWin.rows.length-1) cwRows(function(a){ var x=a[i+1]; a[i+1]=a[i]; a[i]=x; }); }} disabled={i===choiceWin.rows.length-1} title={t.lb_unitDown} aria-label={t.lb_unitDown} style={Object.assign({},mv,i===choiceWin.rows.length-1?{color:'var(--text-4)',cursor:'default'}:null)}>▼</button>
+                        <input value={r.name} maxLength={60} onChange={function(e){ var v=e.target.value; cwRows(function(a){ a[i]=Object.assign({},a[i],{name:v}); }); }} style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                        <button onClick={function(){ cwRows(function(a){ a.splice(i,1); }); }} title={t.lb_unitRemove} aria-label={t.lb_unitRemove} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'6px 0',width:30,cursor:'pointer',fontSize:13,flexShrink:0}}>✕</button>
+                      </div>;
+                    })}
+                  </div>
+                  <div style={{padding:'8px 18px 14px',borderTop:'1px solid '+bd}}>
+                    <div style={{display:'flex',gap:6,marginBottom:8}}>
+                      <input value={choiceWin.add} maxLength={60} placeholder={t.lb_choiceNew} onChange={function(e){ setChoiceWin(Object.assign({},choiceWin,{add:e.target.value,err:''})); }} onKeyDown={function(e){ if(e.key==='Enter') addChoice(); }} style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                      <button onClick={addChoice} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>+ {t.add||'Add'}</button>
+                    </div>
+                    {choiceWin.err?<div role="alert" style={{fontSize:13,color:'var(--danger-text)',marginBottom:8,overflowWrap:'anywhere'}}>{choiceWin.err}</div>:null}
+                    <div style={{fontSize:12,color:t3,marginBottom:6,lineHeight:1.4}}>{t.lb_choicesApplyNote}</div>
+                    <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:4}}>
+                      <button onClick={function(){ setChoiceWin(null); }} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.cancel||'Cancel'}</button>
+                      <button onClick={applyChoices} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'8px 20px',cursor:'pointer',fontSize:14,fontWeight:800}}>OK</button>
+                    </div>
+                  </div>
+                </div>
+              </div>;
+            })():null}
             {unitWin?(<div onClick={function(){ setUnitWin(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div role="dialog" aria-label={t.lb_unitList} onClick={function(e){ e.stopPropagation(); }} style={{width:460,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:scBg,border:'1px solid '+bd2,borderRadius:8,color:tx}}>
                 <div style={{padding:'14px 18px 8px'}}>
