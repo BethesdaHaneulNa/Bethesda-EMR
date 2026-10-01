@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} 환자는 오늘 이미 접수되어 있습니다 (다른 창구에서 방금 접수했을 수 있습니다). 한 번 더 접수할까요?",
   rc_visitCancelled: "접수 취소",
   rc_genderRequired: "성별을 고르세요 (남 / 여).",
-  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌고 받을 돈이 없어 수납에 가지 않아도 됩니다. 계속할까요?",
+  rc_completeNoConsult: "{name} 환자를 진료 없이 「완료」로 보냅니다. 내원구분이 「진료비 없음」으로 바뀌고 받을 돈이 없어 수납에 가지 않아도 됩니다. 의사가 이 환자를 봤다면 누르지 마세요 — 의사가 진료 화면에서 끝내야 진료비가 청구됩니다. 계속할까요?",
   rc_workDate: "작업일자",
   rc_prevDay: "하루 전",
   rc_nextDay: "하루 뒤",
@@ -312,6 +312,9 @@ export default {
   rc_colVisitState: "상태",
   rc_billNothing: "받을 돈 없음",
   rc_visitBilledNoMove: "이미 수납된 내원은 과·의사를 바꿀 수 없습니다. 수납에서 영수를 취소한 뒤 바꾸세요.",
+  rc_hasRecordsNoCancel: "이 내원에는 진료 기록(또는 서류·영수)이 있어 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
+  rc_hasRecordsNoWaiting: "이 내원에는 진료 기록(또는 서류·영수)이 있어 「대기」로 되돌릴 수 없습니다. 고칠 것이 있으면 의사가 진료 화면에서 이 환자를 다시 열어 고칩니다.",
+  rc_completeKeptType: "{name}: 이 내원에는 진료 기록이 있어 내원구분을 바꾸지 않았습니다. 진료비가 그대로 청구되니 환자를 수납으로 안내하세요.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "「{name}」을(를) 지울까요?",

@@ -299,7 +299,7 @@ export default {
   rc_dupVisitOther: "{name} est déjà enregistré(e) aujourd’hui (peut-être à l’autre guichet). Enregistrer une seconde visite ?",
   rc_visitCancelled: "Visite annulée",
   rc_genderRequired: "Choisissez le sexe (Masculin / Féminin).",
-  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse.",
+  rc_completeNoConsult: "Terminer {name} sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n’a pas à passer à la caisse. Si le médecin a vu ce patient, n’utilisez pas ce bouton : c’est le médecin qui termine à l’écran Consultation, sinon la consultation n’est pas facturée.",
   rc_workDate: "Date de travail",
   rc_prevDay: "Jour précédent",
   rc_nextDay: "Jour suivant",
@@ -312,6 +312,9 @@ export default {
   rc_colVisitState: "État",
   rc_billNothing: "Rien à payer",
   rc_visitBilledNoMove: "Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement.",
+  rc_hasRecordsNoCancel: "Cette visite a déjà des données (consultation, document ou reçu) : impossible d’annuler l’attente. La liste a été actualisée.",
+  rc_hasRecordsNoWaiting: "Cette visite a déjà des données (consultation, document ou reçu) : impossible de la remettre en attente. S’il faut corriger, le médecin rouvre le patient à l’écran Consultation.",
+  rc_completeKeptType: "{name} : cette visite a déjà des données de consultation, son type n’a pas changé. La consultation reste à payer : envoyez le patient à la caisse.",
   // ── end reception ──
   // ── begin consultation (cs_) ──
   cs_confirmRemove: "Retirer « {name} » ?",

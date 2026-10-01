@@ -308,6 +308,61 @@ const formMissing = await call('PUT', '/visits/99999999', { chief_complaint: 'x'
 check('PUT /:id of a visit that does not exist → 404 VISIT_NOT_FOUND', formMissing.status === 404 && formMissing.data.code === 'VISIT_NOT_FOUND', { status: formMissing.status, data: formMissing.data });
 await call('PUT', '/visits/' + VT.id + '/status', { status: 'cancelled' }, A);
 
+// ── Status buttons judge by what the visit holds (2026-10-01, with the consultation session's
+// consult.visit.js). A started consultation with nothing written is "empty"; a vital sign,
+// a document, a finished consultation... is a record. ──
+const PS = (await call('POST', '/patients', { last_name: 'Status', first_name: 'S' + Date.now(), gender: 'F' }, A)).data;
+const sv = async (type) => (await call('POST', '/visits', { patient_id: PS.id, visit_type: type || 'newVisit', department_id: DA.id, allow_duplicate: true }, A)).data;
+const st = (id, status, who) => call('PUT', '/visits/' + id + '/status', { status }, who || T.frontdesk);
+const start = async (v) => (await call('POST', '/consultations', { visit_id: v.id, patient_id: PS.id, department_id: DA.id }, A)).data;
+const consultOf = async (v) => (await call('GET', '/consultations/visit/' + v.id, null, A)).data.consultation;   // null when none
+// (A) in consultation with a vital sign: not back to waiting, and so never cancelled.
+const VA = await sv(); const cA = await start(VA);
+await call('PUT', '/consultations/' + cA.id, { bp_systolic: 120 }, A);
+const a1 = await st(VA.id, 'waiting');
+check('status (A) in consultation with a record → back to waiting refused, 409 VISIT_HAS_RECORDS', a1.status === 409 && a1.data.code === 'VISIT_HAS_RECORDS' && a1.data.error === 'The visit has records; it cannot go back to waiting', { status: a1.status, data: a1.data });
+const a2 = await st(VA.id, 'cancelled');
+check('status (A) … and cancelling it → 409 VISIT_NOT_WAITING (same message as before)', a2.status === 409 && a2.data.code === 'VISIT_NOT_WAITING' && a2.data.error === 'Only a waiting visit can be cancelled', { status: a2.status, data: a2.data });
+// (C) in consultation → completed from reception finishes the consultation as Terminé does.
+const a3 = await st(VA.id, 'completed');
+const cA2 = await consultOf(VA);
+check('status (C) in consultation → completed: type kept, consultation completed with completed_at', a3.status === 200 && a3.data.visit_type === 'newVisit' && a3.data.has_records === true && cA2 && cA2.status === 'completed' && !!cA2.completed_at, { status: a3.status, visit_type: a3.data && a3.data.visit_type, consultation: cA2 && { status: cA2.status, completed_at: cA2.completed_at } });
+const a4 = await st(VA.id, 'waiting');
+check('status: a visit the doctor finished → back to waiting refused', a4.status === 409 && a4.data.code === 'VISIT_HAS_RECORDS', { status: a4.status, data: a4.data });
+// Started, nothing written: goes back to waiting and the empty consultation row is gone.
+const VE = await sv(); await start(VE);
+const e1 = await st(VE.id, 'waiting');
+const cE = await consultOf(VE);
+check('status: started but empty → back to waiting, empty consultation row deleted', e1.status === 200 && e1.data.status === 'waiting' && e1.data.has_records === false && !(cE && cE.id), { status: e1.status, consultation: cE && cE.id });
+const e2 = await st(VE.id, 'cancelled');
+check('status: … and then cancelled', e2.status === 200 && e2.data.status === 'cancelled', { status: e2.status, data: e2.data && e2.data.code });
+// Started, nothing written, completed from reception: the doctor did see the patient.
+const VF = await sv('followUp'); await start(VF);
+const f1 = await st(VF.id, 'completed');
+const cF = await consultOf(VF);
+check('status: started but empty → completed keeps the type and finishes the consultation', f1.status === 200 && f1.data.visit_type === 'followUp' && cF && cF.status === 'completed', { visit_type: f1.data && f1.data.visit_type, consultation: cF && cF.status });
+// (B) waiting, but with a record (a document issued without starting): completing keeps the fee type; cancelling is refused.
+const VB = await sv();
+const docB = await call('POST', '/documents', { template_code: 'certificate', template_name: 'Certificat médical', patient_id: PS.id, visit_id: VB.id, payload: {} }, A);
+const b0 = await st(VB.id, 'cancelled');
+check('status (A′) waiting with a record → cancel refused, 409 VISIT_HAS_RECORDS', docB.status === 201 && b0.status === 409 && b0.data.code === 'VISIT_HAS_RECORDS' && b0.data.error === 'The visit has records; it cannot be cancelled', { doc: docB.status, status: b0.status, data: b0.data });
+const b1 = await st(VB.id, 'completed');
+check('status (B) waiting with a record → completed keeps visit_type (not none)', b1.status === 200 && b1.data.visit_type === 'newVisit' && b1.data.has_records === true, { status: b1.status, visit_type: b1.data && b1.data.visit_type });
+// No consultation at all: unchanged behaviour, and the mistake can be undone.
+const VN = await sv();
+const n1 = await st(VN.id, 'completed');
+const n2 = await st(VN.id, 'waiting');
+const n3 = await st(VN.id, 'cancelled');
+check('status: nothing recorded → completed is "no fee", back to waiting and cancel still work', n1.status === 200 && n1.data.visit_type === 'none' && n1.data.has_records === false && n2.status === 200 && n3.status === 200, { n1: n1.status, type: n1.data && n1.data.visit_type, n2: n2.status, n3: n3.status });
+// The general save is no longer a way around these rules.
+const VS = await sv();
+const s1 = await call('PUT', '/visits/' + VS.id, { status: 'cancelled' }, T.frontdesk);
+const s2 = await call('PUT', '/visits/' + VS.id, { status: null, chief_complaint: 'x' }, T.frontdesk);
+check('PUT /:id with a status → 400 STATUS_NOT_HERE; status null is still "unchanged"', s1.status === 400 && s1.data.code === 'STATUS_NOT_HERE' && s2.status === 200 && s2.data.status !== 'cancelled', { s1: s1.status, data: s1.data, s2: s2.status });
+const missS = await st(99999999, 'waiting');
+check('PUT /:id/status of a visit that does not exist → 404 VISIT_NOT_FOUND', missS.status === 404 && missS.data.code === 'VISIT_NOT_FOUND', { status: missS.status });
+await st(VS.id, 'cancelled', A);
+
 // Leave no queue behind: cancel the visits this run created.
 const today = (await call('GET', '/visits/today', null, A)).data;
 for (const v of today.filter(v => v.patient_id === P.id && (v.status === 'waiting' || v.status === 'registered'))) {
