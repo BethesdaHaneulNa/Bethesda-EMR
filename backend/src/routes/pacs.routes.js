@@ -327,12 +327,16 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
     const r = await pool.query(
       `SELECT oi.id, oi.order_code, oi.order_name, oi.pacs_modality, oi.result_text, oi.result_at,
               s.name AS result_by_name, v.visit_date,
+              COALESCE(ob.name, vd.name) AS ordered_by_name, d.code AS dept_code, d.name AS dept_name,
               wl.accession_no, wl.study_instance_uid, wl.images_received_at, wl.image_count,
               wl.image_patient_id, wl.image_patient_name, wl.patient_check, wl.image_study_uid,
               ${ORDER_CANCEL_COLUMNS}
          FROM order_item oi
          JOIN visit v ON v.id = oi.visit_id
          LEFT JOIN staff s ON s.id = oi.result_by
+         LEFT JOIN staff ob ON ob.id = oi.ordered_by
+         LEFT JOIN staff vd ON vd.id = v.doctor_id
+         LEFT JOIN department d ON d.id = v.department_id
          LEFT JOIN LATERAL (SELECT ${WL_COLUMNS} FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
         WHERE oi.patient_id = $1 AND oi.code_type = 'imaging'
         ORDER BY v.visit_date DESC, oi.id DESC`,
