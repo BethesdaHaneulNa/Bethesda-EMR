@@ -177,7 +177,12 @@
   - **줄마다 용량·횟수·일수를 여기서 정합니다** (2026-09-29, 실장님 지적 — 결정 B와 한 묶음: 용량·횟수·일수를 정하는 곳은 **약속처방 하나**). 약 줄: **Dose/j (일총투여) · Fois (횟수) · Jours (일수) · Posologie (용법)** — 진료 화면의 처방 줄과 같은 이름·순서, 총량 = 일총투여 × 일수. 새로 넣은 약 줄은 **빈 칸으로 시작**(약품의 기본값을 복사하지 않음). 검사·처치 줄: **Qté (수량) · Fois · Jours**, 1 · 1 · 1로 시작.
   - **저장 전에 확인**: 약 줄의 일총투여나 일수가 비어 있으면 그 칸이 빨갛게 되고 「⚠ dose/j, jours」, 저장하면 「Indiquez la dose par jour et le nombre de jours … : 약 이름」으로 **막힘** — 비워 두면 세트로 넣은 처방이 「총량 없음」으로 들어가기 때문. 숫자는 진료와 같은 규칙(일총투여 0–1000, 횟수 1–24·일수 1–365 정수, 용법 10자까지). 이미 있는 약속처방을 열면 저장된 값이 칸에 들어 있음.
   - **포장 단위 약**(시럽·흡입기 등, 약품 편집 창에서 표시한 약)의 줄에는 네 칸(복용 안내 — 비워도 됨) 옆에 **병·튜브 수** 칸과 단위(Flacon·Tube…) — 세트를 쓰면 그 수만큼 병·튜브가 처방됩니다. 한 병 이상, 정수만.
-- **📝 Phrases types (상용구)** — **Modifier** 창에 **Texte (par défaut / écran coréen) (문장 · 기본)**, **Texte en français (프랑스어 문장)**, **Texte en anglais (영어 문장)** 세 칸이 있습니다. 진료 화면은 프랑스어 화면이면 프랑스어 문장을 쓰고, 비어 있으면 기본 문장을 씁니다 — **현장에서 쓰는 상용구는 프랑스어 문장을 넣어 주세요.** 목록에서 프랑스어·영어 문장이 있는 줄에는 작은 **FR**·**EN** 표시가 붙습니다. **Catégorie** (General 등)는 저장되는 값이라 번역하지 않습니다.
+- **📝 Phrases types (상용구)** (2026-10-01, 실장님 요청으로 바뀜) — 진료 기록에 한 번 눌러 넣는 미리 써 둔 문장. 진료 화면에서도 같은 이름입니다.
+  - **문장은 하나**: **+ Ajouter** / **Modifier** 창에 **Catégorie (분류)** 와 **Phrase (문장)** 두 칸뿐. 적은 문장이 화면 언어와 상관없이 진료 화면에 그대로 나옵니다 — **현장에서 쓸 말(프랑스어)로 적으세요.** (전에 있던 프랑스어·영어 문장 칸은 없어졌습니다. 그 칸에 넣었던 글은 DB에 남아 있지만 쓰이지 않습니다.)
+  - **분류로 거르기**: 제목 옆 목록 「Toutes les catégories (25) / General (7) / …」에서 고릅니다(괄호는 상용구 수).
+  - **분류 만들기·고치기**: **🗂 Catégories** 를 누르면 분류 줄이 펼쳐집니다 — 이름 칸을 고치고 **Enregistrer le nom**(또는 Enter), **▲ ▼** 로 순서, 맨 아래 칸에 새 이름을 적고 **+ Ajouter la catégorie**. 이 순서가 진료 화면에 보이는 순서입니다. 분류 이름은 한 가지뿐입니다(언어별 이름 없음).
+  - **분류 지우기**: **Supprimer**. 상용구가 든 분류는 바로 지워지지 않고 「⚠ 4 phrase(s) type(s) sont dans cette catégorie. Les déplacer vers : [분류 고르기] — **Déplacer et supprimer la catégorie**」가 나옵니다 — 옮길 분류를 고르면 상용구는 그리로 가고 분류만 없어집니다. 상용구가 없는 분류는 확인 한 번으로 지워집니다.
+  - 분류를 만들고·이름을 바꾸고·지운 것은 **Journal**에 남습니다(「Catégorie de phrases types modifiée」). 순서 바꾸기와 상용구 글 자체의 수정은 남지 않습니다.
 
 ### 2.10 서버 상태 창 (서버 PC에서)
 
@@ -438,11 +443,17 @@
 - **지나온 길**: 처음에는 편집 창이 연 순간의 재고를 그대로 써서, 창을 연 사이 조제된 차감이 되돌아갔습니다(약국 H4). 2026-09-29 오전에 「본 값(`stock_expected`)과 지금 값이 다르면 409로 다시 묻기」 안전장치를 넣었고(`f44ab9e`), 약국 재고 기록이 생기면서 오후에 설정에서 재고를 아예 빼고 안전장치도 지웠습니다. 번역 키 `se_stockChanged`·서버 문구 `STOCK_CHANGED`도 함께 지움.
 - **확인**: `backend/test/settings.drugs.mjs` (격리 스택 전용, `SE_ADMIN_PW`) — 새 약 0 · 최소 재고 10 · 재고는 약국 입고로 0 → 30 · `stock_qty: 999`를 실은 저장 200·재고 그대로 · 옛 `stock_expected` 요청도 200 · 재고 기록에 「설정에서 바뀜(outside)」 줄이 생기지 않음. 화면: 프랑스어 약품 편집에서 단가만 4500 → 4600 저장 → 재고 50 그대로. 포장 단위 11개 — 새 약은 거짓·NULL · 참+tube 저장 · GET에 나옴 · 두 칸 없이 저장 → 그대로 · 거짓 → 단위 NULL · 참+빈 단위 → bottle · 모르는 단위·참/거짓 아님 → 400이고 바뀐 것 없음 · 새 약 참+inhaler · 새 약 모르는 단위 → 400·만들어지지 않음. 화면(격리 스택): 프랑스어로 AMOX250 「Flacon」 체크 → 저장 → 목록에 「Flacon」 표시, 한국어로 단위 바꾸기·체크 해제 → 단위 NULL, 재고 30 그대로.
 
-### 3-9. 상용구의 언어 (2026-09-29)
+### 3-9. 상용구 — 문장 하나, 분류는 자료 (2026-10-01, 마이그레이션 701)
 
-- `phrase_dictionary`에는 처음부터 `text`·`text_en`·`text_fr`가 있었고 API(`POST/PUT /api/admin/phrases`)도 셋 다 받았지만, 편집 창에 `text` 칸만 있었습니다. 시드 문장은 영어 `text`만 있습니다.
-- 진료 화면(`Consultation.jsx` `phraseText`, 진료 세션)이 화면 언어에 맞는 문장을 쓰게 되어(`fr` → `text_fr`, `en` → `text_en`, 없으면 `text`), 편집 창에 두 칸을 더했습니다. 설정 목록도 **같은 규칙으로** 보여줘서, 관리자가 보는 문장이 의사가 보는 문장과 같습니다.
-- `GET /api/admin/phrases`의 정렬에 `id`를 더했습니다(`ORDER BY category, sort_order, id`). 시드 문장의 `sort_order`가 모두 0이라, 저장할 때마다 그 줄이 묶음 안에서 자리를 옮겼습니다 — 설정 목록과 진료 화면 목록 모두.
+- **왜**: 실장님 요청(2026-10-01) — 진료 화면은 「문장사전」, 설정은 「상용구」라 부르던 것을 한 이름으로, 문장을 언어별로 따로 적지 않고 하나만, 분류를 직접 만들 수 있게. (2026-09-29에 넣었던 프랑스어·영어 문장 칸은 이 결정으로 없어짐.)
+- **이름**: 공용 키 `se_phraseName`(ko 상용구 / fr Phrases types / en Phrases). 설정 메뉴·제목·창 제목이 읽고, 진료 화면의 머리도 이 키로 바꾸기로 함(`wiki/handoff/coordinator.md` 「상용구 약속」).
+- **표** `phrase_category`(id, name ≤ 60자, sort_order, is_active, created_at, updated_at). 쓰는 분류끼리는 이름이 겹치지 않음(대소문자 무시 — 부분 유일 인덱스 `phrase_category_name_active_key`). `phrase_dictionary.category_id`가 이를 가리킴. **옛 글자 칸 `phrase_dictionary.category`는 남기고 API가 분류 이름과 같게 유지** — 진료 화면이 이 칸(답의 `category`)으로 거르기 때문.
+- **마이그레이션 701**(총괄이 번호를 다시 매김): 표가 **비어 있을 때만** 다섯 분류(General·Internal·Surgery·Peds·OBGYN, 이 순서)와 상용구가 이미 쓰는 그 밖의 분류(예: 옛 「Custom」, 이름순)를 넣음 — 이름이 아니라 「표가 비었는가」로 막아서, 병원이 General의 이름을 바꾼 뒤 다시 돌려도 General이 되살아나지 않음. 상용구에 `category_id`를 채움(앞뒤 빈칸·대소문자 무시). 기본 문장이 비고 프랑스어나 영어 문장만 있는 줄은 그 글을 기본 문장으로(프랑스어 먼저). `text_fr`·`text_en` 칸과 자료는 그대로. 두 번·세 번 돌려도 같은 결과(격리에서 확인).
+- **상용구 API** `GET /api/admin/phrases`: `id, category_id, category(이름), category_sort, text, sort_order, …` — **`text_fr`·`text_en`은 답에 없음**. 순서 = 분류 순서 → `sort_order` → `id`. `?category_id=` · `?category=`(이름). `POST`·`PUT`은 `{category_id, text}`(옛 호출처럼 `category` 이름을 보내도 받음), 문장이 비면 400 「Phrase text is required」, 분류가 없으면 400 「Choose a category for the phrase」.
+- **분류 API** `/api/admin/phrase-categories`: `GET`(로그인) → `[{id, name, sort_order, phrase_count}]` 순서대로. 설정 권한: `POST {name}`(맨 뒤에 붙음), `PUT /:id {name}`(그 분류의 상용구들의 `category` 글자도 같은 트랜잭션에서), `PUT /order {ids}`(모든 분류의 id를 보일 순서대로 — 빠지거나 겹치면 400), `DELETE /:id[?move_to=<다른 분류>]`. **상용구가 든 분류는 `move_to` 없이는 409** 「This category has N phrase(s)…」(답에 `phrase_count`) — 조용히 사라지지 않게. 지운 분류는 `is_active=false`로 남음(지운 상용구가 가리키므로) → 같은 이름을 다시 만들 수 있음.
+- **변경 기록**: `settings.phrase.category`(`utils/audit.js`에 설정 세션이 한 줄 넣음) — 만들기(`after {name}`), 이름 바꾸기(`name` 옛 → 새), 지우기(`status` active → inactive, 옮겼으면 `phrases_moved_to`·`phrases_moved`). 순서 바꾸기와 상용구 글 수정은 남기지 않음.
+- **화면**: `frontend/src/pages/settingsPhrases.jsx`(새 파일 — 목록·분류 고르기·분류 줄·편집 창을 모두 가짐). `Settings.jsx`에서는 상용구 탭이 이 부품 한 줄이 되고, 공용 편집 창의 상용구 갈래와 `phrases` 상태를 뺌.
+- **시험**: `backend/test/settings.phrases.mjs`(41개), `settings.access.mjs`에 분류 길 다섯, `settings.messages.mjs`에 새 문구.
 
 ### 3-10. 변경 기록 (2026-09-29)
 
@@ -500,7 +511,8 @@
 | `POST /api/auth/login` | 없음 | `{token, user}` |
 | `POST /api/auth/password` | 로그인 (권한 필요 없음, 비활성이면 401) | 자기 비밀번호 바꾸기 `{current_password, new_password}` → `{success}`. 지금 비밀번호가 틀리면 400 (3-3절) |
 | `GET /api/auth/me` | 로그인 (비활성이면 401) | 내 정보. `permissions`는 로그인 답과 같은 모양(없으면 역할 기본값) — 화면이 저장해 둔 권한을 새로 고칠 때 쓰라고 (2026-09-29). **`theme`**(`dark`/`light`, 037)도 — 로그인·첫 설치의 `user`에도 있음(2026-09-30, 디자인 세션 부탁: 같은 PC에서 다른 사람이 로그인할 때 앞 사람의 화면이 먼저 보이지 않게). 직원 목록(`/admin/staff`)에는 없음 — 바꾸는 곳은 `/api/theme`(자기 계정만) |
-| `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `clinic` | 로그인 | 목록 (다른 화면도 씀) |
+| `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `phrase-categories` · `clinic` | 로그인 | 목록 (다른 화면도 씀). 상용구·분류의 모양은 3-9절 |
+| `POST /api/admin/phrase-categories` · `PUT /:id` · `PUT /order` · `DELETE /:id[?move_to=]` | settings | 상용구 분류 만들기·이름·순서·지우기 (3-9절) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). `exclude=<action>[,…]`(알려진 action 이름만, 모르는 값은 무시, `action`으로 고른 것은 빼지 않음) → 답에 `excluded: {action: 숨긴 줄 수}`. 쓰기 라우트 없음 |
@@ -536,7 +548,8 @@
 | `department` | `code` UNIQUE, 이름 3개 국어, `head_doctor_id` → staff | 001, 002(기본 9개 과) |
 | `clinic` | 한 줄(id=1). 이름 3개 국어, 주소·전화·이메일·진료시간, `app_title` | 001, 002, 011 |
 | `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, PACS 칸 | 001, 009 |
-| `phrase_dictionary` | 상용구 3개 국어 | 001 |
+| `phrase_dictionary` | 상용구 — 문장은 `text` 하나(`text_en`·`text_fr`는 2026-10-01부터 쓰지 않음), `category_id` → `phrase_category` | 001, 701 |
+| `phrase_category` | 상용구 분류(이름·순서·쓰는지) | 701 |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
 | `audit_log` | 변경 기록 (총괄 설계, 설정은 직원 계정 줄을 쓰고 「Journal」 탭에서 읽음). UPDATE·DELETE·**TRUNCATE** 거절 | 022(총괄), **026**(설정 — TRUNCATE, 세션 번호 702) |
 | `schema_migrations` | 마이그레이션 적용 기록 (`config/migrate.js`, 총괄) | — |
@@ -702,4 +715,5 @@
 | 2026-09-30 | 클린 설치에서 걸린 둘: 상태 창이 **EMR·PACS 포트를 듣는 다른 프로그램**(이름·PID)과 **127.0.0.1에서 EMR이 아닌 답**을 알림, 상태 점·API에 **영상 창 → 영상 서버** 줄(중계와 같은 요청으로 주소·비밀번호·다른 프로그램을 구분). 「설치 뒤 할 일」은 제안만(인계 노트) | `server-status.ps1` `Get-ForeignListeners`·`Add-LoopbackEmrCheck`·창 높이 720, `services/pacs-probe.js`(새), `status.routes.js` `checkPacsRelay`, i18n `se_sys_pacsRelay_*` (2.10·2.15·3-6) | `e7ae327` |
 | 2026-09-30 | **설치 뒤 할 일 여덟 가지**(실장님 결정 (가) — 화면에는 만들지 않고 설명서에만): 프랑스어 설명서 첫 절 「Après l'installation — dans cet ordre」, 2.1 4번, 출발 전 목록의 현지 할 일에서 가리킴 | 위키만 (2.1) | `9260caa` |
 | 2026-09-30 | 기록 탭: 끝난 진료의 **의사별 진료 기록**(`consultation_note`, 038) 줄에 대상 이름 「note du médecin / 의사의 진료 기록」, 요약 `note`는 숨김(옛 `consultation`과 같게) | `settingsAudit.js` `ENTITIES`, i18n `se_ent_consultation_note` (3-10) | `3566d4c` |
-| 2026-09-30 | 기록 탭: **전과**(`visit.transfer`, 접수) — 종류 「Changement de service / médecin」, 칸 「Médecin」(없음은 「—」)·「Motif」, 과는 이미 과 이름으로 | `settingsAudit.js`, i18n `se_act_visitTransfer`·`se_fld_doctor`·`se_fld_reason` (3-10) | (이 커밋) |
+| 2026-09-30 | 기록 탭: **전과**(`visit.transfer`, 접수) — 종류 「Changement de service / médecin」, 칸 「Médecin」(없음은 「—」)·「Motif」, 과는 이미 과 이름으로 | `settingsAudit.js`, i18n `se_act_visitTransfer`·`se_fld_doctor`·`se_fld_reason` (3-10) | `5bfd3df` |
+| 2026-10-01 | **상용구**(실장님 요청): 진료 화면과 한 이름(`se_phraseName`), 문장은 하나(프랑스어·영어 칸 없앰), **분류를 자료로** — 만들기·이름·순서·지우기(상용구가 있으면 옮길 곳을 물음), 분류로 거르기, 분류 변경은 Journal에 | 마이그레이션 `701_settings_phrase_category.sql`, `admin.routes.js`, `settingsPhrases.jsx`(새), `Settings.jsx`, `settings.messages.js`, `utils/audit.js` 한 줄, `settings.phrases.mjs`(새) (2.9·3-9) | (이 커밋) |

@@ -43,6 +43,7 @@ const ACTIONS = {
   STAFF_PERMISSIONS:    'settings.staff.permissions',
   STAFF_PASSWORD:       'settings.staff.password',      // that it was changed and by whom - never the value
   DRUG_PRICE:           'settings.drug.price',          // unit price changed (decision 2026-09-30): before/after unit_price only
+  PHRASE_CATEGORY:      'settings.phrase.category',     // a phrase category made, renamed or removed (2026-10-01): name, status, phrases moved
   ORDER_PRICE:          'settings.order.price',         // an order code's price changed (fee, lab, imaging, procedure): same shape
   // Documents (decision 2026-09-30, both): issuing is logged although it is a first entry -
   // the director wants every paper that left the clinic in the one log. A draft print is not an issue.

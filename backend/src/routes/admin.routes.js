@@ -3,7 +3,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware, ALL_PERMS } = require('../middleware/auth');
 const { sendDbError } = require('../utils/dbError');
 // Messages shown to people - translated by the screen; see settings.messages.js.
-const { MSG, fieldMsg } = require('./settings.messages');
+const { MSG, fieldMsg, phraseMsg } = require('./settings.messages');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const KNOWN_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -639,34 +639,69 @@ router.put('/departments/:id', permMiddleware('settings'), async (req, res) => {
 });
 
 // ── PHRASES ──
+// One sentence per phrase and categories the clinic makes itself (the director,
+// 2026-10-01; migration 701). text_fr / text_en are no longer read or written - the
+// columns keep what they had. `category` (the name) is still sent with every phrase and
+// kept equal to its category's name, because the consultation screen reads and filters
+// on it; category_id and category_sort are the new way.
+const PHRASE_SELECT = `SELECT p.id, p.category_id, COALESCE(pc.name, p.category) AS category, COALESCE(pc.sort_order, 0) AS category_sort,
+                              p.text, p.sort_order, p.is_active, p.created_by, p.created_at
+                         FROM phrase_dictionary p LEFT JOIN phrase_category pc ON pc.id = p.category_id`;
+
 router.get('/phrases', async (req, res) => {
   try {
-    const { category } = req.query;
-    let query = 'SELECT * FROM phrase_dictionary WHERE is_active = true';
+    const { category, category_id } = req.query;
+    let query = PHRASE_SELECT + ' WHERE p.is_active = true';
     const params = [];
-    if (category) { query += ' AND category = $1'; params.push(category); }
-    // id breaks ties: every seeded phrase shares sort_order 0, so without it a phrase
-    // jumped to another place in its group - here and in the consultation screen's
-    // list - each time it was saved.
-    query += ' ORDER BY category, sort_order, id';
+    if (category_id && /^\d+$/.test(String(category_id))) { params.push(Number(category_id)); query += ' AND p.category_id = $' + params.length; }
+    if (category) { params.push(category); query += ' AND COALESCE(pc.name, p.category) = $' + params.length; }
+    // The categories in their own order, then the phrases; id breaks ties (every seeded
+    // phrase shares sort_order 0, and without it a phrase jumped each time it was saved).
+    query += ' ORDER BY COALESCE(pc.sort_order, 0), lower(COALESCE(pc.name, p.category)), p.sort_order, p.id';
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }
 });
 
+// The category a phrase is saved under: category_id, or - for a caller that still sends
+// the name - the category of that name. null when neither names a category in use.
+async function phraseCategoryOf(db, body) {
+  if (body.category_id !== undefined && body.category_id !== null && body.category_id !== '') {
+    if (!/^\d+$/.test(String(body.category_id))) return null;
+    const r = await db.query('SELECT id, name FROM phrase_category WHERE id = $1 AND is_active', [Number(body.category_id)]);
+    return r.rows[0] || null;
+  }
+  const name = String(body.category || '').trim();
+  if (!name) return null;
+  const r = await db.query('SELECT id, name FROM phrase_category WHERE lower(name) = lower($1) AND is_active', [name]);
+  return r.rows[0] || null;
+}
+
 router.post('/phrases', permMiddleware('settings'), async (req, res) => {
   try {
-    const { category, text, text_en, text_fr } = req.body;
-    const result = await pool.query('INSERT INTO phrase_dictionary (category, text, text_en, text_fr, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING *', [category, text, text_en, text_fr, req.user.id]);
+    const text = String(req.body.text == null ? '' : req.body.text).trim();
+    if (!text) return res.status(400).json({ error: MSG.PHRASE_TEXT_REQUIRED });
+    const cat = await phraseCategoryOf(pool, req.body);
+    if (!cat) return res.status(400).json({ error: MSG.PHRASE_CATEGORY_REQUIRED });
+    const made = await pool.query(
+      'INSERT INTO phrase_dictionary (category_id, category, text, created_by) VALUES ($1,$2,$3,$4) RETURNING id',
+      [cat.id, cat.name.slice(0, 30), text, req.user.id]);
+    const result = await pool.query(PHRASE_SELECT + ' WHERE p.id = $1', [made.rows[0].id]);
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
 });
 
 router.put('/phrases/:id', permMiddleware('settings'), async (req, res) => {
   try {
-    const { category, text, text_en, text_fr } = req.body;
-    const result = await pool.query('UPDATE phrase_dictionary SET category=$1, text=$2, text_en=$3, text_fr=$4 WHERE id=$5 RETURNING *', [category, text, text_en, text_fr, req.params.id]);
-    if (sentMissing(res, result)) return;
+    const text = String(req.body.text == null ? '' : req.body.text).trim();
+    if (!text) return res.status(400).json({ error: MSG.PHRASE_TEXT_REQUIRED });
+    const cat = await phraseCategoryOf(pool, req.body);
+    if (!cat) return res.status(400).json({ error: MSG.PHRASE_CATEGORY_REQUIRED });
+    const saved = await pool.query(
+      'UPDATE phrase_dictionary SET category_id=$1, category=$2, text=$3 WHERE id=$4 RETURNING id',
+      [cat.id, cat.name.slice(0, 30), text, req.params.id]);
+    if (sentMissing(res, saved)) return;
+    const result = await pool.query(PHRASE_SELECT + ' WHERE p.id = $1', [saved.rows[0].id]);
     res.json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
 });
@@ -676,6 +711,132 @@ router.delete('/phrases/:id', permMiddleware('settings'), async (req, res) => {
     await pool.query('UPDATE phrase_dictionary SET is_active = false WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { sendDbError(res, err); }
+});
+
+// ── PHRASE CATEGORIES ──
+// Read by anyone signed in (the consultation screen lists them); changed with the
+// settings permission. A category is never removed while it still holds phrases: the
+// answer says how many (409), and the caller either moves them (move_to) or deletes
+// them first. Adding, renaming and removing go to the change log; the order does not.
+const CATEGORY_SELECT = `SELECT pc.id, pc.name, pc.sort_order,
+                                (SELECT COUNT(*)::int FROM phrase_dictionary p WHERE p.category_id = pc.id AND p.is_active) AS phrase_count
+                           FROM phrase_category pc WHERE pc.is_active`;
+const CATEGORY_ORDER = ' ORDER BY pc.sort_order, pc.id';
+function badCategoryName(raw) {
+  const name = String(raw == null ? '' : raw).trim();
+  if (!name) return { error: MSG.CATEGORY_NAME_REQUIRED };
+  if (name.length > 60) return { error: MSG.CATEGORY_NAME_LONG };
+  return { name };
+}
+// The partial unique index (active names, case-insensitive) is the real guard; this
+// turns its refusal into words.
+function categoryDbError(res, err) {
+  if (err && err.code === '23505') return res.status(409).json({ error: MSG.CATEGORY_EXISTS });
+  return sendDbError(res, err);
+}
+
+router.get('/phrase-categories', async (req, res) => {
+  try { res.json((await pool.query(CATEGORY_SELECT + CATEGORY_ORDER)).rows); }
+  catch (err) { sendDbError(res, err); }
+});
+
+router.post('/phrase-categories', permMiddleware('settings'), async (req, res) => {
+  const n = badCategoryName(req.body.name);
+  if (n.error) return res.status(400).json({ error: n.error });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const made = await client.query(
+      'INSERT INTO phrase_category (name, sort_order) VALUES ($1, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM phrase_category WHERE is_active)) RETURNING id, name',
+      [n.name]);
+    await writeAudit(client, req, { action: ACTIONS.PHRASE_CATEGORY, entity: 'phrase_category', entity_id: made.rows[0].id,
+      summary: made.rows[0].name, before: null, after: { name: made.rows[0].name } });
+    await client.query('COMMIT');
+    res.status(201).json((await pool.query(CATEGORY_SELECT + ' AND pc.id = $1', [made.rows[0].id])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    categoryDbError(res, err);
+  } finally { client.release(); }
+});
+
+// The order of all categories at once: ids as they should be listed.
+router.put('/phrase-categories/order', permMiddleware('settings'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number) : [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const have = (await client.query('SELECT id FROM phrase_category WHERE is_active FOR UPDATE')).rows.map(r => r.id);
+    const same = ids.length === have.length && new Set(ids).size === ids.length && ids.every(id => have.includes(id));
+    if (!same) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.CATEGORY_ORDER }); }
+    for (let i = 0; i < ids.length; i++) {
+      await client.query('UPDATE phrase_category SET sort_order = $1, updated_at = NOW() WHERE id = $2', [i + 1, ids[i]]);
+    }
+    await client.query('COMMIT');
+    res.json((await pool.query(CATEGORY_SELECT + CATEGORY_ORDER)).rows);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Rename. The phrases' own copy of the name (phrase_dictionary.category) follows in the
+// same transaction.
+router.put('/phrase-categories/:id', permMiddleware('settings'), async (req, res) => {
+  const n = badCategoryName(req.body.name);
+  if (n.error) return res.status(400).json({ error: n.error });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT id, name FROM phrase_category WHERE id = $1 AND is_active FOR UPDATE', [req.params.id]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    await client.query('UPDATE phrase_category SET name = $1, updated_at = NOW() WHERE id = $2', [n.name, was.rows[0].id]);
+    await client.query('UPDATE phrase_dictionary SET category = $1 WHERE category_id = $2', [n.name.slice(0, 30), was.rows[0].id]);
+    await writeAudit(client, req, { action: ACTIONS.PHRASE_CATEGORY, entity: 'phrase_category', entity_id: was.rows[0].id,
+      summary: n.name, before: { name: was.rows[0].name }, after: { name: n.name } });
+    await client.query('COMMIT');
+    res.json((await pool.query(CATEGORY_SELECT + ' AND pc.id = $1', [was.rows[0].id])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    categoryDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Remove. With phrases in it: 409 and the number, unless ?move_to=<another category>,
+// which moves them there first. The category is kept as "not in use" (removed phrases
+// still point at it), so its name can be used again.
+router.delete('/phrase-categories/:id', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT id, name FROM phrase_category WHERE id = $1 AND is_active FOR UPDATE', [req.params.id]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const cat = was.rows[0];
+    const n = (await client.query('SELECT COUNT(*)::int AS n FROM phrase_dictionary WHERE category_id = $1 AND is_active', [cat.id])).rows[0].n;
+    let moved = null;
+    if (n > 0) {
+      const to = req.query.move_to;
+      if (to === undefined || to === '') {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: phraseMsg.categoryInUse(n), phrase_count: n });
+      }
+      const target = /^\d+$/.test(String(to))
+        ? (await client.query('SELECT id, name FROM phrase_category WHERE id = $1 AND is_active AND id <> $2', [Number(to), cat.id])).rows[0]
+        : null;
+      if (!target) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.CATEGORY_MOVE_TARGET }); }
+      await client.query('UPDATE phrase_dictionary SET category_id = $1, category = $2 WHERE category_id = $3 AND is_active',
+        [target.id, target.name.slice(0, 30), cat.id]);
+      moved = { to: target.name, count: n };
+    }
+    await client.query('UPDATE phrase_category SET is_active = false, updated_at = NOW() WHERE id = $1', [cat.id]);
+    await writeAudit(client, req, { action: ACTIONS.PHRASE_CATEGORY, entity: 'phrase_category', entity_id: cat.id, summary: cat.name,
+      before: { status: 'active', phrases_moved_to: null, phrases_moved: null },
+      after: { status: 'inactive', phrases_moved_to: moved ? moved.to : null, phrases_moved: moved ? moved.count : null } });
+    await client.query('COMMIT');
+    res.json({ success: true, moved: moved ? moved.count : 0 });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
 });
 
 // ── CLINIC INFO ──

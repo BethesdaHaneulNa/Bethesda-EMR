@@ -99,6 +99,20 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 
 **« ⚠ 2 médicament(s) absent(s) de la liste »** sur une ordonnance type : ces médicaments (barrés) ont été retirés de la liste des médicaments. Ils ne sont **pas prescrits** quand on applique l'ordonnance type en consultation. **Modifier** → ✕ sur la ligne barrée, ajoutez le bon médicament de la liste, **Sauver**.
 
+### Préparer les phrases types
+
+Les **phrases types** sont des phrases déjà écrites que le médecin ajoute à sa note d'un clic, dans l'écran de consultation.
+
+1. **Paramètres** → **Phrases types**. La liste **Toutes les catégories** permet de n'afficher qu'une catégorie.
+2. Pour ajouter une phrase : **+ Ajouter**. Choisissez la **Catégorie**, écrivez la **Phrase**, puis **Sauver**.
+   - Écrivez la phrase **une seule fois**, dans la langue du dossier (le français). Elle s'affiche telle quelle, quelle que soit la langue de l'écran.
+3. Pour changer une phrase : **Modifier** sur sa ligne. Pour l'enlever : **Supprimer**.
+4. Pour les catégories : **🗂 Catégories**.
+   - Nouvelle catégorie : écrivez son nom en bas, puis **+ Ajouter la catégorie**.
+   - Changer un nom : corrigez-le dans la case, puis **Enregistrer le nom**.
+   - Changer l'ordre : **▲** et **▼**. C'est l'ordre que le médecin voit.
+   - Enlever une catégorie : **Supprimer**. S'il reste des phrases dedans, l'écran demande « Les déplacer vers : » — choisissez une autre catégorie, puis **Déplacer et supprimer la catégorie**. Les phrases ne sont pas perdues.
+
 ### Régler les valeurs de référence des analyses
 
 1. **Paramètres** → **Items de test**.
@@ -137,7 +151,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes, catégories de phrases types), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
 
 1. **Paramètres** → **Journal**. Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.
@@ -164,6 +178,8 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Vérifiez les nombres… | Un nombre est hors limites | Corrigez (Fois 1–24, Jours 1–365…) |
 | La visionneuse n'est pas appairée au serveur d'images — lancez pair-with-emr… | Les images ne s'ouvrent pas depuis le dossier | Prévenez le responsable (dossier PACS du PC serveur) |
 | Ligne 2 : la dose par jour doit être supérieure à 0. (et autres « Ligne n : … ») | Une ligne d'ordonnance type a un nombre refusé | Corrigez la ligne indiquée |
+| … phrase(s) type(s) sont dans cette catégorie. Déplacez-les vers une autre catégorie ou supprimez-les d'abord. | On supprime une catégorie qui contient encore des phrases | Choisissez où les déplacer, ou supprimez d'abord les phrases |
+| Une catégorie porte déjà ce nom. | Deux catégories ne peuvent pas avoir le même nom | Prenez un autre nom |
 | Le serveur ne répond pas… | Le serveur est arrêté ou lent | Regardez la fenêtre d'état sur le PC serveur ; prévenez le responsable |
 | Fenêtre d'état : « Autres programmes sur les ports — port 9080 : DownloadServer … » | Un autre programme (téléchargement, serveur web…) écoute un port de l'EMR ou du PACS ; l'écran peut s'ouvrir alors que la liste de travail des appareils ne marche plus | Fermez ou désinstallez ce programme, redémarrez le PC ; sinon prévenez le responsable |
 
