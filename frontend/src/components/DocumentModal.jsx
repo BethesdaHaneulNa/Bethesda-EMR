@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, getUser } from '../api/client.js';
 import { useLang } from '../i18n/index.jsx';
-import { TEMPLATES, getTemplate, autofillValue, templatesByCategory, historyCodes } from '../documents/registry.js';
+import { TEMPLATES, getTemplate, autofillValue, templatesByCategory, historyCodes, printTitle } from '../documents/registry.js';
 import { L, fmtDate, printDocument } from '../documents/shared.jsx';
 
 var UI = {
@@ -205,7 +205,7 @@ export function DocumentModal(props) {
   }
 
   function doPrint() {
-    printDocument(previewRef.current, (mode === 'view' && viewed ? viewed.doc_no : 'document'), lang);
+    printDocument(previewRef.current, (mode === 'view' && viewed ? printTitle(viewed, lang) : 'document'), lang);
   }
 
   if (!props.open) return null;
