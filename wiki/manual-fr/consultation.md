@@ -22,7 +22,7 @@ Voir un patient de la file :
 - *En haut* — une barre bleue : les boutons **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
 - *Juste en dessous, à gauche* — trois boutons : **☰ File d'Attente**, **🔍 Trouver patient** et **📋 Visites du patient** (les autres visites du patient ouvert ; gris tant qu'aucun patient n'est ouvert).
 - *À gauche* — **Prescriptions** : les médicaments en haut, les examens et actes en dessous, dans le même tableau.
-- *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et le **Dictionnaire** (phrases toutes prêtes).
+- *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et les **Phrases types** (phrases toutes prêtes).
 - *À droite* — **Dossier Patient** et **Ordonnances types**.
 
 ### 2. Appeler un patient
@@ -37,7 +37,7 @@ Voir un patient de la file :
 
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
 2. Écrivez la consultation dans **Ma note de consultation** (S, O, A, P dans la même case). C'est **votre** note pour cette visite : chaque médecin a la sienne.
-3. Pour ajouter une phrase toute prête : cliquez dessus dans le **Dictionnaire**. Pour la trouver : la liste **Catégorie : toutes** (cliquez, puis choisissez **Général**, **Médecine**, **Chirurgie**… — toutes les catégories créées dans les paramètres y sont) et la case **Rechercher**, qui s'ajoutent l'une à l'autre. La catégorie choisie reste la même pour le patient suivant, sur cet ordinateur et pour votre compte.
+3. Pour ajouter une phrase toute prête : cliquez dessus dans **Phrases types** (sous la note). Pour la trouver : la liste **Catégorie : toutes** (cliquez, puis choisissez une catégorie — ce sont celles créées dans les paramètres, dans leur ordre et avec leur nom) et la case **Rechercher**, qui s'ajoutent l'une à l'autre. Une catégorie sans phrase affiche « Aucune phrase dans cette catégorie. » La catégorie choisie reste la même pour le patient suivant, sur cet ordinateur et pour votre compte.
 4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite dans **Dossier Patient**, dans le cadre bleu de la visite ouverte (**● Dossier ouvert**), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
 5. Deux médecins sur la même visite : la note de l'autre médecin s'affiche à droite sous son nom (mise à jour toutes les 30 secondes). Vous ne pouvez modifier que **votre** note — l'administrateur non plus ne peut pas modifier la note d'un médecin.
 6. Si vous ouvrez un autre patient sans avoir enregistré, un message le demande : **OK** enregistre puis ouvre l'autre patient, **Annuler** reste.
