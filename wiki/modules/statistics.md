@@ -64,9 +64,9 @@
 
 1. **Recettes** 아래 **Caisse par période (기간별 현금)** 표에서 **Jour (일별)** · **Mois (월별)** · **Année (연별)** 를 누릅니다. 처음에는 최근 30일 · 12개월 · 5년.
 2. 다른 기간은 오른쪽 날짜 칸 두 개에 넣습니다(약품 표와 같은 방식).
-3. 줄마다 **Entrées (들어옴)** · **Sorties (나감)** · **Net (순액)** 과 종류별: **Paiements (수납)** · **Règlements de solde (미수 수납)** · **Rendu (correction) (정정 환불)** · **Rendu (annulation) (취소 환불)**. 현금 기록 전의 날짜가 기간에 있으면 **Avant le journal de caisse (옛 기록)** 칸이 더 나옵니다(그 날의 영수증 금액).
+3. **가장 최근 날(달·해)이 맨 위**입니다 — 오늘을 보려고 아래로 내릴 필요가 없습니다. 줄마다 **Entrées (들어옴)** · **Sorties (나감)** · **Net (순액)** 과 종류별: **Paiements (수납)** · **Règlements de solde (미수 수납)** · **Rendu (correction) (정정 환불)** · **Rendu (annulation) (취소 환불)**. 현금 기록 전의 날짜가 기간에 있으면 **Avant le journal de caisse (옛 기록)** 칸이 더 나옵니다(그 날의 영수증 금액).
 4. 맨 아래 **Total** 이 기간 합계입니다(모두 Ariary 라 더할 수 있음). 매일의 순액이 그날 금고의 현금과 같아야 합니다.
-5. **⬇ CSV** 로 내려받습니다.
+5. **⬇ CSV** 로 내려받습니다. 파일도 화면과 같은 순서(최근이 위, 합계가 맨 끝)입니다.
 
 ### 2.4 Usage médicaments (약품 사용통계) — 약이 얼마나 나갔나
 
@@ -299,7 +299,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 
 - **왜**: 수납액이 영수 날짜 기준이라, 영수를 다른 날 정정·취소하면 처음 받은 날의 숫자가 나중에 0 이 되고 처리한 날에 영수 금액 전체가 잡혔습니다(수납 시뮬레이션 ① 실제 D1 +18 000 / D2 −3 000 인데 통계 0 / +15 000). 창구는 현금이라 하루 마감과 맞지 않았고, 이미 마감한 날의 장부가 바뀌었습니다. 실장님 결정: **통계는 그날 실제로 들어오고 나간 돈.**
 - **어디서**: 수납이 쓰는 `cash_movement`(마이그레이션 036) — 돈이 움직일 때마다 그 트랜잭션 안에서 한 줄(`payment` 수납 · 추가 청구 · 재수납, `settlement` 미수 수납, `correction` 정정 때 돌려준 돈(−), `cancel` 직원 취소 때 돌려준 돈(−), `opening` 036 전 영수), 고치거나 지울 수 없음(트리거). 그래서 **하루의 합 = 그날 금고**, 지난 날은 바뀌지 않음.
-- **통계가 읽는 곳**: `/summary` 의 `cash`, 새 `/cash?granularity=day|month|year&from&to`(기간마다 한 줄 — 빈 날도 0, `generate_series` — 과 기간 합계), `/monthly` 의 `revenue`. 공통 식은 `CASH_COLS`·`cashOf()`(`stats.routes.js`).
+- **통계가 읽는 곳**: `/summary` 의 `cash`, 새 `/cash?granularity=day|month|year&from&to`(기간마다 한 줄 — 빈 날도 0, `generate_series` — 과 기간 합계; **줄 순서는 최신이 먼저**(`ORDER BY period DESC`, 실장님 2026-10-01: 일별 30일에서 오늘이 맨 아래라 스크롤해야 보였음). 화면과 CSV 가 이 순서를 그대로 씀 — 합계 줄은 맨 끝), `/monthly` 의 `revenue`. 공통 식은 `CASH_COLS`·`cashOf()`(`stats.routes.js`).
 - **영수 기준으로 남긴 것**: 과·의사별 수납액(결정 9 의 조각 나누기 — 「누구의 진료로 번 돈」; 현금으로 나누면 환불한 날 과가 음수), 청구액 · 항목별 · 진료 영수 · 미수 수납 건수 · 방문당 평균 청구액(14), 미수 · 환불 예정, 취소 영수 개수(20), 미수 명단(16). 화면은 과·의사 그래프 제목에 「영수 기준 · 합계」를 붙여 그날 현금과 다를 수 있음을 밝힘.
 - **옛 날짜**: 036 이 취소 안 된 영수마다 `opening +net_paid`(영수 날짜)를 넣어, 036 전 날짜의 그날 현금 = 예전 통계 수납액. 예외: 「취소됐지만 돈이 창구에 남은」 영수도 `opening` 이 들어가 그날이 커짐(실제로 받은 돈). 옛 정정의 날짜별 어긋남은 기록이 없어 그대로. 실행 중 EMR: `opening` 2줄 합 474 500 = 예전 수납액(총괄 확인). 표에는 `opening` 이 있는 기간에만 「옛 기록」 열이 나옴.
 - **격리 확인 (2026-09-29, 새 DB, 036 포함, 실제 수납 API)**: 수납 시뮬레이션 ①~④ 를 사례마다 다른 D1 · D2 로(각 단계가 쓴 영수·줄을 그 날짜로 옮김 — 시험 DB 에서만 `cash_movement` 거절 트리거를 잠깐 끄고, 수납 세션과 같은 방법).
@@ -328,7 +328,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 |---|---|---|
 | `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount(진료 영수),settlementCount(미수 수납),billedVisits,avgBilledPerVisit}, cash{in,out,net,byKind}(그날 현금 — `cash_movement`), voidedCount(직원 취소만), refunded(그 취소 때 돌려준 돈 — 화면에는 안 씀, `cash.byKind.cancel` 과 같은 값), refundUnknownCount(033 전 취소라 모름), outstanding{owed,refund}`. `revenue.paid` 는 영수 기준(과·의사 그래프 합계). 과·의사 없음은 `code`/`name` 이 `null`. 과·의사별 `paid` 는 3.8 방식. 예전 `revenue.avg` 는 없어짐(`avgBilledPerVisit` 로) |
 | `GET /monthly` | `months` (1~24, 기본 6) | `[{ym, visits, revenue}]` — `revenue` = 그 달의 **현금 순액**(`cash_movement`, 2026-09-29 부터) |
-| `GET /cash` | `granularity`(day·month·year, 기본 day), `from`, `to`(생략 시 30일 · 12개월 · 5년) | `{granularity, from, to, periods[{period, in, out, net, byKind{payment,settlement,correction,cancel,opening}}], total{…}}` — 기간마다 한 줄(빈 날 0) |
+| `GET /cash` | `granularity`(day·month·year, 기본 day), `from`, `to`(생략 시 30일 · 12개월 · 5년) | `{granularity, from, to, periods[{period, in, out, net, byKind{payment,settlement,correction,cancel,opening}}], total{…}}` — 기간마다 한 줄(빈 날 0), **최신 기간이 먼저** |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
 | `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods, drugs[{drug_code,drug_name,category,pack_label,total_qty,total_count,by_period}]}` (약을 가로지르는 합계 없음 — `periodTotals`·`grandTotal` 은 2026-09-29 에 뺌) — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
 
@@ -423,4 +423,5 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 2026-09-29 | 결정 기록: 통계는 현금 기준(7절 8 다시 결정). 설계는 수납의 돈 움직임 기록을 기다림(코드 변경 없음) | `e07c200` |
 | 2026-09-29 | 현금 기준 설계 메모(인계 노트) — 코드 전 | `a01b810` |
 | 2026-09-29 | **현금 기준 구현(결정 8, 시안 A)**: 「Caisse」 카드 · 기간별 현금 표 · CSV · 월별 추이 현금(`cash_movement`), 청구액을 진료 영수 카드 밑으로, 과·의사 그래프에 「영수 기준 · 합계」, 취소 영수 카드는 개수만. 3.11 새로 | `fdaad17` |
-| 2026-09-30 | 통합 시험 뒤: 프랑스어 금액 천 단위 빈칸(`fmtAmount(n, lang)`), 숫자와 단위 사이 빈칸, 막대 이름 칸 넓힘. 1366×768 · 프랑스어 · 밝은 화면 한 바퀴 | (이 커밋) |
+| 2026-09-30 | 통합 시험 뒤: 프랑스어 금액 천 단위 빈칸(`fmtAmount(n, lang)`), 숫자와 단위 사이 빈칸, 막대 이름 칸 넓힘. 1366×768 · 프랑스어 · 밝은 화면 한 바퀴 | `b694b5b` |
+| 2026-10-01 | 「기간별 현금」 표와 CSV 를 최신 날짜가 맨 위로(실장님 말씀) — 순서만, 숫자 계산 그대로 | (이 커밋) |

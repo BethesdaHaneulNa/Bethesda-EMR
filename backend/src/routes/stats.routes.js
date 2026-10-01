@@ -348,6 +348,9 @@ router.get('/monthly', async (req, res) => {
 // GET /api/stats/cash?granularity=day|month|year&from&to — the till by day, month
 // or year: in, out, net and by kind, one row for every period in the range (zero
 // or not), and the range total. Same default ranges as the drug table.
+// Newest period first: the day people open this for is today, and with thirty
+// days listed oldest-first it sat at the bottom, below the fold (office
+// manager, 2026-10-01). The screen and its CSV both follow this order.
 router.get('/cash', async (req, res) => {
   try {
     const gran = ['day', 'month', 'year'].includes(req.query.granularity) ? req.query.granularity : 'day';
@@ -370,7 +373,7 @@ router.get('/cash', async (req, res) => {
            FROM cash_movement WHERE move_date BETWEEN $1 AND $2
           GROUP BY 1
        )
-       SELECT p.period AS slot, c.* FROM p LEFT JOIN c ON c.period = p.period ORDER BY p.period`,
+       SELECT p.period AS slot, c.* FROM p LEFT JOIN c ON c.period = p.period ORDER BY p.period DESC`,
       [from, to])).rows;
     const periods = rows.map(function (r) { return Object.assign({ period: r.slot }, cashOf(r)); });
     const total = (await pool.query(`SELECT ${CASH_COLS} FROM cash_movement WHERE move_date BETWEEN $1 AND $2`, [from, to])).rows[0];

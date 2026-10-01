@@ -64,10 +64,10 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 
 1. Sous **Recettes**, dans **Caisse par période**, cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années.
 2. Pour une autre période, saisissez les deux dates à droite.
-3. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
+3. **Le jour le plus récent est en haut** : aujourd'hui se lit sans descendre. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
 4. La ligne **Total** donne la période entière.
 5. Le **Net** d'un jour doit être égal à l'argent de la caisse ce jour-là. Si ce n'est pas le cas, prévenez l'administrateur.
-6. Cliquez sur **⬇ CSV** pour télécharger le tableau.
+6. Cliquez sur **⬇ CSV** pour télécharger le tableau (même ordre : le plus récent en haut, le total à la fin).
 
 ### Médicaments : « Usage médicaments »
 
