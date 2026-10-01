@@ -900,7 +900,7 @@ export default {
   se_fld_nationalId: "N° CIN",
   se_fld_bloodType: "Groupe sanguin",
   se_fld_allergies: "Allergies",
-  se_fld_receptionNote: "Note d'accueil",
+  se_fld_receptionNote: "Note permanente du patient",
   se_fld_paymentStatus: "Statut du paiement",
   se_fld_outstanding: "Impayé",
   se_fld_cancelReason: "Motif d'annulation",

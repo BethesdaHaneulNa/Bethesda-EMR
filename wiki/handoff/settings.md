@@ -2,6 +2,16 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 기록 탭: 「접수 메모」로 보이던 칸을 「환자 메모」로
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `ffe5800` merge 위)
+- **무엇을**: 기록 탭이 환자 인적사항을 고친 줄에서 `reception_note`를 부르는 이름(`se_fld_receptionNote`)을 「환자 메모 / Patient note / Note permanente du patient」로. 전에는 「접수 메모 / Reception note / Note d'accueil」.
+- **왜**: 접수 화면에서 「접수 메모」는 이제 내원의 한 칸(`visit.chief_complaint`, 045)의 이름이고, 환자에 붙어 늘 보이는 메모(`patient.reception_note`)는 「환자 메모(늘 보임)」(접수 `3b0bfd1`). 기록 탭이 옛 이름을 쓰면 다른 칸을 고친 것처럼 읽힘. 프랑스어는 접수 화면의 「Note permanente du patient」와 글자까지 같게.
+- **같이 본 것 — 내원의 `chief_complaint` · `reception_memo`**: 기록 탭에 **칸 이름이 없고, 필요도 없음**. `PUT /visits/:id`는 기록을 남기지 않고(내원에서 기록에 남는 것은 `visit.transfer` 하나 — 진료과·의사·사유), 다른 어떤 기록 줄도 이 두 칸을 싣지 않음(`backend/src` 전체에서 두 이름이 나오는 곳은 `visit.routes.js`뿐). 그래서 넣은 것 없음. 나중에 접수가 「접수 메모」 고침을 기록에 남기게 되면 그때 `chief_complaint` → 「접수 메모 / Reception Memo / Mémo Réception」, `reception_memo` → 「(옛) 접수 메모」로 넣으면 됨.
+- **바꾼 파일**: `frontend/src/i18n/ko.js` · `en.js` · `fr.js` (se_ 구역의 한 줄씩) · `wiki/modules/settings.md` (8절) · 이 노트. 설명서에는 이 칸 이름이 나오지 않아 고칠 곳 없음.
+- **확인한 방법**: `npm run build`. 격리 스택(9187)에서 환자를 만들고 메모를 「Parle malgache」→「Vient avec sa fille」로 고친 뒤 기록 탭 — 프랑스어 「Note permanente du patient: Parle malgache → Vient avec sa fille」, 한국어 「환자 메모: …」(요약 줄과 바뀐 것 줄 둘 다). 스택은 `down -v`.
+
 ## 2026-10-01 — 문서 정리: 메뉴 순서 · 단위 목록 · 종이색 (코드 변경 없음)
 
 - **상태**: 확인 요청 — 위키만

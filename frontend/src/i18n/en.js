@@ -909,7 +909,7 @@ export default {
   se_fld_nationalId: "National ID",
   se_fld_bloodType: "Blood type",
   se_fld_allergies: "Allergies",
-  se_fld_receptionNote: "Reception note",
+  se_fld_receptionNote: "Patient note",
   se_fld_paymentStatus: "Payment status",
   se_fld_outstanding: "Outstanding",
   se_fld_cancelReason: "Reason for cancelling",
