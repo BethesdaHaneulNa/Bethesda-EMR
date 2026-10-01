@@ -119,6 +119,7 @@ Une case grisée ne peut pas être cochée ; laissez la souris dessus pour lire 
 
 - **Masquer le compte-rendu / Afficher le compte-rendu** (en haut de la fenêtre) : replie ou montre la case du compte-rendu. Le texte déjà écrit n'est pas perdu.
 - Pas de ligne sous le titre : ce patient n'a pas d'autre examen avec images.
+- Dans la liste de gauche de la visionneuse, les examens ne sont **pas rangés par date**. Regardez la date écrite sous le nom de chaque examen (et en haut à droite de chaque image).
 - Ne sont pas proposés : les examens annulés, ceux dont les images ne sont pas arrivées, et ceux qui portent un avertissement d'identité (rouge ou jaune). Ceux-là s'ouvrent seulement depuis leur propre ligne. Au plus 9 autres examens, les plus récents.
 - Une fenêtre qui s'ouvre coupée en deux avec une case vide **[ drop a series here ]** : c'est la disposition gardée par la visionneuse. Pour revenir à une seule image : bouton **▦** → une seule case.
 
