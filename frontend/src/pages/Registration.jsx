@@ -874,7 +874,7 @@ export default function RegistrationPage() {
                       <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>{p.chart_no}</td>
                       <td style={{ padding: '9px 12px', color: tx, fontWeight: 700, overflowWrap: 'anywhere' }}>{p.last_name} {p.first_name}{p.gender ? ' (' + p.gender + ')' : ''}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.date_of_birth ? String(p.date_of_birth).split('T')[0] : '—'}</td>
-                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{phoneLines(p.mobile || p.phone)}</td>
+                      <td style={{ padding: '9px 12px', color: t2, fontFamily: 'monospace' }}>{phoneLines(p.phone || p.mobile)}</td>
                       <td style={{ padding: '9px 12px', color: t2, whiteSpace: 'nowrap' }}>{p.last_visit_date ? String(p.last_visit_date).split('T')[0] : '—'}</td>
                       <td style={{ padding: '6px 12px', textAlign: 'right' }}><button type="button" onClick={function () { answerSimilar({ action: 'use', patient: p }); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a60)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{t.rc_similarUse}</button></td>
                     </tr>;

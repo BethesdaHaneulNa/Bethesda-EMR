@@ -137,7 +137,7 @@ export function PatientFinder(props){
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
                       <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)',whiteSpace:'nowrap'}}>{p.chart_no}</td>
                       <td style={Object.assign({padding:'9px 12px',color:tx,fontWeight:700},WRAP)}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{phoneLines(p.mobile || p.phone)}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{phoneLines(p.phone || p.mobile)}</td>
                       <td style={{padding:'9px 12px',color:t2,whiteSpace:'nowrap'}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;
