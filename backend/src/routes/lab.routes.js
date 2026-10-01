@@ -322,12 +322,14 @@ router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab'),
     const r = await pool.query(
       `SELECT lr.*, oc.code AS panel_code, oc.name AS panel_name,
               oi.status AS order_status,
+              st.name AS result_by_name,   -- who entered it: printed on the results sheet
               -- read through jsonb so this works before and after the consultation
               -- session's migration adds order_item.cancel_reason
               to_jsonb(oi)->>'cancel_reason' AS cancel_reason
          FROM lab_result lr
          LEFT JOIN order_item oi ON oi.id = lr.order_item_id
          LEFT JOIN order_code oc ON oc.id = oi.order_code_id
+         LEFT JOIN staff st ON st.id = lr.result_by
         WHERE lr.patient_id = $1
         ORDER BY lr.result_date DESC NULLS LAST, lr.order_item_id, lr.sort_order`,
       [req.params.patientId]

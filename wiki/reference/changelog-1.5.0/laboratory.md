@@ -81,6 +81,18 @@ Under the work date there is a search box, as on the payment and pharmacy screen
 narrows the list on screen by patient name, chart number or test name, and says so when
 nothing in the list matches.
 
+### The lab results window: narrow it, and print a results sheet
+
+The window the doctor opens from the consultation screen keeps its table of dates by
+tests — that is what it is for — and gets what the imaging list has. A drop-down shows
+one kind of test, a search box finds a test or a date. Each date has a tick box: tick the
+days and print them as a results sheet for the hospital the patient is referred to — the
+days side by side, four to a sheet, high and low marked H and L since paper has no
+colours, the range each value was judged by, who entered the results, and no document
+number on the paper. Printing issues the sheet like any document that leaves the clinic:
+it is in the documents history and the change log, and can be reprinted or voided there.
+The window itself now has the same frame as the imaging list's.
+
 ### Units are picked from a list the clinic keeps
 
 The unit of a test item was typed by hand on every row, so the same unit ended up
