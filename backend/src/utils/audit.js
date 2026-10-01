@@ -49,6 +49,10 @@ const ACTIONS = {
   // the director wants every paper that left the clinic in the one log. A draft print is not an issue.
   DOCUMENT_ISSUE:       'documents.issue',
   DOCUMENT_VOID:        'documents.void',
+  // PACS (2026-10-01): a finished order's images were no longer on the image server under the
+  // number the EMR kept and were found again by accession (routes/pacs.relink.js). Done by the
+  // EMR itself when the image window is opened; the line names who opened it.
+  PACS_STUDY_RELINK:    'pacs.study.relink',
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 

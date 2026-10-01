@@ -120,7 +120,7 @@ device-watch 화면에 뜨는 글자 그대로입니다(한국어).
 
 ## EMR 쪽 설정 (관리자)
 
-- **설정 → Codes d'actes**(오더 코드): 영상 검사마다 **Modality**(CR, DX, US, ES …)와 **워크리스트 켬**. 장비가 「CR만」 묻는데 오더 코드가 DX면 0명 — 장비가 묻는 종류(device-watch의 「조건: Modality=…」)에 오더 코드를 맞추거나, 장비의 Modality 거르기를 끕니다.
+- **설정 → Codes d'actes**(오더 코드): 영상 검사마다 **Modality**(CR, DX, US, ES …)와 **워크리스트 켬**. 장비가 「CR만」 묻는데 오더 코드가 DX면 0명 — 장비가 묻는 종류(device-watch의 「조건: Modality=…」)에 오더 코드를 맞추거나, 장비의 Modality 거르기를 끕니다. **흔치 않은 값도 됩니다**: 장비가 「Modality=AS」처럼 처음 보는 값을 물으면 device-watch가 그 값을 그대로 보여 주므로(「→ 0명 — 장비가 AS 검사만 물음. 지금 목록: US 6, CR 5」), 오더 코드의 Modality에 **그 글자 그대로**(AS) 넣으면 됩니다 — 격리에서 AS로 목록·영상·EMR 화면까지 확인(2026-10-01).
 - **Station AE**: 오더 코드에 칸이 있지만 **지금 EMR은 쓰지 않습니다**(모든 장비에 모든 검사가 보임, 목록에는 `ANY`). 그래서 장비의 「내 AE만」 거르기는 꺼야 합니다. 방이 여럿이라 장비마다 나눠야 하면 총괄에게(설계 변경).
 - **설정 → Flux d'ordres**: Host / IP `host.docker.internal`, DICOM Port 4242, 「Tester PACS (DICOM)」와 「Tester : visionneuse → serveur d'images」 둘 다 ✓.
 
