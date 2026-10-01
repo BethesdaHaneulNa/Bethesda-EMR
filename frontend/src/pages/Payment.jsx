@@ -39,9 +39,34 @@ export default function PaymentPage() {
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
   var sbs = useState(null), settleBill = sbs[0], setSettleBill = sbs[1];
-  var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];
+  var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];   // {bill, reason} - the cancel dialog (M6)
   var cds = useState(null), cashDay = cds[0], setCashDay = cds[1];          // GET /cash-day (M9)
-  var sis = useState(false), showInactive = sis[0], setShowInactive = sis[1]; // cancelled / replaced receipts folded   // {bill, reason} - the cancel dialog (M6)
+  var sis = useState(false), showInactive = sis[0], setShowInactive = sis[1]; // cancelled / replaced receipts folded
+  // Work date (2026-10-01, asked for by the office manager), as on the reception screen:
+  // the lists show one day's visits, today by default. "Today" comes from the server
+  // (GET /cash-day), never the PC's clock. While the screen follows today a reload after
+  // midnight moves to the new day; a date staff picked stays put. Earlier days' visits
+  // still to settle are not mixed into today's list but kept under one folded line.
+  // Money is unchanged: a payment taken while a past date is shown is dated today.
+  var wds = useState(''), workDate = wds[0], setWorkDate = wds[1];
+  var tds = useState(''), serverToday = tds[0], setServerToday = tds[1];
+  var workRef = useRef({ date: '', follow: true });
+  var sps = useState(false), showPast = sps[0], setShowPast = sps[1];
+  var viewingPast = !!(workDate && serverToday && workDate < serverToday);
+  function chooseWorkDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))) return;
+    if(serverToday && date > serverToday) date = serverToday;   // nothing is billed ahead
+    workRef.current = { date: date, follow: date === serverToday };
+    setWorkDate(date); setShowPast(false);
+    setSel(null); setBillItems(null); setDoneBill(null);   // a visit of the other day is not left open
+    loadLists();
+  }
+  function shiftWorkDate(days){
+    var d = new Date((workDate || serverToday) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    chooseWorkDate(d.toLocaleDateString('en-CA'));
+  }
+  function dayOf(v){ return v && v.visit_date ? ymd(v.visit_date).slice(0,10) : ''; }
   var sams = useState(''), settleAmt = sams[0], setSettleAmt = sams[1];
   var pbs = useState({owed:0,refund:0}), patBalance = pbs[0], setPatBalance = pbs[1];
   var fos = useState(false), finderOpen = fos[0], setFinderOpen = fos[1];
@@ -114,6 +139,16 @@ export default function PaymentPage() {
   };
 
   useEffect(function(){ loadLists(); },[]);
+  // Quiet refresh (2026-10-01): the lists and the day follow the server every 30 s and
+  // when the tab comes back, as reception and pharmacy do - a screen left open overnight
+  // no longer shows yesterday as today. It does not touch the open patient or the bill
+  // being typed, and it is skipped while a payment is being saved.
+  useEffect(function(){
+    function tick(){ if(!document.hidden && !busyRef.current) loadLists(true); }
+    var id = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', tick);
+    return function(){ clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  },[]);
   useEffect(function(){ setSel(null); setBillItems(null); setDoneBill(null); },[tab]);
   useEffect(function(){
     var pid = sel ? sel.patient_id : null;
@@ -122,20 +157,32 @@ export default function PaymentPage() {
     api.get('/billing/patient/'+pid+'/balance').then(function(b){ setPatBalance(b||{owed:0,refund:0}); }).catch(function(){ setPatBalance({owed:0,refund:0}); });
   },[sel]);
 
-  async function loadLists(){
-    setLoading(true);
+  // quiet === true: the 30 s refresh - no "loading" over the list, the fee codes are not
+  // read again. (The refresh button passes its click event, which is not `true`.)
+  async function loadLists(quiet){
+    quiet = quiet === true;
+    if(!quiet) setLoading(true);
     try {
       var data = await api.get('/billing/pending');
+      var cd = null; try { cd = await api.get('/billing/cash-day'); } catch(e){}
+      var today = (cd && (cd.today || cd.date)) || '';
       setPending(data);
-      var done = await api.get('/billing/completed');
-      setCompleted(done);
-      try { setCashDay(await api.get('/billing/cash-day')); } catch(e){ setCashDay(null); }
-      try {
-        var fc = await api.get('/admin/order-codes?code_type=fee');
-        setFeeCodes((fc||[]).filter(function(c){ return CONSULT_FEE_CODES.indexOf(c.code)<0; }));
-      } catch(e){ setFeeCodes([]); }
-    } catch(err){ console.error(err); }
-    setLoading(false);
+      setServerToday(today);
+      if(workRef.current.follow || !workRef.current.date) workRef.current = { date: today, follow: true };
+      var wd = workRef.current.date;
+      setWorkDate(wd);
+      var done = await api.get('/billing/completed' + (wd ? '?date=' + wd : ''));
+      if(wd && today && wd !== today){ try { cd = await api.get('/billing/cash-day?date=' + wd); } catch(e){ cd = null; } }
+      // the date may have been changed while this was read: the later read owns the lists
+      if(workRef.current.date === wd){ setCompleted(done); setCashDay(cd); }
+      if(!quiet){
+        try {
+          var fc = await api.get('/admin/order-codes?code_type=fee');
+          setFeeCodes((fc||[]).filter(function(c){ return CONSULT_FEE_CODES.indexOf(c.code)<0; }));
+        } catch(e){ setFeeCodes([]); }
+      }
+    } catch(err){ if(!quiet) console.error(err); }
+    if(!quiet) setLoading(false);
   }
 
   function matches(v){
@@ -211,6 +258,12 @@ export default function PaymentPage() {
   function extraTotal(){ return extraItems.reduce(function(s,it){ return s + (parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1); },0); }
 
   // 이 내원이 이미 수납된 적이 있나(→ 추가 청구 모드)
+  // The new receipt is dated today. On today's lists it shows under "paid today"; while
+  // a past date is shown it is not on that day's list, so the screen stays where it is.
+  function afterBilled(){
+    if(workRef.current.follow) setTab('completed');
+    else { setSel(null); setBillItems(null); }
+  }
   function isAdditional(){ return !!(billItems && (billItems.billed_consult || (billItems.billed_items && billItems.billed_items.length>0))); }
   function billedTotal(){ return (billItems?.billed_items||[]).reduce(function(s,b){ return s+(parseFloat(b.amount)||0); },0); }
   // 실제로 청구할 항목 = 현재 항목 − 이미 청구된 항목(코드·수량 차감). 일반 수납이면 전체가 그대로 나옴.
@@ -289,7 +342,7 @@ export default function PaymentPage() {
       // 수납에서 바꾼 진료비 종류를 내원 기록에도 반영 — only once the bill is saved, so a
       // refused payment does not leave the visit's type changed (L4).
       if(sel && sel.id){ try { await api.put('/visits/'+sel.id, { visit_type:vType }); } catch(e){} }
-      setReceiptId(result.id); await loadLists(); setTab('completed');
+      setReceiptId(result.id); await loadLists(); afterBilled();
     } catch(err){ showError(err); }
   }
 
@@ -316,7 +369,7 @@ export default function PaymentPage() {
         expected_refund:corr.refund, expected_outstanding:corr.outstanding,
         reason:(t.correctionBadge||'정정'),
       });
-      setReceiptId(result.id); await loadLists(); setTab('completed');
+      setReceiptId(result.id); await loadLists(); afterBilled();
     } catch(err){ showError(err); }
   }
 
@@ -427,9 +480,16 @@ export default function PaymentPage() {
   function listData(){ return (tab==='waiting'?pending:completed).filter(matches); }
   // The paid-today list: receipts in force first (their number is the tab's count),
   // cancelled and replaced ones folded underneath.
+  function dayCount(){ return workDate ? pending.filter(function(v){ return dayOf(v)===workDate; }).length : pending.length; }
   function listRows(){
     var all = listData();
-    if(tab!=='completed') return all;
+    if(tab!=='completed'){
+      if(!workDate) return all;
+      var day = all.filter(function(v){ return dayOf(v)===workDate; });
+      if(viewingPast) return day;
+      var past = all.filter(function(v){ return dayOf(v) && dayOf(v) < workDate; });
+      return (past.length ? [{ __pastToggle:true, id:'past', n:past.length }] : []).concat(showPast ? past : []).concat(day);
+    }
     var live = all.filter(function(b){ return b.payment_status!=='cancelled'; });
     return showInactive ? live.concat(all.filter(function(b){ return b.payment_status==='cancelled'; })) : live;
   }
@@ -439,8 +499,8 @@ export default function PaymentPage() {
     <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,height:'100vh',display:'flex',flexDirection:'column',fontSize:16}}>
       <TopBar />
       <div style={{background:'var(--panel-2)',borderBottom:'1px solid '+bd,padding:'6px 8px',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
-        <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'var(--accent)':'var(--chip)',color:tab==='waiting'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='waiting'?'var(--accent-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({pending.length})</button>
-        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'var(--ok)':'var(--chip)',color:tab==='completed'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='completed'?'var(--ok-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
+        <button onClick={function(){setTab('waiting')}} style={{background:tab==='waiting'?'var(--accent)':'var(--chip)',color:tab==='waiting'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='waiting'?'var(--accent-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{L.waitingPay} ({dayCount()})</button>
+        <button onClick={function(){setTab('completed')}} style={{background:tab==='completed'?'var(--ok)':'var(--chip)',color:tab==='completed'?'var(--on-fill)':'var(--text-max)',border:'1px solid '+(tab==='completed'?'var(--ok-text)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>{viewingPast ? t.py_paidOn.replace('{date}', workDate) : L.completedPay} ({completed.filter(function(b){ return b.payment_status!=='cancelled'; }).length})</button>
         <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:'var(--text-soft)',border:'1px solid '+bd2,borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:'pointer'}}>🔍 {t.findPatient}</button>
         <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
         <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
@@ -456,11 +516,25 @@ export default function PaymentPage() {
         <button onClick={loadLists} style={{background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:6,padding:'7px 12px',cursor:'pointer'}}>↻</button>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',flex:1,minHeight:0}}>
-        <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn}}>
-          <div style={{padding:'9px 12px',borderBottom:'1px solid '+bd,background:scBg,fontWeight:800,fontSize:16,color:tx}}>💰 {tab==='waiting'?L.waitingPay:L.todayPaid}</div>
+      {/* one row as tall as the space left, and the left column clipped like the other two:
+          a long list scrolls inside its column instead of stretching the whole page */}
+      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',gridTemplateRows:'minmax(0,1fr)',flex:1,minHeight:0}}>
+        <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn,overflow:'hidden',minHeight:0}}>
+          <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd,background:viewingPast?'var(--warn-a14)':'var(--panel-2)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:12,fontWeight:700,color:viewingPast?'var(--warn-text)':t2,whiteSpace:'nowrap'}}>{t.rc_workDate}</span>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function(){shiftWorkDate(-1)}} disabled={!workDate} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:13}}>◀</button>
+              <input type="date" value={workDate} max={serverToday||undefined} onChange={function(e){chooseWorkDate(e.target.value)}} style={{flex:1,minWidth:0,background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 6px',color:tx,fontSize:14,colorScheme:'var(--scheme)'}} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function(){shiftWorkDate(1)}} disabled={!workDate||!serverToday||workDate>=serverToday} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:13,opacity:(!workDate||workDate>=serverToday)?0.4:1}}>▶</button>
+            </div>
+            {viewingPast?<div style={{display:'flex',alignItems:'flex-start',gap:6,marginTop:6}}>
+              <div style={{flex:1,fontSize:12,color:'var(--warn-text)',lineHeight:1.4}}>{t.py_workDatePast.replace('{date}', workDate).replace('{today}', serverToday)}</div>
+              <button type="button" onClick={function(){chooseWorkDate(serverToday)}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{t.rc_backToToday}</button>
+            </div>:null}
+          </div>
+          <div style={{padding:'9px 12px',borderBottom:'1px solid '+bd,background:scBg,fontWeight:800,fontSize:16,color:viewingPast?'var(--warn-text)':tx}}>💰 {tab==='waiting'?L.waitingPay:(viewingPast?t.py_paidOn.replace('{date}', workDate):L.todayPaid)}</div>
           {tab==='completed'&&cashDay?<div style={{padding:'8px 12px',borderBottom:'1px solid '+bd,background:'var(--ok-a12)',fontSize:13}}>
-            <div style={{fontWeight:800,color:'var(--ok-text)',marginBottom:3}}>💵 {t.py_cashDay}</div>
+            <div style={{fontWeight:800,color:'var(--ok-text)',marginBottom:3}}>💵 {viewingPast ? t.py_cashOn.replace('{date}', workDate) : t.py_cashDay}</div>
             <div style={{display:'flex',justifyContent:'space-between',gap:6,fontFamily:'monospace',flexWrap:'wrap'}}>
               <span style={{color:t2}}>{t.py_cashIn} <strong style={{color:'var(--ok-text)'}}>+{fmtAr(cashDay.cash_in)}</strong></span>
               <span style={{color:t2}}>{t.py_cashOut} <strong style={{color:'var(--danger-text)'}}>−{fmtAr(cashDay.cash_out)}</strong></span>
@@ -472,8 +546,10 @@ export default function PaymentPage() {
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
+              if(v.__pastToggle) return <div key="past-toggle" onClick={function(){setShowPast(!showPast)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,fontWeight:700,color:'var(--warn-text)',background:'var(--warn-a14)',borderBottom:'1px solid var(--warn-a55)'}}>{showPast?'▾':'▸'} 📅 {t.py_pastToDo.replace('{n}', v.n)}</div>;
               var isSel=sel&&sel.id===v.id;
-              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'transparent')}}>
+              var earlier=tab==='waiting'&&!viewingPast&&workDate&&dayOf(v)&&dayOf(v)<workDate;
+              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):earlier?'var(--warn-a55)':'transparent')}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
                   {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
@@ -483,6 +559,7 @@ export default function PaymentPage() {
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
                 {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'var(--accent-text)',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
                 {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'var(--violet-text-2)',marginTop:2,fontFamily:'monospace'}}>↩ {corrLine(v)}</div>:null}
+                {tab==='waiting'&&!v.past_unbilled&&!v.needs_rebill&&serverToday&&dayOf(v)&&dayOf(v)!==serverToday?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {dayOf(v)}</div>:null}
                 {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
                 {tab==='completed'?<>
                   <div style={{fontSize:12,color:'var(--accent-text)',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
@@ -493,6 +570,7 @@ export default function PaymentPage() {
               </div>;
             })}
             {!loading&&inactiveCount()>0?<div onClick={function(){setShowInactive(!showInactive)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,color:t3,borderBottom:'1px solid var(--line-soft)'}}>{showInactive?'▾':'▸'} {t.py_inactiveReceipts.replace('{n}', inactiveCount())}</div>:null}
+            {!loading&&tab==='waiting'&&viewingPast&&listRows().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{t.py_noneThatDay}</div>:null}
             {!loading&&tab==='completed'&&listData().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{L.noCompleted}</div>:null}
           </div>
         </div>
@@ -749,7 +827,7 @@ export default function PaymentPage() {
   }
 
   function renderCompleted(){
-    if(!(sel&&doneBill)) return <Empty icon="✅" text={L.selectCompleted+'\n'+L.paidListHint} />;
+    if(!(sel&&doneBill)) return <Empty icon="✅" text={L.selectCompleted+'\n'+(viewingPast ? t.py_paidOnHint.replace('{date}', workDate) : L.paidListHint)} />;
     var b=doneBill.bill, items=doneBill.items||[];
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <div style={{padding:'11px 15px',background:scBg,border:'1px solid '+bd,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}>
@@ -776,7 +854,7 @@ export default function PaymentPage() {
     </div>;
   }
 
-  function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div></div>; }
+  function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div>{serverToday&&dayOf(p)&&dayOf(p)!==serverToday?<span style={{marginLeft:'auto',background:'var(--warn-a18)',color:'var(--warn-text)',borderRadius:5,padding:'3px 9px',fontSize:13,fontWeight:800,fontFamily:'monospace',whiteSpace:'nowrap'}}>📅 {dayOf(p)}</span>:null}</div>; }
   function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-5)',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }

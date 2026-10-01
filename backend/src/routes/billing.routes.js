@@ -264,7 +264,9 @@ router.get('/cash-day', canSeeCash, async (req, res) => {
   try {
     let date = req.query.date;
     if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
-    if (!date) date = (await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
+    // today: what the payment screen's work date follows (never the PC's clock)
+    const today = (await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
+    if (!date) date = today;
     const lines = (await pool.query(
       `SELECT m.id, m.created_at, m.kind, m.amount, m.memo, b.receipt_no, b.billing_date,
               p.chart_no, p.last_name, p.first_name, s.name AS staff_name
@@ -275,7 +277,7 @@ router.get('/cash-day', canSeeCash, async (req, res) => {
         WHERE m.move_date = $1::date ORDER BY m.id`, [date])).rows;
     let cashIn = 0, cashOut = 0;
     lines.forEach(function (l) { const a = Number(l.amount) || 0; if (a > 0) cashIn += a; else cashOut -= a; });
-    res.json({ date: date, cash_in: round2(cashIn), cash_out: round2(cashOut), net: round2(cashIn - cashOut), lines: lines });
+    res.json({ date: date, today: today, cash_in: round2(cashIn), cash_out: round2(cashOut), net: round2(cashIn - cashOut), lines: lines });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
