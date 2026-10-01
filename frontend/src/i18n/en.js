@@ -840,6 +840,7 @@ export default {
   se_priceEditable: "The amount can be changed at payment",
   se_priceEditableHint: "When on, the payment screen opens an amount box for this item, so the cashier can change the amount there. The price above is the amount the box starts with.",
   se_priceEditableTag: "amount editable",
+  se_act_orderPriceEditable: "Order code: amount editable at payment turned on / off",
   se_type_lab: "Lab",
   se_type_imaging: "Imaging",
   se_type_procedure: "Procedure",

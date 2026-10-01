@@ -11,7 +11,8 @@
 //
 // And price_editable (047, payment: the cashier may type the amount of a fee's line): only
 // DOC has it after the migration (others may be ticked later); a fee code stores what is sent and keeps what it has when
-// the field is not sent (an older screen); any other type stores false. Node 18+.
+// the field is not sent (an older screen); any other type stores false. Turning it on or
+// off writes one line in the change log (settings.order.price_editable). Node 18+.
 import crypto from 'crypto';
 
 const BASE = process.env.SE_TEST_BASE || 'http://127.0.0.1:9187/api';
@@ -83,10 +84,17 @@ const ticked = seeded.filter(o => o.price_editable).map(o => o.code);
 if (ticked.join() !== 'DOC') console.log('  (note)  ticked on this stack besides DOC: ' + ticked.filter(c => c !== 'DOC').join(', '));
 const priceLines = async () => (await call('GET', '/admin/audit?action=settings.order.price&limit=1', null, A)).data.total;
 const linesBefore = await priceLines();
+// turning it on or off is a line of the change log (decided 2026-10-01)
+const tickLines = async () => (await call('GET', '/admin/audit?action=settings.order.price_editable&limit=200', null, A)).data;
+const ticksBefore = (await tickLines()).total;
+const lastTick = async () => (await tickLines()).rows[0] || {};
 
 r = await call('POST', '/admin/order-codes', fee('P', { price_editable: true }), A);
 check('a new fee code sent with price_editable true keeps it', (r.status === 201 || r.status === 200) && r.data.price_editable === true, r);
 const pe = r.data;
+let line = await lastTick();
+check('... and that is a line in the log: the code, nothing before, on', (await tickLines()).total === ticksBefore + 1 && String(line.entity_id) === String(pe.id) && String(line.summary).includes(pe.code)
+  && line.before_value == null && line.after_value && line.after_value.price_editable === true && line.staff_name, line);
 r = await call('POST', '/admin/order-codes', fee('Q', {}), A);
 check('a new fee code sent without it has none', r.data && r.data.price_editable === false, r);
 const pq = r.data;
@@ -94,6 +102,7 @@ r = await call('POST', '/admin/order-codes', body('R', { price_editable: true })
 check('a new procedure code sent with it: ignored (false)', r.data && r.data.price_editable === false, r);
 r = await call('POST', '/admin/order-codes', body('S', { code_type: 'lab', group_name: 'Laboratory', price_editable: 'true' }), A);
 check('... a lab code too', r.data && r.data.price_editable === false, r);
+check('new codes made without it wrote no line', (await tickLines()).total === ticksBefore + 1, (await tickLines()).total - ticksBefore);
 
 const till = (await call('GET', '/admin/order-codes?code_type=fee', null, A)).data;
 check('what the payment screen reads (?code_type=fee) shows it', (till.find(o => o.id === pe.id) || {}).price_editable === true && (till.find(o => o.id === pq.id) || {}).price_editable === false,
@@ -103,15 +112,27 @@ r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { name: 'Frais ' +
 check('edit without the field (an older screen): kept', r.status === 200 && r.data.price_editable === true && r.data.name === 'Frais ' + tag, r);
 r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { price_editable: false }), A);
 check('edit: unticked', r.status === 200 && r.data.price_editable === false, r);
+line = await lastTick();
+check('... one line: on -> off (the edit before it, which kept the tick, wrote none)', (await tickLines()).total === ticksBefore + 2 && String(line.entity_id) === String(pe.id)
+  && line.before_value.price_editable === true && line.after_value.price_editable === false, line);
 r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', {}), A);
 check('edit without the field: stays unticked', r.status === 200 && r.data.price_editable === false, r);
 r = await call('PUT', '/admin/order-codes/' + pq.id, fee('Q', { price_editable: true }), A);
 check('edit: ticked', r.status === 200 && r.data.price_editable === true, r);
+line = await lastTick();
+check('... one line: off -> on', (await tickLines()).total === ticksBefore + 3 && String(line.entity_id) === String(pq.id)
+  && line.before_value.price_editable === false && line.after_value.price_editable === true, line);
 r = await call('PUT', '/admin/order-codes/' + pq.id, body('Q', { code_type: 'lab', group_name: 'Laboratory', price: 5000, price_clinic: 5000, price_editable: true }), A);
 check('edit: the type changed to lab - false, whatever is sent', r.status === 200 && r.data.code_type === 'lab' && r.data.price_editable === false, r);
 r = await call('PUT', '/admin/order-codes/' + pq.id, fee('Q', {}), A);
 check('... and back to a fee without the field: still false', r.status === 200 && r.data.code_type === 'fee' && r.data.price_editable === false, r);
-check('ticking and unticking wrote no price line in the log (the price did not change)', (await priceLines()) === linesBefore, [linesBefore, await priceLines()]);
+line = await lastTick();
+check('the type change that switched it off is a line too (on -> off), and nothing after it', (await tickLines()).total === ticksBefore + 4 && String(line.entity_id) === String(pq.id)
+  && line.before_value.price_editable === true && line.after_value.price_editable === false, [(await tickLines()).total - ticksBefore, line]);
+check('ticking and unticking wrote no price line (the price did not change)', (await priceLines()) === linesBefore, [linesBefore, await priceLines()]);
+r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { price_editable: true, price: 7000, price_clinic: 7000 }), A);
+check('a save that changes the price and the tick writes one line of each', r.status === 200 && (await priceLines()) === linesBefore + 1 && (await tickLines()).total === ticksBefore + 5,
+  [(await priceLines()) - linesBefore, (await tickLines()).total - ticksBefore]);
 
 // ── the drug table's column is another thing ──
 const drugs = (await call('GET', '/admin/drugs', null, A)).data;

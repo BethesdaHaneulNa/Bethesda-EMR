@@ -288,6 +288,20 @@ function cleanPriceEditable(raw, codeType) {
   return null;
 }
 
+// Turning it on or off goes to the change log (decided 2026-10-01: a setting about money -
+// it opens the amount to the cashier): who, which code, off -> on. One line of its own,
+// next to the price line when the same save changed both. A new code made with it on is
+// a line too (nothing before): from that moment its amount can be typed at the till.
+async function auditPriceEditable(db, req, was, now) {
+  const b = was ? was.price_editable === true : null, a = now.price_editable === true;
+  if (was ? b === a : !a) return;
+  await writeAudit(db, req, {
+    action: ACTIONS.ORDER_PRICE_EDITABLE, entity: 'order_code', entity_id: now.id,
+    summary: [now.code, now.name].filter(Boolean).join(' '),
+    before: was ? { price_editable: b } : null, after: { price_editable: a },
+  });
+}
+
 function cleanModality(raw) {
   const v = String(raw == null ? '' : raw).trim().toUpperCase();
   if (!v) return { value: null };
@@ -325,6 +339,7 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
       [code, name, name_en, code_type, group_name, cleanDirections(default_dose), default_freq, default_days, price, price_clinic, modality.value, worklist_enabled, station_ae, body_part, memo,
        cleanPriceEditable(req.body.price_editable, code_type) === true]
     );
+    await auditPriceEditable(pool, req, null, result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }
 });
@@ -344,7 +359,7 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
     // (the change log, as for a drug's price).
     client = await pool.connect();
     await client.query('BEGIN');
-    const was = await client.query('SELECT id, code, name, price, price_clinic FROM order_code WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const was = await client.query('SELECT id, code, name, price, price_clinic, price_editable FROM order_code WHERE id = $1 FOR UPDATE', [req.params.id]);
     const result = await client.query(
       `UPDATE order_code SET code=$1, name=$2, name_en=$3, code_type=$4, group_name=$5, default_dose=$6, default_freq=$7,
        default_days=$8, price=$9, price_clinic=$10, pacs_modality=$11, worklist_enabled=$12, station_ae=$13, body_part=$14, memo=$15,
@@ -356,6 +371,7 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
     if (!result.rows.length) { await client.query('ROLLBACK'); return sentMissing(res, result); }
     await auditPrice(client, req, ACTIONS.ORDER_PRICE, 'order_code', was.rows[0], result.rows[0],
       ['price_clinic', 'price'], { price: 'price_clinic' });
+    await auditPriceEditable(client, req, was.rows[0], result.rows[0]);
     await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
@@ -624,7 +640,9 @@ router.get('/audit', permMiddleware('settings'), async (req, res) => {
       params.push('%' + String(req.query.patient).trim() + '%');
       where.push('(patient_name ILIKE $' + params.length + ' OR chart_no ILIKE $' + params.length + ')');
     }
-    const chosen = req.query.action && /^[a-z.]+$/.test(String(req.query.action)) ? String(req.query.action) : '';
+    // (an action name may hold an underscore - settings.order.price_editable; without it in
+    // the pattern that filter was dropped and every line came back)
+    const chosen = req.query.action && /^[a-z_.]+$/.test(String(req.query.action)) ? String(req.query.action) : '';
     if (chosen) {
       if (chosen.indexOf('.') >= 0) add('action = ?', chosen); else add('module = ?', chosen);
     }
