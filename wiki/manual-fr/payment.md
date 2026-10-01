@@ -109,12 +109,15 @@ N'annulez un reçu que si le reçu lui-même est faux (mauvais patient, par exem
 
 Les listes montrent seulement les visites de la **Date de travail** (en haut à gauche). Elle est sur aujourd'hui et passe toute seule au nouveau jour après minuit. On ne peut pas choisir une date future.
 
-**Ce qui reste des jours passés.** Quand il reste quelque chose à traiter d'un jour précédent, une ligne jaune apparaît en haut de **En attente** : **▸ 📅 Jours passés à traiter (3)**. Cliquez dessus : les patients s'affichent avec leur date (📅 2026-09-30) et un bord jaune à gauche. On y trouve :
+**Ce qui reste d'un jour passé n'apparaît pas dans la liste d'aujourd'hui.** Une visite d'hier qui n'a pas été encaissée, un **Supplément**, une **Correction** ou un **Re-facturer** d'hier se trouvent **à la date d'hier** :
 
-- les visites jamais encaissées — **📅 2026-09-30 · visite d’un jour passé · pas encore encaissée** (par exemple une visite de la veille terminée ce matin par l'accueil) ;
-- les **Supplément**, **Correction** et **Re-facturer** de ces jours.
+1. Cliquez sur **◀** : l'écran passe à hier. **En attente** montre ce qui reste à traiter pour ce jour — par exemple **📅 2026-09-30 · visite d’un jour passé · pas encore encaissée**.
+2. Traitez le patient comme d'habitude. Le reçu est daté d'aujourd'hui.
+3. Cliquez sur **Aujourd’hui** pour revenir.
 
-Traitez-les comme d'habitude ; le reçu est daté d'aujourd'hui. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) apparaissent ainsi. Quand tout est traité, la ligne jaune disparaît.
+Si vous connaissez le patient, **🔍 Trouver patient** l'ouvre directement, quelle que soit la date (voir 13).
+
+L'écran ne signale pas qu'il reste quelque chose d'un jour passé. En fin de journée, vérifiez que **En attente** est vide ; s'il reste des patients, ouvrez la date d'hier le lendemain matin. Seules les visites avec quelque chose à facturer (consultation, médicament, examen) restent dans la liste d'un jour passé.
 
 **Regarder un autre jour.** Cliquez sur **◀**, ou choisissez la date. Le haut de la liste devient jaune : « Date passée (2026-09-30) : un encaissement fait maintenant est daté d’aujourd’hui (2026-10-01) — reçu et caisse du jour. »
 
@@ -139,7 +142,7 @@ Un patient ouvert avec **🔍 Trouver patient** dont la visite n'est pas d'aujou
 
 ### 13. Le patient n'est pas dans la liste
 
-Cliquez sur **🔍 Trouver patient**, cherchez le nom, choisissez la visite. Si la visite a été annulée à l'accueil, l'écran le dit et il n'y a rien à encaisser.
+Cliquez sur **🔍 Trouver patient**, cherchez le nom, choisissez la visite. La visite s'ouvre quelle que soit la **Date de travail** ; si elle n'est pas d'aujourd'hui, sa date (📅) est affichée à droite du nom. Une visite avec une **Correction** ou un **Re-facturer** en attente s'ouvre directement sur cet écran. Si la visite a été annulée à l'accueil, l'écran le dit et il n'y a rien à encaisser.
 
 ## Si ce message apparaît
 
