@@ -19,7 +19,7 @@ Voir un patient de la file :
 
 ### 1. L'écran
 
-- *En haut* — une barre bleue avec le patient (N° dossier, nom, sexe/date de naissance ; **⚠** rouge si allergie) et les boutons **Sélection visite**, **Documents**, **Résultats labo**, **Compte-rendu**, **Dossier**.
+- *En haut* — une barre bleue : les boutons **Sélection visite**, **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
 - *À gauche* — **Prescriptions** : les médicaments en haut, les examens et actes en dessous, dans le même tableau.
 - *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et le **Dictionnaire** (phrases toutes prêtes).
 - *À droite* — **Dossier Patient** et **Ordonnances types**.
@@ -103,7 +103,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 2. Si un cadre rouge **⚠** apparaît au-dessus de l'image, l'image porte le nom d'un **autre patient**. Un cadre jaune : l'image ne porte aucun numéro de patient. Vérifiez le patient sur l'image **avant** d'écrire le compte-rendu.
 3. Écrivez le compte-rendu, puis cliquez sur **💾 Enregistrer**.
 4. **⊘ Images d'une demande annulée** : l'examen a été annulé. Les images restent visibles, mais aucun nouveau compte-rendu ne peut être enregistré.
-5. Tous les comptes-rendus du patient : bouton **Compte-rendu** dans la barre bleue.
+5. Toutes les images et tous les comptes-rendus du patient : bouton **Imagerie** dans la barre bleue.
 6. Séries, **Ouvrir dans un onglet ↗**, session expirée : voir le guide PACS, section 4.
 
 ### 10. Compte-rendu opératoire et lettre de référence
