@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「영상 검사」의 뜻을 한 곳에서: 종류가 imaging 또는 영상 종류가 있는 오더 (시술 + AS·ES)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `e9a75df`를 ff로 당긴 뒤 — 마이그레이션 040 포함). **PACS 저장소** — 없음
+- **앞 커밋과의 관계**: 총괄이 실행 중 EMR에서 AS 오더로 찾은 빈틈(시술 + Modality 오더가 목록에 없고 판독 저장이 안 됨)은 앞 커밋 `0ff275e`에서 이미 고친 것과 같은 것(서로 엇갈림). 그때는 뜻을 「imaging **또는 워크리스트로 간 오더**」로 했는데, 총괄의 말대로 **「imaging 또는 영상 종류(`pacs_modality`)가 있는 오더」**로 바꿈 — 진료 화면이 🖼 단추를 주는 조건과 글자 그대로 같은 뜻. 다른 점은 하나: 영상 종류는 있는데 워크리스트를 끈 오더 코드의 오더도 이제 목록에 나오고 판독을 쓸 수 있음(🖼 단추가 있으므로).
+- **한 일**: `pacs.routes.js`의 `isExam` 한 줄(과 주석). 쓰는 곳 — 목록(`GET /readings/patient`: 진료·수납 화면 공통), 판독 저장(`PUT /reading` 두 물음), 체크 비교(`pickedOrders`). 「비교에 허락할 다른 검사」·「accession으로 되찾기」는 영상이 도착한 `worklist_log` 줄을 보므로 종류를 묻지 않음. 판독 보고서 인쇄·영상 창의 판독 칸은 목록의 줄·`viewer-url`에서 오므로 따로 고칠 것 없음. **`Consultation.jsx`·`Payment.jsx`는 안 고침**(이미 맞음: 🖼 조건 `code_type==='imaging'||pacs_modality`, 영상 창의 판독 칸은 연 오더가 무엇이든 나옴, 수납은 같은 부품).
+- **바꾼 파일**: `backend/src/routes/pacs.routes.js`, `wiki/modules/pacs.md`(4절 「무엇이 영상 검사인가」·DB 표·P-32·8절), `wiki/manual-fr/pacs.md`(6절 한 문장), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인한 방법** (격리 EMR 9188 + PACS 9198 + 장비 흉내, 가짜 환자만. 마이그레이션 040이 격리 DB에 적용됨 — 세 칸 16자):
+  - 오더 코드 둘을 설정 API로: `RT1` Rectoscopie (acte) — **procedure · AS · 워크리스트 켬**, `RT2` Anuscopie — procedure · AS · **워크리스트 끔**. 환자 1에 오더(60, 61).
+  - 장비 흉내: **Modality=AS로 물으면 60 한 줄만**, ES로 물으면 0. 컬러 2장(VL Endoscopic Image, RGB, Modality AS) C-STORE → 브리지 도착 보고 → EMR `completed`·2장·`match`.
+  - **목록**(`readings/patient/1`, 의사·수납 계정 모두 35줄): `AS | Anuscopie (acte, sans worklist) | —`, `AS | Rectoscopie (acte) | 2 image(s)`, `AS | Rectoscopie | 3 image(s)`, `ES | Gastroscopy (GFS) | 2 image(s)`.
+  - **판독 저장**: 60 → 200, 61(워크리스트 없음) → 200, 검사실 오더 → 404(전과 같음). 화면에서도: 영상 창의 판독 칸에 한 문장 더 쓰고 Enregistrer → 「Compte-rendu enregistré ✓」.
+  - **비교**: 57(AS, imaging)을 열면 비교 목록 맨 앞에 `Rectoscopie (acte)`·`Gastroscopy (GFS)`. 체크 비교 60+57+54 → 200, 가장 최근(60)이 열림. 60+61(영상 없음) → 409(전과 같은 규칙).
+  - **영상 창**: 60을 열면 Stone에 **컬러 그림**(2장 한 묶음), 오른쪽 판독 칸·저장 단추.
+  - **판독 보고서**: 60의 미리보기 — 「Examen / **Rectoscopie (acte) (AS)** / Demandé par : GEN · RABE Hery — 2 image(s)」, 발행 → 「Émis : D26-00033」(인쇄 창은 시험에서 가로챔). ES는 같은 자리(`pacs_modality` 그대로 — 보지는 않음).
+  - **수납 화면**(시험용 수납 계정으로 로그인): 🩻 Imagerie → 같은 35줄, 종류 고르기 「Type : tous · AS · US · CR · ES」, 체크 칸 0개, 단추는 「🖨 Imprimer」뿐(Voir image·Comparer 없음) — 지난번에 「코드로만 봄」이라고 적었던 수납 화면의 윗줄도 이번에 눈으로 봄.
+  - **회귀**: 중계 15/15, 비교 32/32, 체크 비교 23/23.
+- **확인 못 한 것**: ES 오더의 판독 보고서 종이(AS만 봄). 설정 화면에서 Modality를 손으로 입력하는 것(API로 넣음). 진짜 장비. ko·en 화면.
+- **다른 세션에 부탁**: (앞 항목과 같음) 진료 — 영상이 온 시술 종류 오더는 `cancellable(o)`이 `lab`·`imaging`만이라 지울 수도 취소할 수도 없음. 설정 — 변경 기록의 `pacs.study.relink` 글.
+
 ## 2026-10-01 — 끝난 오더의 영상을 accession으로 되찾기 · Modality 「AS」 확인 · 시술 종류 오더(내시경)가 걸리던 세 곳
 
 - **상태**: 확인 요청

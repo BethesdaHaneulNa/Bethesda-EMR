@@ -73,7 +73,7 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
 ### 6. Tous les examens d'imagerie du patient
 
 1. Dans la barre bleue de **Consultation**, cliquez sur **🩻 Imagerie**. (Ne pas confondre : **Imagerie** ouvre la liste des examens du patient ; **Compte-rendu** est la case où le médecin écrit, à droite des images.)
-2. **À gauche, la liste** : une ligne par examen, le plus récent en haut — **Date**, **Type** (`CR`, `US`, `ES`…), **Examen**, **Images**, **Compte-rendu**. Les endoscopies envoyées aux appareils (gastroscopie, coloscopie, rectoscopie) y sont aussi, même si elles sont facturées comme un acte.
+2. **À gauche, la liste** : une ligne par examen, le plus récent en haut — **Date**, **Type** (`CR`, `US`, `ES`…), **Examen**, **Images**, **Compte-rendu**. Les endoscopies (gastroscopie, coloscopie, rectoscopie — tout acte qui a un type d'appareil dans **Paramètres → Codes d'actes**) y sont aussi, même si elles sont facturées comme un acte.
    - **Images** : **N image(s)** (vert) = arrivées ; **en attente** = pas encore arrivées ; **—** = l'examen ne part pas vers les appareils.
    - **Compte-rendu** : **✓** et le nom du médecin = écrit ; **pas encore** = pas de compte-rendu.
    - **Annulé** (nom barré, gris) : examen annulé. **⚠ identité à vérifier** (rouge ou jaune) : les images portent un autre numéro de patient, ou aucun.
