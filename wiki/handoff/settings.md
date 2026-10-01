@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 권한 시험 표: 빠져 있던 길 19개 (화면 변화 없음)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `734d2ae` merge 위)
+- **무엇을**: `backend/test/settings.access.mjs`의 표에 줄 19개 — 120 → **139개 × 계정 11 = 1529건**, 격리 스택에서 **모두 표와 같음**.
+  - 총괄이 부른 것: `GET /lab/day` [LAB] · `GET /pharmacy/day` [PHARM] · `GET /lab/units` [LAB, SET] · `POST /lab/units/save` [SET] · `GET /consultations/queue-filter`·`PUT`·`DELETE` [CONS] · `GET /consultations/visit/:id` [CONS] · `PUT /consultations/visit/:id/waiting` [CONS] · `GET /pacs/move-targets` · `POST /pacs/move` · `POST /pacs/move/resume` [CONS, SET] · `GET /pacs/moves/patient/:id` [CONS, PAY, SET].
+  - 백엔드의 모든 `router.<method>`와 표를 대조해 **더 찾은 것**: `PUT /visits/:id/transfer` [REG, CONS] · `GET /consultations/:id/notes` · `PUT /consultations/:id/note` · `GET /consultations/:id/billed-codes` [CONS] · `POST /pharmacy/stock/:id/check-done` [PHARM, CONS, SET] · `GET /stats/cash` [STATS].
+- **총괄에 확인을 부탁한 것 — `/pacs/moves/patient/:id`**: 총괄의 말은 「진료 또는 설정」, 코드(`pacs.move.js`)는 **수납도**(`consultation, payment, settings`). 판독 목록 `/pacs/readings/patient`가 [CONS, PAY]인 것과 같은 까닭으로 보여 **코드대로** 적었음. 수납을 빼기로 한 것이면 표의 한 줄을 [CONS, SET]로 바꾸면 시험이 그 차이를 잡음(고치는 곳은 PACS).
+- **조심한 것 — `POST /lab/units/save`**: 이 길은 목록을 **통째로 바꿔 넣고**, 빈 본문은 「빈 목록」이라 통과한 계정이 부르면 단위가 모두 지워짐. 그래서 빈 이름 하나(`{units: ['']}`)를 보냄 → 가드를 지난 계정에게 400, 바뀌는 것 없음. 시험 뒤 격리 DB의 `lab_unit` 24줄 그대로인 것 확인.
+- **표에 넣지 않는 길**(스크립트 머리말과 모듈 위키 4절에 적음): 로그인 없이 부르는 길(`/auth/setup-status`·`/auth/setup`·`/auth/login`, 브리지 토큰의 `/pacs/worklist-feed`·`/pacs/bridge-heartbeat`·`/pacs/image-backup-report`·`/pacs/study-arrived`·`/pacs/superseded-images`)과, 통과한 계정에게 정말로 일을 하는 설정 쓰기 셋(`PUT /pacs/config`·`PUT /admin/clinic`·`POST /backup/run`). 이 셋은 전부터 빠져 있던 것이고 가드는 settings.
+- **바꾼 파일**: `backend/test/settings.access.mjs` · `wiki/modules/settings.md`(4절·8절) · 이 노트
+- **확인한 방법**: `node --check`. 새 격리 스택(9187)에서 `node backend/test/settings.access.mjs` → 「139 routes x 11 accounts = 1529 requests / every route answered every role as the S2 table says」. 시험 뒤 `lab_unit` 24 · `pacs_study_move` 0 · 기록의 pacs 줄 0. 스택 `down -v`, 계정 파일 삭제.
+
 ## 2026-10-01 — 기록 탭: 영상을 다른 오더로 옮김 / 맞바꿈 (`pacs.study.move`)
 
 - **상태**: 확인 요청
