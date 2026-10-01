@@ -100,7 +100,7 @@ export function PatientFinder(props){
             <div style={{flex:1,overflow:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
                 <thead><tr style={{position:'sticky',top:0,background:scBg}}>
-                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.chartNo}</th>
+                  <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>{t.chartNo}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.name||'Name'}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.phone||'Phone'}</th>
                   <th style={{textAlign:'left',padding:'8px 12px',color:t3,fontWeight:700,fontSize:12}}>{t.dob||'DOB'}</th>
@@ -110,10 +110,12 @@ export function PatientFinder(props){
                   {results.map(function(p){
                     return <tr key={p.id} onClick={function(){pickPatient(p)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer'}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)'}}>{p.chart_no}</td>
+                      {/* The number, the phone and the birth date stay on one line: beside a long name
+                          (which wraps, uncut) they were squeezed and broke at their hyphens. */}
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)',whiteSpace:'nowrap'}}>{p.chart_no}</td>
                       <td style={{padding:'9px 12px',color:tx,fontWeight:700}}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{p.mobile || p.phone || '—'}</td>
-                      <td style={{padding:'9px 12px',color:t2}}>{ymd(p.date_of_birth)}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{padding:'9px 12px',color:t2,whiteSpace:'nowrap'}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;
                   })}
