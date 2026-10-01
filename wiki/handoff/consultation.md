@@ -2,6 +2,23 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 문서: 영상 창의 「전 검사와 비교」·판독 칸 접기 (PACS 세션의 부품)
+
+- **상태**: 확인 요청 (문서만)
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `d234fc7` 다음
+- **한 일**:
+  - 모듈 문서 3.1에 한 단락: PACS 세션이 `Consultation.jsx`에 넣은 여섯 군데(import `ViewerCompare`, 상태 `readFolded`, `openViewer`의 `base_url`·`compare`·`setReadFolded(false)`, 제목 줄 접기 단추, 제목 아래 `<ViewerCompare … />`, 판독 칸 `display`)와 「비교·접기는 PACS 세션의 부품 — 고칠 일이 있으면 PACS와 맞춤」.
+  - 설명서 fr §9에 7번: 비교와 판독 칸 접기는 PACS 설명서 §8을 보라고.
+- **바꾼 파일**: `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: 격리 스택 1366×768 FR. 한 환자에 영상 검사 둘(둘 다 영상 도착으로 DB를 맞춤)을 두고 영상 창을 엶.
+  - 제목 줄: **한 줄**(높이 48px, 폭 1282px, 넘침 없음) — «🖼 Visionneuse · Chest PA · 26-00189 · TRC Medecin · Masquer le compte-rendu ▸ · Ouvrir dans un onglet ↗ · Fermer ✕».
+  - 그 아래 «⇆ Comparer avec Chest PA 2026-10-01»(29px). 누르면 «✕ Fin de la comparaison | Autre examen… (1) | …»(36px), 판독 칸이 접히고 단추가 «◂ Afficher le compte-rendu»로. Afficher → 판독 칸 다시 보임. Fin de la comparaison → 처음 모습.
+  - 격리 스택에는 PACS가 없어 영상 자체(두 검사가 Stone 목록에 뜨는 것)는 보지 않았습니다.
+- **고칠 것**: 진료 쪽에서 보이는 것은 없었습니다.
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 상용구: 설정의 약속(039)에 맞춰 마무리, 끝까지 확인
 
 - **상태**: 확인 요청

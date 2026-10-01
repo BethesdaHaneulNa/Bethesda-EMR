@@ -107,6 +107,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 4. **⊘ Images d'une demande annulée** : l'examen a été annulé. Les images restent visibles, mais aucun nouveau compte-rendu ne peut être enregistré.
 5. Toutes les images et tous les comptes-rendus du patient : bouton **Imagerie** dans la barre bleue.
 6. Séries, **Ouvrir dans un onglet ↗**, session expirée : voir le guide PACS, section 4.
+7. Comparer avec un examen précédent (**⇆ Comparer avec …**, sous le titre de la fenêtre) et replier le compte-rendu (**Masquer le compte-rendu ▸**) : voir le guide PACS, section 8.
 
 ### 10. Compte-rendu opératoire et lettre de référence
 
