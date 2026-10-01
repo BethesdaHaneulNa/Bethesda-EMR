@@ -3,7 +3,7 @@ import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
-import { LIST_COL, CHART_COL, TOOL_ROW, toolBtn, tabBtn, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, ROW_EMPTY, rowTag, EMPTY_ICON, EMPTY_TEXT, SIDE_HEAD } from '../layout.js';
+import { LIST_COL, CHART_COL, TOOL_ROW, toolBtn, tabBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, ROW_EMPTY, rowTag, EMPTY_ICON, EMPTY_TEXT, SIDE_HEAD } from '../layout.js';
 import { api } from '../api/client.js';
 import { LabResults } from '../components/LabResults.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
@@ -101,6 +101,20 @@ export default function LabPage() {
   var nts = useState(''), notice = nts[0], setNotice = nts[1];   // what the last save did
   var tos = useState(''), toast = tos[0], setToast = tos[1];     // same, when the patient is closed after saving
   var rks = useState(0), resultsKey = rks[0], setResultsKey = rks[1]; // remounts LabResults after a save
+
+  // The search box over the list (director, 2026-10-01: as on payment and pharmacy). It
+  // only narrows what is on screen -- the day's list of the chosen tab -- by patient name,
+  // chart number or test name; nothing is asked of the server. Like the payment screen's,
+  // the text stays when the tab or the work date changes, and the tabs' numbers stay the
+  // whole day's.
+  var qs = useState(''), q = qs[0], setQ = qs[1];
+  function matches(g) {
+    var s = q.trim().toLowerCase();
+    if (!s) return true;
+    var name = (nm(g) + ' ' + (g.first_name || '') + ' ' + (g.last_name || '')).toLowerCase();   // either order of the two names
+    var tests = (g.lab_orders || []).map(function (o) { return (o.order_name || '') + ' ' + (o.order_code || ''); }).join(' ').toLowerCase();
+    return name.indexOf(s) >= 0 || String(g.chart_no || '').toLowerCase().indexOf(s) >= 0 || tests.indexOf(s) >= 0;
+  }
 
   var viewSeq = useRef(0);   // numbers each loadView, so only the latest one may fill the grid
 
@@ -246,6 +260,7 @@ export default function LabPage() {
 
   var bd = 'var(--border)', bd2 = 'var(--border-2)', pn = 'var(--panel)', scBg = 'var(--panel-head)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--cyan)';
   var list = tab === 'pending' ? pending : completed;
+  var shown = list.filter(matches);
   var totalItems = groups.reduce(function (a, g) { return a + g.items.length; }, 0);
 
   // Every row is a grid of its own, so the columns are given as shares that the content
@@ -320,10 +335,15 @@ export default function LabPage() {
               <button type="button" onClick={function () { chooseWorkDate(serverToday); }} style={{ background: 'var(--accent-a20)', color: 'var(--accent-text)', border: '1px solid var(--accent-a40)', borderRadius: 5, padding: '4px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t.rc_backToToday}</button>
             </div> : null}
           </div>
+          <div style={LIST_SEARCH_WRAP}>
+            <input autoComplete="off" value={q} onChange={function (e) { setQ(e.target.value); }} placeholder={t.lb_searchPh} aria-label={t.lb_searchPh} style={LIST_SEARCH} />
+          </div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 16, color: t3 }}>{t.loading || 'Loading…'}</div> : null}
           {!loading && list.length === 0 ? <div style={ROW_EMPTY}>{tab === 'pending' ? t.lb_noPending : (viewingPast ? t.lb_noCompletedOn : t.lb_noCompleted)}</div> : null}
-          {list.map(function (g) {
+          {/* the list has rows and the search hides them all: say so, or it reads as "nothing today" */}
+          {!loading && list.length > 0 && shown.length === 0 ? <div style={Object.assign({}, ROW_EMPTY, { overflowWrap: 'anywhere' })}>{t.lb_searchNone.replace('{q}', q.trim())}</div> : null}
+          {shown.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
             return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: ROW_PAD, borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
               {/* A long name (50 letters and more are common here) takes what is left and

@@ -726,6 +726,9 @@ export default {
   // lab screen: work date (the label and the day buttons are reception's rc_ keys)
   lb_workDatePast: "Date passée ({date}) : un résultat saisi maintenant reste classé à cette date.",
   lb_noCompletedOn: "Aucune analyse terminée à cette date",
+  // lab screen: the search box over the list
+  lb_searchPh: "Patient / N° dossier / Analyse",
+  lb_searchNone: "« {q} » : aucun patient de cette liste ne correspond",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

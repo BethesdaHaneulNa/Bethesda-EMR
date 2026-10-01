@@ -77,6 +77,10 @@ as before. *Completed* now means the tests of that day's visits that have a resu
 used to mean the results entered today, whatever the visit's day. The patient search
 still opens a test of any day.
 
+Under the work date there is a search box, as on the payment and pharmacy screens: it
+narrows the list on screen by patient name, chart number or test name, and says so when
+nothing in the list matches.
+
 ### Units are picked from a list the clinic keeps
 
 The unit of a test item was typed by hand on every row, so the same unit ended up
