@@ -415,6 +415,15 @@ export default {
   cs_phraseNoMatch: "찾는 상용구가 없습니다.",
   cs_phraseCat: "분류",
   cs_phraseCatAll: "분류: 전체",
+  // 진료 시작 / 대기로 (결정 다, 2026-10-01): 환자를 여는 것만으로는 진료가 시작되지 않음
+  cs_start: "진료 시작",
+  cs_startHint: "환자를 열기만 해서는 진료가 시작되지 않습니다. 이 단추를 누르거나 무언가를 처음 저장하면 「진료 중」이 됩니다.",
+  cs_back: "대기로",
+  cs_backHint: "잘못 시작한 진료를 대기 목록으로 되돌립니다. 아무것도 기록하지 않았을 때만 됩니다.",
+  cs_backDone: "대기로 되돌렸습니다",
+  cs_backHasRecords: "이 진료에는 이미 기록(기록·바이탈·처방·오더·서류·수납)이 있어서 대기로 되돌릴 수 없습니다.",
+  cs_backNotStarted: "이 내원은 지금 「진료 중」이 아닙니다. 화면을 다시 읽었습니다.",
+  cs_nothingToSave: "저장할 것이 없습니다",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "이 환자는 방금 다른 곳에서 수납되었거나 이전 미수가 이미 정산되었습니다. 목록을 새로 불러왔습니다 — 다시 확인하고 수납하세요.",

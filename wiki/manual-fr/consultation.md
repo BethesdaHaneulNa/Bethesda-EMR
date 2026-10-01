@@ -33,6 +33,15 @@ Voir un patient de la file :
 4. Un patient qui n'est pas dans la file du jour : cliquez sur **🔍 Trouver patient**, cherchez-le, puis choisissez la visite.
 5. Une autre visite du patient déjà ouvert : cliquez sur **📋 Visites du patient**, à droite de **Trouver patient**, puis choisissez la date.
 
+**Ouvrir n'est pas commencer.** Cliquer sur un patient ouvre son dossier pour le lire : à l'accueil, il reste **En attente**. Si vous avez cliqué par erreur, ouvrez simplement un autre patient : rien n'a changé.
+
+En haut de la colonne du milieu, une ligne indique l'état de la visite : **En attente**, **En consultation** ou **Terminé**.
+
+- **▶ Commencer la consultation** (visible quand la visite est **En attente**) : la visite passe **En consultation**, à l'accueil aussi (onglet **En cours**).
+- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen — la visite passe toute seule **En consultation**. **Terminé** fonctionne aussi directement.
+- **↩ Remettre en attente** (visible seulement si la visite est **En consultation** et que **rien** n'est enregistré) : pour une consultation commencée par erreur. La visite redevient **En attente**. Dès qu'il y a une note, une constante, un médicament, un examen, un document ou une facture, ce bouton n'existe plus.
+- **Sauver** sans rien avoir saisi affiche « Rien à enregistrer » et ne change pas l'état.
+
 ### 3. Signes vitaux et note
 
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
@@ -150,6 +159,7 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 2. Cliquez sur le bouton vert **Terminé** (au milieu, sous **Sauver** — pas l'onglet **Terminé** de la file).
 3. S'il reste des cases vides, un message le demande. Choisissez **Annuler** et complétez, sauf si c'est voulu.
 4. La pharmacie et la caisse voient le patient seulement après **Terminé**.
+   - **Cliquez toujours sur Terminé quand vous avez vu le patient**, même sans rien écrire. Une visite restée **En attente** que l'accueil ferme avec **Terminer →** est comptée comme « sans consultation » : pas de frais de consultation.
 5. On peut rouvrir un patient terminé (onglet **Terminé** de la file) et ajouter une ligne : la pharmacie la reçoit de nouveau.
 
 ## Si ce message apparaît
@@ -168,6 +178,8 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 | **Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.** | La demande a été annulée pendant que vous écriviez | La visionneuse se rouvre ; le compte-rendu n'est pas enregistré |
 | **Non ajouté(s) - retiré(s) de la liste des médicaments : …** | L'ordonnance type contient un médicament retiré | Cherchez un autre médicament |
 | **Il reste des champs [ ] à compléter : … Émettre quand même ?** | Des crochets restent dans le document | **Annuler**, remplacez les crochets, puis **Émettre** |
+| **Cette consultation contient déjà des données … : elle ne peut pas être remise en attente.** | Vous cliquez sur **↩ Remettre en attente**, mais un autre médecin a écrit entre-temps, ou il y a un document ou une facture | Rien à faire : l'écran est relu et le bouton disparaît. Pour finir, cliquez sur **Terminé** |
+| **Cette visite n'est plus « En consultation ». L'écran a été relu.** | Quelqu'un l'a déjà remise en attente ou terminée | Rien à faire |
 | **Cette visite a été annulée à l'accueil : la consultation ne peut pas être ouverte.** | La visite a été annulée à l'accueil | Faites réenregistrer le patient à l'accueil |
 | **Erreur : …** | Le serveur a refusé l'enregistrement | Vérifiez la case (un chiffre là où il faut un chiffre) et recommencez |
 

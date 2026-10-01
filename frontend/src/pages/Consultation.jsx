@@ -21,6 +21,8 @@ var LOCK_MESSAGES = {
   'Order already has a result': 'cs_orderLocked',
   'Visit was cancelled': 'cs_visitCancelled',
   'Order is cancelled': 'cs_orderIsCancelled',
+  'Visit is not in consultation': 'cs_backNotStarted',
+  'Consultation has records': 'cs_backHasRecords',
   'pack_qty must be a whole number of at least 1': 'cs_packQtyWhole',
 };
 
@@ -151,7 +153,16 @@ export default function ConsultationPage() {
   var user = getUser();
   var vs = useState([]), visits = vs[0], setVisits = vs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
+  // Opening a visit only reads it (decision (다), 2026-10-01): `sel` is the open visit,
+  // `consult` its consultation - null until the consultation is started (the button, or
+  // the first thing saved: needConsult below). sel.status is the visit's status as the
+  // server last said it. `opened` is false while the visit is still being read.
   var cs = useState(null), consult = cs[0], setConsult = cs[1];
+  var consultRef = useRef(null); consultRef.current = consult;
+  var selRef = useRef(null); selRef.current = sel;
+  var ops = useState(false), opened = ops[0], setOpened = ops[1];
+  var startingRef = useRef(null);
+  var sbs = useState(false), statusBusy = sbs[0], setStatusBusy = sbs[1];
   var qs = useState(false), queueOpen = qs[0], setQueueOpen = qs[1];
   var cfs = useState(false), finderOpen = cfs[0], setFinderOpen = cfs[1];
   var hos = useState(false), histOpen = hos[0], setHistOpen = hos[1];
@@ -368,7 +379,7 @@ export default function ConsultationPage() {
 
   // Text typed in my note and not saved yet is kept in this browser (decision 2026-09-30,
   // conditions from the coordinator): found only by this account's id + the
-  // consultation's id, dropped when saved, dropped when older than a day, and every one
+  // visit's id ('v' + id - a visit only opened has no consultation yet), dropped when saved, dropped when older than a day, and every one
   // of this account's is removed at sign-out (api/client.js logout). A patient's text
   // stays on a shared PC until then - wiki/modules/consultation.md 7.3.
   var noteDraft = {
@@ -391,10 +402,11 @@ export default function ConsultationPage() {
     drop: function(cid){ try { localStorage.removeItem(noteDraft.key(cid)); } catch(e){} },
   };
   var consultId = consult ? consult.id : null;
+  var draftKey = sel ? 'v' + sel.id : null;
   useEffect(function(){
-    if(!consultId) return;
-    if(note !== mineSaved) noteDraft.write(consultId, note); else noteDraft.drop(consultId);
-  },[note, mineSaved, consultId]);
+    if(!draftKey || !opened) return;
+    if(note !== mineSaved) noteDraft.write(draftKey, note); else noteDraft.drop(draftKey);
+  },[note, mineSaved, draftKey, opened]);
   // Two doctors on one visit: every 30 s the notes are read again, so the other doctor's
   // appears. The box (what I am typing) is never touched.
   useEffect(function(){
@@ -467,12 +479,147 @@ export default function ConsultationPage() {
     }
   }
 
+  // The visit's status on the open visit and on its row of the queue, together.
+  function setVisitStatus(vid, status){
+    setSel(function(cur){ return cur && cur.id===vid && cur.status!==status ? Object.assign({}, cur, { status: status }) : cur; });
+    setVisits(function(list){ return (list||[]).map(function(x){ return x.id===vid && x.status!==status ? Object.assign({}, x, { status: status }) : x; }); });
+  }
+  // Puts a consultation on the screen: its lines, every doctor's note, the vital signs.
+  // `draft` is my unsaved text kept on this computer (null: none) - it goes in the box
+  // instead of my saved note. keepBox: the box is being typed in, leave it alone.
+  async function showConsult(v, cData, draft, keepBox){
+    consultRef.current = cData; setConsult(cData);
+    var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
+    var oi = await api.get('/consultations/'+cData.id+'/orders');
+    var ns = await api.get('/consultations/'+cData.id+'/notes');
+    if(!selRef.current || selRef.current.id !== v.id) return;
+    setRxList(rememberRx(rx));
+    setOrderItems(oi);
+    // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
+    // this computer, see noteDraft) comes back instead, with a line saying so.
+    var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
+    var mineText = mine ? mine.note_text : '';
+    setNotes(ns||[]); setMineSaved(mineText); mineSavedRef.current = mineText;
+    if(!keepBox){
+      if(draft != null && draft !== mineText){ setNote(draft); setDraftBack(true); }
+      else setNote(mineText);
+      // Every saved vital sign is loaded, with or without a blood pressure. This used to
+      // load only when a BP was saved, so a temperature taken alone showed empty and the
+      // next Sauver wrote it away (the change log caught it, 2026-09-29).
+      setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
+    }
+  }
+  // The consultation to write on. A visit only opened has none: this starts it (POST
+  // /consultations makes the row and puts the visit in consultation) - the "Commencer"
+  // button, and the safety net before the first thing saved. One request at a time.
+  async function needConsult(){
+    if(consultRef.current) return consultRef.current;
+    var v = selRef.current;
+    if(!v) throw new Error(t.cs_selectPatient);
+    if(!startingRef.current){
+      startingRef.current = api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id })
+        .then(function(c){
+          startingRef.current = null;
+          if(selRef.current && selRef.current.id === v.id){
+            consultRef.current = c; setConsult(c);
+            // A finished consultation is returned as it is, and its visit may stay finished:
+            // the status is then taken from the server.
+            if(c.status!=='completed' && c.status!=='signed') setVisitStatus(v.id, 'in_progress'); else takeStatus(v);
+          }
+          return c;
+        }, function(err){ startingRef.current = null; throw err; });
+    }
+    return startingRef.current;
+  }
+  // Reads the open visit again: its status and whether a consultation exists - after
+  // another screen changed it (a second doctor started it or put it back to waiting,
+  // reception changed its status). The note box and the vital-sign boxes are not touched.
+  // The notes are read again too (another doctor's note is a record: no "back to waiting"
+  // then); the lines only when asked (withLines) - a row being typed in is left alone on
+  // the 15 s check.
+  async function rereadOpen(withLines){
+    var v = selRef.current;
+    if(!v) return;
+    try {
+      var r = await api.get('/consultations/visit/'+v.id);
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      setVisitStatus(v.id, r.visit_status);
+      if(r.consultation){
+        if(!consultRef.current || consultRef.current.id !== r.consultation.id) await showConsult(v, r.consultation, null, true);
+        else {
+          consultRef.current = r.consultation; setConsult(r.consultation);
+          var ns = await api.get('/consultations/'+r.consultation.id+'/notes');
+          if(selRef.current && selRef.current.id === v.id) setNotes(ns||[]);
+          if(withLines) reloadItems();
+        }
+      } else if(consultRef.current){
+        // Put back to waiting elsewhere: the empty consultation is gone. What is typed in
+        // the box stays (kept on this computer) and the next save starts the visit again.
+        consultRef.current = null; setConsult(null);
+        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+      }
+    } catch(err){
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+    }
+  }
+  // The "Commencer la consultation" button.
+  async function startConsult(){
+    if(statusBusy) return;
+    setStatusBusy(true);
+    var v = selRef.current;
+    try {
+      // Always asks the server: a consultation can already be there on a visit still
+      // waiting (reception put the visit back to waiting) - POST starts that one again.
+      var c = await api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id });
+      if(selRef.current && selRef.current.id === v.id){
+        if(!consultRef.current || consultRef.current.id !== c.id) await showConsult(v, c, null, true);
+        await takeStatus(v);
+      }
+    } catch(err){
+      if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
+      else alert(t.cs_errorPrefix+err.message);
+    }
+    setStatusBusy(false);
+  }
+  // "Remettre en attente": a consultation started by mistake, with nothing recorded.
+  // The server checks again (a note, a line, a vital sign, a document or a bill -> 409).
+  async function backToWaiting(){
+    var v = selRef.current;
+    if(!v || statusBusy) return;
+    setStatusBusy(true);
+    try {
+      await api.put('/consultations/visit/'+v.id+'/waiting');
+      if(selRef.current && selRef.current.id === v.id){
+        consultRef.current = null; setConsult(null);
+        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+        setVisitStatus(v.id, 'waiting');
+        showToast(t.cs_backDone);
+      }
+    } catch(err){
+      alert(LOCK_MESSAGES[err && err.message] ? t[LOCK_MESSAGES[err.message]] : t.cs_errorPrefix+err.message);
+      rereadOpen(true);
+    }
+    setStatusBusy(false);
+  }
+  // The queue is read again every 15 s: when it says another status for the open visit
+  // than this screen has, the visit is read again (see rereadOpen).
+  useEffect(function(){
+    if(!sel || !opened) return;
+    var row = (visits||[]).filter(function(x){ return x.id===sel.id; })[0];
+    if(row && row.status !== sel.status) rereadOpen();
+  },[visits]);
+
   async function pickPatient(v){
     // My note not saved yet: OK saves it and opens the other visit, Annuler stays.
-    if(consult && noteRef.current !== mineSavedRef.current){
+    if(sel && noteRef.current !== mineSavedRef.current){
       if(!window.confirm(t.cs_noteUnsavedSwitch)) return;
       try { await pushNote(); } catch(err){ alert(t.cs_errorPrefix+err.message); return; }
     }
+    // Read before the screen changes visit: the draft effect drops the kept text while
+    // the box is still empty.
+    var draft = noteDraft.read('v'+v.id);
+    selRef.current = v; consultRef.current = null; startingRef.current = null;
+    setOpened(false); setConsult(null);
     setSel(v); setQueueOpen(false); setPastView(null);
     // A visit picked through Trouver patient / Sélection visite comes from the visit-history
     // list, which carries no sex, birth date or allergies - the header then showed no
@@ -487,32 +634,21 @@ export default function ConsultationPage() {
     setHistory([]);   // the chart is this patient's only: no cards of the patient before while it loads
     setOrderCode(''); setOrderSugg([]);
     try {
-      // Check if consultation already exists for this visit
-      // If not, start one
-      var cData = await api.post('/consultations',{ visit_id:v.id, patient_id:v.patient_id, department_id:v.department_id });
-      // Read before anything renders with this consultation: the draft effect below drops
-      // the kept text while the box is still empty.
-      var draft = noteDraft.read(cData.id);
-      setConsult(cData);
-      // Load existing data
-      var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
-      setRxList(rememberRx(rx));
-      var oi = await api.get('/consultations/'+cData.id+'/orders');
-      setOrderItems(oi);
-      // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
-      // this computer, see noteDraft) comes back instead, with a line saying so.
-      var ns = await api.get('/consultations/'+cData.id+'/notes');
-      var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
-      var mineText = mine ? mine.note_text : '';
-      setNotes(ns||[]); setMineSaved(mineText); mineSavedRef.current = mineText;
-      if(draft != null && draft !== mineText){ setNote(draft); setDraftBack(true); }
-      else { noteDraft.drop(cData.id); setNote(mineText); }
-      // Every saved vital sign is loaded, with or without a blood pressure. This used to
-      // load only when a BP was saved, so a temperature taken alone showed empty and the
-      // next Sauver wrote it away (the change log caught it, 2026-09-29).
-      setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
+      // Opening reads; it starts nothing (GET, not POST): the visit keeps its status, and
+      // a visit nobody started has no consultation.
+      var r = await api.get('/consultations/visit/'+v.id);
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      setVisitStatus(v.id, r.visit_status);
+      if(r.consultation){
+        // Text kept before 2026-10-01 was filed under the consultation's id.
+        if(draft == null){ draft = noteDraft.read(r.consultation.id); noteDraft.drop(r.consultation.id); }
+        await showConsult(v, r.consultation, draft, false);
+      } else if(draft != null && draft !== ''){ setNote(draft); setDraftBack(true); }
+      if(!selRef.current || selRef.current.id !== v.id) return;
+      setOpened(true);
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
+      if(!selRef.current || selRef.current.id !== v.id) return;
       // The open consultation stays in the list: the chart shows every visit in date order
       // and marks the open one where it belongs (it used to be taken out and pinned on top).
       setHistory(h);
@@ -589,34 +725,54 @@ export default function ConsultationPage() {
       respiratory_rate: parseInt(vt.rr)||null,
     };
   }
+  function anyVital(){ var b = vitalsBody(); return Object.keys(b).some(function(k){ return b[k] != null; }); }
   async function saveVitals(){
+    // A visit not started and no vital sign typed: nothing to save, and nothing to start.
+    if(!consultRef.current && !anyVital()) return;
+    var consult = await needConsult();
     var c = await api.put('/consultations/'+consult.id, vitalsBody());
     setConsult(function(p){ return p && p.id===c.id ? Object.assign({}, p, { vitals_by:c.vitals_by, vitals_at:c.vitals_at, vitals_by_name:c.vitals_by_name }) : p; });
   }
   // My note, if it changed. Empty text empties it (the server removes it from the chart).
   async function pushNote(){
-    if(!consult) return;
-    var cid = consult.id, text = noteRef.current;
-    if(text === mineSavedRef.current) return;
+    var v = selRef.current, text = noteRef.current;
+    if(!v || text === mineSavedRef.current) return;
+    // Saving a note on a visit not started starts it (the safety net).
+    var cid = (await needConsult()).id, key = 'v' + v.id;
     var r = await api.put('/consultations/'+cid+'/note', { note_text: text });
+    if(!selRef.current || selRef.current.id !== v.id) return;
     var saved = r.note ? r.note.note_text : '';
     mineSavedRef.current = saved; setMineSaved(saved);
     setNotes(r.notes || []);
     // Typed on while it was saving: that text stays kept on this computer.
-    if(noteRef.current === saved) noteDraft.drop(cid); else noteDraft.write(cid, noteRef.current);
+    if(noteRef.current === saved) noteDraft.drop(key); else noteDraft.write(key, noteRef.current);
     setDraftBack(false);
   }
   async function saveNote(){
-    if(!consult) return;
+    if(!sel) return;
+    // Sauver with nothing typed on a visit not started: nothing is saved and the visit
+    // stays waiting.
+    if(!consultRef.current && !anyVital() && noteRef.current === mineSavedRef.current){ showToast(t.cs_nothingToSave); return; }
     try {
       await saveVitals();
       await pushNote();
       showToast(t.cs_noteSaved);
+      // Vital signs saved on a consultation whose visit was still waiting start it too.
+      rereadStatus();
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
+  }
+  // After a save that may have started the visit on the server (startVisit): take the
+  // status from the server instead of guessing it.
+  function takeStatus(v){
+    return api.get('/consultations/visit/'+v.id).then(function(r){ setVisitStatus(v.id, r.visit_status); }).catch(function(){});
+  }
+  function rereadStatus(){
+    var v = selRef.current;
+    if(v && (v.status==='waiting' || v.status==='registered')) takeStatus(v);
   }
 
   async function completeConsult(){
-    if(!consult) return;
+    if(!sel) return;
     var missing = rxList.filter(noDose);
     if(missing.length && !window.confirm(String(t.cs_noDoseConfirm||'').replace('{n}', missing.length)
         .replace('{names}', missing.map(function(r){ return r.drug_name; }).join(', ')))) return;
@@ -627,7 +783,8 @@ export default function ConsultationPage() {
       // 완료 전에 바이탈과 내 기록을 먼저 저장 (저장을 안 누르고 완료해도 날아가지 않게)
       await saveVitals();
       await pushNote();
-      await api.put('/consultations/'+consult.id+'/complete');
+      // Terminé on a visit not started: it is started, then finished.
+      await api.put('/consultations/'+(await needConsult()).id+'/complete');
       await loadData();
       setSel(null); setConsult(null);
       alert(t.cs_consultDone);
@@ -672,8 +829,9 @@ export default function ConsultationPage() {
   }
 
   async function addDrugRx(drug){
-    if(!consult) return;
+    if(!sel) return;
     try {
+      var consult = await needConsult();
       // Decision B (2026-09-29): a drug has a price, not a default dose. From the search
       // the daily dose, times, days and sig start EMPTY for the doctor to write; only an
       // order set brings its own (fromSet). The drug's old default_* columns are not read.
@@ -689,6 +847,7 @@ export default function ConsultationPage() {
       });
       rememberRx([rx]);
       setRxList(function(p){ return p.concat([rx]); });
+      rereadStatus();
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
@@ -703,9 +862,10 @@ export default function ConsultationPage() {
     return true;
   }
   async function reloadItems(){
-    if(!consult) return;
-    try { setRxList(rememberRx(await api.get('/consultations/'+consult.id+'/prescriptions'))); } catch(e){}
-    try { setOrderItems(await api.get('/consultations/'+consult.id+'/orders')); } catch(e){}
+    var c = consultRef.current;
+    if(!c) return;
+    try { setRxList(rememberRx(await api.get('/consultations/'+c.id+'/prescriptions'))); } catch(e){}
+    try { setOrderItems(await api.get('/consultations/'+c.id+'/orders')); } catch(e){}
   }
 
   // The status cell of an order row. worklist_status only means something for an order
@@ -723,11 +883,14 @@ export default function ConsultationPage() {
   }
   // Every visit of the chart, newest first: by the visit's date, then by when the
   // consultation was opened, then by id - so two visits of one day keep one order.
+  var OPEN_CARD = -1;
   function chartItems(){
     var items = history.slice();
-    var openId = consult ? consult.id : null;
-    if(consult && sel && !items.some(function(h){ return h.id===openId; }))
-      items.push({ id: openId, consult_date: sel.visit_date || consult.consult_date, created_at: consult.created_at });
+    // A visit not started has no consultation: its card is filed under OPEN_CARD, first
+    // of its day.
+    var openId = consult ? consult.id : OPEN_CARD;
+    if(sel && !items.some(function(h){ return h.id===openId; }))
+      items.push({ id: openId, consult_date: sel.visit_date || (consult && consult.consult_date), created_at: consult ? consult.created_at : '\uffff' });
     var day = function(h){ return h.id===openId && sel ? ymd(sel.visit_date || h.consult_date) : ymd(h.consult_date); };
     return items.sort(function(a, b){
       var da = day(a), db = day(b); if(da !== db) return da < db ? 1 : -1;
@@ -987,7 +1150,7 @@ export default function ConsultationPage() {
 
 
   async function addExamOrder(oc){
-    if(!consult) return;
+    if(!sel) return;
     // Lab and imaging orders always start 1 · 1 · 1 (director's instruction, 2026-09-29):
     // with ⑭ the days multiply the bill, and repeating an exam on several days is a thing
     // the doctor writes on purpose. A procedure (an injection course) starts with its
@@ -1001,6 +1164,7 @@ export default function ConsultationPage() {
     // No sig on an exam line. On a procedure line the order code's (or the set's) sig is
     // copied only when it is one - never a bare number (orderSig, above).
     try {
+      var consult = await needConsult();
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
         dose:exam ? '' : orderSig(oc.default_dose), frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
@@ -1010,13 +1174,14 @@ export default function ConsultationPage() {
         unit_price:oc.price_clinic || oc.price || 0, memo:oc.memo || ''
       });
       setOrderItems(function(p){ return p.concat([item]); });
+      rereadStatus();
       setOrderCode(''); setOrderSugg([]); setOSelIdx(-1);
     } catch(err){ alert(t.cs_errorPrefix+err.message); }
   }
 
   // 약속처방 세트 적용: 세트 항목을 현재 진료에 한 번에 추가
   async function applySet(set){
-    if(!consult){ alert(t.cs_selectPatient); return; }
+    if(!sel){ alert(t.cs_selectPatient); return; }
     if(pastView) setPastView(null);
     var items = (set && set.items) ? set.items : [];
     // A drug hidden from the list (drug_active false, orderset.routes.js) is not put in:
@@ -1125,6 +1290,13 @@ export default function ConsultationPage() {
 
   finishedRef.current = !!(consult && (consult.status==='completed' || consult.status==='signed' ||
     (sel && sel.visit_date && ymd(sel.visit_date) !== ymd(new Date()))));
+  // The status line over the vital signs. Start: a visit still waiting. Back to waiting:
+  // a visit in consultation with nothing recorded as far as this screen knows (the server
+  // also looks for a document and a bill).
+  var notStarted = !!sel && (sel.status==='waiting' || sel.status==='registered');
+  var nothingRecorded = !consult || (consult.status!=='completed' && consult.status!=='signed' && !consult.vitals_at
+    && notes.length===0 && rxList.length===0 && orderItems.length===0);
+  var canGoBack = !!sel && sel.status==='in_progress' && nothingRecorded && !visitBilled(sel);
   var SC={waiting:'accent',registered:'accent',in_progress:'warn',completed:'ok'};   // colour families (design): tint() and -ink make the colours
   var bd='var(--border)',bd2='var(--border-2)',scBg='var(--panel-head)',pn='var(--panel)',tx='var(--text)',t2='var(--text-2)',t3='var(--text-3)';
 
@@ -1214,7 +1386,7 @@ export default function ConsultationPage() {
 
           {pastView?(
             <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-4)',fontSize: 14,fontStyle:'italic',textAlign:'center',padding:20,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{t.viewingPast}</div>
-          ):consult?(
+          ):sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -1357,8 +1529,18 @@ export default function ConsultationPage() {
         {/* minWidth 0: a flex item otherwise grows to its content, and anything too wide
             in here pushed the column sideways (design session, 2026-09-29). */}
         <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--bg-col)',borderRight:'1px solid '+bd}}>
-          {pastView?renderPast():consult?(
+          {pastView?renderPast():sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+              {/* The visit's status, in words, and the one button that changes it (decision
+                  (다), 2026-10-01): opening a patient no longer starts the consultation.
+                  Waiting -> «Commencer»; in consultation with nothing recorded -> «Remettre
+                  en attente»; otherwise the status alone. The line keeps its height, so
+                  nothing under it moves when a button comes or goes. */}
+              <div data-cs="visit-status" style={{padding:'0 10px',height:36,flexShrink:0,boxSizing:'border-box',borderBottom:'1px solid '+bd,background:tint(SC[sel.status]||'accent','12'),display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:tint(SC[sel.status]||'accent','20'),color:SC[sel.status]?'var(--'+SC[sel.status]+'-ink)':t2,borderRadius:3,padding:'1px 8px',fontSize: 13,fontWeight:800,whiteSpace:'nowrap'}}>{label(VISIT_STATUS_KEY, sel.status)}</span>
+                {notStarted ? <button onClick={startConsult} disabled={statusBusy} title={t.cs_startHint} style={{marginLeft:'auto',flexShrink:0,background:'var(--accent)',color:'var(--on-fill)',border:'1px solid var(--accent)',borderRadius:5,padding:'3px 12px',cursor:statusBusy?'wait':'pointer',fontSize: 13,fontWeight:800,whiteSpace:'nowrap'}}>▶ {t.cs_start}</button> : null}
+                {canGoBack ? <button onClick={backToWaiting} disabled={statusBusy} title={t.cs_backHint} style={{marginLeft:'auto',flexShrink:0,background:'var(--chip)',color:tx,border:'1px solid '+bd2,borderRadius:5,padding:'3px 12px',cursor:statusBusy?'wait':'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>↩ {t.cs_back}</button> : null}
+              </div>
               {/* Vitals */}
               <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:10,alignItems:'stretch',background:scBg}}>
                 {/* Two columns when there is room, one when the middle column is narrow (a
@@ -1377,7 +1559,7 @@ export default function ConsultationPage() {
                       <input value={vt[item[0]]} onChange={function(e){uvt(item[0],e.target.value)}} placeholder={item[2]} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'5px 4px',color:tx,fontSize: 15,width:'100%',textAlign:'center',fontFamily:'monospace',boxSizing:'border-box',outline:'none'}}/>
                     </div>;
                   })}
-                  {consult.vitals_at ? <div style={{gridColumn:'1 / -1',fontSize:11,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                  {consult && consult.vitals_at ? <div style={{gridColumn:'1 / -1',fontSize:11,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                     {String(t.cs_vitalsBy||'').replace('{name}', consult.vitals_by_name||'?').replace('{time}', (ymd(consult.vitals_at)===ymd(new Date()) ? '' : ymd(consult.vitals_at)+' ') + hhmm(consult.vitals_at))}</div> : null}
                 </div>
                 <div style={{width:118,flexShrink:0,display:'flex',flexDirection:'column',gap:6,justifyContent:'center'}}>
@@ -1441,7 +1623,7 @@ export default function ConsultationPage() {
               sel?(<>
                 {chartItems().map(function(h){
                   var who = function(dept, doctor, strong){ return <span style={{fontSize: 12,color:strong?tx:t2}}>{[dept, doctor].filter(Boolean).join(' ')}</span>; };
-                  if(consult && h.id===consult.id){
+                  if(h.id===(consult ? consult.id : OPEN_CARD)){
                     // The open visit: a thick band, a clear border and ground, and a tag in
                     // words - not colour alone. It is the live record: every note in full, my
                     // note puts the cursor in the box. While an earlier visit is being read in
@@ -1452,8 +1634,8 @@ export default function ConsultationPage() {
                         {/* The date, then whose chart: department and the doctor the visit was registered
                             with; with no doctor on the visit, the account that opened the consultation -
                             the same fallback as the other visits (GET /patients/:id/history). */}
-                        <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
-                        {who(sel.dept_code, sel.doctor_name || consult.opened_by_name, true)}
+                        <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || (consult && consult.consult_date))}</span>
+                        {who(sel.dept_code, sel.doctor_name || (consult && consult.opened_by_name), true)}
                         <span style={{marginLeft:'auto',background:'var(--accent)',color:'var(--on-fill)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>● {t.cs_chartOpen}</span>
                       </div>
                       {notesBlock(notes, false, true)}
