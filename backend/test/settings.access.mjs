@@ -138,7 +138,8 @@ const ROUTES = [
   ['GET',  '/lab/visit/' + X + '/orders',   [LAB]],
   ['GET',  '/lab/order/' + X + '/items',    [LAB]],
   ['POST', '/lab/order/' + X + '/results',  [LAB], {}],
-  ['GET',  '/lab/patient/' + X + '/results', [CONS, LAB]],
+  // payment added 2026-10-01 (the director): the payment screen's "lab results" button
+  ['GET',  '/lab/patient/' + X + '/results', [CONS, LAB, PAY]],
   ['GET',  '/lab/test-items',               [LAB, SET]],
   ['POST', '/lab/test-items/save',          [SET], { order_code_id: X, items: [] }],
   // the unit list (044). The save replaces the whole list, and an empty body is an empty
