@@ -5,6 +5,7 @@ const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { cancelWorklistForOrder } = require('./pacs.cancel');
+const { visitHasRecords, completeVisitConsultation } = require('./consult.visit');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
@@ -171,30 +172,15 @@ router.get('/visit/:visitId', canConsult, async (req, res) => {
 
 // PUT /api/consultations/visit/:visitId/waiting - back to the waiting list.
 // Only a visit in consultation with nothing recorded: no note, prescription, order,
-// diagnosis, vital sign, document or bill. Anything recorded -> 409 (finish or cancel is
+// diagnosis, vital sign, document or bill - visitHasRecords (consult.visit.js), the one
+// test reception's status buttons use too. Anything recorded -> 409 (finish or cancel is
 // the way then). The empty consultation row goes with it. No change-log line: nothing
 // that was recorded is lost, and the log has no action for a status change.
 router.put('/visit/:visitId/waiting', canConsult, (req, res) => inTx(res, async (client) => {
   const vis = await client.query('SELECT id, status FROM visit WHERE id = $1 FOR UPDATE', [req.params.visitId]);
   if (vis.rows.length === 0) return [404, { error: 'Visit not found' }];
   if (vis.rows[0].status !== 'in_progress') return [409, { error: VISIT_NOT_STARTED }];
-  const found = await client.query(
-    `SELECT (
-       EXISTS (SELECT 1 FROM consultation c WHERE c.visit_id = $1 AND (
-                 c.status IN ('completed', 'signed')
-                 OR btrim(concat(c.note_text, c.subjective, c.objective, c.assessment, c.plan)) <> ''
-                 OR c.bp_systolic IS NOT NULL OR c.bp_diastolic IS NOT NULL OR c.temperature IS NOT NULL
-                 OR c.pulse IS NOT NULL OR c.spo2 IS NOT NULL OR c.respiratory_rate IS NOT NULL
-                 OR c.weight IS NOT NULL OR c.height IS NOT NULL
-                 OR EXISTS (SELECT 1 FROM consultation_note n WHERE n.consultation_id = c.id)
-                 OR EXISTS (SELECT 1 FROM prescription r WHERE r.consultation_id = c.id)
-                 OR EXISTS (SELECT 1 FROM order_item o WHERE o.consultation_id = c.id)
-                 OR EXISTS (SELECT 1 FROM diagnosis d WHERE d.consultation_id = c.id)
-                 OR EXISTS (SELECT 1 FROM document_log dl WHERE dl.consultation_id = c.id)))
-       OR EXISTS (SELECT 1 FROM document_log dl WHERE dl.visit_id = $1)
-       OR EXISTS (SELECT 1 FROM billing b WHERE b.visit_id = $1)
-     ) AS has_records`, [req.params.visitId]);
-  if (found.rows[0].has_records) return [409, { error: VISIT_HAS_RECORDS }];
+  if (await visitHasRecords(client, req.params.visitId)) return [409, { error: VISIT_HAS_RECORDS }];
   await client.query('DELETE FROM consultation WHERE visit_id = $1', [req.params.visitId]);
   const r = await client.query("UPDATE visit SET status = 'waiting', updated_at = NOW() WHERE id = $1 RETURNING id, status", [req.params.visitId]);
   return [200, r.rows[0]];
@@ -298,13 +284,13 @@ router.put('/:id/complete', canConsult, async (req, res) => {
     await client.query('BEGIN');
     const consult = await client.query('SELECT visit_id FROM consultation WHERE id = $1', [req.params.id]);
     if (consult.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
-    // completed_at (decision L9: the pharmacy lists patients in the order their
-    // consultations were finished) is the FIRST time Terminé was pressed: finishing
-    // again after reopening and editing keeps it, so the patient keeps their place.
-    await client.query(
-      "UPDATE consultation SET status = 'completed', completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() WHERE id = $1",
-      [req.params.id]);
-    await client.query("UPDATE visit SET status = 'completed', updated_at = NOW() WHERE id = $1", [consult.rows[0].visit_id]);
+    // A visit reception cancelled stays cancelled: a waiting visit can carry a consultation
+    // (reception put it back to waiting), be cancelled, and still be open on a doctor's screen.
+    const vis = await client.query('SELECT status FROM visit WHERE id = $1 FOR UPDATE', [consult.rows[0].visit_id]);
+    if (vis.rows.length && vis.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return res.status(409).json({ error: VISIT_CANCELLED }); }
+    // Finishing is one function (consult.visit.js): reception's "in consultation ->
+    // finished" button goes the same way, so completed_at (decision L9) is set there too.
+    await completeVisitConsultation(client, consult.rows[0].visit_id);
     await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {

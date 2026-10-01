@@ -788,7 +788,11 @@ export default function ConsultationPage() {
       await loadData();
       setSel(null); setConsult(null);
       alert(t.cs_consultDone);
-    } catch(err){ alert(t.cs_errorPrefix+err.message); }
+    } catch(err){
+      // Cancelled at reception while it was open here: say so and close it.
+      if(err && err.message==='Visit was cancelled'){ alert(t.cs_visitCancelled); setSel(null); setConsult(null); loadData(); }
+      else alert(t.cs_errorPrefix+err.message);
+    }
   }
 
   // Drug / exam order autocomplete

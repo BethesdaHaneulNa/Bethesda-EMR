@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 진료 시작 / 대기로(결정 다) — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 접수와 같이 쓰는 서버 함수(판정·완료) — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -322,7 +322,11 @@
 - `POST /` — 진료 **시작**(또는 쓰려고 열기). 같은 `visit_id`의 진료가 있으면 그것을 돌려주고(완료·서명 전이거나 **내원이 `registered`·`waiting`이면** 내원을 `in_progress`로 — 완료된 내원을 Terminé 탭에서 여는 것은 그대로 완료), 없으면 새로 만들며 `doctor_id = 지금 로그인한 사람`, `department_id = 내원의 과 || 로그인한 사람의 과`, `consult_date = CURRENT_DATE`. `consultation.visit_id`에 UNIQUE 인덱스가 있어 한 내원에 진료는 하나입니다. **취소된 내원**(`visit.status='cancelled'`)은 409 `Visit was cancelled`로 거절하고(내원 행을 `FOR UPDATE`로 잠가 동시 취소도 봄), 없는 내원은 404. 새 진료의 `consult_date`는 **내원 날짜**(전에는 오늘 — 지난 내원을 늦게 적으면 오늘 진료로 잡혔음). 2026-09-29, 7절 ⑫.
 - `PUT /:id` — **요청에 들어 있는 칸만** 바꿉니다(`subjective, objective, assessment, plan, note_text`, 바이탈 7개 중 몸체에 키가 있는 것). 키를 `null`로 보내면 그 칸을 비웁니다(지운 바이탈). 전에는 없는 키도 NULL로 덮어써서, 화면이 보내지 않는 S/O/A/P·체중·키가 저장할 때마다 지워졌습니다(7절 ⑬, 2026-09-29). 끝난 진료(아래 「변경 기록」)면 바뀐 칸의 전 값 → 새 값을 기록합니다. 전·후 값은 둘 다 표에서 읽은 값이라 `36.5`와 `"36.5"`가 바뀜으로 잡히지 않습니다.
 - `GET /:id/billed-codes` — 이 내원의 청구 가운데 취소되지 않은 것에 들어 있는 약·오더 코드 목록(진료비·기타 항목 제외, 권한 `consultation`). 화면이 줄을 지우기 직전에 물어 「이미 수납된 줄」 안내를 붙입니다. 수납이 하는 것처럼 코드로 맞춥니다(같은 코드가 두 줄이면 둘 다 수납된 것으로 봄).
-- `PUT /:id/complete` — 진료 `completed` + 내원 `completed`, 한 트랜잭션. **`consultation.completed_at`**(결정 L9, 2026-09-29 — 약국 목록은 진료가 끝난 순서)을 `COALESCE(completed_at, NOW())`로 둡니다: **처음 Terminé를 누른 때**이고, 다시 열어 고친 뒤 또 눌러도 바뀌지 않습니다(약국에서 기다리는 환자가 목록 끝으로 밀리지 않게). 약국 세션이 이 칸으로 정렬합니다.
+- **접수와 같이 쓰는 함수 — `backend/src/routes/consult.visit.js`**(2026-10-01, 총괄 결정: 판정과 완료는 한 곳에서). 약속의 전문은 `wiki/handoff/consultation.md` 「접수와의 약속」. 셋 다 `db`(호출하는 쪽 트랜잭션의 client, 읽기만이면 pool)를 받고, 스스로 BEGIN·COMMIT·잠금을 하지 않습니다.
+  - `visitRecords(db, visitId)` → 없는 내원이면 `null`, 아니면 `{consultation_id, finished, notes, vitals, prescriptions, orders, diagnoses, documents, bills, any}`. `any`는 여덟 가운데 하나라도 참. **시작만 하고 아무것도 안 쓴 빈 진료 행은 기록이 아님**(`consultation_id`는 있고 `any=false`). 취소된 오더·발급 취소된 서류·취소된 청구도 셉니다(흔적이 남은 것).
+  - `visitHasRecords(db, visitId)` → `visitRecords().any`. 진료의 「↩ 대기로」가 쓰는 판정.
+  - `completeVisitConsultation(db, visitId)` → Terminé가 하는 일(진료 `completed`, `completed_at`은 처음 끝낸 때, 내원 `completed`). 진료 행이 없으면 아무것도 바꾸지 않고 `null`. 조건 없음(진단·기록·용량이 비어도 완료됨), 변경 기록 줄 없음.
+- `PUT /:id/complete` — `completeVisitConsultation`을 부릅니다. **취소된 내원이면 409 `Visit was cancelled`**(2026-10-01 — 접수가 대기로 되돌린 뒤 취소한 내원이 의사 화면에 열려 있을 수 있음; 화면은 안내 후 닫음). 진료 `completed` + 내원 `completed`, 한 트랜잭션. **`consultation.completed_at`**(결정 L9, 2026-09-29 — 약국 목록은 진료가 끝난 순서)을 `COALESCE(completed_at, NOW())`로 둡니다: **처음 Terminé를 누른 때**이고, 다시 열어 고친 뒤 또 눌러도 바뀌지 않습니다(약국에서 기다리는 환자가 목록 끝으로 밀리지 않게). 약국 세션이 이 칸으로 정렬합니다.
 - **오더 줄의 `dose`는 용법 글자**(2026-10-01): `POST /:id/orders`·`PUT /order/:id`는 `dose`를 숫자로 보지 않고 `badOrderSig`(20자 이내 — 칸 크기)만 봅니다. 전에는 처방의 하루 총량처럼 숫자만 받아(2026-09-29의 400 검사) 오더 줄의 용법 칸에 「PRN」을 치면 «dose must be a number»였고, 그 칸에 들어갈 수 있는 것은 오더 코드에서 베낀 뜻 없는 「1.000」뿐이었습니다. 오더의 청구는 수량 × 일수(`orderTotal`)라 `dose`를 수로 읽는 곳은 없습니다. 약속처방(`orderset.routes.js` `badItems`)은 원래 오더 줄의 `dose`를 검사하지 않았습니다. **처방(약) 줄의 `dose`는 그대로 숫자**(하루 총량).
 - 처방·오더 쓰기는 `badAmounts`(`utils/validate.js`)로 숫자 범위를 막습니다 — 처방의 `dose` 0~1000 **숫자만**(그래서 `1/2` 같은 용량은 400), `frequency` 1~24 정수, `days` 1~365 정수, `quantity` 0~10000, `unit_price` 0~1억.
 - **필수 칸과 오류 응답**(2026-09-29): `POST /:id/diagnoses`는 `diagnosis_name`, `POST /:id/prescriptions`는 `drug_name`, `POST /:id/orders`는 `order_name`이 비면 400(「… is required」). 처방의 `route`(용법, `VARCHAR(10)`)는 10자를 넘으면 POST·PUT 모두 400. 그 밖의 DB 제약 오류는 세 라우트 파일 모두 `utils/dbError.js`의 `sendDbError`로 4xx와 읽을 수 있는 문구로 바꿉니다(처방·진단·오더를 없는 진료 id에 쓰면 404 「Consultation not found」 — 2026-09-29 로그 작업 때 처방·진단도 오더처럼 먼저 진료를 읽게 됨). 전에는 not-null·길이 초과가 드라이버 문구를 단 500으로 나갔습니다(설정 세션의 권한 전체 시험에서 발견).
@@ -487,6 +491,7 @@
 
 ### 공용 부품
 
+- `backend/src/routes/consult.visit.js` — 진료 주관, **접수(`visit.routes.js`)가 같이 부름**: `visitRecords` · `visitHasRecords` · `completeVisitConsultation`(3.2). 돌려주는 모양이나 「기록」의 뜻을 바꾸면 접수에 먼저 알립니다.
 - `frontend/src/components/DocumentModal.jsx` · `documents/shared.jsx` · `documents/registry.js` — 공용 문서 엔진, 진료 주관. 쓰는 곳: `Consultation.jsx`(document·chart), `Payment.jsx`(document·prescription·chart 읽기), `Pharmacy.jsx`(prescription·chart 읽기), `Lab.jsx`(chart 읽기), `Registration.jsx`(chart 읽기)
 
 ### DB 테이블
@@ -746,7 +751,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | **환자를 여는 것만으로는 「진료 중」이 되지 않음**(실장님 결정 (다)) — 열기는 `GET /visit/:id`(읽기만, 진료 행을 만들지 않음), 「▶ 진료 시작」 단추(`POST /`), 첫 저장이 시작하는 안전망(`needConsult` + 서버 `startVisit`), 아무것도 없을 때만 「↩ 대기로」(`PUT /visit/:id/waiting`, 빈 행 삭제), 가운데 맨 위 상태 줄, 초안 키를 내원 id로 | (이 커밋) |
+| 2026-10-01 | **접수와 같이 쓰는 서버 함수**(`consult.visit.js`) — 「이 내원에 적은 것이 있나」(`visitRecords`·`visitHasRecords`)와 완료(`completeVisitConsultation`)를 함수로 내보냄. 「대기로」와 Terminé가 그 함수를 씀. 취소된 내원의 Terminé는 409 | (이 커밋) |
+| 2026-10-01 | **환자를 여는 것만으로는 「진료 중」이 되지 않음**(실장님 결정 (다)) — 열기는 `GET /visit/:id`(읽기만, 진료 행을 만들지 않음), 「▶ 진료 시작」 단추(`POST /`), 첫 저장이 시작하는 안전망(`needConsult` + 서버 `startVisit`), 아무것도 없을 때만 「↩ 대기로」(`PUT /visit/:id/waiting`, 빈 행 삭제), 가운데 맨 위 상태 줄, 초안 키를 내원 id로 | `9713494` |
 | 2026-10-01 | **긴 이름 훑기**(50자·85자) — 파란 줄의 차트번호를 이름과 한 덩어리로, 영상 창 제목 줄의 제목·단추가 꺾이지 않게, 서류 환자 표의 차트번호 칸 nowrap. 그 밖의 자리는 그대로 좋음 | `30e1df8` |
 | 2026-10-01 | **오더 줄의 용법에 「1.000」이 저절로 들어가던 것** — 영상 종류가 있는 시술도 검사처럼 1·1·1·용법 비움, 그 밖의 시술은 숫자뿐인 `default_dose`를 베끼지 않음(`orderSig`), 서버는 오더의 `dose`를 20자 글자로(`badOrderSig` — 전에는 숫자만 받아 「PRN」이 400), 옛 「1.000」은 「1」로 보임. **오더 이름 옆 촬영 부위를 뺌**(실장님) | `6ab6600` |
 | 2026-10-01 | `isImagingOrder`를 PACS의 뜻과 글자 그대로(`code_type==='imaging' \|\| pacs_modality`) — 워크리스트를 끈 영상 종류 오더도 판독이 있으면 ✕로 취소, 그 경우의 문장 `cs_cancelPromptRead`(장비 목록 말 없음) | `30d28a2` |
