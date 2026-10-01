@@ -264,8 +264,10 @@ export default function PharmacyPage() {
     var badge = pastBadge(v);
     return <div key={where + v.consultation_id} onClick={function(){setSel(v);}} style={{ padding:'10px 12px', borderBottom:'1px solid '+bd, cursor:'pointer', background:active?'var(--violet-a15)':'transparent', borderLeft:active?'3px solid '+violet:'3px solid transparent' }}>
       <div style={{ display:'flex', justifyContent:'space-between', gap:6 }}>
-        <div style={{ fontWeight:800, color:tx, fontSize: 16 }}>{patientName(v)}</div>
-        <div style={{ fontSize: 16, color:tab==='pending'?'var(--warn-text)':'var(--ok-text-2)', fontWeight:700 }}>{tab==='pending'?t.waiting:t.completed}</div>
+        {/* A long name (50 characters and more are common here) wraps between words and is
+            never cut; the status tag beside it keeps its one line instead of folding. */}
+        <div style={{ fontWeight:800, color:tx, fontSize: 16, minWidth:0, overflowWrap:'anywhere' }}>{patientName(v)}</div>
+        <div style={{ fontSize: 16, color:tab==='pending'?'var(--warn-text)':'var(--ok-text-2)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>{tab==='pending'?t.waiting:t.completed}</div>
       </div>
       <div style={{ color:t3, fontSize: 16, marginTop:3 }}>#{v.chart_no} · {v.rx_count} {t.rxUnit}</div>
       {badge ? <div style={{ display:'inline-block', marginTop:4, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a50)', borderRadius:4, padding:'1px 6px', fontSize: 13, fontWeight:800 }}>{badge}</div> : null}
@@ -311,8 +313,8 @@ export default function PharmacyPage() {
             {!loading && filtered.length === 0 ? <div style={{ padding:28, textAlign:'center', color:t3, fontSize: 16 }}>{t.noRxToShow}</div> : null}
             {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
-                <div style={{ flex:1, fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
-                <button onClick={function(){ setPast(null); }} style={{ background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
+                <div style={{ flex:1, minWidth:0, overflowWrap:'anywhere', fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
+                <button onClick={function(){ setPast(null); }} style={{ flexShrink:0, whiteSpace:'nowrap', alignSelf:'flex-start', background:'var(--chip)', color:t2, border:'1px solid '+bd2, borderRadius:4, padding:'2px 8px', cursor:'pointer', fontSize: 13 }}>{t.close}</button>
               </div>
               {past.groups.length === 0 ? <div style={{ padding:'8px 12px', color:t3, fontSize: 14 }}>{t.ph_noPastRx}</div> : null}
               {past.groups.map(function(v){ return rxCard(v, 'past'); })}
@@ -332,14 +334,14 @@ export default function PharmacyPage() {
           </div> : <>
             <div style={{ flexShrink:0, padding:'12px 16px', borderBottom:'1px solid '+bd, background:scBg }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight:900, color:'var(--text-strong-2)' }}>{patientName(sel)}</div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize: 22, fontWeight:900, color:'var(--text-strong-2)', overflowWrap:'anywhere' }}>{patientName(sel)}</div>
                   <div style={{ marginTop:4, fontSize: 16, color:t2 }}>{t.chartNo} {sel.chart_no} · {t.doctor} {sel.doctor_name || '-'} · {timeText(sel, locale)}</div>
                   {sel.allergies ? <div style={{ marginTop:6, color:'var(--danger-text-2)', background:'var(--danger-a20)', border:'1px solid var(--danger-a50)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 16, fontWeight:700 }}>{t.allergies}: {sel.allergies}</div> : null}
                   {pastBadge(sel) ? <div style={{ marginTop:6, marginRight:6, color:'var(--warn-text)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', display:'inline-block', fontSize: 15, fontWeight:800 }}>🕘 {pastBadge(sel)}</div> : null}
                   {selGone ? <div style={{ marginTop:6, color:'var(--warn-text-3)', background:'var(--warn-a20)', border:'1px solid var(--warn-a60)', borderRadius:5, padding:'5px 8px', fontSize: 15, fontWeight:700 }}>⚠ {t.ph_selGone}</div> : null}
                 </div>
-                <div style={{ textAlign:'right' }}>
+                <div style={{ textAlign:'right', flexShrink:0, whiteSpace:'nowrap' }}>
                   <div style={{ color:t3, fontSize: 16 }}>{t.ph_drugCostInternal}</div>
                   <div style={{ color:'var(--text-strong-2)', fontSize: 20, fontWeight:900 }}>{fmt(totalDrug, lc.lang)}</div>
                   {anyUnquantified ? <div style={{ color:'var(--danger-text-2)', fontSize: 13, fontWeight:700 }}>{t.ph_noTotal}</div> : null}
