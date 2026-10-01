@@ -23,7 +23,14 @@
 //   settle                   "settle all": every unpaid receipt of this visit's patient, one new receipt per visit
 //   settle-bill <billing_id> [amount]
 //                            take money for one unpaid receipt (all of it, or part)
+//   save-fee <CODE[:amount][,CODE...] | none>
+//                            the Save button of the counter fees: keep these lines on the visit
+//                            without billing (they replace what was saved; none removes them)
 //   show                     print what the screen would show, write nothing
+//
+// Counter fees saved on a visit (the Save button) are on its bill when it is opened, as on the
+// screen: every pay mode bills them, together with any --fee lines, and the receipt takes
+// them off the saved list. A visit already billed with saved fees is billed as a supplement.
 //
 // A visit already billed whose doctor added something is billed again with the same
 // command: only what is new is charged (the screen's "Supplement"). A visit whose receipt
@@ -73,7 +80,7 @@ async function call(method, url, body) {
 }
 function num(v) { return parseFloat(v) || 0; }
 function fmt(n) { return String(Math.round(num(n) * 100) / 100); }
-function usage(msg) { console.error((msg ? msg + '\n' : '') + 'usage: node pay-visit.js <visit_id> <paid|partial|overpay|unpaid|discount|correct|void|settle|settle-bill|show> [values] [--type= --fee= --as= --yes-zero-price --port=]'); process.exit(2); }
+function usage(msg) { console.error((msg ? msg + '\n' : '') + 'usage: node pay-visit.js <visit_id> <paid|partial|overpay|unpaid|discount|correct|void|settle|settle-bill|save-fee|show> [values] [--type= --fee= --as= --yes-zero-price --port=]'); process.exit(2); }
 
 // one line for a saved receipt, read back from the server
 async function printBill(id, label) {
@@ -126,6 +133,39 @@ function payMode(words, totalDue) {
   usage('unknown way to pay: ' + mode);
 }
 
+// "CODE[:amount],CODE..." -> the lines "+ add" puts under the counter fees
+async function feeLines(text) {
+  const fc = (await call('GET', '/admin/order-codes?code_type=fee')).filter(function (c) { return CONSULT_FEE_CODES.indexOf(c.code) < 0; });
+  return String(text).split(',').map(function (wantRaw) {
+    const parts = wantRaw.trim().split(':');
+    const want = parts[0];
+    const c = fc.find(function (x) { return x.code === want; });
+    if (!c) throw new Refused(0, 'no counter fee with code ' + want + ' (have: ' + fc.map(function (x) { return x.code; }).join(', ') + ')');
+    let price = num(c.price_clinic || c.price);
+    if (parts.length > 1) {
+      // the amount box exists only on a line whose code is price_editable; empty or 0 is refused
+      if (!c.price_editable) throw new Refused(0, 'the amount of ' + c.code + ' cannot be changed at the till (its code is not price_editable)');
+      price = parseFloat(String(parts[1]).replace(/[^0-9.]/g, '')) || 0;
+    }
+    if (c.price_editable && !(price > 0)) throw new Refused(0, 'no amount for ' + c.name + ' - the screen asks for an amount or for the line to be removed');
+    return { order_code_id: c.id, code: c.code, name: c.name, quantity: 1, unit_price: price };
+  });
+}
+
+// The Save button of the counter fees: the lines given replace what was saved for the visit.
+async function saveFees(visitId, words) {
+  if (!words[1]) usage('save-fee needs CODE[:amount][,CODE...] or none');
+  const bi = await call('GET', '/billing/visit/' + visitId + '/items');
+  const lines = words[1] === 'none' ? [] : await feeLines(words[1]);
+  const r = await call('PUT', '/billing/visit/' + visitId + '/saved-fees', {
+    items: lines.map(function (it) { return { id: null, order_code_id: it.order_code_id, unit_price: it.unit_price }; }),
+    expected_saved_ids: (bi.saved_fees || []).map(function (f) { return f.id; }),
+  });
+  const now = r.saved_fees || [];
+  console.log('saved for visit ' + visitId + ': ' + (now.length ? now.map(function (f) { return f.item_code + ' ' + fmt(f.unit_price); }).join(', ') : 'nothing') +
+    ' · total ' + fmt(now.reduce(function (a, f) { return a + num(f.quantity) * num(f.unit_price); }, 0)) + ' · not billed');
+}
+
 async function billVisit(visitId, words) {
   // the row of the waiting list when the visit is on it (any day) - it carries the
   // carried balance and the correction / re-bill marks; otherwise the bare visit
@@ -145,25 +185,11 @@ async function billVisit(visitId, words) {
   const consultFee = vType === 'none' ? 0 : (prices[code] != null ? num(prices[code]) : 0);
   if (vType !== 'none' && prices[code] == null) console.error('warning: consultation code ' + code + ' not found - the consultation counts 0 (the screen shows a yellow notice)');
 
-  // counter fees chosen at the till
-  let extraItems = [];
-  if (opt.fee) {
-    const fc = (await call('GET', '/admin/order-codes?code_type=fee')).filter(function (c) { return CONSULT_FEE_CODES.indexOf(c.code) < 0; });
-    extraItems = String(opt.fee).split(',').map(function (wantRaw) {
-      const parts = wantRaw.trim().split(':');
-      const want = parts[0];
-      const c = fc.find(function (x) { return x.code === want; });
-      if (!c) throw new Refused(0, 'no counter fee with code ' + want + ' (have: ' + fc.map(function (x) { return x.code; }).join(', ') + ')');
-      let price = num(c.price_clinic || c.price);
-      if (parts.length > 1) {
-        // the amount box exists only on a line whose code is price_editable; empty or 0 is refused
-        if (!c.price_editable) throw new Refused(0, 'the amount of ' + c.code + ' cannot be changed at the till (its code is not price_editable)');
-        price = parseFloat(String(parts[1]).replace(/[^0-9.]/g, '')) || 0;
-      }
-      if (c.price_editable && !(price > 0)) throw new Refused(0, 'no amount for ' + c.name + ' - the screen asks for an amount or for the line to be removed');
-      return { order_code_id: c.id, code: c.code, name: c.name, quantity: 1, unit_price: price };
-    });
-  }
+  // counter fees: the lines saved on the visit (the Save button) come up with the visit, as
+  // on the screen; then the ones chosen at the till now
+  const saved = bi.saved_fees || [];
+  let extraItems = saved.map(function (f) { return { saved_id: f.id, order_code_id: f.order_code_id, code: f.item_code, name: f.item_name, quantity: parseFloat(f.quantity) || 1, unit_price: num(f.unit_price) }; });
+  if (opt.fee) extraItems = extraItems.concat(await feeLines(opt.fee));
 
   const missing = (bi.prescriptions || []).filter(function (r) { return rxQty(r) == null; });
   const rows = chargeRows(bi, consultFee, extraItems);
@@ -188,6 +214,7 @@ async function billVisit(visitId, words) {
   if (words[0] === 'show') {
     console.log('visit ' + visitId + ' · type ' + vType + ' · ' + (sel.needs_refund ? 'CORRECTION pending' : sel.needs_rebill ? 're-bill (held ' + fmt(sel.prior_paid) + ')' : additional ? 'supplement' : 'first bill'));
     rows.forEach(function (r) { console.log('  ' + r.item_type + ' ' + (r.item_code || '-') + ' ' + r.item_name + ' × ' + r.quantity + ' @ ' + r.unit_price + ' = ' + r.total_price); });
+    if (saved.length) console.log('  (saved at the till, not billed yet: ' + saved.map(function (f) { return f.item_code + ' ' + fmt(f.unit_price); }).join(', ') + ')');
     if (missing.length) console.log('  MISSING QUANTITY (billing is blocked): ' + missing.map(function (r) { return r.drug_name; }).join(', '));
     console.log('subtotal ' + fmt(subtotal) + ' · carried balance ' + fmt(prevBal) + ' · total ' + fmt(totalDue));
     return;
@@ -220,6 +247,7 @@ async function billVisit(visitId, words) {
     note: '',   // the screen has no note box
     items: rows.map(function (r) { return { item_type: r.item_type, item_name: r.item_name, item_code: r.item_code, quantity: r.quantity, unit_price: r.unit_price, total_price: r.total_price }; }),
     expected_active_bill_ids: bi.active_bill_ids || [],
+    saved_fee_ids: saved.map(function (f) { return f.id; }),
   });
   // the screen then writes the consultation type it billed back onto the visit
   try { await call('PUT', '/visits/' + sel.id, { visit_type: vType }); } catch (e) { /* as the screen: ignored */ }
@@ -298,6 +326,7 @@ async function settleOne(visitId, words) {
   const mode = words[0];
   if (['paid', 'partial', 'overpay', 'unpaid', 'discount', 'show'].indexOf(mode) >= 0) await billVisit(visitId, words);
   else if (mode === 'correct') await correctVisit(visitId);
+  else if (mode === 'save-fee') await saveFees(visitId, words);
   else if (mode === 'void') await voidBill(visitId, words);
   else if (mode === 'settle') await settleAll(visitId);
   else if (mode === 'settle-bill') await settleOne(visitId, words);

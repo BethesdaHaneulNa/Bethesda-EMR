@@ -531,6 +531,12 @@ export default {
   py_nonePaidThatDay: "No completed payments on this date.",
   py_feeAmount: "{name} amount - can be changed",
   py_feeAmountMissing: "No amount for: {names}. Type an amount, or remove the line with ✕, then bill.",
+  py_save: "Save",
+  py_savedOk: "Saved",
+  py_savedNot: "Not saved - press Save to keep these changes",
+  py_savedLine: "{n} fee line(s) saved · {amount} Ar",
+  py_saveFeesHint: "Keeps the lines added here on this visit without confirming payment. Other PCs see them too.",
+  py_savedChanged: "The saved fee lines of this visit were changed on another screen. What is saved now is shown again - check and retry.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
