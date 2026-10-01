@@ -169,7 +169,8 @@ export function ImagingReportLayout(props) {
                 {/* The exam's name alone (director, 2026-10-01): the modality code beside it - «(CR)» -
                     said nothing to the hospital that receives the report; the form it follows has none. */}
                 <div style={{ fontSize: '13pt', overflowWrap: 'break-word' }}>{v.exam_name || ''}</div>
-                {small ? <div style={{ fontSize: '8.5pt', color: '#444', marginTop: 3, overflowWrap: 'break-word' }}>{small}</div> : null}
+                {/* No second line (ordered by - number of images): the director took it out,
+                    2026-10-01 - the form it follows has the exam's name alone. */}
               </div>
               {/* 3. the reading - the box is as tall as the text */}
               <div style={band}>{L(T.reading, lang)}</div>
