@@ -72,7 +72,7 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
 
 ### 6. Tous les examens d'imagerie du patient
 
-1. Dans la barre bleue de **Consultation**, cliquez sur **Compte-rendu**.
+1. Dans la barre bleue de **Consultation**, cliquez sur **🩻 Imagerie**. (Ne pas confondre : **Imagerie** ouvre la liste des examens du patient ; **Compte-rendu** est la case où le médecin écrit, à droite des images.)
 2. La liste montre tous les examens d'imagerie du patient, le plus récent en haut : date, appareil (`US`, `CR`…), nom de l'examen, compte-rendu.
 3. À côté du nom de l'examen :
    - **N image(s) reçue(s)** (vert) : toutes les images sont arrivées.
@@ -81,7 +81,7 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
 4. **Voir image** ouvre la **Visionneuse**.
 5. La liste ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
 
-La caisse (**Paiement**) voit la même liste en lecture seule, sans images.
+La caisse (**Paiement**) a le même bouton **🩻 Imagerie** : la même liste, en lecture seule, sans images.
 
 ### 7. Un examen d'imagerie annulé
 

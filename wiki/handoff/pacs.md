@@ -2,6 +2,34 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 단추 이름 «Imagerie (영상/판독)»에 문서를 맞춤 (코드 변경 없음)
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `b828129`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**: 총괄이 바꾼 단추 이름(공용 키 `imagingList` = fr «Imagerie» · ko 「영상/판독」 · en "Imaging", 진료·수납의 단추와 목록 창 제목)에 PACS 몫 문서를 맞춤. **목록을 여는 단추**를 가리키는 곳만 «Imagerie»로, **영상 창 오른쪽 판독 칸**을 가리키는 «Compte-rendu»(키 `reading`)는 그대로.
+  - `wiki/manual-fr/pacs.md` 6절: 「cliquez sur **🩻 Imagerie**」 + 한 줄 「Ne pas confondre : **Imagerie** ouvre la liste des examens du patient ; **Compte-rendu** est la case où le médecin écrit, à droite des images.」 / 수납 문장 「La caisse (**Paiement**) a le même bouton **🩻 Imagerie** …」. 4절(영상 창의 «Compte-rendu» 칸)은 그대로.
+  - `wiki/modules/pacs.md`: 2.4에 이름이 바뀐 까닭과 두 이름의 구분을 적은 상자, 2.4·2.5·2.6·4·5절의 단추 이름, 8절 기록.
+  - `wiki/reference/device-connection-onsite.md`(순서서): 「판독 목록」 → 「진료 화면의 **🩻 Imagerie (영상/판독)** 목록」. 「🖼 → Compte-rendu 칸에 소견을 적고」는 판독 칸이라 그대로.
+  - `wiki/reference/integration-test-imaging-2026-09-30.md`: 맨 위에 「이 기록의 «Compte-rendu» 목록은 지금 «Imagerie»」 한 줄(기록 본문은 그날 화면 그대로 둠).
+- **다른 모듈 장에 단추 이름으로 남은 「Compte-rendu / 판독소견」 (제가 고치지 않음 — 목록)**:
+  | 파일 | 줄 | 지금 글 | 맡은 곳 |
+  |---|---|---|---|
+  | `wiki/manual-fr/consultation.md` | 22 | 파란 줄의 단추 목록 «…**Résultats labo**, **Compte-rendu**, **Dossier**» → **Imagerie** (이 줄에는 **⇄ Transfert**도 빠져 있음) | 진료 |
+  | `wiki/manual-fr/consultation.md` | 106 | «Tous les comptes-rendus du patient : bouton **Compte-rendu** dans la barre bleue» → bouton **Imagerie** | 진료 |
+  | `wiki/modules/consultation.md` | 144 | 단추 표 「**🩻 Compte-rendu (판독소견)** — 이 환자의 영상 판독 목록」 | 진료 |
+  | `wiki/modules/consultation.md` | 110 | 「Compte-rendu 목록에도 같은 줄이 있습니다」 | 진료 |
+  | `wiki/modules/payment.md` | 37 | 단추 표 「**🩻 Compte-rendu (판독소견)** — 영상 판독 소견 보기」 | 수납 |
+  - 그대로 두어도 되는 것(판독 칸·수술 기록을 가리킴): `manual-fr/consultation.md` 102(«avec le **Compte-rendu** à droite»)·109–120(Compte-rendu opératoire), `modules/consultation.md` 14·109·154·168. `wiki/manual-fr/payment.md`에는 이 단추 얘기가 없음(넣을지는 수납 몫).
+- **바꾼 파일**: `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/reference/device-connection-onsite.md`, `wiki/reference/integration-test-imaging-2026-09-30.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: 없음. **DB 마이그레이션**: 없음. **번역 키**: 없음(총괄의 `imagingList`를 읽기만 함)
+- **확인한 방법** (격리 EMR 9188만, develop `b828129`로 다시 지은 것, 1366×768 · 프랑스어 · 어두운 화면, 시험 의사 계정): 진료 화면에서 환자를 부른 뒤 파란 환자 줄을 잼 —
+  - 줄 높이 **40px, 한 줄**(넘침 없음: `scrollWidth` = `clientWidth` = 1366). 단추 6개(Sélection visite · Documents · Résultats labo · **🩻 Imagerie** · Dossier · ⇄ Transfert)와 의사·차트번호·이름·성별/생일이 모두 같은 줄, 잘린 글자 없음. 맨 오른쪽 끝 1193px — **173px 남음**.
+  - «🩻 Imagerie» 단추 너비 101px(전의 «🩻 Compte-rendu»는 재지 않았으나 글자 수가 더 많았음).
+  - 단추를 누르면 창 제목 **「🩻 Imagerie · 26-00001 · RAKOTO Jean」**, 목록 내용·«Voir image»·«Aucun compte-rendu»는 그대로.
+  - 수납 화면은 코드로만 봄: `Payment.jsx` 448·609가 같은 키(`t.imagingList||t.reading`).
+- **확인 못 한 것**: 수납 화면을 눈으로 보지는 않음. 알레르기 ⚠가 붙은 환자·이름이 아주 긴 환자의 줄(남는 폭 173px 안이면 한 줄). 한국어·영어 화면의 줄(「영상/판독」·"Imaging" 모두 «Imagerie»보다 짧거나 같음).
+- **다른 세션에 부탁**: 위 표 — 진료 세션 4곳, 수납 세션 1곳.
+
 ## 2026-09-30 — 그림 없는 자료만 온 검사: 영상 창에 빈 칸 대신 한 줄 안내
 
 - **상태**: 확인 요청

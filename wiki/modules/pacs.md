@@ -77,19 +77,21 @@
 
 ### 2.4 환자의 영상 검사 한눈에 보기
 
-- **Consultation (진료)** 화면 위쪽의 **🩻 Compte-rendu (판독소견)** 버튼 → 이 환자의 모든 영상 검사가 최근 것부터 나옵니다. 줄마다 날짜 · 종류(US, CR …) · 검사 이름 · 판독 내용이 보이고, **🖼 Voir image (영상보기)** 를 누르면 2.3의 영상 창이 열립니다.
+> **단추 이름 (2026-10-01, 실장님 결정·총괄 `b828129`)**: 이 목록을 여는 단추와 창 제목은 **🩻 Imagerie (영상/판독)** 입니다(공용 키 `imagingList` — fr «Imagerie» · ko 「영상/판독」 · en "Imaging"). 병원의 PACS 단추처럼 「그 환자가 찍은 것들의 목록」으로 읽히게 하려는 것. 전에는 «Compte-rendu (판독소견)»였음. **영상 창 오른쪽의 판독 칸**은 그대로 **🩻 Compte-rendu (판독소견)**(키 `reading`) — 둘은 다른 것입니다. 이 위키의 아래 절들에서 「판독 목록」이라고 쓴 것은 이 **Imagerie** 목록을 뜻합니다. 영상 서버의 모든 영상을 보여 주는 목록은 EMR에 만들지 않음(Orthanc 관리 화면으로).
+
+- **Consultation (진료)** 화면 위쪽의 **🩻 Imagerie (영상/판독)** 버튼 → 이 환자의 모든 영상 검사가 최근 것부터 나옵니다. 줄마다 날짜 · 종류(US, CR …) · 검사 이름 · 판독 내용이 보이고, **🖼 Voir image (영상보기)** 를 누르면 2.3의 영상 창이 열립니다.
 - 검사 이름 옆에 영상이 왔는지 나옵니다.
   - **N image(s) reçue(s) (영상 N장 도착)** — 초록. 영상이 모두 들어왔습니다.
   - **Images en attente (영상 대기 중)** — 회색. 아직 안 왔습니다(2.5 참고).
   - 아무것도 없으면 워크리스트로 보내지 않는 검사입니다.
 - 영상 검사가 하나도 없으면 **Aucune imagerie (영상검사 내역이 없습니다)**, 판독이 없으면 **Aucun compte-rendu (판독 소견 없음)** 이 나옵니다.
 - **취소된 영상 검사**는 흐리게, 검사 이름에 줄이 그어지고 **Annulé (취소됨)** 이 붙습니다. 그 아래 *Annulé · 날짜 — Motif : 이유* 한 줄. 영상 도착 표시·환자 번호 경고·판독은 **그대로 보이고**, **🖼 Voir image (영상보기)** 로 영상도 볼 수 있습니다(기록이라서). 취소된 검사에는 판독을 새로 저장할 수 없습니다.
-- **Paiement (수납)** 화면에도 **🩻 Compte-rendu (판독소견)** 버튼이 있습니다. 여기서는 **읽기만** 할 수 있고 영상 창은 열리지 않습니다.
+- **Paiement (수납)** 화면에도 **🩻 Imagerie (영상/판독)** 버튼이 있습니다. 여기서는 **읽기만** 할 수 있고 영상 창은 열리지 않습니다.
 - 창을 닫았다가 다시 열면 새로 불러옵니다. 영상이 도착했는지 다시 보려면 닫고 다시 여세요.
 
 ### 2.5 영상이 안 보일 때 — 순서대로
 
-1. **🩻 Compte-rendu (판독소견)** 목록에서 그 검사 옆 글자를 봅니다.
+1. **🩻 Imagerie (영상/판독)** 목록에서 그 검사 옆 글자를 봅니다.
 2. **Images en attente (영상 대기 중)** 이면 영상이 아직 PACS에 안 왔습니다.
    1. 방사선사가 전송한 지 **2분이 안 됐으면** 기다렸다가 목록을 닫고 다시 엽니다. 전송이 끝나고 1분쯤 새 영상이 없어야 「도착」으로 바뀝니다.
    2. 몇 분이 지나도 그대로면 방사선사에게 묻습니다 — 전송했는지, **워크리스트에서 이 환자를 골라** 찍었는지. 환자 이름을 장비에 손으로 쳐서 찍었으면 이 검사와 연결되지 않습니다. 관리자에게 알립니다(연결하는 기능은 아직 없음, 7절 P-4).
@@ -104,7 +106,7 @@
 
 ### 2.6 환자 번호 경고가 떴을 때 — 순서대로
 
-**🩻 Compte-rendu (판독소견)** 목록과 **🖼 Visionneuse (영상 뷰어)** 창 위쪽에 이런 경고가 보일 수 있습니다.
+**🩻 Imagerie (영상/판독)** 목록과 **🖼 Visionneuse (영상 뷰어)** 창 위쪽에 이런 경고가 보일 수 있습니다.
 
 - 🟥 빨강 — *Les images sont au nom de « 26-00012 RAKOTO Jean », qui ne correspond pas au numéro de dossier de ce patient… (영상에 적힌 환자는 「26-00012 RAKOTO Jean」으로, 이 환자의 차트번호와 다릅니다…)* — 영상 속 환자번호가 이 환자의 차트번호와 다릅니다.
 - 🟧 노랑 — *Les images ne portent aucun numéro de patient… (영상에 환자번호가 없습니다…)* — 영상에 환자번호가 없습니다.
@@ -215,7 +217,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 ### 화면
 
-- `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. 진료·수납 화면의 「🩻 판독소견」 창 안에 들어갑니다.
+- `frontend/src/components/RadiologyReadings.jsx` — 환자의 영상 검사·판독 목록(읽기 전용). `props.patientId`, `props.onOpen(orderItemId)`가 있으면 「영상보기」 버튼 표시. 진료·수납 화면의 「🩻 Imagerie (영상/판독)」 창(키 `imagingList`, 2026-10-01 전에는 「🩻 판독소견」) 안에 들어갑니다.
   - 같은 파일에서 **`PatientCheck({images, t, style})`** 와 **`imagesOfRow(row)`** 도 export합니다. `images`는 `viewer-url` 응답의 `images` 모양(`{patient_check, patient_id, patient_name}`, 도착 전에는 `null`)으로 통일했고, 판독 목록의 줄은 `imagesOfRow`로 그 모양으로 바꿔 넘깁니다. `style`은 바깥 상자(여백)만 덮어씀. 진료 화면의 뷰어 창이 이것을 가져다 쓰면 경고 모양·문구가 한 곳에서 관리됩니다.
 - 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다. iframe `src`와 「새 탭에서 열기」는 `viewer-url`의 `url`(EMR 자신의 상대 주소 `/api/pacs/viewer/…`)을 그대로 씀 — P-9 뒤에도 진료 파일은 바뀐 것 없음.
 - 설정 → 오더 연동(Order Feed) 탭 — `Settings.jsx` 약 476~515줄, `savePacs`·`testPacs`.
@@ -333,7 +335,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 ## 5. 다른 모듈과의 연결
 
 - **진료** — 영상 오더를 만들고(`consult.routes.js`가 worklist_log 생성), 오더를 지우면 worklist_log도 지움. 영상이 도착해 `worklist_status='completed'`가 되면 진료 화면이 그 오더를 **잠급니다**(삭제 불가 — `Consultation.jsx` `orderLocked`, `consult.routes.js` DELETE의 409). 영상 뷰어 창·🖼 버튼·판독 입력 UI가 `Consultation.jsx` 안에 있음. `consult.routes.js`도 `pacs_config`를 `CREATE TABLE IF NOT EXISTS`로 만드는데, 그 기본값이 옛 데모값(`192.168.0.222`/`10004`/`BROKER`/`Yonsei Shintong Clinic`)입니다 — 테이블이 이미 있으면 영향 없음.
-- **수납** — 「🩻 판독소견」에서 `RadiologyReadings`를 읽기 전용으로 띄움. 영상 오더 청구는 수납 모듈 몫.
+- **수납** — 「🩻 Imagerie (영상/판독)」에서 `RadiologyReadings`를 읽기 전용으로 띄움. 영상 오더 청구는 수납 모듈 몫.
 - **설정** — 오더 코드의 Modality·워크리스트 사용 여부, 오더 연동 탭(`/api/pacs/config`). 서버 상태(`status.routes.js` `checkBridge`·`checkPacs`, `server-status.ps1`)가 브리지·PACS를 봄.
 - **PatientChart**(수납 소유 공용) — 오더의 worklist_status를 글자로 보여줌.
 
@@ -495,7 +497,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 환자 식별 (영상이 다른 환자·다른 오더에 붙는 경우)
 
-- **P-3 [보통] 🟡 일부 고침 (2026-09-29)** — 브리지가 영상 도착을 알릴 때 EMR이 영상 속 PatientID를 chart_no와 비교해 `patient_check`로 저장하고, 「🩻 판독소견」 목록에 빨강·노랑 경고를 띄움. `viewer-url`도 `images.patient_check`를 돌려줌. 영상 뷰어 창에도 같은 경고 — 진료 세션 `9dfcedc`(`Consultation.jsx`). 두 화면이 같은 부품 `PatientCheck`(`RadiologyReadings.jsx`에서 export, `viewer-url`의 `images` 모양을 받음)를 쓰도록 PACS가 내보냄. **남은 것**: 워크리스트에서 다른 환자를 고른 경우는 원리상 못 잡음(4절 `patient_check`). **원래 문제**: 영상이 맞는 환자의 것인지 EMR이 확인하지 않음. `pacs.routes.js:91` — StudyInstanceUID만으로 뷰어를 엽니다. 방사선사가 워크리스트에서 다른 환자를 골라 찍으면 그 영상은 고른 환자(틀린 환자)의 오더에 붙어 그대로 보입니다. 뷰어 창 머리의 환자 이름은 EMR 쪽 이름이고, 영상 속 DICOM 환자 이름은 Stone 뷰어 안에만 나옵니다. 개선안: 뷰어를 열 때 EMR 백엔드가 Orthanc REST로 그 Study의 PatientID를 조회해 chart_no와 다르면 경고.
+- **P-3 [보통] 🟡 일부 고침 (2026-09-29)** — 브리지가 영상 도착을 알릴 때 EMR이 영상 속 PatientID를 chart_no와 비교해 `patient_check`로 저장하고, 「🩻 Imagerie (영상/판독)」 목록(그때 이름은 「판독소견」)에 빨강·노랑 경고를 띄움. `viewer-url`도 `images.patient_check`를 돌려줌. 영상 뷰어 창에도 같은 경고 — 진료 세션 `9dfcedc`(`Consultation.jsx`). 두 화면이 같은 부품 `PatientCheck`(`RadiologyReadings.jsx`에서 export, `viewer-url`의 `images` 모양을 받음)를 쓰도록 PACS가 내보냄. **남은 것**: 워크리스트에서 다른 환자를 고른 경우는 원리상 못 잡음(4절 `patient_check`). **원래 문제**: 영상이 맞는 환자의 것인지 EMR이 확인하지 않음. `pacs.routes.js:91` — StudyInstanceUID만으로 뷰어를 엽니다. 방사선사가 워크리스트에서 다른 환자를 골라 찍으면 그 영상은 고른 환자(틀린 환자)의 오더에 붙어 그대로 보입니다. 뷰어 창 머리의 환자 이름은 EMR 쪽 이름이고, 영상 속 DICOM 환자 이름은 Stone 뷰어 안에만 나옵니다. 개선안: 뷰어를 열 때 EMR 백엔드가 Orthanc REST로 그 Study의 PatientID를 조회해 chart_no와 다르면 경고.
 - **P-4 [보통] 🟡 1·2단계 고침 (2026-09-29, 격리 스택에서 진짜 Orthanc로 확인)** — 브리지가 UID로 못 찾으면 AccessionNumber로 한 번 더(정확히 하나일 때만), EMR이 accession 일치를 다시 확인하고 실제 UID를 `image_study_uid`(마이그레이션 802)에 저장, 뷰어는 그 UID로 엶, 판독 목록에 노란 한 줄 「검사 번호로 연결됨 — 영상 속 환자 정보 확인」(`px_linkedByAccession`). 격리 시험: UID를 새로 만든 영상 2장 → accession으로 연결·`match`·뷰어 주소가 실제 UID. 같은 accession 영상 둘 → 연결 안 함. accession 틀린 보고·실제 UID 없는 보고 → 409. **남은 것(3단계, 결정 필요)**: accession도 없이 손으로 친 영상을 오더에 붙이는 화면. **원래 문제**: 장비가 StudyInstanceUID를 새로 만들면 영상이 오더에 안 붙음. 연결 고리가 UID 하나뿐입니다(`pacs.routes.js:81-91`). README는 「Accession Number / Study UID로 맞춘다」고 하지만 코드는 UID만 씁니다. 일부 CR·초음파 장비는 워크리스트의 UID를 쓰지 않고 자기 UID를 만듭니다(장비별 확인 필요). 개선안: UID로 못 찾으면 AccessionNumber로 Orthanc에서 찾기.
 - **P-6 [보통] 워크리스트가 「오늘」만 나옴.** `pacs.routes.js:134`·`worklist.routes.js:75` — 어제 낸 오더를 오늘 찍으면 장비 목록에 없어서 손으로 입력 → P-4처럼 연결이 끊깁니다. `consult.routes.js`가 `scheduled_date=CURRENT_DATE`로 고정.
 - **P-7 [보통] ✅ 고침 (2026-09-29)** — 브리지가 Orthanc에서 Stable 스터디를 찾으면 `POST /api/pacs/study-arrived` → 완료 처리 → 다음 바퀴에 `.wl` 삭제. 격리 시험(가짜 Orthanc)으로 확인. **진짜 Orthanc 26.6.1의 응답 형식은 재부팅 뒤 확인함**(R-5: `IsStable` 있음 — 올린 직후 False, 75초 뒤 True, `PatientMainDicomTags.PatientID`, `CountInstances`). **격리 스택에서 끝까지 확인(2026-09-29)**: 오더 → `.wl` → 영상 3장 업로드(Orthanc REST — 장비 대신) → 약 1~2분 뒤 `completed`·`match` → 다음 바퀴 `.wl` 삭제. 실제 장비의 C-STORE로는 장비 설치 날. 남은 한계: 피드가 「오늘」만 주므로 어제 오더의 영상이 오늘 도착하면, 또 자정을 넘겨 도착하면 완료 처리가 안 됨(P-6과 같이 풀 것). (과도기 — EMR만 합쳐지고 브리지는 옛것이던 때 「영상 대기 중」이 계속 보이던 것 — 는 2026-09-29 재부팅 뒤 PACS 합침으로 끝남.) **원래 문제**: 촬영이 끝나도 워크리스트에서 안 빠짐. worklist_log.status를 `completed`로 바꾸는 곳이 없습니다(`PUT /api/worklist/:id/status`를 부르는 코드 없음). 끝난 환자가 하루 종일 장비 목록에 남아, 다음 환자를 찍을 때 잘못 고를 여지가 커집니다. `order_item.worklist_status`도 영원히 `sent`. 개선안: 브리지가 Orthanc에 해당 UID/Accession 영상이 들어왔는지 보고 완료 처리.
@@ -554,6 +556,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | 단추 이름: 환자의 영상 검사 목록을 여는 단추·창 제목이 **🩻 Imagerie (영상/판독)**(공용 키 `imagingList`, 총괄 `b828129`). 2.4·2.5·2.6·4·5절과 프랑스어 설명서·순서서의 이름을 맞춤. 판독 칸 «Compte-rendu»는 그대로 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 4절 중계 7: 그림 없는 자료만 온 검사는 영상 창에 빈 칸 대신 한 줄 안내(fr·ko·en). 프랑스어 설명서 메시지 표·순서서 ④ | EMR `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.3: 모르는 영상 종류도 받음(`ORTHANC__UNKNOWN_SOP_CLASS_ACCEPTED`, 총괄 결정) — 격리 시험·영상 창에서 보이는 것·되돌리기. device-watch: 전용 종류·그림 없는 자료 알림, 「영상 서버 알림」을 DICOM 스레드로 좁힘(W001 뺌) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-30 | 6.3 현지 장비 연결: PACS `device-watch.ps1/.bat`(장비가 하는 일을 사람 말로, `-Detail`·`-Ping`·`-Reset`), 순서서 `wiki/reference/device-connection-onsite.md`, 조사 결과(기본 로그엔 DICOM 없음, 틀린 서버 이름도 받음, 제조사 전용 영상 종류는 조용히 거절) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
