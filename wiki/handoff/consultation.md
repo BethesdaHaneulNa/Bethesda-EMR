@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 오른쪽 맨 위 묶음의 「오늘」: 오늘의 내원일 때만
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `5076ed5` 다음
+- **한 일**:
+  - 지난 날의 내원을 「Trouver patient → Sélection visite」로 열면 머리가 «2026-09-30 오늘»이던 것 → 오늘의 내원이 아니면 **「Cette visite / 이 내원 / This visit」**(`cs_noteThisVisit`). 날짜는 그대로 앞에 있습니다.
+  - 판단은 **서버 날짜**: `POST /consultations` 응답에 `visit_is_today`(`visit_date = todayLocal()`, 새로 열 때와 다시 열 때 모두). PC 시계가 틀려도 맞습니다.
+  - **자정을 넘긴 화면**: 열 때의 PC 날짜를 `consult.client_day`로 적어 두고, 그 뒤 PC 날짜가 바뀌면 「오늘」을 떼어 「Cette visite」로(15·30초 새로고침이 다시 그릴 때). 서버에 다시 묻지 않고, PC 시계의 **변화**만 봅니다.
+  - 총괄이 바꾼 파란 줄 순서(단추 다섯 → ⇄ 전과 → 과·의사 → 차트번호 → 이름 → 성별/생년월일 → 알레르기 → 메모)를 모듈 문서 2.7·3.1과 설명서 fr(전과 단추 위치, §11 맨 위 묶음)에 반영.
+- **바꾼 파일**: `backend/src/routes/consult.routes.js`(`POST /` 응답에 `visit_is_today`) · `frontend/src/pages/Consultation.jsx` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(`cs_noteThisVisit`) · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 더함 `cs_noteThisVisit`
+- **확인한 방법**: `npm run build`, `node --check` 통과. 격리 스택(서버 날짜 2026-10-01).
+  - API `today-e2e` 4항목: 어제 내원 다시 열기 false · 오늘 내원 처음 열기(201) true · 다시 열기(200) true · 어제 내원 처음 열기(201) false.
+  - 화면(1366×768 FR): 대기 목록의 오늘 내원 «2026-10-01 | Aujourd'hui» → Sélection visite에서 09-30 내원 «2026-09-30 | Cette visite» → 오늘 내원을 다시 연 뒤 화면의 시계를 하루 앞으로(Date를 바꿔 흉내) 두고 17초 → «2026-10-01 | Cette visite».
+- **확인 못 한 것**: 실제 자정(흉내로 대신).
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-09-30 — 전과 손질: 의사를 먼저 고르기, 꺼진 단추의 색
 
 - **상태**: 확인 요청

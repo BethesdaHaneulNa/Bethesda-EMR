@@ -392,6 +392,7 @@ export default {
   cs_noteDraftBack: "Le texte non enregistré gardé sur cet ordinateur a été repris.",
   cs_noteUnsavedSwitch: "Votre note de consultation n'est pas encore enregistrée.\nOK : l'enregistrer et ouvrir l'autre patient.\nAnnuler : rester sur ce patient.",
   cs_noteToday: "Aujourd'hui",
+  cs_noteThisVisit: "Cette visite",
   cs_noteNone: "Pas encore de note",
   cs_noteYou: "(vous)",
   cs_noteEdited: "modifiée {time}",
