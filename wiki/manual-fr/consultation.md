@@ -82,10 +82,10 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 ### 7. Examens, imagerie, actes
 
 1. Tapez le code ou le nom (par exemple `CBC`, `Chest`) dans la même case, puis Entrée. La liste montre **LABO**, l'appareil (`CR`, `US`…) ou **ACTE**. **WL** : l'examen part tout de suite vers l'appareil d'imagerie.
-2. Un examen de laboratoire ou d'imagerie arrive toujours avec **1 · 1 · 1** (quantité, fois, jours).
+2. Un examen de laboratoire ou d'imagerie arrive toujours avec **1 · 1 · 1** (quantité, fois, jours) — aussi un acte fait sur un appareil (endoscopie, rectoscopie). La case **Posologie** d'un examen ou d'un acte arrive vide ; vous pouvez y écrire un mot (`PRN`, `matin et soir` — 20 caractères au plus).
 3. Facturation : **quantité × jours**. Par exemple une injection une fois par jour pendant 5 jours = `1` · `1` · `5` → « facturé 5 fois » sous le nom. Attention : **2 jours sur un examen le facture deux fois.**
 4. Le laboratoire voit l'examen dès qu'il est ajouté. Le résultat apparaît tout seul en moins de 30 secondes : la colonne de droite passe de **En attente** à **Résultat reçu**.
-5. Imagerie : la colonne de droite montre **Envoyé** dès l'ajout, puis **En cours** et **Réalisé**. La région (`CHEST`, `ABDOMEN`…) est écrite en petit à côté du nom ; la case **Unité** reste libre pour une note.
+5. Imagerie : la colonne de droite montre **Envoyé** dès l'ajout, puis **En cours** et **Réalisé**. La case **Unité** reste libre pour une note. (La région — `CHEST`, `ABDOMEN`… — n'est plus écrite à côté du nom ; elle s'affiche en passant la souris sur le nom.)
 
 ### 8. Retirer ou annuler une ligne
 

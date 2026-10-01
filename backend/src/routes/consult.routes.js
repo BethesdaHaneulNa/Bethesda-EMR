@@ -563,7 +563,7 @@ router.post('/:id/orders', canConsult, async (req, res) => {
     await client.query('BEGIN');
     const { order_code_id, order_code, order_name, code_type, dose, frequency, days, quantity, unit_price, memo } = req.body;
     if (blank(order_name)) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'order_name is required' }); }
-    const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
+    const invalid = badAmounts(req.body, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig(dose);
     if (invalid) { await client.query('ROLLBACK'); return res.status(400).json({ error: invalid }); }
     // Get consultation info
     const consult = await consultOf(client, req.params.id);
@@ -647,10 +647,20 @@ router.post('/:id/orders', canConsult, async (req, res) => {
 
 
 
+// An ORDER line's `dose` is its sig - the box under Posologie / 용법 on an order row -
+// and is text ("PRN", "QD", "après repas"), at most the column's 20 characters. It was
+// checked as a number like a prescription's daily dose (the 400 checks of 2026-09-29),
+// so a word typed there was refused with "dose must be a number" and the only thing the
+// box could hold was the meaningless "1.000" copied from the order code. Nothing reads
+// it as an amount: an order is billed by quantity x days (orderTotal).
+function badOrderSig(v) {
+  return v != null && String(v).length > 20 ? 'dose (the sig of an order) must be at most 20 characters' : null;
+}
+
 // PUT /api/consultations/order/:orderId - update order item dosing/quantity details
 router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client) => {
   const { dose, frequency, days, quantity, memo, unit_price } = req.body;
-  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'quantity', 'unit_price']);
+  const invalid = badAmounts(req.body, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig(dose);
   if (invalid) return [400, { error: invalid }];
   // A cancelled order is a record: its quantity and notes no longer change (and it is
   // out of the bill, so a change would mean nothing anyway). Locked and checked here,
