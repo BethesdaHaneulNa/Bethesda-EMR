@@ -7,6 +7,12 @@
 // this router relays each request to Orthanc, adding that login here, on the
 // server. Staff never see it, and the clinic network no longer needs port 9090.
 //
+// Stone is served exactly as Orthanc ships it. This relay never changes a byte of
+// its pages or files and never adds code that calls into it (Orthanc and Stone are
+// AGPLv3; the clinic uses them unmodified). What the EMR may use is Stone's own URL
+// parameters (?study=A,B) and Stone's own buttons. The only pages of ours are the
+// short notices sent INSTEAD of Stone when it has nothing to show.
+//
 // Who may: an iframe cannot send the EMR's bearer token, so GET /api/pacs/viewer-url
 // (JWT + consultation) sets a short-lived signed cookie naming the user and the
 // studies of the order they opened last (its own study and the same patient's
@@ -18,8 +24,6 @@
 // list or open another patient's images.
 
 const express = require('express');
-const fs = require('fs');
-const pathLib = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const https = require('https');
@@ -270,15 +274,30 @@ const VIEWER_CSP = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
 ].join('; ');
-// "Compare with an earlier exam": a small script of ours added to the Stone page
-// when the window opens with several studies of the same patient (viewer-url puts
-// them in ?study=A,B,...). Stone has no URL parameter or message for "split the
-// screen and put that study on the right", so the script calls Stone's own page
-// functions. It is browser code, kept in its own file and served from here.
-const COMPARE_PATH = '/px/compare.js';
-let COMPARE_JS = '';
-try { COMPARE_JS = fs.readFileSync(pathLib.join(__dirname, 'pacs.viewer.compare.js'), 'utf8'); } catch (e) { COMPARE_JS = ''; }
-const COMPARE_TAG = '<script src="../px/compare.js"></script>';
+// Two exams in one window (?study=OPENED,OTHER, to compare): Stone puts in its first
+// pane whichever exam's series description (.../metadata) arrives first, and it has
+// no parameter to say which - measured, the other exam came up first once in eight.
+// The window's title and its reading box belong to the opened order, so that exam
+// must be the one that comes up. The other exam's descriptions are therefore held
+// until one of the opened exam's has been sent for this page (1.5 s at most, so a
+// problem here can only cost that long). Only the timing of our own answers changes:
+// Stone is served as it is and nothing calls into it. (Holding the other exam's list
+// queries instead emptied the first pane - Stone rebuilds its list when they arrive.)
+const openedFirst = {
+  pages: new Map(),                       // user:openedStudy -> { page: ms, sent: ms }
+  page(key) {
+    if (this.pages.size > 200) this.pages.clear();
+    this.pages.set(key, { page: Date.now(), sent: 0 });
+  },
+  sent(key) { const p = this.pages.get(key); if (p) p.sent = Date.now(); },
+  async wait(key) {
+    const p = this.pages.get(key);
+    if (!p) return;
+    const until = Date.now() + 1500;
+    while (p.sent < p.page && Date.now() < until) await new Promise(r => setTimeout(r, 40));
+    await new Promise(r => setTimeout(r, 60));
+  },
+};
 
 function viewerHeaders(res) {
   res.removeHeader('Content-Security-Policy');
@@ -296,14 +315,11 @@ router.all('*', async (req, res) => {
   if (!grant) return isPage(path) ? explain(res, 401, ...EXPIRED) : res.status(401).json({ error: 'Viewer session missing or expired' });
 
   // Without ?study= Stone would list every study, which is refused anyway. The page
-  // may name several (the opened one first, then the same patient's others): each
-  // must be in the cookie.
+  // may name several - the opened one first, then the same patient's exam to compare
+  // it with (Stone's own ?study=A,B): each must be in the cookie.
   const pageStudies = isPage(path) ? String(req.query.study || '').split(',') : [];
   if (isPage(path) && (!pageStudies[0] || pageStudies.some(u => !grant.s.includes(u)))) {
     return explain(res, 403, ...NOT_OPENED);
-  }
-  if (path === COMPARE_PATH) {
-    return res.status(200).set({ 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'private, no-store' }).send(COMPARE_JS);
   }
   const study = studyOf(path, req.query);
   if (study === null || (study && !grant.s.includes(study))) {
@@ -312,6 +328,10 @@ router.all('*', async (req, res) => {
     console.log('[pacs viewer] refused', req.method, path.replace(/[0-9.]{6,}/g, '<uid>'));
     return res.status(403).json({ error: 'Not allowed' });
   }
+
+  // Two exams in one window: the opened one must come up first (see openedFirst).
+  const examKey = grant.u + ':' + grant.s[0];
+  if (study && study !== grant.s[0] && path.endsWith('/metadata')) await openedFirst.wait(examKey);
 
   let cfg;
   try {
@@ -328,6 +348,7 @@ router.all('*', async (req, res) => {
   } catch (e) { return isPage(path) ? explain(res, 200, ...UNREACHABLE) : res.status(PACS_DOWN).json({ error: 'Bad PACS address' }); }
 
   if (isPage(path)) {
+    if (pageStudies.length > 1) openedFirst.page(examKey);
     const pics = await studyPictures(cfg, pageStudies[0]);
     if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
     if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
@@ -359,22 +380,8 @@ router.all('*', async (req, res) => {
     // An upstream 502-504 would be swapped by nginx for "backend not reachable";
     // pass it on as 424 so the log still says it was the image server.
     const code = up.statusCode || PACS_DOWN;
-    if (isPage(path) && code === 200 && pageStudies.length > 1 && COMPARE_JS) {
-      // Several studies: add our script to Stone's page (it is small; read it whole).
-      const chunks = [];
-      up.on('data', c => chunks.push(c));
-      up.on('end', () => {
-        let html = Buffer.concat(chunks).toString('utf8');
-        const at = html.lastIndexOf('</body>');
-        html = at >= 0 ? html.slice(0, at) + COMPARE_TAG + html.slice(at) : html + COMPARE_TAG;
-        delete headers['content-length']; delete headers['content-encoding'];
-        res.writeHead(200, headers);
-        res.end(html);
-      });
-      up.on('error', () => { if (!res.headersSent) explain(res, 200, ...UNREACHABLE); else res.destroy(); });
-      return;
-    }
     res.writeHead([502, 503, 504].includes(code) ? PACS_DOWN : code, headers);
+    if (study === grant.s[0] && path.endsWith('/metadata')) up.on('end', () => openedFirst.sent(examKey));
     up.pipe(res);
   });
   // Connect within 5 s (Orthanc down should say so quickly); once connected a

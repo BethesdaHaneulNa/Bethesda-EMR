@@ -1108,6 +1108,12 @@ export default {
   px_orthancUrlDefault: "Par défaut",
   px_orthancUnreachable: "Avec cette adresse, la visionneuse n'atteint pas le serveur d'images — les images ne s'ouvriront pas.",
   px_testOrthancBtn: "Tester : visionneuse → serveur d'images",
+  px_compareWith: "Comparer avec {x}",
+  px_compareOther: "Autre examen… ({n})",
+  px_compareEnd: "Fin de la comparaison",
+  px_compareHint: "Les deux examens sont dans la liste de gauche. Pour les voir côte à côte : bouton ▦ en haut des images → deux cases, puis faites glisser l'autre examen dans la case vide.",
+  px_readingHide: "Masquer le compte-rendu",
+  px_readingShow: "Afficher le compte-rendu",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Couleurs de l'écran (clair / sombre)",

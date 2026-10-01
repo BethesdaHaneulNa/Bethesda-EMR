@@ -1117,6 +1117,12 @@ export default {
   px_orthancUrlDefault: "Default",
   px_orthancUnreachable: "At this address the viewer cannot reach the image server - images will not open.",
   px_testOrthancBtn: "Test: viewer → image server",
+  px_compareWith: "Compare with {x}",
+  px_compareOther: "Another exam… ({n})",
+  px_compareEnd: "End comparison",
+  px_compareHint: "Both exams are in the list on the left. To see them side by side: the ▦ button above the images → two panes, then drag the other exam into the empty pane.",
+  px_readingHide: "Hide the reading",
+  px_readingShow: "Show the reading",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "Screen colours (light / dark)",

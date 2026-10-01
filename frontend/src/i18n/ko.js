@@ -1108,6 +1108,12 @@ export default {
   px_orthancUrlDefault: "기본값으로",
   px_orthancUnreachable: "이 주소로는 영상 창이 영상 서버에 닿지 못합니다 — 영상이 열리지 않습니다.",
   px_testOrthancBtn: "시험: 영상 창 → 영상 서버",
+  px_compareWith: "이전 검사와 비교: {x}",
+  px_compareOther: "다른 검사… ({n})",
+  px_compareEnd: "비교 끝내기",
+  px_compareHint: "두 검사가 왼쪽 목록에 있습니다. 나란히 보려면: 영상 위의 ▦ 단추 → 두 칸, 그다음 다른 검사를 빈 칸으로 끌어다 놓으세요.",
+  px_readingHide: "판독 칸 접기",
+  px_readingShow: "판독 칸 펴기",
   // ── end pacs ──
   // ── begin design (ds_) ──
   ds_themeSwitch: "화면 색 (밝게 / 어둡게)",

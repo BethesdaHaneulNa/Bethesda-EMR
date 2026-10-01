@@ -232,8 +232,10 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
         try {
           const all = (await comparableStudies(oid)).filter(x => x.study !== study);
           prev = previousAlike({ order_code, pacs_modality: o.rows[0].pacs_modality, body_part: w.rows[0].body_part }, all);
-          others = [...(prev ? [prev] : []), ...all.filter(x => x !== prev)]
+          // The offered one is always kept; the rest are the most recent, in date order.
+          const kept = [...(prev ? [prev] : []), ...all.filter(x => x !== prev)]
             .filter((x, i, a) => a.findIndex(y => y.study === x.study) === i).slice(0, MAX_COMPARE);
+          others = all.filter(x => kept.includes(x));
         } catch (e) { others = []; prev = null; }
       }
     }
@@ -244,14 +246,19 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     // every patient in the PACS -- inside one patient's chart (P-18). has_viewer
     // is always true now (the EMR is the viewer), so the screen shows "nothing to
     // show for this order" rather than the old "no viewer address set".
-    // The opened study first, then the same patient's other studies (pacs.viewer.js
-    // checks every one against the cookie). selectedStudies makes Stone show the
-    // opened one first; px_prev is the one the compare button puts next to it.
-    const uids = [study, ...others.map(x => x.study)];
-    const url = !study ? '' : `${base}/stone-webviewer/index.html?study=${uids.map(encodeURIComponent).join(',')}` +
-      (others.length ? `&selectedStudies=${encodeURIComponent(study)}` : '') + (prev ? `&px_prev=${encodeURIComponent(prev.study)}` : '');
-    if (study) viewer.grantViewerCookie(req, res, uids);
-    const compare = { count: others.length, prev: prev ? { order_name: prev.order_name, visit_date: prev.visit_date, same_exam: prev.order_code === order_code } : null };
+    // The window opens on the order's own study, as it always did. The cookie also
+    // opens the same patient's other studies, and `compare` hands the screen one
+    // ready address per study: Stone's own ?study=OPENED,OTHER puts both in its list
+    // (the doctor splits the screen with Stone's layout button). Stone itself is never
+    // changed or scripted - only its URL parameters are used (see pacs.viewer.js).
+    const page = `${base}/stone-webviewer/index.html?study=`;
+    const url = study ? page + encodeURIComponent(study) : '';
+    if (study) viewer.grantViewerCookie(req, res, [study, ...others.map(x => x.study)]);
+    const shown = x => ({ order_name: x.order_name, modality: x.pacs_modality || '', visit_date: x.visit_date,
+      same_exam: x.order_code === order_code, url: page + [study, x.study].map(encodeURIComponent).join(',') });
+    // prev: the one the button offers; others: every one, most recent first.
+    const compare = { count: others.length, prev: prev ? shown(prev) : null,
+      others: others.map(shown) };
     // A cancelled order's images stay viewable: they are part of the record.
     res.json({ has_viewer: true, base, study_instance_uid: study, accession, url, order_name, modality, reading, images, compare,
                no_study: !study, order_status, cancelled: order_status === 'cancelled', cancelled_at, cancel_reason });

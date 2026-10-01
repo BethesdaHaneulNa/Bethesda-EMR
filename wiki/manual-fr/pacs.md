@@ -58,7 +58,7 @@ Attention : un clic sur la zone sombre **autour** de la fenêtre la ferme, et un
 
 Corriger un compte-rendu remplace l'ancien texte (l'ancien n'est pas gardé).
 
-La fenêtre s'ouvre sur les images de la demande ouverte ; les autres examens du même patient ne viennent que si vous demandez une comparaison (8). Jamais les images d'un autre patient. Après 30 minutes, elle affiche **La session d'affichage a expiré** : fermez-la et cliquez de nouveau sur **🖼**.
+La fenêtre s'ouvre sur les images de la demande ouverte ; un autre examen du même patient ne vient que si vous demandez une comparaison (8). Jamais les images d'un autre patient. Après 30 minutes, elle affiche **La session d'affichage a expiré** : fermez-la et cliquez de nouveau sur **🖼**.
 
 ### 5. « Not for diagnostic usage » : qu'est-ce que c'est ?
 
@@ -99,17 +99,18 @@ Un examen qui a déjà des images ou un compte-rendu ne peut pas être retiré ;
 Deux radios du thorax à deux dates : on peut les mettre côte à côte.
 
 1. Ouvrez l'examen le plus récent (**🖼** ou **Voir image**).
-2. Si le patient a d'autres examens d'imagerie, une ligne apparaît juste au-dessus des images : le bouton violet **⇆ Comparer avec … du …** (le même examen, celui d'avant) et, à côté, **N autre(s) examen(s) de ce patient**.
-3. Cliquez sur le bouton. L'écran se coupe en deux : à gauche l'examen ouvert, à droite l'examen précédent. Le nom et la date de l'examen sont écrits en haut à droite de chaque image.
-4. Pour mettre un autre examen à droite : cliquez dessus dans la liste de gauche. Tous les examens du patient y sont, l'examen ouvert en premier, puis du plus récent au plus ancien.
-5. **✕ Fin de la comparaison** : retour à une seule image.
-6. Pour comparer en grand : **Ouvrir dans un onglet ↗**, puis le même bouton.
+2. Si le patient a d'autres examens d'imagerie, une ligne apparaît sous le titre de la fenêtre : le bouton violet **⇆ Comparer avec … (date)** — le même examen, celui d'avant — et la liste **Autre examen… (N)**.
+3. Cliquez sur le bouton, ou choisissez un examen dans la liste. Le **Compte-rendu** se replie pour laisser la place aux images, et les deux examens sont maintenant dans la liste de gauche de la visionneuse. L'examen ouvert s'affiche en premier.
+4. La première fois : en haut des images, cliquez sur le bouton **▦** (la grille, tout à gauche des outils) et choisissez **deux cases côte à côte**. La visionneuse s'en souvient : les fois suivantes, la fenêtre s'ouvre déjà en deux cases.
+5. Faites glisser l'autre examen de la liste de gauche vers la case vide (**[ drop a series here ]**). Le nom et la date de l'examen sont écrits en haut à droite de chaque image.
+6. **✕ Fin de la comparaison** : retour à l'examen seul, et le **Compte-rendu** revient.
+7. Pour comparer en grand : **Ouvrir dans un onglet ↗** pendant la comparaison ; le nouvel onglet contient les deux examens.
 
-- Le bouton dit **⇆ Comparer avec un autre examen** quand le patient n'a pas le même examen à une autre date : après le clic, choisissez dans la liste de gauche.
-- Pas de ligne au-dessus des images : ce patient n'a pas d'autre examen avec images.
-- Le **Compte-rendu** à droite reste celui de l'examen ouvert (son nom est dans le titre de la fenêtre), même si vous regardez un autre examen.
+- **Afficher le compte-rendu / Masquer le compte-rendu** (en haut de la fenêtre) : replie ou montre la case du compte-rendu. Le texte déjà écrit n'est pas perdu.
+- Le **Compte-rendu** reste celui de l'examen ouvert (son nom est dans le titre de la fenêtre), même si vous regardez l'autre examen.
+- Pas de ligne sous le titre : ce patient n'a pas d'autre examen avec images.
 - Ne sont pas proposés : les examens annulés, ceux dont les images ne sont pas arrivées, et ceux qui portent un avertissement d'identité (rouge ou jaune). Ceux-là s'ouvrent seulement depuis leur propre ligne.
-- La fenêtre s'ouvre déjà coupée en deux, avec **[ drop a series here ]** dans une moitié vide : la visionneuse garde la dernière disposition choisie à la main. Cliquez sur le premier bouton de la barre d'outils (la grille, « Change layout ») et choisissez une seule case.
+- Une fenêtre qui s'ouvre coupée en deux avec une case vide **[ drop a series here ]** : c'est la disposition gardée par la visionneuse. Pour revenir à une seule image : bouton **▦** → une seule case.
 
 ## Si ce message apparaît
 

@@ -42,6 +42,40 @@ export function PatientCheck(props) {
     border: '1px solid ' + (mismatch ? 'var(--danger-deep)' : 'var(--warn-strong)') }, props.style)}>⚠ {text}</div>;
 }
 
+// "Compare with an earlier exam": the bar under the image window's header (director,
+// 2026-10-01 - two chest films of different dates must be seen side by side).
+// GET /api/pacs/viewer-url returns `compare`: the same patient's other studies the
+// cookie also opens, each with a ready address ?study=OPENED,OTHER, and `prev`, the
+// one worth offering first (same exam, the time before). This bar only swaps the
+// image window's address between the exam alone and one of those; Stone then lists
+// both exams and the doctor splits the screen with Stone's own layout button - which
+// Stone remembers for the next window. Stone is used as shipped (its URL parameters
+// only): nothing is added to its page and nothing calls into it.
+//   props.viewer  { order_item_id, base_url, compare }   base_url = the exam alone
+//   props.onUrl(address)  the screen puts it in the iframe (and "open in a new tab")
+export function ViewerCompare(props) {
+  var t = props.t, v = props.viewer || {}, c = v.compare;
+  var ps = useState(''), picked = ps[0], setPicked = ps[1];   // '' = the exam alone
+  useEffect(function () { setPicked(''); }, [v.order_item_id]);
+  if (!c || !c.count || !v.base_url) return null;
+  function go(address) { setPicked(address); props.onUrl(address || v.base_url); }
+  function name(x) { return x.order_name + ' ' + ymd(x.visit_date); }
+  var btn = { background: 'var(--violet-deep)', color: 'var(--on-fill-violet)', border: '1px solid var(--violet-ink)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
+  var off = { background: 'var(--btn-neutral-2)', color: 'var(--text)', border: '1px solid var(--border-2)', borderRadius: 5, padding: '4px 11px', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' };
+  return <div style={Object.assign({ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13 }, props.style)}>
+    {picked
+      ? <button onClick={function () { go(''); }} style={off}>✕ {t.px_compareEnd}</button>
+      : (c.prev ? <button onClick={function () { go(c.prev.url); }} style={btn}>⇆ {String(t.px_compareWith || '').replace('{x}', name(c.prev))}</button> : null)}
+    {picked || !c.prev || c.count > 1
+      ? <select value={picked} onChange={function (e) { go(e.target.value); }} style={{ background: 'var(--field)', color: 'var(--text)', border: '1px solid var(--field-border)', borderRadius: 5, padding: '4px 6px', fontSize: 13, maxWidth: 300 }}>
+          <option value="">{String(t.px_compareOther || '').replace('{n}', c.count)}</option>
+          {c.others.map(function (x) { return <option key={x.url} value={x.url}>{ymd(x.visit_date) + ' · ' + (x.modality ? x.modality + ' · ' : '') + x.order_name}</option>; })}
+        </select>
+      : null}
+    {picked ? <span style={{ color: 'var(--text-2)', flex: 1, minWidth: 260, lineHeight: 1.4 }}>{t.px_compareHint}</span> : null}
+  </div>;
+}
+
 // Read-only list of a patient's imaging orders + radiology readings.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
