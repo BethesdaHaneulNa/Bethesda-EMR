@@ -452,6 +452,9 @@ export default {
   cs_allergyTitle: "Allergy warning",
   cs_allergyLead: "Allergy recorded for this patient:",
   cs_allergyOk: "OK",
+  // When the list under the code box cannot show every match (the "+ Drug Search" button was removed, 2026-10-01)
+  cs_moreAll: "… {n} more. Type more letters, or choose “Drug” or “Exam / Imaging” above.",
+  cs_moreOne: "… {n} more. Type more letters to narrow the list.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

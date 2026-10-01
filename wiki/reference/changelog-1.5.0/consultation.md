@@ -178,6 +178,16 @@ prescriptions; it shows only when there is a memo, and a long one scrolls inside
 Issuing a document for a visit still waiting now puts that visit in consultation, like
 any other record.
 
+### One way to find a drug
+
+The green **+ Recherche médicament** button and its window are gone: the box under it
+already found drugs, exams and procedures as you type. The window did one thing the box
+could not - show every match - because the box stopped at eight drugs. With
+**Médicament** (or **Examen / Imagerie**) chosen above the box, the list now shows up to
+fifty matches and scrolls; under **Tout** it stays short and ends with a line saying how
+many more there are. Two letters are needed to search; browsing the whole drug list
+without typing is no longer possible.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**
