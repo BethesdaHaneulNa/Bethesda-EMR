@@ -205,6 +205,11 @@ export default function ConsultationPage() {
   var pqs = useState(''), phraseQ = pqs[0], setPhraseQ = pqs[1];
   var rts = useState('chart'), rTab = rts[0], setRTab = rts[1];
   var his = useState([]), history = his[0], setHistory = his[1];
+  // The chart on the right (director, 2026-10-01): visits always newest first, the open
+  // visit in its own place by date - not pinned on top, where an earlier visit opened from
+  // the visit list read as the latest chart - and marked so it cannot be missed. When a
+  // visit is opened the list scrolls to its card, once; the 30 s refresh never scrolls.
+  var chartScrollRef = useRef(null), openCardRef = useRef(null), chartWantScroll = useRef(false);
   var pvs = useState(null), pastView = pvs[0], setPastView = pvs[1];
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var rtb2 = useState('past'), rightTab = rtb2[0], setRightTab = rtb2[1];
@@ -371,6 +376,16 @@ export default function ConsultationPage() {
   // say has_active_bill; a visit opened from the patient's visit list (Trouver patient /
   // Sélection visite) carries its latest bill's status instead.
   function visitBilled(v){ return !!(v && (v.has_active_bill || (v.billing_id && v.bill_status && v.bill_status !== 'cancelled'))); }
+  // Bring the open visit's card to the middle of the chart, once per opening.
+  useEffect(function(){
+    if(!chartWantScroll.current) return;
+    var c = chartScrollRef.current, el = openCardRef.current;
+    if(!c || !el) return;
+    chartWantScroll.current = false;
+    var cr = c.getBoundingClientRect(), er = el.getBoundingClientRect();
+    c.scrollTop = Math.max(0, c.scrollTop + (er.top - cr.top) - Math.max(0, (cr.height - er.height) / 2));
+  },[history, consultId, rightTab]);
+
   async function openTransfer(){
     if(!sel) return;
     setTransfer({ doctor: sel.doctor_id ? String(sel.doctor_id) : '', reason: '', doctors: [], busy: false });
@@ -433,6 +448,7 @@ export default function ConsultationPage() {
     }
     setDxList([]); setRxList([]); setOrderItems([]);
     setNote(''); setNotes([]); setMineSaved(''); setDraftBack(false); setVt({bp:'',temp:'',pulse:'',spo2:'',rr:''});
+    setHistory([]);   // the chart is this patient's only: no cards of the patient before while it loads
     setOrderCode(''); setOrderSugg([]);
     try {
       // Check if consultation already exists for this visit
@@ -461,7 +477,10 @@ export default function ConsultationPage() {
       setVt({bp:cData.bp_systolic ? cData.bp_systolic+'/'+(cData.bp_diastolic||'') : '',temp:cData.temperature||'',pulse:cData.pulse||'',spo2:cData.spo2||'',rr:cData.respiratory_rate||''});
       // Load history
       var h = await api.get('/patients/'+v.patient_id+'/history');
-      setHistory(h.filter(function(c){ return c.id !== cData.id; }));
+      // The open consultation stays in the list: the chart shows every visit in date order
+      // and marks the open one where it belongs (it used to be taken out and pinned on top).
+      setHistory(h);
+      chartWantScroll.current = true;
     } catch(err){
       // A visit reception cancelled is refused by the server (409); tell the doctor
       // instead of leaving a patient bar with nothing under it.
@@ -666,6 +685,20 @@ export default function ConsultationPage() {
     if(gone || !(tot > 0) || tot === (parseFloat(o.quantity)||0)) return null;
     return <div style={{fontSize:11.5,color:t2,marginTop:1}}>{String(t.cs_orderTotal||'').replace('{n}', fmtAmount(tot))}</div>;
   }
+  // Every visit of the chart, newest first: by the visit's date, then by when the
+  // consultation was opened, then by id - so two visits of one day keep one order.
+  function chartItems(){
+    var items = history.slice();
+    var openId = consult ? consult.id : null;
+    if(consult && sel && !items.some(function(h){ return h.id===openId; }))
+      items.push({ id: openId, consult_date: sel.visit_date || consult.consult_date, created_at: consult.created_at });
+    var day = function(h){ return h.id===openId && sel ? ymd(sel.visit_date || h.consult_date) : ymd(h.consult_date); };
+    return items.sort(function(a, b){
+      var da = day(a), db = day(b); if(da !== db) return da < db ? 1 : -1;
+      var ca = String(a.created_at||''), cb = String(b.created_at||''); if(ca !== cb) return ca < cb ? 1 : -1;
+      return (b.id||0) - (a.id||0);
+    });
+  }
   // ── Notes in the chart ──
   function hhmm(x){
     if(!x) return '';
@@ -683,13 +716,15 @@ export default function ConsultationPage() {
   // (today) clicking it puts the cursor in the box, where it is edited. Another doctor's
   // note is read only. compact: two lines, for the list of earlier visits.
   function notesBlock(list, compact, today){
-    if(!list || !list.length) return <div style={{fontSize: 13,color:t3}}>{compact ? '\u2014' : t.cs_noteNone}</div>;
+    // (today = the open visit's card: its ground is the accent chip, where the softer
+    // text colours fall just under the contrast floor in the dark screen - full text colour.)
+    if(!list || !list.length) return <div style={{fontSize: 13,color:today?tx:t3}}>{compact ? '\u2014' : t.cs_noteNone}</div>;
     return list.map(function(n){
       var mine = isMine(n);
       return <div key={n.id} onClick={mine && today ? function(){ if(noteBoxRef.current) noteBoxRef.current.focus(); } : undefined}
         style={{marginTop:4,paddingLeft:7,borderLeft:'3px solid '+(mine?'var(--accent)':'var(--line-soft)'),cursor:mine&&today?'pointer':'default'}}>
-        <div title={noteHead(n)} style={{fontSize: 12,fontWeight:700,color:mine?'var(--accent-text)':t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
-        <div style={Object.assign({fontSize: 13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}, compact ? {maxHeight:38,overflow:'hidden'} : {})}>{n.note_text}</div>
+        <div title={noteHead(n)} style={{fontSize: 12,fontWeight:700,color:mine?'var(--accent-text)':(today?tx:t2),whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
+        <div style={Object.assign({fontSize: 13,color:today?tx:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}, compact ? {maxHeight:38,overflow:'hidden'} : {})}>{n.note_text}</div>
       </div>;
     });
   }
@@ -1334,35 +1369,42 @@ export default function ConsultationPage() {
             <button onClick={function(){setRightTab('past')}} style={{flex:1,background:rightTab==='past'?'var(--accent-a18)':'transparent',color:rightTab==='past'?'var(--accent-text)':t3,border:'none',borderBottom:rightTab==='past'?'2px solid var(--accent-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:13,fontWeight:800}}>{t.patientChart}</button>
             <button onClick={function(){setRightTab('sets')}} style={{flex:1,background:rightTab==='sets'?'var(--ok-a18)':'transparent',color:rightTab==='sets'?'var(--ok-text)':t3,border:'none',borderBottom:rightTab==='sets'?'2px solid var(--ok-ink)':'2px solid transparent',padding:'8px 6px',cursor:'pointer',fontSize:13,fontWeight:800}}>{t.orderSets}</button>
           </div>
-          <div style={{flex:1,overflow:'auto',padding:'6px 8px'}}>
+          <div ref={chartScrollRef} style={{flex:1,overflow:'auto',padding:'6px 8px'}}>
             {rightTab==='past'?(
               sel?(<>
-                {consult ? <div style={{background:'var(--accent-a12)',borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid var(--accent-a40)'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                    <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
-                    {/* "Today" only for a visit of today (the server's date when it was opened, and
-                        this PC's date not having changed since); otherwise "This visit" - an
-                        earlier day's visit opened from the visit list was headed "Today". */}
-                    {/* The date alone (director, 2026-10-01): no «today» / «this visit» word beside it. */}
-                    {/* Whose chart: department and the doctor the visit was registered with
-                        (director, 2026-09-30 - «GEN» alone did not say which chart). */}
-                    {/* No doctor on the visit: the account that opened the consultation, the same
-                        fallback as the earlier visits below (GET /patients/:id/history), so today's
-                        header does not change name once it becomes an earlier visit. */}
-                    <span style={{fontSize: 12,color:t2}}>{[sel.dept_code, sel.doctor_name || consult.opened_by_name].filter(Boolean).join(' ')}</span>
-                  </div>
-                  {notesBlock(notes, false, true)}
-                </div> : null}
-                {history.length>0?history.map(function(h,i){
-                var active = pastView && pastView.c && pastView.c.id===h.id;
-                return <div key={i} onClick={function(){openPast(h)}} style={{background:active?'var(--accent-a15)':scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid '+(active?'var(--accent-a50)':bd),borderLeft:active?'3px solid var(--accent-ink)':'3px solid transparent',cursor:'pointer'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                    <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
-                    <span style={{fontSize: 12,color:t2}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
-                  </div>
-                  {notesBlock(h.notes, true)}
-                </div>;
-              }):<div style={{padding:'12px 10px',textAlign:'center',color:'var(--text-5)',fontSize: 13,fontStyle:'italic'}}>{t.cs_noPastVisit}</div>}
+                {chartItems().map(function(h){
+                  var who = function(dept, doctor, strong){ return <span style={{fontSize: 12,color:strong?tx:t2}}>{[dept, doctor].filter(Boolean).join(' ')}</span>; };
+                  if(consult && h.id===consult.id){
+                    // The open visit: a thick band, a clear border and ground, and a tag in
+                    // words - not colour alone. It is the live record: every note in full, my
+                    // note puts the cursor in the box. While an earlier visit is being read in
+                    // the middle, clicking this card goes back to it.
+                    return <div key={'open-'+h.id} ref={openCardRef} onClick={pastView ? closePast : undefined}
+                      style={{background:'var(--accent-chip)',borderRadius:5,padding:'8px 10px 8px 8px',marginBottom:6,border:'2px solid var(--accent)',borderLeft:'6px solid var(--accent)',cursor:pastView?'pointer':'default'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,flexWrap:'wrap'}}>
+                        {/* The date, then whose chart: department and the doctor the visit was registered
+                            with; with no doctor on the visit, the account that opened the consultation -
+                            the same fallback as the other visits (GET /patients/:id/history). */}
+                        <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
+                        {who(sel.dept_code, sel.doctor_name || consult.opened_by_name, true)}
+                        <span style={{marginLeft:'auto',background:'var(--accent)',color:'var(--on-fill)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>● {t.cs_chartOpen}</span>
+                      </div>
+                      {notesBlock(notes, false, true)}
+                    </div>;
+                  }
+                  // Another visit: quiet. The one being read in the middle (pastView) has an
+                  // amber dashed edge and its own tag, so it is not taken for the open visit.
+                  var active = pastView && pastView.c && pastView.c.id===h.id;
+                  return <div key={'visit-'+h.id} onClick={function(){openPast(h)}} style={{background:scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:active?'1px dashed var(--warn-ink)':'1px solid '+bd,borderLeft:active?'3px solid var(--warn-ink)':'3px solid transparent',cursor:'pointer'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,flexWrap:'wrap'}}>
+                      <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(h.consult_date)}</span>
+                      {who(h.dept_code, h.doctor_name)}
+                      {active ? <span style={{marginLeft:'auto',background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>{t.cs_chartReading}</span> : null}
+                    </div>
+                    {notesBlock(h.notes, true)}
+                  </div>;
+                })}
+                {history.filter(function(h){ return !consult || h.id!==consult.id; }).length===0 ? <div style={{padding:'12px 10px',textAlign:'center',color:'var(--text-5)',fontSize: 13,fontStyle:'italic'}}>{t.cs_noPastVisit}</div> : null}
             </>):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.cs_selectPatient}</div>
             ):(
               orderSets.length>0?osGrouped().map(function(grp,gi){

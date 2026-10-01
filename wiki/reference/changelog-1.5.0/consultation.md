@@ -91,8 +91,11 @@ the phrase dictionary's header now wraps, and the vital signs keep two columns d
 The note of a visit was one text: a second doctor opening the same visit typed into it,
 and nothing said who wrote what. Now each doctor has **one note per visit**, under their
 name. The box in the middle is *Ma note de consultation*; after **Sauver** it stays in the
-box and appears at the top of **Dossier Patient** under the visit's date, with the doctor's
-name and time (and when it was last changed). Another doctor's note shows there under
+box and appears in **Dossier Patient**, in the open visit's card, with the doctor's
+name and time (and when it was last changed). The chart lists every visit newest first;
+the visit that is open stays at its own date and is marked by a thick blue edge and the
+tag **● Dossier ouvert** (an earlier visit opened from the visit list is no longer shown
+on top as if it were the latest), and the list scrolls to it. Another doctor's note shows there under
 their name and can only be read — an administrator cannot change a doctor's note either.
 Opening another patient with an unsaved note asks first; unsaved text is kept on the
 computer until it is saved, the user signs out, or a day has passed. Vital signs stay one

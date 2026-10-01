@@ -401,6 +401,8 @@ export default {
   cs_noteUnsaved: "Not saved",
   cs_noteDraftBack: "Unsaved text kept on this computer was brought back.",
   cs_noteUnsavedSwitch: "Your consultation note is not saved yet.\nOK: save it and open the other patient.\nCancel: stay on this patient.",
+  cs_chartOpen: "Open chart",
+  cs_chartReading: "Reading",
   cs_noteNone: "No note yet",
   cs_noteYou: "(you)",
   cs_noteEdited: "edited {time}",
