@@ -14,6 +14,10 @@ Every account starts on the dark screen, so nothing changes for anyone until the
 
 Beside dark and light there is a third choice, **📄 Paper** (**Papier**, **종이색**): the light screen on a warm, slightly yellow ground, like paper. It glares less than white, which some eyes prefer for a long day. The director asked for it after looking at the first mockups again (2026-10-01). It works exactly like the other two: one press, remembered with the account, on every screen and on the login screen. Its text and outlines were deepened until they meet the same contrast line as the light screen, because paper is a little darker than white. Dark stays the screen every account starts with.
 
+### Payment, pharmacy and laboratory look alike
+
+These three screens are built the same way (tools on top, the patient list on the left, the work in the middle, the patient's history on the right) but each had its own sizes. They now share them: the tool row and its buttons, the waiting / done tabs (tinted, with the count in brackets), the refresh button right after the tabs, the list (name, second line, a small boxed tag for "waiting" or "in consultation"), the notice in the empty middle, and the width of the right-hand column. The title line above the list, which repeated the chosen tab, is gone, so one more patient fits. The waiting drawer of the consultation screen and the work-date line of the reception screen follow the same sizes. Nothing changed in what the screens do, and each keeps its own colour.
+
 ### What stays the same on every screen
 
 - **Anything on paper.** Receipts, prescriptions, surgical records, referral letters and their previews are white sheets as before, and the letterhead preview in Settings too. Printing is untouched.

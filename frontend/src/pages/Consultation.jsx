@@ -4,6 +4,7 @@ import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
+import { TOOL_BTN, toolBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, rowTag } from '../layout.js';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
@@ -1455,16 +1456,16 @@ export default function ConsultationPage() {
             stayed in the Tab order and the focus vanished into it: inert (Chrome 102+) takes
             the closed drawer out of it (integration test, 2026-09-30). */}
         <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:340,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-350px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
-          <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:3,flexWrap:'wrap'}}>
+          <div style={{padding:'6px 9px',borderBottom:'1px solid '+bd,display:'flex',gap:6,flexWrap:'wrap'}}>
             {['waiting','completed'].map(function(k){
               var c=k==='waiting'?'accent':'ok';
-              return <button key={k} onClick={function(){setQTab(k)}} style={{flex:1,background:qTab===k?tint(c,'18'):'transparent',color:qTab===k?'var(--'+c+'-ink)':t3,border:qTab===k?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:4,padding:'3px 6px',cursor:'pointer',fontSize: 12,fontWeight:600}}>{t[k]||k}</button>;
+              return <button key={k} onClick={function(){setQTab(k)}} style={Object.assign({},TOOL_BTN,{flex:1,fontWeight:800,background:qTab===k?tint(c,'18'):'transparent',color:qTab===k?'var(--'+c+'-ink)':t3,border:qTab===k?'1px solid '+tint(c,'40'):'1px solid transparent'})}>{t[k]||k}</button>;
             })}
             {/* Whose patients this list shows: the doctors ticked in the window this opens. */}
-            <button onClick={openQueueFilter} title={t.cs_qfTitle} aria-label={t.cs_qfTitle} style={{flexShrink:0,background:queueRule?'var(--accent-a20)':'var(--chip)',color:queueRule?'var(--accent-text)':t2,border:'1px solid '+(queueRule?'var(--accent-a40)':bd2),borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize: 13,fontWeight:700}}>⚙</button>
+            <button onClick={openQueueFilter} title={t.cs_qfTitle} aria-label={t.cs_qfTitle} style={toolBtn({flexShrink:0,background:queueRule?'var(--accent-a20)':'var(--chip)',color:queueRule?'var(--accent-text)':t2,border:'1px solid '+(queueRule?'var(--accent-a40)':bd2)})}>⚙</button>
           </div>
-          <div style={{padding:'5px 8px',borderBottom:'1px solid '+bd}}>
-            <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+          <div style={LIST_SEARCH_WRAP}>
+            <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={LIST_SEARCH}/>
             {/* One line, cut with "…" (the full list is the tooltip): a long doctor name must
                 not push the list down. */}
             <div data-cs="queue-shown" title={queueSummary()} style={{fontSize: 12,color:t2,marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{String(t.cs_qfShown||'').replace('{list}', queueSummary())}</div>
@@ -1473,16 +1474,16 @@ export default function ConsultationPage() {
             {filteredQueue.map(function(v){
               var isSel=sel&&sel.id===v.id;
               var sc2=SC[v.status]||'text-2';
-              return <div key={v.id} onClick={function(){pickPatient(v)}} style={{padding:'7px 10px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent'}}>
+              return <div key={v.id} onClick={function(){pickPatient(v)}} style={{padding:ROW_PAD,cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent'}}>
                 {/* The status tag keeps its width and stays on one line: beside a long name
                     (two lines) it was squeezed and «대기» broke into 대 / 기 (director, 2026-10-01).
                     The name takes what is left and wraps between words. */}
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:1}}>
-                  <span style={{fontWeight:600,fontSize: 14,color:'var(--text-strong)',minWidth:0,overflowWrap:'anywhere'}}>{v.last_name} {v.first_name}</span>
-                  <span style={{background:tint(sc2,'18'),color:SC[v.status]?'var(--'+sc2+'-ink)':t2,borderRadius:3,padding:'0 4px',fontSize: 11,fontWeight:600,whiteSpace:'nowrap',flexShrink:0,marginTop:2}}>{label(VISIT_STATUS_KEY, v.status)}</span>
+                  <span style={Object.assign({},ROW_NAME,{minWidth:0,overflowWrap:'anywhere'})}>{v.last_name} {v.first_name}</span>
+                  <span style={rowTag(tint(sc2,'18'),SC[v.status]?'var(--'+sc2+'-ink)':t2)}>{label(VISIT_STATUS_KEY, v.status)}</span>
                 </div>
-                <div style={{fontSize: 12,color:t2}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
-                <div style={{fontSize: 12,color:t3,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.chief_complaint||''}</div>
+                <div style={Object.assign({},ROW_SUB,{marginTop:3})}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
+                <div style={Object.assign({},ROW_NOTE,{color:t3,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'})}>{v.chief_complaint||''}</div>
               </div>;
             })}
           </div>
