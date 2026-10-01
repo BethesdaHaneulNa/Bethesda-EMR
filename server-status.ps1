@@ -106,6 +106,11 @@ $T = @{
     foreignOne = 'port {0} : {1} (PID {2})'
     foreignAnswers = '127.0.0.1:{0} repond, mais pas l''EMR ({1}) - un autre programme utilise ce port'
     foreignNoJson = 'pas de reponse de l''EMR'
+    envFile = 'Fichier .env de l''EMR'
+    envAbsent = 'fichier .env introuvable dans le dossier de l''EMR'
+    envMissing = 'ligne(s) absente(s) ou vide(s) : {0}'
+    envDbDiffers = 'DB_PASSWORD n''est pas celui de l''EMR en marche'
+    adviceEnv = 'Le fichier .env de l''EMR a ete modifie a la main. Ne redemarrez pas et ne mettez pas a jour l''EMR : au prochain demarrage il ne pourrait plus ouvrir la base. Prevenez le responsable (DEPLOYMENT.md, partie 4).'
     adviceForeign = 'Un autre programme ecoute un port de l''EMR ou du PACS ({0}). Fermez-le ou desinstallez-le, puis redemarrez le PC. Sinon prevenez le responsable.'
   }
   en = @{
@@ -172,6 +177,11 @@ $T = @{
     foreignOne = 'port {0}: {1} (PID {2})'
     foreignAnswers = '127.0.0.1:{0} answers, but not the EMR ({1}) - another program is using this port'
     foreignNoJson = 'not the EMR''s answer'
+    envFile = 'EMR .env file'
+    envAbsent = '.env file not found in the EMR folder'
+    envMissing = 'line(s) missing or empty: {0}'
+    envDbDiffers = 'DB_PASSWORD is not the one the running EMR uses'
+    adviceEnv = 'The EMR''s .env file was edited by hand. Do not restart or update the EMR: at the next start it could no longer open the database. Tell the person in charge (DEPLOYMENT.md, section 4).'
     adviceForeign = 'Another program is listening on a port of the EMR or the PACS ({0}). Close or uninstall it, then restart the PC. Otherwise tell the person in charge.'
   }
   ko = @{
@@ -238,6 +248,11 @@ $T = @{
     foreignOne = '{0} 포트: {1} (PID {2})'
     foreignAnswers = '127.0.0.1:{0}에서 EMR이 아닌 것이 답함 ({1}) - 다른 프로그램이 이 포트를 쓰고 있음'
     foreignNoJson = 'EMR의 답이 아님'
+    envFile = 'EMR의 .env 파일'
+    envAbsent = 'EMR 폴더에 .env 파일이 없음'
+    envMissing = '줄이 없거나 비어 있음: {0}'
+    envDbDiffers = 'DB_PASSWORD가 실행 중인 EMR이 쓰는 값과 다름'
+    adviceEnv = 'EMR의 .env 파일이 손으로 고쳐졌습니다. EMR을 다시 시작하거나 업데이트하지 마세요 - 다음에 켤 때 DB를 열지 못합니다. 관리자에게 알리세요(DEPLOYMENT.md 4절).'
     adviceForeign = '다른 프로그램이 EMR이나 PACS의 포트를 듣고 있습니다({0}). 그 프로그램을 끄거나 지운 뒤 PC를 다시 시작하세요. 그래도 안 되면 관리자에게 알리세요.'
   }
 }
@@ -287,9 +302,21 @@ function Get-MountSource {
   return $null
 }
 
+# The folder the container's docker-compose.yml is in. Read from the labels as JSON: the
+# direct template ({{index .Config.Labels "com.docker..."}}) needs double quotes inside
+# the argument, and Windows PowerShell 5.1 strips them on the way to docker ("function
+# com not defined") - so this returned nothing, and every check that starts from the
+# folder (image backup, bridge heartbeat file, .env) was silently skipped (found 2026-10-01).
 function Get-ComposeDir {
   param([string]$Container)
-  return Invoke-Docker @('inspect', $Container, '--format', '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')
+  $json = Invoke-Docker @('inspect', $Container, '--format', '{{json .Config.Labels}}')
+  if (-not $json -or $json -eq 'null') { return $null }
+  try {
+    $labels = ($json | Select-Object -First 1) | ConvertFrom-Json
+    $dir = $labels.'com.docker.compose.project.working_dir'
+    if ($dir) { return [string]$dir }
+  } catch {}
+  return $null
 }
 
 function New-Check {
@@ -468,6 +495,65 @@ function Add-LoopbackEmrCheck {
   }
   if (-not $what) { return $Check }
   return New-Check $Check.Key 'down' ($Strings.foreignAnswers -f $Port, $what) $false $true
+}
+
+# ------------------------------------------------------------- the .env file
+#
+# 2026-10-01: the EMR's .env had been edited by hand (DB_PASSWORD shortened, the JWT_SECRET
+# line gone - meant for the image server's password, in another folder). The running
+# containers kept going, so nothing looked wrong until the next deploy stopped with
+# "JWT_SECRET is missing"; with only DB_PASSWORD changed, the EMR would have come back up
+# unable to open its database (the real password lives in the database's storage, not in
+# the file). This looks at the file next to docker-compose.yml: the two lines must be
+# there, and DB_PASSWORD must be the one the running app container was started with.
+# Values are compared in memory and never written anywhere. A row only when something is wrong.
+$EnvRequired = @('DB_PASSWORD', 'JWT_SECRET')
+
+function Read-EnvFile {
+  param([string]$Path)
+  $map = @{}
+  foreach ($line in (Get-Content -LiteralPath $Path -ErrorAction Stop)) {
+    if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$') {
+      $v = $Matches[2].Trim()
+      if ($v.Length -ge 2 -and (($v[0] -eq '"' -and $v[-1] -eq '"') -or ($v[0] -eq "'" -and $v[-1] -eq "'"))) { $v = $v.Substring(1, $v.Length - 2) }
+      $map[$Matches[1]] = $v
+    }
+  }
+  return $map
+}
+
+function Get-ContainerEnv {
+  param([string]$Container)
+  $map = @{}
+  $json = Invoke-Docker @('inspect', $Container, '--format', '{{json .Config.Env}}')
+  if (-not $json -or $json -eq 'null') { return $null }
+  try {
+    foreach ($pair in (($json | Select-Object -First 1) | ConvertFrom-Json)) {
+      $i = ([string]$pair).IndexOf('=')
+      if ($i -gt 0) { $map[([string]$pair).Substring(0, $i)] = ([string]$pair).Substring($i + 1) }
+    }
+  } catch { return $null }
+  return $map
+}
+
+function Get-EnvFileCheck {
+  param($Strings)
+  $dir = Get-ComposeDir -Container 'bethesda-emr-api'
+  if (-not $dir) { return $null }
+  $file = Join-Path ([string]($dir | Select-Object -First 1)) '.env'
+  if (-not (Test-Path -LiteralPath $file)) { return New-Check 'envFile' 'warn' $Strings.envAbsent $false $true }
+  try { $inFile = Read-EnvFile -Path $file } catch { return New-Check 'envFile' 'warn' $Strings.envAbsent $false $true }
+  $problems = @()
+  $missing = @($EnvRequired | Where-Object { -not $inFile.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($inFile[$_]) })
+  if ($missing.Count) { $problems += ($Strings.envMissing -f ($missing -join ', ')) }
+  if ($missing -notcontains 'DB_PASSWORD') {
+    $running = Get-ContainerEnv -Container 'bethesda-emr-api'
+    if ($running -and $running.ContainsKey('DB_PASSWORD') -and -not [string]::Equals($running['DB_PASSWORD'], $inFile['DB_PASSWORD'], [StringComparison]::Ordinal)) {
+      $problems += $Strings.envDbDiffers
+    }
+  }
+  if ($problems.Count -eq 0) { return $null }
+  return New-Check 'envFile' 'warn' ($problems -join ' ; ') $false $true
 }
 
 function Get-ContainerCheck {
@@ -692,6 +778,8 @@ function Get-AllChecks {
   )
   $foreign = Get-ForeignCheck -Strings $Strings -Ports $ourPorts
   if ($foreign) { $ordered += $foreign }
+  $envFile = Get-EnvFileCheck -Strings $Strings
+  if ($envFile) { $ordered += $envFile }
   $img = Get-ImageBackupCheck -Strings $Strings
   if ($img) { $ordered += $img }
   # Only while the database answers; no row for a report from the older PACS script.
@@ -738,6 +826,7 @@ function Get-Advice {
       if ($c.Key -eq 'pacsAddr') { return $Strings.adviceAddr }
       if ($c.Key -eq 'imgBackup') { return $Strings.adviceImg }
       if ($c.Key -eq 'emrCopy') { return $Strings.adviceEmrCopy }
+      if ($c.Key -eq 'envFile') { return $Strings.adviceEnv }
       return $Strings.adviceDown
     }
   }
@@ -774,9 +863,9 @@ $ColorPaper = [System.Drawing.Color]::FromArgb(248, 248, 246)
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $T[$script:CurrentLang].title
-# Room for up to eleven rows (the seven, plus imaging addresses, image backup, the EMR
-# backup copy and other programs on the ports when they show).
-$form.Size = New-Object System.Drawing.Size(620, 720)
+# Room for up to twelve rows (the seven, plus imaging addresses, image backup, the EMR
+# backup copy, other programs on the ports and the .env file when they show).
+$form.Size = New-Object System.Drawing.Size(620, 740)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = $ColorPaper
 
