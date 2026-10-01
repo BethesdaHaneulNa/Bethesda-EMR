@@ -900,7 +900,7 @@ export default {
   se_fld_nationalId: "신분증 번호",
   se_fld_bloodType: "혈액형",
   se_fld_allergies: "알레르기",
-  se_fld_receptionNote: "접수 메모",
+  se_fld_receptionNote: "환자 메모",
   se_fld_paymentStatus: "수납 상태",
   se_fld_outstanding: "미수금",
   se_fld_cancelReason: "취소 사유",
