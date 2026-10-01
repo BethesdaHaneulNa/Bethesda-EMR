@@ -28,7 +28,12 @@
 | 가운데 | 고른 환자의 처방 약 표: **Médicament (약품명)** · **Dose/jour (1일 총량)** · **Dose/prise (1회량)** · **Fréq. (횟수)** · **Jours (일수)** · **Posologie (용법)** · **Qté (수량)** · **Note (메모)**. 오른쪽 위 **Médicaments (interne) (약제비 (원내))** 는 병원에서 받을 약값 |
 | 오른쪽 | **Dossier Patient (Patient Chart)** — 이 환자의 지난 진료 기록(2026-09-30부터 이 이름, 전에는 Visites passées). 내원마다 카드 하나: 머리에 **날짜 + 과·의사**, 그 아래 진료 기록의 **처음 세 줄 … 마지막 줄**(의사가 재진 안내를 보통 끝에 적으므로 「Contrôle dans 3 jours」 같은 줄이 열지 않아도 보임). 한 내원에 의사가 둘 이상 적었으면 의사마다 **이름 · 시각** 머리 밑에 두 줄 + 마지막 줄. 카드를 누르면 그날의 바이탈·기록 전체·처방·오더가 열리고 **← Retour** 로 목록에 돌아옵니다(읽기만). 윗줄의 **📋 Dossier (vue)** 는 이 환자의 차트를 읽기만 하는 창(2.8) |
 
-- 왼쪽 목록에는 **오늘 진료가 끝난** 환자 중 아직 약을 받지 않은 사람만 나옵니다(**En Attente (대기)** 표시). 의사가 진료 화면에서 진료를 끝내야 나타납니다.
+- 왼쪽 맨 위 **Date de travail (작업일자)** — 접수·수납 화면과 같은 조절입니다(2026-10-01). 처음에는 **오늘**이고, **◀ ▶** 로 하루씩, 날짜 칸으로 바로 고릅니다(오늘보다 뒤는 안 됨). 두 탭과 숫자는 **그 날짜 것만** 보입니다.
+  - **En attente**: 그 날짜에 내원해 진료가 끝났고 아직 약을 받지 않은 사람(**En Attente (대기)** 표시). 의사가 진료를 끝내야 나타납니다.
+  - **Délivré**: 그 날짜에 **조제한** 처방(내원이 며칠 전이어도 그날 조제했으면 그날 것).
+  - 지난 날짜를 보는 동안 위 칸이 노랗게 바뀌고 « Date passée (2026-09-30) : une délivrance faite maintenant est datée d’aujourd’hui… » 안내와 **Aujourd’hui (오늘로)** 단추가 나옵니다. 그 상태에서 조제하면 **재고 기록과 조제 완료 목록은 오늘 날짜**로 잡힙니다.
+  - **7일보다 오래된 처방**은 보이기만 하고 조제할 수 없습니다 — 환자 머리에 빨간 « Une ordonnance de plus de 7 jours ne peut pas être délivrée. Le médecin doit represcrire. » 가 나오고 **Terminer délivrance** 가 꺼집니다.
+  - 지난 날짜에 남은 조제 대기는 오늘 화면에서 따로 알리지 않습니다(작업일자로 그 날짜에 가거나 환자 찾기로).
 - **지난 며칠 사이 약을 안 받아 간 환자**는 **🔍 Trouver patient (환자 찾기)** 로 찾습니다. 이름이나 차트번호로 찾아 고르면:
   - 그 환자의 **최근 7일** 조제 대기 처방이 목록 맨 위 주황 칸 « PAST One — ordonnances en attente (7 derniers jours) » 에 나옵니다. 하나뿐이면 바로 열립니다.
   - 처방에는 « Prescrit il y a 3 j (2026-09-26) » (3일 전 처방) 표시가 붙습니다. 조제 방법은 오늘 처방과 똑같습니다.
@@ -83,7 +88,7 @@
 
 ### 2.5 Délivré (조제 완료) 탭
 
-- **오늘 조제를 마친** 환자가 최근 것부터 50명까지 나옵니다(**Terminé (완료)** 표시). 며칠 전 처방이라도 오늘 조제했으면 여기 나옵니다.
+- **작업일자(기본 오늘)에 조제를 마친** 환자가 최근 것부터 나옵니다(**Terminé (완료)** 표시, 300명까지). 며칠 전 처방이라도 그날 조제했으면 그날 목록에 나옵니다.
 - 환자를 누르면 내어준 약과 **Externe** 표시를 볼 수 있습니다. 원내/원외는 여기서 바꿀 수 없습니다.
 - 원외 처방전을 다시 뽑아야 하면 여기서 환자를 고르고 **💊 Ordonnance ext.** 를 누릅니다.
 
@@ -141,7 +146,7 @@
 
 - **조제 완료는 되돌릴 수 없습니다.** 잘못 눌렀으면 관리자에게 알려 재고를 고쳐야 합니다.
 - **환자에게 나간 약은 돌려받지 않습니다**(2026-09-29 실장님 결정, `wiki/decisions.md` — 반품 기능 없음). 약이 잘못 나갔으면(다른 약·개수 착오) 재고는 **📦 Stock** 에서 그 약을 골라 **Inventaire (실사)** 로 선반을 센 수를 넣고 **Note (메모)** 에 사유를 적어 맞춥니다. 돈을 돌려줘야 하면 관리자에게 알립니다.
-- **어제 이전**에 진료가 끝나고 약을 받지 않은 환자는 목록에 나오지 않습니다 — **🔍 Trouver patient** 로 찾으세요(최근 7일까지).
+- **어제 이전**에 진료가 끝나고 약을 받지 않은 환자는 오늘 목록에 나오지 않습니다 — **🔍 Trouver patient** 로 찾거나(최근 7일까지), **Date de travail** 을 그 날짜로 옮기세요.
 - **🔍 Trouver patient** 로 고른 환자는 오른쪽 **Dossier Patient** 에 차트가 보이고, 최근 7일 안의 조제 대기 처방이 있으면 조제할 수 있습니다.
 - **📋 Dossier (vue)** 는 이 환자의 차트를 읽기만 하는 창입니다.
 
@@ -164,6 +169,15 @@
 - `GET /api/pharmacy/patient/:patientId/pending` (`pharmacy.routes.js:86`) — `/pending`과 **같은 SQL**(`pendingQuery`, `:25`)에 조건만 `c.patient_id = $1 AND v.visit_date >= CURRENT_DATE - 7`. 응답 `{ days, groups, older }` — `older`는 7일보다 오래된 미조제 진료 수(보여주기만).
 - 기간은 상수 `PAST_RX_DAYS = 7` (`:21`) 하나입니다. 오래된 처방은 증상이 이미 바뀌었을 수 있어(항생제 등) 진료실에서 다시 처방하게 합니다. **조제 API도 같은 기간을 검사**해서 7일보다 오래된 진료는 409 `ERR_TOO_OLD`로 거절합니다(`:205-216`) — 화면만 막으면 API로는 할 수 있기 때문입니다.
 - 조제 자체(`PUT /consultations/:id/dispense`)는 진료 번호 기준이라 그대로 씁니다. 잠금·재고 차감·동시 조제 처리도 같습니다.
+
+**작업일자 (2026-10-01 실장님: 접수·수납·임상병리·약국 모두 같게)**
+
+- `GET /pharmacy/day` → `{ today, past_days }` — `today`는 DB의 `CURRENT_DATE`(PC 시계 아님), `past_days`는 `PAST_RX_DAYS`.
+- `GET /pharmacy/pending?date=YYYY-MM-DD` — **그 날짜에 내원한**(`visit.visit_date`) 진료 중 미조제 처방이 있는 것. 날짜가 없으면 오늘(전과 같음). 순서는 그대로 진료 완료 시각(L9).
+- `GET /pharmacy/completed?date=` — **그 날짜에 조제한**(`dispensed_at`) 것. 수납 화면이 「그날 수납한 것」을 보이는 것과 같은 뜻이고, M3 결정(조제 완료 목록은 조제 날짜 기준) 그대로입니다. 50 → 300줄까지.
+- 날짜가 날짜가 아니면(`2026-02-31`, `yesterday`) 400 `date must be YYYY-MM-DD`.
+- 조제 API는 바뀌지 않았습니다 — 지난 날짜를 보며 조제해도 `dispensed_at`과 재고 기록은 **누른 그때**입니다(확인: 9/30 내원을 10/1 09:07에 조제 → `dispensed_at` 10/1 09:07, 재고 기록 10/1 09:07, 9/30의 완료 목록에는 안 나오고 10/1에 나옴). 7일 제한(`ERR_TOO_OLD`)도 그대로이고, 화면은 그런 진료를 고르면 단추를 끄고 이유를 보입니다(`tooOld`).
+- 화면(`Pharmacy.jsx`): 수납 화면과 같은 조절(왼쪽 칸 맨 위, 말은 접수의 `rc_workDate`·`rc_prevDay`·`rc_nextDay`·`rc_backToToday`를 같이 씀, 안내만 `ph_workDatePast`). 오늘을 따라가는 동안에는 자정 뒤 새로고침에서 새 날로 넘어가고, 직원이 고른 날짜는 30초 자동 새로고침에도 그대로입니다(`workRef`). 환자 찾기(최근 7일)·📦 Stock·원외 처방전은 날짜와 무관하게 전과 같습니다.
 - 두 목록 모두 `days_ago`(`CURRENT_DATE - visit_date`, 서버 계산)를 돌려줍니다. 화면은 0보다 크면 「N일 전 처방 (날짜)」(`ph_pastRx`)을 붙입니다.
 - 화면(`Pharmacy.jsx`): 환자 찾기(`pickPatient`, `:92`)가 이 목록을 불러 `past` 상태에 둡니다. 1건이면 바로 열고, 여러 건이면 왼쪽 목록 위 주황 칸(`:294`). 수동·자동 새로고침 때 이 목록도 다시 받고, 열린 환자를 오늘 목록**과** 이 목록에서 찾습니다. 「목록에서 사라짐」 안내(`selGone`, `:224`)도 두 목록을 모두 봅니다 — 안 그러면 지난 처방을 열자마자 노란 안내가 떴습니다.
 - 조제 완료 목록(`/completed`)은 **조제한 날짜 = 오늘**(`rx.dispensed_at >= CURRENT_DATE`, `:157`)로 바꿨습니다. 내원 날짜 기준이면 3일 전 처방을 오늘 조제해도 Délivré 탭에 안 나왔습니다.
@@ -327,7 +341,7 @@
 
 | 라우트 | 권한 (하나라도) |
 |---|---|
-| `GET /pending` · `GET /patient/:patientId/pending` · `GET /completed` · `GET /patient/:patientId/recent-rx` | `pharmacy` |
+| `GET /day` · `GET /pending?date=` · `GET /patient/:patientId/pending` · `GET /completed?date=` · `GET /patient/:patientId/recent-rx` | `pharmacy` |
 | `PUT /consultations/:id/dispense` · `PUT /prescription/:id/dispense-type` | `pharmacy` |
 | `GET /stock` · `GET /stock/:drugId/movements` · `POST /stock/:drugId/receive` · `POST /stock/:drugId/count` · `POST /stock/:drugId/discard` · `POST /stock/:drugId/check-done` | `pharmacy` · `consultation` · `settings` |
 | `GET /stock/report` | `pharmacy` · `settings` · `stats` |
@@ -523,7 +537,8 @@ API — 설정 세션 파일 `admin.routes.js`:
 | 2026-09-29 | 통합 시험 A(원외 약 없으면 원외 처방전 발급 안 함), B(가져온 메모 화면 언어), C(단위 말을 제형에서, 확인 창 문장, 프랑스어 자릿수), 반품 없음 안내 | `9af72a9` · `a60788f` · `fe91eb4` · `a24e185` |
 | 2026-09-30 | 1366×768에서 약국·재고 화면이 창 높이에 맞음(바깥 틀 100vh, 안쪽만 스크롤) | `8e45fb3` |
 | 2026-10-01 | 오른쪽 Dossier Patient 칸 폭을 넓은 화면에서만 넓게(320~420), 처방 표 여덟 칸 고정 비율, 「의사 확인」 두 안내를 약 이름 아래로 | `70a76d0` |
-| 2026-10-01 | 긴 환자 이름(50자·84자): 목록의 상태 꼬리표 한 줄, 환자 머리의 약제비 한 줄, 재고 기록의 환자 칸, 원외 처방전·환자 찾기의 차트번호가 줄바꿈되지 않게 — 이름은 자르지 않고 낱말 사이로 줄바꿈 | 이 줄의 커밋 |
+| 2026-10-01 | **작업일자**: 약국 화면에 접수·수납과 같은 날짜 조절 — 대기는 그 날짜 내원, 완료는 그 날짜 조제, 7일 넘은 처방은 보이되 조제 안 됨 | 이 줄의 커밋 |
+| 2026-10-01 | 긴 환자 이름(50자·84자): 목록의 상태 꼬리표 한 줄, 환자 머리의 약제비 한 줄, 재고 기록의 환자 칸, 원외 처방전·환자 찾기의 차트번호가 줄바꿈되지 않게 — 이름은 자르지 않고 낱말 사이로 줄바꿈 | `d3a1f83` · `e3ac746` |
 | 2026-09-29 | 설정 약품 탭: 재고 칸 읽기 전용·새 약 0, 「경로」 → 「용법」 | `14ff4be` |
 | 2026-09-29 | H2-B ①: 포장 단위 약 칸(마이그레이션 025), 약품 탭 체크·단위 | `b335836` (develop `ce5d938`) |
 | 2026-09-29 | H2-B ②: 포장 단위 줄 표시(rx-dosing · 약국 화면 · 원외 처방전), 대기·완료 목록에 pack 칸 | (이 커밋) |

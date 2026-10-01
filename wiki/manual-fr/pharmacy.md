@@ -36,7 +36,7 @@ Ce qui peut apparaître en jaune ou en rouge :
 
 ### Remettre les médicaments
 
-1. Cliquez sur **Pharmacie**, puis sur **En attente**. Seuls les patients dont la consultation est **terminée aujourd'hui** sont dans la liste, dans l'ordre où le médecin a terminé.
+1. Cliquez sur **Pharmacie**, puis sur **En attente**. En haut à gauche, **Date de travail** indique la date affichée : aujourd'hui, sauf si vous l'avez changée. Seuls les patients venus ce jour-là et dont la consultation est terminée sont dans la liste, dans l'ordre où le médecin a terminé.
    - Pour trouver vite un patient, tapez une partie du nom, du numéro de dossier ou du médicament dans **Patient / N° dossier / Médicament**.
 2. Cliquez sur le patient. Lisez l'encadré **Allergies** s'il y en a un.
    - À droite, **Dossier Patient** montre une carte par consultation : la date, le service et le médecin, puis le début de la note et sa dernière ligne. C'est sur cette dernière ligne que le médecin écrit en général la suite (exemple : « Contrôle dans 3 jours »). Rappelez-la au patient en lui remettant ses médicaments.
@@ -63,17 +63,27 @@ Les médicaments remis au patient ne sont pas repris. Si un médicament est part
 
 ### Un patient n'est pas venu chercher ses médicaments hier
 
-La liste **En attente** ne montre que les consultations d'aujourd'hui.
+La liste **En attente** ne montre que les consultations de la **Date de travail** (aujourd'hui par défaut). Deux façons de retrouver une ordonnance d'un autre jour :
+
+**Par le patient**
 
 1. Cliquez sur **🔍 Trouver patient**, cherchez le nom ou le numéro de dossier, puis cliquez sur le patient.
 2. Un encadré orange montre ses ordonnances en attente des **7 derniers jours**, avec « Prescrit il y a 2 j (date) ».
 3. Remettez les médicaments comme d'habitude (**Interne** / **Externe**, puis **✓ Terminer délivrance**).
-4. Une ordonnance de **plus de 7 jours** ne peut pas être remise ici. Renvoyez le patient chez le médecin pour une nouvelle ordonnance.
-5. Fermez l'encadré orange avec **Fermer**.
+4. Fermez l'encadré orange avec **Fermer**.
+
+**Par la date**
+
+1. En haut à gauche, à côté de **Date de travail**, cliquez sur **◀** pour reculer d'un jour (ou choisissez la date dans la case).
+2. La liste et les chiffres **En attente** / **Délivré** sont ceux de ce jour-là. Le bandeau devient jaune : « Date passée (…) : une délivrance faite maintenant est datée d’aujourd’hui… ».
+3. Remettez les médicaments comme d'habitude. La délivrance est enregistrée à l'heure réelle : elle apparaît dans **Délivré** d'aujourd'hui et dans le registre du stock d'aujourd'hui.
+4. Cliquez sur **Aujourd’hui** pour revenir à la date du jour.
+
+Dans les deux cas, une ordonnance de **plus de 7 jours** ne peut pas être remise : le bouton **✓ Terminer délivrance** est grisé. Renvoyez le patient chez le médecin pour une nouvelle ordonnance.
 
 ### Voir ce qui a été remis aujourd'hui
 
-Cliquez sur **Délivré**. Les patients servis aujourd'hui apparaissent, le plus récent en haut. Pour réimprimer une ordonnance extérieure, choisissez le patient ici, puis **💊 Ordonnance ext.**
+Cliquez sur **Délivré**. Les patients servis à la **Date de travail** (aujourd'hui par défaut) apparaissent, le plus récent en haut. Pour réimprimer une ordonnance extérieure, choisissez le patient ici, puis **💊 Ordonnance ext.**
 
 ### Entrée de médicaments, inventaire, rebut
 
