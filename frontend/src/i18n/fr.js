@@ -517,6 +517,9 @@ export default {
   py_noneThatDay: "Rien à encaisser à cette date.",
   py_cashOn: "Caisse du {date}",
   py_paidOnHint: "Liste des paiements finalisés le {date}.",
+  py_searchPh: "Patient / N° dossier / N° de reçu",
+  py_searchNone: "« {q} » : aucun patient de cette liste ne correspond",
+  py_nonePaidThatDay: "Aucun paiement à cette date.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Médicaments (interne)",

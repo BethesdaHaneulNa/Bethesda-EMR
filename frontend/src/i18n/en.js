@@ -526,6 +526,9 @@ export default {
   py_noneThatDay: "Nothing to bill on this date.",
   py_cashOn: "Cash on {date}",
   py_paidOnHint: "Review payments completed on {date}.",
+  py_searchPh: "Patient / Chart No. / Receipt No.",
+  py_searchNone: "“{q}”: no patient in this list matches",
+  py_nonePaidThatDay: "No completed payments on this date.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "Drug cost (in-house)",
