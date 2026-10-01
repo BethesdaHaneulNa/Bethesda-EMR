@@ -517,6 +517,9 @@ export default {
   py_noneThatDay: "이 날짜에 수납할 내원이 없습니다.",
   py_cashOn: "{date} 금고",
   py_paidOnHint: "{date}에 수납된 건을 확인하는 화면입니다.",
+  py_searchPh: "환자명 / 차트번호 / 영수번호 검색",
+  py_searchNone: "「{q}」: 이 목록에 맞는 환자가 없습니다",
+  py_nonePaidThatDay: "이 날짜에 수납 완료된 건이 없습니다.",
   // ── end payment ──
   // ── begin pharmacy (ph_) ──
   ph_drugCostInternal: "약제비 (원내)",

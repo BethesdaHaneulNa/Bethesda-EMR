@@ -4,7 +4,7 @@ import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
-import { PAGE_COLS, TOOL_ROW, toolBtn, tabBtn } from '../layout.js';
+import { PAGE_COLS, TOOL_ROW, toolBtn, tabBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_EMPTY } from '../layout.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
@@ -205,10 +205,14 @@ export default function PaymentPage() {
     if(!quiet) setLoading(false);
   }
 
+  // The list search works as the laboratory's does (2026-10-01, the director: screens that
+  // can be the same should be): spaces around the text are ignored, and a name is found in
+  // either order ("rakoto jean" and "jean rakoto"). Name, chart number, receipt number.
   function matches(v){
-    if(!q) return true;
-    var s=q.toLowerCase();
-    return String((v.first_name||'')+' '+(v.last_name||'')).toLowerCase().indexOf(s)>=0 || String(v.chart_no||'').toLowerCase().indexOf(s)>=0 || String(v.receipt_no||'').toLowerCase().indexOf(s)>=0;
+    var s = q.trim().toLowerCase();
+    if(!s) return true;
+    var name = (((v.last_name||'')+' '+(v.first_name||'')).trim()+' '+(v.first_name||'')+' '+(v.last_name||'')).toLowerCase();
+    return name.indexOf(s)>=0 || String(v.chart_no||'').toLowerCase().indexOf(s)>=0 || String(v.receipt_no||'').toLowerCase().indexOf(s)>=0;
   }
 
   // A visit picked in the patient finder. The finder's row is the bare visit; when the visit
@@ -522,6 +526,10 @@ export default function PaymentPage() {
     return showInactive ? live.concat(all.filter(function(b){ return b.payment_status==='cancelled'; })) : live;
   }
   function inactiveCount(){ return tab==='completed' ? listData().filter(function(b){ return b.payment_status==='cancelled'; }).length : 0; }
+  // how many rows the list holds before the search, and after it: when the first is not 0
+  // and the second is, the list says the search found nothing - not "nothing today"
+  function baseCount(){ return tab==='waiting' ? dayCount() : completed.length; }
+  function foundCount(){ return tab==='waiting' ? listRows().length : listData().length; }
 
   return(
     <div style={{fontFamily:'system-ui,sans-serif',background:'var(--bg)',color:tx,height:'100vh',display:'flex',flexDirection:'column',fontSize:16}}>
@@ -568,8 +576,8 @@ export default function PaymentPage() {
               <span style={{color:t2}}>{t.py_cashNet} <strong style={{color:tx}}>{fmtAr(cashDay.net)} Ar</strong></span>
             </div>
           </div>:null}
-          <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd}}>
-            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'7px 9px',color:tx,fontSize:15,outline:'none',width:'100%',boxSizing:'border-box'}}/>
+          <div style={LIST_SEARCH_WRAP}>
+            <input autoComplete="off" value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.py_searchPh} aria-label={t.py_searchPh} style={LIST_SEARCH}/>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
@@ -600,8 +608,10 @@ export default function PaymentPage() {
               </div>;
             })}
             {!loading&&inactiveCount()>0?<div onClick={function(){setShowInactive(!showInactive)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,color:t3,borderBottom:'1px solid var(--line-soft)'}}>{showInactive?'▾':'▸'} {t.py_inactiveReceipts.replace('{n}', inactiveCount())}</div>:null}
-            {!loading&&tab==='waiting'&&viewingPast&&listRows().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{t.py_noneThatDay}</div>:null}
-            {!loading&&tab==='completed'&&listData().length===0?<div style={{padding:25,textAlign:'center',color:t3}}>{L.noCompleted}</div>:null}
+            {!loading&&tab==='waiting'&&viewingPast&&baseCount()===0?<div style={ROW_EMPTY}>{t.py_noneThatDay}</div>:null}
+            {!loading&&tab==='completed'&&baseCount()===0?<div style={ROW_EMPTY}>{viewingPast?t.py_nonePaidThatDay:L.noCompleted}</div>:null}
+            {/* the list has rows and the search hides them all: say so, or it reads as "nothing today" */}
+            {!loading&&baseCount()>0&&foundCount()===0?<div style={Object.assign({}, ROW_EMPTY, {overflowWrap:'anywhere'})}>{t.py_searchNone.replace('{q}', q.trim())}</div>:null}
           </div>
         </div>
 
