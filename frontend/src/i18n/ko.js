@@ -831,6 +831,7 @@ export default {
   se_priceEditable: "수납에서 금액을 고칠 수 있음",
   se_priceEditableHint: "켜면 수납 화면에서 이 항목을 넣을 때 금액 칸이 열려, 그 자리에서 금액을 고칠 수 있습니다. 위의 가격은 그 칸에 처음 나오는 금액입니다.",
   se_priceEditableTag: "금액 수정",
+  se_act_orderPriceEditable: "오더 코드의 「수납에서 금액 고치기」를 켜거나 끔",
   se_type_lab: "검사",
   se_type_imaging: "영상",
   se_type_procedure: "처치",

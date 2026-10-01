@@ -831,6 +831,7 @@ export default {
   se_priceEditable: "Montant modifiable au paiement",
   se_priceEditableHint: "Activé : l'écran Paiement ouvre une case de montant pour cet élément, et le caissier peut y changer le montant. Le prix ci-dessus est le montant proposé au départ.",
   se_priceEditableTag: "montant modifiable",
+  se_act_orderPriceEditable: "Code d'acte : montant modifiable au paiement activé / désactivé",
   se_type_lab: "Laboratoire",
   se_type_imaging: "Imagerie",
   se_type_procedure: "Acte",
