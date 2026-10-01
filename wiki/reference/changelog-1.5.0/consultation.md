@@ -166,6 +166,18 @@ on the waiting-list button follows. The choice is kept for the account, so it is
 same on another computer; accounts that never open it see what they saw before. A line
 under the search box always says whose patients are listed.
 
+### Allergy warning when a patient is opened; the reception memo has its own place
+
+The red allergy tag in the patient bar stays, and opening a patient who has an allergy
+now also stops the doctor once with a window naming the patient and the allergy; it
+closes only with **OK** (or Enter). It appears each time another patient or another visit
+is opened, from the waiting list, the patient finder or the visit list, and never on the
+screen's own refreshes. The visit's reception memo, which used to sit in the patient bar
+beside the allergy, moved to a box on the left, under the queue buttons and above the
+prescriptions; it shows only when there is a memo, and a long one scrolls inside the box.
+Issuing a document for a visit still waiting now puts that visit in consultation, like
+any other record.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**

@@ -101,6 +101,17 @@ router.post('/', canIssueDocs, (req, res) => inTx(res, async (client) => {
      JSON.stringify(payload || {}), req.user.id]
   );
   const d = r.rows[0];
+  // A paper issued for a visit still waiting starts that visit (coordinator, 2026-10-01).
+  // Since opening a patient no longer starts the consultation, a document could be issued
+  // on a visit that stayed "waiting" - and a document is a record: the consultation
+  // screen's "back to waiting" is refused for it, and reception may not cancel it. The
+  // status now says so. No consultation row is made here; the first thing the doctor
+  // saves makes it. A visit already in consultation or finished is left as it is.
+  if (d.visit_id) {
+    await client.query(
+      "UPDATE visit SET status = 'in_progress', updated_at = NOW() WHERE id = $1 AND status IN ('registered', 'waiting')",
+      [d.visit_id]);
+  }
   await writeAudit(client, req, {
     action: ACTIONS.DOCUMENT_ISSUE, patient_id: d.patient_id, visit_id: d.visit_id,
     entity: 'document', entity_id: d.id, summary: docLabel(d),

@@ -448,6 +448,10 @@ export default {
   cs_qfDefault: "Default",
   cs_qfDefaultHint: "Default: a doctor sees their own patients and the patients with no doctor; other accounts see all patients.",
   cs_qfSaved: "Waiting list setting saved",
+  // Allergy warning when a patient is opened (director, 2026-10-01)
+  cs_allergyTitle: "Allergy warning",
+  cs_allergyLead: "Allergy recorded for this patient:",
+  cs_allergyOk: "OK",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

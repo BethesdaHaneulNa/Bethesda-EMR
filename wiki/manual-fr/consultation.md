@@ -20,6 +20,7 @@ Voir un patient de la file :
 ### 1. L'écran
 
 - *En haut* — une barre bleue : les boutons **Documents**, **Résultats labo**, **Imagerie**, **Dossier** et **⇄ Transfert**, puis le service et le médecin de la visite (« GEN Dr … »), le N° dossier, le nom, le sexe/date de naissance (**⚠** rouge si allergie).
+- *À gauche, sous les boutons* — **📝 Mémo Réception** : le mémo saisi à l'accueil pour cette visite (et le motif). Il n'apparaît que s'il y a un mémo ; un long mémo se fait défiler dans son cadre.
 - *Juste en dessous, à gauche* — trois boutons : **☰ File d'Attente**, **🔍 Trouver patient** et **📋 Visites du patient** (les autres visites du patient ouvert ; gris tant qu'aucun patient n'est ouvert).
 - *À gauche* — **Prescriptions** : les médicaments en haut, les examens et actes en dessous, dans le même tableau.
 - *Au milieu* — les signes vitaux, **Sauver**, **Terminé**, la **Note de Consultation** et les **Phrases types** (phrases toutes prêtes).
@@ -36,12 +37,14 @@ Voir un patient de la file :
 4. Un patient qui n'est pas dans la file du jour : cliquez sur **🔍 Trouver patient**, cherchez-le, puis choisissez la visite.
 5. Une autre visite du patient déjà ouvert : cliquez sur **📋 Visites du patient**, à droite de **Trouver patient**, puis choisissez la date.
 
+**Allergie.** Quand vous ouvrez un patient qui a une allergie notée, une fenêtre rouge **⚠ Attention : allergie** s'affiche avec son nom et l'allergie. Lisez-la, puis cliquez sur **OK** (ou touche Entrée) : elle ne se ferme pas autrement. Elle s'affiche une fois à chaque ouverture d'un autre patient ou d'une autre visite. L'étiquette rouge reste en haut pendant toute la consultation.
+
 **Ouvrir n'est pas commencer.** Cliquer sur un patient ouvre son dossier pour le lire : à l'accueil, il reste **En attente**. Si vous avez cliqué par erreur, ouvrez simplement un autre patient : rien n'a changé.
 
 En haut de la colonne du milieu, une ligne indique l'état de la visite : **En attente**, **En consultation** ou **Terminé**.
 
 - **▶ Commencer la consultation** (visible quand la visite est **En attente**) : la visite passe **En consultation**, à l'accueil aussi (onglet **En cours**).
-- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen — la visite passe toute seule **En consultation**. **Terminé** fonctionne aussi directement.
+- Sans cliquer sur ce bouton : dès que vous enregistrez quelque chose — **Sauver** avec une note ou une constante, un médicament, un examen, ou un **document émis** — la visite passe toute seule **En consultation**. **Terminé** fonctionne aussi directement.
 - **↩ Remettre en attente** (visible seulement si la visite est **En consultation** et que **rien** n'est enregistré) : pour une consultation commencée par erreur. La visite redevient **En attente**. Dès qu'il y a une note, une constante, un médicament, un examen, un document ou une facture, ce bouton n'existe plus.
 - **Sauver** sans rien avoir saisi affiche « Rien à enregistrer » et ne change pas l'état.
 
