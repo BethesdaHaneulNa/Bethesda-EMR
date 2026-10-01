@@ -726,6 +726,9 @@ export default {
   // lab screen: work date (the label and the day buttons are reception's rc_ keys)
   lb_workDatePast: "지난 날짜({date})의 검사를 보는 중입니다. 지금 넣는 결과도 그 날짜의 검사로 저장됩니다.",
   lb_noCompletedOn: "이 날짜에 입력 완료된 검사가 없습니다",
+  // lab screen: the search box over the list
+  lb_searchPh: "환자명 / 차트번호 / 검사명 검색",
+  lb_searchNone: "「{q}」: 이 목록에 맞는 환자가 없습니다",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",

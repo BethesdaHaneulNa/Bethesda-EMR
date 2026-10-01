@@ -33,6 +33,12 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
    - **Rien de saisi, reste en attente: Malaria RDT** — rien n'a été écrit pour cette analyse ; elle reste dans **En attente**. Revenez sur le patient quand le résultat est prêt.
 6. Quand toutes les analyses du patient sont enregistrées, un message vert **✓ Enregistré et terminé: …** s'affiche quelques secondes en bas de l'écran, puis le centre affiche **Sélectionnez un patient à gauche**.
 
+### Trouver un patient dans la liste
+
+- Sous **Date de travail**, écrivez dans la case **Patient / N° dossier / Analyse** : une partie du nom, le numéro de dossier (exemple : **26-00002**) ou le nom de l'analyse (exemple : **CBC**). La liste se réduit pendant que vous écrivez.
+- La case cherche seulement dans la liste affichée (**En attente** ou **Terminé** de la **Date de travail**). Pour un patient d'un autre jour, changez la date ou utilisez **🔍 Trouver patient**.
+- Le texte reste quand vous changez de liste ou de date : **effacez-le** quand vous avez fini, sinon la liste paraît vide.
+
 ### Écrire les chiffres
 
 - La virgule et le point sont acceptés : **12,5** et **12.5** donnent le même résultat.
@@ -89,6 +95,7 @@ Le tableau **Résultats labo** montre tous les résultats du patient, une colonn
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
 |---|---|---|
+| **« … » : aucun patient de cette liste ne correspond** | Le texte écrit dans la case de recherche ne correspond à aucun patient de la liste affichée. | Effacez la case de recherche, ou corrigez le texte. |
 | **Aucune analyse en attente de résultat** | Personne n'attend de résultat à la **Date de travail**. | Rien. Attendez ou cliquez sur **↻**. Vérifiez que la **Date de travail** est bien celle d'aujourd'hui. |
 | **Rien n'a été saisi. Saisissez au moins une valeur ou une note.** | Vous avez cliqué sur Enregistrer sans rien écrire. | Écrivez au moins un résultat, puis enregistrez. |
 | **La demande de cet examen a été supprimée en consultation. La liste est rechargée.** | Le médecin a supprimé cette analyse pendant que vous la saisissiez. | Rien à refaire. Les autres analyses du patient sont bien enregistrées. |
