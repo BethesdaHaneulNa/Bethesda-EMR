@@ -1,12 +1,18 @@
 // Images that leave the clinic (director, 2026-10-01: «영상 인쇄, 영상 내려받기 둘 다 필요»).
 //
-// This file is the server side of it. For now: printing an exam's images on paper.
+// This file is the server side of it.
+//  Printing an exam's images on paper (components/ImagesPrint.jsx):
 //   GET  /api/pacs/export/exam/:orderItemId   the pictures of one exam, in the order of the device
 //   GET  /api/pacs/export/image?order_item_id=&instance=&w=   one picture, as JPEG
 //   POST /api/pacs/export/printed             the change-log line of a print, before the paper is issued
+//  Copying exams to a disc - the export program of the PACS folder (cd-export.ps1), which
+//  talks to the EMR only, never to the image server:
+//   GET  /api/pacs/export/patient?chart_no=   the patient, the clinic, the patient's exams with their sizes
+//   GET  /api/pacs/export/bundle?order_item_ids=&medium=   the exams as one ZIP: DICOMDIR + IMAGES/
 //
 // The pictures come from the image server's own REST (GET /instances/{id}/rendered) and
-// are handed on as they are - Orthanc is not changed and nothing is stored here.
+// the bundle is the image server's own (POST /tools/create-media-extended); both are
+// handed on as they are - Orthanc is not changed and nothing is stored here.
 // Every answer is checked against the order: the exam must be this order's, the picture
 // must be of this exam. What is refused, and why, is in WHY (the screens say the same in
 // the user's language by `code`).
@@ -19,6 +25,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { writeAudit, ACTIONS } = require('../utils/audit');
+const { Readable } = require('stream');
 const { DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 const { isExam, OPEN_ON } = require('./pacs.exam');
 
@@ -38,16 +45,21 @@ const WHY = {
   NOT_A_PICTURE: 'This item cannot be shown as a picture',
   BAD_REQUEST: 'The request is not understood',
   TOO_MANY: 'Too many pictures for one print',
-  NOT_LOGGED: 'The change log could not be written: nothing is printed',
+  NOT_LOGGED: 'The change log could not be written: nothing is given out',
+  NO_PATIENT: 'No patient with this chart number',
+  OTHER_PATIENT: 'The exams are not all of the same patient',
+  TOO_MANY_EXAMS: 'Too many exams for one copy',
 };
 // The image server not answering is a 409 like the other refusals, never 502/503/504:
 // the web server in front (frontend/nginx.conf) replaces those answers with its own
 // "API backend is not reachable", and the screen would lose the `code`.
-const HTTP = { NOT_FOUND: 404, NOT_ON_SERVER: 404, NOT_OF_EXAM: 403, NOT_A_PICTURE: 415, BAD_REQUEST: 400, TOO_MANY: 400, NOT_LOGGED: 500 };
-const refuse = (res, code) => res.status(HTTP[code] || 409).json({ ok: false, code, error: WHY[code] });
+const HTTP = { NOT_FOUND: 404, NO_PATIENT: 404, NOT_ON_SERVER: 404, NOT_OF_EXAM: 403, NOT_A_PICTURE: 415, BAD_REQUEST: 400, TOO_MANY: 400, TOO_MANY_EXAMS: 400, NOT_LOGGED: 500 };
+const refuse = (res, code, extra) => res.status(HTTP[code] || 409).json(Object.assign({ ok: false, code, error: WHY[code] }, extra || {}));
 
 const MAX_PRINT = 48;        // pictures on one paper (6 a page, 8 pages)
 const MAX_WIDTH = 1600;      // a wider picture is made smaller by the image server; none is made larger
+const MAX_EXAMS = 30;        // exams in one copy
+const MEDIA = ['disc', 'iso', 'folder', 'zip'];   // where a copy goes: a burnt disc, a disc image, a folder (USB), the ZIP itself
 const ORTHANC_ID = /^[0-9a-f]{8}(-[0-9a-f]{8}){4}$/;
 // Series that hold no picture: reports, key-object notes, presentation states, PDFs.
 // A picture the image server cannot draw is refused when it is asked for, too.
@@ -226,6 +238,160 @@ router.post('/printed', authMiddleware, mayExport, async (req, res) => {
     if (!logged) return refuse(res, 'NOT_LOGGED');
     res.json({ ok: true, image_count: ids.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── copying exams to a disc ──────────────────────────────────────────────
+const EXAM_SQL = `
+  SELECT oi.id, oi.patient_id, oi.visit_id, oi.order_name, oi.status, oi.pacs_modality, v.visit_date,
+         to_char(COALESCE(wl.images_received_at::date, v.visit_date), 'YYYY-MM-DD') AS exam_date,   -- the day the images arrived, as on the printed sheets
+         wl.accession_no, wl.study_instance_uid, wl.image_study_uid, wl.images_received_at,
+         wl.image_count, wl.patient_check, ${OPEN_ON('oi.id')} AS moving
+    FROM order_item oi
+    LEFT JOIN visit v ON v.id = oi.visit_id
+    LEFT JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true`;
+
+// The studies of several exams, in one question to the image server: { uid: study }.
+// null = no answer.
+async function studiesOf(cfg, exams) {
+  const uids = exams.map(linkOf).filter(Boolean);
+  if (!uids.length) return {};
+  const f = await ox(cfg, 'POST', '/tools/find', { Level: 'Study', Query: { StudyInstanceUID: uids.join('\\') }, Expand: true });
+  if (f.status !== 200 || !Array.isArray(f.json)) return null;
+  const by = {};
+  f.json.forEach(st => {
+    const uid = (st.MainDicomTags || {}).StudyInstanceUID;
+    by[uid] = by[uid] ? 'twice' : st;          // the same number twice on the server: not given out
+  });
+  return by;
+}
+// How many items and how many bytes a study holds on the image server (its DICOM files).
+async function sizeOf(cfg, study) {
+  const st = await ox(cfg, 'GET', '/studies/' + study.ID + '/statistics');
+  if (st.status !== 200 || !st.json) return null;
+  return { items: number(st.json.CountInstances) || 0, bytes: Number(st.json.DicomDiskSize) || 0 };
+}
+async function inTurns(list, n, fn) {
+  const out = new Array(list.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, list.length) }, async () => {
+    while (next < list.length) { const i = next++; out[i] = await fn(list[i], i); }
+  }));
+  return out;
+}
+
+// GET /api/pacs/export/patient?chart_no=
+// What the export program shows after the chart number is typed: who the patient is (to
+// be checked by eye), the clinic (for the note written on the disc), and the patient's
+// imaging exams, most recent first - each with how many items and bytes it holds on the
+// image server, or why it cannot be copied (`block`, the codes of WHY).
+// The image server not answering does not hide the list: `server` says so and no exam
+// can be chosen.
+router.get('/patient', authMiddleware, mayExport, async (req, res) => {
+  try {
+    const chart = String(req.query.chart_no || '').trim();
+    if (!chart || chart.length > 40) return refuse(res, 'BAD_REQUEST');
+    const p = (await pool.query(
+      `SELECT id, chart_no, last_name, first_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth FROM patient WHERE upper(btrim(chart_no)) = upper($1) LIMIT 2`, [chart])).rows;
+    if (p.length !== 1) return refuse(res, 'NO_PATIENT');
+    const patient = p[0];
+    const c = (await pool.query('SELECT name, name_en, name_fr, address, phone FROM clinic LIMIT 1')).rows[0] || {};
+    const exams = (await pool.query(EXAM_SQL + ` WHERE oi.patient_id = $1 AND ${isExam('oi')} ORDER BY v.visit_date DESC NULLS LAST, oi.id DESC`, [patient.id])).rows;
+
+    const cfg = await config();
+    const ready = exams.filter(e => !examBlock(e));
+    let server = '', studies = {};
+    if (!cfg.orthanc_password) server = 'NOT_PAIRED';
+    else if (ready.length) { studies = await studiesOf(cfg, ready); if (!studies) { server = 'UNREACHABLE'; studies = {}; } }
+    const sizes = {};
+    if (!server) {
+      await inTurns(ready, 4, async e => {
+        const st = studies[linkOf(e)];
+        if (!st || st === 'twice') return;
+        const z = await sizeOf(cfg, st);
+        if (z) sizes[e.id] = z; else server = 'UNREACHABLE';
+      });
+    }
+    res.json({
+      ok: true, patient, clinic: c, server, max_exams: MAX_EXAMS,
+      exams: exams.map(e => {
+        const z = sizes[e.id];
+        const block = examBlock(e) || server || (z ? '' : 'NOT_ON_SERVER');
+        return {
+          id: e.id, exam_date: e.exam_date || '', modality: e.pacs_modality || '', order_name: e.order_name, accession_no: e.accession_no || '',
+          block, items: z ? z.items : null, bytes: z ? z.bytes : null,
+        };
+      }),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/pacs/export/bundle?order_item_ids=1,2,3&medium=disc|iso|folder|zip
+// The chosen exams of one patient as one ZIP, made by the image server and handed on
+// byte for byte: DICOMDIR at the top and the DICOM files under IMAGES/ - copied to the
+// top of a disc, that is a standard DICOM disc. Nothing is added here (the note for the
+// reader of the disc is written by the export program).
+// The change-log line (pacs.images.export) is written when the image server has begun to
+// answer and before the first byte leaves: no line, no bundle. `medium` is what the
+// program says it will do with the copy; the line stays if the burn fails afterwards.
+router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
+  let ctl = null;
+  try {
+    const ids = String(req.query.order_item_ids || '').split(',').map(x => x.trim()).filter(Boolean);
+    const medium = String(req.query.medium || '');
+    if (!ids.length || ids.some(x => !/^[0-9]{1,9}$/.test(x)) || new Set(ids).size !== ids.length || MEDIA.indexOf(medium) < 0) return refuse(res, 'BAD_REQUEST');
+    if (ids.length > MAX_EXAMS) return refuse(res, 'TOO_MANY_EXAMS');
+    const exams = (await pool.query(EXAM_SQL + ` WHERE oi.id = ANY($1::int[]) AND ${isExam('oi')} ORDER BY v.visit_date, oi.id`, [ids])).rows;
+    if (exams.length !== ids.length) return refuse(res, 'NOT_FOUND');
+    if (exams.some(e => e.patient_id !== exams[0].patient_id)) return refuse(res, 'OTHER_PATIENT');
+    for (const e of exams) { const why = examBlock(e); if (why) return refuse(res, why, { order_item_id: e.id }); }
+
+    const cfg = await config();
+    if (!cfg.orthanc_password) return refuse(res, 'NOT_PAIRED');
+    const studies = await studiesOf(cfg, exams);
+    if (!studies) return refuse(res, 'UNREACHABLE');
+    for (const e of exams) { const st = studies[linkOf(e)]; if (!st || st === 'twice') return refuse(res, 'NOT_ON_SERVER', { order_item_id: e.id }); }
+    const sizes = await inTurns(exams, 4, e => sizeOf(cfg, studies[linkOf(e)]));
+    if (sizes.some(z => !z)) return refuse(res, 'UNREACHABLE');
+    const items = sizes.reduce((n, z) => n + z.items, 0), bytes = sizes.reduce((n, z) => n + z.bytes, 0);
+
+    // The image server makes the ZIP and sends it as it makes it.
+    ctl = new AbortController();
+    const base = new URL(String(cfg.orthanc_url || DEFAULT_ORTHANC_URL));
+    const head = setTimeout(() => ctl.abort(), 60000);       // for the answer to begin; the body takes what it takes
+    let r;
+    try {
+      r = await fetch(new URL(base.pathname.replace(/\/+$/, '') + '/tools/create-media-extended', base.origin), {
+        method: 'POST', signal: ctl.signal,
+        headers: { Authorization: 'Basic ' + Buffer.from('admin:' + cfg.orthanc_password).toString('base64'), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Resources: exams.map(e => studies[linkOf(e)].ID), Synchronous: true }),
+      });
+    } catch (e) { return refuse(res, 'UNREACHABLE'); } finally { clearTimeout(head); }
+    if (r.status !== 200 || !r.body) { ctl.abort(); return refuse(res, 'UNREACHABLE'); }
+
+    const names = exams.map(e => e.order_name + (e.accession_no ? ' (' + e.accession_no + ')' : ''));
+    const logged = await writeAudit(pool, req, {
+      action: ACTIONS.PACS_IMAGES_EXPORT, patient_id: exams[0].patient_id, visit_id: exams.length === 1 ? exams[0].visit_id : null,
+      entity: 'patient', entity_id: exams[0].patient_id,
+      summary: exams.length + ' exam(s), ' + items + ' image(s), ' + (bytes / 1048576).toFixed(1) + ' MB given out (' + medium + '): ' + names.join('; '),
+      after: { medium, exam_count: exams.length, image_count: items, size_mb: Math.round(bytes / 104857.6) / 10, exams: names.join('; ') },
+    });
+    if (!logged) { ctl.abort(); return refuse(res, 'NOT_LOGGED'); }
+
+    res.status(200);
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', 'attachment; filename="images.zip"');
+    res.set('Cache-Control', 'private, no-store');
+    res.set('X-Accel-Buffering', 'no');                 // nginx hands it on as it comes, without keeping it on its disk
+    res.set('X-Export-Items', String(items));
+    res.set('X-Export-Bytes', String(bytes));
+    res.on('close', () => { if (!res.writableEnded) ctl.abort(); });     // the program went away: stop asking the image server
+    const body = Readable.fromWeb(r.body);
+    body.on('error', () => res.destroy());              // the image server broke off: the copy is cut, never ended as if whole
+    body.pipe(res);
+  } catch (err) {
+    if (ctl) ctl.abort();
+    if (!res.headersSent) res.status(500).json({ error: err.message }); else res.destroy();
+  }
 });
 
 module.exports = { router, WHY, _test: { examBlock, NOT_PICTURES } };

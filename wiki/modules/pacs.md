@@ -190,6 +190,32 @@
 - 브라우저 인쇄 창에서 **머리글과 바닥글**을 끄세요. 팝업이 막혀 있으면 「Le navigateur a bloqué la fenêtre d'impression」.
 - **총괄이 추천값으로 정함(2026-10-01 — 실장님이 바꿀 수 있음)**: 종이 아래 「참고용 — 진단용 아님」 넣음 / 수납도 인쇄 허용 / 환자 번호 경고가 있는 검사는 막음 / 기본 2장 배치, 한 번에 48장, 처음 12장 선택.
 
+### 2.4.4 영상 CD 반출 — 따로 실행하는 프로그램 `cd-export` (2026-10-01, 실장님 요청)
+
+다른 병원에 **영상 자체**를 줄 때 씁니다(실장님: 「CD는 아직도 보안 때문에 CD로 하는 경우가 너무 많다, USB 안 받는다」 → 「반출 프로그램이 환자 차트번호로 조회하고, 그 환자의 어떤 것을 반출할지 클릭하고, 영상 크기 알려 주고, CD 인식하면 『이 CD에 구울까요』 물어보고」). EMR 화면이 아니라 **PACS 폴더의 `cd-export.bat`** 을 더블클릭해 여는 따로 된 프로그램입니다([창의 모습 — 가짜 환자](../reference/design/cd-export-sample-fr.png)). EMR에 닿는 PC면 어디서나 됩니다(서버 PC가 아니어도).
+
+> **지금 상태(2026-10-01)**: 「폴더에 저장」과 「ISO 파일로 저장」까지 확인했습니다. **진짜 디스크에 굽는 것은 아직 한 번도 해 보지 않았습니다**(실장님의 디스크를 쓰는 일이라 총괄에 알린 뒤에 합니다) — 굽기 단추는 들어 있고, 디스크를 알아보는 것까지는 확인했습니다. 뷰어(Weasis)를 함께 넣는 것은 그다음 단계입니다.
+
+1. **`cd-export.bat` 더블클릭** → 창이 뜹니다. **EMR 계정으로 로그인**(진료 또는 수납 권한). 처음 한 번은 「Adresse de l'EMR」(예: `http://192.168.1.10:9080`)을 적습니다 — 다음부터는 기억합니다(프로그램 옆의 `cd-export.ini`. 비밀번호·토큰은 어디에도 적지 않음).
+2. **N° dossier(차트번호)** 를 치고 Enter → 환자 이름 · 차트번호 · 생년월일 · 성별이 나옵니다. **맞는 환자인지 눈으로 확인**하세요.
+3. 그 환자의 **영상 검사 목록**(날짜 · 종류 · 검사 이름 · 영상 장수 · 크기). 반출할 검사의 줄을 눌러 **체크**합니다. 회색 줄은 반출할 수 없는 검사이고 「État」 칸에 이유가 있습니다: 취소된 검사 / 영상 없음 / **환자 번호 경고**(EMR에서 먼저 바로잡기 — 2.6절) / 바로잡는 중 / 영상 서버에 영상이 없음.
+4. 목록 아래 두 줄: **「Sélection : 2 examen(s) · 23 image(s) · 60 Mo」**, 그리고 드라이브 — 「Graveur G: — CD-R vierge, 703 Mo libres ✔ tient sur ce disque」. 빈 디스크를 넣으면 **스스로 알아봅니다**(2초마다 봄). 안 들어가면 「✘ 15 Mo de trop : décochez un examen ou utilisez un DVD」.
+5. 세 단추:
+   - **Graver ce CD…** — 「Graver 2 examen(s) (60 Mo) de RAKOTO Jean sur le disque du lecteur G: ?」 → 예 → 받기 → 굽기 → 확인 → 디스크가 나옴 → 「Écrivez le nom du patient et la date sur le disque」. 빈 디스크가 들어 있고 용량이 맞을 때만 눌립니다.
+   - **Enregistrer en fichier ISO…** — 디스크 이미지 파일(`.iso`)로. 굽는 드라이브가 없는 PC에서, 다른 PC로 가져가 구울 때.
+   - **Enregistrer dans un dossier…** — 고른 폴더(USB 등) 아래에 **새 폴더**(`26-00001_20261001_1730` 꼴)를 만들어 그 안에. 그 폴더가 곧 「디스크의 맨 위」입니다. 같은 이름이 있으면 `_2`를 붙이고, 있는 폴더에는 절대 쓰지 않습니다.
+6. 끝나면 무엇을 어디에 썼는지 알려 줍니다. 폴더·ISO에는 「환자의 영상이 들어 있으니 쓸 일이 끝나면 지우세요」.
+
+**디스크에 들어가는 것**: `DICOMDIR`(표준 목록) + `IMAGES\`(원본 DICOM 파일 — 영상 서버가 가진 그대로) + `README.TXT`(누구의 어떤 검사인지, 어떻게 읽는지 — 프랑스어 다음 영어). **JPG 사본은 없습니다**(실장님: 「jpg 는 넣지 마」), **판독소견도 넣지 않습니다**(「판독소견은 어차피 프린트해서 줄 거니까」 — 종이로, 2.4.1절). 받는 병원은 자기 PACS·뷰어의 「CD 가져오기 / DICOMDIR 열기」로 읽습니다.
+
+- **기록**: 반출 한 번에 변경 기록 한 줄(`pacs.images.export`) — 누가 · 환자 · 검사 몇 건(이름과 accession) · 영상 몇 장 · 크기 · 매체(`disc` / `iso` / `folder`). 줄은 **묶음을 받아 갈 때** 적힙니다(그 뒤 굽기가 실패해도 줄은 남음). **줄을 못 적으면 묶음을 주지 않습니다.**
+- **빈 디스크만** 씁니다. 무언가 들어 있는 디스크는 쓰지도 지우지도 않습니다(다시 쓸 수 있는 디스크도). 구운 디스크는 닫습니다(나중에 더 넣을 수 없음). 여러 장에 나눠 굽기는 없습니다 — 검사를 나눠 두 번 반출합니다.
+- **이 PC에 남는 것**: 받은 영상은 `%TEMP%\BethesdaCD` 아래에 잠시 풀렸다가 끝나면(성공 · 실패 · 취소 모두) 지워집니다. 프로그램이 도중에 죽었으면 다음에 켤 때 지웁니다.
+- **시스템을 바꾸지 않습니다**: 설치 없음, 레지스트리 · 예약 작업 없음. 굽기는 Windows에 들어 있는 부품(IMAPI2), 창도 Windows의 것.
+- **로그인이 만료되면** 로그인 화면으로 돌아갑니다(「La session a expiré」).
+- **받는 도중 끊기면** 「La connexion a été coupée… Rien n'a été copié」 — 반쪽짜리를 온전한 것처럼 남기지 않습니다. 다시 하면 됩니다.
+- 화면 언어: 프랑스어(기본), `cd-export.bat -Lang ko`, `-Lang en`. `README.TXT`는 늘 프랑스어 + 영어.
+
 ### 2.5 영상이 안 보일 때 — 순서대로
 
 1. **🩻 Imagerie (영상/판독)** 목록에서 그 검사 옆 글자를 봅니다.
@@ -384,18 +410,21 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 
 ### 서버 — `backend/src/routes/pacs.export.js` (`/api/pacs/export`, 2026-10-01 — 병원 밖으로 나가는 영상)
 
-지금은 **영상 인쇄**의 서버 쪽입니다(CD 반출의 길은 다음에 이 파일에 더함). 권한: **진료 또는 수납**. 그림은 Orthanc의 공식 REST(`/instances/{id}/rendered`)로 받아 그대로 넘깁니다 — Orthanc를 고치지 않고, EMR에 저장하지 않습니다.
+**영상 인쇄**와 **영상 CD 반출**의 서버 쪽입니다. 권한: **진료 또는 수납**. 그림은 Orthanc의 공식 REST(`/instances/{id}/rendered`)로 받아 그대로 넘깁니다 — Orthanc를 고치지 않고, EMR에 저장하지 않습니다.
 
 | 길 | 하는 일 |
 |---|---|
 | `GET /export/exam/:orderItemId` | 그 검사의 그림 목록: `{exam, images:[{id, series, desc, modality, number, frames}], skipped, max}`. 순서는 시리즈 번호 → 영상 번호(장비가 붙인 대로). 그림이 없는 시리즈(종류가 SR · KO · PR · DOC 등)는 빼고 `skipped`로 셈 |
 | `GET /export/image?order_item_id=&instance=&w=` | 그림 한 장(JPEG, 장비가 저장한 밝기 창으로). 여러 프레임이면 첫 프레임. 그림의 너비가 `w`(200~1600, 기본 1600)보다 크면 영상 서버가 줄여서, 작으면 그대로(키우지 않음). **그 영상이 그 오더의 검사 것이 아니면 403** |
 | `POST /export/printed` `{order_item_id, instances:[…], per_page, lang}` | 인쇄의 변경 기록 한 줄(`pacs.images.print`). 영상은 1~48장, 모두 그 검사의 것이어야 함. 줄을 못 적으면 500 `NOT_LOGGED` — 화면은 이것이 ok일 때만 서류를 발행하고 인쇄 |
+| `GET /export/patient?chart_no=` | (반출 프로그램) 차트번호로 환자 한 명: `{patient:{id, chart_no, last_name, first_name, gender, date_of_birth}, clinic:{name…, address, phone}, server, max_exams, exams:[{id, exam_date, modality, order_name, accession_no, block, items, bytes}]}`. 환자의 연락처는 주지 않음. 검사마다 영상 서버에 있는 장수와 크기(`/studies/{id}/statistics`), 못 주는 검사는 `block`에 사유 코드. 영상 서버가 무응답이어도 목록은 오고 `server: 'UNREACHABLE'` |
+| `GET /export/bundle?order_item_ids=1,2&medium=disc\|iso\|folder\|zip` | (반출 프로그램) 고른 검사들을 **ZIP 하나**로 — Orthanc의 `POST /tools/create-media-extended`가 만든 것을 **뜯지도 덧붙이지도 않고 그대로** 흘려보냄(맨 위 `DICOMDIR`, 그 옆 `IMAGES/IM0…`). 검사는 모두 한 환자의 것(아니면 `OTHER_PATIENT`), 30건까지, 하나라도 못 주는 검사면 거절(`order_item_id`로 어느 것인지). 영상 서버가 답하기 시작한 뒤, 첫 바이트를 보내기 전에 변경 기록 한 줄(`pacs.images.export`) — 못 적으면 500 `NOT_LOGGED`이고 한 바이트도 안 나감. 머리말 `X-Export-Items` · `X-Export-Bytes`(프로그램이 받은 것과 맞춰 봄), `X-Accel-Buffering: no`(nginx가 디스크에 받아 두지 않게). 프로그램이 도중에 끊으면 영상 서버 쪽 요청도 끊음 |
 
-- **거절**(`{ok:false, code, error}` — 화면은 `code`로 자기 말을 고름, `px_imErr_<CODE>`): `NOT_FOUND`(영상 오더가 아님, 404) · `CANCELLED` · `NO_IMAGES` · `IDENTITY`(환자 번호 경고 — `patient_check`가 `match`가 아님) · `BUSY`(옮기는 중) · `NOT_PAIRED` · `UNREACHABLE` · `NOT_ON_SERVER`(404) · `NOT_OF_EXAM`(403) · `NOT_A_PICTURE`(415) · `BAD_REQUEST` · `TOO_MANY`(400) · `NOT_LOGGED`(500). 나머지는 409.
+- **거절**(`{ok:false, code, error}` — 화면은 `code`로 자기 말을 고름, `px_imErr_<CODE>`): `NOT_FOUND`(영상 오더가 아님, 404) · `CANCELLED` · `NO_IMAGES` · `IDENTITY`(환자 번호 경고 — `patient_check`가 `match`가 아님) · `BUSY`(옮기는 중) · `NOT_PAIRED` · `UNREACHABLE` · `NOT_ON_SERVER`(404) · `NOT_OF_EXAM`(403) · `NOT_A_PICTURE`(415) · `BAD_REQUEST` · `TOO_MANY`(400) · `NOT_LOGGED`(500) · 반출: `NO_PATIENT`(404) · `OTHER_PATIENT` · `TOO_MANY_EXAMS`(400). 나머지는 409.
 - **영상 서버 무응답을 502·503·504로 답하지 않습니다**: EMR 앞의 nginx(`frontend/nginx.conf`)가 그 셋을 자기 글(「API backend is not reachable」)로 바꿔 버려서 `code`가 사라집니다(격리에서 겪음). 그래서 409.
 - **변경 기록 줄**: `entity: order_item`, 요약 `N image(s) of <검사> (<accession>) printed`, 값 `{order_name, accession_no, image_count, per_page, lang}`. 그림도, 어느 영상인지도 넣지 않습니다(어느 영상인지는 발행된 서류의 기록에).
-- **격리에서 확인한 것**(가짜 장비로 보낸 검사 — 초음파 컬러 800×600 18장 + 12프레임 1건 + 장비 보고서 1건 / 60장짜리 / 12비트 흉부 필름 2500×3000 2장 + 흑백이 뒤집힌 필름 1장): 목록 순서 · 보고서가 빠짐 · 필름이 1600×1920으로 줄어 옴(한 장 0.05초) · 작은 그림은 그대로 · 뒤집힌 필름도 바르게 · 다른 검사/다른 환자의 영상 번호를 넣으면 403 · 취소/경고/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 기록을 못 적게 하면(시험용 DB 트리거) 500이고 줄 없음 — 35가지.
+- **반출 쪽 — 격리에서 확인한 것**(`export_api.py` 33가지): 환자·검사 목록과 크기 · 차트번호 앞뒤 공백 · 없는 번호 404 · 두 검사 묶음이 `DICOMDIR` + 23파일이고 **영상 서버의 파일과 바이트까지 같음** · 기록 한 줄(환자, 건수, 장수, 크기, 매체, 검사 이름) · 다른 환자의 검사가 섞이면 거절 · 취소/경고/영상 없음 거절(어느 검사인지) · 매체 이름이 틀리면 400 · 31건 거절 · 로그인 없이 401 · 기록을 못 적게 하면 500이고 ZIP이 한 바이트도 안 나감 · 받다가 연결을 끊어도 EMR은 계속 응답 · 영상 서버를 끄면 목록은 오고(`UNREACHABLE`) 묶음은 409. **687MB 묶음**(큰 필름 48장)이 nginx를 지나 온전히 옴(nginx 설정은 안 고침).
+- **인쇄 쪽 — 격리에서 확인한 것**(가짜 장비로 보낸 검사 — 초음파 컬러 800×600 18장 + 12프레임 1건 + 장비 보고서 1건 / 60장짜리 / 12비트 흉부 필름 2500×3000 2장 + 흑백이 뒤집힌 필름 1장): 목록 순서 · 보고서가 빠짐 · 필름이 1600×1920으로 줄어 옴(한 장 0.05초) · 작은 그림은 그대로 · 뒤집힌 필름도 바르게 · 다른 검사/다른 환자의 영상 번호를 넣으면 403 · 취소/경고/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 기록을 못 적게 하면(시험용 DB 트리거) 500이고 줄 없음 — 35가지.
 
 ### 서버 — `backend/src/routes/pacs.viewer.js` (`/api/pacs/viewer`, 영상 중계 — P-9 C)
 
@@ -457,6 +486,11 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - `bridge/bridge.py`, `bridge/Dockerfile`(python 3.12-slim, pydicom 2.4.4, requests 2.32.3)
 - 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요. `make_*`는 브리지 컨테이너 안에서 돌리며 `ORTHANC_PASSWORD`를 환경 변수에서 읽고, 시험 오더의 `STUDY_UID`·`ACCESSION`·`PATIENT_ID`도 환경 변수로 받음(가짜 환자 `TEST^Patient`).
 - `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`
+- **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
+  - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
+  - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬). 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
+  - `cd-export-ui.ps1` — 창(WinForms). 글은 `$CdxText`(fr · ko · en). 사람에게 묻는 것(안내 · 예/아니오 · 폴더 고르기 · 파일 이름)은 함수 네 개에 모아 둠 — 시험이 사람 대신 답할 수 있게.
+  - **EMR만 부릅니다**(로그인 · `GET /api/pacs/export/patient` · `GET /api/pacs/export/bundle`). Orthanc에 직접 가지 않으므로 영상 서버 비밀번호가 프로그램에 없습니다.
 
 ### 브리지 환경 변수
 
@@ -770,3 +804,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | **P-9 C: EMR이 영상을 중계**(`pacs.viewer.js`, 마이그레이션 035(세션 번호 803) `orthanc_url`·`orthanc_password`, 서명 쿠키, 허용 목록, 뷰어용 CSP). `pair-with-emr`가 Orthanc 비밀번호도 넣음, Orthanc 9090은 127.0.0.1만, Stone 시작 안내 끔. 2.3·2.5(로그인 없음, 안내 문구), 4절 중계, 6절 설정 칸, 6.1 순서, 7절 P-9 ✅(보안 시험·50MB 수치) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | 영상 백업 만듦(6.2, PACS `image-backup.ps1` 등 5개, EMR `POST /image-backup-report`), 6.1을 새 도구(check-windows-ports·pair-with-emr·영상 복원) 기준 설치 순서로 다시 씀, 2.6에 취소 뒤 늦은 영상 | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | **영상 인쇄**(2.4.3절): 검사의 영상을 A4에 1·2·4·6장씩 — 🩻 창의 「🖨 Imprimer les images」(진료·수납). 새 서버 파일 `pacs.export.js`(그림 목록 · 그림 한 장 · 인쇄 기록), 인쇄 창 `ImagesPrint.jsx`, 서식 `imaging-images.jsx`, 변경 기록 동작 `pacs.images.print`(+ 다음에 쓸 `pacs.images.export`). 번역 키 `px_im…` 29개 | EMR `session/pacs` |
+| 2026-10-01 | **영상 CD 반출 프로그램**(2.4.4절) — PACS 폴더의 `cd-export.bat`: EMR 계정으로 로그인 → 차트번호 조회 → 검사 체크 → 크기 → 폴더 / ISO / 디스크. EMR에 길 둘(`GET /export/patient`, `GET /export/bundle` — Orthanc의 묶음을 그대로 넘김, 기록 `pacs.images.export`). **폴더 · ISO까지 확인, 진짜 굽기는 아직** | EMR `session/pacs` · PACS `session/pacs` |

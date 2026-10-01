@@ -121,6 +121,17 @@ log and issues the sheets as a document (listed in the documents history, where 
 from the image server and reprinted). A cancelled exam, an exam without images and an exam with an
 identity warning cannot be printed.
 
+### Copying a patient's images to a CD
+
+Hospitals still ask for images on a CD. A small separate program in the PACS folder, **`cd-export.bat`**,
+does it: sign in with an EMR account (consultation or payment), type the patient's chart number, tick the
+exams, see how large they are and whether they fit the blank disc in the drive, then burn - or save a disc
+image, or a folder on a USB stick, on a PC without a burner. The disc is a standard DICOM disc (`DICOMDIR`
+and the original files, made by the image server itself) with a `README.TXT`; there are no JPEG copies and
+the reading is not on it (it is printed). The program talks to the EMR only: the EMR checks the account,
+refuses cancelled exams and exams with an identity warning, hands the image server's bundle on untouched
+and writes one line in the change log per copy - no line, no copy. Only a blank disc is ever written.
+
 ### The EMR knows when the images have arrived, and whose they are
 
 Nothing ever marked an imaging order done: a patient stayed on the device worklist all day after being

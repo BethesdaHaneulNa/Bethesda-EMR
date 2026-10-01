@@ -191,6 +191,24 @@ Pour un patient qui va dans un autre hôpital, les images elles-mêmes peuvent �
 - Dans la fenêtre d'impression du navigateur, décochez **En-têtes et pieds de page**.
 - Ces feuilles sont des copies pour référence : elles ne remplacent pas les images d'origine, qui restent dans le PACS.
 
+### 12. Copier les images sur un CD (programme à part)
+
+Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD avec un petit programme à part : **cd-export.bat**, dans le dossier du PACS (demandez à l'administrateur de mettre un raccourci sur le bureau).
+
+1. Double-cliquez sur **cd-export.bat**. Connectez-vous avec **votre compte de l'EMR** (Consultation ou Paiement). La première fois, l'administrateur écrit l'**Adresse de l'EMR**.
+2. Tapez le **N° dossier** du patient, puis **Entrée**. Le nom, le N° dossier et la date de naissance s'affichent : **vérifiez que c'est le bon patient.**
+3. La liste des examens d'imagerie s'affiche, avec le nombre d'images et la taille. **Cochez** les examens à copier (cliquez sur la ligne). Une ligne grise ne peut pas être copiée ; la colonne **État** dit pourquoi (examen annulé, pas d'images, avertissement d'identité à régler d'abord dans l'EMR…).
+4. Sous la liste : **Sélection : … examen(s) · … image(s) · … Mo**, puis le graveur. Mettez un **disque vierge** dans le lecteur : le programme le voit tout seul et dit **✔ tient sur ce disque**, ou de combien c'est trop.
+5. Cliquez sur **Graver ce CD…**, puis sur **Oui**. Le programme récupère les images, grave, vérifie le disque et l'éjecte. **Écrivez le nom du patient et la date sur le disque.**
+6. Pas de graveur sur ce PC ? **Enregistrer dans un dossier…** (une clé USB : un nouveau dossier y est créé) ou **Enregistrer en fichier ISO…** (à graver sur un autre PC).
+
+- Le disque contient les images d'origine (format DICOM) et un fichier **README.TXT** qui dit de quel patient et de quels examens il s'agit. L'autre hôpital l'ouvre avec son logiciel d'imagerie (« importer un CD »). Le compte-rendu n'est pas sur le disque : imprimez-le (§ 9).
+- Seul un disque **vierge** est utilisé. Un disque qui contient déjà quelque chose n'est jamais effacé.
+- Chaque copie est notée dans le journal des modifications de l'EMR (qui, quel patient, quels examens).
+- **« La connexion a été coupée… Rien n'a été copié »** : recommencez. **« Le serveur d'images ne répond pas »** : réessayez dans un instant, puis prévenez l'administrateur.
+- **« La gravure a échoué : ce disque est à jeter »** ou **« La vérification a échoué »** : ne remettez pas ce disque ; mettez un autre disque vierge et recommencez.
+- Un dossier ou un fichier ISO enregistré contient les images d'un patient : supprimez-le quand il n'est plus utile, et ne le laissez pas sur une clé USB qui circule.
+
 ## Si ce message apparaît
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
