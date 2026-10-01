@@ -2,6 +2,22 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 기록 탭: 영상을 다른 오더로 옮김 / 맞바꿈 (`pacs.study.move`)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `209d80b` merge 위)
+- **무엇을**: PACS 046(`pacs.move.js`)이 남기는 줄을 기록 탭이 화면 언어로 읽음.
+  - 종류: 「영상을 다른 오더로 옮김 / 맞바꿈」 · 「Images moved to another order / exchanged」 · 「Images déplacées vers une autre demande / échangées」 — 옮김과 맞바꿈이 한 action 이라 한 문장이고, 어느 쪽인지는 칸 `kind`가 말함. 종류 고르는 목록에도 나옴.
+  - 새 칸 넷: `accession_no` 「검사 번호(Accession) / Accession no. / N° d'accession」(PACS 화면 `px_dAccession`과 같은 말) · `kind` 「옮긴 방식 / Correction / Correction」, 값 move 「옮김 / moved / déplacement」 · swap 「맞바꿈 / exchanged / échange」 · `reading_moved` 「판독도 함께 옮김 / … / Compte-rendu déplacé avec les images」 · `readings_exchanged` 「판독도 맞바꿈 / … / Comptes-rendus échangés aussi」 — 값은 「예 / 아니요」(Oui / Non).
+  - 이미 있던 칸: `order_name`(검사·처치 / Examen / acte) · `image_count` · `reason`.
+  - **요약 줄**: PACS가 영어로 적은 summary(「5 image(s): A (..) -> B (..)」) 대신, 칸에서 다시 만든 「A (번호) → B (번호)」(맞바꿈은 ⇄) — 낱말이 없어 어느 언어에서나 같음. 영상 수는 칸에 있음. 칸이 없는 줄이면 적힌 summary 그대로.
+  - 칸 순서: 오더 → 검사 번호 → 옮긴 방식 → 영상 수 → 판독 → 사유. 이를 위해 `FIELDS`에서 `reason`을 PACS 칸들 뒤로 옮김 — 전과(`visit.transfer`) 줄은 진료과 → 의사 → 사유 그대로.
+- **되찾기(`pacs.study.relink`)의 칸**: `study_uid` · `image_count` · `image_patient_id` · `patient_check` 넷 다 이미 있음 — 빠진 것 없음(화면에서 다시 확인).
+- **알아둘 것**: 옮김 줄에서 `before`에 없는 칸(옮긴 방식·영상 수·판독·사유)은 「— → 값」으로 보임. 기록 탭이 모든 줄에 쓰는 모양 그대로 두었음(전과의 사유도 같음).
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 7줄씩) · `wiki/03-change-log.md`(한 줄) · `wiki/modules/settings.md`(8절) · 이 노트. 백엔드는 건드리지 않음.
+- **확인한 방법**: `npm run build`. 격리 스택(9187)에는 영상 서버가 없어 실제로 옮길 수 없으므로, `pacs.move.js`·`pacs.relink.js`가 쓰는 모양 그대로의 줄 넷(옮김 — 판독·사유 있음 / 옮김 — 판독 없음·사유 없음 / 맞바꿈 / 되찾기)을 격리 DB의 `audit_log`에 넣고 기록 탭을 프랑스어·한국어로 읽음 — 문장·요약·칸·값 모두 화면 언어. **실제 옮기기가 남긴 줄로는 보지 못했음** — 본 스택에서 한 번 옮긴 뒤 기록 탭을 보면 됨. 스택은 `down -v`.
+- **남은 것**: 임상병리 부탁 `settings.access.mjs` 표에 `/lab/day` [LAB] — 임상병리 작업일자가 합쳐졌다는 알림 뒤에.
+
 ## 2026-10-01 — 기록 탭: 「접수 메모」로 보이던 칸을 「환자 메모」로
 
 - **상태**: 확인 요청
