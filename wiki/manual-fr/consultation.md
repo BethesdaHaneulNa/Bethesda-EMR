@@ -119,7 +119,8 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 5. Dans le texte proposé, remplacez chaque partie entre crochets `[ ]` par le vrai contenu et supprimez les crochets. Tant qu'il en reste, une ligne jaune **⚠ À compléter** les montre.
 6. Cliquez sur **Émettre**. Le document reçoit un numéro (par exemple `D26-00001`).
 7. Cliquez sur **🖨 Réimprimer**, puis signez. Le document porte le nom du médecin qui l'a rédigé.
-8. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**. L'émission et l'annulation sont notées dans le journal des modifications (numéro et nom du document, jamais son contenu).
+8. Le **Compte-rendu d'imagerie** (la feuille imprimée depuis la liste **Imagerie**, pour accompagner les images vers un autre hôpital) n'est pas dans la liste **Formulaires** : il se fait seulement depuis **Imagerie** (guide PACS). Une fois émis, il apparaît ici dans **Historique** comme les autres documents : on peut le rouvrir, le **Réimprimer** et l'**Annuler**.
+9. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**. L'émission et l'annulation sont notées dans le journal des modifications (numéro et nom du document, jamais son contenu).
 
 <!-- terme à vérifier sur place : noms des formulaires opératoires et termes médicaux des comptes-rendus (liste dans wiki/modules/consultation.md 3.6) -->
 

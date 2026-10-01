@@ -2,6 +2,31 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 영상 판독 보고서가 문서 창의 발급 이력·발급 취소에 보이게 (서류 엔진)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `a0a7de3` 다음
+- **한 일**:
+  - ① `documents/registry.js`에 `imaging-report`를 등록. 서식의 `category`가 `'imaging'`이라 어느 창의 **「새로 만들기」 목록에도 나오지 않고**, 새 함수 `historyCodes(cat)`(그 창의 양식 + `HISTORY_ALSO.document = ['imaging-report']`)로 📄 문서 창의 **발급 이력에만** 올림. `DocumentModal`은 이력 목록에 이것을 씀.
+  - 이력에서 누르면 저장된 payload로 다시 그리고(서식은 PACS 것 그대로 — **서식 파일은 고치지 않았습니다**), 「Réimprimer」·「Annuler」가 다른 문서와 같음.
+  - 판독 보고서를 보다가 「+ Nouveau」를 누르면 그 창의 첫 양식(의뢰서)으로 — 전 코드대로면 빈 판독 보고서 양식이 열렸을 것이라 `newDoc()`을 고침.
+  - ② 수납의 문서 창(같은 부품, `category="document"`)도 같음 — 확인함.
+  - ③ 발급 취소는 `documents.void`로 남음 — 확인함(판독 글은 기록에 없음).
+  - ④ `template_code` 목록을 세는 곳: 서버·통계에 없음(쓰는 곳은 `document.routes.js`의 원외 처방 확인, 기록 탭의 이름 표시 `Settings.jsx` → `getTemplate(code).name` — 등록으로 기록 탭에도 이름이 나옴).
+- **바꾼 파일**: `frontend/src/documents/registry.js` · `frontend/src/components/DocumentModal.jsx` · `wiki/modules/consultation.md`(2.11·3.5·8) · `wiki/manual-fr/consultation.md`(§10) · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: `DocumentModal.jsx`·`registry.js`(진료 주관 공용 부품) — 이력 목록의 기준이 `historyCodes(category)`로, `newDoc()`이 만들 수 없는 종류에서 첫 양식으로. 다른 창(chart·prescription)의 목록은 그대로(`HISTORY_ALSO`에 없음).
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: `npm run build` 통과. 격리 스택 1366×768 FR.
+  - **영상/판독에서 발행**: 진료 → Imagerie → 판독이 있는 검사를 고름 → 🖨 Imprimer → «Émettre et imprimer»(인쇄 창은 흉내로 막음) → «Émis : D26-00136». DB `document_log` `imaging-report`, 기록 `documents.issue` «D26-00136 Compte-rendu d'imagerie».
+  - **문서 창 이력**: 📄 Documents → 양식 목록 «Lettre de référence»뿐, 이력에 «D26-00136 · Compte-rendu d'imagerie · 2026-10-01 · S2 doctor». 누르면 보고서가 다시 그려짐(환자·검사·판독 글), 아래 단추 «+ Nouveau · Annuler · 🖨 Réimprimer».
+  - **다시 인쇄**: Réimprimer → 인쇄 창이 한 번 열림.
+  - **+ Nouveau**: 의뢰서 입력 칸으로(«Destinataire …»), 단추 «Imprimer · Émettre».
+  - **취소**: Annuler → «Motif d'annulation:» → «Mauvais patient» → ANNULÉ 도장, 이력에 «ANNULÉ», Annuler 단추 사라짐. DB `voided t`, 기록 `documents.void` `{voided:false} → {voided:true, void_reason}`. 기록 두 줄 어디에도 판독 글 없음.
+  - **수납 화면**(관리자 계정): Trouver patient → 내원 → 📄 Documents → 같은 이력(«D26-00136 · ANNULÉ · Compte-rendu d'imagerie»), 양식 목록은 의뢰서뿐, 도장 보임.
+- **확인 못 한 것**: 실제 종이 인쇄(인쇄 창을 흉내로 막고 봄). 설정의 기록 탭 화면에서 이름이 나오는 것은 코드로만.
+- **다른 세션에 부탁**: PACS — 위키 7절 P-30(「문서 창 이력에 안 보임」)을 고침으로 바꿔 주세요.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 문서: 「영상/판독」 목록에서 체크해 여러 검사를 함께 열기 (PACS 세션의 부품)
 
 - **상태**: 확인 요청 (문서만)

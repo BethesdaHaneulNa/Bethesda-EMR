@@ -130,6 +130,13 @@ drop-down (**Catégorie : toutes**) instead of a row of buttons, so any number o
 categories fits. The choice is remembered for the account on that computer. A phrase has
 one text, whatever the screen language.
 
+### Imaging reports in the document history
+
+The imaging report printed from the **Imagerie** list (one A4 sheet per exam, to go with
+the images to another hospital) is listed in the **Documents** window's history like any
+other paper, in consultation and at the till: it can be opened again, reprinted and
+voided there. It is still made only from the imaging list.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**
