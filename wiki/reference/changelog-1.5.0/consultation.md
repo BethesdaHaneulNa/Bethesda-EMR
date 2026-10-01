@@ -137,6 +137,25 @@ the images to another hospital) is listed in the **Documents** window's history 
 other paper, in consultation and at the till: it can be opened again, reprinted and
 voided there. It is still made only from the imaging list.
 
+### Opening a patient no longer starts the consultation
+
+Clicking a patient in the waiting list used to put the visit "in consultation" at once.
+A doctor who clicked the wrong name and left had changed nothing — but reception saw the
+patient as being seen, could no longer cancel the registration, and an empty consultation
+stayed in the patient's chart. The director decided that opening is reading. A line at the
+top of the middle column now says where the visit stands — *En attente*, *En consultation*,
+*Terminé* — with one button: **▶ Commencer la consultation** on a waiting visit. The
+button is not required: the first thing saved (a note, a vital sign, a drug, an exam) or
+**Terminé** starts the visit by itself. A consultation started by mistake goes back with
+**↩ Remettre en attente**, offered only while nothing at all is recorded; the server
+checks again and refuses if a second doctor wrote in the meantime. A visit that was only
+opened leaves no consultation behind.
+
+One thing changes for reception as a result: a visit the doctor saw without saving
+anything and without pressing **Terminé** stays *En attente*, and reception's
+**Terminer →** on a waiting visit closes it without the consultation fee. Doctors should
+press **Terminé** for every patient they see.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**

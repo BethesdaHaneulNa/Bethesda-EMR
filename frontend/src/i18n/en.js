@@ -424,6 +424,15 @@ export default {
   cs_phraseNoMatch: "No phrase found.",
   cs_phraseCat: "Category",
   cs_phraseCatAll: "Category: all",
+  // Start consultation / back to waiting (decision (다), 2026-10-01): opening a patient does not start the consultation
+  cs_start: "Start consultation",
+  cs_startHint: "Opening a patient does not start the consultation. This button, or the first thing you save, puts the visit in consultation.",
+  cs_back: "Back to waiting",
+  cs_backHint: "Puts a consultation started by mistake back on the waiting list. Only while nothing is recorded.",
+  cs_backDone: "Back on the waiting list",
+  cs_backHasRecords: "This consultation already has records (note, vital signs, prescription, order, document or bill): it cannot go back to waiting.",
+  cs_backNotStarted: "This visit is not in consultation any more. The screen has been read again.",
+  cs_nothingToSave: "Nothing to save",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",

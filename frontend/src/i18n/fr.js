@@ -415,6 +415,15 @@ export default {
   cs_phraseNoMatch: "Aucune phrase trouvée.",
   cs_phraseCat: "Catégorie",
   cs_phraseCatAll: "Catégorie : toutes",
+  // Commencer la consultation / remettre en attente (décision (다), 2026-10-01) : ouvrir un patient ne commence pas la consultation
+  cs_start: "Commencer la consultation",
+  cs_startHint: "Ouvrir un patient ne commence pas la consultation. Ce bouton, ou le premier enregistrement, met la visite « En consultation ».",
+  cs_back: "Remettre en attente",
+  cs_backHint: "Remet en attente une consultation commencée par erreur. Possible seulement tant que rien n'est enregistré.",
+  cs_backDone: "Remis en attente",
+  cs_backHasRecords: "Cette consultation contient déjà des données (note, constantes, prescription, examen, document ou facture) : elle ne peut pas être remise en attente.",
+  cs_backNotStarted: "Cette visite n'est plus « En consultation ». L'écran a été relu.",
+  cs_nothingToSave: "Rien à enregistrer",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
