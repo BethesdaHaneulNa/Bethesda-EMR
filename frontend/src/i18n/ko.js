@@ -125,7 +125,7 @@ export default {
   rebillHint: "취소 후 재수납 필요",
   findPatient: "환자 찾기",
   searchPatientPh: "이름 / 차트번호 검색",
-  outpatientHistory: "외래 내역 선택",
+  outpatientHistory: "내원 목록",
   colReceptionTime: "접수시간",
   colBillStatus: "수납상태",
   noPatientsFound: "검색 결과가 없습니다",

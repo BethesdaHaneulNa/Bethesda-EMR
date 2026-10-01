@@ -134,7 +134,7 @@ export default {
   rebillHint: "needs re-billing after void",
   findPatient: "Find Patient",
   searchPatientPh: "Search name / chart no.",
-  outpatientHistory: "Select Visit",
+  outpatientHistory: "Patient's visits",
   colReceptionTime: "Time",
   colBillStatus: "Billing",
   noPatientsFound: "No patients found",

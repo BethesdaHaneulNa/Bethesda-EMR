@@ -125,7 +125,7 @@ export default {
   rebillHint: "à re-facturer",
   findPatient: "Trouver patient",
   searchPatientPh: "Nom / n° dossier",
-  outpatientHistory: "Sélection visite",
+  outpatientHistory: "Visites du patient",
   colReceptionTime: "Heure",
   colBillStatus: "Paiement",
   noPatientsFound: "Aucun patient",

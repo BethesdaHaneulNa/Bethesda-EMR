@@ -59,7 +59,7 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 
 1. Cliquez sur **🔍 Trouver patient**.
 2. Tapez le nom ou le numéro de dossier (exemple : **26-00001**) dans **Nom / n° dossier**, puis cliquez sur **Rechercher**.
-3. Cliquez sur le patient. La fenêtre **Sélection visite** montre ses visites par date. Cliquez sur la bonne date.
+3. Cliquez sur le patient. La fenêtre **Visites du patient** montre ses visites par date. Cliquez sur la bonne date.
 4. Saisissez et enregistrez comme d'habitude. Le résultat apparaît aujourd'hui dans **Terminé**.
 
 ### Lire le tableau des résultats (à droite)
@@ -81,7 +81,7 @@ Le tableau **Résultats labo** montre tous les résultats du patient, une colonn
 | **La demande de cet examen a été supprimée en consultation. La liste est rechargée.** | Le médecin a supprimé cette analyse pendant que vous la saisissiez. | Rien à refaire. Les autres analyses du patient sont bien enregistrées. |
 | **Cet examen a été annulé en consultation. La liste est rechargée.** | Le médecin a annulé cette analyse (résultat déjà présent). | Rien à refaire. Si vous pensez que c'est une erreur, parlez au médecin. |
 | **Aucun item défini pour cette analyse : saisie sur une seule ligne (…)** | Cette analyse n'a pas encore de lignes détaillées. | Écrivez le résultat sur la seule ligne. Prévenez l'administrateur pour qu'il crée les lignes. |
-| **Aucune analyse pour cette visite.** | La visite choisie n'a pas d'analyse (ou elle a été annulée). | Vérifiez la date dans **Sélection visite**. |
+| **Aucune analyse pour cette visite.** | La visite choisie n'a pas d'analyse (ou elle a été annulée). | Vérifiez la date dans **Visites du patient**. |
 | **Impossible d'ouvrir les examens de cette visite. Réessayez dans un instant.** | Le serveur n'a pas répondu. | Attendez un peu et réessayez. Si cela continue, appelez l'administrateur. |
 | **Ces items ont déjà des résultats** (écran **Paramètres → Items de test**, administrateur seulement) | On essaie de changer l'**Unité** d'une ligne qui a déjà des résultats : les anciens chiffres s'afficheraient avec la nouvelle unité. | Cliquez sur **Annuler**. Suivez la méthode sûre écrite dans la fenêtre : nouvelle ligne avec un nom différent, puis supprimer l'ancienne avec **✕**. |
 
