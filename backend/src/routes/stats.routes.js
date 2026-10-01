@@ -508,7 +508,11 @@ router.get('/drug-usage', async (req, res) => {
       P
     );
 
-    const periods = Array.from(new Set(result.rows.map(r => r.period))).sort();
+    // Newest period first, like the cash table (office manager, 2026-10-01): the
+    // screen puts these as columns after the drug name, and with thirty daily
+    // columns the latest day was off the right edge. The CSV follows the same
+    // order; the per-drug total stays the last column.
+    const periods = Array.from(new Set(result.rows.map(r => r.period))).sort().reverse();
     const drugMap = {};
     for (const r of result.rows) {
       // A pack-unit line (a syrup, inhaler, cream... handed out by the bottle or

@@ -38,7 +38,7 @@ The Voided card counted both receipts cancelled by staff and receipts replaced b
 
 ### Drug usage
 
-- The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years.
+- The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years. The newest period is the first column, next to the drug name, so the latest day is visible without scrolling sideways.
 - **Dispensed** now follows the same rules as the pharmacy's new monthly stock report: it counts by the day the drug was handed over, in-house drugs only, rounded up to whole units. The two screens now give the same figure for the same month. **All prescriptions** still counts what was prescribed, by visit date. A line under the table says which rules apply.
 - Outside prescriptions no longer count as dispensed. The dispense button marks them dispensed, but only a paper prescription left the building.
 - Prescriptions of a cancelled registration are no longer counted, unless the pharmacy had already handed the drug over.
