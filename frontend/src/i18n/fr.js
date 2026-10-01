@@ -700,6 +700,21 @@ export default {
   lb_flagHigh: "élevé",
   lb_flagLow: "bas",
   lb_flagAbnormal: "anormal",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "Liste des unités",
+  lb_unitListHint: "Les unités proposées dans la case « Unité » d'un item. Retirer ou renommer une unité ici ne change pas les items et les résultats qui l'utilisent déjà.",
+  lb_unitListEmpty: "La liste est vide.",
+  lb_unitNone: "— sans unité —",
+  lb_unitNotListed: "hors liste",
+  lb_unitNew: "Nouvelle unité (ex. mg/dL)",
+  lb_unitUsedBy: "{n} item(s)",
+  lb_unitLeavesNote: "« {u} » : utilisée par {n} item(s). Ces items gardent leur unité ; elle sort seulement de la liste.",
+  lb_unitUp: "Monter",
+  lb_unitDown: "Descendre",
+  lb_unitRemove: "Retirer de la liste",
+  lb_errUnitDup: "« {u} » est déjà dans la liste (les majuscules et les espaces ne comptent pas).",
+  lb_errUnitLong: "« {u} » : une unité a 30 caractères au maximum.",
+  lb_errUnitEmpty: "Une unité n'a pas de nom. Écrivez-le ou retirez la ligne avec ✕.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Annulé",

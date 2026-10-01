@@ -709,6 +709,21 @@ export default {
   lb_flagHigh: "high",
   lb_flagLow: "low",
   lb_flagAbnormal: "abnormal",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "Unit list",
+  lb_unitListHint: "The units offered in the Unit box of a test item. Removing or renaming one here does not change the items and results that already use it.",
+  lb_unitListEmpty: "The list is empty.",
+  lb_unitNone: "— no unit —",
+  lb_unitNotListed: "not in the list",
+  lb_unitNew: "New unit (e.g. mg/dL)",
+  lb_unitUsedBy: "used by {n} item(s)",
+  lb_unitLeavesNote: "“{u}”: used by {n} item(s). Those items keep their unit; it only leaves the list.",
+  lb_unitUp: "Move up",
+  lb_unitDown: "Move down",
+  lb_unitRemove: "Remove from the list",
+  lb_errUnitDup: "“{u}” is already in the list (capitals and spaces do not count).",
+  lb_errUnitLong: "“{u}”: a unit has 30 characters at most.",
+  lb_errUnitEmpty: "A unit has no name. Type one or remove the row with ✕.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "Cancelled",

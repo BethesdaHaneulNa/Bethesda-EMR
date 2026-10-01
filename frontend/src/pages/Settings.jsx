@@ -53,6 +53,8 @@ export default function SettingsPage() {
   var liS = useState([]), labItems = liS[0], setLabItems = liS[1];
   var loS = useState([]), labOrig = loS[0], setLabOrig = loS[1];   // item list as last loaded/saved (with result_count)
   var lwS = useState(null), labWarn = lwS[0], setLabWarn = lwS[1]; // {changed, sameName} while asking before a save
+  var luS = useState([]), labUnits = luS[0], setLabUnits = luS[1];  // the units offered for a lab item (lab_unit), with item_count
+  var uwS = useState(null), unitWin = uwS[0], setUnitWin = uwS[1]; // {rows:[{name}], add, err} while the Unit list window is open
   var npS = useState(false), newPanelOpen = npS[0], setNewPanelOpen = npS[1];
   var npfS = useState({code:'',name:'',price:''}), newPanel = npfS[0], setNewPanel = npfS[1];
   var bkS = useState(null), backup = bkS[0], setBackup = bkS[1];
@@ -67,6 +69,7 @@ export default function SettingsPage() {
 
   useEffect(function(){ loadAll(); },[]);
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
+  useEffect(function(){ if(activeTab==='labitems') loadLabUnits(); },[activeTab]);
   // Back to the default each time the Journal tab is opened, even without leaving Settings.
   useEffect(function(){ if(activeTab==='audit') setAuditIssued(false); },[activeTab]);
   useEffect(function(){ if(activeTab==='audit') loadAudit(auditF, auditPage); },[activeTab, auditPage, auditIssued]);
@@ -240,6 +243,69 @@ export default function SettingsPage() {
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
       showToast(t.lb_saved);
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
+  // The unit of a lab item is picked from a list the clinic keeps in the "Unit list"
+  // window (director, 2026-10-01). The list is only what the box offers: an item keeps
+  // its unit as text, so a unit removed or renamed here changes no item and no result,
+  // and an item whose unit is not in the list keeps it (the box shows it, marked).
+  // unitName/unitKey: same rule as backend/src/utils/labFlag.js and the unique index of
+  // lab_unit -- capitals, spaces and the two micro letters do not make a different unit.
+  function unitName(v){ return String(v==null?'':v).replace(/\s+/g,' ').trim(); }
+  function unitKey(v){ return unitName(v).replace(/\u03bc/g,'\u00b5').replace(/ /g,'').toLowerCase(); }
+  function loadLabUnits(){ api.get('/lab/units').then(function(r){ setLabUnits(r||[]); }).catch(function(){ setLabUnits([]); }); }
+  // What the unit box of one item offers besides the list: the unit the item has now and
+  // the one it was loaded with, when the list does not have them -- so an old unit is
+  // never lost by opening the panel, and can be picked back after trying another.
+  function unitExtras(it){
+    var listed={}; labUnits.forEach(function(u){ listed[u.name]=true; });
+    var orig=null; if(it.id) labOrig.forEach(function(o){ if(o.id===it.id) orig=o.unit; });
+    var out=[]; [orig,it.unit].forEach(function(v){ if(v!=null && v!=='' && !listed[v] && out.indexOf(v)<0) out.push(v); });
+    return out;
+  }
+  function unitProblem(names){
+    var seen={};
+    for(var i=0;i<names.length;i++){
+      var n=unitName(names[i]);
+      if(!n) return t.lb_errUnitEmpty;
+      if(n.length>30) return t.lb_errUnitLong.replace('{u}',n);
+      var k=unitKey(n);
+      if(seen[k]) return t.lb_errUnitDup.replace('{u}',n);
+      seen[k]=true;
+    }
+    return '';
+  }
+  function openUnitWin(){ setUnitWin({ rows: labUnits.map(function(u){ return { name:u.name }; }), add:'', err:'' }); }
+  function uwRows(fn){ setUnitWin(function(w){ var rows=w.rows.slice(); fn(rows); return Object.assign({},w,{rows:rows,err:''}); }); }
+  function addUnit(){
+    var n=unitName(unitWin.add); if(!n) return;
+    var bad=unitProblem(unitWin.rows.map(function(r){ return r.name; }).concat([n]));
+    if(bad){ setUnitWin(Object.assign({},unitWin,{err:bad})); return; }
+    setUnitWin(Object.assign({},unitWin,{rows:unitWin.rows.concat([{name:n}]),add:'',err:''}));
+  }
+  // Units of the saved list that items use and that the list being edited no longer has
+  // (removed or renamed): said before saving, since those items keep their unit.
+  function unitsLeaving(){
+    var names={}; unitWin.rows.forEach(function(r){ names[unitName(r.name)]=true; });
+    if(unitName(unitWin.add)) names[unitName(unitWin.add)]=true;
+    return labUnits.filter(function(u){ return u.item_count>0 && !names[u.name]; });
+  }
+  async function saveUnits(){
+    // a unit still in the "new unit" box counts: saving must not drop what was typed
+    var names=unitWin.rows.map(function(r){ return unitName(r.name); });
+    if(unitName(unitWin.add)) names.push(unitName(unitWin.add));
+    var bad=unitProblem(names);
+    if(bad){ setUnitWin(Object.assign({},unitWin,{err:bad})); return; }
+    try {
+      var saved=await api.post('/lab/units/save',{ units:names });
+      setLabUnits(saved||[]); setUnitWin(null); showToast(t.lb_saved);
+    } catch(err){
+      var m=String(err.message||''), u=m.split(':').slice(1).join(':');
+      var msg = m.indexOf('lab_unit_duplicate')===0 ? t.lb_errUnitDup.replace('{u}',u)
+        : m.indexOf('lab_unit_too_long')===0 ? t.lb_errUnitLong.replace('{u}',u)
+        : m.indexOf('lab_unit_empty')===0 ? t.lb_errUnitEmpty
+        : (t.se_error)+': '+seMessage(t,m);
+      setUnitWin(function(w){ return w ? Object.assign({},w,{err:msg}) : w; });
+    }
   }
   function unp(k,v){ setNewPanel(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
   async function createPanel(){
@@ -828,7 +894,8 @@ export default function SettingsPage() {
                 <option value="">— {t.lb_selectPanel} —</option>
                 {orderCodes.filter(function(o){return o.code_type==='lab'}).map(function(o){return <option key={o.id} value={o.id}>{o.code} · {o.name}</option>})}
               </select>
-              <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700}}>+ {t.newLabPanel||'새 검사 패널'}</button>
+              <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>+ {t.newLabPanel||'새 검사 패널'}</button>
+              <button onClick={openUnitWin} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>{t.lb_unitList}</button>
             </div>
             {newPanelOpen?(<div style={{display:'flex',gap:8,alignItems:'flex-end',marginBottom:14,background:scBg,border:'1px solid '+bd,borderRadius:8,padding:'10px 12px',flexWrap:'wrap'}}>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.lb_code}</label><input value={newPanel.code} onChange={function(e){unp('code',e.target.value)}} placeholder="L09" style={Object.assign({},IS,{width:90})}/></div>
@@ -839,12 +906,16 @@ export default function SettingsPage() {
               <div style={{fontSize: 12,color:t3,width:'100%',marginTop:2}}>{t.newLabPanelHint||'새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.'}</div>
             </div>):null}
             {labCode?(<div style={{maxWidth:860}}>
-              <div style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 150px 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
+              <div style={{display:'grid',gridTemplateColumns:'1.4fr 1.2fr .6fr .6fr 1fr 150px 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
                 <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div><div></div>
               </div>
-              {labItems.map(function(it,i){ var nr=(it.ranges||[]).length; return <div key={i}><div style={{display:'grid',gridTemplateColumns:'1.6fr .8fr .7fr .7fr 1fr 150px 32px',gap:6,marginBottom:5,alignItems:'center'}}>
+              {labItems.map(function(it,i){ var nr=(it.ranges||[]).length; return <div key={i}><div style={{display:'grid',gridTemplateColumns:'1.4fr 1.2fr .6fr .6fr 1fr 150px 32px',gap:6,marginBottom:5,alignItems:'center'}}>
                 <input value={it.name||''} onChange={function(e){uli(i,'name',e.target.value)}} style={IS}/>
-                <input value={it.unit||''} onChange={function(e){uli(i,'unit',e.target.value)}} style={IS}/>
+                <select value={it.unit||''} onChange={function(e){uli(i,'unit',e.target.value)}} title={it.unit||''} style={Object.assign({},IS,{minWidth:0,textOverflow:'ellipsis'})}>
+                  <option value="">{t.lb_unitNone}</option>
+                  {unitExtras(it).map(function(v){ return <option key={'x'+v} value={v}>{v} · {t.lb_unitNotListed}</option>; })}
+                  {labUnits.map(function(u){ return <option key={u.id} value={u.name}>{u.name}</option>; })}
+                </select>
                 <input type="number" value={it.ref_low!=null?it.ref_low:''} onChange={function(e){uli(i,'ref_low',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_high!=null?it.ref_high:''} onChange={function(e){uli(i,'ref_high',e.target.value)}} style={IS}/>
                 <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={IS}/>
@@ -875,6 +946,40 @@ export default function SettingsPage() {
                 <button onClick={function(){ saveLabItems(); }} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
             </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
+            {unitWin?(<div onClick={function(){ setUnitWin(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div role="dialog" aria-label={t.lb_unitList} onClick={function(e){ e.stopPropagation(); }} style={{width:460,maxWidth:'92vw',maxHeight:'86vh',display:'flex',flexDirection:'column',background:scBg,border:'1px solid '+bd2,borderRadius:8,color:tx}}>
+                <div style={{padding:'14px 18px 8px'}}>
+                  <div style={{fontWeight:800,fontSize:15,marginBottom:6}}>{t.lb_unitList}</div>
+                  <div style={{fontSize:13,color:t3,lineHeight:1.5}}>{t.lb_unitListHint}</div>
+                </div>
+                <div style={{flex:1,minHeight:0,overflow:'auto',padding:'4px 18px'}}>
+                  {unitWin.rows.length===0?<div style={{fontSize:13,color:t3,fontStyle:'italic',padding:'8px 0'}}>{t.lb_unitListEmpty}</div>:null}
+                  {unitWin.rows.map(function(r,i){
+                    var saved=null; labUnits.forEach(function(u){ if(u.name===r.name) saved=u; });
+                    var mv={background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px 0',width:28,cursor:'pointer',fontSize:11,flexShrink:0};
+                    return <div key={i} style={{display:'flex',gap:5,alignItems:'center',marginBottom:5}}>
+                      <button onClick={function(){ if(i>0) uwRows(function(a){ var x=a[i-1]; a[i-1]=a[i]; a[i]=x; }); }} disabled={i===0} title={t.lb_unitUp} aria-label={t.lb_unitUp} style={Object.assign({},mv,i===0?{color:'var(--text-4)',cursor:'default'}:null)}>▲</button>
+                      <button onClick={function(){ if(i<unitWin.rows.length-1) uwRows(function(a){ var x=a[i+1]; a[i+1]=a[i]; a[i]=x; }); }} disabled={i===unitWin.rows.length-1} title={t.lb_unitDown} aria-label={t.lb_unitDown} style={Object.assign({},mv,i===unitWin.rows.length-1?{color:'var(--text-4)',cursor:'default'}:null)}>▼</button>
+                      <input value={r.name} maxLength={30} onChange={function(e){ var v=e.target.value; uwRows(function(a){ a[i]=Object.assign({},a[i],{name:v}); }); }} style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                      <span style={{fontSize:12,color:t3,whiteSpace:'nowrap',width:96,flexShrink:0}}>{saved&&saved.item_count>0?t.lb_unitUsedBy.replace('{n}',saved.item_count):''}</span>
+                      <button onClick={function(){ uwRows(function(a){ a.splice(i,1); }); }} title={t.lb_unitRemove} aria-label={t.lb_unitRemove} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'6px 0',width:30,cursor:'pointer',fontSize:13,flexShrink:0}}>✕</button>
+                    </div>;
+                  })}
+                </div>
+                <div style={{padding:'8px 18px 14px',borderTop:'1px solid '+bd}}>
+                  <div style={{display:'flex',gap:6,marginBottom:8}}>
+                    <input value={unitWin.add} maxLength={30} placeholder={t.lb_unitNew} onChange={function(e){ setUnitWin(Object.assign({},unitWin,{add:e.target.value,err:''})); }} onKeyDown={function(e){ if(e.key==='Enter') addUnit(); }} style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                    <button onClick={addUnit} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>+ {t.add||'Add'}</button>
+                  </div>
+                  {unitWin.err?<div role="alert" style={{fontSize:13,color:'var(--danger-text)',marginBottom:8,overflowWrap:'anywhere'}}>{unitWin.err}</div>:null}
+                  {unitsLeaving().map(function(u){ return <div key={u.id} style={{fontSize:13,color:'var(--warn-text)',marginBottom:6,overflowWrap:'anywhere'}}>{t.lb_unitLeavesNote.replace('{u}',u.name).replace('{n}',u.item_count)}</div>; })}
+                  <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:4}}>
+                    <button onClick={function(){ setUnitWin(null); }} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 16px',cursor:'pointer',fontSize:14,fontWeight:700}}>{t.cancel||'Cancel'}</button>
+                    <button onClick={saveUnits} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'8px 20px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.save||'Save'}</button>
+                  </div>
+                </div>
+              </div>
+            </div>):null}
             {labWarn?(<div onClick={function(){ setLabWarn(null); }} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div role="alertdialog" onClick={function(e){ e.stopPropagation(); }} style={{width:520,maxWidth:'92vw',background:scBg,border:'1px solid var(--warn-ink)',borderRadius:8,padding:'16px 18px',color:tx}}>
                 <div style={{fontWeight:800,fontSize:15,color:'var(--warn-text)',marginBottom:8}}>⚠ {t.lb_unitWarnTitle}</div>

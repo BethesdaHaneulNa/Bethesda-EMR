@@ -8,7 +8,7 @@ router.use(authMiddleware);
 
 // The flag rule and the reference-range rules live in utils/labFlag.js (shared,
 // with a checker against the screen's copies: backend/test/lab.flag.mjs).
-const { flagFor, refFor, rangeError, nullInt } = require('../utils/labFlag');
+const { flagFor, refFor, rangeError, nullInt, unitName, unitListError } = require('../utils/labFlag');
 
 async function rangesFor(db, itemIds) {
   if (!itemIds.length) return {};
@@ -400,6 +400,48 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
     res.json(await listTestItems(pool, order_code_id));
   } catch (err) {
     await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally { client.release(); }
+});
+
+// ── master: the units offered for a lab item (settings) ──
+// Only a list to pick from. An item keeps its unit as text (lab_test_item.unit) and a
+// result its own copy (lab_result.unit); nothing points at lab_unit. So a unit removed
+// or renamed here changes no item and no result -- item_count says how many items
+// write exactly that unit, for the screen to tell the user before he removes it.
+async function listUnits(db) {
+  const r = await db.query(
+    `SELECT u.id, u.name, u.sort_order,
+            (SELECT COUNT(*) FROM lab_test_item i WHERE i.unit = u.name)::int AS item_count
+       FROM lab_unit u ORDER BY u.sort_order, u.id`);
+  return r.rows;
+}
+
+router.get('/units', permMiddleware('lab', 'settings'), async (req, res) => {
+  try { res.json(await listUnits(pool)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// The whole list at once, in the order sent. Since nothing refers to a row, the list is
+// simply replaced: that also lets two names be swapped without tripping the unique index.
+router.post('/units/save', permMiddleware('settings'), async (req, res) => {
+  const names = (Array.isArray(req.body.units) ? req.body.units : [])
+    .map(function (u) { return unitName(u && typeof u === 'object' ? u.name : u); });
+  const bad = unitListError(names);
+  if (bad) return res.status(400).json({ error: bad });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM lab_unit');
+    for (let i = 0; i < names.length; i++) {
+      await client.query('INSERT INTO lab_unit (name, sort_order) VALUES ($1, $2)', [names[i], i + 1]);
+    }
+    await client.query('COMMIT');
+    res.json(await listUnits(pool));
+  } catch (err) {
+    await client.query('ROLLBACK');
+    // the index's idea of "same unit" has the last word (23505 = unique violation)
+    if (err.code === '23505') return res.status(400).json({ error: 'lab_unit_duplicate:' });
     res.status(500).json({ error: err.message });
   } finally { client.release(); }
 });

@@ -700,6 +700,21 @@ export default {
   lb_flagHigh: "높음",
   lb_flagLow: "낮음",
   lb_flagAbnormal: "이상",
+  // Settings > lab test items: the unit is picked from a list; the Unit list window
+  lb_unitList: "단위 목록",
+  lb_unitListHint: "검사항목의 「단위」 칸에서 고를 수 있는 단위입니다. 여기서 빼거나 이름을 고쳐도, 이미 그 단위를 쓰는 검사항목과 결과는 바뀌지 않습니다.",
+  lb_unitListEmpty: "목록이 비어 있습니다.",
+  lb_unitNone: "— 단위 없음 —",
+  lb_unitNotListed: "목록에 없음",
+  lb_unitNew: "새 단위 (예: mg/dL)",
+  lb_unitUsedBy: "항목 {n}개가 사용",
+  lb_unitLeavesNote: "「{u}」: 검사항목 {n}개가 쓰고 있습니다. 그 항목들의 단위는 그대로 남고, 목록에서만 빠집니다.",
+  lb_unitUp: "위로",
+  lb_unitDown: "아래로",
+  lb_unitRemove: "목록에서 빼기",
+  lb_errUnitDup: "「{u}」: 같은 단위가 이미 목록에 있습니다 (대소문자·띄어쓰기만 다른 것도 같은 단위로 봅니다).",
+  lb_errUnitLong: "「{u}」: 단위는 30자까지입니다.",
+  lb_errUnitEmpty: "이름이 빈 단위가 있습니다. 적거나 ✕ 로 빼세요.",
   // ── end laboratory ──
   // ── begin statistics (st_) ──
   st_cancelled: "취소",
