@@ -170,7 +170,9 @@ export function PharmacyStock() {
     count: { title: t.ph_count, amount: t.ph_countedQty, memo: t.ph_memoCountHint, color: 'var(--warn)' },
     discard: { title: t.ph_discard, amount: t.ph_discardQty, memo: t.ph_memoDiscardHint, color: 'var(--danger)' },
   };
-  var COLS = '1.3fr .9fr .6fr .9fr .6fr .9fr 1fr 1.4fr';
+  // Fixed shares, as in the prescription table: every row is its own grid, and with plain
+  // fr a long word (a patient's name) widened its column in that row only.
+  var COLS = 'minmax(0,1.35fr) minmax(0,.9fr) minmax(0,.6fr) minmax(0,.8fr) minmax(0,.6fr) minmax(0,.8fr) minmax(0,1.75fr) minmax(0,1.2fr)';
 
   return (
     // Fills what the pharmacy screen leaves under its top bars; only the list, the
@@ -296,7 +298,7 @@ export function PharmacyStock() {
                   <div style={{ padding: '7px 9px' }}>{m.stock_before} → {m.stock_after}</div>
                   <div style={{ padding: '7px 9px', color: m.shortfall > 0 ? 'var(--danger-text)' : t3, fontWeight: m.shortfall > 0 ? 800 : 400 }}>{m.shortfall > 0 ? m.shortfall : '-'}</div>
                   <div style={{ padding: '7px 9px' }}>{m.staff_name || '-'}</div>
-                  <div style={{ padding: '7px 9px' }}>{m.chart_no ? (m.patient_name || '') + ' #' + m.chart_no : '-'}</div>
+                  <div style={{ padding: '7px 9px', overflowWrap: 'anywhere' }}>{m.chart_no ? <>{m.patient_name || ''} <span style={{ whiteSpace: 'nowrap' }}>#{m.chart_no}</span></> : '-'}</div>
                   <div style={{ padding: '7px 9px', color: m.memo === MEMO_OUTSIDE ? 'var(--warn-text)' : t2 }}>{memoText(m)}</div>
                 </div>;
               })}

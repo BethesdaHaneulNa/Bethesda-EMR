@@ -1149,8 +1149,13 @@ export default function ConsultationPage() {
           {sel.status!=='cancelled' ? <button onClick={openTransfer} disabled={visitBilled(sel)} title={visitBilled(sel) ? t.cs_trBilledTitle : t.cs_trTitle}
             style={{background:visitBilled(sel)?'#16294a':'#334155',color:visitBilled(sel)?'#6f8db3':'#e2e8f0',border:'1px solid '+(visitBilled(sel)?'#2b4568':'#64748b'),borderRadius:5,padding:'4px 12px',cursor:visitBilled(sel)?'not-allowed':'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>⇄ {t.cs_transfer}</button> : null}
           <span style={{background:'#1e3a5f',borderRadius:3,padding:'1px 6px',color:'#93c5fd',fontWeight:600,fontSize: 13,whiteSpace:'nowrap'}}>{[sel.dept_code, sel.doctor_name].filter(Boolean).join(' ')}</span>
-          <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace'}}>{sel.chart_no}</span>
-          <span style={{color:'#fff',fontWeight:700,fontSize: 15}}>{sel.last_name} {sel.first_name}</span>
+          {/* The chart number and the name are one piece: with a long name the bar wraps, and the
+              number used to stay at the end of the first line while the name went to the second
+              (long-name check, 2026-10-01). The name itself is never cut - it wraps. */}
+          <span style={{display:'inline-flex',alignItems:'baseline',flexWrap:'wrap',gap:'2px 14px',minWidth:0}}>
+            <span style={{color:'#93c5fd',fontWeight:700,fontFamily:'monospace',whiteSpace:'nowrap'}}>{sel.chart_no}</span>
+            <span style={{color:'#fff',fontWeight:700,fontSize: 15,minWidth:0}}>{sel.last_name} {sel.first_name}</span>
+          </span>
           <span style={{color:'#bfdbfe'}}>{[sel.gender, sel.date_of_birth ? sel.date_of_birth.split('T')[0] : ''].filter(Boolean).join('/')}</span>
           {sel.allergies&&sel.allergies!=='None'?<span style={{background:'#dc2626',color:'#fff',borderRadius:3,padding:'2px 8px',fontSize: 12,fontWeight:700}}>⚠ {sel.allergies}</span>:null}
           {sel.reception_memo?<span style={{background:'#f59e0b30',color:'#fbbf24',borderRadius:3,padding:'2px 6px',fontSize: 12}}>📝 {sel.reception_memo}</span>:null}
@@ -1162,7 +1167,7 @@ export default function ConsultationPage() {
         {/* Slide-out queue. Closed, it is only moved off screen, so its tabs and search box
             stayed in the Tab order and the focus vanished into it: inert (Chrome 102+) takes
             the closed drawer out of it (integration test, 2026-09-30). */}
-        <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:280,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-290px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
+        <div data-motion="drawer" {...(queueOpen ? {} : { inert: '', 'aria-hidden': 'true' })} style={{position:'absolute',left:0,top:0,bottom:0,width:340,background:pn,borderRight:'1px solid '+bd,zIndex:20,transform:queueOpen?'translateX(0)':'translateX(-350px)',transition:'transform 250ms var(--ease-drawer)',display:'flex',flexDirection:'column',boxShadow:queueOpen?'4px 0 20px var(--shadow-50)':'none'}}>
           <div style={{padding:'8px 10px',borderBottom:'1px solid '+bd,display:'flex',gap:3,flexWrap:'wrap'}}>
             {['waiting','completed'].map(function(k){
               var c=k==='waiting'?'accent':'ok';
@@ -1555,12 +1560,16 @@ export default function ConsultationPage() {
         <div onClick={function(){setViewer(null)}} style={{position:'fixed',inset:0,background:'var(--scrim-70)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div onClick={function(e){e.stopPropagation()}} style={{width:'94vw',height:'92vh',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid var(--border-2)',background:'var(--panel-head)'}}>
-              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🖼 {t.imageViewer||'영상 뷰어'}</span>
-              <span style={{color:'var(--text-soft)',fontSize:14,fontWeight:700}}>{viewer.order_name}</span>
-              {sel?<span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>:null}
-              <button onClick={function(){setReadFolded(!readFolded)}} style={{marginLeft:'auto',background:'var(--chip)',color:'var(--text-soft)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>{readFolded ? '◂ '+t.px_readingShow : t.px_readingHide+' ▸'}</button>
-              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:null}
-              <button onClick={function(){setViewer(null)}} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
+              {/* A long patient name squeezed everything else: «Visionneuse», the exam name and
+                  the three buttons each broke onto two lines (long-name check, 2026-10-01).
+                  They keep one line; the exam name and the patient's name share what is left
+                  and wrap. */}
+              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)',whiteSpace:'nowrap',flexShrink:0}}>🖼 {t.imageViewer||'영상 뷰어'}</span>
+              <span style={{color:'var(--text-soft)',fontSize:14,fontWeight:700,minWidth:0}}>{viewer.order_name}</span>
+              {sel?<span style={{color:'var(--text-2)',fontSize:13,flex:'1 1 0',minWidth:0}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>:null}
+              <button onClick={function(){setReadFolded(!readFolded)}} style={{whiteSpace:'nowrap',flexShrink:0,marginLeft:'auto',background:'var(--chip)',color:'var(--text-soft)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700}}>{readFolded ? '◂ '+t.px_readingShow : t.px_readingHide+' ▸'}</button>
+              {viewer.url?<a href={viewer.url} target="_blank" rel="noreferrer" style={{whiteSpace:'nowrap',flexShrink:0,background:'var(--chip)',color:'var(--violet-text)',border:'1px solid var(--border-2)',borderRadius:5,padding:'6px 12px',cursor:'pointer',fontSize:13,fontWeight:700,textDecoration:'none'}}>{t.openNewTab||'새 탭에서 열기'} ↗</a>:null}
+              <button onClick={function(){setViewer(null)}} style={{whiteSpace:'nowrap',flexShrink:0,background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
             {/* What the arrived images say about the patient (viewer-url -> images): red when
                 they name another patient, amber when they name nobody. PACS's component. */}
