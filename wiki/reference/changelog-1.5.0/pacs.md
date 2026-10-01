@@ -37,7 +37,7 @@ be folded at any time (**Masquer le compte-rendu**). Another patient's images ar
 before, and opening an exam replaces what the previous image window was allowed to load.
 
 The exams can also be chosen by hand: in the patient's imaging list each exam has a tick box, and
-**⇆ Comparer (N)** at the top of the list opens the ticked ones together (two to nine). The reading box is
+**⇆ Comparer (N)**, just above the tick boxes, opens the ticked ones together (two to nine). The reading box is
 then the most recent ticked exam's. Exams that may not be compared (cancelled, no images yet, identity
 warning) cannot be ticked, and the server checks every one again.
 
@@ -50,7 +50,7 @@ The window that lists a patient's imaging exams showed one card per exam with it
 patient with many exams filled the screen with three or four of them. It is now a list - one line per exam
 (date, device type, exam, images, reading), most recent first, nineteen lines on a 1366x768 screen - and
 the chosen exam on the right: when and by whom it was ordered, the images, who read it and when, and the
-whole reading. A click or the arrow keys choose a line; the list can be narrowed by device type or by a
+whole reading. A click or the arrow keys choose a line; the list can be narrowed by device type (a drop-down) or by a
 word of the name or date. **Voir image** is next to the chosen exam. The payment screen has the same
 window, read-only.
 
@@ -60,7 +60,7 @@ When a patient is referred elsewhere the reading goes with the images. **🖨 Im
 exam in the imaging list, prints it on one A4 sheet: a large title and the exam date, the patient (name,
 chart number, sex and age, date of birth), the exam, the whole reading, and at the foot of the page the
 clinic, who read it and when, and room to sign. The sheet's language is chosen in the preview - French
-first, whatever the screen's language. Printing issues the sheet as a document: it gets a number and one
+first, whatever the screen's language. Printing issues the sheet as a document: it is listed in the documents history and gets one
 line in the change log, like every paper that leaves the clinic. Several ticked exams can be printed in one
 go, one sheet each. A long reading runs onto further pages, each headed with the patient and the exam.
 Exams without a reading, and cancelled exams, cannot be printed. It works from the payment screen too.

@@ -7,7 +7,7 @@ import { tint } from '../theme.js';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { LabResults } from '../components/LabResults.jsx';
-import { RadiologyReadings, PatientCheck, ViewerCompare, CompareChecked } from '../components/RadiologyReadings.jsx';
+import { RadiologyReadings, PatientCheck, ViewerCompare } from '../components/RadiologyReadings.jsx';
 import { perDose, doseSentence, fmtAmount, isLegacyTotal, isPack, packWord } from '../documents/rx-dosing.js';
 // The dosage form of an imported drug (pharmacy's drug-info.js, drug.dosage_form): shown
 // in the search lists where the default sig used to be (decision B retired default doses).
@@ -255,10 +255,6 @@ export default function ConsultationPage() {
   // again, so a reading just saved shows.
   var rrl = useState(0), readingsReload = rrl[0], setReadingsReload = rrl[1];
   useEffect(function(){ if(!viewer && readingsOpen) setReadingsReload(function(n){ return n+1; }); }, [viewer]);
-  // Exams ticked in that list, to open together (PACS: RadiologyReadings, CompareChecked).
-  // The ticks stay while the image window is open over the list; closing the list drops them.
-  var rpk = useState([]), readingsPicked = rpk[0], setReadingsPicked = rpk[1];
-  useEffect(function(){ if(!readingsOpen) setReadingsPicked([]); }, [readingsOpen]);
   var canRead = (user && Array.isArray(user.permissions)) ? user.permissions.indexOf('consultation')>=0 : (user && user.role==='doctor')||(user&&user.role==='admin');
 
   // pickedIds: exams ticked in the list - the server opens them together and says which
@@ -1617,10 +1613,9 @@ export default function ConsultationPage() {
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid var(--border-2)',background:'var(--panel-head)'}}>
               <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🩻 {t.imagingList||t.reading}</span>
               <span style={{color:'var(--text-2)',fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>
-              <CompareChecked ids={readingsPicked} t={t} style={{marginLeft:'auto'}} onGo={function(){ openViewer(null, readingsPicked); }} />
-              <button onClick={function(){setReadingsOpen(false)}} style={{background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
+              <button onClick={function(){setReadingsOpen(false)}} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:'var(--text)',border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>
-            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} reload={readingsReload} onOpen={function(oid){ openViewer(oid); }} picked={readingsPicked} onPick={setReadingsPicked} /></div>
+            <div style={{flex:1,overflow:'hidden'}}><RadiologyReadings patientId={sel.patient_id} reload={readingsReload} onOpen={function(oid){ openViewer(oid); }} onCompare={function(ids){ openViewer(null, ids); }} /></div>
           </div>
         </div>
       ) : null}

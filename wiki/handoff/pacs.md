@@ -2,6 +2,36 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 한 묶음: 종이에서 서류 번호 빼기 · 비교/인쇄 단추를 체크 칸 위로 · 종류 고르기를 목록형으로
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `07fa4fc`를 ff로 당긴 뒤). **PACS 저장소** — 없음
+- **한 일**:
+  1. **판독 보고서 종이에서 서류 번호를 뺌** (`documents/imaging-report.jsx`): 맨 아래 줄이 «Émis le 2026-10-01 11:15»(발행 일시)만. 서식은 `docNo`를 더 찍지 않으므로 **문서 창의 이력에서 다시 그릴 때(저장된 payload)도 번호가 안 나옴**. 둘째 장 머리줄에는 원래 번호가 없음.
+     - **인쇄 창의 제목**도 번호에서 서류 이름(«Compte-rendu d'imagerie»)으로 — 브라우저가 「머리글」을 찍을 때 제목이 종이에 찍히기 때문(`RadiologyReadings.jsx` `ReportPrint`).
+     - 안쪽 기록은 그대로: 서류 엔진으로 발행(번호·이력·다시 인쇄·발급 취소·변경 기록). 발행 뒤 미리보기 창 아래 «Émis : D26-…»은 화면에만.
+     - 미리보기 창의 안내 글: fr «L'impression est enregistrée dans le dossier comme un document émis. Les images ne sont pas sur la feuille.» / ko 「인쇄하면 발행 기록이 남습니다. 영상은 이 종이에 들어가지 않습니다.」
+  2. **「⇆ Comparer (N)」·「🖨 Imprimer (N)」를 체크 칸 바로 위로** (`RadiologyReadings.jsx`): 목록 위 줄의 맨 왼쪽 — 체크 칸 열 위. 그 옆에 「Tout décocher (모두 해제)」. 체크가 0이면 셋 다 흐리게(자리는 그대로 — 목록이 안 움직임), 비교는 둘 이상·인쇄는 판독 있는 것이 하나 이상일 때 켜짐. 창 머리의 단추는 뺌.
+     - 체크 상태를 **부품 안으로** 넣음: prop이 `picked`·`onPick` → **`onCompare(오더 번호 배열)`** 하나로. 영상 창이 위에 떠 있는 동안 체크는 남고(목록이 그대로 있으므로), 목록을 닫으면 사라짐 — 전과 같음.
+  3. **종류 좁혀 보기를 고르기(`<select>`)로**: 닫힌 모습 «Type : tous» / 「종류: 전체」 / "Type: all", 목록에 전체 + 그 환자 목록의 종류들. 진료 화면 상용구 분류 고르기와 같은 크기·글자(12px, 테두리 3px 둥글기, 고르면 굵게·색). 종류가 하나뿐이면 숨김(전과 같음). 수납 화면의 같은 창도 같은 고르기.
+- **바꾼 파일**: `frontend/src/documents/imaging-report.jsx`, `frontend/src/components/RadiologyReadings.jsx`, `frontend/src/pages/Consultation.jsx`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/manual-fr/pacs.md`(6·8·9절), `wiki/modules/pacs.md`(2.3.1·2.4·2.4.1·4절·8절), `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 (진료 세션에 알려 주세요)**: `frontend/src/pages/Consultation.jsx` — **줄이는 쪽으로** 4군데: ① import에서 `CompareChecked` 뺌 ② 상태 `readingsPicked`와 그 `useEffect` 뺌 ③ 목록 창 머리의 `<CompareChecked … />` 뺌(닫기 단추에 `marginLeft:'auto'` 되돌림) ④ `<RadiologyReadings … picked onPick />` → `<RadiologyReadings … onCompare={function(ids){ openViewer(null, ids); }} />`. `openViewer(orderItemId, pickedIds)`는 그대로. `documents/imaging-report.jsx`는 PACS 서식 파일.
+- **DB 마이그레이션**: 없음
+- **번역 키** (px_ 구역): **글을 바꾼 키** `px_filterAll`(«Tous» → «Type : tous» / 「전체」 → 「종류: 전체」 / "All" → "Type: all" — 고르기의 닫힌 모습이라), `px_printNote`(위 1번). **새 키** `px_untickAll`(«Tout décocher» / 「모두 해제」 / "Untick all"), `px_printNeedTick`(인쇄 단추가 꺼져 있을 때의 title). 이제 안 쓰는 것: 없음.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198, 1366×768):
+  - **한 줄에 들어가는지**(영상 검사 29줄 환자): fr 「⇆ Comparer (0) · 🖨 Imprimer (0) · Tout décocher | Type : tous ▾ · Chercher : nom ou date… · 29」, ko 「⇆ 비교하기 (0) · 🖨 인쇄 (0) · 모두 해제 | 종류: 전체 ▾ · 찾기: 검사 이름·날짜… · 29」 — 둘 다 한 줄, 넘침 없음, 목록은 여전히 19줄. 창 머리는 「🩻 Imagerie | 26-00001 · RAKOTO Jean | Fermer ✕」.
+  - **거리**: 첫 체크 칸에서 「⇆ Comparer」 단추까지 약 74px(전에는 1,000px 넘음).
+  - **켜짐**: 0개 → 셋 다 꺼짐 / 1개 → 비교 꺼짐·해제 켜짐 / 2개 → 비교 켜짐, 인쇄는 판독 있는 수만큼(「🖨 Imprimer (1)」, title 「1 examen(s) coché(s) sans compte-rendu : non imprimé(s).」). 체크해도 목록 위치가 안 움직임(같은 139px).
+  - **비교**: 둘 체크 → 「⇆ Comparer (2)」 → 영상 창 주소에 검사 2개, 판독 칸 접힘(「◂ 판독 칸 펴기」), 「Le compte-rendu est celui de …」. 닫으면 체크 2개 남음. 「Tout décocher」 → 0.
+  - **종류 고르기**: 목록 「Type : tous, CR, US」, US를 고르면 16줄(「16 / 29」)·체크는 그대로, 전체로 되돌리면 29줄.
+  - **종이의 번호**: 둘을 체크해 「🖨 인쇄 (2)」 → 발행(D26-00031, D26-00032 — 화면 아래에만) → 인쇄 창에 쓰인 HTML에 `D26-`·「N° document」·「발행번호」가 **없음**, 창 제목 「Compte-rendu d'imagerie」, 종이마다 «Émis le 2026-10-01 11:41».
+  - **문서 창에서 다시 인쇄**(진료 세션의 이력): 📄 Documents → 이력의 「D26-00032 Compte-rendu d'imagerie」 → Réimprimer → 종이(본문)에 번호 없음.
+- **확인 못 한 것**: 수납 화면은 이번에 화면으로 보지 않음(코드: `onCompare`가 없으면 세 단추·체크 칸을 그리지 않고, 종류 고르기·찾기·건수만). en 화면. 진짜 프린터.
+- **알아 둘 것 (진료 세션 몫 — 제가 안 고침)**:
+  - **문서 창의 「Réimprimer」는 인쇄 창 제목이 서류 번호**(`DocumentModal.jsx`의 `printDocument(…, viewed.doc_no, …)`) — 브라우저 인쇄에서 「머리글과 바닥글」을 켜 두면 그 번호가 종이 위쪽에 찍힙니다(모든 서류가 그럼). 판독 보고서에서 번호를 완전히 빼려면 거기도 서류 이름으로.
+  - `wiki/manual-fr/consultation.md` 111줄 «…puis **⇆ Comparer (N)** en haut à droite» → 지금은 체크 칸 바로 위(«juste au-dessus des cases»).
+- **다른 세션에 부탁**: 진료 — 위 두 가지와 `Consultation.jsx` 변경(4군데, 줄이는 쪽).
+
 ## 2026-10-01 — 판독 보고서: 긴 이름이 잘리지 않게 (실장님 물음)
 
 - **상태**: 확인 요청

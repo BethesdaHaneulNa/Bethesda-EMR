@@ -25,7 +25,6 @@ var T = {
   orderedBy: { fr: 'Demandé par', en: 'Ordered by', ko: '의뢰' },
   images:    { fr: '{n} image(s)', en: '{n} image(s)', ko: '영상 {n}장' },
   reader:    { fr: 'Médecin lecteur :', en: 'Read by:', ko: '판독의:' },
-  docNo:     { fr: 'N° document', en: 'Document No.', ko: '발행번호' },
   issued:    { fr: 'Émis le', en: 'Issued', ko: '발행' },
 };
 
@@ -190,8 +189,11 @@ export function ImagingReportLayout(props) {
             <div style={{ marginTop: 16, borderTop: '1px solid #000', paddingTop: 2, fontSize: '8pt', color: '#333' }}>{L(DOC_LABELS.signature, lang)}</div>
           </div>
         </div>
-        <div style={{ marginTop: 6, fontSize: '7.5pt', color: '#444', textAlign: 'right' }}>
-          {L(T.docNo, lang) + colon}{props.docNo || '—'}{props.dateStr ? '   ·   ' + L(T.issued, lang) + ' ' + props.dateStr : ''}
+        {/* When it was printed - not the document number: that is for the clinic's own
+            records (documents history, change log) and means nothing to the hospital
+            that receives the sheet (director, 2026-10-01). props.docNo is not printed. */}
+        <div style={{ marginTop: 6, fontSize: '7.5pt', color: '#444', textAlign: 'right', minHeight: '9pt' }}>
+          {props.dateStr ? L(T.issued, lang) + ' ' + props.dateStr : ''}
         </div>
       </div>
     </div>

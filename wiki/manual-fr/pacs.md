@@ -79,8 +79,8 @@ En haut à gauche des images, une phrase rouge en anglais dit : *For patients, r
    - **Annulé** (nom barré, gris) : examen annulé. **⚠ identité à vérifier** (rouge ou jaune) : les images portent un autre numéro de patient, ou aucun.
 3. **À droite, l'examen choisi** : cliquez sur une ligne (ou les flèches **↑ ↓** du clavier). Le plus récent est choisi à l'ouverture. On y lit : la date de la demande, le service et le médecin qui a demandé, les images (nombre, date et heure d'arrivée), le N° d'accession, **Lu par** (médecin, date et heure) et le **compte-rendu en entier**. Un compte-rendu long défile dans sa case. Pour un examen annulé : le motif. Pour un avertissement d'identité : le message complet.
 4. **🖼 Voir image** (à droite, en haut) ouvre la **Visionneuse** par-dessus la liste. Quand vous fermez l'image, la liste est toujours là, sur le même examen ; le compte-rendu que vous venez d'enregistrer y apparaît.
-5. Beaucoup d'examens : en haut de la liste, les boutons **Tous** / `CR` / `US`… ne montrent qu'un type d'appareil, et la case **Chercher : nom ou date…** ne garde que les examens dont le nom ou la date contient ce que vous écrivez (par exemple `chest` ou `2026-09`). Le nombre à droite indique combien de lignes sont affichées.
-6. Les cases à cocher à gauche des lignes et le bouton **⇆ Comparer (N)** : voir 8.
+5. Beaucoup d'examens : au-dessus de la liste, le menu **Type : tous** (cliquez dessus et choisissez `CR`, `US`…) ne montre qu'un type d'appareil, et la case **Chercher : nom ou date…** ne garde que les examens dont le nom ou la date contient ce que vous écrivez (par exemple `chest` ou `2026-09`). Le nombre à droite indique combien de lignes sont affichées.
+6. Les cases à cocher à gauche des lignes et, juste au-dessus, les boutons **⇆ Comparer (N)**, **🖨 Imprimer (N)** et **Tout décocher** : voir 8 et 9. Ils sont gris tant que rien n'est coché.
 7. La liste se relit chaque fois que vous fermez une image. Sinon elle ne se met pas à jour toute seule : fermez-la et rouvrez-la pour voir si les images sont arrivées.
 
 On n'écrit pas le compte-rendu dans cette fenêtre : il s'écrit dans la **Visionneuse** (4).
@@ -114,7 +114,7 @@ Deux radios du thorax à deux dates : on peut les mettre côte à côte.
 **Choisir soi-même les examens à comparer** (depuis la liste **🩻 Imagerie**) :
 
 1. Dans la liste des examens du patient, cochez la case à gauche de chaque examen à comparer (deux ou plus, 9 au plus).
-2. En haut à droite de la liste, cliquez sur **⇆ Comparer (N)**. La visionneuse s'ouvre avec ces examens seulement, le **Compte-rendu** replié.
+2. Juste au-dessus des cases, cliquez sur **⇆ Comparer (N)** (il s'allume quand deux examens au moins sont cochés). La visionneuse s'ouvre avec ces examens seulement, le **Compte-rendu** replié.
 3. Le titre de la fenêtre et le **Compte-rendu** sont ceux de l'examen **le plus récent** parmi ceux cochés ; il s'affiche en premier. La ligne **Le compte-rendu est celui de : …** le rappelle.
 4. Coupez l'écran et faites glisser les examens comme ci-dessus (4 et 5).
 5. **Fermer ✕** : vous revenez à la liste, les cases restent cochées — décochez-en une, cochez-en une autre, et comparez de nouveau. Les cases s'effacent quand vous fermez la liste.
@@ -134,9 +134,9 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 1. Ouvrez **🩻 Imagerie** (Consultation ou Paiement) et choisissez l'examen dans la liste.
 2. À droite, cliquez sur **🖨 Imprimer**. La feuille s'affiche : en haut le titre et la date de l'examen, le patient (nom, N° dossier, sexe et âge, date de naissance), l'examen, le compte-rendu en entier ; en bas le nom de la clinique, le médecin qui a lu et la place pour signer.
 3. **Langue de la feuille** : **FR**, **EN** ou **KO**, en haut de la fenêtre. La feuille est en français au départ, quelle que soit la langue de l'écran. Le compte-rendu lui-même reste tel que le médecin l'a écrit.
-4. Cliquez sur **🖨 Émettre et imprimer**. La feuille reçoit un numéro de document (en bas à droite) et l'impression est notée dans le journal des modifications, comme les autres documents remis au patient.
-5. **Imprimer de nouveau** réimprime la même feuille, avec le même numéro. Si vous changez de langue, une nouvelle feuille est émise, avec un nouveau numéro.
-6. Plusieurs examens d'un coup (en Consultation) : cochez-les dans la liste, puis **🖨 Imprimer (N)** en haut de la liste. Une feuille et un numéro par examen. Un examen coché qui n'a pas de compte-rendu est laissé de côté.
+4. Cliquez sur **🖨 Émettre et imprimer**. L'impression est notée dans le dossier comme un document émis (historique de **Documents**, journal des modifications), comme les autres documents remis au patient. La feuille porte la date et l'heure d'émission, en bas à droite ; le numéro du document n'est pas imprimé — il reste dans l'EMR et s'affiche dans la fenêtre (**Émis : D26-…**).
+5. **Imprimer de nouveau** réimprime la même feuille sans l'émettre une seconde fois. Si vous changez de langue, une nouvelle feuille est émise.
+6. Plusieurs examens d'un coup (en Consultation) : cochez-les dans la liste, puis **🖨 Imprimer (N)** juste au-dessus des cases. Une feuille par examen. Un examen coché qui n'a pas de compte-rendu est laissé de côté. **Tout décocher** efface les coches.
 
 - **🖨 Imprimer** est grisé : l'examen n'a pas de compte-rendu, ou il est annulé (laissez la souris sur le bouton pour lire pourquoi).
 - Un compte-rendu long continue sur la page suivante ; le nom du patient, le N° dossier et l'examen sont rappelés en haut de chaque page, et le numéro de page est en bas.
