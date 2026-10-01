@@ -10,6 +10,11 @@
 // from the table shows up. Each route lists the module permissions that may call it;
 // a request passes if the account holds any of them (permMiddleware is an OR).
 //   ALL  = any signed-in account     OPEN = no sign-in (bridge / login routes; not tested)
+// Not swept: the routes without a sign-in (/auth/setup-status, /auth/setup, /auth/login,
+// and the bridge's own, which take the bridge token: /pacs/worklist-feed,
+// /pacs/bridge-heartbeat, /pacs/image-backup-report, /pacs/study-arrived,
+// /pacs/superseded-images), and three Settings writes that would really do something for
+// the accounts that pass: PUT /pacs/config, PUT /admin/clinic, POST /backup/run.
 // For each account the check is only "refused or not": 403 when none of its permissions
 // is listed, anything else (200, 400, 404 ...) when one is. A 401 or a 5xx is always
 // reported. Fix a difference in the route's own file, not here - unless the table
@@ -54,6 +59,8 @@ const ROUTES = [
   ['POST', '/visits',                       [REG], {}],
   ['PUT',  '/visits/' + X + '/status',      [REG], { status: 'cancelled' }],
   ['PUT',  '/visits/' + X,                  [REG, PAY], {}],
+  // a visit moved to another department / doctor (2026-09-30): reception, or the doctor's own screen
+  ['PUT',  '/visits/' + X + '/transfer',    [REG, CONS], {}],
   // consult.routes.js (consultation)
   ['POST', '/consultations',                [CONS], {}],
   ['PUT',  '/consultations/' + X,           [CONS], {}],
@@ -71,6 +78,16 @@ const ROUTES = [
   ['POST', '/consultations/order/' + X + '/cancel', [CONS], {}],   // (2026-09-29)
   ['DELETE', '/consultations/order/' + X,   [CONS]],
   ['GET',  '/consultations/' + X + '/orders', [CONS, PAY, PHARM]],
+  // the doctor's own list filter (kept per account), a visit's consultation, back to waiting,
+  // each doctor's note (038), what was already billed (2026-10-01)
+  ['GET',  '/consultations/queue-filter',   [CONS]],
+  ['PUT',  '/consultations/queue-filter',   [CONS], {}],
+  ['DELETE', '/consultations/queue-filter', [CONS]],
+  ['GET',  '/consultations/visit/' + X,     [CONS]],
+  ['PUT',  '/consultations/visit/' + X + '/waiting', [CONS], {}],
+  ['GET',  '/consultations/' + X + '/notes', [CONS]],
+  ['PUT',  '/consultations/' + X + '/note', [CONS], {}],
+  ['GET',  '/consultations/' + X + '/billed-codes', [CONS]],
   // document.routes.js (consultation)
   ['GET',  '/documents/patient/' + X,       [CONS, PAY, PHARM, LAB, REG]],
   ['GET',  '/documents/' + X,               [CONS, PAY, PHARM, LAB, REG]],
@@ -99,6 +116,8 @@ const ROUTES = [
   // pharmacy.routes.js
   ['GET',  '/pharmacy/pending',             [PHARM]],
   ['GET',  '/pharmacy/completed',           [PHARM]],
+  // one working day's prescriptions (?date=YYYY-MM-DD), pharmacy only (2026-10-01)
+  ['GET',  '/pharmacy/day',                 [PHARM]],
   ['GET',  '/pharmacy/patient/' + X + '/pending', [PHARM]],
   ['GET',  '/pharmacy/patient/' + X + '/recent-rx', [PHARM]],
   ['PUT',  '/pharmacy/consultations/' + X + '/dispense', [PHARM], {}],
@@ -110,26 +129,41 @@ const ROUTES = [
   ['POST', '/pharmacy/stock/' + X + '/receive', [PHARM, CONS, SET], { qty: 1 }],
   ['POST', '/pharmacy/stock/' + X + '/count',   [PHARM, CONS, SET], { counted: 1, memo: 'access test' }],
   ['POST', '/pharmacy/stock/' + X + '/discard', [PHARM, CONS, SET], { qty: 1, memo: 'access test' }],
+  ['POST', '/pharmacy/stock/' + X + '/check-done', [PHARM, CONS, SET], {}],
   // lab.routes.js
   ['GET',  '/lab/pending',                  [LAB]],
   ['GET',  '/lab/completed',                [LAB]],
+  // one working day's lab orders (?date=YYYY-MM-DD), lab only (2026-10-01)
+  ['GET',  '/lab/day',                      [LAB]],
   ['GET',  '/lab/visit/' + X + '/orders',   [LAB]],
   ['GET',  '/lab/order/' + X + '/items',    [LAB]],
   ['POST', '/lab/order/' + X + '/results',  [LAB], {}],
   ['GET',  '/lab/patient/' + X + '/results', [CONS, LAB]],
   ['GET',  '/lab/test-items',               [LAB, SET]],
   ['POST', '/lab/test-items/save',          [SET], { order_code_id: X, items: [] }],
+  // the unit list (044). The save replaces the whole list, and an empty body is an empty
+  // list - so a blank name is sent: a 400 for those who pass the guard, nothing changed
+  ['GET',  '/lab/units',                    [LAB, SET]],
+  ['POST', '/lab/units/save',               [SET], { units: [''] }],
   // stats.routes.js
   ['GET',  '/stats/summary',                [STATS]],
   ['GET',  '/stats/monthly',                [STATS]],
   ['GET',  '/stats/outstanding',            [STATS]],
   ['GET',  '/stats/drug-usage',             [STATS]],
+  ['GET',  '/stats/cash',                   [STATS]],
   // pacs.routes.js / worklist.routes.js (PACS)
   ['GET',  '/pacs/config',                  [SET]],
   ['GET',  '/pacs/test?target=worklist',    [SET]],
   ['GET',  '/pacs/viewer-url?order_item_id=' + X, [CONS]],
   ['PUT',  '/pacs/reading/' + X,            [CONS], {}],
   ['GET',  '/pacs/readings/patient/' + X,   [CONS, PAY]],
+  // images put under another order (046, pacs.move.js): doctors and administrators. The
+  // orders are unknown ids (404) and nothing waits to be resumed on a test stack. The list
+  // of a patient's corrections is also read by payment, like the readings above.
+  ['GET',  '/pacs/move-targets?order_item_id=' + X, [CONS, SET]],
+  ['POST', '/pacs/move',                    [CONS, SET], { from_order_item_id: X, to_order_item_id: X }],
+  ['GET',  '/pacs/moves/patient/' + X,      [CONS, PAY, SET]],
+  ['POST', '/pacs/move/resume',             [CONS, SET], {}],
   ['GET',  '/worklist',                     [CONS]],
   ['PUT',  '/worklist/' + X + '/status',    [SET], { status: 'completed' }],
   ['GET',  '/worklist/dicom-mwl',           [SET]],
