@@ -445,7 +445,7 @@ export default function PaymentPage() {
         <button onClick={function(){ if(sel) setDocOpen(true); }} disabled={!sel} style={{background:sel?'var(--teal-deep)':'var(--chip)',color:sel?'var(--on-fill-teal)':'var(--text-4)',border:'1px solid '+(sel?'var(--teal-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📄 {t.documents}</button>
         <button onClick={function(){ if(sel) setRxOpen(true); }} disabled={!sel} style={{background:sel?'var(--warn-strong)':'var(--chip)',color:sel?'var(--on-fill-amber)':'var(--text-4)',border:'1px solid '+(sel?'var(--warn-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>💊 {t.outsideRx}</button>
         <button onClick={function(){ if(sel) setChartOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-strong)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-2)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>📋 {t.chartViewer||'차트뷰어'}</button>
-        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.reading||'판독소견'}</button>
+        <button onClick={function(){ if(sel) setReadingsOpen(true); }} disabled={!sel} style={{background:sel?'var(--violet-deep)':'var(--chip)',color:sel?'var(--on-fill-violet)':'var(--text-4)',border:'1px solid '+(sel?'var(--violet-ink)':bd2),borderRadius:6,padding:'6px 9px',fontSize:14,fontWeight:800,cursor:sel?'pointer':'not-allowed'}}>🩻 {t.imagingList||t.reading}</button>
         <div style={{flex:1}}></div>
         {tab==='waiting'&&sel&&billItems&&!sel.needs_refund&&sel.status!=='cancelled'?(nothingToCharge()?(
           <span style={{color:'var(--ok-text)',fontSize:14,fontWeight:800,padding:'7px 14px'}}>✓ {t.alreadySettled||'이미 수납 완료'}</span>
@@ -606,7 +606,7 @@ export default function PaymentPage() {
         <div onClick={function(){setReadingsOpen(false)}} style={{position:'fixed',inset:0,background:'var(--scrim)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div onClick={function(e){e.stopPropagation()}} style={{width:'80vw',height:'84vh',background:'var(--bg)',border:'1px solid '+bd,borderRadius:8,display:'flex',flexDirection:'column',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',borderBottom:'1px solid '+bd,background:scBg}}>
-              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🩻 {t.reading||'판독소견'}</span>
+              <span style={{fontWeight:800,fontSize:15,color:'var(--violet-text)'}}>🩻 {t.imagingList||t.reading}</span>
               <span style={{color:t2,fontSize:13}}>{sel.chart_no} · {sel.last_name} {sel.first_name}</span>
               <button onClick={function(){setReadingsOpen(false)}} style={{marginLeft:'auto',background:'var(--btn-neutral-2)',color:tx,border:'none',borderRadius:5,padding:'6px 14px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.close||'닫기'} ✕</button>
             </div>

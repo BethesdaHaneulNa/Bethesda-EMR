@@ -243,6 +243,7 @@ export default {
   imageViewer: "영상 뷰어",
   openNewTab: "새 탭에서 열기",
   reading: "판독소견",
+  imagingList: "영상/판독",
   saveReading: "판독 저장",
   readingPlaceholder: "판독 소견을 입력하세요...",
   lastReadBy: "판독",

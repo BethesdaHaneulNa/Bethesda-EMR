@@ -252,6 +252,7 @@ export default {
   imageViewer: "Image Viewer",
   openNewTab: "Open in new tab",
   reading: "Radiology Reading",
+  imagingList: "Imaging",
   saveReading: "Save reading",
   readingPlaceholder: "Enter the radiology reading...",
   lastReadBy: "Read by",

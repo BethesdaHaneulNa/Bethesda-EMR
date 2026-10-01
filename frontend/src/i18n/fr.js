@@ -243,6 +243,7 @@ export default {
   imageViewer: "Visionneuse",
   openNewTab: "Ouvrir dans un onglet",
   reading: "Compte-rendu",
+  imagingList: "Imagerie",
   saveReading: "Enregistrer",
   readingPlaceholder: "Saisir le compte-rendu radiologique...",
   lastReadBy: "Lu par",
