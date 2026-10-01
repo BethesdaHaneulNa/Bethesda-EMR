@@ -430,6 +430,10 @@ export default function ConsultationPage() {
       // Read before anything renders with this consultation: the draft effect below drops
       // the kept text while the box is still empty.
       var draft = noteDraft.read(cData.id);
+      // The day on this PC's clock when the visit was opened: if the screen stays open past
+      // midnight the clock's date moves on, and the chart stops calling the visit "Today"
+      // (the server said it was today's at that moment - visit_is_today).
+      cData.client_day = ymd(new Date());
       setConsult(cData);
       // Load existing data
       var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
@@ -1329,7 +1333,10 @@ export default function ConsultationPage() {
                 {consult ? <div style={{background:'var(--accent-a12)',borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid var(--accent-a40)'}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
                     <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700}}>{ymd(sel.visit_date || consult.consult_date)}</span>
-                    <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{t.cs_noteToday}</span>
+                    {/* "Today" only for a visit of today (the server's date when it was opened, and
+                        this PC's date not having changed since); otherwise "This visit" - an
+                        earlier day's visit opened from the visit list was headed "Today". */}
+                    <span style={{fontSize: 12,color:'var(--accent-text)',fontWeight:700}}>{consult.visit_is_today && ymd(new Date()) === consult.client_day ? t.cs_noteToday : t.cs_noteThisVisit}</span>
                     {/* Whose chart: department and the doctor the visit was registered with
                         (director, 2026-09-30 - «GEN» alone did not say which chart). */}
                     {/* No doctor on the visit: the account that opened the consultation, the same

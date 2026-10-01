@@ -141,7 +141,11 @@ router.post('/', canConsult, async (req, res) => {
     // visit list) used to create a consultation and flip the visit to in_progress,
     // bringing back a visit reception had cancelled. The row is locked so a
     // cancellation landing at the same moment is seen.
-    const vis = await client.query('SELECT status, visit_date FROM visit WHERE id = $1 FOR UPDATE', [visit_id]);
+    // is_today: whether the visit is today's by the clinic's date (todayLocal, the same
+    // date the change log uses). The screen heads the chart's first block "Today" only
+    // then - a visit of an earlier day opened from the patient's visit list was headed
+    // "2026-09-30 Today" on 10-01.
+    const vis = await client.query('SELECT status, visit_date, (visit_date = $2::date) AS is_today FROM visit WHERE id = $1 FOR UPDATE', [visit_id, todayLocal()]);
     if (vis.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
     if (vis.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return res.status(409).json({ error: VISIT_CANCELLED }); }
 
@@ -164,6 +168,7 @@ router.post('/', canConsult, async (req, res) => {
         await client.query("UPDATE visit SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [visit_id]);
       }
       await client.query('COMMIT');
+      existing.rows[0].visit_is_today = vis.rows[0].is_today === true;
       return res.json(existing.rows[0]);
     }
 
@@ -178,6 +183,7 @@ router.post('/', canConsult, async (req, res) => {
     );
     await client.query('COMMIT');
     result.rows[0].opened_by_name = req.user.name || null;
+    result.rows[0].visit_is_today = vis.rows[0].is_today === true;
     res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');

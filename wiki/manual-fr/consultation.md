@@ -121,7 +121,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 
 ### 11. Dossier Patient
 
-1. À droite, onglet **Dossier Patient** : en haut, la visite du jour (**Aujourd'hui**) avec la note de chaque médecin ; en dessous, les visites précédentes. Cliquez sur une date passée.
+1. À droite, onglet **Dossier Patient** : en haut, la visite ouverte avec la note de chaque médecin — **Aujourd'hui** si c'est la visite du jour, **Cette visite** si vous avez ouvert une visite d'un autre jour ; en dessous, les autres visites. Cliquez sur une date passée.
 2. Au milieu s'affiche **Dossier passé · lecture seule** : signes vitaux, notes (avec le nom de chaque médecin), prescriptions de ce jour-là.
 3. Cliquez sur **← Retour à l'actuel** pour revenir à la visite du jour.
 
@@ -129,7 +129,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 
 Le patient a été enregistré au mauvais service ou chez un autre médecin : inutile d'annuler l'enregistrement.
 
-1. Dans la barre bleue du patient, à côté de « GEN Dr … », cliquez sur **⇄ Transfert**.
+1. Dans la barre bleue du patient, cliquez sur **⇄ Transfert** : c'est le dernier bouton, juste avant « GEN Dr … » (le service et le médecin de la visite), suivi du numéro de dossier et du nom.
 2. Choisissez le **Médecin** : la liste montre tous les médecins (« PED – Dr … »), ceux du service actuel en haut. **Pour changer seulement de médecin, choisissez-le : le service suit tout seul.** Changez le **Service** en dessous seulement si besoin ; si le médecin choisi n'est pas de ce service, la case médecin demande « — Choisissez le médecin — ». Le service et le médecin actuels sont déjà choisis ; **Changer** reste gris tant que rien ne change. Si la visite a déjà un médecin, il faut en choisir un ; si elle n'en a pas, vous pouvez changer seulement le service.
 3. Écrivez un **Motif** si vous voulez (facultatif), puis **Changer**.
 4. La barre bleue, l'en-tête **Aujourd'hui** du **Dossier Patient** et la file d'attente montrent tout de suite le nouveau service et le nouveau médecin. Le changement est noté dans le journal des modifications.
