@@ -658,6 +658,8 @@ export default {
   ph_chk_packlabel: "Pack word (jar? bottle?)",
   ph_chkQtyDetail: "{note} ≈ {n}; imported quantity: {qty}",
   ph_dispenseConfirm: "Finish dispensing for {name}?",
+  ph_searchNone: "“{q}”: no patient in this list matches",
+  ph_stockSearchNone: "“{q}”: no drug matches",
   ph_workDatePast: "You are looking at a past date ({date}). A dispense done now is dated today ({today}) - stock record and Dispensed list of the day.",
   ph_u_cap: "caps",
   ph_u_tab: "tab",

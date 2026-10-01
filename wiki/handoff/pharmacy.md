@@ -2,6 +2,28 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 약국 목록 검색을 임상병리와 같은 동작으로 + Stock 탭 목록 폭
+
+- **상태**: 확인 요청. develop `9d9389a`를 merge(ff)한 뒤(디자인의 화면 맞추기 `layout.js` 위).
+- **한 일**(임상병리 `Lab.jsx` `2b2e4fe`를 본보기로):
+  1. 검색으로 줄이 다 가려졌을 때 따로 안내 — `ph_searchNone` 「「{q}」: 이 목록에 맞는 환자가 없습니다 / « {q} » : aucun patient de cette liste ne correspond / “{q}”: no patient in this list matches」(임상병리와 같은 문구). 목록이 정말 비었을 때의 「Aucune ordonnance à afficher」는 그대로.
+  2. 검색어 앞뒤 공백 무시(`q.trim()`).
+  3. 이름을 성·이름 두 순서 모두로.
+  4. 검색 칸은 디자인이 이미 `LIST_SEARCH_WRAP`·`LIST_SEARCH`로 바꿔 둠 — 그대로, `autoComplete off`·`aria-label`만 더함.
+  - 찾는 칸(이름·차트번호·약 이름과 코드), 탭 숫자(그날 전체), 작업일자·탭을 바꿔도 글자가 남는 것은 그대로.
+- **덧붙여 고친 것**(디자인이 못 본 곳을 보다가): **Stock 탭의 약 목록이 360px**이라 조제 탭(300px)에서 넘어가면 왼쪽 칸 폭이 바뀌었음 → `LIST_COL`(300)과 `LIST_SEARCH`를 쓰게 맞춤. 검색으로 약이 다 가려지면 `ph_stockSearchNone`(「맞는 약이 없습니다」).
+- **바꾼 파일**: `Pharmacy.jsx`(`filtered`, 빈 목록 안내 둘, 검색 칸 속성), `PharmacyStock.jsx`(격자 폭, 검색 칸, 안내), i18n `ph_searchNone`·`ph_stockSearchNone`(ko·en·fr), `wiki/modules/pharmacy.md` 2.1·3.9·8절, `wiki/manual-fr/pharmacy.md`.
+- **공용 파일 변경**: 없음(`layout.js`는 읽기만) · **DB 마이그레이션**: 없음 · 서버·조제·재고 로직은 안 건드림.
+- **본 것**(격리 9184, 1366×768):
+  - fr: 「  jean rakoto  」(순서 바꿈 + 공백) → RAKOTO Jean 한 줄 · 「RAKOTO Jean」 · 「 26-00116 」 · 「  profein 」(약 이름) → 6줄 · 「zzz」 → « « zzz » : aucun patient de cette liste ne correspond » · 빈칸만 → 전체 8줄. 검색 중 탭 숫자 En attente (8) / Délivré (102) 그대로.
+  - 처방이 없는 날짜(2026-01-05): 검색어가 있어도 없어도 « Aucune ordonnance à afficher »(검색 안내가 아님). 날짜를 바꿔도 검색 글자 남음.
+  - ko: 「jean rakoto」 → RAKOTO Jean, 「없는이름」 → 「「없는이름」: 이 목록에 맞는 환자가 없습니다」.
+  - 긴 이름(84·89자)이 검색 결과에 있어도 줄 모양 그대로.
+  - **디자인이 못 본 세 곳** — 깨진 곳 없음: 조제 완료 탭(긴 이름 환자 선택, 원외 꼬리표, 조제 단추 없음), Stock 탭(약 선택 + Inventaire 줄 + 기록 표, 이제 목록 300px), 환자 찾기로 불러온 지난 처방 묶음(주황 칸 284 = scrollWidth, Fermer 단추 제 크기, 검색 「zzz」에도 남음). 모든 상태에서 문서 크기 1366×768, 창 밖으로 나간 것 없음.
+  - 세 테마(어둡게·밝게·종이색): 대기 탭 + 지난 처방 묶음 + 검색 안내 상태에서 대비 3.5:1 아래 없음.
+- **안 본 것**: en 화면(문구만 넣음), 1366보다 좁은 창, Stock 탭의 밝은·종이색 화면(색은 안 바꿈).
+- **임상병리와 같게 둔 점 하나**: 검색어 **가운데** 빈칸이 둘이면(「Jean  RAKOTO」) 맞지 않습니다 — 임상병리 검색도 같은 방식(앞뒤만 다듬음)이라 그대로 둠. 둘 다 바꾸려면 말씀 주세요.
+
 ## 2026-10-01 — 약국 화면에 작업일자 (접수·수납과 같게)
 
 - **상태**: 확인 요청. develop `2aa0215`를 merge(ff)한 뒤.

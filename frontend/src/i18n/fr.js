@@ -649,6 +649,8 @@ export default {
   ph_chk_packlabel: "Unité (pot ? flacon ?)",
   ph_chkQtyDetail: "{note} ≈ {n} ; quantité importée : {qty}",
   ph_dispenseConfirm: "Terminer la délivrance pour {name} ?",
+  ph_searchNone: "« {q} » : aucun patient de cette liste ne correspond",
+  ph_stockSearchNone: "« {q} » : aucun médicament ne correspond",
   ph_workDatePast: "Date passée ({date}) : une délivrance faite maintenant est datée d’aujourd’hui ({today}) — registre du stock et liste « Délivré » du jour.",
   ph_u_cap: "gél.",
   ph_u_tab: "cp",

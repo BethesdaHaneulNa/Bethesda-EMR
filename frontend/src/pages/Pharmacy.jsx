@@ -279,11 +279,16 @@ export default function PharmacyPage() {
   function pastBadge(v){
     return v && Number(v.days_ago) > 0 ? fill(t.ph_pastRx, { n: v.days_ago, date: v.visit_date }) : '';
   }
+  // The search box over the list works as the lab's does (director, 2026-10-01: alike
+  // where alike reads better): it only narrows the list on screen - the work date's list
+  // of the chosen tab - by patient name, chart number or drug; spaces around the text are
+  // ignored and the two names match in either order. The tabs' numbers stay the whole
+  // day's, and the text stays when the tab or the work date changes.
   var filtered = useMemo(function(){
-    if(!q) return activeList;
-    var s = q.toLowerCase();
+    var s = q.trim().toLowerCase();
+    if(!s) return activeList;
     return activeList.filter(function(v){
-      var name = patientName(v).toLowerCase();
+      var name = (patientName(v) + ' ' + (v.first_name || '') + ' ' + (v.last_name || '')).toLowerCase();   // either order of the two names
       var chart = (v.chart_no || '').toLowerCase();
       var drugs = (v.prescriptions || []).map(function(r){ return (r.drug_name || '') + ' ' + (r.drug_code || ''); }).join(' ').toLowerCase();
       return name.indexOf(s) >= 0 || chart.indexOf(s) >= 0 || drugs.indexOf(s) >= 0;
@@ -367,11 +372,14 @@ export default function PharmacyPage() {
             </div> : null}
           </div>
           <div style={LIST_SEARCH_WRAP}>
-            <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} style={LIST_SEARCH}/>
+            <input autoComplete="off" value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.pharmacySearchPlaceholder} aria-label={t.pharmacySearchPlaceholder} style={LIST_SEARCH}/>
           </div>
           <div style={{ flex:1, minHeight:0, overflow:'auto' }}>
             {loading ? <div style={{ padding:20, textAlign:'center', color:t3 }}>{t.loading}</div> : null}
-            {!loading && filtered.length === 0 ? <div style={ROW_EMPTY}>{t.noRxToShow}</div> : null}
+            {/* Nothing in the list at all, or everything hidden by the search: two different
+                things to tell staff - the second used to read as "no prescriptions". */}
+            {!loading && activeList.length === 0 ? <div style={ROW_EMPTY}>{t.noRxToShow}</div> : null}
+            {!loading && activeList.length > 0 && filtered.length === 0 ? <div style={Object.assign({}, ROW_EMPTY, { overflowWrap:'anywhere' })}>{fill(t.ph_searchNone, { q: q.trim() })}</div> : null}
             {tab==='pending' && past ? <div style={{ borderBottom:'2px solid var(--warn-a60)', background:'var(--warn-a0d)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 10px', borderBottom:'1px solid '+bd }}>
                 <div style={{ flex:1, minWidth:0, overflowWrap:'anywhere', fontWeight:800, fontSize: 14, color:'var(--warn-text)' }}>🔍 {past.name} — {fill(t.ph_pastListTitle, { n: past.days })}</div>
