@@ -55,19 +55,20 @@ export default function PaymentPage() {
   // Work date (2026-10-01, asked for by the office manager), as on the reception screen:
   // the lists show one day's visits, today by default. "Today" comes from the server
   // (GET /cash-day), never the PC's clock. While the screen follows today a reload after
-  // midnight moves to the new day; a date staff picked stays put. Earlier days' visits
-  // still to settle are not mixed into today's list but kept under one folded line.
+  // midnight moves to the new day; a date staff picked stays put. The lists hold the
+  // chosen day's visits and nothing else: what is left from an earlier day is found by
+  // going to that day (or with the patient finder) - the folded "earlier days" line of
+  // the first version was taken out the same day (the director: the work date is enough).
   // Money is unchanged: a payment taken while a past date is shown is dated today.
   var wds = useState(''), workDate = wds[0], setWorkDate = wds[1];
   var tds = useState(''), serverToday = tds[0], setServerToday = tds[1];
   var workRef = useRef({ date: '', follow: true });
-  var sps = useState(false), showPast = sps[0], setShowPast = sps[1];
   var viewingPast = !!(workDate && serverToday && workDate < serverToday);
   function chooseWorkDate(date){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))) return;
     if(serverToday && date > serverToday) date = serverToday;   // nothing is billed ahead
     workRef.current = { date: date, follow: date === serverToday };
-    setWorkDate(date); setShowPast(false);
+    setWorkDate(date);
     setSel(null); setBillItems(null); setDoneBill(null);   // a visit of the other day is not left open
     loadLists();
   }
@@ -159,7 +160,16 @@ export default function PaymentPage() {
     document.addEventListener('visibilitychange', tick);
     return function(){ clearInterval(id); document.removeEventListener('visibilitychange', tick); };
   },[]);
-  useEffect(function(){ setSel(null); setBillItems(null); setDoneBill(null); },[tab]);
+  // Changing the tab closes what is open. A visit picked in the patient finder while the
+  // "paid" tab is shown waits in pickRef and is opened here, after that clearing - before
+  // (2026-10-01) the finder switched the tab and this effect closed the visit it had just
+  // opened, so nothing appeared.
+  var pickRef = useRef(null);
+  useEffect(function(){
+    var v = pickRef.current; pickRef.current = null;
+    setSel(null); setBillItems(null); setDoneBill(null);
+    if(v) openPicked(v);
+  },[tab]);
   useEffect(function(){
     var pid = sel ? sel.patient_id : null;
     if(!pid){ setReceipts([]); setPatBalance({owed:0,refund:0}); return; }
@@ -199,6 +209,18 @@ export default function PaymentPage() {
     if(!q) return true;
     var s=q.toLowerCase();
     return String((v.first_name||'')+' '+(v.last_name||'')).toLowerCase().indexOf(s)>=0 || String(v.chart_no||'').toLowerCase().indexOf(s)>=0 || String(v.receipt_no||'').toLowerCase().indexOf(s)>=0;
+  }
+
+  // A visit picked in the patient finder. The finder's row is the bare visit; when the visit
+  // is one the waiting list knows (any day), its row there is opened instead - it carries
+  // what the screen needs to show a correction, a re-bill or a supplement. Without it a
+  // visit with a correction pending opened as "already paid in full" (2026-10-01; it
+  // matters now that an earlier day's work is reached by its date or by the finder).
+  async function openPicked(v){
+    var rows = pending;
+    try { rows = await api.get('/billing/pending'); setPending(rows); } catch(e){}
+    var row = (rows||[]).find(function(x){ return x.id === v.id; });
+    selectVisit(row || v);
   }
 
   async function selectVisit(v){
@@ -494,11 +516,7 @@ export default function PaymentPage() {
   function listRows(){
     var all = listData();
     if(tab!=='completed'){
-      if(!workDate) return all;
-      var day = all.filter(function(v){ return dayOf(v)===workDate; });
-      if(viewingPast) return day;
-      var past = all.filter(function(v){ return dayOf(v) && dayOf(v) < workDate; });
-      return (past.length ? [{ __pastToggle:true, id:'past', n:past.length }] : []).concat(showPast ? past : []).concat(day);
+      return workDate ? all.filter(function(v){ return dayOf(v)===workDate; }) : all;
     }
     var live = all.filter(function(b){ return b.payment_status!=='cancelled'; });
     return showInactive ? live.concat(all.filter(function(b){ return b.payment_status==='cancelled'; })) : live;
@@ -533,9 +551,9 @@ export default function PaymentPage() {
           <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd,background:viewingPast?'var(--warn-a14)':'var(--panel-2)'}}>
             <div style={{display:'flex',alignItems:'center',gap:5}}>
               <span style={{fontSize:12,fontWeight:700,color:viewingPast?'var(--warn-text)':t2,whiteSpace:'nowrap'}}>{t.rc_workDate}</span>
-              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function(){shiftWorkDate(-1)}} disabled={!workDate} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:13}}>◀</button>
-              <input type="date" value={workDate} max={serverToday||undefined} onChange={function(e){chooseWorkDate(e.target.value)}} style={{flex:1,minWidth:0,background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 6px',color:tx,fontSize:14,colorScheme:'var(--scheme)'}} />
-              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function(){shiftWorkDate(1)}} disabled={!workDate||!serverToday||workDate>=serverToday} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:13,opacity:(!workDate||workDate>=serverToday)?0.4:1}}>▶</button>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function(){shiftWorkDate(-1)}} disabled={!workDate} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 5px',cursor:'pointer',fontSize:13}}>◀</button>
+              <input type="date" value={workDate} max={serverToday||undefined} onChange={function(e){chooseWorkDate(e.target.value)}} style={{flex:1,minWidth:0,background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 4px',color:tx,fontSize:13,colorScheme:'var(--scheme)'}} />
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function(){shiftWorkDate(1)}} disabled={!workDate||!serverToday||workDate>=serverToday} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'4px 5px',cursor:'pointer',fontSize:13,opacity:(!workDate||workDate>=serverToday)?0.4:1}}>▶</button>
             </div>
             {viewingPast?<div style={{display:'flex',alignItems:'flex-start',gap:6,marginTop:6}}>
               <div style={{flex:1,fontSize:12,color:'var(--warn-text)',lineHeight:1.4}}>{t.py_workDatePast.replace('{date}', workDate).replace('{today}', serverToday)}</div>
@@ -556,10 +574,8 @@ export default function PaymentPage() {
           </div>
           <div style={{flex:1,overflow:'auto'}}>
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
-              if(v.__pastToggle) return <div key="past-toggle" onClick={function(){setShowPast(!showPast)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,fontWeight:700,color:'var(--warn-text)',background:'var(--warn-a14)',borderBottom:'1px solid var(--warn-a55)'}}>{showPast?'▾':'▸'} 📅 {t.py_pastToDo.replace('{n}', v.n)}</div>;
               var isSel=sel&&sel.id===v.id;
-              var earlier=tab==='waiting'&&!viewingPast&&workDate&&dayOf(v)&&dayOf(v)<workDate;
-              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):earlier?'var(--warn-a55)':'transparent')}}>
+              return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'transparent')}}>
                 <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
                   <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
                   {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
@@ -680,7 +696,7 @@ export default function PaymentPage() {
       {/* One receipt for right after payment and for reprints, read from the stored bill (components/Receipt.jsx). */}
       <ReceiptModal billingId={receiptId} t={t} onClose={function(){ if(receiptQueue.length){ setReceiptId(receiptQueue[0]); setReceiptQueue(receiptQueue.slice(1)); } else setReceiptId(null); }} />
       <PatientFinder open={finderOpen} onClose={function(){setFinderOpen(false)}} mode="visit"
-        onPickVisit={function(v){ setTab('waiting'); selectVisit(v); }} />
+        onPickVisit={function(v){ if(tab==='waiting') openPicked(v); else { pickRef.current = v; setTab('waiting'); } }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
         context={{ visit_id: sel?sel.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'' }} />

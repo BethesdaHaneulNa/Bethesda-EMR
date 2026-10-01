@@ -481,7 +481,6 @@ export default {
   py_cashOut: "나감",
   py_cashNet: "순액",
   py_workDatePast: "지난 날짜({date})를 보는 중입니다. 지금 수납하면 영수증과 금고는 오늘({today}) 날짜로 잡힙니다.",
-  py_pastToDo: "지난 날 처리할 것 ({n})",
   py_paidOn: "수납 완료 {date}",
   py_noneThatDay: "이 날짜에 수납할 내원이 없습니다.",
   py_cashOn: "{date} 금고",
