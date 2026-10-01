@@ -7,7 +7,7 @@
 병원에 온 환자가 가장 먼저 거치는 곳입니다.
 
 - **환자 등록** — 처음 온 환자의 인적사항을 입력하면 **차트번호**(`26-00001` 형식 — 연도 두 자리 + 그 해의 번호, **해마다 1번부터**)가 자동으로 붙습니다. 이 번호는 진료·수납·약국·검사·영상(PACS)이 모두 환자를 가리킬 때 씁니다.
-- **내원 접수** — 오늘 온 환자를 담당 의사에게 배정하고 주호소·접수 메모를 적어 **대기 목록**에 올립니다. 이렇게 만들어지는 **내원(visit)** 한 건이 그날의 진료·처방·검사·청구가 모두 매달리는 중심 기록입니다.
+- **내원 접수** — 오늘 온 환자를 담당 의사에게 배정하고 접수 메모를 적어 **대기 목록**에 올립니다. 이렇게 만들어지는 **내원(visit)** 한 건이 그날의 진료·처방·검사·청구가 모두 매달리는 중심 기록입니다.
 - **대기 관리** — 오늘 접수된 환자를 대기 / 진료중 / 완료로 나눠 보여주고, 상태를 손으로 옮기거나 대기를 취소합니다.
 - 환자를 고르면 **이전 진료 기록**, **미수금·환불예정 금액**, **차트뷰어**(발행된 수술기록지 등)를 함께 보여줍니다.
 - 다섯 화면(접수·진료·수납·약국·임상병리)이 같이 쓰는 **환자 찾기 창**(`PatientFinder`)을 주관합니다.
@@ -34,7 +34,7 @@
 | **🔍 Trouver patient (환자 찾기)** | 환자 찾기 창을 엶. 이름·차트번호로 찾아서 고름(2.7) |
 | **+ Nouveau patient (+ 신규 환자 입력)** | 왼쪽 칸을 모두 비우고 처음 온 환자를 입력 |
 | **Enregistrer / Mettre en attente (접수 / 대기 등록)** | 환자 정보를 저장하고 **오늘 대기 목록에 올림**. 처음 온 환자면 차트번호가 이때 생김 |
-| **Modifier l'enregistrement (접수 정보 수정)** | 오른쪽 목록에서 환자를 고르면 위 버튼이 이 이름으로 바뀜. 담당의사·내원구분·주호소·접수 메모를 고침 |
+| **Modifier l'enregistrement (접수 정보 수정)** | 오른쪽 목록에서 환자를 고르면 위 버튼이 이 이름으로 바뀜. 담당의사·내원구분·접수 메모를 고침 |
 | **💾 Enregistrer le patient (환자 정보 저장)** | 환자 정보만 저장. **대기 목록에는 올라가지 않음** |
 | **📋 Dossier (vue) (차트뷰어)** | 이 환자에게 발행된 차트 기록(수술기록지 등) 보기. 고칠 수 없음 |
 | **Annuler l'attente / Retirer (대기 취소 / 목록에서 빼기)** | 아직 **En Attente (대기)** 인 환자를 목록에서 뺌 |
@@ -49,7 +49,7 @@
 1. 먼저 이미 등록된 환자가 아닌지 확인합니다. 왼쪽 위 **Rechercher patient (기존 환자 검색)** 칸에 이름·차트번호·전화번호를 넣고 **Enter**. 이름은 「성 이름」이든 「이름 성」이든 찾습니다. 일부만 쳐도 됩니다.
 2. 목록에 없으면 칸 아래에 「Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient »」(찾는 환자가 없습니다)가 나옵니다. **+ Nouveau patient** 를 누릅니다.
 3. 2.4의 칸을 채웁니다. 꼭 필요한 것은 **Nom** 과 **Prénom** 둘뿐입니다.
-4. **Service / Médecin** 에서 의사를 고르고, **Type de Visite** 가 맞는지 봅니다(2.4). **Motif** 와 **Mémo Réception** 을 적습니다.
+4. **Service / Médecin** 에서 의사를 고르고, **Type de Visite** 가 맞는지 봅니다(2.4). **Mémo Réception (접수 메모)** 을 적습니다 — 환자가 온 이유와 오늘 알릴 것을 한 칸에(여러 줄).
 5. 파란 **Enregistrer / Mettre en attente** 를 누릅니다.
    - 저장하는 동안 버튼이 흐려지고 **Enregistrement…** 로 바뀌며 더 눌리지 않습니다.
    - 「Patient mis en attente — *이름* (N° dossier *차트번호*)」 창이 뜨면 끝입니다. 환자가 오른쪽 **En Attente** 목록에 나타납니다.
@@ -73,7 +73,7 @@
 2. 환자를 누르면 왼쪽에 환자 정보가, 가운데에 이전 진료 기록이 나옵니다. **Dû (미수)** 나 **Rembours. (환불예정)** 이 보이면 수납 창구로 안내하세요.
 3. 바뀐 정보가 있으면 고칩니다.
 4. 의사를 고릅니다. 이 환자가 **그 진료과에 온 적이 있으면 Type de Visite 가 Suivi (재진)** 로 골라지고 「Déjà venu en … : Suivi présélectionné…」가 보입니다. 같은 과라도 **다른 병으로 왔으면 Nouvelle (초진)** 을 누르세요.
-5. 주호소·메모를 넣고 **Enregistrer / Mettre en attente** 를 누릅니다. 오늘 이미 접수된 환자면 한 번 더 묻습니다(2.2).
+5. 접수 메모를 넣고 **Enregistrer / Mettre en attente** 를 누릅니다. 오늘 이미 접수된 환자면 한 번 더 묻습니다(2.2).
 
 환자 정보만 고치고 접수는 안 할 때는 **💾 Enregistrer le patient** 를 누릅니다. 「Patient enregistré — N° dossier …」 창이 뜹니다.
 
@@ -98,8 +98,7 @@
 |---|---|
 | **Service / Médecin (진료과 / 담당의사)** | 의사를 고르면 진료과는 그 의사의 소속과로 **자동으로** 정해집니다(목록에 `SUR – Dr …` 처럼 과 약자가 앞에 붙음). 모르면 **—** 로 두어도 접수됩니다 |
 | **Type de Visite (내원구분)** | **Nouvelle (초진)** · **Suivi (재진)** · **Sans frais (진료비 없음)** 중 하나. 수납할 때 진료비가 이것으로 정해집니다(초진 C01, 재진 C02, 진료비 없음 0). **재진은 「같은 진료를 이어서 받는 것」** 입니다 — 두 번째 방문이라도 다른 병이면 초진입니다.<br>EMR이 먼저 골라 둡니다: 고른 의사의 진료과에 **전에 온 적이 있으면 Suivi**(아래에 「Déjà venu en GS : Suivi présélectionné…」 안내), 처음이거나 다른 과면 **Nouvelle**. 취소된 접수는 안 셉니다. **Sans frais** 는 저절로 골라지지 않습니다.<br>맞지 않으면 **단추를 눌러 바꾸세요.** 한 번 누른 값은 의사를 바꿔도 그대로 남습니다.<br>수납이 끝난 접수는 단추가 잠기고 「Déjà encaissé…」가 보입니다 — 수납 화면에서 바꿉니다 |
-| **Motif (주호소)** | 환자가 온 이유. 의사 화면과 대기 목록에 보입니다 |
-| **Mémo Réception (접수 메모)** | 오늘 접수에만 붙는 메모. 늘 필요한 내용은 위의 **Note d'accueil** 에 적습니다 |
+| **Mémo Réception (접수 메모)** | 환자가 온 이유와 오늘 접수에 붙는 메모를 **한 칸에**(여러 줄). 의사 화면 · 대기 목록 · 내원 목록에 보입니다. 2026-10-01 전에는 「Motif (주호소)」와 「Mémo Réception」 두 칸이었음 — 옛 접수의 두 글은 이 칸에 줄을 바꿔 이어져 있습니다. 늘 필요한 내용은 위의 **Note d'accueil** 에 적습니다 |
 
 > 응급·의뢰는 따로 고르지 않습니다(실장님 결정 2026-09-29). 예전 접수에 응급·의뢰가 들어 있으면 단추 아래에 「Valeur actuelle : Urgence…」처럼 지금 값이 보이고, 단추를 누르면 그 값으로 바뀝니다.
 
@@ -114,7 +113,7 @@
 
 - 위의 **En Attente (대기)** · **En cours (진료중)** · **Terminé (완료)** 로 목록을 바꿉니다. 괄호 안 숫자는 사람 수입니다.
 - **Rechercher dans la file (대기목록 검색)** 칸에 이름이나 차트번호 일부를 넣으면 걸러집니다.
-- 각 환자 줄: 이름, 상태, `차트번호 · 과 약자 · 의사`, 주호소.
+- 각 환자 줄: 이름, 상태, `차트번호 · 과 약자 · 의사`, 접수 메모(두 줄까지, 전체는 마우스를 올리면).
 
 | 상태 | 뜻 | 누가 바꾸나 |
 |---|---|---|
@@ -143,7 +142,7 @@
 ### 2.6 접수 내용 고치기 · 대기 취소
 
 1. 오른쪽 목록에서 환자를 누르면 왼쪽에 그 접수 내용이 채워지고, 파란 버튼이 **Modifier l'enregistrement** 로 바뀝니다.
-2. 담당의사·**내원구분**·주호소·접수 메모를 고친 뒤 그 버튼을 누릅니다. 「Enregistrement modifié — *이름*」 창이 뜹니다.
+2. 담당의사·**내원구분**·접수 메모를 고친 뒤 그 버튼을 누릅니다. 「Enregistrement modifié — *이름*」 창이 뜹니다.
    - 의사를 **—** 로 바꾸면 담당의사가 비워집니다.
    - 진료 상태(En Attente · En cours · Terminé)는 이 버튼으로 바뀌지 않습니다.
    - 내원구분은 **단추를 눌렀거나 의사를 바꿨을 때만** 저장됩니다. 그냥 메모만 고치면 수납 창구가 그 사이 바꿔 둔 값이 그대로 남습니다.
@@ -199,7 +198,7 @@
 | `selectedPatient` | 왼쪽에 올라온 환자. `id`가 있으면 기존 환자, 없으면 신규 입력 중 |
 | `sel` | 오른쪽 대기 목록에서 고른 **내원**. 있으면 파란 버튼이 「접수 정보 수정」이 됨 |
 | `form` | 환자 인적사항 입력값 (camelCase). **화면에 있는 칸만** 담음 — `chartNo` `lastName` `firstName` `dob` `gender` `phone` `bloodType` `allergies` `receptionNote` |
-| `visitForm` | 내원 입력값 — `department` `doctor` `visitType` `chiefComplaint`. 접수 메모는 별도 `memo` 상태 |
+| `visitForm` | 내원 입력값 — `department` `doctor` `visitType` `chiefComplaint`. **`chiefComplaint`가 「접수 메모」 한 칸**(2026-10-01 — 전에는 접수 메모가 별도 `memo` 상태였음) |
 | `visits` | `/visits/today` 결과 전체. 탭·검색은 화면에서 거름 (`filteredVisits`) |
 | `patBal` | `/billing/patient/:id/balance` 결과 `{owed, refund}` |
 | `busy` · `busyRef` | 저장 중. `busy`는 버튼을 막고(`disabled`, 「저장 중…」), `busyRef`는 화면이 다시 그려지기 전의 두 번째 클릭까지 막음 (`withBusy()`) |
@@ -229,7 +228,7 @@
 - **같은 날 중복 접수 경고** — `postVisit(body, name)`: 화면의 오늘 목록(`visits`, 30초마다 갱신)에서 같은 `patient_id`의 취소 아닌 내원을 찾아 `confirm(rc_dupVisit)`; 확인하면 `allow_duplicate: true`를 붙여 보냄. 목록이 오래돼 서버가 409 `Patient already registered today`를 주면 `confirm(rc_dupVisitOther)` 뒤 `allow_duplicate`로 다시 보냄. 취소하면 아무것도 안 만듦.
 - **접수 / 대기 등록 · 접수 정보 수정** — `createOrUpdateVisit()`:
   1. 신규면 `confirmNewPatient()`(동명이인 경고) → `POST /patients` (차트번호 생성) 후 **바로 `selectedPatient`에 기억**. 뒤의 내원 생성이 실패해 다시 눌러도 새 환자를 또 만들지 않음 (7절 ③). 기존이면 `PUT /patients/:id` — **실패하면 여기서 멈추고 오류를 보여줌** (예전에는 `catch (e) {}`로 삼키고 접수를 진행해 수정 내용이 조용히 사라졌음).
-  2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint` `reception_memo`**만** 보냄. `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`은 `visitTypeSource`가 `'loaded'`가 아닐 때(단추를 눌렀거나 의사를 바꿔 제안이 다시 계산됐을 때)만, 그리고 `has_active_bill`이 아닐 때만 보냄 — 수납이 그 사이 바꾼 값을 덮지 않으려고. `sel`이 없으면 `POST /visits`(늘 `visit_type` 포함). 과·의사는 수납된 내원에도 늘 보냄 — 그대로인 값은 서버가 받고, 수납 전에 바꿔 둔 것을 그 사이 수납된 뒤 저장하면 409 `VISIT_BILLED`가 `rc_visitBilledNoMove`로 보임(말없이 빠지지 않게). 저장이 실패하면 `loadData()`와 함께 `refreshQueue()`를 불러 고른 내원의 잠금이 바로 걸림.
+  2. `sel`이 있으면 `PUT /visits/:id`로 `department_id` `doctor_id` `chief_complaint`**만** 보냄(`reception_memo`는 2026-10-01부터 보내지 않음). `status`는 안 보냄 — 목록이 몇 분 전 것일 수 있어, 예전처럼 보내면 의사가 완료한 내원이 대기로 돌아가 수납 목록에서 빠졌음 (7절 ②). `visit_type`은 `visitTypeSource`가 `'loaded'`가 아닐 때(단추를 눌렀거나 의사를 바꿔 제안이 다시 계산됐을 때)만, 그리고 `has_active_bill`이 아닐 때만 보냄 — 수납이 그 사이 바꾼 값을 덮지 않으려고. `sel`이 없으면 `POST /visits`(늘 `visit_type` 포함). 과·의사는 수납된 내원에도 늘 보냄 — 그대로인 값은 서버가 받고, 수납 전에 바꿔 둔 것을 그 사이 수납된 뒤 저장하면 409 `VISIT_BILLED`가 `rc_visitBilledNoMove`로 보임(말없이 빠지지 않게). 저장이 실패하면 `loadData()`와 함께 `refreshQueue()`를 불러 고른 내원의 잠금이 바로 걸림.
   3. 목록 다시 불러오고 입력칸을 비움 (`startNewPatient()`).
 - **상태 버튼** — `changeStatus()` → `PUT /visits/:id/status`. 화면에서 허용하는 이동: 대기→완료, 진료중→대기, 진료중→완료, 완료→대기. 대기→완료는 `completeWithoutConsult()`가 확인 창 뒤 부름 — 서버가 그 내원을 `visit_type='none'`으로 바꾸기 때문(2026-09-29 실장님 결정 ⑳). 확인 창 문구는 대기 줄의 `has_active_bill`로 나눔: 영수 없음 → `rc_completeNoConsult`(「rien à payer, le patient n'a pas à passer à la caisse」 — 0 Ar 내원은 수납 `HAS_CHARGES_SQL`이 목록에서 뺌), 영수 있음 → `rc_completeNoConsultBilled`(서버가 내원구분을 두므로 「수납에서 확인」). 2026-09-30 전에는 모든 경우에 「part à la caisse」라 실제와 달랐음(다시 통합 시험 C).
   - **2026-10-01 — 내원에 적힌 것으로 판정**(서버, 4절 `PUT /visits/:id/status`): 기록이 있는 내원은 「← 대기로」와 「대기 취소」가 거절됨 → `errText`가 `rc_hasRecordsNoWaiting`(「…의사가 진료 화면에서 다시 열어 고칩니다」) · `rc_hasRecordsNoCancel`로. 대기 줄의 「완료로 →」는 확인 창(`rc_completeNoConsult`)에 한 문장을 더함 — 「의사가 이 환자를 봤다면 누르지 마세요 — 의사가 진료 화면에서 끝내야 진료비가 청구됩니다」(이제 의사가 보고도 저장을 안 하면 대기로 남기 때문). 그래도 눌렀는데 서버가 기록을 찾으면(`has_records`) 내원구분을 두고 진료를 닫은 뒤 `rc_completeKeptType`로 알림(「진료비가 그대로 청구되니 수납으로 안내」). `changeStatus()`는 이제 서버의 답을 돌려줌.
@@ -282,13 +281,24 @@
 
 확인하는 법(격리 스택, 1366×768, ko · fr): 50자 · 83자 · 띄어쓰기 없는 42자 이름, 150자 주호소, 57자 의사 이름, 10자 과 코드로 — 22자 이하 글자가 두 줄로 접힌 곳 0, 가로로 넘치는 칸 0(내원 목록의 주호소 말줄임만 예외), 페이지 가로 스크롤 없음.
 
+### 접수 메모 한 칸 (2026-10-01)
+
+실장님: 「굳이 주호소 접수메모 이게 두 개가 나눠질 필요가 있을까? 그냥 접수메모란 이름만 남기고 주호소의 기능을 하게끔 해.」
+
+- **화면**: 접수 양식에 여러 줄 칸 하나. 이름은 공용 키 `receptionMemo` — 「접수 메모 / Reception Memo / Mémo Réception」(전부터 있던 이름 그대로). 「주호소 / Motif」 입력 칸은 없어짐. 환자 찾기 창의 내원 목록 머리글도 같은 키.
+- **저장**: 그 글은 `visit.chief_complaint`에 들어감 — 대기 목록 줄, 내원 목록, 진료 화면이 읽던 그 칸이라 다른 화면은 읽는 곳을 바꿀 필요가 없음. `/visits/today` · `/visits/day` · `/visits/patient/:id` 모두 `chief_complaint`로 줌.
+- **`reception_memo`**: 서버가 더 쓰지 않음(칸은 남김). 업데이트 전에 열어 둔 화면이 두 값을 같이 보내도 글이 사라지지 않게 `withMemo(complaint, memo)`(`visit.routes.js`)가 주호소 뒤에 줄을 바꿔 이어 붙임 — 같은 줄이 이미 있으면 다시 붙이지 않아, 그 화면이 여러 번 저장해도 한 번만.
+- **기존 자료**: `backend/sql/045_reception_memo_into_complaint.sql`. `reception_memo`에 글이 있는 내원마다 `chief_complaint` 뒤에 줄을 바꿔 붙이고(주호소가 비었으면 그 글만, 같은 줄이 이미 있으면 붙이지 않음) `reception_memo`를 비움 → 두 번 돌려도 한 번만. `updated_at`은 건드리지 않음. 두 칸 모두 TEXT라 길이 제한 없음.
+- **공용 키 `chiefComplaint`**(「주호소 / Chief Complaint / Motif」)는 이제 어느 화면도 쓰지 않음 — 지우지 않고 둠(공용 블록).
+- **헷갈릴 수 있는 이름**: 같은 양식 위쪽의 📌 칸(환자에 늘 붙는 `patient.reception_note`, 키 `receptionDeskNote`)이 「접수과 메모 / Reception note / Note d'accueil」 — 한국어 · 영어는 「접수 메모 / Reception Memo」와 거의 같음. 이름을 바꿀지는 총괄 · 실장님 결정(7절).
+
 ### 환자 찾기 창 (`PatientFinder.jsx`, 공용)
 
 - `mode='patient'`: 환자를 누르면 `onPickPatient(p)` 호출하고 닫힘. 접수·약국이 씀.
 - `mode='visit'`(기본): 환자를 누르면 `/visits/patient/:id`로 그 환자의 모든 내원을 날짜 역순으로 보여주고, 내원을 누르면 `onPickVisit(v)`. 진료(2곳)·수납·임상병리가 씀.
 - `initialPatient`를 주면 검색을 건너뛰고 바로 그 환자의 내원 목록을 엶 (진료 화면의 이력 보기).
 - 내원 목록의 수납 상태 표시: `paid` `partial` `unpaid` `waived` `cancelled`, 청구가 없으면 「미수납」. 한 내원에 청구가 여러 개면 취소 안 된 최신 것 하나(`visit.routes.js` `/patient/:patientId`의 LATERAL). 진료비 없이 끝난 내원(`completed` + `visit_type='none'` + 청구 없음)은 「미수납」 대신 `rc_billNothing`(「Rien à payer」) — 수납의 `HAS_CHARGES_SQL`이 이런 내원을 목록에서 빼기 때문.
-- **주호소·상태 칸**(2026-09-30, 다시 통합 시험 B): `chief_complaint`(말줄임, 전체는 `title`), `visitState(v)` — `waiting`/`registered` → `t.waiting`, `in_progress` → `t.in_progress`, `completed` → `t.completed` 또는 `none`이면 `t.rc_visitNoFee`, `cancelled`는 비움(날짜 칸 딱지). 같은 날 두 내원이 똑같이 보여 의사가 잘못 열 수 있었음. 창 너비 760 → 900(94vw 안), 날짜·의사·상태·수납 칸 `nowrap`.
+- **접수 메모·상태 칸**(2026-09-30, 다시 통합 시험 B — 머리글은 2026-10-01부터 `t.receptionMemo`, 전에는 `t.chiefComplaint` 「주호소」): `chief_complaint`(말줄임, 전체는 `title`), `visitState(v)` — `waiting`/`registered` → `t.waiting`, `in_progress` → `t.in_progress`, `completed` → `t.completed` 또는 `none`이면 `t.rc_visitNoFee`, `cancelled`는 비움(날짜 칸 딱지). 같은 날 두 내원이 똑같이 보여 의사가 잘못 열 수 있었음. 창 너비 760 → 900(94vw 안), 날짜·의사·상태·수납 칸 `nowrap`.
 - 검색어 없이 **검색**을 누르면 최근 등록 환자 50명이 나옴.
 - **취소된 내원**(`status='cancelled'`)은 글자를 흐린 글자색(`t3`)으로(투명도는 쓰지 않음 — 2026-09-30 전에는 `opacity 0.55`), 날짜에 취소선, `rc_visitCancelled` 딱지. 숨기거나 막지는 않음 — 환자 이력의 일부이고, 취소된 내원으로 무엇을 할지는 각 화면이 정함(진료는 서버가 409로 거절하고 안내 — 진료 세션 작업). 2026-09-29 전에는 구분 없이 나왔음(7절 ⑮).
 
@@ -338,7 +348,7 @@
 | `GET /api/visits/patient/:patientId` | 그 환자의 모든 내원 + 대표 청구 1건. 줄마다 `chief_complaint`, 그리고 환자의 `gender`·`date_of_birth`·`allergies`(2026-09-30, 진료 세션 부탁 — 환자 찾기로 연 내원의 머리줄·알레르기 경고에 따로 조회가 필요 없게. 이 라우트를 부르는 역할은 모두 `GET /patients/:id`로 이미 읽음) | 접수(초진/재진 제안), PatientFinder, 진료 |
 | `POST /api/visits` | 접수. `visit_type` 검사함. `status='waiting'`, `reception_time`은 서버 시각 `HH:MM`, `registered_by`는 로그인 직원. **오늘 같은 환자의 취소 아닌 내원이 있으면 409 `Patient already registered today`** — 본문에 `allow_duplicate: true`가 있으면 통과(직원이 확인한 뒤 화면이 붙임). 두 요청이 동시에 오면 둘 다 통과할 수 있음(잠금 없음 — 경고일 뿐이라) | 접수 |
 | `PUT /api/visits/:id/status` | 접수의 대기 목록 단추(취소 · 대기로 · 완료로). 한 트랜잭션, 내원 줄 `FOR UPDATE`. **2026-10-01부터 내원에 적힌 것으로 판정** — 진료 세션의 `visitRecords(db, id).any`(`consult.visit.js`: 의사 기록 · 활력징후 · 처방 · 오더 · 진단 · 서류 · 청구(취소된 영수도) 또는 의사가 끝낸 진료. 시작만 한 빈 진료 줄은 기록이 아님). 진료 화면의 「↩ 대기로」와 같은 판정. **→ `cancelled`**: `registered`·`waiting`에서만(아니면 409 `VISIT_NOT_WAITING`, 문장은 전과 같은 `Only a waiting visit can be cancelled` + `status`), 기록이 있으면 409 `VISIT_HAS_RECORDS`(`The visit has records; it cannot be cancelled`). **→ `waiting`**(`in_progress`·`completed`에서): 기록이 있으면 409 `VISIT_HAS_RECORDS`(`The visit has records; it cannot go back to waiting`) — 의사가 끝낸 내원은 접수가 되돌리지 못하고, 의사가 진료 화면에서 다시 열어 고침. **→ `completed`**: `registered`·`waiting`이고 기록이 없으면 진료 없이 끝낸 것 → `visit_type='none'`(실장님 결정 ⑳). 기록이 있으면 내원구분을 둠. 진료 줄이 있으면 진료의 `completeVisitConsultation()`으로 닫음(`consultation.status='completed'`, `completed_at` — 약국 목록 순서, 결정 L9). **빈 진료 줄**은 대기로 돌리거나 취소하거나 「진료 없이 완료」할 때 지움(진료의 「대기로」와 같음). 취소된 내원은 판정하지 않음(되살리기는 전처럼 됨, 진료 줄은 건드리지 않음). 없는 내원 404 `VISIT_NOT_FOUND`. 답: 내원 줄 + `has_records`(바꾸기 전에 본 값) | 접수 |
-| `PUT /api/visits/:id` | 수정. **본문에 있는 칸만** 씀 (`visit_type` `department_id` `doctor_id` `chief_complaint` `reception_memo`). **`status`는 여기서 바꾸지 않음**(2026-10-01): 값이 오면 400 `STATUS_NOT_HERE` — 상태는 `PUT /:id/status`의 규칙으로만. 어느 화면도 보내지 않던 칸이라 규칙을 돌아가는 옆문이었음. `department_id`·`doctor_id`는 `null`/`''`로 **비울 수 있음**. `visit_type`·`status`는 `null`이면 무시, 값이 있으면 POST와 같은 목록으로 검사(400). 빈 본문은 400. 한 트랜잭션(내원 줄 잠금): 과·의사가 **실제로** 바뀌면 전과와 같은 `applyTransfer` — 기록 한 줄(`visit.transfer`, 사유 없음), 그 내원의 `consultation.department_id`를 새 과로(2026-09-30). **수납 뒤 과·의사 변경은 거절**(2026-09-30 실장님 결정 — 전과 길과 같은 규칙, 같은 함수 `activeReceipt()`): 취소 안 된 영수가 있고 과 또는 의사가 **실제로** 바뀌는 요청이면 409 `{error, code:'VISIT_BILLED', receipt_no}`, 아무것도 쓰지 않음. 같은 값(글자 `"8"`도 숫자 8과 같게 봄)을 다시 보내거나 주호소·메모만 고치는 저장은 됨. 없는 내원은 404 `{error:'Visit not found', code:'VISIT_NOT_FOUND'}` | 접수, 수납(`visit_type`만) |
+| `PUT /api/visits/:id` | 수정. **본문에 있는 칸만** 씀 (`visit_type` `department_id` `doctor_id` `chief_complaint`). `reception_memo`는 쓰지 않음(2026-10-01) — 옛 화면이 보내면 `withMemo()`가 주호소 뒤에 줄을 바꿔 이어 붙임(같은 줄이 이미 있으면 다시 붙이지 않음, 혼자 오면 저장된 주호소 뒤에). **`status`는 여기서 바꾸지 않음**(2026-10-01): 값이 오면 400 `STATUS_NOT_HERE` — 상태는 `PUT /:id/status`의 규칙으로만. 어느 화면도 보내지 않던 칸이라 규칙을 돌아가는 옆문이었음. `department_id`·`doctor_id`는 `null`/`''`로 **비울 수 있음**. `visit_type`·`status`는 `null`이면 무시, 값이 있으면 POST와 같은 목록으로 검사(400). 빈 본문은 400. 한 트랜잭션(내원 줄 잠금): 과·의사가 **실제로** 바뀌면 전과와 같은 `applyTransfer` — 기록 한 줄(`visit.transfer`, 사유 없음), 그 내원의 `consultation.department_id`를 새 과로(2026-09-30). **수납 뒤 과·의사 변경은 거절**(2026-09-30 실장님 결정 — 전과 길과 같은 규칙, 같은 함수 `activeReceipt()`): 취소 안 된 영수가 있고 과 또는 의사가 **실제로** 바뀌는 요청이면 409 `{error, code:'VISIT_BILLED', receipt_no}`, 아무것도 쓰지 않음. 같은 값(글자 `"8"`도 숫자 8과 같게 봄)을 다시 보내거나 주호소·메모만 고치는 저장은 됨. 없는 내원은 404 `{error:'Visit not found', code:'VISIT_NOT_FOUND'}` | 접수, 수납(`visit_type`만) |
 | `PUT /api/visits/:id/transfer` | **전과**(2026-09-30, 실장님 요청 — 「접수 취소하고 다시 접수는 번거롭다」). 본문 `{department_id, doctor_id, reason?}`: `department_id`는 쉬지 않는 과(필수), `doctor_id`는 `role='doctor'`·`status='active'`인 계정 또는 `null`(의사 없이), `reason`은 글자(300자까지, 없어도 됨). 한 트랜잭션(`FOR UPDATE`): `visit.department_id`·`doctor_id`, 그 내원의 `consultation.department_id`(있으면), 기록 한 줄 `visit.transfer`. **진료 기록·처방·오더·글쓴이(`consultation.doctor_id` 포함)는 그대로.** 거절 — 모두 `{error, code}`: 404 `VISIT_NOT_FOUND` · 409 `VISIT_CANCELLED`(취소된 내원) · 409 `VISIT_BILLED` + `receipt_no`(취소 안 된 영수가 있음 — 영수를 취소하면 다시 됨) · 400 `BAD_DEPARTMENT`(없음·쉼·빠짐) · 400 `BAD_DOCTOR`(의사가 아니거나 쉬는 계정, 숫자 아님) · 400 `NO_CHANGE`(과·의사가 그대로). 답: `/today`와 같은 모양의 내원 줄(`dept_code`·`dept_name`·`doctor_name`·환자 칸·`has_active_bill`) | 진료(단추), 접수 |
 
 두 라우트 파일의 모든 경로(읽기 포함)는 DB 오류를 공용 `utils/dbError.js`의 `sendDbError`로 4xx(형식 오류 400 — 예: `/patients/abc`, `limit=x` — 없는 참조 400, 중복 409 등)로 돌려줌. 예전에는 전부 500에 DB 원문이었음.
@@ -390,7 +400,8 @@
 | `department_id` | FK → department | 통계의 진료과별 내원·매출 기준 |
 | `doctor_id` | FK → staff | |
 | `reception_time` | TIME | 백엔드 컨테이너 시각(`TZ`) `HH:MM` |
-| `chief_complaint` / `reception_memo` | TEXT | |
+| `chief_complaint` | TEXT | **접수 양식의 「접수 메모」 한 칸**(2026-10-01). 대기 목록 줄 · 내원 목록 · 진료 화면이 읽는 글. 길이 제한 없음, 여러 줄 |
+| `reception_memo` | TEXT | **더 쓰지 않음**(2026-10-01). 칸은 남아 있고, 있던 글은 마이그레이션 `045_reception_memo_into_complaint.sql`이 `chief_complaint` 뒤로 옮기고 비움 |
 | `status` | CHECK `registered` `waiting` `in_progress` `completed` `cancelled` | 기본값 `registered`지만 API는 `waiting`으로 만듦 |
 | `registered_by` | FK → staff | |
 | `created_at` / `updated_at` | TIMESTAMPTZ | |
@@ -532,4 +543,5 @@
 | 2026-10-01 | 긴 이름(50~80자)에서 대기 목록의 상태 꼬리표가 접히지 않고, 긴 한 낱말 이름이 목록을 옆으로 밀지 않음. 환자 찾기 창의 차트번호·전화·생년월일이 한 줄, 같은 이름 확인 창을 넓힘, 미수 상자가 긴 이름 아래로 내려감. 이름은 자르지 않고 줄바꿈, 주호소만 두 줄까지 (실장님이 진료 화면에서 본 것과 같은 종류) | `Registration.jsx`·`PatientFinder.jsx` 모양만(3절 「긴 이름」) | `b3af7ff` |
 | 2026-10-01 | 전화 칸에 두 번호가 들어 있어도(37자) 환자 찾기 표와 같은 이름 확인 창에서 번호가 위아래 두 줄로 — 이름 칸이 좁아지지 않음. 검색 결과 목록에서 생년월일이 중간에서 끊기지 않음 (실장님이 시험 차트에 긴 전화번호를 넣으심) | `phoneLines()` · `phoneText()`(`PatientFinder.jsx`), `Registration.jsx` 두 곳 (3절 「긴 이름」) | `2da0abd` |
 | 2026-10-01 | 환자 찾기 표와 같은 이름 확인 창이 보이는 전화번호를 접수 양식이 고치는 번호와 같게(`phone` 먼저, 없으면 `mobile`) — 양식에서 고친 번호가 표에 안 보이는 일이 없게 (총괄 결정) | `PatientFinder.jsx` · `Registration.jsx` 각 한 줄 | `3d08332` |
-| 2026-10-01 | 접수의 「대기 취소」「← 대기로」「완료로 →」가 내원에 적힌 것으로 판정 — 진료 기록(또는 서류 · 영수)이 있는 내원은 취소도 대기로 되돌리기도 안 되고, 「완료로 →」는 진료비 없음으로 바꾸지 않으며 진료 기록을 같이 닫음(약국 순서가 찍힘). 판정과 완료는 진료 세션의 함수 그대로. 일반 저장으로 상태를 바꾸던 옆문을 닫음 (총괄 결정, 진료의 「열기만 해서는 진료 중이 아님」과 함께) | `PUT /visits/:id/status`(4절), `consult.visit.js`, `rc_hasRecordsNoCancel` · `rc_hasRecordsNoWaiting` · `rc_completeKeptType`, `rc_completeNoConsult` 문구, 시험 12건 | (이 커밋) |
+| 2026-10-01 | 접수의 「대기 취소」「← 대기로」「완료로 →」가 내원에 적힌 것으로 판정 — 진료 기록(또는 서류 · 영수)이 있는 내원은 취소도 대기로 되돌리기도 안 되고, 「완료로 →」는 진료비 없음으로 바꾸지 않으며 진료 기록을 같이 닫음(약국 순서가 찍힘). 판정과 완료는 진료 세션의 함수 그대로. 일반 저장으로 상태를 바꾸던 옆문을 닫음 (총괄 결정, 진료의 「열기만 해서는 진료 중이 아님」과 함께) | `PUT /visits/:id/status`(4절), `consult.visit.js`, `rc_hasRecordsNoCancel` · `rc_hasRecordsNoWaiting` · `rc_completeKeptType`, `rc_completeNoConsult` 문구, 시험 12건 | `cc52b9b` |
+| 2026-10-01 | 접수 양식의 「주호소」와 「접수 메모」를 「접수 메모」 한 칸으로(여러 줄). 글은 주호소 칸(`chief_complaint`)에 저장되어 대기 목록 · 내원 목록 · 진료 화면에 그대로 보임. 옛 접수 메모는 주호소 뒤에 줄을 바꿔 옮김 (실장님 결정) | `Registration.jsx`, `PatientFinder.jsx` 머리글, `withMemo()`, 마이그레이션 `045_reception_memo_into_complaint.sql`, 시험 5건 (3절 「접수 메모 한 칸」) | (이 커밋) |

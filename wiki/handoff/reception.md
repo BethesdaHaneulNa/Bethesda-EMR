@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「주호소」와 「접수 메모」를 「접수 메모」 한 칸으로
+
+- **상태**: 확인 요청
+- **왜**: 실장님 2026-10-01 — 「굳이 주호소 접수메모 이게 두 개가 나눠질 필요가 있을까? 그냥 접수메모란 이름만 남기고 주호소의 기능을 하게끔 해.」
+- **화면**: 접수 양식에 여러 줄 칸 하나, 이름은 공용 키 `receptionMemo`(「접수 메모 / Reception Memo / Mémo Réception」 — 전부터 있던 이름, i18n 변경 없음). 「주호소 / Motif」 입력 칸은 없앰. 환자 찾기 창 내원 목록의 머리글 「주호소」 → 「접수 메모」(같은 키)
+- **저장**: 그 글은 `visit.chief_complaint`에. `reception_memo`는 서버가 더 쓰지 않음(칸은 남김). 업데이트 전에 열어 둔 화면이 두 값을 같이 보내면 `withMemo()`가 주호소 뒤에 줄을 바꿔 이어 붙임(한 번만) — 지시에 없던 안전장치, 글이 말없이 사라지지 않게
+- **DB 마이그레이션**: `backend/sql/101_reception_memo_into_complaint.sql`(세션 번호, 총괄이 다시 매김). `visit`의 자료만 바꿈 — `reception_memo`에 글이 있는 내원마다 `chief_complaint` 뒤에 줄을 바꿔 붙이고 `reception_memo`를 비움. 두 번 돌려도 한 번만, `updated_at` 그대로. 두 칸 모두 TEXT(길이 제한 없음)
+- **다른 세션이 쓰는 곳** (고치지 않음, 목록):
+  · 공용 키 `chiefComplaint` · `receptionMemo`를 쓰는 화면은 접수(`Registration.jsx`)와 환자 찾기 창(`PatientFinder.jsx`)뿐이었음. `chiefComplaint`는 이제 아무도 쓰지 않음(공용 블록이라 지우지 않음)
+  · `Consultation.jsx`: 대기 줄이 `v.chief_complaint`를, 환자 줄이 `sel.reception_memo`를 읽음(진료 세션이 고치는 중 — 합친 뒤 `reception_memo`는 늘 비어 있음)
+  · 서류 · 인쇄물 · 통계: 「주호소」나 `chief_complaint` · `reception_memo`를 찍는 곳 **없음**(`frontend/src/documents/*`, `stats.routes.js`, `document.routes.js` grep). 의뢰서의 「의뢰 목적 / Motif de la référence」는 다른 칸. 진료 기록 칸의 안내 글자 「S: 주호소...」(`cs_notePlaceholder`)는 진료 것
+  · 기록 탭(설정): 내원 수정은 기록하지 않으므로 이름표 없음
+- **응답 확인**: `/visits/today` · `/visits/day` · `/visits/patient/:id`가 합친 글을 `chief_complaint`로 줌(시험에 넣음). 진료 세션이 부탁한 `/visits/patient/:id`의 `reception_memo` 칸은 합쳤으므로 더하지 않음
+- **확인** (격리 9181, 스택 내림):
+  · `reception.api.mjs` 205/205(새 5건): 여러 줄 그대로 저장, 옛 화면이 둘 다 보냄(POST · PUT) → 이어 붙음, 같은 저장 두 번 → 한 번만, `reception_memo`만 보냄 → 저장된 글 뒤에 한 번, 세 조회 길이 같은 글
+  · 마이그레이션: 옛 모양 줄 9가지(메모만 / 둘 다 / 메모가 이미 주호소의 한 줄 / 빈칸뿐인 메모 / 주호소가 줄바꿈으로 끝남 / 빈 주호소 / 둘 다 없음 / 주호소만 / 여러 줄 메모)를 넣고 파일의 SQL을 두 번 돌림 — 첫 번째 `UPDATE 6`, 두 번째 `UPDATE 0`, 글 손실 없음, `updated_at` 그대로. 처음 시험에서 「주호소가 줄바꿈으로 끝남」이 빈 줄을 남겨 `rtrim` → `regexp_replace('\s+$')`로 고침(서버의 같은 식도)
+  · 화면 ko · en · fr(1366×768): 양식에 「접수 메모 / Reception Memo / Mémo Réception」 한 칸, 「주호소 / Chief Complaint / Motif」 이름표 없음. 내원을 고르면 여러 줄 그대로 불러옴 → 한 줄 더 적어 저장 → 대기 줄에 보임(전체는 title). 새 접수(fr)에 두 줄 적어 접수 → 대기 줄. 수납 화면에서 연 내원 목록 창의 머리글 세 언어
+  · `node --check`, `npm run build` 통과
+- **보지 않은 것**: 실제 옛 자료(실행 중 EMR의 `reception_memo`가 든 내원 수와 모양 — 총괄이 올릴 때 `UPDATE n`으로 보임). 진료 화면이 합친 글을 보이는 모습(진료 세션). 업데이트 전에 열어 둔 화면으로 실제 저장해 보는 것(서버 쪽은 시험에 있음)
+- **정할 것** (이름): 같은 양식의 📌 칸(환자에 늘 붙는 메모)이 「접수과 메모 / Reception note / Note d'accueil」라 한국어 · 영어에서 「접수 메모 / Reception Memo」와 거의 같음. 제안 — 이번 칸은 그대로 두고 📌 칸을 「📌 환자 메모(늘 보임) / Patient note (always shown) / Note permanente du patient」로. 키 `receptionDeskNote`는 공용이지만 쓰는 곳은 접수 양식뿐. 결정 주시면 바꿈
+- **공유 파일**: `PatientFinder.jsx` 머리글 한 줄
+- **바꾼 파일**: `backend/sql/101_reception_memo_into_complaint.sql`(새), `backend/src/routes/visit.routes.js`, `backend/test/reception.api.mjs`, `frontend/src/pages/Registration.jsx`, `frontend/src/components/PatientFinder.jsx`, `wiki/modules/reception.md`, `wiki/manual-fr/reception.md`, 이 노트
+
 ## 2026-10-01 — 접수의 상태 단추가 내원에 적힌 것으로 판정 (①②③·(C)), 진료의 함수 그대로
 
 - **상태**: 확인 요청
