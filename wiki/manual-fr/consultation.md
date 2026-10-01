@@ -36,7 +36,7 @@ Voir un patient de la file :
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
 2. Écrivez la consultation dans **Ma note de consultation** (S, O, A, P dans la même case). C'est **votre** note pour cette visite : chaque médecin a la sienne.
 3. Pour ajouter une phrase toute prête : cliquez dessus dans le **Dictionnaire**. Les boutons **Tout**, **Général**, **Médecine**, **Chirurgie**… et la case **Rechercher** servent à trouver la phrase.
-4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite, en haut de **Dossier Patient**, sous la date de la visite (suivie du service et du médecin), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
+4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite dans **Dossier Patient**, dans le cadre bleu de la visite ouverte (**● Dossier ouvert**), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
 5. Deux médecins sur la même visite : la note de l'autre médecin s'affiche à droite sous son nom (mise à jour toutes les 30 secondes). Vous ne pouvez modifier que **votre** note — l'administrateur non plus ne peut pas modifier la note d'un médecin.
 6. Si vous ouvrez un autre patient sans avoir enregistré, un message le demande : **OK** enregistre puis ouvre l'autre patient, **Annuler** reste.
 7. Coupure de courant ou F5 : le texte non enregistré est gardé sur cet ordinateur et revient quand vous rouvrez la visite (« Le texte non enregistré gardé sur cet ordinateur a été repris. »). Il est effacé quand vous enregistrez, quand vous vous déconnectez, et après un jour. **Déconnectez-vous** en quittant un ordinateur partagé.
@@ -121,9 +121,10 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 
 ### 11. Dossier Patient
 
-1. À droite, onglet **Dossier Patient** : en haut, la visite ouverte — sa date, le service et le médecin (« 2026-09-30 GEN Dr … ») — avec la note de chaque médecin ; en dessous, les autres visites. Cliquez sur une date passée.
-2. Au milieu s'affiche **Dossier passé · lecture seule** : signes vitaux, notes (avec le nom de chaque médecin), prescriptions de ce jour-là.
-3. Cliquez sur **← Retour à l'actuel** pour revenir à la visite du jour.
+1. À droite, onglet **Dossier Patient** : toutes les visites du patient, **de la plus récente à la plus ancienne**. Chaque visite montre sa date, le service et le médecin (« 2026-09-30 GEN Dr … »), puis la note de chaque médecin.
+2. La visite que vous avez ouverte reste **à sa place selon sa date** — elle n'est pas remontée en haut. Elle se reconnaît à son **cadre bleu épais** et à l'étiquette **● Dossier ouvert** ; ses notes sont affichées en entier. En ouvrant un patient ou une autre visite, la liste se place d'elle-même sur ce cadre. Regardez bien la date : si vous avez ouvert une visite ancienne, les visites plus récentes sont au-dessus.
+3. Cliquez sur une autre visite : au milieu s'affiche **Dossier passé · lecture seule** (signes vitaux, notes avec le nom de chaque médecin, prescriptions de ce jour-là), et cette visite prend un bord pointillé orange avec l'étiquette **En lecture**.
+4. Cliquez sur **← Retour à l'actuel**, ou sur le cadre bleu **● Dossier ouvert**, pour revenir à la visite ouverte.
 
 ### Changer de médecin
 
