@@ -3,6 +3,7 @@ import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
+import { LIST_COL, CHART_COL, TOOL_ROW, toolBtn, tabBtn, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, ROW_EMPTY, rowTag, EMPTY_ICON, EMPTY_TEXT, SIDE_HEAD } from '../layout.js';
 import { api } from '../api/client.js';
 import { LabResults } from '../components/LabResults.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
@@ -295,17 +296,17 @@ export default function LabPage() {
     // below the window.
     <div style={{ fontFamily: 'system-ui,sans-serif', background: 'var(--bg)', color: tx, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontSize: 15 }}>
       <TopBar />
-      <div style={{ background: 'var(--panel-2)', borderBottom: '1px solid ' + bd, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={function () { setTab('pending'); setSel(null); }} style={{ background: tab === 'pending' ? tint('cyan', '20') : 'transparent', color: tab === 'pending' ? 'var(--cyan-text)' : t3, border: '1px solid ' + (tab === 'pending' ? tint('cyan', '50') : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labPending || '결과 대기'} {pending.length}</button>
-        <button onClick={function () { setTab('completed'); setSel(null); }} style={{ background: tab === 'completed' ? 'var(--ok-a20)' : 'transparent', color: tab === 'completed' ? 'var(--ok-text-2)' : t3, border: '1px solid ' + (tab === 'completed' ? 'var(--ok-a50)' : 'transparent'), borderRadius: 5, padding: '5px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{t.labCompleted || '입력 완료'} {completed.length}</button>
-        <button onClick={function () { loadData(); }} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 15 }}>↻</button>
-        <button onClick={function () { setFinderOpen(true); }} style={{ background: 'var(--chip)', color: t2, border: '1px solid ' + bd2, borderRadius: 5, padding: '5px 12px', cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>🔍 {t.findPatient}</button>
-        <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: 'var(--chip)', color: sel ? 'var(--violet-text-3)' : 'var(--text-4)', border: '1px solid ' + (sel ? 'var(--violet-2)' : bd2), borderRadius: 5, padding: '5px 12px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
+      <div style={TOOL_ROW}>
+        <button onClick={function () { setTab('pending'); setSel(null); }} style={tabBtn(tab === 'pending', tint('cyan', '20'), 'var(--cyan-text)', tint('cyan', '50'))}>{t.labPending || '결과 대기'} ({pending.length})</button>
+        <button onClick={function () { setTab('completed'); setSel(null); }} style={tabBtn(tab === 'completed', 'var(--ok-a20)', 'var(--ok-text-2)', 'var(--ok-a50)')}>{t.labCompleted || '입력 완료'} ({completed.length})</button>
+        <button onClick={function () { loadData(); }} title={t.refresh} aria-label={t.refresh} style={toolBtn()}>↻</button>
+        <button onClick={function () { setFinderOpen(true); }} style={toolBtn()}>🔍 {t.findPatient}</button>
+        <button onClick={function () { if (sel) setChartViewOpen(true); }} disabled={!sel} style={{ background: 'var(--chip)', color: sel ? 'var(--violet-text-3)' : 'var(--text-4)', border: '1px solid ' + (sel ? 'var(--violet-2)' : bd2), borderRadius: 6, padding: '6px 10px', cursor: sel ? 'pointer' : 'not-allowed', fontSize: 14, fontWeight: 700 }}>📋 {t.chartViewer || '차트뷰어'}</button>
       </div>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* LEFT: pending consultations */}
-        <div style={{ width: 300, borderRight: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ width: LIST_COL, borderRight: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
           {/* work date: same strip as the payment screen's (Payment.jsx), at the top of the list */}
           <div style={{ flexShrink: 0, padding: '7px 9px', borderBottom: '1px solid ' + bd, background: viewingPast ? 'var(--warn-a14)' : 'var(--panel-2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -321,19 +322,19 @@ export default function LabPage() {
           </div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {loading ? <div style={{ padding: 16, color: t3 }}>{t.loading || 'Loading…'}</div> : null}
-          {!loading && list.length === 0 ? <div style={{ padding: 16, color: t3, fontSize: 14 }}>{tab === 'pending' ? t.lb_noPending : (viewingPast ? t.lb_noCompletedOn : t.lb_noCompleted)}</div> : null}
+          {!loading && list.length === 0 ? <div style={ROW_EMPTY}>{tab === 'pending' ? t.lb_noPending : (viewingPast ? t.lb_noCompletedOn : t.lb_noCompleted)}</div> : null}
           {list.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
-            return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
+            return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: ROW_PAD, borderBottom: '1px solid var(--line-soft)', cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
               {/* A long name (50 letters and more are common here) takes what is left and
                   wraps -- inside a word too, or one 36-letter name widens the whole list;
                   the date keeps its width and stays on one line. Names are never cut. */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <span style={{ fontWeight: 700, color: 'var(--text-strong)', minWidth: 0, overflowWrap: 'anywhere' }}>{nm(g)}</span>
-                <span style={{ color: t3, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{ymd(g.visit_date)}</span>
+                <span style={Object.assign({}, ROW_NAME, { minWidth: 0, overflowWrap: 'anywhere' })}>{nm(g)}</span>
+                {g.consultation_status === 'in_progress' ? <span style={rowTag('var(--warn-a18)', 'var(--warn-ink)')}>{t.lb_inConsultation}</span> : null}
               </div>
-              <div style={{ fontSize: 12, color: t2, overflowWrap: 'anywhere' }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: 'var(--warn-text)', fontWeight: 700, whiteSpace: 'nowrap' }}>· {t.lb_inConsultation}</span> : null}</div>
-              <div style={{ fontSize: 12, color: cyan, marginTop: 2, overflowWrap: 'anywhere' }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
+              <div style={Object.assign({}, ROW_SUB, { marginTop: 3, overflowWrap: 'anywhere' })}>{[g.chart_no, g.doctor_name, ymd(g.visit_date)].filter(Boolean).join(' · ')}</div>
+              <div style={Object.assign({}, ROW_NOTE, { color: cyan, marginTop: 2, overflowWrap: 'anywhere' })}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
             </div>;
           })}
           </div>
@@ -341,7 +342,7 @@ export default function LabPage() {
 
         {/* CENTER: entry */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
+          {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}><div style={{ textAlign: 'center' }}><div style={EMPTY_ICON}>🧪</div><div style={EMPTY_TEXT}>{t.lb_selectHint}</div></div></div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
                 <div style={{ fontWeight: 800, fontSize: 17, overflowWrap: 'anywhere' }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400, whiteSpace: 'nowrap' }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: 'var(--warn-text)', border: '1px solid var(--warn-a66)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap', display: 'inline-block' }}>{t.lb_inConsultation}</span> : null}</div>
@@ -372,8 +373,8 @@ export default function LabPage() {
         </div>
 
         {/* RIGHT: history matrix */}
-        <div style={{ width: 460, borderLeft: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + bd, background: scBg, fontWeight: 800, fontSize: 14, color: 'var(--cyan-text)' }}>🧪 {t.labResultsTitle || '검사결과'}</div>
+        <div style={{ width: CHART_COL, minWidth: 280, borderLeft: '1px solid ' + bd, background: pn, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={Object.assign({}, SIDE_HEAD, { color: 'var(--cyan-text)' })}>🧪 {t.labResultsTitle || '검사결과'}</div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}><LabResults key={resultsKey} patientId={sel ? sel.patient_id : null} /></div>
         </div>
       </div>
