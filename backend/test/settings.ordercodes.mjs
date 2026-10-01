@@ -7,7 +7,11 @@
 // Checks: after the migration no order code holds a bare number, and default_freq /
 // default_days are still 1; a new code made without directions - or with the '1.000' an
 // older screen still sends - is stored with none; words are kept, trimmed; the same on
-// edit; the drug table's column of the same name is untouched. Node 18+.
+// edit; the drug table's column of the same name is untouched.
+//
+// And price_editable (047, payment: the cashier may type the amount of a fee's line): only
+// DOC has it after the migration (others may be ticked later); a fee code stores what is sent and keeps what it has when
+// the field is not sent (an older screen); any other type stores false. Node 18+.
 import crypto from 'crypto';
 
 const BASE = process.env.SE_TEST_BASE || 'http://127.0.0.1:9187/api';
@@ -68,6 +72,46 @@ r = await call('PUT', '/admin/order-codes/' + h.id, body('H', { default_dose: '1
 check('edit: an older screen sending 1.000 back -> none', r.status === 200 && r.data.default_dose === null, r);
 r = await call('PUT', '/admin/order-codes/' + a.id, body('A', { default_dose: '' }), A);
 check('edit: directions removed', r.status === 200 && r.data.default_dose === null, r);
+
+// ── price_editable: the amount of a fee's line may be typed at the till (047) ──
+const fee = (suffix, extra) => body(suffix, { code_type: 'fee', group_name: 'Issuance', price: 5000, price_clinic: 5000, ...extra });
+const seeded = (await call('GET', '/admin/order-codes', null, A)).data.filter(o => !String(o.code).startsWith(tag));
+check('the list gives price_editable as true / false on every code', seeded.every(o => typeof o.price_editable === 'boolean'), seeded.find(o => typeof o.price_editable !== 'boolean'));
+check('after the migration DOC has it', (seeded.find(o => o.code === 'DOC') || {}).price_editable === true, seeded.find(o => o.code === 'DOC'));
+check('no code of another type has it', seeded.every(o => o.code_type === 'fee' || !o.price_editable), seeded.filter(o => o.code_type !== 'fee' && o.price_editable).map(o => o.code));
+const ticked = seeded.filter(o => o.price_editable).map(o => o.code);
+if (ticked.join() !== 'DOC') console.log('  (note)  ticked on this stack besides DOC: ' + ticked.filter(c => c !== 'DOC').join(', '));
+const priceLines = async () => (await call('GET', '/admin/audit?action=settings.order.price&limit=1', null, A)).data.total;
+const linesBefore = await priceLines();
+
+r = await call('POST', '/admin/order-codes', fee('P', { price_editable: true }), A);
+check('a new fee code sent with price_editable true keeps it', (r.status === 201 || r.status === 200) && r.data.price_editable === true, r);
+const pe = r.data;
+r = await call('POST', '/admin/order-codes', fee('Q', {}), A);
+check('a new fee code sent without it has none', r.data && r.data.price_editable === false, r);
+const pq = r.data;
+r = await call('POST', '/admin/order-codes', body('R', { price_editable: true }), A);
+check('a new procedure code sent with it: ignored (false)', r.data && r.data.price_editable === false, r);
+r = await call('POST', '/admin/order-codes', body('S', { code_type: 'lab', group_name: 'Laboratory', price_editable: 'true' }), A);
+check('... a lab code too', r.data && r.data.price_editable === false, r);
+
+const till = (await call('GET', '/admin/order-codes?code_type=fee', null, A)).data;
+check('what the payment screen reads (?code_type=fee) shows it', (till.find(o => o.id === pe.id) || {}).price_editable === true && (till.find(o => o.id === pq.id) || {}).price_editable === false,
+  till.filter(o => o.id === pe.id || o.id === pq.id).map(o => [o.code, o.price_editable]));
+
+r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { name: 'Frais ' + tag }), A);
+check('edit without the field (an older screen): kept', r.status === 200 && r.data.price_editable === true && r.data.name === 'Frais ' + tag, r);
+r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { price_editable: false }), A);
+check('edit: unticked', r.status === 200 && r.data.price_editable === false, r);
+r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', {}), A);
+check('edit without the field: stays unticked', r.status === 200 && r.data.price_editable === false, r);
+r = await call('PUT', '/admin/order-codes/' + pq.id, fee('Q', { price_editable: true }), A);
+check('edit: ticked', r.status === 200 && r.data.price_editable === true, r);
+r = await call('PUT', '/admin/order-codes/' + pq.id, body('Q', { code_type: 'lab', group_name: 'Laboratory', price: 5000, price_clinic: 5000, price_editable: true }), A);
+check('edit: the type changed to lab - false, whatever is sent', r.status === 200 && r.data.code_type === 'lab' && r.data.price_editable === false, r);
+r = await call('PUT', '/admin/order-codes/' + pq.id, fee('Q', {}), A);
+check('... and back to a fee without the field: still false', r.status === 200 && r.data.code_type === 'fee' && r.data.price_editable === false, r);
+check('ticking and unticking wrote no price line in the log (the price did not change)', (await priceLines()) === linesBefore, [linesBefore, await priceLines()]);
 
 // ── the drug table's column is another thing ──
 const drugs = (await call('GET', '/admin/drugs', null, A)).data;

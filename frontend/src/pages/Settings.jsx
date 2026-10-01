@@ -407,6 +407,11 @@ export default function SettingsPage() {
   // consultation server takes them since 6ab6600), never a bare number: a stored "1.000"
   // was the old column default and reads as nothing.
   function osDir(v){ var x = v==null ? '' : String(v).trim(); return /^[0-9]+([.,][0-9]*)?$/.test(x) ? '' : x; }
+  // price_editable (047): the amount of this fee's line may be typed at the till. Only a fee
+  // the till offers can have it - not the consultation fees, which follow the kind of visit.
+  var CONSULT_FEES = ['C01','C02','C03','C04'];
+  function feeMayBeEditable(o){ return !!o && (o.code_type||'fee')==='fee' && CONSULT_FEES.indexOf(String(o.code||'').trim().toUpperCase())<0; }
+  function feeEditable(o){ return feeMayBeEditable(o) && !!o.price_editable; }
   // Where a fee code is used: the payment screen's own words for its section and its list.
   function feeHint(){ return String(t.se_feeHint||'').split('{pay}').join(t.payment||'').split('{section}').join(t.adminCharges||'').split('{add}').join(t.addCharge||''); }
   function osOpen(s){
@@ -632,7 +637,7 @@ export default function SettingsPage() {
                   <td style={{padding:'4px 6px',color:tx}}>{o.name}</td>
                   <td style={{padding:'4px 6px'}}><span style={{background:tint(tc,'15'),color:TC[o.code_type]?'var(--'+tc+'-ink)':t2,borderRadius:3,padding:'1px 5px',fontSize: 11,fontWeight:600}}>{t['se_type_'+o.code_type]||o.code_type}</span></td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.group_name}</td>
-                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx,whiteSpace:'nowrap'}}>{seMoney(o.price_clinic!=null?o.price_clinic:o.price, langCtx.lang)}</td>
+                  <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx,whiteSpace:'nowrap'}}>{feeEditable(o)?<span title={t.se_priceEditableHint} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:600,fontFamily:'inherit',marginRight:6}}>✎ {t.se_priceEditableTag}</span>:null}{seMoney(o.price_clinic!=null?o.price_clinic:o.price, langCtx.lang)}</td>
                   <td style={{padding:'4px 6px'}}>{o.pacs_modality?<span style={{background:'var(--violet-a20)',color:'var(--violet-text)',borderRadius:3,padding:'1px 5px',fontSize: 12,fontWeight:700,fontFamily:'monospace'}}>{o.pacs_modality}</span>:'—'}</td>
                   <td style={{padding:'4px 6px',color:o.worklist_enabled?'var(--ok-text)':'var(--text-5)'}}>{o.worklist_enabled?'✓':'—'}</td>
                   <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{o.body_part||'—'}</td>
@@ -1329,6 +1334,18 @@ export default function SettingsPage() {
               <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6}}>
                 <Fld label={t.price||"가격 (Price)"}><input type="number" value={seMoneyInput(editItem.price_clinic!=null?editItem.price_clinic:editItem.price)||0} onChange={function(e){ var v=Number(e.target.value); ue('price_clinic',v); ue('price',v); }} style={IS}/></Fld>
               </div>
+              {feeMayBeEditable(editItem) ? (
+                <div>
+                  <div className="pressable" role="checkbox" aria-checked={!!editItem.price_editable} tabIndex={0}
+                    onClick={function(){ue('price_editable',!editItem.price_editable)}}
+                    onKeyDown={function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); ue('price_editable',!editItem.price_editable); } }}
+                    style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:scBg,border:'1px solid '+bd2,borderRadius:5,padding:'7px 10px'}}>
+                    <div style={{width:14,height:14,borderRadius:3,border:editItem.price_editable?'2px solid var(--ok-ink)':'2px solid var(--border-2)',background:editItem.price_editable?'var(--ok)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{editItem.price_editable?<span style={{color:'var(--on-fill)',fontSize: 12}}>✓</span>:null}</div>
+                    <span style={{fontSize: 14,color:editItem.price_editable?'var(--ok-text)':tx}}>{t.se_priceEditable}</span>
+                  </div>
+                  <div style={{fontSize:12,color:t3,marginTop:4,lineHeight:1.5}}>{t.se_priceEditableHint}</div>
+                </div>
+              ) : null}
               <div style={{background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:6,padding:'10px'}}>
                 <div style={{fontSize: 13,fontWeight:700,color:'var(--violet-ink)',marginBottom:6}}>📡 {t.orderFeedModality}</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
