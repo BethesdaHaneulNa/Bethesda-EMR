@@ -44,13 +44,35 @@ export function PatientChart(props){
     return [ n.author_name || '?', hhmm(n.created_at),
       n.updated_at ? String(t.cs_noteEdited||'').replace('{time}', hhmm(n.updated_at)) : '' ].filter(Boolean).join(' \u00b7 ');
   }
-  // compact: the list of visits - one line of text per doctor (two when there is one note)
-  function notesBlock(list, compact){
-    var lines = compact ? (list.length > 1 ? 19 : 38) : null;
+  // A note on a card of the list (2026-10-01, the director: the till reads these often and
+  // must see "control in 3 days" without opening the visit). The beginning of the note, cut
+  // with an ellipsis after `rows` lines on screen, and then its LAST line whole (two lines on
+  // screen at most) - the plan and the next appointment are written at the end. A note of
+  // one line is simply shown, up to `rows` + 1 lines on screen. The full text is one click
+  // away, in the visit.
+  var noteText = {fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'};
+  function clamp(n){ return {display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:n,overflow:'hidden'}; }
+  function shortNote(text, rows){
+    var ls = String(text||'').split('\n').map(function(x){ return x.replace(/\s+$/,''); });
+    while(ls.length && !ls[ls.length-1].trim()) ls.pop();
+    if(!ls.length) return <div style={noteText}>{'\u2014'}</div>;
+    if(ls.length === 1) return <div style={Object.assign({}, noteText, clamp(rows + 1))}>{ls[0]}</div>;
+    return <div>
+      <div style={Object.assign({}, noteText, clamp(rows))}>{ls.slice(0, -1).join('\n')}</div>
+      <div style={Object.assign({}, noteText, clamp(2))}>{ls[ls.length-1]}</div>
+    </div>;
+  }
+  // compact: the list of visits - see shortNote; three lines of the beginning per note, two
+  // when several doctors wrote on the visit. `visitDoctor`: when the only note is by the
+  // doctor the card's head already names, the small head (name · time) is not repeated.
+  function notesBlock(list, compact, visitDoctor){
+    var rows = list.length > 1 ? 2 : 3;
+    var bare = compact && list.length === 1 && visitDoctor && list[0].author_name === visitDoctor && !list[0].updated_at;
     return list.map(function(n, i){
-      return <div key={n.id || i} style={{marginTop:i?5:0,paddingLeft:7,borderLeft:'3px solid var(--line-soft)'}}>
+      if(bare) return <div key={n.id || i}>{shortNote(n.note_text, rows)}</div>;
+      return <div key={n.id || i} style={{marginTop:i?6:0,paddingLeft:7,borderLeft:'3px solid var(--line-soft)'}}>
         <div title={noteHead(n)} style={{fontSize:12,fontWeight:700,color:t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{noteHead(n)}</div>
-        <div style={Object.assign({fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}, lines ? {maxHeight:lines,overflow:'hidden'} : {})}>{n.note_text}</div>
+        {compact ? shortNote(n.note_text, rows) : <div style={noteText}>{n.note_text}</div>}
       </div>;
     });
   }
@@ -130,13 +152,13 @@ export function PatientChart(props){
 
   return <div style={{padding:'6px 8px'}}>
     {history.length>0?history.map(function(h,i){
-      return <div key={i} onClick={function(){openPast(h)}} style={{background:scBg,borderRadius:5,padding:'8px 10px',marginBottom:6,border:'1px solid '+bd,cursor:'pointer'}}>
-        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-          <span style={{fontFamily:'monospace',fontSize:13,color:'var(--accent-text)',fontWeight:700}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
-          <span style={{fontSize:12,color:t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
+      return <div key={i} onClick={function(){openPast(h)}} style={{background:scBg,borderRadius:5,padding:'8px 10px',marginBottom:8,border:'1px solid '+bd,cursor:'pointer'}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:5,paddingBottom:4,borderBottom:'1px solid var(--line-soft)'}}>
+          <span style={{fontFamily:'monospace',fontSize:14,color:'var(--accent-text)',fontWeight:800,whiteSpace:'nowrap'}}>{h.consult_date?h.consult_date.split('T')[0]:''}</span>
+          <span style={{fontSize:13,fontWeight:700,color:tx,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{[h.dept_code, h.doctor_name].filter(Boolean).join(' ')}</span>
         </div>
-        {hasNotes(h) ? notesBlock(h.notes, true)
-          : <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{h.note_text||h.subjective||'\u2014'}</div>}
+        {hasNotes(h) ? notesBlock(h.notes, true, h.doctor_name)
+          : shortNote(h.note_text||h.subjective, 3)}
       </div>;
     }):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{t.noHistory}</div>}
   </div>;

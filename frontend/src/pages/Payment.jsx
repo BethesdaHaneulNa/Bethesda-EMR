@@ -17,6 +17,16 @@ import { packWord } from '../documents/rx-dosing.js';
 function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 
+// Column widths (2026-10-01, the director): the cashier reads the doctor's notes often
+// ("control in 3 days"), so the patient chart on the right is wider and the receipt in the
+// middle a little narrower - not by much. At 1366 px: list 280, middle 704 (items 376 +
+// amounts 284), chart 382 (was 300 / 766 = 422 + 300 / 300). The chart follows the screen
+// (28 % of its width) between 340 and 460 px, so a 1920 screen gets 460 and no more. The
+// amounts column keeps the five quick-amount buttons on one line down to 280 px (5 x 48
+// + gaps + padding); narrower, they wrap to a second line.
+var PAGE_COLS = 'minmax(230px,280px) minmax(0,1fr) minmax(280px,clamp(340px,28vw,460px))';
+var BILL_COLS = 'minmax(0,1fr) minmax(230px,clamp(260px,20.8vw,300px))';
+
 export default function PaymentPage() {
   var langCtx = useLang(); var t = langCtx.t;
   function fmtAr(n){ return fmtAmount(n, langCtx.lang); }
@@ -518,7 +528,7 @@ export default function PaymentPage() {
 
       {/* one row as tall as the space left, and the left column clipped like the other two:
           a long list scrolls inside its column instead of stretching the whole page */}
-      <div style={{display:'grid',gridTemplateColumns:'minmax(230px,300px) minmax(0,1fr) minmax(240px,300px)',gridTemplateRows:'minmax(0,1fr)',flex:1,minHeight:0}}>
+      <div style={{display:'grid',gridTemplateColumns:PAGE_COLS,gridTemplateRows:'minmax(0,1fr)',flex:1,minHeight:0}}>
         <div style={{borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',background:pn,overflow:'hidden',minHeight:0}}>
           <div style={{padding:'7px 9px',borderBottom:'1px solid '+bd,background:viewingPast?'var(--warn-a14)':'var(--panel-2)'}}>
             <div style={{display:'flex',alignItems:'center',gap:5}}>
@@ -718,7 +728,7 @@ export default function PaymentPage() {
       }
       return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
         {head}
-        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
+        <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
           <div>
             <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,overflow:'hidden'}}>
               <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:t2}}>{t.currentItems||'현재 항목'}</div>
@@ -764,10 +774,10 @@ export default function PaymentPage() {
       {mqRows.filter(function(r){ return r.pack_unit; }).length?<div style={{background:'var(--danger-a18)',border:'1px solid var(--danger-a60)',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'var(--danger-text-2)',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingPack.replace('{names}', mqRows.filter(function(r){ return r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {isAdditional()&&subtotal()>0.0001?<div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--accent-text)'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
       {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'var(--warn-a12)',border:'1px solid var(--warn-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--warn-ink)'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'var(--warn-text)',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
-      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
+      <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
         <div>
-          <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontWeight:900,fontSize:16,color:'var(--accent-text)'}}>🏥 {t.consultFee}</span>
+          <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 8px'}}>
+            <span style={{fontWeight:900,fontSize:16,color:'var(--accent-text)',whiteSpace:'nowrap'}}>🏥 {t.consultFee}</span>
             {/* Visit types are 초진 · 재진 · 진료비 없음 only (decided 2026-09-29). An older visit
                 saved as emergency/referral still shows that value, marked old and not
                 offered again; its fee stays what C03/C04 price it at. */}
@@ -777,14 +787,14 @@ export default function PaymentPage() {
               <option value="followUp">{t.followUp}</option>
               <option value="none">{t.noConsult}</option>
             </select>
-            <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace'}}>{fmtAr(consultFee())} Ar</span>
+            <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtAr(consultFee())} Ar</span>
           </div>
           <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,packRx:rx.pack_unit?rx:null,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
           <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=orderQty(o);return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}>
             <div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8}}>
-              <span>🧾 {t.adminCharges}</span>
-              <select value="" onChange={function(e){ if(e.target.value){ addFeeItem(e.target.value); e.target.value=''; } }} style={{marginLeft:'auto',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 8px',color:tx,fontSize:13,cursor:'pointer'}}>
+              <span style={{whiteSpace:'nowrap'}}>🧾 {t.adminCharges}</span>
+              <select value="" onChange={function(e){ if(e.target.value){ addFeeItem(e.target.value); e.target.value=''; } }} style={{marginLeft:'auto',minWidth:0,flex:'0 1 150px',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 8px',color:tx,fontSize:13,cursor:'pointer'}}>
                 <option value="">+ {t.addCharge}</option>
                 {feeCodes.map(function(c){ return <option key={c.id} value={c.id}>{c.name} ({fmtAr(c.price_clinic||c.price)} Ar)</option>; })}
               </select>
@@ -833,10 +843,10 @@ export default function PaymentPage() {
       <div style={{padding:'11px 15px',background:scBg,border:'1px solid '+bd,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}>
         <div style={{fontSize:30}}>✅</div><div style={{flex:1}}><div style={{fontSize:19,fontWeight:900,color:'var(--ok-text)'}}>{L.billDetail}</div><div style={{fontSize:14,color:t2}}>{b.chart_no} · {b.last_name} {b.first_name} · {ymd(b.billing_date)}</div></div>{billBadge(b)}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(240px,300px)',gap:12}}>
+      <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
           <div style={{padding:'10px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>🧾 {L.item}</div>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'var(--bg-col-2)'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid var(--line-soft)'}}><td style={td()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','var(--ok-text)',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'var(--bg-col-2)'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid var(--line-soft)'}}><td style={tdCode()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','var(--ok-text)',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
         </div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,height:'fit-content'}}>
           <div style={{display:'grid',gap:5,fontSize:15}}>
@@ -855,11 +865,12 @@ export default function PaymentPage() {
   }
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div>{serverToday&&dayOf(p)&&dayOf(p)!==serverToday?<span style={{marginLeft:'auto',background:'var(--warn-a18)',color:'var(--warn-text)',borderRadius:5,padding:'3px 9px',fontSize:13,fontWeight:800,fontFamily:'monospace',whiteSpace:'nowrap'}}>📅 {dayOf(p)}</span>:null}</div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={td()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={tdCode()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-5)',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
-  function th(align){ return {padding:'7px 10px',textAlign:align||'left',color:'var(--accent-text-3)',fontSize:13,borderBottom:'1px solid '+bd}; }
-  function td(align,color,weight){ return {padding:'7px 10px',textAlign:align||'left',color:color||tx,fontWeight:weight||500,fontFamily:align==='right'?'monospace':'inherit'}; }
+  function th(align){ return {padding:'7px 7px',textAlign:align||'left',color:'var(--accent-text-3)',fontSize:13,borderBottom:'1px solid '+bd}; }
+  function td(align,color,weight){ return {padding:'7px 7px',textAlign:align||'left',color:color||tx,fontWeight:weight||500,fontFamily:align==='right'?'monospace':'inherit',whiteSpace:align==='right'?'nowrap':'normal'}; }
+  function tdCode(){ return Object.assign(td(), {fontFamily:'monospace',fontSize:13,color:t2,whiteSpace:'nowrap'}); }
   function Pair(p){ return <div style={{display:'flex',justifyContent:'space-between',gap:10}}><span style={{color:t2}}>{p.k}</span><strong style={{color:tx,textAlign:'right'}}>{p.v}</strong></div>; }
   function InfoLine(p){ return <div style={{background:tint(p.tint,'15'),borderRadius:5,padding:'7px 9px',marginTop:8,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:14,color:p.color,fontWeight:800}}>{p.label}</span><span style={{fontSize:16,color:p.color,fontWeight:900,fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span></div>; }
 }
