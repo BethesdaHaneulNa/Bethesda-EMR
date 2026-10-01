@@ -2,6 +2,24 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 조제 대기 목록 꼬리표(수납 세션 발견 `f42c253`) — 이미 고친 것 확인 + 줄 모양 맞춤
+
+- **상태**: 확인 요청. develop `5fce7c5`를 merge(ff)한 뒤.
+- **한 일**: 총괄이 알려 준 「En / Attente」 접힘은 **바로 앞 커밋 `d3a1f83`에서 이미 고쳐 develop에 들어 있었음**(꼬리표 `nowrap` + `flexShrink 0`, 이름 `minWidth 0` + `overflowWrap anywhere`) — 보고와 지시가 엇갈린 것. 이번에는 다른 화면과 같은 모양이 되게 그 줄에 `alignItems: 'flex-start'`, `gap: 8`만 더함(전에는 `gap: 6`, 정렬 없음).
+- **바꾼 파일**: `Pharmacy.jsx`(목록 줄 한 곳). **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **본 것**(격리 9184, 1366×768, 가짜 환자 넷: 50자 · 84자 · 89자 `RAKOTONDRAMANANA-RAZAFIMAHATRATRA Andrianantenaina Hery Tiana Jean Chrysostome Marie Ange` · 빈칸 없는 41자 한 낱말, 각각 대기 1건·오늘 완료 1건):
+
+  | 화면 언어 | 탭 | 꼬리표 | 이름 줄 수(50 · 84 · 89 · 41자) | 잘림 · 줄 넘침 |
+  |---|---|---|---|---|
+  | fr | En attente / Délivré | 「En Attente」 / 「Terminé」 한 줄 | 3 · 5 · 5 · 2~3 | 없음 |
+  | ko | 조제 대기 / 조제 완료 | 「대기」 / 「완료」 한 줄 | 3 · 4 · 4 · 2 | 없음 |
+  | en | Dispensing Pending / Dispensed | 「Waiting」 / 「Completed」 한 줄 | 3 · 5 · 5 · 2~3 | 없음 |
+
+  이름과 꼬리표 사이 8px, 꼬리표는 이름 첫 줄 높이에 맞음. 문서 크기 1366×768 그대로.
+  - 환자 머리(fr): 89자 3줄 · 41자 한 낱말 2줄(낱말 안에서 줄바꿈), 잘림 없음, « Médicaments (interne) » 한 줄, 아래 **✓ Terminer délivrance** 아래 끝 758.
+  - 오른쪽 Dossier Patient 칸(수납이 고친 카드 머리): 폭 327 = scrollWidth — 넘침 없음(이 환자들은 내원 두 건, 기록 없음).
+- **안 본 것**: 과·의사 이름이 긴 카드 머리의 줄바꿈 모양(수납이 확인했다고 함 — 약국에서는 넘침만 잼), 밝은 화면, 1366보다 좁은 창, 재고 기록·원외 처방전·환자 찾기에서 89자·41자(앞 항목에서 50·84자로 봄).
+
 ## 2026-10-01 — 긴 환자 이름(50자·84자)에서 약국 화면이 깨지던 곳
 
 - **상태**: 확인 요청. develop `e8db948`을 merge(ff)한 뒤.
