@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — Orthanc 관리 화면의 Modify를 눌러 확인 · 설계 메모를 좁힘 · 설명서 주의 (문서만)
+
+- **상태**: 확인 요청 (영상 바로잡기는 **결정 대기** — 짓지 않음)
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `9050e50`을 ff로 당긴 뒤). 문서만. **PACS 저장소** — 없음
+- **★ 총괄의 답 ③을 고쳐야 합니다**: Modify 창의 **「keeping the original DICOM UIDs」는 우리 PACS에서 실패합니다** — Orthanc가 400(*"…you must have the 'OverwriteInstances' Orthanc configuration set to true"*), 창에는 「Unexpected error during modification」, 아무것도 안 바뀜. 우리 compose는 `OverwriteInstances`를 정하지 않아 기본값 false입니다. 그래서 설명서의 주의를 「keeping만 쓰라」가 아니라 **「Modify를 쓰지 말라」**로 썼습니다.
+- **눌러 확인한 것** (로그인 없는 버리는 Orthanc 26.6.1을 127.0.0.1:9196에 잠깐 띄워 관리 화면의 창을 직접 누르고 보내는 요청을 받아 적음 → 같은 요청을 EMR 오더에 이어진 격리 검사(9198)에 보내 EMR을 봄):
+  - 창: 고칠 수 있는 칸은 PatientID · PatientName · AccessionNumber · StudyDate · StudyDescription · StudyTime, **StudyInstanceUID는 「Auto-generated」로 잠김**(답 ④ 맞음). 고르는 것 셋 중 **기본은 「generating new DICOM UIDs」**.
+  - 「keeping」(직접 누름): 요청 `Keep: [Study·Series·SOP UID], KeepSource: true` → 400, 변화 없음.
+  - 「Create a modified copy」(직접 누름): `Keep: [], KeepSource: true` → 원본 그대로 + 새 번호의 사본(같은 accession의 검사가 둘). EMR 연결 그대로.
+  - 「generating new UIDs」(기본): 화면이 가려져 **누르지는 못함** — 위 둘의 요청 모양에서 `KeepSource: false`로 보내 확인: 원본 없어짐, 새 번호. EMR 목록은 「2 image(s)」 그대로인데 영상보기는 「L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas」, 80초 뒤에도 그대로(브리지는 끝난 오더를 다시 찾지 않음) — 답 ② 맞음.
+  - 세 경우 모두 EMR의 검사 이름은 「Chest PA」 그대로 — 답 ① 맞음.
+- **설계 메모를 고침** (`wiki/reference/study-reassign-design.md`): 맨 위에 범위(같은 종류의 오더끼리만 · 급하지 않음 — 실장님 말씀), 새 0-1절 「세 안」 — (가) 전체(EMR 단추) / (나) 관리자용 스크립트(`move-study.ps1`, 화면 없음) / (다) 주의와 「accession으로 되찾기」만 — 각각의 일의 양과 위험, 새 1-1절(위 확인), Q5는 「정해짐」.
+  - PACS 세션의 생각: 드문 일이므로 **(다)를 지금, (나)를 그다음**. (나)면 영상 서버의 자료가 실제로 고쳐져 실장님 원칙을 지키면서 큰 장치가 필요 없음.
+- **프랑스어 설명서에 주의 한 단락** (`wiki/manual-fr/pacs.md` «À ne pas faire»): 관리자는 Orthanc의 Modify로 검사를 고치지 말 것 — 기본 선택은 EMR에서 영상을 못 찾게 하고, keeping은 이 서버에서 오류, copy는 군더더기. 검사 이름은 오더의 것. 다른 줄을 골라 찍은 영상은 손으로 고치지 말고 판독에 적고 지원에 알릴 것.
+- **모듈 위키**: 7절 P-31, 8절.
+- **바꾼 파일**: `wiki/reference/study-reassign-design.md`, `wiki/manual-fr/pacs.md`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음
+- **확인 못 한 것**: Modify 창의 기본 선택을 **화면에서 누르는 것**(브라우저 창이 가려져 창이 안 열림 — 요청을 흉내 내 확인). `OverwriteInstances`를 켰을 때 keeping이 실제로 되는지(켜지 않음).
+- **뒷정리**: 버리는 Orthanc 컨테이너 삭제, 격리 검사는 원래 번호로 되돌림, 격리 스택 내림.
+- **다른 세션에 부탁**: 총괄 — 세 안과 8절을 실장님께. (다)의 「끝난 오더의 영상을 accession으로 한 번 더 찾기」는 작아서 시키시면 바로 짓겠습니다.
+
 ## 2026-10-01 — 설계 메모: 잘못 고른 오더로 찍힌 영상을 맞는 오더로 바로잡기 (짓기 전)
 
 - **상태**: 확인 요청 (**결정 대기** — 아직 짓지 않음)

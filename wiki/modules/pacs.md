@@ -594,6 +594,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 동작 · 기타
 
+- **P-31 [주의] Orthanc 관리 화면의 Modify 창을 쓰면 EMR 연결이 끊기거나 오류가 난다 (2026-10-01, 격리에서 확인).** 기본으로 골라진 「generating new DICOM UIDs」는 검사 번호를 바꿔 **EMR이 그 영상을 못 찾게** 하고(끝난 오더는 브리지가 다시 잇지 않음), 「keeping the original DICOM UIDs」는 이 서버 설정(`OverwriteInstances` false)에서 **400 오류**, 「Create a modified copy」는 사본을 남김. Orthanc에서 `StudyDescription`을 고쳐도 EMR의 검사 이름은 오더의 것이라 안 바뀜. 프랑스어 설명서 «À ne pas faire»에 주의를 넣음. 잘못 고른 오더로 찍힌 영상을 바로잡는 길은 설계 메모 [`reference/study-reassign-design.md`](../reference/study-reassign-design.md)(세 안 — 실장님 결정 대기).
 - **P-30 ✅ 풀림 (2026-10-01, 진료 세션 `d853f7a`)** — 발행된 판독 보고서가 서류 창의 발행 이력에 안 보이고 발행 취소 화면이 없던 것. 진료 세션이 `documents/registry.js`에 `imaging-report`를 등록하고 📄 문서 창의 **발급 이력에만** 올림(`historyCodes` — 「새로 만들기」 목록에는 안 나옴). 이력에서 누르면 저장된 payload를 **PACS의 서식 파일(`imaging-report.jsx`) 그대로** 다시 그림 — 그래서 서식을 고칠 때는 **옛 payload로도 그려지는지**(값 이름 `values.exam_name` 등을 바꾸지 않기)를 지켜야 함. 수납의 문서 창도 같음. 발급 취소는 `documents.void`로 남음.
 
 - **P-28 [참고] 「이전 검사와 비교」는 Stone을 고치지 않고 짓는다 (2026-10-01, 라이선스).** 4절 「이전 검사와 비교」. 그래서 **화면 나누기와 끌어다 놓기는 의사가 Stone의 단추로** 합니다(나누기는 한 번 하면 기억됨). 한 번에 「누르면 나란히」가 되게 하려면 Stone 안쪽 함수를 불러야 하는데(처음에 그렇게 지었다가 걷어 냄 — 커밋 `2e7a738`), 그것은 직원에게 내주는 Stone을 배포판과 다르게 만드는 일이라 하지 않기로 함. Orthanc 이미지를 올린 뒤에는 `?study=A,B`가 여전히 두 검사를 여는지, 연 검사가 먼저 뜨는지 격리에서 다시 볼 것.
@@ -641,6 +642,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-09-29 | PACS 격리 스택(9198·11298)으로 진짜 Orthanc 시험: P-7·P-3 끝까지 확인, P-4 1·2단계(accession으로 찾기, `image_study_uid` 802), P-8 확인(내 AE만 거르면 0건 — 브리지로 못 고침) | EMR `session/pacs` · PACS `session/pacs` (인계 노트 참고) |
 | 2026-09-29 | G-1~G-4: `pair-with-emr.ps1/.sh`(토큰을 화면에 안 찍고 짝 맞춤, 복원 뒤에도), `check-windows-ports.ps1`(포트 경고), setup·start.bat의 LAN IP 안내 — 6.1 갱신 | EMR `session/pacs` · PACS `d3d001c` |
 | 2026-09-29 | 영상 오더 취소 켜진 뒤 실제 브리지로 확인(P-23 ✅), 2.1 ④ 문구를 영상 전용 물음(`cs_cancelPromptImg`)과 실제 화면에 맞춤 | EMR `session/pacs` (인계 노트 참고) |
+| 2026-10-01 | 7절 P-31: Orthanc 관리 화면의 Modify 창을 격리에서 눌러 봄 — 기본 선택은 EMR 연결을 끊고, 「원래 번호 유지」는 이 서버에서 오류. 프랑스어 설명서 «À ne pas faire»에 주의. 영상 바로잡기 설계 메모(`reference/study-reassign-design.md`)를 같은 종류의 오더끼리로 좁히고 세 안(전체 / 관리자 스크립트 / 주의와 자동 되찾기)을 적음 — 짓지 않음, 결정 대기 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 한 묶음(실장님): ① 판독 보고서 **종이에서 서류 번호를 뺌**(발행 일시만 작게; 번호는 EMR 안 — 이력·변경 기록·미리보기 창) ② **「⇆ Comparer (N)」·「🖨 Imprimer (N)」·「Tout décocher」를 체크 칸 바로 위로**(창 머리에서 뺌, 체크 상태를 부품 안으로 — `props.onCompare`) ③ 종류 좁혀 보기를 **목록이 뜨는 고르기**로. 2.3.1·2.4·2.4.1·4절, 프랑스어 설명서 6·8·9절 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | 판독 보고서: **긴 이름**이 잘리지 않게 — 글자 크기 12→9pt·낱말 사이에서 줄바꿈·네 줄이 함께 높아짐, 둘째 장 머리줄·검사·병원·판독의 이름도. 실장님 결정 셋(작게 넣은 항목 그대로 / 환자 번호 경고 검사 인쇄 허용 / 한국어 서류 이름표는 영어)을 2.4.1에 적음. 긴 이름 견본 그림 | EMR `session/pacs` (인계 노트 참고) |
 | 2026-10-01 | **판독 보고서 인쇄**(2.4.1·4절·P-30): 영상/판독 창의 「🖨 Imprimer」 — 검사마다 A4 한 장(실장님 병원 서식: 제목·검사 날짜 / 환자 칸 / Examen / Compte-rendu / 맨 아래 병원·판독의), 서류 언어 FR·EN·KO(기본 FR), 서류로 발행(번호·변경 기록), 여러 검사 한꺼번에, 수납 화면에서도. 프랑스어 설명서 9절, 견본 그림 | EMR `session/pacs` (인계 노트 참고) |
