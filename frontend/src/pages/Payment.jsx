@@ -489,16 +489,16 @@ export default function PaymentPage() {
   // own grey look rather than falling into the orange of "partial".
   function statusLabel(s){ var k={paid:'py_stPaid',partial:'py_stPartial',unpaid:'py_stUnpaid',cancelled:'py_stCancelled',waived:'py_stWaived',waiting:'py_stWaiting'}[s]; return k&&t[k]?t[k]:s; }
   function statusBadge(s){
-    if(s==='cancelled') return <span style={{background:'var(--text-3-a22)',color:'var(--text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{statusLabel(s)}</span>;
+    if(s==='cancelled') return <span style={{background:'var(--text-3-a22)',color:'var(--text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700,whiteSpace:'nowrap',flexShrink:0}}>{statusLabel(s)}</span>;
     var paid=s==='paid', unpaid=s==='unpaid';
-    return <span style={{background:paid?'var(--ok-a18)':unpaid?'var(--danger-a18)':'var(--warn-a18)',color:paid?'var(--ok-text)':unpaid?'var(--danger-ink)':'var(--warn-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{statusLabel(s)}</span>;
+    return <span style={{background:paid?'var(--ok-a18)':unpaid?'var(--danger-a18)':'var(--warn-a18)',color:paid?'var(--ok-text)':unpaid?'var(--danger-ink)':'var(--warn-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700,whiteSpace:'nowrap',flexShrink:0}}>{statusLabel(s)}</span>;
   }
 
   // A receipt's badge, and the line under it: a correction replaced it (not a staff
   // cancellation), or its balance was taken on a later receipt (a settlement or a
   // carry) - then its own "partial" and balance are history, not what is owed.
   function billBadge(b){
-    var chip = function(bg, fg, text){ return <span style={{background:bg,color:fg,borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700}}>{text}</span>; };
+    var chip = function(bg, fg, text){ return <span style={{background:bg,color:fg,borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:700,whiteSpace:'nowrap',flexShrink:0}}>{text}</span>; };
     if(b.payment_status==='cancelled' && b.replaced_by_receipt_no) return chip('var(--violet-2-a18)','var(--violet-text-2)',t.py_stReplaced);
     if(b.payment_status!=='cancelled' && b.carried_into_receipt_no) return chip('var(--text-3-a22)','var(--text-2)',t.py_stCarried);
     return statusBadge(b.payment_status);
@@ -576,11 +576,16 @@ export default function PaymentPage() {
             {loading?<div style={{padding:20,textAlign:'center',color:t3}}>{t.loading}</div>:listRows().map(function(v){
               var isSel=sel&&sel.id===v.id;
               return <div key={tab+'-'+v.id} onClick={function(){tab==='waiting'?selectVisit(v):selectCompleted(v)}} style={{padding:'10px 12px',cursor:'pointer',borderBottom:'1px solid var(--line-soft)',background:isSel?'var(--accent-a12)':'transparent',borderLeft:'3px solid '+(tab==='completed'&&v.payment_status==='cancelled'?(v.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'transparent')}}>
-                <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:3}}>
-                  <span style={{fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
-                  {tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800}}>{t.waiting}</span>):billBadge(v)}
+                {/* A long name (50 to 89 characters at the hospital) is never cut. Name and tag share
+                    the line while the longest word of the name fits beside the tag; when it does not,
+                    the tag takes a line of its own above (wrap-reverse) and the name has the full
+                    width, so it breaks between words - inside a word only when that word alone is
+                    wider than the row. The tag itself never wraps. */}
+                <div style={{display:'flex',flexWrap:'wrap-reverse',alignItems:'flex-end',gap:'2px 8px',marginBottom:3}}>
+                  <span style={{flex:'1 1 0%',maxWidth:'100%',overflowWrap:'break-word',fontWeight:800,fontSize:15,color:'var(--text-strong)'}}>{v.last_name} {v.first_name}</span>
+                  <span style={{marginLeft:'auto',flexShrink:0,display:'flex'}}>{tab==='waiting'?(v.needs_additional?<span style={{background:'var(--accent-a18)',color:'var(--accent-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800,whiteSpace:'nowrap',flexShrink:0}}>{t.additionalBadge}</span>:v.needs_refund?<span style={{background:'var(--violet-2-a18)',color:'var(--violet-text-2)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800,whiteSpace:'nowrap',flexShrink:0}}>{t.py_correction}</span>:v.needs_rebill?<span style={{background:'var(--danger-a18)',color:'var(--danger-text)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800,whiteSpace:'nowrap',flexShrink:0}}>{t.rebillBadge}</span>:<span style={{background:'var(--warn-a18)',color:'var(--warn-ink)',borderRadius:4,padding:'2px 7px',fontSize:12,fontWeight:800,whiteSpace:'nowrap',flexShrink:0}}>{t.waiting}</span>):billBadge(v)}</span>
                 </div>
-                <div style={{fontSize:13,color:t2}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
+                <div style={{fontSize:13,color:t2,overflowWrap:'anywhere'}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                 {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
                 {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'var(--accent-text)',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
@@ -857,7 +862,7 @@ export default function PaymentPage() {
     var b=doneBill.bill, items=doneBill.items||[];
     return <div style={{flex:1,overflow:'auto',padding:'12px 16px'}}>
       <div style={{padding:'11px 15px',background:scBg,border:'1px solid '+bd,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}>
-        <div style={{fontSize:30}}>✅</div><div style={{flex:1}}><div style={{fontSize:19,fontWeight:900,color:'var(--ok-text)'}}>{L.billDetail}</div><div style={{fontSize:14,color:t2}}>{b.chart_no} · {b.last_name} {b.first_name} · {ymd(b.billing_date)}</div></div>{billBadge(b)}
+        <div style={{fontSize:30,flexShrink:0}}>✅</div><div style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}><div style={{fontSize:19,fontWeight:900,color:'var(--ok-text)'}}>{L.billDetail}</div><div style={{fontSize:14,color:t2}}>{b.chart_no} · {b.last_name} {b.first_name} · {ymd(b.billing_date)}</div></div>{billBadge(b)}
       </div>
       <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
@@ -880,7 +885,7 @@ export default function PaymentPage() {
     </div>;
   }
 
-  function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)'}}>{(p.first_name||'?')[0]}</div><div><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div>{serverToday&&dayOf(p)&&dayOf(p)!==serverToday?<span style={{marginLeft:'auto',background:'var(--warn-a18)',color:'var(--warn-text)',borderRadius:5,padding:'3px 9px',fontSize:13,fontWeight:800,fontFamily:'monospace',whiteSpace:'nowrap'}}>📅 {dayOf(p)}</span>:null}</div>; }
+  function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)',flexShrink:0}}>{(p.first_name||'?')[0]}</div><div style={{minWidth:0,overflowWrap:'anywhere'}}><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div>{serverToday&&dayOf(p)&&dayOf(p)!==serverToday?<span style={{marginLeft:'auto',background:'var(--warn-a18)',color:'var(--warn-text)',borderRadius:5,padding:'3px 9px',fontSize:13,fontWeight:800,fontFamily:'monospace',whiteSpace:'nowrap',flexShrink:0}}>📅 {dayOf(p)}</span>:null}</div>; }
   function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={tdCode()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-5)',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
