@@ -266,7 +266,7 @@ router.delete('/drugs/:id', permMiddleware('settings'), async (req, res) => {
 // An order code's default_dose is its default *directions* - words (QD, PRN) the
 // consultation screen copies onto a procedure order. It is a text column that used to
 // default to '1.000', and every code carried that (the director, 2026-10-01: "why do the
-// directions fill in with 1 by themselves?"; migration 701 cleared them). A bare number
+// directions fill in with 1 by themselves?"; migration 041 cleared them). A bare number
 // or blanks are not directions: stored as NULL, without refusing - an older screen still
 // open somewhere sends back the '1.000' it loaded.
 function cleanDirections(raw) {
