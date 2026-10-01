@@ -58,6 +58,11 @@ const ACTIONS = {
   // patient, on the image server and in the EMR (routes/pacs.move.js): which orders, how many
   // images, whether the reading went with them, the reason typed.
   PACS_STUDY_MOVE:      'pacs.study.move',
+  // PACS (2026-10-01): an exam's images given out of the clinic - printed on paper
+  // (routes/pacs.export.js; the paper itself is a documents.issue line), or copied to a disc or a
+  // file: whose, which exam(s), how many pictures, and for a copy its size and medium.
+  PACS_IMAGES_PRINT:    'pacs.images.print',
+  PACS_IMAGES_EXPORT:   'pacs.images.export',
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 

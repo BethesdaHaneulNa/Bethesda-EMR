@@ -13,6 +13,36 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-01 — ① 영상 인쇄: 검사의 영상을 A4에 1·2·4·6장씩
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(develop `da9bd2d`가 들어 있음 — 그 뒤 develop에 새 것 없음). **PACS 저장소** — 없음
+- **한 일**: 🩻 영상/판독 창의 검사 상세에 **「🖨 Imprimer les images」**(진료·수납 공통). 창에서 영상을 고르고(처음 12장, 한 번에 48장), 한 장에 1·2·4·6장, 밝기(Normale · + · ++ — 종이에만), 언어(FR 먼저). 종이: 병원 · 환자 · 검사 · 그림(시리즈·영상 번호) · 「Images de référence — non destinées au diagnostic」 · 발행 일시 · 쪽 번호. 인쇄 = 변경 기록 한 줄(`pacs.images.print`) → 서류 발행(`imaging-images`) → 인쇄 창. 앞의 둘 가운데 하나라도 안 되면 인쇄하지 않음.
+- **바꾼 파일**:
+  - 새로: `backend/src/routes/pacs.export.js`, `frontend/src/components/ImagesPrint.jsx`, `frontend/src/documents/imaging-images.jsx`, 견본 그림 둘(`wiki/reference/design/imaging-images-sample-*.png` — 가짜 환자)
+  - 고침: `backend/src/routes/pacs.routes.js`(라우터 걸기 3줄), `frontend/src/components/RadiologyReadings.jsx`(단추와 창 열기 — 주황색 「⇄」 단추는 그대로), `frontend/src/documents/imaging-report.jsx`(`fitSize` · `linesAt`에 `export`만)
+  - 위키: `modules/pacs.md`(2.4.3절, 4절 화면·서버, 8절), `manual-fr/pacs.md`(§11), `reference/changelog-1.5.0/pacs.md`, `reference/image-print-export-design.md`(시작 · 총괄이 정한 값 · 판독소견은 넣지 않음 · `D:\CD-TEST` · 차례)
+- **공용 파일 변경**:
+  - `backend/src/utils/audit.js` — 동작 둘: `PACS_IMAGES_PRINT: 'pacs.images.print'`, `PACS_IMAGES_EXPORT: 'pacs.images.export'`(뒤의 것은 ④에서 씀 — 총괄 결정 ㄴ)
+  - `frontend/src/documents/registry.js` — `imagingImages`를 `TEMPLATES` · `HISTORY_ALSO.document` · `NO_NUMBER_ON_PAPER`에(총괄 결정 ㄱ: PACS가 직접)
+  - `frontend/src/i18n/{ko,en,fr}.js` — pacs 구간 안에만
+- **DB 마이그레이션**: 없음
+- **번역 키**: `px_im…` 29개(ko/en/fr) — 단추 · 창 · 안내 16개, 거절 사유 `px_imErr_<CODE>` 13개. 판독 보고서의 `px_printLang` · `px_printGo` · `px_printAgain` · `px_printIssued` · `px_printFail` · `px_untickAll`을 같이 씀.
+- **확인한 방법**(격리 EMR 9188 + PACS 9198, 가짜 환자 · 가짜 장비로 보낸 검사):
+  - 서버(`imprint_api.py`) **35가지 통과**: 그림 목록의 순서 · 장비 보고서가 빠짐 · 큰 필름(2500×3000, 12비트)이 1600×1920으로 줄어 옴 · 작은 그림은 키우지 않음 · 12프레임 영상의 첫 프레임 · 흑백이 뒤집힌 필름 · 다른 검사/다른 환자의 영상 번호 → 403 · 취소/환자 번호 경고(다름·없음)/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 겹친 번호/빈 목록 400 · 기록을 못 적게 하면(시험용 트리거) 500이고 줄이 안 생김.
+  - 화면(브라우저, 인쇄 창의 HTML을 받아 Chrome으로 PDF를 만들어 봄): 2장 배치 12장 → 6쪽 / 4장 → 3쪽 / 6장 19장 → 4쪽 / 1장 → 1쪽 / 48장 6장 배치 → 8쪽. 긴 이름(84자) 세 줄로 잘리지 않음. FR · EN · KO. 밝기 + · ++가 종이에 반영됨. 60장짜리: 처음 12장, 「Cocher les 48 premières」, 49번째를 누르면 안내. 발행 기록(`document_log`)의 배치·장수가 종이와 같음. 「Imprimer de nouveau」는 다시 발행하지 않음(같은 번호). 팝업이 막히면 안내.
+  - 📄 문서 창의 이력에서 다시 열기: 그림을 영상 서버에서 다시 가져와 같은 배치·밝기로 나옴, 다시 인쇄됨.
+  - 수납 계정: 수납 화면의 🩻 창에 단추가 나오고 인쇄됨. 취소/경고 검사는 단추가 꺼지고 이유가 나옴. 옮기기·영상 보기 단추는 전처럼 수납에는 없음.
+  - 영상 서버를 끈 채: 창을 열면 「Le serveur d'images ne répond pas」 / 열어 둔 창에서 더 고르면 「7 image(s) n'ont pas pu être chargée(s)」, 인쇄 단추 꺼짐.
+  - 밝은 화면 · 영어 화면 · 한국어 화면(창의 글이 그 언어로, 종이는 프랑스어로 시작). 기존 회귀: 영상 중계 15 · 비교 32 · 체크 비교 23 통과.
+- **지으면서 고친 것**: 영상 서버 무응답을 502로 답했더니 EMR 앞의 nginx가 자기 글로 바꿔 버려 사유(`code`)가 사라짐 → 409로 답함(설명은 `modules/pacs.md` 4절).
+- **확인 못 한 것**: **진짜 프린터**(특히 흑백 레이저에서 밝기 값 — 화면과 PDF로만 봄) · 진짜 장비의 영상(가짜 장비가 만든 그림으로 봄 — 압축된 영상(JPEG 2000 등)과 아주 큰 영상은 안 해 봄) · 수백 장짜리 검사에서 작은 그림이 다 뜨는 시간(60장은 바로) · 문서 이력에서 다시 인쇄할 때는 공용 `printDocument`(0.35초 뒤 인쇄)를 씀 — 3장으로는 됐고, 48장은 안 해 봄(그림이 빠지면 영상 창에서 다시 뽑으면 됨).
+- **총괄이 추천값으로 정한 것**(실장님이 바꿀 수 있음 — 설계안 9절에 적음): 「참고용 — 진단용 아님」 넣음 · 수납도 인쇄 · 환자 번호 경고 검사는 막음 · 기본 2장/48장/처음 12장.
+- **다른 세션에 부탁**:
+  - **총괄/설정**: 변경 기록 탭이 새 동작을 화면 언어로 부르게 — `frontend/src/pages/settingsAudit.js`의 동작 이름표에 `'pacs.images.print'`(와 ④ 때 `'pacs.images.export'`), `se_act_…` 번역, `wiki/03-change-log.md`의 동작 표에 한 줄. 줄의 값은 이미 있는 이름표(`order_name` · `accession_no` · `image_count` · `lang`)를 쓰고, 새 것은 `per_page` 하나.
+  - 없으면 변경 기록 탭에 동작이 `pacs.images.print` 글자 그대로 나옵니다(기록 자체는 남음).
+- **다음**: ④ 영상 CD 반출 프로그램 — 「폴더에 저장」(`D:\CD-TEST`)부터.
+
 ## 2026-10-01 — 설계안 고침: JPG 사본 없음 · 뷰어(Weasis)를 일찍 · 굽는 장치 연결됨 (문서만)
 
 - **상태**: 확인 요청 — **짓지 않음**(총괄: 「아직 짓지 말고 설계안만」). 실장님 답(가·라·마·사·아·차)과 시작 신호를 기다림.

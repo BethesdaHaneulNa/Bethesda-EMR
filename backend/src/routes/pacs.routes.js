@@ -9,6 +9,7 @@ const viewer = require('./pacs.viewer');
 const { relinkLostStudies, patientCheck } = require('./pacs.relink');
 const { isExam } = require('./pacs.exam');            // which orders are imaging exams
 const move = require('./pacs.move');                 // images put under another order
+const exportImages = require('./pacs.export');      // images given out: printed, copied to a disc
 const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
@@ -84,6 +85,8 @@ function configProblem(cfg) {
 router.use('/viewer', viewer.router);
 // Moving the images of an order to another order of the same patient (pacs.move.js).
 router.use('/', move.router);
+// An exam's images given out of the clinic: on paper, on a disc (pacs.export.js).
+router.use('/export', exportImages.router);
 
 // Settings UI. This carries the bridge token, which opens the patient feed, so
 // it is for the settings permission only -- not every member of staff.
