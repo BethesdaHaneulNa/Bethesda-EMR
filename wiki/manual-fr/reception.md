@@ -133,6 +133,8 @@ Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en m
 2. Cliquez sur le patient.
 3. **Fermer** ferme la fenêtre.
 
+Si le dossier contient deux numéros de téléphone (« +261 34 … / +261 33 … »), ils s'affichent l'un sous l'autre dans la colonne **Téléphone**.
+
 Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Visites du patient**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Motif**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Motif** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
 
 ### 13. Dossier (vue)
