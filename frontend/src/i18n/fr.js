@@ -482,7 +482,7 @@ export default {
   py_cashOut: "Rendu",
   py_cashNet: "Net",
   py_workDatePast: "Date passée ({date}) : un encaissement fait maintenant est daté d’aujourd’hui ({today}) — reçu et caisse du jour.",
-  py_paidOn: "Payé le {date}",
+  py_paidOn: "Payé ce jour-là",
   py_noneThatDay: "Rien à encaisser à cette date.",
   py_cashOn: "Caisse du {date}",
   py_paidOnHint: "Liste des paiements finalisés le {date}.",

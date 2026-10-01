@@ -491,7 +491,7 @@ export default {
   py_cashOut: "Out",
   py_cashNet: "Net",
   py_workDatePast: "You are looking at a past date ({date}). A payment taken now is dated today ({today}) - receipt and cash of the day.",
-  py_paidOn: "Paid {date}",
+  py_paidOn: "Paid that day",
   py_noneThatDay: "Nothing to bill on this date.",
   py_cashOn: "Cash on {date}",
   py_paidOnHint: "Review payments completed on {date}.",
