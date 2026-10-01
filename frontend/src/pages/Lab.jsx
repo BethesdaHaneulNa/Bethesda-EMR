@@ -272,12 +272,15 @@ export default function LabPage() {
           {list.map(function (g) {
             var active = sel && sel.consultation_id === g.consultation_id;
             return <div key={g.consultation_id} onClick={function () { pickConsult(g); }} style={{ padding: '9px 12px', borderBottom: '1px solid ' + bd, cursor: 'pointer', background: active ? tint('cyan', '12') : 'transparent', borderLeft: active ? '3px solid ' + cyan : '3px solid transparent' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text-strong)' }}>{nm(g)}</span>
-                <span style={{ color: t3, fontSize: 12 }}>{ymd(g.visit_date)}</span>
+              {/* A long name (50 letters and more are common here) takes what is left and
+                  wraps -- inside a word too, or one 36-letter name widens the whole list;
+                  the date keeps its width and stays on one line. Names are never cut. */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ fontWeight: 700, color: 'var(--text-strong)', minWidth: 0, overflowWrap: 'anywhere' }}>{nm(g)}</span>
+                <span style={{ color: t3, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>{ymd(g.visit_date)}</span>
               </div>
-              <div style={{ fontSize: 12, color: t2 }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: 'var(--warn-text)', fontWeight: 700 }}>· {t.lb_inConsultation}</span> : null}</div>
-              <div style={{ fontSize: 12, color: cyan, marginTop: 2 }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
+              <div style={{ fontSize: 12, color: t2, overflowWrap: 'anywhere' }}>{g.chart_no} · {g.doctor_name || ''}{g.consultation_status === 'in_progress' ? <span style={{ marginLeft: 6, color: 'var(--warn-text)', fontWeight: 700, whiteSpace: 'nowrap' }}>· {t.lb_inConsultation}</span> : null}</div>
+              <div style={{ fontSize: 12, color: cyan, marginTop: 2, overflowWrap: 'anywhere' }}>{(g.lab_orders || []).map(function (o) { return o.order_name; }).join(', ')}</div>
             </div>;
           })}
         </div>
@@ -287,8 +290,8 @@ export default function LabPage() {
           {!sel ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t3 }}>{t.lb_selectHint}</div> : (
             <>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid ' + bd, background: scBg }}>
-                <div style={{ fontWeight: 800, fontSize: 17 }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400 }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: 'var(--warn-text)', border: '1px solid var(--warn-a66)', borderRadius: 4, padding: '1px 6px' }}>{t.lb_inConsultation}</span> : null}</div>
-                {sel.allergies ? <div style={{ marginTop: 4, color: 'var(--danger-text-2)', fontSize: 13 }}>⚠ {sel.allergies}</div> : null}
+                <div style={{ fontWeight: 800, fontSize: 17, overflowWrap: 'anywhere' }}>{nm(sel)} <span style={{ color: t2, fontSize: 14, fontWeight: 400, whiteSpace: 'nowrap' }}>{sel.chart_no} · {ymd(sel.visit_date)}</span>{sel.consultation_status === 'in_progress' ? <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: 'var(--warn-text)', border: '1px solid var(--warn-a66)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap', display: 'inline-block' }}>{t.lb_inConsultation}</span> : null}</div>
+                {sel.allergies ? <div style={{ marginTop: 4, color: 'var(--danger-text-2)', fontSize: 13, overflowWrap: 'anywhere' }}>⚠ {sel.allergies}</div> : null}
               </div>
               {/* panel tabs: All + each panel */}
               <div style={{ padding: '8px 14px', borderBottom: '1px solid ' + bd, display: 'flex', gap: 6, flexWrap: 'wrap' }}>

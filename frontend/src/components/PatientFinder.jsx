@@ -84,10 +84,12 @@ export function PatientFinder(props){
     <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}} onClick={function(e){ if(e.target===e.currentTarget && props.onClose) props.onClose(); }}>
       <div style={{background:pn,border:'1px solid '+bd2,borderRadius:12,width:900,maxWidth:'94vw',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{padding:'12px 16px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontWeight:800,fontSize:16,color:tx}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
-          {selPatient?<span style={{fontSize:13,color:t2}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
+          {/* A long name (50 letters and more) wraps in the room that is left; the title and
+              the close button keep their width, or they fold into two lines beside it. */}
+          <span style={{fontWeight:800,fontSize:16,color:tx,whiteSpace:'nowrap',flexShrink:0}}>🔍 {selPatient ? t.outpatientHistory : t.findPatient}</span>
+          {selPatient?<span style={{fontSize:13,color:t2,minWidth:0,overflowWrap:'anywhere'}}>· {selPatient.chart_no} {selPatient.last_name} {selPatient.first_name}</span>:null}
           <div style={{flex:1}}></div>
-          <button onClick={props.onClose} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13}}>✕ {t.close}</button>
+          <button onClick={props.onClose} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:13,whiteSpace:'nowrap',flexShrink:0}}>✕ {t.close}</button>
         </div>
 
         {!selPatient ? (
@@ -110,10 +112,12 @@ export function PatientFinder(props){
                   {results.map(function(p){
                     return <tr key={p.id} onClick={function(){pickPatient(p)}} style={{borderTop:'1px solid var(--line-soft)',cursor:'pointer'}}
                       onMouseEnter={function(e){e.currentTarget.style.background='var(--accent-a12)'}} onMouseLeave={function(e){e.currentTarget.style.background='transparent'}}>
-                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)'}}>{p.chart_no}</td>
-                      <td style={{padding:'9px 12px',color:tx,fontWeight:700}}>{p.last_name} {p.first_name}</td>
-                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace'}}>{p.mobile || p.phone || '—'}</td>
-                      <td style={{padding:'9px 12px',color:t2}}>{ymd(p.date_of_birth)}</td>
+                      {/* Beside a long name the other columns were squeezed and broke at their
+                          hyphens (26- / 00003, 1990-05- / 05): they stay on one line, the name wraps. */}
+                      <td style={{padding:'9px 12px',fontFamily:'monospace',color:'var(--accent-text)',whiteSpace:'nowrap'}}>{p.chart_no}</td>
+                      <td style={{padding:'9px 12px',color:tx,fontWeight:700,overflowWrap:'anywhere'}}>{p.last_name} {p.first_name}</td>
+                      <td style={{padding:'9px 12px',color:'var(--text-soft)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{p.mobile || p.phone || '—'}</td>
+                      <td style={{padding:'9px 12px',color:t2,whiteSpace:'nowrap'}}>{ymd(p.date_of_birth)}</td>
                       <td style={{padding:'9px 12px',color:t2}}>{p.gender||''}</td>
                     </tr>;
                   })}

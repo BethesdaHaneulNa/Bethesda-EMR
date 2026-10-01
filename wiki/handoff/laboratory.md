@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 긴 이름에서 검사실 목록·환자 머리·환자 찾기 창
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `(이 커밋)` (출발점 `develop` `e8db948`, fast-forward 뒤)
+- **본 자리** (격리 스택, 1366×768, 프랑스어·한국어, 이름 50자 `RAZAFINDRAKOTO Andriamihaja Jean Baptiste Emmanuel` · 86자 `ANDRIANAMPOINIMERINATOMPOKOINDRINDRA Hery Nomenjanahary Tsiorintsoa Fanomezantsoa Mamy`(36자 한 낱말 포함) · 짧은 이름):
+  | 자리 | 고치기 전 | 고친 뒤 |
+  |---|---|---|
+  | 검사 대기·완료 목록의 줄 (`Lab.jsx`) | 50자: 날짜가 「2026- / 10-01」 두 줄. 86자: 줄이 목록보다 넓어져 **목록에 가로 스크롤**, 날짜가 밖으로 밀림 | 이름 3줄·5줄로 줄바꿈(자르지 않음), 날짜·「En consultation / 진료 중」 한 줄, 가로 스크롤 없음(299/299) |
+  | 결과 입력 표 위의 환자 머리 (`Lab.jsx`) | 날짜가 「2026-10- / 01」로 끊김 | 「26-00002 · 2026-10-01」 묶음이 한 줄, 꼬리표 한 줄. 저장 단추는 그대로 창 안(718–758) |
+  | 환자 찾기 창 첫 단계 (`PatientFinder.jsx`, 공용) | 긴 이름이 있으면 **모든 줄**에서 차트번호 「26- / 00003」, 생년월일 「1990-05- / 05」 | 차트번호·전화·생년월일 한 줄, 이름만 줄바꿈 |
+  | 환자 찾기 창 둘째 단계 머리 (공용) | 제목 「Visites du / patient」, 닫기 「✕ / Fermer」 두 줄 | 제목·닫기 한 줄, 이름은 사이에서 줄바꿈 |
+  | 「Dossier (vue)」 창 머리 (`DocumentModal`, 공용) | 이상 없음 — 86자가 한 줄에 들어감 | 안 고침 |
+  | 진료 화면의 🧪 결과 창 머리 (`Consultation.jsx`) | 이상 없음 | 안 고침 |
+  | 오른쪽 결과 표 (`LabResults.jsx`) | 환자 이름이 없음 | — |
+  | 결과지 인쇄 | **검사실에는 결과지 인쇄가 없습니다** (`Lab.jsx`·`LabResults.jsx` 에 인쇄 코드 없음, `documents/` 에 검사 결과 서식 없음) | — |
+- **고친 방법**: 진료 대기 목록(총괄 `e8db948`)과 같은 원칙 — 이름 `minWidth: 0; overflowWrap: 'anywhere'`(낱말 사이에서 줄바꿈, 한 낱말이 칸보다 길 때만 낱말 안에서), 날짜·꼬리표·차트번호·제목·단추 `whiteSpace: 'nowrap'`(+ flex 자리에서는 `flexShrink: 0`). 이름은 어디서도 자르지 않음(`…` 없음). 색은 안 건드림.
+- **바꾼 파일**: `frontend/src/pages/Lab.jsx` · `frontend/src/components/PatientFinder.jsx` · `wiki/modules/laboratory.md`(3.1, 7절 27, 8절) · 이 노트
+- **공용 파일 변경**: **`frontend/src/components/PatientFinder.jsx`** — 모양만(머리 줄 세 군데와 첫 단계 표의 칸 네 군데에 `nowrap`/`overflowWrap`, 주석 두 개). 접수·진료·수납·약국의 환자 찾기도 같이 바뀜. 다른 세션이 같은 자리를 고쳤다면 겹칠 수 있음 — 같은 내용이면 어느 쪽을 써도 됨.
+- **DB 마이그레이션**: 없음 · **번역 키**: 없음 · **다른 세션에 부탁**: 없음
+- **확인한 방법**: 빌드. 격리 스택 9185(develop `e8db948` + 이 변경). 화면 사진 + 화면에서 잰 값(줄 수·높이·가로 넘침). 목록은 대기·완료 두 탭, 환자 찾기는 `RA` 검색 → 86자 환자 → 내원 줄을 눌러 검사가 열리는 것까지. 프랑스어·한국어 모두. 실행 중 EMR(9080)은 건드리지 않음. 스택 내림.
+
 ## 2026-09-30 — 결과 표 「✕」 열 오른쪽 여백 · 어두운 화면 새 색 점검
 
 - **상태**: 확인 요청
