@@ -1089,7 +1089,7 @@ export default {
   px_cancelledViewer: "취소된 오더의 영상입니다. 기록으로 남아 있고, 판독은 더 쓸 수 없습니다.",
   px_readingOnCancelled: "이 영상 검사는 진료실에서 취소되어 판독을 저장할 수 없습니다.",
   px_noStudy: "이 영상 검사는 촬영 목록(워크리스트)으로 보내지 않아 연결된 영상이 없습니다. 판독만 쓸 수 있습니다.",
-  px_linkedByAccession: "장비가 영상 번호를 새로 만들어, 검사 번호(Accession)로 이 오더에 연결했습니다. 영상 속 환자 정보를 한 번 확인하세요.",
+  px_linkedByAccession: "영상의 번호가 이 오더가 준 번호와 다릅니다(장비가 새로 만들었거나, 영상 서버에서 바뀜). 검사 번호(Accession)로 이 오더에 연결했습니다. 영상 속 환자 정보를 한 번 확인하세요.",
   px_orthancUrl: "서버 PC 안에서 EMR이 영상 서버를 부르는 주소 (그대로 두세요)",
   px_orthancPasswordSet: "영상 서버 비밀번호 설정됨 — 영상 창이 로그인 없이 열립니다",
   px_orthancPasswordMissing: "영상 서버 비밀번호가 아직 없습니다. 서버 PC의 PACS 폴더에서 pair-with-emr.ps1을 실행하세요.",

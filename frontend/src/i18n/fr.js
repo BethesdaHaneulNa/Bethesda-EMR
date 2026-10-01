@@ -1089,7 +1089,7 @@ export default {
   px_cancelledViewer: "Images d'une demande annulée. Elles restent au dossier ; aucun nouveau compte-rendu ne peut être enregistré.",
   px_readingOnCancelled: "Cet examen d'imagerie a été annulé en consultation : le compte-rendu ne peut pas être enregistré.",
   px_noStudy: "Cette demande d'imagerie n'a pas été envoyée à la liste de travail des appareils : aucune image n'y est liée. Le compte-rendu peut quand même être saisi.",
-  px_linkedByAccession: "L'appareil a donné son propre numéro d'étude à ces images ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.",
+  px_linkedByAccession: "Ces images ne portent pas le numéro d'étude donné par cette demande (l'appareil a mis le sien, ou il a été changé sur le serveur d'images) ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.",
   px_orthancUrl: "Adresse du serveur d'images vue de l'intérieur du PC serveur (ne pas modifier)",
   px_orthancPasswordSet: "Mot de passe du serveur d'images enregistré — la visionneuse s'ouvre sans connexion",
   px_orthancPasswordMissing: "Pas encore de mot de passe du serveur d'images. Sur le PC serveur, lancez pair-with-emr.ps1 dans le dossier du PACS.",

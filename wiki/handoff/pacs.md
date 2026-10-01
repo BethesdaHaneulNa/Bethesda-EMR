@@ -2,6 +2,56 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 끝난 오더의 영상을 accession으로 되찾기 · Modality 「AS」 확인 · 시술 종류 오더(내시경)가 걸리던 세 곳
+
+- **상태**: 확인 요청
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋 (develop `935e99c`를 ff로 당긴 뒤). **PACS 저장소** — 없음(`main` `b4ba4a3` 그대로)
+- **결정 받아 적음**: 영상 바로잡기(잘못 고른 오더로 찍힌 영상) — **2026-10-01 실장님 「일단 패스」**. (가)·(나) 짓지 않음. 설계 메모 맨 위에 한 줄. `OverwriteInstances`는 켜지 않음.
+- **한 일**:
+  1. **영상을 accession으로 되찾기** (새 파일 `backend/src/routes/pacs.relink.js`, `GET /viewer-url`이 답을 만들기 전에 부름):
+     - 그 환자의 끝난 영상 오더들(연 오더 먼저, 최근 60건까지)의 번호를 **한 번의 물음**(`/tools/find`, `StudyInstanceUID` 목록)으로 영상 서버에 묻고, **없는 것만** accession으로 다시 찾음.
+     - 조건은 브리지와 같음: 그 accession의 검사가 **정확히 하나**이고 Orthanc가 **안정됨**이라고 할 때만(고친 뒤 1분쯤). 둘 이상이면 잇지 않음.
+     - **환자 번호 대조를 다시**(`patientCheck` — `/study-arrived`와 같은 함수로 묶음). 다르면 `mismatch` → 경고, 비교 목록에서 빠짐.
+     - 고치는 것은 `worklist_log`의 `image_study_uid`·`orthanc_study_id`·`image_count`·`image_patient_id`·`image_patient_name`·`patient_check`뿐(워크리스트가 준 `study_instance_uid`는 남음). **영상 서버에는 아무것도 쓰지 않음.**
+     - 흔적: **변경 기록** 한 줄(동작 `pacs.study.relink`, 그 환자, 요약 「accession - 검사 이름」, 전→후 `study_uid`·`image_count`·`image_patient_id`·`patient_check` 중 달라진 것) + 서버 로그 한 줄. 사람 칸은 그 영상 창을 연 사람.
+     - 영상 서버에 물을 수 없거나 오류가 나면 아무것도 하지 않고 창은 전처럼 열림(물음마다 2초까지).
+     - 그 뒤 영상 창 위에 「접수번호로 연결됨」 한 줄(`px_linkedByAccession`)이 붙음 — 글을 두 경우(장비가 번호를 새로 만듦 / 영상 서버에서 바뀜)에 다 맞게 고침.
+  2. **Modality 「AS」**(실장님: 현지 직장경) — 격리에서 오더부터 화면까지 한 번: 아래 「확인한 방법」. EMR·브리지·Orthanc 어디에도 Modality 값의 목록·검사가 없음(칸 10자). **걸리는 곳 없음** — 단 3번.
+  3. **찾아서 고친 것 — 종류가 `procedure`(시술)인 오더**: 기본 오더 코드의 내시경(`E1` Gastroscopy·`E2` Colonoscopy, Modality `ES`)은 종류가 `imaging`이 아니라 `procedure`. 워크리스트·영상 도착·🖼 단추까지는 됐는데 **판독 저장이 404 「Imaging order not found」**, **「영상/판독」 목록에 안 나옴**, **비교·체크 비교에서 빠짐**. 직장경 오더 코드도 시술로 만들면 같은 일. → `pacs.routes.js`에 `isExam`(종류가 imaging **또는 워크리스트로 간 오더**)을 두고 그 세 곳에 씀. 워크리스트로 가지 않은 다른 종류(검사실·진찰료)는 전과 같음(404·목록에 없음).
+- **바꾼 파일**: `backend/src/routes/pacs.relink.js`(새), `backend/src/routes/pacs.routes.js`, `backend/src/routes/pacs.viewer.js`(`orthancJson`을 내보냄 — 한 줄), `backend/src/utils/audit.js`, `frontend/src/i18n/{ko,en,fr}.js`, `wiki/modules/pacs.md`(2.5·4절·7절 P-31·P-32·8절), `wiki/manual-fr/pacs.md`(6절·메시지 표·«À ne pas faire»), `wiki/reference/study-reassign-design.md`, `wiki/reference/changelog-1.5.0/pacs.md`, `wiki/reference/device-connection-onsite.md`, `wiki/handoff/pacs.md`
+- **공용 파일 변경**: **`backend/src/utils/audit.js`** — `ACTIONS`에 `PACS_STUDY_RELINK: 'pacs.study.relink'` 한 줄(+주석 3줄). 다른 줄은 안 건드림.
+- **DB 마이그레이션**: 없음
+- **번역 키** (px_ 구역): **글을 바꾼 키** `px_linkedByAccession` — fr «Ces images ne portent pas le numéro d'étude donné par cette demande (l'appareil a mis le sien, ou il a été changé sur le serveur d'images) ; elles ont été liées à cette demande par le numéro d'accession. Vérifiez l'identité dans les images.» / ko 「영상의 번호가 이 오더가 준 번호와 다릅니다(장비가 새로 만들었거나, 영상 서버에서 바뀜). 검사 번호(Accession)로 이 오더에 연결했습니다. …」 / en 같은 뜻. 새 키 없음.
+- **확인한 방법** (격리 EMR 9188 + PACS 9198 + 장비 흉내, 가짜 환자만):
+  - **되찾기** (환자 3, 오더 53 Chest PA 2장): Orthanc에서 관리 화면의 기본 선택과 같은 요청(`Keep: []`, `KeepSource: false`)으로 고침 → 원본 없어짐·새 번호.
+    - 바로 열면(아직 안정되지 않음): 옛 번호 그대로, 창에 「…le serveur d'images ne les a pas」, 기록 변화 없음.
+    - 63초 뒤 다시 열면: **새 번호로 열림**, Stone에 그림(고친 이름 「Thorax face 2」), 창 위에 접수번호 안내 한 줄, `worklist_log.image_study_uid` = 새 번호, 변경 기록 한 줄. 또 열어도 기록은 한 줄(다시 하지 않음).
+    - 같은 환자의 다른 오더(51)에서 열면 비교 주소에 53의 **새 번호**가 들어 있고 옛 번호는 없음. 체크 비교 51+53 → 200. 새 번호의 영상 자료 200, 옛 번호 403.
+    - 이미 「접수번호로 연결」된 검사를 한 번 더 고쳐도 다시 되찾음(기록 둘째 줄).
+  - **accession이 둘 → 안 이음** (오더 51): 새 번호로 고친 뒤 그 검사의 「사본」을 만듦 → 같은 accession 둘, 원본 없음 → 열어도 옛 번호 그대로·안내 그대로·기록 변화 없음.
+  - **환자 번호가 다른 검사** (오더 42: 고치면서 환자 번호를 다른 값으로): 되찾되 `patient_check` match → **mismatch**, 목록에 「⚠ identité à vérifier」, 영상 창 `images.patient_check: mismatch`, 53의 비교 목록·쿠키에서 빠짐, 체크 비교 42+53 → 409. 변경 기록에 전→후 환자 번호·판정.
+  - **영상 서버 꺼짐**: `viewer-url` 10~15ms로 답하고 창에 「Le serveur d'images ne répond pas」.
+  - **빠르기**: 영상이 다 있을 때 `viewer-url` 10~15ms(전과 같은 수준 — 환자 1, 영상 30건).
+  - **변경 기록 화면의 자료**: `GET /admin/audit?action=pacs.study.relink` → 3줄(module `pacs`, 사람·환자·요약·전후). 걸러 보지 않은 목록에도 나옴.
+  - **AS**: 오더 코드 `RS1` Rectoscopie(종류 imaging, Modality AS, 워크리스트 켬)를 설정 API로 만들어 오더 → 피드에 `('261001-57', 'AS', 'Rectoscopie')` → 장비 흉내가 **Modality=AS로 물음 → 1명** / MR로 물음 → 0명 → 컬러 영상 3장(VL Endoscopic 2 + Secondary Capture 1, RGB) C-STORE 200 → 브리지 「study arrived … 3 instances, patient match, found by uid」 → EMR `completed`·3장·match → 화면: 「영상/판독」 목록 첫 줄 `AS | Rectoscopie | 3 image(s)`, 종류 고르기 「Type : tous · AS · US · CR · ES」, 영상 창(Stone)에 컬러 그림 두 묶음.
+  - **device-watch**(-Detail, ko, 격리 컨테이너): 「장비가 목록을 물어봄 — AE: XRAY01 · 조건: Modality=AS → 1명 보냄」, 「조건: Modality=MR → 0명 — 장비가 MR 검사만 물음. 지금 목록: US 6, CR 5, AS 1, ES 1」, 영상 뒤 「영상 받음 — 3장 … ↳ EMR 오더와 연결됨: Rectoscopie … ↳ 환자번호 맞음 … ↳ EMR에 기록됨」, 끝난 뒤 다시 물으면 「→ 0명 — 장비가 AS 검사만 물음. 지금 목록: US 6, CR 5, ES 1」 — **장비가 물은 값을 보여 줌**. 끝난 뒤 Orthanc 로그 수준 `default`로 돌아옴. `device-watch.ps1`은 고치지 않음.
+  - **시술 종류(오더 54 Gastroscopy, ES, procedure)**: 고치기 전 — 판독 저장 404, 목록에 없음. 고친 뒤 — 영상 2장(VL Endoscopic) 도착, 판독 저장 200, 목록에 `ES | Gastroscopy (GFS) | 2 image(s) | ✓`, 57(AS)의 비교 목록에 들어감, 체크 비교 54+57 → 200. 검사실 오더(L01)는 판독 저장 404·목록에 없음(전과 같음).
+  - **회귀**: 중계 15/15, 비교 32/32, 체크 비교 23/23. (옛 중계 검사 둘은 「같은 환자의 다른 검사」를 남의 검사로 쓰고 있어 비교 기능 뒤로는 맞지 않았음 — 다른 환자의 검사로 바꿈. 「검사가 하나뿐인 환자」도 환자 4로 바꿈. 제품은 안 바뀜.)
+- **확인 못 한 것**:
+  - 관리 화면의 Modify 창을 **화면에서 눌러** 고친 뒤의 되찾기(같은 요청을 REST로 보냄).
+  - 진짜 AS 장비·진짜 직장경 영상(형식·압축이 다를 수 있음 — device-watch가 보여 줌).
+  - 설정 화면에서 Modality를 직접 입력하는 것(설정 세션이 고치는 중 — 여기서는 API로 `AS`를 넣음).
+  - 변경 기록 화면(설정 → Journal)을 눈으로(자료는 API로 봄). `pacs.study.relink`의 글·칸 이름은 번역이 없어 **저장된 그대로** 나옴(설정 세션의 `settingsAudit.js`가 그렇게 하게 되어 있음).
+  - 수납 화면의 목록(같은 길 `readings/patient` — 내시경 줄이 거기에도 나옴).
+  - en·ko 화면의 접수번호 안내 글(fr만 눈으로).
+- **알아 둘 것**:
+  - 되찾은 검사는 그 뒤로 「접수번호로 연결됨」 안내가 계속 붙습니다(워크리스트가 준 번호와 영상의 번호가 다르므로 — 사실 그대로).
+  - 되찾지 못한 검사(accession 둘·없음)는 같은 환자의 비교 목록(허락 목록)에 옛 번호로 남습니다 — 전과 같음. 그때 Stone 목록이 어떻게 보이는지는 보지 않았습니다.
+  - 영상 서버가 **꺼진 PC**에 있어 연결 자체가 안 되면 `viewer-url`이 2초까지 늦어질 수 있습니다(같은 PC에서 컨테이너만 꺼진 경우는 즉시).
+- **다른 세션에 부탁**:
+  - **설정**: 변경 기록 화면에 `pacs.study.relink`의 글(`se_act_…`)과 칸 이름(`study_uid`·`image_count`·`image_patient_id`·`patient_check`) 번역, `wiki/03-change-log.md`의 동작 목록에 한 줄. module 값은 `pacs`(화면의 모듈 거르기에 PACS가 있는지). 오더 코드의 Modality를 직접 입력하게 할 때 — **종류가 시술(procedure)이어도 워크리스트로 가면 PACS 쪽은 이제 영상 검사로 다룹니다**.
+  - **진료**: `Consultation.jsx`의 `cancellable(o)`이 `lab`·`imaging`만이라, 영상이 온 **시술 종류** 오더(내시경)는 지울 수도(결과 있음) 「취소」할 수도 없습니다. 영상 창의 판독 저장은 이제 됩니다.
+
 ## 2026-10-01 — Orthanc 관리 화면의 Modify를 눌러 확인 · 설계 메모를 좁힘 · 설명서 주의 (문서만)
 
 - **상태**: 확인 요청 (영상 바로잡기는 **결정 대기** — 짓지 않음)

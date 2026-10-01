@@ -1098,7 +1098,7 @@ export default {
   px_cancelledViewer: "These images belong to a cancelled order. They are kept as a record; no new reading can be saved.",
   px_readingOnCancelled: "This imaging order was cancelled in the consultation room, so the reading cannot be saved.",
   px_noStudy: "This imaging order was not sent to the device worklist, so no images are linked to it. You can still write the reading.",
-  px_linkedByAccession: "The device gave these images its own study number; they were linked to this order by accession number. Check the patient details in the images.",
+  px_linkedByAccession: "These images do not carry the study number this order gave (the device made its own, or it was changed on the image server); they were linked to this order by accession number. Check the patient details in the images.",
   px_orthancUrl: "Address the EMR uses inside the server PC to call the image server (leave as is)",
   px_orthancPasswordSet: "Image server password set — the image window opens without a login",
   px_orthancPasswordMissing: "No image server password yet. On the server PC, run pair-with-emr.ps1 in the PACS folder.",

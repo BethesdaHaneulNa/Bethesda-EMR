@@ -23,6 +23,22 @@ stayed black until the window was resized. Stone's own red line *Not for diagnos
 shown. The **PACS web/viewer address** field in Settings → Order Feed is kept but marked unused, so an
 older backup restores cleanly.
 
+### Images found again after a study was changed in Orthanc; endoscopies in the imaging list
+
+Correcting a study in Orthanc's own administration screen (**Modify**, with its default choice) gives it a new
+study number and deletes the original: the EMR kept saying **N image(s)** while the image window said the
+server did not have them, for good. When an exam is opened the EMR now checks that the image server still
+has the patient's studies under the numbers it noted, and looks a missing one up by accession number. It
+takes it only when exactly one study carries that number and Orthanc calls it stable (about a minute after
+the change); it compares the patient number in the images with the chart again, and writes a line in the
+change log (`pacs.study.relink`). Nothing is written to the image server. The manual still says not to use
+that screen.
+
+An order sent to the devices is now an imaging exam whatever its billing type: endoscopies (order codes of
+type *procedure* with a modality) could be opened with the image button but their reading could not be saved,
+and they were missing from the patient's imaging list and from comparisons. A modality the EMR had never
+seen ("AS", a rectoscope on site) was checked from the order to the viewer: nothing filters on its value.
+
 ### Comparing with an earlier exam
 
 Two chest films of different dates could not be put side by side: the image window was only allowed the

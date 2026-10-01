@@ -6,6 +6,7 @@ const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { presentedToken, bridgeTokenMatches, usableBridgeToken } = require('./pacs.token');
 const { ORDER_CANCELLED } = require('./pacs.cancel');
 const viewer = require('./pacs.viewer');
+const { relinkLostStudies, patientCheck } = require('./pacs.relink');
 const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
@@ -148,6 +149,13 @@ const WL_COLUMNS = `accession_no, study_instance_uid, images_received_at, image_
 const ORDER_CANCEL_COLUMNS = `oi.status AS order_status,
        to_jsonb(oi)->>'cancelled_at' AS cancelled_at, to_jsonb(oi)->>'cancel_reason' AS cancel_reason`;
 
+// Which orders are imaging exams here: those of the imaging type, and any other order
+// that went to the device worklist. An endoscopy is priced as a procedure (order codes
+// E1, E2; a rectoscope on site) and still sends pictures: the consultation screen gives
+// it the image button, so it must also be in the patient's list, take a reading and be
+// comparable (2026-10-01; before, saving its reading answered "Imaging order not found").
+const isExam = a => `(${a}.code_type = 'imaging' OR EXISTS (SELECT 1 FROM worklist_log wx WHERE wx.order_item_id = ${a}.id))`;
+
 function imagesOf(w) {
   if (!w || !w.images_received_at) return null;
   return {
@@ -184,7 +192,7 @@ async function pickedOrders(raw) {
   if (ids.length < 2 || ids.length > MAX_PICKED || ids.some(x => !/^[0-9]{1,9}$/.test(x))) return null;
   const r = await pool.query(
     `SELECT oi.id, oi.patient_id FROM order_item oi JOIN visit v ON v.id = oi.visit_id
-      WHERE oi.id = ANY($1::int[]) AND oi.code_type = 'imaging' ORDER BY v.visit_date DESC, oi.id DESC`, [ids.map(Number)]);
+      WHERE oi.id = ANY($1::int[]) AND ${isExam('oi')} ORDER BY v.visit_date DESC, oi.id DESC`, [ids.map(Number)]);
   if (r.rows.length !== ids.length || r.rows.some(x => x.patient_id !== r.rows[0].patient_id)) return null;
   return { opened: r.rows[0].id, others: r.rows.slice(1).map(x => x.id) };
 }
@@ -195,7 +203,7 @@ async function comparableStudies(orderItemId) {
             (v.visit_date, oi.id) < (mv.visit_date, me.id) AS older
        FROM order_item me
        JOIN visit mv ON mv.id = me.visit_id
-       JOIN order_item oi ON oi.patient_id = me.patient_id AND oi.id <> me.id AND oi.code_type = 'imaging'
+       JOIN order_item oi ON oi.patient_id = me.patient_id AND oi.id <> me.id
        JOIN visit v ON v.id = oi.visit_id
        JOIN LATERAL (SELECT w.* FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) wl ON true
       WHERE me.id = $1 AND oi.status IS DISTINCT FROM 'cancelled'
@@ -237,6 +245,10 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
     }
     const oid = picked ? picked.opened : req.query.order_item_id;
     if (oid) {
+      // Images the server no longer has under the number noted here (a study corrected
+      // in Orthanc's own screen gets a new one) are found again by accession first, for
+      // this order and the patient's others - what follows reads the corrected lines.
+      await relinkLostStudies(req, oid);
       const w = await pool.query(
         `SELECT ${WL_COLUMNS}, body_part FROM worklist_log WHERE order_item_id = $1 ORDER BY id DESC LIMIT 1`, [oid]);
       if (w.rows[0]) {
@@ -309,11 +321,11 @@ router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation
   try {
     const r = await pool.query(
       `UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW()
-        WHERE id = $3 AND code_type = 'imaging' AND status IS DISTINCT FROM 'cancelled' RETURNING id`,
+        WHERE id = $3 AND ${isExam('order_item')} AND status IS DISTINCT FROM 'cancelled' RETURNING id`,
       [req.body.result_text || '', req.user.id, req.params.orderItemId]
     );
     if (!r.rows.length) {
-      const o = await pool.query(`SELECT status FROM order_item WHERE id = $1 AND code_type = 'imaging'`, [req.params.orderItemId]);
+      const o = await pool.query(`SELECT status FROM order_item WHERE id = $1 AND ${isExam('order_item')}`, [req.params.orderItemId]);
       if (o.rows[0] && o.rows[0].status === 'cancelled') return res.status(409).json({ error: ORDER_CANCELLED });
       return res.status(404).json({ error: 'Imaging order not found' });
     }
@@ -338,7 +350,7 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
          LEFT JOIN staff vd ON vd.id = v.doctor_id
          LEFT JOIN department d ON d.id = v.department_id
          LEFT JOIN LATERAL (SELECT ${WL_COLUMNS} FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY id DESC LIMIT 1) wl ON true
-        WHERE oi.patient_id = $1 AND oi.code_type = 'imaging'
+        WHERE oi.patient_id = $1 AND ${isExam('oi')}
         ORDER BY v.visit_date DESC, oi.id DESC`,
       [req.params.patientId]
     );
@@ -500,11 +512,8 @@ router.post('/image-backup-report', async (req, res) => {
 // whose patient was typed or edited on the device. It cannot catch a
 // technician who picked the wrong patient from the worklist: those images carry
 // that patient's own details and look correct -- which is why finished entries
-// now leave the list.
-function samePatientId(a, b) {
-  return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
-}
-
+// now leave the list. (patientCheck: pacs.relink.js, which makes the same check when
+// it finds a study again.)
 router.post('/study-arrived', async (req, res) => {
   let cfg;
   try { cfg = await ensureConfig(); }
@@ -540,7 +549,7 @@ router.post('/study-arrived', async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Study does not belong to this worklist entry' });
     }
-    const check = !imagePatientId ? 'missing' : (samePatientId(imagePatientId, row.chart_no) ? 'match' : 'mismatch');
+    const check = patientCheck(imagePatientId, row.chart_no);
     await client.query(
       `UPDATE worklist_log
           SET status = CASE WHEN status = 'cancelled' THEN status ELSE 'completed' END,

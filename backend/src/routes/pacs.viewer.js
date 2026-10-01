@@ -427,4 +427,4 @@ router.all('*', async (req, res) => {
   upstream.end();
 });
 
-module.exports = { router, grantViewerCookie, _test: { sign, verify, cleanPath, studyOf } };
+module.exports = { router, grantViewerCookie, orthancJson, _test: { sign, verify, cleanPath, studyOf } };
