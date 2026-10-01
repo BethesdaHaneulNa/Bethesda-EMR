@@ -20,6 +20,7 @@
 | 직원 계정을 만듦 / 고침 / 권한을 바꿈 / 비밀번호를 바꿈 | `settings.staff.create` · `.edit` · `.permissions` · `.password` | 설정 |
 | 약 가격을 바꿈 (가격이 바뀔 때만 — 이름·재고 표시 같은 다른 칸은 남기지 않음) | `settings.drug.price` | 설정 (`admin.routes.js` 약 저장) |
 | 오더 코드(진료비·검사·영상·처치) 가격을 바꿈 (가격이 바뀔 때만) | `settings.order.price` | 설정 (`admin.routes.js` 오더 코드 저장) |
+| 오더 코드의 「수납에서 금액을 고칠 수 있음」을 켜거나 끔 (2026-10-01 결정 — 창구에서 금액을 고칠 수 있게 여는, 돈에 관한 설정. 바뀔 때만 한 줄: `price_editable` 꺼짐 → 켜짐. 켠 채로 새로 만든 코드도 한 줄(앞 값 없음). 종류를 진료비 · 발급비가 아닌 것으로 바꿔 꺼진 것도) | `settings.order.price_editable` | 설정 (`admin.routes.js` `auditPriceEditable`) |
 | 상용구 분류를 만듦 / 이름을 바꿈 / 지움 (순서 바꾸기와 상용구 글 수정은 남기지 않음. 지울 때 상용구를 옮겼으면 어디로 몇 개) | `settings.phrase.category` | 설정 (`admin.routes.js` 분류 길, 2026-10-01) |
 | 서류를 발행함 / 취소함 (의뢰서·진단서·수술기록지·원외 처방전 등. 초안 인쇄는 남기지 않음) | `documents.issue` · `documents.void` | 진료 (`document.routes.js`) |
 

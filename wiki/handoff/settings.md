@@ -2,6 +2,37 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 「수납에서 금액을 고칠 수 있음」을 켜고 끈 것도 로그에 (결정)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `1298449` merge 위)
+- **결정**(총괄이 전함, 2026-10-01): 켜고 끈 것도 로그에 남긴다 — 창구에서 금액을 고칠 수 있게 여는, 돈에 관한 설정. 가격 변경 줄과 같은 방식으로 한 줄(누가 · 어느 코드 · 꺼짐 → 켜짐).
+- **무엇을**
+  - **action** `settings.order.price_editable`(`utils/audit.js` `ORDER_PRICE_EDITABLE` — 공용 파일에 한 줄). entity `order_code`, 요약 「코드 이름」, `before`/`after` = `{ price_editable: true|false }`. 환자·내원 없음.
+  - **언제 남는가**(`admin.routes.js` `auditPriceEditable`): 고칠 때 값이 **바뀌면** 한 줄(가격 줄과 같은 트랜잭션·같은 잠금). 한 번의 저장이 가격과 체크를 둘 다 바꾸면 줄도 둘. **켠 채로 새로 만든 코드**도 한 줄(앞 값 없음 → 화면에 「켜짐」만) — 가격은 새 코드에 줄을 남기지 않지만, 이것은 그 순간부터 창구에서 금액을 칠 수 있게 되는 일이라 남김. 종류를 진료비 · 발급비가 아닌 것으로 바꿔 서버가 끈 것도 한 줄. 바뀌지 않은 저장·끈 채로 만든 코드는 줄 없음.
+  - **로그 탭**(`settingsAudit.js`): 종류 「오더 코드의 「수납에서 금액 고치기」를 켜거나 끔 / Order code: amount editable at payment turned on / off / Code d'acte : montant modifiable au paiement activé / désactivé」(종류 거르개에도). 칸 이름은 편집 창의 체크 글자 그대로(`se_priceEditable`), 값 「켜짐 / 꺼짐 · Enabled / Disabled · Activé / Désactivé」(`se_on`/`se_off`).
+- **같이 고친 것 — 로그 읽기 API의 종류 거르기**: `GET /admin/audit?action=`이 이름을 `^[a-z.]+$`로 검사해서 **밑줄이 든 이름**(이번 것이 처음)은 거르기가 말없이 빠지고 **모든 줄**이 나왔음. 시험이 「줄 수가 하나 더 많다」로 잡음(가격 줄까지 세어짐). `^[a-z_.]+$`로. 화면의 종류 거르개에서 이 종류를 고르면 그 줄만 나오는 것 확인.
+- **시험** `settings.ordercodes.mjs` 31 → 37: 「켜고 끄는 것이 가격 줄을 만들지 않는다」는 그대로 두고(가격 줄은 가격이 바뀔 때만), 「켜고 끄는 것이 로그 줄을 만든다」를 넣음 — 켠 채로 만든 코드의 줄(앞 값 없음, 코드·사람) · 안 켠 새 코드는 줄 없음 · 끄기 한 줄(그 앞의 「유지」 저장은 줄 없음) · 켜기 한 줄 · 종류를 바꿔 꺼진 것 한 줄 · 가격과 체크를 한 번에 바꾸면 가격 줄 하나 + 체크 줄 하나.
+- **설명서**: 「Lire le Journal」 6번과 오더 코드 절의 체크 설명에 한 문장씩. `wiki/03-change-log.md`에 한 줄.
+- **바꾼 파일**: `backend/src/utils/audit.js`(한 줄) · `backend/src/routes/admin.routes.js` · `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 한 줄씩) · `backend/test/settings.ordercodes.mjs` · `wiki/03-change-log.md` · `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · 이 노트. DB 변경 없음(action 이름 29자, 칸은 40자).
+- **확인한 방법**: `node --check` 셋, `npm run build`. 새 격리 스택(9187): `settings.ordercodes.mjs` 37개(두 번 이어서), `settings.drugprice.mjs` · `settings.auditdocs.mjs` · `settings.audit.mjs` 통과. 로그 탭 — 한국어: 종류 거르개에서 고르면 그 줄만, 「수납에서 금액을 고칠 수 있음: 꺼짐 → 켜짐」. 프랑스어: 「Montant modifiable au paiement: Désactivé → Activé」, 켠 채로 만든 코드는 「Activé」만. 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
+## 2026-10-01 — 문서: 영상 종류 목록이 코드만 보임 (총괄 `6bbfe9d` 뒤 맞춤)
+
+- **상태**: 확인 요청 — 문서와 주석만
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `6bbfe9d` 포함 merge 위)
+- **배경**: 실장님 「장비 모달리티 옆에 내시경·혈관경 이런 설명을 뭣하러 — 그냥 US, CR, AS 심플하게」 → 총괄이 `settingsModality.jsx`의 목록을 코드만 보이게 바꿈(풀이는 option의 title).
+- **맞춘 것**
+  - 설명서 「Ajouter ou corriger un acte」 3번: 「(US — échographie, CR — radiographie, ES — endoscopie…)」 → 「(la liste montre les codes seuls : US pour l'échographie, CR pour la radiographie, ES pour l'endoscopie…)」 — 관리자가 어느 코드가 무엇인지는 설명서에서 읽을 수 있게 남김.
+  - 4번의 **「Autre — saisir la valeur…」**: 화면의 글자(`se_modOther`)가 그대로라 바꾼 것 없음(굵은 글씨 대조 스크립트로 확인).
+  - 모듈 위키 2.9 표의 Modalité 줄과 3-9b의 화면 설명을 「코드만, 풀이는 올려 두면」으로.
+  - `settingsModality.jsx` 머리말 주석 두 줄(「each with a word on what it is」가 더는 맞지 않아서). 동작은 건드리지 않음.
+- **알아둘 것**: 풀이(title)는 마우스를 올려야 나오고, 펼친 목록 안에서는 브라우저에 따라 안 나올 수 있음. 「AS」가 무엇인지는 창 아래 안내(`se_modHint`)와 설명서 4번에 남아 있음.
+- **바꾼 파일**: `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · `frontend/src/pages/settingsModality.jsx`(주석) · 이 노트
+- **확인한 방법**: `npm run build`, 설명서 대조 스크립트. 화면은 총괄이 바꾼 것이라 다시 띄우지 않음.
+- **앞 항목과 엇갈린 것**: 총괄의 이 알림은 「합친 뒤 3)을 이어서」였는데 3)은 이미 `54c34f2`로 보고함(메시지가 엇갈림).
+
 ## 2026-10-01 — 오더 코드 창: 「수납에서 금액을 고칠 수 있음」 체크 (`price_editable`, 실장님 요청 3번)
 
 - **상태**: 확인 요청

@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 수납 화면에서 검사결과 창을 열 수 있게: 결과 읽기에 payment 권한
+
+- **상태**: 확인 요청
+- **커밋**: session/laboratory `d740fb0` (출발점 `develop` `9f64a19`, fast-forward 뒤)
+- **계기**: 실장님(2026-10-01, 총괄 전달) — 검사실 화면에서 이 창을 여는 것은 「굳이 필요 없음」(안 넣음, lab 의 서류 발행 권한도 그대로). 대신 「수납에도 이 버튼 필요해 — 피검사 결과 뽑아 줄 일이 분명히 있을 거야」. 단추는 수납 세션이 답니다.
+- **고친 것**: `GET /api/lab/patient/:patientId/results` 가 `consultation` · `lab` 에 더해 **`payment`** 도 통과(읽기). 그 밖의 검사실 길(`/lab/day`, 결과 저장 등)은 그대로 lab 만.
+- **수납 세션께 — 쓰는 법**
+  1. `import { LabResultsWindow } from '../components/LabResults.jsx';`
+  2. 열림 상태 하나(`labOpen`)와 단추 하나: `<button onClick={function(){ if(sel) setLabOpen(true); }} disabled={!sel} style={toolBtn()}>🧪 {t.labResultsTitle}</button>` — 제목 글자는 있는 키 `t.labResultsTitle`(검사결과 / Résultats labo / Lab Results).
+  3. `{labOpen && sel ? <LabResultsWindow patient={{ id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name }} onClose={function(){ setLabOpen(false); }} /> : null}`
+  - props 는 **환자와 닫기 둘뿐**: `patient { id, chart_no, last_name, first_name }`, `onClose()`. **내원은 넘기지 않습니다** — 창은 그 환자의 모든 날짜를 보여 주고, 발행하는 서류의 내원은 창이 스스로 정함(체크한 결과가 한 내원 것이면 그 내원, 여러 내원이면 비움). 창이 부르는 것: `GET /lab/patient/:id/results`, 인쇄할 때 `GET /admin/clinic` · `GET /patients/:id` · `POST /documents` — 모두 payment 권한으로 됨(확인).
+  - 발행한 결과지는 수납 화면의 **📄 Documents** 창 기록에 나옴(다시 인쇄·취소).
+- **바꾼 파일**: `backend/src/routes/lab.routes.js`(권한 한 줄 + 주석) · `wiki/modules/laboratory.md`(4절, 8절) · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **본 것** (격리 스택 9185, 1366×768)
+  - 권한: payment 만 가진 계정 200(61줄) · lab 간호사 200 · 접수만 403 · 약국만 403 · 토큰 없음 401. payment 계정으로 `/lab/day` 403, 결과 저장 403(그대로 닫혀 있음), `/admin/clinic` 200, `/patients/:id` 200.
+  - 화면: **payment 만 가진 계정으로 로그인**(메뉴에 Paiement 만) → 수납 화면에서 🔍 환자 찾기로 RAKOTO Jean 의 내원을 열고 → (시험용으로 잠깐 단 단추로) 창을 엶 → 표(날짜 8칸·21줄) → 날짜 2개 체크 「Imprimer (2)」 → 미리보기 → 「Émettre et imprimer」 → 「Émis : D26-00001」, 발행자 = 그 수납 계정, 수납 화면 📄 Documents 창 기록에 나옴. **시험용 단추는 커밋하지 않았습니다**(`Payment.jsx` 는 되돌림 — 수납 세션 몫).
+  - `node --check` · 빌드.
+- **안 본 것**: 수납 세션이 단 실제 단추(아직 없음). 수납 대기 목록에서 고른 환자(시험 환자가 목록에 없어 환자 찾기로 엶 — `sel` 의 칸 이름은 같음).
+
 ## 2026-10-01 — 검사결과 창: 날짜 체크 → 결과지 인쇄 · 종류 · 찾기 · 창 틀 통일
 
 - **상태**: 확인 요청

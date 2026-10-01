@@ -39,6 +39,8 @@ export var AUDIT_ACTIONS = {
   // price only, before -> after (decision 2026-09-30 (나)); no patient
   'settings.drug.price': 'se_act_drugPrice',
   'settings.order.price': 'se_act_orderPrice',
+  // "the amount can be changed at payment" turned on or off for a fee code (decided 2026-10-01)
+  'settings.order.price_editable': 'se_act_orderPriceEditable',
   // a phrase category made, renamed or removed (name, status, phrases moved)
   'settings.phrase.category': 'se_act_phraseCategory',
   // documents (decision 2026-09-30 (다)): issued and voided; the document's content never comes here
@@ -73,6 +75,8 @@ var FIELDS = {
   quantity: 'se_fld_quantity', total_qty: 'se_fld_totalQty', unit_price: 'se_fld_unitPrice', memo: 'se_fld_memo',
   // settings: an order code's price (price_clinic is the one the payment screen bills)
   price_clinic: 'se_fld_priceClinic', price: 'se_fld_priceList',
+  // the tick of the order-code window, by its own label; on / off
+  price_editable: 'se_priceEditable',
   // documents (document.routes.js): number, which document, its language; voiding
   doc_no: 'se_fld_docNo', template_code: 'se_fld_template', lang: 'se_fld_docLang',
   voided: 'se_fld_voided', void_reason: 'se_fld_voidReason',
@@ -180,6 +184,7 @@ export function auditValue(t, field, v, ctx) {
   // the language a document was printed in, in its own name
   if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
   if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
+  if (field === 'price_editable' && typeof v === 'boolean') return v ? (t.se_on || '✓') : (t.se_off || '✗');
   // moved images: put under the other order, the two orders' images exchanged, or the
   // correction made again after a restore
   if (field === 'kind' && (v === 'move' || v === 'swap' || v === 'reapply')) return t['se_mvk_' + v] || v;

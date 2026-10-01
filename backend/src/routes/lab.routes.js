@@ -314,10 +314,13 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
   } finally { client.release(); }
 });
 
-// ── all lab results for a patient (doctors view + the lab's own screen) ──
-// Only Consultation.jsx and Lab.jsx read this. Left open to every logged-in
-// account it also handed a patient's full result history to reception.
-router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab'), async (req, res) => {
+// ── all lab results for a patient (the lab's own screen and the lab results window) ──
+// Read by Lab.jsx and by the lab results window (LabResultsWindow), which the
+// consultation screen opens and, since 2026-10-01, the payment screen too: the desk
+// hands a patient a printed results sheet (director). Reading only - a results sheet is
+// issued through /api/documents, which the payment permission already may do. Left open
+// to every logged-in account it also handed a patient's full result history to reception.
+router.get('/patient/:patientId/results', permMiddleware('consultation', 'lab', 'payment'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT lr.*, oc.code AS panel_code, oc.name AS panel_name,
