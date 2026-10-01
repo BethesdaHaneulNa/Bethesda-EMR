@@ -391,8 +391,6 @@ export default {
   cs_noteUnsaved: "저장 안 됨",
   cs_noteDraftBack: "이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.",
   cs_noteUnsavedSwitch: "내 진료 기록을 아직 저장하지 않았습니다.\n확인: 저장하고 다른 환자를 엽니다.\n취소: 이 환자에 남습니다.",
-  cs_noteToday: "오늘",
-  cs_noteThisVisit: "이 내원",
   cs_noteNone: "아직 기록 없음",
   cs_noteYou: "(나)",
   cs_noteEdited: "수정 {time}",

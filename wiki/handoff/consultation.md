@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-01 — 정리: 차트 머리줄은 날짜와 과·의사만 (「오늘 / 이 내원」에 딸린 것 지움)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `9a7eb55`를 merge한 뒤(`cb5315f` 전과 창은 이미 `13c63d5`로 합쳐져 있어 따로 올립니다)
+- **한 일**: 실장님 결정(「그냥 날짜만」)으로 총괄이 머리줄의 글자를 뺀 뒤 남은 것을 지웠습니다.
+  - 번역 키 `cs_noteToday`·`cs_noteThisVisit`(ko·en·fr) — 다른 곳에서 쓰지 않음(grep 0건).
+  - `Consultation.jsx`의 `consult.client_day`와 그 주석.
+  - `consult.routes.js` `POST /`의 `visit_is_today`와 `is_today` 계산·주석 — 다른 쓰임 없음. 내원 조회는 전의 `SELECT status, visit_date …`로 돌아감.
+  - 문서: 모듈 2.2·2.5·3.1·8, 설명서 fr §3-4·§11-1·「Changer de médecin」 4번, changelog 초안의 「Aujourd'hui」를 「날짜와 과·의사」로.
+- **바꾼 파일**: `frontend/src/pages/Consultation.jsx` · `backend/src/routes/consult.routes.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` · `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 뺌 `cs_noteToday`·`cs_noteThisVisit`
+- **확인한 방법**: `npm run build`, `node --check` 통과. 남은 쓰임 grep 0건. 격리 스택: 진료 열기(`POST /consultations` 새로 201·다시 200, `opener-e2e` 4항목) 통과, 화면(1366×768 KO) 머리줄 «2026-10-01 | GEN S2 doctor». 덤으로 전과 창의 ko 한 줄 «과도 바뀝니다: GEN → PED»를 화면에서 확인(앞 보고에서 빌드만 했던 것).
+- **다른 세션에 부탁**: 없음.
+- **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-01 — 전과 창에서 「과」 칸을 뺌: 의사만 고르기
 
 - **상태**: 확인 요청
