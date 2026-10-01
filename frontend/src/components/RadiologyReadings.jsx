@@ -61,7 +61,7 @@ export function PatientCheck(props) {
 //                                               base_url = the exam alone
 //   props.onUrl(address)  the screen puts it in the iframe (and "open in a new tab")
 // "Comparing" is read from the address, not kept here: a window opened straight into
-// a comparison (exams ticked in the list, CompareChecked) shows the same bar.
+// a comparison (exams ticked in the list) shows the same bar.
 export function ViewerCompare(props) {
   var t = props.t, v = props.viewer || {}, c = v.compare;
   if (!c || !c.count || !c.url || !v.base_url) return null;
@@ -92,15 +92,6 @@ export function compareBlock(r, t) {
   return '';
 }
 
-// "Compare (N)" in the header of the patient's imaging list: opens the ticked exams
-// together (director, 2026-10-01). Off until two are ticked; its title says what to do.
-//   props.ids  the ticked order items     props.onGo()  the screen opens them
-export function CompareChecked(props) {
-  var t = props.t, n = (props.ids || []).length, ok = n >= 2;
-  return <button disabled={!ok} onClick={function () { if (ok) props.onGo(); }} title={ok ? t.px_compareHint : t.px_cmpNeedTwo}
-    style={Object.assign({ background: ok ? 'var(--violet-deep)' : 'var(--chip)', color: ok ? 'var(--on-fill-violet)' : 'var(--text-3)', border: '1px solid ' + (ok ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 5, padding: '6px 14px', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }, props.style)}>⇆ {String(t.px_cmpGo || '').replace('{n}', n)}</button>;
-}
-
 // Why an exam's reading cannot be printed ('' = it can): there must be a reading, and
 // a cancelled exam's reading is not sent out.
 export function printBlock(r, t) {
@@ -128,8 +119,9 @@ function reportValues(r) {
 // The sheet's language is chosen here, French first: it is read in another hospital,
 // whatever language this screen is in. Printing issues the paper through the document
 // engine (POST /api/documents, one number and one change-log line per sheet) - it is a
-// patient document leaving the clinic. The number is then on the sheet; printing the
-// same sheets again does not issue them again, changing the language does.
+// patient document leaving the clinic. The number is shown in this window only (to find
+// the paper again in the documents history) - it is not printed on the sheet. Printing
+// the same sheets again does not issue them again, changing the language does.
 //   props.exams      the rows to print (each must pass printBlock)
 //   props.patientId  props.t  props.onClose()
 export function ReportPrint(props) {
@@ -149,7 +141,9 @@ export function ReportPrint(props) {
   }, [props.patientId]);
   // The numbers are on the sheets only after React has drawn them: print then.
   useEffect(function () {
-    if (printNow && sheet.current) printDocument(sheet.current, (issued && exams[0] && issued[exams[0].id]) || 'Compte-rendu', lang);
+    // The print window's title is what a browser prints in its page header: the sheet's
+    // name, not the document number (the number stays inside the clinic).
+    if (printNow && sheet.current) printDocument(sheet.current, IMAGING_REPORT_NAME[lang] || IMAGING_REPORT_NAME.fr, lang);
   }, [printNow]);
 
   // On the sheet and in the record: who the patient is, never how to reach them.
@@ -236,9 +230,14 @@ function ymdhm(d) {
 //   props.patientId
 //   props.reload                      a number the screen raises to read the list again
 //   props.onOpen(orderItemId)         shows "View image" (the consultation screen)
-//   props.picked / props.onPick(ids)  tick boxes for a comparison (CompareChecked);
-//                                     without onPick there are none - the payment
-//                                     screen has no image window.
+//   props.onCompare(orderItemIds)     tick boxes on the lines, and above the list -
+//                                     right over the tick boxes, not across the window
+//                                     (director: the mouse had too far to go) - what is
+//                                     done with the ticked exams: compare, print, untick
+//                                     all. Without onCompare there are none of these:
+//                                     the payment screen has no image window.
+// The ticks live here: they stay while the image window is open over the list and go
+// when the list is closed.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
@@ -247,6 +246,7 @@ export function RadiologyReadings(props) {
   var ks = useState(''), kind = ks[0], setKind = ks[1];       // '' = every device type
   var qs = useState(''), query = qs[0], setQuery = qs[1];
   var prs = useState(null), printing = prs[0], setPrinting = prs[1];   // the rows whose report is being printed
+  var pks = useState([]), picked = pks[0], setPicked = pks[1];         // the ticked order items
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
@@ -256,7 +256,7 @@ export function RadiologyReadings(props) {
     // and the list keeps its place (no «Loading…», no jump to the top, same exam chosen).
     var quiet = lastPatient.current === props.patientId;
     lastPatient.current = props.patientId;
-    if (!quiet) { setLoading(true); setSelId(null); setKind(''); setQuery(''); }
+    if (!quiet) { setLoading(true); setSelId(null); setKind(''); setQuery(''); setPicked([]); }
     api.get('/pacs/readings/patient/' + props.patientId)
       .then(function (r) { setRows(r || []); }).catch(function () { if (!quiet) setRows([]); })
       .then(function () { setLoading(false); });
@@ -267,18 +267,18 @@ export function RadiologyReadings(props) {
 
   var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)', cyan = 'var(--violet-text)';
 
-  var picked = props.picked || [];
+  var canTick = !!props.onCompare;
   // The list reads itself again when the image window closes: an exam cancelled in
   // the meantime drops out of the ticks.
   useEffect(function () {
-    if (!props.onPick || !picked.length || loading) return;
+    if (!picked.length || loading) return;
     var still = picked.filter(function (id) { return rows.some(function (r) { return r.id === id && !compareBlock(r, t); }); });
-    if (still.length !== picked.length) props.onPick(still);
+    if (still.length !== picked.length) setPicked(still);
   }, [rows]);
   function tick(r) {
-    if (picked.indexOf(r.id) >= 0) return props.onPick(picked.filter(function (id) { return id !== r.id; }));
+    if (picked.indexOf(r.id) >= 0) return setPicked(picked.filter(function (id) { return id !== r.id; }));
     if (picked.length >= MAX_PICKED) return alert(t.px_cmpMax);
-    props.onPick(picked.concat([r.id]));
+    setPicked(picked.concat([r.id]));
   }
 
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
@@ -310,29 +310,41 @@ export function RadiologyReadings(props) {
   // Ticked exams can be printed together, one sheet each: those with a reading.
   var tickedToPrint = rows.filter(function (r) { return picked.indexOf(r.id) >= 0 && !printBlock(r, t); });
 
-  var COLS = (props.onPick ? '26px ' : '') + '92px 42px minmax(120px, 1fr) 96px minmax(90px, 150px)';
+  var COLS = (canTick ? '26px ' : '') + '92px 42px minmax(120px, 1fr) 96px minmax(90px, 150px)';
   var cell = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
   var chip = { borderRadius: 3, padding: '0 6px', fontSize: 11, fontWeight: 700, marginLeft: 6, verticalAlign: 'middle' };
-  var kindBtn = function (on) { return { background: on ? 'var(--violet-deep)' : 'var(--chip)', color: on ? 'var(--on-fill-violet)' : 'var(--text-soft)', border: '1px solid ' + (on ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 4, padding: '2px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }; };
+  // A button of the line above the list; off = greyed, and it keeps its place so the
+  // list does not move when the first box is ticked.
+  var act = function (on, strong) { return { flex: 'none', background: on && strong ? 'var(--violet-deep)' : 'var(--chip)', color: on ? (strong ? 'var(--on-fill-violet)' : 'var(--text-soft)') : t3, border: '1px solid ' + (on && strong ? 'var(--violet-ink)' : 'var(--border-2)'), borderRadius: 4, padding: '3px 9px', cursor: on ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }; };
   var label = { color: t3, fontSize: 12, whiteSpace: 'nowrap', paddingRight: 10, verticalAlign: 'top' };
 
   return (
     <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
       {/* the list */}
       <div style={{ flex: '1 1 58%', minWidth: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid ' + bd }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid ' + bd, flexWrap: 'wrap' }}>
-          {kinds.length > 1 ? <button onClick={function () { setKind(''); }} style={kindBtn(!kind)}>{t.px_filterAll}</button> : null}
-          {kinds.length > 1 ? kinds.map(function (k) { return <button key={k} onClick={function () { setKind(k); }} style={kindBtn(kind === k)}>{k}</button>; }) : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid ' + bd }}>
+          {/* what is done with the ticked exams - over the tick boxes */}
+          {canTick ? <button disabled={picked.length < 2} onClick={function () { if (picked.length >= 2) props.onCompare(picked); }}
+            title={picked.length >= 2 ? t.px_compareHint : t.px_cmpNeedTwo} style={act(picked.length >= 2, true)}>⇆ {String(t.px_cmpGo || '').replace('{n}', picked.length)}</button> : null}
+          {canTick ? <button disabled={!tickedToPrint.length} onClick={function () { if (tickedToPrint.length) setPrinting(tickedToPrint); }}
+            title={!picked.length ? t.px_printNeedTick : tickedToPrint.length === picked.length ? '' : String(t.px_printSkipped || '').replace('{n}', picked.length - tickedToPrint.length)}
+            style={act(tickedToPrint.length > 0)}>🖨 {String(t.px_printN || '').replace('{n}', tickedToPrint.length)}</button> : null}
+          {canTick ? <button disabled={!picked.length} onClick={function () { setPicked([]); }} style={act(picked.length > 0)}>{t.px_untickAll}</button> : null}
+          {canTick ? <span style={{ flex: 'none', width: 1, alignSelf: 'stretch', background: bd, margin: '0 2px' }}></span> : null}
+          {/* narrowing the list: the device type from a drop-down (like the phrase categories
+              of the consultation screen - it does not grow with the number of types), a word */}
+          {kinds.length > 1 ? <select aria-label={t.px_colType} value={kind} onChange={function (e) { setKind(e.target.value); }}
+            style={{ flex: '0 1 130px', minWidth: 0, background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 3, padding: '2px 4px', color: kind ? cyan : tx, fontSize: 12, fontWeight: kind ? 700 : 400, fontFamily: 'inherit', textOverflow: 'ellipsis' }}>
+            <option value="">{t.px_filterAll}</option>
+            {kinds.map(function (k) { return <option key={k} value={k}>{k}</option>; })}
+          </select> : null}
           <input value={query} onChange={function (e) { setQuery(e.target.value); }} onKeyDown={keys} placeholder={t.px_filterSearch}
-            style={{ flex: '0 1 220px', minWidth: 120, background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 4, color: tx, fontSize: 13, padding: '3px 8px', outline: 'none' }} />
-          <span style={{ marginLeft: 'auto', color: t3, fontSize: 12 }}>{shown.length === rows.length ? rows.length : shown.length + ' / ' + rows.length}</span>
-          {props.onPick && picked.length ? <button disabled={!tickedToPrint.length} onClick={function () { setPrinting(tickedToPrint); }}
-            title={tickedToPrint.length === picked.length ? '' : String(t.px_printSkipped || '').replace('{n}', picked.length - tickedToPrint.length)}
-            style={{ background: 'var(--chip)', color: tickedToPrint.length ? 'var(--text-soft)' : t3, border: '1px solid var(--border-2)', borderRadius: 4, padding: '2px 9px', cursor: tickedToPrint.length ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 700 }}>🖨 {String(t.px_printN || '').replace('{n}', tickedToPrint.length)}</button> : null}
+            style={{ flex: '1 1 90px', minWidth: 0, maxWidth: 220, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 3, color: tx, fontSize: 12, padding: '2px 6px', outline: 'none' }} />
+          <span style={{ flex: 'none', marginLeft: 'auto', color: t3, fontSize: 12 }}>{shown.length === rows.length ? rows.length : shown.length + ' / ' + rows.length}</span>
         </div>
         <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
-            {props.onPick ? <span></span> : null}
+            {canTick ? <span></span> : null}
             <span>{t.px_colDate}</span><span>{t.px_colType}</span><span>{t.px_colExam}</span><span>{t.px_colImages}</span><span>{t.px_colReading}</span>
           </div>
           {!shown.length ? <div style={{ padding: 14, color: t3, fontSize: 13 }}>{t.px_noMatch}</div> : null}
@@ -342,11 +354,11 @@ export function RadiologyReadings(props) {
             // the "Annulé" tag, not by opacity (design 3.3.1: contrast).
             var cancelled = r.order_status === 'cancelled', on = sel && r.id === sel.id;
             var flagged = r.images_received_at && (r.patient_check === 'mismatch' || r.patient_check === 'missing');
-            var why = props.onPick ? compareBlock(r, t) : '';
+            var why = canTick ? compareBlock(r, t) : '';
             return <div key={r.id} data-exam={r.id} onClick={function () { setSelId(r.id); }}
               style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '0 10px', height: 28, cursor: 'pointer', fontSize: 13,
                 borderBottom: '1px solid ' + bd, borderLeft: '3px solid ' + (on ? 'var(--violet-strong)' : 'transparent'), background: on ? 'var(--violet-a20)' : 'transparent' }}>
-              {props.onPick ? <input type="checkbox" checked={picked.indexOf(r.id) >= 0} disabled={!!why} title={why || t.px_cmpPick}
+              {canTick ? <input type="checkbox" checked={picked.indexOf(r.id) >= 0} disabled={!!why} title={why || t.px_cmpPick}
                 onClick={function (e) { e.stopPropagation(); }} onChange={function () { tick(r); }}
                 style={{ width: 16, height: 16, margin: 0, cursor: why ? 'not-allowed' : 'pointer', accentColor: 'var(--violet-strong)' }} /> : null}
               <span style={Object.assign({ fontFamily: 'monospace', fontWeight: 700, color: cancelled ? t3 : 'var(--ok-text)' }, cell)}>{ymd(r.visit_date)}</span>
