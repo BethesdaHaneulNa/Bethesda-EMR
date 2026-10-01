@@ -152,8 +152,12 @@ voided there. It is still made only from the imaging list.
   says when they were linked only by accession number; a radiology reading's date is the
   local date. Saving a reading shows a short notice instead of a box to click away.
 - An imaging order shows **Envoyé** as soon as it is added (it used to appear only after
-  the patient was opened again). The body part is written small next to the name; the
-  **Unité** box no longer shows it cut to four letters.
+  the patient was opened again). The **Unité** box no longer shows the body part cut to
+  four letters (the body part is in the name's tooltip).
+- An order line's **Posologie** box starts empty and takes words (`PRN`, up to 20
+  characters): it used to start at « 1.000 » on every procedure line, and the server
+  accepted only a number there. A procedure done on a device (endoscopy, rectoscopy)
+  starts 1 · 1 · 1 like an imaging exam.
 
 ### Not visible on the screen
 

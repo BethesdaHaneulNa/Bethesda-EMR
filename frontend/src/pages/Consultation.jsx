@@ -76,6 +76,14 @@ function ymd(d){
 // only the type was looked at, so such an order with images or a reading could be
 // neither deleted (it has a result) nor cancelled.
 function isImagingOrder(o){ return o.code_type==='imaging' || !!o.pacs_modality; }
+// The sig an order code brings to a new order line (order_item.dose, the Posologie
+// column of an order row - words like "QD" or "PRN"). Every order code of the sample data
+// has default_dose '1.000', the column's default, so a procedure line started with
+// "1.000" under Posologie (director, 2026-10-01). A value that is only a number is not a
+// sig and is not copied. (A DRUG line's dose is the daily amount, a number by nature:
+// this is for order lines only.)
+function orderSig(v){ var s = v == null ? '' : String(v).trim(); return /^\d+([.,]\d+)?$/.test(s) ? '' : s; }
+
 function cancellable(o){ return (o.code_type==='lab' || isImagingOrder(o)) && o.status!=='cancelled' && orderLocked(o); }
 
 // A quantity or dose as the database returns it ("1.000", DECIMAL(10,3)) is shown without
@@ -985,13 +993,17 @@ export default function ConsultationPage() {
     // the doctor writes on purpose. A procedure (an injection course) starts with its
     // order code's times and days when it has them, else 1 · 1 · 1. From an order set
     // the set's values come in through default_freq / default_days, same rule.
-    var exam = oc.code_type==='lab' || oc.code_type==='imaging';
-    // No dose on a lab or imaging line: the order code's default dose ('1.000', the
-    // column default) showed under Posologie and meant nothing there.
+    // An exam is a lab order or an imaging order in the screen's one sense (isImagingOrder:
+    // type imaging or a modality - an endoscopy, a rectoscopy). An order set's line does
+    // not carry the modality, so the order code is looked up.
+    var known = allOrderCodes.filter(function(c){ return c.id===oc.id; })[0];
+    var exam = oc.code_type==='lab' || isImagingOrder(oc) || !!(known && isImagingOrder(known));
+    // No sig on an exam line. On a procedure line the order code's (or the set's) sig is
+    // copied only when it is one - never a bare number (orderSig, above).
     try {
       var item = await api.post('/consultations/'+consult.id+'/orders',{
         order_code_id:oc.id, order_code:oc.code, order_name:oc.name, code_type:oc.code_type,
-        dose:exam ? '' : oc.default_dose, frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
+        dose:exam ? '' : orderSig(oc.default_dose), frequency:exam ? 1 : (parseInt(oc.default_freq)||1), days:exam ? 1 : (parseInt(oc.default_days)||1),
         // Quantity: 1 for a lab / imaging order; a procedure from an order set brings the
         // set's quantity (editable in Settings since 6a0ef41), otherwise 1.
         quantity:exam ? 1 : (parseFloat(oc.default_qty) > 0 ? parseFloat(oc.default_qty) : 1),
@@ -1302,7 +1314,10 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_orderLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeOrder(o)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 3px',color:gone?t3:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,textDecoration:gone?'line-through':'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={o.order_code}>{o.order_code}</td>
-                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{o.order_name}{authorTag(o.ordered_by_name)}{o.body_part ? <span style={{marginLeft:6,fontSize:12,color:t3,whiteSpace:'nowrap'}}>{o.body_part}</span> : null}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
+                          <td style={{padding:'3px 4px',color:gone?t3:tx,fontSize: 15,textDecoration:gone?'line-through':'none',overflowWrap:'anywhere'}}>{/* The body part (CHEST, HAND, RECTUM - what the device worklist is told) is not written
+                              here any more: beside «Chest PA» it only repeated the name (director,
+                              2026-10-01). It is in the name's tooltip. */}
+                          <span title={o.body_part ? o.order_name + ' · ' + o.body_part : undefined}>{o.order_name}</span>{authorTag(o.ordered_by_name)}{!gone && noPrice(o.unit_price) ? <NoPriceBadge/> : null}{orderTotalLine(o, gone)}</td>
                           {gone ? <>
                             {roCell(o.quantity == null ? 1 : o.quantity, t3)}
                             {roCell(o.frequency || 1, t3)}
@@ -1313,7 +1328,7 @@ export default function ConsultationPage() {
                           <td style={{padding:'3px 2px'}}><input value={o.quantity == null || o.quantity === '' ? '' : showNum(o.quantity)} onChange={function(e){updateOrderLocal(o.id,'quantity',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.frequency || 1} onChange={function(e){updateOrderLocal(o.id,'frequency',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input inputMode="numeric" value={o.days || 1} onChange={function(e){updateOrderLocal(o.id,'days',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
-                          <td style={{padding:'3px 2px'}}><input value={o.dose || ''} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
+                          <td style={{padding:'3px 2px'}}><input maxLength={20} title={o.dose ? String(o.dose) : undefined} value={showNum(o.dose)} onChange={function(e){updateOrderLocal(o.id,'dose',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           <td style={{padding:'3px 2px'}}><input value={o.memo || ''} title={o.memo || undefined} onChange={function(e){updateOrderLocal(o.id,'memo',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveOrder(o); }} style={inStyle}/></td>
                           </>}
                           <td style={{padding:'3px 2px',textAlign:'center',fontSize: 12,fontWeight:700}}>
