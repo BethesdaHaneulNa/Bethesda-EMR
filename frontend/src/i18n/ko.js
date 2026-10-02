@@ -1516,6 +1516,12 @@ export default {
   ds_themeSwitch: "화면 색 (어둡게 / 밝게 / 종이색)",
   ds_themeLight: "밝게",
   ds_themePaper: "종이색",
+  // the groups of the statistics screen (side menu)
+  ds_stSummary: "요약",
+  ds_stMoney: "매출 · 현금",
+  ds_stPatients: "환자 · 진료량",
+  ds_stOrders: "오더",
+  ds_stDrugs: "약품",
   ds_themeDark: "어둡게",
   // ── end design ──
 };
