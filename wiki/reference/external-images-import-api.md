@@ -19,7 +19,7 @@
 
 - **검사 하나에 ②→③…→④ 한 벌.** 디스크에 검사가 여럿이면 고른 검사마다 차례로 한 벌씩.
 - 머리말: `Authorization: Bearer <로그인에서 받은 토큰>` — 반출과 같음(`EmrClient.Call`).
-- 권한: **consultation 또는 payment**(반출과 같음). 없으면 403 `{error:"Access denied"}`, 토큰 없음/만료 401.
+- 권한: **consultation · payment · registration 가운데 하나**(접수 계정도 됨 — 2026-10-02 결정; 반출은 consultation · payment 그대로). 없으면 403 `{error:"Access denied"}`, 토큰 없음/만료 401.
 - 거절의 모양은 반출과 같음: `{ ok:false, code:"…", error:"영어 문장", …덧붙는 값 }`. 프로그램은 `code`로 자기 말(fr/ko/en)을 고름.
   HTTP 상태는 아래 표. 502/503/504는 EMR 앞의 nginx가 「서버가 응답하지 않음」으로 바꿔 보냄(반출과 같음).
 - **④가 성공하기 전에는 EMR 어느 화면에도 안 보임.** 끊긴 들여오기는 서버가 치움(⑤를 못 불러도 — 30분 조용하면 저절로).

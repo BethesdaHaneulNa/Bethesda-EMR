@@ -42,9 +42,10 @@
 // any screen; an import that stops half-way is undone - by `cancel`, or by resumePending()
 // (20 s after the server starts and every 5 minutes) when it has been silent for 30 minutes.
 //
-// Who: bringing in and the list - consultation or payment (the same as copying to a disc:
-// the program is one). Opening the images - consultation (the viewer's own rule). Taking
-// an import out again - consultation or settings.
+// Who: bringing in and the list - consultation, payment or registration (the disc is handed
+// over at reception; what these routes show of the patient is name, birth date and sex).
+// Opening the images - consultation (the viewer's own rule). Taking an import out again -
+// consultation or settings.
 const express = require('express');
 const { Readable } = require('stream');
 const { pool } = require('../config/database');
@@ -54,7 +55,7 @@ const { DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 const viewer = require('./pacs.viewer');
 
 const router = express.Router();
-const MAY_IMPORT = ['consultation', 'payment'];   // one place to change who may bring images in
+const MAY_IMPORT = ['consultation', 'payment', 'registration'];   // one place to change who may bring images in
 const mayImport = permMiddleware(...MAY_IMPORT);
 const mayOpen = permMiddleware('consultation');
 const mayUndo = permMiddleware('consultation', 'settings');

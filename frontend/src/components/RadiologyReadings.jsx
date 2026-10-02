@@ -325,6 +325,12 @@ export function RadiologyReadings(props) {
     var el = listRef.current && listRef.current.querySelector('[data-exam="' + next + '"]');
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
   }
+  function toOutside() {
+    if (!shownOut.length) return;
+    if (!selOut) setSelId('x' + shownOut[0].id);
+    var el = listRef.current && listRef.current.querySelector('[data-outside-head]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+  }
   function keys(e) {
     if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
@@ -363,7 +369,9 @@ export function RadiologyReadings(props) {
           </select> : null}
           <input value={query} onChange={function (e) { setQuery(e.target.value); }} onKeyDown={keys} placeholder={t.px_filterSearch}
             style={{ flex: '1 1 90px', minWidth: 0, maxWidth: 220, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 3, color: tx, fontSize: 12, padding: '2px 6px', outline: 'none' }} />
-          <span style={{ flex: 'none', marginLeft: 'auto', color: t3, fontSize: 12 }}>{lines.length === rows.length + outside.length ? lines.length : lines.length + ' / ' + (rows.length + outside.length)}</span>
+          {/* the outside studies are under the patient's own exams: with a long list, one click goes there */}
+          {shownOut.length && shown.length ? <button onClick={toOutside} title={t.px_xGroup} style={Object.assign(act(true), { marginLeft: 'auto' })}>💿 {shownOut.length}</button> : null}
+          <span style={{ flex: 'none', marginLeft: shownOut.length && shown.length ? 0 : 'auto', color: t3, fontSize: 12 }}>{lines.length === rows.length + outside.length ? lines.length : lines.length + ' / ' + (rows.length + outside.length)}</span>
         </div>
         <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
@@ -398,7 +406,7 @@ export function RadiologyReadings(props) {
             </div>;
           })}
           {/* the studies brought in from another establishment's disc: under the patient's own exams */}
-          {shownOut.length ? <div style={{ padding: '5px 10px', background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, borderTop: shown.length ? '1px solid ' + bd : 'none', color: t2, fontSize: 12, fontWeight: 700 }}>
+          {shownOut.length ? <div data-outside-head="1" style={{ padding: '5px 10px', background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, borderTop: shown.length ? '1px solid ' + bd : 'none', color: t2, fontSize: 12, fontWeight: 700 }}>
             💿 {t.px_xGroup} <span style={{ color: t3, fontWeight: 400 }}>· {shownOut.length}</span></div> : null}
           {shownOut.map(function (x) {
             var on = selOut && x.id === selOut.id;

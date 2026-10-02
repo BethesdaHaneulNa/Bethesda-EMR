@@ -20,6 +20,7 @@ export function outsideDate(d) {
 export function outsideName(x, t) { return x.description || x.modality || t.px_xChip; }
 function sizeOf(bytes) {
   var mb = (Number(bytes) || 0) / 1048576;
+  if (mb < 0.1) return Math.max(1, Math.round(mb * 1024)) + ' KB';
   return (mb >= 100 ? Math.round(mb) : Math.round(mb * 10) / 10) + ' MB';
 }
 function when(d) {
