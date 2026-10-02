@@ -4,14 +4,13 @@
 // The boxes follow the hospital form the director showed (the picture itself carries
 // personal data and is not in the repository): document and chart numbers / the patient /
 // the diagnoses with their codes, clinical or final / history / the physician's findings /
-// remarks / date of issue, the institution, the department, the licence number, the
-// physician and a place to sign.
+// remarks / date of issue, the institution, the department, the physician and a place
+// to sign. No licence number: the director dropped it (2026-10-02, not needed in Madagascar).
 //
 // Filled by itself: the patient, the consultation's diagnoses (autofill 'diagnoses': one a
 // line, "code name", in the document's language), today's date, the clinic, the doctor.
 // Typed: the address when the patient record has none (reception does not record one),
-// history, findings, remarks, clinical / final, and the licence number - the staff record
-// has no such field, so the line is typed or left to be written by hand.
+// history, findings, remarks, clinical / final.
 //
 // Another certificate later (rest / sick leave): copy this file, change the boxes, and
 // add it to TEMPLATES in registry.js. Nothing else needs to change.
@@ -24,7 +23,6 @@ var FL = {
   history:   { ko: '병력 (발병일 · 경과)', en: 'History of illness or injury', fr: 'Histoire de la maladie ou de la blessure' },
   findings:  { ko: '의사 소견', en: "Physician's findings and statement", fr: 'Constatations et avis du médecin' },
   remarks:   { ko: '비고', en: 'Remarks', fr: 'Remarques' },
-  licence:   { ko: '면허번호', en: 'Licence No.', fr: "N° d'inscription à l'Ordre" },
 };
 // What the paper prints (shorter than the form's labels).
 var PL = {
@@ -149,7 +147,6 @@ function Layout(props) {
             {clinic.address ? row(L(DOC_LABELS.address, lang), clinic.address) : null}
             {clinic.phone ? row(L(DOC_LABELS.phone, lang), clinic.phone) : null}
             {doctor.dept_code ? row(L(DOC_LABELS.department, lang), doctor.dept_code) : null}
-            {row(L(FL.licence, lang), String(v.licenceNo || '').trim() || blank)}
             {row(L(DOC_LABELS.doctor, lang), <span><b>{doctor.name || ''}</b>{doctor.name ? null : blank}<span style={{ marginLeft: 10, color: '#555' }}>({L(DOC_LABELS.signature, lang)})</span><span style={{ display: 'inline-block', minWidth: 110, borderBottom: '1px solid #999', marginLeft: 6 }}>{' '}</span></span>)}
           </tbody>
         </table>
@@ -170,7 +167,6 @@ export default {
     { key: 'findings',  label: FL.findings,  type: 'textarea', rows: 5 },
     { key: 'remarks',   label: FL.remarks,   type: 'textarea', rows: 2 },
     { key: 'address',   label: FL.address,   type: 'text' },
-    { key: 'licenceNo', label: FL.licence,   type: 'text' },
   ],
   Layout: Layout,
 };

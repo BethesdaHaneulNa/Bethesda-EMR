@@ -156,11 +156,11 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 1. Le patient, les diagnostics de la consultation, la date, la clinique et votre nom sont déjà remplis.
 2. Cochez **Diagnostic clinique** ou **Diagnostic définitif**.
 3. Écrivez **Histoire de la maladie ou de la blessure**, **Constatations et avis du médecin** et, s'il y a lieu, **Remarques**.
-4. **Adresse** : à remplir si le dossier du patient n'en a pas. **N° d'inscription à l'Ordre** : tapez-le, ou laissez vide pour l'écrire à la main sur le papier.
+4. **Adresse** : à remplir si le dossier du patient n'en a pas.
 5. La case **Diagnostic** peut être corrigée : une ligne par diagnostic, le code d'abord s'il y en a un.
 6. Cliquez sur **Émettre**, puis **🖨 Réimprimer**, et signez. Le certificat tient sur une page, sauf si le texte est très long.
 
-<!-- terme à vérifier sur place : « N° d'inscription à l'Ordre » (numéro ONM ?), « Diagnostic définitif », le titre « Certificat médical » -->
+<!-- terme à vérifier sur place : « Diagnostic définitif », le titre « Certificat médical » -->
 
 <!-- terme à vérifier sur place : noms des formulaires opératoires et termes médicaux des comptes-rendus (liste dans wiki/modules/consultation.md 3.6) -->
 
