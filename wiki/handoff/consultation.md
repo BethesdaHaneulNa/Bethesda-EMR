@@ -2,6 +2,48 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 결과지 인쇄는 발급이 아니다 — 변경 기록 한 줄만 (실장님)
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `b07e9a1` 다음
+- **실장님 말씀**(총괄이 전함, 문서 창의 발급 이력에 「영상 판독 보고서」 D26-00001~4가 있는 것을 보시고): 「문서발급에 영상판독보고서 들이 왜 발급이력에 있는지 이해가 안가는데 저거는 발급이다 프린트 했을경우 그냥 로그로만 남겨」
+- **규칙**: **발급**(번호 + 이력) = 의사가 써서 내는 서류 — 의뢰서 · 진단서 · 원외 처방전 · 차트 기록. **결과지 인쇄** = 영상 판독 보고서 · 검사 결과지 · 영상 인쇄 — 문서 번호도 이력도 없이 변경 기록 한 줄.
+- **한 일**
+  1. **서버**(`document.routes.js`, 진료 주관): 새 길 `POST /api/documents/print-log`(권한 `consultation`·`payment` — 그 창을 열 수 있는 계정 그대로). 문서 행을 만들지 않고 변경 기록 줄만 씁니다. 줄을 못 적으면 500 `NOT_LOGGED`이고 화면은 인쇄하지 않습니다(전의 「기록이 안 되면 종이도 없다」 그대로).
+  2. **`POST /api/documents`는 세 종류(`imaging-report`·`lab-results`·`imaging-images`)를 400으로 거절** — 새로 고치지 않은 옛 화면이 계속 번호를 매기지 못하게. 그 화면에는 «…n'a pas pu être…: This sheet is printed, not issued»가 뜨고, F5 뒤 정상입니다.
+  3. **세 인쇄 창**: 문서 만들기를 빼고 기록 줄만. 창 아래 글과 단추를 「발행」에서 「인쇄」로.
+  4. **문서 창의 발급 이력**: 세 종류가 빠짐(`registry.js` `historyCodes`에서 `HISTORY_ALSO` 없앰). **있던 행은 지우지 않았습니다**(DB에 그대로, 목록에서만 빠짐 — 마이그레이션 없음). 「다시 열어 다시 인쇄 · 발급 취소」는 이 세 종류에서 없어졌습니다 — 결과는 늘 지금의 값으로 그 창에서 다시 뽑습니다.
+  5. **종이**: 모양 그대로. 문서 번호는 전부터 종이에 없었습니다. 맨 아래의 «Émis le 2026-10-02 14:52»만 **«Imprimé le …»**(en «Printed», ko 「인쇄」)로 바꿨습니다 — 인쇄 일시.
+- **다른 세션 파일에서 고친 줄**(총괄 허락: 「인쇄 때 문서 만들기」 부분만)
+  | 파일 (주인) | 고친 것 |
+  |---|---|
+  | `components/RadiologyReadings.jsx` (PACS) | `ReportPrint`: 머리 주석 5줄; `issued` 상태의 뜻(번호 표 → 기록됨 true); `issueAndPrint`의 `POST /documents` 반복을 `POST /documents/print-log` 한 번으로; `docNo=""`; 아래 글 `t.px_printIssued`에서 `{x}` 바꾸기 뺌 |
+  | `components/ImagesPrint.jsx` (PACS) | 머리 주석 4줄; `issueAndPrint`에서 `POST /documents` 뺌(`/pacs/export/printed`는 그대로); `docNo=""`; 상태 글의 `{x}` 바꾸기 뺌. `values`·`who`·`clinic`은 종이 그리는 데 그대로 씀 |
+  | `components/LabResults.jsx` (임상병리) | `LabResultsPrint`: 머리 주석 3줄; `issued`의 뜻; `POST /documents` → `POST /documents/print-log`; `docNo=""`; 아래 글의 `{x}` 바꾸기 뺌 |
+  | `documents/imaging-report.jsx`·`imaging-images.jsx` (PACS) · `lab-results.jsx` (임상병리) | `T.issued` 한 줄씩: «Émis le / Issued / 발행» → «Imprimé le / Printed / 인쇄» |
+  | `i18n/{ko,en,fr}.js`의 PACS 키 | `px_printGo`(발행하고 인쇄 → 인쇄) · `px_printNote` · `px_printIssued`(«Émis : {x}» → «Noté dans le journal des modifications.») · `px_printFail` · `px_imNote` |
+  | `i18n/{ko,en,fr}.js`의 임상병리 키 | `lb_rPrintGo` · `lb_rPrintNote` · `lb_rPrintIssued` · `lb_rPrintFail` |
+  | `wiki/modules/pacs.md` · `wiki/modules/laboratory.md` · `wiki/manual-fr/pacs.md` · `wiki/manual-fr/payment.md` | 인쇄 대목(발행 → 인쇄, 이력에 안 나옴) |
+  - **두 세션이 마저 볼 것**(손대지 않음): 세 서식 파일의 **머리 주석**이 아직 「issued through POST /api/documents」라고 말합니다(`imaging-report.jsx` 8·13행, `lab-results.jsx` 8·13행, `imaging-images.jsx` 8·13행). `backend/src/routes/pacs.export.js` 212행 주석 「before it issues the paper (POST /api/documents)」. 세 서식의 `export default` 템플릿 객체(code·category·Layout)는 이제 옛 변경 기록 줄의 이름 찾기에만 쓰입니다.
+- **새 변경 기록 action — 설정 세션에 넘길 것**(기록 탭의 글 ko/en/fr)
+  | action | module | entity · entity_id | summary(영어, 서버가 씀) | after |
+  |---|---|---|---|---|
+  | `pacs.report.print` | `pacs` | `order_item` · 검사 id | «Reading of Chest PA (261001-306) printed» | `{order_name, accession_no, lang}` |
+  | `laboratory.results.print` | `laboratory` | `patient` · 환자 id | «Lab results of 2026-09-29 printed» / «… of 2026-09-28 .. 2026-10-01 printed» | `{dates: '2026-09-28, 2026-10-01', test_count, lang}` |
+  - 둘 다 `patient_id`·`visit_id`(검사 결과가 여러 내원에 걸치면 `visit_id`는 비어 있음)·누가(토큰)가 같이 저장됩니다. `utils/audit.js`의 `ACTIONS`에 `PACS_REPORT_PRINT`·`LAB_RESULTS_PRINT` 두 줄을 더했습니다(공용 파일).
+  - 영상 인쇄는 전부터 있던 `pacs.images.print` 그대로(중복 줄 없음 — 전에는 그 줄 + `documents.issue` 두 줄이었고 이제 한 줄).
+- **권한 표에 넣을 것**(설정 세션의 권한 시험 표): `POST /api/documents/print-log` — `consultation`·`payment`(임상병리·약국·접수만 있는 계정은 403). 전에는 같은 인쇄가 `POST /api/documents`(`consultation`·`payment`·`pharmacy`)였습니다 — 약국만 있는 계정은 그 창을 열 길이 없어 실제로는 같았습니다.
+- **바꾼 파일**: `backend/src/routes/document.routes.js` · `backend/src/utils/audit.js` · `frontend/src/documents/registry.js` · 위 표의 다른 세션 파일 · `wiki/modules/consultation.md`(2.11·3.5·4·8) · `wiki/manual-fr/consultation.md`(§10) · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: `utils/audit.js`(action 둘) · `documents/registry.js`(진료 주관) · 위 표.
+- **DB 마이그레이션**: 없음(있던 `document_log` 행은 그대로) · **번역 키**: 새 키 없음(위 표의 글자만)
+- **확인한 방법**: `npm run build`·`node --check`. 격리 스택(9182):
+  - 서버 시험 21개(scratchpad `print-e2e.mjs`): 판독 인쇄 → 줄 1·문서 행 0, 줄의 내용(module·누가·환자·내원·검사·언어), 판독 없는 검사가 섞이면 409·줄 0, 다른 환자의 검사 404, 빈 목록·같은 검사 두 번 400, 없는 환자 404; 검사 결과 인쇄 → 줄 1·문서 행 0, 날짜 정렬·항목 수·언어, 여러 내원(visit 없음), 날짜 없음·날짜 모양 아님·항목 0 → 400, 남의 내원 404, 다른 kind 400; 임상병리만 있는 계정 403, 미로그인 401; `POST /documents`가 세 종류 400·행 0; 진단서는 전처럼 201·번호.
+  - 화면(1366×768, FR, 관리자 계정): 🩻 영상/판독 → 판독 있는 검사 → 🖨 Imprimer → 창 아래 글·단추(«Imprimer»), 종이에 번호 없음, 누르면 인쇄 창 1번·«Noté dans le journal des modifications.»·«Imprimer de nouveau», 다시 누르면 인쇄 창만(줄 그대로 2), 언어를 바꾸면 처음 상태; DB: 문서 행 143 → 143, `pacs.report.print` +1. 🧪 검사결과 → 날짜 체크 → 🖨 Imprimer (1) → 같은 흐름; DB: 문서 행 그대로, `laboratory.results.print` +1(«Lab results of 2026-09-29 printed»). 📄 Documents 창 이력: 옛 `imaging-report` 행(D26-00136)이 있는 환자에게 **의뢰서만**, 다른 환자에게 진단서만.
+- **확인 못 한 것**: **영상 인쇄 창**(격리 스택에 영상 서버가 없어 창이 열리지 않음 — 코드로만: `POST /documents`를 뺀 것과 `/pacs/export/printed`가 남은 것). 수납 화면에서 여는 것(같은 부품). 설정의 기록 탭에 새 줄이 어떻게 보이는지(글은 설정 세션 몫 — 지금은 action 이름이 그대로 보일 것). 실제 종이.
+- **총괄 확인 요청**: 종이 아래의 낱말을 «Imprimé le»로 바꾼 것(권하신 「인쇄 일시만」에 맞춤). 같은 창에서 **다시 인쇄할 때 줄을 다시 적지 않는 것**(전의 규칙과 영상 인쇄의 규칙을 그대로 따름 — 인쇄할 때마다 한 줄을 원하시면 한 줄 고치면 됩니다).
+- **다른 세션에 부탁**: **설정** — 기록 탭의 글 둘(`pacs.report.print`, `laboratory.results.print`)과 권한 시험 표. **PACS · 임상병리** — 위 「마저 볼 것」의 주석.
+- **남은 일 · 알려진 문제**: 실행 중 EMR의 옛 결과지 행(D26-00001~4 등)은 DB에 남아 있고 목록에서만 안 보입니다. 변경 기록의 옛 「서류 발행」 줄도 그대로입니다(지우지 않음).
+
 ## 2026-10-02 — 문서만: 진단 목록의 관리 화면(설정 → 진단 목록)을 반영
 
 - **상태**: 확인 요청

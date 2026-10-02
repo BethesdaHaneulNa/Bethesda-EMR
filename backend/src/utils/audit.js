@@ -52,6 +52,12 @@ const ACTIONS = {
   // the director wants every paper that left the clinic in the one log. A draft print is not an issue.
   DOCUMENT_ISSUE:       'documents.issue',
   DOCUMENT_VOID:        'documents.void',
+  // Result sheets (director, 2026-10-02): printing a reading or the lab results is not
+  // issuing a document - no number, no row in the documents history, only this line: who,
+  // whose, which exam or which days, in which language (routes/document.routes.js
+  // POST /print-log). An exam's pictures on paper already have their line, pacs.images.print.
+  PACS_REPORT_PRINT:    'pacs.report.print',
+  LAB_RESULTS_PRINT:    'laboratory.results.print',
   // PACS (2026-10-01): a finished order's images were no longer on the image server under the
   // number the EMR kept and were found again by accession (routes/pacs.relink.js). Done by the
   // EMR itself when the image window is opened; the line names who opened it.

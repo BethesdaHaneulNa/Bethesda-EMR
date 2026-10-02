@@ -28,7 +28,7 @@ var T = {
   exam:    { fr: 'Examen', en: 'Exam', ko: 'Exam' },
   date:    { fr: 'Date', en: 'Date', ko: 'Date' },
   note:    { fr: 'Images de référence — non destinées au diagnostic', en: 'Reference images — not for diagnosis', ko: '참고용 영상 — 진단용이 아님' },
-  issued:  { fr: 'Émis le', en: 'Issued', ko: '발행' },
+  issued:  { fr: 'Imprimé le', en: 'Printed', ko: '인쇄' },   // printed, not issued (director, 2026-10-02): the sheet takes no number
   frames:  { fr: '1re image de {n}', en: 'first of {n} frames', ko: '{n}프레임 중 첫 장' },
   loading: { fr: 'Chargement…', en: 'Loading…', ko: '불러오는 중…' },
   missing: { fr: 'Image indisponible', en: 'Picture not available', ko: '그림을 가져오지 못함' },

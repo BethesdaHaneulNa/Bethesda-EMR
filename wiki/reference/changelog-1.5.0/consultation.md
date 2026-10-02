@@ -211,6 +211,17 @@ and any remarks. The licence number is typed, or left blank to be written by han
 staff record has no such field yet. Issuing, reprinting and voiding work as for the
 referral letter, and each certificate issued makes a line in the change log.
 
+### Result sheets are printed, not issued
+
+For a day, printing an imaging report, a lab results sheet or an exam's pictures gave the
+sheet a document number and put it in the patient's document history, between the letters
+the doctors write. The director asked for the two to be kept apart: a document is issued
+when a doctor writes it - referral letter, medical certificate, outside prescription,
+chart records; a result sheet is a result that already exists, put on paper. Printing one
+now leaves a single line in the change log (who, which patient, which exam or which days)
+and nothing else: no number, no entry in the history. Printed again, a sheet always shows
+the result as it is now. The foot of the sheets reads « Imprimé le … ».
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**
