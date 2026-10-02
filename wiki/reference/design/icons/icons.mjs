@@ -50,6 +50,19 @@ export function svgEmrAlt(k) { const t = TONE.blue; return `<svg xmlns="http://w
 // Chosen by the director on 2026-10-02: option C, with the house for the EMR.
 export const FINAL = { emr: () => svgEmrAlt('house'), pacs: () => svg('C', 'pacs'), cd: () => svg('C', 'cd') };
 
+// The same three at 16px, drawn again for that size (PACS session, 2026-10-02: shrunk from
+// the big picture, the cross of the CD came out as four dots). On a 16-pixel grid one pixel
+// is 16 units here: every edge sits on a pixel, the cross is 2 pixels thick and 6 long, the
+// tile fills the whole square, and the small details (the ring and the hub of the disc) are left out.
+const tile16 = (id, t) => '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + t.top + '"/><stop offset="1" stop-color="' + t.bottom + '"/></linearGradient></defs><rect x="0" y="0" width="256" height="256" rx="56" fill="url(#' + id + ')"/>';
+const cross16 = (cx, cy, ink) => '<rect x="' + (cx - 48) + '" y="' + (cy - 16) + '" width="96" height="32" fill="' + ink + '"/><rect x="' + (cx - 16) + '" y="' + (cy - 48) + '" width="32" height="96" fill="' + ink + '"/>';
+const wrap16 = (id, tone, body) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">' + tile16(id, TONE[tone]) + body + '</svg>';
+export const FINAL16 = {
+  emr:  () => wrap16('s16e', 'blue',   '<path fill="#fff" d="M128 32L224 112V224H32V112Z"/>' + cross16(128, 160, TONE.blue.ink)),
+  pacs: () => wrap16('s16p', 'violet', '<rect x="32" y="48" width="192" height="128" rx="12" fill="#fff"/><rect x="112" y="176" width="32" height="32" fill="#fff"/><rect x="80" y="208" width="96" height="16" fill="#fff"/>' + cross16(128, 112, TONE.violet.ink)),
+  cd:   () => wrap16('s16c', 'cyan',   '<circle cx="128" cy="128" r="100" fill="#fff"/>' + cross16(128, 128, TONE.cyan.ink)),
+};
+
 // the candidates
 export const OPTIONS = {
   A: { name: '글자 B', note: '지금 로그인 화면의 파란 「B」 그대로. 프로그램은 색으로만 구별(EMR 파랑 · PACS 보라 · CD 청록).',
@@ -80,6 +93,7 @@ if ((process.argv[1] || '').endsWith('icons.mjs')) {
   // the chosen three: final/bethesda-<program>.svg, and the page that draws their PNGs
   fs.mkdirSync(path.join(here, 'final'), { recursive: true }); fs.mkdirSync(path.join(here, 'png'), { recursive: true });
   const fin = {}; for (const p of Object.keys(FINAL)) { fin[p] = FINAL[p](); fs.writeFileSync(path.join(here, 'final', 'bethesda-' + p + '.svg'), fin[p] + String.fromCharCode(10)); }
-  fs.writeFileSync(path.join(here, 'sheet3.html'), fs.readFileSync(path.join(here, 'sheet3.template.html'), 'utf8').replace('/*DATA*/', 'var FINAL = ' + JSON.stringify(fin) + ';'));
+  fs.writeFileSync(path.join(here, 'sheet3.html'), fs.readFileSync(path.join(here, 'sheet3.template.html'), 'utf8').replace('/*DATA*/', 'var FINAL = ' + JSON.stringify(fin) + '; var FINAL16 = ' + JSON.stringify(Object.fromEntries(Object.keys(FINAL16).map(p => [p, FINAL16[p]()]))) + ';'));
+  for (const p of Object.keys(FINAL16)) fs.writeFileSync(path.join(here, 'final', 'bethesda-' + p + '-16.svg'), FINAL16[p]() + String.fromCharCode(10));
   console.log('wrote', Object.keys(all).length + Object.keys(alt).length, 'svg, sheet.html and sheet2.html');
 }

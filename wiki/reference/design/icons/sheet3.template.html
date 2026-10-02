@@ -9,11 +9,15 @@
 (async function () {
   function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
   var done = [];
-  for (var p of Object.keys(FINAL)) { var im = await img(FINAL[p]); for (var s of [16, 32, 48, 256]) {
+  for (var p of Object.keys(FINAL)) { var big = await img(FINAL[p]), small = await img(FINAL16[p]); for (var s of [16, 32, 48, 256]) { var im = s === 16 ? small : big;
     var c = document.createElement('canvas'); c.width = s; c.height = s; var ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, 0, 0, s, s); document.body.appendChild(c);
     var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
     var r = await fetch('/png?name=ico-' + p + '-' + s, { method: 'POST', body: blob }); done.push(p + s + ':' + r.status);
   } }
+  // one picture to look at: the 16px icons, shrunk from the big drawing and drawn for 16, eight times enlarged
+  var cmp = document.createElement('canvas'); cmp.width = 3 * 2 * 150 + 20; cmp.height = 190; var cx = cmp.getContext('2d'); cx.fillStyle = '#f3f4f6'; cx.fillRect(0, 0, cmp.width, 95); cx.fillStyle = '#111827'; cx.fillRect(0, 95, cmp.width, 95);
+  var col = 0; for (var p2 of Object.keys(FINAL)) { for (var src of [FINAL[p2], FINAL16[p2]]) { var i2 = await img(src); var c16 = document.createElement('canvas'); c16.width = 16; c16.height = 16; var k = c16.getContext('2d'); k.imageSmoothingQuality = 'high'; k.drawImage(i2, 0, 0, 16, 16); cx.imageSmoothingEnabled = false; [8, 103].forEach(function (yy) { cx.drawImage(c16, 14 + col * 150, yy, 80, 80); cx.drawImage(c16, 14 + col * 150 + 96, yy + 64, 16, 16); }); col++; } }
+  document.body.appendChild(cmp); var b2 = await new Promise(function (res) { cmp.toBlob(res, 'image/png'); }); var r2 = await fetch('/png?name=bethesda-icon-16px-before-after', { method: 'POST', body: b2 }); done.push('cmp:' + r2.status);
   window.__sheets = done.join(' '); document.title = 'done';
 })();
 </script>
