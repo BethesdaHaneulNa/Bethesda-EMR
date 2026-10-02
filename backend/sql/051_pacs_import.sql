@@ -1,4 +1,4 @@
--- 851 (PACS; the coordinator gives it its number when merging): images brought in from
+-- 051 (PACS): images brought in from
 -- another establishment (a CD or a USB stick the patient carries).
 --
 -- Director, 2026-10-02: "들여오기 프로그램에서 차트번호 입력하면 그 환자 것으로 외부 영상이 들어감 →

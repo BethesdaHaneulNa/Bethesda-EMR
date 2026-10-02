@@ -1,7 +1,7 @@
 # 외부 영상 들여오기 — 프로그램이 부르는 EMR API (약속)
 
 > 2026-10-02 · PACS 세션. **Bethesda CD의 「들여오기」를 만드는 세션이 읽는 문서.**
-> 서버 코드: `backend/src/routes/pacs.import.js` · 표: `backend/sql/851_pacs_import.sql`(임시 번호) ·
+> 서버 코드: `backend/src/routes/pacs.import.js` · 표: `backend/sql/051_pacs_import.sql`(임시 번호) ·
 > 설계: [external-images-import-design.md](external-images-import-design.md).
 > 격리 스택에서 시험 48개 통과(아래 「확인한 것」). 이 문서의 모양을 바꾸게 되면 총괄에 바로 알립니다.
 
