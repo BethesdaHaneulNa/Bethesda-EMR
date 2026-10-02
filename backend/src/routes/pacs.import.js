@@ -329,7 +329,7 @@ async function removeFromServer(cfg, imp) {
 async function rollBack(imp, why) {
   const cfg = await config();
   const state = cfg.orthanc_password && (await removeFromServer(cfg, imp)) === 'gone' ? 'rolled-back' : 'cleanup-pending';
-  await pool.query(`UPDATE pacs_import SET state = $2, error = $3, finished_at = CASE WHEN $2 = 'rolled-back' THEN NOW() ELSE finished_at END WHERE id = $1 AND state IN ('started', 'cleanup-pending')`,
+  await pool.query(`UPDATE pacs_import SET state = $2::text, error = $3, finished_at = CASE WHEN $2::text = 'rolled-back' THEN NOW() ELSE finished_at END WHERE id = $1 AND state IN ('started', 'cleanup-pending')`,
     [imp.id, state, text(why, 300)]);
   return state;
 }
@@ -462,6 +462,12 @@ async function resumePending() {
 }
 setTimeout(() => { resumePending(); }, 20000).unref();
 setInterval(() => { resumePending(); }, 5 * 60000).unref();
+// POST /api/pacs/import/resume - the same clean-up, asked for now (an administrator who
+// does not want to wait for the next round).
+router.post('/resume', authMiddleware, mayUndo, async (req, res) => {
+  try { res.json(Object.assign({ ok: true }, await resumePending())); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ── what other parts of the PACS module ask ──────────────────────────────
 // The orders of a patient that carry outside images: order id -> where they came from.

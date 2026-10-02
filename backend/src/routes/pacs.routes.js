@@ -10,6 +10,7 @@ const { relinkLostStudies, patientCheck } = require('./pacs.relink');
 const { isExam } = require('./pacs.exam');            // which orders are imaging exams
 const move = require('./pacs.move');                 // images put under another order
 const exportImages = require('./pacs.export');      // images given out: printed, copied to a disc
+const imports = require('./pacs.import');           // images brought in from another establishment
 const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
@@ -87,6 +88,8 @@ router.use('/viewer', viewer.router);
 router.use('/', move.router);
 // An exam's images given out of the clinic: on paper, on a disc (pacs.export.js).
 router.use('/export', exportImages.router);
+// Images of another establishment brought in and tied to an order (pacs.import.js).
+router.use('/import', imports.router);
 
 // Settings UI. This carries the bridge token, which opens the patient feed, so
 // it is for the settings permission only -- not every member of staff.
@@ -364,6 +367,9 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
         ORDER BY v.visit_date DESC, oi.id DESC`,
       [req.params.patientId]
     );
+    // Orders whose images came from another establishment's disc say so (pacs.import.js).
+    const outside = await imports.externalByOrder(req.params.patientId);
+    r.rows.forEach(row => { row.external = outside.get(row.id) || null; });
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -457,6 +463,10 @@ router.post('/bridge-heartbeat', async (req, res) => {
       // Why the bridge could not ask Orthanc which studies arrived; '' when it
       // could. status.routes.js (settings) turns a non-empty one into a warning.
       arrivals_error: String(body.arrivals_error || '').slice(0, 300),
+      // The room on the disk the image server stores on, as the bridge sees it (it shares
+      // that disk): pacs.import.js refuses an import that would fill it. 0 = not said.
+      storage_free_bytes: Number(body.storage_free_bytes) > 0 ? Number(body.storage_free_bytes) : 0,
+      storage_total_bytes: Number(body.storage_total_bytes) > 0 ? Number(body.storage_total_bytes) : 0,
     };
     await pool.query(
       `INSERT INTO service_heartbeat (name, last_seen, ok, detail)
@@ -535,7 +545,9 @@ router.get('/superseded-images', async (req, res) => {
     const cfg = await ensureConfig();
     const denied = bridgeDenied(cfg, req);
     if (denied) return res.status(401).json({ error: denied });
-    res.json({ items: await move.supersededNow() });
+    // ... and the studies an import made here and removed again (pacs.import.js).
+    const removed = (await imports.removedStudies()).map(uid => ({ study_uid: uid, all: true, instances: [], replaced_by: '' }));
+    res.json({ items: (await move.supersededNow()).concat(removed) });
   } catch (err) { console.error('[pacs] superseded images:', err.message); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -571,6 +583,11 @@ router.post('/study-arrived', async (req, res) => {
     // its number right now is not an arrival. The bridge asks again on its next cycle.
     const moving = await client.query(`SELECT 1 WHERE ${move.OPEN_ON('$1')}`, [row.order_item_id]);
     if (moving.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'A correction is in progress for this order' }); }
+    // A study an import is working on (under the number it came with, or the one it is given
+    // here) is not an arrival either.
+    if (await imports.importingNow(uid) || (imageStudyUid && await imports.importingNow(imageStudyUid))) {
+      await client.query('ROLLBACK'); return res.status(409).json({ error: 'This study is being brought in from a disc' });
+    }
     // The UID is the link; a report for some other study must not land here.
     // A study found by accession (the device made up its own UID, P-4) must
     // carry this entry's accession number, and its own UID is kept apart.
