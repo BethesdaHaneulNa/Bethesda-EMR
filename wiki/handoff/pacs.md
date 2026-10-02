@@ -2,6 +2,27 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 외부 영상 들여오기: EMR 쪽(서버 · 「영상/판독」의 외부 영상 묶음) — 오더 없이 환자에게
+
+- **상태**: 확인 요청. 프로그램(Bethesda CD의 「들여오기」) 쪽은 **설정 세션이 맡음**(총괄의 일 나누기) — PACS 세션은 PACS 저장소의 `bethesda-cd\` · `cd-export*.ps1`을 더 건드리지 않음.
+- **커밋**: **EMR 저장소** `session/pacs` — `ade2deb`(서버 · 화면 · API 약속) + 이 항목이 든 커밋(접수 권한 · 화면 다듬기 · 위키). 그 앞의 `e2b4816` · `bc82262`는 폐기된 안(오더에 붙임)의 중간 커밋 — 그 위에 고쳐 썼으므로 따로 볼 것 없음. develop을 `git merge`로 합침. **PACS 저장소** `session/pacs` — `1c593bd`(main `80417f7`을 ff로 받은 뒤 `bridge/bridge.py` 한 건).
+- **방식**(실장님 2026-10-02: 「차트번호 입력하면 그 환자 것으로 외부 영상이 들어감 … EMR 영상판독에서 조회하면 다 뜨게」): 외부 영상은 **환자에게** 붙음 — 오더 · 진료 · 방문 · worklist_log · 수납 줄 없음, 판독 칸 없음. EMR은 **표 `pacs_import`에 `done`으로 적힌 것만** 보여 줌. 앞의 두 안(오더에 붙임 / EMR 화면에서 브라우저로 올림)은 폐기 — 그때 넣었던 배선(`pacs.move`의 EXTERNAL, `export`의 external, `readings`의 external, 오더 코드 `IMG-EXT`)은 모두 되돌림(`pacs.move.js`는 develop과 같음).
+- **한 일**
+  - `backend/sql/851_pacs_import.sql`(임시 번호): 표 `pacs_import`(검사 하나 = 한 줄) + `pacs_config.import_max_file_mb`(기본 1024). 오더 코드는 만들지 않음.
+  - `backend/src/routes/pacs.import.js`: 프로그램이 부르는 `patient` · `check` · `begin` · `instance`(몸통 = DICOM 파일 그대로, EMR에 머물지 않고 흘러감) · `finish` · `cancel`, EMR 화면이 부르는 `list` · `:id/viewer-url` · `:id/undo`, 뒷정리 `resume`(서버도 5분마다 스스로). 검사 번호는 새 가지 `…3680043.9.7308.<id>.<시각>`, accession은 `EXT-<id>`.
+  - `pacs.routes.js`: 심박의 `storage_free_bytes`/`storage_total_bytes` 받기 · `superseded-images`에 치운/뺀 검사 · `/study-arrived`가 들여오는 중인 검사를 거절(409) · `PUT /pacs/config`가 `import_max_file_mb`(1~4096)를 받음. `pacs.viewer.js`: 외부 검사용 안내 둘(영상 서버에 없음 / 그림 없는 자료뿐). `utils/audit.js`: `pacs.images.import`.
+  - 화면: `frontend/src/components/OutsideStudies.jsx`(새) + `RadiologyReadings.jsx` — 목록 맨 아래 「💿 Imagerie externe (CD / USB)」 묶음, 목록 위 「💿 N」 단추, 오른쪽 칸(병원 · 장수/크기 · 누가 언제 · 디스크의 이름/번호 · 생일/성별이 달랐다는 표시), 「Voir image」(판독 칸 없는 영상 창), 「Retirer du dossier…」(사유 필수). `Consultation.jsx` · `Payment.jsx`는 고치지 않음.
+  - PACS 저장소 `bridge/bridge.py`: 심박에 영상 서버 디스크의 남은 자리.
+  - 문서: `wiki/reference/external-images-import-api.md`(새 — 프로그램이 부르는 길의 약속), `external-images-import-design.md`(맨 위에 「확정된 방식」, 폐기된 절에 표시), `modules/pacs.md`(2.8 · 4절 서버/화면/표 · P-34 · 변경 기록), `manual-fr/pacs.md`(13절 · 안내문 두 줄 · 관리자 바로가기 이름), `changelog-1.5.0/pacs.md`, `image-print-export-design.md`(바로가기 이름).
+- **공용 파일 변경**: `frontend/nginx.conf` — 새 블록 `location /api/pacs/import/`(몸통 크기 제한 없음 · `proxy_request_buffering off` · 시간 제한 900초 · 502~504는 다른 길과 같이 `/api_backend_down.json`). 다른 길의 1MB 한도는 그대로. `backend/src/utils/audit.js`(동작 이름 한 줄). `frontend/src/i18n/{fr,en,ko}.js` — `px_` 구간 안에 `px_x…` 22개씩.
+- **DB 마이그레이션**: `851_pacs_import.sql`(임시 번호 — 다음 진짜 번호 051). 격리 DB에는 적용돼 있음(옛 모양의 851을 지우고 다시 적용).
+- **번역 키**: `px_xGroup` `px_xChip` `px_xStudyDate` `px_xFrom` `px_xFromUnknown` `px_xImported` `px_xCameAs` `px_xBirthDiffered` `px_xSexDiffered` `px_xUndrawn` `px_xNoReading` `px_xUndo` `px_xUndoAsk` `px_xUndoReason` `px_xUndoGo` `px_xUndoFail` `px_xOpenFail` `px_xErr_UNREACHABLE` `px_xErr_NOT_PAIRED` `px_xErr_NOT_DONE` `px_xErr_NOT_FOUND` `px_xErr_NO_REASON` — fr · en · ko.
+- **확인한 방법**(격리 스택 EMR 9188 · PACS 9198, 공개 견본 CT와 이 세션이 그린 가짜 환자 영상): `import_api.py` **48가지 통과**(내용은 `modules/pacs.md` 4절) — 그 가운데: 들여온 뒤 오더 · worklist_log · 방문 · 진료 · 수납 줄 수가 처음과 같음, 그림 바이트 · 압축 그대로, 끊긴 것은 남지 않음, 영상 서버를 끈 채 취소 → 켠 뒤 치움. 반출 `export_api.py` 31가지 그대로 통과. 화면(진료 화면, 불어): 묶음 · 「💿 N」 · 오른쪽 칸 · Stone으로 열림(우리 환자 이름 · 번호) · 사유 넣고 빼기 → 줄이 사라짐.
+- **영상 인쇄 창 점검**(총괄 부탁 — 진료 세션 `fe0e23d` 뒤): 격리에서 2장짜리 검사를 인쇄 → `document_log` 47 → 47(그대로), `pacs.images.print` 20 → 21(한 줄), 인쇄 창은 한 번 열림. 화면의 안내도 「journal des modifications (pas de numéro de document…)」.
+- **확인 못 한 것**: 프로그램(C#)에서 부르는 것 자체 · 접수 권한만 있는 계정(시험 계정 없음) · 진짜 다른 병원 디스크 · 1GB에 가까운 파일 하나 · 수납 화면에서의 모습(같은 부품이나 눈으로 안 봄) · 한국어/영어 화면의 글 배치. `move_blocks.py`의 두 가지가 `STILL_ARRIVING`으로 떨어짐 — 옮긴 직후 다시 옮기는 시험이 Orthanc의 「아직 안정되지 않음」에 걸린 것으로, `pacs.move.js`는 develop과 같음(이번 변경과 무관, 시험 스크립트의 기다림 문제).
+- **격리 스택**: 총괄 말씀대로 **내리지 않고 둠**(설정 세션이 프로그램을 맞춰 볼 때 씀). 외부 검사는 모두 빼 둔 상태(`pacs_import`에 `done` 없음), 파일 한도 1024MB.
+- **다른 세션에 부탁**: ① 총괄 — 마이그레이션 번호(051) · nginx 블록 확인. ② 설정 세션 — 「오더 연동」 탭에 「들여오기: 파일 하나의 한도(MB)」 칸(`GET/PUT /api/pacs/config`의 `import_max_file_mb`, 1~4096)을 넣을지. ③ 프로그램을 짓는 세션 — `external-images-import-api.md`대로; 모양을 바꿔야 하면 PACS 세션에.
+
 ## 2026-10-01 — 설계안 보탬: 영상 CD 반출 프로그램(④) · 총괄 몫의 결정 반영 (문서만)
 
 - **상태**: 확인 요청 — **결정 대기**(실장님 몫: 가 · 나 · 라 · 마 · 바 · 사 · 아 · 자 · 차). 짓지 않음.

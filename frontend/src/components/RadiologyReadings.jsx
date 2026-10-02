@@ -5,6 +5,7 @@ import { printDocument } from '../documents/shared.jsx';
 import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
 import { MoveStudy, moveLine } from './MoveStudy.jsx';
 import { ImagesPrint, imagesBlock } from './ImagesPrint.jsx';
+import { OutsideDetail, OutsideViewer, outsideDate, outsideName } from './OutsideStudies.jsx';
 
 // A timestamp (result_at, cancelled_at) reaches the browser in UTC, so cutting
 // at 'T' dated a reading written between local midnight and 03:00 the day
@@ -234,7 +235,9 @@ function ymdhm(d) {
 // when the list is closed.
 // Where there is an image window (props.onOpen) the chosen exam also offers "the images
 // are under the wrong order" (MoveStudy.jsx), and every exam shows the corrections it
-// was part of.
+// Under the patient's own exams the list shows the studies brought in from another
+// establishment's disc (OutsideStudies.jsx; GET /pacs/import/list): they hang on the
+// patient, not on an order - no tick box, no reading, no print. A chosen one is 'x<id>'.
 export function RadiologyReadings(props) {
   var lc = useLang(); var t = lc.t;
   var rs = useState([]), rows = rs[0], setRows = rs[1];
@@ -248,10 +251,12 @@ export function RadiologyReadings(props) {
   var mls = useState([]), moved = mls[0], setMoved = mls[1];           // the patient's corrections (GET /pacs/moves/patient)
   var ags = useState(0), again = ags[0], setAgain = ags[1];            // raised to read the list again after a correction
   var ims = useState(null), imaging = ims[0], setImaging = ims[1];     // the row whose images are being printed on paper
+  var xs = useState([]), outside = xs[0], setOutside = xs[1];          // the patient's outside studies
+  var xvs = useState(null), outsideOpen = xvs[0], setOutsideOpen = xvs[1];   // the outside study shown in the image window
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
-    if (!props.patientId) { setRows([]); return; }
+    if (!props.patientId) { setRows([]); setOutside([]); return; }
     // props.reload: a number the screen raises to read the list again without taking it
     // off the screen - after the image window closes, a reading saved there shows here
     // and the list keeps its place (no «Loading…», no jump to the top, same exam chosen).
@@ -265,6 +270,10 @@ export function RadiologyReadings(props) {
     api.get('/pacs/moves/patient/' + props.patientId)
       .then(function (r) { setMoved((r || []).filter(function (m) { return m.state !== 'rolled-back' && m.state !== 'failed'; })); })
       .catch(function () { setMoved([]); });
+    // The outside studies. An EMR without them shows none.
+    if (!quiet) setOutside([]);
+    api.get('/pacs/import/list?patient_id=' + props.patientId)
+      .then(function (r) { setOutside((r && r.studies) || []); }).catch(function () { if (!quiet) setOutside([]); });
   }, [props.patientId, props.reload, again]);
 
   // The arrow keys work as soon as the list is on the screen.
@@ -287,25 +296,40 @@ export function RadiologyReadings(props) {
   }
 
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
-  if (!rows.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
+  if (!rows.length && !outside.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
 
   // Narrowing the list: by device type (only offered when there are several) and by a
   // word of the exam's name or a piece of its date.
-  var kinds = rows.map(function (r) { return r.pacs_modality || ''; }).filter(function (k, i, a) { return k && a.indexOf(k) === i; });
+  var kinds = rows.map(function (r) { return r.pacs_modality || ''; }).concat(outside.map(function (x) { return x.modality || ''; })).filter(function (k, i, a) { return k && a.indexOf(k) === i; });
   var word = query.trim().toLowerCase();
   var shown = rows.filter(function (r) {
     if (kind && (r.pacs_modality || '') !== kind) return false;
     return !word || (String(r.order_name || '') + ' ' + ymd(r.visit_date)).toLowerCase().indexOf(word) >= 0;
   });
-  var sel = shown.filter(function (r) { return r.id === selId; })[0] || shown[0] || null;
+  var shownOut = outside.filter(function (x) {
+    if (kind && (x.modality || '') !== kind) return false;
+    return !word || (String(x.description || '') + ' ' + String(x.institution || '') + ' ' + outsideDate(x.study_date)).toLowerCase().indexOf(word) >= 0;
+  });
+  var selOut = shownOut.filter(function (x) { return 'x' + x.id === selId; })[0] || null;
+  var sel = selOut ? null : (shown.filter(function (r) { return r.id === selId; })[0] || shown[0] || null);
+  if (!sel && !selOut) selOut = shownOut[0] || null;
+  // every line of the list, in the order shown: what the arrow keys walk through
+  var lines = shown.map(function (r) { return r.id; }).concat(shownOut.map(function (x) { return 'x' + x.id; }));
 
   function move(step) {
-    if (!sel) return;
-    var next = shown[Math.max(0, Math.min(shown.length - 1, shown.indexOf(sel) + step))];
-    if (!next) return;
-    setSelId(next.id);
-    var el = listRef.current && listRef.current.querySelector('[data-exam="' + next.id + '"]');
+    var at = lines.indexOf(selOut ? 'x' + selOut.id : sel ? sel.id : null);
+    if (at < 0) return;
+    var next = lines[Math.max(0, Math.min(lines.length - 1, at + step))];
+    if (next === undefined) return;
+    setSelId(next);
+    var el = listRef.current && listRef.current.querySelector('[data-exam="' + next + '"]');
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+  function toOutside() {
+    if (!shownOut.length) return;
+    if (!selOut) setSelId('x' + shownOut[0].id);
+    var el = listRef.current && listRef.current.querySelector('[data-outside-head]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
   }
   function keys(e) {
     if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
@@ -345,14 +369,16 @@ export function RadiologyReadings(props) {
           </select> : null}
           <input value={query} onChange={function (e) { setQuery(e.target.value); }} onKeyDown={keys} placeholder={t.px_filterSearch}
             style={{ flex: '1 1 90px', minWidth: 0, maxWidth: 220, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 3, color: tx, fontSize: 12, padding: '2px 6px', outline: 'none' }} />
-          <span style={{ flex: 'none', marginLeft: 'auto', color: t3, fontSize: 12 }}>{shown.length === rows.length ? rows.length : shown.length + ' / ' + rows.length}</span>
+          {/* the outside studies are under the patient's own exams: with a long list, one click goes there */}
+          {shownOut.length && shown.length ? <button onClick={toOutside} title={t.px_xGroup} style={Object.assign(act(true), { marginLeft: 'auto' })}>💿 {shownOut.length}</button> : null}
+          <span style={{ flex: 'none', marginLeft: shownOut.length && shown.length ? 0 : 'auto', color: t3, fontSize: 12 }}>{lines.length === rows.length + outside.length ? lines.length : lines.length + ' / ' + (rows.length + outside.length)}</span>
         </div>
         <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
             {canTick ? <span></span> : null}
             <span>{t.px_colDate}</span><span>{t.px_colType}</span><span>{t.px_colExam}</span><span>{t.px_colImages}</span><span>{t.px_colReading}</span>
           </div>
-          {!shown.length ? <div style={{ padding: 14, color: t3, fontSize: 13 }}>{t.px_noMatch}</div> : null}
+          {!lines.length ? <div style={{ padding: 14, color: t3, fontSize: 13 }}>{t.px_noMatch}</div> : null}
           {shown.map(function (r) {
             // A cancelled order (decision 3-B) stays in the list - its images and reading
             // are part of the record. Told apart by grey text, the struck-out name and
@@ -379,12 +405,33 @@ export function RadiologyReadings(props) {
                 {r.result_text ? '✓ ' + (r.result_by_name || '') : t.px_readNone}</span>
             </div>;
           })}
+          {/* the studies brought in from another establishment's disc: under the patient's own exams */}
+          {shownOut.length ? <div data-outside-head="1" style={{ padding: '5px 10px', background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, borderTop: shown.length ? '1px solid ' + bd : 'none', color: t2, fontSize: 12, fontWeight: 700 }}>
+            💿 {t.px_xGroup} <span style={{ color: t3, fontWeight: 400 }}>· {shownOut.length}</span></div> : null}
+          {shownOut.map(function (x) {
+            var on = selOut && x.id === selOut.id;
+            return <div key={'x' + x.id} data-exam={'x' + x.id} onClick={function () { setSelId('x' + x.id); }}
+              style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '0 10px', height: 28, cursor: 'pointer', fontSize: 13,
+                borderBottom: '1px solid ' + bd, borderLeft: '3px solid ' + (on ? 'var(--violet-strong)' : 'transparent'), background: on ? 'var(--violet-a20)' : 'transparent' }}>
+              {canTick ? <span></span> : null}
+              <span style={Object.assign({ fontFamily: 'monospace', fontWeight: 700, color: 'var(--ok-text)' }, cell)}>{outsideDate(x.study_date) || '—'}</span>
+              <span style={Object.assign({ color: 'var(--accent-text-2)', fontWeight: 700, fontSize: 12 }, cell)}>{x.modality || ''}</span>
+              <span style={cell} title={[outsideName(x, t), x.institution].filter(Boolean).join(' — ')}>
+                <span style={{ color: tx, fontWeight: 700 }}>{outsideName(x, t)}</span>
+                <span style={Object.assign({ background: 'var(--warn-chip)', color: 'var(--warn-text-2)' }, chip)}>{t.px_xChip}</span>
+                {x.institution ? <span style={{ color: t2, marginLeft: 6, fontSize: 12 }}>{x.institution}</span> : null}
+              </span>
+              <span style={Object.assign({ fontSize: 12, fontWeight: 700, color: 'var(--ok-text)' }, cell)}>{String(t.px_imgShort || '').replace('{n}', x.image_count == null ? '?' : x.image_count)}</span>
+              <span style={Object.assign({ fontSize: 12, color: t2 }, cell)}>—</span>
+            </div>;
+          })}
         </div>
       </div>
 
       {/* the chosen exam */}
       <div style={{ flex: '1 1 42%', minWidth: 300, display: 'flex', flexDirection: 'column', padding: 14, boxSizing: 'border-box', minHeight: 0, background: 'var(--bg-col)' }}>
-        {!sel ? <div style={{ color: t3, fontSize: 14 }}>{t.px_pickHint}</div> : (function () {
+        {selOut ? <OutsideDetail study={selOut} t={t} onOpen={props.onOpen ? function () { setOutsideOpen(selOut); } : null} onDone={function () { setAgain(again + 1); }} />
+        : !sel ? <div style={{ color: t3, fontSize: 14 }}>{t.px_pickHint}</div> : (function () {
           var r = sel, cancelled = r.order_status === 'cancelled';
           return <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -442,6 +489,7 @@ export function RadiologyReadings(props) {
       {printing ? <ReportPrint exams={printing} patientId={props.patientId} t={t} onClose={function () { setPrinting(null); }} /> : null}
       {imaging ? <ImagesPrint exam={imaging} examDate={ymd(imaging.images_received_at) || ymd(imaging.visit_date)} now={ymdhm(new Date().toISOString())}
         patientId={props.patientId} t={t} onClose={function () { setImaging(null); }} /> : null}
+      {outsideOpen ? <OutsideViewer study={outsideOpen} t={t} onClose={function () { setOutsideOpen(null); }} /> : null}
       {moving ? <MoveStudy exam={moving} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
     </div>
   );

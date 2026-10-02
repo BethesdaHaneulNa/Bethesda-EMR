@@ -5,12 +5,14 @@
 // and which page it is.
 //
 // It has the document engine's template shape (code, name, Layout taking values /
-// patient / clinic / lang / docNo / dateStr) and is issued through POST /api/documents,
-// but it is printed from the imaging list (components/ImagesPrint.jsx): the pictures are
-// chosen there.
+// patient / clinic / lang / docNo / dateStr), but it is printed from the imaging list
+// (components/ImagesPrint.jsx): the pictures are chosen there. Printing it is not issuing
+// a document (director, 2026-10-02): it takes no number; the print leaves one line in the
+// change log (POST /api/pacs/export/printed). Sheets issued before that are still in
+// document_log and open from the documents history with this same layout.
 //   values { exam_name, exam_date, order_item_id, per_page, clarity,
 //            images: [{ id, series, number, frames, desc }] }
-// The issued record keeps which pictures were printed, never the pictures themselves:
+// A record issued earlier keeps which pictures were printed, never the pictures themselves:
 // a sheet opened again from the documents history asks the image server for them again
 // (usePictures below). props.pictures - { id: data URL } - is what the print window has
 // already loaded; with it nothing is fetched here.

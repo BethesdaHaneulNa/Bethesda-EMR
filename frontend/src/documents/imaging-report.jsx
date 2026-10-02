@@ -5,13 +5,15 @@
 // with the reading, and at the foot of the page the clinic and who read it.
 //
 // It has the document engine's template shape (code, name, Layout taking values /
-// patient / clinic / lang / docNo / dateStr) and is issued through POST /api/documents
-// like every paper that leaves the clinic, but it is printed from the imaging list
+// patient / clinic / lang / docNo / dateStr), but it is printed from the imaging list
 // (components/RadiologyReadings.jsx), not from the documents window - there is nothing
-// to fill in: every value comes from the exam.
+// to fill in: every value comes from the exam. Printing it is not issuing a document
+// (director, 2026-10-02): it takes no number; the print leaves one line in the change log
+// (POST /documents/print-log). Reports issued before that are still in document_log and
+// open from the documents history with this same layout.
 //   values { exam_name, exam_date, reading, read_by, read_at } are printed. The list also
-//   passes modality, image_count, dept and ordered_by: they stay in the issued record
-//   (document_log) and are not on the sheet - the director took them off (2026-10-01).
+//   passes modality, image_count, dept and ordered_by: they are in the log line (and in
+//   the records issued earlier), not on the sheet - the director took them off (2026-10-01).
 import { L, fmtDate, calcAge, clinicName, DOC_LABELS } from './shared.jsx';
 
 // The labels are the form's own. Korean keeps the English labels of the original sheet.

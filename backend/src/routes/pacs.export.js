@@ -4,7 +4,7 @@
 //  Printing an exam's images on paper (components/ImagesPrint.jsx):
 //   GET  /api/pacs/export/exam/:orderItemId   the pictures of one exam, in the order of the device
 //   GET  /api/pacs/export/image?order_item_id=&instance=&w=   one picture, as JPEG
-//   POST /api/pacs/export/printed             the change-log line of a print, before the paper is issued
+//   POST /api/pacs/export/printed             the change-log line of a print, before the paper is printed
 //  Copying exams to a disc - the export program of the PACS folder (cd-export.ps1), which
 //  talks to the EMR only, never to the image server:
 //   GET  /api/pacs/export/patient?chart_no=   the patient, the clinic, the patient's exams with their sizes
@@ -209,8 +209,8 @@ router.get('/image', authMiddleware, mayExport, async (req, res) => {
 
 // POST /api/pacs/export/printed   { order_item_id, instances: [image server ids], per_page, lang }
 // The change-log line of a print (pacs.images.print): who, whose, which exam, how many
-// pictures. The screen calls it before it issues the paper (POST /api/documents) and
-// prints only when this answered ok - no line, no paper. Every picture named must be of
+// pictures. The screen calls it before it prints and prints only when this answered ok -
+// no line, no paper. (The print is not a document issue: no document number is taken.) Every picture named must be of
 // this exam.
 router.post('/printed', authMiddleware, mayExport, async (req, res) => {
   try {
