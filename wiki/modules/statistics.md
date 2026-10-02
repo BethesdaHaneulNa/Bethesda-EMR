@@ -1,6 +1,6 @@
 # 통계 (Statistics)
 
-> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-10-02 · **상태**: 1~20 처리 · 현금 기준(시안 A) · **진료 통계 네 표 추가(2026-10-02): 환자 통계 · 과·의사별 진료량 · 진단 통계 · 오더 통계** · 열린 항목: 나이대가 현장 보고 양식과 맞는지(3.12)
+> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-10-02 · **상태**: 1~20 처리 · 현금 기준(시안 A) · 진료 통계 네 표(환자 · 과·의사별 · 진단 · 오더) · **여섯 묶음: 묶음마다 기간 줄 하나 · 보이는 묶음만 불러옴 · 고른 묶음 기억(2026-10-02)** · 열린 항목: 나이대가 현장 보고 양식과 맞는지(3.12)
 
 ## 1. 이 모듈이 하는 일
 
@@ -23,14 +23,19 @@
 
 > 병원 직원이 읽는 부분입니다. 현장은 프랑스어 화면을 쓰므로 **버튼 이름은 프랑스어 화면에 보이는 그대로** 쓰고, 괄호 안에 한국어 화면의 이름을 붙였습니다. 화면 언어는 오른쪽 위의 **EN · KO · FR** 로 바꿉니다.
 
-### 2.1 화면 열기와 기간 고르기
+### 2.1 화면 열기 · 묶음 고르기 · 기간 고르기
 
 1. 맨 위 메뉴 줄에서 **Statistiques (통계)** 를 누릅니다. 이 메뉴는 통계 권한이 있는 계정에만 보입니다.
-2. 처음에는 **Ce mois (이번 달)** — 이번 달 1일부터 오늘까지가 보입니다.
-3. 기간을 바꾸려면 위쪽의 **Aujourd'hui (오늘)** · **Cette semaine (이번 주)** · **Ce mois (이번 달)** 중 하나를 누르거나, 옆의 날짜 칸 두 개에 시작일과 끝일을 직접 넣습니다. 이번 주는 월요일부터입니다.
-4. 날짜를 바꾸면 곧바로 다시 계산됩니다. 계산하는 동안 날짜 옆에 `···` 가 보입니다.
+2. 왼쪽 메뉴에서 볼 **묶음**을 고릅니다: **Résumé (요약)** · **Recettes · caisse (매출 · 현금)** · **Patients · activité (환자 · 진료량)** · **Diagnostics (진단 통계)** · **Examens · actes (오더)** · **Médicaments (약품)**. 마지막에 본 묶음을 기억해, 다른 화면에 갔다 와도 그 묶음이 열립니다(이 PC · 이 계정).
+3. 묶음마다 맨 위에 **기간 줄이 하나** 있고, 어느 묶음에서나 같은 모양입니다:
+   - 단추 **Aujourd'hui (오늘)** · **Cette semaine (이번 주, 월요일부터)** · **Ce mois (이번 달)** · **30 jours (30일 — 오늘까지 30일)** · **Cette année (올해 — 1월 1일부터)**. 지금 기간의 단추에 불이 들어옵니다.
+   - 그 옆 **날짜 칸 두 개**에 시작일과 끝일을 직접 넣을 수도 있습니다. 시작일이 끝일보다 늦게 되는 날짜는 받지 않습니다(바뀌지 않음).
+   - 환자 · 진단 · 오더 묶음에는 그 옆에 **Tous les services (전체 진료과)** · **Tous les médecins (전체 의사)** 칸이 있어 과나 의사 하나로 좁힙니다.
+4. **그 묶음에 보이는 모든 표가 이 한 줄을 따릅니다.** 기간을 바꾸면 곧바로 다시 계산됩니다.
+5. 처음 기간: **Résumé** 와 **Recettes · caisse** 는 **Ce mois**(두 묶음은 같은 기간을 함께 씀 — 한쪽에서 바꾸면 다른 쪽도), **Patients · activité** · **Diagnostics** · **Examens · actes** 는 **30 jours**(묶음마다 따로), **Médicaments** 은 표의 단위에 맞춘 기간(2.4).
 
-> 위에서 고른 기간은 **Activité** 와 **Recettes** 부분에만 적용됩니다. **Impayé · Remboursement dû** 칸, **Caisse par période**, **Patients**, **Activité par service et par médecin**, **Diagnostics**, **Examens et actes prescrits**, **Usage médicaments**, **Tendance mensuelle** 은 기간과 관계없습니다(저마다 자기 날짜 칸이 있음 — 아래 설명).
+> 기간 줄을 따르지 않는 것: **Impayé · Remboursement dû** 칸(지금 이 순간의 금액)과 **Tendance mensuelle**(늘 최근 6개월).
+> 묶음은 기억하지만 **기간은 기억하지 않습니다** — 화면을 새로 열면 처음 기간으로 돌아갑니다.
 
 ### 2.2 Activité (운영 현황) — 몇 명이 왔나
 
@@ -66,15 +71,15 @@
 
 ### 2.3b Caisse par période (기간별 현금)
 
-1. **Recettes** 아래 **Caisse par période (기간별 현금)** 표에서 **Jour (일별)** · **Mois (월별)** · **Année (연별)** 를 누릅니다. 처음에는 최근 30일 · 12개월 · 5년.
-2. 다른 기간은 오른쪽 날짜 칸 두 개에 넣습니다(약품 표와 같은 방식).
+1. **Recettes · caisse** 묶음의 **Recettes** 아래 **Caisse par période (기간별 현금)** 표에서 **Jour (일별)** · **Mois (월별)** · **Année (연별)** 를 누릅니다. 기간은 **묶음 맨 위의 기간 줄**(위의 카드들과 같은 기간)입니다.
+2. 여러 달 · 여러 해를 보려면 기간 줄에서 **Cette année** 를 누르거나 날짜 칸에 넓은 기간을 넣습니다(「이번 달」에서 **Mois** 를 누르면 한 줄뿐).
 3. **가장 최근 날(달·해)이 맨 위**입니다 — 오늘을 보려고 아래로 내릴 필요가 없습니다. 줄마다 **Entrées (들어옴)** · **Sorties (나감)** · **Net (순액)** 과 종류별: **Paiements (수납)** · **Règlements de solde (미수 수납)** · **Rendu (correction) (정정 환불)** · **Rendu (annulation) (취소 환불)**. 현금 기록 전의 날짜가 기간에 있으면 **Avant le journal de caisse (옛 기록)** 칸이 더 나옵니다(그 날의 영수증 금액).
 4. 맨 아래 **Total** 이 기간 합계입니다(모두 Ariary 라 더할 수 있음). 매일의 순액이 그날 금고의 현금과 같아야 합니다.
 5. **⬇ CSV** 로 내려받습니다. 파일도 화면과 같은 순서(최근이 위, 합계가 맨 끝)입니다.
 
 ### 2.3c Patients (환자 통계) — 누가 왔나
 
-1. **Caisse par période** 아래 **👥 Patients (환자 통계)**. 처음에는 **오늘까지 30일**. 날짜 칸 두 개로 기간을 바꾸고, **Tous les services** · **Tous les médecins** 칸에서 과나 의사 하나로 좁힐 수 있습니다.
+1. 왼쪽 메뉴 **Patients · activité** 묶음의 **👥 Patients (환자 통계)**. 기간과 과 · 의사는 묶음 맨 위의 기간 줄에서 고릅니다(처음 **30 jours**) — 아래 **Activité par service et par médecin** 표와 **함께** 씁니다.
 2. 줄은 나이대입니다: **<5** · **5–14** · **15–49** · **50+**, 생년월일이 없는 환자가 있으면 **Âge inconnu (나이 모름)** 줄. 맨 아래 **Total**.
 
    | 칸 | 뜻 |
@@ -92,7 +97,7 @@
 
 ### 2.3d Activité par service et par médecin (과 · 의사별 진료량) — 누가 얼마나 봤나
 
-1. **📋 Activité par service et par médecin**. 처음에는 **오늘까지 30일**. 날짜 칸 두 개로 기간을 바꿉니다.
+1. 같은 묶음의 **📋 Activité par service et par médecin**. 기간 줄의 기간과 과 · 의사를 위의 환자 표와 함께 따릅니다 — 과 하나를 고르면 그 과의 줄과 그 과의 방문을 본 의사들만, 의사 하나를 고르면 그 의사의 줄과 그 의사가 본 과만 남습니다.
 2. 왼쪽 표는 **Par service (진료과별)**, 오른쪽 표는 **Par médecin (의사별)** — 내원이 많은 줄이 위.
 
    | 칸 | 뜻 |
@@ -107,11 +112,11 @@
 
 ### 2.3e Diagnostics (진단 통계) — 어떤 병이 많았나
 
-1. **Activité par service et par médecin** 아래 **🩺 Diagnostics (진단 통계)** 로 내려갑니다. 처음에는 **오늘까지 30일**이 나옵니다.
-2. 맨 왼쪽 칸에서 **Diagnostic principal (주진단만)** 또는 **Tous les diagnostics (전체 진단)** 를 고릅니다.
+1. 왼쪽 메뉴 **🩺 Diagnostics (진단 통계)**. 처음에는 **30 jours**(오늘까지 30일).
+2. 표 제목 아래 칸에서 **Diagnostic principal (주진단만)** 또는 **Tous les diagnostics (전체 진단)** 를 고릅니다.
    - **Diagnostic principal** — 진료마다 주진단 하나만 셉니다. 진료 한 번이 한 번만 세어지므로 「이 기간에 무엇 때문에 왔나」를 볼 때 씁니다. 처음에는 이것입니다.
    - **Tous les diagnostics** — 부진단도 셉니다. 한 진료가 여러 줄에 나올 수 있습니다.
-3. 날짜 칸 두 개로 기간을 바꾸고, **Tous les services (전체 진료과)** · **Tous les médecins (전체 의사)** 칸에서 과나 의사 하나로 좁힐 수 있습니다(그 방문의 과 · 담당 의사).
+3. 기간과 과 · 의사는 맨 위 기간 줄에서 바꿉니다(그 방문의 과 · 담당 의사).
 4. 표는 **많은 진단이 위**입니다. 칸의 뜻:
 
    | 칸 | 뜻 |
@@ -130,9 +135,9 @@
 
 ### 2.3f Examens et actes prescrits (오더 통계) — 어떤 오더가 많이 나왔나
 
-1. **🧪 Examens et actes prescrits (오더 통계)**. 처음에는 **오늘까지 30일**.
-2. 맨 왼쪽 칸에서 종류를 고릅니다: **Tous les types (전체 종류)** · **Laboratoire (검사)** · **Imagerie (영상)** · **Actes (처치)**.
-3. 날짜 칸 두 개 · **Tous les services** · **Tous les médecins** 은 진단 통계와 같습니다.
+1. 왼쪽 메뉴 **Examens · actes** 묶음의 **🧪 Examens et actes prescrits (오더 통계)**. 처음에는 **30 jours**.
+2. 표 제목 아래 칸에서 종류를 고릅니다: **Tous les types (전체 종류)** · **Laboratoire (검사)** · **Imagerie (영상)** · **Actes (처치)**.
+3. 기간과 과 · 의사는 맨 위 기간 줄에서 바꿉니다.
 4. 표는 **건수가 많은 오더가 위**입니다.
 
    | 칸 | 뜻 |
@@ -149,9 +154,9 @@
 
 ### 2.4 Usage médicaments (약품 사용통계) — 약이 얼마나 나갔나
 
-1. **Jour (일별)** · **Mois (월별)** · **Année (연별)** 중 하나를 누릅니다. 처음에는 Jour 는 최근 30일, Mois 는 이번 달을 포함한 12개월, Année 는 올해를 포함한 5년이 나옵니다. 오른쪽의 **날짜 칸 두 개**에 그 기간이 보입니다.
-   - 다른 기간을 보려면 날짜 칸 두 개에 시작일과 끝일을 넣습니다. 시작일이 끝일보다 늦으면 바뀌지 않습니다.
-   - Jour · Mois · Année 를 다시 누르면 날짜 칸이 그 단위의 처음 기간으로 돌아갑니다.
+1. 왼쪽 메뉴 **Médicaments** 묶음에서 **Jour (일별)** · **Mois (월별)** · **Année (연별)** 중 하나를 누릅니다. 처음에는 Jour 는 최근 30일, Mois 는 이번 달을 포함한 12개월, Année 는 올해를 포함한 5년이 나옵니다. 맨 위 기간 줄의 **날짜 칸 두 개**에 그 기간이 보입니다(이때는 불이 들어온 단추가 없음).
+   - 다른 기간을 보려면 기간 줄의 단추를 누르거나 날짜 칸 두 개에 시작일과 끝일을 넣습니다. 시작일이 끝일보다 늦으면 바뀌지 않습니다.
+   - Jour · Mois · Année 를 누르면 기간이 그 단위의 처음 기간으로 돌아갑니다.
 2. **Tous (전체)** · **Interne (원내)** · **Externe (원외)** — 병원 약국에서 내준 약만, 또는 밖에서 사도록 처방한 약만 볼 수 있습니다.
 3. **Toutes Rx (처방전체)** · **Dispensé (조제완료)** — 둘은 세는 기준이 다릅니다. 표 위 작은 글씨에 지금 기준이 한 줄로 나옵니다.
    - **Toutes Rx** — 의사가 **처방한 날**(내원일) 기준, 처방한 수량 그대로. 「의사가 무엇을 얼마나 처방했나」.
@@ -161,7 +166,7 @@
    - 약 이름 옆에 노란 글씨 **Flacon · Tube · Inhalateur · Unité (병 · 튜브 · 흡입기 · 개)** 가 붙은 줄은 **병·개 수**입니다(시럽·흡입기·연고처럼 병째 주는 약). 붙지 않은 줄은 알약 등 먹는 양의 수입니다. 같은 약이 두 줄로 나오면 한 줄은 예전 방식(먹는 양), 한 줄은 병 수입니다.
 5. **⬇ CSV** 를 누르면 표를 엑셀에서 열 수 있는 파일로 내려받습니다. 파일에는 병·개 단위 칸(unit)도 있고, 날짜 칸 순서는 화면과 같습니다(최근이 먼저, total 이 맨 끝).
 
-> 이 표의 기간은 맨 위의 기간 선택과 **따로** 고릅니다(맨 위의 「이번 달」로 월별 표를 만들면 한 칸뿐이라). 날짜는 **Toutes Rx 는 처방한 날(내원일), Dispensé 는 약국이 내준 날** 기준입니다. 취소된 접수의 처방은 세지 않습니다 — 단 약국에서 이미 내준 약은 셉니다.
+> 이 묶음의 기간은 다른 묶음과 **따로**입니다(처음부터 「이번 달」이면 월별 표가 한 칸뿐이라 단위에 맞춘 기간에서 시작). 날짜는 **Toutes Rx 는 처방한 날(내원일), Dispensé 는 약국이 내준 날** 기준입니다. 취소된 접수의 처방은 세지 않습니다 — 단 약국에서 이미 내준 약은 셉니다.
 
 ### 2.5 Tendance mensuelle (월별 추이)
 
@@ -184,9 +189,22 @@
 
 ### 3.1 화면 구조 (`frontend/src/pages/Stats.jsx`)
 
-- 기간 상태 `range {from,to}` 가 바뀌면 `load()` 가 `/summary` 만 부릅니다(`Stats.jsx:64`). 기간과 무관한 `/monthly` 는 화면을 열 때 한 번(`Stats.jsx:35`), `/outstanding` 은 미수·환불 칸을 눌러 명단을 **열 때마다** 부릅니다(`toggleList`, `Stats.jsx:74`) — 명단이 방금 본 카드 금액과 같은 시점의 자료가 되도록. 명단을 처음 불러오는 동안은 「불러오는 중」이 보입니다.
-- 약품 표는 `drugGran/drugType/drugStat` 과 자기 기간 `drugRange {from,to}`(`Stats.jsx:32`)가 바뀔 때 `/drug-usage` 를 부릅니다(`Stats.jsx:42`). `drugRange` 가 비어 있으면 `from/to` 를 보내지 않아 서버 기본 기간(3.6)이 쓰이고, 날짜 칸에는 서버가 돌려준 기간이 보입니다. 단위 단추(`pickDrugGran`)는 `drugRange` 를 비워 기본으로 되돌립니다. 한쪽 날짜만 바꾸면 다른 쪽은 보이던 값으로 채워 보냅니다(`setDrugFrom`·`setDrugTo`, 시작 > 끝 은 무시). 위쪽 기간과 따로 둔 이유: 월별·연별 표를 「이번 달」로 자르면 한 칸뿐. 요청이 실패하면 빈 표(「데이터 없음」)가 되어, 예전처럼 「불러오는 중」에 멈춰 있지 않습니다.
-- 기간 버튼의 날짜는 **브라우저의 시계**로 계산합니다(`rangeFor`, `Stats.jsx:8`). 병원 PC 시계가 병원 시간대이면 맞습니다.
+- **여섯 묶음**(디자인 세션 2026-10-02, `wiki/modules/design.md` 3.12): 왼쪽 메뉴 `GROUPS` 에서 `group`(`summary`·`money`·`patients`·`dx`·`orders`·`drugs`)을 고르고, `Section` 은 `group` 속성이 지금 묶음과 다르면 그리지 않습니다. 배치는 디자인 세션의 것이고, 아래 세 가지 동작은 통계 세션이 2026-10-02 에 맞춤(총괄 지시).
+- **묶음마다 기간 줄 하나 — 같은 부품**: 상태 `per` = `{ main, patients, dx, orders, drugs }`, 각각 `{preset, from, to[, dept, doc]}`. `BAR_OF` 가 묶음 → 기간 줄: `summary`·`money` 는 둘 다 `main`(같은 `/summary` 를 읽으므로 한 기간을 함께 씀), 나머지는 제 것. 화면 맨 위의 한 덩어리(기간 줄 IIFE)가 지금 묶음의 줄을 그림: 단추 다섯(`today`·`week`·`month`·`30d`·`year` — `rangeFor`), 날짜 칸 둘, 환자 · 진단 · 오더 묶음이면 과 · 의사 칸(`/options`). `barPreset` 은 두 날짜를 한꺼번에, `barDate` 는 한쪽만 바꾸고 다른 쪽은 보이던 값 — **시작 > 끝이 되는 입력은 무시**(전에는 맨 위 줄만 그대로 보내 400 → 「데이터 없음」이 떴음; 이제 어디서나 같은 규칙), 날짜를 치면 `preset:'custom'`(불 들어온 단추 없음).
+  - 처음 값: `main` = 이번 달(전과 같음), `patients`·`dx`·`orders` = 30일(`rangeFor('30d')` = 오늘 − 29일 ~ 오늘 — 전에 서버 기본으로 보이던 것과 같은 기간), `drugs` = 빈 값(서버가 단위에 맞춰 30일 · 12개월 · 5년, 날짜 칸에는 서버가 돌려준 기간; 단위 단추 `pickDrugGran` 이 다시 비움 — 전과 같음).
+  - 한 묶음의 부분들이 그 줄을 **함께** 씀: 「매출 · 현금」의 카드 · 과/의사 그래프(`/summary`)와 **기간별 현금 표**(`/cash` — 전에는 자기 날짜 칸과 단위별 기본 기간이 있었음; 이제 단위 단추만 남고 기간은 묶음의 것), 「환자 · 진료량」의 환자 표(`/patients`)와 과 · 의사별 표(`/workload` — 과 · 의사 거르기도 같이 받게 서버를 넓힘, 3.13). 진단 · 오더의 표마다의 고르기(주진단/전체, 종류)와 CSV 단추는 표 제목 아래 줄에 그대로.
+  - 단추 「30일」「올해」는 이번에 더함: 30일은 진료 통계 네 표의 처음 기간에 불이 들어올 단추가 필요해서, 올해는 기간별 현금 · 약품 표의 월별 보기를 날짜를 치지 않고 한 번에 보려고(전에는 「월별 → 12개월」 기본이 그 일을 했음).
+- **보이는 묶음만 불러옴**: 화면을 열 때 아홉 부분을 모두 부르던 것을, 묶음을 처음 열 때 그 묶음의 것만. `ask(name, url, set, onFail)` 이 부분마다 마지막으로 부른 주소를 `asked`(ref)에 적어 두고 **주소가 같으면 다시 부르지 않음** — 다른 묶음에 갔다 와도 같은 기간이면 요청 없음, 기간 · 거르기를 바꾸면 보이는 묶음만. 늦게 온 옛 응답은 버림(주소가 그 사이 바뀌었으면 `set` 하지 않음). 실패하면 적어 둔 주소를 지워 다음에 그 묶음을 열 때 다시 시도하고, 화면에는 빈 표(「데이터 없음」).
+  | 묶음 | 부르는 것 |
+  |---|---|
+  | 요약 | `/summary`(기간), `/monthly`(한 번) |
+  | 매출 · 현금 | `/summary`(요약과 같은 주소면 다시 안 부름), `/cash`(단위 · 기간), 미수 · 환불 칸을 열 때 `/outstanding` |
+  | 환자 · 진료량 | `/options`(한 번), `/patients`, `/workload` |
+  | 진단 / 오더 | `/options`(한 번), `/diagnoses` / `/orders` |
+  | 약품 | `/drug-usage` |
+  `/summary` 가 오기 전에는 요약 · 매출의 두 `Section` 을 만들지 않음(`!data?null`) — 다른 묶음에서 시작하면 `data` 가 없으므로.
+- **고른 묶음 기억**: `localStorage` 키 `st_group:<계정 id>`(진료 화면의 `cs_phraseCat:<id>` 와 같은 방식 — 이 PC · 이 계정). 목록에 없는 값이면 `summary`. 기간 · 거르기는 기억하지 않음(화면을 새로 열면 처음 값).
+- 기간 버튼의 날짜는 **브라우저의 시계**로 계산합니다(`rangeFor`). 병원 PC 시계가 병원 시간대이면 맞습니다.
 - **금액 표기**(총괄 결정 2026-09-30): 프랑스어는 천 단위를 빈칸(U+00A0, 줄바꿈 안 되는 빈칸)으로 「39 300」, 한국어·영어는 쉼표 「39,300」 — `fmtAmount(n, lang)`(약국 `Pharmacy.jsx` 의 `fmt(n, lang)` 과 같은 규칙), 화면 안에서는 `fmtAr(n)` 이 지금 언어로 부름. CSV 는 기호 없는 숫자 그대로. 카드의 숫자와 단위 사이에도 줄바꿈 안 되는 빈칸(「3 cas」 · 「3 건」 · 「118 000 Ar」 — 예전에는 CSS 여백뿐이라 글자로는 「3cas」). 막대그래프 이름 칸 160px + 마우스를 올리면 전체 이름(프랑스어 과 이름이 110px 에서 잘렸음).
 - 개수 뒤의 단위 글자 `cases`·`people` 은 영어에서 **일부러 빈 문자열**(「15」, 「15 cases」가 아님)이라, `t.cases||'건'` 처럼 쓰면 빈 문자열이 한국어 기본값으로 떨어집니다. 그래서 `word(v, ko)`(빈 문자열도 값으로 봄)로 읽습니다 — 2026-09-29 영어 화면 확인 때 「15건」이 보여서 고침.
 - 막대그래프 `Bars`/`VBars` 는 가장 큰 값을 100%로 놓고 비율로 그립니다. 금액은 `fmtAr` 로 천 단위 쉼표, 반올림한 Ariary 정수입니다.
@@ -470,6 +488,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 - 총괄 범위의 「환자 수 · 진료 수 · 오더 건수」. **진료 수는 내원 수로 셈**(`visit`, 취소 제외, 진료 기록이 없어도) — 운영 현황의 과별 · 의사별 막대와 같은 숫자가 되도록(같은 화면에 비슷한 이름의 다른 숫자가 생기지 않게). 대기만 하다 간 방문도 들어감. 「진료 기록이 있는 방문만」으로 바꾸려면 `consultation` 과 묶으면 됨.
 - **오더 건수** = 그 방문의 `order_item` 줄 중 취소 아닌 것(`ORDERS_OF_VISIT`) — `/orders` 가 세는 줄과 같아, 같은 기간이면 전체 오더 건수 = `/orders` 의 `total.count`(시험에서 대조). 약(`prescription`)은 빠짐.
 - 과 · 의사는 **방문의** 것(`visit.department_id/doctor_id`), 없으면 id 가 null 인 한 줄(화면 「미지정」). id 로 묶어 동명이인이 합쳐지지 않음.
+- **거르기**(2026-10-02, 묶음의 기간 줄을 환자 표와 함께 쓰게 되면서): `department_id` · `doctor_id` 를 받으면 그 과 · 의사의 방문만 모음(`visitFilters`, 숫자가 아니면 400). 과 하나 → 과 표는 그 한 줄, 의사 표는 그 과의 방문을 본 의사들. 의사 하나 → 의사 표는 한 줄, 과 표는 그 의사가 본 과들. 시험: 과 FM → FM 2 · 2 · 4 / Kim 2 · 2 · 4 / 전체 2 · 2 · 4, 의사 Lee → INT 2 · 2 · 2 / Lee 2 · 2 · 2 ✅.
 - **한 번 읽고 세 갈래로 묶음**: 기간의 방문을 한 번 모아(`vv`, 방문마다 오더 수를 인덱스 `idx_oi_visit`(053)로 찾음) `GROUPING SETS ((department_id), (doctor_id), ())` 로 과별 · 의사별 · 전체를 한 쿼리에서. 처음에는 세 쿼리가 각각 방문마다 오더를 찾아 3년 전체에 0.8초 → 0.34초. 정렬(내원 수 · 환자 수 · 코드/이름)은 서버 JS 에서.
 - 환자 수는 과 · 의사를 가로질러 더할 수 없어(한 사람이 두 과) 전체를 따로 셈(`()` 묶음). 내원 수와 오더 건수는 줄의 합 = 전체.
 
@@ -505,12 +524,12 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 |---|---|---|
 | `GET /summary` | `from`, `to` (YYYY-MM-DD, 생략 시 이번 달) | `range, visits, byDept[{code,name,name_en,name_fr,cnt}], byDoctor[{doctor_id,name,cnt}], revenueByDept[{code,name,name_en,name_fr,paid,gross,billCount}], revenueByDoctor[{doctor_id,name,paid,gross,billCount}], revenue{gross,paid,consult,drug,procedure(서류 제외),issuance,issuanceCount,billCount(진료 영수),settlementCount(미수 수납),billedVisits,avgBilledPerVisit}, cash{in,out,net,byKind}(그날 현금 — `cash_movement`), voidedCount(직원 취소만), refunded(그 취소 때 돌려준 돈 — 화면에는 안 씀, `cash.byKind.cancel` 과 같은 값), refundUnknownCount(033 전 취소라 모름), outstanding{owed,refund}`. `revenue.paid` 는 영수 기준(과·의사 그래프 합계). 과·의사 없음은 `code`/`name` 이 `null`. 과·의사별 `paid` 는 3.8 방식. 예전 `revenue.avg` 는 없어짐(`avgBilledPerVisit` 로) |
 | `GET /monthly` | `months` (1~24, 기본 6) | `[{ym, visits, revenue}]` — `revenue` = 그 달의 **현금 순액**(`cash_movement`, 2026-09-29 부터) |
-| `GET /cash` | `granularity`(day·month·year, 기본 day), `from`, `to`(생략 시 30일 · 12개월 · 5년) | `{granularity, from, to, periods[{period, in, out, net, byKind{payment,settlement,correction,cancel,opening}}], total{…}}` — 기간마다 한 줄(빈 날 0), **최신 기간이 먼저** |
+| `GET /cash` | `granularity`(day·month·year, 기본 day), `from`, `to`(생략 시 30일 · 12개월 · 5년 — 화면은 이제 늘 묶음의 기간을 보냄) | `{granularity, from, to, periods[{period, in, out, net, byKind{payment,settlement,correction,cancel,opening}}], total{…}}` — 기간마다 한 줄(빈 날 0), **최신 기간이 먼저** |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
 | `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods(최신이 먼저), drugs[{drug_code,drug_name,category,pack_label,total_qty,total_count,by_period}]}` (약을 가로지르는 합계 없음 — `periodTotals`·`grandTotal` 은 2026-09-29 에 뺌) — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
 | `GET /options` | 없음 | `{departments[{id,code,name,name_en,name_fr}], doctors[{id,name}]}` — 환자 · 진단 · 오더 통계의 과 · 의사 고르기 칸 |
 | `GET /patients` | `from`, `to`(생략 시 오늘까지 30일), `department_id`, `doctor_id` | `{from, to, bands[{band('0_4'·'5_14'·'15_49'·'50'·'unknown' — 늘 다섯), patients, male, female, sex_unknown, new_patients, returning_patients, visits}], total{…}}` — 한 사람은 한 구간(기간 안 첫 내원일의 나이), 구간의 합 = `total` (3.13) |
-| `GET /workload` | `from`, `to`(생략 시 30일) | `{from, to, departments[{department_id, code, name, name_en, name_fr, visits, patients, orders}], doctors[{doctor_id, name, visits, patients, orders}], total{visits, patients, orders}}` — 내원 수 많은 순, 과 · 의사 없음은 id · code · name 이 `null`. `total.patients` 는 따로 센 값 (3.13) |
+| `GET /workload` | `from`, `to`(생략 시 30일), `department_id`, `doctor_id`(2026-10-02 더함 — 묶음의 기간 줄을 환자 표와 함께 따르게) | `{from, to, departments[{department_id, code, name, name_en, name_fr, visits, patients, orders}], doctors[{doctor_id, name, visits, patients, orders}], total{visits, patients, orders}}` — 내원 수 많은 순, 과 · 의사 없음은 id · code · name 이 `null`. `total.patients` 는 따로 센 값 (3.13) |
 | `GET /orders` | `from`, `to`(생략 시 오늘까지 30일), `type`(lab·imaging·procedure·fee, 생략·`all` = 전부), `department_id`, `doctor_id` | `{from, to, type, rows[{order_code_id, code, name, name_en, code_type, typed, count, qty, amount, patients}], total{count, amount}}` — 건수 많은 순(같으면 금액 · 이름). `amount` 는 오더에 적힌 값(받은 돈 아님, 3.12) |
 | `GET /diagnoses` | `from`, `to`(생략 시 30일), `scope`(primary 기본 · all), `department_id`, `doctor_id` | `{from, to, scope, rows[{diagnosis_code_id, code, name, name_fr, name_ko, cases, patients, male, female, age_0_4, age_5_14, age_15_49, age_50, age_unknown, typed}], total{cases, patients}}` — 진료 수 많은 순. `total` 은 따로 센 값(줄의 합 아님) |
 
@@ -614,4 +633,5 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 2026-10-01 | 「기간별 현금」 표와 CSV 를 최신 날짜가 맨 위로(실장님 말씀) — 순서만, 숫자 계산 그대로 | `fca7ad9` |
 | 2026-10-01 | 약품 사용통계의 기간 열을 최근이 맨 왼쪽으로(실장님 승인), CSV 도 같게 — 순서만. 월별 추이 그래프는 그대로 | `feae7ac` |
 | 2026-10-02 | **진단 통계 · 오더 통계**(실장님 말씀 → 총괄 범위, 1단계): 기간 · 과 · 의사로 거른 순위표와 CSV, `/options`·`/orders`·`/diagnoses`, 마이그레이션 053(세션 번호 601, `order_item.visit_id` 인덱스). 3.12 · 2.3e · 2.3f 새로 | `329286a` |
-| 2026-10-02 | **환자 통계 · 과·의사별 진료량**(2단계): 나이대 × 성별 × 처음/다시 온 환자, 과별 · 의사별 내원 수 · 환자 수 · 오더 건수, CSV — `/patients`·`/workload`. 3.13 · 2.3c · 2.3d 새로(진단 · 오더는 2.3e · 2.3f 로) | (이 커밋) |
+| 2026-10-02 | **환자 통계 · 과·의사별 진료량**(2단계): 나이대 × 성별 × 처음/다시 온 환자, 과별 · 의사별 내원 수 · 환자 수 · 오더 건수, CSV — `/patients`·`/workload`. 3.13 · 2.3c · 2.3d 새로(진단 · 오더는 2.3e · 2.3f 로) | `980104d` |
+| 2026-10-02 | **여섯 묶음에 맞춘 동작**(디자인 세션의 배치 뒤, 총괄 지시): 묶음마다 맨 위 기간 줄 하나(같은 부품 — 단추 오늘 · 이번 주 · 이번 달 · 30일 · 올해, 날짜 둘, 과 · 의사), 매출 · 현금과 환자 · 진료량 묶음은 부분들이 한 기간을 함께, 보이는 묶음만 불러옴, 고른 묶음 기억. `/workload` 가 과 · 의사 거르기를 받음. 숫자 계산은 그대로. 2.1 · 3.1 다시 씀 | (이 커밋) |

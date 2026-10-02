@@ -867,6 +867,8 @@ export default {
   st_workload: "과 · 의사별 진료량",
   st_wlOrders: "오더 건수",
   st_wlBasis: "내원일 기준 · 취소된 접수 제외 · 오더 건수는 취소하지 않은 검사 · 영상 · 처치 오더(약 제외) · 환자 수는 줄끼리 더할 수 없음(한 사람이 두 과에 올 수 있음)",
+  st_last30: "30일",
+  st_thisYear: "올해",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",

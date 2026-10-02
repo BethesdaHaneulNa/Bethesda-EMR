@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
-import { api } from '../api/client.js';
+import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { SIDE_NAV_COL, SIDE_NAV, SIDE_NAV_TITLE, sideNavItem } from '../layout.js';
 
@@ -13,18 +13,40 @@ function rangeFor(p){
   if(p==='today'){ from=to; }
   else if(p==='week'){ var d=new Date(now); var wd=(d.getDay()+6)%7; d.setDate(d.getDate()-wd); from=ymd(d); }
   else if(p==='month'){ from=ymd(new Date(now.getFullYear(), now.getMonth(), 1)); }
+  else if(p==='30d'){ var d30=new Date(now); d30.setDate(d30.getDate()-29); from=ymd(d30); }
+  else if(p==='year'){ from=ymd(new Date(now.getFullYear(), 0, 1)); }
   return { from:from, to:to };
 }
+// The side menu's groups, and which period row each one listens to: the summary and the
+// revenue group read the same /summary, so they share one; the others have their own.
+var GROUP_IDS = ['summary','money','patients','dx','orders','drugs'];
+var BAR_OF = { summary:'main', money:'main', patients:'patients', dx:'dx', orders:'orders', drugs:'drugs' };
 
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
   function fmtAr(n){ return fmtAmount(n, lang); }
   // Which group of parts is on screen (design session, 2026-10-02): the screen had grown to
   // nine parts one under the other. They are shown a group at a time, chosen in a side menu
-  // like the settings screen's. Only what is shown changes: every part still loads as before.
-  var gps = useState('summary'), group = gps[0], setGroup = gps[1];
-  var ps = useState('month'), period = ps[0], setPeriod = ps[1];
-  var rs = useState(rangeFor('month')), range = rs[0], setRange = rs[1];
+  // like the settings screen's. The choice is remembered per account on this computer
+  // (the way the consultation screen keeps its phrase category), so leaving the screen and
+  // coming back opens the same group.
+  var user = getUser(), groupKey = 'st_group:' + (user ? user.id : '');
+  var gps = useState(function(){ try { var g = localStorage.getItem(groupKey); return GROUP_IDS.indexOf(g) >= 0 ? g : 'summary'; } catch(e){ return 'summary'; } }), group = gps[0], setGroupState = gps[1];
+  function setGroup(g){ setGroupState(g); try { localStorage.setItem(groupKey, g); } catch(e){} }
+  // One period row per group, the same row everywhere (2026-10-02): the parts of a group
+  // share its dates and its department / doctor instead of each carrying a pair of its own.
+  // `preset` is the button that is lit ('custom' once a date is typed). The drug table
+  // starts with no dates: empty means the server's default for its granularity.
+  var pes = useState(function(){ var m = rangeFor('month'), d = rangeFor('30d'); return {
+    main:     { preset:'month', from:m.from, to:m.to },
+    patients: { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
+    dx:       { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
+    orders:   { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
+    drugs:    { preset:'', from:'', to:'' },
+  }; }), per = pes[0], setPer = pes[1];
+  function setBar(id, change){ setPer(function(o){ var n = Object.assign({}, o); n[id] = Object.assign({}, o[id], change); return n; }); }
+  var range = per.main, ptF = per.patients, dxF = per.dx, ordF = per.orders, drugRange = per.drugs;
+  var inMain = group==='summary' || group==='money';
   var ds = useState(null), data = ds[0], setData = ds[1];
   var os = useState(null), outData = os[0], setOutData = os[1];
   var ms = useState([]), monthly = ms[0], setMonthly = ms[1];
@@ -33,45 +55,45 @@ export default function StatsPage(){
   var dgs = useState('month'), drugGran = dgs[0], setDrugGran = dgs[1];
   var dts = useState('all'), drugType = dts[0], setDrugType = dts[1];
   var dsts = useState('all'), drugStat = dsts[0], setDrugStat = dsts[1];
-  // The drug table's own period. Empty means the server's default for the
-  // granularity (30 days, 12 months, 5 years); picking a granularity goes back
-  // to that default. It is separate from the range at the top because a
-  // monthly or yearly table over "this month" would be a single column.
-  var drs = useState({ from:'', to:'' }), drugRange = drs[0], setDrugRange = drs[1];
+  // The drug table's period (per.drugs): empty means the server's default for the
+  // granularity (30 days, 12 months, 5 years); picking a granularity goes back to
+  // that default, because a monthly or yearly table over "this month" is one column.
   var dus = useState(null), drugUsage = dus[0], setDrugUsage = dus[1];
-  // Cash by period (the till, decided 2026-09-29): its own granularity and dates,
-  // like the drug table. Empty dates = the server's default for the granularity.
+  // Cash by period (the till, decided 2026-09-29): by day, month or year over the
+  // revenue group's period - the same dates as the cards above it.
   var cgs = useState('day'), cashGran = cgs[0], setCashGran = cgs[1];
-  var crs = useState({ from:'', to:'' }), cashRange = crs[0], setCashRange = crs[1];
   var cds = useState(null), cashData = cds[0], setCashData = cds[1];
-  // Clinical rankings (orders, diagnoses): "what was most frequent in this period".
-  // Each has its own pair of dates like the drug table (empty = the server's last
-  // 30 days) and can be narrowed to a department or a doctor.
+  // Clinical tables: who came and who saw them (one group, one period), what they had,
+  // what was ordered. Each group's row can narrow them to a department or a doctor.
   var ops = useState({ departments:[], doctors:[] }), opts = ops[0], setOpts = ops[1];
-  var ofs = useState({ from:'', to:'', type:'all', dept:'', doc:'' }), ordF = ofs[0], setOrdF = ofs[1];
+  var ots = useState('all'), ordType = ots[0], setOrdType = ots[1];
   var ods = useState(null), ordData = ods[0], setOrdData = ods[1];
-  var dfs = useState({ from:'', to:'', scope:'primary', dept:'', doc:'' }), dxF = dfs[0], setDxF = dfs[1];
+  var dss = useState('primary'), dxScope = dss[0], setDxScope = dss[1];
   var dds = useState(null), dxData = dds[0], setDxData = dds[1];
-  // Who came (patients by age, sex, new or known) and who saw them (departments and
-  // doctors): same frame as the rankings - own dates, last 30 days when empty.
-  var pfs = useState({ from:'', to:'', dept:'', doc:'' }), ptF = pfs[0], setPtF = pfs[1];
   var pds = useState(null), ptData = pds[0], setPtData = pds[1];
-  var wfs = useState({ from:'', to:'' }), wlF = wfs[0], setWlF = wfs[1];
   var wds = useState(null), wlData = wds[0], setWlData = wds[1];
 
   var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
-  useEffect(function(){ load(); }, [range.from, range.to]);
-  // The trend is always the last six months, whatever range is picked above, so
-  // it loads once rather than on every change of dates.
-  useEffect(function(){ api.get('/stats/monthly?months=6').then(setMonthly).catch(function(){ setMonthly([]); }); }, []);
-  useEffect(function(){ loadDrugUsage(); }, [drugGran, drugType, drugStat, drugRange.from, drugRange.to]);
+  // Only the group on screen asks the server: when it is first opened, and again when
+  // what it asks for changes (2026-10-02 - the screen used to fetch all nine parts on
+  // opening). `asked` holds each part's last request, so coming back to a group with the
+  // same period costs nothing, and an answer that arrives after a newer request is dropped.
+  var asked = useRef({});
+  function ask(name, url, set, onFail){
+    if(asked.current[name]===url) return;
+    asked.current[name] = url;
+    api.get(url).then(function(d){ if(asked.current[name]===url) set(d); })
+      // Forget a failed request, so opening the group again tries once more.
+      .catch(function(){ if(asked.current[name]===url){ asked.current[name] = null; set(onFail); } });
+  }
+  useEffect(function(){ if(inMain) load(); }, [inMain, range.from, range.to]);
+  // The trend is always the last six months, whatever the period, so it is asked once.
+  useEffect(function(){ if(group==='summary') ask('monthly', '/stats/monthly?months=6', setMonthly, []); }, [group]);
   useEffect(function(){
-    var q = '/stats/cash?granularity='+cashGran;
-    if(cashRange.from && cashRange.to) q += '&from='+cashRange.from+'&to='+cashRange.to;
-    api.get(q).then(setCashData).catch(function(){ setCashData({ periods:[], total:null, from:cashRange.from, to:cashRange.to }); });
-  }, [cashGran, cashRange.from, cashRange.to]);
-  useEffect(function(){ api.get('/stats/options').then(setOpts).catch(function(){}); }, []);
+    if(group==='money') ask('cash', '/stats/cash?granularity='+cashGran+'&from='+range.from+'&to='+range.to, setCashData, { periods:[], total:null, from:range.from, to:range.to });
+  }, [group, cashGran, range.from, range.to]);
+  useEffect(function(){ if(group==='patients'||group==='dx'||group==='orders') ask('options', '/stats/options', setOpts, { departments:[], doctors:[] }); }, [group]);
   function rankQuery(f){
     var q = [];
     if(f.from && f.to){ q.push('from='+f.from); q.push('to='+f.to); }
@@ -80,28 +102,40 @@ export default function StatsPage(){
     return q;
   }
   useEffect(function(){
-    var q = rankQuery(ordF); if(ordF.type!=='all') q.push('type='+ordF.type);
-    api.get('/stats/orders'+(q.length?'?'+q.join('&'):'')).then(setOrdData).catch(function(){ setOrdData({ rows:[], total:{ count:0, amount:0 }, from:ordF.from, to:ordF.to }); });
-  }, [ordF.from, ordF.to, ordF.type, ordF.dept, ordF.doc]);
+    if(group!=='orders') return;
+    var q = rankQuery(ordF); if(ordType!=='all') q.push('type='+ordType);
+    ask('orders', '/stats/orders?'+q.join('&'), setOrdData, { rows:[], total:{ count:0, amount:0 }, from:ordF.from, to:ordF.to });
+  }, [group, ordF.from, ordF.to, ordType, ordF.dept, ordF.doc]);
   useEffect(function(){
-    var q = rankQuery(dxF); q.push('scope='+dxF.scope);
-    api.get('/stats/diagnoses?'+q.join('&')).then(setDxData).catch(function(){ setDxData({ rows:[], total:{ cases:0, patients:0 }, from:dxF.from, to:dxF.to }); });
-  }, [dxF.from, dxF.to, dxF.scope, dxF.dept, dxF.doc]);
+    if(group!=='dx') return;
+    var q = rankQuery(dxF); q.push('scope='+dxScope);
+    ask('dx', '/stats/diagnoses?'+q.join('&'), setDxData, { rows:[], total:{ cases:0, patients:0 }, from:dxF.from, to:dxF.to });
+  }, [group, dxF.from, dxF.to, dxScope, dxF.dept, dxF.doc]);
+  // The patient table and the department / doctor tables answer for the same period and
+  // the same department / doctor.
   useEffect(function(){
-    var q = rankQuery(ptF);
-    api.get('/stats/patients'+(q.length?'?'+q.join('&'):'')).then(setPtData).catch(function(){ setPtData({ bands:[], total:{ patients:0 }, from:ptF.from, to:ptF.to }); });
-  }, [ptF.from, ptF.to, ptF.dept, ptF.doc]);
+    if(group!=='patients') return;
+    var q = rankQuery(ptF).join('&');
+    ask('patients', '/stats/patients?'+q, setPtData, { bands:[], total:{ patients:0 }, from:ptF.from, to:ptF.to });
+    ask('workload', '/stats/workload?'+q, setWlData, { departments:[], doctors:[], total:{ visits:0, patients:0, orders:0 }, from:ptF.from, to:ptF.to });
+  }, [group, ptF.from, ptF.to, ptF.dept, ptF.doc]);
   useEffect(function(){
-    var q = rankQuery(wlF);
-    api.get('/stats/workload'+(q.length?'?'+q.join('&'):'')).then(setWlData).catch(function(){ setWlData({ departments:[], doctors:[], total:{ visits:0, patients:0, orders:0 }, from:wlF.from, to:wlF.to }); });
-  }, [wlF.from, wlF.to]);
-  // Editing one date keeps the other as shown; a start after the end is ignored
-  // (same rule as the drug and cash tables).
-  function rankDates(f, setF, data, which, v){
-    var from = which==='from' ? v : (f.from||(data&&data.from)||''), to = which==='to' ? v : (f.to||(data&&data.to)||'');
-    if(v && from && to && from<=to) setF(Object.assign({}, f, { from:from, to:to }));
+    if(group!=='drugs') return;
+    var q = '/stats/drug-usage?granularity='+drugGran;
+    if(drugType!=='all') q += '&dispense_type='+drugType;
+    if(drugStat==='dispensed') q += '&status=dispensed';
+    if(drugRange.from && drugRange.to) q += '&from='+drugRange.from+'&to='+drugRange.to;
+    // An empty table rather than null on failure: null reads as "still loading" below.
+    ask('drugs', q, setDrugUsage, { drugs:[], periods:[], from:drugRange.from, to:drugRange.to });
+  }, [group, drugGran, drugType, drugStat, drugRange.from, drugRange.to]);
+  // The period row. A button sets both dates; typing one date keeps the other as shown,
+  // and a start after the end is ignored - the same rule in every group.
+  function barPreset(id, p){ var r = rangeFor(p); setBar(id, { preset:p, from:r.from, to:r.to }); }
+  function barDate(id, shown, which, v){
+    var from = which==='from' ? v : shown.from, to = which==='to' ? v : shown.to;
+    if(v && from && to && from<=to) setBar(id, { preset:'custom', from:from, to:to });
   }
-  function patch(f, setF, k){ return function(e){ var n = Object.assign({}, f); n[k] = e.target.value; setF(n); }; }
+  function barPick(id, k){ return function(e){ var c = {}; c[k] = e.target.value; setBar(id, c); }; }
   function downloadCsv(name, lines){
     var blob = new Blob(["\ufeff"+lines.join('\n')], {type:'text/csv;charset=utf-8'});
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href);
@@ -145,9 +179,6 @@ export default function StatsPage(){
   function dxName(r){ return r.typed ? r.name : (lang==='ko' ? (r.name_ko||r.name) : lang==='fr' ? (r.name_fr||r.name) : r.name); }
   var ORD_TYPE_KO = { all:'전체', lab:'검사', imaging:'영상', procedure:'처치', fee:'수가' };
   function ordTypeLabel(k){ return t['st_ordType_'+k] || ORD_TYPE_KO[k] || k; }
-  function pickCashGran(g){ setCashGran(g); setCashRange({ from:'', to:'' }); }
-  function setCashFrom(v){ var to=cashRange.to||(cashData&&cashData.to)||''; if(v&&(!to||v<=to)) setCashRange({ from:v, to:to }); }
-  function setCashTo(v){ var from=cashRange.from||(cashData&&cashData.from)||''; if(v&&(!from||from<=v)) setCashRange({ from:from, to:v }); }
   var CASH_KINDS = ['payment','settlement','correction','cancel','opening'];
   var KIND_KO = { payment:'수납', settlement:'미수 수납', correction:'정정 환불', cancel:'취소 환불', opening:'옛 기록' };
   function kindLabel(k){ return t['st_kind_'+k] || KIND_KO[k]; }
@@ -164,21 +195,7 @@ export default function StatsPage(){
     a.download = 'cash-'+cashGran+'-'+(cashData.from||'')+'_'+(cashData.to||'')+'.csv';
     a.click(); URL.revokeObjectURL(a.href);
   }
-  async function loadDrugUsage(){
-    try {
-      var q = '/stats/drug-usage?granularity='+drugGran;
-      if(drugType!=='all') q += '&dispense_type='+drugType;
-      if(drugStat==='dispensed') q += '&status=dispensed';
-      if(drugRange.from && drugRange.to) q += '&from='+drugRange.from+'&to='+drugRange.to;
-      setDrugUsage(await api.get(q));
-    // An empty table rather than null: null reads as "still loading" below.
-    } catch(e){ setDrugUsage({ drugs:[], periods:[], from:drugRange.from, to:drugRange.to }); }
-  }
-  function pickDrugGran(g){ setDrugGran(g); setDrugRange({ from:'', to:'' }); }
-  // Editing one end keeps the other as shown, so the table never falls back to
-  // the default half-way through a change. A start after the end is ignored.
-  function setDrugFrom(v){ var to=drugRange.to||(drugUsage&&drugUsage.to)||''; if(v&&(!to||v<=to)) setDrugRange({ from:v, to:to }); }
-  function setDrugTo(v){ var from=drugRange.from||(drugUsage&&drugUsage.from)||''; if(v&&(!from||from<=v)) setDrugRange({ from:from, to:v }); }
+  function pickDrugGran(g){ setDrugGran(g); setBar('drugs', { preset:'', from:'', to:'' }); }
   function packWord(l){ return t['ph_pack_'+l] || ({ bottle:'병', tube:'튜브', inhaler:'흡입기', unit:'개' })[l] || l; }
   function fmtQty(n){ n=Number(n)||0; return Math.round(n*10)/10===Math.round(n)?String(Math.round(n)):String(Math.round(n*10)/10); }
   function exportDrugCsv(){
@@ -198,12 +215,12 @@ export default function StatsPage(){
     a.click(); URL.revokeObjectURL(a.href);
   }
   async function load(){
+    var url = '/stats/summary?from='+range.from+'&to='+range.to;
+    if(asked.current.summary===url) return;
+    asked.current.summary = url;
     setLoading(true);
-    try {
-      var d = await api.get('/stats/summary?from='+range.from+'&to='+range.to); setData(d);
-    }
-    catch(err){ console.error(err); setData(null); }
-    setLoading(false);
+    try { var d = await api.get(url); if(asked.current.summary===url){ setData(d); setLoading(false); } }
+    catch(err){ console.error(err); if(asked.current.summary===url){ asked.current.summary = null; setData(null); setLoading(false); } }
   }
   // The debtor list does not depend on the dates either. It is fetched when a
   // card is opened, so it is as fresh as the card total it is read against.
@@ -212,12 +229,8 @@ export default function StatsPage(){
     setShowList(next);
     if(next) api.get('/stats/outstanding').then(setOutData).catch(function(){ setOutData(null); });
   }
-  function pick(p){ setPeriod(p); if(p!=='custom') setRange(rangeFor(p)); }
-  function setFrom(v){ setPeriod('custom'); setRange(Object.assign({}, range, { from:v })); }
-  function setTo(v){ setPeriod('custom'); setRange(Object.assign({}, range, { to:v })); }
 
   var IS = { background:'var(--field-5)', border:'1px solid var(--field-border)', borderRadius:6, padding:'6px 10px', color:tx, fontSize:14 };
-  function pbtn(p,label){ var on=period===p; return <button onClick={function(){pick(p)}} style={{ background:on?'var(--accent-a18)':'transparent', color:on?'var(--accent-text)':t3, border:'1px solid '+(on?'var(--accent-a40)':'transparent'), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{label}</button>; }
 
   function Card(props){ return <div onClick={props.onClick} className={props.onClick?'pressable':undefined} style={{ background:scBg, border:'1px solid '+(props.active?'var(--accent-a80)':bd), borderRadius:10, padding:'14px 16px', flex:1, minWidth:140, cursor:props.onClick?'pointer':'default' }}>
     <div style={{ fontSize:13, color:t3, fontWeight:700 }}>{props.label}{props.onClick?<span style={{marginLeft:5,color:t3,fontSize:11}}>{props.active?'▲':'▼'}</span>:null}</div>
@@ -287,21 +300,42 @@ export default function StatsPage(){
         return <button key={g[0]} type="button" className="pressable" aria-current={on?'page':undefined} onClick={function(){ setGroup(g[0]); }} style={sideNavItem(on)}>{g[1]}</button>; })}
     </nav>
     <div style={{ overflow:'auto', padding:'16px 20px' }}>
-      {/* 기간 선택 — only where it applies: the summary and the revenue cards. The other
-          parts have a period of their own, and this row above them looked as if it ruled them. */}
-      <div style={{ display:(group==='summary'||group==='money')?'flex':'none', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:18 }}>
-        {pbtn('today', t.today||'오늘')}
-        {pbtn('week', t.thisWeek||'이번 주')}
-        {pbtn('month', t.thisMonth||'이번 달')}
-        <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
-        <input type="date" value={range.from} onChange={function(e){setFrom(e.target.value)}} style={IS} />
-        <span style={{ color:t3 }}>~</span>
-        <input type="date" value={range.to} onChange={function(e){setTo(e.target.value)}} style={IS} />
-        {loading?<span style={{ color:t3, fontSize:13, marginLeft:8 }}>···</span>:null}
-      </div>
+      {/* 기간 줄 — one at the top of each group, the same row everywhere: the three period
+          buttons (and 30 days, this year), two dates, and for the clinical groups the
+          department and the doctor. Every part of the group on screen follows it. */}
+      {(function(){
+        var id = BAR_OF[group], b = per[id];
+        // The drug table's dates are the server's until one is chosen.
+        var shown = id==='drugs' ? { from:b.from||(drugUsage&&drugUsage.from)||'', to:b.to||(drugUsage&&drugUsage.to)||'' } : { from:b.from, to:b.to };
+        var who = id==='patients' || id==='dx' || id==='orders';
+        // Sized so the whole row stays on one line at 1366 px in French, the longest labels.
+        var inp = Object.assign({}, IS, { fontSize:13, padding:'5px 8px' }), sel = Object.assign({}, inp, { maxWidth:170 });
+        return <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:18 }}>
+          {[['today',t.today||'오늘'],['week',t.thisWeek||'이번 주'],['month',t.thisMonth||'이번 달'],['30d',t.st_last30||'30일'],['year',t.st_thisYear||'올해']].map(function(o){ var on=b.preset===o[0];
+            return <button key={o[0]} onClick={function(){barPreset(id, o[0])}} style={{ background:on?'var(--accent-a18)':'transparent', color:on?'var(--accent-text)':t3, border:'1px solid '+(on?'var(--accent-a40)':'transparent'), borderRadius:6, padding:'6px 10px', cursor:'pointer', fontSize:14, fontWeight:700, whiteSpace:'nowrap' }}>{o[1]}</button>; })}
+          <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
+          <input type="date" value={shown.from} max={shown.to||undefined} onChange={function(e){barDate(id, shown, 'from', e.target.value)}} style={inp} />
+          <span style={{ color:t3 }}>~</span>
+          <input type="date" value={shown.to} min={shown.from||undefined} onChange={function(e){barDate(id, shown, 'to', e.target.value)}} style={inp} />
+          {who?<>
+            <select value={b.dept} onChange={barPick(id, 'dept')} style={sel}>
+              <option value="">{t.st_allDepts||'전체 진료과'}</option>
+              {(opts.departments||[]).map(function(d){ return <option key={d.id} value={d.id}>{deptLabel(d)}</option>; })}
+            </select>
+            <select value={b.doc} onChange={barPick(id, 'doc')} style={sel}>
+              <option value="">{t.st_allDoctors||'전체 의사'}</option>
+              {(opts.doctors||[]).map(function(d){ return <option key={d.id} value={d.id}>{d.name}</option>; })}
+            </select>
+          </>:null}
+          {inMain&&loading?<span style={{ color:t3, fontSize:13, marginLeft:8 }}>···</span>:null}
+        </div>;
+      })()}
 
-      {!data?<div style={{ color:t3, padding:40, textAlign:'center' }}>{loading?(t.loading||'불러오는 중...'):(t.noData||'데이터 없음')}</div>:<>
-        {/* 운영 현황 */}
+      {inMain&&!data?<div style={{ color:t3, padding:40, textAlign:'center' }}>{loading?(t.loading||'불러오는 중...'):(t.noData||'데이터 없음')}</div>:null}
+      <>
+        {/* 운영 현황 · 매출 — /summary. Not built until it has arrived: it is asked for only
+            when one of these two groups is opened. */}
+        {!data?null:<>
         <Section group="summary" title={'🏥 '+(t.operations||'운영 현황')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
             <Card label={t.totalVisits||'총 내원'} value={v.total||0} unit={cases} color="var(--accent-text)" sub={(t.uniquePatients||'고유 환자')+' '+(v.unique_patients||0)} />
@@ -402,15 +436,13 @@ export default function StatsPage(){
           </div>
         </Section>
 
+        </>}
+
         {/* 기간별 현금 (그날 현금 by day / month / year) */}
         <Section group="money" title={'💵 '+(t.st_cashTable||'기간별 현금')}>
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
             {[['day',t.daily||'일별'],['month',t.monthly2||'월별'],['year',t.yearly||'연별']].map(function(o){ var on=cashGran===o[0];
-              return <button key={o[0]} onClick={function(){pickCashGran(o[0])}} style={{ background:on?'var(--ok-a18)':'transparent', color:on?'var(--ok-ink)':t3, border:'1px solid '+(on?'var(--ok-a40)':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
-            <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
-            <input type="date" value={cashRange.from||(cashData&&cashData.from)||''} max={cashRange.to||(cashData&&cashData.to)||undefined} onChange={function(e){setCashFrom(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
-            <span style={{ color:t3 }}>~</span>
-            <input type="date" value={cashRange.to||(cashData&&cashData.to)||''} min={cashRange.from||(cashData&&cashData.from)||undefined} onChange={function(e){setCashTo(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
+              return <button key={o[0]} onClick={function(){setCashGran(o[0])}} style={{ background:on?'var(--ok-a18)':'transparent', color:on?'var(--ok-ink)':t3, border:'1px solid '+(on?'var(--ok-a40)':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
             <div style={{ flex:1 }}></div>
             <button onClick={exportCashCsv} disabled={!cashData||!(cashData.periods||[]).length} style={{ background:'var(--chip)', color:'var(--ok-text)', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>⬇ CSV</button>
           </div>
@@ -451,32 +483,15 @@ export default function StatsPage(){
           })()}
         </Section>
 
-        {/* 환자 통계 · 과·의사별 · 진단 통계 · 오더 통계 — 약품 사용통계와 같은 틀(기간 · 거르기 · 표 · CSV), 많은 것이 위 */}
+        {/* 환자 통계 · 과·의사별 · 진단 통계 · 오더 통계 — 기간과 과 · 의사는 묶음의 기간 줄에서, 여기는 표마다의 고르기와 CSV. 많은 것이 위 */}
         {(function(){
           var th = { padding:'7px 10px', textAlign:'right', position:'sticky', top:0, background:scBg, borderBottom:'1px solid '+bd, whiteSpace:'nowrap' };
           var thL = Object.assign({}, th, { textAlign:'left' });
           var td = { padding:'6px 10px', textAlign:'right', fontFamily:'monospace', color:t2, whiteSpace:'nowrap' };
-          var dateStyle = Object.assign({}, IS, { fontSize:13, padding:'5px 8px' });
           var selStyle = Object.assign({}, IS, { fontSize:13, padding:'5px 8px', maxWidth:220 });
           var csvBtn = { background:'var(--chip)', color:'var(--ok-text)', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 };
           var typedTag = <span style={{ marginLeft:6, fontSize:11, color:t3, border:'1px solid '+bd2, borderRadius:3, padding:'0 4px', flexShrink:0 }}>{t.st_typed||'직접 입력'}</span>;
           function num(v){ return v ? fmtAr(v) : '·'; }
-          function dates(f, setF, data){ return <>
-            <input type="date" value={f.from||(data&&data.from)||''} max={f.to||(data&&data.to)||undefined} onChange={function(e){rankDates(f, setF, data, 'from', e.target.value)}} style={dateStyle} />
-            <span style={{ color:t3 }}>~</span>
-            <input type="date" value={f.to||(data&&data.to)||''} min={f.from||(data&&data.from)||undefined} onChange={function(e){rankDates(f, setF, data, 'to', e.target.value)}} style={dateStyle} />
-          </>; }
-          function filters(f, setF, data){ return <>
-            {dates(f, setF, data)}
-            <select value={f.dept} onChange={patch(f, setF, 'dept')} style={selStyle}>
-              <option value="">{t.st_allDepts||'전체 진료과'}</option>
-              {(opts.departments||[]).map(function(d){ return <option key={d.id} value={d.id}>{deptLabel(d)}</option>; })}
-            </select>
-            <select value={f.doc} onChange={patch(f, setF, 'doc')} style={selStyle}>
-              <option value="">{t.st_allDoctors||'전체 의사'}</option>
-              {(opts.doctors||[]).map(function(d){ return <option key={d.id} value={d.id}>{d.name}</option>; })}
-            </select>
-          </>; }
           var bar = { display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 };
           var box = { background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' };
           var head = { fontSize:12, color:t3, padding:'8px 12px', borderBottom:'1px solid '+bd };
@@ -516,7 +531,6 @@ export default function StatsPage(){
           return <>
             <Section group="patients" title={'👥 '+(t.st_patients||'환자 통계')}>
               <div style={bar}>
-                {filters(ptF, setPtF, ptData)}
                 <div style={{ flex:1 }}></div>
                 <button onClick={exportPatientsCsv} disabled={!ptTotal.patients} style={csvBtn}>⬇ CSV</button>
               </div>
@@ -552,7 +566,6 @@ export default function StatsPage(){
 
             <Section group="patients" title={'📋 '+(t.st_workload||'과 · 의사별 진료량')}>
               <div style={bar}>
-                {dates(wlF, setWlF, wlData)}
                 <div style={{ flex:1 }}></div>
                 <button onClick={exportWorkloadCsv} disabled={!wlTotal.visits} style={csvBtn}>⬇ CSV</button>
               </div>
@@ -571,11 +584,10 @@ export default function StatsPage(){
 
             <Section group="dx" title={'🩺 '+(t.st_diagnoses||'진단 통계')}>
               <div style={bar}>
-                <select value={dxF.scope} onChange={patch(dxF, setDxF, 'scope')} style={selStyle}>
+                <select value={dxScope} onChange={function(e){ setDxScope(e.target.value); }} style={selStyle}>
                   <option value="primary">{t.st_dxPrimary||'주진단만'}</option>
                   <option value="all">{t.st_dxAll||'전체 진단'}</option>
                 </select>
-                {filters(dxF, setDxF, dxData)}
                 <div style={{ flex:1 }}></div>
                 <button onClick={exportDxCsv} disabled={!dxRows.length} style={csvBtn}>⬇ CSV</button>
               </div>
@@ -612,10 +624,9 @@ export default function StatsPage(){
             <Section group="orders" title={'🧪 '+(t.st_orders||'오더 통계')}>
               <div style={bar}>
                 {/* Kinds in one select, not a row of buttons (the coordinator's brief). */}
-                <select value={ordF.type} onChange={patch(ordF, setOrdF, 'type')} style={selStyle}>
+                <select value={ordType} onChange={function(e){ setOrdType(e.target.value); }} style={selStyle}>
                   {['all','lab','imaging','procedure'].map(function(k){ return <option key={k} value={k}>{ordTypeLabel(k)}</option>; })}
                 </select>
-                {filters(ordF, setOrdF, ordData)}
                 <div style={{ flex:1 }}></div>
                 <button onClick={exportOrdersCsv} disabled={!ordRows.length} style={csvBtn}>⬇ CSV</button>
               </div>
@@ -659,10 +670,6 @@ export default function StatsPage(){
             <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
             {[['all',t.allOrders||'처방전체'],['dispensed',t.dispensedOnly||'조제완료']].map(function(o){ var on=drugStat===o[0];
               return <button key={o[0]} onClick={function(){setDrugStat(o[0])}} style={{ background:on?'var(--violet-text-a18)':'transparent', color:on?'var(--violet-text)':t3, border:'1px solid '+(on?'var(--violet-text-a40)':bd2), borderRadius:6, padding:'5px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>{o[1]}</button>; })}
-            <span style={{ width:1, height:20, background:bd, margin:'0 4px' }}></span>
-            <input type="date" value={drugRange.from||(drugUsage&&drugUsage.from)||''} max={drugRange.to||(drugUsage&&drugUsage.to)||undefined} onChange={function(e){setDrugFrom(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
-            <span style={{ color:t3 }}>~</span>
-            <input type="date" value={drugRange.to||(drugUsage&&drugUsage.to)||''} min={drugRange.from||(drugUsage&&drugUsage.from)||undefined} onChange={function(e){setDrugTo(e.target.value)}} style={Object.assign({}, IS, { fontSize:13, padding:'5px 8px' })} />
             <div style={{ flex:1 }}></div>
             <button onClick={exportDrugCsv} disabled={!drugUsage||!(drugUsage.drugs||[]).length} style={{ background:'var(--chip)', color:'var(--ok-text)', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 }}>⬇ CSV</button>
           </div>
@@ -714,7 +721,7 @@ export default function StatsPage(){
             </div>
           </div>
         </Section>
-      </>}
+      </>
     </div>
     </div>
   </div>;

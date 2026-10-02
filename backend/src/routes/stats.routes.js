@@ -697,7 +697,7 @@ router.get('/diagnoses', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/stats/workload?from&to
+// GET /api/stats/workload?from&to&department_id&doctor_id
 // Departments and doctors side by side: visits, distinct patients and order lines.
 //  - A visit is counted as in the activity cards: by visit date, cancelled
 //    registrations left out, whether or not a consultation was written. For the
@@ -715,6 +715,13 @@ router.get('/workload', async (req, res) => {
   try {
     const range = await rankingRange(req);
     if (range.error) return res.status(400).json({ error: range.error });
+    // The group's department / doctor choice applies here as it does to the patient
+    // table beside it: one department leaves that row and the doctors who saw its
+    // visits; one doctor leaves that row and the departments they worked in.
+    const conds = ['v.visit_date BETWEEN $1 AND $2', "v.status <> 'cancelled'"];
+    const P = [range.from, range.to];
+    const badFilter = visitFilters(req, conds, P);
+    if (badFilter) return res.status(400).json({ error: badFilter });
     // One pass over the period's visits, grouped three ways (by department, by
     // doctor, all together) - the order count is looked up once per visit, not
     // once per grouping.
@@ -722,7 +729,7 @@ router.get('/workload', async (req, res) => {
       `WITH vv AS MATERIALIZED (
          SELECT v.patient_id, v.department_id, v.doctor_id, ${ORDERS_OF_VISIT} AS orders
            FROM visit v
-          WHERE v.visit_date BETWEEN $1 AND $2 AND v.status <> 'cancelled'
+          WHERE ${conds.join(' AND ')}
        ), g AS (
          SELECT GROUPING(department_id) AS all_depts, GROUPING(doctor_id) AS all_docs, department_id, doctor_id,
                 COUNT(*)::int AS visits, COUNT(DISTINCT patient_id)::int AS patients, COALESCE(SUM(orders), 0)::int AS orders
@@ -730,7 +737,7 @@ router.get('/workload', async (req, res) => {
        )
        SELECT g.*, ${DEPT_COLS}, s.name AS doctor_name
          FROM g LEFT JOIN department d ON d.id = g.department_id
-                LEFT JOIN staff s ON s.id = g.doctor_id`, [range.from, range.to]);
+                LEFT JOIN staff s ON s.id = g.doctor_id`, P);
     const most = function (key) { return function (a, b) {
       return b.visits - a.visits || b.patients - a.patients || String(a[key] || '\uffff').localeCompare(String(b[key] || '\uffff'));
     }; };
