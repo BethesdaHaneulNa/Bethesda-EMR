@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-02 · **상태**: 결과지 인쇄는 발급이 아님(기록만) — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-02 · **상태**: 진단 목록 100 → 315 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -295,7 +295,7 @@
 - 첫 로드 `loadData()` (75-89): `/visits/today`, `/admin/drugs`, `/admin/order-codes`, `/admin/phrases`, `/order-sets`를 **순서대로** 받아 둡니다. 자동완성은 전부 브라우저 안에서 거릅니다(서버 검색 없음). 약속처방은 **진료과 필터 없이 전부** 받습니다(API는 `?department_id=`를 지원).
 - **진단**(2026-10-02): `dxList`(서버가 준 그 진료의 진단, 주진단 먼저) · `dxCodes`(자주 쓰는 진단 목록, `loadData`에서 한 번) · `histDx`(환자의 다른 진료의 진단, 진료 id별 — 차트용).
   - 자리와 모양(실장님, 2026-10-02 — 병원 화면의 「상병보기」를 본뜸): 왼쪽 칸, 접수 메모 칸 아래 · 처방 머리 위(`data-cs="diagnoses"`). 한 줄(제목 + 입력 칸, 처방 코드 칸과 같은 글꼴), 진단이 있으면 그 아래 **표** — ✕(22px) · 주/번호(40px) · 코드(70px) · 이름, 처방 표와 같은 `tableLayout:fixed`·글꼴·줄 높이·색. 높이: 진단이 없으면 39px, 한 줄 67px, 표는 `max-height 113px`(네 줄) 뒤 안에서 스크롤 → 가장 클 때 152px. 처음에는 이름표(칩) 모양이었습니다(`fc6c8b8`).
-  - 찾기(`dxSugg`): 두 글자부터, 코드 또는 **세 언어 이름 어느 것에든** 들어 있으면 맞음. `plain()`이 소문자·악센트 제거(NFD). 이미 넣은 목록 줄은 빠짐. 순서: 코드가 그 글자로 시작 → 이름이 그 글자로 시작 → 목록 순서. 맨 끝에 「그대로 넣기」 줄(`{free:true}`) — 친 글이 이미 있는 진단·목록 이름과 같으면 없음. 키: ↑↓·Enter·Esc(처방 코드 칸과 같음).
+  - 찾기(`dxSugg`): 두 글자부터, 코드 또는 **세 언어 이름 어느 것에든** 들어 있으면 맞음. `plain()`이 소문자·악센트 제거(NFD). 이미 넣은 목록 줄은 빠짐. **순서**(2026-10-02, 목록이 300줄이 되면서): ① 코드가 친 글과 똑같음 → ② 코드가 그 글로 시작 → ③ 이름이 그 글로 시작(또는 줄임말이 가리키는 진단) → ④ 이름 안의 어느 낱말이 그 글로 시작 → ⑤ 이름 안에 들어 있음; 같은 급에서는 `sort_order`. **줄임말**(`DX_ABBR`): 의사들이 줄여 부르는 말을 그대로 치면 그 뜻의 진단을 찾음 — `hta`(hypertension artérielle) · `avc` · `tb`·`bk`(tubercul…) · `ist`·`mst` · `bpco` · `rgo` · `ugd` · `hbp` · `geu` · `gea` · `ira` · `oma` · `irc` · `itu` · `dt1`·`dt2` 등. 목록의 이름에 그 줄임말이 없어도 찾고(예: 씨앗의 「Hypertension artérielle essentielle」), ③의 급으로 올림. 맨 끝에 「그대로 넣기」 줄(`{free:true}`) — 친 글이 이미 있는 진단·목록 이름과 같으면 없음. 키: ↑↓·Enter·Esc(처방 코드 칸과 같음). 목록은 한 번에 **여덟 줄쯤**(높이 230px, 줄 28px) 보이고 그 안에서 스크롤 — «in»처럼 112줄이 맞아도 그리는 데 0.06초.
   - `addDx`는 `needConsult()`를 거칩니다(안전망 — 시작 전 내원을 시작). 쓰기는 모두 서버가 돌려준 `diagnoses`로 목록을 통째로 바꿉니다 — 주/부 바꾸기를 화면이 계산하지 않습니다.
   - 보이는 이름 `dxName(d)`: 목록에서 고른 줄은 **화면 언어의 이름**(줄에 `name_en·fr·ko`가 같이 옴), 직접 친 줄·그 언어 이름이 없는 줄은 저장된 글.
   - 주진단은 색만으로 알리지 않습니다 — 첫 칸의 글자 «DP»/「주」/«Main»(`cs_dxMainShort`, 도움말 `cs_dxPrimary`). 다른 줄의 첫 칸은 번호 단추(2, 3…)이고 누르면 `makeDxPrimary` — 단추를 따로 늘리지 않았습니다. 긴 이름은 그 칸 안에서 줄바꿈(`overflow-wrap:anywhere`), 코드는 한 줄·말줄임·`title`.
@@ -581,7 +581,7 @@
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
 | `order_set_item` | `set_id`(CASCADE), `kind` ∈ `drug`·`order`, `drug_id`, `order_code_id`, `code`, `name`, `dose`, `frequency`, `days`, `route`, `quantity`, `sort_order` | 단가 없음 |
-| `diagnosis_code` (050) | **자주 쓰는 진단 목록.** `id`, `code VARCHAR(20)`(비어도 됨, 유일하지 않아도 됨 — 코드 체계에 묶지 않음), `name_en`(필수) · `name_fr` · `name_ko`, `is_active`(끄면 찾기에서 빠지고 이미 쓴 줄은 그대로), `sort_order`, `created_at`, `updated_at`. 씨앗 100줄(ICD-10) — 표가 비어 있을 때만 넣음 |
+| `diagnosis_code` (050 · 052) | **자주 쓰는 진단 목록.** `id`, `code VARCHAR(20)`(비어도 됨, 유일하지 않아도 됨 — 코드 체계에 묶지 않음), `name_en`(필수) · `name_fr` · `name_ko`, `is_active`(끄면 찾기에서 빠지고 이미 쓴 줄은 그대로), `sort_order`, `created_at`, `updated_at`. **씨앗 100줄(050) + 215줄(203) = 315줄**, 모두 WHO ICD-10(3·4자리). 050은 표가 비어 있을 때만, **203은 같은 코드가 없는 줄만** 넣음(켜져 있든 꺼져 있든, 대소문자 무시) — 있던 줄의 이름·순서·상태는 안 바꾸고, 새 줄은 있던 것 맨 뒤에. 두 번 돌려도 같음 |
 | `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(`primary`·`secondary`), `sort_order`, **`diagnosis_code_id`**(→ `diagnosis_code`, ON DELETE SET NULL; 직접 친 진단은 NULL), **`created_by`**(→ `staff`) — 굵은 둘이 202에서 더한 칸 |
 | `consultation_queue_filter` (042) | `staff_id`(PK, CASCADE), `all_doctors`, `doctor_ids INTEGER[]`, `unassigned`, `updated_at`. **행이 없으면 기본 규칙.** `staff` 표의 칸이 아니라 따로 둔 이유: `GET /admin/staff`가 `staff.*`를 돌려주어 칸을 더하면 설정 화면으로 실려 감 |
 | `consultation_note` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `author_id`, `note_text`(빈 글 금지), `created_at`, `updated_at`(고친 때, 안 고쳤으면 NULL), **UNIQUE(consultation_id, author_id)** | 038(세션 번호 201) — 의사마다 한 내원 한 기록. 옛 `consultation.note_text`(와 S/O/A/P를 「S: …」로 앞에 붙여)를 `doctor_id`의 기록으로 옮김, 두 번 돌려도 같음 |
@@ -623,7 +623,7 @@
 |---|---|
 | **약품** (`drug`) — 코드, 이름, 기본 용량·횟수·일수·용법, 단가, 단위 | 약 자동완성·약 검색, 처방 추가 시 기본값 |
 | **오더 코드** (`order_code`) — 종류(`lab`·`imaging`·`procedure`·`fee`), 가격(`price_clinic`), 모달리티, 워크리스트 사용, 부위, 기본값 | 검사·영상 자동완성(`fee`는 제외), 오더 단가, 워크리스트 생성 |
-| **자주 쓰는 진단** (`diagnosis_code`) — 코드, 세 언어 이름, 켬/끔, 순서 | 진단 칸의 찾기 목록. **설정 → 진단 목록**(Paramètres → Diagnostics) 탭에서 더하기 · 고치기 · 켜기/끄기 · 순서(설정 세션, 2026-10-02 — `GET·POST /api/admin/diagnosis-codes`, `PUT …/order`, `PUT …/:id`, 권한 `settings`). 끈 진단은 찾기에서 빠지고 이미 넣은 줄은 그대로. 처음에는 씨앗 100줄 |
+| **자주 쓰는 진단** (`diagnosis_code`) — 코드, 세 언어 이름, 켬/끔, 순서 | 진단 칸의 찾기 목록. **설정 → 진단 목록**(Paramètres → Diagnostics) 탭에서 더하기 · 고치기 · 켜기/끄기 · 순서(설정 세션, 2026-10-02 — `GET·POST /api/admin/diagnosis-codes`, `PUT …/order`, `PUT …/:id`, 권한 `settings`). 끈 진단은 찾기에서 빠지고 이미 넣은 줄은 그대로. 처음에는 **315줄**(2026-10-02: 100 → 315, 실장님 「걍 우리가 필요할 것만 같은 것들만 골라서 쓰자」 — ICD-10 전체는 넣지 않음). 과별: 일반·가정의학 67 · 내과 46 · 소아 19 · 산부인과 37 · 외과(비뇨 포함) 35 · 정형 29 · 피부 23 · 응급(외상·화상·중독) 21 · 눈·귀코목·치과 21 · 정신건강 8 · 검진·예방·증명서(Z) 9. **이름은 우리가 짧게 쓴 것이고 의료진의 검토를 받지 않은 목록**입니다. 빼 둔 후보 179개: `wiki/reference/diagnosis-candidates.md` |
 | **상용구** (`phrase_dictionary` · `phrase_category`, 039) | 진료 기록에 끼워 넣는 문장. 분류(이름·순서)와 문장 모두 설정에서 만든 그대로 — 진료 화면은 `GET /admin/phrase-categories`·`GET /admin/phrases`를 읽기만 합니다 |
 | **약속처방** (`order_set`) | 오른쪽 약속처방 탭 |
 | **오더연동 → PACS** (`pacs_config.auto_create_worklist`, `pacs_viewer_url`) | 워크리스트 자동 생성 여부, 영상 뷰어 주소 |
@@ -828,7 +828,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-02 | **결과지 인쇄는 발급이 아님 — 기록만**(실장님) — 영상 판독 보고서·검사 결과지·영상 인쇄가 문서 행·번호 없이 변경 기록 한 줄(`POST /documents/print-log`: `pacs.report.print`·`laboratory.results.print`; 영상 인쇄는 있던 `pacs.images.print`), 문서 창 이력에서 빠짐(행은 DB에 그대로), `POST /documents`는 그 세 종류를 거절, 종이 아래 «Imprimé le» | (이 커밋) |
+| 2026-10-02 | **진단 목록 100 → 315**(실장님 — ICD-10 전체 대신 필요한 것만) — 새 마이그레이션(203, 같은 코드가 없는 줄만 더함·있던 줄은 안 건드림), 과별 진단과 마다가스카르에서 흔한 것, 찾기 순서(코드 일치 → 코드 앞머리 → 이름 시작·줄임말 → 낱말 시작 → 포함)와 줄임말(`hta`·`avc`·`tb`…), 후보 179개는 `reference/diagnosis-candidates.md` | (이 커밋) |
+| 2026-10-02 | **결과지 인쇄는 발급이 아님 — 기록만**(실장님) — 영상 판독 보고서·검사 결과지·영상 인쇄가 문서 행·번호 없이 변경 기록 한 줄(`POST /documents/print-log`: `pacs.report.print`·`laboratory.results.print`; 영상 인쇄는 있던 `pacs.images.print`), 문서 창 이력에서 빠짐(행은 DB에 그대로), `POST /documents`는 그 세 종류를 거절, 종이 아래 «Imprimé le» | `fe0e23d` |
 | 2026-10-02 | 문서만: 진단 목록의 관리 화면이 생김(설정 → 진단 목록) — 2.2.1 · 3.2 · 6절과 설명서에 반영 | `f90f727` |
 | 2026-10-02 | **진단서**(현지 피드백 「문서에 의뢰서만 있음」) — `documents/medical-certificate.jsx`, A4 한 장, 환자·이 진료의 진단·발행일·병원·의사는 자동, 병력·소견·비고·임상/최종·면허번호는 손으로, FR·EN·KO | `5124535` |
 | 2026-10-02 | **진단 칸을 표 모양으로**(실장님 — 병원 화면의 「상병보기」처럼) — 이름표 대신 ✕ · 주/번호 · 코드 · 진단명의 작은 표(처방 표와 같은 글꼴·색), 번호를 누르면 주진단, 네 줄 뒤 표 안 스크롤, 입력 칸 글 「진단 코드 또는 이름 입력...」 | `eb7137d` |

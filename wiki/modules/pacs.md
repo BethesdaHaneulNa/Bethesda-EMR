@@ -194,9 +194,9 @@
 
 다른 병원에 **영상 자체**를 줄 때 씁니다(실장님: 「CD는 아직도 보안 때문에 CD로 하는 경우가 너무 많다, USB 안 받는다」 → 「반출 프로그램이 환자 차트번호로 조회하고, 그 환자의 어떤 것을 반출할지 클릭하고, 영상 크기 알려 주고, CD 인식하면 『이 CD에 구울까요』 물어보고」). EMR 화면이 아니라 **PACS 폴더의 `cd-export.bat`** 을 더블클릭해 여는 따로 된 프로그램입니다([창의 모습 — 가짜 환자](../reference/design/cd-export-sample-fr.png)). EMR에 닿는 PC면 어디서나 됩니다(서버 PC가 아니어도).
 
-> **이름과 모양(2026-10-02, 실장님)**: 프로그램의 이름은 **Bethesda CD**, 진짜 실행 파일 **`Bethesda-CD.exe`**(1.0.0)입니다 — PACS 저장소의 `bethesda-cd\` 폴더에서 `build.ps1`로 만듭니다(Windows에 든 컴파일러만, 설치 없음). 그 전의 `cd-export.bat`(PowerShell 스크립트)는 같은 일을 하는 옛 모양으로, 한 번의 배포 동안 함께 두었다가 뺍니다. 아래의 「`cd-export.bat` 더블클릭」은 「`Bethesda-CD.exe` 더블클릭」으로 읽으세요(설정 파일은 `Bethesda-CD.ini` — 옛 `cd-export.ini`가 있으면 처음 한 번 그 주소를 읽어 옴). 실행 파일은 0.3초에 뜨고(스크립트는 몇 초), 디스크에 넣는 `VOIR.EXE`는 프로그램이 품고 있는 **같은 파일**입니다. 완성되면 따로 저장소로 떼어 냅니다(총괄).
+> **이름과 모양(2026-10-02, 실장님)**: 프로그램의 이름은 **Bethesda CD**, 진짜 실행 파일 **`Bethesda-CD.exe`**(1.0.0)입니다 — PACS 저장소의 `bethesda-cd\` 폴더에서 `build.ps1`로 만듭니다(Windows에 든 컴파일러만, 설치 없음). 그 전의 `cd-export.bat`(PowerShell 스크립트)는 같은 일을 하는 옛 모양으로, 한 번의 배포 동안 함께 두었다가 뺍니다. 아래의 「`cd-export.bat` 더블클릭」은 「`Bethesda-CD.exe` 더블클릭」으로 읽으세요(설정 파일은 `Bethesda-CD.ini` — 옛 `cd-export.ini`가 있으면 처음 한 번 그 주소를 읽어 옴). 실행 파일은 0.3초에 뜨고(스크립트는 몇 초), 디스크에 넣는 `VIEWER.EXE`는 프로그램이 품고 있는 **같은 파일**입니다. 완성되면 따로 저장소로 떼어 냅니다(총괄).
 >
-> **지금 상태(2026-10-02)**: 폴더 저장 · ISO 저장 · **진짜 CD-R 한 장 굽기**까지 확인했습니다(가짜 환자, 실장님의 직접 허락). 디스크에는 병원이 직접 만든 **작은 뷰어 `VOIR.EXE`**가 함께 들어갑니다(압축 없는 영상과 JPEG — 병원의 초음파가 보냄. 아래).
+> **지금 상태(2026-10-02)**: 폴더 저장 · ISO 저장 · **진짜 CD-R 한 장 굽기**까지 확인했습니다(가짜 환자, 실장님의 직접 허락). 디스크에는 병원이 직접 만든 **작은 뷰어 `VIEWER.EXE`**가 함께 들어갑니다(압축 없는 영상과 JPEG — 병원의 초음파가 보냄. 아래).
 
 1. **`cd-export.bat` 더블클릭** → 창이 뜹니다. **EMR 계정으로 로그인**(진료 또는 수납 권한). 처음 한 번은 「Adresse de l'EMR」(예: `http://192.168.1.10:9080`)을 적습니다 — 다음부터는 기억합니다(프로그램 옆의 `cd-export.ini`. 비밀번호·토큰은 어디에도 적지 않음).
 2. **N° dossier(차트번호)** 를 치고 Enter → 환자 이름 · 차트번호 · 생년월일 · 성별이 나옵니다. **맞는 환자인지 눈으로 확인**하세요.
@@ -208,7 +208,7 @@
    - **Enregistrer dans un dossier…** — 고른 폴더(USB 등) 아래에 **새 폴더**(`26-00001_20261001_1730` 꼴)를 만들어 그 안에. 그 폴더가 곧 「디스크의 맨 위」입니다. 같은 이름이 있으면 `_2`를 붙이고, 있는 폴더에는 절대 쓰지 않습니다.
 6. 끝나면 무엇을 어디에 썼는지 알려 줍니다. 폴더·ISO에는 「환자의 영상이 들어 있으니 쓸 일이 끝나면 지우세요」.
 
-**디스크에 들어가는 것**: `DICOMDIR`(표준 목록) + `IMAGES\`(원본 DICOM 파일 — 영상 서버가 가진 그대로) + `README.TXT`(누구의 어떤 검사인지, 어떻게 읽는지 — 프랑스어 다음 영어) + `VOIR.EXE`(작은 뷰어 — 아래). **JPG 사본은 없습니다**(실장님: 「jpg 는 넣지 마」), **판독소견도 넣지 않습니다**(「판독소견은 어차피 프린트해서 줄 거니까」 — 종이로, 2.4.1절). 받는 병원은 자기 PACS·뷰어의 「CD 가져오기 / DICOMDIR 열기」로 읽습니다.
+**디스크에 들어가는 것**: `DICOMDIR`(표준 목록) + `IMAGES\`(원본 DICOM 파일 — 영상 서버가 가진 그대로) + `README.TXT`(누구의 어떤 검사인지, 어떻게 읽는지 — 프랑스어 다음 영어) + `VIEWER.EXE`(작은 뷰어 — 아래) + `AUTORUN.INF`(뷰어가 들어간 디스크에만 — 아래). **JPG 사본은 없습니다**(실장님: 「jpg 는 넣지 마」), **판독소견도 넣지 않습니다**(「판독소견은 어차피 프린트해서 줄 거니까」 — 종이로, 2.4.1절). 받는 병원은 자기 PACS·뷰어의 「CD 가져오기 / DICOMDIR 열기」로 읽습니다.
 
 - **기록**: 반출 한 번에 변경 기록 한 줄(`pacs.images.export`) — 누가 · 환자 · 검사 몇 건(이름과 accession) · 영상 몇 장 · 크기 · 매체(`disc` / `iso` / `folder`). 줄은 **묶음을 받아 갈 때** 적힙니다(그 뒤 굽기가 실패해도 줄은 남음). **줄을 못 적으면 묶음을 주지 않습니다.**
 - **빈 디스크만** 씁니다. 무언가 들어 있는 디스크는 쓰지도 지우지도 않습니다(다시 쓸 수 있는 디스크도). 구운 디스크는 닫습니다(나중에 더 넣을 수 없음). 여러 장에 나눠 굽기는 없습니다 — 검사를 나눠 두 번 반출합니다.
@@ -220,18 +220,32 @@
 - **굽기에 걸리는 시간**(2026-10-02, 이 PC의 얇은 USB 드라이브, CD-R, 60MB): 전체 **2분 46초** — 받기 1초 · 굽기 52초(처음 11초는 0%에 머묾 — 디스크 준비, 그 뒤 1%씩 올라감) · 「Vérification du disque…」 **약 1분 50초**(디스크 닫기 + 드라이브의 자체 확인 + 다시 읽어 파일마다 비교) · 트레이 열림. 굽는 속도는 드라이브가 대는 것 중 **가장 느린 것**(이 드라이브는 x10)으로 맞춥니다 — 싼 디스크와 USB 전원으로 도는 드라이브에 무리가 덜 가게(CD 한 장 가득이면 몇 분 더).
 - **구운 디스크를 다시 넣으면** 「Graveur G: — ce disque n'est pas vierge : il ne sera pas utilisé」, 굽기 단추는 꺼집니다. 트레이가 열려 있을 때는 「insérez un disque vierge」.
 
-**디스크의 작은 뷰어 — `VOIR.EXE`** (2026-10-02, 실장님: 「보기에 충실 + 초음파 동영상」)
+**디스크의 작은 뷰어 — `VIEWER.EXE`** (2026-10-02, 실장님: 「보기에 충실 + 초음파 동영상」)
 
-받는 쪽에 영상 프로그램이 없어도(환자 · 작은 의원) 디스크를 볼 수 있게, 모든 디스크의 맨 위에 **`VOIR.EXE`**(49KB)가 들어갑니다. 더블클릭하면 그 디스크의 환자 · 검사 · 시리즈 목록이 왼쪽에, 영상이 오른쪽에 나옵니다([X-ray](../reference/design/cd-viewer-sample-film-fr.png) · [초음파](../reference/design/cd-viewer-sample-us-fr.png) — 가짜 환자). 설치하지 않고, 받는 PC에 아무것도 남기지 않습니다. 맨 아래에 늘 「Visionneuse de consultation — non destinée au diagnostic」.
+> **이름**: 2026-10-02 실장님 결정으로 `VOIR.EXE` → **`VIEWER.EXE`**(누구나 읽을 수 있는 이름). 디스크 위의 파일 이름 · `README.TXT`의 안내(fr · en) · 프로그램의 안내 글 · 옛 `cd-export*.ps1`이 모두 새 이름. 창 안의 글(«Visionneuse de consultation — non destinée au diagnostic»)과 소스 폴더 이름(`src\viewer`)은 그대로. **그 전에 구운 디스크에는 `VOIR.EXE`로 들어 있습니다.**
+
+받는 쪽에 영상 프로그램이 없어도(환자 · 작은 의원) 디스크를 볼 수 있게, 모든 디스크의 맨 위에 **`VIEWER.EXE`**(약 80KB)가 들어갑니다. 더블클릭하면 그 디스크의 환자 · 검사 · 시리즈 목록이 왼쪽에, 영상이 오른쪽에 나옵니다([X-ray](../reference/design/cd-viewer-sample-film-fr.png) · [초음파](../reference/design/cd-viewer-sample-us-fr.png) — 가짜 환자). 설치하지 않고, 받는 PC에 아무것도 남기지 않습니다. 맨 아래에 늘 「Visionneuse de consultation — non destinée au diagnostic」.
 
 - **되는 것(단계 ① · ② · ③)**: 압축 없이 온 영상(X-ray CR/DR 등)과 **JPEG로 온 영상** — 병원의 초음파(GE LOGIQ P10)가 보내는 **무손실 JPEG 컬러**는 뷰어가 직접 풀고(값이 원본과 똑같음), 손실 JPEG 8비트는 Windows의 기능으로 풉니다. 밝기/대비(왼쪽 단추로 끌기 — 위아래 밝기, 좌우 대비 — 또는 아래 줄의 작은 막대 ☀ ◐; **흑백에도 컬러에도**) · 확대(Ctrl+휠) · 이동(오른쪽 단추로 끌기) · 맞춤(더블클릭) · 뒤집기 · 앞/뒤 영상(휠 · ← →) · 앞/뒤 시리즈(↑ ↓).
 - **여러 프레임짜리 파일**(초음파 동영상): 재생은 없습니다(실장님 2026-10-02 — 현지에 심초음파가 없음). 휠로 한 장씩 넘겨 볼 수 있습니다.
 - **RLE**로 온 영상도 뷰어가 직접 풉니다(8비트 흑백 · 컬러, 16비트 흑백).
 - **뷰어가 못 여는 압축**(JPEG 2000 · JPEG-LS · JPEG Extended · Big Endian 등)이 고른 검사에 하나라도 있으면, **EMR이 그 사본 전체를 영상 서버에서 풀어서 받아** 넣습니다(화질 손실 없음, 사본이 커짐 — 병원의 초음파가 함께 들어 있으면 약 3배). 끝 안내에 그렇게 나오고 변경 기록에도 「unpacked」가 적힙니다. 병원의 초음파 · X-ray만 고르면 풀리지 않고 원본 그대로 들어갑니다. 그래도 못 여는 영상이 남으면 뷰어는 「…compression non prise en charge. Ouvrez le disque avec un logiciel d'imagerie.」라고 알려 줍니다.
 - 실장님의 진짜 초음파 55개로 확인: 뷰어가 그린 그림이 영상 서버의 그림과 **한 픽셀도 다르지 않음**, 한 장에 평균 0.02초. 그 영상은 우리 반출의 묶음에 **풀리지 않고 그대로** 들어갑니다.
-- **진짜 CD에서**(2026-10-02, 가짜 환자로 한 장 구워 확인): `VOIR.EXE`를 더블클릭하면 1.5초에 창. 영상은 CD가 읽는 속도(초당 약 1.7MB)만큼 걸립니다 — 초음파 한 장 0.5~1초, 큰 X-ray 필름(14MB) 8초. 읽는 동안 「Lecture de l'image…」가 보입니다.
+- **진짜 CD에서**(2026-10-02, 가짜 환자로 한 장 구워 확인 — 그때의 이름은 `VOIR.EXE`): 뷰어를 더블클릭하면 1.5초에 창. 영상은 CD가 읽는 속도(초당 약 1.7MB)만큼 걸립니다 — 초음파 한 장 0.5~1초, 큰 X-ray 필름(14MB) 8초. 읽는 동안 「Lecture de l'image…」가 보입니다.
 - 만드는 법: PACS 폴더의 `viewer\*.cs`(소스)를 반출 프로그램이 디스크를 만들 때 **그 자리에서** 실행 파일로 만듭니다(Windows에 든 컴파일러 — 설치 없음). 못 만들면 디스크는 뷰어 없이 만들어지고 끝 안내가 그렇게 말합니다.
 - Weasis(큰 공개 뷰어)를 넣는 것은 해 보고 **쓰지 않기로 했습니다**(디스크마다 139MB · 받는 PC에 95MB가 남음 · 영어 동의 창).
+
+**`AUTORUN.INF` — CD를 넣으면 Windows가 뷰어를 권함** (2026-10-02, 실장님 — 설정 세션이 지음)
+
+뷰어가 들어간 디스크에는 네 줄짜리 `AUTORUN.INF`가 함께 들어갑니다(`open=VIEWER.EXE` · `icon=VIEWER.EXE,0` · `action=Voir les images / View the images`).
+
+- **CD · DVD에서**: 탐색기가 그 디스크를 **뷰어의 아이콘**으로 보여 주고, 디스크를 **더블클릭하면 뷰어가 열립니다**(디스크의 오른쪽 단추 메뉴 맨 위가 「Voir les images / View the images」; 파일을 보려면 그 메뉴의 「열기」). 디스크를 넣을 때 Windows의 자동 실행 알림에도 같은 선택지가 나올 수 있습니다.
+- **저절로 실행되지는 않습니다.** Windows가 먼저 묻습니다. 자동 실행을 꺼 둔 PC나 병원 규칙으로 막아 둔 PC에서는 아무것도 권하지 않습니다 — 그때는 `README.TXT`대로 `VIEWER.EXE`를 더블클릭.
+- **USB · 폴더에서는 Windows가 이 파일을 무시합니다**(Windows 7부터). 거기서도 `VIEWER.EXE`를 더블클릭.
+- **뷰어를 못 넣은 디스크에는 넣지 않습니다**(없는 프로그램을 가리키면 디스크를 여는 사람에게 오류가 뜸).
+- 세 길(폴더 저장 · ISO · 굽기)이 모두 **같은 작업 폴더**에서 만들어지므로 한 곳에서 써 넣으면 셋 다에 들어갑니다. 굽기는 돌려 보지 않았습니다(코드로만 — 굽기는 그 폴더를 그대로 받음).
+- **확인한 것**(Windows 11, ISO를 가상 드라이브로 물림 — 끝나면 내림): 드라이브가 CD로 보이고 이름표 `IMG_…`, 아이콘이 뷰어의 것, 메뉴 맨 위가 「Voir les images / View the images」, **물렸을 때 아무것도 실행되지 않음**, 디스크의 기본 동작(더블클릭)을 부르니 디스크의 `VIEWER.EXE`가 열리고 그 디스크의 환자(가짜)를 보여 줌, 디스크의 파일이 모두 넣은 것과 같음, **Microsoft Defender 검사에서 이상 없음**(디스크와 ISO 파일).
+- **확인 못 한 것**: 진짜 드라이브의 구운 CD · 디스크를 넣을 때 뜨는 알림 자체(화면을 보지 못함) · 다른 백신 · 자동 실행을 막아 둔 PC.
 - 설계와 시험 결과: [cd-mini-viewer-design.md](../reference/cd-mini-viewer-design.md) 13 · 14절(실제 장비가 보내는 형식은 4-1절, RLE와 풀어서 내보내기는 15절).
 
 ### 2.5 영상이 안 보일 때 — 순서대로
@@ -280,6 +294,19 @@ EMR 상태 화면(또는 서버 상태 창)에 영상 백업 경고가 보이면
 2. 「가득 참(full)」이면 관리자(실장님)에게 알립니다 — 디스크를 바꾸거나 새로 준비해야 합니다.
 3. 그 밖의 경고(실패, 오래 안 됨)도 관리자에게 알립니다. 영상 서버와 진료는 그대로 쓸 수 있습니다 — 백업만 멈춘 것입니다.
 4. 영상 백업 디스크에는 **환자 영상과 EMR 데이터베이스 백업(모든 환자 기록)이 암호화 없이 그대로 들어 있습니다.** 서버 옆 잠기는 곳에 두고, 빌려주거나 다른 일에 쓰지 마세요.
+
+### 2.8 다른 병원에서 가져온 영상 — 「외부 영상」 (2026-10-02)
+
+환자가 다른 병원의 CD · USB를 가져오면 **접수에서** 프로그램 「Bethesda CD」의 **들여오기**로 그 환자 차트에 넣습니다(프로그램 쪽 사용법은 프로그램이 다 지어지면 여기에 보탭니다). 넣은 뒤 EMR에서는:
+
+1. 진료 화면(또는 수납 화면)에서 환자를 고르고 **🩻 Imagerie (영상/판독)** 창을 엽니다.
+2. 목록 **맨 아래**에 **💿 Imagerie externe (CD / USB)** 묶음이 있습니다. 우리 검사가 많아 안 보이면 목록 위의 **💿 N** 단추를 누릅니다. 줄마다: 검사 날짜(그 병원에서 찍은 날) · 종류 · 검사 이름 · **Externe** 표시 · 병원 이름 · 장수.
+3. 줄을 누르면 오른쪽에: 검사 날짜 · 병원(디스크에 안 적혀 있으면 «non indiqué sur le disque») · 장수와 크기 · 누가 언제 들여왔는지 · **디스크에 적혀 있던 이름과 번호**. 들여올 때 생일이나 성별이 차트와 달랐으면 노란 줄로 알려 줍니다.
+4. 진료 화면에서는 **🖼 Voir image** 로 영상을 봅니다(수납 화면에는 이 단추가 없습니다 — 우리 검사와 같음). 영상 안의 이름 · 번호는 **우리 차트의 것**으로 나옵니다.
+5. **판독 칸은 없습니다.** 원장님 소견은 진료 기록(note)에 적습니다. 수납 줄도 생기지 않습니다.
+6. **잘못 들여왔으면**(다른 환자의 디스크): 그 줄을 고르고 **✕ Retirer du dossier… (차트에서 빼기)** → 사유를 적고 **Retirer**. 영상 서버에서 지워지고 목록에서 사라집니다. 진료 또는 설정 권한이 있는 계정만 — 누가 왜 뺐는지 변경 이력에 남습니다. 그 디스크는 다시 들여올 수 있습니다.
+
+아직 안 되는 것: 외부 영상을 우리 검사와 한 창에서 나란히 보기 · 종이로 인쇄 · 우리 CD에 다시 담기 · 다른 오더로 옮기기.
 
 ## 3. 기능 상세
 
@@ -368,6 +395,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - 영상 뷰어 창(iframe + 판독 입력)과 🖼 버튼은 **`frontend/src/pages/Consultation.jsx` 안**에 있습니다(`openViewer`, `saveReading`, 약 51~66줄, 692~716줄) — **진료 세션 파일**이라 PACS 세션이 직접 고치지 않습니다. iframe `src`와 「새 탭에서 열기」는 `viewer-url`의 `url`(EMR 자신의 상대 주소 `/api/pacs/viewer/…`)을 그대로 씀 — P-9 뒤에도 진료 파일은 바뀐 것 없음.
 - **`frontend/src/components/ImagesPrint.jsx`**(2026-10-01) — 영상 인쇄 창. `ImagesPrint({exam, examDate, now, patientId, t, onClose})`, `imagesBlock(row, t)`(단추가 꺼지는 이유 — 서버의 `examBlock`과 같은 규칙). 작은 그림은 3장씩 차례로 가져오고(브라우저는 한 서버에 6개까지만 동시에 — 종이의 그림이 작은 그림 300장 뒤에 줄 서지 않게), 종이의 그림은 `usePictures`가 가져옵니다. 인쇄 창은 그림이 모두 그려질 준비가 된 뒤에 `print()`를 부릅니다(공용 `printDocument`의 0.35초 대기로는 48장이 모자람 — 그래서 이 창은 자기 것을 씀). `RadiologyReadings.jsx`가 「Images」 줄 아래에 단추를 그리고 이 창을 엽니다(진료·수납 공통 — `onOpen`이 없어도 나옴).
 - **`frontend/src/documents/imaging-images.jsx`**(2026-10-01) — 영상 인쇄의 서식(`code: 'imaging-images'`, `category: 'imaging'`). `ImagingImagesLayout`: `values {exam_name, exam_date, order_item_id, per_page, clarity, images:[{id, series, number, frames, desc}]}`. 한 장 = 높이 264mm의 칸(머리 · 그림 격자 · 꼬리), 격자는 1×1 / 1×2 / 2×2 / 2×3. `props.pictures`(인쇄 창이 이미 가져온 것)가 없으면 스스로 가져옴(문서 이력에서 다시 열 때). `loadPicture`(로그인 토큰을 머리말에 실어 `GET /api/pacs/export/image` → `<img>`), `toPaper(img, clarity)`(캔버스에서 감마 곡선 1 / 1.45 / 2.0 → JPEG 자료 주소), `usePictures`, `forgetPictures`, `pictureLabel`, `pictureWidth`(1·2장 배치 1600, 4·6장 1000). `registry.js`에 등록(PACS가 직접 — 총괄 결정 ㄱ): `TEMPLATES`, 문서 창 이력(`HISTORY_ALSO.document`), 번호를 종이에 안 찍는 목록(`NO_NUMBER_ON_PAPER`). `imaging-report.jsx`의 `fitSize` · `linesAt`을 export해서 같이 씀.
+- **`frontend/src/components/OutsideStudies.jsx`**(2026-10-02) — 외부 영상(다른 병원의 디스크에서 들여온 검사). `RadiologyReadings.jsx`가 `GET /pacs/import/list`로 받은 검사들을 목록 맨 아래 「💿 Imagerie externe (CD / USB)」 묶음으로 그리고(고른 줄의 표시는 `'x' + id` — 오더의 id와 섞이지 않게; 체크 칸 없음, 종류 · 낱말 거르기와 ↑ ↓는 같이 먹음), 이 파일이 오른쪽 칸 **`OutsideDetail({study, t, onOpen, onDone})`**(병원 · 장수/크기 · 들여온 사람/때 · 디스크의 이름/번호 · 생일/성별이 달랐다는 표시 · 「차트에서 빼기」 — 진료 또는 설정 권한일 때만 보임, 사유 필수)과 영상 창 **`OutsideViewer({study, t, onClose})`**(판독 칸 없는 iframe 창 — `GET /pacs/import/:id/viewer-url`)를 줍니다. `Consultation.jsx`는 고치지 않았습니다(`onOpen`이 있으면 「Voir image」가 보임 — 수납 화면에는 없음). 번역 키 `px_x…` 22개.
 - 설정 → 오더 연동(Order Feed) 탭 — `Settings.jsx` 약 476~515줄, `savePacs`·`testPacs`.
 
 ### 서버 — `backend/src/routes/pacs.routes.js` (`/api/pacs`)
@@ -444,6 +472,35 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - **반출 쪽 — 격리에서 확인한 것**(`export_api.py` 33가지): 환자·검사 목록과 크기 · 차트번호 앞뒤 공백 · 없는 번호 404 · 두 검사 묶음이 `DICOMDIR` + 23파일이고 **영상 서버의 파일과 바이트까지 같음** · 기록 한 줄(환자, 건수, 장수, 크기, 매체, 검사 이름) · 다른 환자의 검사가 섞이면 거절 · 취소/경고/영상 없음 거절(어느 검사인지) · 매체 이름이 틀리면 400 · 31건 거절 · 로그인 없이 401 · 기록을 못 적게 하면 500이고 ZIP이 한 바이트도 안 나감 · 받다가 연결을 끊어도 EMR은 계속 응답 · 영상 서버를 끄면 목록은 오고(`UNREACHABLE`) 묶음은 409. **687MB 묶음**(큰 필름 48장)이 nginx를 지나 온전히 옴(nginx 설정은 안 고침).
 - **인쇄 쪽 — 격리에서 확인한 것**(가짜 장비로 보낸 검사 — 초음파 컬러 800×600 18장 + 12프레임 1건 + 장비 보고서 1건 / 60장짜리 / 12비트 흉부 필름 2500×3000 2장 + 흑백이 뒤집힌 필름 1장): 목록 순서 · 보고서가 빠짐 · 필름이 1600×1920으로 줄어 옴(한 장 0.05초) · 작은 그림은 그대로 · 뒤집힌 필름도 바르게 · 다른 검사/다른 환자의 영상 번호를 넣으면 403 · 취소/경고/영상 없음/영상 오더 아님 거절 · 로그인 없이 401 · 수납 계정 통과 · 49장 거절 · 기록을 못 적게 하면(시험용 DB 트리거) 500이고 줄 없음 — 35가지.
 
+### 서버 — `backend/src/routes/pacs.import.js` (`/api/pacs/import`, 2026-10-02 — 다른 병원의 영상 들여오기)
+
+외부 영상은 **환자에게** 붙습니다 — 오더 · 진료 · 방문 · worklist_log · 수납과 무관(실장님, 2026-10-02). 들여오는 것은 프로그램 「Bethesda CD」, 보여 주는 것은 EMR의 「영상/판독」 창. **EMR은 표 `pacs_import`에 `done`으로 적힌 검사만 보여 줍니다**(영상 서버에 그 차트번호로 있는 것 전부가 아님 — 장비에서 번호를 잘못 친 영상이 조용히 차트에 붙지 않게). 프로그램이 부르는 길의 약속(보내는 것 · 받는 것 · 거절 코드)은 [external-images-import-api.md](../reference/external-images-import-api.md), 방식의 근거는 [external-images-import-design.md](../reference/external-images-import-design.md).
+
+| 길 | 누가 | 하는 일 |
+|---|---|---|
+| `GET /import/patient?chart_no=` | 프로그램 | 환자 · 영상 서버가 답하는지(`server`) · 한도(`max_file_bytes` · `warn_bytes` · `free_bytes` · `spare_bytes`) · 이미 들여온 것(`imported`) |
+| `POST /import/check` `{patient_id, studies:[uid]}` | 프로그램 | 검사마다 `''`(들여올 수 있음) · `OURS`(우리가 찍은 것 / 우리가 들여온 것의 사본) · `HERE`(이 환자에게 이미) · `OTHER`(다른 환자에게 — 누구인지 안 알림) · `BUSY` · `ON_SERVER` · `UNREACHABLE` |
+| `POST /import/begin` `{patient_id, files, bytes, source{…}, confirm{…}}` | 프로그램 | 검사 하나 시작 — `pacs_import` 한 줄(`started`), 우리 검사 번호 `1.2.826.0.1.3680043.9.7308.<id>.<시각>`과 accession `EXT-<id>`를 정함. 자리 검사(`bytes×2 + 5GB > 남은 자리` → `NO_ROOM`) |
+| `PUT /import/:id/instance` (몸통 = DICOM 파일) | 프로그램 | 한 장: Orthanc에 그대로 넣음 → 알린 검사 · 환자의 것인지 봄 → `/instances/{id}/modify`(Orthanc가 바꾼 파일을 **저장하지 않고** 돌려줌) → 그것을 넣음 → 원래 것 지움. 파일은 EMR에 머물지 않고 흘러감. 한도는 지나가는 바이트로도 셈 |
+| `POST /import/:id/finish` | 프로그램 | 영상 서버의 장수 = 올린 수 = 알린 수인지, 원래 번호로 남은 것이 없는지 본 뒤 **한 번에**: `done` + 변경 이력. 이력을 못 쓰면 아무것도 안 들어감(`NOT_LOGGED`). 영상 서버가 못 그리는 시리즈는 `undrawn`에 |
+| `POST /import/:id/cancel` | 프로그램 | 올린 것을 영상 서버에서 지움(`rolled-back`; 영상 서버가 답하지 않으면 `cleanup-pending`) |
+| `GET /import/list?patient_id=` | EMR 화면 | 그 환자의 외부 검사(끝난 것만, 최근 검사 날짜 먼저) |
+| `GET /import/:id/viewer-url` | EMR 화면(진료 권한) | 그 검사 **하나**를 여는 뷰어 쿠키(`pacs.viewer.js`의 `grantViewerCookie`)와 Stone 주소 — 오더 없이 |
+| `POST /import/:id/undo` `{reason}` | EMR 화면(진료 또는 설정) | 차트에서 빼기: 영상 서버에서 지우고 줄을 `undone`(누가 · 언제 · 왜)으로, 변경 이력 한 줄. 사유 없으면 400 `NO_REASON` |
+| `POST /import/resume` | 관리자(진료 또는 설정) | 끊긴 들여오기의 뒷정리를 지금(서버도 시작 20초 뒤 · 5분마다 스스로 — 30분 조용한 `started`와 `cleanup-pending`) |
+
+- **권한**: 프로그램의 길과 `list` — consultation · payment · **registration** 가운데 하나(`MAY_IMPORT` 한 줄). 디스크를 받는 곳이 접수이고, 이 길들이 보여 주는 환자 정보는 이름 · 생일 · 성별뿐.
+- **영상 안에서 바꾸는 것**: PatientID · PatientName · 생일 · 성별 = 우리 차트 것, StudyInstanceUID = 새 번호, AccessionNumber = `EXT-<id>`, IssuerOfPatientID 뺌, 원래 번호 · 이름은 OtherPatientIDs · OtherPatientNames에. **그림 바이트 · 압축 · 시리즈/영상 번호 · 병원 · 날짜는 그대로**(격리에서 그림 바이트 비교 · 압축 종류 비교로 확인).
+- **브리지와 부딪히지 않게**: accession `EXT-<n>`은 오더의 accession 꼴이 아니어서 어느 워크리스트 줄과도 맞지 않음. 올리는 도중 원래 번호로 영상 한 장이 잠깐 서 있는 동안 브리지가 그것을 「accession으로 찾은 도착」으로 보고하면 `/study-arrived`가 409(「This study is being brought in from a disc」).
+- **백업**: 치우거나 뺀 검사 번호는 `GET /superseded-images`에 `{study_uid, all:true}`로 같이 나감(영상 백업이 그 검사를 내려놓게).
+- **남은 자리**: 브리지가 심박에 `storage_free_bytes` · `storage_total_bytes`(자기 워크리스트 폴더가 있는 디스크 = 영상 서버가 저장하는 디스크)를 실어 보냄 — PACS 저장소 `bridge/bridge.py`. 심박이 3분 넘게 없으면 「모름」 → 자리로는 막지 않음.
+- **파일 하나의 한도**: `pacs_config.import_max_file_mb`(기본 1024). `PUT /api/pacs/config {import_max_file_mb}`(1~4096)로 바꿈 — **설정 화면에는 아직 칸이 없음**.
+- **nginx**(`frontend/nginx.conf`): `location /api/pacs/import/` — 몸통 크기 제한 없음(`client_max_body_size 0`), 디스크에 받아 두지 않고 바로 넘김(`proxy_request_buffering off`), 시간 제한 900초. 다른 길은 그대로 1MB.
+- **뷰어의 안내**(`pacs.viewer.js`): 외부 검사가 영상 서버에 없으면 「들여온 것으로 적혀 있는데 영상 서버에 없음」, 그림이 없는 자료뿐이면 「외부 검사에 그림 없는 자료만」 — 오더의 안내(「아직 안 옴」 · 「판독은 오른쪽에」)가 나오지 않게.
+- **변경 이력**(`pacs.images.import`, `entity: pacs_import`, 환자에 붙음): 들여옴 — `Outside images brought in: N image(s), X MB - <종류 설명> (<병원>, <날짜>)` + 값 `{image_count, size_mb, institution, study_date, description, modality, came_as_patient_id, came_as_patient_name, birth_date_differed, sex_differed, accession}`. 뺌 — `Outside images taken out again: … - <사유>`.
+- **격리에서 확인한 것**(`import_api.py` 48가지, 공개 견본 CT · 이 세션이 그린 가짜 환자의 영상): 접수(payment) 계정으로 한 장 들여오기 → 영상 서버에 우리 번호 · 이름, 그림 바이트 같음, 병원 · 날짜 · 시리즈/영상 번호 그대로 · 끝내기 전에는 목록에 없음 · **오더 · worklist_log · 방문 · 진료 · 수납 줄 수가 처음과 같음** · 우리 검사 목록(`readings/patient`)과 장비 feed에 안 나옴 · 뷰어 쿠키가 그 검사만 엶(우리 검사는 403), 수납 계정은 못 엶 · 같은 디스크 다시 = `HERE`, 다른 환자 = `OTHER`, 우리 사본 = `OURS` · 5장 7.2MB(무손실 JPEG · Baseline · 12프레임, 1MB 넘는 파일을 nginx 거쳐) 0.7초, 압축 그대로 · 같은 파일 두 번 = 한 번 · 다른 계정 · 다른 검사의 파일 · DICOM 아닌 파일 거절 · 장수 모자란 끝내기 거절 · 취소 뒤 남는 것 없음 · 45분 조용한 것 치움 · 영상 서버를 끈 채 취소 → `cleanup-pending` → 켠 뒤 치움 · 우리 차트번호와 같은 번호가 적힌 남의 파일도 외부 검사로만 들어옴 · 파일 한도(1MB로 낮춰 4MB 거절, 5000MB 설정 거절) · 자리 모자람 · 빼기(수납 계정 거절, 사유 없음 거절, 뺀 뒤 목록 · 영상 서버에서 사라지고 `undone` 줄과 이력, 뷰어 안 열림, superseded에 나감, 다시 들여올 수 있음).
+- **화면에서 확인한 것**(격리, 진료 화면, 불어): 목록 맨 아래의 묶음과 「💿 N」 단추 · 오른쪽 칸(병원 · 장수/크기 · 누가 언제 · 디스크의 이름/번호 · 생일이 달랐다는 노란 줄) · 「Voir image」로 Stone이 우리 환자 이름 · 번호로 그 CT를 엶 · 「Retirer du dossier…」 → 사유 → 줄이 사라짐.
+
 ### 서버 — `backend/src/routes/pacs.viewer.js` (`/api/pacs/viewer`, 영상 중계 — P-9 C)
 
 직원 브라우저는 Orthanc(9090)에 직접 가지 않고 **EMR에 영상을 달라고 하고, EMR이 Orthanc에 `admin`으로 들어가 받아 그대로 흘려 줍니다**. 직원은 Orthanc 비밀번호를 모르고, Orthanc 9090은 서버 PC 안(127.0.0.1)에만 엽니다.
@@ -505,19 +562,19 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요. `make_*`는 브리지 컨테이너 안에서 돌리며 `ORTHANC_PASSWORD`를 환경 변수에서 읽고, 시험 오더의 `STUDY_UID`·`ACCESSION`·`PATIENT_ID`도 환경 변수로 받음(가짜 환자 `TEST^Patient`).
 - `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`
 - **`bethesda-cd\`**(2026-10-02) — 「Bethesda CD」: 반출 프로그램과 디스크의 뷰어, **그 폴더 하나로 서 있음**(PACS 저장소의 다른 파일에 기대지 않음 — 따로 저장소로 떼어 낼 것). EMR과의 약속은 HTTP 길 셋(`/api/auth/login` · `/api/pacs/export/patient` · `/export/bundle`)뿐.
-  - `build.ps1` — Windows의 `csc.exe`(C# 5)로 두 번: `src\shared` + `src\viewer` → `build\VOIR.EXE`, `src\shared` + `src\app`(+ 그 `VOIR.EXE`를 자원으로, 아이콘) → `build\Bethesda-CD.exe`. 0.7초. `build\`는 git에서 제외.
+  - `build.ps1` — Windows의 `csc.exe`(C# 5)로 두 번: `src\shared` + `src\viewer` → `build\VIEWER.EXE`, `src\shared` + `src\app`(+ 그 `VIEWER.EXE`를 자원으로, 아이콘) → `build\Bethesda-CD.exe`. 0.7초. `build\`는 git에서 제외.
   - `src\shared\Version.cs` — 이름과 판 번호(1.0.0)를 정하는 **한 곳**: 창 · 실행 파일 속성 · 뷰어의 「?」가 같은 값.
-  - `src\app\` — `Program.cs`(시작 · 설정 파일 `Config`) · `MainForm.cs`(창 + `Ask` — 사람에게 묻는 넷을 시험이 갈아 끼움) · `Texts.cs`(fr · ko · en) · `Emr.cs`(`EmrClient` · JSON 읽기 `J`) · `DiscFolder.cs`(작업 폴더 · 묶음 풀기 · README · 뷰어 넣기 · 폴더 저장과 비교) · `Burner.cs`(`DiscJob` · `Burners` — IMAPI2). 옛 PowerShell 함수와 한 줄씩 대응.
+  - `src\app\` — `Program.cs`(시작 · 설정 파일 `Config`) · `MainForm.cs`(창 + `Ask` — 사람에게 묻는 넷을 시험이 갈아 끼움) · `Texts.cs`(fr · ko · en) · `Emr.cs`(`EmrClient` · JSON 읽기 `J`) · `DiscFolder.cs`(작업 폴더 · 묶음 풀기 · README · 뷰어 넣기 · `WriteAutorun` — 뷰어가 있을 때만 `AUTORUN.INF` · 폴더 저장과 비교) · `Burner.cs`(`DiscJob` · `Burners` — IMAPI2). 옛 PowerShell 함수와 한 줄씩 대응.
   - `src\viewer\` — 뷰어(아래 `viewer\` 항목의 파일들이 이리로 옮겨짐).
   - `icon\make-icon.ps1` — 아이콘을 직접 그림(16 · 32 · 48 · 256, 받아 오는 그림 없음). 후보 셋: [bethesda-cd-icon-candidates.png](../reference/design/bethesda-cd-icon-candidates.png).
-  - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
+  - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · **`tests\disc_test.ps1`**(2026-10-02 — EMR 없이: 뷰어 · `AUTORUN.INF` · `README.TXT`를 디스크 폴더에 넣고, 폴더 저장 · ISO, `-Mount`면 ISO를 Windows 가상 드라이브로 물려 파일마다 다시 읽고 반드시 내림, 16가지) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
   - `install.ps1` · `install.bat` — 다른 PC(접수 등)에 프로그램과 바탕화면 바로가기를 놓음(파일 하나 복사 + `Bethesda-CD.ini` + `.lnk`; `-Here`는 복사 없이 바로가기만).
   - `README.md` · `CHANGELOG.md` · `LICENSE`(PACS 저장소와 같은 글) · `Bethesda-CD.example.ini`.
 - **`desktop-shortcuts.ps1`**(2026-10-02) — 서버 PC의 바탕화면에 「Bethesda PACS」(`.url` — 영상 서버의 화면, 관리자용)와 「Bethesda CD」(`.lnk`)를 만들거나 고침. `setup.ps1`이 끝에서 부름. 파일만 만듦(레지스트리 · 예약 작업 없음).
 - **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 같은 프로그램의 옛 모양(PowerShell). 한 번의 배포 동안 남겨 둠 — 뷰어는 `bethesda-cd\src`에서 그 자리에서 빌드. 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
   - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
   - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬 → 가장 느린 속도). **진짜 굽기로 확인함(2026-10-02)**: 이 드라이브에서 자체 확인이 켜지고, 굽고 나면 트레이를 열지 않아도 Windows가 디스크를 다시 읽어 줘서 파일 비교까지 됨. 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
-  - 뷰어: `Get-ViewerSource`(프로그램 옆 `viewer\*.cs`) · `Add-DiscViewer`(그 소스를 `Add-Type -OutputAssembly … -OutputType WindowsApplication`으로 디스크 폴더의 `VOIR.EXE`로 만듦 — `{ok, bytes, error}`). Weasis 때의 `cd-viewer` 폴더 · 체크 칸 · `VOIR.BAT`은 없앰.
+  - 뷰어: `Get-ViewerSource`(프로그램 옆 `viewer\*.cs`) · `Add-DiscViewer`(그 소스를 `Add-Type -OutputAssembly … -OutputType WindowsApplication`으로 디스크 폴더의 `VIEWER.EXE`로 만듦 — `{ok, bytes, error}`). Weasis 때의 `cd-viewer` 폴더 · 체크 칸 · `VOIR.BAT`은 없앰.
 - **`bethesda-cd\src\viewer\`**(2026-10-02, 처음에는 `viewer\`) — 작은 뷰어의 소스, C# 5(Windows에 든 컴파일러용), 파일마다 UTF-8 머리표: `Dicom.cs`(DICOM 파일 읽기 — Little Endian의 명시적/암시적 VR, 헤더는 길이를 믿지 않고 태그로 읽음, 길이 없는 사설 시퀀스) · `Disc.cs`(`DICOMDIR`의 기록을 자리(offset)로 이어 목록을 만들고 시리즈마다 첫 파일의 머리에서 글을 바로잡음, 없으면 폴더를 훑음) · `Picture.cs`(영상의 속성, 픽셀 읽기 — 압축 없음 / JPEG, 프레임 가르기, 색 표현, 밝기 창으로 그리기) · `Rle.cs`(RLE를 직접 풂 — PS3.5 부록 G: 조각마다 PackBits, 높은 바이트 먼저) · `Jpeg.cs`(무손실 JPEG를 직접 풂 — T.81 부록 H: 허프만 표 · 예측 1~7 · restart · 길이로 손상 알아보기 / 손실 JPEG 8비트는 GDI+에 맡기되 색의 뜻을 「Adobe」 조각으로 알려 줌) · `ImagePanel.cs` · `MainForm.cs` · `Texts.cs` · `Program.cs`.
   - `cd-export-ui.ps1` — 창(WinForms). 글은 `$CdxText`(fr · ko · en). 사람에게 묻는 것(안내 · 예/아니오 · 폴더 고르기 · 파일 이름)은 함수 네 개에 모아 둠 — 시험이 사람 대신 답할 수 있게.
   - **EMR만 부릅니다**(로그인 · `GET /api/pacs/export/patient` · `GET /api/pacs/export/bundle`). Orthanc에 직접 가지 않으므로 영상 서버 비밀번호가 프로그램에 없습니다.
@@ -558,6 +615,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | `order_code` (설정 소유) | pacs_modality(US/CR/CT/MR/ES/OT … — 아무 값이나, 16자까지(설정 세션 마이그레이션 040 — 전에는 10자); 「AS」 같은 값도 끝까지 감, P-32), worklist_enabled, station_ae, body_part | 어떤 오더가 워크리스트로 가는지 정함 |
 | `pacs_config` (001, 015, **035**) | worklist_scp_host/port/ae, bridge_token, emr_base_url, pacs_viewer_url(**P-9 뒤 안 씀**), auto_create_worklist, facility_name, notes. **035:** `orthanc_url`(기본 `http://host.docker.internal:9090` — EMR 컨테이너에서 본 Orthanc 웹 주소), `orthanc_password`(비밀값, `pair-with-emr`만 씀, 응답에 안 나옴) | 한 줄(id=1). 015가 옛 한국 데모값(`BROKER`/`192.168.0.222`)을 Orthanc 기본값으로 바꿈. `consult.routes.js`가 `SELECT *`로 읽지만 `auto_create_worklist`만 쓰고 내보내지 않음(확인) |
 | `pacs_study_move` (046) | kind(`move`/`swap`), state(`started`·`emr-done`·`cleanup-pending`·`undo-pending`·`done`·`rolled-back`·`failed`), step, patient_id, from/to_order_item_id(오더가 지워지면 NULL — 이름·accession은 따로 적어 둠), image_count, reading_moved, reason, detail(JSONB: 옛·새 검사 번호, Orthanc id, 영상 번호, 고친 태그), **superseded**(JSONB: 영상 서버에서 없어진 `[{study_uid, instances}]` — 영상 백업이 읽을 것), error, staff, 시각 | 영상을 다른 오더로 옮긴 기록 = ① 끊긴 일을 잇는 근거 ② 백업이 「없어진 영상」을 아는 근거 ③ 화면의 옮긴 기록 |
+| `pacs_import` (051) | state(`started`·`done`·`rolled-back`·`cleanup-pending`·`undone`), patient_id, study_uid(우리 서버에서의 번호), accession_no(`EXT-<id>`), image_count, source_study_uid · source_patient_id · source_patient_name · source_birth_date · source_sex · source_accession, institution, study_date, description, modality, files_announced · files_received · bytes_received, detail(JSONB: 사람이 확인한 것 · 못 그리는 시리즈), error, staff_id · staff_name, created_at · last_at · finished_at, undone_at · undone_by · undone_by_name · undo_reason | 외부 검사 하나 = 한 줄. 오더와 무관. `done`인 것만 화면에 나옴. 같은 마이그레이션이 `pacs_config.import_max_file_mb`(기본 1024)도 더함 |
 | `service_heartbeat` (018, 설정과 공유) | name(`worklist_bridge`), last_seen, ok, detail(JSONB) | 현재 상태만, 이력 없음 |
 
 마이그레이션 `007_worklist_cascade.sql`(오더 삭제 시 worklist_log 같이 삭제), `015_pacs_viewer.sql`(pacs_viewer_url 추가·데모값 정리), `018_service_heartbeat.sql`. 셋 다 이미 적용된 파일이라 **고치지 않습니다**. `019_pacs_image_arrival.sql` — PACS 번호대, 칸·CHECK 추가만(기존 줄은 안 바꿈). 합칠 때 총괄이 번호를 다시 매김. `035_pacs_viewer_proxy.sql` — `pacs_config`에 `orthanc_url`·`orthanc_password` 추가만(`ADD COLUMN IF NOT EXISTS`).
@@ -750,7 +808,8 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 동작 · 기타
 
-- **P-33 [참고] 영상 옮기기의 한계 (2026-10-01).** ⓪ 받을 오더에 이미 판독이 있고 옮길 판독도 있으면 「옮기기」는 막힘(맞바꾸기는 판독도 맞바꿈). ① 같은 환자·같은 종류(Modality)의 오더끼리만. 한 검사 안에 두 검사가 섞인 경우와 다른 환자의 줄로 찍힌 경우는 범위 밖(설계 메모 Q7·Q8). ② 방금 옮긴 검사는 1분쯤 「아직 들어오는 중」으로 보여 바로 되옮길 수 없음. ③ 영상 서버가 고친 검사를 다 만들 때까지 요청이 기다림(작은 검사 0.2초; 수백 장이면 길어질 수 있고, 화면의 요청이 먼저 끊겨도 서버는 끝까지 하고 줄에 결과가 남음). ④ `failed` 상태(새 번호의 검사가 있는데 이 일의 것으로 알아볼 수 없음)는 사람이 봐야 함 — 격리에서는 일어나지 않음. ⑤ 바로잡은 날 밤 백업이 돌기 전에 영상 서버를 잃으면, 디스크에는 그 그림이 옛 번호로만 있음 — 복원이 옛 번호로 올리고, EMR이 다음에 열 때 스스로 다시 적용(4절). 한 영상이 그 사이 **두 번 이상 이어서** 옮겨진 경우(A→B→C)는 다시 적용하지 않음(가장 최근 줄의 「바로 전 모습」만 봄). ⑥ 총괄이 기능이 생기기 전에 손으로 옮긴 건처럼 옮긴 기록 표에 없는 것은 백업이 모름 — 표에 한 줄을 넣어야 함(인계 노트).
+- **P-34 [참고] 외부 영상의 한계 · 확인 못 한 것 (2026-10-02).** ① 프로그램(Bethesda CD)의 「들여오기」는 설정 세션이 짓는 중 — 서버는 시험 스크립트로만 불러 봄. ② 외부 영상은 그 검사 하나만 열림(우리 검사와 한 창에서 비교 · 인쇄 · CD 반출 · 옮기기 없음 — 정한 것). ③ 파일 하나의 한도를 바꾸는 칸이 설정 화면에 없음(`PUT /api/pacs/config`로만). ④ 접수 권한만 있는 계정: 격리에서 해 봄(`import_reg.py` 10가지 — 들여오기 · 목록은 되고, 영상 열기 · 빼기 · 반출 목록/묶음 · 우리 검사 목록은 403). ⑤ 진짜 다른 병원 디스크, 1GB에 가까운 파일, 수납 화면에서의 모습은 보지 못함. ⑥ 환자를 합치는 기능이 생기면 `pacs_import.patient_id`도 같이 옮겨야 함(지금은 그런 기능이 없음). ⑦ 치우거나 뺀 검사는 `superseded-images`에 계속 나감(줄이 쌓여도 번호 목록일 뿐).
+- **P-33 [참고] 영상 옮기기의 한계 (2026-10-01).** ⓪ 받을 오더에 이미 판독이 있고 옮길 판독도 있으면 「옮기기」는 막힘(맞바꾸기는 판독도 맞바꿈). ① 같은 환자·같은 종류(Modality)의 오더끼리만. 한 검사 안에 두 검사가 섞인 경우와 다른 환자의 줄로 찍힌 경우는 범위 밖(설계 메모 Q7·Q8). ② 방금 옮긴 검사는 1분쯤 「아직 들어오는 중」으로 보여 바로 되옮길 수 없음. ③ 영상 서버가 고친 검사를 다 만들 때까지 요청이 기다림(작은 검사 0.2초; 수백 장이면 길어질 수 있고, 화면의 요청이 먼저 끊겨도 서버는 끝까지 하고 줄에 결과가 남음 — 격리에서 48장짜리 검사가 68초: EMR 앞의 nginx가 60초에 끊어 화면에는 「서버가 응답하지 않음」이 나오지만 옮기기는 끝나 있었음, 2026-10-02). ④ `failed` 상태(새 번호의 검사가 있는데 이 일의 것으로 알아볼 수 없음)는 사람이 봐야 함 — 격리에서는 일어나지 않음. ⑤ 바로잡은 날 밤 백업이 돌기 전에 영상 서버를 잃으면, 디스크에는 그 그림이 옛 번호로만 있음 — 복원이 옛 번호로 올리고, EMR이 다음에 열 때 스스로 다시 적용(4절). 한 영상이 그 사이 **두 번 이상 이어서** 옮겨진 경우(A→B→C)는 다시 적용하지 않음(가장 최근 줄의 「바로 전 모습」만 봄). ⑥ 총괄이 기능이 생기기 전에 손으로 옮긴 건처럼 옮긴 기록 표에 없는 것은 백업이 모름 — 표에 한 줄을 넣어야 함(인계 노트).
 - **P-32 [확인] 흔치 않은 Modality(예: 직장경 「AS」)도 걸리는 곳 없음 — 단, 오더 종류가 `procedure`이면 세 곳에서 걸렸음(고침) (2026-10-01, 격리).** 실장님: 현지 직장경 장비의 Modality가 「AS」. 오더 코드 Modality=`AS`(종류 `imaging`)로: 피드 → `.wl`(Modality AS) → 장비 흉내가 **Modality=AS로 물음 → 1명** → 컬러 영상(VL Endoscopic Image `1.2.840.10008.5.1.4.1.1.77.1.1` 2장 + Secondary Capture 1장, RGB) 저장 → 브리지 도착 보고 → EMR `completed`·3장·`match` → 「영상/판독」 목록에 종류 `AS`, 종류 고르기에 `AS`, 영상 창(Stone)에 컬러 그림. EMR·브리지·Orthanc 어디에도 Modality 값의 목록·검사가 없습니다(칸은 16자 — 마이그레이션 040). device-watch: 「조건: Modality=AS → 1명 보냄」, 목록에 AS가 없을 때 「→ 0명 — 장비가 AS 검사만 물음. 지금 목록: US 6, CR 5, ES 1」 — **장비가 물은 값을 그대로 보여 줌**. **찾은 것**: 내시경처럼 종류가 `procedure`인 오더(기본 코드 `E1`·`E2`, Modality `ES`)는 워크리스트·영상·🖼 단추까지는 되는데 판독 저장 404·목록에 없음·비교에서 빠짐 → 4절 「무엇이 영상 검사인가」로 고침(종류가 `procedure`인 AS 오더로도 다시 확인: 목록·판독 저장·비교·판독 보고서(그때는 이름 옆에 「(AS)」 — 그 뒤 종류 코드는 종이에서 뺌, 2.4.1)·컬러 영상·수납 화면 목록). **남은 것(진료 세션)**: 진료 화면의 `cancellable(o)`은 `lab`·`imaging`만이라, 영상이 온 `procedure` 오더는 지울 수도(결과 있음) 「취소」할 수도 없음.
 - **P-31 [주의] Orthanc 관리 화면의 Modify 창을 쓰면 EMR 연결이 끊기거나 오류가 난다 (2026-10-01, 격리에서 확인).** 기본으로 골라진 「generating new DICOM UIDs」는 검사 번호를 바꿔 **EMR이 그 영상을 못 찾게** 하고(끝난 오더는 브리지가 다시 잇지 않음), 「keeping the original DICOM UIDs」는 이 서버 설정(`OverwriteInstances` false)에서 **400 오류**, 「Create a modified copy」는 사본을 남김. Orthanc에서 `StudyDescription`을 고쳐도 EMR의 검사 이름은 오더의 것이라 안 바뀜. 프랑스어 설명서 «À ne pas faire»에 주의를 넣음. 잘못 고른 오더로 찍힌 영상을 바로잡는 길은 설계 메모 [`reference/study-reassign-design.md`](../reference/study-reassign-design.md) — **2026-10-01 실장님: 「일단 패스」**(짓지 않음). 기본 선택으로 끊긴 연결은 EMR이 accession으로 **스스로 되찾음**(4절 「영상을 accession으로 되찾기」).
 - **P-30 ✅ 풀림 (2026-10-01, 진료 세션 `d853f7a`)** — 발행된 판독 보고서가 서류 창의 발행 이력에 안 보이고 발행 취소 화면이 없던 것. 진료 세션이 `documents/registry.js`에 `imaging-report`를 등록하고 📄 문서 창의 **발급 이력에만** 올림(`historyCodes` — 「새로 만들기」 목록에는 안 나옴). 이력에서 누르면 저장된 payload를 **PACS의 서식 파일(`imaging-report.jsx`) 그대로** 다시 그림 — 그래서 서식을 고칠 때는 **옛 payload로도 그려지는지**(값 이름 `values.exam_name` 등을 바꾸지 않기)를 지켜야 함. 수납의 문서 창도 같음. 발급 취소는 `documents.void`로 남음.
@@ -847,3 +906,5 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | 설계안 [external-images-import-design.md](../reference/external-images-import-design.md) — 다른 병원의 CD · USB 영상을 들여와 차트에 붙이기(짓지 않음). 임시 서버에서 해 본 것: Orthanc의 공식 `modify`로 한 장씩 우리 환자 번호를 넣음(그림 · 압축 그대로, 2~27ms), 같은 영상을 두 번 올리면 Orthanc가 막아 주지 않음, EMR의 nginx는 1MB 넘는 올리기를 거절(413) | — |
 | 2026-10-02 | **「Bethesda CD」 1.0.0 — 반출 프로그램을 진짜 실행 파일로**(실장님: 「뱃으로 만들기보다는 좀 더 제대로 프로그램처럼」, 이름 「Bethesda CD」). PACS 저장소 `bethesda-cd\`: C# 소스 · `build.ps1`(Windows의 컴파일러만) · 아이콘 스크립트 · 시험 · README · CHANGELOG · LICENSE — 한 폴더로 섬. `Bethesda-CD.exe` 182KB(뷰어 `VOIR.EXE`를 품음 — 모든 디스크에 같은 파일), 0.3초에 뜸. 격리에서 창 시험 23가지 · 풀어서 내보내기 5가지 · 뷰어 시험 21가지(무손실 JPEG 예측 방식 1~7을 처음 확인) 통과. 옛 `cd-export.bat`은 한 번의 배포 동안 함께 | PACS `session/pacs` |
 | 2026-10-02 | **실행 파일로 진짜 CD 한 장**(가짜 환자 26개 63Mo, 171.6초, 「gravé et vérifié」) · 주어진 `.ico`로 빌드하는 길(`-IconFile` / `icon\Bethesda-CD.ico`) · **바탕화면 바로가기**(서버: `setup.ps1` → `desktop-shortcuts.ps1`; 다른 PC: `bethesda-cd\install.bat`) | PACS `session/pacs` |
+| 2026-10-02 | **외부 영상 들여오기 — EMR 쪽**(실장님: 「차트번호 입력하면 그 환자 것으로 … EMR 영상판독에서 조회하면 다 뜨게」): 오더 없이 환자에게 붙음. 표 `pacs_import`(임시 851) · `routes/pacs.import.js`(프로그램이 부르는 여섯 길 + 목록 · 뷰어 열기 · 차트에서 빼기 · 뒷정리) · nginx의 `/api/pacs/import/` · 브리지의 남은 자리 · 「영상/판독」 창의 「💿 Imagerie externe」 묶음(`OutsideStudies.jsx`). 앞의 두 안(오더에 붙임 / EMR 화면에서 올림)은 폐기. 프로그램 쪽은 설정 세션. 격리 `import_api.py` 48가지 + 화면 | EMR `ade2deb` + 이 항목의 커밋 · PACS `1c593bd` |
+| 2026-10-02 | **Bethesda CD: 뷰어 이름 `VIEWER.EXE`(전 `VOIR.EXE` — 실장님 결정) · 디스크에 `AUTORUN.INF`**(뷰어가 있는 디스크에만; CD에서 Windows가 뷰어를 권하고 디스크 더블클릭이 뷰어를 엶 — 저절로 실행되지 않음, USB에서는 무시됨) · EMR 없이 도는 `tests\disc_test.ps1` · 16px 아이콘이 exe · 바로가기 · 뷰어에서 Windows가 꺼낸 모습 [그림](../reference/design/bethesda-cd-icon-16px-windows.png). **설정 세션이 맡음**(총괄의 일 나누기) | PACS 저장소 `session/cd`: `bethesda-cd\`(`DiscFolder.cs` · `MainForm.cs` · `Texts.cs` · `build.ps1` · tests · README · CHANGELOG) · 옛 `cd-export*.ps1` (2.4.4 · 4절) | PACS `3f1cb91` · `0f970ea` |

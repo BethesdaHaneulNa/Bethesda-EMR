@@ -2,6 +2,65 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — Bethesda CD: 뷰어 이름 VIEWER.EXE · AUTORUN.INF · 16px 아이콘 확인 (설정 세션이 맡음)
+
+- **상태**: 확인 요청 — 일 1~3. 일 4(들여오기 갈래)는 이어서, 따로 보고.
+- **누가**: **설정 세션**(총괄의 일 나누기 — 실장님: 「팍스 세션한테 일이 너무 많으면 분배좀 해줘라」). PACS 세션은 `bethesda-cd\`를 건드리지 않음.
+- **커밋**: **PACS 저장소** 워크트리 `C:\Bethesda-worktrees\pacs-cd`, 브랜치 `session/cd`(main `80417f7`에서) — `3f1cb91`(이름) · `0f970ea`(AUTORUN.INF). push 하지 않음. 위키는 EMR 저장소 `session/settings`의 이 커밋.
+- **일 1 — `VOIR.EXE` → `VIEWER.EXE`**(실장님 결정): 디스크 위의 파일 이름, 프로그램 안의 자원 이름, `README.TXT`의 안내 문단(fr · en — 이름이 두 글자 길어져 줄을 다시 나눔, 가장 긴 줄은 전과 같이 78자), 「뷰어를 넣지 못했습니다」 안내(fr · ko · en), 시험, `bethesda-cd`의 README · CHANGELOG · LICENSE, 저장소 맨 위 README, 옛 `cd-export*.ps1`(같은 뷰어를 그 자리에서 지음). 창 안의 글과 소스 폴더 이름(`src\viewer`)은 그대로. 파일 22개, 줄 58개가 바뀜(BOM · 줄 끝 그대로).
+- **일 2 — `AUTORUN.INF`**: 뷰어가 들어간 디스크에만 네 줄(`[autorun]` · `open=VIEWER.EXE` · `icon=VIEWER.EXE,0` · `action=Voir les images / View the images`), ASCII · CRLF. `DiscFolder.WriteAutorun`이 작업 폴더에 쓰고, 그 폴더가 폴더 저장 · ISO · 굽기에 그대로 가므로 세 길 모두에 들어감. 뷰어가 없으면 쓰지 않고, 남아 있던 것이 있으면 지움. 옛 `cd-export*.ps1`에는 넣지 않음(Bethesda CD가 대신함).
+- **일 3 — 16px 아이콘**: [bethesda-cd-icon-16px-windows.png](../reference/design/bethesda-cd-icon-16px-windows.png) — Windows가 꺼낸 그대로(`SHGetFileInfo`), 있는 그대로와 10배 확대, 밝은 · 어두운 · 고른 바탕. `Bethesda-CD.exe` · 설치 스크립트가 만든 바로가기(화살표 포함) · `VIEWER.EXE` 모두 16px에서 **디자인이 다시 그린 16px 그림 그대로**(청록 네모 · 흰 원 · 십자가가 또렷함). 32px는 원 안의 고리와 십자가. 바로가기는 Windows의 화살표가 왼쪽 아래 1/4을 가림(모든 바로가기가 그러함). 설치는 진짜 설치 스크립트를 **scratch의 가짜 바탕화면 · 가짜 프로그램 폴더로**(`-Desktop` · `-To`) 돌림 — 진짜 바탕화면은 건드리지 않음.
+- **확인한 것** (이 PC, Windows 11, PowerShell 5.1)
+  - `build.ps1` → `Bethesda-CD.exe` 184,320바이트 · 그 안의 `VIEWER.EXE` 79,360바이트. `viewer_test.ps1` 21가지 통과.
+  - 새 `tests\disc_test.ps1`(EMR 없이): 12가지, `-Mount -Sample D:\CD-TEST\JPEG-TEST`(가짜 환자 5장 — 읽기만)로 16가지 통과 — 뷰어가 프로그램에 든 것과 바이트까지 같음 · AUTORUN.INF의 내용 · 뷰어 없는 폴더에는 안 씀 · README가 VIEWER.EXE를 두 번 말함 · 폴더 저장 뒤 다시 읽어 비교 · ISO · **ISO를 가상 드라이브로 물려** CD로 보임 · 파일 목록 · 파일마다 비교 · 내림 · 남는 것 없음.
+  - 물린 ISO에서(scratch의 스크립트): 탐색기의 드라이브 이름 「DVD 드라이브 (H:) IMG_00_00000」, **아이콘이 뷰어의 것**, 메뉴가 「Voir les images / View the images · 자동 실행 열기… · … · 열기 · …」 순, Windows가 읽어 둔 값 `shell\AutoRun\command = "H:\VIEWER.EXE"`, **물렸을 때 실행된 프로그램 0**, 기본 동작(더블클릭과 같음)을 부르니 `H:\VIEWER.EXE`가 열리고 창 제목에 그 디스크의 환자(가짜), 닫고 내림. 이 사용자의 자동 실행 설정은 「켜짐, 프로그램이 든 디스크는 물어봄」.
+  - **Microsoft Defender**(`MpCmdRun -Scan -ScanType 3 -DisableRemediation`): 물린 디스크 · ISO 파일 모두 「found no threats」.
+  - 옛 스크립트: `cd-export-common.ps1`를 불러 `Write-DiscReadme` · `Add-DiscViewer`를 scratch 폴더에 돌림 → `README.TXT` · `VIEWER.EXE`. 바뀐 `.ps1` 여섯은 PowerShell 5.1 파서 통과.
+- **확인 못 한 것**
+  - `app_test.ps1`(시험용 EMR이 있어야 함 — PACS 세션의 격리 스택): 기대하는 폴더 내용만 새 파일에 맞게 고치고 **돌리지 않음**. 옛 `cd-export.bat`의 전체 흐름도 같은 까닭으로 돌리지 않음.
+  - 굽기: 돌리지 않음(실장님 승인이 있어야 함). 굽기 코드는 같은 작업 폴더를 받으므로 AUTORUN.INF가 들어간다는 것은 코드로만.
+  - 진짜 드라이브의 구운 CD에서의 모습, 디스크를 넣을 때 뜨는 **알림 자체**(화면을 보지 않음), 다른 백신, 자동 실행을 막아 둔 PC, Windows 10.
+- **알릴 것**
+  - **아이콘 파일의 모양(디자인 세션께)**: `Bethesda-CD.ico`의 네 장(16 · 32 · 48 · 256)이 **모두 PNG로** 들어 있음. Windows의 탐색기 · 실행 파일 자원은 잘 읽음(위 그림). 다만 .NET의 `Icon` 클래스는 작은 PNG 장을 못 읽어 깨진 그림을 줌(시험 그림을 만들다 봄) — 프로그램은 창 아이콘을 탐색기 방식(`ExtractAssociatedIcon`)으로 꺼내므로 지금 영향 없음. 작은 장(16 · 32 · 48)을 BMP로 넣는 것이 관례이니, 다음에 아이콘을 다시 만들 때 참고.
+  - **이 PC에 남은 것**: ISO를 물릴 때마다 탐색기가 그 가상 디스크의 정보를 사용자 레지스트리(`HKCU\…\Explorer\MountPoints2\{볼륨 번호}`)에 적어 둠 — Windows가 스스로 하는 일이고 지우지 않았음(해가 없는 기록, 서너 줄). scratch의 ISO · 가짜 바탕화면 · 가짜 프로그램 폴더는 세션 scratch에 있음.
+  - 뷰어 창이 **몇 초 동안 실장님 화면에 떴을 수 있음**(기본 동작을 불러 본 한 번, 가짜 환자 — 바로 닫음).
+- **실장님이 이 세션에 직접 하신 말씀**: 「총괄한테 물어봐」(이 일을 맡아도 되는지 창에 띄운 질문의 답) → 총괄에 물어 「맞다」를 받고 시작. 앞으로 묻는 것은 총괄에게(작업 규칙 11절).
+/^>>>>>>> session/pacs$/d
+## 2026-10-02 — 외부 영상: 접수 전용 계정으로 시험 · 프로그램 시험용 계정 · 남은 주석 둘 · 낡은 옮기기 시험
+
+- **상태**: 확인 요청(작은 것). 프로그램 쪽(설정 세션)이 물어 오는 것에 답하고, 끝나면 함께 맞춰 봄.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(주석 두 줄 + 위키). develop(051로 번호가 바뀐 것까지)을 받음. **PACS 저장소** — 없음(main과 같음).
+- **접수 권한만 있는 계정**(격리, `import_reg.py` 10가지 통과): 환자 조회 · check · begin · 한 장 · finish · 목록은 됨. 영상 열기(`viewer-url`) · 차트에서 빼기 · 반출의 `export/patient`와 `export/bundle` · 우리 검사 목록(`readings/patient`)은 403. → **프로그램은 접수 전용 계정이면 `export/patient`를 부르지 말고 `import/patient`만**(「내보내기」 갈래를 숨김). 수납 전용 계정은 둘 다 200.
+- **프로그램 시험용 계정**(격리 스택에만 — 실행 중 EMR에는 없음): `bcdreg`(접수만) · `bcdpay`(수납만), 역할 frontdesk, 가짜 이름. 비밀번호는 스크립트가 만들어 **PACS 세션 scratchpad의 `bcd-test-accounts.txt`** 에만 적음(화면 · 메시지 · 저장소에 없음). 다시 만들려면 scratchpad의 `bcd_accounts.py`(비밀번호가 새로 바뀜).
+- **남은 주석 둘**: `ImagesPrint.jsx`의 `issued`(「the document number, once issued」 → 로그에 적힌 뒤 참), `RadiologyReadings.jsx`의 `reportValues` 위(「kept in the issued record only」 → 종이에 없는 값이라는 뜻으로). 동작 변화 없음.
+- **`move_blocks.py`는 기다림의 문제가 아니었음 — 낡은 시험**: 맞바꾸기와 「사유는 선택」이 생기기 **전에** 쓴 스크립트라, 지금 코드에 돌리면 「거절되어야 한다」던 것들이 **실제로 옮겨짐**. 오늘 두 번 돌려 격리의 가짜 검사에 바로잡기 넷(63↔68 · 65→45 · 63↔62 · 67↔69)이 생겼고, **거꾸로 넷을 다시 해 원래대로 돌려 놓음**(`move_restore.py`; 줄 48~51). `STILL_ARRIVING`은 방금 바뀐 검사를 1분 안에 다시 옮기려 한 것 — 코드가 맞게 거절한 것(P-33 ②). 스크립트는 `move_blocks_OUTDATED_do_not_run.py`로 이름을 바꾸고 첫 줄에서 멈추게 함. 지금의 옮기기 시험은 `swap_failures.py` · `reason_test.py` · `reapply_test2.py`. 앞 보고의 「시험 스크립트의 기다림 문제」는 반만 맞은 말이었음.
+- **그러다 본 것**(P-33 ③에 숫자를 보탬): 48장짜리 검사 옮기기가 68초 — nginx가 60초에 끊어 요청은 502를 받았지만 옮기기는 끝나 있었음.
+- **격리 스택**: 그대로 떠 있음. 코드 = develop + 이 커밋, DB의 마이그레이션 이름도 051로 맞춤(내용의 머리말이 바뀌어 시작할 때 「checksum mismatch」 경고 한 줄이 나옴 — 격리에서만, 동작과 무관). 외부 검사 0건.
+- **바꾼 파일**: `frontend/src/components/ImagesPrint.jsx` · `RadiologyReadings.jsx`(주석만), `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`.
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음.
+- **다른 세션에 부탁**: 프로그램을 짓는 세션 — 위의 「접수 전용 계정이면 `import/patient`만」.
+
+## 2026-10-02 — 외부 영상 들여오기: EMR 쪽(서버 · 「영상/판독」의 외부 영상 묶음) — 오더 없이 환자에게
+
+- **상태**: 확인 요청. 프로그램(Bethesda CD의 「들여오기」) 쪽은 **설정 세션이 맡음**(총괄의 일 나누기) — PACS 세션은 PACS 저장소의 `bethesda-cd\` · `cd-export*.ps1`을 더 건드리지 않음.
+- **커밋**: **EMR 저장소** `session/pacs` — `ade2deb`(서버 · 화면 · API 약속) + 이 항목이 든 커밋(접수 권한 · 화면 다듬기 · 위키). 그 앞의 `e2b4816` · `bc82262`는 폐기된 안(오더에 붙임)의 중간 커밋 — 그 위에 고쳐 썼으므로 따로 볼 것 없음. develop을 `git merge`로 합침. **PACS 저장소** `session/pacs` — `1c593bd`(main `80417f7`을 ff로 받은 뒤 `bridge/bridge.py` 한 건).
+- **방식**(실장님 2026-10-02: 「차트번호 입력하면 그 환자 것으로 외부 영상이 들어감 … EMR 영상판독에서 조회하면 다 뜨게」): 외부 영상은 **환자에게** 붙음 — 오더 · 진료 · 방문 · worklist_log · 수납 줄 없음, 판독 칸 없음. EMR은 **표 `pacs_import`에 `done`으로 적힌 것만** 보여 줌. 앞의 두 안(오더에 붙임 / EMR 화면에서 브라우저로 올림)은 폐기 — 그때 넣었던 배선(`pacs.move`의 EXTERNAL, `export`의 external, `readings`의 external, 오더 코드 `IMG-EXT`)은 모두 되돌림(`pacs.move.js`는 develop과 같음).
+- **한 일**
+  - `backend/sql/051_pacs_import.sql`(임시 번호): 표 `pacs_import`(검사 하나 = 한 줄) + `pacs_config.import_max_file_mb`(기본 1024). 오더 코드는 만들지 않음.
+  - `backend/src/routes/pacs.import.js`: 프로그램이 부르는 `patient` · `check` · `begin` · `instance`(몸통 = DICOM 파일 그대로, EMR에 머물지 않고 흘러감) · `finish` · `cancel`, EMR 화면이 부르는 `list` · `:id/viewer-url` · `:id/undo`, 뒷정리 `resume`(서버도 5분마다 스스로). 검사 번호는 새 가지 `…3680043.9.7308.<id>.<시각>`, accession은 `EXT-<id>`.
+  - `pacs.routes.js`: 심박의 `storage_free_bytes`/`storage_total_bytes` 받기 · `superseded-images`에 치운/뺀 검사 · `/study-arrived`가 들여오는 중인 검사를 거절(409) · `PUT /pacs/config`가 `import_max_file_mb`(1~4096)를 받음. `pacs.viewer.js`: 외부 검사용 안내 둘(영상 서버에 없음 / 그림 없는 자료뿐). `utils/audit.js`: `pacs.images.import`.
+  - 화면: `frontend/src/components/OutsideStudies.jsx`(새) + `RadiologyReadings.jsx` — 목록 맨 아래 「💿 Imagerie externe (CD / USB)」 묶음, 목록 위 「💿 N」 단추, 오른쪽 칸(병원 · 장수/크기 · 누가 언제 · 디스크의 이름/번호 · 생일/성별이 달랐다는 표시), 「Voir image」(판독 칸 없는 영상 창), 「Retirer du dossier…」(사유 필수). `Consultation.jsx` · `Payment.jsx`는 고치지 않음.
+  - PACS 저장소 `bridge/bridge.py`: 심박에 영상 서버 디스크의 남은 자리.
+  - 문서: `wiki/reference/external-images-import-api.md`(새 — 프로그램이 부르는 길의 약속), `external-images-import-design.md`(맨 위에 「확정된 방식」, 폐기된 절에 표시), `modules/pacs.md`(2.8 · 4절 서버/화면/표 · P-34 · 변경 기록), `manual-fr/pacs.md`(13절 · 안내문 두 줄 · 관리자 바로가기 이름), `changelog-1.5.0/pacs.md`, `image-print-export-design.md`(바로가기 이름).
+- **공용 파일 변경**: `frontend/nginx.conf` — 새 블록 `location /api/pacs/import/`(몸통 크기 제한 없음 · `proxy_request_buffering off` · 시간 제한 900초 · 502~504는 다른 길과 같이 `/api_backend_down.json`). 다른 길의 1MB 한도는 그대로. `backend/src/utils/audit.js`(동작 이름 한 줄). `frontend/src/i18n/{fr,en,ko}.js` — `px_` 구간 안에 `px_x…` 22개씩.
+- **DB 마이그레이션**: `051_pacs_import.sql`(총괄이 매긴 번호). 격리 DB에는 적용돼 있음(옛 모양의 851을 지우고 다시 적용).
+- **번역 키**: `px_xGroup` `px_xChip` `px_xStudyDate` `px_xFrom` `px_xFromUnknown` `px_xImported` `px_xCameAs` `px_xBirthDiffered` `px_xSexDiffered` `px_xUndrawn` `px_xNoReading` `px_xUndo` `px_xUndoAsk` `px_xUndoReason` `px_xUndoGo` `px_xUndoFail` `px_xOpenFail` `px_xErr_UNREACHABLE` `px_xErr_NOT_PAIRED` `px_xErr_NOT_DONE` `px_xErr_NOT_FOUND` `px_xErr_NO_REASON` — fr · en · ko.
+- **확인한 방법**(격리 스택 EMR 9188 · PACS 9198, 공개 견본 CT와 이 세션이 그린 가짜 환자 영상): `import_api.py` **48가지 통과**(내용은 `modules/pacs.md` 4절) — 그 가운데: 들여온 뒤 오더 · worklist_log · 방문 · 진료 · 수납 줄 수가 처음과 같음, 그림 바이트 · 압축 그대로, 끊긴 것은 남지 않음, 영상 서버를 끈 채 취소 → 켠 뒤 치움. 반출 `export_api.py` 31가지 그대로 통과. 화면(진료 화면, 불어): 묶음 · 「💿 N」 · 오른쪽 칸 · Stone으로 열림(우리 환자 이름 · 번호) · 사유 넣고 빼기 → 줄이 사라짐.
+- **영상 인쇄 창 점검**(총괄 부탁 — 진료 세션 `fe0e23d` 뒤): 격리에서 2장짜리 검사를 인쇄 → `document_log` 47 → 47(그대로), `pacs.images.print` 20 → 21(한 줄), 인쇄 창은 한 번 열림. 화면의 안내도 「journal des modifications (pas de numéro de document…)」.
+- **확인 못 한 것**: 프로그램(C#)에서 부르는 것 자체 · 접수 권한만 있는 계정(시험 계정 없음) · 진짜 다른 병원 디스크 · 1GB에 가까운 파일 하나 · 수납 화면에서의 모습(같은 부품이나 눈으로 안 봄) · 한국어/영어 화면의 글 배치. `move_blocks.py`의 두 가지가 `STILL_ARRIVING`으로 떨어짐 — 옮긴 직후 다시 옮기는 시험이 Orthanc의 「아직 안정되지 않음」에 걸린 것으로, `pacs.move.js`는 develop과 같음(이번 변경과 무관, 시험 스크립트의 기다림 문제).
+- **격리 스택**: 총괄 말씀대로 **내리지 않고 둠**(설정 세션이 프로그램을 맞춰 볼 때 씀). 외부 검사는 모두 빼 둔 상태(`pacs_import`에 `done` 없음), 파일 한도 1024MB.
+- **다른 세션에 부탁**: ① 총괄 — 마이그레이션 번호(051) · nginx 블록 확인. ② 설정 세션 — 「오더 연동」 탭에 「들여오기: 파일 하나의 한도(MB)」 칸(`GET/PUT /api/pacs/config`의 `import_max_file_mb`, 1~4096)을 넣을지. ③ 프로그램을 짓는 세션 — `external-images-import-api.md`대로; 모양을 바꿔야 하면 PACS 세션에.
+
 ## 2026-10-01 — 설계안 보탬: 영상 CD 반출 프로그램(④) · 총괄 몫의 결정 반영 (문서만)
 
 - **상태**: 확인 요청 — **결정 대기**(실장님 몫: 가 · 나 · 라 · 마 · 바 · 사 · 아 · 자 · 차). 짓지 않음.

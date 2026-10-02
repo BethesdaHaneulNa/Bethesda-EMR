@@ -117,8 +117,7 @@ with the clinic, the patient and the exam, each picture carries its series and i
 says «Images de référence — non destinées au diagnostic». **Clarté** lightens dark pictures on the paper
 for a black-and-white laser printer - the image itself is not changed. Of a multi-frame image the first
 frame is printed; device reports that are not pictures are left out. Printing makes a line in the change
-log and issues the sheets as a document (listed in the documents history, where they can be drawn again
-from the image server and reprinted). A cancelled exam, an exam without images and an exam with an
+log; the sheets are printed, not issued as a document - they take no document number. A cancelled exam, an exam without images and an exam with an
 identity warning cannot be printed.
 
 ### Copying a patient's images to a CD
@@ -136,6 +135,24 @@ reference - not for diagnosis"): it opens uncompressed images, JPEG - lossless J
 ultrasound sends - and RLE. When a chosen exam holds an image in a compression the viewer does not open
 (JPEG 2000, JPEG-LS, ...), the EMR has the image server unpack that copy (lossless, larger) and the log
 line says so.
+
+### Images from another hospital's disc are brought into the patient's chart
+
+A patient who brings a CD or a USB stick from another hospital no longer has to carry it to every visit.
+At reception the program **Bethesda CD** reads the disc and, once the chart number is typed and the
+patient confirmed, sends the chosen exam through the EMR to the image server. The images are stored under
+this clinic's patient number and name (the number and name they came with are kept inside the images and
+in the EMR); the picture itself and its compression are not touched. In the EMR the exam appears in the
+patient's imaging window, in a group of its own under the clinic's exams - **Imagerie externe (CD / USB)**
+- with the other establishment's name, the exam's own date and the number of images; a doctor opens it in
+the viewer like any exam. An outside exam hangs on the patient, not on an order: nothing is ordered,
+nothing is charged, there is no reading box (the doctor's opinion goes into the consultation note).
+The EMR lists only what was brought in this way - never whatever the image server happens to hold under
+that patient number. An import that stops half-way leaves nothing behind; the same exam is not taken
+twice, and not into two charts. An import made by mistake is taken out again from the same window, with a
+reason, by an account with the consultation or settings permission; every import and every removal is a
+line in the change log. A single file may be up to 1 GB (a setting); the image server's free room is
+checked before anything is sent.
 
 ### The EMR knows when the images have arrived, and whose they are
 
