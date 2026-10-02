@@ -98,6 +98,9 @@ const ROUTES = [
   ['GET',  '/documents/' + X,               [CONS, PAY, PHARM, LAB, REG]],
   ['POST', '/documents',                    [CONS, PAY, PHARM], {}],
   ['POST', '/documents/' + X + '/void',     [CONS, PAY, PHARM], {}],
+  // a result sheet (imaging report, lab results) is printed, not issued: one change-log line
+  // (decided 2026-10-02). Those who open the windows it is printed from; the empty body is a 400.
+  ['POST', '/documents/print-log',          [CONS, PAY], {}],
   // orderset.routes.js (consultation; the Settings tab writes)
   ['GET',  '/order-sets',                   [CONS, SET]],
   ['GET',  '/order-sets/' + X,              [CONS, SET]],
@@ -308,6 +311,15 @@ for (const [method, p, allowed, body] of ROUTES) {
     else if (mayPass && r.status === 403) bad = 'refused, but the table allows ' + allowed.join('/');
     else if (!mayPass && r.status !== 403) bad = 'let through (' + r.status + '), but the table allows only ' + allowed.join('/');
     if (bad) problems.push({ route: method + ' ' + p.replace(String(X), ':id'), login, perms: perms[login].join(',') || '(none)', bad });
+  }
+}
+
+// Not a permission: the three result sheets are no longer issued (POST /documents keeps its
+// guard and refuses them with a 400), so a screen loaded before the change cannot number one.
+for (const kind of ['imaging-report', 'lab-results', 'imaging-images']) {
+  const r = await call('POST', '/documents', { template_code: kind, patient_id: X }, AT);
+  if (r.status !== 400 || !/printed, not issued/.test(String(r.data && r.data.error))) {
+    problems.push({ route: 'POST /documents (' + kind + ')', login: 'admin', perms: ALL_PERMS.join(','), bad: 'expected 400 "printed, not issued", got ' + r.status + ' ' + JSON.stringify(r.data) });
   }
 }
 

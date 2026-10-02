@@ -41,6 +41,10 @@ if ($Offline) {
   docker compose up -d --build
 }
 
+# A shortcut "Bethesda EMR" on this PC's desktop. Never in the way of the installation.
+try { & (Join-Path $PSScriptRoot 'desktop-shortcut.ps1') | Write-Host }
+catch { Write-Host "The desktop shortcut could not be made ($($_.Exception.Message)) - run desktop-shortcut.ps1 later." -ForegroundColor Yellow }
+
 Write-Host ""
 Write-Host "Bethesda EMR is starting at http://localhost:9080"
 Write-Host "Open it in a browser to create your administrator account."
