@@ -16,7 +16,7 @@ Encaisser un patient qui sort de consultation :
 4. Prenez l'argent du patient. Dans **Montant Reçu**, tapez ce qu'il vous donne (ou cliquez sur **Exact**, **5 000**, **10 000**, **20 000**, **50 000**).
 5. Lisez **Monnaie** et rendez ce montant au patient.
 6. Cliquez sur **Confirmer**.
-7. Le reçu s'ouvre. Cliquez sur **🖨 Imprimer Reçu**, donnez le reçu au patient, puis **Fermer**.
+7. Le reçu s'ouvre. Cliquez sur **🖨 Imprimer : Reçu**, donnez le reçu au patient, puis **Fermer**.
 
 ## Pas à pas
 
@@ -34,7 +34,7 @@ Encaisser un patient qui sort de consultation :
 1. Choisissez le patient dans **En attente**.
 2. Si le patient vous donne 20 000 Ar pour un total de 18 000 Ar : tapez `20000` dans **Montant Reçu**.
 3. **Monnaie** affiche **2 000 Ar**. Rendez 2 000 Ar.
-4. Cliquez sur **Confirmer**. Le reçu indique **Montant remis** 20 000 Ar et **Monnaie rendue** 2 000 Ar.
+4. Cliquez sur **Confirmer**. Le reçu s'affiche : il indique **Montant remis** 20 000 Ar et **Monnaie rendue** 2 000 Ar. Imprimez-le avec **🖨 Imprimer : Reçu** et remettez-le au patient. Le détail article par article est dans l'onglet **Relevé détaillé** (voir 12).
 5. Si un certificat ou un CD est payé à la caisse : avant **Confirmer**, choisissez-le dans **Délivrance / Autres** → **+ Ajouter**. Pour **Document Fee**, la ligne a une case de montant : elle propose 5 000, tapez le montant du document (par exemple `3000`). Ce que vous tapez s'affiche avec l'espace des milliers (« 3 000 »), comme dans **Montant Reçu** et **Remise**. Si la case est vide, l'écran refuse d'encaisser (« Montant manquant pour : Document Fee ») : tapez un montant ou retirez la ligne avec **✕**. Le certificat et le CD gardent leur tarif. Pour garder ces lignes sans encaisser tout de suite, voir 16.
 6. Pour une remise : tapez le montant dans **Remise** avant **Confirmer**.
 
@@ -52,7 +52,7 @@ Le patient quitte la liste **En attente**. Pour encaisser le reste plus tard, vo
 1. Trouvez le patient : dans **Payé aujourd’hui** s'il a été encaissé aujourd'hui, sinon avec **🔍 Trouver patient**.
 2. À droite, cliquez sur **Reçus**. Le reçu non soldé montre **Impayé: N Ar**.
 3. Cliquez sur **💵 Encaisser impayé**. Dans **Montant reçu**, le montant dû est déjà écrit. S'il paie une partie seulement, changez le montant.
-4. Cliquez sur **Confirmer**. Un **nouveau reçu daté d'aujourd'hui** s'ouvre (« Règlement du reçu R-… ») : **🖨 Imprimer Reçu**, puis **Fermer**.
+4. Cliquez sur **Confirmer**. Un **nouveau reçu daté d'aujourd'hui** s'ouvre (« Règlement du reçu R-… ») : **🖨 Imprimer : Reçu**, puis **Fermer**.
 5. Plusieurs reçus impayés : cliquez sur **💵 Tout encaisser** en haut des reçus. Un reçu est émis par visite.
 6. Le reçu d’origine indique ensuite **Reporté** et « → solde réglé sur le reçu R-… » : son impayé est à 0, le reste a été encaissé sur le nouveau reçu.
 
@@ -133,12 +133,37 @@ Un patient ouvert avec **🔍 Trouver patient** dont la visite n'est pas d'aujou
 
 - **Sans prix** à la place du prix, et le cadre jaune « **N article(s) sans prix — vérifiez les prix** » : le médicament ou l'examen n'a pas de prix. Au moment de **Confirmer**, une fenêtre demande « Encaisser quand même ? ». S'il est donné gratuitement, confirmez. Sinon, annulez et demandez au médecin ou à la pharmacie.
 - **⚠ Quantité manquante** (et dans la liste **Quantité de médicament manquante**) : la quantité totale n'est pas écrite. L'encaissement est bloqué. Demandez au médecin d'enregistrer à nouveau la prescription (pour un sirop ou une crème : le **nombre de flacons / tubes**), puis cliquez sur **↻** et encaissez.
-- Pour un sirop, une crème, un inhalateur, la quantité s'écrit en flacons ou tubes (par exemple **2 flacons**), aussi sur le reçu.
+- Pour un sirop, une crème, un inhalateur, la quantité s'écrit en flacons ou tubes (par exemple **2 flacons**), aussi sur le relevé détaillé.
 
-### 12. Réimprimer un reçu
+### 12. Le reçu, le relevé détaillé, réimprimer
+
+**Deux papiers** (depuis le 2 octobre 2026) :
+
+- **Reçu** — le papier remis au patient. Il montre les montants **par catégorie** (Consultation, Médicaments, Analyses de laboratoire, Imagerie, Actes et soins, Documents et frais divers), puis le total, l'argent reçu, la monnaie, l'impayé, et une case **Cachet et signature**. Il ne liste pas les articles un par un.
+- **Relevé détaillé** — la liste de **chaque article** (code, désignation, prix unitaire, quantité, montant). À donner quand le patient le demande (assurance, employeur). **Ce n'est pas un reçu** : c'est écrit sur le papier, et il n'indique pas l'argent reçu.
+
+Après **Confirmer**, la fenêtre s'ouvre sur le **Reçu** ; l'onglet **Relevé détaillé** est à côté. Le bouton vert imprime le papier affiché (**🖨 Imprimer : Reçu** ou **🖨 Imprimer : Relevé détaillé**).
+
+**Réimprimer un reçu**
 
 1. Choisissez le patient (**Payé aujourd’hui** ou **🔍 Trouver patient**), puis **Reçus**.
-2. Cliquez sur **🖨 Réimprimer** à côté du reçu. Le reçu est identique au premier. Un reçu annulé porte **ANNULÉ** sur le papier — aussi un reçu remplacé par une correction ; c'est le nouveau reçu qui indique « Remplace le(s) reçu(s) ».
+2. Cliquez sur **🖨 Réimprimer** à côté du reçu. La même fenêtre s'ouvre, avec les deux onglets. Le papier est identique au premier. Un reçu annulé porte **ANNULÉ** sur le papier — aussi un reçu remplacé par une correction ; c'est le nouveau reçu qui indique « Remplace le(s) reçu(s) ».
+
+**Réimprimer plusieurs reçus en une fois** — par exemple un patient qui demande un seul papier pour toutes ses visites du mois.
+
+1. Dans **Reçus**, cochez la case à gauche de chaque reçu voulu, ou **Tout cocher**. Un reçu annulé ne peut pas être coché : réimprimez-le seul.
+2. Cliquez sur **🖨 Réimprimer (N)** en haut.
+3. Choisissez **Quel papier** : **Reçu**, **Relevé détaillé** ou **Les deux**.
+4. Choisissez **Comment les regrouper** :
+   - **Tout sur un seul papier** — un seul **Reçu récapitulatif** : la liste des reçus (numéro, date, facturé, encaissé, reste à payer), les montants par catégorie, les totaux.
+   - **Un papier par reçu** — chaque reçu sur sa feuille, comme d'habitude.
+   - **Regrouper par date de consultation** — les reçus d'une même date de consultation ensemble.
+5. **Aperçu**, vérifiez, puis **🖨 Imprimer (N)**.
+
+- Réimprimer **ne change aucun reçu ni aucun montant**, et ne crée pas de nouveau numéro.
+- Le **Reçu récapitulatif** porte la date d'impression et votre nom. Il ne remplace pas les reçus d'origine.
+- Si l'écran dit « Les totaux de ces reçus ne concordent pas… » : imprimez **Un papier par reçu** et prévenez l'administrateur.
+- Si vous ne cochez que des reçus de règlement d'impayé et demandez le **Relevé détaillé** : il n'y en a pas — les articles sont sur le reçu d'origine.
 
 ### 13. Le patient n'est pas dans la liste
 
@@ -197,7 +222,7 @@ Quand un patient demande un certificat ou un CD mais ne paie pas tout de suite :
 | « Le solde de cette visite a été reporté sur le reçu R-… Annulez d’abord R-… » | Même chose, lors d'une correction. | Annulez d'abord le reçu indiqué, puis corrigez. |
 | « Le solde de ce reçu a déjà été reporté sur le reçu R-… Encaissez-le sur ce reçu. » | Cet impayé est maintenant sur un autre reçu. | Utilisez **Encaisser impayé** sur le reçu indiqué. |
 | « Cette visite a été annulée à l’accueil — rien à encaisser. » | Visite annulée. | Rien à encaisser. |
-| « Le navigateur a bloqué la fenêtre d'impression… » | Le navigateur a bloqué la fenêtre du reçu. | Autorisez les fenêtres pop-up pour ce site, puis **Imprimer Reçu** de nouveau. |
+| « Le navigateur a bloqué la fenêtre d'impression… » | Le navigateur a bloqué la fenêtre du reçu. | Autorisez les fenêtres pop-up pour ce site, puis **🖨 Imprimer : Reçu** de nouveau. |
 | « Les frais enregistrés de cette visite ont été modifiés sur un autre poste… » | Un autre poste a enregistré ou retiré des lignes pour ce patient pendant que vous l'aviez ouvert. Rien n'a été encaissé. | L'écran montre ce qui est enregistré maintenant ; vérifiez et recommencez. |
 | « Montant manquant pour : Document Fee… » | La case du montant est vide ou à 0. | Tapez le montant, ou retirez la ligne avec **✕**. |
 
