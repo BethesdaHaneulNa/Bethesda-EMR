@@ -416,11 +416,23 @@ cd-export.ini         ← 지금과 같음(EMR 주소 · 마지막 폴더)
 - 옛 `cd-export.bat`의 길도 그대로 돎(뷰어 소스의 새 자리에서 빌드) — 창 시험 22가지 통과.
 
 **확인 못 한 것**
-- **실행 파일로 진짜 굽기**: 굽는 코드는 옛 것 그대로이고 드라이브 알아보기(`Burners.List`)는 새로 옮겨 적은 것 — 드라이브와 「빈 디스크가 아님」은 읽었지만, 실행 파일로 **구워 보지는 않았습니다**(빈 CD-R 한 장과 실장님의 직접 승인이 필요).
+- ~~실행 파일로 진짜 굽기~~ → **구웠습니다(2026-10-02, 실장님이 빈 CD를 넣고 PACS 세션 창에서 직접 말씀)**: `Bethesda-CD.exe`의 창 코드로 가짜 환자의 검사 2건(영상 26개 63Mo — 지난번과 같은 내용) → 「CD-R vierge, 703 Mo libres ✔ tient sur ce disque」 → 묻고 → **171.6초**(준비 2.2 · 굽기 54(×10) · 검증 약 115) → 「Terminé : le disque est gravé et vérifié.」(프로그램이 다시 읽어 파일마다 비교함), 작업 폴더에 남은 것 없음, 변경 기록 한 줄. 옛 스크립트로 구웠을 때(171.9초)와 같습니다.
 - 인터넷에서 받은 사본(GitHub의 zip)을 실행할 때의 SmartScreen 창 — 일부러 띄우지 않았습니다(Microsoft의 글대로면 「추가 정보 → 실행」을 한 번).
 - 다른 PC(Windows 10 · 32비트 · 다른 백신).
 
 **아이콘 후보**(직접 그림 — `icon\make-icon.ps1`): [bethesda-cd-icon-candidates.png](design/bethesda-cd-icon-candidates.png) — A 파란 바탕의 흰 디스크 / B 은색 디스크에 파란 라벨 / C 파란 디스크에 흰 십자. 지금 빌드는 A(`build.ps1 -Icon B`로 바꿈). 실장님이 고르시면 그것으로 고정.
+
+### 11-3. 아이콘 파일을 받는 길 · 바탕화면 바로가기 (2026-10-02)
+
+실장님: 아이콘은 「공통 아이콘부터 만들고 그걸 기반으로」(EMR · PACS · CD 세 프로그램 — 디자인 세션이 후보를 그림, 지금의 A는 임시) / 「설치하면 바탕화면에 자동으로 바로가기 만들어줬으면 … EMR PACS 그리고 CD 프로그램까지」.
+
+- **주어진 `.ico`를 쓰는 길**: `bethesda-cd\build.ps1 -IconFile x.ico`, 또는 `bethesda-cd\icon\Bethesda-CD.ico`에 파일을 두면 그것을 씀(없으면 지금처럼 그 자리에서 그림). 고른 아이콘이 오면 그 파일 하나를 넣으면 됩니다.
+- **서버 PC**(PACS 설치): `setup.ps1`이 끝에서 `desktop-shortcuts.ps1`을 부름 → 바탕화면에 **`Bethesda PACS.url`**(영상 서버의 화면 `http://localhost:9090`)과 **`Bethesda CD.lnk`**(`bethesda-cd\build\Bethesda-CD.exe` — 없으면 `build.ps1`을 먼저). 다시 돌려도 됨.
+- **다른 PC**(접수 등 — Docker 없음): `Bethesda-CD.exe` · `install.bat` · `install.ps1` 셋을 USB로 옮겨 **`install.bat` 더블클릭** → 프로그램을 그 사용자의 프로그램 폴더(`%LOCALAPPDATA%\Programs\Bethesda CD`)에 복사, EMR 주소를 한 번 묻고 `Bethesda-CD.ini`에 적음(이미 있으면 그대로), 바탕화면에 `Bethesda CD.lnk`.
+- **방식(EMR 쪽도 같게 하려면)**: 웹 주소는 **`.url` 글자 파일**(`[InternetShortcut]` / `URL=…` / 아이콘이 있으면 `IconFile=` · `IconIndex=0`), 프로그램은 **`.lnk`**(Windows의 `WScript.Shell` — `TargetPath` · `WorkingDirectory` · `IconLocation`). 이름은 **「Bethesda EMR」 · 「Bethesda PACS」 · 「Bethesda CD」**. 자리는 지금 사용자의 바탕화면(`[Environment]::GetFolderPath('Desktop')`). **같은 이름의 파일이 있으면 그 파일을 고쳐 씀**(둘째 것을 만들지 않음). 아이콘은 `-IconFile`로 받거나 스크립트 옆의 `bethesda-<이름>.ico`가 있으면 그것. 레지스트리 · 예약 작업 · 시작 메뉴는 건드리지 않음.
+- **확인**(scratch의 가짜 바탕화면 · 가짜 프로그램 폴더로 — 이 PC의 진짜 바탕화면은 건드리지 않음, `shortcut_test.ps1` 9가지 통과): 주어진 `.ico`로 빌드됨 / 복사 · 설정 · 바로가기 / 다시 돌리면 바로가기는 하나 그대로 「corrected」, 있던 설정은 그대로 / `http`가 아닌 주소는 거절 / 복사된 프로그램이 뜸 / 서버 PC의 두 바로가기 / 서버에서는 설정 파일을 만들지 않음 / 진짜 바탕화면에 더해지거나 없어진 것 없음.
+- **생각할 점 하나 — 「Bethesda PACS」 바로가기**: 그 주소는 Orthanc의 관리 화면입니다. `admin` 비밀번호를 묻고, 들어가면 검사를 고치거나 지울 수 있습니다(P-31). 직원은 영상을 EMR 안에서 보므로 이 바로가기는 **서버 PC에서 관리자만** 쓰는 것이 맞습니다 — 그래서 서버의 설치에서만 만들고, 다른 PC에 놓는 길은 만들지 않았습니다. 이름을 「Bethesda PACS (administration)」으로 할지는 실장님 · 총괄 뜻대로.
+- 확인 못 한 것: `setup.ps1` 전체를 돌려 보지는 않았습니다(개발 PC 규칙 — 끝의 바로가기 부분만 따로 돌림). 실제 설치 PC에서의 모습.
 
 ## 조사에 쓴 곳
 

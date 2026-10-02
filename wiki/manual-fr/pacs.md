@@ -134,7 +134,7 @@ Quand un patient est adressé ailleurs, le compte-rendu part avec les images : u
 1. Ouvrez **🩻 Imagerie** (Consultation ou Paiement) et choisissez l'examen dans la liste.
 2. À droite, cliquez sur **🖨 Imprimer**. La feuille s'affiche : en haut le titre et la date de l'examen, le patient (nom, N° dossier, sexe et âge, date de naissance), le nom de l'examen, le compte-rendu en entier ; en bas le nom de la clinique, le médecin qui a lu et la place pour signer.
 3. **Langue de la feuille** : **FR**, **EN** ou **KO**, en haut de la fenêtre. La feuille est en français au départ, quelle que soit la langue de l'écran. Le compte-rendu lui-même reste tel que le médecin l'a écrit.
-4. Cliquez sur **🖨 Émettre et imprimer**. L'impression est notée dans le dossier comme un document émis (historique de **Documents**, journal des modifications), comme les autres documents remis au patient. La feuille porte la date et l'heure d'émission, en bas à droite ; le numéro du document n'est pas imprimé — il reste dans l'EMR et s'affiche dans la fenêtre (**Émis : D26-…**).
+4. Cliquez sur **🖨 Imprimer**. Ce n'est pas un document émis : la feuille n'a pas de numéro et n'apparaît pas dans l'historique de **Documents**. L'impression est seulement notée dans le journal des modifications (qui, quel patient, quel examen). La feuille porte la date et l'heure d'impression, en bas à droite. Pour la refaire, imprimez-la de nouveau ici : elle montre toujours le compte-rendu actuel.
 5. **Imprimer de nouveau** réimprime la même feuille sans l'émettre une seconde fois. Si vous changez de langue, une nouvelle feuille est émise.
 6. Plusieurs examens d'un coup (en Consultation) : cochez-les dans la liste, puis **🖨 Imprimer (N)** juste au-dessus des cases. Une feuille par examen. Un examen coché qui n'a pas de compte-rendu est laissé de côté. **Tout décocher** efface les coches.
 
@@ -181,7 +181,7 @@ Pour un patient qui va dans un autre hôpital, les images elles-mêmes peuvent �
 5. **Clarté** : **Normale**, **+** ou **++**. Les échographies et les radiographies sont sombres ; sur une imprimante laser noir et blanc, essayez **+** ou **++**. Seule la feuille change : l'image d'origine reste telle quelle.
 6. **Langue de la feuille** : **FR**, **EN** ou **KO**. La feuille est en français au départ.
 7. La feuille s'affiche en dessous telle qu'elle sera imprimée : la clinique, le patient (nom, N° dossier, sexe et âge), l'examen et sa date, les images avec leur numéro, et en bas **« Images de référence — non destinées au diagnostic »**, la date d'émission et le numéro de page.
-8. Cliquez sur **🖨 Émettre et imprimer**. L'impression est notée dans le journal des modifications et dans le dossier comme un document émis (historique de **Documents**). Le numéro du document n'est pas imprimé ; il s'affiche dans la fenêtre (**Émis : D26-…**).
+8. Cliquez sur **🖨 Imprimer**. L'impression est notée dans le journal des modifications (qui, quel patient, quel examen, combien d'images). Ce n'est pas un document émis : pas de numéro, rien dans l'historique de **Documents**.
 9. **Imprimer de nouveau** réimprime les mêmes feuilles. Si vous changez les images cochées, le nombre par page, la clarté ou la langue, de nouvelles feuilles sont émises.
 
 - **🖨 Imprimer les images** est grisé : l'examen est annulé, il n'a pas d'images, ou il porte un **avertissement d'identité** (cadre rouge ou jaune). Dans ce dernier cas, réglez d'abord l'avertissement : les images d'un autre patient ne doivent pas partir sous ce nom. Laissez la souris sur le bouton pour lire la raison.

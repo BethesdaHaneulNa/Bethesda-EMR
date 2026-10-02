@@ -13,6 +13,18 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-02 — 실행 파일로 진짜 CD 한 장 · 아이콘 파일을 받는 길 · 바탕화면 바로가기
+
+- **상태**: 확인 요청.
+- **커밋**: **PACS 저장소** `session/pacs` `2d2d5b1`. **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(문서만).
+- **실행 파일로 굽기**(실장님이 빈 CD를 넣고 PACS 세션 창에서 직접 말씀, 굽기 전에 총괄에 알림): `Bethesda-CD.exe`의 창 코드로 격리 스택의 가짜 환자 검사 2건(영상 26개 63Mo — 지난번과 같은 내용). 「CD-R vierge, 703 Mo libres ✔」 → **171.6초**(준비 2.2 · 굽기 54 · 검증 약 115) → 「Terminé : le disque est gravé et vérifié.」 — 프로그램이 다시 읽어 파일마다 비교한 결과. 작업 폴더 비움, 변경 기록 한 줄. **굽고 나서 트레이가 열려 있어**, 다시 넣은 뒤의 확인(「빈 디스크가 아님」 · 디스크의 VOIR.EXE가 빌드한 것과 같은지 · CD에서 새 뷰어의 시간)은 실장님이 트레이를 넣으신 뒤에 합니다 — 서버 쪽 파일의 해시는 받아 두었고 격리 스택은 내렸습니다.
+- **아이콘**: `build.ps1 -IconFile x.ico` 또는 `bethesda-cd\icon\Bethesda-CD.ico`에 파일을 두면 그것으로 빌드(없으면 그 자리에서 그림 — 지금의 A는 임시).
+- **바로가기**: 서버 PC — `setup.ps1` 끝 → `desktop-shortcuts.ps1` → 바탕화면에 `Bethesda PACS.url`(영상 서버의 화면) · `Bethesda CD.lnk`. 다른 PC — `bethesda-cd\install.bat`(프로그램 한 파일을 `%LOCALAPPDATA%\Programs\Bethesda CD`에 복사, EMR 주소를 물어 ini에, 바탕화면에 `Bethesda CD.lnk`). 있으면 고쳐 씀. 레지스트리 · 예약 작업 없음. **방식과 이름 규칙**은 설계안 11-3절(EMR 쪽이 같게 하도록): 웹 주소는 `.url`, 프로그램은 `.lnk`, 이름 「Bethesda EMR / PACS / CD」.
+- **생각할 점**: 「Bethesda PACS」 바로가기가 여는 것은 Orthanc의 관리 화면(admin 비밀번호 · 고치기/지우기 가능 — P-31) → 서버 PC의 관리자용으로만 만듦. 이름에 「(administration)」을 붙일지는 정해 주세요.
+- **확인한 방법**: `shortcut_test.ps1` 9가지 통과 — scratch의 가짜 바탕화면 · 가짜 프로그램 폴더로(이 PC의 진짜 바탕화면에 더해지거나 없어진 것 없음을 확인). `setup.ps1` 전체는 돌리지 않음(개발 PC 규칙).
+- **바꾼 파일**: PACS — `bethesda-cd\build.ps1` · `bethesda-cd\install.ps1`(새) · `install.bat`(새) · `bethesda-cd\README.md` · `desktop-shortcuts.ps1`(새) · `setup.ps1`(끝에 한 덩어리) · `README.md`. EMR — 위키 `reference/image-print-export-design.md`(11-2 고침 · 11-3 새) · `modules/pacs.md` · 이 노트. 공용 파일 · DB · 번역 키: 없음.
+- **들여오기를 EMR 화면 안에서 하는 안**: 의견을 총괄에 메시지로 보냄(문서는 결정 뒤에 고침).
+
 ## 2026-10-02 — 「Bethesda CD」 1.0.0: 반출 프로그램을 진짜 실행 파일로 · 한 폴더로 서게 · 아이콘 후보
 
 - **상태**: 확인 요청. 실장님이 고르실 것 — **아이콘 후보 셋**: `wiki/reference/design/bethesda-cd-icon-candidates.png`.

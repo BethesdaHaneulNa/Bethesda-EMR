@@ -32,9 +32,10 @@ function refText(it, dash) {
 // Preview and print of the lab results sheet (documents/lab-results.jsx) - the same window
 // as the imaging report's (RadiologyReadings.jsx ReportPrint), by the same rules: the
 // sheet's language is chosen here, French first, because it is read in another hospital;
-// printing issues the paper through the document engine (POST /api/documents: one number,
-// one change-log line), and the number is shown here only, never on the sheet. Printing the
-// same sheet again does not issue it again, changing the language does.
+// printing is not issuing (director, 2026-10-02): no number, no row in the documents
+// history - one change-log line (POST /api/documents/print-log, laboratory.results.print),
+// and nothing is printed unless it answered. Printing the same sheet again from this
+// window does not log it again, changing the language does.
 //   props.values     what is printed (see lab-results.jsx)
 //   props.patientId  props.visitId (when the results are all of one visit)  props.t  props.onClose()
 function LabResultsPrint(props) {
@@ -42,7 +43,7 @@ function LabResultsPrint(props) {
   var lg = useState('fr'), lang = lg[0], setLang = lg[1];
   var cs = useState(null), clinic = cs[0], setClinic = cs[1];
   var ps = useState(null), patient = ps[0], setPatient = ps[1];
-  var ns = useState(''), issued = ns[0], setIssued = ns[1];    // the document number once issued
+  var ns = useState(''), issued = ns[0], setIssued = ns[1];    // 'logged' once the print is in the change log
   var bs = useState(false), busy = bs[0], setBusy = bs[1];
   var go = useState(0), printNow = go[0], setPrintNow = go[1];
   var sheet = useRef(null);
@@ -68,12 +69,11 @@ function LabResultsPrint(props) {
     if (issued) { setPrintNow(printNow + 1); return; }
     setBusy(true);
     try {
-      var saved = await api.post('/documents', {
-        template_code: 'lab-results', template_name: LAB_RESULTS_NAME[lang] || LAB_RESULTS_NAME.fr,
-        patient_id: props.patientId, visit_id: props.visitId || null, lang: lang,
-        payload: { values: values, patient: who, clinic: clinic, lang: lang, dateStr: now.current },
-      });
-      setIssued(saved.doc_no); setPrintNow(printNow + 1);
+      // What the line says: the days on the sheet and how many tests.
+      await api.post('/documents/print-log', { kind: 'lab-results', patient_id: props.patientId, visit_id: props.visitId || null, lang: lang,
+        dates: values.columns.map(function (c) { return c.date; }),
+        test_count: values.panels.reduce(function (n, P) { return n + P.items.length; }, 0) });
+      setIssued('logged'); setPrintNow(printNow + 1);
     } catch (e) {
       alert(t.lb_rPrintFail + (e && e.message ? e.message : ''));
     }
@@ -101,12 +101,12 @@ function LabResultsPrint(props) {
               <div ref={sheet}>
                 {/* page numbers at the foot of every printed page, where the browser can */}
                 <style>{'@page{@bottom-right{content:counter(page) " / " counter(pages);font:8pt sans-serif;color:#444}}'}</style>
-                <LabResultsLayout values={values} patient={who} clinic={clinic} lang={lang} docNo={issued} dateStr={now.current} />
+                <LabResultsLayout values={values} patient={who} clinic={clinic} lang={lang} docNo="" dateStr={now.current} />
               </div>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderTop: '1px solid var(--border-2)', background: 'var(--panel-head)' }}>
-          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>{issued ? String(t.lb_rPrintIssued || '').replace('{x}', issued) : t.lb_rPrintNote}</span>
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>{issued ? t.lb_rPrintIssued : t.lb_rPrintNote}</span>
           <button onClick={issueAndPrint} disabled={!on} style={Object.assign({}, btn, { background: on ? 'var(--cyan-fill)' : 'var(--chip)', color: on ? 'var(--on-cyan)' : 'var(--text-3)', border: '1px solid ' + (on ? 'var(--cyan-fill)' : 'var(--border-2)') })}>
             🖨 {issued ? t.lb_rPrintAgain : t.lb_rPrintGo}</button>
         </div>

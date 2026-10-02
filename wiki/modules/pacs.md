@@ -138,7 +138,7 @@
 1. **🩻 Imagerie (영상/판독)** 창(진료·수납 모두)에서 검사를 고르고, 오른쪽 위의 **🖨 Imprimer (인쇄)** 를 누릅니다.
 2. 미리보기 창이 뜹니다. 위에서부터: 큰 파란 제목(**COMPTE-RENDU** / REPORT)과 검사 날짜 · 환자 칸(이름, 차트번호, 성별·나이, 생년월일) · **Examen** 띠와 **검사 이름만**(2026-10-01 실장님이 미리보기를 보시고 둘을 뺌 — 이름 옆의 종류 코드 「(CR)」: 「굳이 모달리티를 적어 주는 이유를 모르겠어」, 총괄 `2e17872`; 그 아래 작은 둘째 줄 「의뢰한 과·의사 — 영상 장수」: 총괄 `b8f3f30`. 서식이 따른 원본 종이에도 검사 이름뿐) · **Compte-rendu** 띠와 판독 글 전체 · 종이 맨 아래에 병원 이름(작게 주소·전화), 판독의 이름과 판독 일시, 서명 줄, 발행 일시(발행번호는 종이에 없음 — 4번).
 3. **Langue de la feuille (서류 언어)**: FR · EN · KO. **처음은 늘 프랑스어**(화면 언어와 따로 — 다른 병원이 읽는 종이). 한국어는 실장님 병원 서식처럼 이름표가 영어(REPORT · NAME · ID · Sex,Age · Birthday · Exam · Reading)이고 성별·「판독의」만 한글. 판독 글은 의사가 쓴 그대로.
-4. **🖨 Émettre et imprimer (발행하고 인쇄)** — 서류로 **발행**됩니다: 📄 문서 창의 발급 이력과 변경 기록에 「서류 발행」 한 줄이 남습니다(다른 서류와 같은 방식 — 내용은 기록에 넣지 않음). **종이에는 서류 번호가 찍히지 않습니다**(2026-10-01 실장님: 「도큐먼트 넘버 이건 딱히 필요 없을 듯」 — 받는 병원에는 뜻이 없는 번호). 종이 맨 아래에는 발행 일시만 작게(«Émis le 2026-10-01 11:15»). 번호(`D26-00012` 꼴)는 EMR 안에만 있고, 발행한 뒤 미리보기 창 아래에 «Émis : D26-…» 로 보입니다(이력에서 찾을 때 씀).
+4. **🖨 Imprimer (인쇄)** — **발급이 아니라 인쇄입니다**(실장님, 2026-10-02: 「프린트 했을 경우 그냥 로그로만 남겨」): 문서 번호가 없고 📄 문서 창의 발급 이력에도 나오지 않습니다. 설정의 **기록** 탭에 검사마다 한 줄(누가 · 어느 환자 · 어느 검사의 판독을 · 어느 언어로 인쇄 — 내용은 넣지 않음)만 남고, 그 줄이 적힌 뒤에만 인쇄 창이 열립니다(못 적으면 인쇄하지 않음). 종이 맨 아래에는 인쇄 일시만 작게(«Imprimé le 2026-10-02 11:15»). 인쇄한 뒤 창 아래 글이 «Noté dans le journal des modifications.»로 바뀌고 단추는 «Imprimer de nouveau»가 됩니다 — 같은 창에서 다시 인쇄하면 줄을 다시 적지 않고, 언어를 바꾸면 다시 적습니다. (2026-10-01 하루 동안은 서류로 발행되어 번호 `D26-…`가 붙었습니다 — 그 행은 DB에 남아 있고 이력 목록에서만 빠졌습니다.)
 5. 같은 창에서 **Imprimer de nouveau (다시 인쇄)** 는 같은 번호로 다시 뽑습니다. 언어를 바꾸면 새 번호로 다시 발행됩니다. 창을 닫았다가 다시 인쇄해도 새 번호입니다.
 6. **여러 검사 한꺼번에**(진료 화면): 목록에서 체크하고 체크 칸 바로 위의 **🖨 Imprimer (N)** — 검사마다 한 장(안쪽 기록은 검사마다 한 건). 체크한 것 중 판독이 없는 검사는 빠집니다(단추에 마우스를 올리면 몇 건이 빠지는지 나옴).
 
@@ -150,7 +150,7 @@
 - 브라우저 인쇄 창에서 **머리글과 바닥글** 을 끄세요(켜져 있으면 날짜와 주소가 함께 찍힘).
 - 병원 이름·주소·전화는 **설정의 병원 정보**에서 옵니다(다른 서류와 같은 출처). 비어 있으면 그 줄 없이 인쇄됩니다.
 - **실장님 결정 (2026-10-01, 「지금 딱 좋다」)**: 원본 서식에 없는데 작게 넣은 항목들(주소·전화, 판독 일시·서명 줄, 의뢰 과·의사·영상 장수)은 **그대로 둠** — 그 뒤 같은 날 실장님이 미리보기를 보시고 **발행번호**(4번), **종류 코드**, **의뢰 과·의사·영상 장수 줄**을 차례로 뺌(2번). 지금 남은 것은 주소·전화, 판독 일시·서명 줄, 발행 일시 / 환자 번호 경고가 있는 검사는 **인쇄 허용, 종이에 경고 없음** 그대로 / 한국어 서류의 이름표는 **영어 그대로**.
-- **발행한 뒤**: 발행된 판독 보고서는 변경 기록에 남고, **📄 Documents (문서) 창의 발급 이력**에도 나옵니다(2026-10-01, 진료 세션 `d853f7a`) — 거기서 같은 번호로 다시 인쇄(Réimprimer)하고 발급 취소(Annuler)할 수 있습니다. 새 판독 보고서는 문서 창이 아니라 이 영상/판독 창에서 뽑습니다.
+- **인쇄한 뒤**: 변경 기록에 한 줄이 남을 뿐, 다시 여는 「발급된 종이」는 없습니다(2026-10-02). 다시 필요하면 이 영상/판독 창에서 다시 뽑습니다 — 늘 **지금의 판독**으로 나옵니다(판독을 고쳤으면 고친 글로).
 
 ### 2.4.2 영상이 다른 오더에 붙어 있을 때 — 맞는 오더로 옮기기 (2026-10-01, 실장님 결정)
 
@@ -179,14 +179,14 @@
 4. **Clarté (밝기)**: Normale · + · ++ — 초음파·X-ray는 바탕이 검어서 흑백 레이저 프린터에서 뭉개집니다. 어두운 쪽을 밝게 올려 **종이에만** 그렇게 찍습니다(영상 자체는 안 바뀜). 미리보기에 바로 보입니다. 현지 프린터에서 어느 값이 맞는지는 뽑아 보고 정하세요.
 5. **Langue de la feuille (서류 언어)**: FR · EN · KO, 처음은 프랑스어(판독 보고서와 같은 규칙).
 6. 아래에 **종이가 그대로** 보입니다. 장마다: 병원 이름(작게 주소·전화)과 파란 **IMAGES** · 환자 칸(이름, 차트번호, 성별·나이) · 검사 이름과 검사 날짜 · 그림들(그림마다 아래에 「S1 · 3 — 시리즈 설명」, 여러 프레임짜리는 「(1re image de 12)」 — **첫 프레임만** 찍힘) · 맨 아래 왼쪽에 **「Images de référence — non destinées au diagnostic」**(참고용 — 진단용 아님), 오른쪽에 발행 일시와 쪽 번호(「1 / 4」).
-7. **🖨 Émettre et imprimer (발행하고 인쇄)** — ① 변경 기록에 「영상 인쇄」 한 줄(누가 · 환자 · 어느 검사 · 몇 장) ② 서류로 발행(📄 문서 창의 발급 이력) ③ 인쇄 창. **①이나 ②가 안 되면 인쇄하지 않습니다.** 종이에 서류 번호는 없고, 창 아래에 «Émis : D26-…»로 보입니다.
+7. **🖨 Imprimer (인쇄)** — ① 변경 기록에 「영상 인쇄」 한 줄(누가 · 환자 · 어느 검사 · 몇 장) ② 인쇄 창. **①이 안 되면 인쇄하지 않습니다.** 발급이 아니라서(2026-10-02) 문서 번호도 📄 문서 창의 발급 이력도 없습니다. 종이 아래에는 인쇄 일시(«Imprimé le …»)와 쪽 번호.
 8. **Imprimer de nouveau** 는 같은 종이를 다시 뽑습니다(다시 발행하지 않음). 고른 영상·배치·밝기·언어 가운데 하나라도 바꾸면 새로 발행됩니다.
 
 - **단추가 꺼져 있을 때**(마우스를 올리면 이유): 취소된 검사 / 영상이 없는 검사 / **환자 번호 경고가 있는 검사**(영상 속 번호가 차트와 다르거나 없음 — 다른 사람의 영상이 이 환자 이름으로 나갈 수 있어서 막음. 2.6절대로 바로잡은 뒤에) / 「다른 오더로 옮기는 중」인 검사(몇 분 뒤).
 - **그림이 아닌 자료**(장비가 보낸 보고서 등)는 작은 그림 줄에 나오지 않고, 「N élément(s) sans image … non affiché(s)」라고 알려 줍니다.
 - **긴 이름**은 잘리지 않습니다(글자가 작아지고 줄이 늘어남 — 판독 보고서와 같은 규칙). 머리 칸이 커지면 그림 칸이 그만큼 줄어듭니다.
 - **그림을 못 가져왔을 때**: 그 칸에 「Image indisponible」, 아래 줄에 「N image(s) n'ont pas pu être chargée(s)」 — 인쇄 단추가 꺼집니다. 그 영상의 체크를 풀거나 창을 닫았다 다시 엽니다. 영상 서버가 꺼져 있으면 창에 「Le serveur d'images ne répond pas」.
-- **발행한 뒤**: 📄 Documents 창의 발급 이력에 「Images de l'examen」으로 나옵니다. 거기서 열면 **영상 서버에서 그림을 다시 가져와** 같은 배치·밝기로 보여 주고, 다시 인쇄할 수 있습니다(그림이 다 뜬 뒤에 인쇄 단추를 누르세요). 기록에는 「어느 영상」만 있고 그림은 들어 있지 않으므로, 그 뒤에 영상이 지워졌으면 그 칸은 비어 나옵니다.
+- **인쇄한 뒤**: 변경 기록의 한 줄 말고는 남는 것이 없습니다(2026-10-02 — 전에는 📄 Documents 창의 발급 이력에 「Images de l'examen」으로 남아 다시 열 수 있었음). 다시 필요하면 이 창에서 영상을 다시 골라 뽑습니다.
 - 브라우저 인쇄 창에서 **머리글과 바닥글**을 끄세요. 팝업이 막혀 있으면 「Le navigateur a bloqué la fenêtre d'impression」.
 - **총괄이 추천값으로 정함(2026-10-01 — 실장님이 바꿀 수 있음)**: 종이 아래 「참고용 — 진단용 아님」 넣음 / 수납도 인쇄 허용 / 환자 번호 경고가 있는 검사는 막음 / 기본 2장 배치, 한 번에 48장, 처음 12장 선택.
 
@@ -434,7 +434,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 |---|---|
 | `GET /export/exam/:orderItemId` | 그 검사의 그림 목록: `{exam, images:[{id, series, desc, modality, number, frames}], skipped, max}`. 순서는 시리즈 번호 → 영상 번호(장비가 붙인 대로). 그림이 없는 시리즈(종류가 SR · KO · PR · DOC 등)는 빼고 `skipped`로 셈 |
 | `GET /export/image?order_item_id=&instance=&w=` | 그림 한 장(JPEG, 장비가 저장한 밝기 창으로). 여러 프레임이면 첫 프레임. 그림의 너비가 `w`(200~1600, 기본 1600)보다 크면 영상 서버가 줄여서, 작으면 그대로(키우지 않음). **그 영상이 그 오더의 검사 것이 아니면 403** |
-| `POST /export/printed` `{order_item_id, instances:[…], per_page, lang}` | 인쇄의 변경 기록 한 줄(`pacs.images.print`). 영상은 1~48장, 모두 그 검사의 것이어야 함. 줄을 못 적으면 500 `NOT_LOGGED` — 화면은 이것이 ok일 때만 서류를 발행하고 인쇄 |
+| `POST /export/printed` `{order_item_id, instances:[…], per_page, lang}` | 인쇄의 변경 기록 한 줄(`pacs.images.print`). 영상은 1~48장, 모두 그 검사의 것이어야 함. 줄을 못 적으면 500 `NOT_LOGGED` — 화면은 이것이 ok일 때만 인쇄(2026-10-02부터 서류로 발행하지 않음 — 이 줄이 인쇄의 유일한 기록) |
 | `GET /export/patient?chart_no=` | (반출 프로그램) 차트번호로 환자 한 명: `{patient:{id, chart_no, last_name, first_name, gender, date_of_birth}, clinic:{name…, address, phone}, server, max_exams, exams:[{id, exam_date, modality, order_name, accession_no, block, items, bytes}]}`. 환자의 연락처는 주지 않음. 검사마다 영상 서버에 있는 장수와 크기(`/studies/{id}/statistics`), 못 주는 검사는 `block`에 사유 코드. 영상 서버가 무응답이어도 목록은 오고 `server: 'UNREACHABLE'` |
 | `GET /export/bundle?order_item_ids=1,2&medium=disc\|iso\|folder\|zip` | (반출 프로그램) 고른 검사들을 **ZIP 하나**로 — Orthanc의 `POST /tools/create-media-extended`가 만든 것을 **뜯지도 덧붙이지도 않고 그대로** 흘려보냄(맨 위 `DICOMDIR`, 그 옆 `IMAGES/IM0…`). 검사는 모두 한 환자의 것(아니면 `OTHER_PATIENT`), 30건까지, 하나라도 못 주는 검사면 거절(`order_item_id`로 어느 것인지). 영상 서버가 답하기 시작한 뒤, 첫 바이트를 보내기 전에 변경 기록 한 줄(`pacs.images.export`) — 못 적으면 500 `NOT_LOGGED`이고 한 바이트도 안 나감. 머리말 `X-Export-Items` · `X-Export-Bytes`(프로그램이 받은 것과 맞춰 봄), `X-Accel-Buffering: no`(nginx가 디스크에 받아 두지 않게). 프로그램이 도중에 끊으면 영상 서버 쪽 요청도 끊음. 두 오더가 **같은 검사**를 가리키면 그 검사는 한 번만 넣음(2026-10-02 — 같은 검사를 두 번 적으면 Orthanc 1.12.11이 끝내 응답하지 않는 것을 확인해서). **한 가지만 바뀔 수 있음(2026-10-02)**: 고른 검사의 영상 가운데 디스크의 작은 뷰어가 못 여는 전송 구문(`VIEWER_OPENS`에 없는 것 — 압축 없음 · JPEG Baseline · 무손실 JPEG · RLE 말고)이 하나라도 있으면 `Transcode: 1.2.840.10008.1.2.1`을 붙여 **묶음 전체를 압축 없음으로** 받음. 전송 구문은 검사마다 `POST /tools/find {Level: Instance, ParentStudy, ResponseContent: [Metadata]}`로 물음(답이 없으면 풀지 않고 그대로). 머리말 `X-Export-Unpacked: 1\|0`, 기록 줄에 「unpacked」와 `unpacked_from` |
 
@@ -485,7 +485,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - **판독 보고서 인쇄** (2026-10-01):
   - 서식 `frontend/src/documents/imaging-report.jsx` — 서류 엔진의 템플릿 모양(`code: 'imaging-report'`, `category: 'imaging'`, `Layout`이 `values`·`patient`·`clinic`·`lang`·`docNo`·`dateStr`를 받음)으로 지음. `registry.js` 등록은 진료 세션이 함(`d853f7a` — 문서 창의 발급 이력에만 보임, 7절 P-30). `values = {exam_name, modality, exam_date, image_count, dept, ordered_by, reading, read_by, read_at}`. 같은 폴더의 `shared.jsx`(`L`·`fmtDate`·`calcAge`·`clinicName`·`DOC_LABELS`)만 가져다 씀.
   - 미리보기·발행·인쇄 `RadiologyReadings.jsx`의 `ReportPrint({exams, patientId, t, onClose})`와 `printBlock(r, t)`(인쇄할 수 없는 이유). 병원 정보 `GET /api/admin/clinic`, 환자 `GET /api/patients/:id` — 서류 창과 같은 출처. 인쇄는 `printDocument()`(A4, 여백 14mm — 영수증·서류와 같은 틀).
-  - **발행** = `POST /api/documents`(서류 엔진의 길 그대로, 고치지 않음): `template_code: 'imaging-report'`, `template_name`(서류 언어의 이름), `patient_id`, `visit_id`(오더의 내원), `lang`, `payload: {values, patient(이름·차트번호·성별·생년월일만), clinic, lang, dateStr, order_item_id}` → `document_log` 한 줄 + 변경 기록 `documents.issue`(「D26-00009 Compte-rendu d'imagerie」, payload는 기록에 안 들어감). 권한은 서류 발행과 같음(진료·수납·약국).
+  - **인쇄의 기록** = `POST /api/documents/print-log {kind:'imaging-report', patient_id, order_item_ids:[…], lang}`(진료 세션, 2026-10-02 — 실장님: 결과지 인쇄는 발급이 아님): 검사마다 변경 기록 한 줄 `pacs.report.print`(`entity order_item`, 요약 «Reading of Chest PA (261001-306) printed», `after {order_name, accession_no, lang}`), 모두 한 트랜잭션. 그 환자의 검사가 아니면 404, 판독이 없으면 409, 줄을 못 적으면 500 `NOT_LOGGED` — 화면(`ReportPrint.issueAndPrint`)은 200일 때만 인쇄. `document_log` 행과 번호는 만들지 않습니다(2026-10-01에는 `POST /api/documents`로 `imaging-report` 행을 만들었음 — 그 길은 이제 이 종류를 400으로 거절). 권한: 진료·수납.
   - 긴 판독: 서식이 표라서 브라우저가 **표 머리줄을 장마다 되풀이**(둘째 장부터의 「환자 · 차트번호 · 검사 · 날짜」; 첫 장에서는 큰 머리 상자가 그 줄을 덮음). 쪽 번호는 `@page { @bottom-right { content: counter(page) " / " counter(pages) } }` — 시험한 Chrome에서 찍힘(이 기능은 최근의 Chrome·Edge에 들어온 것이라, 지원하지 않는 옛 브라우저에서는 쪽 번호만 빠짐).
   - 긴 이름: 서식은 인쇄 창에 글로 넘어가기 전에 그려져 자기 크기를 잴 수 없으므로, **글자마다의 폭을 어림해서**(`emWidth` — Segoe UI와 Arial에서 잰 값 중 넓은 쪽: 대문자 0.68em, 소문자 0.56em, i·l 0.26em, 한글 1em) 몇 줄이 되는지 세고(`linesAt` — 낱말 사이에서 끊고, 칸보다 긴 낱말은 이어 씀) 글자 크기를 고름(`fitSize` — 먼저 「낱말을 끊지 않아도 되는 크기」, 없으면 끊어도 되는 크기). 이름 칸: 줄 높이 35pt 안에 들어가는 가장 큰 크기(12·10.5·9.5·9pt), 안 들어가면 9pt로 두고 네 줄의 높이를 함께 키움(`rowPt`). 어림은 넉넉한 쪽이라 실제보다 한 줄 많게 셀 수 있음 — 그러면 칸이 조금 높아질 뿐 넘치지 않음. 둘째 장 머리줄의 높이(`runPx`)와 종이 아래에 비워 두는 자리(`footPt`)도 같은 어림으로. CSS는 `overflow-wrap: break-word`(낱말 사이 먼저).
   - 목록 응답에 `visit_id`를 더함(서류를 내원에 달려고).
@@ -511,7 +511,9 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
   - `src\viewer\` — 뷰어(아래 `viewer\` 항목의 파일들이 이리로 옮겨짐).
   - `icon\make-icon.ps1` — 아이콘을 직접 그림(16 · 32 · 48 · 256, 받아 오는 그림 없음). 후보 셋: [bethesda-cd-icon-candidates.png](../reference/design/bethesda-cd-icon-candidates.png).
   - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
+  - `install.ps1` · `install.bat` — 다른 PC(접수 등)에 프로그램과 바탕화면 바로가기를 놓음(파일 하나 복사 + `Bethesda-CD.ini` + `.lnk`; `-Here`는 복사 없이 바로가기만).
   - `README.md` · `CHANGELOG.md` · `LICENSE`(PACS 저장소와 같은 글) · `Bethesda-CD.example.ini`.
+- **`desktop-shortcuts.ps1`**(2026-10-02) — 서버 PC의 바탕화면에 「Bethesda PACS」(`.url` — 영상 서버의 화면, 관리자용)와 「Bethesda CD」(`.lnk`)를 만들거나 고침. `setup.ps1`이 끝에서 부름. 파일만 만듦(레지스트리 · 예약 작업 없음).
 - **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 같은 프로그램의 옛 모양(PowerShell). 한 번의 배포 동안 남겨 둠 — 뷰어는 `bethesda-cd\src`에서 그 자리에서 빌드. 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
   - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
   - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬 → 가장 느린 속도). **진짜 굽기로 확인함(2026-10-02)**: 이 드라이브에서 자체 확인이 켜지고, 굽고 나면 트레이를 열지 않아도 Windows가 디스크를 다시 읽어 줘서 파일 비교까지 됨. 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
@@ -844,3 +846,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | **뷰어의 밝기 · 대비**(실장님: 「밝기 조절은 안돼?」 「드드드득」) — 컬러(초음파)에도 먹게, 끄는 동안 끊기지 않게(끌 때마다 바로 그리고, 화면 크기의 그림을 바로 만듦: 한 걸음 38ms → 3~6ms), 아래 줄에 작은 막대 ☀ ◐. 버튼은 그대로(왼쪽 = 밝기, 오른쪽 = 이동) | PACS `session/pacs` |
 | 2026-10-02 | 설계안 [external-images-import-design.md](../reference/external-images-import-design.md) — 다른 병원의 CD · USB 영상을 들여와 차트에 붙이기(짓지 않음). 임시 서버에서 해 본 것: Orthanc의 공식 `modify`로 한 장씩 우리 환자 번호를 넣음(그림 · 압축 그대로, 2~27ms), 같은 영상을 두 번 올리면 Orthanc가 막아 주지 않음, EMR의 nginx는 1MB 넘는 올리기를 거절(413) | — |
 | 2026-10-02 | **「Bethesda CD」 1.0.0 — 반출 프로그램을 진짜 실행 파일로**(실장님: 「뱃으로 만들기보다는 좀 더 제대로 프로그램처럼」, 이름 「Bethesda CD」). PACS 저장소 `bethesda-cd\`: C# 소스 · `build.ps1`(Windows의 컴파일러만) · 아이콘 스크립트 · 시험 · README · CHANGELOG · LICENSE — 한 폴더로 섬. `Bethesda-CD.exe` 182KB(뷰어 `VOIR.EXE`를 품음 — 모든 디스크에 같은 파일), 0.3초에 뜸. 격리에서 창 시험 23가지 · 풀어서 내보내기 5가지 · 뷰어 시험 21가지(무손실 JPEG 예측 방식 1~7을 처음 확인) 통과. 옛 `cd-export.bat`은 한 번의 배포 동안 함께 | PACS `session/pacs` |
+| 2026-10-02 | **실행 파일로 진짜 CD 한 장**(가짜 환자 26개 63Mo, 171.6초, 「gravé et vérifié」) · 주어진 `.ico`로 빌드하는 길(`-IconFile` / `icon\Bethesda-CD.ico`) · **바탕화면 바로가기**(서버: `setup.ps1` → `desktop-shortcuts.ps1`; 다른 PC: `bethesda-cd\install.bat`) | PACS `session/pacs` |

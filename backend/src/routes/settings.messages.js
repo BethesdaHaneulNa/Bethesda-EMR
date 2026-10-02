@@ -33,6 +33,11 @@ const MSG = Object.freeze({
   CATEGORY_EXISTS: 'A category with that name already exists',
   CATEGORY_MOVE_TARGET: 'Choose another category to move the phrases to',
   CATEGORY_ORDER: 'ids must list every category once',
+  // the list of frequent diagnoses (admin.routes.js, 2026-10-02)
+  DIAGNOSIS_NAME_REQUIRED: 'The English name of the diagnosis is required',
+  DIAGNOSIS_CODE_LONG: 'The diagnosis code is too long (20 characters at most)',
+  DIAGNOSIS_NAME_LONG: 'A diagnosis name is too long (200 characters at most)',
+  DIAGNOSIS_ORDER: 'ids must list every diagnosis once',
   // an order code's imaging modality (admin.routes.js cleanModality)
   MODALITY_FORMAT: 'Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)',
 });

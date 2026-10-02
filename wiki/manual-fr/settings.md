@@ -22,7 +22,7 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 ## En bref
 
 1. Cliquez sur **Paramètres** dans la barre du haut.
-2. À gauche, choisissez la partie. Dans l'ordre du menu : **Personnel**, **Médicaments**, **Codes d'actes**, **Items de test**, **Phrases types**, **Services**, **Ordonnances types**, **Flux d'ordres**, **Sauvegarde**, **Journal**, **Établissement**.
+2. À gauche, choisissez la partie. Dans l'ordre du menu : **Personnel**, **Médicaments**, **Codes d'actes**, **Items de test**, **Diagnostics**, **Phrases types**, **Services**, **Ordonnances types**, **Flux d'ordres**, **Sauvegarde**, **Journal**, **Établissement**.
 3. Pour ajouter : **+ Ajouter** (ou **Nouvel ensemble** pour une ordonnance type).
 4. Pour changer une ligne : **Modifier**, changez, puis **Sauver**.
 5. Regardez chaque jour le **petit point** en haut, juste avant l'heure : vert = tout va bien.
@@ -126,6 +126,20 @@ Les **phrases types** sont des phrases déjà écrites que le médecin ajoute à
    - Changer l'ordre : **▲** et **▼**. C'est l'ordre que le médecin voit.
    - Enlever une catégorie : **Supprimer**. S'il reste des phrases dedans, l'écran demande « Les déplacer vers : » — choisissez une autre catégorie, puis **Déplacer et supprimer la catégorie**. Les phrases ne sont pas perdues.
 
+### Tenir la liste des diagnostics
+
+En consultation, le médecin cherche un diagnostic dans une liste, par son nom ou son code. Cette liste se tient ici. Elle arrive avec 100 diagnostics fréquents (codes CIM-10).
+
+1. **Paramètres** → **Diagnostics**. La liste montre tout, y compris les diagnostics désactivés. Le choix **Tous / Activés / Désactivés** et la case **Rechercher** (code ou nom, dans les trois langues, sans les accents) servent à trouver une ligne.
+2. Pour ajouter : **+ Ajouter**. Remplissez **Nom (anglais)** — obligatoire — puis, si vous voulez, **Code**, **Nom (français)** et **Nom (coréen)**. Cliquez sur **Sauver**.
+   - Si le nom français ou coréen est vide, l'écran dans cette langue affiche le nom anglais.
+   - Le **Code** s'écrit comme vous voulez et peut rester vide. Deux lignes peuvent avoir le même code (deux façons de dire le même diagnostic) : la fenêtre vous prévient — « Ce code est déjà dans la liste » — et vous laisse enregistrer.
+3. Pour corriger : **Modifier** sur la ligne.
+4. Pour qu'un diagnostic ne soit plus proposé au médecin : **Désactiver**. Pour le remettre : **Activer**. **On ne supprime pas** un diagnostic.
+5. L'ordre de la liste est l'ordre dans lequel le médecin voit les propositions. **▲ ▼** déplacent une ligne d'un cran ; pour un grand déplacement, **Modifier** puis changez **Position**. Les flèches ne marchent que si toute la liste est affichée (videz la recherche et le filtre).
+
+Ce qui est déjà écrit dans le dossier d'un patient ne change pas quand vous modifiez ou désactivez une ligne : le dossier garde son propre code et son propre nom. Chaque ajout, modification, activation ou désactivation est noté dans le **Journal** (« Liste des diagnostics modifiée ») ; l'ordre ne l'est pas.
+
 ### Régler les valeurs de référence des analyses
 
 1. **Paramètres** → **Items de test**.
@@ -168,7 +182,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes, catégories de phrases types), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes, catégories de phrases types, liste des diagnostics), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
 
 1. **Paramètres** → **Journal**. Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.
@@ -187,6 +201,8 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Saisissez un identifiant. / Saisissez un mot de passe. | Case vide dans **Nouveau membre du personnel** | Remplissez-la, puis **Sauver** |
 | Vous n'avez pas l'autorisation pour cela… | Le compte n'a pas la permission | Demandez à un administrateur de cocher la permission |
 | C'est le dernier administrateur actif pouvant ouvrir les Paramètres… | On retirerait le dernier accès aux Paramètres | Donnez d'abord le rôle **Administrateur** et **Paramètres** à un autre compte |
+| Saisissez le nom anglais. | **Diagnostics** : la case **Nom (anglais)** est vide | Écrivez le nom anglais, puis **Sauver** |
+| La liste a changé sur un autre écran. Rouvrez-la et recommencez. | **Diagnostics** : quelqu'un d'autre a ajouté une ligne pendant que vous changiez l'ordre | Rouvrez **Diagnostics** et refaites le déplacement |
 | Le compte administrateur créé à l'installation ne peut pas être désactivé. | Ce compte (identifiant admin) est protégé | Normal — ne rien faire |
 | Seul un administrateur peut réactiver un compte du personnel. | Votre rôle n'est pas **Administrateur** | Demandez à un administrateur |
 | Le mot de passe actuel n'est pas correct. | Erreur dans **Mot de passe actuel** | Retapez-le |

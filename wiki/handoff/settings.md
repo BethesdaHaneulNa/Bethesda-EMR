@@ -2,6 +2,52 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 설정에 「진단 목록 / Diagnostics」 탭 (진료 화면의 진단 칸이 찾는 목록)
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `5ec9dff` merge 위 — 진료의 마이그레이션 050 포함)
+- **배경**(총괄 전달): 천팀장님 피드백으로 진료 화면에 진단 칸이 생김(050, 오늘 배포). 원장님은 `diagnosis_code`(씨앗 100줄, ICD-10 · 세 언어)에서 골라 넣는데, 이 목록을 병원이 고칠 화면이 없었음.
+- **만든 것**
+  1. **탭** 「🩺 진단 목록 / Diagnoses / Diagnostics」 — 메뉴에서 「검사항목」 바로 아래(오더 코드 · 검사항목 · 진단 목록 · 상용구 …).
+  2. **목록**: 꺼진 것까지 모든 줄. 위에 고르기 「전체 (n) / 켜진 것 (n) / 꺼진 것 (n)」(상용구 탭처럼 단추 줄이 아니라 고르는 칸 하나), 검색(코드·세 언어 이름, 악센트 없이 쳐도 찾음), 「+ 추가」. 줄마다 ▲▼ · 코드 · 이름 셋 · 상태 · 「수정」 · 「끄기 / 켜기」.
+  3. **편집 창**(상용구·오더 코드 창과 같은 틀): 코드 · 이름(영어) * · 이름(프랑스어) · 이름(한국어) · 순서(숫자) · 상태(켜짐/꺼짐).
+  4. **지우기는 없음 — 끄기만.** 서버에도 DELETE 길이 없음.
+  5. **같은 코드 · 같은 이름**: 막지 않고 창이 그 자리에서 알림 — 「ⓘ 같은 코드가 이미 목록에 있습니다: B54 — Malaria, unspecified. 그대로 저장해도 됩니다.」(이름도 같은 식, 세 언어 어느 것이든). 저장할 때 다시 묻지 않음.
+  6. **관리 길**(settings 권한) `GET · POST /api/admin/diagnosis-codes`, `PUT /:id`(보낸 칸만), `PUT /order`. 진료가 읽는 `GET /api/consultations/diagnosis-codes`는 건드리지 않음.
+  7. **로그**: `settings.diagnosis.code` — 더하기(다섯 칸) · 고치기(바뀐 칸만) · 켜고 끄기(상태: 켜짐 → 꺼짐) 한 줄씩. 순서는 남기지 않음(상용구 분류·검사 단위와 같음).
+- **정한 것 (보고)**
+  1. **순서를 두 가지로**: ▲▼(한 칸씩 — 상용구 분류·단위 목록과 같은 손맛) + 편집 창의 **순서 숫자**(100줄에서 맨 끝의 새 줄을 2번으로 올리려면 ▲를 백 번 눌러야 해서). ▲▼는 전체 목록을 볼 때만 되고, 찾기·거르기 중에는 흐리게 + 「순서는 전체 목록을 볼 때 바꿉니다」 풀이.
+  2. **새 줄은 맨 끝**에 놓임(창의 순서 숫자를 바꾸면 그 자리).
+  3. **끄기에 「정말?」을 묻지 않음** — 되돌릴 수 있고(「켜기」) 상태가 바로 보이므로. 저장 알림 「✓ 저장했습니다」만.
+  4. **낱말**: 이 탭에서는 「켜짐 / 꺼짐 · 켜기 / 끄기 · 켜진 것 / 꺼진 것」(fr 「Activé / Désactivé · Activer / Désactiver · Activés / Désactivés」)으로 통일 — 총괄이 「켜고 끄기」라 하셨고, 직원 탭의 「활성 / 비활성」은 계정에 쓰는 말이라 따로 둠. 로그 탭도 이 줄에서는 「켜짐 → 꺼짐」.
+  5. **코드는 적은 글자 그대로** 저장(대문자로 바꾸지 않음 — 「체계에 묶지 않음」). 앞뒤 빈칸만 뗌. 「b54」와 「B54」는 다른 글자로 저장되지만 **같은 코드 알림은 대소문자를 가리지 않음.**
+  6. **목록 읽기(`GET /admin/diagnosis-codes`)는 settings 권한만** — 다른 설정 목록(약·오더 코드…)은 로그인만 있으면 읽지만, 이 목록은 진료가 자기 길로 읽으므로 관리용 전체 목록은 설정에만 열었음.
+  7. **「쓰인 횟수」는 넣지 않음**(이 줄이 몇 번 진단에 쓰였는지). 끄는 판단에 도움이 되겠지만 지금은 목록이 단순한 편이 낫다고 봄 — 필요하면 한 칸.
+- **마이그레이션**: 없음(표는 진료의 050 그대로).
+- **공용 파일**: `backend/src/utils/audit.js`에 action 한 줄(`DIAGNOSIS_CODE: 'settings.diagnosis.code'`). `wiki/03-change-log.md`에 한 줄.
+- **권한 시험 표**: 설정의 새 길 넷 [SET] + 대조하다 찾은 **진료의 새 길 셋**(`GET /consultations/diagnosis-codes` [CONS] · `PUT /consultations/diagnosis/:id` [CONS] · `GET /consultations/patient/:id/diagnoses` [CONS, PAY, PHARM]). 142 → **149개 × 11 = 1639건**, 모두 표와 같음.
+- **다른 세션에 알릴 것 — 진료**: `wiki/modules/consultation.md` 6절의 「관리 화면은 아직 없습니다(설정 세션 몫)」을 「설정 → 진단 목록」으로 고치면 됨(진료의 문서라 손대지 않음). 직원용 설명서에 「목록에 없는 진단은 관리자가 설정 → Diagnostics에서 더합니다」 한 줄도.
+- **바꾼 파일**: `frontend/src/pages/settingsDiagnoses.jsx`(새) · `frontend/src/pages/Settings.jsx`(import · 탭 · 한 줄) · `frontend/src/pages/settingsAudit.js` · `frontend/src/pages/settingsMessages.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js`(se_ 구역 25줄씩) · `backend/src/routes/admin.routes.js` · `backend/src/routes/settings.messages.js` · `backend/src/utils/audit.js` · `backend/test/settings.diagnoses.mjs`(새) · `backend/test/settings.access.mjs` · `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · `wiki/03-change-log.md` · 이 노트
+- **번역 키**: `se_tabDiagnoses` · `se_dxHint` · `se_dxFilterAll/On/Off` · `se_dxNameEn/Fr/Ko` · `se_dxOn/Off` · `se_dxEmpty` · `se_dxNewTitle/EditTitle` · `se_dxCodeHint` · `se_dxNameHint` · `se_dxPosition` · `se_dxSameCode/SameName/SameOk` · `se_dxOrderWhole` · `se_errDxName/CodeLong/NameLong/Order` · `se_act_diagnosisCode`. 「켜짐/꺼짐」·「위로/아래로」·「코드」·「상태」는 있던 키.
+- **확인한 것** (새 격리 스택 9187, develop `5ec9dff` + 이 변경)
+  - `node --check` · `npm run build` · `settings.messages.mjs`(서버 메시지가 세 언어로 번역됨).
+  - **`settings.diagnoses.mjs` 40개 통과**(새 스택에서 한 번, 이어서 한 번 더): 전체 목록(꺼진 것 포함) · 영어 이름 없으면 거절 · 21자 코드/201자 이름 거절 · 빈칸 다듬기 · 빈 이름은 NULL · 맨 끝에 놓임 · 같은 코드·이름 다시 → 허용 · 보낸 칸만 고침 · 영어 이름은 비울 수 없음 · 코드는 비울 수 있음 · 바뀐 것 없는 저장은 로그 줄 없음 · 없는 id 404 · 끄면 진료의 읽기에서 빠지고 설정 목록에는 남음 · 켜면 돌아옴 · 순서(빠진 id/겹친 id 거절, 맨 끝 줄을 맨 위로 → 진료가 그 줄을 먼저 읽음, 로그 줄 없음) · DELETE 없음 · **환자의 진단 줄은 목록 줄을 바꾸고 꺼도 자기 코드·이름 그대로** · 로그 줄의 모양.
+  - `settings.access.mjs` 149 × 11 = 1639건 통과. 시험이 진단 목록에 줄을 더하지 않는 것 확인.
+  - **화면 — 한국어**: 메뉴 「🩺 진단 목록」(검사항목 아래), 106줄 표, 고르기 「전체 (106) / 켜진 것 (100) / 꺼진 것 (6)」. 「+ 추가」 → 키보드로 코드 `b54` · 이름 셋 입력(Tab으로 다음 칸) → 같은 코드·같은 이름 알림 둘 → 순서 `2` → 저장 → 「✓ 저장했습니다」, 둘째 줄에 들어감. ▼ → 셋째 줄로. 「끄기」 → 「꺼짐」·「켜기」, 고르기의 숫자가 100 / 7로. 첫 줄의 ▲·끝 줄의 ▼는 눌리지 않음. 찾기 `fievre` → 「Fièvre …」 넷, 그동안 ▲▼는 흐리고 풀이가 뜸. 없는 말 → 「이 조건에 맞는 진단이 없습니다.」
+  - **화면 — 프랑스어**: 「Diagnostics」, 「Tous (107) / Activés (100) / Désactivés (7)」, 머리글 「Code · Nom (anglais) · Nom (français) · Nom (coréen) · Statut」, 줄 「Activé · Modifier · Désactiver」, 편집 창 「Modifier le diagnostic」(Position (1 à 107), 알림 「Ce code est déjà dans la liste : B54 — Malaria, unspecified. Vous pouvez l'enregistrer quand même.」), 창이 화면 안에 다 들어옴, 가로 넘침 없음(1024 폭).
+  - **로그 탭**: 종류 「진단 목록을 바꿈 / Liste des diagnostics modifiée」(종류 거르개에도), 「코드: b54 · 이름 (영어): Malaria, severe · … · 상태: 켜짐」, 「상태: 켜짐 → 꺼짐」, 「Nom (français): — → Fièvre de test …」.
+  - 스택 `down -v`, 시험 계정 파일 삭제.
+- **못 본 것**
+  - **진료 화면에서** 설정에서 더한 줄이 찾기에 뜨고 끈 줄이 사라지는 것을 화면으로는 보지 않음 — 진료가 읽는 길(API)의 답으로만 확인.
+  - ~~영어 화면(글자만 넣음), 밝은 화면·종이색 테마~~ → **봤음**(같은 날, 아래 「뒤이어 본 것」).
+  - 1366 폭보다 넓은 화면(1024 폭에서 봄). 줄이 수백 개일 때의 빠르기(107줄에서 봄).
+  - 두 사람이 동시에 순서를 바꾸는 경우는 서버 거절(시험)까지만, 화면의 문구는 눈으로 보지 않음.
+  - 실행 중 EMR의 실제 목록.
+- **뒤이어 본 것** (2026-10-02, 총괄 부탁 — 합쳐진 뒤 새 격리 스택 9187, develop `d3b5ebd`. 코드 변경 없음)
+  - **영어 화면**: 메뉴 「Diagnoses」, 고르기 「All (100) / Enabled (99) / Disabled (1)」, 머리글 「Code · Name (English) · Name (French) · Name (Korean) · Status」, 줄 「Enabled · Edit · Disable」/「Disabled · Edit · Enable」, 「+ Add」·「Search」, 안내 글, 편집 창 「Edit diagnosis」(Position (1 to 100), Status, 「The English name is required. …」, Cancel / Save). 어색한 글 없음.
+  - **밝은 화면 · 종이색**(편집 창을 연 채로, 켜진 줄과 꺼진 줄 하나씩): 글자 대비를 화면에서 잼 — 밝게: 창 제목 13 · 칸 이름과 풀이 5.2 · 입력 글자 15.4 · 상태 6.2 · 취소 6.0 · 저장 5.2, 목록 안내 5.9 · 머리글 5.0 · 켜진 줄 코드 6.3·이름 14.7·상태 6.4 · 꺼진 줄 코드·이름 5.9·상태 6.6 · 수정 6.0 · 끄기 5.8 · 켜기 5.4 · ▲▼ 6.0(눌리지 않는 것 4.7) · 「+ 추가」 4.7. 종이색: 5.0 ~ 15.8, 「+ 추가」 4.6. **모두 4.5 이상**(가장 낮은 「+ 추가」는 상용구 탭과 같은 단추). 화면 사진으로도 두 테마에서 창·표·단추가 제대로 보임.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-02 — 로그 탭: 영수증 여러 장을 합쳐 다시 인쇄함 (`payment.receipt.print_combined`) + 권한 시험 표에 수납의 새 길 셋
 
 - **상태**: 확인 요청

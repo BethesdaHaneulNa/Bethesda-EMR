@@ -24,7 +24,7 @@ var T = {
   exam:      { fr: 'Examen', en: 'Exam', ko: 'Exam' },
   reading:   { fr: 'Compte-rendu', en: 'Reading', ko: 'Reading' },
   reader:    { fr: 'Médecin lecteur :', en: 'Read by:', ko: '판독의:' },
-  issued:    { fr: 'Émis le', en: 'Issued', ko: '발행' },
+  issued:    { fr: 'Imprimé le', en: 'Printed', ko: '인쇄' },   // printed, not issued (director, 2026-10-02): the sheet takes no number
 };
 
 var FONT = '"Segoe UI", "Malgun Gothic", "Noto Sans", Arial, sans-serif';

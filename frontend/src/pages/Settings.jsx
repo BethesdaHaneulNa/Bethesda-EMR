@@ -13,6 +13,7 @@ import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditCha
 import { seMoney, seMoneyInput, seNumber } from './settingsMoney.js';
 import { getTemplate } from '../documents/registry.js';
 import { PhrasesTab } from './settingsPhrases.jsx';
+import { DiagnosesTab } from './settingsDiagnoses.jsx';
 import { ModalityField, ModalityHint } from './settingsModality.jsx';
 
 export default function SettingsPage() {
@@ -598,7 +599,7 @@ export default function SettingsPage() {
   var TC={fee:'accent',lab:'warn',imaging:'violet',procedure:'ok'};
 
   var TABS = [
-    {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},
+    {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'diag',label:'🩺 '+t.se_tabDiagnoses},
     {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
   ];
 
@@ -719,6 +720,7 @@ export default function SettingsPage() {
 
           {/* PHRASES - settingsPhrases.jsx: one sentence per phrase, categories as data (2026-10-01) */}
           {activeTab==='phrase'?<PhrasesTab t={t} onSaved={function(){ showToast(t.se_saved); }}/>:null}
+          {activeTab==='diag'?<DiagnosesTab t={t} onSaved={function(){ showToast(t.se_saved); }}/>:null}
 
           {/* DEPARTMENTS */}
           {activeTab==='dept'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>

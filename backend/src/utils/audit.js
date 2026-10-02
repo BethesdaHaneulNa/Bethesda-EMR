@@ -46,11 +46,18 @@ const ACTIONS = {
   DRUG_PRICE:           'settings.drug.price',          // unit price changed (decision 2026-09-30): before/after unit_price only
   PHRASE_CATEGORY:      'settings.phrase.category',     // a phrase category made, renamed or removed (2026-10-01): name, status, phrases moved
   ORDER_PRICE:          'settings.order.price',         // an order code's price changed (fee, lab, imaging, procedure): same shape
+  DIAGNOSIS_CODE:       'settings.diagnosis.code',      // the list of frequent diagnoses (2026-10-02): a row added, edited, switched off or on - code, names, status
   ORDER_PRICE_EDITABLE: 'settings.order.price_editable', // "the amount can be changed at payment" turned on or off for a fee code (2026-10-01)
   // Documents (decision 2026-09-30, both): issuing is logged although it is a first entry -
   // the director wants every paper that left the clinic in the one log. A draft print is not an issue.
   DOCUMENT_ISSUE:       'documents.issue',
   DOCUMENT_VOID:        'documents.void',
+  // Result sheets (director, 2026-10-02): printing a reading or the lab results is not
+  // issuing a document - no number, no row in the documents history, only this line: who,
+  // whose, which exam or which days, in which language (routes/document.routes.js
+  // POST /print-log). An exam's pictures on paper already have their line, pacs.images.print.
+  PACS_REPORT_PRINT:    'pacs.report.print',
+  LAB_RESULTS_PRINT:    'laboratory.results.print',
   // PACS (2026-10-01): a finished order's images were no longer on the image server under the
   // number the EMR kept and were found again by accession (routes/pacs.relink.js). Done by the
   // EMR itself when the image window is opened; the line names who opened it.

@@ -60,6 +60,7 @@
 | 💊 **Médicaments** | 약품 | 약 목록·단가·재고 | 약국 (`pharmacy.md`) |
 | 📋 **Codes d'actes** | 오더 코드 | 진료비·검사·영상·처치 코드와 가격, 영상 종류, 처치의 기본 용법 (2.9) | 설정 |
 | 🧫 **Items de test** | 검사항목 | 검사 결과 항목·기준치. 단위는 목록에서 고르고, 「+ Nouveau panel」 옆 **Liste des unités (단위 목록)** 창에서 단위를 더하고·순서를 바꾸고·뺌(2026-10-01, 마이그레이션 044). **글자 결과의 「고를 값」**(2026-10-01, 048): 문자 참고치(Réf. texte) 칸 옆 **☰** → 창 「Valeurs à choisir」에서 묶음 단추(Negative / Positive 등)로 채우거나 값을 넣고·순서를 바꾸고·뺌 → OK → 페이지의 Sauver. 검사실의 결과 칸이 그 목록에서 고르는 칸이 됨(목록을 비워 두면 문자 참고치에서 기본 묶음). 판정은 그대로 | 임상병리 (`laboratory.md` 2절 「단위 목록」·글자 결과, 3.3.1) |
+| 🩺 **Diagnostics** | 진단 목록 | 진료 화면의 진단 칸에서 찾는 「자주 쓰는 진단」 목록 — 더하기·고치기·켜고 끄기·순서 (2.9, 2026-10-02) | 설정 (표는 진료의 050) |
 | 📝 **Phrases types** | 상용구 | 진료 기록 상용구와 그 분류 (2.9) | 설정 |
 | 🏥 **Services** | 진료과 | 진료과 (2.9) | 설정 |
 | 🧪 **Ordonnances types** | 약속처방 | 약·검사 묶음 (2.9) | 설정 |
@@ -485,7 +486,30 @@
 - **시험**: `backend/test/settings.ordercodes.mjs`(31개 — 기본 용법 16, `price_editable` 15).
 - **`price_editable`** (2026-10-01, 칸은 수납의 047): 서버 `cleanPriceEditable`(오더 코드 POST·PUT) — 종류가 `fee`가 아니면 **무엇을 보내든 FALSE**; `fee`면 보낸 true/false 그대로; **보내지 않으면** 새 코드는 FALSE, 고칠 때는 **저장된 값 유지**(`COALESCE` — 이 칸이 생기기 전에 열어 둔 설정 화면이 다른 것을 저장하다가 DOC의 체크를 끄지 않게). 목록 `GET /admin/order-codes`는 `SELECT *`라 값을 그대로 줌(수납이 `?code_type=fee`로 읽음). **켜고 끄는 것은 로그에 남음**(2026-10-01 결정 — 돈에 관한 설정이라): `auditPriceEditable`, action `settings.order.price_editable`, 바뀔 때만 한 줄(`price_editable` false → true), 고칠 때는 가격 줄과 같은 트랜잭션, 한 번의 저장이 가격과 체크를 둘 다 바꾸면 줄도 둘. 켠 채로 새로 만든 코드도 한 줄(앞 값 없음 — 가격은 새 코드에 줄이 없지만 이것은 그 순간부터 창구에서 금액을 칠 수 있게 되므로), 종류를 바꿔 꺼진 것도 한 줄. 로그 탭: 종류 「오더 코드의 「수납에서 금액 고치기」를 켜거나 끔」, 칸 이름은 창의 체크 글자 그대로, 값 「켜짐 / 꺼짐」. 화면은 C01~C04에는 체크를 보여 주지 않음(수납의 「+ 항목 추가」 목록에 나오지 않는 코드라 뜻이 없음); 서버는 그 구분을 하지 않음.
 
+- **🩺 Diagnostics (진단 목록)** (2026-10-02) — 원장님이 진료 화면의 진단 칸에서 찾는 목록(처음에 ICD-10 100줄).
+  - 화면: 위에 **Tous / Activés / Désactivés** (전체 / 켜진 것 / 꺼진 것) 고르기와 **Rechercher (검색)** — 코드나 세 언어 이름, 악센트 없이 쳐도 찾음 — 과 **+ Ajouter**. 표의 줄마다 ▲▼ · 코드 · 이름 셋(영어·프랑스어·한국어) · 상태 · **Modifier (수정)** · **Désactiver / Activer (끄기 / 켜기)**.
+  - **지우기는 없습니다 — 끄기만.** 끄면 원장님의 찾기에서 빠집니다. 환자 기록에 이미 들어간 진단은 자기 코드·이름을 따로 가지고 있어, 목록의 줄을 고치거나 꺼도 **바뀌지 않습니다.**
+  - **영어 이름만 꼭** 있어야 합니다. 프랑스어·한국어 이름이 비면 그 언어 화면에서는 영어 이름이 보입니다. **코드는 적은 글자 그대로**이고 비워도 되며, **같은 코드·같은 이름을 또 넣어도 막지 않습니다** — 창이 「Ce code est déjà dans la liste : …」로 알려 주기만 합니다(한 코드에 두 표현을 둘 수 있게).
+  - **순서** = 원장님에게 보이는 순서. ▲▼로 한 칸씩, 멀리 옮길 때는 **Modifier** 창의 **Position (순서)** 숫자. ▲▼는 전체 목록을 볼 때만 됩니다(찾기·거르기를 쓰는 동안은 흐리게).
+  - 더하고·고치고·켜고 끈 것은 **Journal(로그)** 에 남습니다(「Liste des diagnostics modifiée」). 순서는 남지 않습니다.
+
 - **약속처방 편집 창의 오더 줄**(같은 날, 진료 `6ab6600` 뒤 — 오더의 용법을 서버가 글자 20자로 받음): 약속처방 줄의 `dose` 칸은 약 줄에서는 **하루 총량(숫자)**, 검사·처치 줄에서는 **용법(글자)**. 편집 창은 오더 줄의 용법을 그리지 않으면서도 `osLineProblem`이 모든 줄의 `dose`를 숫자로 검사해, 진료 화면의 「약속처방으로 저장」이 「PRN」을 넣은 세트는 설정에서 다시 저장할 수 없었음(「Vérifiez les nombres」, 고칠 칸도 안 보임). → 숫자 검사는 약 줄에만, 오더 줄은 20자 이하인지만. **처치 줄**(또는 용법이 든 오더 줄)에 **Posologie** 글자 칸(20자). 숫자만인 값(옛 `1.000`)은 빈 칸으로 보이고 저장하면 비워짐(`osDir`). 처치 오더 코드를 세트에 넣으면 그 코드의 기본 용법이 줄에 따라옴.
+
+### 3-9d. 진단 목록 관리 (2026-10-02 — 표는 진료의 마이그레이션 050)
+
+- **표** `diagnosis_code`(진료 세션이 만듦 — `wiki/modules/consultation.md` 4절): `code VARCHAR(20)`(비어도 됨, 유일하지 않음) · `name_en`(필수) · `name_fr` · `name_ko`(각 200자) · `is_active` · `sort_order`. 설정은 **마이그레이션을 더하지 않았음.** 진료가 읽는 길 `GET /api/consultations/diagnosis-codes`(켜진 줄만, 순서대로)은 그대로.
+- **관리 길**(`admin.routes.js` 「DIAGNOSIS LIST」, 모두 settings 권한):
+  - `GET /api/admin/diagnosis-codes` → 꺼진 줄까지 **모든 줄** `[{id, code, name_en, name_fr, name_ko, is_active, sort_order}]`, `sort_order, id` 순.
+  - `POST /api/admin/diagnosis-codes` `{code?, name_en, name_fr?, name_ko?, is_active?}` → 201. 맨 끝에 놓임(`MAX(sort_order) + 10`).
+  - `PUT /api/admin/diagnosis-codes/:id` — **보낸 칸만** 고침(목록의 켜기·끄기는 `{is_active}`만 보냄). 없는 id · 숫자가 아닌 id → 404.
+  - `PUT /api/admin/diagnosis-codes/order` `{ids}` — **모든 줄의 id를 한 번씩**(꺼진 줄 포함), 그 순서대로 `sort_order` = 10, 20, 30… 빠지거나 겹치면 400(다른 화면에서 줄이 더해졌을 때 — 화면은 「목록이 다른 화면에서 바뀌었습니다」).
+  - **DELETE는 없음**(404).
+- **다듬기**(`diagnosisFields`): 글자는 앞뒤 빈칸을 떼고 안쪽의 이어진 빈칸은 하나로, 빈 글자는 NULL. 코드 20자·이름 200자 초과 400, 영어 이름이 비면 400(새로 만들 때, 그리고 고칠 때 `name_en`을 보냈으면), `is_active`가 true/false가 아니면 400. **코드의 대소문자는 바꾸지 않음**(체계에 묶지 않으므로 적은 그대로). **같은 코드·같은 이름은 서버가 막지 않음** — 알림은 화면이 함(편집 창이 이미 불러온 목록에서 같은 코드, 또는 세 언어 어느 것이든 같은 이름을 찾아 최대 셋까지 보여 줌; 대소문자·악센트·빈칸 차이는 같은 것으로 봄).
+- **로그**: action `settings.diagnosis.code`(`utils/audit.js` `DIAGNOSIS_CODE` — 공용 파일에 한 줄), entity `diagnosis_code`, 요약 「코드 이름」. 새 줄은 `after`만(다섯 칸), 고칠 때는 바뀐 칸만, 바뀐 것이 없으면 줄 없음. 상태는 `status: active|inactive` — 로그 탭이 이 entity에서는 「켜짐 / 꺼짐」으로 읽음. 순서 바꾸기는 남기지 않음.
+- **화면** `frontend/src/pages/settingsDiagnoses.jsx`(새, 상용구 탭과 같은 틀): 전체 목록을 한 번 읽어 화면에서 거르고 찾음(100~수백 줄). **Position**: 저장 뒤 숫자가 지금 자리와 다르면 `/order`를 한 번 더 부름. ▲▼는 전체 목록의 이웃과 맞바꿈.
+- **메시지**: `settings.messages.js` MSG 넷(`DIAGNOSIS_NAME_REQUIRED` · `DIAGNOSIS_CODE_LONG` · `DIAGNOSIS_NAME_LONG` · `DIAGNOSIS_ORDER`) ↔ `settingsMessages.js` ↔ `se_errDx*`.
+- **시험**: `backend/test/settings.diagnoses.mjs`(40개 — 아래 8절), `settings.access.mjs`에 길 넷.
+- **끄기와 환자 기록**: 진료의 진단 줄은 `diagnosis_code_id`로 목록 줄을 가리키되 `icd_code`·`diagnosis_name`을 **자기 것으로** 가짐. 목록 줄의 코드·이름을 바꾸고 꺼도 그 줄의 글자가 그대로인 것을 시험이 확인. (화면 언어로 바뀌어 보이는 이름은 목록 줄에서 오므로, 줄을 지우면 그 기능이 사라짐 — 그래서 지우기를 두지 않음.)
 
 ### 3-10. 변경 기록 (2026-09-29)
 
@@ -546,6 +570,7 @@
 | `GET /api/admin/drugs` · `order-codes` · `departments` · `phrases` · `phrase-categories` · `clinic` | 로그인 | 목록 (다른 화면도 씀). 상용구·분류의 모양은 3-9절 |
 | `POST /api/admin/phrase-categories` · `PUT /:id` · `PUT /order` · `DELETE /:id[?move_to=]` | settings | 상용구 분류 만들기·이름·순서·지우기 (3-9절) |
 | `GET /api/admin/doctors` | **registration 또는 consultation** (2026-09-29, S2 — 전화·이메일 포함이라) | 활성 의사 목록 (접수용, 비밀번호 해시 없음) |
+| `GET /api/admin/diagnosis-codes` · `POST` · `PUT /:id` · `PUT /order` | settings | 진단 목록 관리 — 모든 줄(꺼진 것 포함), 더하기, 보낸 칸만 고치기(켜고 끄기), 순서. DELETE 없음 (3-9d절) |
 | `GET /api/admin/staff` | settings | 전체 직원 (`password_hash` 제거) |
 | `GET /api/admin/audit` | settings | 변경 기록 읽기 — 거르기·쪽 나누기 (3-10절). `action`은 소문자·점·**밑줄**(2026-10-01 — 전에는 밑줄이 든 이름이면 거르기가 말없이 빠져 모든 줄이 나왔음). `exclude=<action>[,…]`(알려진 action 이름만, 모르는 값은 무시, `action`으로 고른 것은 빼지 않음) → 답에 `excluded: {action: 숨긴 줄 수}`. 쓰기 라우트 없음 |
 | `POST/PUT /api/admin/staff[/:id]` · `DELETE /api/admin/staff/:id`(=비활성) | settings | 3-2절 보호 규칙. PUT으로 비활성 → 활성은 **admin 역할만**(아니면 403) |
@@ -565,7 +590,7 @@
 - 검사: `node backend/test/settings.permissions.mjs` — 서버 권한 목록 ↔ `modules.js` (설치·서버 불필요)
 - 서버 안내 문구: `backend/src/routes/settings.messages.js`(새) ↔ `frontend/src/pages/settingsMessages.js`(새), 검사 `node backend/test/settings.messages.mjs`
 - 약 재고 시험: `backend/test/settings.drugs.mjs` (격리 스택 전용)
-- **권한 전체 시험**: `backend/test/settings.access.mjs` (격리 스택 전용, 9080 거부) — 역할별 계정 10개(관리자·의사·접수·간호사·약국만·검사만·수납만·통계만·설정만·권한 없음) × 라우트 **142개 = 1562건**(2026-10-02, 수납의 새 길 셋 포함. 2026-10-01에는 139개 = 1529건 — 계정은 그 뒤 「진료만」이 더해져 11개. 처음에는 107개 = 1070건). 표에 **넣지 않는 길**: 로그인 없이 부르는 길(`/auth/setup-status`·`/auth/setup`·`/auth/login`, 브리지 토큰으로 부르는 `/pacs/worklist-feed`·`/pacs/bridge-heartbeat`·`/pacs/image-backup-report`·`/pacs/study-arrived`·`/pacs/superseded-images`)과, 통과한 계정에게 정말로 일을 하는 설정 쓰기 셋(`PUT /pacs/config`·`PUT /admin/clinic`·`POST /backup/run`) — 스크립트 머리말에도 적음. 기대 값은 **S2 표**(인계 노트 2026-09-29 「S2 초안」, 결정대로)를 스크립트 안에 그대로 옮긴 것이고 라우트 파일에서 읽지 **않습니다** — 파일의 가드가 표에서 벗어나면 잡으라고. 칸마다 「막혀야 하는데 통과 / 통과해야 하는데 403」과 401·5xx를 알림. **라우트를 추가하거나 권한을 바꾸면 이 표에도 한 줄.** 쓰기 라우트는 없는 id(999999)로 부름
+- **권한 전체 시험**: `backend/test/settings.access.mjs` (격리 스택 전용, 9080 거부) — 역할별 계정 10개(관리자·의사·접수·간호사·약국만·검사만·수납만·통계만·설정만·권한 없음) × 라우트 **149개 = 1639건**(2026-10-02, 수납의 새 길 셋·진단 목록 길 넷·진료의 진단 길 셋 포함. 2026-10-01에는 139개 = 1529건 — 계정은 그 뒤 「진료만」이 더해져 11개. 처음에는 107개 = 1070건). 표에 **넣지 않는 길**: 로그인 없이 부르는 길(`/auth/setup-status`·`/auth/setup`·`/auth/login`, 브리지 토큰으로 부르는 `/pacs/worklist-feed`·`/pacs/bridge-heartbeat`·`/pacs/image-backup-report`·`/pacs/study-arrived`·`/pacs/superseded-images`)과, 통과한 계정에게 정말로 일을 하는 설정 쓰기 셋(`PUT /pacs/config`·`PUT /admin/clinic`·`POST /backup/run`) — 스크립트 머리말에도 적음. 기대 값은 **S2 표**(인계 노트 2026-09-29 「S2 초안」, 결정대로)를 스크립트 안에 그대로 옮긴 것이고 라우트 파일에서 읽지 **않습니다** — 파일의 가드가 표에서 벗어나면 잡으라고. 칸마다 「막혀야 하는데 통과 / 통과해야 하는데 403」과 401·5xx를 알림. **라우트를 추가하거나 권한을 바꾸면 이 표에도 한 줄.** 쓰기 라우트는 없는 id(999999)로 부름
 - 변경 기록 시험: `backend/test/settings.audit.mjs` (격리 스택 전용)
 
 ### 공용 부품
@@ -582,6 +607,7 @@
 | `order_code` | `code_type` CHECK(fee/lab/imaging/procedure), `price`/`price_clinic`, 기본 용법 `default_dose`(글자 — 2026-10-01부터 칸 기본값 없음, 숫자만인 값은 NULL), PACS 칸(`pacs_modality` VARCHAR(16) — 2026-10-01에 10 → 16, `order_item.pacs_modality`·`worklist_log.modality`도 같이) | 001, 009, 701(영상 종류 폭) |
 | `phrase_dictionary` | 상용구 — 문장은 `text` 하나(`text_en`·`text_fr`는 2026-10-01부터 쓰지 않음), `category_id` → `phrase_category` | 001, 701 |
 | `phrase_category` | 상용구 분류(이름·순서·쓰는지) | 701 |
+| `diagnosis_code` | 자주 쓰는 진단 목록 — **표는 진료의 것**(050), 설정은 관리 화면과 길만 (3-9d절) | (진료 050) |
 | `service_heartbeat` | 브리지 생존 신호 (PACS 브리지가 씀, 상태 API가 읽음) | 018 |
 | `audit_log` | 변경 기록 (총괄 설계, 설정은 직원 계정 줄을 쓰고 「Journal」 탭에서 읽음). UPDATE·DELETE·**TRUNCATE** 거절 | 022(총괄), **026**(설정 — TRUNCATE, 세션 번호 702) |
 | `schema_migrations` | 마이그레이션 적용 기록 (`config/migrate.js`, 총괄) | — |
@@ -592,6 +618,7 @@
 - **접수**: `GET /admin/departments`, `GET /admin/doctors` (`Registration.jsx`)
 - **진료**: `GET /admin/drugs` · `order-codes` · `phrases` (`Consultation.jsx`), 약속처방(`/api/order-sets`, 진료 세션 소유 라우트)
 - **수납**: `GET /admin/order-codes?code_type=fee` (`Payment.jsx`)
+- **진료 — 진단 목록**: 표 `diagnosis_code`와 읽는 길 `GET /consultations/diagnosis-codes`는 진료 세션의 것. 설정은 그 표를 `/admin/diagnosis-codes`로 고칩니다(3-9d절). 설정에서 끈 줄은 진료의 찾기에서 빠지고, 순서는 진료의 제안 순서가 됩니다.
 - **인쇄 문서**: `DocumentModal.jsx`가 `GET /admin/clinic`으로 편지지 머리글을 찍습니다.
 - **약국**: 약품 마스터 API(`/admin/drugs`)는 이 모듈 라우트에 있지만 약품 탭 내용은 약국 세션이 고칩니다.
 - **임상병리**: 검사항목 탭이 `/api/lab/test-items`를 쓰고, 새 검사 패널은 `POST /admin/order-codes`(code_type `lab`)로 만듭니다.
@@ -767,4 +794,5 @@
 | 2026-10-01 | 문서만: 검사항목의 **글자 결과 「고를 값」 목록**(임상병리 `16e1759`, 048)을 관리자 설명서와 2.3 표에. 권한 시험 표는 바꿀 것 없음(`/lab/test-items/save`의 권한은 그대로 settings — 다시 돌려 확인) | `manual-fr/settings.md`, 이 문서 (2.3) | `36cf106` |
 | 2026-10-01 | 로그 탭: **영상을 인쇄함 / 반출함**(`pacs.images.print` · `pacs.images.export`, PACS) — 종류 「Images imprimées」·「Images remises (disque / fichier)」, 새 칸 「종이 한 장의 영상 수」(`per_page`)·「매체」(`medium`: ZIP 파일 · 디스크 · ISO 파일 · 폴더). 요약 줄은 영어 문장 대신 「검사 (번호)」. 칸 순서에서 「언어」를 영상 칸 뒤로(서류 줄의 순서는 그대로) | `settingsAudit.js`, i18n `se_act_imagesPrint`·`se_act_imagesExport`·`se_fld_perPage`·`se_fld_medium`·`se_medium_*`, `03-change-log.md` (3-10) | `8c40a99` |
 | 2026-10-01 | 로그 탭: 영상 반출 줄의 칸(PACS `f7daaac`) — 「검사 수」(`exam_count`) · 「크기」(`size_mb`, 「12,3 Mo」/「12.3 MB」) · 「검사 목록」(`exams`). 칸 순서 매체 → 검사 수 → 영상 수 → 크기 → 검사 목록, 요약 줄은 첫 검사와 「+ n」 | `settingsAudit.js`, i18n `se_fld_examCount`·`se_fld_sizeMb`·`se_fld_exams`·`se_unitMb`, `03-change-log.md` (3-10) | `f587e0b` |
-| 2026-10-02 | 로그 탭: **영수증 여러 장을 합쳐 다시 인쇄함**(`payment.receipt.print_combined`, 수납 `82f6d55`) — 종류 「Reçus imprimés ensemble」, 칸 「뽑은 종이」·「묶는 방식」(값은 수납 화면의 글자 그대로), 요약의 영수번호는 칸에 한 번만. 권한 시험 표에 수납의 새 길 셋(`GET /billing/receipts` · `POST /billing/receipts/print-log` · `PUT /billing/visit/:id/saved-fees`, 모두 payment) — 142 × 11 = 1562건 | `settingsAudit.js`, i18n `se_act_receiptPrintCombined`·`se_fld_printDocument`·`se_fld_printGrouping`, `settings.access.mjs`, `03-change-log.md` (3-10·4절) | (이 커밋) |
+| 2026-10-02 | 로그 탭: **영수증 여러 장을 합쳐 다시 인쇄함**(`payment.receipt.print_combined`, 수납 `82f6d55`) — 종류 「Reçus imprimés ensemble」, 칸 「뽑은 종이」·「묶는 방식」(값은 수납 화면의 글자 그대로), 요약의 영수번호는 칸에 한 번만. 권한 시험 표에 수납의 새 길 셋(`GET /billing/receipts` · `POST /billing/receipts/print-log` · `PUT /billing/visit/:id/saved-fees`, 모두 payment) — 142 × 11 = 1562건 | `settingsAudit.js`, i18n `se_act_receiptPrintCombined`·`se_fld_printDocument`·`se_fld_printGrouping`, `settings.access.mjs`, `03-change-log.md` (3-10·4절) | `a3f24e3` |
+| 2026-10-02 | **설정에 「진단 목록 / Diagnostics」 탭**(진료 화면의 진단 칸이 찾는 목록 — 표는 진료 050): 전체 보기(꺼진 것 포함) · 찾기 · 더하기 · 고치기 · 켜고 끄기 · 순서(▲▼와 Position). 지우기 없음. 같은 코드·이름은 알리기만. 관리 길 넷(settings), 로그 한 줄씩 | `settingsDiagnoses.jsx`(새), `Settings.jsx`(탭), `admin.routes.js` 「DIAGNOSIS LIST」, `utils/audit.js`(한 줄), `settings.messages.js`·`settingsMessages.js`, `settingsAudit.js`, i18n `se_dx*`·`se_tabDiagnoses`·`se_errDx*`·`se_act_diagnosisCode`, `settings.diagnoses.mjs`(새, 40), `settings.access.mjs`(149), 설명서, `03-change-log.md` (2.3·2.9·3-9d) | `c8f1bab` |

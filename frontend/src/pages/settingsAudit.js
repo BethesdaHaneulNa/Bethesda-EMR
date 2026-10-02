@@ -50,6 +50,8 @@ export var AUDIT_ACTIONS = {
   'settings.order.price_editable': 'se_act_orderPriceEditable',
   // a phrase category made, renamed or removed (name, status, phrases moved)
   'settings.phrase.category': 'se_act_phraseCategory',
+  // the list of frequent diagnoses: a row added, edited, switched off or on (code, names, status)
+  'settings.diagnosis.code': 'se_act_diagnosisCode',
   // documents (decision 2026-09-30 (다)): issued and voided; the document's content never comes here
   'documents.issue': 'se_act_docIssue',
   'documents.void': 'se_act_docVoid',
@@ -59,6 +61,8 @@ export var AUDIT_ACTIONS = {
 var FIELDS = {
   // settings: staff accounts
   login_id: 'se_fLoginId', name: 'se_fName', role: 'se_colRole',
+  // settings: a row of the diagnosis list (its status is the shared field, last)
+  code: 'se_colCode', name_en: 'se_dxNameEn', name_fr: 'se_dxNameFr', name_ko: 'se_dxNameKo',
   department_id: 'se_colDept', phone: 'se_fPhone', email: 'se_fEmail', permissions: 'se_fld_permissions',
   // laboratory: results
   value: 'se_fld_value', flag: 'se_fld_flag', unit: 'se_fld_unit',
@@ -201,6 +205,8 @@ export function auditValue(t, field, v, ctx) {
     return v.map(function (p) { var m = MODULES.filter(function (x) { return x.perm === p; })[0]; return m ? (t[m.key] || p) : p; }).join(', ');
   }
   if (field === 'role') return t['se_role_' + v] || v;
+  // a row of the diagnosis list is switched on or off: the words its own tab uses
+  if (field === 'status' && ctx && ctx.entity === 'diagnosis_code' && (v === 'active' || v === 'inactive')) return (v === 'active' ? t.se_on : t.se_off) || v;
   if (field === 'status' && (v === 'active' || v === 'inactive')) return v === 'active' ? t.se_statusActive : t.se_statusInactive;
   if (field === 'status' && v === 'ordered' && ctx && ctx.entity === 'prescription') return t.se_st_rxOrdered || v;
   if (field === 'status' && STATUS_KEYS[v]) return t[STATUS_KEYS[v]] || v;

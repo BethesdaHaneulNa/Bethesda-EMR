@@ -67,6 +67,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
 1. Dans la case **Diagnostic**, tapez au moins deux lettres du nom, ou le code (`palu`, `fievre`, `J06`). La liste des diagnostics fréquents s'affiche.
 2. Choisissez avec ↑ ↓ puis Entrée (ou cliquez). Entrée seule prend la première ligne.
 3. Le diagnostic n'est pas dans la liste : choisissez la dernière ligne **Ajouter « … » tel quel (sans code)**. Il est enregistré avec vos mots, sans code.
+   - Un diagnostic fréquent qui manque dans la liste : l'administrateur l'ajoute dans **Paramètres → Diagnostics**. Après l'ajout, rechargez l'écran de consultation (F5) pour le voir dans la liste.
 4. Chaque diagnostic est une ligne du petit tableau sous la case : **✕**, **DP** ou un numéro, le code, le nom. Le premier saisi est le diagnostic principal (**DP**) ; les autres sont numérotés 2, 3, 4… Pour qu'un autre devienne le principal, cliquez sur son **numéro**. Pour en retirer un, cliquez sur **✕**. Au-delà de quatre lignes, le tableau se fait défiler.
 5. Les diagnostics des visites précédentes se lisent à droite dans **Dossier Patient** (ligne **Diagnostic :** de chaque visite).
 6. Dans **📄 Documents → Lettre de référence**, la case **Diagnostic** est déjà remplie avec ces diagnostics ; vous pouvez la corriger.
@@ -148,7 +149,7 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 5. Dans le texte proposé, remplacez chaque partie entre crochets `[ ]` par le vrai contenu et supprimez les crochets. Tant qu'il en reste, une ligne jaune **⚠ À compléter** les montre.
 6. Cliquez sur **Émettre**. Le document reçoit un numéro (par exemple `D26-00001`).
 7. Cliquez sur **🖨 Réimprimer**, puis signez. Le document porte le nom du médecin qui l'a rédigé.
-8. Le **Compte-rendu d'imagerie** (la feuille imprimée depuis la liste **Imagerie**, pour accompagner les images vers un autre hôpital) n'est pas dans la liste **Formulaires** : il se fait seulement depuis **Imagerie** (guide PACS). Une fois émis, il apparaît ici dans **Historique** comme les autres documents : on peut le rouvrir, le **Réimprimer** et l'**Annuler**.
+8. Le **Compte-rendu d'imagerie**, les **Résultats d'analyses** et les **images d'un examen** ne sont pas des documents émis : ils s'impriment depuis **Imagerie** ou **Résultats labo**, sans numéro, et n'apparaissent pas dans **Historique**. Chaque impression est notée dans le journal des modifications. Pour les refaire, imprimez-les de nouveau au même endroit.
 9. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**. L'émission et l'annulation sont notées dans le journal des modifications (numéro et nom du document, jamais son contenu).
 
 **Certificat médical.** Cliquez sur **Documents**, puis sur **Certificat médical** à gauche.
@@ -156,11 +157,11 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 1. Le patient, les diagnostics de la consultation, la date, la clinique et votre nom sont déjà remplis.
 2. Cochez **Diagnostic clinique** ou **Diagnostic définitif**.
 3. Écrivez **Histoire de la maladie ou de la blessure**, **Constatations et avis du médecin** et, s'il y a lieu, **Remarques**.
-4. **Adresse** : à remplir si le dossier du patient n'en a pas. **N° d'inscription à l'Ordre** : tapez-le, ou laissez vide pour l'écrire à la main sur le papier.
+4. **Adresse** : à remplir si le dossier du patient n'en a pas.
 5. La case **Diagnostic** peut être corrigée : une ligne par diagnostic, le code d'abord s'il y en a un.
 6. Cliquez sur **Émettre**, puis **🖨 Réimprimer**, et signez. Le certificat tient sur une page, sauf si le texte est très long.
 
-<!-- terme à vérifier sur place : « N° d'inscription à l'Ordre » (numéro ONM ?), « Diagnostic définitif », le titre « Certificat médical » -->
+<!-- terme à vérifier sur place : « Diagnostic définitif », le titre « Certificat médical » -->
 
 <!-- terme à vérifier sur place : noms des formulaires opératoires et termes médicaux des comptes-rendus (liste dans wiki/modules/consultation.md 3.6) -->
 
