@@ -169,11 +169,17 @@ export function SignatureBlock(props) {
 // adds a 14 mm page margin (printDocument), so the padding here is on top of that.
 export function A4(props) {
   return (
-    <div ref={props.innerRef} style={{
+    <div ref={props.innerRef} className="bethesda-a4" style={{
       width: '100%', background: '#fff', color: '#111',
       padding: props.pad || '34px 40px', boxSizing: 'border-box',
       fontFamily: '"Times New Roman", Georgia, serif', fontSize: 13, lineHeight: 1.45,
     }}>
+      {/* The preview shows what prints. The app's page sets every table to 16px (index.html,
+          for the screens); the print window has no such rule, so a table of the paper that
+          names no size of its own - the signature block - printed at the paper's 12.5px but
+          was shown at 16px. This puts the preview back on the paper's own size. It changes
+          nothing on paper. */}
+      <style>{'.bethesda-a4 table{font-size:inherit}'}</style>
       {props.children}
     </div>
   );
