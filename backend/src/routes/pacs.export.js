@@ -350,7 +350,11 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
     const studies = await studiesOf(cfg, exams);
     if (!studies) return refuse(res, 'UNREACHABLE');
     for (const e of exams) { const st = studies[linkOf(e)]; if (!st || st === 'twice') return refuse(res, 'NOT_ON_SERVER', { order_item_id: e.id }); }
-    const sizes = await inTurns(exams, 4, e => sizeOf(cfg, studies[linkOf(e)]));
+    // Two orders may point at one study (linked by accession to the same images): the study
+    // goes into the bundle once. Named twice, the image server never answers (Orthanc
+    // 1.12.11, tried) - and its files and bytes would be counted twice in the log.
+    const wanted = [...new Map(exams.map(e => [studies[linkOf(e)].ID, studies[linkOf(e)]])).values()];
+    const sizes = await inTurns(wanted, 4, st => sizeOf(cfg, st));
     if (sizes.some(z => !z)) return refuse(res, 'UNREACHABLE');
     const items = sizes.reduce((n, z) => n + z.items, 0), bytes = sizes.reduce((n, z) => n + z.bytes, 0);
 
@@ -363,7 +367,7 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
       r = await fetch(new URL(base.pathname.replace(/\/+$/, '') + '/tools/create-media-extended', base.origin), {
         method: 'POST', signal: ctl.signal,
         headers: { Authorization: 'Basic ' + Buffer.from('admin:' + cfg.orthanc_password).toString('base64'), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Resources: exams.map(e => studies[linkOf(e)].ID), Synchronous: true }),
+        body: JSON.stringify({ Resources: wanted.map(st => st.ID), Synchronous: true }),
       });
     } catch (e) { return refuse(res, 'UNREACHABLE'); } finally { clearTimeout(head); }
     if (r.status !== 200 || !r.body) { ctl.abort(); return refuse(res, 'UNREACHABLE'); }
