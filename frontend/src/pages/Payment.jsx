@@ -10,7 +10,7 @@ import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
 import { RadiologyReadings } from '../components/RadiologyReadings.jsx';
 import { LabResultsWindow } from '../components/LabResults.jsx';
-import { ReceiptModal } from '../components/Receipt.jsx';
+import { ReceiptModal, ReprintModal } from '../components/Receipt.jsx';
 import { packWord } from '../documents/rx-dosing.js';
 
 // Amounts: French puts a non-breaking space between thousands (« 108 850 »), as the
@@ -94,6 +94,13 @@ export default function PaymentPage() {
   var rt2 = useState('chart'), rightTab2 = rt2[0], setRightTab2 = rt2[1];
   var rcps = useState([]), receipts = rcps[0], setReceipts = rcps[1];
   var sbs = useState(null), settleBill = sbs[0], setSettleBill = sbs[1];
+  // Printing receipts again from the patient's receipt list (the director, 2026-10-02):
+  // receipts are ticked, and several are printed together - as one summary receipt and/or
+  // one detailed statement, one by one, or by visit date. Printing only reads; it makes
+  // and changes no receipt. A cancelled or replaced receipt is printed alone, never joined.
+  var pks = useState({}), picked = pks[0], setPicked = pks[1];              // {billing id: true}
+  var rds = useState(null), reprintDlg = rds[0], setReprintDlg = rds[1];    // {doc, grouping} - the question before printing several
+  var rjs = useState(null), reprintJob = rjs[0], setReprintJob = rjs[1];    // {ids, doc, grouping} - the papers shown
   var vds = useState(null), voidDlg = vds[0], setVoidDlg = vds[1];   // {bill, reason} - the cancel dialog (M6)
   var cds = useState(null), cashDay = cds[0], setCashDay = cds[1];          // GET /cash-day (M9)
   var sis = useState(false), showInactive = sis[0], setShowInactive = sis[1]; // cancelled / replaced receipts folded
@@ -255,6 +262,7 @@ export default function PaymentPage() {
     api.get('/billing/patient/'+pid+'/history').then(function(r){ setReceipts(r||[]); }).catch(function(){ setReceipts([]); });
     api.get('/billing/patient/'+pid+'/balance').then(function(b){ setPatBalance(b||{owed:0,refund:0}); }).catch(function(){ setPatBalance({owed:0,refund:0}); });
   },[sel]);
+  useEffect(function(){ setPicked({}); setReprintDlg(null); }, [sel ? sel.patient_id : null]);   // ticks belong to one patient
 
   // quiet === true: the 30 s refresh - no "loading" over the list, the fee codes are not
   // read again. (The refresh button passes its click event, which is not `true`.)
@@ -578,6 +586,19 @@ export default function PaymentPage() {
   }
 
   function reprint(b){ setReceiptId(b.id); }
+  function canPick(b){ return b.payment_status!=='cancelled'; }
+  function pickedIds(){ return (receipts||[]).filter(function(b){ return picked[b.id] && canPick(b); }).map(function(b){ return b.id; }); }
+  function togglePick(b){ if(!canPick(b)) return; setPicked(function(p){ var n = Object.assign({}, p); if(n[b.id]) delete n[b.id]; else n[b.id] = true; return n; }); }
+  function allPicked(){ var all = (receipts||[]).filter(canPick); return all.length>0 && all.every(function(b){ return picked[b.id]; }); }
+  function pickAll(){ var n = {}; if(!allPicked()) (receipts||[]).filter(canPick).forEach(function(b){ n[b.id] = true; }); setPicked(n); }
+  // one ticked: its receipt window (receipt and statement tabs); several: ask what and how
+  function reprintPicked(){
+    var ids = pickedIds();
+    if(!ids.length) return;
+    if(ids.length===1){ setReceiptId(ids[0]); return; }
+    setReprintDlg({ doc:'receipt', grouping:'all' });
+  }
+  function staffName(){ try { return (JSON.parse(localStorage.getItem('medconnect_user')||'{}').name)||''; } catch(e){ return ''; } }
 
   function settleConfirm(){ return once(settleConfirmNow); }
   async function settleConfirmNow(){
@@ -770,11 +791,17 @@ export default function PaymentPage() {
                 <span style={{fontSize:13,color:'var(--danger-text)',fontWeight:800,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(patBalance.owed)} Ar</span>
                 <button onClick={settleAll} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--ok)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'5px 10px',cursor:'pointer',fontSize:13,fontWeight:800,whiteSpace:'nowrap'}}>💵 {t.settleAll||'전체 미수 수납'}</button>
               </div>:null}
+              <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 8px',marginBottom:6,fontSize:13}}>
+                <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',color:t2,whiteSpace:'nowrap'}}><input type="checkbox" checked={allPicked()} onChange={pickAll} style={{width:16,height:16,cursor:'pointer'}} />{t.py_pickAll}</label>
+                {pickedIds().length?<span style={{color:t3,whiteSpace:'nowrap'}}>{t.py_pickedN.replace('{n}', pickedIds().length)}</span>:null}
+                <button onClick={reprintPicked} disabled={!pickedIds().length} style={{marginLeft:'auto',whiteSpace:'nowrap',background:pickedIds().length?'var(--accent)':'var(--chip)',color:pickedIds().length?'var(--on-fill)':'var(--text-4)',border:'1px solid '+(pickedIds().length?'var(--accent-text)':bd2),borderRadius:5,padding:'4px 10px',fontSize:13,fontWeight:800,cursor:pickedIds().length?'pointer':'default'}}>🖨 {t.py_reprintN.replace('{n}', pickedIds().length)}</button>
+              </div>
               {receipts.map(function(b,i){
                 var out=parseFloat(b.outstanding)||0;
                 var cancelled = b.payment_status==='cancelled';
                 return <div key={i} style={{background:scBg,border:'1px solid '+(cancelled?(b.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):bd),borderLeft:cancelled?'3px solid '+(b.replaced_by_receipt_no?'var(--violet-2-a50)':'var(--danger-a40)'):'1px solid '+bd,borderRadius:5,padding:'8px 10px',marginBottom:6}}>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                    <input type="checkbox" checked={!!picked[b.id]&&!cancelled} disabled={cancelled} onChange={function(){togglePick(b)}} title={cancelled?t.py_pickCancelled:t.py_pickOne} aria-label={(cancelled?t.py_pickCancelled:t.py_pickOne)+' '+b.receipt_no} style={{width:16,height:16,flexShrink:0,cursor:cancelled?'not-allowed':'pointer'}} />
                     <span style={{fontFamily:'monospace',fontSize:13,color:'var(--ok-text)',fontWeight:700,textDecoration:cancelled?'line-through':'none'}}>{ymd(b.billing_date)}</span>
                     <span style={{fontSize:11,color:t2}}>{b.dept_code||''}</span>
                     <span style={{fontSize:11,color:t3,marginLeft:'auto',fontFamily:'monospace'}}>{b.receipt_no}</span>
@@ -847,6 +874,28 @@ export default function PaymentPage() {
 
       {/* One receipt for right after payment and for reprints, read from the stored bill (components/Receipt.jsx). */}
       <ReceiptModal billingId={receiptId} t={t} onClose={function(){ if(receiptQueue.length){ setReceiptId(receiptQueue[0]); setReceiptQueue(receiptQueue.slice(1)); } else setReceiptId(null); }} />
+      {reprintDlg?(
+        <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={function(){setReprintDlg(null)}}>
+          <div role="dialog" aria-label={t.py_reprintTitle.replace('{n}', pickedIds().length)} style={{background:pn,border:'1px solid '+bd2,color:tx,borderRadius:10,width:380,maxWidth:'94vw',maxHeight:'92vh',overflow:'auto',padding:18,boxSizing:'border-box'}} onClick={function(e){e.stopPropagation()}}>
+            <div style={{fontWeight:900,fontSize:16,marginBottom:4}}>🖨 {t.py_reprintTitle.replace('{n}', pickedIds().length)}</div>
+            <div style={{fontSize:13,color:t2,marginBottom:10,overflowWrap:'anywhere'}}>{sel?[sel.last_name+' '+sel.first_name, sel.chart_no].filter(Boolean).join(' · '):''}</div>
+            <div style={{fontSize:12,color:t3,fontWeight:800,margin:'8px 0 5px'}}>{t.py_reprintWhat}</div>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.doc==='receipt'?'var(--accent-text)':bd2),background:reprintDlg.doc==='receipt'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-doc" checked={reprintDlg.doc==='receipt'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {doc:'receipt'})); }} style={{marginTop:3}} /><span>{t.py_docReceipt}<span style={{display:'block',fontSize:12,color:t3}}>{t.py_docReceiptHint}</span></span></label>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.doc==='statement'?'var(--accent-text)':bd2),background:reprintDlg.doc==='statement'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-doc" checked={reprintDlg.doc==='statement'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {doc:'statement'})); }} style={{marginTop:3}} /><span>{t.py_docStatement}<span style={{display:'block',fontSize:12,color:t3}}>{t.py_docStatementHint}</span></span></label>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.doc==='both'?'var(--accent-text)':bd2),background:reprintDlg.doc==='both'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-doc" checked={reprintDlg.doc==='both'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {doc:'both'})); }} style={{marginTop:3}} /><span>{t.py_docBoth}</span></label>
+            <div style={{fontSize:12,color:t3,fontWeight:800,margin:'12px 0 5px'}}>{t.py_reprintHow}</div>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.grouping==='all'?'var(--accent-text)':bd2),background:reprintDlg.grouping==='all'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-grouping" checked={reprintDlg.grouping==='all'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {grouping:'all'})); }} style={{marginTop:3}} /><span>{t.py_groupAll}</span></label>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.grouping==='each'?'var(--accent-text)':bd2),background:reprintDlg.grouping==='each'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-grouping" checked={reprintDlg.grouping==='each'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {grouping:'each'})); }} style={{marginTop:3}} /><span>{t.py_groupEach}</span></label>
+              <label style={{display:'flex',gap:8,alignItems:'flex-start',padding:'6px 9px',border:'1px solid '+(reprintDlg.grouping==='visit_day'?'var(--accent-text)':bd2),background:reprintDlg.grouping==='visit_day'?'var(--accent-a12)':'transparent',borderRadius:6,marginBottom:5,cursor:'pointer',fontSize:14}}><input type="radio" name="reprint-grouping" checked={reprintDlg.grouping==='visit_day'} onChange={function(){ setReprintDlg(Object.assign({}, reprintDlg, {grouping:'visit_day'})); }} style={{marginTop:3}} /><span>{t.py_groupDay}</span></label>
+            <div style={{fontSize:12,color:t3,margin:'10px 0'}}>{t.py_reprintNoChange}</div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={function(){setReprintDlg(null)}} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:7,padding:'9px',cursor:'pointer',fontSize:14}}>{t.cancel}</button>
+              <button onClick={function(){ setReprintJob({ ids:pickedIds(), doc:reprintDlg.doc, grouping:reprintDlg.grouping }); setReprintDlg(null); }} style={{flex:2,background:'var(--accent)',color:'var(--on-fill)',border:'none',borderRadius:7,padding:'9px',cursor:'pointer',fontSize:14,fontWeight:800}}>{t.py_preview}</button>
+            </div>
+          </div>
+        </div>
+      ):null}
+      <ReprintModal ids={reprintJob?reprintJob.ids:[]} doc={reprintJob?reprintJob.doc:'receipt'} grouping={reprintJob?reprintJob.grouping:'all'} printedBy={staffName()} t={t} onClose={function(){ setReprintJob(null); }} />
       <PatientFinder open={finderOpen} onClose={function(){setFinderOpen(false)}} mode="visit"
         onPickVisit={function(v){ if(tab==='waiting') openPicked(v); else { pickRef.current = v; setTab('waiting'); } }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false)}} category="document"

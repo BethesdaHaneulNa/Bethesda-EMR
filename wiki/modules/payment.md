@@ -90,7 +90,7 @@
    - 약의 총량이 비어 있으면 수납이 되지 않습니다(빨간 「Quantité totale manquante…」) — 진료실이 처방을 다시 저장하면 됩니다(2.11).
 8. 한 푼도 못 받았으면 빨간 **Impayé (미수 처리)** 를 누릅니다. **총액 전부**가 미수로 남습니다. **Montant Reçu** 칸에 숫자가 있으면 「그 금액은 기록되지 않습니다」라고 한 번 묻습니다 — 실제로 돈을 받았으면 **취소**하고 **Confirmer** 를 누르세요.
 9. 누르면 처리가 끝날 때까지 버튼이 흐려지고 「…」로 바뀝니다. 여러 번 눌러도 영수는 한 장만 생깁니다.
-10. 영수증 창이 뜨면 **🖨 Imprimer Reçu (영수증 출력)** 를 누릅니다. 새 창이 열리며 A4 인쇄 창이 뜹니다(브라우저가 팝업을 막으면 이 사이트의 팝업을 허용하세요). **Fermer (닫기)** 로 닫습니다.
+10. 영수증 창이 뜨면 **🖨 Imprimer : Reçu (일반 영수증 인쇄)** 를 누릅니다(창은 일반 영수증으로 열리고, 품목 목록은 옆 탭 **Relevé détaillé (세부내역서)** — 2.9). 새 창이 열리며 A4 인쇄 창이 뜹니다(브라우저가 팝업을 막으면 이 사이트의 팝업을 허용하세요). **Fermer (닫기)** 로 닫습니다.
     - 영수증은 **화면 언어와 상관없이 항상 프랑스어**입니다. 병원명·주소·전화는 **Paramètres (설정)** 의 병원 정보에서 옵니다.
     - 영수증에는 항목(약·검사·발급비), 할인, 이전 미수, 총액, 받은 돈, 거스름돈, 실제 받은 돈, 남은 미수, 받은 직원이 나옵니다. 항목이 많아 두 장이 되면 합계는 둘째 장에 통째로 옮겨지고, 그 위에 영수번호·환자 이름이 작게 붙습니다.
 
@@ -190,7 +190,19 @@
   4. 영수증이 **ANNULÉ** 가 되고, 그 내원은 **En attente** 목록에 **Re-facturer** 로 돌아옵니다(2.7). **Retour** 는 아무것도 하지 않고 닫습니다.
   - **미수 수납 영수증(「Règlement du reçu …」)을 취소하면** 「미수를 받은 것」이 취소됩니다: 옛 영수증의 미수가 원래 금액으로 되살아납니다. 받은 돈을 돌려줬으면 **Oui** 를 고릅니다.
   - 「…reporté sur le reçu R-…, qui le facture maintenant. Annulez d’abord R-…」 안내가 뜨면, 이 영수증의 미수가 뒤의 영수증으로 넘어가 있는 것입니다. 안내에 나온 영수증을 **먼저** 취소한 뒤 이 영수증을 취소합니다.
-- **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유, 돌려줬으면 **Remboursé au patient : N Ar**)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
+- **🖨 Réimprimer (재출력)** — 저장된 영수증을 수납 직후와 **똑같은 모양**으로 다시 뽑습니다(「재발행」 표시는 찍지 않음 — 2026-10-02 결정). 뜨는 창에 탭 둘: **Reçu (일반 영수증)** — 분류별 금액, 환자에게 주는 종이 · **Relevé détaillé (세부내역서)** — 품목 하나하나, 영수증이 아님. 인쇄 단추는 보고 있는 종이를 뽑습니다(**🖨 Imprimer : Reçu**). 수납 확정 직후에 뜨는 창도 같은 창입니다. 미수 수납 영수증은 품목이 없어 탭이 하나입니다. 취소된 것은 빨간 **ANNULÉ** 상자(취소 일시·취소한 직원·사유, 돌려줬으면 **Remboursé au patient : N Ar**)가, 정정 영수증에는 「Remplace le(s) reçu(s) R-…」와 **Remboursé au patient (환불)** 이, 미수를 다음 영수증으로 넘긴 영수증에는 「Solde reporté sur le reçu R-…」와 상태 **Reporté** 가 찍힙니다.
+
+- **여러 장을 한 번에 다시 뽑기**(2026-10-02, 실장님 요청) — 영수내역의 영수증마다 왼쪽에 **체크 칸**, 맨 위에 **Tout cocher (전체 선택)** · 「N coché(s)」 · **🖨 Réimprimer (N)**.
+  1. 뽑을 영수증을 체크합니다. 취소된 영수증(정정으로 바뀐 것 포함)은 칸이 흐려 고를 수 없습니다 — 그 줄의 **Réimprimer** 로 한 장씩.
+  2. **🖨 Réimprimer (N)** 을 누릅니다. 한 장만 골랐으면 위의 탭 둘짜리 창이 바로 뜹니다. 두 장 이상이면 묻는 창:
+     - **Quel papier (무엇을)**: **Reçu** / **Relevé détaillé** / **Les deux**
+     - **Comment les regrouper (어떻게 묶을까)**: **Tout sur un seul papier** (전체 합산 1장) / **Un papier par reçu** (한 건씩 따로) / **Regrouper par date de consultation** (같은 진료일끼리)
+  3. **Aperçu (미리보기)** → 종이가 차례로 보입니다 → **🖨 Imprimer (N)**. 종이마다 새 쪽에서 시작합니다.
+  - 합친 일반 영수증의 제목은 **REÇU RÉCAPITULATIF**: 인쇄한 날짜 · 직원, 영수번호와 날짜의 표, 분류별 합, 청구 · 받은 돈 · 남은 미수 합계, 도장 자리. 「이미 발행한 영수증을 모은 종이이며 수납을 기록하지 않는다」고 적혀 있습니다.
+  - **다시 뽑아도 영수증과 금액은 바뀌지 않습니다.** 새 영수번호도 생기지 않습니다.
+  - 「Les totaux de ces reçus ne concordent pas…」 안내가 뜨면 합계가 맞지 않는 조합입니다 — **Un papier par reçu** 로 뽑고 관리자에게 알립니다.
+  - 미수 수납 영수증만 골라 세부내역서를 달라고 하면 「…aucun article : pas de relevé détaillé」 — 품목은 원래 영수증에 있습니다.
+  - 여러 장을 **합쳐** 뽑으면 로그에 한 줄이 남습니다(누가 · 어느 영수증들을). 한 장 재출력은 남지 않습니다.
 
 ### 2.10 Payé aujourd’hui (수납 완료) — 오늘 수납한 것 보기
 
@@ -222,7 +234,7 @@
 | 「Appliquer la correction ? Le reçu actuel est annulé et réémis au montant correct.」 + 「Rendez N Ar au patient.」 / 「N Ar resteront impayés.」 / 「Aucune différence…」 | 정정 확인. 돌려줄 돈·남을 미수를 다시 보고 확인(2.6, 2.12) |
 | 「⚠ Code de consultation C0x introuvable — la consultation compte 0 Ar…」 | 그 진료 종류의 진료비 코드가 설정에 없습니다. 진료비 없이 계산됩니다(막지는 않음). 진료비를 받아야 하면 수납 전에 설정 › 오더 코드에 그 코드를 되살리거나 만들어 달라고 합니다 |
 | 「⚠ Nombre de flacons / tubes non indiqué pour : …」 | 병·튜브로 주는 약인데 개수가 비어 있습니다. 수납이 막혀 있습니다. **진료실에 그 약의 개수를 넣어 달라고** 한 뒤 **↻** 를 누르고 수납합니다 |
-| 「Le navigateur a bloqué la fenêtre d'impression…」 | 브라우저가 인쇄 창(팝업)을 막았습니다. 주소창 오른쪽의 팝업 차단 표시를 눌러 이 사이트의 팝업을 허용하고 다시 **Imprimer Reçu** |
+| 「Le navigateur a bloqué la fenêtre d'impression…」 | 브라우저가 인쇄 창(팝업)을 막았습니다. 주소창 오른쪽의 팝업 차단 표시를 눌러 이 사이트의 팝업을 허용하고 다시 **🖨 Imprimer : Reçu** |
 | 화면 곳곳의 영어(`paid` · `partial` · `+ Outstanding` · `No items`) | 아직 번역되지 않은 글자(7절 L1). `paid` 전액 수납 · `partial` 부분 수납 · `unpaid` 미수 · `cancelled` 취소 |
 
 ### 2.12 돈을 돌려줘야 할 때 (현금)
@@ -366,27 +378,72 @@
 - 영수취소(`/:id/void`), 정정(`/visit/:id/correct`), 미수 수납(`/settle`)도 같은 환자 잠금을 겁니다. 이월 금액이 수납과 동시에 바뀌지 않게.
 - 화면은 `BILL_CHANGED`로 시작하는 오류를 받으면 `py_billChanged` 안내를 띄우고 선택을 풀고 목록을 새로 불러옵니다.
 
-### 3.10 영수증 (2026-09-29, H3 — 실장님 결정: 제대로 · 항상 프랑스어 · A4)
+### 3.10 영수증 — 일반 영수증 · 세부내역서 · 합쳐 다시 뽑기 (2026-09-29 H3, 2026-10-02 나눔 — 실장님 결정)
 
-- **부품**: `frontend/src/components/Receipt.jsx` — `ReceiptDoc`(인쇄되는 A4 한 장), `ReceiptModal`(미리보기 + 인쇄 단추). 수납 직후(`doConfirmNow`·`confirmCorrectionNow`가 새 영수의 `id`를 넘김)와 재출력(`reprint(b)`)이 **같은 `ReceiptModal`** 을 씁니다.
-- **금액은 저장된 영수에서만** 읽습니다: `GET /api/billing/:id/detail`(영수 · 항목 · 이월 출처). 화면이 계산한 값은 쓰지 않습니다 — 예전 수납 직후 영수증이 빈칸·0 Ar였던 원인(탭이 바뀌며 화면 선택이 지워짐)이 구조적으로 없어졌습니다.
+결정(2026-09-29): 제대로 · 항상 프랑스어 · A4. 결정(2026-10-02): 품목이 다 들어간 한 장을 **일반 영수증**(분류별 금액)과 **세부내역서**(품목)로 나눔, 영수 내역에서 여러 장을 합쳐 다시 뽑음, 재발행(DUPLICATA) 표시는 찍지 않음, 합쳐 뽑을 때만 로그 한 줄. 설계와 결정 · 본 것: [reference/payment-receipt-split-design.md](../reference/payment-receipt-split-design.md), 견본 그림 `reference/design/receipt-split-*.png`.
+
+- **부품**: `frontend/src/components/Receipt.jsx`
+  - 종이 셋 — `ReceiptDoc`(일반 영수증, 영수 한 장) · `StatementDoc`(세부내역서, 영수 한 장 또는 여러 장) · `SummaryDoc`(합친 일반 영수증 「Reçu récapitulatif」).
+  - 창 둘 — `ReceiptModal`(영수 한 장: 탭 「일반 영수증」 · 「세부내역서」, 보고 있는 종이를 인쇄) · `ReprintModal`(고른 여러 장: 종이를 위아래로 보여 주고 한 번에 인쇄, 종이마다 새 쪽).
+  - 셈 — `categoriesOf(d)`(영수 한 장의 분류별 금액) · `combineReceipts(list)`(합친 종이의 합계와 검산) · `reprintPapers(list, doc, grouping)`(고른 영수로 어떤 종이들이 나오는지).
+  - 수납 직후(`doConfirmNow` · `confirmCorrectionNow`가 새 영수의 `id`를 넘김), 영수 한 장 재출력(`reprint(b)`), 체크 한 장 다시 인쇄가 **같은 `ReceiptModal`** 을 씁니다.
+- **금액은 저장된 영수에서만** 읽습니다: 한 장은 `GET /api/billing/:id/detail`, 여러 장은 `GET /api/billing/receipts?ids=`(같은 내용을 한 번에). 화면이 계산한 값은 쓰지 않습니다. **인쇄는 아무것도 저장하지 않습니다**(영수 · 영수 줄 · 현금 기록 · 미수 그대로, 새 번호 없음).
 - **병원 정보**: `GET /api/admin/clinic`(로그인만 확인). 머리말은 문서 엔진의 `ClinicHeader`(`documents/shared.jsx`, 진료 주관 — **고치지 않고 가져다 씀**): 프랑스어 이름(`name_fr` → `name_en` → `name`), 주소 · 전화 · 이메일(빈 값은 안 나옴).
-- **언어**: `RECEIPT_LANG = 'fr'`. 글자는 문서 엔진처럼 `{ ko, en, fr }` 표(`RL` · `STATUS` · `VISIT_TYPE`)에 두고 프랑스어로만 그립니다 — 번역 파일(`i18n`)이 아니라 부품 안에 둔 이유: 화면 언어를 따르지 않는 인쇄물이고, 문서 엔진의 다른 양식도 같은 방식이기 때문입니다. 미리보기 창의 단추(닫기·출력)만 화면 언어입니다.
-- **용지**: `RECEIPT_PAGE = { size: 'A4', widthPx: 688 }` 한 곳에서 정합니다. 인쇄는 `printDocument()`(새 창, `@page{size:A4;margin:14mm}`). 80mm로 바꾸려면 이 상수와 전용 인쇄 창이 필요합니다(`printDocument`는 A4 고정) — 만들지 않음(결정).
-- **쪽 나눔**: 항목표 머리줄은 쪽마다 반복(`thead`), 줄은 쪼개지지 않음. 합계 덩어리는 `break-inside: avoid`라 **통째로** 다음 쪽으로 넘어가고, 맨 위에 「영수번호 · 환자」가 작게 붙습니다(떨어진 쪽이 어느 영수증인지 알게).
-- **영수증에 나오는 것**: 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · (정정) Remplace le(s) reçu(s): 비고의 `correction of R-…`에서 · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 프랑스어 이름 + 의사, 없으면 칸째 숨김) · 항목표(Désignation · Code · Qté · Prix unitaire · Montant; 미수 수납 영수(진료 칸 0 + 이전 미수 > 0, 3.4의 모양)는 항목 대신 옛 영수마다 「Règlement du reçu R-… du …」 한 줄, 연결이 없어진 취소 영수는 비고의 영수번호로; Sous-total·Solde antérieur 줄은 생략) · Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호·날짜) · **Total à payer** · Montant remis(받은 돈 ≠ 실제 받은 돈일 때; 정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut(Payé · Paiement partiel · Impayé · Annulé; 미수가 다음 영수로 넘어갔으면 **Reporté**) · 「Solde reporté sur le reçu R-… du …」 · Merci de votre confiance.
-- **넣지 않는 것**(실장님 결정 2026-09-29): NIF/STAT 번호, 로고, 서명란, 금액 글자 표기 — 지금 영수증 그대로. 숫자는 **프랑스어 표기 `15 000 Ar`**(줄바꿈 없는 공백, 영수증 안에서만 — 화면은 `15,000`), 날짜는 다른 문서와 같은 `YYYY-MM-DD`. 인쇄 창을 브라우저가 막으면 `printDocument(…, 'fr')`로 **프랑스어** 안내가 뜹니다(진료 세션이 `printDocument`에 언어 인자를 추가, 2026-09-29).
+- **언어**: `RECEIPT_LANG = 'fr'`. 글자는 문서 엔진처럼 `{ ko, en, fr }` 표(`RL` · `CAT` · `STATUS` · `VISIT_TYPE`)에 두고 프랑스어로만 그립니다 — 화면 언어를 따르지 않는 인쇄물이기 때문입니다. **창의 탭 · 단추 · 안내만 화면 언어**(`py_doc*` · `py_print*` · `py_reprint*` 키).
+- **용지**: `RECEIPT_PAGE = { size: 'A4', widthPx: 688 }` 한 곳에서 정합니다. 인쇄는 `printDocument()`(새 창, `@page{size:A4;margin:14mm}`). 숫자는 **프랑스어 표기 `15 000 Ar`**(줄바꿈 없는 공백 — 코드에는 `\u00a0`로 적음, 종이 안에서만; 화면은 `15,000`), 날짜는 `YYYY-MM-DD`.
 
-### 3.11 변경 기록(로그) — 영수 취소 · 정정 (2026-09-29, 실장님 결정)
+**일반 영수증 (`ReceiptDoc`)** — 제목 REÇU · N° de reçu · 일시(`billing_date` + `created_at` 시각) · Caissier · (취소) ANNULÉ 상자: 취소 일시 · 취소한 직원 · 사유 · 돌려준 돈 · (정정) Remplace le(s) reçu(s) · Patient · N° dossier · 진료일 · 진료 종류 · Service(과 + 의사, 없으면 칸째 숨김) · **분류 표**(Prestations · Montant — 금액이 있는 분류만 한 줄씩; 미수 수납 영수는 옛 영수마다 「Règlement du reçu R-… du …」 한 줄) · 합계 칸: Sous-total · Remise(>0) · Solde antérieur(>0, 이월 출처 영수번호 · 날짜) · **Total à payer** · Montant remis(정정 영수는 **Déjà encaissé**) · Monnaie rendue(정정 영수는 **Remboursé au patient**) · Montant encaissé(`net_paid`) · **Reste à payer**(>0) · Statut · 「Solde reporté sur le reçu R-… du …」 · **Cachet et signature** 칸 · Merci de votre confiance · 「세부내역서는 요청하시면 드립니다」.
 
-공통 로그(`audit_log`, `wiki/03-change-log.md`)에 수납은 **두 가지만** 남깁니다. 화면에는 아무 표시도 없고, 설정 → 「기록」에서 관리자만 읽습니다. 보통 수납·추가 청구·미수 수납(새 영수)은 평소 일이라 남기지 않습니다.
+- 합계 칸 · 환자 칸 · 표 밖의 글은 **옛 영수증과 같은 글자**입니다(대조: 아래 「확인」).
+
+**분류** — 영수 줄의 `billing_item.item_type`으로 더합니다. 새 자료 · 설정이 없고 옛 영수도 같은 규칙입니다. 차례는 표의 차례로 고정.
+
+| `item_type` | 종이의 글자 | 들어가는 것 |
+|---|---|---|
+| `consultation` | Consultation | 진료비 |
+| `drug` | Médicaments | 원내 약 |
+| `lab` | Analyses de laboratoire | 검사 오더 |
+| `imaging` | Imagerie | 영상 오더 |
+| `procedure` | Actes et soins | 처치 오더 |
+| `fee` | Documents et frais divers | 창구 발급비, fee 종류 오더 |
+| 그 밖 | Autres | 옛 자료에 다른 값이 있을 때 |
+
+- 줄의 합이 영수의 소계와 0.5 Ar 넘게 다르면(옛 자료 대비) 줄을 믿지 않고 영수의 `consult_fee` · `drug_total` · `procedure_total` 세 금액으로 적습니다 — 검사 · 영상 · 처치는 「Examens, actes et autres frais」 한 줄.
+
+**세부내역서 (`StatementDoc`)** — 제목 RELEVÉ DÉTAILLÉ DES PRESTATIONS · Reçu(s) n° · Imprimé le · 환자 칸 · **품목 표**(Date(진료일) · Code · Désignation · Prix unitaire · Qté · Montant), 분류마다 머리 줄(분류 이름 · 분류 소계) · 합계: Total des prestations · Remise · **Net facturé** · 상자 「**Ce relevé n’est pas un reçu** … Paiement : voir le reçu n° …」. **받은 돈 · 거스름돈 · 미수는 적지 않습니다.** 병 · 튜브 약의 수량은 「2 flacons」.
+
+- 여러 장이면 진료일 순으로 **영수마다** 머리 줄(진료일 — 과, 의사 — reçu R-… · 그 영수의 품목 합)을 달고 이어집니다. 품목이 없는 영수(미수 수납)는 표에 줄이 없습니다.
+- 쪽 나눔: 표 머리는 쪽마다 반복(`thead`), 줄은 쪼개지지 않고, 분류 · 영수 머리 줄은 다음 줄과 붙어 다니며, **합계와 상자는 한 덩어리**로 다음 쪽에 넘어갑니다(맨 위에 「영수번호 · 환자」가 작게 붙음).
+
+**합친 일반 영수증 (`SummaryDoc`)** — 제목 REÇU RÉCAPITULATIF · 「Imprimé le : 날짜 à 시각」 · 「Par : 인쇄한 직원」(재발행 표시 없음) · 환자 칸과 기간 · **영수 표**(N° de reçu · Date du reçu · Consultation du · Facturé · Encaissé · Reste à payer; 미수가 넘어간 영수는 「reporté sur R-…」) · 분류별 합 · 합계 · 도장 자리 · 「이미 발행한 영수증을 모은 것이며 원래 영수증을 대신하지 않고 수납을 기록하지 않는다」.
+
+- `combineReceipts(list)`의 셈(영수마다 청구 = `subtotal − discount_amount`, 받은 돈 = `net_paid`, 남은 미수 = `outstanding`):
+  - **청구 합계** = Σ 청구 + **고르지 않은 영수에서 넘어온 이전 미수**(Σ `previous_balance` − 고른 영수끼리 넘긴 금액 — 두 번 세지 않음)
+  - **다른 영수로 넘어간 미수** = 고른 영수 중 미수가 **고르지 않은** 영수로 넘어간 것의 Σ(`total_due − net_paid`) — 「Solde reporté sur d’autres reçus」 줄
+  - **검산**: 청구 합계 = 받은 돈 합계 + 남은 미수 합계 + 다른 영수로 넘어간 미수, 그리고 분류 금액의 합 = 소계. 0.5 Ar 넘게 어긋나거나 취소된 영수가 섞이면 `ok = false` — 창은 종이를 그리지 않고 `py_reprintCannot` 안내만 보입니다.
+- 받은 지폐 금액 · 거스름돈은 적지 않습니다(영수마다의 일).
+
+**묶는 방식 (`reprintPapers`)** — `all`: 고른 것 전부 한 묶음 · `each`: 영수마다 · `visit_day`: 진료일이 같은 것끼리. 묶음에 영수가 하나면 그 영수의 보통 종이(일반 영수증 · 세부내역서), 둘 이상이면 합친 종이. 「둘 다」는 묶음마다 일반 → 세부 순.
+
+**취소된 영수 · 정정으로 바뀐 영수**는 합치지 않습니다 — 체크 칸이 흐리고(`canPick`), 「전체 선택」도 건너뜁니다. 한 장 재출력은 되고 ANNULÉ가 찍힙니다.
+
+**넣지 않는 것**(실장님 결정 2026-09-29): NIF/STAT 번호, 로고, 금액 글자 표기. (도장 · 서명 칸은 2026-10-02 결정으로 넣음.) 80mm 용지는 만들지 않음(`printDocument`는 A4 고정). 인쇄 창을 브라우저가 막으면 `printDocument(…, 'fr')`로 프랑스어 안내가 뜹니다.
+
+**확인**(격리 스택, 2026-10-02): 영수 269장을 옛 영수증과 새 「일반 + 세부」로 그려 글자로 대조 — 다른 것 0(합계 칸 · 환자 칸 · 표 밖의 글이 같고, 분류 합 = 옛 품목 합 = 소계, 세부내역서의 줄 = 옛 품목 줄). 환자마다 전부 + 둘씩의 조합 85가지 — 검산 통과, 종이에 찍힌 줄로 다시 더해도 맞음. 51줄짜리 세부내역서를 A4 PDF로 — 3쪽, 표 머리 반복, 합계와 상자가 같이 넘어감. 종이를 진짜 프린터로는 뽑아 보지 못했습니다.
+
+### 3.11 변경 기록(로그) — 영수 취소 · 정정 · 합쳐 다시 인쇄 (2026-09-29 · 2026-10-02, 실장님 결정)
+
+공통 로그(`audit_log`, `wiki/03-change-log.md`)에 수납은 **세 가지만** 남깁니다. 화면에는 아무 표시도 없고, 설정 → 「기록」에서 관리자만 읽습니다. 보통 수납·추가 청구·미수 수납(새 영수), **영수 한 장 재출력과 수납 직후 인쇄**는 평소 일이라 남기지 않습니다.
 
 | 언제 | action | 한 줄에 들어가는 것 |
 |---|---|---|
 | 영수 취소 `PUT /:id/void` (미수 수납 영수 취소 포함) | `payment.receipt.cancel` | summary: **영수번호 — 사유만**(2026-09-29 통합 시험 B4 — 말은 기록 탭이 번역하는 칸으로). before→after: 상태(`payment_status`), 미수. **after에만**: 총액(`total_due`), 받은 돈(`amount_paid` = `net_paid`), 돌려준 돈(`refunded_amount`, 0 = 창구에 둠, 받은 돈이 없으면 비움), 취소 사유, 미수를 되살린 옛 영수번호(`balance_restored_to`) — 기록은 바뀐 칸만 남기므로 취소로 바뀌지 않는 금액은 after 쪽에만 둠 |
 | 정정 `POST /visit/:id/correct` (환불이든 미수가 남든) | `payment.receipt.correct` | summary: **옛 영수번호 → 새 영수번호 · 바뀐 항목 코드**(`-DRG1`, `+X`, `PARA 9→6`) **— 사유**(말 없음, B4). before→after: 영수번호(`receipts`), 상태(`payment_status`, 영수마다 하나 — 배열), 총액, 받은 돈, 환불(`refund`), 미수, 항목×수량 |
+| 영수 **여러 장을 합쳐** 다시 인쇄 `POST /receipts/print-log` (2026-10-02) | `payment.receipt.print_combined` | summary: **영수번호들**(쉼표로). after에만: `receipts`(영수번호 배열) · `print_document`(`receipt` · `statement` · `both`) · `print_grouping`(`all` · `visit_day`). 환자 · 직원은 줄의 공통 칸. 돈은 아무것도 바뀌지 않음 — 「누가 어느 영수들을 합쳐 뽑았는지」만 |
 
-- 두 줄 모두 **바꾸는 트랜잭션 안에서, COMMIT 전에** 씁니다(`writeAudit(client, …)`) — 취소·정정이 롤백되면 줄도 없음. 거절(409·404)이면 줄 없음.
+- 취소 · 정정 두 줄은 **바꾸는 트랜잭션 안에서, COMMIT 전에** 씁니다(`writeAudit(client, …)`) — 취소·정정이 롤백되면 줄도 없음. 거절(409·404)이면 줄 없음.
+- **합쳐 인쇄**의 줄은 화면이 인쇄 단추를 누를 때 보내고 **답을 기다리지 않습니다** — 줄을 못 남겨도 인쇄는 됩니다. 합쳐진 종이가 하나도 없으면(한 장, 「한 건씩 따로」, 날짜가 모두 다른 「같은 진료일끼리」) 보내지 않습니다. 서버는 영수가 둘 미만이거나 다른 환자의 것이 섞이면 줄 없이 400. 브라우저가 인쇄 창을 막아도 줄은 남습니다(단추를 누른 기록). 기록 탭의 글자(행위 이름 · 칸 이름)는 설정 세션 것 — 총괄에 알림.
+- 격리 스택 확인(2026-10-02): 합쳐 인쇄 → 1줄 / 한 장 · 한 건씩 따로 · 날짜가 다른 「같은 진료일끼리」 → 0줄 / 로그 요청을 실패시켜도 인쇄됨 / 거절된 요청(한 장 · 다른 환자 · 모르는 종이) → 0줄.
 - 격리 스택 확인(2026-09-29): 보통 수납·미수 수납 → 0줄 / 영수 취소 → 1줄 / 이미 취소된 영수 다시(404) → 0줄 / 이월된 옛 영수 취소(409) → 0줄 / 미수 수납 영수 취소 → 1줄(`balance_restored_to` 옛 영수) / 정정 환불 2,000 → 1줄(`-DRG1 · refund 2000`) / 화면이 본 환불액과 다름(409) → 0줄 / 정정 뒤 미수 → 1줄(`owed 10000`).
 
 ### 3.12 현금 기록 — `cash_movement` (2026-09-29, 실장님 결정 M9 (가), 마이그레이션 304)
@@ -412,7 +469,7 @@
 ### 화면
 
 - `frontend/src/pages/Payment.jsx` — 수납 화면 전체.
-- `frontend/src/components/Receipt.jsx` — 영수증(수납 전용, 2026-09-29 새로 만듦). 3.10.
+- `frontend/src/components/Receipt.jsx` — 일반 영수증 · 세부내역서 · 합친 영수증과 그 창 둘(수납 전용, 2026-09-29 만듦 · 2026-10-02 나눔). 3.10.
 
 ### 서버 — `backend/src/routes/billing.routes.js` (`/api/billing`)
 
@@ -425,6 +482,8 @@
 | `GET /pending` | 수납 대기 목록. 오늘 진료 끝났고 **유효(취소 안 된) 영수가 없는** 내원(L7 — 부분·미수 영수가 있어도 빠짐) + **지난 날 내원 중 영수가 한 장도 없고 청구할 것이 있는 것**(진료비 있음, 원내 처방이나 취소 안 된 오더 있음 — `HAS_CHARGES_SQL`, 2026-09-29 접수 작업일자) + 취소만 남은 내원(날짜 무관) + 금액이 달라진 내원(날짜 무관). 줄마다 `previous_balance`, `needs_rebill`, `prior_paid`, `missing_qty`, `past_unbilled`, `needs_additional`, `needs_refund`, `extra_due`, `refund_due`, `active_bill_id`, `active_paid`, 정정 표시된 줄에는 `corr` |
 | `GET /completed?date=` | 그날(`billing_date`, 기본 오늘) 영수 전부 — **취소된 것도 포함**. 줄마다 `replaced_by_receipt_no`(정정으로 바뀐 영수면 새 영수번호 — 「바뀜」과 「취소」를 나눔), `carried_into_receipt_no`(미수가 넘어간 영수) |
 | `GET /:billingId/detail` | 영수 1장 + `billing_item` + `carried_from`(이 영수가 미수를 넘겨받은 옛 영수: `receipt_no` · `billing_date` · `amount`). 영수에는 `dept_name_fr` · `cancelled_by_name` · `carried_into_receipt_no` · `carried_into_date` · `replaced_by_receipt_no`도 붙음(영수증용, 2026-09-29) |
+| `GET /receipts?ids=3,7,…` | 영수 **여러 장**을 한 번에 — `{patient_id, receipts: [/:billingId/detail 과 같은 모양…]}`(2026-10-02, 합쳐 다시 인쇄). 1 ~ 60장, 같은 id는 한 번. **다른 환자의 영수가 섞이면 400 `RECEIPTS_MIXED`**, 없는 id는 404. 읽기만 |
+| `POST /receipts/print-log` | 합쳐 인쇄했다는 로그 한 줄 `{ids(둘 이상), document: receipt·statement·both, grouping: all·visit_day}` → `{logged: true}`(3.11). 조건이 안 맞으면 줄 없이 400. 돈 · 영수는 건드리지 않음 |
 | `PUT /visit/:visitId/saved-fees` | 발급비 줄을 영수증 없이 내원에 저장(위 「저장해 둔 발급비」). 409 `SAVED_FEES_CHANGED` · `VISIT_CANCELLED`, 400 `FEE_AMOUNT_MISSING` |
 | `GET /visit/:visitId/items` | (+ `saved_fees` — 저장해 둔 발급비) 청구할 원내 처방·오더(취소된 오더 제외), `visit_type`, 이미 청구된 코드별 합계 `billed_items`, `billed_consult`, 진료비 `consult_prices`(`{C01: 15000, …}`, 행이 있는 코드만), 살아 있는 영수 id `active_bill_ids` |
 | `POST /` | (`saved_fee_ids` — 이 영수가 가져가는 저장 줄, 같은 트랜잭션에서 지움) 영수 만들기 + 항목 + 이월 흡수 (트랜잭션). **`expected_active_bill_ids` 필수** — 다르면 409 `BILL_CHANGED` (3.9) |
@@ -660,3 +719,4 @@
 | 2026-10-01 | 금액 칸에 치는 숫자가 「6,000」으로 보임(발급비 · 할인 · 받은 금액 · 미수 수납 창) · 고친 발급비 옆의 줄 그은 기본 금액을 뺌(실장님 요청) | `Payment.jsx` `MoneyInput` · `moneyText` · `moneyRaw`, `py_feeListPrice` 지움, 위키 2.2 · 2.3 · 4절, 프랑스어 설명서 §2 | `b4858ec` |
 | 2026-10-01 | 도구 줄에 「🧪 검사결과」 — 수납에서 검사 결과지를 뽑음(실장님 요청) · 도구 줄이 화면보다 길면 단추의 그림 문자를 뺌 | `Payment.jsx` `labOpen` · `toolsTight`, 임상병리의 `LabResultsWindow`를 엶, 위키 2.1 · 4절, 프랑스어 설명서 §1 · §15 | `3236c06` |
 | 2026-10-01 | 발급/기타에 「저장」 — 넣은 줄을 수납 확정 없이 내원에 남김, 다른 PC에서도 보임, 영수증에 들어갈 때 지워짐 · 수납이 끝난 내원에 저장하면 「추가 청구」로 다시 뜸(실장님 요청 · 결정) | 마이그레이션 306 `billing_saved_fee`, `PUT /visit/:id/saved-fees`, `POST /`의 `saved_fee_ids`, `GET /pending`의 판정, `Payment.jsx` 저장 단추, `pay-visit.js` `save-fee`, 위키 2.2 · 2.4 · 4절, 프랑스어 설명서 §2 · §16 | `f7b7de6` |
+| 2026-10-02 | 영수증이 둘로 — 환자에게 주는 **일반 영수증**(분류별 금액 · 도장 자리)과 **세부내역서**(품목, 영수증이 아님). 수납 뒤에는 일반 영수증이 먼저 뜨고 세부는 옆 탭 · 영수 내역에서 체크해 **여러 장을 합쳐 다시 인쇄**(일반 / 세부 / 둘 다 × 전체 1장 / 한 건씩 / 같은 진료일끼리) · 재발행 표시 없음 · 합쳐 뽑을 때만 로그 한 줄(실장님 요청 · 결정) | `Receipt.jsx` 다시 씀(`ReceiptDoc` · `StatementDoc` · `SummaryDoc` · `ReceiptModal` · `ReprintModal` · `combineReceipts`), `Payment.jsx` 체크 칸 · 묻는 창, `GET /receipts` · `POST /receipts/print-log`, `audit.js` `payment.receipt.print_combined`, `py_` 키 23개, 마이그레이션 없음. 위키 2.9 · 3.10 · 3.11 · 4절, 설계 문서, 프랑스어 설명서 §2 · §11 · §12 | (이 커밋) |

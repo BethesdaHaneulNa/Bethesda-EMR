@@ -36,6 +36,7 @@ const ACTIONS = {
   ORDER_CANCEL:         'consultation.order.cancel',
   RECEIPT_CANCEL:       'payment.receipt.cancel',
   RECEIPT_CORRECT:      'payment.receipt.correct',
+  RECEIPT_PRINT_COMBINED: 'payment.receipt.print_combined',   // several receipts printed as one paper (2026-10-02): which receipts, which paper, how grouped - no money changes
   PATIENT_EDIT:         'reception.patient.edit',
   VISIT_TRANSFER:       'visit.transfer',               // a visit moved to another department or doctor (2026-09-30): before/after department and doctor, reason
   STAFF_CREATE:         'settings.staff.create',

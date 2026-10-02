@@ -338,9 +338,11 @@ router.get('/completed', canPay, async (req, res) => {
 });
 
 // GET /api/billing/:billingId/detail - completed bill with item detail
-router.get('/:billingId/detail', canPay, async (req, res) => {
-  try {
-    const billResult = await pool.query(
+// One receipt as the papers need it: the bill with its patient, visit and cashier, its
+// lines, and the older receipts whose unpaid balance it took over (016), so the paper can
+// say where "previous balance" came from. null when there is no such bill.
+async function receiptDetail(db, billingId) {
+  const billResult = await db.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender, p.allergies,
        v.visit_date, v.visit_type, d.code as dept_code, s.name as doctor_name, c.name as cashier_name,
        COALESCE(NULLIF(d.name_fr,''), NULLIF(d.name_en,''), d.name) as dept_name_fr,
@@ -357,18 +359,86 @@ router.get('/:billingId/detail', canPay, async (req, res) => {
        LEFT JOIN billing ci ON ci.id = b.carried_into_id
        LEFT JOIN billing rb ON rb.id = b.replaced_by_id
        WHERE b.id = $1`,
-      [req.params.billingId]
-    );
-    if (!billResult.rows.length) return res.status(404).json({ error: 'Billing not found' });
-    const itemResult = await pool.query('SELECT * FROM billing_item WHERE billing_id = $1 ORDER BY id', [req.params.billingId]);
-    // The older receipts whose unpaid balance this one took over (016), so the
-    // printed receipt can say where "previous balance" came from.
-    const fromResult = await pool.query(
-      `SELECT receipt_no, billing_date, GREATEST(total_due - amount_paid, 0) AS amount
-         FROM billing WHERE carried_into_id = $1 ORDER BY billing_date, id`,
-      [req.params.billingId]
-    );
-    res.json({ bill: billResult.rows[0], items: itemResult.rows, carried_from: fromResult.rows });
+    [billingId]
+  );
+  if (!billResult.rows.length) return null;
+  const itemResult = await db.query('SELECT * FROM billing_item WHERE billing_id = $1 ORDER BY id', [billingId]);
+  const fromResult = await db.query(
+    `SELECT receipt_no, billing_date, GREATEST(total_due - amount_paid, 0) AS amount
+       FROM billing WHERE carried_into_id = $1 ORDER BY billing_date, id`,
+    [billingId]
+  );
+  return { bill: billResult.rows[0], items: itemResult.rows, carried_from: fromResult.rows };
+}
+
+// The receipt ids of a request ("3,7,12" or an array): whole numbers, no repeats.
+function receiptIds(v) {
+  const list = Array.isArray(v) ? v : String(v == null ? '' : v).split(',');
+  const out = [];
+  list.forEach(function (x) { const n = parseInt(x, 10); if (Number.isInteger(n) && n > 0 && out.indexOf(n) < 0) out.push(n); });
+  return out;
+}
+const MAX_RECEIPTS_AT_ONCE = 60;
+
+// GET /api/billing/receipts?ids=3,7,12 - several receipts of ONE patient, for printing
+// them again as one paper or one by one (the director, 2026-10-02). Read only: nothing is
+// written. Receipts of different patients are refused - a paper must never mix patients.
+router.get('/receipts', canPay, async (req, res) => {
+  try {
+    const ids = receiptIds(req.query.ids);
+    if (!ids.length || ids.length > MAX_RECEIPTS_AT_ONCE) return res.status(400).json({ error: 'ids: 1 to ' + MAX_RECEIPTS_AT_ONCE + ' receipt ids' });
+    const receipts = [];
+    for (const id of ids) {
+      const d = await receiptDetail(pool, id);
+      if (!d) return res.status(404).json({ error: 'Billing not found: ' + id });
+      receipts.push(d);
+    }
+    const patientId = receipts[0].bill.patient_id;
+    if (receipts.some(function (d) { return d.bill.patient_id !== patientId; })) {
+      return res.status(400).json({ error: 'RECEIPTS_MIXED: the receipts belong to different patients' });
+    }
+    res.json({ patient_id: patientId, receipts: receipts });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/billing/receipts/print-log { ids, document, grouping } - one change-log line
+// when several receipts are printed as one paper (decided 2026-10-02: only then - a single
+// reprint and the print right after payment leave no line, as before). The only thing
+// written is the log line; no receipt, amount or cash row is touched. The screen calls it
+// when the print button is pressed and does not wait for it: a line that cannot be written
+// never stops the printing.
+const PRINT_DOCS = ['receipt', 'statement', 'both'];
+const PRINT_GROUPINGS = ['all', 'visit_day'];
+router.post('/receipts/print-log', canPay, async (req, res) => {
+  try {
+    const ids = receiptIds(req.body && req.body.ids);
+    const doc = String((req.body && req.body.document) || '');
+    const grouping = String((req.body && req.body.grouping) || '');
+    if (ids.length < 2 || ids.length > MAX_RECEIPTS_AT_ONCE || !PRINT_DOCS.includes(doc) || !PRINT_GROUPINGS.includes(grouping)) {
+      return res.status(400).json({ error: 'ids (2 or more), document (' + PRINT_DOCS.join('/') + ') and grouping (' + PRINT_GROUPINGS.join('/') + ') are required' });
+    }
+    const rows = (await pool.query('SELECT id, patient_id, receipt_no FROM billing WHERE id = ANY($1::int[]) ORDER BY billing_date, id', [ids])).rows;
+    if (rows.length !== ids.length) return res.status(404).json({ error: 'Billing not found' });
+    if (rows.some(function (r) { return r.patient_id !== rows[0].patient_id; })) {
+      return res.status(400).json({ error: 'RECEIPTS_MIXED: the receipts belong to different patients' });
+    }
+    const numbers = rows.map(function (r) { return r.receipt_no; });
+    const logged = await writeAudit(pool, req, {
+      action: ACTIONS.RECEIPT_PRINT_COMBINED, patient_id: rows[0].patient_id,
+      entity: 'billing', entity_id: rows[0].id,
+      summary: numbers.join(', '),
+      after: { receipts: numbers, print_document: doc, print_grouping: grouping },
+    });
+    res.json({ logged: logged });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/billing/:billingId/detail - one receipt (the receipt window, the paid list)
+router.get('/:billingId/detail', canPay, async (req, res) => {
+  try {
+    const d = await receiptDetail(pool, req.params.billingId);
+    if (!d) return res.status(404).json({ error: 'Billing not found' });
+    res.json(d);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
