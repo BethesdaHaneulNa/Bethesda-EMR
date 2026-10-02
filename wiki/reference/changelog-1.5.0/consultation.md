@@ -188,6 +188,18 @@ fifty matches and scrolls; under **Tout** it stays short and ends with a line sa
 many more there are. Two letters are needed to search; browsing the whole drug list
 without typing is no longer possible.
 
+### Diagnoses
+
+The clinic pointed out that the consultation screen had nowhere to enter a diagnosis.
+There is now a **Diagnostic** box on the left, above the prescriptions. Typing two letters
+of a name or a code searches a list of a hundred frequent outpatient diagnoses, each with
+its ICD-10 code and its name in French, English and Korean; a diagnosis that is not in the
+list is typed as it is and saved without a code - the name is what the clinic needs, the
+code is optional. The first diagnosis is the main one, the others secondary; a star
+changes which one is main. Earlier diagnoses show in the patient chart on the right, and
+the referral letter opens with the consultation's diagnoses already in its diagnosis
+field. The list itself will be managed in Settings.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**

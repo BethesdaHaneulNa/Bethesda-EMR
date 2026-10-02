@@ -48,7 +48,7 @@ export default {
   name: { ko: '진료의뢰서', en: 'Referral Letter', fr: 'Lettre de référence' },
   fields: [
     { key: 'referredTo', label: FL.referredTo, type: 'text' },
-    { key: 'diagnosis',  label: FL.diagnosis,  type: 'textarea', rows: 2 },
+    { key: 'diagnosis',  label: FL.diagnosis,  type: 'textarea', rows: 2, autofill: 'diagnoses' },
     { key: 'findings',   label: FL.findings,   type: 'textarea', rows: 4, autofill: 'note' },
     { key: 'treatment',  label: FL.treatment,  type: 'textarea', rows: 3, autofill: 'meds' },
     { key: 'purpose',    label: FL.purpose,    type: 'textarea', rows: 2 },

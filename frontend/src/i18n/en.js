@@ -455,6 +455,14 @@ export default {
   // When the list under the code box cannot show every match (the "+ Drug Search" button was removed, 2026-10-01)
   cs_moreAll: "… {n} more. Type more letters, or choose “Drug” or “Exam / Imaging” above.",
   cs_moreOne: "… {n} more. Type more letters to narrow the list.",
+  // Diagnoses (2026-10-02)
+  cs_dxTitle: "Diagnosis",
+  cs_dxPlaceholder: "Search by name or code — or type it as it is",
+  cs_dxPrimary: "Main",
+  cs_dxMakePrimary: "Make this the main diagnosis",
+  cs_dxRemove: "Remove this diagnosis",
+  cs_dxFree: "Add “{text}” as typed (no code)",
+  cs_dxDuplicate: "This diagnosis is already entered.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "This patient was just billed elsewhere, or the previous balance was already settled. The list has been reloaded — check it and bill again.",
