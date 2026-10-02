@@ -204,6 +204,7 @@ Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD 
 
 - Le disque contient les images d'origine (format DICOM) et un fichier **README.TXT** qui dit de quel patient et de quels examens il s'agit. L'autre hôpital l'ouvre avec son logiciel d'imagerie (« importer un CD »). Le compte-rendu n'est pas sur le disque : imprimez-le (§ 9).
 - Le disque contient aussi une petite visionneuse, **VOIR.EXE** : celui qui reçoit le disque et n'a pas de logiciel d'imagerie double-clique dessus (Windows) et voit les examens et les images. Elle ne s'installe pas et ne laisse rien sur son ordinateur ; elle sert à consulter, pas à faire un diagnostic. Elle montre les radiographies et les échographies ; elle ne lit pas les vidéos (un fichier de plusieurs images se parcourt image par image, avec la molette).
+- Si le message de fin dit que les images ont été **décompressées**, c'est normal : certaines étaient dans un format que la visionneuse ne lit pas, et la copie les contient sans compression (sans perte de qualité). Elle prend plus de place ; si elle ne tient plus sur un disque, copiez moins d'examens à la fois.
 - Seul un disque **vierge** est utilisé. Un disque qui contient déjà quelque chose n'est jamais effacé.
 - Chaque copie est notée dans le journal des modifications de l'EMR (qui, quel patient, quels examens).
 - **« La connexion a été coupée… Rien n'a été copié »** : recommencez. **« Le serveur d'images ne répond pas »** : réessayez dans un instant, puis prévenez l'administrateur.
