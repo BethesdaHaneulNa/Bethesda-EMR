@@ -537,4 +537,164 @@ router.get('/drug-usage', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Clinical rankings: orders and diagnoses (2026-10-02) ───────────────────────────
+// Both are "what was most frequent in this period": a flat table, most first. They
+// share the drug table's way of picking a period (two dates, last 30 days when
+// empty) and are dated like "All prescriptions": by the day of the visit, with
+// cancelled registrations left out. Both can be narrowed to a department or a
+// doctor - the visit's, as in the breakdowns above.
+
+async function rankingRange(req) {
+  let { from, to } = req.query;
+  const bad = badDateRange(from, to);
+  if (bad) return { error: bad };
+  if (!from || !to) {
+    const r = await pool.query(`SELECT ${ymd("CURRENT_DATE - interval '29 days'")} AS f, ${ymd('CURRENT_DATE')} AS t`);
+    from = from || r.rows[0].f;
+    to = to || r.rows[0].t;
+  }
+  return { from, to };
+}
+// department_id / doctor_id: a whole number, or nothing. Anything else is refused
+// rather than quietly ignored - a filter that silently does nothing shows the
+// whole clinic under one doctor's name.
+function visitFilters(req, conds, P) {
+  for (const [param, col] of [['department_id', 'v.department_id'], ['doctor_id', 'v.doctor_id']]) {
+    const raw = req.query[param];
+    if (raw === undefined || raw === '') continue;
+    if (!/^\d+$/.test(String(raw))) return param + ' must be a whole number';
+    P.push(Number(raw));
+    conds.push(`${col} = $${P.length}`);
+  }
+  return null;
+}
+
+// GET /api/stats/options - what the department and doctor selects offer: every
+// department, and the staff who have been the attending doctor of a visit.
+router.get('/options', async (req, res) => {
+  try {
+    const departments = await pool.query(
+      `SELECT d.id, ${DEPT_COLS} FROM department d
+        WHERE d.is_active OR EXISTS (SELECT 1 FROM visit v WHERE v.department_id = d.id)
+        ORDER BY d.code`);
+    const doctors = await pool.query(
+      `SELECT s.id, s.name FROM staff s
+        WHERE EXISTS (SELECT 1 FROM visit v WHERE v.doctor_id = s.id)
+        ORDER BY s.name, s.id`);
+    res.json({ departments: departments.rows, doctors: doctors.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/stats/orders?from&to&type=lab|imaging|procedure|fee&department_id&doctor_id
+// Orders by code: how many lines, what quantity, what they were priced at.
+//  - Dated by the visit (the day the order was written), not by when it was done
+//    or paid. Cancelled orders and orders of cancelled registrations are left out.
+//  - An order picked from the list is grouped by its list row (order_code_id), so
+//    renaming the code does not split it; one typed without a list row is grouped
+//    by the code and name written on the line, and marked `typed`.
+//  - `amount` is what the orders were priced at - quantity x unit price, the same
+//    expression the payment screen bills from (COALESCE(total_qty, quantity, 1) x
+//    unit_price). It is NOT money received: discounts, unpaid bills and orders not
+//    yet billed all make it differ from the till. The screen says so.
+//  - Outside imaging (films brought in) is not an order and is not here.
+const ORDER_TYPES = ['lab', 'imaging', 'procedure', 'fee'];
+router.get('/orders', async (req, res) => {
+  try {
+    const range = await rankingRange(req);
+    if (range.error) return res.status(400).json({ error: range.error });
+    const conds = ['v.visit_date BETWEEN $1 AND $2', "v.status <> 'cancelled'", "COALESCE(oi.status, '') <> 'cancelled'"];
+    const P = [range.from, range.to];
+    const type = req.query.type;
+    if (type !== undefined && type !== '' && type !== 'all') {
+      if (!ORDER_TYPES.includes(type)) return res.status(400).json({ error: 'type must be one of ' + ORDER_TYPES.join(', ') });
+      P.push(type);
+      conds.push(`COALESCE(oi.code_type, oc.code_type) = $${P.length}`);
+    }
+    const badFilter = visitFilters(req, conds, P);
+    if (badFilter) return res.status(400).json({ error: badFilter });
+    const QTY = 'COALESCE(oi.total_qty, oi.quantity, 1)';
+    const r = await pool.query(
+      `SELECT oi.order_code_id,
+              CASE WHEN oi.order_code_id IS NULL THEN COALESCE(oi.order_code, '') ELSE oc.code END AS code,
+              CASE WHEN oi.order_code_id IS NULL THEN oi.order_name ELSE oc.name END AS name,
+              CASE WHEN oi.order_code_id IS NULL THEN NULL ELSE oc.name_en END AS name_en,
+              COALESCE(oi.code_type, oc.code_type) AS code_type,
+              COUNT(*)::int AS cnt,
+              SUM(${QTY})::numeric AS qty,
+              SUM(${QTY} * COALESCE(oi.unit_price, 0))::numeric AS amount,
+              COUNT(DISTINCT oi.patient_id)::int AS patients
+         FROM order_item oi
+         JOIN visit v ON v.id = oi.visit_id
+         LEFT JOIN order_code oc ON oc.id = oi.order_code_id
+        WHERE ${conds.join(' AND ')}
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY cnt DESC, amount DESC, name`, P);
+    const rows = r.rows.map(function (x) {
+      return { order_code_id: x.order_code_id, code: x.code || '', name: x.name, name_en: x.name_en, code_type: x.code_type || null,
+        typed: x.order_code_id == null, count: x.cnt, qty: Number(x.qty) || 0, amount: Math.round(Number(x.amount) || 0), patients: x.patients };
+    });
+    res.json({ from: range.from, to: range.to, type: type && type !== 'all' ? type : 'all', rows: rows,
+      // Lines and value add up across orders (same unit); quantities do not.
+      total: { count: rows.reduce(function (a, x) { return a + x.count; }, 0), amount: rows.reduce(function (a, x) { return a + x.amount; }, 0) } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/stats/diagnoses?from&to&scope=primary|all&department_id&doctor_id
+// Diagnoses by frequency: consultations and distinct patients, with the patients
+// split by sex and by age on the day of the visit.
+//  - scope=primary (default): only each consultation's main diagnosis, so every
+//    consultation counts once. scope=all adds the secondary ones.
+//  - A diagnosis picked from the list is grouped by its list row
+//    (diagnosis_code_id) and carries the three names for the screen's language;
+//    one typed freely is grouped by the code and name as written, marked `typed`.
+//    Two spellings of the same disease therefore stay two rows.
+//  - Age bands for reporting: under 5, 5-14, 15-49, 50 and over. A patient with no
+//    birth date or sex is counted in the diagnosis and in the "unknown" figure.
+const AGE = "date_part('year', age(v.visit_date, p.date_of_birth))";
+router.get('/diagnoses', async (req, res) => {
+  try {
+    const range = await rankingRange(req);
+    if (range.error) return res.status(400).json({ error: range.error });
+    const scope = req.query.scope === undefined || req.query.scope === '' ? 'primary' : req.query.scope;
+    if (scope !== 'primary' && scope !== 'all') return res.status(400).json({ error: "scope must be 'primary' or 'all'" });
+    const conds = ['v.visit_date BETWEEN $1 AND $2', "v.status <> 'cancelled'"];
+    const P = [range.from, range.to];
+    if (scope === 'primary') conds.push("dx.diagnosis_type = 'primary'");
+    const badFilter = visitFilters(req, conds, P);
+    if (badFilter) return res.status(400).json({ error: badFilter });
+    const distinctIf = function (cond) { return `COUNT(DISTINCT c.patient_id) FILTER (WHERE ${cond})::int`; };
+    const FROM = `FROM diagnosis dx
+         JOIN consultation c ON c.id = dx.consultation_id
+         JOIN visit v ON v.id = c.visit_id
+         JOIN patient p ON p.id = c.patient_id
+         LEFT JOIN diagnosis_code dc ON dc.id = dx.diagnosis_code_id
+        WHERE ${conds.join(' AND ')}`;
+    const r = await pool.query(
+      `SELECT dx.diagnosis_code_id,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN COALESCE(dx.icd_code, '') ELSE COALESCE(dc.code, '') END AS code,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN dx.diagnosis_name ELSE dc.name_en END AS name,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN NULL ELSE dc.name_fr END AS name_fr,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN NULL ELSE dc.name_ko END AS name_ko,
+              COUNT(DISTINCT dx.consultation_id)::int AS cases,
+              COUNT(DISTINCT c.patient_id)::int AS patients,
+              ${distinctIf("p.gender = 'M'")} AS male,
+              ${distinctIf("p.gender = 'F'")} AS female,
+              ${distinctIf(AGE + ' < 5')} AS age_0_4,
+              ${distinctIf(AGE + ' BETWEEN 5 AND 14')} AS age_5_14,
+              ${distinctIf(AGE + ' BETWEEN 15 AND 49')} AS age_15_49,
+              ${distinctIf(AGE + ' >= 50')} AS age_50,
+              ${distinctIf('p.date_of_birth IS NULL')} AS age_unknown
+         ${FROM}
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY cases DESC, patients DESC, name`, P);
+    // Across diagnoses a consultation or a patient can appear in several rows, so
+    // the totals are counted on their own rather than added up.
+    const tot = await pool.query(
+      `SELECT COUNT(DISTINCT dx.consultation_id)::int AS cases, COUNT(DISTINCT c.patient_id)::int AS patients ${FROM}`, P);
+    res.json({ from: range.from, to: range.to, scope: scope,
+      rows: r.rows.map(function (x) { return Object.assign({}, x, { typed: x.diagnosis_code_id == null }); }),
+      total: tot.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

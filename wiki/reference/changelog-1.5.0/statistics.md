@@ -36,6 +36,13 @@ The average used to be cash collected divided by receipts. Unpaid receipts, old 
 
 The Voided card counted both receipts cancelled by staff and receipts replaced by a correction, which are not refunds. It now counts staff cancellations only. The cash handed back when a receipt is cancelled appears as money out in the till figures, on the day it was handed back.
 
+### New: which diagnoses and which orders were most frequent
+
+Two tables answer what the clinic saw and asked for most in a period. Each has its own two dates (the last 30 days to start with), can be narrowed to one department or one doctor, lists the most frequent first, and downloads as CSV.
+
+- **Diagnoses** counts consultations and distinct patients per diagnosis, and splits the patients by sex and by age on the day of the visit (under 5, 5–14, 15–49, 50 and over). It counts each consultation's main diagnosis by default, so every consultation counts once; "All diagnoses" adds the secondary ones. A diagnosis picked from the list is one row whatever language it was picked in, and shows its name in the screen's language. One typed freely is grouped as written and marked "typed".
+- **Orders** counts lab, imaging and procedure orders by code: how many times, what quantity, and what they were priced at. That value is the price of what was ordered, not money received, and the screen says so. Orders are counted on the day of the visit. Cancelled orders and orders of cancelled registrations are left out. Images a patient brings in are not orders and are not counted.
+
 ### Drug usage
 
 - The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years. The newest period is the first column, next to the drug name, so the latest day is visible without scrolling sideways.
@@ -56,4 +63,4 @@ The Voided card counted both receipts cancelled by staff and receipts replaced b
 
 - Tell the office staff before they open Statistics. The takings card is now **Cash**, the till for the day. The Unpaid total may be lower, because debts already paid through carry-over are no longer counted. Total visits leave out cancelled registrations. The average card has a new name and a new meaning.
 - Past days keep their figures after the update. From the update on, a day's **Cash** should match the cash counted at the till; if it does not, the record is the place to look (Statistics → Cash by period, or the payment screen's cash for the day).
-- No statistics migration (the cash record is payment's migration 036). The figures depend on the database connection using the clinic's time zone, which this release fixes centrally. Check that `TZ` in `.env` is `Indian/Antananarivo`.
+- One statistics migration: an index on the orders table (by visit), which the new orders table and the payment screen's per-visit lookups use. It changes no rows. The cash record is payment's migration 036. The figures depend on the database connection using the clinic's time zone, which this release fixes centrally. Check that `TZ` in `.env` is `Indian/Antananarivo`.

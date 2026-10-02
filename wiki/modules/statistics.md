@@ -1,6 +1,6 @@
 # 통계 (Statistics)
 
-> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-09-29 · **상태**: 1~20 처리 · **8 현금 기준 구현(시안 A)** · 열린 항목 없음
+> **담당**: 통계 세션 · 브랜치 `session/statistics` · **마지막 갱신**: 2026-10-02 · **상태**: 1~20 처리 · 현금 기준(시안 A) · **진단 통계 · 오더 통계 추가(2026-10-02)** · 다음: 과·의사별 · 환자 통계
 
 ## 1. 이 모듈이 하는 일
 
@@ -9,6 +9,8 @@
 - **운영 현황** — 그 기간의 내원 수(초진·재진·완료·진행 중·취소), 진료과별·의사별 내원 수
 - **매출 · 정산** — 수납액·청구액·건수·평균, 진료과별·의사별 매출, 항목별 매출(진료비·약·검사/처치·서류)
 - **미수 · 환불** — 지금 이 순간 병원이 받을 돈·돌려줄 돈의 합계와, 환자별 명단(이름·연락처·금액·발생일)
+- **진단 통계** — 기간에 어떤 진단이 많았나: 진단별 진료 수 · 환자 수, 남/여 · 나이대, 많은 순. CSV
+- **오더 통계** — 기간에 어떤 검사 · 영상 · 처치 오더가 많이 나왔나: 오더별 건수 · 수량 · 오더 금액, 많은 순. CSV
 - **약품 사용통계** — 처방된 약을 일·월·연 단위로 약품별 수량 피벗표로 보고 CSV로 내려받기
 - **월별 추이** — 최근 6개월 내원 수와 수납액 막대그래프
 
@@ -26,7 +28,7 @@
 3. 기간을 바꾸려면 위쪽의 **Aujourd'hui (오늘)** · **Cette semaine (이번 주)** · **Ce mois (이번 달)** 중 하나를 누르거나, 옆의 날짜 칸 두 개에 시작일과 끝일을 직접 넣습니다. 이번 주는 월요일부터입니다.
 4. 날짜를 바꾸면 곧바로 다시 계산됩니다. 계산하는 동안 날짜 옆에 `···` 가 보입니다.
 
-> 위에서 고른 기간은 **Activité** 와 **Recettes** 부분에만 적용됩니다. **Impayé · Remboursement dû** 칸, **Caisse par période**, **Usage médicaments**, **Tendance mensuelle** 은 기간과 관계없습니다(아래 설명).
+> 위에서 고른 기간은 **Activité** 와 **Recettes** 부분에만 적용됩니다. **Impayé · Remboursement dû** 칸, **Caisse par période**, **Diagnostics**, **Examens et actes prescrits**, **Usage médicaments**, **Tendance mensuelle** 은 기간과 관계없습니다(저마다 자기 날짜 칸이 있음 — 아래 설명).
 
 ### 2.2 Activité (운영 현황) — 몇 명이 왔나
 
@@ -68,6 +70,48 @@
 4. 맨 아래 **Total** 이 기간 합계입니다(모두 Ariary 라 더할 수 있음). 매일의 순액이 그날 금고의 현금과 같아야 합니다.
 5. **⬇ CSV** 로 내려받습니다. 파일도 화면과 같은 순서(최근이 위, 합계가 맨 끝)입니다.
 
+### 2.3c Diagnostics (진단 통계) — 어떤 병이 많았나
+
+1. **Caisse par période** 아래 **🩺 Diagnostics (진단 통계)** 로 내려갑니다. 처음에는 **오늘까지 30일**이 나옵니다.
+2. 맨 왼쪽 칸에서 **Diagnostic principal (주진단만)** 또는 **Tous les diagnostics (전체 진단)** 를 고릅니다.
+   - **Diagnostic principal** — 진료마다 주진단 하나만 셉니다. 진료 한 번이 한 번만 세어지므로 「이 기간에 무엇 때문에 왔나」를 볼 때 씁니다. 처음에는 이것입니다.
+   - **Tous les diagnostics** — 부진단도 셉니다. 한 진료가 여러 줄에 나올 수 있습니다.
+3. 날짜 칸 두 개로 기간을 바꾸고, **Tous les services (전체 진료과)** · **Tous les médecins (전체 의사)** 칸에서 과나 의사 하나로 좁힐 수 있습니다(그 방문의 과 · 담당 의사).
+4. 표는 **많은 진단이 위**입니다. 칸의 뜻:
+
+   | 칸 | 뜻 |
+   |---|---|
+   | **Diagnostic (진단)** · **Code (코드)** | 진단 이름(화면 언어로)과 코드. 이름 옆에 **saisie libre (직접 입력)** 표가 있으면 의사가 목록에서 고르지 않고 직접 친 진단입니다 — 친 글자 그대로 묶이므로, 같은 병도 다르게 치면 다른 줄이 됩니다 |
+   | **Consultations (진료 수)** | 그 진단이 붙은 진료의 수 |
+   | **Patients (환자 수)** | 그 진단을 받은 사람 수 — 같은 사람이 세 번 와도 1 |
+   | **H (남)** · **F (여)** | 환자 수를 성별로 |
+   | **<5** · **5–14** · **15–49** · **50+** | 환자 수를 나이대로(나이는 **진료받은 날** 기준). 한 사람이 기간 중에 생일을 지나 두 나이대에 걸리면 두 칸에 모두 셉니다 |
+   | **Âge inconnu (나이 모름)** | 생년월일이 없는 환자. 그런 환자가 있을 때만 이 칸이 나옵니다 |
+
+5. 표 위 첫 줄에 기간 · 진단 가짓수 · 전체 진료 수 · 전체 환자 수가 나옵니다. 전체 수는 **줄을 더한 것이 아니라 따로 센 것**입니다(전체 진단에서는 한 진료가 여러 줄에 있으므로).
+6. **⬇ CSV** 로 내려받습니다(엑셀에서 열림).
+
+> 취소된 접수의 진단은 세지 않습니다. 진료 화면에서 진단을 지우거나 바꾸면 지난 날의 숫자도 그에 따라 바뀝니다 — 통계는 「지금 기록에 적힌 진단」을 셉니다.
+
+### 2.3d Examens et actes prescrits (오더 통계) — 어떤 오더가 많이 나왔나
+
+1. **🧪 Examens et actes prescrits (오더 통계)**. 처음에는 **오늘까지 30일**.
+2. 맨 왼쪽 칸에서 종류를 고릅니다: **Tous les types (전체 종류)** · **Laboratoire (검사)** · **Imagerie (영상)** · **Actes (처치)**.
+3. 날짜 칸 두 개 · **Tous les services** · **Tous les médecins** 은 진단 통계와 같습니다.
+4. 표는 **건수가 많은 오더가 위**입니다.
+
+   | 칸 | 뜻 |
+   |---|---|
+   | **Acte (오더)** | 오더 이름과 코드. **saisie libre (직접 입력)** 표는 목록에 없는 것을 직접 친 오더 |
+   | **Type (종류)** | 검사 · 영상 · 처치(· 수가) |
+   | **Nombre (건수)** | 오더를 낸 횟수(오더 줄 수) |
+   | **Quantité (수량)** | 오더에 적힌 수량의 합 — 예: 드레싱을 3일치로 한 번 내면 건수 1, 수량 3 |
+   | **Valeur prescrite (오더 금액)** | 수량 × 단가의 합. **받은 돈이 아닙니다** — 할인 · 미수 · 아직 수납하지 않은 오더 때문에 **Recettes** 의 숫자와 다를 수 있습니다 |
+
+5. 표 위 첫 줄에 기간 · 오더 가짓수 · 전체 건수 · 전체 오더 금액. **⬇ CSV** 로 내려받습니다.
+
+> 날짜는 **오더를 낸 날(내원일)** 기준입니다 — 검사를 한 날이나 돈을 받은 날이 아닙니다. **취소한 오더**와 취소된 접수의 오더는 세지 않습니다. 환자가 밖에서 찍어 온 영상(외부 영상)은 오더가 아니라 여기에 없습니다. 약은 여기가 아니라 아래 **Usage médicaments** 에 있습니다.
+
 ### 2.4 Usage médicaments (약품 사용통계) — 약이 얼마나 나갔나
 
 1. **Jour (일별)** · **Mois (월별)** · **Année (연별)** 중 하나를 누릅니다. 처음에는 Jour 는 최근 30일, Mois 는 이번 달을 포함한 12개월, Année 는 올해를 포함한 5년이 나옵니다. 오른쪽의 **날짜 칸 두 개**에 그 기간이 보입니다.
@@ -93,6 +137,9 @@
 - **지난 날의 Caisse 가 바뀌었습니다** — 바뀌지 않습니다. 정정·취소는 돌려준 **그날**의 Sorties 로 잡힙니다. 바뀐 것이 **Recettes par service / médecin** 의 합계라면 그것은 영수증 기준이라 정정·취소하면 처음 날짜에서 빠집니다.
 - **Caisse 가 음수입니다** — 그날 들어온 돈보다 돌려준 돈이 많았던 날입니다(예: 어제 받은 영수증을 오늘 정정하며 차액만 돌려줌).
 - **Recettes par service 의 합계가 Caisse 와 다릅니다** — 과·의사 그래프는 영수증 기준, Caisse 는 금고 기준이라 정정·취소·미수 수납이 다른 날 있었던 기간에는 다릅니다. 기간을 넓게 잡으면 같아집니다.
+- **Diagnostics 의 줄을 더하면 위의 전체 진료 수보다 많습니다** — **Tous les diagnostics** 에서는 한 진료에 진단이 여럿이라 그렇습니다. **Diagnostic principal** 로 바꾸면 줄의 합이 전체 진료 수와 같습니다. 환자 수는 어느 쪽에서도 줄을 더하면 안 됩니다(한 사람이 두 진단을 받았을 수 있음).
+- **같은 병이 두 줄입니다** — 한 줄에 **saisie libre** 표가 있으면 의사가 직접 친 진단입니다. 목록에서 고르면 한 줄로 모입니다.
+- **Valeur prescrite 가 Recettes 와 다릅니다** — 오더 금액은 오더에 적힌 값이고, Recettes 는 영수증 · 금고의 돈입니다. 같아야 하는 숫자가 아닙니다.
 - **Visites totales 가 접수 화면의 건수보다 적습니다** — 취소된 접수는 세지 않습니다. **Annulé** 칸을 보세요.
 - **지난 날의 숫자가 바뀌었습니다** — 접수 화면의 작업일자로 지난 날의 접수를 정리하면(취소하거나 끝내면) 그날의 숫자가 바뀝니다. 통계는 「그날 온 사람들이 지금 어떤 상태인가」를 보여 주므로 맞는 동작입니다. 특히 대기 중인 접수를 진료 없이 **Terminer (끝내기)** 로 끝내면 진료비 없는 방문이 되어, 그날의 **Nouvelle / Suivi** 에서 **Sans frais / autres** 로 옮겨 갑니다.
 
@@ -315,6 +362,60 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 
   `/summary` 의 `cash.net` 도 날마다 같음. 기간 합계 들어옴 100 000 · 나감 24 000 · 순 76 000 = 영수 기준 합 76 000(기간 전체로는 같음). 월별 추이 9월 76 000. 영수 기준 숫자는 앞선 시험(4차 t9 · 5차 t16 · 20)을 새 DB 에서 다시 돌려 **전부 그대로**. `opening` 줄 하나를 넣어 「옛 기록」 열 · 합계 확인. 화면(ko · fr · en)과 CSV(단추 → Blob 읽기: `date,in,out,net,payment,settlement,correction,cancel,opening` + TOTAL) 확인.
 
+### 3.12 진단 통계 · 오더 통계 — 「이 기간에 무엇이 많았나」 (2026-10-02)
+
+실장님 2026-10-02: 「통계쪽 고도화가 더필요 할것 같긴해 어떤 오더가 많이 나오는지…」 → 총괄이 범위를 정함(1단계 오더 · 진단, 2단계 과·의사별 · 환자 통계).
+
+**공통 틀** — 약품 사용통계와 같은 손맛: 자기 날짜 칸 두 개(비우면 서버 기본 = 오늘까지 30일, `rankingRange()`), 표 위에 기준 한 줄, 많은 것이 위, CSV. 약품 표와 다른 점은 **기간 피벗이 아니라 한 기간의 순위표**라는 것 — 「무엇이 많았나」가 물음이라 날짜 열로 쪼개면 순위가 안 보이고, 진단은 남/여 · 나이대 열이 그 자리를 씀(일 · 월 · 연 단추 없음). 달마다의 변화를 보려면 기간을 달리해 두 번 봄.
+
+- **날짜 = 내원일**(`visit.visit_date`). 약품 「처방전체」와 같은 기준 — 오더를 낸 날 / 진료한 날. 검사를 한 날 · 결과가 나온 날 · 수납한 날이 아님.
+- **빼는 것**: 취소된 접수(`visit.status='cancelled'`)의 모든 것. 오더는 거기에 취소한 오더(`order_item.status='cancelled'`)도.
+- **거르기**: `department_id` · `doctor_id` 는 **방문의** 과 · 담당 의사(`visit.department_id/doctor_id`, 운영 현황 · 매출 그래프와 같은 열쇠). 숫자가 아니면 400 — 조용히 무시하면 「한 의사의 통계」라는 이름으로 병원 전체가 보이므로. 고를 것은 `GET /options`(과 = 쓰는 과 + 방문이 있는 과, 의사 = 방문의 담당 의사였던 직원 — 약사 · 원무과가 목록에 뜨지 않게).
+- **권한**: 통계의 것 그대로(`permMiddleware('stats')`). 환자 이름은 나오지 않음(수만).
+
+**오더 (`GET /orders`)**
+
+- **묶는 열쇠**: 목록에서 고른 오더는 `order_code_id`(이름 · 코드는 지금의 `order_code` 것 — 설정에서 이름을 고쳐도 한 줄로 남음), 목록에 없는 직접 입력은 줄에 적힌 `order_code` + `order_name` 그대로(`typed: true`).
+- **건수** = 오더 줄 수. **수량** = `COALESCE(total_qty, quantity, 1)` 의 합. **오더 금액** = 그 수량 × `COALESCE(unit_price, 0)` 의 합 — 수납 화면이 청구 금액을 만드는 식과 **같은 식**(`billing.routes.js` `/visit/:id/items`). 그래도 받은 돈과는 다름: 할인 · 미수 · 아직 수납 안 한 오더 · 수납에서 뺀 항목. 그래서 화면 기준 줄에 「받은 돈이 아님」을 밝히고, 칸 이름도 「오더 금액 / Valeur prescrite / Order value」.
+- **종류**: `COALESCE(order_item.code_type, order_code.code_type)` — `lab` · `imaging` · `procedure` · `fee`. 화면의 종류 칸은 전체 · 검사 · 영상 · 처치(총괄 지시 — 단추 줄이 아니라 한 칸). `fee`(수가) 줄은 「전체」에서만 보이고 종류 칸에 「수가 / Frais」로 나옴.
+- **합계**: 건수와 금액은 오더를 가로질러 더할 수 있어(같은 단위) 표 위에 냄. 수량은 더하지 않음(검사 1회와 드레싱 3일치는 다른 단위 — 약품 표에서 합계를 뺀 것과 같은 이유).
+- **외부 영상**(가져온 필름)은 `order_item` 이 아니라 들어가지 않음. **약**은 `prescription` 이라 약품 사용통계에.
+- **이름**: `order_code` 에는 이름이 `name`(한국어 화면) · `name_en` 둘뿐 — 프랑스어 화면은 `name_en`.
+
+**진단 (`GET /diagnoses`)**
+
+- **범위 `scope`**: `primary`(기본) = 주진단만 — 진료 하나에 주진단은 하나(마이그레이션 050 의 규칙)라 진료가 한 번씩만 세어지고, 줄의 진료 수를 더하면 전체 진료 수. `all` = 부진단 포함.
+- **묶는 열쇠**: `diagnosis_code_id` 가 있으면 그것(이름은 `diagnosis_code.name_en/name_fr/name_ko` 를 화면이 언어에 맞게 고름 — 진단 줄에 복사된 이름이 아니라 지금 목록의 이름). 없으면(직접 친 진단) `icd_code` + `diagnosis_name` 글자 그대로, `typed: true`. 직접 친 것은 철자가 다르면 다른 줄 — 합쳐 주지 않음(틀리게 합치는 것보다 낫고, 화면에 「직접 입력」 표로 드러남).
+- **진료 수** = `COUNT(DISTINCT consultation_id)`, **환자 수** = `COUNT(DISTINCT patient_id)`. 남/여 · 나이대는 **환자 수**를 나눈 것(`COUNT(DISTINCT patient) FILTER`).
+- **나이** = 내원일의 만 나이(`age(visit_date, date_of_birth)`). 나이대 **<5 · 5–14 · 15–49 · 50+** — 5세 미만은 따로 보는 것이 보건 보고의 관례라 그렇게 잡음. **현장(마다가스카르 보건부 월 보고)의 나이대와 맞는지는 확인하지 못함** — 다르면 `stats.routes.js` 의 네 줄(`AGE`)과 화면 머리만 바꾸면 됨. 한 환자가 기간 안에 나이대 경계를 넘으면 두 칸에 모두 세어짐(각 칸은 「그 나이대였던 환자 수」). 생년월일 없는 환자는 `age_unknown`(있을 때만 열이 나옴), 성별이 M/F 가 아닌 환자는 남 · 여 어디에도 안 들어가고 환자 수에만.
+- **전체 수**(`total.cases/patients`)는 줄을 더하지 않고 따로 셈 — `all` 에서는 한 진료가 여러 줄에 있으므로.
+- 진료 화면에서 진단을 지우거나 바꾸면 지난 기간의 숫자도 바뀜(기록을 그대로 읽음 — 내원 수와 같은 성격).
+
+**속도** — `order_item` 에 `visit_id` 인덱스가 없었음(patient · worklist · modality 만). 마이그레이션 **601** `idx_oi_visit`. 격리 DB 에 방문 6만 · 오더 18만 · 진단 6만을 넣고 잼(같은 요청 4번):
+
+| 요청 | 걸린 시간 |
+|---|---|
+| 오더 30일(기본) · 90일 · 1년 · 3년(전부) | 5~12 · 25~30 · 112~134 · 265~381 ms |
+| 오더 1년 + 검사 + 과 하나 | 44~53 ms |
+| 진단 30일 · 1년 · 3년(전체 진단) | 9~25 · 69~89 · 197~207 ms |
+
+  인덱스가 실제로 쓰이는 곳은 **짧은 기간**(1주: 1.7 ms ↔ 인덱스 없이 10 ms)과, 통계 밖이지만 같은 모양인 **방문 하나의 오더 찾기**(수납 화면: 0.03 ms ↔ 6.7 ms). 긴 기간은 어차피 표를 다 읽는 편이 빨라 인덱스를 안 씀(그래도 3년 전체 0.3초). 진단 쪽은 있는 인덱스(`idx_diagnosis_consultation`, `idx_consult_visit_unique`, `idx_visit_date`)로 충분해 새로 만들지 않음.
+
+**격리 확인 (2026-10-02, 새 DB, 진료 API 로 넣음)** — 방문 6건: ① 오늘 FM · Kim, 3살 남: 주 B54 + 부 J00, 말라리아 검사 + 흉부 촬영 ② 오늘 FM · Kim, 30살 여: 주 B54, 말라리아 검사 + 드레싱 3일치 ③ 어제 INT · Lee, ①의 아이: 주 B54 + 부 「Fatigue」(직접 입력), 말라리아 검사 ④ 5일 전 INT · Lee, 60살 남: 주 「Douleur lombaire…」(직접 입력, 긴 이름), 직접 친 오더 「Pansement simple」 2 × 1 000 + 말라리아 검사 → **오더 취소** ⑤ 오늘, 접수 취소(진단 · 오더 있음) ⑥ 40일 전(기본 기간 밖).
+
+| 물음 | 손으로 센 값 | API |
+|---|---|---|
+| 오더 기본 30일 | L04 3건 · 수량 3 · 15 000 / P01 1건 · 수량 3 · 24 000 / X1 1건 · 20 000 / Pansement(직접) 1건 · 수량 2 · 2 000 — 6건 61 000 | ✅ |
+| 오더 종류 = 검사 / 처치 | L04 3 / P01 + Pansement | ✅ |
+| 오더 과 = INT / 의사 = Kim | L04 1 + Pansement 1 / L04 2 + P01 + X1 | ✅ |
+| 오더 60일 | L04 4건(⑥ 포함) | ✅ |
+| 진단 주진단 | B54 진료 3 · 환자 2(남 1 여 1, <5 1 · 15–49 1) / Douleur…(직접) 1 · 1(남, 50+) — 전체 진료 4 · 환자 3 | ✅ |
+| 진단 전체 | 위 + J00 1 · 1 / Fatigue(직접) 1 · 1 — 전체는 그대로 4 · 3 | ✅ |
+| 진단 과 = INT / 의사 = Kim / 60일 | B54 1 + Douleur 1 / B54 2 · 환자 2 / B54 4 · 환자 2 | ✅ |
+| 빈 기간 / 틀린 인자(`type=xyz`, `department_id=abc`, `scope=x`, 시작 > 끝) | 빈 표 / 400 | ✅ |
+
+  취소한 오더 · 취소 접수 ⑤ 는 어디에도 안 세어짐. 따로 짠 SQL(코드 목록과 묶지 않고 줄에 적힌 코드로 세는 방식, `EXISTS` 로 기간을 거르는 방식)과도 같음 — 작은 데이터와 위의 큰 데이터(1년: 오더 55 348건 1 292 884 000 Ar, 진단 18 452 진료 · 8 003 환자) 둘 다. 화면: 한국어 · 프랑스어 · 영어, 어두운 · 밝은 · 종이색, 1366×768(가로 넘침 없음), 긴 진단 이름(말줄임 + 마우스 올리면 전체, 「직접 입력」 표는 안 잘림), 빈 기간(「데이터 없음」, CSV 단추 꺼짐), CSV 둘(단추 → Blob 읽기).
+
 ## 4. 데이터 · API
 
 ### 화면
@@ -332,6 +433,9 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | `GET /cash` | `granularity`(day·month·year, 기본 day), `from`, `to`(생략 시 30일 · 12개월 · 5년) | `{granularity, from, to, periods[{period, in, out, net, byKind{payment,settlement,correction,cancel,opening}}], total{…}}` — 기간마다 한 줄(빈 날 0), **최신 기간이 먼저** |
 | `GET /outstanding` | 없음 | `{owed:[…], refund:[…], owedTotal, refundTotal}` — 각 행 `patient_id, chart_no, name, contact, amount, since(미수만), last_date, open_bills` |
 | `GET /drug-usage` | `granularity`(day·month·year), `from`, `to`, `status`(dispensed), `dispense_type`(internal·external) | `{granularity, basis('prescribed'·'dispensed'), from, to, periods(최신이 먼저), drugs[{drug_code,drug_name,category,pack_label,total_qty,total_count,by_period}]}` (약을 가로지르는 합계 없음 — `periodTotals`·`grandTotal` 은 2026-09-29 에 뺌) — `basis` 에 따라 날짜·수량 규칙이 다름(3.6) |
+| `GET /options` | 없음 | `{departments[{id,code,name,name_en,name_fr}], doctors[{id,name}]}` — 진단 · 오더 통계의 과 · 의사 고르기 칸 |
+| `GET /orders` | `from`, `to`(생략 시 오늘까지 30일), `type`(lab·imaging·procedure·fee, 생략·`all` = 전부), `department_id`, `doctor_id` | `{from, to, type, rows[{order_code_id, code, name, name_en, code_type, typed, count, qty, amount, patients}], total{count, amount}}` — 건수 많은 순(같으면 금액 · 이름). `amount` 는 오더에 적힌 값(받은 돈 아님, 3.12) |
+| `GET /diagnoses` | `from`, `to`(생략 시 30일), `scope`(primary 기본 · all), `department_id`, `doctor_id` | `{from, to, scope, rows[{diagnosis_code_id, code, name, name_fr, name_ko, cases, patients, male, female, age_0_4, age_5_14, age_15_49, age_50, age_unknown, typed}], total{cases, patients}}` — 진료 수 많은 순. `total` 은 따로 센 값(줄의 합 아님) |
 
 ### 공용 부품
 
@@ -341,24 +445,29 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 
 | 테이블 | 쓰는 컬럼 | 주인 모듈 |
 |---|---|---|
-| `visit` | `visit_date, visit_type, status, patient_id, department_id, doctor_id` | 접수 |
+| `visit` | `id, visit_date, visit_type, status, patient_id, department_id, doctor_id` | 접수 |
 | `department` | `id, code, name, name_en, name_fr` (화면이 언어에 맞는 이름을 고름) | 설정 |
 | `staff` | `id, name` | 설정 |
 | `billing` | `billing_date, payment_status, consult_fee, drug_total, procedure_total, previous_balance, total_due, net_paid, outstanding, carried_into_id, replaced_by_id, refunded_amount, cancelled_at, visit_id, patient_id` | 수납 |
 | `cash_movement` | `move_date, kind, amount` (그날 현금 — 3.11). 통계는 읽기만(고칠 수도 없음 — 트리거) | 수납 |
 | `billing_item` | `item_type, total_price` | 수납 |
-| `patient` | `chart_no, last_name, first_name, mobile, phone` | 접수 |
+| `patient` | `chart_no, last_name, first_name, mobile, phone`, 진단 통계: `gender, date_of_birth` | 접수 |
 | `prescription` | `drug_code, drug_name, drug_id, total_qty, status, dispense_type, consultation_id` | 진료·약국 |
-| `consultation` | `visit_id` | 진료 |
+| `consultation` | `id, visit_id, patient_id` | 진료 |
+| `order_item` | `visit_id, patient_id, order_code_id, order_code, order_name, code_type, quantity, total_qty, unit_price, status` (오더 통계 — 3.12) | 진료 |
+| `order_code` | `code, name, name_en, code_type` | 설정 |
+| `diagnosis` | `consultation_id, diagnosis_code_id, icd_code, diagnosis_name, diagnosis_type` (진단 통계 — 3.12) | 진료 |
+| `diagnosis_code` | `code, name_en, name_fr, name_ko` | 진료 · 설정 |
 | `drug` | `category` | 설정·약국 |
 
-마이그레이션: 없음 (601~699 사용 가능)
+마이그레이션: **601** `601_statistics_order_item_visit_index.sql` — `order_item(visit_id)` 인덱스 하나(`idx_oi_visit`, `IF NOT EXISTS`, 줄은 안 바꿈). 세션 임시 번호이고 합칠 때 총괄이 다시 번호를 붙임. 통계의 표는 여전히 없음
 
 ## 5. 다른 모듈과의 연결
 
 - **접수** — 내원 수·진료과·담당의·초진/재진은 전부 `visit` 에서 옵니다. 접수에서 과나 담당의를 비워 두면 과별·의사별 모두 「미지정」 줄로 갑니다. 접수를 취소(`status='cancelled'`)하면 내원 수에서 빠집니다.
 - **수납** — 영수 기준 숫자(과·의사별 · 청구 · 미수 · 환불 예정 · 취소 개수)는 `billing` 에서, **그날 현금**은 수납이 쓰는 `cash_movement`(036)에서 옵니다. 금액 규칙은 3.4 · 3.10 · 3.11. 미수·환불 식(`OWED_SQL`·`REFUND_SQL`)은 수납의 `/patient/:id/balance` 와 **일부러 같게** 맞춰 두었습니다 — 수납이 그 식이나 `cash_movement` 의 `kind` 를 바꾸면 통계도 같이 바꿔야 합니다. 수납 화면의 「Caisse du jour」(`GET /api/billing/cash-day`)와 통계의 그날 현금은 같은 표를 읽으므로 같은 날 같은 숫자여야 합니다.
 - **진료·약국** — 약품 사용통계는 `prescription` 의 처방·조제 상태를 셉니다.
+- **진료** — 진단 통계는 `diagnosis`(주/부 구분 · 목록 코드 `diagnosis_code_id`), 오더 통계는 `order_item` 을 읽습니다(3.12). 진료가 오더 취소를 `status='cancelled'` 가 아닌 다른 방법으로 하게 되거나, 오더 금액 식(`total_qty × unit_price`)을 바꾸면 통계도 같이 바꿔야 합니다. 진단 목록(`diagnosis_code`)에 이름이 늘거나 바뀌면 통계 화면의 이름도 따라 바뀝니다(코드 id 로 묶으므로 줄은 안 갈라짐).
 - **설정** — 진료과 이름(한·영·불), 직원 이름, 약품 분류. 모듈 권한 `stats` 는 `frontend/src/modules.js` 에 정의.
 
 ## 6. 설정 항목
@@ -426,4 +535,5 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | 2026-09-29 | **현금 기준 구현(결정 8, 시안 A)**: 「Caisse」 카드 · 기간별 현금 표 · CSV · 월별 추이 현금(`cash_movement`), 청구액을 진료 영수 카드 밑으로, 과·의사 그래프에 「영수 기준 · 합계」, 취소 영수 카드는 개수만. 3.11 새로 | `fdaad17` |
 | 2026-09-30 | 통합 시험 뒤: 프랑스어 금액 천 단위 빈칸(`fmtAmount(n, lang)`), 숫자와 단위 사이 빈칸, 막대 이름 칸 넓힘. 1366×768 · 프랑스어 · 밝은 화면 한 바퀴 | `b694b5b` |
 | 2026-10-01 | 「기간별 현금」 표와 CSV 를 최신 날짜가 맨 위로(실장님 말씀) — 순서만, 숫자 계산 그대로 | `fca7ad9` |
-| 2026-10-01 | 약품 사용통계의 기간 열을 최근이 맨 왼쪽으로(실장님 승인), CSV 도 같게 — 순서만. 월별 추이 그래프는 그대로 | (이 커밋) |
+| 2026-10-01 | 약품 사용통계의 기간 열을 최근이 맨 왼쪽으로(실장님 승인), CSV 도 같게 — 순서만. 월별 추이 그래프는 그대로 | `feae7ac` |
+| 2026-10-02 | **진단 통계 · 오더 통계**(실장님 말씀 → 총괄 범위, 1단계): 기간 · 과 · 의사로 거른 순위표와 CSV, `/options`·`/orders`·`/diagnoses`, 마이그레이션 601(`order_item.visit_id` 인덱스). 3.12 · 2.3c · 2.3d 새로 | (이 커밋) |
