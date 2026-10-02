@@ -13,6 +13,40 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-02 — 진짜 굽기 1장 성공 · Weasis를 설치 없이 풀어 켜 봄
+
+- **상태**: 확인 요청. 실장님이 PACS 세션 창에 직접 「CD 구워, Weasis 받아」.
+- **커밋**: **PACS 저장소** `session/pacs` — 「cd-export: burnt for real…」 커밋. **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(문서만).
+- **① 진짜 굽기 — 성공**(G: Slimtype DVD A DS8A3S, CD-R 1장, 가짜 환자 RAKOTO Jean 26-00001의 검사 2건 60MB, 뷰어 없이)
+  - 프로그램의 말: 「Terminé : le disque est gravé et vérifié」. 드라이브의 자체 전체 확인을 켠 채로 통과했고, 그 뒤 프로그램이 디스크를 다시 읽어 **25개 파일을 모두 원본과 비교해 같음**.
+  - **시간**: 전체 165.9초 — 받기 1.3초 · 이미지 준비 0.8초 · 굽기 52초(0%에 11초 머문 뒤 1%→99%가 40초, x10) · 「Vérification du disque…」 112초 · 트레이 열림.
+  - **진행 표시**: 1%씩 고르게 올라가고 100%에서 「Vérification du disque… mm:ss」로 바뀜(이 표시는 굽기 전에 넣은 것).
+  - **드라이브가 사라진 흔적 없음**, 오류 없음, 임시 폴더 비워짐. 변경 기록 한 줄: 「2 exam(s), 23 image(s), 60.4 MB given out (disc): Chest PA (261001-55); SONO(5) (261001-56)」.
+  - 디스크를 다시 넣은 뒤: 프로그램이 「ce disque n'est pas vierge : il ne sera pas utilisé」, 굽기 단추 꺼짐 / 볼륨 이름 `IMG_26_00001`, 맨 위 `DICOMDIR · IMAGES · README.TXT` / `IMAGES`의 23개가 영상 서버의 파일과 **바이트까지 같음** / `DICOMDIR`을 DICOM 라이브러리로 읽어 환자 1 · 검사 2 · 시리즈 6 · 영상 23, 가리키는 파일 모두 있음 / **다른 영상 서버(임시 Orthanc, 127.0.0.1:9196)에 올려 23개 모두 받아들여짐** — 환자 1 · 검사 2 · 시리즈 6. 그 임시 서버는 지웠습니다.
+  - 굽기 전에 쓰지 않고 확인한 것: 빈 디스크 · 자체 확인을 켤 수 있음 · 속도 x24/x20/x16/x10 · 이미지가 들어감.
+- **굽기 시험으로 고친 것**(PACS 커밋에 들어감):
+  - 굽는 속도를 드라이브가 대는 것 중 **가장 느린 것**으로(x10) — 제가 정한 것. 바꾸길 원하시면 알려 주세요.
+  - 100%에 닿은 뒤 「Vérification du disque… mm:ss」.
+  - 트레이가 열려 있을 때 「이 디스크는 구울 수 없음」이라고 하던 것 → 「디스크를 넣으세요」. 닫힌 CD-R(드라이브가 CD-ROM이라고 부름)은 「빈 디스크가 아님」.
+- **② Weasis**
+  - 받은 것: `Weasis-4.7.3-x86-64.msi`, `https://github.com/nroduit/Weasis/releases/download/v4.7.3/Weasis-4.7.3-x86-64.msi`, 54 636 544바이트, SHA-256 `c15358f95b79d936dd908ebd9afeebbce90bd463a9ba97aeda5edcfb78712f1c` — 릴리스 값과 **일치**. 서명 유효(「Open Source Developer, Nicolas Roduit」). 자리: scratch의 `weasis\`.
+  - **설치하지 않음**: `msiexec /a … /qn TARGETDIR=scratch\weasis\x` → `x\PFiles64\Weasis`(139MB, 430개). 프로그램 목록 · `C:\Program Files\Weasis` · 시작 메뉴 · `weasis://` 연결 모두 **없음**을 확인. (Windows 이벤트 기록에는 MSI가 「설치했습니다」 한 줄을 남김 — 풀기 작업의 기록.)
+  - 그 폴더를 뷰어로 넣어 `D:\CD-TEST\26-00001_20261002_0853`(198MB)와 ISO(201MB)를 만듦. 뷰어 넣기 시험 11가지 통과(진짜 폴더로).
+  - **켜짐**: USB 폴더에서 `VOIR.BAT` → 처음 창까지 약 4초, 영상까지 약 7초(Weasis의 기록으로 잼), 두 번째는 1.5초. 환자 · 검사 2건 · 시리즈가 스스로 열림(창을 찍어 확인). 읽기 전용 **가상 디스크(ISO를 물림, UDF)** 에서도 켜지고 영상이 뜸(창 4.2초). 물린 ISO는 뗐습니다.
+  - 처음 켤 때 **동의 창**: 「The open-source distribution of Weasis is not a certified medical device (CE or FDA)… — I accept / No」.
+  - **받는 PC에 남는 것**: `%USERPROFILE%\.weasis` 약 95MB(켠 자리마다 하나 — 부품 사본 · 설정 · 시작 기록. 환자 이름 없음, 켠 자리의 경로는 적힘) / 켜져 있는 동안 `%TEMP%\weasis-<사용자>.<번호>`에 영상 사본 61MB → **창을 닫으면 0개**. 메모리 0.7~1.5GB.
+  - **지운 것**: `C:\Users\Shintong\.weasis`(188MB — 시험 전에는 없던 폴더) · `%TEMP%\weasis-Shintong.07F51C12` · `%TEMP%\weasis-Shintong.E2A53071` · `%TEMP%\weasis-out.txt` · scratch의 `cdx-v-085401.iso`. **남긴 것**: scratch의 `weasis\`(MSI와 풀린 폴더 — 뷰어를 넣은 CD를 구울 때 씀. 끝나면 지움).
+  - 시험 중 한 번 「안 켜짐」으로 보였던 것은 이 도구의 셸 환경(현재 폴더의 파일을 이름만으로 못 찾게 한 설정) 탓 — `VOIR.BAT`을 전체 경로로(더블클릭처럼) 부르니 켜짐. 제품 문제가 아님.
+- **바꾼 파일**: PACS — `cd-export-common.ps1` · `cd-export-ui.ps1` · `README.md`. EMR — 위키 `modules/pacs.md`(2.4.4절) · `manual-fr/pacs.md`(§12) · `reference/image-print-export-design.md` · 이 노트.
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음.
+- **확인 못 한 것**: 뷰어를 넣은 **진짜 CD**(CD에서 켜지는 시간) · 받는 병원 PC가 CD의 프로그램 실행을 막는지 · 다시 쓰는 디스크 · DVD · 불량 디스크 · 굽는 도중 드라이브가 떨어졌을 때(일부러 만들 수 없음) · CD 한 장 가득(약 700MB) 굽는 시간.
+- **`D:\CD-TEST`**: 지금 둘 — `26-00001_20261001_1825_2`(뷰어 없음, 60MB)와 **`26-00001_20261002_0853`(뷰어 포함, 198MB — `VOIR.BAT`을 더블클릭해 보실 수 있음)**. 회귀 시험이 만든 `26-00001_20261002_0901` · `_0901_2`는 지웠습니다.
+- **다른 세션에 부탁 · 정할 것(총괄)**:
+  - 뷰어를 넣은 **두 번째 장**을 구울지(실장님) — 디스크 198MB, CD에서 켜지는 시간을 잼.
+  - `cd-viewer`를 설치 USB 묶음에 넣을지, 병원이 직접 만들게 할지.
+  - Weasis 자신의 라이선스 글(`LICENSE`)을 `cd-viewer`에 넣는 것 — 풀린 폴더에는 Java 것만 있음.
+  - 굽는 속도 「가장 느리게」 그대로 둘지.
+
 ## 2026-10-02 — 단추 간격 · 뷰어 넣기 준비(가짜 폴더로) · 설계안 「.exe로 만드는 길」
 
 - **상태**: 확인 요청. **Weasis 받기와 진짜 굽기는 하지 않았음** — 아래 「기다리는 것」.
