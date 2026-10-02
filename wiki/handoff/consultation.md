@@ -7,7 +7,7 @@
 - **상태**: 확인 요청
 - **커밋**: session/consultation (이 항목과 같은 커밋) — develop `d767082` 다음
 - **실장님 말씀**(총괄이 전함): 「179개는 뺐다는데 뭐 이정도는 더 추가해도 되지않나? 차피 그정도양이면」
-- **한 일**: 새 마이그레이션 `backend/sql/204_consultation_diagnosis_code_rest.sql`(임시 번호 — **총괄이 053으로**): 후보 179개 가운데 **175줄**. 052와 같은 규칙 — 같은 코드가 이미 있으면(켜져 있든 꺼져 있든, 대소문자·공백 무시) 넣지 않음, 있던 줄은 안 건드림, 새 줄은 맨 뒤, 두 번 돌려도 같음, WHO ICD-10 3·4자리만(만들 때 모양 검사), 우리가 쓴 짧은 이름 세 언어. 화면·서버 코드는 바꾸지 않았습니다(찾기·줄임말은 `de0d191` 그대로).
+- **한 일**: 새 마이그레이션 `backend/sql/054_consultation_diagnosis_code_rest.sql`(임시 번호 — **총괄이 053으로**): 후보 179개 가운데 **175줄**. 052와 같은 규칙 — 같은 코드가 이미 있으면(켜져 있든 꺼져 있든, 대소문자·공백 무시) 넣지 않음, 있던 줄은 안 건드림, 새 줄은 맨 뒤, 두 번 돌려도 같음, WHO ICD-10 3·4자리만(만들 때 모양 검사), 우리가 쓴 짧은 이름 세 언어. 화면·서버 코드는 바꾸지 않았습니다(찾기·줄임말은 `de0d191` 그대로).
 - **넣지 않은 넷**(후보였지만 코드가 미심쩍음 — `wiki/reference/diagnosis-candidates.md`의 「남은 것」)
   | 코드 | 진단 | 이유 |
   |---|---|---|
@@ -37,9 +37,9 @@
   - «palu» 5(B54 먼저) · «hta» → I10, 그다음 R03.0(«…sans diagnostic d'HTA») · «k35» → K35.8·K35.3 · «k3» 4 · 「충수」 3 · «fracture» 17(T14.2 먼저, 그다음 부위별) · «s42» 4 · «tb» 9 · «avc» → I64·I63.9·I61.9 · «rage» → A82.9·Z20.3 · «ugd» → K27.9·K25.9·K26.9 · «irc» → N18.9 먼저 · «geu» → O00.9 · «ist» → A64 먼저(그 뒤에 «…ist…»가 든 이름들).
   - 고칠 것은 보이지 않았습니다.
 - **후보 문서**: `wiki/reference/diagnosis-candidates.md`를 「남은 것 4(이유와 함께) / 들어간 것 175」로 고쳐 썼습니다.
-- **바꾼 파일**: `backend/sql/204_consultation_diagnosis_code_rest.sql`(새) · `wiki/reference/diagnosis-candidates.md` · `wiki/modules/consultation.md`(3.1·4·6·8) · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **바꾼 파일**: `backend/sql/054_consultation_diagnosis_code_rest.sql`(새) · `wiki/reference/diagnosis-candidates.md` · `wiki/modules/consultation.md`(3.1·4·6·8) · `wiki/manual-fr/consultation.md` · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
 - **공용 파일 변경**: 없음 · **번역 키**: 없음
-- **DB 마이그레이션**: `204_consultation_diagnosis_code_rest.sql` — `INSERT … WHERE NOT EXISTS`(같은 코드) 하나. 모듈 문서 4절의 「204 → 총괄이 번호 매김」도 같이.
+- **DB 마이그레이션**: `054_consultation_diagnosis_code_rest.sql` — `INSERT … WHERE NOT EXISTS`(같은 코드) 하나. 모듈 문서 4절의 「204 → 총괄이 번호 매김」도 같이.
 - **확인한 방법**: 격리 스택(9182).
   - **이미 쓰던 DB**(315줄에 병원이 한 듯 손을 댐 — `J32.9` 이름 바꾸고 끔, 새 목록과 같은 코드 `g20`을 병원 이름·소문자로 더함): 시작 때 적용 → **490줄**(316 + 174), 중복 0, J32.9·g20 그대로, 새 줄은 모두 있던 것 뒤(9010~10750). 손으로 한 번 더 → `INSERT 0 0`. (이름이 바뀐 052 파일이 다시 적용됐지만 한 줄도 더해지지 않음 — 두 번 돌려도 같다는 확인을 겸함.)
   - **빈 목록**(따로 만든 스키마에 050 → 052 → 204 → 204): 100 → 315 → 490 → 490, 중복 0, 모양 벗어난 코드 0, 204의 줄은 052의 마지막(3150) 뒤(3160~4900).

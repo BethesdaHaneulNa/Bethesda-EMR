@@ -1,4 +1,4 @@
--- 204 (consultation; session number - the coordinator renumbers it): the rest of the
+-- 054 (consultation): the rest of the
 -- candidates - the list of frequent diagnoses goes from 315 to about 490.
 --
 -- When the list was widened (052) these were chosen and then left out to stay near 300, a
