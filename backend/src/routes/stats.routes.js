@@ -697,4 +697,116 @@ router.get('/diagnoses', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /api/stats/workload?from&to
+// Departments and doctors side by side: visits, distinct patients and order lines.
+//  - A visit is counted as in the activity cards: by visit date, cancelled
+//    registrations left out, whether or not a consultation was written. For the
+//    same period the visit column equals the "by department / by doctor" bars.
+//  - Orders are the visit's order lines (lab, imaging, procedures, fees) that were
+//    not cancelled - the same lines /orders ranks. Drugs are prescriptions, not
+//    orders, and are not here.
+//  - Department and doctor are the visit's. No department or no doctor is a row of
+//    its own (id null), grouped by id so two staff sharing a name stay two rows.
+//  - Patients cannot be added up down a column (one person can see two doctors),
+//    so the total is counted on its own.
+const ORDERS_OF_VISIT = `(SELECT COUNT(*) FROM order_item oi
+                           WHERE oi.visit_id = v.id AND COALESCE(oi.status, '') <> 'cancelled')`;
+router.get('/workload', async (req, res) => {
+  try {
+    const range = await rankingRange(req);
+    if (range.error) return res.status(400).json({ error: range.error });
+    // One pass over the period's visits, grouped three ways (by department, by
+    // doctor, all together) - the order count is looked up once per visit, not
+    // once per grouping.
+    const r = await pool.query(
+      `WITH vv AS MATERIALIZED (
+         SELECT v.patient_id, v.department_id, v.doctor_id, ${ORDERS_OF_VISIT} AS orders
+           FROM visit v
+          WHERE v.visit_date BETWEEN $1 AND $2 AND v.status <> 'cancelled'
+       ), g AS (
+         SELECT GROUPING(department_id) AS all_depts, GROUPING(doctor_id) AS all_docs, department_id, doctor_id,
+                COUNT(*)::int AS visits, COUNT(DISTINCT patient_id)::int AS patients, COALESCE(SUM(orders), 0)::int AS orders
+           FROM vv GROUP BY GROUPING SETS ((department_id), (doctor_id), ())
+       )
+       SELECT g.*, ${DEPT_COLS}, s.name AS doctor_name
+         FROM g LEFT JOIN department d ON d.id = g.department_id
+                LEFT JOIN staff s ON s.id = g.doctor_id`, [range.from, range.to]);
+    const most = function (key) { return function (a, b) {
+      return b.visits - a.visits || b.patients - a.patients || String(a[key] || '\uffff').localeCompare(String(b[key] || '\uffff'));
+    }; };
+    const counts = function (x) { return { visits: x.visits, patients: x.patients, orders: x.orders }; };
+    const departments = r.rows.filter(function (x) { return x.all_depts === 0; }).map(function (x) {
+      return Object.assign({ department_id: x.department_id, code: x.code, name: x.name, name_en: x.name_en, name_fr: x.name_fr }, counts(x));
+    }).sort(most('code'));
+    const doctors = r.rows.filter(function (x) { return x.all_docs === 0; }).map(function (x) {
+      return Object.assign({ doctor_id: x.doctor_id, name: x.doctor_name }, counts(x));
+    }).sort(most('name'));
+    const all = r.rows.filter(function (x) { return x.all_depts === 1 && x.all_docs === 1; })[0];
+    res.json({ from: range.from, to: range.to, departments: departments, doctors: doctors,
+      total: all ? counts(all) : { visits: 0, patients: 0, orders: 0 } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/stats/patients?from&to&department_id&doctor_id
+// Who came: the period's patients by age band, split by sex and by whether the
+// hospital had seen them before.
+//  - A patient is counted once, however many times they came in the period, in
+//    the age band of their FIRST visit of the period - so the bands add up to the
+//    total, unlike the diagnosis table's age columns.
+//  - "New" means new to the hospital: no visit (cancelled ones aside) before the
+//    period begins, in any department. It is worked out from the visit history,
+//    not from the visit type chosen at reception - that one picks a consultation
+//    fee and counts visits, and stays in the activity cards.
+//  - With a department or doctor filter the patients are those who saw that
+//    department or doctor; "new" still means new to the hospital.
+//  - Same age bands as /diagnoses. No birth date: band 'unknown'. No sex: counted
+//    in the band and in sex_unknown.
+const AGE_BANDS = ['0_4', '5_14', '15_49', '50', 'unknown'];
+router.get('/patients', async (req, res) => {
+  try {
+    const range = await rankingRange(req);
+    if (range.error) return res.status(400).json({ error: range.error });
+    const conds = ['v.visit_date BETWEEN $1 AND $2', "v.status <> 'cancelled'"];
+    const P = [range.from, range.to];
+    const badFilter = visitFilters(req, conds, P);
+    if (badFilter) return res.status(400).json({ error: badFilter });
+    const AGE_AT_FIRST = "date_part('year', age(pv.first_in, p.date_of_birth))";
+    const r = await pool.query(
+      `WITH pv AS (
+         SELECT v.patient_id, COUNT(*) AS visits, MIN(v.visit_date) AS first_in
+           FROM visit v WHERE ${conds.join(' AND ')}
+          GROUP BY v.patient_id
+       ), x AS (
+         SELECT pv.visits, p.gender,
+                CASE WHEN p.date_of_birth IS NULL THEN 'unknown'
+                     WHEN ${AGE_AT_FIRST} < 5 THEN '0_4'
+                     WHEN ${AGE_AT_FIRST} < 15 THEN '5_14'
+                     WHEN ${AGE_AT_FIRST} < 50 THEN '15_49'
+                     ELSE '50' END AS band,
+                EXISTS (SELECT 1 FROM visit b
+                         WHERE b.patient_id = pv.patient_id AND b.status <> 'cancelled' AND b.visit_date < $1) AS seen_before
+           FROM pv JOIN patient p ON p.id = pv.patient_id
+       )
+       SELECT band, COUNT(*)::int AS patients,
+              COUNT(*) FILTER (WHERE gender = 'M')::int AS male,
+              COUNT(*) FILTER (WHERE gender = 'F')::int AS female,
+              COUNT(*) FILTER (WHERE gender IS NULL OR gender NOT IN ('M', 'F'))::int AS sex_unknown,
+              COUNT(*) FILTER (WHERE NOT seen_before)::int AS new_patients,
+              COUNT(*) FILTER (WHERE seen_before)::int AS returning_patients,
+              SUM(visits)::int AS visits
+         FROM x GROUP BY band`, P);
+    const zero = function (band) { return { band: band, patients: 0, male: 0, female: 0, sex_unknown: 0, new_patients: 0, returning_patients: 0, visits: 0 }; };
+    const byBand = {};
+    r.rows.forEach(function (x) { byBand[x.band] = x; });
+    // Every band is sent, empty ones as zeros: the table keeps its shape and a
+    // quiet band reads as "none", not as a missing line.
+    const bands = AGE_BANDS.map(function (b) { return byBand[b] || zero(b); });
+    const total = bands.reduce(function (a, x) {
+      Object.keys(a).forEach(function (k) { if (k !== 'band') a[k] += x[k]; });
+      return a;
+    }, zero('total'));
+    res.json({ from: range.from, to: range.to, bands: bands, total: total });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

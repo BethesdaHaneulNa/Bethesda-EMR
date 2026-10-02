@@ -866,6 +866,16 @@ export default {
   st_allDepts: "All departments",
   st_allDoctors: "All doctors",
   st_typed: "typed",
+  st_patients: "Patients",
+  st_ageBand: "Age",
+  st_sexUnknown: "Sex unknown",
+  st_ptNew: "New patients",
+  st_ptReturning: "Returning patients",
+  st_visits: "Visits",
+  st_ptBasis: "By visit date · cancelled registrations left out · each patient counted once, at their age on their first visit of the period · “New patients” had no visit at the hospital before the period (not the New / Follow-up chosen at reception)",
+  st_workload: "Workload by department and doctor",
+  st_wlOrders: "Orders",
+  st_wlBasis: "By visit date · cancelled registrations left out · orders are lab, imaging and procedure orders not cancelled (drugs excluded) · patients do not add up across rows (one person can visit two departments)",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",
