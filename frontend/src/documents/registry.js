@@ -10,15 +10,19 @@ import imagingReport from './imaging-report.jsx';
 import labResults from './lab-results.jsx';
 import imagingImages from './imaging-images.jsx';
 
-// imagingReport (category 'imaging') is issued from the imaging list, where the exam and
-// its reading are chosen - not from a documents window, so no window offers it under
-// "new" (templatesByCategory never returns it). It is registered so that a sheet
-// already issued can be drawn again from its saved payload, named in the history and in
-// the change log, reprinted and voided like any other paper.
-// labResults (category 'lab') is the same kind of paper, issued from the lab results window.
-// imagingImages (category 'imaging'): an exam's pictures on paper, issued from the imaging
-// list (components/ImagesPrint.jsx). Its record names the pictures; drawn again, the sheet
-// asks the image server for them.
+// Issued or only printed (director, 2026-10-02). The documents a doctor writes and gives
+// out are ISSUED: they take a number and stay in the patient's document history - the
+// referral letter, the medical certificate, the outside prescription, the chart records.
+// A RESULT SHEET is a result that already exists, put on paper: the imaging report
+// (imagingReport), the lab results (labResults), an exam's pictures (imagingImages). It
+// is printed from its own window (the imaging list, the lab results window), takes no
+// number and makes no document row - only a change-log line (POST /documents/print-log;
+// the pictures: POST /pacs/export/printed).
+// Those three are still listed below for ONE reason: until 2026-10-02 they were issued,
+// and the change log holds "documents.issue" lines that name them - the log tab asks this
+// registry for a paper's name. No window offers them under "new" (their category is not a
+// window's) and none lists them in its history any more; the rows issued before the
+// change stay in the database, unlisted.
 export var TEMPLATES = [referral, medicalCertificate, externalRx].concat(CHART_TEMPLATES).concat([imagingReport, labResults, imagingImages]);
 
 export function getTemplate(code) {
@@ -36,26 +40,19 @@ export function templatesByCategory(cat) {
   return TEMPLATES.filter(function (t) { return (t.category || 'document') === cat; });
 }
 
-// The documents a window lists in its history: its own kinds, and the kinds issued on
-// another screen that belong with them. The imaging report goes with the letters and
-// certificates (the 📄 Documents window of consultation and payment): it leaves the
-// clinic with the patient like a referral letter.
-var HISTORY_ALSO = { document: ['imaging-report', 'lab-results', 'imaging-images'] };
+// The documents a window lists in its history: the kinds it can issue. (The imaging
+// report, the lab results and the image prints were listed in the 📄 Documents window
+// until 2026-10-02; they are printed, not issued, and are no longer listed.)
 export function historyCodes(cat) {
   cat = cat || 'document';
-  return templatesByCategory(cat).map(function (t) { return t.code; }).concat(HISTORY_ALSO[cat] || []);
+  return templatesByCategory(cat).map(function (t) { return t.code; });
 }
 
 // The title of the print window - what the browser prints in the page header when its
-// "headers and footers" are on, and the file name when the page is saved as PDF. A paper
-// carries its number there, as it does in its own text; the imaging report does not show
-// its number on the sheet at all (director, 2026-10-01: it goes to another hospital), so
-// it is titled by its name, as when it is first printed from the imaging list.
-var NO_NUMBER_ON_PAPER = ['imaging-report', 'lab-results', 'imaging-images'];   // the lab results sheet follows the imaging report
+// "headers and footers" are on, and the file name when the page is saved as PDF: the
+// paper's number, as in its own text.
 export function printTitle(doc, lang) {
   if (!doc) return 'document';
-  var tpl = getTemplate(doc.template_code);
-  if (tpl && NO_NUMBER_ON_PAPER.indexOf(tpl.code) >= 0) return (tpl.name && (tpl.name[lang] || tpl.name.fr)) || doc.template_name || 'document';
   return doc.doc_no || 'document';
 }
 

@@ -187,7 +187,7 @@ Si un patient est resté dans la liste d'un jour passé, il n'apparaît plus auj
 1. Choisissez le patient (dans la liste, ou avec **🔍 Trouver patient**).
 2. Cliquez sur **Résultats labo** dans la barre du haut. Une fenêtre montre les résultats du patient : une colonne par date.
 3. Cochez la case de la date (ou des dates) à imprimer. Le bouton devient **🖨 Imprimer (1)** ; cliquez dessus.
-4. La feuille **Résultats d'analyses** s'affiche. Cliquez sur **Émettre et imprimer**, puis imprimez. Si le navigateur bloque la fenêtre, autorisez les fenêtres pop-up pour ce site.
+4. La feuille **Résultats d'analyses** s'affiche. Cliquez sur **Imprimer** (l'impression est notée dans le journal des modifications ; la feuille n'a pas de numéro de document). Si le navigateur bloque la fenêtre, autorisez les fenêtres pop-up pour ce site.
 5. La feuille émise reçoit un numéro (D26-…) et se retrouve dans **Documents** → **HISTORIQUE**.
 
 Sur un petit écran, les boutons de la barre du haut n'ont pas leur dessin (📄, 🧪…) : le texte et la couleur sont les mêmes.

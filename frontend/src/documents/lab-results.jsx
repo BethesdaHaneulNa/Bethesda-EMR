@@ -39,7 +39,7 @@ var T = {
   ownRef:  { fr: 'réf.', en: 'ref.', ko: 'ref.' },
   legend:  { fr: 'H = élevé  ·  L = bas  ·  * = anormal', en: 'H = high  ·  L = low  ·  * = abnormal', ko: 'H = 높음  ·  L = 낮음  ·  * = 이상' },
   by:      { fr: 'Résultats saisis par :', en: 'Results entered by:', ko: '결과 입력:' },
-  issued:  { fr: 'Émis le', en: 'Issued', ko: '발행' },
+  issued:  { fr: 'Imprimé le', en: 'Printed', ko: '인쇄' },   // printed, not issued (director, 2026-10-02): the sheet takes no number
   page:    { fr: 'Feuille', en: 'Sheet', ko: 'Sheet' },
 };
 

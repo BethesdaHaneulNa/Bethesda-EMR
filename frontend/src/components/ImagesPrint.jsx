@@ -8,10 +8,10 @@ import { ImagingImagesLayout, IMAGING_IMAGES_NAME, PER_PAGE, loadPicture, usePic
 // printed. How many pictures a page (1, 2, 4, 6), the sheet's language (French first: it
 // is read in another hospital) and how light the pictures are printed are chosen here.
 //
-// Printing makes a change-log line (POST /api/pacs/export/printed) and issues the paper
-// through the document engine (POST /api/documents) - in that order, and nothing is
-// printed unless both answered. Printing the same sheets again does neither again;
-// changing anything on the paper does.
+// Printing makes a change-log line (POST /api/pacs/export/printed) and nothing is printed
+// unless it answered. It is not issuing (director, 2026-10-02): the paper takes no
+// number and no row in the documents history. Printing the same sheets again from this
+// window does not log them again; changing anything on the paper does.
 //   props.exam       the row of the list (id, visit_id, order_name)
 //   props.examDate   the date printed for the exam   props.now  when it is printed
 //   props.patientId  props.t  props.onClose()
@@ -139,15 +139,9 @@ export function ImagesPrint(props) {
     if (issued) { setPrintNow(printNow + 1); return; }
     setBusy(true);
     try {
-      // 1. the change-log line - refused, nothing is issued and nothing is printed
+      // the change-log line - refused, nothing is printed
       await api.post('/pacs/export/printed', { order_item_id: exam.id, instances: images.map(function (x) { return x.id; }), per_page: per, lang: lang });
-      // 2. the paper, in the patient's documents
-      var saved = await api.post('/documents', {
-        template_code: 'imaging-images', template_name: IMAGING_IMAGES_NAME[lang] || IMAGING_IMAGES_NAME.fr,
-        patient_id: props.patientId, visit_id: exam.visit_id || null, lang: lang,
-        payload: { values: values, patient: who, clinic: clinic, lang: lang, dateStr: props.now, order_item_id: exam.id },
-      });
-      setIssued(saved.doc_no); setPrintNow(printNow + 1);
+      setIssued(true); setPrintNow(printNow + 1);
     } catch (e) {
       alert(t.px_printFail + (why(t, e) || ''));
     }
@@ -161,7 +155,7 @@ export function ImagesPrint(props) {
     : !images.length ? t.px_imPickNone
     : failed ? String(t.px_imFailed || '').replace('{n}', failed)
     : loaded < images.length ? String(t.px_imLoading || '').replace('{n}', loaded).replace('{m}', images.length)
-    : issued ? String(t.px_printIssued || '').replace('{x}', issued) : t.px_imNote;
+    : issued ? t.px_printIssued : t.px_imNote;
 
   return (
     <div onClick={props.onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim-70)', zIndex: 1002, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -200,7 +194,7 @@ export function ImagesPrint(props) {
                 {/* in this window only: the pages apart from each other, each a sheet */}
                 <style>{'.px-img-page{background:#fff;box-shadow:0 0 0 1px #9993;margin-bottom:14px}'}</style>
                 <div ref={sheet}>
-                  <ImagingImagesLayout values={values} patient={who} clinic={clinic} lang={lang} docNo={issued || ''} dateStr={props.now} pictures={pics} />
+                  <ImagingImagesLayout values={values} patient={who} clinic={clinic} lang={lang} docNo="" dateStr={props.now} pictures={pics} />
                 </div>
               </div>}
         </div>
