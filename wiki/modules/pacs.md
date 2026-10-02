@@ -194,7 +194,7 @@
 
 다른 병원에 **영상 자체**를 줄 때 씁니다(실장님: 「CD는 아직도 보안 때문에 CD로 하는 경우가 너무 많다, USB 안 받는다」 → 「반출 프로그램이 환자 차트번호로 조회하고, 그 환자의 어떤 것을 반출할지 클릭하고, 영상 크기 알려 주고, CD 인식하면 『이 CD에 구울까요』 물어보고」). EMR 화면이 아니라 **PACS 폴더의 `cd-export.bat`** 을 더블클릭해 여는 따로 된 프로그램입니다([창의 모습 — 가짜 환자](../reference/design/cd-export-sample-fr.png)). EMR에 닿는 PC면 어디서나 됩니다(서버 PC가 아니어도).
 
-> **지금 상태(2026-10-02)**: 폴더 저장 · ISO 저장 · **진짜 CD-R 한 장 굽기**까지 확인했습니다(가짜 환자, 실장님의 직접 허락). 뷰어(Weasis)는 설치 없이 풀어서 USB 폴더와 가상 디스크(ISO)에서 켜지는 것까지 확인 — **뷰어를 넣은 진짜 CD는 아직 굽지 않았습니다.**
+> **지금 상태(2026-10-02)**: 폴더 저장 · ISO 저장 · **진짜 CD-R 한 장 굽기**까지 확인했습니다(가짜 환자, 실장님의 직접 허락). 디스크에 뷰어는 넣지 않습니다 — Weasis를 해 봤으나 쓰지 않기로 했고(아래), 작은 뷰어를 따로 설계하는 중입니다.
 
 1. **`cd-export.bat` 더블클릭** → 창이 뜹니다. **EMR 계정으로 로그인**(진료 또는 수납 권한). 처음 한 번은 「Adresse de l'EMR」(예: `http://192.168.1.10:9080`)을 적습니다 — 다음부터는 기억합니다(프로그램 옆의 `cd-export.ini`. 비밀번호·토큰은 어디에도 적지 않음).
 2. **N° dossier(차트번호)** 를 치고 Enter → 환자 이름 · 차트번호 · 생년월일 · 성별이 나옵니다. **맞는 환자인지 눈으로 확인**하세요.
@@ -218,19 +218,13 @@
 - **굽기에 걸리는 시간**(2026-10-02, 이 PC의 얇은 USB 드라이브, CD-R, 60MB): 전체 **2분 46초** — 받기 1초 · 굽기 52초(처음 11초는 0%에 머묾 — 디스크 준비, 그 뒤 1%씩 올라감) · 「Vérification du disque…」 **약 1분 50초**(디스크 닫기 + 드라이브의 자체 확인 + 다시 읽어 파일마다 비교) · 트레이 열림. 굽는 속도는 드라이브가 대는 것 중 **가장 느린 것**(이 드라이브는 x10)으로 맞춥니다 — 싼 디스크와 USB 전원으로 도는 드라이브에 무리가 덜 가게(CD 한 장 가득이면 몇 분 더).
 - **구운 디스크를 다시 넣으면** 「Graveur G: — ce disque n'est pas vierge : il ne sera pas utilisé」, 굽기 단추는 꺼집니다. 트레이가 열려 있을 때는 「insérez un disque vierge」.
 
-**뷰어(Weasis)를 디스크에 함께 넣기** (2026-10-02 — 실장님: 「일단 위아시스로 진행하는 걸로 해 보자」)
+**디스크에 뷰어를 넣는 것 — Weasis는 쓰지 않기로 함** (2026-10-02, 실장님: 「위아시스는 버려」)
 
-받는 쪽에 영상 프로그램이 없으면(환자 · 작은 의원) 디스크를 볼 수 없으므로, 뷰어를 함께 넣을 수 있습니다. 프로그램 옆에 **`cd-viewer` 폴더**(그 안에 `Weasis.exe`)가 있을 때만 창에 **「☐ Ajouter la visionneuse d'images au disque (+ 138 Mo)」** 가 나옵니다(없으면 안 나옴). 체크하면 그 폴더가 디스크의 `VIEWER\`로 **그대로** 복사되고, 맨 위에 **`VOIR.BAT`**(뷰어를 켜는 파일 하나)이 생기며, `README.TXT`에 「Sans logiciel d'imagerie : double-cliquez sur VOIR.BAT」 문단이 들어갑니다. 자동 실행 파일은 쓰지 않습니다. Weasis는 고치지 않습니다 — 켤 때 주는 말만 씁니다(Weasis가 자기 CD에 쓰는 `RUN.BAT`과 같은 한 줄).
+받는 쪽에 영상 프로그램이 없으면(환자 · 작은 의원) 디스크를 볼 수 없어서 뷰어를 함께 넣는 것을 해 봤습니다. Weasis 4.7.3을 설치 없이 풀어(`msiexec /a`) 디스크 폴더와 가상 디스크에서 켜지는 것까지 확인했지만 — **디스크마다 139MB · 받는 PC의 사용자 폴더에 약 95MB가 남음 · 처음 켤 때 영어 동의 창 · 메모리 0.7~1.5GB** — 쓰지 않기로 했습니다. 선택 사항으로도 두지 않습니다.
 
-- **`cd-viewer` 폴더 만드는 법**(설치하지 않음): Weasis 공식 릴리스의 `Weasis-4.7.3-x86-64.msi`를 받아 `msiexec /a Weasis-4.7.3-x86-64.msi /qn TARGETDIR=<빈 폴더>` — 「풀기만」 하는 방식이라 그 PC에 설치되지 않습니다(확인함: 프로그램 목록 · `C:\Program Files` · 시작 메뉴 · `weasis://` 연결 어디에도 등록 안 됨. Windows 이벤트 기록에는 「설치했습니다」라고 한 줄 남음). 풀린 것 중 **`PFiles64\Weasis` 폴더**(139MB, 파일 430개: `Weasis.exe` · `Dicomizer.exe` · `app` · `runtime`)를 `cd-viewer`라는 이름으로 프로그램 옆에 둡니다. 받은 파일은 SHA-256과 서명(「Open Source Developer, Nicolas Roduit」, 유효)으로 확인했습니다.
-- **확인한 것**(가짜 환자 2건 60MB + 뷰어):
-  - 디스크 폴더는 198MB(영상 60 + 뷰어 138), ISO는 201MB — CD 한 장(703MB)에 영상 약 500MB까지 함께 들어갑니다. USB(FAT32)에 저장하는 데 61초.
-  - **USB 폴더에서 `VOIR.BAT`**: 처음 켤 때 창까지 약 4초, 디스크의 영상(환자 · 검사 2건 · 시리즈 전부)이 뜰 때까지 약 7초. 두 번째부터는 1.5초. `DICOMDIR`을 읽어 스스로 엽니다 — 받는 사람이 할 일은 더블클릭뿐.
-  - **읽기 전용 가상 디스크(ISO를 Windows에 물림)에서 `VOIR.BAT`**: 켜지고 영상이 뜸(창까지 4초). 진짜 CD는 이보다 느립니다(Weasis 설명서: CD에서 바로 돌리면 느림 — **재지 못함**).
-  - **처음 켤 때 동의 창**이 뜹니다: 「The open-source distribution of Weasis is not a certified medical device (CE or FDA)… — I accept / No」. 영어입니다.
-- **받는 PC에 남는 것**(확인함): 사용자 폴더의 `.weasis`에 **약 95MB**(뷰어의 부품 사본 · 설정 · 시작 기록 — 환자 이름은 없음. 디스크를 켠 자리의 경로가 적히므로, USB의 `26-00001_…` 폴더에서 켰다면 **그 폴더 이름(차트번호)** 이 남음; CD에서는 드라이브 글자뿐). 켜져 있는 동안에는 임시 폴더에 **영상 사본**(60MB 검사에 61MB)이 생기고, **창을 닫으면 지워집니다**(강제로 꺼지면 남을 수 있음). 메모리는 0.7~1.5GB를 씁니다 — 오래된 PC에서는 무거울 수 있음.
-- **아직 안 한 것 · 정할 것**: 뷰어를 넣은 **진짜 CD**를 구워 CD에서 켜지는 시간 · 받는 병원 PC가 CD의 프로그램 실행을 막지 않는지(현지에서만 알 수 있음) · Weasis 자신의 라이선스 글(EPL-2.0 / Apache-2.0)을 `cd-viewer`에 함께 넣는 것(풀린 폴더에는 Java의 라이선스 글만 있음 — `runtime\legal`) · `cd-viewer`를 설치 USB 묶음에 넣을지(총괄).
-
+- 대신 **작은 「보기 전용」 뷰어**(수백 KB, 받는 PC에 아무것도 안 남김, 초음파 동영상 재생)를 설계하는 중입니다: [cd-mini-viewer-design.md](../reference/cd-mini-viewer-design.md). 아직 짓지 않았습니다.
+- 지금 굽는 디스크에는 **뷰어가 없습니다** — 받는 병원이 자기 PACS · 뷰어로 `DICOMDIR`을 읽습니다.
+- 프로그램에는 「뷰어 넣기」의 자리만 남아 있습니다(`cd-viewer` 폴더 → 디스크의 `VIEWER\`). 지금은 아무것도 제안하지 않습니다 — 체크 칸이 나오지 않음.
 
 ### 2.5 영상이 안 보일 때 — 순서대로
 
@@ -505,7 +499,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
   - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
   - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬 → 가장 느린 속도). **진짜 굽기로 확인함(2026-10-02)**: 이 드라이브에서 자체 확인이 켜지고, 굽고 나면 트레이를 열지 않아도 Windows가 디스크를 다시 읽어 줘서 파일 비교까지 됨. 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
-  - 뷰어: `Get-ViewerInfo`(`cd-viewer`에 `Weasis.exe`가 있는지, 파일 수와 크기) · `Add-DiscViewer`(`VIEWER\`로 복사 + `VOIR.BAT`) · `Get-DiscFileSystems`(뷰어가 있으면 ISO 9660 + Joliet + UDF). `cd-export.ps1 -ViewerDir`(기본: 프로그램 옆 `cd-viewer`).
+  - 뷰어의 자리(비어 있음): `Get-ViewerInfo`는 `$VIEWER_START`(뷰어 폴더에서 켜는 프로그램의 이름)가 비어 있는 동안 늘 「없음」 · `Add-DiscViewer`(`VIEWER\`로 복사) · `Get-DiscFileSystems`. Weasis용이던 `VOIR.BAT`과 README의 뷰어 문단은 뺌(2026-10-02).
   - `cd-export-ui.ps1` — 창(WinForms). 글은 `$CdxText`(fr · ko · en). 사람에게 묻는 것(안내 · 예/아니오 · 폴더 고르기 · 파일 이름)은 함수 네 개에 모아 둠 — 시험이 사람 대신 답할 수 있게.
   - **EMR만 부릅니다**(로그인 · `GET /api/pacs/export/patient` · `GET /api/pacs/export/bundle`). Orthanc에 직접 가지 않으므로 영상 서버 비밀번호가 프로그램에 없습니다.
 
@@ -825,3 +819,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | 영상/판독 창의 상세: 「⇄ 다른 오더로 옮기기…」와 「🖨 영상 인쇄」를 한 줄에 나란히, 아래에 여백(총괄 요청). 반출 프로그램에 **뷰어 넣기 준비**(`cd-viewer` 폴더가 있을 때만 체크 칸 — 가짜 폴더로만 확인). 설계안에 「.exe로 만드는 길」(11절) | EMR `session/pacs` · PACS `session/pacs` |
 | 2026-10-02 | **진짜 굽기 1장 확인**(CD-R, 가짜 환자 2건 60MB — 굽기 · 드라이브 자체 확인 · 다시 읽어 비교 · 꺼냄 · 다시 넣으면 거절 · 다른 영상 서버가 읽음). 굽는 속도를 가장 느린 것으로, 100% 뒤 「Vérification du disque…」 표시, 열린 트레이를 「디스크 없음」으로. **Weasis**: 설치 없이 풀어 USB 폴더와 가상 디스크에서 `VOIR.BAT`으로 켜짐(2.4.4절) | PACS `session/pacs` |
 | 2026-10-02 | 설계안 [cd-mini-viewer-design.md](../reference/cd-mini-viewer-design.md) — CD에 넣는 작은 「보기 전용」 뷰어(짓지 않음). 조사하다 찾아 고친 것: 묶음에 같은 검사가 두 번 들어가면 영상 서버가 멈춤 → `GET /export/bundle`이 한 번만 넣음 | EMR `session/pacs` |
+| 2026-10-02 | **Weasis를 쓰지 않기로 함**(실장님) — 반출 프로그램 · README · 설명서에서 Weasis의 글과 켜는 한 줄을 뺌, 「뷰어 넣기」의 자리만 남김. 작은 뷰어 설계안에 「읽고 그리는 작은 시험」의 결과(179줄 · 11KB · 영상 서버의 그림과 차이 1/255 이내) | EMR `session/pacs` · PACS `session/pacs` |
