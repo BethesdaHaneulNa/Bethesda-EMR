@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bethesda icons - comparison sheets</title>
+<!-- Draws one sheet per candidate on a canvas and posts it as PNG to the helper server
+     (sheet-server.mjs). Generated into sheet.html by icons.mjs. Design session tooling. -->
+<body style="margin:0;background:#888">
+<script>
+/*DATA*/
+(async function () {
+  var W = 1840, ROW = 372, TOP = 96, H = TOP + ROW * 3 + 24;
+  var FONT = '"Malgun Gothic","Segoe UI",system-ui,sans-serif';
+  function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+  // a desktop-like background, drawn: a soft blue-green field with two light shapes
+  function wallpaper(ctx, x, y, w, h) {
+    var g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#0b4f8a'); g.addColorStop(0.55, '#1b7fa8'); g.addColorStop(1, '#3fa58c'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x + w * 0.72, y + h * 1.25, w * 0.5, h * 0.9, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.10; ctx.beginPath(); ctx.ellipse(x + w * 0.2, y - h * 0.3, w * 0.4, h * 0.8, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  var done = [];
+  for (var key of Object.keys(META)) {
+    var c = document.createElement('canvas'); c.width = W; c.height = H; var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#111827'; ctx.font = '700 34px ' + FONT; ctx.textBaseline = 'alphabetic'; ctx.fillText('안 ' + key + ' — ' + META[key].name, 28, 46);
+    ctx.fillStyle = '#4b5563'; ctx.font = '400 20px ' + FONT; ctx.fillText(META[key].note + '   크기: 256 · 48 · 32 · 16, 맨 오른쪽은 16을 6배로 키운 것', 28, 78);
+    var rows = [['밝은 바탕', '#f3f4f6', '#374151'], ['어두운 바탕', '#111827', '#e5e7eb'], ['바탕화면', null, '#ffffff']];
+    for (var r = 0; r < rows.length; r++) {
+      var y = TOP + r * ROW, row = rows[r];
+      if (row[1]) { ctx.fillStyle = row[1]; ctx.fillRect(0, y, W, ROW - 12); } else wallpaper(ctx, 0, y, W, ROW - 12);
+      ctx.fillStyle = row[2]; ctx.globalAlpha = 0.75; ctx.font = '600 16px ' + FONT; ctx.fillText(row[0], 20, y + 26); ctx.globalAlpha = 1;
+      var progs = Object.keys(PROGRAMS);
+      for (var p = 0; p < progs.length; p++) {
+        var x = 40 + p * 600, iy = y + 40, im = await img(ICONS[key + '-' + progs[p]]);
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(im, x, iy, 256, 256);
+        var sx = x + 280;
+        [48, 32, 16].forEach(function (s) { ctx.drawImage(im, sx, iy + 256 - s, s, s); sx += s + 22; });
+        // the 16px icon as it is, enlarged six times without smoothing
+        var small = document.createElement('canvas'); small.width = 16; small.height = 16; var sc = small.getContext('2d'); sc.imageSmoothingQuality = 'high'; sc.drawImage(im, 0, 0, 16, 16);
+        ctx.imageSmoothingEnabled = false; ctx.drawImage(small, sx + 6, iy + 256 - 96, 96, 96); ctx.imageSmoothingEnabled = true;
+        // the name, as under a desktop shortcut
+        ctx.font = '600 18px ' + FONT; ctx.textAlign = 'center';
+        if (!row[1]) { ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1; }
+        ctx.fillStyle = row[2]; ctx.fillText(PROGRAMS[progs[p]], x + 128, iy + 256 + 30);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.textAlign = 'left';
+      }
+    }
+    document.body.appendChild(c); c.style.cssText = 'display:block;max-width:100%;margin:0 auto 16px';
+    var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+    var resp = await fetch('/png?name=bethesda-icon-option-' + key, { method: 'POST', body: blob });
+    done.push(key + ':' + resp.status + ':' + blob.size);
+  }
+  window.__sheets = done.join(' ');
+  document.title = 'done ' + window.__sheets;
+})();
+</script>
+</body>
