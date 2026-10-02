@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bethesda icons - PNG for the .ico</title>
+<!-- Draws the chosen marks at 16, 32, 48 and 256 and posts each as PNG to sheet-server.mjs
+     (saved under png/). Generated into sheet3.html by icons.mjs. Design session tooling. -->
+<body style="margin:0;background:#888">
+<script>
+/*DATA*/
+(async function () {
+  function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+  var done = [];
+  for (var p of Object.keys(FINAL)) { var im = await img(FINAL[p]); for (var s of [16, 32, 48, 256]) {
+    var c = document.createElement('canvas'); c.width = s; c.height = s; var ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, 0, 0, s, s); document.body.appendChild(c);
+    var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+    var r = await fetch('/png?name=ico-' + p + '-' + s, { method: 'POST', body: blob }); done.push(p + s + ':' + r.status);
+  } }
+  window.__sheets = done.join(' '); document.title = 'done';
+})();
+</script>
+</body>

@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 공통 아이콘이 정해짐: 안 C + EMR 은 집 그림. SVG · .ico 셋을 만듦
+
+- **상태**: 확인 요청 (favicon · 로그인 표식은 **보류 — 총괄 승인**)
+- **커밋**: session/design (이 항목과 같은 커밋)
+- **실장님 결정**(제 화면에서 그림을 보시고): ① 「C안으로, EMR 그림만 종이 말고 다른 걸로 다시 그려 줘」 ② EMR 그림 넷 가운데 「가. 집 (병원)」. 그림: `wiki/reference/design/bethesda-icon-option-C.png` · `bethesda-icon-emr-shapes.png`
+- **한 일**: 정해진 셋의 SVG `wiki/reference/design/icons/final/bethesda-{emr,pacs,cd}.svg`, PNG `icons/png/`(16 · 32 · 48 · 256), .ico `icons/ico/bethesda-{emr,pacs,cd}.ico`. 묶는 도구 `icons/ico.mjs`.
+- **바꾼 파일**: `wiki/` 뿐. **앱 코드 · 공용 파일 변경 없음**
+- **확인한 방법**: .ico 머리(종류 1, 그림 4장, 각 PNG) 읽음, Windows `System.Drawing.Icon` 으로 셋 다 32×32 로 열림. 16px 을 키운 그림에서 집(오각형) · 화면 · 동그라미가 구별됨.
+- **확인 못 한 것**: 실제 바탕화면 바로가기 · 작업 표시줄 · 브라우저 탭에 붙여 본 모습. 오래된 도구가 PNG 를 담은 .ico 의 작은 크기를 못 읽는 경우(그러면 16 · 32 · 48 을 BMP 로 담아 다시 묶음 — PACS 의 exe 빌드에서 확인 필요)
+- **위키**: `modules/design.md` 3.10
+- **총괄 확인 요청**: 다음을 해도 되는지 — (가) `frontend/index.html` 에 favicon 한 줄 + `frontend/public/favicon.svg` · `favicon.ico`(새 파일), (나) `Login.jsx` 의 파란 네모 「B」를 집 그림으로(같은 자리 · 같은 크기 60px). 설치 스크립트의 바로가기 아이콘은 누가 맡는지
+- **다른 세션에 부탁**: PACS — Bethesda CD 의 exe 아이콘을 `wiki/reference/design/icons/ico/bethesda-cd.ico` 로(`make-icon.ps1`). PACS 바로가기는 `bethesda-pacs.ico`
+- **남은 일**: ② 진료 화면 다시 확인(진단 칸 · 진단서) — 이어서 함
+
 ## 2026-10-02 — 세 프로그램 공통 아이콘 후보 세 안 (그림만)
 
 - **상태**: 보류 — 실장님이 고르셔야 함

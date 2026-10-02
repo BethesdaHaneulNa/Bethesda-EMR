@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bethesda icons - EMR shapes</title>
+<!-- One sheet: the EMR shapes to choose from (option C), each beside the PACS and CD icons,
+     as three shortcuts would stand on a desktop. Posts a PNG to sheet-server.mjs.
+     Generated into sheet2.html by icons.mjs. Design session tooling. -->
+<body style="margin:0;background:#888">
+<script>
+var ALT = {"house":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gEhouse\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gEhouse)\"/><path fill=\"#fff\" stroke=\"#fff\" stroke-width=\"18\" stroke-linejoin=\"round\" d=\"M128 58L198 114V198H58V114Z\"/><rect x=\"95\" y=\"139.5\" width=\"66\" height=\"21\" rx=\"5.25\" fill=\"#1d4ed8\"/><rect x=\"117.5\" y=\"117\" width=\"21\" height=\"66\" rx=\"5.25\" fill=\"#1d4ed8\"/></svg>","heart":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gEheart\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gEheart)\"/><path fill=\"#fff\" d=\"M128 210C66 168 42 132 42 100A46 46 0 0 1 128 78A46 46 0 0 1 214 100C214 132 190 168 128 210Z\"/><rect x=\"97\" y=\"116\" width=\"62\" height=\"20\" rx=\"5\" fill=\"#1d4ed8\"/><rect x=\"118\" y=\"95\" width=\"20\" height=\"62\" rx=\"5\" fill=\"#1d4ed8\"/></svg>","folder":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gEfolder\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gEfolder)\"/><path fill=\"#fff\" d=\"M48 78A14 14 0 0 1 62 64H104A10 10 0 0 1 112 68L124 84H194A14 14 0 0 1 208 98V186A14 14 0 0 1 194 200H62A14 14 0 0 1 48 186Z\"/><rect x=\"97\" y=\"132\" width=\"62\" height=\"20\" rx=\"5\" fill=\"#1d4ed8\"/><rect x=\"118\" y=\"111\" width=\"20\" height=\"62\" rx=\"5\" fill=\"#1d4ed8\"/></svg>","person":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gEperson\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gEperson)\"/><circle cx=\"128\" cy=\"90\" r=\"34\" fill=\"#fff\"/><path fill=\"#fff\" d=\"M56 212A72 72 0 0 1 200 212Z\"/><rect x=\"108\" y=\"171\" width=\"40\" height=\"14\" rx=\"3.5\" fill=\"#1d4ed8\"/><rect x=\"121\" y=\"158\" width=\"14\" height=\"40\" rx=\"3.5\" fill=\"#1d4ed8\"/></svg>"}; var ALTMETA = {"house":{"name":"집 (병원)","note":"베데스다 = 「자비의 집」. 지붕이 있는 집 안에 십자"},"heart":{"name":"하트","note":"돌봄. 하트 안에 십자"},"folder":{"name":"차트 폴더","note":"환자 차트를 넣는 폴더. 종이 대신 폴더"},"person":{"name":"사람 (환자)","note":"환자 한 사람. 가슴에 작은 십자"}}; var PACS = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCpacs\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8b5cf6\"/><stop offset=\"1\" stop-color=\"#5b21b6\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCpacs)\"/><rect x=\"40\" y=\"56\" width=\"176\" height=\"122\" rx=\"16\" fill=\"#fff\"/><rect x=\"112\" y=\"176\" width=\"32\" height=\"20\" fill=\"#fff\"/><rect x=\"84\" y=\"192\" width=\"88\" height=\"16\" rx=\"8\" fill=\"#fff\"/><rect x=\"93\" y=\"106\" width=\"70\" height=\"22\" rx=\"5.5\" fill=\"#5b21b6\"/><rect x=\"117\" y=\"82\" width=\"22\" height=\"70\" rx=\"5.5\" fill=\"#5b21b6\"/></svg>"; var CD = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCcd\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#1596b3\"/><stop offset=\"1\" stop-color=\"#155e75\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCcd)\"/><circle cx=\"128\" cy=\"128\" r=\"88\" fill=\"#fff\"/><circle cx=\"128\" cy=\"128\" r=\"62\" fill=\"none\" stroke=\"#155e75\" stroke-opacity=\".22\" stroke-width=\"6\"/><rect x=\"94\" y=\"117\" width=\"68\" height=\"22\" rx=\"5.5\" fill=\"#155e75\"/><rect x=\"117\" y=\"94\" width=\"22\" height=\"68\" rx=\"5.5\" fill=\"#155e75\"/><circle cx=\"128\" cy=\"128\" r=\"7\" fill=\"#fff\"/></svg>";
+(async function () {
+  var keys = Object.keys(ALT), W = 1840, ROW = 300, TOP = 96, H = TOP + ROW * keys.length + 16;
+  var FONT = '"Malgun Gothic","Segoe UI",system-ui,sans-serif';
+  function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+  function wallpaper(ctx, x, y, w, h) {
+    var g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#0b4f8a'); g.addColorStop(0.55, '#1b7fa8'); g.addColorStop(1, '#3fa58c'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  }
+  var c = document.createElement('canvas'); c.width = W; c.height = H; var ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#111827'; ctx.font = '700 34px ' + FONT; ctx.fillText('안 C — EMR 그림 고르기', 28, 46);
+  ctx.fillStyle = '#4b5563'; ctx.font = '400 20px ' + FONT; ctx.fillText('PACS(화면) · CD(디스크)는 그대로. EMR 만 종이 대신 넷 가운데 하나로. 오른쪽은 바탕화면에 셋이 나란히 놓인 모습(48 크기)과 가장 작은 크기(16).', 28, 78);
+  var pacs = await img(PACS), cd = await img(CD);
+  var names = ['가', '나', '다', '라'];
+  for (var r = 0; r < keys.length; r++) {
+    var k = keys[r], y = TOP + r * ROW, im = await img(ALT[k]);
+    ctx.fillStyle = '#f3f4f6'; ctx.fillRect(0, y, 900, ROW - 12);
+    ctx.fillStyle = '#111827'; ctx.font = '700 26px ' + FONT; ctx.fillText(names[r] + '. ' + ALTMETA[k].name, 290, y + 60);
+    ctx.fillStyle = '#4b5563'; ctx.font = '400 18px ' + FONT; ctx.fillText(ALTMETA[k].note, 290, y + 92);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(im, 28, y + 16, 240, 240);
+    var sx = 290; [48, 32, 16].forEach(function (s) { ctx.drawImage(im, sx, y + 256 - s - 16, s, s); sx += s + 22; });
+    var small = document.createElement('canvas'); small.width = 16; small.height = 16; var sc = small.getContext('2d'); sc.imageSmoothingQuality = 'high'; sc.drawImage(im, 0, 0, 16, 16);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(small, sx + 10, y + 256 - 96 - 16, 96, 96); ctx.imageSmoothingEnabled = true;
+    // the three shortcuts side by side: on a dark and on a desktop-like background
+    var panels = [[912, '#111827', '#e5e7eb'], [1380, null, '#ffffff']];
+    for (var p = 0; p < panels.length; p++) {
+      var px = panels[p][0], pw = 456;
+      if (panels[p][1]) { ctx.fillStyle = panels[p][1]; ctx.fillRect(px, y, pw, ROW - 12); } else wallpaper(ctx, px, y, pw, ROW - 12);
+      var trio = [[im, 'Bethesda EMR'], [pacs, 'Bethesda PACS'], [cd, 'Bethesda CD']];
+      for (var t = 0; t < 3; t++) {
+        var tx = px + 40 + t * 136;
+        ctx.drawImage(trio[t][0], tx + 24, y + 44, 64, 64);
+        ctx.font = '500 14px ' + FONT; ctx.textAlign = 'center'; ctx.fillStyle = panels[p][2];
+        if (!panels[p][1]) { ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1; }
+        ctx.fillText(trio[t][1], tx + 56, y + 132);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.textAlign = 'left';
+        // and at 16, as in a taskbar or a browser tab, enlarged four times
+        var s16 = document.createElement('canvas'); s16.width = 16; s16.height = 16; var c16 = s16.getContext('2d'); c16.imageSmoothingQuality = 'high'; c16.drawImage(trio[t][0], 0, 0, 16, 16);
+        ctx.drawImage(trio[t][0], tx + 12, y + 190, 16, 16);
+        ctx.imageSmoothingEnabled = false; ctx.drawImage(s16, tx + 40, y + 166, 64, 64); ctx.imageSmoothingEnabled = true;
+      }
+    }
+  }
+  document.body.appendChild(c); c.style.cssText = 'display:block;max-width:100%;margin:0 auto';
+  var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+  var resp = await fetch('/png?name=bethesda-icon-emr-shapes', { method: 'POST', body: blob });
+  window.__sheets = resp.status + ':' + blob.size; document.title = 'done ' + window.__sheets;
+})();
+</script>
+</body>
