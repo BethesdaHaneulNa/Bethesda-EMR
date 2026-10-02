@@ -24,6 +24,7 @@ var LOCK_MESSAGES = {
   'Order is cancelled': 'cs_orderIsCancelled',
   'Visit is not in consultation': 'cs_backNotStarted',
   'Consultation has records': 'cs_backHasRecords',
+  'Diagnosis already on this consultation': 'cs_dxDuplicate',
   'pack_qty must be a whole number of at least 1': 'cs_packQtyWhole',
 };
 
@@ -177,7 +178,18 @@ export default function ConsultationPage() {
   var hos = useState(false), histOpen = hos[0], setHistOpen = hos[1];
   var qfs = useState(''), qFilter = qfs[0], setQFilter = qfs[1];
   var qtb = useState('waiting'), qTab = qtb[0], setQTab = qtb[1];
+  // ── Diagnoses (2026-10-02) ──
+  // dxList: the open consultation's diagnoses as the server has them, the primary one
+  // first. A line is picked from the clinic's list of frequent diagnoses (dxCodes, with
+  // its ICD code and its name in the three screen languages) or typed freely (no code).
+  // The server keeps "one primary" in order and answers every change with the whole list.
+  // histDx: the diagnoses of the patient's other consultations, by consultation id, for
+  // the chart on the right.
   var dxs = useState([]), dxList = dxs[0], setDxList = dxs[1];
+  var dcs2 = useState([]), dxCodes = dcs2[0], setDxCodes = dcs2[1];
+  var dqs2 = useState(''), dxQ = dqs2[0], setDxQ = dqs2[1];
+  var dis = useState(0), dxIdx = dis[0], setDxIdx = dis[1];
+  var hds = useState({}), histDx = hds[0], setHistDx = hds[1];
   var rxs = useState([]), rxList = rxs[0], setRxList = rxs[1];
   // The editable fields of each prescription line as the server last returned them.
   // A field losing focus saves the line (onBlur); with nothing changed there is nothing
@@ -393,6 +405,7 @@ export default function ConsultationPage() {
       try { setPhraseCatRows(await api.get('/admin/phrase-categories') || []); } catch(e){ setPhraseCatRows([]); }
       try { var osData = await api.get('/order-sets'); setOrderSets(osData||[]); } catch(e){ setOrderSets([]); }
       try { setQDoctors(await api.get('/admin/doctors') || []); } catch(e){ setQDoctors([]); }
+      try { setDxCodes(await api.get('/consultations/diagnosis-codes') || []); } catch(e){ setDxCodes([]); }
       try { setQueuePref(prefFromServer(await api.get('/consultations/queue-filter'))); } catch(e){ setQueuePref(null); }
     } catch(err){ console.error(err); }
     setLoading(false);
@@ -515,9 +528,11 @@ export default function ConsultationPage() {
     var rx = await api.get('/consultations/'+cData.id+'/prescriptions');
     var oi = await api.get('/consultations/'+cData.id+'/orders');
     var ns = await api.get('/consultations/'+cData.id+'/notes');
+    var dx = []; try { dx = await api.get('/consultations/'+cData.id+'/diagnoses'); } catch(e){}
     if(!selRef.current || selRef.current.id !== v.id) return;
     setRxList(rememberRx(rx));
     setOrderItems(oi);
+    setDxList(dx||[]);
     // Every doctor's note; mine goes in the box. Text typed here and not saved (kept on
     // this computer, see noteDraft) comes back instead, with a line saying so.
     var mine = (ns||[]).filter(function(n){ return n.mine; })[0];
@@ -579,7 +594,7 @@ export default function ConsultationPage() {
         // Put back to waiting elsewhere: the empty consultation is gone. What is typed in
         // the box stays (kept on this computer) and the next save starts the visit again.
         consultRef.current = null; setConsult(null);
-        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+        setRxList([]); setOrderItems([]); setDxList([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
       }
     } catch(err){
       if(LOCK_MESSAGES[err && err.message]){ alert(t[LOCK_MESSAGES[err.message]]); setSel(null); setConsult(null); }
@@ -614,7 +629,7 @@ export default function ConsultationPage() {
       await api.put('/consultations/visit/'+v.id+'/waiting');
       if(selRef.current && selRef.current.id === v.id){
         consultRef.current = null; setConsult(null);
-        setRxList([]); setOrderItems([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
+        setRxList([]); setOrderItems([]); setDxList([]); setNotes([]); setMineSaved(''); mineSavedRef.current = '';
         setVisitStatus(v.id, 'waiting');
         showToast(t.cs_backDone);
       }
@@ -662,7 +677,7 @@ export default function ConsultationPage() {
         if(selRef.current && selRef.current.id===v.id) warn(p.allergies);
       }).catch(function(){});
     }
-    setDxList([]); setRxList([]); setOrderItems([]);
+    setDxList([]); setRxList([]); setOrderItems([]); setDxQ(''); setHistDx({});
     setNote(''); setNotes([]); setMineSaved(''); setDraftBack(false); setVt({bp:'',temp:'',pulse:'',spo2:'',rr:''});
     setHistory([]);   // the chart is this patient's only: no cards of the patient before while it loads
     setOrderCode(''); setOrderSugg([]);
@@ -686,6 +701,12 @@ export default function ConsultationPage() {
       // and marks the open one where it belongs (it used to be taken out and pinned on top).
       setHistory(h);
       chartWantScroll.current = true;
+      // The diagnoses of every consultation of the patient, for the chart's cards.
+      api.get('/consultations/patient/'+v.patient_id+'/diagnoses').then(function(rows){
+        if(!selRef.current || selRef.current.id !== v.id) return;
+        var by = {}; (rows||[]).forEach(function(d){ (by[d.consultation_id] = by[d.consultation_id] || []).push(d); });
+        setHistDx(by);
+      }).catch(function(){});
     } catch(err){
       // A visit reception cancelled is refused by the server (409); tell the doctor
       // instead of leaving a patient bar with nothing under it.
@@ -721,7 +742,8 @@ export default function ConsultationPage() {
         <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:12}}>
           {vrows.map(function(r){return <div key={r[0]} style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'5px 10px'}}><span style={{fontSize: 12,color:t3,fontWeight:700,marginRight:6}}>{r[0]}</span><span style={{fontSize: 15,color:tx,fontFamily:'monospace'}}>{r[1]}</span></div>;})}
         </div>
-        <div style={{fontWeight:700,fontSize: 13,color:'var(--accent-text)',marginBottom:4}}>{t.consultNote}</div>
+        {dxLine(histDx[c.id], true)}
+        <div style={{fontWeight:700,fontSize: 13,color:'var(--accent-text)',marginBottom:4,marginTop:histDx[c.id] ? 8 : 0}}>{t.consultNote}</div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:6,padding:'8px 12px',marginBottom:14,minHeight:60}}>{notesBlock(c.notes, false)}</div>
         <div style={{fontWeight:700,fontSize: 13,color:'var(--ok-text)',marginBottom:4}}>{t.orders}</div>
         <div style={{background:pn,border:'1px solid '+bd,borderRadius:6,overflow:'hidden'}}>
@@ -913,6 +935,85 @@ export default function ConsultationPage() {
     if(!c) return;
     try { setRxList(rememberRx(await api.get('/consultations/'+c.id+'/prescriptions'))); } catch(e){}
     try { setOrderItems(await api.get('/consultations/'+c.id+'/orders')); } catch(e){}
+    try { setDxList(await api.get('/consultations/'+c.id+'/diagnoses')); } catch(e){}
+  }
+
+  // ── Diagnoses ──
+  // The name a diagnosis shows: a line picked from the list reads in the screen's
+  // language (the list row's names come with the line); a line typed freely, or whose
+  // list row has no name in this language, reads as it was saved.
+  function dxName(d){ return d['name_'+lang] || (d.diagnosis_code_id ? d.name_en : '') || d.diagnosis_name || ''; }
+  function dxCodeName(c){ return c['name_'+lang] || c.name_en || ''; }
+  // Lower case, accents dropped: "fievre" finds « Fièvre ».
+  function plain(x){ var s = String(x == null ? '' : x).toLowerCase(); try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e){} return s; }
+  // The list under the diagnosis box: from two letters, every list row whose code or
+  // name - in ANY of the three languages, so "malaria" and "palu" both find it - holds
+  // what was typed; rows already on the consultation are left out. Code matches first,
+  // then names that begin with it, then the list's own order. The last line always
+  // offers to save the words as typed, with no code.
+  var dxSugg = useMemo(function(){
+    var q = plain(dxQ).trim();
+    if(q.length < 2) return [];
+    var onIt = {}; dxList.forEach(function(d){ if(d.diagnosis_code_id) onIt[d.diagnosis_code_id] = 1; });
+    var rank = function(c){
+      if(plain(c.code).indexOf(q) === 0) return 0;
+      if([c.name_en, c.name_fr, c.name_ko].some(function(n){ return plain(n).indexOf(q) === 0; })) return 1;
+      return 2;
+    };
+    var out = (dxCodes||[]).filter(function(c){
+      return !onIt[c.id] && [c.code, c.name_en, c.name_fr, c.name_ko].some(function(n){ return plain(n).indexOf(q) >= 0; });
+    }).map(function(c){ return { c: c, r: rank(c) }; })
+      .sort(function(a, b){ return (a.r - b.r) || (a.c.sort_order - b.c.sort_order) || (a.c.id - b.c.id); })
+      .map(function(x){ return x.c; });
+    var typed = dxQ.trim();
+    var same = dxList.some(function(d){ return plain(d.diagnosis_name) === plain(typed) || plain(dxName(d)) === plain(typed); })
+      || out.some(function(c){ return plain(dxCodeName(c)) === plain(typed); });
+    if(!same) out.push({ free: true, text: typed });
+    return out;
+  },[dxQ, dxCodes, dxList, lang]);
+  // Adds a diagnosis: a list row, or {free, text}. On a visit not started this starts it
+  // (needConsult), as any first record does.
+  async function addDx(item){
+    if(!sel || !item) return;
+    try {
+      var c = await needConsult();
+      var body = item.free ? { diagnosis_name: item.text }
+        : { diagnosis_code_id: item.id, icd_code: item.code || '', diagnosis_name: dxCodeName(item) };
+      var r = await api.post('/consultations/'+c.id+'/diagnoses', body);
+      if(consultRef.current && consultRef.current.id === c.id) setDxList(r.diagnoses || []);
+      setDxQ(''); setDxIdx(0);
+      rereadStatus();
+    } catch(err){ if(!lockAlert(err)) alert(t.cs_errorPrefix+err.message); }
+  }
+  async function removeDx(d){
+    if(!window.confirm(String(t.cs_confirmRemove||'').replace('{name}', [d.icd_code, dxName(d)].filter(Boolean).join(' ')))) return;
+    try {
+      var r = await api.del('/consultations/diagnosis/'+d.id);
+      setDxList(r.diagnoses || []);
+    } catch(err){ alert(t.cs_errorPrefix+err.message); reloadItems(); }
+  }
+  async function makeDxPrimary(d){
+    try {
+      var r = await api.put('/consultations/diagnosis/'+d.id, { diagnosis_type: 'primary' });
+      setDxList(r.diagnoses || []);
+    } catch(err){ alert(t.cs_errorPrefix+err.message); reloadItems(); }
+  }
+  function handleDxKey(e){
+    if(e.key==='ArrowDown'){ e.preventDefault(); setDxIdx(function(i){ return Math.min(i+1, dxSugg.length-1); }); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); setDxIdx(function(i){ return Math.max(i-1, 0); }); }
+    else if(e.key==='Enter'){ e.preventDefault(); addDx(dxSugg[dxIdx] || dxSugg[0]); }
+    else if(e.key==='Escape'){ setDxQ(''); setDxIdx(0); }
+  }
+  // One line of diagnoses for a chart card or a past record: the primary first, each
+  // "code name", nothing when there is none.
+  function dxLine(list, strong){
+    if(!list || !list.length) return null;
+    return <div style={{fontSize: 13,color:strong?tx:'var(--text-2)',lineHeight:1.5,marginBottom:3,overflowWrap:'anywhere'}}>
+      <span style={{fontWeight:800,color:strong?tx:t2,marginRight:5}}>{t.cs_dxTitle} :</span>
+      {list.map(function(d, i){
+        return <span key={d.id}>{i ? ' · ' : ''}{d.icd_code ? <span style={{fontFamily:'monospace',fontWeight:700,whiteSpace:'nowrap'}}>{d.icd_code} </span> : null}<span style={{fontWeight:i===0 ? 700 : 400}}>{dxName(d)}</span></span>;
+      })}
+    </div>;
   }
 
   // The status cell of an order row. worklist_status only means something for an order
@@ -1405,7 +1506,7 @@ export default function ConsultationPage() {
   // also looks for a document and a bill).
   var notStarted = !!sel && (sel.status==='waiting' || sel.status==='registered');
   var nothingRecorded = !consult || (consult.status!=='completed' && consult.status!=='signed' && !consult.vitals_at
-    && notes.length===0 && rxList.length===0 && orderItems.length===0);
+    && notes.length===0 && rxList.length===0 && orderItems.length===0 && dxList.length===0);
   var canGoBack = !!sel && sel.status==='in_progress' && nothingRecorded && !otherRecords && !visitBilled(sel);
   // The visit's reception memo, for the box over the prescriptions. Reception is merging
   // "chief complaint" and "reception memo" into one field kept in chief_complaint; until
@@ -1520,6 +1621,49 @@ export default function ConsultationPage() {
             <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-4)',fontSize: 14,fontStyle:'italic',textAlign:'center',padding:20,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{t.viewingPast}</div>
           ):sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
+              {/* Diagnoses (2026-10-02): one line - the title and the box - then the
+                  diagnoses entered, as chips. The box works like the code box under
+                  it: two letters, a list, arrows and Enter. The primary diagnosis is
+                  said in words («Principal»), not by colour alone; ☆ on another one
+                  makes it the primary. Long names wrap inside their chip. */}
+              <div data-cs="diagnoses" style={{padding:'5px 10px 6px',borderBottom:'1px solid '+bd,position:'relative',flexShrink:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx,whiteSpace:'nowrap',flexShrink:0}}>{t.cs_dxTitle}</span>
+                  <input autoComplete="off" value={dxQ} onChange={function(e){ setDxQ(e.target.value); setDxIdx(0); }} onKeyDown={handleDxKey}
+                    placeholder={t.cs_dxPlaceholder} aria-label={t.cs_dxTitle}
+                    style={{flex:1,minWidth:0,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',boxSizing:'border-box'}}/>
+                </div>
+                {dxSugg.length>0 ? (
+                  <div style={{position:'absolute',left:10,right:10,top:34,background:'var(--panel-head)',border:'1px solid '+bd,borderRadius:6,zIndex:31,maxHeight:230,overflow:'auto',boxShadow:'0 8px 24px var(--shadow-50)'}}>
+                    {dxSugg.map(function(c, i){
+                      return <div key={c.free ? 'free' : c.id} onClick={function(){ addDx(c); }} onMouseEnter={function(){ setDxIdx(i); }}
+                        style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:8,alignItems:'baseline',background:i===dxIdx?'var(--accent-a20)':'transparent',borderBottom:'1px solid var(--border)'}}>
+                        {c.free
+                          ? <span style={{fontSize: 13,color:t2,overflowWrap:'anywhere'}}>{String(t.cs_dxFree||'').replace('{text}', c.text)}</span>
+                          : <>
+                            <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700,width:52,flexShrink:0,whiteSpace:'nowrap'}}>{c.code || ''}</span>
+                            <span style={{fontSize: 13,color:tx,flex:1,minWidth:0,overflowWrap:'anywhere'}}>{dxCodeName(c)}</span>
+                          </>}
+                      </div>;
+                    })}
+                  </div>
+                ) : null}
+                {dxList.length ? (
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'4px 6px',marginTop:6}}>
+                    {dxList.map(function(d){
+                      var main = d.diagnosis_type==='primary';
+                      return <span key={d.id} style={{display:'inline-flex',alignItems:'baseline',gap:5,maxWidth:'100%',boxSizing:'border-box',background:main?'var(--accent-a12)':'var(--chip)',border:'1px solid '+(main?'var(--accent-a40)':bd2),borderRadius:4,padding:'2px 4px 2px 6px',fontSize: 13,lineHeight:1.4}}>
+                        {main
+                          ? <span style={{fontSize: 11,fontWeight:800,color:'var(--accent-text)',whiteSpace:'nowrap',flexShrink:0}}>★ {t.cs_dxPrimary}</span>
+                          : <button onClick={function(){ makeDxPrimary(d); }} title={t.cs_dxMakePrimary} aria-label={t.cs_dxMakePrimary} style={{background:'transparent',border:'none',color:t2,cursor:'pointer',fontSize: 13,padding:'0 2px',flexShrink:0}}>☆</button>}
+                        {d.icd_code ? <span style={{fontFamily:'monospace',fontWeight:700,color:'var(--accent-text)',whiteSpace:'nowrap',flexShrink:0}}>{d.icd_code}</span> : null}
+                        <span style={{minWidth:0,color:tx,overflowWrap:'anywhere'}}>{dxName(d)}</span>
+                        <button onClick={function(){ removeDx(d); }} title={t.cs_dxRemove} aria-label={t.cs_dxRemove} style={{background:'transparent',border:'none',color:'var(--danger-text)',cursor:'pointer',fontSize: 13,fontWeight:800,padding:'0 3px',flexShrink:0}}>✕</button>
+                      </span>;
+                    })}
+                  </div>
+                ) : null}
+              </div>
               {/* Orders */}
               <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
                 <div style={{padding:'5px 10px',background:scBg,display:'flex',justifyContent:'space-between',borderBottom:'1px solid '+bd,alignItems:'center'}}>
@@ -1770,6 +1914,7 @@ export default function ConsultationPage() {
                         {who(sel.dept_code, sel.doctor_name || (consult && consult.opened_by_name), true)}
                         <span style={{marginLeft:'auto',background:'var(--accent)',color:'var(--on-fill)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>● {t.cs_chartOpen}</span>
                       </div>
+                      {dxLine(dxList, true)}
                       {notesBlock(notes, false, true)}
                     </div>;
                   }
@@ -1782,6 +1927,7 @@ export default function ConsultationPage() {
                       {who(h.dept_code, h.doctor_name)}
                       {active ? <span style={{marginLeft:'auto',background:'var(--warn-a20)',color:'var(--warn-text)',borderRadius:3,padding:'1px 7px',fontSize: 11,fontWeight:800,whiteSpace:'nowrap'}}>{t.cs_chartReading}</span> : null}
                     </div>
+                    {dxLine(histDx[h.id])}
                     {notesBlock(h.notes, true)}
                   </div>;
                 })}
@@ -1827,10 +1973,10 @@ export default function ConsultationPage() {
         onPickVisit={function(v){ pickPatient(v); }} />
       <DocumentModal open={docOpen} onClose={function(){setDocOpen(false); rereadOpen(); }} category="document"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
-        context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList }} />
+        context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList, diagnoses: dxList }} />
       <DocumentModal open={chartOpen} onClose={function(){setChartOpen(false)}} category="chart"
         patient={sel ? { id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name, gender: sel.gender, date_of_birth: sel.date_of_birth } : null}
-        context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList }} />
+        context={{ visit_id: sel?sel.id:null, consultation_id: consult?consult.id:null, dept_code: sel?sel.dept_code:'', doctor_name: sel?sel.doctor_name:'', note: note, meds: rxList, diagnoses: dxList }} />
       {/* the lab results window: its frame and tools live with the table (components/LabResults.jsx,
           laboratory session, 2026-10-01) - the same window whichever screen opens it */}
       {labOpen && sel ? <LabResultsWindow patient={{ id: sel.patient_id, chart_no: sel.chart_no, last_name: sel.last_name, first_name: sel.first_name }} onClose={function(){setLabOpen(false)}} /> : null}

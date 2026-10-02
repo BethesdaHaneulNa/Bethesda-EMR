@@ -70,6 +70,15 @@ export function autofillValue(src, ctx, lang) {
   ctx = ctx || {};
   if (src === 'doctor') return ctx.doctor_name || '';
   if (src === 'note') return ctx.note || '';
+  // The consultation's diagnoses, one a line, the primary first: "B54 Paludisme, sans
+  // précision". A diagnosis picked from the clinic's list reads in the document's
+  // language; one typed freely reads as it was typed.
+  if (src === 'diagnoses') {
+    return (ctx.diagnoses || []).map(function (d) {
+      var name = d['name_' + lang] || (d.diagnosis_code_id ? d.name_en : '') || d.diagnosis_name || '';
+      return [d.icd_code, name].filter(Boolean).join(' ');
+    }).filter(Boolean).join('\n');
+  }
   if (src === 'meds') {
     var meds = ctx.meds || [];
     return meds.map(function (m) {

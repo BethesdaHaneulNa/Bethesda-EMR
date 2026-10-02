@@ -2,6 +2,43 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 진단 칸 (주진단 + 부진단, 자주 쓰는 진단 목록, 의뢰서 자동 채움)
+
+- **상태**: 확인 요청 — ①(진단 칸)만. ②(진단서)는 이것이 합쳐진 뒤 시작합니다.
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `4896578` 다음
+- **배경**(총괄이 전함): 천팀장님 피드백 「1. 진단코드 입력칸 없음 2. 문서에 의뢰서만 있음」, 실장님 「ㅇㅇ 너 말대로 진행해」 — 진단**명**은 필요, **코드**는 필수 아님(목록의 진단에 미리 붙여 두고, 직접 친 진단은 코드 없이). 코드 칸은 글자 그대로(체계에 묶지 않음).
+- **한 일**
+  1. **화면**: 왼쪽 칸, 접수 메모 아래 · 처방 위에 **Diagnostic / 진단** 한 줄(제목 + 입력 칸). 두 글자부터 자주 쓰는 진단 목록에서 찾음 — 코드 또는 세 언어 이름 어느 것으로든, 악센트 없이도. ↑↓·Enter·Esc는 처방 코드 칸과 같음. 목록 맨 끝 줄 「Ajouter « … » tel quel (sans code)」로 직접 치기. 넣은 진단은 그 아래 이름표로: «★ Principal 코드 이름 ✕» / «☆ 코드 이름 ✕». ☆ = 주진단으로, ✕ = 빼기(묻음).
+  2. **규칙**(서버가 지킴): 처음 넣은 것이 주진단, 다른 것을 주진단으로 하면 전의 것은 부진단, 주진단을 빼면 남은 것 중 먼저 넣은 것이 주진단. 같은 진단 두 번은 거절.
+  3. **끝난 진료·다른 의사의 진료**: 처방과 같게 — 진료 권한이면 고칠 수 있고, 끝난 진료(Terminé 또는 지난 날)의 변경은 변경 기록에 한 줄씩. 지난 기록을 가운데에서 읽는 화면은 읽기 전용.
+  4. **진단을 넣는 것도 「첫 기록」**: 대기 내원이 「진료 중」이 되고, 진단이 있으면 「↩ 대기로」가 없습니다(전부터 `visitRecords().diagnoses`가 세고 있었음).
+  5. **지난 진단**: 오른쪽 Dossier Patient의 날짜별 묶음과, 묶음을 눌러 가운데에서 읽는 화면에 «Diagnostic : J00 … · B50.9 …»(주진단 먼저·굵게). 수납·약국이 쓰는 공용 `PatientChart.jsx`(수납 것)에는 넣지 않았습니다 — 아래 「부탁」.
+  6. **의뢰서**: 진단 칸이 이 진료의 진단으로 채워져 열림(한 줄에 하나 «코드 이름», 서류 언어의 이름, 고칠 수 있음).
+- **자주 쓰는 진단 목록 — 설정 세션에 넘길 것**
+  - 표 `diagnosis_code`: `id SERIAL PK` · `code VARCHAR(20)`(NULL 가능, **UNIQUE 아님** — 코드 체계에 묶지 않음, 한 코드에 두 이름도 됨) · `name_en VARCHAR(200) NOT NULL` · `name_fr VARCHAR(200)` · `name_ko VARCHAR(200)` · `is_active BOOLEAN DEFAULT true` · `sort_order INTEGER DEFAULT 0` · `created_at` · `updated_at`.
+  - 진료가 읽는 길: `GET /api/consultations/diagnosis-codes`(권한 `consultation`) → 켜진 줄만 `sort_order, id` 순 `[{id, code, name_en, name_fr, name_ko, sort_order}]`. **관리용 길(전체 읽기·더하기·고치기·끄기·순서)은 설정이 `/api/admin/…`에 만들면 됩니다.**
+  - 지켜 줄 것: ① 줄을 **지우기보다 끄기**(`is_active=false`)를 권합니다 — 지워도 환자 기록은 안 깨집니다(`diagnosis.diagnosis_code_id`가 ON DELETE SET NULL, 줄이 자기 코드·이름을 따로 가짐). 다만 지우면 그 진단이 화면 언어로 바뀌어 보이지 않고 저장된 글로만 보입니다. ② 이름을 고쳐도 이미 넣은 줄의 `diagnosis_name`은 그대로이고, 화면에는 목록의 새 이름이 보입니다(서류에도). ③ `name_en`은 비울 수 없습니다(다른 언어 이름이 없을 때의 대체).
+  - 씨앗 **100줄**(ICD-10, 세 언어 이름), 마이그레이션이 **표가 비어 있을 때만** 넣습니다.
+- **씨앗 코드에 대해 — 확인이 필요한 것**(모두 넣었고, 비워 둔 것은 없습니다. 아래는 「판에 따라 다른」 것과 「이름을 줄여 쓴」 것)
+  - **판(edition)에 따라 다른 코드**: `K64.9` 치핵(ICD-10 2010년판부터 — 그 전 판은 `I84.9`), `A09` 위장염(2010년판에서 뜻이 넓어짐 — 그 전 판은 「감염성으로 추정되는 설사·위장염」). 현지가 쓰는 CIM-10 판이 오래된 것이면 이 둘을 고쳐야 합니다.
+  - **세부 구분을 뭉뚱그린 코드**: `A16.2`(폐결핵, 세균학적·조직학적 확인 없음 — 확인된 결핵은 `A15.x`), `J11.1`(인플루엔자, 바이러스 미확인), `K27.9`(소화성 궤양, 부위·급만성 불명), `T14.x`·`T30.0`(부위 불명 손상·화상 — 실제로는 부위별 S코드를 씀), `Z34.9`·`Z30.9`(임신·피임 관리 — 질병이 아닌 Z코드).
+  - **이름**: WHO 표제어를 짧게 줄인 곳이 있습니다(예: `K27.9`, `O03.9`, `N10`). 프랑스어는 CIM-10 표제어를 따랐고 일상어를 괄호로(«Schistosomiase (bilharziose)», «Dermatophytose (teigne)», «Phlegmon (cellulite)»). 한국어는 KCD 낱말을 따르되 「상세불명」을 대부분 뺐습니다. **의료진의 검토를 받지 않은 목록**입니다 — 현지에서 쓰는 낱말과 다르면 설정에서 고칩니다.
+- **바꾼 파일**: `backend/sql/202_consultation_diagnosis_code.sql`(새) · `backend/src/routes/consult.routes.js` · `frontend/src/pages/Consultation.jsx` · `frontend/src/documents/registry.js`(`autofillValue`에 `diagnoses`) · `frontend/src/documents/referral.jsx`(진단 칸 `autofill`) · `frontend/src/i18n/{ko,en,fr}.js` · `wiki/modules/consultation.md`(2.2.1·3.1·3.2·4·6·8) · `wiki/manual-fr/consultation.md`(Diagnostic 절) · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **공용 파일 변경**: `documents/registry.js`·`referral.jsx`(진료 주관) — 자동 채움 종류 하나(`diagnoses`)와 의뢰서 진단 칸. 수납의 문서 창은 진단을 넘기지 않아 전처럼 빈칸으로 열립니다.
+- **DB 마이그레이션**: `backend/sql/202_consultation_diagnosis_code.sql` — **임시 번호, 총괄이 050으로.** 표 `diagnosis_code` 만듦 + 씨앗 100줄, `diagnosis`에 NULL 가능한 칸 둘(`diagnosis_code_id`, `created_by`)과 인덱스. 있던 줄은 건드리지 않음. 모듈 문서 4절의 「202 → 총괄이 번호 매김」도 같이 고쳐 주세요.
+- **API가 달라진 것**(화면이 쓰지 않던 길이라 부르는 곳이 없었음): `POST /:id/diagnoses`의 응답이 진단 한 줄 → `{diagnosis, diagnoses}`, `DELETE`의 응답에 `diagnoses`. `diagnosis_type`을 안 보내면 전에는 늘 `primary`였는데 이제 서버가 정함.
+- **번역 키**: `cs_dxTitle` · `cs_dxPlaceholder` · `cs_dxPrimary` · `cs_dxMakePrimary` · `cs_dxRemove` · `cs_dxFree` · `cs_dxDuplicate` (ko·en·fr)
+- **확인한 방법**: `npm run build`·`node --check`. 격리 스택(9182, 마이그레이션 적용·100줄 확인).
+  - 서버 시험 31개(scratchpad `dx-e2e.mjs`): 목록(100줄·권한·끈 줄 빠짐), 첫 진단 = 주진단·작성자·내원 시작, 둘째 = 부진단, 직접 치기(코드 없음·앞뒤 공백 정리), 같은 줄·같은 글 409, 빈 이름·긴 이름·없는 목록 줄·틀린 종류 400, 없는 진료 404, 주진단 바꾸기(표에 주진단 하나), 주진단으로 넣기, 주진단 지우면 승격, 두 번 지우기, 환자 진단 읽기와 권한, 진단이 있으면 「대기로」 409, 목록 줄 이름 바꿈·삭제에도 환자 줄 보존, 끝난 진료의 넣기·바꾸기·빼기가 변경 기록 5줄, 열린 진료는 0줄, 동시에 셋 넣어도 주진단 하나. 앞의 47개도 다시 통과.
+  - 화면(1366×768): FR 밝은 화면 — 한 글자는 목록 없음, «palu»·«malaria»·«fievre»·«j0» 찾기, Enter·↓Enter·Esc, 직접 치기(54자), 주진단 바꾸기, 빼기(확인 창), 진단을 넣자 «En cours», 열린 묶음의 진단 줄, 의뢰서 진단 칸 채움, 가로 넘침 없음. KO — 제목·안내 글, «말라»·«hyper» 찾기, 이름표와 지난 묶음이 한국어 이름으로(직접 친 글은 그대로), 지난 기록 읽기 화면의 진단 줄. 세 테마(밝은·어두운·종이색)에서 이름표·목록 글자 대비 5.4~14.9 : 1.
+- **확인 못 한 것**: 끝난 진료에서 화면으로 넣고 빼기(서버 시험으로만). 다른 의사 계정의 화면. 진단이 아주 많을 때(여섯 개 이상)의 왼쪽 칸 높이 — 세 개에서 128px, 처방 표가 그만큼 줄어듭니다. EN 화면(글자만).
+- **총괄 확인 요청**: ① 자리(왼쪽, 처방 위)가 뜻에 맞는지 — 진단 셋이면 처방 표가 약 90px 줄어듭니다. ② 씨앗 목록의 검토(위 「확인이 필요한 것」). ③ 마이그레이션 번호 050.
+- **다른 세션에 부탁**
+  - **설정**: 「자주 쓰는 진단」 관리 탭(위 표 모양·지켜 줄 것).
+  - **수납**(`PatientChart.jsx` 주인): 수납·약국의 환자 차트에도 지난 진단을 보이려면 `GET /api/consultations/patient/:patientId/diagnoses`(권한 consultation·payment·pharmacy, 줄마다 `consultation_id`·`icd_code`·`diagnosis_name`·`diagnosis_type`·`name_en/fr/ko`)를 읽어 날짜 묶음에 한 줄 더하면 됩니다. 접수 화면(권한 registration)에서도 보이게 하려면 이 길의 권한을 넓히거나 `GET /patients/:id/history`(접수 것)에 `diagnoses`를 싣는 쪽이 낫습니다 — 정해 주세요.
+  - **통계**: 질병 통계는 `diagnosis`(`diagnosis_code_id`로 묶고, 직접 친 것은 `diagnosis_name`으로) — 이번에는 하지 않음.
+- **남은 일 · 알려진 문제**: ② 진단서. 목록 관리 화면이 생기기 전에는 목록을 고칠 길이 없습니다(직접 치기로 대신).
+
 ## 2026-10-01 — 영어 상태 낱말 «In progress» (접수와 같게)
 
 - **상태**: 확인 요청

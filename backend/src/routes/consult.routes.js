@@ -42,6 +42,7 @@ const ORDER_HAS_RESULT = 'Order already has a result';
 const VISIT_CANCELLED = 'Visit was cancelled';
 const ORDER_CANCELLED = 'Order is cancelled';
 const ORDER_NO_RESULT = 'Order has no result';
+const DX_DUPLICATE = 'Diagnosis already on this consultation';
 
 // ── Change log (wiki/03-change-log.md, decision 2026-09-29) ──
 // Written here: an order cancelled or deleted, a prescription deleted, and any edit to
@@ -444,36 +445,148 @@ router.put('/:id/note', canConsult, (req, res) => inTx(res, async (client) => {
 
 // ── Diagnosis ──
 
-// GET /api/consultations/:id/diagnoses
-router.get('/:id/diagnoses', canConsult, async (req, res) => {
+// The diagnoses of a consultation (2026-10-02; the table and POST / DELETE existed, the
+// screen did not). One PRIMARY diagnosis and any number of secondary ones:
+//   - the first diagnosis entered is the primary one;
+//   - making another one primary (POST with diagnosis_type 'primary', or PUT) makes the
+//     old primary secondary;
+//   - removing the primary promotes the oldest remaining line.
+// A line is picked from the list of frequent diagnoses (diagnosis_code_id; it keeps its
+// own copy of the code and of the name as the doctor saw it) or typed freely (no code).
+// Who may change them, and what is logged, is as for prescriptions: any account with the
+// consultation permission, on any consultation; a change to a FINISHED consultation makes
+// a change-log line (recordEdit). Every write answers with the consultation's whole list,
+// so the screen never has to work out the primary / secondary shuffle itself.
+const DX_COLUMNS = `d.id, d.consultation_id, d.diagnosis_code_id, d.icd_code, d.diagnosis_name, d.diagnosis_type,
+       d.sort_order, d.created_by, d.created_at,
+       dc.name_en, dc.name_fr, dc.name_ko`;
+// Primary first, then in the order they were entered. The list row's three names come
+// along so a screen in another language shows the diagnosis in its own.
+async function diagnosesOf(db, consultationId) {
+  const r = await db.query(
+    `SELECT ${DX_COLUMNS}
+       FROM diagnosis d LEFT JOIN diagnosis_code dc ON dc.id = d.diagnosis_code_id
+      WHERE d.consultation_id = $1
+      ORDER BY (d.diagnosis_type = 'primary') DESC, d.sort_order, d.id`, [consultationId]);
+  return r.rows;
+}
+const DX_NAME_MAX = 300, DX_CODE_MAX = 20;
+
+// GET /api/consultations/diagnosis-codes - the list of frequent diagnoses the screen
+// searches: active rows in list order. [{id, code, name_en, name_fr, name_ko, sort_order}]
+// (Settings manages the list through its own routes; this is the read for consultation.)
+router.get('/diagnosis-codes', canConsult, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM diagnosis WHERE consultation_id = $1 ORDER BY sort_order', [req.params.id]);
-    res.json(result.rows);
+    const r = await pool.query(
+      'SELECT id, code, name_en, name_fr, name_ko, sort_order FROM diagnosis_code WHERE is_active ORDER BY sort_order, id');
+    res.json(r.rows);
   } catch (err) { sendDbError(res, err); }
 });
 
-// POST /api/consultations/:id/diagnoses
+// GET /api/consultations/patient/:patientId/diagnoses - every diagnosis of the patient's
+// consultations, for the chart (each row names its consultation). Read by the screens
+// that read prescriptions and orders.
+router.get('/patient/:patientId/diagnoses', canReadRx, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT ${DX_COLUMNS}
+         FROM diagnosis d
+         JOIN consultation c ON c.id = d.consultation_id
+         LEFT JOIN diagnosis_code dc ON dc.id = d.diagnosis_code_id
+        WHERE c.patient_id = $1
+        ORDER BY d.consultation_id, (d.diagnosis_type = 'primary') DESC, d.sort_order, d.id`, [req.params.patientId]);
+    res.json(r.rows);
+  } catch (err) { sendDbError(res, err); }
+});
+
+// GET /api/consultations/:id/diagnoses
+router.get('/:id/diagnoses', canConsult, async (req, res) => {
+  try { res.json(await diagnosesOf(pool, req.params.id)); } catch (err) { sendDbError(res, err); }
+});
+
+// POST /api/consultations/:id/diagnoses { diagnosis_code_id?, icd_code?, diagnosis_name, diagnosis_type? }
+// -> 201 { diagnosis, diagnoses }. The same list row, or the same words, twice on one
+// consultation -> 409.
 router.post('/:id/diagnoses', canConsult, (req, res) => inTx(res, async (client) => {
-  const { icd_code, diagnosis_name, diagnosis_type, sort_order } = req.body;
-  if (blank(diagnosis_name)) return [400, { error: 'diagnosis_name is required' }];
+  const b = req.body || {};
+  const name = String(b.diagnosis_name == null ? '' : b.diagnosis_name).trim();
+  const code = blank(b.icd_code) ? null : String(b.icd_code).trim();
+  if (!name) return [400, { error: 'diagnosis_name is required' }];
+  if (name.length > DX_NAME_MAX) return [400, { error: 'diagnosis_name must be at most ' + DX_NAME_MAX + ' characters' }];
+  if (code && code.length > DX_CODE_MAX) return [400, { error: 'icd_code must be at most ' + DX_CODE_MAX + ' characters' }];
+  if (!blank(b.diagnosis_type) && b.diagnosis_type !== 'primary' && b.diagnosis_type !== 'secondary') {
+    return [400, { error: "diagnosis_type must be 'primary' or 'secondary'" }];
+  }
+  let codeId = null;
+  if (!blank(b.diagnosis_code_id)) {
+    const known = await client.query('SELECT id FROM diagnosis_code WHERE id = $1', [parseInt(b.diagnosis_code_id, 10) || 0]);
+    if (known.rows.length === 0) return [400, { error: 'diagnosis_code_id is not in the list' }];
+    codeId = known.rows[0].id;
+  }
+  // The consultation row is locked: two additions at once must not both become primary.
+  const lock = await client.query('SELECT id FROM consultation WHERE id = $1 FOR UPDATE', [req.params.id]);
+  if (lock.rows.length === 0) return [404, { error: 'Consultation not found' }];
   const c = await consultOf(client, req.params.id);
-  if (!c) return [404, { error: 'Consultation not found' }];
+  const have = await diagnosesOf(client, req.params.id);
+  if (have.some((d) => (codeId && d.diagnosis_code_id === codeId) || String(d.diagnosis_name).trim().toLowerCase() === name.toLowerCase())) {
+    return [409, { error: DX_DUPLICATE }];
+  }
+  const hasPrimary = have.some((d) => d.diagnosis_type === 'primary');
+  const type = !hasPrimary || b.diagnosis_type === 'primary' ? 'primary' : 'secondary';
+  if (type === 'primary' && hasPrimary) {
+    for (const d of have.filter((x) => x.diagnosis_type === 'primary')) {
+      await client.query("UPDATE diagnosis SET diagnosis_type = 'secondary' WHERE id = $1", [d.id]);
+      await recordEdit(client, req, c, 'diagnosis', d, dxLabel(d), pick(d, DX_LOG), pick(Object.assign({}, d, { diagnosis_type: 'secondary' }), DX_LOG));
+    }
+  }
+  const order = have.reduce((m, d) => Math.max(m, d.sort_order || 0), 0) + 1;
   const result = await client.query(
-    'INSERT INTO diagnosis (consultation_id, icd_code, diagnosis_name, diagnosis_type, sort_order) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-    [req.params.id, icd_code, diagnosis_name, diagnosis_type || 'primary', sort_order || 0]
-  );
+    `INSERT INTO diagnosis (consultation_id, diagnosis_code_id, icd_code, diagnosis_name, diagnosis_type, sort_order, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [req.params.id, codeId, code, name, type, order, req.user.id]);
   const dx = result.rows[0];
   await recordEdit(client, req, c, 'diagnosis', dx, dxLabel(dx), null, pick(dx, DX_LOG));
   await startVisit(client, req.params.id);
-  return [201, dx];
+  return [201, { diagnosis: dx, diagnoses: await diagnosesOf(client, req.params.id) }];
 }));
 
-// DELETE /api/consultations/diagnosis/:dxId
+// PUT /api/consultations/diagnosis/:dxId { diagnosis_type: 'primary' } - make this line
+// the primary diagnosis; the one that was becomes secondary. -> { diagnoses }
+router.put('/diagnosis/:dxId', canConsult, (req, res) => inTx(res, async (client) => {
+  if (!req.body || req.body.diagnosis_type !== 'primary') return [400, { error: "diagnosis_type must be 'primary'" }];
+  const found = await client.query('SELECT * FROM diagnosis WHERE id = $1', [req.params.dxId]);
+  const dx = found.rows[0];
+  if (!dx) return [404, { error: 'Diagnosis not found' }];
+  await client.query('SELECT id FROM consultation WHERE id = $1 FOR UPDATE', [dx.consultation_id]);
+  const c = await consultOf(client, dx.consultation_id);
+  const have = await diagnosesOf(client, dx.consultation_id);
+  for (const d of have) {
+    const want = d.id === dx.id ? 'primary' : 'secondary';
+    if (d.diagnosis_type === want) continue;
+    await client.query('UPDATE diagnosis SET diagnosis_type = $1 WHERE id = $2', [want, d.id]);
+    await recordEdit(client, req, c, 'diagnosis', d, dxLabel(d), pick(d, DX_LOG), pick(Object.assign({}, d, { diagnosis_type: want }), DX_LOG));
+  }
+  return [200, { diagnoses: await diagnosesOf(client, dx.consultation_id) }];
+}));
+
+// DELETE /api/consultations/diagnosis/:dxId -> { success, diagnoses }. Removing the
+// primary diagnosis makes the oldest remaining line primary.
 router.delete('/diagnosis/:dxId', canConsult, (req, res) => inTx(res, async (client) => {
+  const found = await client.query('SELECT consultation_id FROM diagnosis WHERE id = $1', [req.params.dxId]);
+  if (found.rows.length === 0) return [200, { success: true, diagnoses: [] }];
+  const consultationId = found.rows[0].consultation_id;
+  await client.query('SELECT id FROM consultation WHERE id = $1 FOR UPDATE', [consultationId]);
   const result = await client.query('DELETE FROM diagnosis WHERE id = $1 RETURNING *', [req.params.dxId]);
   const dx = result.rows[0];
-  if (dx) await recordEdit(client, req, await consultOf(client, dx.consultation_id), 'diagnosis', dx, dxLabel(dx), pick(dx, DX_LOG), null);
-  return [200, { success: true }];
+  const c = await consultOf(client, consultationId);
+  if (dx) await recordEdit(client, req, c, 'diagnosis', dx, dxLabel(dx), pick(dx, DX_LOG), null);
+  const left = await diagnosesOf(client, consultationId);
+  if (left.length && !left.some((d) => d.diagnosis_type === 'primary')) {
+    const next = left.slice().sort((x, y) => (x.sort_order - y.sort_order) || (x.id - y.id))[0];
+    await client.query("UPDATE diagnosis SET diagnosis_type = 'primary' WHERE id = $1", [next.id]);
+    await recordEdit(client, req, c, 'diagnosis', next, dxLabel(next), pick(next, DX_LOG), pick(Object.assign({}, next, { diagnosis_type: 'primary' }), DX_LOG));
+  }
+  return [200, { success: true, diagnoses: await diagnosesOf(client, consultationId) }];
 }));
 
 // ── Prescriptions ──

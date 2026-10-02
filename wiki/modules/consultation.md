@@ -1,6 +1,6 @@
 # 진료 (Consultation)
 
-> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-01 · **상태**: 영어 상태 낱말 «In progress» — 확인 요청
+> **담당**: 진료 세션 · 브랜치 `session/consultation` · **마지막 갱신**: 2026-10-02 · **상태**: 진단 칸 — 확인 요청
 
 ## 1. 이 모듈이 하는 일
 
@@ -59,6 +59,18 @@
    - 저장하지 않은 글은 **이 PC의 브라우저**에 남아 F5·정전 뒤 같은 내원을 열면 돌아옵니다(「이 PC에 남아 있던, 저장하지 않은 글을 불러왔습니다.」). 저장·로그아웃·하루가 지나면 지워집니다(7.3).
    - 처방·오더 줄은 한 내원에 **둘 이상의 의사**가 냈을 때만 이름 옆에 작은 글자로 낸 의사가 보입니다. 바이탈 칸 밑에는 「Dernière saisie : 이름 · 시각」(마지막으로 바이탈을 저장한 사람).
 5. **끝난 진료도 고칠 수 있습니다**(실장님 결정 ⑫, 2026-09-29). 다만 **Terminé (완료)**를 누른 진료나 **오늘이 아닌 날의 내원**을 고치면 누가 무엇을 어떻게 바꿨는지(전 값 → 새 값)가 **변경 기록**에 남습니다. 화면에는 아무 표시도 없고, 관리자만 설정에서 봅니다. 진료 중에 여러 번 저장하는 것은 남지 않습니다. 처방·오더를 지우거나 검사를 취소한 것은 진료가 끝났든 아니든 늘 남습니다.
+
+### 2.2.1 Diagnostic — 진단 (왼쪽, 처방 위)
+
+2026-10-02 추가(현지 피드백 「진단코드 입력칸 없음」). 필요한 것은 **진단명**이고 **코드는 필수가 아닙니다**(보험이 없음) — 목록에서 고르면 코드가 따라오고, 직접 치면 코드 없이 저장됩니다.
+
+1. 왼쪽 **Diagnostic (진단)** 칸에 이름의 일부나 코드를 **두 글자 이상** 칩니다. 자주 쓰는 진단 목록에서 맞는 것이 뜹니다 — 프랑스어·영어·한국어 어느 이름으로 쳐도 찾고(«palu», «malaria», «말라»), 악센트 없이 쳐도 됩니다(«fievre»). 이름은 화면 언어로 보입니다.
+2. ↑↓로 고르고 **Enter**(또는 마우스). Enter만 치면 맨 위 것이 들어갑니다. 목록에 없으면 맨 아래 줄 **Ajouter « … » tel quel (sans code) / 「…」 그대로 넣기 (코드 없음)**을 고릅니다 — 맞는 것이 하나도 없을 때는 Enter만 쳐도 그 줄입니다.
+3. 넣은 진단은 칸 아래에 이름표로 나옵니다. **처음 넣은 것이 주진단**(«★ Principal / 주진단»), 그다음은 부진단입니다. 부진단의 **☆**를 누르면 그것이 주진단이 되고 전의 주진단은 부진단이 됩니다. **✕**로 뺍니다(묻습니다). 주진단을 빼면 남은 것 가운데 먼저 넣은 것이 주진단이 됩니다.
+4. 진단을 넣는 것도 「첫 기록」입니다 — 대기인 환자는 「진료 중」이 됩니다.
+5. 끝난 진료에서도 넣고 뺄 수 있고, 그때는 처방처럼 변경 기록에 남습니다. 다른 의사의 진료에서도 처방과 같이 고칠 수 있습니다.
+6. **지난 진단**은 오른쪽 Dossier Patient의 날짜별 묶음에 «Diagnostic : B54 Paludisme · …»로 보이고(주진단이 먼저, 굵게), 묶음을 눌러 가운데에서 읽을 때도 맨 위에 나옵니다.
+7. **의뢰서**(📄 Documents → Lettre de référence)의 Diagnostic 칸은 이 진료의 진단으로 채워져 열립니다(한 줄에 하나, 서류 언어의 이름으로 — 고칠 수 있음).
 
 ### 2.3 Prescriptions — 처방과 검사 (왼쪽)
 
@@ -269,6 +281,15 @@
 **상태 흐름**
 
 - 첫 로드 `loadData()` (75-89): `/visits/today`, `/admin/drugs`, `/admin/order-codes`, `/admin/phrases`, `/order-sets`를 **순서대로** 받아 둡니다. 자동완성은 전부 브라우저 안에서 거릅니다(서버 검색 없음). 약속처방은 **진료과 필터 없이 전부** 받습니다(API는 `?department_id=`를 지원).
+- **진단**(2026-10-02): `dxList`(서버가 준 그 진료의 진단, 주진단 먼저) · `dxCodes`(자주 쓰는 진단 목록, `loadData`에서 한 번) · `histDx`(환자의 다른 진료의 진단, 진료 id별 — 차트용).
+  - 자리: 왼쪽 칸, 접수 메모 칸 아래 · 처방 머리 위(`data-cs="diagnoses"`). 한 줄(제목 + 입력 칸), 진단이 있으면 그 아래 이름표 줄. 진단이 없으면 37px, 이름표 한 줄마다 약 30px.
+  - 찾기(`dxSugg`): 두 글자부터, 코드 또는 **세 언어 이름 어느 것에든** 들어 있으면 맞음. `plain()`이 소문자·악센트 제거(NFD). 이미 넣은 목록 줄은 빠짐. 순서: 코드가 그 글자로 시작 → 이름이 그 글자로 시작 → 목록 순서. 맨 끝에 「그대로 넣기」 줄(`{free:true}`) — 친 글이 이미 있는 진단·목록 이름과 같으면 없음. 키: ↑↓·Enter·Esc(처방 코드 칸과 같음).
+  - `addDx`는 `needConsult()`를 거칩니다(안전망 — 시작 전 내원을 시작). 쓰기는 모두 서버가 돌려준 `diagnoses`로 목록을 통째로 바꿉니다 — 주/부 바꾸기를 화면이 계산하지 않습니다.
+  - 보이는 이름 `dxName(d)`: 목록에서 고른 줄은 **화면 언어의 이름**(줄에 `name_en·fr·ko`가 같이 옴), 직접 친 줄·그 언어 이름이 없는 줄은 저장된 글.
+  - 주진단은 색만으로 알리지 않습니다 — «★ Principal» 글자. 긴 이름은 이름표 안에서 줄바꿈(`overflow-wrap:anywhere`), 코드·단추는 한 줄.
+  - `nothingRecorded`에 진단이 들어갑니다(진단이 있으면 「↩ 대기로」 없음 — 서버 `visitRecords().diagnoses`와 같게).
+  - 차트: `dxLine(list, strong)` — 열린 묶음은 `dxList`, 다른 묶음과 가운데 읽기(`renderPast`)는 `histDx[진료 id]`.
+  - 의뢰서: 문서 창 context에 `diagnoses: dxList`, `registry.js` `autofillValue('diagnoses')`가 «코드 이름» 한 줄씩(서류 언어의 이름). `referral.jsx`의 진단 칸에 `autofill:'diagnoses'`. 수납에서 연 문서 창에는 진단이 넘어가지 않아 전처럼 빈칸입니다.
 - **코드 칸 아래 목록**(`buildOrderSuggestions` → `{list, more}`, 2026-10-01 — 「+ 약 검색」 단추와 창을 없애면서): 두 글자부터. 「전체」는 약 8개 + 오더, 모두 12줄; 「약품」·「검사/영상」은 `SUGG_ONE`(50)줄까지. 못 보여 준 수(`orderMore`)는 목록 끝의 한 줄(`cs_moreAll`·`cs_moreOne`). 전에는 약이 8개에서 끊겨 9번째부터는 창(약 검색)으로만 찾을 수 있었습니다.
 - **알레르기 경고 창**(실장님, 2026-10-01): `allergyWarn` = `{name, chart_no, text}`. `pickPatient`에서만 세웁니다 — 연 것과 **다른 내원**일 때(`sel.id !== v.id`) 한 번; 15초·30초 새로 읽기와 저장은 `pickPatient`를 부르지 않으므로 다시 뜨지 않습니다. 환자 찾기로 고른 줄에 알레르기 칸이 없으면(`gender === undefined`) `/patients/:id`를 받은 뒤 세웁니다. `allergyText(a)`: 빈 글과 「None」(대소문자 무관)은 알레르기 없음 — 파란 줄의 꼬리표도 같은 함수. 창은 `role="alertdialog"`, 단추 하나(`autoFocus` → Enter), 바깥 클릭·Esc에 닫는 처리 없음, `zIndex 1200`(다른 창 위). 상태를 바꾸는 요청은 없습니다(여는 것은 읽기).
 - **접수 메모 칸**(실장님, 2026-10-01): `memoLines` = `[sel.chief_complaint, sel.reception_memo]`에서 빈 것·같은 글을 뺀 것. 왼쪽 칸의 단추 줄 아래(`data-cs="reception-memo"`), 없으면 그리지 않음, 글 칸 `max-height 76px`(19px × 4줄) 뒤 칸 안 스크롤, `pre-wrap`·`overflow-wrap:anywhere`. 가운데에서 지난 기록을 읽는 동안(`pastView`)에는 그리지 않습니다. 이름은 공용 키 `receptionMemo`(접수 양식과 같은 글자). 파란 줄의 📝 표시는 뺐습니다. **알아 둘 것**: `GET /visits/patient/:id`(환자 찾기·내원 목록)는 `chief_complaint`만 주고 `reception_memo`는 주지 않아, 그 길로 연 내원은 주호소만 보입니다(접수에 한 칸 부탁함 — 두 칸이 합쳐지면 저절로 풀림).
@@ -327,6 +348,14 @@
 ### 3.2 서버 — `backend/src/routes/consult.routes.js` (`/api/consultations`)
 
 - **권한 (S2, 2026-09-29 실장님 결정 「서버도 화면 권한대로」)**: 쓰기(POST·PUT·DELETE)는 전부 `permMiddleware('consultation')`(`canConsult`). 읽기는 부르는 화면의 권한만 — 처방·오더 읽기(`GET /visit/:visitId/prescriptions`·`/:id/prescriptions`·`/:id/orders`)는 `canReadRx` = consultation·payment·pharmacy(진료 화면, 수납·약국의 `PatientChart`와 문서 창), 진단 읽기는 consultation. 임상병리·접수는 문서 창을 읽기 전용·내원 없이 열어서 이 라우트를 부르지 않습니다. 라우트별 표는 `wiki/handoff/settings.md` 「S2」. 서버는 요청마다 DB에서 계정 상태·권한을 읽으므로(S1) 권한을 바꾸면 바로 적용됩니다.
+- **진단**(2026-10-02) — 표·`POST`·`DELETE`는 전부터 있었고 화면이 없었습니다. 규칙: **주진단 하나 + 부진단 여럿**. 처음 넣은 것이 주진단; 다른 것을 주진단으로 하면(`POST`에 `diagnosis_type:'primary'`, 또는 `PUT`) 전의 주진단이 부진단; 주진단을 지우면 남은 것 중 먼저 넣은 줄이 주진단. 진료 행을 `FOR UPDATE`로 잠가 동시에 넣어도 주진단은 하나. 쓰기는 모두 그 진료의 목록 전체(`diagnoses`, 주진단 먼저)를 돌려줍니다. 권한·변경 기록은 처방과 같음 — `consultation` 권한이면 누구의 진료든, **끝난 진료**의 변경만 `recordEdit`(주/부가 바뀐 줄도 한 줄씩).
+  - `GET /diagnosis-codes` — 자주 쓰는 진단 목록(켜진 것만, 목록 순서): `[{id, code, name_en, name_fr, name_ko, sort_order}]`. 진료 화면이 읽는 길. **목록 관리(더하기·고치기·감추기·순서)는 설정 세션 몫** — 4절의 표 모양 참고.
+  - `GET /:id/diagnoses` — 그 진료의 진단(주진단 먼저, 넣은 순서). 각 줄에 목록 줄의 세 언어 이름이 같이 옵니다.
+  - `GET /patient/:patientId/diagnoses` — 환자의 모든 진료의 진단(각 줄에 `consultation_id`). 권한은 처방 읽기와 같음(`canReadRx`: consultation·payment·pharmacy) — 수납·약국의 차트가 쓰려면 이 길을 부르면 됩니다.
+  - `POST /:id/diagnoses {diagnosis_code_id?, icd_code?, diagnosis_name, diagnosis_type?}` → 201 `{diagnosis, diagnoses}`. 이름은 비면 400·300자 초과 400, 코드 20자 초과 400, 목록에 없는 `diagnosis_code_id` 400, 같은 목록 줄 또는 같은 글(대소문자 무시)이 이미 있으면 409 `Diagnosis already on this consultation`. `created_by` = 넣은 계정. `startVisit`(대기 내원을 시작).
+  - `PUT /diagnosis/:dxId {diagnosis_type:'primary'}` → `{diagnoses}`. `'primary'`만 받습니다(부진단으로 내리는 것은 다른 줄을 주진단으로 올리는 것으로).
+  - `DELETE /diagnosis/:dxId` → `{success, diagnoses}`.
+  - 줄은 **자기 코드·이름을 따로 가집니다**(`icd_code`·`diagnosis_name`): 설정에서 목록 줄을 고치거나 지워도 환자 기록의 글은 바뀌지 않습니다(목록 줄이 지워지면 `diagnosis_code_id`만 NULL).
 - **대기 현황에 보일 의사**(`consultation_queue_filter`, 2026-10-01) — `GET /queue-filter` → `{custom:false}` 또는 `{custom:true, all_doctors, doctor_ids, unassigned}`; `PUT /queue-filter {all_doctors, doctor_ids, unassigned}`(의사 계정이 아닌 id는 버림; 전체도 아니고 남은 의사도 없고 미지정도 아니면 400 `Choose at least one doctor`; `doctor_ids`가 목록·양의 정수가 아니면 400); `DELETE /queue-filter` → 기본값. 계정 id는 토큰에서만. 테마처럼 변경 기록에 쓰지 않습니다. **`PUT /:id`보다 앞에 선언**되어 있어야 합니다(뒤에 두면 `/:id`가 가로챔).
 - `GET /visit/:visitId`는 `other_records`도 돌려줍니다(2026-10-01): 그 내원에 서류나 청구가 있음 — 화면이 읽지 않는 기록(`visitRecords`의 `documents`·`bills`).
 - **대기 / 진료 중 규칙**(결정 (다), 2026-10-01): 여는 것은 읽기, 시작은 `POST /` 또는 첫 기록, 되돌리기는 아무것도 없을 때만.
@@ -485,7 +514,10 @@
 | `PUT /api/consultations/:id` | `consultation` | 기록·바이탈 저장 (보내지 않은 칸은 NULL) |
 | `PUT /api/consultations/:id/complete` | `consultation` | 진료·내원 완료 |
 | `GET /api/consultations/:id/diagnoses` | `consultation` | 진단 목록 (화면 미사용) |
-| `POST /api/consultations/:id/diagnoses` · `DELETE /diagnosis/:dxId` | `consultation` | 진단 추가·삭제 (화면 미사용) |
+| `GET /api/consultations/diagnosis-codes` | `consultation` | 자주 쓰는 진단 목록(켜진 것, 순서대로) |
+| `GET /api/consultations/:id/diagnoses` | `consultation` | 그 진료의 진단(주진단 먼저) |
+| `GET /api/consultations/patient/:patientId/diagnoses` | `consultation`·`payment`·`pharmacy` | 환자의 모든 진료의 진단(차트용) |
+| `POST /api/consultations/:id/diagnoses` · `PUT /diagnosis/:dxId` · `DELETE /diagnosis/:dxId` | `consultation` | 진단 추가 · 주진단으로 · 삭제 — 모두 그 진료의 목록 전체를 돌려줌 |
 | `GET /api/consultations/:id/prescriptions` | `consultation`·`payment`·`pharmacy` | 처방 목록 |
 | `POST /api/consultations/:id/prescriptions` | `consultation` | 처방 추가. `total_qty`는 서버가 계산(하루 총량 × 일수), 보내도 무시 |
 | `GET /api/consultations/visit/:visitId/prescriptions` | `consultation`·`payment`·`pharmacy` | 내원 단위 처방 (문서용) |
@@ -524,6 +556,8 @@
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
 | `order_set_item` | `set_id`(CASCADE), `kind` ∈ `drug`·`order`, `drug_id`, `order_code_id`, `code`, `name`, `dose`, `frequency`, `days`, `route`, `quantity`, `sort_order` | 단가 없음 |
+| `diagnosis_code` (202 → 총괄이 번호 매김) | **자주 쓰는 진단 목록.** `id`, `code VARCHAR(20)`(비어도 됨, 유일하지 않아도 됨 — 코드 체계에 묶지 않음), `name_en`(필수) · `name_fr` · `name_ko`, `is_active`(끄면 찾기에서 빠지고 이미 쓴 줄은 그대로), `sort_order`, `created_at`, `updated_at`. 씨앗 100줄(ICD-10) — 표가 비어 있을 때만 넣음 |
+| `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(`primary`·`secondary`), `sort_order`, **`diagnosis_code_id`**(→ `diagnosis_code`, ON DELETE SET NULL; 직접 친 진단은 NULL), **`created_by`**(→ `staff`) — 굵은 둘이 202에서 더한 칸 |
 | `consultation_queue_filter` (042) | `staff_id`(PK, CASCADE), `all_doctors`, `doctor_ids INTEGER[]`, `unassigned`, `updated_at`. **행이 없으면 기본 규칙.** `staff` 표의 칸이 아니라 따로 둔 이유: `GET /admin/staff`가 `staff.*`를 돌려주어 칸을 더하면 설정 화면으로 실려 감 |
 | `consultation_note` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `author_id`, `note_text`(빈 글 금지), `created_at`, `updated_at`(고친 때, 안 고쳤으면 NULL), **UNIQUE(consultation_id, author_id)** | 038(세션 번호 201) — 의사마다 한 내원 한 기록. 옛 `consultation.note_text`(와 S/O/A/P를 「S: …」로 앞에 붙여)를 `doctor_id`의 기록으로 옮김, 두 번 돌려도 같음 |
 | `document_log` | `doc_no`(UNIQUE, `D26-00001`), `template_code`, `template_name`, `patient_id`, `visit_id`, `consultation_id`, `lang`, `payload JSONB`, `issued_by/at`, `voided`, `void_reason`, `voided_at/by` | 010 · `generate_doc_no()` · `document_no_seq` |
@@ -564,6 +598,7 @@
 |---|---|
 | **약품** (`drug`) — 코드, 이름, 기본 용량·횟수·일수·용법, 단가, 단위 | 약 자동완성·약 검색, 처방 추가 시 기본값 |
 | **오더 코드** (`order_code`) — 종류(`lab`·`imaging`·`procedure`·`fee`), 가격(`price_clinic`), 모달리티, 워크리스트 사용, 부위, 기본값 | 검사·영상 자동완성(`fee`는 제외), 오더 단가, 워크리스트 생성 |
+| **자주 쓰는 진단** (`diagnosis_code`) — 코드, 세 언어 이름, 켬/끔, 순서 | 진단 칸의 찾기 목록. **관리 화면은 아직 없습니다**(설정 세션 몫) — 그동안은 씨앗 100줄 + 직접 치기 |
 | **상용구** (`phrase_dictionary` · `phrase_category`, 039) | 진료 기록에 끼워 넣는 문장. 분류(이름·순서)와 문장 모두 설정에서 만든 그대로 — 진료 화면은 `GET /admin/phrase-categories`·`GET /admin/phrases`를 읽기만 합니다 |
 | **약속처방** (`order_set`) | 오른쪽 약속처방 탭 |
 | **오더연동 → PACS** (`pacs_config.auto_create_worklist`, `pacs_viewer_url`) | 워크리스트 자동 생성 여부, 영상 뷰어 주소 |
@@ -768,7 +803,8 @@ CREATE INDEX ON consultation_note (consultation_id, created_at);
 | 날짜 | 내용 | 커밋 |
 |---|---|---|
 | 2026-09-30 | **의사마다의 진료 기록**(결정 (나)·(가)·바이탈 한 벌) — `consultation_note`(038), `GET /:id/notes`·`PUT /:id/note`(작성자만), `PUT /:id`는 바이탈만(note_text 400), 오른쪽 차트 맨 위에 오늘 기록(의사 이름·시각), 저장 안 된 글은 이 PC에(하루·저장·로그아웃에 지움), 다른 환자로 갈 때 묻기, 처방 `prescribed_by`, 바이탈 `vitals_by`·`vitals_at`, 환자 기록 API(`patient.routes.js`)가 `notes`·`note_text` 채움 | `0d9ffaf`(038로 합침 `dfe514c`) |
-| 2026-10-01 | 영어 상태 낱말을 접수와 같게 «In progress»(상태 줄·서랍 꼬리표·안내문 둘) — 총괄 결정: fr «En cours», en «In progress», ko 「진료 중」 | (이 커밋) |
+| 2026-10-02 | **진단 칸**(현지 피드백) — 왼쪽 처방 위에 진단 찾기·이름표(주진단 하나 + 부진단), 자주 쓰는 진단 목록 `diagnosis_code`(씨앗 100, ICD-10·세 언어), 직접 치면 코드 없이, `PUT /diagnosis/:dxId`·`GET /diagnosis-codes`·`GET /patient/:id/diagnoses`, 차트·지난 기록에 진단 줄, 의뢰서 진단 칸 자동 채움 | (이 커밋) |
+| 2026-10-01 | 영어 상태 낱말을 접수와 같게 «In progress»(상태 줄·서랍 꼬리표·안내문 둘) — 총괄 결정: fr «En cours», en «In progress», ko 「진료 중」 | `1e9a768` |
 | 2026-10-01 | **「+ 약 검색」 단추와 창을 없앰**(실장님) — 코드 칸 아래 목록이 그 일을 함: 「약품」·「검사/영상」을 고르면 50줄까지, 못 보여 준 수를 끝에 한 줄. 프랑스어 상태 낱말을 접수와 같게 «En cours» | `c6eaf63` |
 | 2026-10-01 | **알레르기 경고 창 · 접수 메모 칸 · 서류 발급도 시작**(실장님 둘 + 총괄 결정) — 알레르기 있는 환자를 열면 확인 창 한 번(꼬리표는 그대로), 접수 메모를 파란 줄에서 빼고 처방 위 칸으로(없으면 칸 없음, 네 줄 뒤 스크롤), 서류를 발급하면 「대기」 내원이 「진료 중」으로(`document.routes.js`), `GET /visit/:id`에 `other_records` | `33dae62` |
 | 2026-10-01 | **진료대기 현황에 보일 의사**(실장님) — 대기 서랍 머리의 ⚙ → 의사 목록 + 「의사 미지정」 체크, 계정마다 서버에 기억(`consultation_queue_filter`, `/queue-filter`), 손대지 않은 계정은 전과 같음, 검색 칸 아래 「표시: …」 한 줄 | `0ecf11c` |

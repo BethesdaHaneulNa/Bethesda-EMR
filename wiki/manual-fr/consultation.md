@@ -60,6 +60,19 @@ En haut de la colonne du milieu, une ligne indique l'état de la visite : **En a
 
 Une consultation terminée, ou celle d'un jour passé, peut toujours être corrigée. Chaque correction est gardée dans le journal des modifications (seul l'administrateur le voit).
 
+### Diagnostic
+
+À gauche, au-dessus de **Prescriptions**. Le **nom** du diagnostic suffit ; le code n'est pas obligatoire.
+
+1. Dans la case **Diagnostic**, tapez au moins deux lettres du nom, ou le code (`palu`, `fievre`, `J06`). La liste des diagnostics fréquents s'affiche.
+2. Choisissez avec ↑ ↓ puis Entrée (ou cliquez). Entrée seule prend la première ligne.
+3. Le diagnostic n'est pas dans la liste : choisissez la dernière ligne **Ajouter « … » tel quel (sans code)**. Il est enregistré avec vos mots, sans code.
+4. Le premier diagnostic saisi est le **★ Principal**. Pour en choisir un autre comme principal, cliquez sur son **☆**. Pour en retirer un, cliquez sur **✕**.
+5. Les diagnostics des visites précédentes se lisent à droite dans **Dossier Patient** (ligne **Diagnostic :** de chaque visite).
+6. Dans **📄 Documents → Lettre de référence**, la case **Diagnostic** est déjà remplie avec ces diagnostics ; vous pouvez la corriger.
+
+Saisir un diagnostic met la visite **En cours**, comme tout autre enregistrement.
+
 ### 4. Prescrire un médicament
 
 1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom, la forme (**Comprimé**, **Gélule**, **Sirop**…) et le **Stock** (en rouge s'il est à 0). Deux médicaments du même nom se distinguent par leur code et leur stock. Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Si rien ne correspond, la liste affiche **Aucun résultat**. Vous pouvez aussi utiliser **+ Recherche médicament**.

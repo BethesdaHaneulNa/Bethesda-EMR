@@ -446,6 +446,14 @@ export default {
   // Quand la liste sous la case ne peut pas tout afficher (le bouton « + Recherche médicament » a été retiré, 2026-10-01)
   cs_moreAll: "… {n} autres. Tapez plus de lettres, ou choisissez « Médicament » ou « Examen / Imagerie » au-dessus.",
   cs_moreOne: "… {n} autres. Tapez plus de lettres pour préciser.",
+  // Diagnostics (2026-10-02)
+  cs_dxTitle: "Diagnostic",
+  cs_dxPlaceholder: "Chercher par nom ou code — ou l'écrire tel quel",
+  cs_dxPrimary: "Principal",
+  cs_dxMakePrimary: "En faire le diagnostic principal",
+  cs_dxRemove: "Retirer ce diagnostic",
+  cs_dxFree: "Ajouter « {text} » tel quel (sans code)",
+  cs_dxDuplicate: "Ce diagnostic est déjà saisi.",
   // ── end consultation ──
   // ── begin payment (py_) ──
   py_billChanged: "Ce patient vient d’être encaissé ailleurs, ou le solde antérieur a déjà été réglé. La liste a été rechargée — vérifiez puis encaissez à nouveau.",
