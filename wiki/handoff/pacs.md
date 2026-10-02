@@ -13,6 +13,25 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-02 — 설계안: CD에 넣는 작은 「보기 전용」 뷰어 (짓지 않음) · 묶음의 결함 하나 고침
+
+- **상태**: 확인 요청 — **결정 대기**(설계안 12절: 실장님 넷, 총괄 다섯).
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 들어간 커밋(develop을 ff로 받은 위). **PACS 저장소** — 없음.
+- **한 일**: `wiki/reference/cd-mini-viewer-design.md` — 화면, 디스크의 모양(작은 뷰어 `VOIR.EXE`는 늘 / Weasis는 체크), 전송 구문 조사와 실험, 규칙, 라이브러리, 표시의 정확성, 시험 영상, 책임 표시, Weasis의 구성, 단계 ①~⑤, 정할 것.
+- **실험으로 확인한 것**(임시 Orthanc 127.0.0.1:9196 — 실행 중과 같은 이미지, Orthanc 1.12.11 + gdcm):
+  - 묶음을 만들 때 `"Transcode": "1.2.840.10008.1.2.1"`을 주면 JPEG Baseline · Extended · Lossless · JPEG-LS · JPEG 2000 · RLE · Big Endian이 **모두 「압축 없음」으로** 나옴. 한 묶음에 목표는 하나. 20건이 22MB → 126MB.
+  - **Windows에 든 기능**(GDI+ · WIC)은 **8비트 JPEG를 모두** 엶 — Baseline · Extended · **무손실까지**(픽셀 값이 원본과 같음). 12 · 16비트 JPEG, JPEG-LS, JPEG 2000은 못 엶. 프레임 한 장 3.5~5.8ms.
+  - PowerShell이 C# 소스에서 **실행 파일을 그 자리에서** 만들 수 있음(`Add-Type -OutputAssembly … -OutputType WindowsApplication`, 0.14초, 4KB짜리가 실행됨) → 뷰어의 실행 파일을 저장소에 넣을 필요가 없음.
+  - Weasis 139MB = Java 실행 환경 113MB + 부품 26MB.
+- **원문에서 확인한 것**: Mindray DP-10/20/30 초음파의 적합성 선언서(내놓는 전송 구문 일곱 가지 · 색 표현), DICOM PS3.3의 초음파 색 표현 규정, fo-dicom의 라이선스(MS-PL)와 딸린 패키지, pydicom-data의 라이선스(MIT)와 견본 목록, .NET Framework가 Windows에 들어 있는 판.
+- **조사하다 찾아 고친 결함**(EMR `pacs.export.js`): 묶음의 `Resources`에 **같은 검사가 두 번** 들어가면 Orthanc 1.12.11이 **끝내 응답하지 않음**(15초 · 300초 기다려 봄). 두 오더가 같은 검사를 가리킬 때 그렇게 될 수 있었음 → 한 번만 넣고, 장수 · 크기도 한 번만 셈. 격리에서: 오더 둘(같은 검사) → 0.7초, 영상 3장, 기록 「2 exam(s), 3 image(s)」. EMR의 길 시험 31가지 다시 통과.
+- **바꾼 파일**: `backend/src/routes/pacs.export.js`(위의 고침) · 위키 `reference/cd-mini-viewer-design.md`(새) · `reference/image-print-export-design.md`(가리키는 한 줄) · `modules/pacs.md` · 이 노트.
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음.
+- **확인 못 한 것**: Windows 10에서 무손실 JPEG가 열리는지 · 진짜 초음파 동영상(공개 견본을 아직 받지 않음) · 뷰어의 크기와 메모리(지은 뒤) · 현지 장비가 실제로 보내는 형식 · GE의 선언서는 검색 결과로만 읽음.
+- **내려받은 것 없음.** 공개 견본(pydicom-data, 약 25MB)은 ①을 시작할 때 파일 이름 · 주소 · 크기를 알리고 실장님의 직접 허락을 받은 뒤에.
+- **남아 있는 것**: scratch의 `weasis\`(MSI와 풀린 폴더), `ts\`(시험 영상을 여러 압축으로 바꾼 것 — 가짜 영상). `D:\CD-TEST`는 그대로 둘(뷰어 없는 것 · Weasis 넣은 것).
+- **다른 세션에 부탁**: 총괄 — 12절의 결정.
+
 ## 2026-10-02 — 진짜 굽기 1장 성공 · Weasis를 설치 없이 풀어 켜 봄
 
 - **상태**: 확인 요청. 실장님이 PACS 세션 창에 직접 「CD 구워, Weasis 받아」.
