@@ -448,9 +448,10 @@ export default {
   cs_moreOne: "… {n} autres. Tapez plus de lettres pour préciser.",
   // Diagnostics (2026-10-02)
   cs_dxTitle: "Diagnostic",
-  cs_dxPlaceholder: "Chercher par nom ou code — ou l'écrire tel quel",
-  cs_dxPrimary: "Principal",
-  cs_dxMakePrimary: "En faire le diagnostic principal",
+  cs_dxPlaceholder: "Saisir code ou nom du diagnostic...",
+  cs_dxPrimary: "Diagnostic principal",
+  cs_dxMainShort: "DP",
+  cs_dxMakePrimary: "Cliquer pour en faire le diagnostic principal",
   cs_dxRemove: "Retirer ce diagnostic",
   cs_dxFree: "Ajouter « {text} » tel quel (sans code)",
   cs_dxDuplicate: "Ce diagnostic est déjà saisi.",

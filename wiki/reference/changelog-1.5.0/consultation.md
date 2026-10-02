@@ -195,8 +195,9 @@ There is now a **Diagnostic** box on the left, above the prescriptions. Typing t
 of a name or a code searches a list of a hundred frequent outpatient diagnoses, each with
 its ICD-10 code and its name in French, English and Korean; a diagnosis that is not in the
 list is typed as it is and saved without a code - the name is what the clinic needs, the
-code is optional. The first diagnosis is the main one, the others secondary; a star
-changes which one is main. Earlier diagnoses show in the patient chart on the right, and
+code is optional. The diagnoses are listed in a small table like the prescriptions'
+(remove, main or number, code, name); the first is the main one, and clicking another
+line's number makes that one main. Earlier diagnoses show in the patient chart on the right, and
 the referral letter opens with the consultation's diagnoses already in its diagnosis
 field. The list itself will be managed in Settings.
 

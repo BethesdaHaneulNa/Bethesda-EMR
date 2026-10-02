@@ -448,9 +448,10 @@ export default {
   cs_moreOne: "… {n}개 더 있습니다. 글자를 더 쳐서 좁히세요.",
   // 진단 (2026-10-02)
   cs_dxTitle: "진단",
-  cs_dxPlaceholder: "이름이나 코드로 찾기 — 없으면 그대로 입력",
+  cs_dxPlaceholder: "진단 코드 또는 이름 입력...",
   cs_dxPrimary: "주진단",
-  cs_dxMakePrimary: "주진단으로 바꾸기",
+  cs_dxMainShort: "주",
+  cs_dxMakePrimary: "누르면 이 진단이 주진단이 됩니다",
   cs_dxRemove: "이 진단 빼기",
   cs_dxFree: "「{text}」 그대로 넣기 (코드 없음)",
   cs_dxDuplicate: "이미 넣은 진단입니다.",
