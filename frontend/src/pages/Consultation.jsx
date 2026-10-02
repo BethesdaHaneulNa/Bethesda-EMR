@@ -1621,27 +1621,30 @@ export default function ConsultationPage() {
             <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-4)',fontSize: 14,fontStyle:'italic',textAlign:'center',padding:20,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{t.viewingPast}</div>
           ):sel&&opened?(
             <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
-              {/* Diagnoses (2026-10-02): one line - the title and the box - then the
-                  diagnoses entered, as chips. The box works like the code box under
-                  it: two letters, a list, arrows and Enter. The primary diagnosis is
-                  said in words («Principal»), not by colour alone; ☆ on another one
-                  makes it the primary. Long names wrap inside their chip. */}
-              <div data-cs="diagnoses" style={{padding:'5px 10px 6px',borderBottom:'1px solid '+bd,position:'relative',flexShrink:0}}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
+              {/* Diagnoses. The place and the shape are the director's (2026-10-02, after his own
+                  hospital's screen): under the reception memo, over the prescriptions; one
+                  line to type in, and under it a small table - ✕, main / number, code, name -
+                  in the prescription table's type, row height and colours. With no
+                  diagnosis there is only the line to type in. Four rows show; more scroll
+                  inside, so the prescriptions keep their room. The first cell says which
+                  line is the main diagnosis («DP» / 주) and numbers the others from 2;
+                  clicking a number makes that line the main one - no extra button. */}
+              <div data-cs="diagnoses" style={{borderBottom:'1px solid '+bd,position:'relative',flexShrink:0}}>
+                <div style={{padding:'5px 10px',display:'flex',alignItems:'center',gap:8}}>
                   <span style={{fontWeight:700,fontSize: 14,color:tx,whiteSpace:'nowrap',flexShrink:0}}>{t.cs_dxTitle}</span>
                   <input autoComplete="off" value={dxQ} onChange={function(e){ setDxQ(e.target.value); setDxIdx(0); }} onKeyDown={handleDxKey}
                     placeholder={t.cs_dxPlaceholder} aria-label={t.cs_dxTitle}
-                    style={{flex:1,minWidth:0,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',boxSizing:'border-box'}}/>
+                    style={{flex:1,minWidth:0,background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'5px 8px',color:'var(--accent-text)',fontSize: 14,fontWeight:600,fontFamily:'monospace',outline:'none',boxSizing:'border-box'}}/>
                 </div>
                 {dxSugg.length>0 ? (
-                  <div style={{position:'absolute',left:10,right:10,top:34,background:'var(--panel-head)',border:'1px solid '+bd,borderRadius:6,zIndex:31,maxHeight:230,overflow:'auto',boxShadow:'0 8px 24px var(--shadow-50)'}}>
+                  <div style={{position:'absolute',left:10,right:10,top:38,background:'var(--panel-head)',border:'1px solid '+bd,borderRadius:6,zIndex:31,maxHeight:230,overflow:'auto',boxShadow:'0 8px 24px var(--shadow-50)'}}>
                     {dxSugg.map(function(c, i){
                       return <div key={c.free ? 'free' : c.id} onClick={function(){ addDx(c); }} onMouseEnter={function(){ setDxIdx(i); }}
-                        style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:8,alignItems:'baseline',background:i===dxIdx?'var(--accent-a20)':'transparent',borderBottom:'1px solid var(--border)'}}>
+                        style={{padding:'5px 10px',cursor:'pointer',display:'flex',gap:6,alignItems:'baseline',background:i===dxIdx?'var(--accent-a20)':'transparent',borderBottom:'1px solid var(--border)'}}>
                         {c.free
                           ? <span style={{fontSize: 13,color:t2,overflowWrap:'anywhere'}}>{String(t.cs_dxFree||'').replace('{text}', c.text)}</span>
                           : <>
-                            <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700,width:52,flexShrink:0,whiteSpace:'nowrap'}}>{c.code || ''}</span>
+                            <span style={{fontFamily:'monospace',fontSize: 13,color:'var(--accent-text)',fontWeight:700,width:76,flexShrink:0,whiteSpace:'nowrap'}}>{c.code || ''}</span>
                             <span style={{fontSize: 13,color:tx,flex:1,minWidth:0,overflowWrap:'anywhere'}}>{dxCodeName(c)}</span>
                           </>}
                       </div>;
@@ -1649,18 +1652,22 @@ export default function ConsultationPage() {
                   </div>
                 ) : null}
                 {dxList.length ? (
-                  <div style={{display:'flex',flexWrap:'wrap',gap:'4px 6px',marginTop:6}}>
-                    {dxList.map(function(d){
-                      var main = d.diagnosis_type==='primary';
-                      return <span key={d.id} style={{display:'inline-flex',alignItems:'baseline',gap:5,maxWidth:'100%',boxSizing:'border-box',background:main?'var(--accent-a12)':'var(--chip)',border:'1px solid '+(main?'var(--accent-a40)':bd2),borderRadius:4,padding:'2px 4px 2px 6px',fontSize: 13,lineHeight:1.4}}>
-                        {main
-                          ? <span style={{fontSize: 11,fontWeight:800,color:'var(--accent-text)',whiteSpace:'nowrap',flexShrink:0}}>★ {t.cs_dxPrimary}</span>
-                          : <button onClick={function(){ makeDxPrimary(d); }} title={t.cs_dxMakePrimary} aria-label={t.cs_dxMakePrimary} style={{background:'transparent',border:'none',color:t2,cursor:'pointer',fontSize: 13,padding:'0 2px',flexShrink:0}}>☆</button>}
-                        {d.icd_code ? <span style={{fontFamily:'monospace',fontWeight:700,color:'var(--accent-text)',whiteSpace:'nowrap',flexShrink:0}}>{d.icd_code}</span> : null}
-                        <span style={{minWidth:0,color:tx,overflowWrap:'anywhere'}}>{dxName(d)}</span>
-                        <button onClick={function(){ removeDx(d); }} title={t.cs_dxRemove} aria-label={t.cs_dxRemove} style={{background:'transparent',border:'none',color:'var(--danger-text)',cursor:'pointer',fontSize: 13,fontWeight:800,padding:'0 3px',flexShrink:0}}>✕</button>
-                      </span>;
-                    })}
+                  <div style={{maxHeight:113,overflowY:'auto',borderTop:'1px solid '+bd}}>
+                    <table style={{width:'100%',tableLayout:'fixed',borderCollapse:'collapse',fontSize: 15}}>
+                      <tbody>
+                        {dxList.map(function(d, i){
+                          var main = d.diagnosis_type==='primary';
+                          return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
+                            <td style={{padding:'3px 5px',width:22}}><span onClick={function(){ removeDx(d); }} title={t.cs_dxRemove} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span></td>
+                            <td style={{padding:'3px 2px',width:40,textAlign:'center'}}>{main
+                              ? <span title={t.cs_dxPrimary} style={{display:'inline-block',minWidth:26,background:'var(--accent-a20)',color:'var(--accent-text)',borderRadius:3,padding:'0 4px',fontSize: 12,fontWeight:800,whiteSpace:'nowrap'}}>{t.cs_dxMainShort}</span>
+                              : <button onClick={function(){ makeDxPrimary(d); }} title={t.cs_dxMakePrimary} aria-label={t.cs_dxMakePrimary} style={{minWidth:26,background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'0 4px',cursor:'pointer',fontSize: 12,fontWeight:700,fontFamily:'inherit'}}>{i+1}</button>}</td>
+                            <td style={{padding:'3px 3px',width:70,color:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={d.icd_code || undefined}>{d.icd_code || ''}</td>
+                            <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{dxName(d)}</td>
+                          </tr>;
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : null}
               </div>

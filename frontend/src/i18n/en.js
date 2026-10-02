@@ -457,9 +457,10 @@ export default {
   cs_moreOne: "… {n} more. Type more letters to narrow the list.",
   // Diagnoses (2026-10-02)
   cs_dxTitle: "Diagnosis",
-  cs_dxPlaceholder: "Search by name or code — or type it as it is",
-  cs_dxPrimary: "Main",
-  cs_dxMakePrimary: "Make this the main diagnosis",
+  cs_dxPlaceholder: "Type diagnosis code or name...",
+  cs_dxPrimary: "Main diagnosis",
+  cs_dxMainShort: "Main",
+  cs_dxMakePrimary: "Click to make this the main diagnosis",
   cs_dxRemove: "Remove this diagnosis",
   cs_dxFree: "Add “{text}” as typed (no code)",
   cs_dxDuplicate: "This diagnosis is already entered.",
