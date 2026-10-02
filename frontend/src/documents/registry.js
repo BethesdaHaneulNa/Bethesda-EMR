@@ -2,6 +2,7 @@
 // To add a new document (진단서, 소견서, 통원확인서 ...): create a template file
 // like ./referral.jsx and add it to TEMPLATES below. Nothing else needs to change.
 import referral from './referral.jsx';
+import medicalCertificate from './medical-certificate.jsx';
 import { doseSentence, isLegacyTotal } from './rx-dosing.js';
 import externalRx from './external-rx.jsx';
 import { CHART_TEMPLATES } from './surgical-records.jsx';
@@ -18,7 +19,7 @@ import imagingImages from './imaging-images.jsx';
 // imagingImages (category 'imaging'): an exam's pictures on paper, issued from the imaging
 // list (components/ImagesPrint.jsx). Its record names the pictures; drawn again, the sheet
 // asks the image server for them.
-export var TEMPLATES = [referral, externalRx].concat(CHART_TEMPLATES).concat([imagingReport, labResults, imagingImages]);
+export var TEMPLATES = [referral, medicalCertificate, externalRx].concat(CHART_TEMPLATES).concat([imagingReport, labResults, imagingImages]);
 
 export function getTemplate(code) {
   for (var i = 0; i < TEMPLATES.length; i++) {
