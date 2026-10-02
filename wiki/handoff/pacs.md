@@ -13,6 +13,26 @@
 - **확인 못 한 것**: 굽기 · 디스크 알아보기 · 진행 표시 · 확인 · 꺼냄 — 이 PC에 드라이브가 없어 **지을 때도 확인할 수 없음**(지어 두고 실장님이 드라이브 있는 PC에서 한 번).
 - **다른 세션에 부탁**: 없음
 
+## 2026-10-02 — 「Bethesda CD」 1.0.0: 반출 프로그램을 진짜 실행 파일로 · 한 폴더로 서게 · 아이콘 후보
+
+- **상태**: 확인 요청. 실장님이 고르실 것 — **아이콘 후보 셋**: `wiki/reference/design/bethesda-cd-icon-candidates.png`.
+- **커밋**: **PACS 저장소** `session/pacs` `0213d99`. **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(문서 · 아이콘 후보 그림).
+- **한 일**(PACS 저장소 `bethesda-cd\` — 그 폴더 하나로 섬):
+  - `src\app\` — 반출 프로그램을 C#으로(옛 PowerShell과 한 줄씩 대응): `Program` · `MainForm`(+ `Ask`) · `Texts` · `Emr` · `DiscFolder` · `Burner`.
+  - `src\viewer\` — 뷰어를 `viewer\`에서 옮김(git mv). `src\shared\Version.cs` — 이름 「Bethesda CD」와 판 **1.0.0**을 정하는 한 곳(창 · 파일 속성 · 뷰어의 「?」).
+  - `build.ps1` — Windows의 `csc`(C# 5)만. `VOIR.EXE`를 먼저 만들어 `Bethesda-CD.exe` 안에 자원으로 품음 → 모든 디스크에 같은 파일. 0.7초, 182KB.
+  - `icon\make-icon.ps1` — 아이콘을 직접 그림(후보 A · B · C, 16 · 32 · 48 · 256).
+  - `tests\viewer_test.ps1`(21 — 바깥 파일 없이 스스로 그림을 그려 확인; 무손실 JPEG 예측 방식 1~7 포함) · `tests\app_test.ps1`(23 — 시험용 EMR 필요, 비밀번호는 환경 변수).
+  - `README.md`(필요한 EMR 판 1.5.0과 HTTP 길 셋) · `CHANGELOG.md` · `LICENSE`(PACS와 같은 글, 첫 줄 「Bethesda CD — License」) · `Bethesda-CD.example.ini` · `.gitignore` · `.gitattributes`.
+  - 옛 `cd-export*.ps1` · `.bat`: 그대로 둠(한 번의 배포 동안). 뷰어 소스의 새 자리(`bethesda-cd\src`)에서 빌드하게만 고침. PACS `README.md`의 그 절을 줄이고 `bethesda-cd\README.md`를 가리킴.
+- **공개 저장소가 될 폴더에 없는 것 — 확인함**: 비밀값 · 이 PC의 주소나 경로 · 실제 환자/실장님 자료 · 견본 DICOM(시험이 그림을 스스로 그림) — 스테이징에서 검사. 시험 스크립트의 예시 주소는 `127.0.0.1` · 예시 차트번호뿐.
+- **확인한 방법**(격리 EMR 9188 · PACS 9198): `app_test.ps1` 23가지 통과(디스크의 VOIR.EXE가 빌드한 것과 바이트까지 같음 포함) · 풀어서 내보내기 5가지 · `viewer_test.ps1` 21가지 · 옛 길의 창 시험 22가지 · 진짜 실행 파일을 로컬 / USB / 네트워크 경로에서 실행(0.3초에 창, 39MB, Windows의 물음 없음, Defender 검사 0건).
+- **SmartScreen/Defender**(총괄의 물음): 로컬 · USB · `\\localhost\C$\…`에서 물음 없이 뜸. 서명 없음, 「인터넷에서 받은 파일」 표시 없음(빌드한 파일 · USB로 옮긴 파일에는 붙지 않음). Defender 사용자 검사 0건. GitHub에서 zip으로 받은 사본은 그 표시가 붙어 SmartScreen이 한 번 물을 것 — 일부러 띄워 보지는 않음.
+- **확인 못 한 것**: **실행 파일로 진짜 굽기**(굽는 코드는 그대로, 드라이브 알아보기는 옮겨 적음 — 드라이브와 「빈 디스크가 아님」은 읽힘. 빈 CD-R과 실장님의 직접 승인이 있으면 한 장 구워 확인) · 다른 PC.
+- **배포할 때**(총괄): 실행 중 PACS 폴더에 `bethesda-cd\` 폴더를 통째로 → `bethesda-cd\build.ps1` → `bethesda-cd\build\Bethesda-CD.exe`(바로가기는 이것으로). 옛 `cd-export.bat`을 계속 쓰려면 `cd-export-common.ps1` · `cd-export.ps1`도 다시 복사(뷰어 소스의 자리가 바뀜 — 옛 `viewer\` 폴더는 지워도 됨). 설정은 `build\Bethesda-CD.ini`에 새로 적힘(옛 `cd-export.ini`를 그 옆에 두면 주소를 읽어 옴).
+- **바꾼 파일**: PACS — `bethesda-cd\`(새 폴더; `viewer\*.cs` 아홉 파일이 `src\viewer\`로) · `cd-export-common.ps1` · `cd-export.ps1` · `README.md` · `.gitignore`. EMR — 위키 `reference/image-print-export-design.md`(11-2절) · `modules/pacs.md` · `manual-fr/pacs.md`(§12의 프로그램 이름) · `reference/design/bethesda-cd-icon-candidates.png` · 이 노트. 공용 파일 · DB · 번역 키: 없음.
+- **다음**: 실장님의 결정(들여오기 가~아, 아이콘)을 기다림 → 들여오기 코드(EMR + 「Bethesda CD」 안에 C#으로).
+
 ## 2026-10-02 — 설계안: 다른 병원의 영상(CD · USB) 들여오기 (문서만)
 
 - **상태**: 확인 요청 — 설계 문서. 코드 없음. 결정(문서 17절)이 나면 짓습니다(프로그램 쪽은 `.exe`로 옮긴 뒤 C#으로).
