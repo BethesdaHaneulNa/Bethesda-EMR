@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
+import { SIDE_NAV_COL, SIDE_NAV, SIDE_NAV_TITLE, sideNavItem } from '../layout.js';
 
 // Thousands: a no-break space in French (« 39 300 »), a comma in Korean and English -
 // the same rule as the pharmacy's fmt(n, lang). CSV exports keep plain numbers.
@@ -18,6 +19,10 @@ function rangeFor(p){
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
   function fmtAr(n){ return fmtAmount(n, lang); }
+  // Which group of parts is on screen (design session, 2026-10-02): the screen had grown to
+  // nine parts one under the other. They are shown a group at a time, chosen in a side menu
+  // like the settings screen's. Only what is shown changes: every part still loads as before.
+  var gps = useState('summary'), group = gps[0], setGroup = gps[1];
   var ps = useState('month'), period = ps[0], setPeriod = ps[1];
   var rs = useState(rangeFor('month')), range = rs[0], setRange = rs[1];
   var ds = useState(null), data = ds[0], setData = ds[1];
@@ -233,7 +238,16 @@ export default function StatsPage(){
       </div>; })}
     </div>; }
 
-  function Section(props){ return <div style={{ marginBottom:18 }}>
+  // The groups of the side menu, in the order of the parts on the old long page.
+  var GROUPS = [
+    ['summary',  '🏥 '+(t.ds_stSummary||'요약')],
+    ['money',    '💰 '+(t.ds_stMoney||'매출 · 현금')],
+    ['patients', '👥 '+(t.ds_stPatients||'환자 · 진료량')],
+    ['dx',       '🩺 '+(t.st_diagnoses||'진단 통계')],
+    ['orders',   '🧪 '+(t.ds_stOrders||'오더')],
+    ['drugs',    '💊 '+(t.ds_stDrugs||'약품')],
+  ];
+  function Section(props){ if (props.group && props.group !== group) return null; return <div style={{ marginBottom:18 }}>
     <div style={{ fontSize:15, fontWeight:900, color:tx, margin:'0 0 10px 2px' }}>{props.title}</div>
     {props.children}
   </div>; }
@@ -266,10 +280,16 @@ export default function StatsPage(){
 
   return <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'var(--bg-2)' }}>
     <TopBar />
-    <div style={{ flex:1, overflow:'auto', padding:'16px 20px' }}>
-      {/* 기간 선택 */}
-      <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:18 }}>
-        <span style={{ fontSize:20, fontWeight:900, color:tx, marginRight:8 }}>📊 {t.stats}</span>
+    <div style={{ flex:1, minHeight:0, display:'grid', gridTemplateColumns:SIDE_NAV_COL+'px minmax(0,1fr)' }}>
+    <nav aria-label={t.stats} style={SIDE_NAV}>
+      <div style={SIDE_NAV_TITLE}>📊 {t.stats}</div>
+      {GROUPS.map(function(g){ var on = group===g[0];
+        return <button key={g[0]} type="button" className="pressable" aria-current={on?'page':undefined} onClick={function(){ setGroup(g[0]); }} style={sideNavItem(on)}>{g[1]}</button>; })}
+    </nav>
+    <div style={{ overflow:'auto', padding:'16px 20px' }}>
+      {/* 기간 선택 — only where it applies: the summary and the revenue cards. The other
+          parts have a period of their own, and this row above them looked as if it ruled them. */}
+      <div style={{ display:(group==='summary'||group==='money')?'flex':'none', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:18 }}>
         {pbtn('today', t.today||'오늘')}
         {pbtn('week', t.thisWeek||'이번 주')}
         {pbtn('month', t.thisMonth||'이번 달')}
@@ -282,7 +302,7 @@ export default function StatsPage(){
 
       {!data?<div style={{ color:t3, padding:40, textAlign:'center' }}>{loading?(t.loading||'불러오는 중...'):(t.noData||'데이터 없음')}</div>:<>
         {/* 운영 현황 */}
-        <Section title={'🏥 '+(t.operations||'운영 현황')}>
+        <Section group="summary" title={'🏥 '+(t.operations||'운영 현황')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
             <Card label={t.totalVisits||'총 내원'} value={v.total||0} unit={cases} color="var(--accent-text)" sub={(t.uniquePatients||'고유 환자')+' '+(v.unique_patients||0)} />
             <Card label={t.newVisit||'초진'} value={v.new_visits||0} unit={cases} small />
@@ -308,7 +328,7 @@ export default function StatsPage(){
         </Section>
 
         {/* 매출 · 정산 */}
-        <Section title={'💰 '+(t.revenueSettlement||'매출 · 정산')}>
+        <Section group="money" title={'💰 '+(t.revenueSettlement||'매출 · 정산')}>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
             {/* The day's cash (design A, 2026-09-29): what came into the till minus what
                 was handed back, from cash_movement. Replaces the receipt-based figure
@@ -383,7 +403,7 @@ export default function StatsPage(){
         </Section>
 
         {/* 기간별 현금 (그날 현금 by day / month / year) */}
-        <Section title={'💵 '+(t.st_cashTable||'기간별 현금')}>
+        <Section group="money" title={'💵 '+(t.st_cashTable||'기간별 현금')}>
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
             {[['day',t.daily||'일별'],['month',t.monthly2||'월별'],['year',t.yearly||'연별']].map(function(o){ var on=cashGran===o[0];
               return <button key={o[0]} onClick={function(){pickCashGran(o[0])}} style={{ background:on?'var(--ok-a18)':'transparent', color:on?'var(--ok-ink)':t3, border:'1px solid '+(on?'var(--ok-a40)':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
@@ -494,7 +514,7 @@ export default function StatsPage(){
             </table>
           </div>; }
           return <>
-            <Section title={'👥 '+(t.st_patients||'환자 통계')}>
+            <Section group="patients" title={'👥 '+(t.st_patients||'환자 통계')}>
               <div style={bar}>
                 {filters(ptF, setPtF, ptData)}
                 <div style={{ flex:1 }}></div>
@@ -530,7 +550,7 @@ export default function StatsPage(){
               </div>)}
             </Section>
 
-            <Section title={'📋 '+(t.st_workload||'과 · 의사별 진료량')}>
+            <Section group="patients" title={'📋 '+(t.st_workload||'과 · 의사별 진료량')}>
               <div style={bar}>
                 {dates(wlF, setWlF, wlData)}
                 <div style={{ flex:1 }}></div>
@@ -549,7 +569,7 @@ export default function StatsPage(){
               </div>)}
             </Section>
 
-            <Section title={'🩺 '+(t.st_diagnoses||'진단 통계')}>
+            <Section group="dx" title={'🩺 '+(t.st_diagnoses||'진단 통계')}>
               <div style={bar}>
                 <select value={dxF.scope} onChange={patch(dxF, setDxF, 'scope')} style={selStyle}>
                   <option value="primary">{t.st_dxPrimary||'주진단만'}</option>
@@ -589,7 +609,7 @@ export default function StatsPage(){
               </div>)}
             </Section>
 
-            <Section title={'🧪 '+(t.st_orders||'오더 통계')}>
+            <Section group="orders" title={'🧪 '+(t.st_orders||'오더 통계')}>
               <div style={bar}>
                 {/* Kinds in one select, not a row of buttons (the coordinator's brief). */}
                 <select value={ordF.type} onChange={patch(ordF, setOrdF, 'type')} style={selStyle}>
@@ -629,7 +649,7 @@ export default function StatsPage(){
         })()}
 
         {/* 약품 사용통계 */}
-        <Section title={'💊 '+(t.drugUsage||'약품 사용통계')}>
+        <Section group="drugs" title={'💊 '+(t.drugUsage||'약품 사용통계')}>
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
             {[['day',t.daily||'일별'],['month',t.monthly2||'월별'],['year',t.yearly||'연별']].map(function(o){ var on=drugGran===o[0];
               return <button key={o[0]} onClick={function(){pickDrugGran(o[0])}} style={{ background:on?'var(--ok-text-a18)':'transparent', color:on?'var(--ok-text)':t3, border:'1px solid '+(on?'var(--ok-text-a40)':bd2), borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{o[1]}</button>; })}
@@ -682,7 +702,7 @@ export default function StatsPage(){
         </Section>
 
         {/* 월별 추이 */}
-        <Section title={'📈 '+(t.monthlyTrend||'월별 추이')+' ('+(t.last6mo||'최근 6개월')+')'}>
+        <Section group="summary" title={'📈 '+(t.monthlyTrend||'월별 추이')+' ('+(t.last6mo||'최근 6개월')+')'}>
           <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
             <div style={{ flex:1, minWidth:300, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.totalVisits||'총 내원'}</div>
@@ -695,6 +715,7 @@ export default function StatsPage(){
           </div>
         </Section>
       </>}
+    </div>
     </div>
   </div>;
 }

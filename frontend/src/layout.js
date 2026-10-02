@@ -49,5 +49,16 @@ export var EMPTY_ICON = { fontSize: 54, opacity: 0.35, marginBottom: 12 };
 export var EMPTY_TEXT = { fontSize: 17, fontStyle: 'italic', color: 'var(--text-3)' };
 export var EMPTY_SUB = { fontSize: 14, marginTop: 6, color: 'var(--text-3)' };
 
+// ── a side menu: the parts of a screen, one shown at a time (settings, statistics) ──
+// The settings screen had this shape first (Settings.jsx keeps its own copy of the values);
+// the statistics screen takes it from here.
+export var SIDE_NAV_COL = 180;                         // px
+export var SIDE_NAV = { borderRight: '1px solid var(--border)', background: 'var(--panel)', padding: '10px 0', overflowY: 'auto' };
+export var SIDE_NAV_TITLE = { padding: '0 12px 10px', fontSize: 14, fontWeight: 700, color: 'var(--text)' };
+export function sideNavItem(on) {
+  return { display: 'block', width: '100%', textAlign: 'left', boxSizing: 'border-box', border: 'none', borderLeft: '3px solid ' + (on ? 'var(--accent-ink)' : 'transparent'), borderRadius: 0, margin: 0,
+    padding: '8px 14px', cursor: 'pointer', background: on ? 'var(--accent-a12)' : 'transparent', color: on ? 'var(--accent-text)' : 'var(--text-2)', fontSize: 14, fontWeight: on ? 600 : 400, fontFamily: 'inherit', lineHeight: 1.35 };
+}
+
 // ── the heading of the right column ──
 export var SIDE_HEAD = { flexShrink: 0, padding: '9px 12px', borderBottom: '1px solid var(--border)', background: 'var(--panel-head)', fontWeight: 800, fontSize: 14 };
