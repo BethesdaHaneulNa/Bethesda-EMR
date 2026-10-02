@@ -5,28 +5,31 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 ## En bref
 
 1. En haut de l'écran, cliquez sur **Statistiques**.
-2. Choisissez la période : **Aujourd'hui**, **Cette semaine** ou **Ce mois** (ou saisissez deux dates).
-3. Lisez **Activité** : combien de patients sont venus.
-4. Lisez **Recettes** : la carte **Caisse** donne l'argent entré moins l'argent rendu.
+2. À gauche, choisissez le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Examens · actes** ou **Médicaments**. En haut du groupe, choisissez la période : **Aujourd'hui**, **Cette semaine**, **Ce mois**, **30 jours** ou **Cette année** (ou saisissez deux dates).
+3. Dans **Résumé**, lisez **Activité** : combien de patients sont venus.
+4. Dans **Recettes · caisse**, lisez **Recettes** : la carte **Caisse** donne l'argent entré moins l'argent rendu.
 5. Pour savoir qui doit encore payer, cliquez sur la carte **Impayé ▼**.
-6. Pour la caisse jour par jour, regardez **Caisse par période**.
-7. Pour savoir qui est venu et quel service a le plus travaillé, regardez **Patients** et **Activité par service et par médecin**.
-8. Pour savoir quelles maladies et quels examens reviennent le plus, regardez **Diagnostics** et **Examens et actes prescrits**.
-9. Descendez à **Usage médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
+6. Pour la caisse jour par jour, regardez **Caisse par période**, dans le même groupe.
+7. Pour savoir qui est venu et quel service a le plus travaillé, ouvrez **Patients · activité**.
+8. Pour savoir quelles maladies et quels examens reviennent le plus, ouvrez **Diagnostics** et **Examens · actes**.
+9. Ouvrez **Médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
 
 ## Pas à pas
 
-### Choisir la période
+### Choisir le groupe et la période
 
 1. Cliquez sur **Statistiques** dans la barre du haut.
-2. L'écran s'ouvre sur **Ce mois** : du 1er du mois jusqu'à aujourd'hui.
-3. Cliquez sur **Aujourd'hui**, **Cette semaine** (depuis lundi) ou **Ce mois**.
-4. Pour une autre période, saisissez la date de début et la date de fin dans les deux cases à côté.
-5. Les chiffres se mettent à jour tout seuls. Pendant le calcul, `···` s'affiche à côté des dates.
+2. Dans le menu de gauche, cliquez sur le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Examens · actes**, **Médicaments**. L'écran se souvient du dernier groupe ouvert.
+3. En haut de chaque groupe, une seule ligne sert à choisir la période. Elle est la même partout : cliquez sur **Aujourd'hui**, **Cette semaine** (depuis lundi), **Ce mois**, **30 jours** (les 30 derniers jours) ou **Cette année** (depuis le 1er janvier). Le bouton de la période affichée est allumé.
+4. Pour une autre période, saisissez la date de début et la date de fin dans les deux cases à côté. Une date de début placée après la date de fin n'est pas acceptée.
+5. Dans **Patients · activité**, **Diagnostics** et **Examens · actes**, la même ligne permet de choisir un seul service (**Tous les services**) ou un seul médecin (**Tous les médecins**).
+6. Tous les tableaux du groupe suivent cette ligne. Les chiffres se mettent à jour tout seuls.
+
+Au départ : **Résumé** et **Recettes · caisse** montrent **Ce mois** (ils partagent la même période) ; **Patients · activité**, **Diagnostics** et **Examens · actes** montrent **30 jours** ; **Médicaments** montre une période adaptée à son tableau.
 
 Les montants s'écrivent avec un espace pour les milliers (**39 300 Ar**) et les nombres avec leur unité (**3 cas**).
 
-La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Caisse par période**, **Patients**, **Activité par service et par médecin**, **Diagnostics**, **Examens et actes prescrits**, **Usage médicaments** et **Tendance mensuelle** (ils ont leurs propres dates).
+Les cartes **Impayé** et **Remboursement dû** ne suivent pas la période (ce sont les montants d'aujourd'hui), ni **Tendance mensuelle** (toujours les 6 derniers mois).
 
 ### Lire « Activité » — combien de patients
 
@@ -64,8 +67,8 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 
 ### La caisse jour par jour : « Caisse par période »
 
-1. Sous **Recettes**, dans **Caisse par période**, cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années.
-2. Pour une autre période, saisissez les deux dates à droite.
+1. Dans le groupe **Recettes · caisse**, sous **Recettes**, dans **Caisse par période**, cliquez sur **Jour**, **Mois** ou **Année**. La période est celle de la ligne du haut, la même que pour les cartes.
+2. Pour voir plusieurs mois, cliquez sur **Cette année** en haut, ou saisissez deux dates.
 3. **Le jour le plus récent est en haut** : aujourd'hui se lit sans descendre. Pour chaque jour (ou mois, ou année) : **Entrées**, **Sorties**, **Net**, puis le détail : **Paiements**, **Règlements de solde**, **Rendu (correction)**, **Rendu (annulation)**. Pour les jours d'avant le journal de caisse, une colonne **Avant le journal de caisse** apparaît (le montant des reçus de ce jour).
 4. La ligne **Total** donne la période entière.
 5. Le **Net** d'un jour doit être égal à l'argent de la caisse ce jour-là. Si ce n'est pas le cas, prévenez l'administrateur.
@@ -73,8 +76,8 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 
 ### Qui est venu : « Patients »
 
-1. Sous **Caisse par période**, allez à **Patients**. Au départ : les 30 derniers jours.
-2. Pour une autre période, saisissez les deux dates. Pour un seul service ou un seul médecin, choisissez-le dans **Tous les services** ou **Tous les médecins**.
+1. Dans le menu de gauche, cliquez sur **Patients · activité**. Le premier tableau est **Patients**. Au départ : **30 jours**.
+2. La période, le service et le médecin se choisissent sur la ligne du haut. Ils valent aussi pour le tableau **Activité par service et par médecin**, juste en dessous.
 3. Une ligne par âge : **<5**, **5–14**, **15–49**, **50+**. La ligne **Âge inconnu** apparaît s'il y a des patients sans date de naissance. La dernière ligne est le **Total**.
 
    | Colonne | Ce qu'elle compte |
@@ -93,7 +96,7 @@ Exemple : <5 · Patients 12 · H 7 · F 5 · Nouveaux patients 9 · Patients dé
 
 ### Le travail de chaque service et de chaque médecin : « Activité par service et par médecin »
 
-1. Allez à **Activité par service et par médecin**. Au départ : les 30 derniers jours. Pour une autre période, saisissez les deux dates.
+1. Dans le même groupe, sous **Patients**, lisez **Activité par service et par médecin**. Il suit la même période, le même service et le même médecin que le tableau **Patients**.
 2. À gauche, le tableau **Par service** ; à droite, **Par médecin**. La ligne avec le plus de visites est en haut.
 
    | Colonne | Ce qu'elle compte |
@@ -108,11 +111,11 @@ Exemple : <5 · Patients 12 · H 7 · F 5 · Nouveaux patients 9 · Patients dé
 
 ### Les maladies les plus fréquentes : « Diagnostics »
 
-1. Sous **Activité par service et par médecin**, allez à **Diagnostics**. Au départ : les 30 derniers jours.
-2. Dans la première case, choisissez **Diagnostic principal** ou **Tous les diagnostics**.
+1. Dans le menu de gauche, cliquez sur **Diagnostics**. Au départ : **30 jours**.
+2. Dans la case sous le titre, choisissez **Diagnostic principal** ou **Tous les diagnostics**.
    - **Diagnostic principal** : un seul diagnostic par consultation. Chaque consultation est comptée une fois. C'est le choix de départ.
    - **Tous les diagnostics** : les diagnostics secondaires sont comptés aussi. Une consultation peut alors se trouver sur plusieurs lignes.
-3. Pour une autre période, saisissez les deux dates. Pour un seul service ou un seul médecin, choisissez-le dans **Tous les services** ou **Tous les médecins**.
+3. La période, le service et le médecin se choisissent sur la ligne du haut.
 4. Le diagnostic le plus fréquent est en haut. Pour chaque diagnostic :
 
    | Colonne | Ce qu'elle compte |
@@ -133,9 +136,9 @@ Les enregistrements annulés ne sont pas comptés.
 
 ### Les examens et actes les plus demandés : « Examens et actes prescrits »
 
-1. Allez à **Examens et actes prescrits**. Au départ : les 30 derniers jours.
-2. Dans la première case, choisissez **Tous les types**, **Laboratoire**, **Imagerie** ou **Actes**.
-3. Les dates, **Tous les services** et **Tous les médecins** s'utilisent comme dans **Diagnostics**.
+1. Dans le menu de gauche, cliquez sur **Examens · actes**. Au départ : **30 jours**.
+2. Dans la case sous le titre, choisissez **Tous les types**, **Laboratoire**, **Imagerie** ou **Actes**.
+3. La période, le service et le médecin se choisissent sur la ligne du haut.
 4. L'acte le plus demandé est en haut. Pour chaque acte :
 
    | Colonne | Ce qu'elle compte |
@@ -152,8 +155,8 @@ La date est celle de la prescription (le jour de la visite), pas celle de l'exam
 
 ### Médicaments : « Usage médicaments »
 
-1. Cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années. Les deux cases de dates à droite montrent la période.
-2. Pour une autre période, saisissez les deux dates. Cliquer de nouveau sur **Jour** / **Mois** / **Année** remet la période de départ.
+1. Dans le menu de gauche, cliquez sur **Médicaments**, puis sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années. Les deux cases de dates de la ligne du haut montrent la période.
+2. Pour une autre période, utilisez la ligne du haut (boutons ou dates). Cliquer sur **Jour** / **Mois** / **Année** remet la période de départ.
 3. Choisissez **Tous**, **Interne** (délivré par la pharmacie de l'hôpital) ou **Externe** (ordonnance à acheter dehors).
 4. Choisissez **Toutes Rx** ou **Dispensé**. La phrase en petit au-dessus du tableau rappelle la règle :
    - **Toutes Rx** : ce que les médecins ont prescrit, à la date de la visite, en quantité prescrite.
@@ -164,7 +167,7 @@ La date est celle de la prescription (le jour de la visite), pas celle de l'exam
 
 ### Tendance mensuelle
 
-En bas : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). Un mois sans activité s'affiche à 0.
+Dans **Résumé**, sous **Activité** : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). Un mois sans activité s'affiche à 0.
 
 ## Si ce message apparaît
 
@@ -182,7 +185,7 @@ En bas : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). U
 | Les lignes de **Diagnostics** additionnées dépassent le total de **Consultations** | Avec **Tous les diagnostics**, une consultation a plusieurs diagnostics. | Choisissez **Diagnostic principal**. |
 | **Valeur prescrite** n'est pas égale aux **Recettes** | La valeur prescrite est le prix des actes demandés. Les recettes sont l'argent reçu (remises, impayés, actes non encore payés). | Rien : ces deux chiffres ne sont pas faits pour être égaux. |
 | **Visites totales** plus petit que la liste de l'accueil | Les enregistrements annulés ne sont pas comptés. | Regardez la carte **Annulé**. |
-| **Aucune donnée** juste après avoir changé une date en haut | La date de début est après la date de fin. (Dans le tableau des médicaments, une telle date est simplement ignorée.) | Corrigez l'une des deux dates. |
+| Une date saisie ne change pas | La date de début serait après la date de fin : elle n'est pas acceptée. | Changez d'abord l'autre date. |
 
 ## À ne pas faire
 

@@ -876,6 +876,8 @@ export default {
   st_workload: "Workload by department and doctor",
   st_wlOrders: "Orders",
   st_wlBasis: "By visit date · cancelled registrations left out · orders are lab, imaging and procedure orders not cancelled (drugs excluded) · patients do not add up across rows (one person can visit two departments)",
+  st_last30: "30 days",
+  st_thisYear: "This year",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Backups are working",

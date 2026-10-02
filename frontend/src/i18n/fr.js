@@ -867,6 +867,8 @@ export default {
   st_workload: "Activité par service et par médecin",
   st_wlOrders: "Actes prescrits",
   st_wlBasis: "Selon la date de visite · enregistrements annulés exclus · actes prescrits : examens, imagerie et actes non annulés (sans les médicaments) · les patients ne s’additionnent pas d’une ligne à l’autre (une personne peut voir deux services)",
+  st_last30: "30 jours",
+  st_thisYear: "Cette année",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",
