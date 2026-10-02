@@ -2,6 +2,26 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 로그 탭: 결과지 인쇄 둘 (`pacs.report.print` · `laboratory.results.print`) + 권한 시험 표
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `20dfa1e` merge 위 — 진료 `fe0e23d` 포함)
+- **배경**(총괄 전달, 실장님 결정): 결과지(영상 판독 보고서 · 검사 결과지 · 영상 인쇄)는 **문서 발급이 아니라 인쇄** — 서류 번호·발급 기록 없이 변경 기록 한 줄만.
+- **진료가 쓰는 줄**(`document.routes.js` `POST /documents/print-log`)
+  - `pacs.report.print`: entity `order_item`, 요약 「Reading of Chest PA (261001-306) printed」, `after` = `{order_name, accession_no, lang}`. 검사마다 한 줄.
+  - `laboratory.results.print`: entity `patient`, 요약 「Lab results of 2026-09-29 printed」 또는 「… of 2026-09-28 .. 2026-10-01 printed」, `after` = `{dates, test_count, lang}`. `dates`는 **한 글자열** 「날짜, 날짜」.
+- **로그 탭**
+  - 종류(종류 거르개에도): 「영상 판독 보고서를 인쇄함 / Imaging report printed / Compte-rendu d'imagerie imprimé」 · 「검사 결과지를 인쇄함 / Laboratory results printed / Résultats d'analyses imprimés」 — 서류의 이름은 서식(`imaging-report.jsx`·`lab-results.jsx`)이 쓰는 이름 그대로, 「Images imprimées」와 같은 결.
+  - 새 칸: `dates` 「검사 날짜 / Dates of the results / Dates des résultats」 · `test_count` 「검사 항목 수 / Tests / Analyses」. `order_name`·`accession_no`·`lang`은 있던 이름표.
+  - 요약 줄: 영어 문장 대신 「검사 (번호)」, 검사 결과지는 날짜 하나 또는 「첫 날 … 끝 날」.
+  - 칸 순서: 판독 보고서 = 검사 → 검사 번호 → 언어. 검사 결과지 = 날짜 → 항목 수 → 언어.
+  - **옛 「서류를 발행함」 줄**(결과지를 발급하던 때의 것)과 그 글은 건드리지 않음.
+- **권한 시험 표**: `POST /documents/print-log` [CONS, PAY] 한 줄(빈 본문은 400). 그리고 표 끝에 **권한이 아닌 검사 하나** — 관리자로 `POST /documents`에 imaging-report · lab-results · imaging-images를 보내면 400 「This sheet is printed, not issued」(권한 줄 [CONS, PAY, PHARM]은 그대로). 149 → **150개 × 11 = 1650건**, 모두 표와 같음. 백엔드의 모든 길과 대조 — 새로 빠진 길 없음.
+- **문서**: `wiki/03-change-log.md`에 두 줄을 넣고, 영상 인쇄 줄의 「서류 발행 줄도 남음」을 「2026-10-02부터 남지 않음」으로 바로잡음(총괄의 문서 — 사실이 바뀐 곳이라 고침, 보고함). 설명서 「Lire le Journal」 7번 아래에 결과지는 발급이 아니라 인쇄로 적힌다는 한 줄.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 4줄씩) · `backend/test/settings.access.mjs` · `wiki/03-change-log.md` · `wiki/manual-fr/settings.md` · `wiki/modules/settings.md` · 이 노트. 백엔드 라우트는 건드리지 않음.
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): `settings.access.mjs` 1650건 + 400 검사 셋 통과. 로그 탭 — 진료가 쓰는 모양 그대로의 줄 넷(판독 보고서: 번호·언어 있음 / 번호·언어 없음, 검사 결과지: 하루 / 사흘)을 격리 DB에 넣고 프랑스어·한국어로 읽음: 「Compte-rendu d'imagerie imprimé — Chest PA (261001-306)」, 「Résultats d'analyses imprimés — 2026-09-28 … 2026-10-01 · Dates des résultats: 2026-09-28, 2026-09-30, 2026-10-01 · Analyses: 21 · Langue: 한국어」. **화면에서 실제로 결과지를 인쇄해 남긴 줄로는 보지 않았음**(줄의 모양은 코드에서 읽음). 영어 화면은 글자만. 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-02 — 설정에 「진단 목록 / Diagnostics」 탭 (진료 화면의 진단 칸이 찾는 목록)
 
 - **상태**: 확인 요청
