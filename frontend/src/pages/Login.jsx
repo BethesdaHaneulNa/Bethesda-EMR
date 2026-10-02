@@ -105,7 +105,13 @@ export default function LoginPage() {
       <div style={{ width: 380, zIndex: 5 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,var(--accent),var(--accent-strong))', borderRadius: 16, width: 60, height: 60, marginBottom: 14, boxShadow: '0 8px 28px var(--accent-a40)' }}>
-            <span style={{ fontSize: 31, fontWeight: 800, color: 'var(--on-fill)' }}>B</span>
+            {/* The EMR's mark: a house with a cross (Bethesda, house of mercy) - the same picture
+                as the desktop icon (wiki/reference/design/icons/final/bethesda-emr.svg). */}
+            <svg width="60" height="60" viewBox="16 16 224 224" role="img" aria-label="Bethesda EMR">
+              <path fill="var(--on-fill)" stroke="var(--on-fill)" strokeWidth="18" strokeLinejoin="round" d="M128 58L198 114V198H58V114Z" />
+              <rect x="95" y="139.5" width="66" height="21" rx="5.25" fill="var(--accent-strong)" />
+              <rect x="117.5" y="117" width="21" height="66" rx="5.25" fill="var(--accent-strong)" />
+            </svg>
           </div>
           <div style={{ fontSize: 27, fontWeight: 700, color: 'var(--text-strong)' }}>{t.appTitle}</div>
           <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 3 }}>Electronic Medical Records</div>
