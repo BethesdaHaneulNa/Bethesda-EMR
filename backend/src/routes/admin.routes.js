@@ -902,6 +902,123 @@ router.delete('/phrase-categories/:id', permMiddleware('settings'), async (req, 
   } finally { client.release(); }
 });
 
+// ── DIAGNOSIS LIST ──
+// The list of frequent diagnoses the consultation screen searches (diagnosis_code, migration
+// 050, made by the consultation session, which reads the active rows through its own route
+// GET /consultations/diagnosis-codes). Here the clinic keeps it: every row - switched off
+// ones too - added, edited, switched off and on, put in order.
+//   - No delete. A row switched off leaves the doctor's search; the lines of patients that
+//     were picked from it keep pointing at it and still read in the screen's language (a
+//     line has its own copy of the code and the name either way, so nothing in a record
+//     changes when a row is edited).
+//   - The code is free text: not tied to a coding system, not unique (two wordings may
+//     share a code - the screen says so, the server does not refuse), and may be empty.
+//     Only the English name is required: it is what a screen falls back on.
+//   - A change is one line in the change log (code, names, status); the order is not.
+const DX_SELECT = 'SELECT id, code, name_en, name_fr, name_ko, is_active, sort_order FROM diagnosis_code';
+const DX_ORDER = ' ORDER BY sort_order, id';
+const DX_TEXT = ['code', 'name_en', 'name_fr', 'name_ko'];
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+// The fields the body holds, cleaned: { fields } or { error }. Text is trimmed and inner
+// runs of blanks made one; empty is NULL. Only what is sent is written (the on/off switch
+// of the list sends is_active alone).
+function diagnosisFields(body, creating) {
+  const b = body || {}, f = {};
+  for (const k of DX_TEXT) {
+    if (!has(b, k)) continue;
+    const v = String(b[k] == null ? '' : b[k]).replace(/\s+/g, ' ').trim();
+    if (v.length > (k === 'code' ? 20 : 200)) return { error: k === 'code' ? MSG.DIAGNOSIS_CODE_LONG : MSG.DIAGNOSIS_NAME_LONG };
+    f[k] = v || null;
+  }
+  if ((creating || has(f, 'name_en')) && !f.name_en) return { error: MSG.DIAGNOSIS_NAME_REQUIRED };
+  if (has(b, 'is_active')) {
+    if (typeof b.is_active !== 'boolean') return { error: fieldMsg.notOneOf('is_active', ['true', 'false']) };
+    f.is_active = b.is_active;
+  }
+  return { fields: f };
+}
+// What a change-log line says of a row.
+const diagnosisLogged = r => ({ code: r.code, name_en: r.name_en, name_fr: r.name_fr, name_ko: r.name_ko, status: r.is_active ? 'active' : 'inactive' });
+const diagnosisSummary = r => [r.code, r.name_en].filter(Boolean).join(' ');
+
+router.get('/diagnosis-codes', permMiddleware('settings'), async (req, res) => {
+  try { res.json((await pool.query(DX_SELECT + DX_ORDER)).rows); }
+  catch (err) { sendDbError(res, err); }
+});
+
+// A new row goes to the end of the list.
+router.post('/diagnosis-codes', permMiddleware('settings'), async (req, res) => {
+  const c = diagnosisFields(req.body, true);
+  if (c.error) return res.status(400).json({ error: c.error });
+  const f = c.fields;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const made = (await client.query(
+      `INSERT INTO diagnosis_code (code, name_en, name_fr, name_ko, is_active, sort_order)
+       VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM diagnosis_code))
+       RETURNING id, code, name_en, name_fr, name_ko, is_active, sort_order`,
+      [f.code || null, f.name_en, f.name_fr || null, f.name_ko || null, f.is_active !== false])).rows[0];
+    await writeAudit(client, req, { action: ACTIONS.DIAGNOSIS_CODE, entity: 'diagnosis_code', entity_id: made.id,
+      summary: diagnosisSummary(made), before: null, after: diagnosisLogged(made) });
+    await client.query('COMMIT');
+    res.status(201).json(made);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// The order of the whole list at once: every id, as the rows should be listed.
+router.put('/diagnosis-codes/order', permMiddleware('settings'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number) : [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const have = new Set((await client.query('SELECT id FROM diagnosis_code FOR UPDATE')).rows.map(r => r.id));
+    const same = ids.length === have.size && new Set(ids).size === ids.length && ids.every(id => have.has(id));
+    if (!same) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DIAGNOSIS_ORDER }); }
+    await client.query(
+      `UPDATE diagnosis_code d SET sort_order = o.n * 10, updated_at = NOW()
+         FROM unnest($1::int[]) WITH ORDINALITY AS o(id, n)
+        WHERE d.id = o.id AND d.sort_order IS DISTINCT FROM o.n * 10`, [ids]);
+    await client.query('COMMIT');
+    res.json((await pool.query(DX_SELECT + DX_ORDER)).rows);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+router.put('/diagnosis-codes/:id', permMiddleware('settings'), async (req, res) => {
+  const c = diagnosisFields(req.body, false);
+  if (c.error) return res.status(400).json({ error: c.error });
+  const f = c.fields;
+  if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: MSG.NOT_FOUND });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = (await client.query(DX_SELECT + ' WHERE id = $1 FOR UPDATE', [req.params.id])).rows[0];
+    if (!was) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const sets = [], vals = [];
+    Object.keys(f).forEach(k => { vals.push(f[k]); sets.push(k + ' = $' + vals.length); });
+    let now = was;
+    if (sets.length) {
+      vals.push(was.id);
+      now = (await client.query('UPDATE diagnosis_code SET ' + sets.join(', ') + ', updated_at = NOW() WHERE id = $' + vals.length +
+        ' RETURNING id, code, name_en, name_fr, name_ko, is_active, sort_order', vals)).rows[0];
+      await writeAudit(client, req, { action: ACTIONS.DIAGNOSIS_CODE, entity: 'diagnosis_code', entity_id: was.id,
+        summary: diagnosisSummary(now), before: diagnosisLogged(was), after: diagnosisLogged(now) });
+    }
+    await client.query('COMMIT');
+    res.json(now);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
 // ── CLINIC INFO ──
 router.get('/clinic', async (req, res) => {
   try {

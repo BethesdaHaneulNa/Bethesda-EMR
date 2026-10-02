@@ -37,6 +37,11 @@ var EXACT = {
   'Choose another category to move the phrases to': 'se_errCatMoveTarget',
   'ids must list every category once': 'se_errCatOrder',
   'Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)': 'se_errModality',
+  // the diagnosis list (settings.messages.js MSG, 2026-10-02)
+  'The English name of the diagnosis is required': 'se_errDxName',
+  'The diagnosis code is too long (20 characters at most)': 'se_errDxCodeLong',
+  'A diagnosis name is too long (200 characters at most)': 'se_errDxNameLong',
+  'ids must list every diagnosis once': 'se_errDxOrder',
   // utils/dbError.js
   'A record with that code or ID already exists': 'se_errDuplicate',
   'Referenced record does not exist': 'se_errMissingRef',
@@ -62,7 +67,7 @@ var EXACT = {
 var FIELD_KEY = {
   unit_price: 'se_colPrice', price: 'se_colPrice', price_clinic: 'se_colPrice',
   stock_qty: 'se_fStock', min_stock: 'se_fMinStock',
-  role: 'se_colRole', code_type: 'se_colType', permissions: 'se_fld_permissions',
+  role: 'se_colRole', code_type: 'se_colType', permissions: 'se_fld_permissions', is_active: 'se_colStatus',
 };
 var SHAPES = [
   [/^(\w+) must be a number$/, 'se_errNotNumber'],
