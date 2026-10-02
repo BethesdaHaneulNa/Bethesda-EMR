@@ -64,7 +64,7 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
 
 À gauche, au-dessus de **Prescriptions**. Le **nom** du diagnostic suffit ; le code n'est pas obligatoire.
 
-1. Dans la case **Diagnostic**, tapez au moins deux lettres du nom, ou le code (`palu`, `fievre`, `J06`). La liste des diagnostics fréquents s'affiche.
+1. Dans la case **Diagnostic**, tapez au moins deux lettres du nom, ou le code (`palu`, `fievre`, `J06`). La liste des diagnostics fréquents (environ 300) s'affiche : d'abord le code exact, puis les noms qui commencent par ce que vous avez tapé. Les abréviations courantes marchent aussi : `hta`, `avc`, `tb`, `ist`, `bpco`, `rgo`, `geu`… La liste se fait défiler quand il y a beaucoup de résultats.
 2. Choisissez avec ↑ ↓ puis Entrée (ou cliquez). Entrée seule prend la première ligne.
 3. Le diagnostic n'est pas dans la liste : choisissez la dernière ligne **Ajouter « … » tel quel (sans code)**. Il est enregistré avec vos mots, sans code.
    - Un diagnostic fréquent qui manque dans la liste : l'administrateur l'ajoute dans **Paramètres → Diagnostics**. Après l'ajout, rechargez l'écran de consultation (F5) pour le voir dans la liste.
