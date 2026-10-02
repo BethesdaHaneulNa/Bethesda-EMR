@@ -107,7 +107,8 @@ export function printBlock(r, t) {
 // What the report sheet says about one exam (documents/imaging-report.jsx `values`).
 // The exam date is the day its images arrived; an exam read without images keeps the
 // day it was ordered. The sheet prints the exam's name, its date and the reading;
-// modality, image_count, dept and ordered_by are kept in the issued record only.
+// modality, image_count, dept and ordered_by are not on the sheet (they were kept in the
+// records issued before printing stopped being an issue, 2026-10-02).
 function reportValues(r) {
   return {
     exam_name: r.order_name || '', modality: r.pacs_modality || '',

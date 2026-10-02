@@ -92,7 +92,7 @@ export function ImagesPrint(props) {
   var is = useState(null), info = is[0], setInfo = is[1];           // GET /pacs/export/exam/:id
   var es = useState(''), refused = es[0], setRefused = es[1];       // why the exam's pictures are not given
   var ks = useState([]), chosen = ks[0], setChosen = ks[1];         // ticked picture ids, in the order ticked
-  var ns = useState(null), issued = ns[0], setIssued = ns[1];       // the document number, once issued
+  var ns = useState(null), issued = ns[0], setIssued = ns[1];       // true once the print is in the change log
   var bs = useState(false), busy = bs[0], setBusy = bs[1];
   var go = useState(0), printNow = go[0], setPrintNow = go[1];
   var sheet = useRef(null);

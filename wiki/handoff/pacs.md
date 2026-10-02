@@ -25,6 +25,20 @@
   - **이 PC에 남은 것**: ISO를 물릴 때마다 탐색기가 그 가상 디스크의 정보를 사용자 레지스트리(`HKCU\…\Explorer\MountPoints2\{볼륨 번호}`)에 적어 둠 — Windows가 스스로 하는 일이고 지우지 않았음(해가 없는 기록, 서너 줄). scratch의 ISO · 가짜 바탕화면 · 가짜 프로그램 폴더는 세션 scratch에 있음.
   - 뷰어 창이 **몇 초 동안 실장님 화면에 떴을 수 있음**(기본 동작을 불러 본 한 번, 가짜 환자 — 바로 닫음).
 - **실장님이 이 세션에 직접 하신 말씀**: 「총괄한테 물어봐」(이 일을 맡아도 되는지 창에 띄운 질문의 답) → 총괄에 물어 「맞다」를 받고 시작. 앞으로 묻는 것은 총괄에게(작업 규칙 11절).
+/^>>>>>>> session/pacs$/d
+## 2026-10-02 — 외부 영상: 접수 전용 계정으로 시험 · 프로그램 시험용 계정 · 남은 주석 둘 · 낡은 옮기기 시험
+
+- **상태**: 확인 요청(작은 것). 프로그램 쪽(설정 세션)이 물어 오는 것에 답하고, 끝나면 함께 맞춰 봄.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(주석 두 줄 + 위키). develop(051로 번호가 바뀐 것까지)을 받음. **PACS 저장소** — 없음(main과 같음).
+- **접수 권한만 있는 계정**(격리, `import_reg.py` 10가지 통과): 환자 조회 · check · begin · 한 장 · finish · 목록은 됨. 영상 열기(`viewer-url`) · 차트에서 빼기 · 반출의 `export/patient`와 `export/bundle` · 우리 검사 목록(`readings/patient`)은 403. → **프로그램은 접수 전용 계정이면 `export/patient`를 부르지 말고 `import/patient`만**(「내보내기」 갈래를 숨김). 수납 전용 계정은 둘 다 200.
+- **프로그램 시험용 계정**(격리 스택에만 — 실행 중 EMR에는 없음): `bcdreg`(접수만) · `bcdpay`(수납만), 역할 frontdesk, 가짜 이름. 비밀번호는 스크립트가 만들어 **PACS 세션 scratchpad의 `bcd-test-accounts.txt`** 에만 적음(화면 · 메시지 · 저장소에 없음). 다시 만들려면 scratchpad의 `bcd_accounts.py`(비밀번호가 새로 바뀜).
+- **남은 주석 둘**: `ImagesPrint.jsx`의 `issued`(「the document number, once issued」 → 로그에 적힌 뒤 참), `RadiologyReadings.jsx`의 `reportValues` 위(「kept in the issued record only」 → 종이에 없는 값이라는 뜻으로). 동작 변화 없음.
+- **`move_blocks.py`는 기다림의 문제가 아니었음 — 낡은 시험**: 맞바꾸기와 「사유는 선택」이 생기기 **전에** 쓴 스크립트라, 지금 코드에 돌리면 「거절되어야 한다」던 것들이 **실제로 옮겨짐**. 오늘 두 번 돌려 격리의 가짜 검사에 바로잡기 넷(63↔68 · 65→45 · 63↔62 · 67↔69)이 생겼고, **거꾸로 넷을 다시 해 원래대로 돌려 놓음**(`move_restore.py`; 줄 48~51). `STILL_ARRIVING`은 방금 바뀐 검사를 1분 안에 다시 옮기려 한 것 — 코드가 맞게 거절한 것(P-33 ②). 스크립트는 `move_blocks_OUTDATED_do_not_run.py`로 이름을 바꾸고 첫 줄에서 멈추게 함. 지금의 옮기기 시험은 `swap_failures.py` · `reason_test.py` · `reapply_test2.py`. 앞 보고의 「시험 스크립트의 기다림 문제」는 반만 맞은 말이었음.
+- **그러다 본 것**(P-33 ③에 숫자를 보탬): 48장짜리 검사 옮기기가 68초 — nginx가 60초에 끊어 요청은 502를 받았지만 옮기기는 끝나 있었음.
+- **격리 스택**: 그대로 떠 있음. 코드 = develop + 이 커밋, DB의 마이그레이션 이름도 051로 맞춤(내용의 머리말이 바뀌어 시작할 때 「checksum mismatch」 경고 한 줄이 나옴 — 격리에서만, 동작과 무관). 외부 검사 0건.
+- **바꾼 파일**: `frontend/src/components/ImagesPrint.jsx` · `RadiologyReadings.jsx`(주석만), `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`.
+- **공용 파일 변경 · DB 마이그레이션 · 번역 키**: 없음.
+- **다른 세션에 부탁**: 프로그램을 짓는 세션 — 위의 「접수 전용 계정이면 `import/patient`만」.
 
 ## 2026-10-02 — 외부 영상 들여오기: EMR 쪽(서버 · 「영상/판독」의 외부 영상 묶음) — 오더 없이 환자에게
 
