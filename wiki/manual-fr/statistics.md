@@ -1,6 +1,6 @@
 # Statistiques
 
-L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le nombre de visites, l'argent entré et sorti de la caisse, ce que les patients doivent encore, et les médicaments prescrits ou délivrés. Il est réservé aux **responsables** (compte avec le droit « Statistiques »). Il ne modifie rien : on peut regarder sans risque.
+L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le nombre de visites, l'argent entré et sorti de la caisse, ce que les patients doivent encore, les diagnostics et les examens les plus fréquents, et les médicaments prescrits ou délivrés. Il est réservé aux **responsables** (compte avec le droit « Statistiques »). Il ne modifie rien : on peut regarder sans risque.
 
 ## En bref
 
@@ -10,7 +10,8 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 4. Lisez **Recettes** : la carte **Caisse** donne l'argent entré moins l'argent rendu.
 5. Pour savoir qui doit encore payer, cliquez sur la carte **Impayé ▼**.
 6. Pour la caisse jour par jour, regardez **Caisse par période**.
-7. Descendez à **Usage médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
+7. Pour savoir quelles maladies et quels examens reviennent le plus, regardez **Diagnostics** et **Examens et actes prescrits**.
+8. Descendez à **Usage médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
 
 ## Pas à pas
 
@@ -24,7 +25,7 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 
 Les montants s'écrivent avec un espace pour les milliers (**39 300 Ar**) et les nombres avec leur unité (**3 cas**).
 
-La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Caisse par période**, **Usage médicaments** et **Tendance mensuelle** (ils ont leurs propres dates).
+La période choisie compte pour **Activité** et **Recettes**. Elle ne compte pas pour les cartes **Impayé** et **Remboursement dû** (ce sont les montants d'aujourd'hui), ni pour **Caisse par période**, **Diagnostics**, **Examens et actes prescrits**, **Usage médicaments** et **Tendance mensuelle** (ils ont leurs propres dates).
 
 ### Lire « Activité » — combien de patients
 
@@ -69,6 +70,50 @@ Le numéro de dossier commence par l'année (26-…, 27-…) et repart de 00001 
 5. Le **Net** d'un jour doit être égal à l'argent de la caisse ce jour-là. Si ce n'est pas le cas, prévenez l'administrateur.
 6. Cliquez sur **⬇ CSV** pour télécharger le tableau (même ordre : le plus récent en haut, le total à la fin).
 
+### Les maladies les plus fréquentes : « Diagnostics »
+
+1. Sous **Caisse par période**, allez à **Diagnostics**. Au départ : les 30 derniers jours.
+2. Dans la première case, choisissez **Diagnostic principal** ou **Tous les diagnostics**.
+   - **Diagnostic principal** : un seul diagnostic par consultation. Chaque consultation est comptée une fois. C'est le choix de départ.
+   - **Tous les diagnostics** : les diagnostics secondaires sont comptés aussi. Une consultation peut alors se trouver sur plusieurs lignes.
+3. Pour une autre période, saisissez les deux dates. Pour un seul service ou un seul médecin, choisissez-le dans **Tous les services** ou **Tous les médecins**.
+4. Le diagnostic le plus fréquent est en haut. Pour chaque diagnostic :
+
+   | Colonne | Ce qu'elle compte |
+   |---|---|
+   | **Diagnostic** · **Code** | Le nom et le code. La mention **saisie libre** signale un diagnostic écrit à la main par le médecin, hors de la liste. |
+   | **Consultations** | Le nombre de consultations avec ce diagnostic. |
+   | **Patients** | Le nombre de personnes : un patient venu trois fois compte pour un. |
+   | **H** · **F** | Ces patients, hommes et femmes. |
+   | **<5** · **5–14** · **15–49** · **50+** | Ces patients par âge, le jour de la visite. |
+   | **Âge inconnu** | Patients sans date de naissance. La colonne n'apparaît que s'il y en a. |
+
+5. La première ligne au-dessus du tableau donne la période, le nombre de diagnostics différents, puis **Consultations** et **Patients** pour l'ensemble.
+6. Cliquez sur **⬇ CSV** pour télécharger le tableau.
+
+Exemple : Paludisme, sans précision · B54 · Consultations 3 · Patients 2 · H 1 · F 1.
+
+Les enregistrements annulés ne sont pas comptés.
+
+### Les examens et actes les plus demandés : « Examens et actes prescrits »
+
+1. Allez à **Examens et actes prescrits**. Au départ : les 30 derniers jours.
+2. Dans la première case, choisissez **Tous les types**, **Laboratoire**, **Imagerie** ou **Actes**.
+3. Les dates, **Tous les services** et **Tous les médecins** s'utilisent comme dans **Diagnostics**.
+4. L'acte le plus demandé est en haut. Pour chaque acte :
+
+   | Colonne | Ce qu'elle compte |
+   |---|---|
+   | **Acte** | Le nom et le code. **saisie libre** : un acte écrit à la main, hors de la liste. |
+   | **Type** | Laboratoire, Imagerie, Actes. |
+   | **Nombre** | Combien de fois l'acte a été prescrit. |
+   | **Quantité** | La quantité prescrite au total. Un pansement prescrit une fois pour 3 jours : Nombre 1, Quantité 3. |
+   | **Valeur prescrite** | Quantité × prix unitaire. **Ce n'est pas l'argent encaissé.** |
+
+5. Cliquez sur **⬇ CSV** pour télécharger le tableau.
+
+La date est celle de la prescription (le jour de la visite), pas celle de l'examen ni celle du paiement. Les prescriptions annulées ne sont pas comptées. Les images apportées par le patient (imagerie externe) ne sont pas des prescriptions : elles ne sont pas ici. Les médicaments sont dans **Usage médicaments**.
+
 ### Médicaments : « Usage médicaments »
 
 1. Cliquez sur **Jour**, **Mois** ou **Année**. Au départ : 30 derniers jours, 12 derniers mois, 5 dernières années. Les deux cases de dates à droite montrent la période.
@@ -95,6 +140,9 @@ En bas : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). U
 | Le nombre de visites d'un jour passé a changé | Un enregistrement de ce jour a été annulé ou terminé plus tard. Un patient en attente terminé sans consultation passe de **Nouvelle** à **Sans frais / autres**. | Rien : c'est normal. |
 | **Caisse** d'un jour est négative | Ce jour-là, on a rendu plus d'argent qu'on n'en a reçu (par exemple une correction d'un reçu de la veille). | Rien : c'est normal. |
 | Le total de **Recettes par service** n'est pas égal à **Caisse** | Les graphiques comptent selon les reçus, la caisse selon le jour de l'argent. Un reçu corrigé ou annulé un autre jour les sépare. | Rien : sur une période plus longue, les deux se rejoignent. Pour la caisse, regardez **Caisse par période**. |
+| Dans **Diagnostics**, la même maladie sur deux lignes | Une des deux lignes porte **saisie libre** : le médecin a écrit le diagnostic à la main au lieu de le choisir dans la liste. | Rien. Pour les prochaines fois, demandez au médecin de choisir le diagnostic dans la liste. |
+| Les lignes de **Diagnostics** additionnées dépassent le total de **Consultations** | Avec **Tous les diagnostics**, une consultation a plusieurs diagnostics. | Choisissez **Diagnostic principal**. |
+| **Valeur prescrite** n'est pas égale aux **Recettes** | La valeur prescrite est le prix des actes demandés. Les recettes sont l'argent reçu (remises, impayés, actes non encore payés). | Rien : ces deux chiffres ne sont pas faits pour être égaux. |
 | **Visites totales** plus petit que la liste de l'accueil | Les enregistrements annulés ne sont pas comptés. | Regardez la carte **Annulé**. |
 | **Aucune donnée** juste après avoir changé une date en haut | La date de début est après la date de fin. (Dans le tableau des médicaments, une telle date est simplement ignorée.) | Corrigez l'une des deux dates. |
 
@@ -104,6 +152,8 @@ En bas : les 6 derniers mois, **Visites totales** et **Caisse** (net du mois). U
 - N'envoyez pas le fichier **CSV** ou une capture de la liste des impayés en dehors de l'hôpital.
 - Ne comparez pas **Toutes Rx** avec le rapport de stock : pour le stock, utilisez **Dispensé**.
 - N'additionnez pas les lignes de médicaments entre elles (comprimés et flacons).
+- N'additionnez pas la colonne **Patients** de **Diagnostics** : un patient peut avoir deux diagnostics.
+- Ne prenez pas **Valeur prescrite** pour de l'argent encaissé.
 - Ne donnez pas le droit « Statistiques » à tout le monde : seulement aux responsables.
 
 ## Qui appeler

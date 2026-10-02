@@ -39,6 +39,14 @@ export default function StatsPage(){
   var cgs = useState('day'), cashGran = cgs[0], setCashGran = cgs[1];
   var crs = useState({ from:'', to:'' }), cashRange = crs[0], setCashRange = crs[1];
   var cds = useState(null), cashData = cds[0], setCashData = cds[1];
+  // Clinical rankings (orders, diagnoses): "what was most frequent in this period".
+  // Each has its own pair of dates like the drug table (empty = the server's last
+  // 30 days) and can be narrowed to a department or a doctor.
+  var ops = useState({ departments:[], doctors:[] }), opts = ops[0], setOpts = ops[1];
+  var ofs = useState({ from:'', to:'', type:'all', dept:'', doc:'' }), ordF = ofs[0], setOrdF = ofs[1];
+  var ods = useState(null), ordData = ods[0], setOrdData = ods[1];
+  var dfs = useState({ from:'', to:'', scope:'primary', dept:'', doc:'' }), dxF = dfs[0], setDxF = dfs[1];
+  var dds = useState(null), dxData = dds[0], setDxData = dds[1];
 
   var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
@@ -52,6 +60,53 @@ export default function StatsPage(){
     if(cashRange.from && cashRange.to) q += '&from='+cashRange.from+'&to='+cashRange.to;
     api.get(q).then(setCashData).catch(function(){ setCashData({ periods:[], total:null, from:cashRange.from, to:cashRange.to }); });
   }, [cashGran, cashRange.from, cashRange.to]);
+  useEffect(function(){ api.get('/stats/options').then(setOpts).catch(function(){}); }, []);
+  function rankQuery(f){
+    var q = [];
+    if(f.from && f.to){ q.push('from='+f.from); q.push('to='+f.to); }
+    if(f.dept) q.push('department_id='+f.dept);
+    if(f.doc) q.push('doctor_id='+f.doc);
+    return q;
+  }
+  useEffect(function(){
+    var q = rankQuery(ordF); if(ordF.type!=='all') q.push('type='+ordF.type);
+    api.get('/stats/orders'+(q.length?'?'+q.join('&'):'')).then(setOrdData).catch(function(){ setOrdData({ rows:[], total:{ count:0, amount:0 }, from:ordF.from, to:ordF.to }); });
+  }, [ordF.from, ordF.to, ordF.type, ordF.dept, ordF.doc]);
+  useEffect(function(){
+    var q = rankQuery(dxF); q.push('scope='+dxF.scope);
+    api.get('/stats/diagnoses?'+q.join('&')).then(setDxData).catch(function(){ setDxData({ rows:[], total:{ cases:0, patients:0 }, from:dxF.from, to:dxF.to }); });
+  }, [dxF.from, dxF.to, dxF.scope, dxF.dept, dxF.doc]);
+  // Editing one date keeps the other as shown; a start after the end is ignored
+  // (same rule as the drug and cash tables).
+  function rankDates(f, setF, data, which, v){
+    var from = which==='from' ? v : (f.from||(data&&data.from)||''), to = which==='to' ? v : (f.to||(data&&data.to)||'');
+    if(v && from && to && from<=to) setF(Object.assign({}, f, { from:from, to:to }));
+  }
+  function patch(f, setF, k){ return function(e){ var n = Object.assign({}, f); n[k] = e.target.value; setF(n); }; }
+  function downloadCsv(name, lines){
+    var blob = new Blob(["\ufeff"+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  }
+  function csvText(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+  function exportOrdersCsv(){
+    if(!ordData) return;
+    var lines = [['code','order','type','typed','lines','quantity','value'].join(',')];
+    (ordData.rows||[]).forEach(function(r){ lines.push([csvText(r.code), csvText(orderName(r)), csvText(r.code_type||''), r.typed?1:0, r.count, r.qty, r.amount].join(',')); });
+    lines.push(['"TOTAL"','','','',ordData.total.count,'',ordData.total.amount].join(','));
+    downloadCsv('orders-'+(ordData.from||'')+'_'+(ordData.to||'')+'.csv', lines);
+  }
+  function exportDxCsv(){
+    if(!dxData) return;
+    var lines = [['code','diagnosis','typed','consultations','patients','male','female','age_0_4','age_5_14','age_15_49','age_50_plus','age_unknown'].join(',')];
+    (dxData.rows||[]).forEach(function(r){ lines.push([csvText(r.code), csvText(dxName(r)), r.typed?1:0, r.cases, r.patients, r.male, r.female, r.age_0_4, r.age_5_14, r.age_15_49, r.age_50, r.age_unknown].join(',')); });
+    lines.push(['"TOTAL"','','',dxData.total.cases,dxData.total.patients,'','','','','','',''].join(','));
+    downloadCsv('diagnoses-'+(dxData.from||'')+'_'+(dxData.to||'')+'.csv', lines);
+  }
+  // The list row's name in the screen's language; a typed line has only what was written.
+  function orderName(r){ return lang==='ko' ? (r.name||r.name_en) : (r.name_en||r.name); }
+  function dxName(r){ return r.typed ? r.name : (lang==='ko' ? (r.name_ko||r.name) : lang==='fr' ? (r.name_fr||r.name) : r.name); }
+  var ORD_TYPE_KO = { all:'전체', lab:'검사', imaging:'영상', procedure:'처치', fee:'수가' };
+  function ordTypeLabel(k){ return t['st_ordType_'+k] || ORD_TYPE_KO[k] || k; }
   function pickCashGran(g){ setCashGran(g); setCashRange({ from:'', to:'' }); }
   function setCashFrom(v){ var to=cashRange.to||(cashData&&cashData.to)||''; if(v&&(!to||v<=to)) setCashRange({ from:v, to:to }); }
   function setCashTo(v){ var from=cashRange.from||(cashData&&cashData.from)||''; if(v&&(!from||from<=v)) setCashRange({ from:from, to:v }); }
@@ -342,6 +397,120 @@ export default function StatsPage(){
             </div>;
           })()}
         </Section>
+
+        {/* 진단 통계 · 오더 통계 — 약품 사용통계와 같은 틀(기간 · 거르기 · 표 · CSV), 많은 것이 위 */}
+        {(function(){
+          var th = { padding:'7px 10px', textAlign:'right', position:'sticky', top:0, background:scBg, borderBottom:'1px solid '+bd, whiteSpace:'nowrap' };
+          var thL = Object.assign({}, th, { textAlign:'left' });
+          var td = { padding:'6px 10px', textAlign:'right', fontFamily:'monospace', color:t2, whiteSpace:'nowrap' };
+          var dateStyle = Object.assign({}, IS, { fontSize:13, padding:'5px 8px' });
+          var selStyle = Object.assign({}, IS, { fontSize:13, padding:'5px 8px', maxWidth:220 });
+          var csvBtn = { background:'var(--chip)', color:'var(--ok-text)', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 };
+          var typedTag = <span style={{ marginLeft:6, fontSize:11, color:t3, border:'1px solid '+bd2, borderRadius:3, padding:'0 4px', flexShrink:0 }}>{t.st_typed||'직접 입력'}</span>;
+          function num(v){ return v ? fmtAr(v) : '·'; }
+          function filters(f, setF, data){ return <>
+            <input type="date" value={f.from||(data&&data.from)||''} max={f.to||(data&&data.to)||undefined} onChange={function(e){rankDates(f, setF, data, 'from', e.target.value)}} style={dateStyle} />
+            <span style={{ color:t3 }}>~</span>
+            <input type="date" value={f.to||(data&&data.to)||''} min={f.from||(data&&data.from)||undefined} onChange={function(e){rankDates(f, setF, data, 'to', e.target.value)}} style={dateStyle} />
+            <select value={f.dept} onChange={patch(f, setF, 'dept')} style={selStyle}>
+              <option value="">{t.st_allDepts||'전체 진료과'}</option>
+              {(opts.departments||[]).map(function(d){ return <option key={d.id} value={d.id}>{deptLabel(d)}</option>; })}
+            </select>
+            <select value={f.doc} onChange={patch(f, setF, 'doc')} style={selStyle}>
+              <option value="">{t.st_allDoctors||'전체 의사'}</option>
+              {(opts.doctors||[]).map(function(d){ return <option key={d.id} value={d.id}>{d.name}</option>; })}
+            </select>
+          </>; }
+          var bar = { display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 };
+          var box = { background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' };
+          var head = { fontSize:12, color:t3, padding:'8px 12px', borderBottom:'1px solid '+bd };
+          // A long name is cut with an ellipsis (the whole of it is in the tooltip); the code and
+          // the "typed" tag after it are never the part that is cut.
+          var nameCell = { padding:'6px 10px', maxWidth:420 };
+          var nameRow = { display:'flex', alignItems:'center', minWidth:0 };
+          var nameText = { color:tx, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 };
+          var empty = { color:t3, fontSize:13, padding:'12px 2px' };
+          var dxRows = (dxData&&dxData.rows)||[], ordRows = (ordData&&ordData.rows)||[];
+          var anyAgeUnknown = dxRows.some(function(r){ return r.age_unknown; });
+          return <>
+            <Section title={'🩺 '+(t.st_diagnoses||'진단 통계')}>
+              <div style={bar}>
+                <select value={dxF.scope} onChange={patch(dxF, setDxF, 'scope')} style={selStyle}>
+                  <option value="primary">{t.st_dxPrimary||'주진단만'}</option>
+                  <option value="all">{t.st_dxAll||'전체 진단'}</option>
+                </select>
+                {filters(dxF, setDxF, dxData)}
+                <div style={{ flex:1 }}></div>
+                <button onClick={exportDxCsv} disabled={!dxRows.length} style={csvBtn}>⬇ CSV</button>
+              </div>
+              {!dxData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!dxRows.length?<div style={empty}>{t.noData||'데이터 없음'}</div>:
+              <div style={box}>
+                <div style={head}>
+                  {dxData.from} ~ {dxData.to} · {dxRows.length} {t.st_dxUnit||'진단'} · {t.st_dxCases||'진료 수'} {fmtAr(dxData.total.cases)} · {t.st_dxPatients||'환자 수'} {fmtAr(dxData.total.patients)}
+                  <div style={{ marginTop:3 }}>{t.st_dxBasis||'진료한 날(내원일) 기준 · 진료 수는 그 진단이 붙은 진료의 수, 환자 수는 같은 사람을 한 번만 · 남/여와 나이대는 환자 수(나이는 내원일 기준)'}</div>
+                </div>
+                <div style={{ overflow:'auto', maxHeight:'56vh' }}>
+                  <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+                    <thead><tr style={{ color:t3 }}>
+                      <th style={thL}>{t.st_dxName||'진단'}</th><th style={thL}>{t.st_dxCode||'코드'}</th>
+                      <th style={Object.assign({}, th, { color:tx })}>{t.st_dxCases||'진료 수'}</th><th style={th}>{t.st_dxPatients||'환자 수'}</th>
+                      <th style={th}>{t.st_male||'남'}</th><th style={th}>{t.st_female||'여'}</th>
+                      <th style={th}>&lt;5</th><th style={th}>5–14</th><th style={th}>15–49</th><th style={th}>50+</th>
+                      {anyAgeUnknown?<th style={th}>{t.st_ageUnknown||'나이 모름'}</th>:null}
+                    </tr></thead>
+                    <tbody>
+                      {dxRows.map(function(r,i){ return <tr key={i} style={{ borderBottom:'1px solid var(--line-soft)' }}>
+                        <td title={dxName(r)} style={nameCell}><div style={nameRow}><span style={nameText}>{dxName(r)}</span>{r.typed?typedTag:null}</div></td>
+                        <td style={{ padding:'6px 10px', fontFamily:'monospace', fontSize:12, color:t3, whiteSpace:'nowrap' }}>{r.code||'—'}</td>
+                        <td style={Object.assign({}, td, { color:'var(--ok-text)', fontWeight:800 })}>{fmtAr(r.cases)}</td><td style={td}>{fmtAr(r.patients)}</td>
+                        <td style={td}>{num(r.male)}</td><td style={td}>{num(r.female)}</td>
+                        <td style={td}>{num(r.age_0_4)}</td><td style={td}>{num(r.age_5_14)}</td><td style={td}>{num(r.age_15_49)}</td><td style={td}>{num(r.age_50)}</td>
+                        {anyAgeUnknown?<td style={td}>{num(r.age_unknown)}</td>:null}
+                      </tr>; })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>)}
+            </Section>
+
+            <Section title={'🧪 '+(t.st_orders||'오더 통계')}>
+              <div style={bar}>
+                {/* Kinds in one select, not a row of buttons (the coordinator's brief). */}
+                <select value={ordF.type} onChange={patch(ordF, setOrdF, 'type')} style={selStyle}>
+                  {['all','lab','imaging','procedure'].map(function(k){ return <option key={k} value={k}>{ordTypeLabel(k)}</option>; })}
+                </select>
+                {filters(ordF, setOrdF, ordData)}
+                <div style={{ flex:1 }}></div>
+                <button onClick={exportOrdersCsv} disabled={!ordRows.length} style={csvBtn}>⬇ CSV</button>
+              </div>
+              {!ordData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!ordRows.length?<div style={empty}>{t.noData||'데이터 없음'}</div>:
+              <div style={box}>
+                <div style={head}>
+                  {ordData.from} ~ {ordData.to} · {ordRows.length} {t.st_ordUnit||'가지'} · {t.st_ordCount||'건수'} {fmtAr(ordData.total.count)} · {t.st_ordValue||'오더 금액'} {fmtAr(ordData.total.amount)} Ar
+                  <div style={{ marginTop:3 }}>{t.st_ordBasis||'오더를 낸 날(내원일) 기준 · 취소된 오더 제외 · 금액은 오더에 적힌 값(수량 × 단가)이며 받은 돈이 아님 — 수납 숫자와 다를 수 있음'}</div>
+                </div>
+                <div style={{ overflow:'auto', maxHeight:'56vh' }}>
+                  <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+                    <thead><tr style={{ color:t3 }}>
+                      <th style={thL}>{t.st_ordName||'오더'}</th><th style={thL}>{t.st_ordKind||'종류'}</th>
+                      <th style={Object.assign({}, th, { color:tx })}>{t.st_ordCount||'건수'}</th><th style={th}>{t.st_ordQty||'수량'}</th><th style={th}>{t.st_ordValue||'오더 금액'}</th>
+                    </tr></thead>
+                    <tbody>
+                      {ordRows.map(function(r,i){ return <tr key={i} style={{ borderBottom:'1px solid var(--line-soft)' }}>
+                        <td title={orderName(r)} style={nameCell}><div style={nameRow}><span style={nameText}>{orderName(r)}</span>
+                          {r.code?<span style={{ color:t3, fontFamily:'monospace', fontSize:11, marginLeft:6, flexShrink:0 }}>{r.code}</span>:null}{r.typed?typedTag:null}</div></td>
+                        <td style={{ padding:'6px 10px', color:t3, whiteSpace:'nowrap' }}>{r.code_type?ordTypeLabel(r.code_type):'—'}</td>
+                        <td style={Object.assign({}, td, { color:'var(--ok-text)', fontWeight:800 })}>{fmtAr(r.count)}</td>
+                        <td style={td}>{fmtQty(r.qty)}</td>
+                        <td style={td}>{fmtAr(r.amount)} Ar</td>
+                      </tr>; })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>)}
+            </Section>
+          </>;
+        })()}
 
         {/* 약품 사용통계 */}
         <Section title={'💊 '+(t.drugUsage||'약품 사용통계')}>
