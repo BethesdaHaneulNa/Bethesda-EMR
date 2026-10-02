@@ -248,6 +248,27 @@
 - **확인 못 한 것**: 진짜 드라이브의 구운 CD · 디스크를 넣을 때 뜨는 알림 자체(화면을 보지 못함) · 다른 백신 · 자동 실행을 막아 둔 PC.
 - 설계와 시험 결과: [cd-mini-viewer-design.md](../reference/cd-mini-viewer-design.md) 13 · 14절(실제 장비가 보내는 형식은 4-1절, RLE와 풀어서 내보내기는 15절).
 
+### 2.4.5 Bethesda CD — 들여오기 (다른 병원의 CD · USB) (2026-10-02, 설정 세션이 지음)
+
+「Bethesda CD」 창 위에 **두 갈래 단추**가 있습니다: **Copier vers un CD (CD로 내보내기)** · **Importer un CD / une clé USB (CD · USB 들여오기)**. 접수 권한만 있는 계정은 들여오기만 보입니다(내보내기는 진료 · 수납 권한). [창](../reference/design/bethesda-cd-import-sample-fr.png) · [환자 확인 창](../reference/design/bethesda-cd-import-confirm-fr.png)
+
+1. 본인 EMR 계정으로 로그인 → **Importer un CD / une clé USB**.
+2. **N° dossier (차트번호)** 를 치고 **Chercher** — 영상을 받을 우리 환자입니다.
+3. CD를 넣고(USB를 꽂고) **Choisir le disque ou le dossier…** → 드라이브나 폴더를 고릅니다. 디스크의 검사가 목록으로 나옵니다: 날짜 · 종류 · 검사 · 장수 · 크기 · 병원 · **디스크에 적힌 환자 이름**. 아래 줄에 「Sur le disque : 이름 · 번호 · 생일 · 성별」.
+4. 들여올 검사를 체크합니다. **회색 줄은 못 고릅니다** — 「État」 칸에 까닭: 이미 들여옴(날짜) · 우리 병원에서 찍은 검사 · 다른 환자의 차트에 있음 · 지금 들여오는 중 · 파일 하나가 한도를 넘음.
+5. **Importer…** → **「Confirmer le patient」** 창: 디스크의 이름 · 번호 · 생일 · 성별과 우리 차트의 것을 나란히. **생일이나 성별이 다르면 그 줄이 빨갛고**(「✘ différent」), 체크할 글이 「…sont différents. Je confirme malgré tout…」로 바뀝니다. 체크해야 **Importer** 단추가 켜집니다. 이름은 보여 주기만 하고 판정하지 않습니다.
+6. 올라가는 동안 「Envoi… examen 1 / 2 — image 12 / 40」과 진행 막대. **Annuler** 를 누르면 그 검사는 그만두고, EMR이 받은 것을 치웁니다.
+7. 끝: 「Terminé : N examen(s), M image(s) importé(s) dans le dossier de …」 — EMR의 **Imagerie → Imagerie externe (CD / USB)** 에서 보입니다(2.8절).
+
+- **읽는 것은 DICOM 영상뿐**입니다. `DICOMDIR`이 있으면 거기 적힌 파일만 만집니다. 없으면 폴더를 훑되, 이름으로 보아 프로그램 · 라이브러리 · 문서 · 그림(`.exe` · `.dll` · `AUTORUN.INF` · `.jpg` · `.pdf` …)인 것은 **열지도 않습니다.** 디스크의 것은 아무것도 실행하지 않습니다.
+- **파일은 고치지 않고 그대로 보냅니다.** 디스크에도 이 PC에도 아무것도 쓰지 않습니다. 환자 번호 · 이름을 우리 것으로 바꾸는 일은 EMR(영상 서버)이 합니다.
+- **한도는 EMR이 줍니다**: 파일 하나의 한도(기본 1GB — 넘는 검사는 회색), 영상 서버의 남은 자리(「Place sur le serveur d'images : …」 — 크기의 두 배 + 여유가 안 들어가면 단추가 꺼짐), 이보다 크면 「오래 걸릴 수 있습니다」를 묻는 크기(2GB).
+- **디스크에 환자가 둘**이면 빨간 줄로 알리고, 한 번에 한 환자의 검사만 들여옵니다.
+- **기다리는 동안 창은 살아 있습니다**: EMR에 묻는 일(시작 · 한 장 · 끝내기 · 그만두기)은 다른 스레드에서 하고 창은 계속 답함 — 큰 검사를 EMR이 끝내는 몇 분 동안에도 「응답 없음」이 되지 않고 **Annuler** 가 눌림.
+- **끊겼을 때**: 연결이 끊기면 같은 파일을 세 번까지 다시 보냅니다(같은 파일을 두 번 보내도 한 번으로 셈). 디스크에서 파일을 못 읽으면(긁힘 · USB 뽑힘) 그 검사를 그만두고 치웁니다. EMR이 파일을 거절하면(그 검사 것이 아님 등) 그 검사를 그만두고 까닭을 말한 뒤, 다음 검사를 계속할지 묻습니다.
+- **영상 서버가 없거나 짝이 안 맞으면** 환자 줄과 들여오기 칸에 빨갛게 나오고 단추가 꺼집니다. **옛 EMR**(들여오기 길이 없는 판)이면 「Cet EMR ne sait pas encore importer des images」.
+- **확인한 것 / 못 한 것**: 4절 `bethesda-cd\` 항목과 [handoff/pacs.md](../handoff/pacs.md). 한 줄로: 가짜 디스크와 가짜 EMR(이 PC의 127.0.0.1)로 처음부터 끝까지(46가지 × 세 언어), 그리고 **영상 서버가 있는 진짜 시험용 EMR(PACS 세션의 격리 스택)에 실제로 올려** 목록에 보이는 것 · 같은 검사 거절(`HERE`) · 중간에 그만두기 · 한도 넘는 파일의 거절 · DICOMDIR + JPEG 디스크(24가지)까지 봤습니다. 진짜 CD 드라이브의 다른 병원 디스크와 수 GB짜리 검사는 아직.
+
 ### 2.5 영상이 안 보일 때 — 순서대로
 
 1. **🩻 Imagerie (영상/판독)** 목록에서 그 검사 옆 글자를 봅니다.
@@ -297,7 +318,7 @@ EMR 상태 화면(또는 서버 상태 창)에 영상 백업 경고가 보이면
 
 ### 2.8 다른 병원에서 가져온 영상 — 「외부 영상」 (2026-10-02)
 
-환자가 다른 병원의 CD · USB를 가져오면 **접수에서** 프로그램 「Bethesda CD」의 **들여오기**로 그 환자 차트에 넣습니다(프로그램 쪽 사용법은 프로그램이 다 지어지면 여기에 보탭니다). 넣은 뒤 EMR에서는:
+환자가 다른 병원의 CD · USB를 가져오면 **접수에서** 프로그램 「Bethesda CD」의 **들여오기**로 그 환자 차트에 넣습니다(프로그램 쪽 사용법: **2.4.5절**). 넣은 뒤 EMR에서는:
 
 1. 진료 화면(또는 수납 화면)에서 환자를 고르고 **🩻 Imagerie (영상/판독)** 창을 엽니다.
 2. 목록 **맨 아래**에 **💿 Imagerie externe (CD / USB)** 묶음이 있습니다. 우리 검사가 많아 안 보이면 목록 위의 **💿 N** 단추를 누릅니다. 줄마다: 검사 날짜(그 병원에서 찍은 날) · 종류 · 검사 이름 · **Externe** 표시 · 병원 이름 · 장수.
@@ -564,10 +585,10 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - **`bethesda-cd\`**(2026-10-02) — 「Bethesda CD」: 반출 프로그램과 디스크의 뷰어, **그 폴더 하나로 서 있음**(PACS 저장소의 다른 파일에 기대지 않음 — 따로 저장소로 떼어 낼 것). EMR과의 약속은 HTTP 길 셋(`/api/auth/login` · `/api/pacs/export/patient` · `/export/bundle`)뿐.
   - `build.ps1` — Windows의 `csc.exe`(C# 5)로 두 번: `src\shared` + `src\viewer` → `build\VIEWER.EXE`, `src\shared` + `src\app`(+ 그 `VIEWER.EXE`를 자원으로, 아이콘) → `build\Bethesda-CD.exe`. 0.7초. `build\`는 git에서 제외.
   - `src\shared\Version.cs` — 이름과 판 번호(1.0.0)를 정하는 **한 곳**: 창 · 실행 파일 속성 · 뷰어의 「?」가 같은 값.
-  - `src\app\` — `Program.cs`(시작 · 설정 파일 `Config`) · `MainForm.cs`(창 + `Ask` — 사람에게 묻는 넷을 시험이 갈아 끼움) · `Texts.cs`(fr · ko · en) · `Emr.cs`(`EmrClient` · JSON 읽기 `J`) · `DiscFolder.cs`(작업 폴더 · 묶음 풀기 · README · 뷰어 넣기 · `WriteAutorun` — 뷰어가 있을 때만 `AUTORUN.INF` · 폴더 저장과 비교) · `Burner.cs`(`DiscJob` · `Burners` — IMAPI2). 옛 PowerShell 함수와 한 줄씩 대응.
+  - `src\app\` — `Program.cs`(시작 · 설정 파일 `Config`) · `MainForm.cs`(창 + `Ask` — 사람에게 묻는 넷을 시험이 갈아 끼움) · `Texts.cs`(fr · ko · en) · `Emr.cs`(`EmrClient` · JSON 읽기 `J`) · `DiscFolder.cs`(작업 폴더 · 묶음 풀기 · README · 뷰어 넣기 · `WriteAutorun` — 뷰어가 있을 때만 `AUTORUN.INF` · 폴더 저장과 비교) · **`ImportDisc.cs`**(들여오기: 디스크 읽기 — `Read`(DICOMDIR이 있으면 그 목록 + 시리즈마다 한 장의 머리, 없으면 폴더를 훑음) · `Verify`(들여오기 직전 그 검사의 모든 파일 머리를 읽어 그 검사 · 그 환자의 것이 아닌 것을 뺌) · `Origin`(EMR에 알리는 원래 값) · `BirthDiffers` · `SexDiffers`) · **`ImportConfirm.cs`**(환자 확인 창). `Emr.cs`에 `ImportPatient` · `Post` · `PutFile`(파일을 읽는 대로 흘려보냄 — 메모리에 통째로 올리지 않음, 블록 사이마다 「그만」을 물음)과 `CanExport` · `CanImport`. `MainForm.cs`: 두 갈래(`SetMode`) · `LoadSource` · `CheckSource` · `Import` · `SendStudy`, 사람에게 묻는 것에 `Ask.Source` · `Ask.SamePatient`. 뷰어의 `src\viewer\Dicom.cs` · `Disc.cs`가 프로그램에도 함께 컴파일됨(`build.ps1`), `Disc.ListOnly`(DICOMDIR만 읽는 목록)가 새로 생김 · `Burner.cs`(`DiscJob` · `Burners` — IMAPI2). 옛 PowerShell 함수와 한 줄씩 대응.
   - `src\viewer\` — 뷰어(아래 `viewer\` 항목의 파일들이 이리로 옮겨짐).
   - `icon\make-icon.ps1` — 아이콘을 직접 그림(16 · 32 · 48 · 256, 받아 오는 그림 없음). 후보 셋: [bethesda-cd-icon-candidates.png](../reference/design/bethesda-cd-icon-candidates.png).
-  - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · **`tests\disc_test.ps1`**(2026-10-02 — EMR 없이: 뷰어 · `AUTORUN.INF` · `README.TXT`를 디스크 폴더에 넣고, 폴더 저장 · ISO, `-Mount`면 ISO를 Windows 가상 드라이브로 물려 파일마다 다시 읽고 반드시 내림, 16가지) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
+  - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · **`tests\disc_test.ps1`**(2026-10-02 — EMR 없이: 뷰어 · `AUTORUN.INF` · `README.TXT`를 디스크 폴더에 넣고, 폴더 저장 · ISO, `-Mount`면 ISO를 Windows 가상 드라이브로 물려 파일마다 다시 읽고 반드시 내림, 16가지) · **`tests\import_test.ps1`**(2026-10-02 — EMR 없이: 스스로 만든 가짜 DICOM 디스크(뷰어 · DLL · AUTORUN.INF · 그림 · 엉뚱한 파일이 섞임)와 이 PC의 가짜 EMR(HttpListener, 127.0.0.1)로 들여오기를 처음부터 끝까지, 46가지 · `-Sample`로 DICOMDIR이 있는 진짜 디스크 폴더도 48가지) · **`tests\import_real_test.ps1`**(영상 서버가 있는 **시험용** EMR에 지어낸 검사 하나를 실제로 들여오고 되읽음 · 같은 검사 다시 · 중간에 그만두기 — 그 검사 하나가 시험용 EMR에 남음; `-RealDisc 폴더`로 진짜 디스크 폴더도, `-OverLimit`로 한도 넘는 파일의 거절도; 2026-10-02 PACS 세션의 격리 스택에서 24가지 통과) · `tests\quiet_window.ps1`(시험 창을 화면 밖 · 작업 표시줄 밖 · 포커스 없이 — 그 PC에서 사람이 일하고 있을 수 있으므로) · `tests\fake_dicom.ps1`(두 들여오기 시험이 쓰는 지어낸 DICOM) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
   - `install.ps1` · `install.bat` — 다른 PC(접수 등)에 프로그램과 바탕화면 바로가기를 놓음(파일 하나 복사 + `Bethesda-CD.ini` + `.lnk`; `-Here`는 복사 없이 바로가기만).
   - `README.md` · `CHANGELOG.md` · `LICENSE`(PACS 저장소와 같은 글) · `Bethesda-CD.example.ini`.
 - **`desktop-shortcuts.ps1`**(2026-10-02) — 서버 PC의 바탕화면에 「Bethesda PACS」(`.url` — 영상 서버의 화면, 관리자용)와 「Bethesda CD」(`.lnk`)를 만들거나 고침. `setup.ps1`이 끝에서 부름. 파일만 만듦(레지스트리 · 예약 작업 없음).
@@ -908,3 +929,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | **실행 파일로 진짜 CD 한 장**(가짜 환자 26개 63Mo, 171.6초, 「gravé et vérifié」) · 주어진 `.ico`로 빌드하는 길(`-IconFile` / `icon\Bethesda-CD.ico`) · **바탕화면 바로가기**(서버: `setup.ps1` → `desktop-shortcuts.ps1`; 다른 PC: `bethesda-cd\install.bat`) | PACS `session/pacs` |
 | 2026-10-02 | **외부 영상 들여오기 — EMR 쪽**(실장님: 「차트번호 입력하면 그 환자 것으로 … EMR 영상판독에서 조회하면 다 뜨게」): 오더 없이 환자에게 붙음. 표 `pacs_import`(임시 851) · `routes/pacs.import.js`(프로그램이 부르는 여섯 길 + 목록 · 뷰어 열기 · 차트에서 빼기 · 뒷정리) · nginx의 `/api/pacs/import/` · 브리지의 남은 자리 · 「영상/판독」 창의 「💿 Imagerie externe」 묶음(`OutsideStudies.jsx`). 앞의 두 안(오더에 붙임 / EMR 화면에서 올림)은 폐기. 프로그램 쪽은 설정 세션. 격리 `import_api.py` 48가지 + 화면 | EMR `ade2deb` + 이 항목의 커밋 · PACS `1c593bd` |
 | 2026-10-02 | **Bethesda CD: 뷰어 이름 `VIEWER.EXE`(전 `VOIR.EXE` — 실장님 결정) · 디스크에 `AUTORUN.INF`**(뷰어가 있는 디스크에만; CD에서 Windows가 뷰어를 권하고 디스크 더블클릭이 뷰어를 엶 — 저절로 실행되지 않음, USB에서는 무시됨) · EMR 없이 도는 `tests\disc_test.ps1` · 16px 아이콘이 exe · 바로가기 · 뷰어에서 Windows가 꺼낸 모습 [그림](../reference/design/bethesda-cd-icon-16px-windows.png). **설정 세션이 맡음**(총괄의 일 나누기) | PACS 저장소 `session/cd`: `bethesda-cd\`(`DiscFolder.cs` · `MainForm.cs` · `Texts.cs` · `build.ps1` · tests · README · CHANGELOG) · 옛 `cd-export*.ps1` (2.4.4 · 4절) | PACS `3f1cb91` · `0f970ea` |
+| 2026-10-02 | **Bethesda CD — 들여오기**(프로그램 쪽): 창이 「내보내기 / 들여오기」 두 갈래, 차트번호 → 디스크 · 폴더 → 검사 목록(병원 · 디스크의 환자 · EMR이 아는 상태) → **환자 확인 창**(생일 · 성별이 다르면 빨갛게, 「그래도 맞다」) → DICOM 파일을 한 장씩 그대로 올림(진행 · 취소 · 끊기면 다시 · 실패하면 그만두기 호출). DICOM만 읽음(다른 회사 뷰어 · DLL은 열지도 않음). 접수 계정은 들여오기만. **설정 세션이 맡음.** 가짜 EMR로 46가지, **진짜 시험용 EMR + 영상 서버(PACS 세션의 격리 스택)에 실제로 올려 24가지, 내보내기 `app_test` 23가지 통과.** 기다리는 동안 창이 멈추지 않게(다른 스레드), 시험 창은 화면 밖에 | PACS 저장소 `session/cd`: `ImportDisc.cs`(새) · `ImportConfirm.cs`(새) · `MainForm.cs` · `Emr.cs` · `Texts.cs` · `viewer\Disc.cs` · `build.ps1` · `tests\import_test.ps1`(새) · README · CHANGELOG (2.4.5 · 4절) | PACS `c4a6117` · `d56e4ac` · `e2de1ba` · `2e47fa8` · `d949d7e` · `f20a93d` · `0121336` |

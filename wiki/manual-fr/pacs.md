@@ -213,7 +213,23 @@ Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD 
 
 ### 13. Images d'un autre établissement (CD ou clé USB du patient)
 
-Quand un patient apporte un CD ou une clé USB d'un autre hôpital, l'**accueil** fait entrer ces images dans son dossier avec le programme **Bethesda CD** (**Importer**). Ensuite, dans l'EMR :
+Quand un patient apporte un CD ou une clé USB d'un autre hôpital, l'**accueil** fait entrer ces images dans son dossier avec le programme **Bethesda CD**.
+
+**À l'accueil, avec Bethesda CD**
+
+1. Ouvrez **Bethesda CD** et connectez-vous avec votre compte de l'EMR. En haut, cliquez sur **Importer un CD / une clé USB** (un compte de l'accueil ne voit que ce bouton).
+2. Tapez le **N° dossier** du patient, puis **Chercher**. Vérifiez le nom affiché : c'est dans ce dossier que les images iront.
+3. Insérez le CD (ou branchez la clé), cliquez sur **Choisir le disque ou le dossier…** et choisissez le lecteur du CD ou le dossier de la clé. La liste montre les examens du disque : date, type, examen, nombre d'images, taille, établissement, et **Patient (disque)** — le nom écrit sur le disque.
+4. Cochez les examens à importer. Une ligne grise ne peut pas être cochée ; la colonne **État** dit pourquoi (par exemple « déjà importé le … »).
+5. Cliquez sur **Importer…**. La fenêtre **Confirmer le patient** montre ce que dit le disque à côté de notre dossier. Si la date de naissance ou le sexe sont en rouge (« ✘ différent »), vérifiez avec le patient que c'est bien son disque. Cochez la phrase de confirmation, puis **Importer**.
+6. Attendez la fin (« Envoi… examen 1 / 1 — image 12 / 40 »). **Annuler** arrête : rien n'est ajouté au dossier pour l'examen en cours.
+7. À la fin : « Terminé : … importé(s) dans le dossier de … ». Rendez le disque au patient.
+
+- Le programme ne lit que les images du disque. Il n'ouvre et ne lance aucun programme qui se trouve sur le disque.
+- Si le message parle du **serveur d'images** (il ne répond pas, il n'est pas relié à l'EMR, pas assez de place), prévenez l'administrateur : rien n'a été importé.
+- Un disque qui contient les images de deux patients : importez un patient à la fois.
+
+**Ensuite, dans l'EMR**
 
 1. Choisissez le patient, puis cliquez sur **🩻 Imagerie**.
 2. Tout en bas de la liste se trouve le groupe **💿 Imagerie externe (CD / USB)**. Si la liste est longue, cliquez sur **💿 N** au-dessus de la liste. Chaque ligne donne la date de l'examen (celle de l'autre établissement), le type, le nom de l'examen, l'étiquette **Externe**, l'établissement et le nombre d'images.
