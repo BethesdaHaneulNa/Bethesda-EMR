@@ -190,10 +190,12 @@
 - 브라우저 인쇄 창에서 **머리글과 바닥글**을 끄세요. 팝업이 막혀 있으면 「Le navigateur a bloqué la fenêtre d'impression」.
 - **총괄이 추천값으로 정함(2026-10-01 — 실장님이 바꿀 수 있음)**: 종이 아래 「참고용 — 진단용 아님」 넣음 / 수납도 인쇄 허용 / 환자 번호 경고가 있는 검사는 막음 / 기본 2장 배치, 한 번에 48장, 처음 12장 선택.
 
-### 2.4.4 영상 CD 반출 — 따로 실행하는 프로그램 `cd-export` (2026-10-01, 실장님 요청)
+### 2.4.4 영상 CD 반출 — 따로 실행하는 프로그램 「Bethesda CD」 (2026-10-01, 실장님 요청)
 
 다른 병원에 **영상 자체**를 줄 때 씁니다(실장님: 「CD는 아직도 보안 때문에 CD로 하는 경우가 너무 많다, USB 안 받는다」 → 「반출 프로그램이 환자 차트번호로 조회하고, 그 환자의 어떤 것을 반출할지 클릭하고, 영상 크기 알려 주고, CD 인식하면 『이 CD에 구울까요』 물어보고」). EMR 화면이 아니라 **PACS 폴더의 `cd-export.bat`** 을 더블클릭해 여는 따로 된 프로그램입니다([창의 모습 — 가짜 환자](../reference/design/cd-export-sample-fr.png)). EMR에 닿는 PC면 어디서나 됩니다(서버 PC가 아니어도).
 
+> **이름과 모양(2026-10-02, 실장님)**: 프로그램의 이름은 **Bethesda CD**, 진짜 실행 파일 **`Bethesda-CD.exe`**(1.0.0)입니다 — PACS 저장소의 `bethesda-cd\` 폴더에서 `build.ps1`로 만듭니다(Windows에 든 컴파일러만, 설치 없음). 그 전의 `cd-export.bat`(PowerShell 스크립트)는 같은 일을 하는 옛 모양으로, 한 번의 배포 동안 함께 두었다가 뺍니다. 아래의 「`cd-export.bat` 더블클릭」은 「`Bethesda-CD.exe` 더블클릭」으로 읽으세요(설정 파일은 `Bethesda-CD.ini` — 옛 `cd-export.ini`가 있으면 처음 한 번 그 주소를 읽어 옴). 실행 파일은 0.3초에 뜨고(스크립트는 몇 초), 디스크에 넣는 `VOIR.EXE`는 프로그램이 품고 있는 **같은 파일**입니다. 완성되면 따로 저장소로 떼어 냅니다(총괄).
+>
 > **지금 상태(2026-10-02)**: 폴더 저장 · ISO 저장 · **진짜 CD-R 한 장 굽기**까지 확인했습니다(가짜 환자, 실장님의 직접 허락). 디스크에는 병원이 직접 만든 **작은 뷰어 `VOIR.EXE`**가 함께 들어갑니다(압축 없는 영상과 JPEG — 병원의 초음파가 보냄. 아래).
 
 1. **`cd-export.bat` 더블클릭** → 창이 뜹니다. **EMR 계정으로 로그인**(진료 또는 수납 권한). 처음 한 번은 「Adresse de l'EMR」(예: `http://192.168.1.10:9080`)을 적습니다 — 다음부터는 기억합니다(프로그램 옆의 `cd-export.ini`. 비밀번호·토큰은 어디에도 적지 않음).
@@ -214,7 +216,7 @@
 - **시스템을 바꾸지 않습니다**: 설치 없음, 레지스트리 · 예약 작업 없음. 굽기는 Windows에 들어 있는 부품(IMAPI2), 창도 Windows의 것.
 - **로그인이 만료되면** 로그인 화면으로 돌아갑니다(「La session a expiré」).
 - **받는 도중 끊기면** 「La connexion a été coupée… Rien n'a été copié」 — 반쪽짜리를 온전한 것처럼 남기지 않습니다. 다시 하면 됩니다.
-- 화면 언어: 프랑스어(기본), `cd-export.bat -Lang ko`, `-Lang en`. `README.TXT`는 늘 프랑스어 + 영어.
+- 화면 언어: 프랑스어(기본). `Bethesda-CD.ini`에 `lang=ko`(또는 `en`) 한 줄, 또는 `Bethesda-CD.exe -Lang ko`(옛 스크립트는 `cd-export.bat -Lang ko`). `README.TXT`는 늘 프랑스어 + 영어.
 - **굽기에 걸리는 시간**(2026-10-02, 이 PC의 얇은 USB 드라이브, CD-R, 60MB): 전체 **2분 46초** — 받기 1초 · 굽기 52초(처음 11초는 0%에 머묾 — 디스크 준비, 그 뒤 1%씩 올라감) · 「Vérification du disque…」 **약 1분 50초**(디스크 닫기 + 드라이브의 자체 확인 + 다시 읽어 파일마다 비교) · 트레이 열림. 굽는 속도는 드라이브가 대는 것 중 **가장 느린 것**(이 드라이브는 x10)으로 맞춥니다 — 싼 디스크와 USB 전원으로 도는 드라이브에 무리가 덜 가게(CD 한 장 가득이면 몇 분 더).
 - **구운 디스크를 다시 넣으면** 「Graveur G: — ce disque n'est pas vierge : il ne sera pas utilisé」, 굽기 단추는 꺼집니다. 트레이가 열려 있을 때는 「insérez un disque vierge」.
 
@@ -502,11 +504,19 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - `bridge/bridge.py`, `bridge/Dockerfile`(python 3.12-slim, pydicom 2.4.4, requests 2.32.3)
 - 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요. `make_*`는 브리지 컨테이너 안에서 돌리며 `ORTHANC_PASSWORD`를 환경 변수에서 읽고, 시험 오더의 `STUDY_UID`·`ACCESSION`·`PATIENT_ID`도 환경 변수로 받음(가짜 환자 `TEST^Patient`).
 - `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`
-- **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
+- **`bethesda-cd\`**(2026-10-02) — 「Bethesda CD」: 반출 프로그램과 디스크의 뷰어, **그 폴더 하나로 서 있음**(PACS 저장소의 다른 파일에 기대지 않음 — 따로 저장소로 떼어 낼 것). EMR과의 약속은 HTTP 길 셋(`/api/auth/login` · `/api/pacs/export/patient` · `/export/bundle`)뿐.
+  - `build.ps1` — Windows의 `csc.exe`(C# 5)로 두 번: `src\shared` + `src\viewer` → `build\VOIR.EXE`, `src\shared` + `src\app`(+ 그 `VOIR.EXE`를 자원으로, 아이콘) → `build\Bethesda-CD.exe`. 0.7초. `build\`는 git에서 제외.
+  - `src\shared\Version.cs` — 이름과 판 번호(1.0.0)를 정하는 **한 곳**: 창 · 실행 파일 속성 · 뷰어의 「?」가 같은 값.
+  - `src\app\` — `Program.cs`(시작 · 설정 파일 `Config`) · `MainForm.cs`(창 + `Ask` — 사람에게 묻는 넷을 시험이 갈아 끼움) · `Texts.cs`(fr · ko · en) · `Emr.cs`(`EmrClient` · JSON 읽기 `J`) · `DiscFolder.cs`(작업 폴더 · 묶음 풀기 · README · 뷰어 넣기 · 폴더 저장과 비교) · `Burner.cs`(`DiscJob` · `Burners` — IMAPI2). 옛 PowerShell 함수와 한 줄씩 대응.
+  - `src\viewer\` — 뷰어(아래 `viewer\` 항목의 파일들이 이리로 옮겨짐).
+  - `icon\make-icon.ps1` — 아이콘을 직접 그림(16 · 32 · 48 · 256, 받아 오는 그림 없음). 후보 셋: [bethesda-cd-icon-candidates.png](../reference/design/bethesda-cd-icon-candidates.png).
+  - `tests\viewer_test.ps1`(스스로 그림을 그려 DICOM으로 쓰고 — RLE · 무손실 JPEG 예측 방식 1~7 — 뷰어가 그대로 돌려주는지, 21가지; 바깥 파일 · 서버 없이 돎) · `tests\app_test.ps1`(만든 실행 파일을 시험용 EMR에 붙여 창의 코드를 그대로 부름, 23가지; 비밀번호는 환경 변수로).
+  - `README.md` · `CHANGELOG.md` · `LICENSE`(PACS 저장소와 같은 글) · `Bethesda-CD.example.ini`.
+- **`cd-export.bat` · `cd-export.ps1` · `cd-export-ui.ps1` · `cd-export-common.ps1`**(2026-10-01) — 같은 프로그램의 옛 모양(PowerShell). 한 번의 배포 동안 남겨 둠 — 뷰어는 `bethesda-cd\src`에서 그 자리에서 빌드. 영상 CD 반출 프로그램(2.4.4절). `-Lang fr|ko|en`, `-ConfigPath`(기본: 프로그램 옆 `cd-export.ini` — EMR 주소와 마지막 폴더만, git에서 제외).
   - `cd-export-common.ps1` — 창 없이 하는 일 전부: `Read-/Save-ExportConfig`, `Invoke-Emr`(한 번의 요청 — 상태 0 = 무응답, 묶음은 파일로 흘려 받음, 도중에 끊기면 받던 파일을 지움), `Connect-Emr`(로그인 — 토큰은 메모리에만, 진료·수납 권한이 없으면 거절), `Get-ExportPatient`, `Get-ExportBundle`(받아서 풀기 — ZIP 안에서 `DICOMDIR`과 `IMAGES/<짧은 이름>`만 받아들이고, 개수가 EMR이 알려 준 것과 다르면 버림), `Write-DiscReadme`(UTF-8 + 머리표, CRLF), `Get-DiscFiles`(파일마다 크기와 SHA-256), `Save-DiscToFolder`(새 폴더에 복사하고 **다시 읽어 비교**, 자리가 모자라면 `NO_ROOM`), `Compare-DiscFiles`, `Get-Burners`(읽기만 — 디스크 없음 / 빈 디스크 / 쓴 디스크 / 못 쓰는 디스크, 남은 크기), `Test-BurnedDisc`, `Open-DiscTray`, `New-ExportTemp` / `Remove-ExportTemp`(`%TEMP%\BethesdaCD`).
   - 같은 파일의 작은 C# 조각(`Bethesda.DiscJob` — 실행할 때 그 자리에서 컴파일, 설치 없음): 디스크 이미지를 만드는 일과 쓰는 일을 **따로 된 줄기(스레드)** 에서 해서 창이 멈추지 않게. `StartIso`(이미지를 파일로 — 드라이브 없이 됨), `StartBurn`(빈 디스크인지 다시 확인 → 드라이브에 맞춘 이미지 → 닫는 디스크로 굽기 → 드라이브의 자체 확인을 켬 → 가장 느린 속도). **진짜 굽기로 확인함(2026-10-02)**: 이 드라이브에서 자체 확인이 켜지고, 굽고 나면 트레이를 열지 않아도 Windows가 디스크를 다시 읽어 줘서 파일 비교까지 됨. 이미지는 ISO 9660 + Joliet. 굽는 부품이 이미지를 읽어 가는 양을 세어서 진행률을 냄(`CountingStream`). **끝나면 이미지를 바로 놓아 줍니다** — 놓지 않으면 임시 폴더의 환자 영상 파일이 잡혀 있어 지워지지 않음(격리에서 겪고 고침).
   - 뷰어: `Get-ViewerSource`(프로그램 옆 `viewer\*.cs`) · `Add-DiscViewer`(그 소스를 `Add-Type -OutputAssembly … -OutputType WindowsApplication`으로 디스크 폴더의 `VOIR.EXE`로 만듦 — `{ok, bytes, error}`). Weasis 때의 `cd-viewer` 폴더 · 체크 칸 · `VOIR.BAT`은 없앰.
-- **`viewer\`**(2026-10-02) — 작은 뷰어의 소스, C# 5(Windows에 든 컴파일러용), 파일마다 UTF-8 머리표: `Dicom.cs`(DICOM 파일 읽기 — Little Endian의 명시적/암시적 VR, 헤더는 길이를 믿지 않고 태그로 읽음, 길이 없는 사설 시퀀스) · `Disc.cs`(`DICOMDIR`의 기록을 자리(offset)로 이어 목록을 만들고 시리즈마다 첫 파일의 머리에서 글을 바로잡음, 없으면 폴더를 훑음) · `Picture.cs`(영상의 속성, 픽셀 읽기 — 압축 없음 / JPEG, 프레임 가르기, 색 표현, 밝기 창으로 그리기) · `Rle.cs`(RLE를 직접 풂 — PS3.5 부록 G: 조각마다 PackBits, 높은 바이트 먼저) · `Jpeg.cs`(무손실 JPEG를 직접 풂 — T.81 부록 H: 허프만 표 · 예측 1~7 · restart · 길이로 손상 알아보기 / 손실 JPEG 8비트는 GDI+에 맡기되 색의 뜻을 「Adobe」 조각으로 알려 줌) · `ImagePanel.cs` · `MainForm.cs` · `Texts.cs` · `Program.cs`.
+- **`bethesda-cd\src\viewer\`**(2026-10-02, 처음에는 `viewer\`) — 작은 뷰어의 소스, C# 5(Windows에 든 컴파일러용), 파일마다 UTF-8 머리표: `Dicom.cs`(DICOM 파일 읽기 — Little Endian의 명시적/암시적 VR, 헤더는 길이를 믿지 않고 태그로 읽음, 길이 없는 사설 시퀀스) · `Disc.cs`(`DICOMDIR`의 기록을 자리(offset)로 이어 목록을 만들고 시리즈마다 첫 파일의 머리에서 글을 바로잡음, 없으면 폴더를 훑음) · `Picture.cs`(영상의 속성, 픽셀 읽기 — 압축 없음 / JPEG, 프레임 가르기, 색 표현, 밝기 창으로 그리기) · `Rle.cs`(RLE를 직접 풂 — PS3.5 부록 G: 조각마다 PackBits, 높은 바이트 먼저) · `Jpeg.cs`(무손실 JPEG를 직접 풂 — T.81 부록 H: 허프만 표 · 예측 1~7 · restart · 길이로 손상 알아보기 / 손실 JPEG 8비트는 GDI+에 맡기되 색의 뜻을 「Adobe」 조각으로 알려 줌) · `ImagePanel.cs` · `MainForm.cs` · `Texts.cs` · `Program.cs`.
   - `cd-export-ui.ps1` — 창(WinForms). 글은 `$CdxText`(fr · ko · en). 사람에게 묻는 것(안내 · 예/아니오 · 폴더 고르기 · 파일 이름)은 함수 네 개에 모아 둠 — 시험이 사람 대신 답할 수 있게.
   - **EMR만 부릅니다**(로그인 · `GET /api/pacs/export/patient` · `GET /api/pacs/export/bundle`). Orthanc에 직접 가지 않으므로 영상 서버 비밀번호가 프로그램에 없습니다.
 
@@ -833,3 +843,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | **뷰어를 넣은 진짜 CD 한 장**(가짜 환자, 영상 26개 62.9MB — 압축 없음 · 무손실 JPEG · Baseline JPEG · 12프레임) — 171.9초(굽기 54초 ×10, 검증 115초), 다시 읽어 26개가 영상 서버의 파일과 바이트까지 같음, CD에서 `VOIR.EXE` 1.5초에 창, 영상 한 장 0.2~8초(파일 크기대로). 뷰어: 읽는 동안 「Lecture de l'image…」 | PACS `session/pacs` |
 | 2026-10-02 | **뷰어의 밝기 · 대비**(실장님: 「밝기 조절은 안돼?」 「드드드득」) — 컬러(초음파)에도 먹게, 끄는 동안 끊기지 않게(끌 때마다 바로 그리고, 화면 크기의 그림을 바로 만듦: 한 걸음 38ms → 3~6ms), 아래 줄에 작은 막대 ☀ ◐. 버튼은 그대로(왼쪽 = 밝기, 오른쪽 = 이동) | PACS `session/pacs` |
 | 2026-10-02 | 설계안 [external-images-import-design.md](../reference/external-images-import-design.md) — 다른 병원의 CD · USB 영상을 들여와 차트에 붙이기(짓지 않음). 임시 서버에서 해 본 것: Orthanc의 공식 `modify`로 한 장씩 우리 환자 번호를 넣음(그림 · 압축 그대로, 2~27ms), 같은 영상을 두 번 올리면 Orthanc가 막아 주지 않음, EMR의 nginx는 1MB 넘는 올리기를 거절(413) | — |
+| 2026-10-02 | **「Bethesda CD」 1.0.0 — 반출 프로그램을 진짜 실행 파일로**(실장님: 「뱃으로 만들기보다는 좀 더 제대로 프로그램처럼」, 이름 「Bethesda CD」). PACS 저장소 `bethesda-cd\`: C# 소스 · `build.ps1`(Windows의 컴파일러만) · 아이콘 스크립트 · 시험 · README · CHANGELOG · LICENSE — 한 폴더로 섬. `Bethesda-CD.exe` 182KB(뷰어 `VOIR.EXE`를 품음 — 모든 디스크에 같은 파일), 0.3초에 뜸. 격리에서 창 시험 23가지 · 풀어서 내보내기 5가지 · 뷰어 시험 21가지(무손실 JPEG 예측 방식 1~7을 처음 확인) 통과. 옛 `cd-export.bat`은 한 번의 배포 동안 함께 | PACS `session/pacs` |

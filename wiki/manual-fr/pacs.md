@@ -193,9 +193,9 @@ Pour un patient qui va dans un autre hôpital, les images elles-mêmes peuvent �
 
 ### 12. Copier les images sur un CD (programme à part)
 
-Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD avec un petit programme à part : **cd-export.bat**, dans le dossier du PACS (demandez à l'administrateur de mettre un raccourci sur le bureau).
+Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD avec un petit programme à part : **Bethesda CD** (`Bethesda-CD.exe` — demandez à l'administrateur de mettre un raccourci sur le bureau ; avant, ce programme s'appelait cd-export.bat).
 
-1. Double-cliquez sur **cd-export.bat**. Connectez-vous avec **votre compte de l'EMR** (Consultation ou Paiement). La première fois, l'administrateur écrit l'**Adresse de l'EMR**.
+1. Double-cliquez sur **Bethesda CD**. Connectez-vous avec **votre compte de l'EMR** (Consultation ou Paiement). La première fois, l'administrateur écrit l'**Adresse de l'EMR**.
 2. Tapez le **N° dossier** du patient, puis **Entrée**. Le nom, le N° dossier et la date de naissance s'affichent : **vérifiez que c'est le bon patient.**
 3. La liste des examens d'imagerie s'affiche, avec le nombre d'images et la taille. **Cochez** les examens à copier (cliquez sur la ligne). Une ligne grise ne peut pas être copiée ; la colonne **État** dit pourquoi (examen annulé, pas d'images, avertissement d'identité à régler d'abord dans l'EMR…).
 4. Sous la liste : **Sélection : … examen(s) · … image(s) · … Mo**, puis le graveur. Mettez un **disque vierge** dans le lecteur : le programme le voit tout seul et dit **✔ tient sur ce disque**, ou de combien c'est trop.
