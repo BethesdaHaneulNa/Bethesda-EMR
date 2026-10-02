@@ -46,6 +46,12 @@ Four tables describe the clinical side of a period. Each has its own two dates (
 - **Diagnoses** counts consultations and distinct patients per diagnosis, and splits the patients by sex and by age on the day of the visit (under 5, 5–14, 15–49, 50 and over). It counts each consultation's main diagnosis by default, so every consultation counts once; "All diagnoses" adds the secondary ones. A diagnosis picked from the list is one row whatever language it was picked in, and shows its name in the screen's language. One typed freely is grouped as written and marked "typed".
 - **Orders** counts lab, imaging and procedure orders by code: how many times, what quantity, and what they were priced at. That value is the price of what was ordered, not money received, and the screen says so. Orders are counted on the day of the visit. Cancelled orders and orders of cancelled registrations are left out. Images a patient brings in are not orders and are not counted.
 
+### One period row per group
+
+The screen now shows one group at a time, chosen in a menu on the left. Each group has a single period row at the top, the same everywhere: Today, This week, This month, 30 days, This year, or two dates, and for the clinical groups a department and a doctor. Every table of the group follows it. The cash-by-period table uses the dates of the revenue cards above it, and the patient table and the department and doctor tables share one period and one department or doctor. A start date after the end date is not accepted.
+
+Only the group on screen is loaded, when it is first opened and when its period changes. The screen remembers the last group for each account on that computer.
+
 ### Drug usage
 
 - The table has its own period (two date fields). Before, it always showed a fixed 30 days, 12 months or 5 years. The newest period is the first column, next to the drug name, so the latest day is visible without scrolling sideways.
