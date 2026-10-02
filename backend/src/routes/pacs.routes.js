@@ -56,6 +56,8 @@ function normalizeConfig(body) {
   fields.forEach(k => { if (body[k] !== undefined) out[k] = String(body[k] || '').trim(); });
   if (body.worklist_scp_port !== undefined) out.worklist_scp_port = Number(body.worklist_scp_port) || 4242;
   if (body.auto_create_worklist !== undefined) out.auto_create_worklist = !!body.auto_create_worklist;
+  // The largest single file an import of outside images takes, in MB (pacs.import.js).
+  if (body.import_max_file_mb !== undefined) out.import_max_file_mb = Number(body.import_max_file_mb);
   return out;
 }
 
@@ -69,6 +71,7 @@ const CONFIG_MAX = {
 };
 const CONFIG_MSG = {
   port: 'DICOM port must be a whole number from 1 to 65535',
+  importFile: 'The limit for one imported file must be a whole number of MB from 1 to 4096',
   saveFailed: 'Could not save the order feed settings',
   noHost: 'No PACS host set',
   server: 'Server error',
@@ -79,6 +82,8 @@ function configProblem(cfg) {
   }
   const p = cfg.worklist_scp_port;
   if (p !== undefined && !(Number.isInteger(p) && p >= 1 && p <= 65535)) return CONFIG_MSG.port;
+  const m = cfg.import_max_file_mb;
+  if (m !== undefined && !(Number.isInteger(m) && m >= 1 && m <= 4096)) return CONFIG_MSG.importFile;
   return null;
 }
 
@@ -88,7 +93,7 @@ router.use('/viewer', viewer.router);
 router.use('/', move.router);
 // An exam's images given out of the clinic: on paper, on a disc (pacs.export.js).
 router.use('/export', exportImages.router);
-// Images of another establishment brought in and tied to an order (pacs.import.js).
+// Images of another establishment brought in for a patient - no order (pacs.import.js).
 router.use('/import', imports.router);
 
 // Settings UI. This carries the bridge token, which opens the patient feed, so
@@ -111,11 +116,12 @@ router.put('/config', authMiddleware, permMiddleware('settings'), async (req, re
        worklist_scp_ae=COALESCE($3, worklist_scp_ae), bridge_token=COALESCE($4, bridge_token),
        emr_base_url=COALESCE($5, emr_base_url), pacs_viewer_url=COALESCE($6, pacs_viewer_url),
        auto_create_worklist=COALESCE($7, auto_create_worklist), facility_name=COALESCE($8, facility_name),
-       notes=COALESCE($9, notes), orthanc_url=COALESCE(NULLIF($11, ''), orthanc_url), updated_by=$10, updated_at=NOW()
+       notes=COALESCE($9, notes), orthanc_url=COALESCE(NULLIF($11, ''), orthanc_url),
+       import_max_file_mb=COALESCE($12, import_max_file_mb), updated_by=$10, updated_at=NOW()
        WHERE id=1 RETURNING *`,
       [cfg.worklist_scp_host, cfg.worklist_scp_port, cfg.worklist_scp_ae,
        cfg.bridge_token, cfg.emr_base_url, cfg.pacs_viewer_url, cfg.auto_create_worklist, cfg.facility_name, cfg.notes, req.user.id,
-       cfg.orthanc_url]
+       cfg.orthanc_url, cfg.import_max_file_mb]
     );
     // Saved either way; the screen shows the answer next to the address field
     // when the EMR cannot reach the image server there (2026-09-30).
@@ -367,9 +373,6 @@ router.get('/readings/patient/:patientId', authMiddleware, permMiddleware('consu
         ORDER BY v.visit_date DESC, oi.id DESC`,
       [req.params.patientId]
     );
-    // Orders whose images came from another establishment's disc say so (pacs.import.js).
-    const outside = await imports.externalByOrder(req.params.patientId);
-    r.rows.forEach(row => { row.external = outside.get(row.id) || null; });
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

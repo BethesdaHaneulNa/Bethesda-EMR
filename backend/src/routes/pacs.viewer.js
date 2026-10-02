@@ -195,6 +195,16 @@ const NOT_THERE = [
   "L'EMR a noté l'arrivée de ces images, mais le serveur d'images ne les a pas. Prévenez l'administrateur : elles sont peut-être à restaurer depuis la sauvegarde des images.",
   'EMR에는 이 검사의 영상이 도착했다고 적혀 있는데, 영상 서버에는 그 영상이 없습니다. 관리자에게 알려 주세요 — 영상 백업에서 되살려야 할 수 있습니다.',
   'The EMR noted that these images arrived, but the image server does not have them. Tell the administrator: they may have to be restored from the image backup.'];
+// A study brought in from another establishment's disc (pacs.import.js) has no order and
+// no reading box: the two notices above, said for it.
+const NO_PICTURE_OUTSIDE = [
+  "Cet examen externe ne contient que des données sans image ({n}) — par exemple un rapport. Il n'y a rien à afficher.",
+  '이 외부 검사에는 그림이 없는 자료만 있습니다({n}개) — 보고서 같은 것. 보여 줄 영상이 없습니다.',
+  'This outside exam holds only data without a picture ({n}) — a report, for example. There is nothing to show.'];
+const OUTSIDE_NOT_THERE = [
+  "Ces images externes ont été importées dans ce dossier, mais le serveur d'images ne les a pas. Prévenez l'administrateur : elles sont peut-être à restaurer depuis la sauvegarde des images.",
+  '이 외부 영상은 이 차트에 들여온 것으로 적혀 있는데, 영상 서버에는 없습니다. 관리자에게 알려 주세요 — 영상 백업에서 되살려야 할 수 있습니다.',
+  'These outside images were brought into this chart, but the image server does not have them. Tell the administrator: they may have to be restored from the image backup.'];
 function isPage(path) { return path === '/stone-webviewer/index.html'; }
 
 // A small JSON call to Orthanc with the stored login, for the viewer's own checks.
@@ -253,6 +263,12 @@ async function arrivalNoted(studyUid) {
         WHERE (study_instance_uid = $1 OR image_study_uid = $1) AND images_received_at IS NOT NULL LIMIT 1`, [studyUid]);
     return r.rows.length > 0;
   } catch (e) { return false; }
+}
+
+// Is this study one that was brought in from a disc? false when it cannot tell.
+async function broughtIn(studyUid) {
+  try { return (await pool.query(`SELECT 1 FROM pacs_import WHERE study_uid = $1 AND state = 'done' LIMIT 1`, [studyUid])).rows.length > 0; }
+  catch (e) { return false; }
 }
 
 // The EMR's helmet() gives every API response `script-src 'self'`, which stops
@@ -376,8 +392,9 @@ router.all('*', async (req, res) => {
   if (isPage(path)) {
     openedFirst.page(examKey, pageStudies);
     const pics = await studyPictures(cfg, pageStudies[0]);
-    if (pics && pics.count === 0) return explain(res, 200, ...((await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
-    if (pics && !pics.picture) return explain(res, 200, ...NO_PICTURE.map(t => t.replace('{n}', pics.count)));
+    const outside = pics && (pics.count === 0 || !pics.picture) ? await broughtIn(pageStudies[0]) : false;
+    if (pics && pics.count === 0) return explain(res, 200, ...(outside ? OUTSIDE_NOT_THERE : (await arrivalNoted(pageStudies[0])) ? NOT_THERE : NOT_ARRIVED));
+    if (pics && !pics.picture) return explain(res, 200, ...(outside ? NO_PICTURE_OUTSIDE : NO_PICTURE).map(t => t.replace('{n}', pics.count)));
   }
 
   const lib = target.protocol === 'https:' ? https : http;

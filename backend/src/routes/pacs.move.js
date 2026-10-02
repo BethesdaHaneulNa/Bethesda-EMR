@@ -51,7 +51,6 @@ const WHY = {
   OTHER_PATIENT:      'The two orders are not the same patient\'s',
   CANCELLED:          'A cancelled order',
   OTHER_TYPE:         'The two orders are not of the same device type',
-  EXTERNAL:           'Images brought in from another establishment are not moved between orders',
   NO_IMAGES:          'This order has no images to move',
   IDENTITY:           'The images of this order carry a patient warning; settle whose they are first',
   NO_WORKLIST:        'The other order was never sent to the devices',
@@ -112,7 +111,7 @@ async function instancesOf(cfg, studyId) {
 
 // ── the two orders ───────────────────────────────────────────────────────────
 const ORDER_SQL = `
-  SELECT oi.id, oi.patient_id, oi.visit_id, oi.order_name, oi.status, oi.pacs_modality, oi.order_code,
+  SELECT oi.id, oi.patient_id, oi.visit_id, oi.order_name, oi.status, oi.pacs_modality,
          oi.result_text, oi.result_by, oi.result_at, ${isExam('oi')} AS exam, v.visit_date,
          wl.id AS wl_id, wl.accession_no, wl.study_instance_uid, wl.image_study_uid, wl.status AS wl_status,
          wl.modality AS wl_modality, wl.images_received_at, wl.image_count, wl.orthanc_study_id,
@@ -131,7 +130,6 @@ const typeOf = o => String(o.pacs_modality || o.wl_modality || '');
 function sourceBlock(from) {
   if (!from || !from.exam) return 'NOT_FOUND';
   if (from.status === 'cancelled') return 'CANCELLED';
-  if (from.order_code === 'IMG-EXT') return 'EXTERNAL';              // (pacs.import.js: outside images stay on their own order)
   if (!from.images_received_at || !linkOf(from)) return 'NO_IMAGES';
   if (from.patient_check !== 'match') return 'IDENTITY';
   return null;
@@ -142,7 +140,6 @@ function targetBlock(from, to) {
   if (to.id === from.id) return 'SAME_ORDER';
   if (to.patient_id !== from.patient_id) return 'OTHER_PATIENT';
   if (to.status === 'cancelled') return 'CANCELLED';
-  if (to.order_code === 'IMG-EXT') return 'EXTERNAL';
   // Same device type only: a device sees only the worklist lines of its own type, so
   // orders of different types cannot be mixed up on it (director, 2026-10-01).
   if (!typeOf(from) || typeOf(from) !== typeOf(to)) return 'OTHER_TYPE';

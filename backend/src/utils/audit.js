@@ -71,8 +71,8 @@ const ACTIONS = {
   // file: whose, which exam(s), how many pictures, and for a copy its size and medium.
   PACS_IMAGES_PRINT:    'pacs.images.print',
   PACS_IMAGES_EXPORT:   'pacs.images.export',
-  // PACS (2026-10-02): images brought in from another establishment's disc and tied to an order
-  // of this patient (routes/pacs.import.js): how many, from where, the number and name they came
+  // PACS (2026-10-02): images brought in from another establishment's disc for this patient
+  // (routes/pacs.import.js; no order): how many, from where, the number and name they came
   // with, whether birth date or sex differed from the chart - and such an import taken out again.
   PACS_IMAGES_IMPORT:   'pacs.images.import',
 };

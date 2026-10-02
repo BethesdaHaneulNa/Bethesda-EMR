@@ -329,9 +329,6 @@ router.get('/patient', authMiddleware, mayExport, async (req, res) => {
         if (z) sizes[e.id] = z; else server = 'UNREACHABLE';
       });
     }
-    // (an exam brought in from another establishment's disc says where it came from: the
-    // note written on the copy names it)
-    const outside = await require('./pacs.import').externalByOrder(patient.id);
     res.json({
       ok: true, patient, clinic: c, server, max_exams: MAX_EXAMS,
       exams: exams.map(e => {
@@ -340,7 +337,6 @@ router.get('/patient', authMiddleware, mayExport, async (req, res) => {
         return {
           id: e.id, exam_date: e.exam_date || '', modality: e.pacs_modality || '', order_name: e.order_name, accession_no: e.accession_no || '',
           block, items: z ? z.items : null, bytes: z ? z.bytes : null,
-          external: outside.has(e.id) ? { institution: outside.get(e.id).institution, study_date: outside.get(e.id).study_date } : null,
         };
       }),
     });

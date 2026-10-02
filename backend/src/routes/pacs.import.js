@@ -1,23 +1,35 @@
-// Images brought in from another establishment (director, 2026-10-02: «다른 병원에서 가져온
-// cd나 usb … 우리쪽으로 업로드도 가능해?» - «그냥 영상판독 저거 클릭하면 뜨게»).
+// Images brought in from another establishment (a CD or a USB stick the patient carries).
 //
-// From the consultation screen's imaging window the doctor picks the folder of a CD or a
-// USB stick; the browser reads which studies it holds and sends the chosen one here, one
-// DICOM file a request. This file is the server side:
-//   GET  /api/pacs/import/target?patient_id=   today's consultation, the order code, the limits, the room left
+// Director, 2026-10-02: «들여오기 프로그램에서 차트번호 입력하면 그 환자 것으로 외부 영상이 들어감 →
+// 연동이나 판독소견은 안 적더라도 EMR 영상판독에서 26-00001로 조회하면 그 이름으로 들어와 있는 영상이
+// 다 뜨게 하면 되는 것 아니냐». So an outside study hangs on the PATIENT, not on an order:
+// no order, no consultation, no visit, no worklist line, no charge, no reading box (the
+// doctor's opinion goes into the consultation note).
+//
+// Who brings them in: the program "Bethesda CD" (reception) - the chart number is typed,
+// the disc's folder is chosen, the program reads which studies it holds and sends the
+// chosen one here, one DICOM file a request. This file is the EMR's side of it, and what
+// the EMR's own imaging window asks:
+//   GET  /api/pacs/import/patient?chart_no=    who the patient is, the limits, the room left
 //   POST /api/pacs/import/check                which of the disc's studies can be brought in
-//   POST /api/pacs/import/begin                one study, onto one order (made by the screen through the
-//                                              consultation's own POST /consultations/:id/orders)
+//   POST /api/pacs/import/begin                one study, for one patient
 //   PUT  /api/pacs/import/:id/instance         one image
-//   POST /api/pacs/import/:id/finish           the images are tied to the order - in one transaction, with the change-log line
+//   POST /api/pacs/import/:id/finish           the study is in the chart - one transaction, with the change-log line
 //   POST /api/pacs/import/:id/cancel           before it is finished: everything made is removed
+//   GET  /api/pacs/import/list?patient_id=     the patient's outside studies (the imaging window)
+//   GET  /api/pacs/import/:id/viewer-url       opens one of them in the viewer (no order needed)
 //   POST /api/pacs/import/:id/undo             after it is finished: an import made by mistake is taken out again
+//   POST /api/pacs/import/resume               the clean-up of interrupted imports, asked for now
 //
-// What is changed in an image is its patient number, name, birth date and sex (ours), its
-// study number and accession (ours, by the same rule as our own orders). The picture, its
-// compression, the series and image numbers, the institution and the dates stay; the
-// number and name it came with are kept in the image (OtherPatientIDs, OtherPatientNames)
-// and in table pacs_import.
+// The EMR shows the studies written in table pacs_import - never "whatever the image
+// server holds under that patient number": a study a device sent with a mistyped number
+// must not appear in a chart by itself.
+//
+// What is changed in an image: its patient number, name, birth date and sex (ours), its
+// study number (a new one, of a branch no order uses) and its accession ('EXT-<n>', never
+// the form of an order's). The picture, its compression, the series and image numbers, the
+// institution and the dates stay; the number and name it came with are kept in the image
+// (OtherPatientIDs, OtherPatientNames) and in table pacs_import.
 //
 // How it gets onto the image server - Orthanc's own REST only, one image at a time:
 //   1. the file is stored as it is                     POST /instances
@@ -30,36 +42,39 @@
 // any screen; an import that stops half-way is undone - by `cancel`, or by resumePending()
 // (20 s after the server starts and every 5 minutes) when it has been silent for 30 minutes.
 //
-// Who: consultation (the button is in the consultation screen).
+// Who: bringing in and the list - consultation or payment (the same as copying to a disc:
+// the program is one). Opening the images - consultation (the viewer's own rule). Taking
+// an import out again - consultation or settings.
 const express = require('express');
 const { Readable } = require('stream');
 const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware } = require('../middleware/auth');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
-const { todayLocal } = require('../utils/localDate');
+const viewer = require('./pacs.viewer');
 
 const router = express.Router();
-const mayImport = permMiddleware('consultation');
+const MAY_IMPORT = ['consultation', 'payment'];   // one place to change who may bring images in
+const mayImport = permMiddleware(...MAY_IMPORT);
+const mayOpen = permMiddleware('consultation');
 const mayUndo = permMiddleware('consultation', 'settings');
 
-const ORDER_CODE = 'IMG-EXT';
-const WARN_BYTES = 2 * 1024 * 1024 * 1024;      // a selection larger than this is warned about, not refused
+const WARN_BYTES = 2 * 1024 * 1024 * 1024;      // a study larger than this is warned about, not refused
 const SPARE_BYTES = 5 * 1024 * 1024 * 1024;     // room that must stay free on the image server's disk
 const SILENT_MINUTES = 30;                      // an import that has received nothing for this long is undone
 const UID = /^[0-9.]{1,64}$/;
+// Study numbers given here: a branch of their own (orders use <root>.<day>.<order>.<n>,
+// corrections <root>.9.7307.<n>).
+const studyUidFor = id => `1.2.826.0.1.3680043.9.7308.${id}.${Date.now()}`;
+const accessionFor = id => `EXT-${id}`;
 
 const WHY = {
   BAD_REQUEST: 'The request is not understood',
   NO_PATIENT: 'No such patient',
-  NO_CONSULTATION: 'This patient has no consultation open today',
-  NO_ORDER_CODE: 'The order code for outside images is missing',
   NOT_PAIRED: 'The image server is not set up',
   UNREACHABLE: 'The image server does not answer',
   NOT_FOUND: 'No such import',
   NOT_YOURS: 'This import was started by someone else',
-  BAD_ORDER: 'This order cannot take outside images',
-  ORDER_HAS_IMAGES: 'This order already has images',
   OURS: 'This exam was made here: it is already in the chart',
   HERE: 'This exam was already brought in for this patient',
   OTHER: 'These images are already in another patient\'s chart',
@@ -71,14 +86,14 @@ const WHY = {
   NOT_OF_STUDY: 'This file is not of the exam that was announced',
   CHANGE_FAILED: 'The image server could not put the patient\'s number into this image',
   INCOMPLETE: 'Not every image has arrived',
-  NOT_LOGGED: 'The change log could not be written: nothing is tied to the chart',
+  NOT_LOGGED: 'The change log could not be written: nothing is put in the chart',
   CLOSED: 'This import is finished already',
   NOT_DONE: 'This import was not finished',
-  HAS_READING: 'A reading was written on these images: remove it first',
+  NO_REASON: 'Say why these images are taken out',
 };
 // Refusals are 409 unless said otherwise - never 502/503/504, which the web server in
 // front replaces with its own text (see pacs.export.js).
-const HTTP = { BAD_REQUEST: 400, NO_PATIENT: 404, NOT_FOUND: 404, NOT_YOURS: 403, TOO_BIG_FILE: 413, NOT_LOGGED: 500 };
+const HTTP = { BAD_REQUEST: 400, NO_PATIENT: 404, NOT_FOUND: 404, NOT_YOURS: 403, TOO_BIG_FILE: 413, NOT_LOGGED: 500, NO_REASON: 400 };
 const refuse = (res, code, extra) => res.status(HTTP[code] || 409).json(Object.assign({ ok: false, code, error: WHY[code] }, extra || {}));
 const text = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const intOf = v => (/^[0-9]{1,9}$/.test(String(v)) ? Number(v) : null);
@@ -117,10 +132,11 @@ async function store(cfg, stream, signal) {
   } catch (e) { return { status: 0 }; }
 }
 
-// ── the patient, the consultation, the order ─────────────────────────────
+// ── the patient ──────────────────────────────────────────────────────────
+const PATIENT_COLUMNS = `id, chart_no, last_name, first_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth`;
 async function patientRow(id) {
   if (intOf(id) == null) return null;
-  return (await pool.query(`SELECT id, chart_no, last_name, first_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth FROM patient WHERE id = $1`, [id])).rows[0] || null;
+  return (await pool.query(`SELECT ${PATIENT_COLUMNS} FROM patient WHERE id = $1`, [id])).rows[0] || null;
 }
 const dicomName = p => [text(p.last_name, 60), text(p.first_name, 60)].filter(Boolean).join('^');
 // The room left on the disk the image server stores on, as the worklist bridge last said
@@ -133,39 +149,37 @@ async function freeBytes() {
     return Number.isFinite(n) && n > 0 ? n : null;
   } catch (e) { return null; }
 }
-// An order of the outside-images code, of this patient, not cancelled, with no images yet.
-async function orderRow(db, id) {
-  const r = await db.query(
-    `SELECT oi.id, oi.patient_id, oi.visit_id, oi.consultation_id, oi.order_code, oi.order_name, oi.status, oi.result_text,
-            EXISTS (SELECT 1 FROM worklist_log w WHERE w.order_item_id = oi.id) AS has_images,
-            EXISTS (SELECT 1 FROM pacs_import i WHERE i.order_item_id = oi.id AND i.state IN ('started', 'cleanup-pending')) AS importing
-       FROM order_item oi WHERE oi.id = $1`, [id]);
-  return r.rows[0] || null;
+// What the screens say of one study brought in.
+const SHOWN = `i.id, i.study_date, i.modality, i.description, i.institution, i.image_count, i.bytes_received, i.source_patient_id, i.source_patient_name,
+               i.source_birth_date, i.source_sex, i.staff_name, i.finished_at, i.detail`;
+const shown = x => ({
+  id: x.id, study_date: x.study_date, modality: x.modality, description: x.description, institution: x.institution,
+  image_count: x.image_count, bytes: Number(x.bytes_received) || 0, imported_at: x.finished_at, imported_by: x.staff_name || '',
+  came_as: { patient_id: x.source_patient_id, patient_name: x.source_patient_name, birth_date: x.source_birth_date, sex: x.source_sex },
+  birth_differed: !!((x.detail || {}).confirm || {}).birth_differs, sex_differed: !!((x.detail || {}).confirm || {}).sex_differs,
+  undrawn: (x.detail || {}).undrawn || [],
+});
+async function importedOf(patientId) {
+  const r = await pool.query(`SELECT ${SHOWN} FROM pacs_import i WHERE i.patient_id = $1 AND i.state = 'done' ORDER BY i.study_date DESC, i.id DESC`, [patientId]);
+  return r.rows.map(shown);
 }
 
-// GET /api/pacs/import/target?patient_id=
-// What the screen needs before it lets anything be chosen. `consultation` is the one of
-// today's visit (the screen makes the order in it); none -> the button says why.
-router.get('/target', authMiddleware, mayImport, async (req, res) => {
+// GET /api/pacs/import/patient?chart_no=
+// What the program shows once the chart number is typed: who the patient is (to be checked
+// by eye against the disc), whether the image server answers, the limits, the room left,
+// and what was brought in for this patient before.
+router.get('/patient', authMiddleware, mayImport, async (req, res) => {
   try {
-    const p = await patientRow(req.query.patient_id);
-    if (!p) return refuse(res, 'NO_PATIENT');
-    const c = (await pool.query(
-      `SELECT c.id, c.visit_id, c.status FROM consultation c WHERE c.patient_id = $1 AND c.consult_date = $2::date ORDER BY c.id DESC LIMIT 1`, [p.id, todayLocal()])).rows[0] || null;
-    const code = (await pool.query(`SELECT id, code, name, name_en, price FROM order_code WHERE code = $1 AND COALESCE(is_active, TRUE) LIMIT 1`, [ORDER_CODE])).rows[0] || null;
-    // an order of this consultation left empty by an import that did not finish: used again
-    const empty = c ? (await pool.query(
-      `SELECT oi.id FROM order_item oi
-        WHERE oi.consultation_id = $1 AND oi.order_code = $2 AND oi.status IS DISTINCT FROM 'cancelled' AND COALESCE(oi.result_text, '') = ''
-          AND NOT EXISTS (SELECT 1 FROM worklist_log w WHERE w.order_item_id = oi.id)
-          AND NOT EXISTS (SELECT 1 FROM pacs_import i WHERE i.order_item_id = oi.id AND i.state IN ('started', 'cleanup-pending'))
-        ORDER BY oi.id`, [c.id, ORDER_CODE])).rows.map(r => r.id) : [];
+    const chart = String(req.query.chart_no || '').trim();
+    if (!chart || chart.length > 40) return refuse(res, 'BAD_REQUEST');
+    const p = (await pool.query(`SELECT ${PATIENT_COLUMNS} FROM patient WHERE upper(btrim(chart_no)) = upper($1) LIMIT 2`, [chart])).rows;
+    if (p.length !== 1) return refuse(res, 'NO_PATIENT');
     const cfg = await config();
     let server = '';
     if (!cfg.orthanc_password) server = 'NOT_PAIRED';
     else if ((await ox(cfg, 'GET', '/system', null, 4000)).status !== 200) server = 'UNREACHABLE';
-    res.json({ ok: true, patient: p, consultation: c ? { id: c.id, visit_id: c.visit_id, status: c.status } : null, order_code: code, empty_orders: empty,
-               server, free_bytes: await freeBytes(), spare_bytes: SPARE_BYTES, max_file_bytes: maxFileBytes(cfg), warn_bytes: WARN_BYTES });
+    res.json({ ok: true, patient: p[0], server, free_bytes: await freeBytes(), spare_bytes: SPARE_BYTES, max_file_bytes: maxFileBytes(cfg), warn_bytes: WARN_BYTES,
+               imported: await importedOf(p[0].id) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -173,15 +187,15 @@ router.get('/target', authMiddleware, mayImport, async (req, res) => {
 async function standing(cfg, patientId, uid) {
   const ours = await pool.query(`SELECT 1 FROM worklist_log WHERE study_instance_uid = $1 OR image_study_uid = $1 LIMIT 1`, [uid]);
   if (ours.rows.length) return { state: 'OURS' };
-  const made = await pool.query(`SELECT 1 FROM pacs_import WHERE study_uid = $1 AND state <> 'rolled-back' LIMIT 1`, [uid]);
+  const made = await pool.query(`SELECT 1 FROM pacs_import WHERE study_uid = $1 AND state IN ('started', 'cleanup-pending', 'done') LIMIT 1`, [uid]);
   if (made.rows.length) return { state: 'OURS' };                                    // (a disc we made, of a study we had brought in)
   const was = await pool.query(
-    `SELECT patient_id, state, order_name, to_char(finished_at, 'YYYY-MM-DD') AS day FROM pacs_import
+    `SELECT patient_id, state, to_char(finished_at, 'YYYY-MM-DD') AS day FROM pacs_import
       WHERE source_study_uid = $1 AND state IN ('started', 'cleanup-pending', 'done') ORDER BY id DESC LIMIT 1`, [uid]);
   if (was.rows.length) {
     const w = was.rows[0];
     if (w.state !== 'done') return { state: 'BUSY' };
-    return w.patient_id === patientId ? { state: 'HERE', imported_at: w.day, order_name: w.order_name } : { state: 'OTHER' };
+    return w.patient_id === patientId ? { state: 'HERE', imported_at: w.day } : { state: 'OTHER' };
   }
   const f = await ox(cfg, 'POST', '/tools/find', { Level: 'Study', Query: { StudyInstanceUID: uid } });
   if (f.status !== 200 || !Array.isArray(f.json)) return { state: 'UNREACHABLE' };
@@ -205,32 +219,30 @@ router.post('/check', authMiddleware, mayImport, async (req, res) => {
 });
 
 // POST /api/pacs/import/begin
-// { order_item_id, files, bytes, source: { study_uid, patient_id, patient_name, birth_date, sex, accession,
+// { patient_id, files, bytes, source: { study_uid, patient_id, patient_name, birth_date, sex, accession,
 //   institution, study_date, description, modality }, confirm: { birth_differs, sex_differs } }
-// One study, onto one order of the outside-images code. The study number and accession it
-// will carry here are fixed now, by the rule of our own orders.
+// One study, for one patient. The study number and accession it will carry here are fixed now.
 router.post('/begin', authMiddleware, mayImport, async (req, res) => {
   try {
     const b = req.body || {}, src = b.source || {};
-    const orderId = intOf(b.order_item_id), files = intOf(b.files), bytes = Number(b.bytes);
+    const files = intOf(b.files), bytes = Number(b.bytes);
     const uid = String(src.study_uid || '');
-    if (orderId == null || !files || files > 100000 || !Number.isFinite(bytes) || bytes < 0 || !UID.test(uid)) return refuse(res, 'BAD_REQUEST');
-    const o = await orderRow(pool, orderId);
-    if (!o || o.order_code !== ORDER_CODE || o.status === 'cancelled') return refuse(res, 'BAD_ORDER');
-    if (o.has_images) return refuse(res, 'ORDER_HAS_IMAGES');
-    if (o.importing) return refuse(res, 'BUSY');
+    if (!files || files > 100000 || !Number.isFinite(bytes) || bytes < 0 || !UID.test(uid)) return refuse(res, 'BAD_REQUEST');
+    const p = await patientRow(b.patient_id);
+    if (!p) return refuse(res, 'NO_PATIENT');
     const cfg = await config();
     if (!cfg.orthanc_password) return refuse(res, 'NOT_PAIRED');
-    const st = await standing(cfg, o.patient_id, uid);
+    const st = await standing(cfg, p.id, uid);
     if (st.state) return refuse(res, st.state, st);
+    // room: the image passes through the server twice (as it came, then changed) before the first is deleted
     const free = await freeBytes();
     if (free != null && bytes * 2 + SPARE_BYTES > free) return refuse(res, 'NO_ROOM', { free_bytes: free, needed_bytes: bytes * 2 + SPARE_BYTES });
-    const day = todayLocal().replace(/-/g, '');
+    const id = Number((await pool.query(`SELECT nextval(pg_get_serial_sequence('pacs_import', 'id')) AS id`)).rows[0].id);
     const row = (await pool.query(
-      `INSERT INTO pacs_import (patient_id, order_item_id, order_name, study_uid, accession_no, source_study_uid, source_patient_id, source_patient_name,
+      `INSERT INTO pacs_import (id, patient_id, study_uid, accession_no, source_study_uid, source_patient_id, source_patient_name,
                                 source_birth_date, source_sex, source_accession, institution, study_date, description, modality, files_announced, detail, staff_id, staff_name)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id, study_uid, accession_no`,
-      [o.patient_id, o.id, o.order_name, `1.2.826.0.1.3680043.${day}.${o.id}.${Math.floor(Math.random() * 10000)}`, `${day.slice(2)}-${o.id}`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id, study_uid, accession_no`,
+      [id, p.id, studyUidFor(id), accessionFor(id),
        uid, text(src.patient_id, 64), text(src.patient_name, 200), text(src.birth_date, 10), text(src.sex, 4), text(src.accession, 64),
        text(src.institution, 200), text(src.study_date, 10), text(src.description, 200), text(src.modality, 16), files,
        JSON.stringify({ bytes_announced: bytes, confirm: { birth_differs: !!(b.confirm || {}).birth_differs, sex_differs: !!(b.confirm || {}).sex_differs } }),
@@ -251,7 +263,7 @@ async function openImport(req, res) {
 // PUT /api/pacs/import/:id/instance   (the body is one DICOM file)
 router.put('/:id/instance', authMiddleware, mayImport, async (req, res) => {
   const ctl = new AbortController();
-  req.on('aborted', () => ctl.abort());                     // the browser went away: stop asking the image server
+  req.on('aborted', () => ctl.abort());                     // the program went away: stop asking the image server
   let cfg = null, original = '';
   try {
     const imp = await openImport(req, res);
@@ -345,10 +357,12 @@ router.post('/:id/cancel', authMiddleware, mayImport, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+const fromOf = imp => [imp.institution, imp.study_date].filter(Boolean).join(', ');
+const whatOf = imp => [imp.modality, imp.description].filter(Boolean).join(' ');
+
 // POST /api/pacs/import/:id/finish
-// Checked against the image server, then one transaction: the order gets its images (a
-// worklist line that was never "scheduled" - it cannot reach a device), the import is
-// done, the change log has its line. No line, nothing tied.
+// Checked against the image server, then one transaction: the import is done (the imaging
+// window lists it from now on) and the change log has its line. No line, nothing in the chart.
 router.post('/:id/finish', authMiddleware, mayImport, async (req, res) => {
   try {
     const imp = await openImport(req, res);
@@ -382,23 +396,12 @@ router.post('/:id/finish', authMiddleware, mayImport, async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const o = (await client.query('SELECT id, patient_id, visit_id, order_name, order_code, status FROM order_item WHERE id = $1 FOR UPDATE', [imp.order_item_id])).rows[0];
-      const taken = o ? (await client.query('SELECT 1 FROM worklist_log WHERE order_item_id = $1 LIMIT 1', [o.id])).rows.length : 0;
-      if (!o || o.order_code !== ORDER_CODE || o.status === 'cancelled' || taken) { await client.query('ROLLBACK'); return refuse(res, taken ? 'ORDER_HAS_IMAGES' : 'BAD_ORDER'); }
-      const modality = text(imp.modality, 10) || 'OT';
-      await client.query(
-        `INSERT INTO worklist_log (order_item_id, patient_id, modality, accession_no, study_instance_uid, scheduled_date, scheduled_time, status, completed_at,
-                                   images_received_at, orthanc_study_id, image_count, image_patient_id, image_patient_name, patient_check)
-         VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,CURRENT_TIME,'completed',NOW(),NOW(),$6,$7,$8,$9,'match')`,
-        [o.id, o.patient_id, modality, imp.accession_no, imp.study_uid, st.ID, have, p.chart_no, dicomName(p)]);
-      await client.query(`UPDATE order_item SET pacs_modality = $2, worklist_status = 'completed', updated_at = NOW() WHERE id = $1`, [o.id, modality]);
       const done = await client.query(
-        `UPDATE pacs_import SET state = 'done', finished_at = NOW(), detail = detail || $2::jsonb WHERE id = $1 AND state = 'started' RETURNING id`,
-        [imp.id, JSON.stringify({ undrawn })]);
-      const from = [imp.institution, imp.study_date].filter(Boolean).join(', ');
+        `UPDATE pacs_import SET state = 'done', finished_at = NOW(), image_count = $2, detail = detail || $3::jsonb WHERE id = $1 AND state = 'started' RETURNING id`,
+        [imp.id, have, JSON.stringify({ undrawn })]);
       const logged = done.rows.length && await writeAudit(client, req, {
-        action: ACTIONS.PACS_IMAGES_IMPORT, patient_id: o.patient_id, visit_id: o.visit_id, entity: 'order_item', entity_id: o.id,
-        summary: `${have} image(s), ${(Number(imp.bytes_received) / 1048576).toFixed(1)} MB brought in: ${imp.modality} ${imp.description}`.trim() + (from ? ` (${from})` : '') + ` -> ${o.order_name} (${imp.accession_no})`,
+        action: ACTIONS.PACS_IMAGES_IMPORT, patient_id: imp.patient_id, entity: 'pacs_import', entity_id: imp.id,
+        summary: `Outside images brought in: ${have} image(s), ${(Number(imp.bytes_received) / 1048576).toFixed(1)} MB - ${whatOf(imp)}`.trim() + (fromOf(imp) ? ` (${fromOf(imp)})` : ''),
         after: { image_count: have, size_mb: Math.round(Number(imp.bytes_received) / 104857.6) / 10, institution: imp.institution, study_date: imp.study_date, description: imp.description,
                  modality: imp.modality, came_as_patient_id: imp.source_patient_id, came_as_patient_name: imp.source_patient_name,
                  birth_date_differed: !!((imp.detail || {}).confirm || {}).birth_differs, sex_differed: !!((imp.detail || {}).confirm || {}).sex_differs, accession: imp.accession_no },
@@ -406,39 +409,60 @@ router.post('/:id/finish', authMiddleware, mayImport, async (req, res) => {
       if (!logged) { await client.query('ROLLBACK'); return refuse(res, done.rows.length ? 'NOT_LOGGED' : 'CLOSED'); }
       await client.query('COMMIT');
     } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
-    res.json({ ok: true, order_item_id: imp.order_item_id, images: have, undrawn });
+    res.json({ ok: true, import_id: imp.id, images: have, undrawn });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/pacs/import/list?patient_id=
+// The patient's outside studies, the most recent study first - what the imaging window
+// shows under the patient's own exams. Only imports that finished and were not taken out.
+router.get('/list', authMiddleware, mayImport, async (req, res) => {
+  try {
+    const p = await patientRow(req.query.patient_id);
+    if (!p) return refuse(res, 'NO_PATIENT');
+    res.json({ ok: true, studies: await importedOf(p.id) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/pacs/import/:id/viewer-url
+// Opens one outside study in the viewer: the short cookie of pacs.viewer.js, granted for
+// this study alone. (An order's GET /api/pacs/viewer-url grants by order; an outside study
+// has none.)
+router.get('/:id/viewer-url', authMiddleware, mayOpen, async (req, res) => {
+  try {
+    const id = intOf(req.params.id);
+    const imp = id == null ? null : (await pool.query(`SELECT id, state, study_uid FROM pacs_import WHERE id = $1`, [id])).rows[0];
+    if (!imp) return refuse(res, 'NOT_FOUND');
+    if (imp.state !== 'done') return refuse(res, 'NOT_DONE', { state: imp.state });
+    viewer.grantViewerCookie(req, res, [imp.study_uid]);
+    res.json({ ok: true, import_id: imp.id, study_instance_uid: imp.study_uid, url: '/api/pacs/viewer/stone-webviewer/index.html?study=' + encodeURIComponent(imp.study_uid) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/pacs/import/:id/undo  { reason }
-// An import that should not have been made (the wrong patient's disc): the study is taken
-// off the image server and off the order, which stays, empty. Not while a reading stands
-// on it. The change log says who and why.
+// An import that should not have been made (another patient's disc): the study is taken
+// off the image server and out of the chart; the line stays in the table as 'undone' and
+// the change log says who and why.
 router.post('/:id/undo', authMiddleware, mayUndo, async (req, res) => {
   try {
     const id = intOf(req.params.id);
     const imp = id == null ? null : (await pool.query('SELECT * FROM pacs_import WHERE id = $1', [id])).rows[0];
     if (!imp) return refuse(res, 'NOT_FOUND');
     if (imp.state !== 'done') return refuse(res, 'NOT_DONE', { state: imp.state });
-    const o = imp.order_item_id ? (await pool.query('SELECT id, patient_id, visit_id, order_name, result_text FROM order_item WHERE id = $1', [imp.order_item_id])).rows[0] : null;
-    if (o && String(o.result_text || '').trim()) return refuse(res, 'HAS_READING');
+    const reason = text((req.body || {}).reason, 300);
+    if (!reason) return refuse(res, 'NO_REASON');
     const cfg = await config();
     if (!cfg.orthanc_password) return refuse(res, 'NOT_PAIRED');
     if ((await removeFromServer(cfg, imp)) !== 'gone') return refuse(res, 'UNREACHABLE');
-    const reason = text((req.body || {}).reason, 300);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      if (o) {
-        await client.query('DELETE FROM worklist_log WHERE order_item_id = $1 AND study_instance_uid = $2', [o.id, imp.study_uid]);
-        await client.query(`UPDATE order_item SET pacs_modality = 'OT', updated_at = NOW() WHERE id = $1`, [o.id]);
-      }
-      await client.query(`UPDATE pacs_import SET state = 'undone', finished_at = NOW(), detail = detail || $2::jsonb WHERE id = $1`,
-        [imp.id, JSON.stringify({ undone_by: req.user.name || '', undo_reason: reason })]);
+      await client.query(`UPDATE pacs_import SET state = 'undone', undone_at = NOW(), undone_by = $2, undone_by_name = $3, undo_reason = $4 WHERE id = $1`,
+        [imp.id, req.user.id, req.user.name || null, reason]);
       await writeAudit(client, req, {
-        action: ACTIONS.PACS_IMAGES_IMPORT, patient_id: imp.patient_id, visit_id: o ? o.visit_id : null, entity: 'order_item', entity_id: imp.order_item_id,
-        summary: `Taken out again: ${imp.files_received} image(s) ${imp.modality} ${imp.description}`.trim() + ` (${imp.accession_no})` + (reason ? ` - ${reason}` : ''),
-        after: { undone: true, image_count: imp.files_received, accession: imp.accession_no, reason },
+        action: ACTIONS.PACS_IMAGES_IMPORT, patient_id: imp.patient_id, entity: 'pacs_import', entity_id: imp.id,
+        summary: `Outside images taken out again: ${imp.image_count == null ? imp.files_received : imp.image_count} image(s) - ${whatOf(imp)}`.trim() + (fromOf(imp) ? ` (${fromOf(imp)})` : '') + ` - ${reason}`,
+        after: { undone: true, image_count: imp.image_count, accession: imp.accession_no, reason },
       });
       await client.query('COMMIT');
     } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
@@ -470,20 +494,6 @@ router.post('/resume', authMiddleware, mayUndo, async (req, res) => {
 });
 
 // ── what other parts of the PACS module ask ──────────────────────────────
-// The orders of a patient that carry outside images: order id -> where they came from.
-async function externalByOrder(patientId) {
-  const by = new Map();
-  try {
-    const r = await pool.query(
-      `SELECT id, order_item_id, institution, study_date, description, modality, staff_name, to_char(finished_at, 'YYYY-MM-DD') AS imported_at, detail
-         FROM pacs_import WHERE patient_id = $1 AND state = 'done' AND order_item_id IS NOT NULL`, [patientId]);
-    r.rows.forEach(x => by.set(x.order_item_id, { import_id: x.id, institution: x.institution, study_date: x.study_date, description: x.description, modality: x.modality,
-                                                  imported_at: x.imported_at, imported_by: x.staff_name || '', undrawn: (x.detail || {}).undrawn || [] }));
-  } catch (e) { /* the table is not there yet (code merged before its migration): no order is marked */ }
-  return by;
-}
-// SQL: this order carries outside images, or is taking them in right now.
-const EXTERNAL_ON = col => `EXISTS (SELECT 1 FROM pacs_import pi WHERE pi.order_item_id = ${col} AND pi.state IN ('started', 'cleanup-pending', 'done'))`;
 // Is a study number one an import is working on right now? (The bridge must not report it.)
 async function importingNow(uid) {
   try { return (await pool.query(`SELECT 1 FROM pacs_import WHERE state IN ('started', 'cleanup-pending') AND (study_uid = $1 OR source_study_uid = $1) LIMIT 1`, [uid])).rows.length > 0; }
@@ -495,4 +505,4 @@ async function removedStudies() {
   catch (e) { return []; }
 }
 
-module.exports = { router, WHY, resumePending, externalByOrder, EXTERNAL_ON, importingNow, removedStudies, ORDER_CODE };
+module.exports = { router, WHY, resumePending, importingNow, removedStudies, MAY_IMPORT };
