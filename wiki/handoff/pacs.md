@@ -2,6 +2,30 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — Bethesda CD: 뷰어 이름 VIEWER.EXE · AUTORUN.INF · 16px 아이콘 확인 (설정 세션이 맡음)
+
+- **상태**: 확인 요청 — 일 1~3. 일 4(들여오기 갈래)는 이어서, 따로 보고.
+- **누가**: **설정 세션**(총괄의 일 나누기 — 실장님: 「팍스 세션한테 일이 너무 많으면 분배좀 해줘라」). PACS 세션은 `bethesda-cd\`를 건드리지 않음.
+- **커밋**: **PACS 저장소** 워크트리 `C:\Bethesda-worktrees\pacs-cd`, 브랜치 `session/cd`(main `80417f7`에서) — `3f1cb91`(이름) · `0f970ea`(AUTORUN.INF). push 하지 않음. 위키는 EMR 저장소 `session/settings`의 이 커밋.
+- **일 1 — `VOIR.EXE` → `VIEWER.EXE`**(실장님 결정): 디스크 위의 파일 이름, 프로그램 안의 자원 이름, `README.TXT`의 안내 문단(fr · en — 이름이 두 글자 길어져 줄을 다시 나눔, 가장 긴 줄은 전과 같이 78자), 「뷰어를 넣지 못했습니다」 안내(fr · ko · en), 시험, `bethesda-cd`의 README · CHANGELOG · LICENSE, 저장소 맨 위 README, 옛 `cd-export*.ps1`(같은 뷰어를 그 자리에서 지음). 창 안의 글과 소스 폴더 이름(`src\viewer`)은 그대로. 파일 22개, 줄 58개가 바뀜(BOM · 줄 끝 그대로).
+- **일 2 — `AUTORUN.INF`**: 뷰어가 들어간 디스크에만 네 줄(`[autorun]` · `open=VIEWER.EXE` · `icon=VIEWER.EXE,0` · `action=Voir les images / View the images`), ASCII · CRLF. `DiscFolder.WriteAutorun`이 작업 폴더에 쓰고, 그 폴더가 폴더 저장 · ISO · 굽기에 그대로 가므로 세 길 모두에 들어감. 뷰어가 없으면 쓰지 않고, 남아 있던 것이 있으면 지움. 옛 `cd-export*.ps1`에는 넣지 않음(Bethesda CD가 대신함).
+- **일 3 — 16px 아이콘**: [bethesda-cd-icon-16px-windows.png](../reference/design/bethesda-cd-icon-16px-windows.png) — Windows가 꺼낸 그대로(`SHGetFileInfo`), 있는 그대로와 10배 확대, 밝은 · 어두운 · 고른 바탕. `Bethesda-CD.exe` · 설치 스크립트가 만든 바로가기(화살표 포함) · `VIEWER.EXE` 모두 16px에서 **디자인이 다시 그린 16px 그림 그대로**(청록 네모 · 흰 원 · 십자가가 또렷함). 32px는 원 안의 고리와 십자가. 바로가기는 Windows의 화살표가 왼쪽 아래 1/4을 가림(모든 바로가기가 그러함). 설치는 진짜 설치 스크립트를 **scratch의 가짜 바탕화면 · 가짜 프로그램 폴더로**(`-Desktop` · `-To`) 돌림 — 진짜 바탕화면은 건드리지 않음.
+- **확인한 것** (이 PC, Windows 11, PowerShell 5.1)
+  - `build.ps1` → `Bethesda-CD.exe` 184,320바이트 · 그 안의 `VIEWER.EXE` 79,360바이트. `viewer_test.ps1` 21가지 통과.
+  - 새 `tests\disc_test.ps1`(EMR 없이): 12가지, `-Mount -Sample D:\CD-TEST\JPEG-TEST`(가짜 환자 5장 — 읽기만)로 16가지 통과 — 뷰어가 프로그램에 든 것과 바이트까지 같음 · AUTORUN.INF의 내용 · 뷰어 없는 폴더에는 안 씀 · README가 VIEWER.EXE를 두 번 말함 · 폴더 저장 뒤 다시 읽어 비교 · ISO · **ISO를 가상 드라이브로 물려** CD로 보임 · 파일 목록 · 파일마다 비교 · 내림 · 남는 것 없음.
+  - 물린 ISO에서(scratch의 스크립트): 탐색기의 드라이브 이름 「DVD 드라이브 (H:) IMG_00_00000」, **아이콘이 뷰어의 것**, 메뉴가 「Voir les images / View the images · 자동 실행 열기… · … · 열기 · …」 순, Windows가 읽어 둔 값 `shell\AutoRun\command = "H:\VIEWER.EXE"`, **물렸을 때 실행된 프로그램 0**, 기본 동작(더블클릭과 같음)을 부르니 `H:\VIEWER.EXE`가 열리고 창 제목에 그 디스크의 환자(가짜), 닫고 내림. 이 사용자의 자동 실행 설정은 「켜짐, 프로그램이 든 디스크는 물어봄」.
+  - **Microsoft Defender**(`MpCmdRun -Scan -ScanType 3 -DisableRemediation`): 물린 디스크 · ISO 파일 모두 「found no threats」.
+  - 옛 스크립트: `cd-export-common.ps1`를 불러 `Write-DiscReadme` · `Add-DiscViewer`를 scratch 폴더에 돌림 → `README.TXT` · `VIEWER.EXE`. 바뀐 `.ps1` 여섯은 PowerShell 5.1 파서 통과.
+- **확인 못 한 것**
+  - `app_test.ps1`(시험용 EMR이 있어야 함 — PACS 세션의 격리 스택): 기대하는 폴더 내용만 새 파일에 맞게 고치고 **돌리지 않음**. 옛 `cd-export.bat`의 전체 흐름도 같은 까닭으로 돌리지 않음.
+  - 굽기: 돌리지 않음(실장님 승인이 있어야 함). 굽기 코드는 같은 작업 폴더를 받으므로 AUTORUN.INF가 들어간다는 것은 코드로만.
+  - 진짜 드라이브의 구운 CD에서의 모습, 디스크를 넣을 때 뜨는 **알림 자체**(화면을 보지 않음), 다른 백신, 자동 실행을 막아 둔 PC, Windows 10.
+- **알릴 것**
+  - **아이콘 파일의 모양(디자인 세션께)**: `Bethesda-CD.ico`의 네 장(16 · 32 · 48 · 256)이 **모두 PNG로** 들어 있음. Windows의 탐색기 · 실행 파일 자원은 잘 읽음(위 그림). 다만 .NET의 `Icon` 클래스는 작은 PNG 장을 못 읽어 깨진 그림을 줌(시험 그림을 만들다 봄) — 프로그램은 창 아이콘을 탐색기 방식(`ExtractAssociatedIcon`)으로 꺼내므로 지금 영향 없음. 작은 장(16 · 32 · 48)을 BMP로 넣는 것이 관례이니, 다음에 아이콘을 다시 만들 때 참고.
+  - **이 PC에 남은 것**: ISO를 물릴 때마다 탐색기가 그 가상 디스크의 정보를 사용자 레지스트리(`HKCU\…\Explorer\MountPoints2\{볼륨 번호}`)에 적어 둠 — Windows가 스스로 하는 일이고 지우지 않았음(해가 없는 기록, 서너 줄). scratch의 ISO · 가짜 바탕화면 · 가짜 프로그램 폴더는 세션 scratch에 있음.
+  - 뷰어 창이 **몇 초 동안 실장님 화면에 떴을 수 있음**(기본 동작을 불러 본 한 번, 가짜 환자 — 바로 닫음).
+- **실장님이 이 세션에 직접 하신 말씀**: 「총괄한테 물어봐」(이 일을 맡아도 되는지 창에 띄운 질문의 답) → 총괄에 물어 「맞다」를 받고 시작. 앞으로 묻는 것은 총괄에게(작업 규칙 11절).
+
 ## 2026-10-02 — 외부 영상 들여오기: EMR 쪽(서버 · 「영상/판독」의 외부 영상 묶음) — 오더 없이 환자에게
 
 - **상태**: 확인 요청. 프로그램(Bethesda CD의 「들여오기」) 쪽은 **설정 세션이 맡음**(총괄의 일 나누기) — PACS 세션은 PACS 저장소의 `bethesda-cd\` · `cd-export*.ps1`을 더 건드리지 않음.
