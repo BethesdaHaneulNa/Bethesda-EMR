@@ -1,4 +1,4 @@
--- 601 (statistics, session number): an index on order_item.visit_id.
+-- 053 (statistics, session number): an index on order_item.visit_id.
 --
 -- The order statistics (GET /api/stats/orders, 2026-10-02) pick the visits of a period
 -- and then look up their orders. order_item had indexes on patient_id, worklist_status

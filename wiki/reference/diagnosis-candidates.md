@@ -1,12 +1,26 @@
-# 자주 쓰는 진단 — 넣지 않고 남겨 둔 후보 (179개)
+# 자주 쓰는 진단 — 후보였던 것들 (들어간 것 175 · 남은 것 4)
 
 > 진료 세션 · 2026-10-02 · 관련: [modules/consultation.md](../modules/consultation.md) 2.2.1 · 6절
 
-진단 목록을 100 → 315개로 넓힐 때(`backend/sql`의 `…_consultation_diagnosis_code_more.sql`) **후보로 골랐다가 「약 300개」에 맞추느라 뺀 것**입니다. 드물거나, 이미 넣은 줄과 가까운 것들입니다.
+진단 목록을 100 → 315개로 넓힐 때(052) 「약 300개」에 맞추느라 빼 두었던 후보 179개입니다. 실장님(2026-10-02): 「179개는 뺐다는데 뭐 이정도는 더 추가해도 되지않나?」 → **175개를 넣었습니다**(다음 마이그레이션 — `…_consultation_diagnosis_code_rest.sql`). 목록은 모두 약 490줄이 됩니다.
 
-- 코드는 WHO ICD-10(3자리 · 4자리, 2010년 이후 판)이고, 이름은 **우리가 짧게 쓴 이름**입니다(공식 표제어가 아님).
-- **의료진의 검토를 받지 않았습니다.** 필요한 것은 **설정 → 진단 목록**(Paramètres → Diagnostics)에서 한 줄씩 더하면 됩니다 — 그때 코드와 이름을 다시 확인하세요.
-- 판(edition)에 따라 다른 것: `K35.3`(2010년판부터 — 그 전은 `K35.0`·`K35.1`), `K85.9`(2010년판부터 — 그 전은 `K85`), `L89.9`(2010년판부터 — 그 전은 `L89`).
+- 코드는 WHO ICD-10(3자리 · 4자리, 2010년 이후 판), 이름은 **우리가 짧게 쓴 이름**(공식 표제어가 아님).
+- **의료진의 검토를 받지 않았습니다.** 고칠 것은 **설정 → 진단 목록**(Paramètres → Diagnostics)에서.
+
+## 남은 것 — 넣지 않음 (4개)
+
+코드가 판(edition)마다 다르거나, 일부러 넣지 않기로 한 계열입니다. 필요하면 현지가 쓰는 판을 확인한 뒤 설정에서 손으로 더합니다.
+
+| 코드 | English | Français | 한국어 | 넣지 않은 이유 |
+|---|---|---|---|---|
+| `A90` | Dengue fever | Dengue | 뎅기열 | ICD-10 2016년판에서 뎅기열이 A97로 옮겨 가고 A90·A91이 없어짐 — 판에 따라 없는 코드 |
+| `K85.9` | Acute pancreatitis | Pancréatite aiguë | 급성 췌장염 | 급성 췌장염: 2010년판부터 K85.x로 나뉨(그 전은 K85) — 「넣지 않는 것」 목록의 K85.x |
+| `L89.9` | Pressure sore | Escarre | 욕창 | 욕창: 2010년판부터 단계별 L89.x(그 전은 L89) — 「넣지 않는 것」 목록의 L89.x |
+| `O82.9` | Caesarean delivery | Accouchement par césarienne | 제왕절개 분만 | 제왕절개: 「넣지 않는 것」 목록의 O82.x |
+
+같은 이유로 처음부터 후보에 넣지 않은 것: 설사(증상) `R19.7`(WHO판에 없음 — 미국판 코드) · 치질 등급별 `K64.0`~`K64.3` · 제왕절개 종류별 `O82.x` · 조기 진통 `O60.x` · 욕창 단계 `L89.x` · 급성 췌장염 원인별 `K85.x` · 외인 코드(W·X·Y — 진단이 아니라 원인) · 치과의 세부 코드.
+
+## 들어간 것 (175개)
 
 | 코드 | English | Français | 한국어 |
 |---|---|---|---|
@@ -21,7 +35,6 @@
 | `A60.0` | Genital herpes | Herpès génital | 생식기 헤르페스 |
 | `A63.0` | Anogenital warts | Condylomes ano-génitaux | 항문생식기 사마귀(콘딜로마) |
 | `A82.9` | Rabies | Rage | 광견병 |
-| `A90` | Dengue fever | Dengue | 뎅기열 |
 | `A92.0` | Chikungunya | Chikungunya | 치쿤구니야열 |
 | `B00.9` | Herpes simplex infection | Herpès (infection à herpès simplex) | 단순포진 |
 | `B06.9` | Rubella | Rubéole | 풍진 |
@@ -57,7 +70,6 @@
 | `K52.9` | Non-infectious gastroenteritis or colitis | Gastro-entérite ou colite non infectieuse | 비감염성 위장염·대장염 |
 | `K70.3` | Alcoholic cirrhosis | Cirrhose alcoolique | 알코올성 간경변 |
 | `K76.0` | Fatty liver | Stéatose hépatique (foie gras) | 지방간 |
-| `K85.9` | Acute pancreatitis | Pancréatite aiguë | 급성 췌장염 |
 | `N00.9` | Acute nephritic syndrome | Syndrome néphritique aigu | 급성 신염 증후군 |
 | `N17.9` | Acute kidney failure | Insuffisance rénale aiguë | 급성 신부전 |
 | `G20` | Parkinson disease | Maladie de Parkinson | 파킨슨병 |
@@ -97,7 +109,6 @@
 | `O15.0` | Eclampsia in pregnancy | Éclampsie pendant la grossesse | 임신 중 자간증 |
 | `O42.9` | Premature rupture of membranes | Rupture prématurée des membranes | 조기양막파수 |
 | `O44.1` | Placenta praevia with bleeding | Placenta prævia hémorragique | 출혈을 동반한 전치태반 |
-| `O82.9` | Caesarean delivery | Accouchement par césarienne | 제왕절개 분만 |
 | `O86.0` | Infected caesarean or perineal wound | Infection de la plaie obstétricale | 산과 수술 상처 감염 |
 | `O91.1` | Breast abscess while breastfeeding | Abcès du sein de l'allaitement | 수유기 유방 농양 |
 | `Z32.1` | Pregnancy confirmed | Grossesse confirmée | 임신 확인 |
@@ -156,7 +167,6 @@
 | `L80` | Vitiligo | Vitiligo | 백반증 |
 | `L81.1` | Melasma | Chloasma (mélasma) | 기미 |
 | `L84` | Corns and calluses | Cors et durillons | 티눈·굳은살 |
-| `L89.9` | Pressure sore | Escarre | 욕창 |
 | `D18.0` | Haemangioma | Hémangiome | 혈관종 |
 | `S00.9` | Minor head injury (bruise, graze) | Contusion ou plaie superficielle de la tête | 머리 표재성 손상 |
 | `S01.0` | Wound of the scalp | Plaie du cuir chevelu | 두피 열상 |

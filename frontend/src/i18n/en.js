@@ -1440,6 +1440,7 @@ export default {
   px_mvGoSwap: "Exchange the images",
   px_mvNeed: "Choose the right order.",
   px_mvBusyNow: "Correcting… do not close this window.",
+  px_mvStillWorking: "The image server is still working (a large exam)… do not close this window.",
   px_mvDone: "Done: the images are under the right order.",
   px_mvDoneLater: "The correction is recorded. The image server finishes tidying up by itself, within a few minutes.",
   px_mvCheckList: "Look at the list: the exam's history line says whether the correction took place.",
