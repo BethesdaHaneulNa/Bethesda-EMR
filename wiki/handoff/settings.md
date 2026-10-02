@@ -2,6 +2,21 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 로그 탭: 영수증 여러 장을 합쳐 다시 인쇄함 (`payment.receipt.print_combined`) + 권한 시험 표에 수납의 새 길 셋
+
+- **상태**: 확인 요청
+- **커밋**: session/settings — 이 항목과 같은 커밋 (develop `c36367b` merge 위 — 수납 `82f6d55` 포함)
+- **수납이 쓰는 줄**(`billing.routes.js` `POST /billing/receipts/print-log`): entity `billing`, before 없음, 요약 = 영수번호들(쉼표), `after` = `{ receipts: [번호…], print_document: receipt|statement|both, print_grouping: all|visit_day }`.
+- **로그 탭**
+  - 종류(종류 거르개에도): 「영수증 여러 장을 합쳐 다시 인쇄함 / Receipts printed together / Reçus imprimés ensemble」.
+  - 칸: `print_document` 「뽑은 종이 / Paper / Papier」 · `print_grouping` 「묶는 방식 / Grouping / Regroupement」. `receipts`는 있던 이름표(영수 / Reçus).
+  - **값은 수납 화면 「다시 인쇄」 창의 글자를 그대로 읽음**(따로 번역을 두지 않음): `py_docReceipt`·`py_docStatement`·`py_docBoth`(일반 영수증 · 세부내역서 · 둘 다 / Reçu · Relevé détaillé · Les deux), `py_groupAll`·`py_groupDay`(전체 합산해서 1장 · 같은 진료일끼리 합산 / Tout sur un seul papier · Regrouper par date de consultation). 수납이 글자를 바꾸면 로그도 따라감. 모르는 값은 저장된 글자 그대로(`each`가 오면 `py_groupEach`).
+  - **요약 줄**: 영수번호가 「영수」 칸과 글자까지 같아서 요약에서는 숨김(같은 번호가 나란히 두 번 보이지 않게). 칸이 없거나 다르면 적힌 요약 그대로.
+- **권한 시험 표**(`settings.access.mjs`) — 백엔드의 모든 길과 대조해 **수납의 새 길 셋**을 넣음, 모두 [PAY]: `GET /billing/receipts` · `POST /billing/receipts/print-log` · `PUT /billing/visit/:id/saved-fees`. 빈 본문은 400, 없는 id는 404 — 시험이 로그 줄을 만들지 않는 것 확인. 139 → **142개 × 11 = 1562건**, 모두 표와 같음.
+- **바꾼 파일**: `frontend/src/pages/settingsAudit.js` · `frontend/src/i18n/ko.js`·`en.js`·`fr.js` (se_ 구역 3줄씩) · `backend/test/settings.access.mjs` · `wiki/03-change-log.md`(한 줄) · `wiki/modules/settings.md`(4절 숫자·8절) · 이 노트. 백엔드 라우트는 건드리지 않음.
+- **확인한 방법**: `node --check`, `npm run build`. 새 격리 스택(9187): `settings.access.mjs` 전체 통과. 로그 탭 — 수납이 쓰는 모양 그대로의 줄 셋(receipt·all / both·visit_day / statement·all)을 격리 DB에 넣고 프랑스어·한국어로 읽음: 「Reçus: R26-00011, R26-00012 · Papier: Relevé détaillé · Regroupement: Tout sur un seul papier」, 「영수: … · 뽑은 종이: 둘 다 · 묶는 방식: 같은 진료일끼리 합산」. **수납 화면에서 실제로 합쳐 인쇄해 남긴 줄로는 보지 않았음**(영수증을 만들어야 해서 — 줄의 모양은 코드에서 읽음). 스택 `down -v`.
+- **실장님이 이 세션에 직접 물으신 것**: 없음.
+
 ## 2026-10-01 — 로그 탭: 영상 반출 줄의 칸 (`pacs.images.export`, PACS `f7daaac` 뒤)
 
 - **상태**: 확인 요청

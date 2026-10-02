@@ -113,6 +113,11 @@ const ROUTES = [
   ['PUT',  '/billing/' + X + '/void',       [PAY], {}],
   ['POST', '/billing/visit/' + X + '/correct', [PAY], {}],
   ['POST', '/billing/settle',               [PAY], {}],
+  // several receipts read at once and the line for printing them as one paper; the fees kept
+  // on a visit before it is paid (2026-10-02). The empty bodies are 400s, the unknown id a 404.
+  ['GET',  '/billing/receipts?ids=' + X,    [PAY]],
+  ['POST', '/billing/receipts/print-log',   [PAY], {}],
+  ['PUT',  '/billing/visit/' + X + '/saved-fees', [PAY], {}],
   // pharmacy.routes.js
   ['GET',  '/pharmacy/pending',             [PHARM]],
   ['GET',  '/pharmacy/completed',           [PHARM]],
