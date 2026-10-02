@@ -13,6 +13,7 @@
 | 처방을 지움 | `consultation.prescription.delete` | 진료 |
 | 오더를 지움 / 취소함 | `consultation.order.delete` · `consultation.order.cancel` | 진료 |
 | 영수를 취소함 / 정정함 | `payment.receipt.cancel` · `payment.receipt.correct` | 수납 |
+| 영수증 여러 장을 합쳐 다시 인쇄함(둘 이상을 한 종이로 뽑을 때만 — 한 장 다시 인쇄와 수납 직후 인쇄는 남기지 않음. 영수증·금액은 바뀌지 않음, 줄을 못 써도 인쇄는 됨. 2026-10-02) | `payment.receipt.print_combined` | 수납 (`billing.routes.js` `POST /billing/receipts/print-log`) · 로그 탭 이름표는 설정(「Reçus imprimés ensemble」, 칸 `receipts` · `print_document`(receipt 일반 영수증 / statement 세부내역서 / both 둘 다) · `print_grouping`(all 전체 합산해서 1장 / visit_day 같은 진료일끼리 합산) — 값의 말은 수납 화면 「다시 인쇄」 창의 글자 그대로) |
 | 환자 인적사항을 고침 | `reception.patient.edit` | 접수 |
 | 내원의 과·의사를 바꿈(전과 — 진료 화면의 단추든 접수 화면의 저장이든, 실제로 바뀔 때만) | `visit.transfer` | 접수 (`visit.routes.js` `applyTransfer`) |
 | 영상을 접수번호로 다시 이음(영상 서버에서 검사 번호가 바뀌어 끊긴 연결을 영상 창을 열 때 EMR이 되찾음 — 사람이 누른 것이 아니라 EMR이 한 일, 그 환자 줄로) | `pacs.study.relink` | PACS (`pacs.relink.js`) · 로그 탭 이름표는 설정(2026-10-01: 「Images retrouvées par le numéro d'accession」, 칸 `study_uid`·`image_count`·`image_patient_id`·`patient_check`) |

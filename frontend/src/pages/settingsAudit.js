@@ -23,6 +23,9 @@ export var AUDIT_ACTIONS = {
   'consultation.order.cancel': 'se_act_orderCancel',
   'payment.receipt.cancel': 'se_act_receiptCancel',
   'payment.receipt.correct': 'se_act_receiptCorrect',
+  // several receipts printed again as one paper (payment, billing.routes.js): which
+  // receipts, which paper, how grouped - no receipt and no amount changes
+  'payment.receipt.print_combined': 'se_act_receiptPrintCombined',
   'reception.patient.edit': 'se_act_patientEdit',
   // a visit moved to another department or doctor (reception, visit.routes.js applyTransfer)
   'visit.transfer': 'se_act_visitTransfer',
@@ -68,6 +71,8 @@ var FIELDS = {
   payment_status: 'se_fld_paymentStatus', outstanding: 'se_fld_outstanding',
   balance_restored_to: 'se_fld_balanceRestoredTo', receipts: 'se_fld_receipts', total_due: 'se_fld_totalDue',
   amount_paid: 'se_fld_amountPaid', refund: 'se_fld_refund', refunded_amount: 'se_fld_refundedAmount', items: 'se_fld_items',
+  // receipts printed together: the paper (receipt / statement / both), how they were grouped
+  print_document: 'se_fld_printDocument', print_grouping: 'se_fld_printGrouping',
   // consultation (d7cee75): note and vital signs of a finished consultation
   subjective: 'se_fld_subjective', objective: 'se_fld_objective', assessment: 'se_fld_assessment', plan: 'se_fld_plan',
   note_text: 'se_fld_noteText', bp_systolic: 'se_fld_bpSys', bp_diastolic: 'se_fld_bpDia', temperature: 'se_fld_temperature',
@@ -163,6 +168,10 @@ export function auditSummary(t, row) {
     var list = String(row.after_value.exams).split('; ');
     return list[0] + (list.length > 1 ? ' + ' + (list.length - 1) : '');
   }
+  // Receipts printed together: the summary is the receipt numbers, and so is the field
+  // "receipts" right beside it - said once, in the field.
+  if (row.action === 'payment.receipt.print_combined' && row.after_value && Array.isArray(row.after_value.receipts)
+      && row.after_value.receipts.join(', ') === row.summary) return '';
   if (row.action === 'reception.patient.edit' && row.summary) {
     return row.summary.split(/,\s*/).map(function (f) { return auditFieldLabel(t, f); }).join(', ');
   }
@@ -211,6 +220,10 @@ export function auditValue(t, field, v, ctx) {
   // the language a document was printed in, in its own name
   if (field === 'lang' && LANG_NAMES[v]) return LANG_NAMES[v];
   if ((field === 'voided' || field === 'reading_moved' || field === 'readings_exchanged') && typeof v === 'boolean') return v ? (t.se_yes || '✓') : (t.se_no || '✗');
+  // receipts printed together, in the words of the payment screen's "print again" window
+  // (py_doc*, py_group*), so the log says what the cashier chose
+  if (field === 'print_document') { var pd = { receipt: 'py_docReceipt', statement: 'py_docStatement', both: 'py_docBoth' }[v]; return (pd && t[pd]) || String(v); }
+  if (field === 'print_grouping') { var pg = { all: 'py_groupAll', visit_day: 'py_groupDay', each: 'py_groupEach' }[v]; return (pg && t[pg]) || String(v); }
   // what a copy of the images was made on: zip (the EMR screen), disc / iso / folder (the CD program)
   if (field === 'medium' && t['se_medium_' + v]) return t['se_medium_' + v];
   // megabytes, with the decimal mark of the screen's language and its unit (Mo in French)
