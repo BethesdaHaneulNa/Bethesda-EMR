@@ -337,7 +337,21 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 **다른 세션에 부탁**: 임상병리 목록에는 검색 칸이 없습니다 — 넣는 것은 동작이라 임상병리 세션 몫(넣을 때 `LIST_SEARCH_WRAP` · `LIST_SEARCH` 를 쓰면 모양이 맞습니다). 새 목록 화면을 만들 때는 `layout.js` 의 값을 쓰기.
 
-### 3.10 세 프로그램의 공통 아이콘 — 후보 (2026-10-02, 고르시기 전)
+### 3.10 세 프로그램의 공통 아이콘 — **정해짐: 안 C, EMR 은 집 그림** (2026-10-02)
+
+**실장님 결정(2026-10-02, 그림을 보시고 하신 말씀 그대로)**: 「C안으로, EMR 그림만 종이 말고 다른 걸로 다시 그려 줘」 → EMR 그림 넷(집 · 하트 · 차트 폴더 · 사람, `wiki/reference/design/bethesda-icon-emr-shapes.png`)을 보시고 **「가. 집 (병원)」**.
+
+| 프로그램 | 색 | 흰 모양 | 정해진 그림 | .ico (16 · 32 · 48 · 256) |
+|---|---|---|---|---|
+| Bethesda EMR | 파랑 `#3b82f6` → `#1d4ed8` | 지붕이 있는 집(베데스다 = 「자비의 집」) + 십자 | `icons/final/bethesda-emr.svg` | `icons/ico/bethesda-emr.ico` |
+| Bethesda PACS | 보라 `#8b5cf6` → `#5b21b6` | 받침 달린 화면 + 십자 | `icons/final/bethesda-pacs.svg` | `icons/ico/bethesda-pacs.ico` |
+| Bethesda CD | 청록 `#1596b3` → `#155e75` | 디스크 + 십자 | `icons/final/bethesda-cd.svg` | `icons/ico/bethesda-cd.ico` |
+
+(경로는 모두 `wiki/reference/design/` 아래.) .ico 는 `node icons.mjs` → `sheet-server.mjs` 를 띄워 `/3` 을 열면 PNG 가 `icons/png/` 에 생기고 → `node ico.mjs` 가 묶습니다(PNG 를 그대로 담은 .ico — Windows Vista 이후가 읽는 형식). Windows 의 `System.Drawing.Icon` 으로 셋 다 열리는 것을 확인.
+
+**아직 안 한 것**(공용 파일을 고치는 일이라 총괄 승인 뒤): EMR 의 favicon(`index.html`) · 로그인 화면의 표식(`Login.jsx` 의 「B」 → 집 그림), 바탕화면 바로가기에 .ico 를 붙이는 것(설치 스크립트), Bethesda CD 의 exe 아이콘(PACS 세션의 `make-icon.ps1` 이 `bethesda-cd.ico` 를 쓰게). 16px 은 큰 그림을 줄인 것 그대로 — 실제 바탕화면 · 탭에서 흐리면 그 크기만 따로 다듬음.
+
+아래는 고르시기 전의 후보 기록입니다.
 
 실장님 말씀(2026-10-02, 총괄이 전함): 「아이콘은 우리 공통 아이콘부터 만들고 그걸 기반으로 하자, 세 프로그램에서 기반이 될 아이콘」. 설치하면 바탕화면에 바로가기 셋(Bethesda EMR · Bethesda PACS · Bethesda CD)이 나란히 생길 예정이라, 한 집안으로 보이면서 서로 구별되어야 합니다. **지금은 후보 그림뿐이고, 코드(favicon · 로그인 표식 · .ico · exe 아이콘)에는 고르신 뒤에 넣습니다.**
 

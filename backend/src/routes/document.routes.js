@@ -17,6 +17,23 @@ const canIssueDocs = permMiddleware('consultation', 'payment', 'pharmacy');
 // The screen (external-rx.jsx issueBlocked) says the same in the user's language.
 const NO_EXTERNAL = 'No prescription marked external: nothing to issue';
 
+// Issued or only printed (director, 2026-10-02: "why are the imaging reports in the issue
+// history? If it was printed, just keep a log line"). A document is ISSUED when a doctor
+// writes it and gives it out - the referral letter, the medical certificate, the outside
+// prescription, the chart records: it takes a number and a row here. A RESULT SHEET - the
+// imaging report, the lab results, an exam's pictures - is a result that already exists,
+// put on paper: no number, no row, one change-log line (POST /print-log below; the
+// pictures' line is pacs.images.print, written by /api/pacs/export/printed).
+// Rows of these three kinds issued before the change stay in document_log and are no
+// longer listed by the screens. A screen still loaded from before the change would issue
+// them here: refused, so that it says so instead of numbering a sheet.
+const PRINT_ONLY = ['imaging-report', 'lab-results', 'imaging-images'];
+const PRINTED_NOT_ISSUED = 'This sheet is printed, not issued';
+const NOT_LOGGED = 'The print could not be logged';
+// The people who can open the windows these sheets are printed from (the imaging list and
+// the lab results window, on the consultation and payment screens).
+const canPrintResults = permMiddleware('consultation', 'payment');
+
 // Change log (decision 2026-09-30, (다) both; wiki/03-change-log.md 1절 「서류」): every
 // document issued and every document voided makes one line, so the log tab shows every
 // paper that left the clinic. The line names the paper (number and name) and never
@@ -79,6 +96,7 @@ router.post('/', canIssueDocs, (req, res) => inTx(res, async (client) => {
   if (!template_code || !patient_id) {
     return [400, { error: 'template_code and patient_id required' }];
   }
+  if (PRINT_ONLY.indexOf(template_code) >= 0) return [400, { error: PRINTED_NOT_ISSUED }];
   // An outside prescription lists the visit's lines marked external; with none it was
   // issued as an empty paper that still took a number (integration test 2026-09-29, A;
   // pharmacy session). Checked before a number is drawn.
@@ -119,6 +137,80 @@ router.post('/', canIssueDocs, (req, res) => inTx(res, async (client) => {
   });
   return [201, d];
 }));
+
+// POST /api/documents/print-log - a result sheet is being printed: the change-log line,
+// and nothing else. The screen prints only when this answered 200 - no line, no paper.
+//   { kind: 'imaging-report', patient_id, order_item_ids: [id, ...], lang }
+//       one line per exam (pacs.report.print): the exam must be the patient's and have a
+//       reading. after = { order_name, accession_no, lang }.
+//   { kind: 'lab-results', patient_id, visit_id?, dates: ['YYYY-MM-DD', ...], test_count, lang }
+//       one line (laboratory.results.print). after = { dates, test_count, lang }.
+// -> { ok: true, lines: n }. 400 for a body that names nothing to print, 404 for an exam
+// that is not this patient's, 409 for an exam with no reading, 500 NOT_LOGGED when the
+// line could not be written (everything is rolled back: no half-logged print).
+router.post('/print-log', canPrintResults, (req, res) => inTx(res, async (client) => {
+  const b = req.body || {};
+  const patientId = parseInt(b.patient_id, 10);
+  const lang = ['fr', 'en', 'ko'].indexOf(b.lang) >= 0 ? b.lang : null;
+  if (!patientId) return [400, { error: 'patient_id required' }];
+  const pat = await client.query('SELECT id FROM patient WHERE id = $1', [patientId]);
+  if (pat.rows.length === 0) return [404, { error: 'Patient not found' }];
+
+  if (b.kind === 'imaging-report') {
+    const ids = Array.isArray(b.order_item_ids) ? b.order_item_ids.map((x) => parseInt(x, 10)) : [];
+    if (!ids.length || ids.length > 50 || ids.some((x) => !(x > 0)) || new Set(ids).size !== ids.length) {
+      return [400, { error: 'order_item_ids must list the exams printed' }];
+    }
+    const exams = await client.query(
+      `SELECT oi.id, oi.patient_id, oi.visit_id, oi.order_name, oi.result_text,
+              (SELECT w.accession_no FROM worklist_log w WHERE w.order_item_id = oi.id ORDER BY w.id DESC LIMIT 1) AS accession_no
+         FROM order_item oi WHERE oi.id = ANY($1::int[])`, [ids]);
+    const byId = {};
+    exams.rows.forEach((e) => { byId[e.id] = e; });
+    for (const id of ids) {
+      const e = byId[id];
+      if (!e || e.patient_id !== patientId) return [404, { error: 'Exam not found for this patient' }];
+      if (String(e.result_text || '').trim() === '') return [409, { error: 'Exam has no reading to print' }];
+    }
+    for (const id of ids) {
+      const e = byId[id];
+      const logged = await writeAudit(client, req, {
+        action: ACTIONS.PACS_REPORT_PRINT, patient_id: patientId, visit_id: e.visit_id,
+        entity: 'order_item', entity_id: e.id,
+        summary: 'Reading of ' + e.order_name + (e.accession_no ? ' (' + e.accession_no + ')' : '') + ' printed',
+        after: { order_name: e.order_name, accession_no: e.accession_no || null, lang: lang },
+      });
+      if (!logged) return [500, { error: NOT_LOGGED, code: 'NOT_LOGGED' }];
+    }
+    return [200, { ok: true, lines: ids.length }];
+  }
+
+  if (b.kind === 'lab-results') {
+    const dates = Array.isArray(b.dates) ? b.dates.map(String) : [];
+    const tests = parseInt(b.test_count, 10);
+    if (!dates.length || dates.length > 100 || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d)) || !(tests > 0)) {
+      return [400, { error: 'dates and test_count must say what is printed' }];
+    }
+    let visitId = null;
+    if (!blankId(b.visit_id)) {
+      const v = await client.query('SELECT id FROM visit WHERE id = $1 AND patient_id = $2', [parseInt(b.visit_id, 10) || 0, patientId]);
+      if (v.rows.length === 0) return [404, { error: 'Visit not found for this patient' }];
+      visitId = v.rows[0].id;
+    }
+    const days = Array.from(new Set(dates)).sort();
+    const logged = await writeAudit(client, req, {
+      action: ACTIONS.LAB_RESULTS_PRINT, patient_id: patientId, visit_id: visitId,
+      entity: 'patient', entity_id: patientId,
+      summary: 'Lab results of ' + (days.length === 1 ? days[0] : days[0] + ' .. ' + days[days.length - 1]) + ' printed',
+      after: { dates: days.join(', '), test_count: tests, lang: lang },
+    });
+    if (!logged) return [500, { error: NOT_LOGGED, code: 'NOT_LOGGED' }];
+    return [200, { ok: true, lines: 1 }];
+  }
+
+  return [400, { error: "kind must be 'imaging-report' or 'lab-results'" }];
+}));
+function blankId(v) { return v === undefined || v === null || v === ''; }
 
 // POST /api/documents/:id/void  — 발급 취소 (이력은 남기고 무효 표시)
 // A document already voided is returned as it is: a second void used to write its own

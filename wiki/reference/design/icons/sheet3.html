@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bethesda icons - PNG for the .ico</title>
+<!-- Draws the chosen marks at 16, 32, 48 and 256 and posts each as PNG to sheet-server.mjs
+     (saved under png/). Generated into sheet3.html by icons.mjs. Design session tooling. -->
+<body style="margin:0;background:#888">
+<script>
+var FINAL = {"emr":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gEhouse\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gEhouse)\"/><path fill=\"#fff\" stroke=\"#fff\" stroke-width=\"18\" stroke-linejoin=\"round\" d=\"M128 58L198 114V198H58V114Z\"/><rect x=\"95\" y=\"139.5\" width=\"66\" height=\"21\" rx=\"5.25\" fill=\"#1d4ed8\"/><rect x=\"117.5\" y=\"117\" width=\"21\" height=\"66\" rx=\"5.25\" fill=\"#1d4ed8\"/></svg>","pacs":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCpacs\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8b5cf6\"/><stop offset=\"1\" stop-color=\"#5b21b6\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCpacs)\"/><rect x=\"40\" y=\"56\" width=\"176\" height=\"122\" rx=\"16\" fill=\"#fff\"/><rect x=\"112\" y=\"176\" width=\"32\" height=\"20\" fill=\"#fff\"/><rect x=\"84\" y=\"192\" width=\"88\" height=\"16\" rx=\"8\" fill=\"#fff\"/><rect x=\"93\" y=\"106\" width=\"70\" height=\"22\" rx=\"5.5\" fill=\"#5b21b6\"/><rect x=\"117\" y=\"82\" width=\"22\" height=\"70\" rx=\"5.5\" fill=\"#5b21b6\"/></svg>","cd":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCcd\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#1596b3\"/><stop offset=\"1\" stop-color=\"#155e75\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCcd)\"/><circle cx=\"128\" cy=\"128\" r=\"88\" fill=\"#fff\"/><circle cx=\"128\" cy=\"128\" r=\"62\" fill=\"none\" stroke=\"#155e75\" stroke-opacity=\".22\" stroke-width=\"6\"/><rect x=\"94\" y=\"117\" width=\"68\" height=\"22\" rx=\"5.5\" fill=\"#155e75\"/><rect x=\"117\" y=\"94\" width=\"22\" height=\"68\" rx=\"5.5\" fill=\"#155e75\"/><circle cx=\"128\" cy=\"128\" r=\"7\" fill=\"#fff\"/></svg>"};
+(async function () {
+  function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+  var done = [];
+  for (var p of Object.keys(FINAL)) { var im = await img(FINAL[p]); for (var s of [16, 32, 48, 256]) {
+    var c = document.createElement('canvas'); c.width = s; c.height = s; var ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, 0, 0, s, s); document.body.appendChild(c);
+    var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+    var r = await fetch('/png?name=ico-' + p + '-' + s, { method: 'POST', body: blob }); done.push(p + s + ':' + r.status);
+  } }
+  window.__sheets = done.join(' '); document.title = 'done';
+})();
+</script>
+</body>

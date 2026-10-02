@@ -120,11 +120,11 @@ function reportValues(r) {
 // Preview and print of the imaging report - one A4 sheet per exam (director,
 // 2026-10-01: the reading goes with the images when a patient is referred elsewhere).
 // The sheet's language is chosen here, French first: it is read in another hospital,
-// whatever language this screen is in. Printing issues the paper through the document
-// engine (POST /api/documents, one number and one change-log line per sheet) - it is a
-// patient document leaving the clinic. The number is shown in this window only (to find
-// the paper again in the documents history) - it is not printed on the sheet. Printing
-// the same sheets again does not issue them again, changing the language does.
+// whatever language this screen is in. Printing is not issuing (director, 2026-10-02): the
+// sheet takes no number and no row in the documents history - one change-log line per
+// exam (POST /api/documents/print-log, pacs.report.print), and nothing is printed unless
+// it answered. Printing the same sheets again from this window does not log them again,
+// changing the language does.
 //   props.exams      the rows to print (each must pass printBlock)
 //   props.patientId  props.t  props.onClose()
 export function ReportPrint(props) {
@@ -132,7 +132,7 @@ export function ReportPrint(props) {
   var lg = useState('fr'), lang = lg[0], setLang = lg[1];
   var cs = useState(null), clinic = cs[0], setClinic = cs[1];
   var ps = useState(null), patient = ps[0], setPatient = ps[1];
-  var ns = useState(null), issued = ns[0], setIssued = ns[1];    // { examId: doc_no } once issued
+  var ns = useState(null), issued = ns[0], setIssued = ns[1];    // true once the print is in the change log
   var bs = useState(false), busy = bs[0], setBusy = bs[1];
   var go = useState(0), printNow = go[0], setPrintNow = go[1];
   var sheet = useRef(null);
@@ -157,21 +157,12 @@ export function ReportPrint(props) {
     if (!ready || busy) return;
     if (issued) { setPrintNow(printNow + 1); return; }
     setBusy(true);
-    var done = {};
     try {
-      for (var i = 0; i < exams.length; i++) {
-        var r = exams[i];
-        var saved = await api.post('/documents', {
-          template_code: 'imaging-report', template_name: IMAGING_REPORT_NAME[lang] || IMAGING_REPORT_NAME.fr,
-          patient_id: props.patientId, visit_id: r.visit_id || null, lang: lang,
-          payload: { values: reportValues(r), patient: who, clinic: clinic, lang: lang, dateStr: now.current, order_item_id: r.id },
-        });
-        done[r.id] = saved.doc_no;
-      }
-      setIssued(done); setPrintNow(printNow + 1);
+      // The lines for every exam are written together, or none is: nothing is printed half-logged.
+      await api.post('/documents/print-log', { kind: 'imaging-report', patient_id: props.patientId,
+        order_item_ids: exams.map(function (r) { return r.id; }), lang: lang });
+      setIssued(true); setPrintNow(printNow + 1);
     } catch (e) {
-      // Sheets issued before the failure keep their numbers; nothing is printed half-done.
-      if (Object.keys(done).length) setIssued(null);
       alert(t.px_printFail + (e && e.message ? e.message : ''));
     }
     setBusy(false);
@@ -199,14 +190,14 @@ export function ReportPrint(props) {
                 <style>{'@page{@bottom-right{content:counter(page) " / " counter(pages);font:8pt sans-serif;color:#444}}'}</style>
                 {exams.map(function (r, i) {
                   return <ImagingReportLayout key={r.id} values={reportValues(r)} patient={who} clinic={clinic} lang={lang}
-                    docNo={issued ? issued[r.id] : ''} dateStr={now.current} last={i === exams.length - 1} />;
+                    docNo="" dateStr={now.current} last={i === exams.length - 1} />;
                 })}
               </div>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderTop: '1px solid var(--border-2)', background: 'var(--panel-head)' }}>
           <span style={{ flex: 1, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
-            {issued ? String(t.px_printIssued || '').replace('{x}', exams.map(function (r) { return issued[r.id]; }).join(', ')) : t.px_printNote}</span>
+            {issued ? t.px_printIssued : t.px_printNote}</span>
           <button onClick={issueAndPrint} disabled={!ready || busy} style={Object.assign({}, btn, { background: ready && !busy ? 'var(--violet-deep)' : 'var(--chip)', color: ready && !busy ? 'var(--on-fill-violet)' : 'var(--text-3)', border: '1px solid ' + (ready && !busy ? 'var(--violet-ink)' : 'var(--border-2)') })}>
             🖨 {issued ? t.px_printAgain : t.px_printGo}</button>
         </div>
