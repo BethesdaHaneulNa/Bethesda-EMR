@@ -201,6 +201,16 @@ line's number makes that one main. Earlier diagnoses show in the patient chart o
 the referral letter opens with the consultation's diagnoses already in its diagnosis
 field. The list itself will be managed in Settings.
 
+### Medical certificate
+
+The documents window offered only the referral letter. It now also offers a **medical
+certificate** on one A4 page, in French, English or Korean: the patient, the diagnoses
+of the consultation with their codes, the date, the clinic and the physician are filled
+in; the physician ticks clinical or final diagnosis and writes the history, the findings
+and any remarks. The licence number is typed, or left blank to be written by hand - the
+staff record has no such field yet. Issuing, reprinting and voiding work as for the
+referral letter, and each certificate issued makes a line in the change log.
+
 ### Smaller changes on the screen
 
 - The patient bar's list of the patient's images and readings is called **Imagerie**

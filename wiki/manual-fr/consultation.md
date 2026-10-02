@@ -151,6 +151,17 @@ Les ordonnances types se créent et se modifient dans **Paramètres** (administr
 8. Le **Compte-rendu d'imagerie** (la feuille imprimée depuis la liste **Imagerie**, pour accompagner les images vers un autre hôpital) n'est pas dans la liste **Formulaires** : il se fait seulement depuis **Imagerie** (guide PACS). Une fois émis, il apparaît ici dans **Historique** comme les autres documents : on peut le rouvrir, le **Réimprimer** et l'**Annuler**.
 9. Un document émis par erreur : ouvrez-le dans **Historique**, cliquez sur **Annuler** et écrivez le motif. Il reste dans l'historique avec **ANNULÉ**. Refaites-le avec **+ Nouveau**. L'émission et l'annulation sont notées dans le journal des modifications (numéro et nom du document, jamais son contenu).
 
+**Certificat médical.** Cliquez sur **Documents**, puis sur **Certificat médical** à gauche.
+
+1. Le patient, les diagnostics de la consultation, la date, la clinique et votre nom sont déjà remplis.
+2. Cochez **Diagnostic clinique** ou **Diagnostic définitif**.
+3. Écrivez **Histoire de la maladie ou de la blessure**, **Constatations et avis du médecin** et, s'il y a lieu, **Remarques**.
+4. **Adresse** : à remplir si le dossier du patient n'en a pas. **N° d'inscription à l'Ordre** : tapez-le, ou laissez vide pour l'écrire à la main sur le papier.
+5. La case **Diagnostic** peut être corrigée : une ligne par diagnostic, le code d'abord s'il y en a un.
+6. Cliquez sur **Émettre**, puis **🖨 Réimprimer**, et signez. Le certificat tient sur une page, sauf si le texte est très long.
+
+<!-- terme à vérifier sur place : « N° d'inscription à l'Ordre » (numéro ONM ?), « Diagnostic définitif », le titre « Certificat médical » -->
+
 <!-- terme à vérifier sur place : noms des formulaires opératoires et termes médicaux des comptes-rendus (liste dans wiki/modules/consultation.md 3.6) -->
 
 ### 11. Dossier Patient
