@@ -1516,6 +1516,12 @@ export default {
   ds_themeSwitch: "Couleurs de l'écran (sombre / clair / papier)",
   ds_themeLight: "Clair",
   ds_themePaper: "Papier",
+  // the groups of the statistics screen (side menu)
+  ds_stSummary: "Résumé",
+  ds_stMoney: "Recettes · caisse",
+  ds_stPatients: "Patients · activité",
+  ds_stOrders: "Examens · actes",
+  ds_stDrugs: "Médicaments",
   ds_themeDark: "Sombre",
   // ── end design ──
 };

@@ -1525,6 +1525,12 @@ export default {
   ds_themeSwitch: "Screen colours (dark / light / paper)",
   ds_themeLight: "Light",
   ds_themePaper: "Paper",
+  // the groups of the statistics screen (side menu)
+  ds_stSummary: "Summary",
+  ds_stMoney: "Revenue · cash",
+  ds_stPatients: "Patients · activity",
+  ds_stOrders: "Orders",
+  ds_stDrugs: "Drugs",
   ds_themeDark: "Dark",
   // ── end design ──
 };
