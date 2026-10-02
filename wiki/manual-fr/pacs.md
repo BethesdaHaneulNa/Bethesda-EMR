@@ -203,7 +203,6 @@ Quand un autre hôpital demande les images elles-mêmes, on les copie sur un CD 
 6. Pas de graveur sur ce PC ? **Enregistrer dans un dossier…** (une clé USB : un nouveau dossier y est créé) ou **Enregistrer en fichier ISO…** (à graver sur un autre PC).
 
 - Le disque contient les images d'origine (format DICOM) et un fichier **README.TXT** qui dit de quel patient et de quels examens il s'agit. L'autre hôpital l'ouvre avec son logiciel d'imagerie (« importer un CD »). Le compte-rendu n'est pas sur le disque : imprimez-le (§ 9).
-- **Ajouter la visionneuse d'images au disque** (si cette case est proposée) : cochez-la quand le destinataire n'a pas de logiciel d'imagerie (un patient, un petit cabinet). Le disque reçoit alors une visionneuse ; le destinataire double-clique sur **VOIR.BAT** (Windows 64 bits) et les images s'ouvrent toutes seules, après une fenêtre en anglais où il clique sur **I accept**. La visionneuse prend environ 140 Mo sur le disque. Pour un hôpital qui a son propre logiciel, inutile de la cocher.
 - Seul un disque **vierge** est utilisé. Un disque qui contient déjà quelque chose n'est jamais effacé.
 - Chaque copie est notée dans le journal des modifications de l'EMR (qui, quel patient, quels examens).
 - **« La connexion a été coupée… Rien n'a été copié »** : recommencez. **« Le serveur d'images ne répond pas »** : réessayez dans un instant, puis prévenez l'administrateur.
