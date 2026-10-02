@@ -349,7 +349,9 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 (경로는 모두 `wiki/reference/design/` 아래.) .ico 는 `node icons.mjs` → `sheet-server.mjs` 를 띄워 `/3` 을 열면 PNG 가 `icons/png/` 에 생기고 → `node ico.mjs` 가 묶습니다(PNG 를 그대로 담은 .ico — Windows Vista 이후가 읽는 형식). Windows 의 `System.Drawing.Icon` 으로 셋 다 열리는 것을 확인.
 
-**아직 안 한 것**(공용 파일을 고치는 일이라 총괄 승인 뒤): EMR 의 favicon(`index.html`) · 로그인 화면의 표식(`Login.jsx` 의 「B」 → 집 그림), 바탕화면 바로가기에 .ico 를 붙이는 것(설치 스크립트), Bethesda CD 의 exe 아이콘(PACS 세션의 `make-icon.ps1` 이 `bethesda-cd.ico` 를 쓰게). 16px 은 큰 그림을 줄인 것 그대로 — 실제 바탕화면 · 탭에서 흐리면 그 크기만 따로 다듬음.
+**EMR 에 넣음**(2026-10-02, 총괄 승인): 브라우저 탭 아이콘 — `frontend/public/favicon.ico` · `favicon.svg`(새 파일, `final/bethesda-emr.svg` 와 같은 그림) + `index.html` 의 `<link rel="icon">` 두 줄. 로그인 화면의 표식 — `Login.jsx` 의 파란 네모 안 글자 「B」 → 흰 집 + 십자(같은 자리 · 60px, 네모의 색은 전처럼 이름표 `--accent` → `--accent-strong`). 세 테마의 로그인 화면에서 네모 파랑 · 집 흰색 · 십자 `rgb(29,78,216)` 로 같음. 화면에 「B」 표식은 로그인 한 곳뿐이었음(상단바에는 없음). 밖에서 받아 오는 것 없음.
+
+**아직 안 한 것**: 바탕화면 바로가기에 .ico 를 붙이는 것(설치 스크립트), Bethesda CD 의 exe 아이콘(PACS 세션의 `make-icon.ps1` 이 `bethesda-cd.ico` 를 쓰게). 16px 은 큰 그림을 줄인 것 그대로 — 실제 바탕화면 · 탭에서 흐리면 그 크기만 따로 다듬음.
 
 아래는 고르시기 전의 후보 기록입니다.
 
@@ -535,6 +537,7 @@ EMR 화면의 **색**만 맡습니다. 지금 화면은 어두운 색 한 가지
 
 | 날짜 | 무엇 |
 |---|---|
+| 2026-10-02 | EMR 의 탭 아이콘(favicon)과 로그인 화면 표식을 정해진 집 그림으로 (3.10) |
 | 2026-10-02 | 진료 화면 다시 확인(진단 칸 · 진단서): 서류 미리보기의 서명 칸 글자 크기를 인쇄와 같게(`documents/shared.jsx` 한 줄), 나머지는 진료 세션에 넘김 (3.11) |
 | 2026-10-02 | 공통 아이콘 정해짐 — 안 C, EMR 은 집 그림. SVG · .ico 셋 (3.10) |
 | 2026-10-02 | 세 프로그램(EMR · PACS · CD) 공통 아이콘 **후보 세 안**의 그림과 그리는 스크립트 — 코드에는 아직 넣지 않음 (3.10) |
