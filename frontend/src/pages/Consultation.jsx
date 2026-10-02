@@ -948,21 +948,39 @@ export default function ConsultationPage() {
   function plain(x){ var s = String(x == null ? '' : x).toLowerCase(); try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e){} return s; }
   // The list under the diagnosis box: from two letters, every list row whose code or
   // name - in ANY of the three languages, so "malaria" and "palu" both find it - holds
-  // what was typed; rows already on the consultation are left out. Code matches first,
-  // then names that begin with it, then the list's own order. The last line always
-  // offers to save the words as typed, with no code.
+  // what was typed; rows already on the consultation are left out. With some three
+  // hundred rows the order matters (2026-10-02): the code that IS what was typed, then
+  // codes that begin with it, then names that begin with it, then names with a word that
+  // begins with it, then names that only contain it; within one rank, the list's own
+  // order. The last line always offers to save the words as typed, with no code.
+  // DX_ABBR: what the doctors say for short. Typed exactly, an abbreviation also finds
+  // the rows whose name holds the words it stands for - «hta» finds «Hypertension
+  // artérielle» although the row does not spell HTA - and ranks them with the names that
+  // begin with it. (A row can also carry its abbreviation in its name: Settings.)
+  var DX_ABBR = { hta:['hypertension arterielle'], avc:['accident vasculaire', 'avc '], tb:['tubercul'], bk:['tubercul'],
+    ist:['sexuellement transmissible'], mst:['sexuellement transmissible'], bpco:['bronchopneumopathie chronique'], copd:['chronic obstructive'],
+    rgo:['reflux gastro'], ugd:['ulcere gastro', 'ulcere de l\'estomac', 'ulcere du duodenum'], hbp:['hyperplasie de la prostate'],
+    geu:['extra-uterine'], gea:['gastro-enterite'], ira:['infection aigue des voies respiratoires', 'infection respiratoire'],
+    oma:['otite moyenne'], irc:['renale chronique'], itu:['voies urinaires', 'infection urinaire'], dt2:['diabete de type 2'], dt1:['diabete de type 1'],
+    palu:['paludisme'], vih:['vih'], hiv:['hiv'], uti:['urinary tract infection'], uri:['upper respiratory'] };
   var dxSugg = useMemo(function(){
     var q = plain(dxQ).trim();
     if(q.length < 2) return [];
     var onIt = {}; dxList.forEach(function(d){ if(d.diagnosis_code_id) onIt[d.diagnosis_code_id] = 1; });
+    var means = DX_ABBR[q] || [];
     var rank = function(c){
-      if(plain(c.code).indexOf(q) === 0) return 0;
-      if([c.name_en, c.name_fr, c.name_ko].some(function(n){ return plain(n).indexOf(q) === 0; })) return 1;
-      return 2;
+      var code = plain(c.code), names = [c.name_en, c.name_fr, c.name_ko].map(plain);
+      if(code && code === q) return 0;
+      if(code && code.indexOf(q) === 0) return 1;
+      if(names.some(function(n){ return n.indexOf(q) === 0; })) return 2;
+      if(means.length && names.some(function(n){ return means.some(function(w){ return n.indexOf(w) >= 0; }); })) return 2;
+      if(names.some(function(n){ return n.split(/[^a-z0-9\u00c0-\uffff]+/).some(function(w){ return w.indexOf(q) === 0; }); })) return 3;
+      if(code.indexOf(q) >= 0 || names.some(function(n){ return n.indexOf(q) >= 0; })) return 4;
+      return -1;
     };
-    var out = (dxCodes||[]).filter(function(c){
-      return !onIt[c.id] && [c.code, c.name_en, c.name_fr, c.name_ko].some(function(n){ return plain(n).indexOf(q) >= 0; });
-    }).map(function(c){ return { c: c, r: rank(c) }; })
+    var out = (dxCodes||[]).filter(function(c){ return !onIt[c.id]; })
+      .map(function(c){ return { c: c, r: rank(c) }; })
+      .filter(function(x){ return x.r >= 0; })
       .sort(function(a, b){ return (a.r - b.r) || (a.c.sort_order - b.c.sort_order) || (a.c.id - b.c.id); })
       .map(function(x){ return x.c; });
     var typed = dxQ.trim();

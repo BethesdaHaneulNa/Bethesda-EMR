@@ -192,7 +192,7 @@ without typing is no longer possible.
 
 The clinic pointed out that the consultation screen had nowhere to enter a diagnosis.
 There is now a **Diagnostic** box on the left, above the prescriptions. Typing two letters
-of a name or a code searches a list of a hundred frequent outpatient diagnoses, each with
+of a name or a code searches a list of some three hundred frequent diagnoses, each with
 its ICD-10 code and its name in French, English and Korean; a diagnosis that is not in the
 list is typed as it is and saved without a code - the name is what the clinic needs, the
 code is optional. The diagnoses are listed in a small table like the prescriptions'
