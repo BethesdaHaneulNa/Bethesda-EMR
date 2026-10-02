@@ -2,6 +2,20 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 문서만: 진단 목록의 관리 화면(설정 → 진단 목록)을 반영
+
+- **상태**: 확인 요청
+- **커밋**: session/consultation (이 항목과 같은 커밋) — develop `d3b5ebd` 다음
+- **한 일**(총괄 지시, 코드는 손대지 않음): 설정 세션이 「진단 목록」 탭을 만들어 배포함 →
+  - `wiki/modules/consultation.md` 6절 「관리 화면은 아직 없습니다」 → 「설정 → 진단 목록(Paramètres → Diagnostics)」, 3.2의 같은 말, 2.2.1에 「목록에 없는 진단은 관리자가 설정에서 더함」 한 줄, 8절.
+  - `wiki/manual-fr/consultation.md` Diagnostic 절: «l'administrateur l'ajoute dans Paramètres → Diagnostics».
+- **덧붙인 사실 하나**: 진료 화면은 화면을 열 때 진단 목록을 **한 번** 읽습니다(`loadData`). 설정에서 목록을 고친 뒤에는 진료 화면을 새로 고쳐야(F5) 새 진단이 찾기에 나옵니다 — 두 문서에 적었습니다. 약·오더 코드 목록도 같은 방식입니다.
+- **면허번호 칸**: 총괄이 `8b92fce`로 뺐습니다(실장님: 「면허번호 쪽은 빼자」) — 받아서 그대로입니다.
+- **바꾼 파일**: `wiki/modules/consultation.md` · `wiki/manual-fr/consultation.md` · 이 노트
+- **공용 파일 변경**: 없음 · **DB 마이그레이션**: 없음 · **번역 키**: 없음
+- **확인한 방법**: 설정 탭의 이름(`se_tabDiagnoses` «Diagnostics» / 「진단 목록」)과 관리 라우트(`/api/admin/diagnosis-codes`)를 코드에서 확인. 화면은 띄우지 않았습니다(문서만).
+- **다른 세션에 부탁**: 없음 · **남은 일 · 알려진 문제**: 없음.
+
 ## 2026-10-02 — 진단서 (Certificat médical / Medical Certificate)
 
 - **상태**: 확인 요청
