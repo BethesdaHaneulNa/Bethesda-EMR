@@ -421,7 +421,6 @@ export function RadiologyReadings(props) {
                 {/* the tag first: a long exam name must not push it out of the cell */}
                 <span style={Object.assign({ background: 'var(--warn-chip)', color: 'var(--warn-text-2)' }, chip, { marginLeft: 0, marginRight: 6 })}>{t.px_xChip}</span>
                 <span style={{ color: tx, fontWeight: 700 }}>{outsideName(x, t)}</span>
-                {x.institution ? <span style={{ color: t2, marginLeft: 6, fontSize: 12 }}>{x.institution}</span> : null}
               </span>
               <span style={Object.assign({ fontSize: 12, fontWeight: 700, color: 'var(--ok-text)' }, cell)}>{String(t.px_imgShort || '').replace('{n}', x.image_count == null ? '?' : x.image_count)}</span>
               <span style={Object.assign({ fontSize: 12, color: t2 }, cell)}>—</span>
