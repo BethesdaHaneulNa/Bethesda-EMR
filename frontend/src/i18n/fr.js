@@ -857,6 +857,16 @@ export default {
   st_allDepts: "Tous les services",
   st_allDoctors: "Tous les médecins",
   st_typed: "saisie libre",
+  st_patients: "Patients",
+  st_ageBand: "Âge",
+  st_sexUnknown: "Sexe inconnu",
+  st_ptNew: "Nouveaux patients",
+  st_ptReturning: "Patients déjà connus",
+  st_visits: "Visites",
+  st_ptBasis: "Selon la date de visite · enregistrements annulés exclus · chaque patient compté une fois, à son âge lors de sa première visite de la période · « Nouveaux patients » : aucune visite à l’hôpital avant la période (différent de Nouvelle / Suivi à l’accueil)",
+  st_workload: "Activité par service et par médecin",
+  st_wlOrders: "Actes prescrits",
+  st_wlBasis: "Selon la date de visite · enregistrements annulés exclus · actes prescrits : examens, imagerie et actes non annulés (sans les médicaments) · les patients ne s’additionnent pas d’une ligne à l’autre (une personne peut voir deux services)",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "Sauvegardes en ordre",

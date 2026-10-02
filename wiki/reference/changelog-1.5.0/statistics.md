@@ -36,9 +36,12 @@ The average used to be cash collected divided by receipts. Unpaid receipts, old 
 
 The Voided card counted both receipts cancelled by staff and receipts replaced by a correction, which are not refunds. It now counts staff cancellations only. The cash handed back when a receipt is cancelled appears as money out in the till figures, on the day it was handed back.
 
-### New: which diagnoses and which orders were most frequent
+### New: who came, who saw them, what they had, what was ordered
 
-Two tables answer what the clinic saw and asked for most in a period. Each has its own two dates (the last 30 days to start with), can be narrowed to one department or one doctor, lists the most frequent first, and downloads as CSV.
+Four tables describe the clinical side of a period. Each has its own two dates (the last 30 days to start with) and downloads as CSV. The patient, diagnosis and order tables can be narrowed to one department or one doctor.
+
+- **Patients** counts the people who came, by age band (under 5, 5–14, 15–49, 50 and over), split by sex and into new and returning patients, with their visits. Each person is counted once, at their age on their first visit of the period, so the bands add up to the total. "New" means the hospital had no earlier visit on record for that person. It is not the New / Follow-up visit type chosen at reception, which sets the consultation fee and still shows in the activity cards.
+- **Workload by department and doctor** gives visits, distinct patients and orders for each department and each doctor. The visit column matches the existing activity charts for the same period.
 
 - **Diagnoses** counts consultations and distinct patients per diagnosis, and splits the patients by sex and by age on the day of the visit (under 5, 5–14, 15–49, 50 and over). It counts each consultation's main diagnosis by default, so every consultation counts once; "All diagnoses" adds the secondary ones. A diagnosis picked from the list is one row whatever language it was picked in, and shows its name in the screen's language. One typed freely is grouped as written and marked "typed".
 - **Orders** counts lab, imaging and procedure orders by code: how many times, what quantity, and what they were priced at. That value is the price of what was ordered, not money received, and the screen says so. Orders are counted on the day of the visit. Cancelled orders and orders of cancelled registrations are left out. Images a patient brings in are not orders and are not counted.

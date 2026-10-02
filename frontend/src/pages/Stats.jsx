@@ -47,6 +47,12 @@ export default function StatsPage(){
   var ods = useState(null), ordData = ods[0], setOrdData = ods[1];
   var dfs = useState({ from:'', to:'', scope:'primary', dept:'', doc:'' }), dxF = dfs[0], setDxF = dfs[1];
   var dds = useState(null), dxData = dds[0], setDxData = dds[1];
+  // Who came (patients by age, sex, new or known) and who saw them (departments and
+  // doctors): same frame as the rankings - own dates, last 30 days when empty.
+  var pfs = useState({ from:'', to:'', dept:'', doc:'' }), ptF = pfs[0], setPtF = pfs[1];
+  var pds = useState(null), ptData = pds[0], setPtData = pds[1];
+  var wfs = useState({ from:'', to:'' }), wlF = wfs[0], setWlF = wfs[1];
+  var wds = useState(null), wlData = wds[0], setWlData = wds[1];
 
   var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
@@ -76,6 +82,14 @@ export default function StatsPage(){
     var q = rankQuery(dxF); q.push('scope='+dxF.scope);
     api.get('/stats/diagnoses?'+q.join('&')).then(setDxData).catch(function(){ setDxData({ rows:[], total:{ cases:0, patients:0 }, from:dxF.from, to:dxF.to }); });
   }, [dxF.from, dxF.to, dxF.scope, dxF.dept, dxF.doc]);
+  useEffect(function(){
+    var q = rankQuery(ptF);
+    api.get('/stats/patients'+(q.length?'?'+q.join('&'):'')).then(setPtData).catch(function(){ setPtData({ bands:[], total:{ patients:0 }, from:ptF.from, to:ptF.to }); });
+  }, [ptF.from, ptF.to, ptF.dept, ptF.doc]);
+  useEffect(function(){
+    var q = rankQuery(wlF);
+    api.get('/stats/workload'+(q.length?'?'+q.join('&'):'')).then(setWlData).catch(function(){ setWlData({ departments:[], doctors:[], total:{ visits:0, patients:0, orders:0 }, from:wlF.from, to:wlF.to }); });
+  }, [wlF.from, wlF.to]);
   // Editing one date keeps the other as shown; a start after the end is ignored
   // (same rule as the drug and cash tables).
   function rankDates(f, setF, data, which, v){
@@ -101,6 +115,25 @@ export default function StatsPage(){
     (dxData.rows||[]).forEach(function(r){ lines.push([csvText(r.code), csvText(dxName(r)), r.typed?1:0, r.cases, r.patients, r.male, r.female, r.age_0_4, r.age_5_14, r.age_15_49, r.age_50, r.age_unknown].join(',')); });
     lines.push(['"TOTAL"','','',dxData.total.cases,dxData.total.patients,'','','','','','',''].join(','));
     downloadCsv('diagnoses-'+(dxData.from||'')+'_'+(dxData.to||'')+'.csv', lines);
+  }
+  var BAND_LABEL = { '0_4':'<5', '5_14':'5–14', '15_49':'15–49', '50':'50+' };
+  function bandLabel(b){ return BAND_LABEL[b] || (t.st_ageUnknown||'나이 모름'); }
+  function exportPatientsCsv(){
+    if(!ptData) return;
+    var cols = ['patients','male','female','sex_unknown','new_patients','returning_patients','visits'];
+    var lines = [['age_band','patients','male','female','sex_unknown','new','returning','visits'].join(',')];
+    // Band codes as in the diagnosis file's headers (age_0_4 ...): "5-14" as text would be read by Excel as a date.
+    (ptData.bands||[]).forEach(function(r){ lines.push([csvText(r.band==='unknown'?'age_unknown':'age_'+r.band+(r.band==='50'?'_plus':''))].concat(cols.map(function(k){ return r[k]; })).join(',')); });
+    lines.push(['"TOTAL"'].concat(cols.map(function(k){ return ptData.total[k]; })).join(','));
+    downloadCsv('patients-'+(ptData.from||'')+'_'+(ptData.to||'')+'.csv', lines);
+  }
+  function exportWorkloadCsv(){
+    if(!wlData) return;
+    var lines = [['group','code','name','visits','patients','orders'].join(',')];
+    (wlData.departments||[]).forEach(function(r){ lines.push(['"department"', csvText(r.code||''), csvText(r.code==null?(t.st_unassigned||'미지정'):(lang==='fr'?(r.name_fr||r.name_en||r.name):lang==='en'?(r.name_en||r.name):r.name)), r.visits, r.patients, r.orders].join(',')); });
+    (wlData.doctors||[]).forEach(function(r){ lines.push(['"doctor"', '""', csvText(doctorLabel(r)), r.visits, r.patients, r.orders].join(',')); });
+    lines.push(['"TOTAL"','','',wlData.total.visits,wlData.total.patients,wlData.total.orders].join(','));
+    downloadCsv('workload-'+(wlData.from||'')+'_'+(wlData.to||'')+'.csv', lines);
   }
   // The list row's name in the screen's language; a typed line has only what was written.
   function orderName(r){ return lang==='ko' ? (r.name||r.name_en) : (r.name_en||r.name); }
@@ -398,7 +431,7 @@ export default function StatsPage(){
           })()}
         </Section>
 
-        {/* 진단 통계 · 오더 통계 — 약품 사용통계와 같은 틀(기간 · 거르기 · 표 · CSV), 많은 것이 위 */}
+        {/* 환자 통계 · 과·의사별 · 진단 통계 · 오더 통계 — 약품 사용통계와 같은 틀(기간 · 거르기 · 표 · CSV), 많은 것이 위 */}
         {(function(){
           var th = { padding:'7px 10px', textAlign:'right', position:'sticky', top:0, background:scBg, borderBottom:'1px solid '+bd, whiteSpace:'nowrap' };
           var thL = Object.assign({}, th, { textAlign:'left' });
@@ -408,10 +441,13 @@ export default function StatsPage(){
           var csvBtn = { background:'var(--chip)', color:'var(--ok-text)', border:'1px solid '+bd2, borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:13, fontWeight:700 };
           var typedTag = <span style={{ marginLeft:6, fontSize:11, color:t3, border:'1px solid '+bd2, borderRadius:3, padding:'0 4px', flexShrink:0 }}>{t.st_typed||'직접 입력'}</span>;
           function num(v){ return v ? fmtAr(v) : '·'; }
-          function filters(f, setF, data){ return <>
+          function dates(f, setF, data){ return <>
             <input type="date" value={f.from||(data&&data.from)||''} max={f.to||(data&&data.to)||undefined} onChange={function(e){rankDates(f, setF, data, 'from', e.target.value)}} style={dateStyle} />
             <span style={{ color:t3 }}>~</span>
             <input type="date" value={f.to||(data&&data.to)||''} min={f.from||(data&&data.from)||undefined} onChange={function(e){rankDates(f, setF, data, 'to', e.target.value)}} style={dateStyle} />
+          </>; }
+          function filters(f, setF, data){ return <>
+            {dates(f, setF, data)}
             <select value={f.dept} onChange={patch(f, setF, 'dept')} style={selStyle}>
               <option value="">{t.st_allDepts||'전체 진료과'}</option>
               {(opts.departments||[]).map(function(d){ return <option key={d.id} value={d.id}>{deptLabel(d)}</option>; })}
@@ -432,7 +468,87 @@ export default function StatsPage(){
           var empty = { color:t3, fontSize:13, padding:'12px 2px' };
           var dxRows = (dxData&&dxData.rows)||[], ordRows = (ordData&&ordData.rows)||[];
           var anyAgeUnknown = dxRows.some(function(r){ return r.age_unknown; });
+          var ptTotal = (ptData&&ptData.total)||{}, ptBands = ((ptData&&ptData.bands)||[]).filter(function(r){ return r.band!=='unknown' || r.patients; });
+          var anySexUnknown = !!ptTotal.sex_unknown;
+          var wlTotal = (wlData&&wlData.total)||{};
+          var totalCell = Object.assign({}, td, { color:tx, fontWeight:800, borderTop:'1px solid '+bd2 });
+          function ptCells(r, cell){ return <>
+            <td style={Object.assign({}, cell, cell===td?{ color:'var(--ok-text)', fontWeight:800 }:null)}>{num(r.patients)}</td>
+            <td style={cell}>{num(r.male)}</td><td style={cell}>{num(r.female)}</td>
+            {anySexUnknown?<td style={cell}>{num(r.sex_unknown)}</td>:null}
+            <td style={cell}>{num(r.new_patients)}</td><td style={cell}>{num(r.returning_patients)}</td>
+            <td style={cell}>{num(r.visits)}</td>
+          </>; }
+          function wlTable(title, rows, label){ return <div style={Object.assign({ flex:1, minWidth:340 }, box)}>
+            <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+              <thead><tr style={{ color:t3 }}>
+                <th style={Object.assign({}, thL, { color:t2 })}>{title}</th>
+                <th style={Object.assign({}, th, { color:tx })}>{t.st_visits||'내원 수'}</th><th style={th}>{t.st_dxPatients||'환자 수'}</th><th style={th}>{t.st_wlOrders||'오더 건수'}</th>
+              </tr></thead>
+              <tbody>
+                {rows.map(function(r,i){ return <tr key={i} style={{ borderBottom:'1px solid var(--line-soft)' }}>
+                  <td title={label(r)} style={nameCell}><div style={nameRow}><span style={nameText}>{label(r)}</span></div></td>
+                  <td style={Object.assign({}, td, { color:'var(--ok-text)', fontWeight:800 })}>{fmtAr(r.visits)}</td><td style={td}>{fmtAr(r.patients)}</td><td style={td}>{num(r.orders)}</td>
+                </tr>; })}
+              </tbody>
+            </table>
+          </div>; }
           return <>
+            <Section title={'👥 '+(t.st_patients||'환자 통계')}>
+              <div style={bar}>
+                {filters(ptF, setPtF, ptData)}
+                <div style={{ flex:1 }}></div>
+                <button onClick={exportPatientsCsv} disabled={!ptTotal.patients} style={csvBtn}>⬇ CSV</button>
+              </div>
+              {!ptData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!ptTotal.patients?<div style={empty}>{t.noData||'데이터 없음'}</div>:
+              <div style={box}>
+                <div style={head}>
+                  {ptData.from} ~ {ptData.to} · {t.st_dxPatients||'환자 수'} {fmtAr(ptTotal.patients)} · {t.st_ptNew||'처음 온 환자'} {fmtAr(ptTotal.new_patients)} · {t.st_ptReturning||'다시 온 환자'} {fmtAr(ptTotal.returning_patients)} · {t.st_visits||'내원 수'} {fmtAr(ptTotal.visits)}
+                  <div style={{ marginTop:3 }}>{t.st_ptBasis||'내원일 기준 · 취소된 접수 제외 · 한 사람은 한 번만, 나이는 기간 중 첫 내원일 기준 · 「처음 온 환자」는 이 기간 전에 병원에 온 기록이 없는 사람(접수의 초진/재진과 다름)'}</div>
+                </div>
+                <div style={{ overflow:'auto' }}>
+                  <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+                    <thead><tr style={{ color:t3 }}>
+                      <th style={thL}>{t.st_ageBand||'나이대'}</th>
+                      <th style={Object.assign({}, th, { color:tx })}>{t.st_dxPatients||'환자 수'}</th>
+                      <th style={th}>{t.st_male||'남'}</th><th style={th}>{t.st_female||'여'}</th>
+                      {anySexUnknown?<th style={th}>{t.st_sexUnknown||'성별 모름'}</th>:null}
+                      <th style={th}>{t.st_ptNew||'처음 온 환자'}</th><th style={th}>{t.st_ptReturning||'다시 온 환자'}</th>
+                      <th style={th}>{t.st_visits||'내원 수'}</th>
+                    </tr></thead>
+                    <tbody>
+                      {ptBands.map(function(r){ return <tr key={r.band} style={{ borderBottom:'1px solid var(--line-soft)' }}>
+                        <td style={{ padding:'6px 10px', color:tx, fontWeight:700, whiteSpace:'nowrap' }}>{bandLabel(r.band)}</td>{ptCells(r, td)}
+                      </tr>; })}
+                    </tbody>
+                    {/* Each patient sits in one band, so here the columns do add up. */}
+                    <tfoot><tr style={{ background:pn }}>
+                      <td style={{ padding:'7px 10px', color:tx, fontWeight:800, borderTop:'1px solid '+bd2 }}>{t.total||'합계'}</td>{ptCells(ptTotal, totalCell)}
+                    </tr></tfoot>
+                  </table>
+                </div>
+              </div>)}
+            </Section>
+
+            <Section title={'📋 '+(t.st_workload||'과 · 의사별 진료량')}>
+              <div style={bar}>
+                {dates(wlF, setWlF, wlData)}
+                <div style={{ flex:1 }}></div>
+                <button onClick={exportWorkloadCsv} disabled={!wlTotal.visits} style={csvBtn}>⬇ CSV</button>
+              </div>
+              {!wlData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!wlTotal.visits?<div style={empty}>{t.noData||'데이터 없음'}</div>:
+              <div>
+                <div style={{ fontSize:12, color:t3, padding:'0 2px 10px' }}>
+                  {wlData.from} ~ {wlData.to} · {t.st_visits||'내원 수'} {fmtAr(wlTotal.visits)} · {t.st_dxPatients||'환자 수'} {fmtAr(wlTotal.patients)} · {t.st_wlOrders||'오더 건수'} {fmtAr(wlTotal.orders)}
+                  <div style={{ marginTop:3 }}>{t.st_wlBasis||'내원일 기준 · 취소된 접수 제외 · 오더 건수는 취소하지 않은 검사 · 영상 · 처치 오더(약 제외) · 환자 수는 줄끼리 더할 수 없음(한 사람이 두 과에 올 수 있음)'}</div>
+                </div>
+                <div style={{ display:'flex', gap:14, flexWrap:'wrap', alignItems:'flex-start' }}>
+                  {wlTable(t.byDept||'진료과별', wlData.departments||[], deptLabel)}
+                  {wlTable(t.byDoctor||'의사별', wlData.doctors||[], doctorLabel)}
+                </div>
+              </div>)}
+            </Section>
+
             <Section title={'🩺 '+(t.st_diagnoses||'진단 통계')}>
               <div style={bar}>
                 <select value={dxF.scope} onChange={patch(dxF, setDxF, 'scope')} style={selStyle}>

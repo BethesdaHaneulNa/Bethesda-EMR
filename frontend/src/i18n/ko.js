@@ -857,6 +857,16 @@ export default {
   st_allDepts: "전체 진료과",
   st_allDoctors: "전체 의사",
   st_typed: "직접 입력",
+  st_patients: "환자 통계",
+  st_ageBand: "나이대",
+  st_sexUnknown: "성별 모름",
+  st_ptNew: "처음 온 환자",
+  st_ptReturning: "다시 온 환자",
+  st_visits: "내원 수",
+  st_ptBasis: "내원일 기준 · 취소된 접수 제외 · 한 사람은 한 번만, 나이는 기간 중 첫 내원일 기준 · 「처음 온 환자」는 이 기간 전에 병원에 온 기록이 없는 사람(접수의 초진/재진과 다름)",
+  st_workload: "과 · 의사별 진료량",
+  st_wlOrders: "오더 건수",
+  st_wlBasis: "내원일 기준 · 취소된 접수 제외 · 오더 건수는 취소하지 않은 검사 · 영상 · 처치 오더(약 제외) · 환자 수는 줄끼리 더할 수 없음(한 사람이 두 과에 올 수 있음)",
   // ── end statistics ──
   // ── begin settings (se_) ──
   se_bkOk: "백업 정상",
