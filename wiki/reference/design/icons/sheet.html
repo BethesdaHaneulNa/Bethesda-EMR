@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bethesda icons - comparison sheets</title>
+<!-- Draws one sheet per candidate on a canvas and posts it as PNG to the helper server
+     (sheet-server.mjs). Generated into sheet.html by icons.mjs. Design session tooling. -->
+<body style="margin:0;background:#888">
+<script>
+var ICONS = {"A-emr":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gAemr\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gAemr)\"/><path fill=\"#fff\" fill-rule=\"evenodd\" transform=\"translate(-5 0)\" d=\"M84 60H138A32 32 0 0 1 138 124H84Z M84 124H146A36 36 0 0 1 146 196H84Z M112 84H137A13 13 0 0 1 137 110H112Z M112 138H143A17 17 0 0 1 143 172H112Z\"/></svg>","A-pacs":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gApacs\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8b5cf6\"/><stop offset=\"1\" stop-color=\"#5b21b6\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gApacs)\"/><path fill=\"#fff\" fill-rule=\"evenodd\" transform=\"translate(-5 0)\" d=\"M84 60H138A32 32 0 0 1 138 124H84Z M84 124H146A36 36 0 0 1 146 196H84Z M112 84H137A13 13 0 0 1 137 110H112Z M112 138H143A17 17 0 0 1 143 172H112Z\"/></svg>","A-cd":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gAcd\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#1596b3\"/><stop offset=\"1\" stop-color=\"#155e75\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gAcd)\"/><path fill=\"#fff\" fill-rule=\"evenodd\" transform=\"translate(-5 0)\" d=\"M84 60H138A32 32 0 0 1 138 124H84Z M84 124H146A36 36 0 0 1 146 196H84Z M112 84H137A13 13 0 0 1 137 110H112Z M112 138H143A17 17 0 0 1 143 172H112Z\"/></svg>","B-emr":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gBemr\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gBemr)\"/><path fill=\"#fff\" d=\"M84 44H150L190 84V198A14 14 0 0 1 176 212H84A14 14 0 0 1 70 198V58A14 14 0 0 1 84 44Z\"/><path fill=\"#1d4ed8\" opacity=\".28\" d=\"M150 44L190 84H162A12 12 0 0 1 150 72Z\"/><rect x=\"92\" y=\"130\" width=\"76\" height=\"24\" rx=\"6\" fill=\"#1d4ed8\"/><rect x=\"118\" y=\"104\" width=\"24\" height=\"76\" rx=\"6\" fill=\"#1d4ed8\"/></svg>","B-pacs":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gBpacs\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gBpacs)\"/><rect x=\"40\" y=\"56\" width=\"176\" height=\"122\" rx=\"16\" fill=\"#fff\"/><rect x=\"112\" y=\"176\" width=\"32\" height=\"20\" fill=\"#fff\"/><rect x=\"84\" y=\"192\" width=\"88\" height=\"16\" rx=\"8\" fill=\"#fff\"/><rect x=\"93\" y=\"106\" width=\"70\" height=\"22\" rx=\"5.5\" fill=\"#1d4ed8\"/><rect x=\"117\" y=\"82\" width=\"22\" height=\"70\" rx=\"5.5\" fill=\"#1d4ed8\"/></svg>","B-cd":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gBcd\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gBcd)\"/><circle cx=\"128\" cy=\"128\" r=\"88\" fill=\"#fff\"/><circle cx=\"128\" cy=\"128\" r=\"62\" fill=\"none\" stroke=\"#1d4ed8\" stroke-opacity=\".22\" stroke-width=\"6\"/><rect x=\"94\" y=\"117\" width=\"68\" height=\"22\" rx=\"5.5\" fill=\"#1d4ed8\"/><rect x=\"117\" y=\"94\" width=\"22\" height=\"68\" rx=\"5.5\" fill=\"#1d4ed8\"/><circle cx=\"128\" cy=\"128\" r=\"7\" fill=\"#fff\"/></svg>","C-emr":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCemr\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3b82f6\"/><stop offset=\"1\" stop-color=\"#1d4ed8\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCemr)\"/><path fill=\"#fff\" d=\"M84 44H150L190 84V198A14 14 0 0 1 176 212H84A14 14 0 0 1 70 198V58A14 14 0 0 1 84 44Z\"/><path fill=\"#1d4ed8\" opacity=\".28\" d=\"M150 44L190 84H162A12 12 0 0 1 150 72Z\"/><rect x=\"92\" y=\"130\" width=\"76\" height=\"24\" rx=\"6\" fill=\"#1d4ed8\"/><rect x=\"118\" y=\"104\" width=\"24\" height=\"76\" rx=\"6\" fill=\"#1d4ed8\"/></svg>","C-pacs":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCpacs\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8b5cf6\"/><stop offset=\"1\" stop-color=\"#5b21b6\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCpacs)\"/><rect x=\"40\" y=\"56\" width=\"176\" height=\"122\" rx=\"16\" fill=\"#fff\"/><rect x=\"112\" y=\"176\" width=\"32\" height=\"20\" fill=\"#fff\"/><rect x=\"84\" y=\"192\" width=\"88\" height=\"16\" rx=\"8\" fill=\"#fff\"/><rect x=\"93\" y=\"106\" width=\"70\" height=\"22\" rx=\"5.5\" fill=\"#5b21b6\"/><rect x=\"117\" y=\"82\" width=\"22\" height=\"70\" rx=\"5.5\" fill=\"#5b21b6\"/></svg>","C-cd":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" width=\"256\" height=\"256\"><defs><linearGradient id=\"gCcd\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#1596b3\"/><stop offset=\"1\" stop-color=\"#155e75\"/></linearGradient></defs><rect x=\"16\" y=\"16\" width=\"224\" height=\"224\" rx=\"52\" fill=\"url(#gCcd)\"/><circle cx=\"128\" cy=\"128\" r=\"88\" fill=\"#fff\"/><circle cx=\"128\" cy=\"128\" r=\"62\" fill=\"none\" stroke=\"#155e75\" stroke-opacity=\".22\" stroke-width=\"6\"/><rect x=\"94\" y=\"117\" width=\"68\" height=\"22\" rx=\"5.5\" fill=\"#155e75\"/><rect x=\"117\" y=\"94\" width=\"22\" height=\"68\" rx=\"5.5\" fill=\"#155e75\"/><circle cx=\"128\" cy=\"128\" r=\"7\" fill=\"#fff\"/></svg>"}; var META = {"A":{"name":"글자 B","note":"지금 로그인 화면의 파란 「B」 그대로. 프로그램은 색으로만 구별(EMR 파랑 · PACS 보라 · CD 청록)."},"B":{"name":"모양 + 십자, 한 가지 파랑","note":"셋 다 같은 파랑. 프로그램은 흰 모양으로 구별(기록지 · 화면 · 디스크), 가운데 십자가 공통 표식."},"C":{"name":"모양 + 십자 + 색","note":"B 의 모양에 프로그램마다 색을 더함. 모양과 색 두 가지로 구별."}}; var PROGRAMS = {"emr":"Bethesda EMR","pacs":"Bethesda PACS","cd":"Bethesda CD"};
+(async function () {
+  var W = 1840, ROW = 372, TOP = 96, H = TOP + ROW * 3 + 24;
+  var FONT = '"Malgun Gothic","Segoe UI",system-ui,sans-serif';
+  function img(svg) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+  // a desktop-like background, drawn: a soft blue-green field with two light shapes
+  function wallpaper(ctx, x, y, w, h) {
+    var g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#0b4f8a'); g.addColorStop(0.55, '#1b7fa8'); g.addColorStop(1, '#3fa58c'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x + w * 0.72, y + h * 1.25, w * 0.5, h * 0.9, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.10; ctx.beginPath(); ctx.ellipse(x + w * 0.2, y - h * 0.3, w * 0.4, h * 0.8, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  var done = [];
+  for (var key of Object.keys(META)) {
+    var c = document.createElement('canvas'); c.width = W; c.height = H; var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#111827'; ctx.font = '700 34px ' + FONT; ctx.textBaseline = 'alphabetic'; ctx.fillText('안 ' + key + ' — ' + META[key].name, 28, 46);
+    ctx.fillStyle = '#4b5563'; ctx.font = '400 20px ' + FONT; ctx.fillText(META[key].note + '   크기: 256 · 48 · 32 · 16, 맨 오른쪽은 16을 6배로 키운 것', 28, 78);
+    var rows = [['밝은 바탕', '#f3f4f6', '#374151'], ['어두운 바탕', '#111827', '#e5e7eb'], ['바탕화면', null, '#ffffff']];
+    for (var r = 0; r < rows.length; r++) {
+      var y = TOP + r * ROW, row = rows[r];
+      if (row[1]) { ctx.fillStyle = row[1]; ctx.fillRect(0, y, W, ROW - 12); } else wallpaper(ctx, 0, y, W, ROW - 12);
+      ctx.fillStyle = row[2]; ctx.globalAlpha = 0.75; ctx.font = '600 16px ' + FONT; ctx.fillText(row[0], 20, y + 26); ctx.globalAlpha = 1;
+      var progs = Object.keys(PROGRAMS);
+      for (var p = 0; p < progs.length; p++) {
+        var x = 40 + p * 600, iy = y + 40, im = await img(ICONS[key + '-' + progs[p]]);
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(im, x, iy, 256, 256);
+        var sx = x + 280;
+        [48, 32, 16].forEach(function (s) { ctx.drawImage(im, sx, iy + 256 - s, s, s); sx += s + 22; });
+        // the 16px icon as it is, enlarged six times without smoothing
+        var small = document.createElement('canvas'); small.width = 16; small.height = 16; var sc = small.getContext('2d'); sc.imageSmoothingQuality = 'high'; sc.drawImage(im, 0, 0, 16, 16);
+        ctx.imageSmoothingEnabled = false; ctx.drawImage(small, sx + 6, iy + 256 - 96, 96, 96); ctx.imageSmoothingEnabled = true;
+        // the name, as under a desktop shortcut
+        ctx.font = '600 18px ' + FONT; ctx.textAlign = 'center';
+        if (!row[1]) { ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1; }
+        ctx.fillStyle = row[2]; ctx.fillText(PROGRAMS[progs[p]], x + 128, iy + 256 + 30);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.textAlign = 'left';
+      }
+    }
+    document.body.appendChild(c); c.style.cssText = 'display:block;max-width:100%;margin:0 auto 16px';
+    var blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+    var resp = await fetch('/png?name=bethesda-icon-option-' + key, { method: 'POST', body: blob });
+    done.push(key + ':' + resp.status + ':' + blob.size);
+  }
+  window.__sheets = done.join(' ');
+  document.title = 'done ' + window.__sheets;
+})();
+</script>
+</body>
