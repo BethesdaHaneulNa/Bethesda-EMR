@@ -348,6 +348,54 @@ Weasis의 소스(GitHub `nroduit/Weasis`, 2026-10-01의 master)와 문서에서 
 1. 지금: PowerShell + `.bat`로 폴더 저장 → Weasis → 굽기까지 완성하고 시험 항목을 고정.
 2. 그 뒤: 같은 시험 항목을 기준으로 C#으로 옮김 → `cd-export.exe`. `.bat` · `.ps1`은 그때 뺌.
 
+### 11-1. 옮기기 전의 준비 (2026-10-02 — 코드는 실장님 결정 뒤)
+
+위 글을 쓴 뒤로 달라진 것: 굽기가 진짜로 확인됐고(2026-10-01), Weasis가 빠졌고, **작은 뷰어 `VOIR.EXE`가 생겨** 반출 프로그램이 디스크마다 그것을 만들어 넣습니다. 그래서 옮기기 전에 정리해 둔 것입니다. 제품 코드는 손대지 않았습니다.
+
+**지금의 크기(확인함 — 줄 수)**
+
+| 파일 | 줄 | 옮기면 |
+|---|---|---|
+| `cd-export.bat` · `cd-export.ps1` | 5 · 40 | 없어짐(`Program.cs`의 `Main` 몇 줄) |
+| `cd-export-common.ps1` | 563 | 그중 **약 130줄은 이미 C#**(`DiscJob` · `CountingStream` — 그대로 옮김). 나머지 26개 함수가 C# 클래스 셋으로: EMR과의 통신 · 디스크 폴더 만들기(묶음 풀기 · README · 뷰어 · 저장 · 비교) · 드라이브와 굽기 |
+| `cd-export-ui.ps1` | 552 | 글자 표 약 150줄(세 언어 — 그대로 표로) + 함수 19개(창 · 누름 처리)가 WinForms 코드로 |
+| `viewer\*.cs` | 1,107 | **이미 C#** — 그대로. 반출 프로그램과는 별개의 실행 파일로 남음(디스크에 들어가는 것) |
+
+→ 새로 옮겨 적을 것은 PowerShell 약 1,000줄이고, C#으로는 **1,200~1,500줄쯤**(추측), 실행 파일은 뷰어를 품고도 **150KB 안쪽**(추측 — 아래 시험의 빈 껍데기가 54KB).
+
+**뷰어를 어떻게 품나 — 해 봄**(이 PC, scratch에서만. 끝나고 지움)
+
+| 길 | 결과 |
+|---|---|
+| `csc`로 뷰어를 직접 빌드(PowerShell 없이) | 됨 — 0.16초, 49,664바이트. 지금 PowerShell의 `Add-Type`이 만드는 것과 **크기가 같음** |
+| **가** `cd-export.exe`가 **만들어진 `VOIR.EXE`를 자원으로 품고** 디스크에 써 넣음 | 됨 — 품은 프로그램 54KB, 꺼낸 파일이 원래 것과 **바이트까지 같음**, 실행됨(0.13초에 창) |
+| **나** `cd-export.exe`가 뷰어의 **소스를 품고** 그 자리에서 빌드(지금 방식 그대로) | 됨 — 소스 9개 0.1초, 49,664바이트, 임시 폴더에 남는 것 없음, 실행됨 |
+
+- **가를 권합니다**: 빌드가 한 번이라 **모든 디스크의 `VOIR.EXE`가 같은 파일**이 됩니다(백신이 한 번 허용하면 끝, 문제가 생기면 어느 판인지 해시로 가릴 수 있음). 접수 PC에서 컴파일러가 돌 일도 없습니다. 지금 방식(나)은 PowerShell이라 그렇게 한 것이고, 실행 파일이 되면 이유가 없어집니다.
+
+**시험은 어떻게 옮기나**: 지금의 시험(`cdx_test` · `cdx_ui_test` 22가지 · `cdx_big_test` · `cdx_unpack_test` · `burn_test`)은 PowerShell 함수를 직접 부릅니다. 실행 파일이 되면 뷰어의 시험(`viewer_test`)이 이미 하는 것처럼 **PowerShell이 그 실행 파일을 어셈블리로 읽어 들여 같은 항목을 부르면** 됩니다(확인함 — 뷰어에서 그렇게 하고 있음). 그러려면 「사람에게 묻는 곳」 넷(알림 · 예/아니오 · 폴더 고르기 · ISO 파일 고르기)을 지금처럼 갈아 끼울 수 있게 두어야 합니다 — 설계의 조건으로 적어 둡니다. 서버 쪽 시험(`export_api.py` 31 · `export_unpack.py` 10)은 그대로입니다.
+
+**옮긴 뒤의 폴더(제안)**
+
+```
+cd-export\            ← 소스(C#): Program · MainForm · Texts · EmrClient · DiscFolder · Burner(DiscJob)
+viewer\               ← 그대로
+build-cd-export.ps1   ← csc 두 번: viewer → VOIR.EXE, cd-export(+ VOIR.EXE를 자원으로) → cd-export.exe
+cd-export.exe         ← 저장소에 넣지 않음(.gitignore) — 설치 묶음을 만들 때 / 배포할 때 빌드
+cd-export.ini         ← 지금과 같음(EMR 주소 · 마지막 폴더)
+```
+
+**정할 것**
+
+| # | 물음 | 추천 |
+|---|---|---|
+| ㄱ | 언제 옮길지 | 뷰어를 넣은 진짜 CD 한 장(④)이 끝난 뒤 — 기능과 시험 항목이 굳은 다음 |
+| ㄴ | 뷰어를 품는 길 | **가**(만들어진 `VOIR.EXE`를 자원으로) |
+| ㄷ | 실행 파일을 어디서 만드나 | 총괄: 설치 묶음(`offline/pack.ps1`)을 만들 때와 실행 중 PACS 폴더에 배포할 때 `build-cd-export.ps1`을 돌림(0.5초). 저장소에는 소스만 |
+| ㄹ | 이름 · 아이콘 | `cd-export.exe`, 창 제목은 지금처럼 「Copie d'images sur CD」. 아이콘은 Windows의 디스크 그림을 빌려 쓰지 않고 **단순한 것 하나를 직접 그림**(받아 오는 것 없음) — 실장님이 원하시는 그림이 있으면 그것으로 |
+| ㅁ | `.bat` · `.ps1`을 언제 빼나 | 한 번의 배포 동안 둘 다 둠(실행 파일에 문제가 있으면 `.bat`로 되돌아갈 수 있게) → 그다음에 뺌 |
+| ㅂ | 언어 | 지금은 `-Lang`(기본 프랑스어). 실행 파일에서는 `cd-export.ini`의 `lang=` 한 줄(없으면 프랑스어)로 — 바로가기에 인수를 달 필요가 없게 |
+
 ## 조사에 쓴 곳
 
 - Weasis: <https://github.com/nroduit/Weasis>(README · `LICENSE`), <https://weasis.org/en/faq/>, <https://weasis.org/en/tutorials/dicom-export/>, <https://weasis.org/en/getting-started/download-dicom-viewer/>, <https://weasis.org/en/getting-started/windows/>, 릴리스 v4.7.3의 파일 크기(GitHub).
