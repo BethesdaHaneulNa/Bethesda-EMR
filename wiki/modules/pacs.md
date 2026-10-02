@@ -581,7 +581,9 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 - `docker-compose.yml` — 프로젝트 이름 `bethesda-pacs` 고정. 컨테이너 `bethesda-pacs`(Orthanc), `bethesda-worklist-bridge`. 볼륨은 **폴더 마운트** `./storage`(영상+색인), `./worklists`(`.wl`, `.heartbeat`).
 - `bridge/bridge.py`, `bridge/Dockerfile`(python 3.12-slim, pydicom 2.4.4, requests 2.32.3)
 - 시험 도구(장비 없이 확인용, compose 네트워크 안에서 실행): `make_demo.py`·`make_chest5.py`(가짜 영상 올리기, Orthanc REST), `storetest.py`(C-STORE), `q_test.py`(MWL C-FIND). **pynetdicom은 브리지 이미지에 없음** — 따로 설치 필요. `make_*`는 브리지 컨테이너 안에서 돌리며 `ORTHANC_PASSWORD`를 환경 변수에서 읽고, 시험 오더의 `STUDY_UID`·`ACCESSION`·`PATIENT_ID`도 환경 변수로 받음(가짜 환자 `TEST^Patient`).
-- `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`
+- `setup.ps1`·`setup.sh`(`-Offline`/`--offline`), `start.bat`. `setup.ps1 -StoragePath <폴더>`: 처음 설치에서 영상 저장 자리를 묻지 않고 정함(6.4)
+- **`image-storage-common.ps1`**(2026-10-02) — 영상 저장 자리: `.env`의 `ORTHANC_STORAGE_PATH` 읽기/쓰기(`Get-ImageStoragePath` · `Set-EnvValue`), 드라이브 알아보기(`Get-DriveFacts` — 남은 자리 · NTFS인지 · USB인지 · Windows 디스크인지 · 물리 디스크 번호), 저장 자리의 상태(`Test-ImageStorage` — store/empty/foreign/missing/nodrive), 표식(`Set-ImageStorageMarker`), 고른 자리의 판정(`Test-ImageStorageChoice`), 처음 설치의 물음(`Read-ImageStorageChoice` · `Initialize-ImageStorage`), 켜기 전 확인(`Confirm-ImageStorage`), 같은 물리 디스크인지(`Test-SamePhysicalDisk`). `setup.ps1` · `move-image-storage.ps1` · `image-backup.ps1` · `prepare-backup-disk.ps1`이 씀.
+- **`move-image-storage.ps1`**(2026-10-02) — 쌓인 영상을 다른 폴더(드라이브)로 옮김(6.4). `-To` · `-Check` · `-FullVerify` · `-AllowUsb` · `-OrthancUrl`.
 - **`bethesda-cd\`**(2026-10-02) — 「Bethesda CD」: 반출 프로그램과 디스크의 뷰어, **그 폴더 하나로 서 있음**(PACS 저장소의 다른 파일에 기대지 않음 — 따로 저장소로 떼어 낼 것). EMR과의 약속은 HTTP 길 셋(`/api/auth/login` · `/api/pacs/export/patient` · `/export/bundle`)뿐.
   - `build.ps1` — Windows의 `csc.exe`(C# 5)로 두 번: `src\shared` + `src\viewer` → `build\VIEWER.EXE`, `src\shared` + `src\app`(+ 그 `VIEWER.EXE`를 자원으로, 아이콘) → `build\Bethesda-CD.exe`. 0.7초. `build\`는 git에서 제외.
   - `src\shared\Version.cs` — 이름과 판 번호(1.0.0)를 정하는 **한 곳**: 창 · 실행 파일 속성 · 뷰어의 「?」가 같은 값.
@@ -609,6 +611,7 @@ EMR 상태 화면 판정(`status.routes.js` `checkBridge`, 설정 세션 파일)
 | `ORTHANC_URL` | `http://orthanc:8042` | 영상 도착 확인용 (같은 compose 네트워크의 서비스 이름) |
 | `ORTHANC_USER` · `ORTHANC_PASSWORD` | `admin` · `.env`의 `ORTHANC_PASSWORD` | 비밀번호가 없으면 도착 확인을 끔 |
 | `WL_DIR` | `/worklists` | `.wl`을 쓰는 곳 |
+| `STORAGE_DIR` | `/storage` | 영상 저장 자리(읽기 전용으로 붙임) — 그 디스크의 남은 자리만 읽음. 붙어 있지 않으면 `WL_DIR`의 디스크를 잼(옛 compose) |
 | `POLL_SECONDS` | `15` | 주기 |
 
 ### Orthanc 설정 (compose 환경 변수)
@@ -683,6 +686,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 2. `install-offline.ps1` — 이미지 load → EMR `setup -Offline` → PACS `setup.ps1 -Offline`.
    - PACS `setup`은 시작 전에 **`check-windows-ports.ps1`** 로 9090·4242가 Windows 예약 구간에 걸리는지, 그리고 **9080·9090·4242를 Docker가 아닌 프로그램이 듣고 있는지**(127.0.0.1만 묶은 것 포함, 프로그램 이름·경로를 보여 줌 — 2026-09-30) 경고(읽기만).
    - 끝에서 브리지가 **EMR에 실제로 닿는지** 최대 약 1분 기다려 봄(`worklists\.feed_ok`가 시작 뒤에 새로 쓰였는지). 짝 맞춤은 `docker exec`로 DB에 쓰므로 다른 프로그램이 9080을 차지해도 통과했음 → 이제 「The worklist bridge reaches the EMR」 또는 노란 경고와 브리지의 마지막 오류.
+   - **영상 저장 자리를 묻습니다**(6.4) — 현지 PC에서는 `D:\Bethesda-PACS-images`(내장 HDD). 물음 없이: `setup.ps1 -Offline -StoragePath D:\Bethesda-PACS-images`.
    - 새 `.env`(`ORTHANC_PASSWORD`·`BRIDGE_TOKEN`)를 만들고, 같은 PC에 EMR이 떠 있으면 **`pair-with-emr.ps1`로 자동 짝 맞춤**(토큰은 화면에 안 나옴) → 「paired - nothing to copy」.
    - 끝에 이 PC의 LAN 주소를 찍어 줌 — **장비가 보낼 곳 `<IP>:4242`**. 직원 PC에는 설정할 뷰어 주소가 없음(P-9).
 3. **EMR 백업 복원** — 옛 PC를 먼저 최신으로 업데이트한 뒤 만든 백업을, 같은 판의 새 EMR에(`DEPLOYMENT.md` 5b, 총괄 결정 1).
@@ -796,6 +800,37 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
   - Orthanc 워크리스트 플러그인도 스스로 `.wl`을 지움(「Deleting worklist … because its study is now stable」 — 이 버전의 housekeeper). 브리지의 삭제와 겹치지만 해가 없음(EMR이 완료를 기록할 때까지 브리지가 다시 써도 곧 같은 이유로 지워짐).
 - **시험**(격리 9188/9198, 장비 흉내 = 임시 Orthanc `XRAY01`, 진짜 DICOM): 연결 시험 · 틀린 서버 이름 · 목록(6명 / Station AE 거르기 0 / MR만 0 / 날짜 0 / 서버에 목록 없음 0) · 영상(맞는 번호 / 다른 번호 / 번호 없음 / 제 UID / JPEG / 제조사 전용 종류 / 손으로 친 환자) · 1~2분 뒤 EMR 기록 · 브리지가 EMR에 닿지 못함 · `-Ping`(닿음·안 닿음) · `-Reset` · 조용한 모드(fr) · en. 각 경우의 줄이 순서서 표와 같음. 로그 수준은 끝날 때 `default`로 돌아옴을 확인.
 
+### 6.4 영상 저장 자리 — 다른 드라이브에 (2026-10-02)
+
+> 실장님(2026-10-02): 「우리 메인 저장소가 c드라이브잖아 … 이것도 문제가 될까?」 → 현지 PC는 **C: SSD(Windows · EMR) + D: 내장 HDD 4TB(영상) + 외장하드(밤 백업, 둘을 번갈아)**.
+
+**설정**: PACS `.env`의 한 줄 `ORTHANC_STORAGE_PATH=D:/Bethesda-PACS-images`(없거나 비면 지금처럼 PACS 폴더의 `storage\`). `docker-compose.yml`이 그 자리를 영상 서버에 붙임. `worklists\` 등 다른 폴더는 그대로 PACS 폴더에.
+
+**처음 설치**(`start.bat` → `setup.ps1`): `.env`를 새로 만드는 그때 한 번 묻습니다 — 드라이브마다 남은 자리를 보여 주고(Windows 디스크 · USB · NTFS가 아님을 표시), Enter = `.\storage`, 또는 `D:\Bethesda-PACS-images` 같은 폴더. 키보드가 없으면(입력이 넘겨진 실행) 묻지 않고 기본값. 물음 없이 정하려면 `.\setup.ps1 -StoragePath D:\Bethesda-PACS-images`. 폴더를 만들고 **표식 파일**을 둡니다.
+- 받지 않는 것: 드라이브 글자 없는 경로 · 네트워크 드라이브 · 드라이브 자체(`D:\`) · 다른 파일이 든 폴더 · CD 드라이브. 경고하고 「그래도?」를 묻는 것: USB 디스크 · NTFS가 아닌 드라이브 · Windows 디스크.
+
+**이미 쌓인 영상을 옮기기**: `powershell -ExecutionPolicy Bypass -File .\move-image-storage.ps1 -To D:\Bethesda-PACS-images`(`-Check`를 붙이면 할 일만 말함).
+1. 영상 서버에 검사 수 · 영상 수 · 바이트를 물음 → 2. 영상 서버와 브리지를 **멈춤**(그동안 장비가 못 보냄 — 진료가 없을 때) → 3. 통째로 복사(robocopy), 모든 파일의 크기 비교 + 색인과 200개 표본은 바이트까지(`-FullVerify`면 전부) → 4. `.env`를 고치고 다시 켬 → 5. 다시 물어 **세 숫자가 전과 같은지** → 6. 옛 폴더는 **지우지 않고** `storage.moved-<날짜>`로 이름만 바꿈(사람이 나중에 지움).
+- 6 전에 무엇이든 실패하면 `.env`를 되돌리고 옛 자리로 다시 켬(옛 자리는 손대지 않았으므로). 새 자리에 복사된 것은 남겨 둠.
+- USB 디스크는 `-AllowUsb` 없이는 거절. 자리가 모자라면(복사할 크기 × 1.05 + 1GB) 시작 전에 거절. 기록은 `logs\move-image-storage.log`.
+
+**저장 디스크가 없을 때 — 빈 폴더로 새로 시작하지 않게**
+- 저장 자리에는 표식 파일 **`BETHESDA-PACS-STORAGE.id`** 가 있습니다(setup · 옮기기 스크립트가 둠).
+- 이 PC에서 해 본 것: 드라이브 글자가 **아예 없으면** Docker가 컨테이너를 못 켭니다(`mkdir Q:\…: The system cannot find the path specified`). 드라이브는 있는데 **폴더가 없으면** Docker Desktop이 **빈 폴더를 조용히 만들어** 붙입니다(글자가 다른 디스크로 넘어간 경우가 이것) — 그대로 두면 영상 서버가 「정상」으로 뜨고, 영상은 하나도 없고, 장비가 보내는 것을 그 빈 자리에 받습니다.
+- 그래서 `docker-compose.yml`에서 Orthanc가 시작하기 **전에** 봅니다: 저장 자리에 표식도 없고 영상 색인(`index`)도 없으면 **시작하지 않음** — 컨테이너는 계속 「Restarting」, `docker logs bethesda-pacs`에 `BETHESDA PACS: the image store is not there …`. Orthanc 자체는 고치지 않음(자기 시작 스크립트를 그대로 부름).
+- `start.bat`(setup)도 켜기 전에 같은 것을 보고, 없으면 빨간 글로 이유(드라이브 없음 / 폴더 없음 / 폴더가 비었음)와 할 일(디스크를 꽂거나 글자를 되돌린 뒤 `start.bat`)을 말하고 **아무것도 켜지 않음**.
+- 그동안 직원이 보는 것: EMR 상태 화면의 영상 서버가 빨강, 영상 창에 「Le serveur d'images ne répond pas」, 장비는 전송 실패.
+- 표식이 생기기 전부터 쓰던 저장 자리(색인만 있음)는 그대로 켜지고, setup이 표식을 채워 넣습니다 → **지금 돌아가는 PACS는 따로 할 일이 없음.**
+
+**브리지의 남은 자리**: 브리지가 저장 자리를 **읽기 전용**으로 붙여(`STORAGE_DIR=/storage`) 그 디스크의 남은 자리를 심박에 보냅니다(전에는 `worklists` 폴더의 디스크를 쟀음 — 드라이브가 갈리면 틀림). NTFS 내장 디스크에서는 Windows가 말하는 숫자와 같음(이 PC의 C:로 확인). **FAT32 USB에서는 틀린 숫자**(15.8GB 남은 것을 56MB로) → 저장 디스크는 NTFS여야 함.
+
+**백업과의 관계**: 밤 백업 · 복원 · `device-watch` · 상태 화면은 영상 서버에 물어서 일하므로 저장 자리가 어디든 그대로(격리에서 백업 한 번 확인). 백업 디스크가 영상 저장 디스크와 **같은 물리 디스크**이면 — `prepare-backup-disk.ps1`은 거절, 밤 백업은 복사는 하되 보고에 경고(「the backup disk is the same physical disk as the image store …」). 전에는 Windows 디스크(C:)만 거절했음.
+
+**저장 압축(StorageCompression)은 켜지 않음**: 필름은 3분의 1쯤 줄지만(추측 — 진짜 CT 견본 한 장 38%) 초음파는 이미 압축돼 와서 거의 안 줄고, 저장 폴더의 파일이 그대로는 DICOM이 아니게 되며, 읽고 쓸 때마다 느려짐.
+
+**확인한 것**(이 PC, scratch 폴더 둘이 「PACS 폴더의 디스크」와 「D:」 노릇 — 임시 영상 서버 `bethesda-s-pacs-reader` 127.0.0.1:9196, 가짜 영상 9개. 실행 중 PACS는 건드리지 않음) — `store_test.ps1` 23가지: 처음 설치(기본 / 다른 자리 / 키보드로 물음 — 없는 드라이브를 거절하고 다음 답을 받음) · 거절과 경고(USB는 이 PC의 D:를 **보기만**) · 옮기기(`-Check`는 아무것도 안 바꿈, 진짜 옮기기 7초 — 검사 5 · 영상 9 · 바이트 같음, `.env` 한 줄, 옛 폴더는 이름만 바뀜, 파일 9개가 바이트까지 같게 나옴, 뷰어 페이지와 그림이 나옴, 컨테이너가 새 폴더를 붙임) · 브리지가 읽기 전용으로 보고 그 디스크를 잼 · 폴더를 치우고 켜면 Docker가 빈 폴더를 만들지만 영상 서버는 안 뜨고 색인도 안 생김 → 되돌리면 그대로 · 표식 없는 옛 저장 자리도 켜짐 · 옮기다 실패(읽을 수 없는 파일)하면 `.env`와 영상 서버가 원래대로 · 같은 물리 디스크의 백업 디스크 거절 · 새 자리에서 밤 백업 9개. 없는 드라이브(`Q:`)로 켜면 Docker가 거절.
+**확인 못 한 것**: 진짜 다른 드라이브(이 PC의 D:는 실장님 USB라 쓰지 않음) · 수백 GB의 옮기기에 걸리는 시간 · `setup.ps1`을 처음부터 끝까지 돌린 것(짝 맞추기 · 바탕화면 바로가기 때문에 — 저장 자리 부분의 함수만 따로 돌림) · 저장 디스크가 Windows 시작 때 Docker보다 늦게 붙는 경우(그러면 빈 폴더 → 영상 서버가 안 뜸 → 디스크가 붙은 뒤 `start.bat`) · 오프라인 설치 스크립트를 거친 설치.
+
 ## 7. 알려진 문제 · 제약
 
 2026-09-29 코드 읽기로 찾은 것. **심각도**: 높음 / 보통 / 낮음. 고친 것은 ✅, 일부 고친 것은 🟡.
@@ -829,6 +864,7 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 
 ### 동작 · 기타
 
+- **P-35 [참고] 영상 저장 자리를 다른 드라이브에 둘 때 (2026-10-02).** ① 저장 디스크는 **NTFS 내장 디스크**여야 함(USB는 끊김 · 절전, FAT/exFAT는 남은 자리가 틀리게 읽힘). ② 디스크가 없으면 영상 서버가 **일부러 안 뜸**(6.4) — 디스크를 되돌린 뒤 `start.bat`. Windows가 켜질 때 그 디스크가 Docker보다 늦게 붙으면 같은 일이 생길 수 있음(내장 디스크에서는 드묾 — 현지에서 재부팅으로 한 번 확인). ③ 옮기는 동안 장비가 못 보냄. ④ 옮긴 뒤 옛 폴더(`storage.moved-<날짜>`)는 사람이 지울 때까지 자리를 차지함. ⑤ 실행 중 PACS에 이 판을 올리면 영상 서버 컨테이너가 한 번 다시 만들어짐(시작 전 확인이 들어가서) — 저장 자리는 그대로 `.\storage`.
 - **P-34 [참고] 외부 영상의 한계 · 확인 못 한 것 (2026-10-02).** ① 프로그램(Bethesda CD)의 「들여오기」는 설정 세션이 짓는 중 — 서버는 시험 스크립트로만 불러 봄. ② 외부 영상은 그 검사 하나만 열림(우리 검사와 한 창에서 비교 · 인쇄 · CD 반출 · 옮기기 없음 — 정한 것). ③ 파일 하나의 한도를 바꾸는 칸이 설정 화면에 없음(`PUT /api/pacs/config`로만). ④ 접수 권한만 있는 계정: 격리에서 해 봄(`import_reg.py` 10가지 — 들여오기 · 목록은 되고, 영상 열기 · 빼기 · 반출 목록/묶음 · 우리 검사 목록은 403). ⑤ 진짜 다른 병원 디스크, 1GB에 가까운 파일, 수납 화면에서의 모습은 보지 못함. ⑥ 환자를 합치는 기능이 생기면 `pacs_import.patient_id`도 같이 옮겨야 함(지금은 그런 기능이 없음). ⑦ 치우거나 뺀 검사는 `superseded-images`에 계속 나감(줄이 쌓여도 번호 목록일 뿐).
 - **P-33 [참고] 영상 옮기기의 한계 (2026-10-01).** ⓪ 받을 오더에 이미 판독이 있고 옮길 판독도 있으면 「옮기기」는 막힘(맞바꾸기는 판독도 맞바꿈). ① 같은 환자·같은 종류(Modality)의 오더끼리만. 한 검사 안에 두 검사가 섞인 경우와 다른 환자의 줄로 찍힌 경우는 범위 밖(설계 메모 Q7·Q8). ② 방금 옮긴 검사는 1분쯤 「아직 들어오는 중」으로 보여 바로 되옮길 수 없음. ③ 영상 서버가 고친 검사를 다 만들 때까지 요청이 기다림(작은 검사 0.2초; 수백 장이면 길어질 수 있고, 화면의 요청이 먼저 끊겨도 서버는 끝까지 하고 줄에 결과가 남음 — 격리에서 48장짜리 검사가 66~68초. **2026-10-02 고침**: ⓐ `frontend/nginx.conf`에 `location = /api/pacs/move`(기다림 600초 — 전에는 기본 60초에 끊겨 화면이 「서버가 응답하지 않음」을 보았고 옮기기는 끝나 있었음) ⓑ 그래도 요청이 끊기면(네트워크 · 10분 넘음) `MoveStudy.jsx`가 그 바로잡기의 줄(`GET /pacs/moves/patient` — 누르기 전의 가장 큰 번호보다 새롭고 두 오더가 같은 줄)을 4초마다 다시 물어, `done` → 「C'est fait」, `cleanup-pending` → 「enregistrée…」, `rolled-back` → 「n'a pas pu être faite」로 알림. 기다리는 동안 «Le serveur d'images travaille encore (examen volumineux)…». 20초 동안 그런 줄이 없으면 요청이 서버에 닿지 않은 것 — 전처럼 「목록을 보세요」). ④ `failed` 상태(새 번호의 검사가 있는데 이 일의 것으로 알아볼 수 없음)는 사람이 봐야 함 — 격리에서는 일어나지 않음. ⑤ 바로잡은 날 밤 백업이 돌기 전에 영상 서버를 잃으면, 디스크에는 그 그림이 옛 번호로만 있음 — 복원이 옛 번호로 올리고, EMR이 다음에 열 때 스스로 다시 적용(4절). 한 영상이 그 사이 **두 번 이상 이어서** 옮겨진 경우(A→B→C)는 다시 적용하지 않음(가장 최근 줄의 「바로 전 모습」만 봄). ⑥ 총괄이 기능이 생기기 전에 손으로 옮긴 건처럼 옮긴 기록 표에 없는 것은 백업이 모름 — 표에 한 줄을 넣어야 함(인계 노트).
 - **P-32 [확인] 흔치 않은 Modality(예: 직장경 「AS」)도 걸리는 곳 없음 — 단, 오더 종류가 `procedure`이면 세 곳에서 걸렸음(고침) (2026-10-01, 격리).** 실장님: 현지 직장경 장비의 Modality가 「AS」. 오더 코드 Modality=`AS`(종류 `imaging`)로: 피드 → `.wl`(Modality AS) → 장비 흉내가 **Modality=AS로 물음 → 1명** → 컬러 영상(VL Endoscopic Image `1.2.840.10008.5.1.4.1.1.77.1.1` 2장 + Secondary Capture 1장, RGB) 저장 → 브리지 도착 보고 → EMR `completed`·3장·`match` → 「영상/판독」 목록에 종류 `AS`, 종류 고르기에 `AS`, 영상 창(Stone)에 컬러 그림. EMR·브리지·Orthanc 어디에도 Modality 값의 목록·검사가 없습니다(칸은 16자 — 마이그레이션 040). device-watch: 「조건: Modality=AS → 1명 보냄」, 목록에 AS가 없을 때 「→ 0명 — 장비가 AS 검사만 물음. 지금 목록: US 6, CR 5, ES 1」 — **장비가 물은 값을 그대로 보여 줌**. **찾은 것**: 내시경처럼 종류가 `procedure`인 오더(기본 코드 `E1`·`E2`, Modality `ES`)는 워크리스트·영상·🖼 단추까지는 되는데 판독 저장 404·목록에 없음·비교에서 빠짐 → 4절 「무엇이 영상 검사인가」로 고침(종류가 `procedure`인 AS 오더로도 다시 확인: 목록·판독 저장·비교·판독 보고서(그때는 이름 옆에 「(AS)」 — 그 뒤 종류 코드는 종이에서 뺌, 2.4.1)·컬러 영상·수납 화면 목록). **남은 것(진료 세션)**: 진료 화면의 `cancellable(o)`은 `lab`·`imaging`만이라, 영상이 온 `procedure` 오더는 지울 수도(결과 있음) 「취소」할 수도 없음.
@@ -930,3 +966,4 @@ EMR이 쓰는 Orthanc 쪽 주소: **중계(`pacs.viewer.js`)가 넘겨 주는 St
 | 2026-10-02 | **외부 영상 들여오기 — EMR 쪽**(실장님: 「차트번호 입력하면 그 환자 것으로 … EMR 영상판독에서 조회하면 다 뜨게」): 오더 없이 환자에게 붙음. 표 `pacs_import`(임시 851) · `routes/pacs.import.js`(프로그램이 부르는 여섯 길 + 목록 · 뷰어 열기 · 차트에서 빼기 · 뒷정리) · nginx의 `/api/pacs/import/` · 브리지의 남은 자리 · 「영상/판독」 창의 「💿 Imagerie externe」 묶음(`OutsideStudies.jsx`). 앞의 두 안(오더에 붙임 / EMR 화면에서 올림)은 폐기. 프로그램 쪽은 설정 세션. 격리 `import_api.py` 48가지 + 화면 | EMR `ade2deb` + 이 항목의 커밋 · PACS `1c593bd` |
 | 2026-10-02 | **Bethesda CD: 뷰어 이름 `VIEWER.EXE`(전 `VOIR.EXE` — 실장님 결정) · 디스크에 `AUTORUN.INF`**(뷰어가 있는 디스크에만; CD에서 Windows가 뷰어를 권하고 디스크 더블클릭이 뷰어를 엶 — 저절로 실행되지 않음, USB에서는 무시됨) · EMR 없이 도는 `tests\disc_test.ps1` · 16px 아이콘이 exe · 바로가기 · 뷰어에서 Windows가 꺼낸 모습 [그림](../reference/design/bethesda-cd-icon-16px-windows.png). **설정 세션이 맡음**(총괄의 일 나누기) | PACS 저장소 `session/cd`: `bethesda-cd\`(`DiscFolder.cs` · `MainForm.cs` · `Texts.cs` · `build.ps1` · tests · README · CHANGELOG) · 옛 `cd-export*.ps1` (2.4.4 · 4절) | PACS `3f1cb91` · `0f970ea` |
 | 2026-10-02 | **Bethesda CD — 들여오기**(프로그램 쪽): 창이 「내보내기 / 들여오기」 두 갈래, 차트번호 → 디스크 · 폴더 → 검사 목록(병원 · 디스크의 환자 · EMR이 아는 상태) → **환자 확인 창**(생일 · 성별이 다르면 빨갛게, 「그래도 맞다」) → DICOM 파일을 한 장씩 그대로 올림(진행 · 취소 · 끊기면 다시 · 실패하면 그만두기 호출). DICOM만 읽음(다른 회사 뷰어 · DLL은 열지도 않음). 접수 계정은 들여오기만. **설정 세션이 맡음.** 가짜 EMR로 46가지, **진짜 시험용 EMR + 영상 서버(PACS 세션의 격리 스택)에 실제로 올려 24가지, 내보내기 `app_test` 23가지 통과.** 기다리는 동안 창이 멈추지 않게(다른 스레드), 시험 창은 화면 밖에 | PACS 저장소 `session/cd`: `ImportDisc.cs`(새) · `ImportConfirm.cs`(새) · `MainForm.cs` · `Emr.cs` · `Texts.cs` · `viewer\Disc.cs` · `build.ps1` · `tests\import_test.ps1`(새) · README · CHANGELOG (2.4.5 · 4절) | PACS `c4a6117` · `d56e4ac` · `e2de1ba` · `2e47fa8` · `d949d7e` · `f20a93d` · `0121336` |
+| 2026-10-02 | **영상 저장 자리를 다른 드라이브로**(실장님: 「메인 저장소가 c드라이브잖아」 → C: SSD + D: 내장 HDD 4TB + 외장 백업): `.env`의 `ORTHANC_STORAGE_PATH`, 처음 설치 때 물음, `move-image-storage.ps1`(멈춤 → 복사 · 비교 → 켬 → 세 숫자 확인 → 옛 폴더는 이름만 바꿈), 표식 파일 + 「빈 폴더에서는 영상 서버가 안 뜸」, 브리지가 저장 디스크의 남은 자리를 잼, 백업 디스크가 같은 물리 디스크면 거절/경고. 6.4 · P-35. 격리 `store_test.ps1` 23가지 | PACS `session/pacs`(인계 노트) |

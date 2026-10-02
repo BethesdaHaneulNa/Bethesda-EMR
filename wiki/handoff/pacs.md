@@ -2,6 +2,29 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 영상 저장 자리를 다른 드라이브로 · 프로그램이 들여온 외부 검사를 화면으로 봄
+
+- **상태**: 확인 요청. **실행 중 PACS(`C:\Bethesda-PACS`)의 저장 자리는 바꾸지 않았음** — 올릴 때 주의 한 가지는 아래 「올릴 때」.
+- **커밋**: **PACS 저장소** `session/pacs` `3da73f5`(main `20b11db`를 ff로 받은 뒤). **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(화면 한 줄 + 위키; develop을 받은 뒤).
+- **배경**(실장님 2026-10-02): 현지 PC = C: SSD(Windows · EMR) + **D: 내장 HDD 4TB(영상)** + 외장하드(밤 백업, 둘을 번갈아).
+- **한 일 — PACS 저장소**
+  1. `docker-compose.yml`: 저장 자리 = `${ORTHANC_STORAGE_PATH:-./storage}`(`.env`의 한 줄; 없으면 지금처럼). 브리지가 그 자리를 **읽기 전용**으로 붙여 **그 디스크의** 남은 자리를 잼(`STORAGE_DIR`).
+  2. **빈 폴더로 새로 시작하지 않게**: 저장 자리에 표식 파일 `BETHESDA-PACS-STORAGE.id`. Orthanc가 시작하기 전에 컨테이너가 「표식도 영상 색인도 없으면 시작 안 함」(계속 Restarting, `docker logs bethesda-pacs`에 이유). Orthanc 자체는 그대로(자기 시작 스크립트를 부름). `start.bat`(setup)도 켜기 전에 같은 것을 보고 빨간 글로 알리고 아무것도 안 켬.
+  3. `image-storage-common.ps1`(새) · `setup.ps1`: 처음 설치 때 저장 자리를 물음(드라이브별 남은 자리, Windows 디스크 · USB · NTFS 아님 표시; `-StoragePath`로 물음 없이). `setup.sh`도 표식을 만듦.
+  4. `move-image-storage.ps1`(새): 멈춤 → 복사 · 비교 → `.env` 고침 → 켬 → 검사 수 · 영상 수 · 바이트가 전과 같은지 → 옛 폴더는 이름만 바꿔 남김. 도중에 실패하면 원래대로.
+  5. `prepare-backup-disk.ps1`: 영상 저장 디스크와 **같은 물리 디스크**면 거절. `image-backup.ps1`: 그런 경우 보고에 경고.
+  6. `docker-compose.session.yml`: 격리 스택은 이름 붙인 볼륨 그대로, Orthanc의 원래 시작 스크립트 그대로(표식 확인은 진짜 디스크용).
+  7. README(「Where the images are kept」 · 문제 해결 한 덩어리) · CHANGELOG.
+- **이 PC에서 알아낸 것**(Docker Desktop): 없는 **드라이브**를 붙이려 하면 컨테이너가 안 켜짐(`mkdir Q:\…: The system cannot find the path specified`). 드라이브는 있는데 **폴더가 없으면** 긴 문법(`--mount`)으로 써도 **빈 폴더를 만들어 붙임** → 그래서 표식 확인이 꼭 필요. 컨테이너 안에서 잰 남은 자리: NTFS인 C:는 Windows의 숫자와 같음, **FAT32 USB는 15.8GB를 56MB로** 읽음 → 저장 디스크는 NTFS.
+- **확인한 방법**: `store_test.ps1` **23가지 통과** — scratch 폴더 둘이 「PACS 폴더의 디스크」와 「D:」 노릇, 임시 영상 서버 `bethesda-s-pacs-reader`(127.0.0.1:9196)와 임시 브리지, 가짜 영상 9개. 내용은 `modules/pacs.md` 6.4. 끝난 뒤 임시 컨테이너 · 이미지 · scratch 폴더를 지움. 이 PC의 D:(실장님 USB)는 「USB · FAT32」로 알아보는지 **보기만** 함(아무것도 안 씀).
+- **확인 못 한 것**: 진짜 다른 드라이브로의 설치 · 옮기기 · 수백 GB에 걸리는 시간 · `setup.ps1`을 처음부터 끝까지(짝 맞추기와 바탕화면 바로가기 때문에 저장 자리 부분의 함수만 따로) · Windows 시작 때 저장 디스크가 Docker보다 늦게 붙는 경우 · 오프라인 설치 스크립트를 거친 설치 · 실행 중 PACS에 올린 뒤의 모습.
+- **올릴 때**(총괄): ① 이 판을 올리면 `docker compose up -d`가 **영상 서버 컨테이너를 한 번 다시 만듦**(시작 전 확인과 브리지의 붙임이 바뀌어서) — 진료가 없을 때. 저장 자리는 그대로 `.\storage`(색인이 있으므로 그대로 켜짐; `start.bat`을 돌리면 표식이 채워짐). ② 오프라인 설치(`install-offline.ps1`)가 PACS `setup.ps1 -Offline`을 부를 때 저장 자리를 묻게 됨 — 물음 없이 하려면 `-StoragePath D:\Bethesda-PACS-images`를 넘기도록(총괄 파일). ③ `02-before-departure.md`에 「디스크 구성」 덩어리를 넣었음(4절 끝).
+- **프로그램이 들여온 외부 검사를 화면으로**(총괄 부탁): 격리 EMR에서 가짜 환자 26-00001의 「영상/판독」 → 「💿 6」 → 여섯 줄(검사 날짜 · 종류 `US/CR`/`OT` · 이름 · 장수)이 묶음에 나옴. 40번(JPEG 무손실 컬러 5장)을 「Voir image」 → Stone이 우리 환자 이름 · 번호로 그림(세 시리즈, 「JPEG Lossless SV1」 표시). 오른쪽 칸에 병원(TEST-BCD) · 올린 사람(RAZAFY Voahirana (essai accueil)) · 디스크의 이름 · 「생일이 달랐음」 줄. 한 줄(38번)을 「Retirer du dossier…」 → 사유 → 사라짐. 남은 31 · 32 · 35 · 37 · 40도 치움 — 영상 서버에 `EXT-` 검사 0, 검사 61 · 영상 219(시험 전과 같음).
+  - **본 흠 하나를 고침**: 검사 이름이 길면 «Externe» 표시가 칸 밖으로 밀려 안 보였음 → 표시를 이름 **앞**에 둠(`RadiologyReadings.jsx` 한 줄). 긴 이름의 가짜 검사로 다시 봄.
+- **바꾼 파일**: PACS — `docker-compose.yml` · `docker-compose.session.yml` · `bridge/bridge.py` · `setup.ps1` · `setup.sh` · `image-storage-common.ps1`(새) · `move-image-storage.ps1`(새) · `image-backup.ps1` · `prepare-backup-disk.ps1` · `README.md` · `CHANGELOG.md`. EMR — `frontend/src/components/RadiologyReadings.jsx`, `wiki/modules/pacs.md`(6.1 · 6.4 · 4절 · P-35 · 변경 기록), `wiki/02-before-departure.md`, `wiki/handoff/pacs.md`.
+- **공용 파일 변경**: `wiki/02-before-departure.md`(총괄이 말씀하신 「디스크 구성」). **DB 마이그레이션 · 번역 키**: 없음.
+- **다른 세션에 부탁**: 총괄 — 위 「올릴 때」 ①②. 설명서(`manual-fr`)에는 설치 절이 없어 넣지 않았음(직원용) — 설치 문서(`DEPLOYMENT.md` · `OFFLINE-INSTALL.md`)에 한 줄이 필요하면 총괄이.
+
 ## 2026-10-02 — Bethesda CD: 들여오기 (다른 병원의 CD · USB → 환자의 차트) — 프로그램 쪽 (설정 세션이 맡음)
 
 - **상태**: 확인 요청 — 일 4. **진짜 EMR + 영상 서버(PACS 세션의 격리 스택)에 실제로 올려 봄 — 통과**(아래 「진짜 스택에서」). 시험용 EMR에 지어낸 검사 여섯이 남아 있음(PACS 세션이 치움).

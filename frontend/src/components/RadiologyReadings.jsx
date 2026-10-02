@@ -418,8 +418,9 @@ export function RadiologyReadings(props) {
               <span style={Object.assign({ fontFamily: 'monospace', fontWeight: 700, color: 'var(--ok-text)' }, cell)}>{outsideDate(x.study_date) || '—'}</span>
               <span style={Object.assign({ color: 'var(--accent-text-2)', fontWeight: 700, fontSize: 12 }, cell)}>{x.modality || ''}</span>
               <span style={cell} title={[outsideName(x, t), x.institution].filter(Boolean).join(' — ')}>
+                {/* the tag first: a long exam name must not push it out of the cell */}
+                <span style={Object.assign({ background: 'var(--warn-chip)', color: 'var(--warn-text-2)' }, chip, { marginLeft: 0, marginRight: 6 })}>{t.px_xChip}</span>
                 <span style={{ color: tx, fontWeight: 700 }}>{outsideName(x, t)}</span>
-                <span style={Object.assign({ background: 'var(--warn-chip)', color: 'var(--warn-text-2)' }, chip)}>{t.px_xChip}</span>
                 {x.institution ? <span style={{ color: t2, marginLeft: 6, fontSize: 12 }}>{x.institution}</span> : null}
               </span>
               <span style={Object.assign({ fontSize: 12, fontWeight: 700, color: 'var(--ok-text)' }, cell)}>{String(t.px_imgShort || '').replace('{n}', x.image_count == null ? '?' : x.image_count)}</span>
