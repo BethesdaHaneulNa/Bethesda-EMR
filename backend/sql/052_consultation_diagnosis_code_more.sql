@@ -1,4 +1,4 @@
--- 203 (consultation; session number - the coordinator renumbers it): more frequent
+-- 052 (consultation): more frequent
 -- diagnoses - the list goes from 100 to about 300.
 --
 -- Decided by the director on 2026-10-02: the whole ICD-10 (about 12,000 codes) is not

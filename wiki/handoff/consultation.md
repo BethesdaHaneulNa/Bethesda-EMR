@@ -8,7 +8,7 @@
 - **커밋**: session/consultation (이 항목과 같은 커밋) — develop `9bd600c` 다음
 - **결정**(실장님, 총괄이 전함): ICD-10 전체(약 12,000개)는 넣지 않음 — 세 언어 자료의 사용 조건이 공개 저장소와 맞지 않음. 「걍 우리가 필요할것만 같은 것들만 골라서 쓰자」. 코드 체계는 ICD-10 그대로.
 - **한 일**
-  1. **새 마이그레이션** `backend/sql/203_consultation_diagnosis_code_more.sql`(임시 번호 — **총괄이 번호를 매겨 주세요**): 진단 215줄. **같은 코드가 이미 있으면(켜져 있든 꺼져 있든, 대소문자·공백 무시) 그 줄은 넣지 않음.** 있던 줄의 이름·순서·상태는 건드리지 않음. 새 줄의 `sort_order`는 있던 것 맨 뒤(그때의 최댓값 + 10, 20, …). 두 번 돌려도 같음. 표·칸은 바꾸지 않음.
+  1. **새 마이그레이션** `backend/sql/052_consultation_diagnosis_code_more.sql`(임시 번호 — **총괄이 번호를 매겨 주세요**): 진단 215줄. **같은 코드가 이미 있으면(켜져 있든 꺼져 있든, 대소문자·공백 무시) 그 줄은 넣지 않음.** 있던 줄의 이름·순서·상태는 건드리지 않음. 새 줄의 `sort_order`는 있던 것 맨 뒤(그때의 최댓값 + 10, 20, …). 두 번 돌려도 같음. 표·칸은 바꾸지 않음.
   2. **찾기 순서**: 코드가 친 글과 똑같음 → 코드가 그 글로 시작 → 이름이 그 글로 시작 → 이름 안의 낱말이 그 글로 시작 → 이름 안에 들어 있음; 같은 급에서는 `sort_order`. (전에는 「코드 앞머리 → 이름 시작 → 포함」 셋이었음.)
   3. **줄임말**(화면의 `DX_ABBR`): `hta` · `avc` · `tb`·`bk` · `ist`·`mst` · `bpco` · `rgo` · `ugd` · `hbp` · `geu` · `gea` · `ira` · `oma` · `irc` · `itu` · `dt1`·`dt2` 등을 치면 그 뜻의 진단을 찾음. **이유**: 씨앗 100줄의 프랑스어 이름에 줄임말이 없고(「Hypertension artérielle essentielle」), 있던 줄의 이름은 바꾸지 않기로 했으므로 — 이름을 고치지 않고 «hta»가 I10을 찾게 하는 길.
 - **과별 개수**(department 표의 과 + 과가 없는 분야)
@@ -35,9 +35,9 @@
   - **빼 둔 후보 179개**는 `wiki/reference/diagnosis-candidates.md`에 표로(코드·세 언어 이름) — 필요하면 설정에서 더함.
 - **이름**: 세 언어 모두 **우리가 짧게 쓴 이름**(공식 표제어를 베끼지 않음). 프랑스어는 현지 말과 줄임말을 괄호로(«Rhumatisme articulaire aigu (RAA)», «Consultation prénatale (CPN)», «Malnutrition aiguë sévère (MAS)», «Tungose (puce-chique, parasy)», «Grossesse extra-utérine (GEU)»), 한국어는 「상세불명의」를 뺀 평이한 이름. **의료진의 검토를 받지 않은 목록입니다.**
   - **알려 드릴 것 — 있던 100줄의 이름**: 씨앗(050)의 이름 가운데 일부는 공식 표제어에 가깝습니다(«Tuberculose pulmonaire, sans confirmation bactériologique ou histologique», «…, sans précision» 꼴). 「있던 줄은 안 바꿈」이라 손대지 않았습니다. 저작권 조건 때문에 그것도 우리 말로 바꾸려면, 「이름이 씨앗 그대로인 줄만」 고치는 마이그레이션을 따로 낼 수 있습니다 — 정해 주세요.
-- **바꾼 파일**: `backend/sql/203_consultation_diagnosis_code_more.sql`(새) · `frontend/src/pages/Consultation.jsx`(찾기 순서·줄임말) · `wiki/modules/consultation.md`(3.1·4·6·8) · `wiki/manual-fr/consultation.md` · `wiki/reference/diagnosis-candidates.md`(새) · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
+- **바꾼 파일**: `backend/sql/052_consultation_diagnosis_code_more.sql`(새) · `frontend/src/pages/Consultation.jsx`(찾기 순서·줄임말) · `wiki/modules/consultation.md`(3.1·4·6·8) · `wiki/manual-fr/consultation.md` · `wiki/reference/diagnosis-candidates.md`(새) · `wiki/reference/changelog-1.5.0/consultation.md` · 이 노트
 - **공용 파일 변경**: 없음. **설정의 진단 목록 탭은 건드리지 않았습니다.**
-- **DB 마이그레이션**: `203_consultation_diagnosis_code_more.sql` — `INSERT … WHERE NOT EXISTS`(같은 코드) 하나. 표·칸·있던 줄은 그대로. 모듈 문서 4절의 「203 → 총괄이 번호 매김」도 같이.
+- **DB 마이그레이션**: `052_consultation_diagnosis_code_more.sql` — `INSERT … WHERE NOT EXISTS`(같은 코드) 하나. 표·칸·있던 줄은 그대로. 모듈 문서 4절의 「203 → 총괄이 번호 매김」도 같이.
 - **번역 키**: 없음
 - **확인한 방법**: `npm run build`. 격리 스택(9182):
   - **이미 쓰던 DB**(100줄에 병원이 한 듯이 손을 댐 — I10 이름·순서 바꿈, R11 끔, B68.9 지움, 새 목록과 같은 코드 둘을 병원 이름으로 더함(`K35.8` 켜짐, `s93.4` 꺼짐·소문자), 코드 없는 진단 하나): 시작 때 마이그레이션 적용 → **315줄**(102 + 213), 같은 코드 중복 0, I10·R11 그대로, B68.9 되살아나지 않음, K35.8·s93.4는 병원 것 그대로, 새 줄 213개의 순서 2030~4170(있던 것 뒤), 이름 빈 것 0, 코드 모양 벗어난 것 0. **손으로 한 번 더 돌림 → `INSERT 0 0`, 315줄 그대로.**
