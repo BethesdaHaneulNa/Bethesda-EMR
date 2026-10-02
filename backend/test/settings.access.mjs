@@ -68,6 +68,11 @@ const ROUTES = [
   ['GET',  '/consultations/' + X + '/diagnoses', [CONS]],
   ['POST', '/consultations/' + X + '/diagnoses', [CONS], {}],
   ['DELETE', '/consultations/diagnosis/' + X, [CONS]],
+  // the diagnosis box (050, 2026-10-02): the list the doctor searches, main / secondary on a
+  // line, and a patient's earlier diagnoses - read by payment and pharmacy too, like prescriptions
+  ['GET',  '/consultations/diagnosis-codes', [CONS]],
+  ['PUT',  '/consultations/diagnosis/' + X, [CONS], {}],
+  ['GET',  '/consultations/patient/' + X + '/diagnoses', [CONS, PAY, PHARM]],
   ['GET',  '/consultations/visit/' + X + '/prescriptions', [CONS, PAY, PHARM]],
   ['GET',  '/consultations/' + X + '/prescriptions', [CONS, PAY, PHARM]],
   ['POST', '/consultations/' + X + '/prescriptions', [CONS], {}],
@@ -203,6 +208,13 @@ const ROUTES = [
   ['PUT',  '/admin/phrase-categories/order', [SET], {}],
   ['PUT',  '/admin/phrase-categories/' + X, [SET], {}],
   ['DELETE', '/admin/phrase-categories/' + X, [SET]],
+  // the diagnosis list kept in Settings (2026-10-02): the whole list is a Settings read - the
+  // doctors read the active rows through /consultations/diagnosis-codes. Empty bodies are
+  // 400s, the unknown id a 404; there is no delete.
+  ['GET',  '/admin/diagnosis-codes',        [SET]],
+  ['POST', '/admin/diagnosis-codes',        [SET], {}],
+  ['PUT',  '/admin/diagnosis-codes/order',  [SET], {}],
+  ['PUT',  '/admin/diagnosis-codes/' + X,   [SET], { name_en: 'x' }],
   // settings, and the admin role on top (U2); every account holding settings here is an admin
   ['POST', '/admin/staff/' + X + '/reactivate', [SET], {}],
   // backup / status / version / auth (settings)
