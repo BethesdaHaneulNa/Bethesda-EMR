@@ -556,7 +556,7 @@
 | `lab_result` | `order_item_id`(**CASCADE**, 014) … | 임상병리 소유. 오더를 지우면 같이 지워짐 |
 | `order_set` | `name`, `group_name`, `department_id`, `description`, `is_active`, `sort_order` | 004 |
 | `order_set_item` | `set_id`(CASCADE), `kind` ∈ `drug`·`order`, `drug_id`, `order_code_id`, `code`, `name`, `dose`, `frequency`, `days`, `route`, `quantity`, `sort_order` | 단가 없음 |
-| `diagnosis_code` (202 → 총괄이 번호 매김) | **자주 쓰는 진단 목록.** `id`, `code VARCHAR(20)`(비어도 됨, 유일하지 않아도 됨 — 코드 체계에 묶지 않음), `name_en`(필수) · `name_fr` · `name_ko`, `is_active`(끄면 찾기에서 빠지고 이미 쓴 줄은 그대로), `sort_order`, `created_at`, `updated_at`. 씨앗 100줄(ICD-10) — 표가 비어 있을 때만 넣음 |
+| `diagnosis_code` (050) | **자주 쓰는 진단 목록.** `id`, `code VARCHAR(20)`(비어도 됨, 유일하지 않아도 됨 — 코드 체계에 묶지 않음), `name_en`(필수) · `name_fr` · `name_ko`, `is_active`(끄면 찾기에서 빠지고 이미 쓴 줄은 그대로), `sort_order`, `created_at`, `updated_at`. 씨앗 100줄(ICD-10) — 표가 비어 있을 때만 넣음 |
 | `diagnosis` | `consultation_id`(CASCADE), `icd_code`, `diagnosis_name`, `diagnosis_type`(`primary`·`secondary`), `sort_order`, **`diagnosis_code_id`**(→ `diagnosis_code`, ON DELETE SET NULL; 직접 친 진단은 NULL), **`created_by`**(→ `staff`) — 굵은 둘이 202에서 더한 칸 |
 | `consultation_queue_filter` (042) | `staff_id`(PK, CASCADE), `all_doctors`, `doctor_ids INTEGER[]`, `unassigned`, `updated_at`. **행이 없으면 기본 규칙.** `staff` 표의 칸이 아니라 따로 둔 이유: `GET /admin/staff`가 `staff.*`를 돌려주어 칸을 더하면 설정 화면으로 실려 감 |
 | `consultation_note` | `consultation_id`(CASCADE), `visit_id`, `patient_id`, `author_id`, `note_text`(빈 글 금지), `created_at`, `updated_at`(고친 때, 안 고쳤으면 NULL), **UNIQUE(consultation_id, author_id)** | 038(세션 번호 201) — 의사마다 한 내원 한 기록. 옛 `consultation.note_text`(와 S/O/A/P를 「S: …」로 앞에 붙여)를 `doctor_id`의 기록으로 옮김, 두 번 돌려도 같음 |

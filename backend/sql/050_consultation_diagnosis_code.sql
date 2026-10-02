@@ -1,4 +1,4 @@
--- 202 (consultation; session number - the coordinator renumbers it): the list of
+-- 050 (consultation): the list of
 -- frequent diagnoses, and two columns on the diagnosis lines.
 --
 -- Feedback from the clinic (2026-10-02): the consultation screen had nowhere to enter a
