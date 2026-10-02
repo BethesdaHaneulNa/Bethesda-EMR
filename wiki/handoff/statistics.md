@@ -11,9 +11,9 @@
   1. **🩺 진단 통계 / Diagnostics** — 기간(날짜 칸 두 개, 처음 30일) · 주진단만/전체 진단(한 칸) · 과 · 의사로 거르기. 진단별 **진료 수 · 환자 수 · 남 · 여 · <5 · 5–14 · 15–49 · 50+**(나이 모름은 있을 때만), 많은 순. 목록에서 고른 진단은 `diagnosis_code_id` 로 묶고 이름은 화면 언어로, 직접 친 진단은 코드 + 이름 글자 그대로 묶고 「직접 입력」 표. 표 위에 기준 한 줄과 전체 진료 수 · 환자 수(따로 센 값). CSV.
   2. **🧪 오더 통계 / Examens et actes prescrits** — 기간 · 종류(전체 · 검사 · 영상 · 처치, 한 칸) · 과 · 의사. 오더별 **건수 · 수량 · 오더 금액**, 건수 많은 순. 낸 날(내원일) 기준, 취소한 오더 · 취소된 접수 빼기, 금액은 「오더에 적힌 값이며 받은 돈이 아님」을 기준 줄에 밝힘. 외부 영상 · 약은 들어가지 않음. CSV.
   - 서버: `GET /api/stats/options`(과 · 의사 고를 것) · `/orders` · `/diagnoses` — 모두 통계 권한 그대로, 읽기만.
-- **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`, `frontend/src/i18n/{ko,en,fr}.js`(통계 구역 안), `backend/sql/601_statistics_order_item_visit_index.sql`(새), 위키(`modules/statistics.md` 1 · 2.1 · 2.3c · 2.3d · 2.6 · 3.12 · 4 · 5 · 8절, `manual-fr/statistics.md`, `reference/changelog-1.5.0/statistics.md`)
+- **바꾼 파일**: `backend/src/routes/stats.routes.js`, `frontend/src/pages/Stats.jsx`, `frontend/src/i18n/{ko,en,fr}.js`(통계 구역 안), `backend/sql/053_statistics_order_item_visit_index.sql`(새), 위키(`modules/statistics.md` 1 · 2.1 · 2.3c · 2.3d · 2.6 · 3.12 · 4 · 5 · 8절, `manual-fr/statistics.md`, `reference/changelog-1.5.0/statistics.md`)
 - **공용 파일 변경**: 번역 파일 세 개의 `// ── begin statistics (st_) ──` 구역 안에만 `st_` 키 28개씩(진단 12 · 오더 13 · 공통 3: `st_allDepts`·`st_allDoctors`·`st_typed`). 그 밖 없음.
-- **DB 마이그레이션**: **601** `601_statistics_order_item_visit_index.sql` — `CREATE INDEX IF NOT EXISTS idx_oi_visit ON order_item (visit_id)` 하나. 줄은 안 바꿈, 다시 돌려도 안전. **세션 임시 번호 — 합칠 때 총괄이 다시 번호를 붙여 주세요.** `order_item` 은 진료의 표이나 인덱스만 더함(진료 세션에 알릴 것: 아래 「다른 세션에 부탁」).
+- **DB 마이그레이션**: **601** `053_statistics_order_item_visit_index.sql` — `CREATE INDEX IF NOT EXISTS idx_oi_visit ON order_item (visit_id)` 하나. 줄은 안 바꿈, 다시 돌려도 안전. **세션 임시 번호 — 합칠 때 총괄이 다시 번호를 붙여 주세요.** `order_item` 은 진료의 표이나 인덱스만 더함(진료 세션에 알릴 것: 아래 「다른 세션에 부탁」).
 - **확인한 방법** (격리 스택 9186, 새 DB, 실행 중 EMR 은 건드리지 않음)
   - `node --check` · 프런트 빌드(격리 스택의 web 이미지 빌드) 통과.
   - **숫자**: 진료 API 로 방문 6건(주/부진단, 목록/직접 입력, 검사 · 영상 · 처치 3일치 · 직접 친 오더, 취소한 오더 1, 취소된 접수 1, 기간 밖 1)을 넣고 손으로 센 값과 대조 — 오더 기본 · 종류 · 과 · 의사 · 60일, 진단 주진단 · 전체 · 과 · 의사 · 60일, 빈 기간, 틀린 인자 400: **전부 일치**(표는 `modules/statistics.md` 3.12). 따로 짠 SQL 과도 일치.

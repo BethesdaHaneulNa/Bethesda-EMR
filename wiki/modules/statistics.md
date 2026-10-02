@@ -460,7 +460,7 @@ S1 전액 이월: 9/10 FM·김 10 000 중 4 000 → 9/11 INT·이 3 000 + 이월
 | `diagnosis_code` | `code, name_en, name_fr, name_ko` | 진료 · 설정 |
 | `drug` | `category` | 설정·약국 |
 
-마이그레이션: **601** `601_statistics_order_item_visit_index.sql` — `order_item(visit_id)` 인덱스 하나(`idx_oi_visit`, `IF NOT EXISTS`, 줄은 안 바꿈). 세션 임시 번호이고 합칠 때 총괄이 다시 번호를 붙임. 통계의 표는 여전히 없음
+마이그레이션: **601** `053_statistics_order_item_visit_index.sql` — `order_item(visit_id)` 인덱스 하나(`idx_oi_visit`, `IF NOT EXISTS`, 줄은 안 바꿈). 세션 임시 번호이고 합칠 때 총괄이 다시 번호를 붙임. 통계의 표는 여전히 없음
 
 ## 5. 다른 모듈과의 연결
 
