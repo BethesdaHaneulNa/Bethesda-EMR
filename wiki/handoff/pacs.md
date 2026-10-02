@@ -2,6 +2,19 @@
 
 > 형식: [handoff/README.md](README.md) · 새 항목은 **맨 위에** 추가합니다.
 
+## 2026-10-02 — 큰 검사를 옮길 때 화면이 「서버가 응답하지 않음」을 보던 것
+
+- **상태**: 확인 요청(작은 것). 총괄: 「둘 다 하세요 — nginx 블록(이번에는 세션이 넣어도 됨) + 화면이 상태를 다시 물음」.
+- **커밋**: **EMR 저장소** `session/pacs` — 이 항목이 든 커밋(develop을 받은 뒤). **PACS 저장소** — 없음.
+- **한 일**: ① `frontend/nginx.conf` — `location = /api/pacs/move`(그 길 하나만, 기다림 600초; 나머지는 `/api/`와 같음). ② `MoveStudy.jsx` — 요청이 코드 없이 실패하면(끊김 · 502 · 시간 초과) 그 바로잡기의 줄을 4초마다(10분까지) 다시 물어 끝난 모습대로 알림; 기다리는 동안의 문장 `px_mvStillWorking`. `RadiologyReadings.jsx`가 `patientId`를 넘김(한 줄).
+- **공용 파일 변경**: **`frontend/nginx.conf`** — 새 블록 하나:
+  `location = /api/pacs/move { proxy_pass http://backend:3000; proxy_http_version 1.1; Host · X-Real-IP · X-Forwarded-For; proxy_read_timeout 600s; proxy_send_timeout 600s; proxy_connect_timeout 5s; proxy_intercept_errors on; error_page 502 503 504 = /api_backend_down.json; }`
+- **DB 마이그레이션**: 없음. **번역 키**: `px_mvStillWorking`(fr · en · ko).
+- **확인한 방법**(격리, 가짜 환자 26-00005의 48장짜리 검사): ① nginx를 거쳐 옮기기 — 전에는 60초에 502, 이제 **66초 뒤 200 `done`**. ② 화면에서 — 브라우저의 요청을 일부러 끊어(서버에는 보냄) 「Déplacer les images」: 10초 뒤 «Le serveur d'images travaille encore (examen volumineux)… ne fermez pas cette fenêtre.», 약 70초 뒤 **«✓ C'est fait : les images sont sous la bonne demande.»**. 검사는 원래 오더(65)로 돌아가 있음.
+- **확인 못 한 것**: 10분을 넘는 옮기기(그만큼 큰 검사가 없음) · `rolled-back` · `cleanup-pending`으로 끝나는 끊긴 요청의 화면 문장(코드로만) · 한국어/영어 화면.
+- **바꾼 파일**: `frontend/nginx.conf`, `frontend/src/components/MoveStudy.jsx`, `RadiologyReadings.jsx`, `frontend/src/i18n/{fr,en,ko}.js`, `wiki/modules/pacs.md`, `wiki/handoff/pacs.md`.
+- **다른 세션에 부탁**: 없음.
+
 ## 2026-10-02 — Bethesda CD: 뷰어 이름 VIEWER.EXE · AUTORUN.INF · 16px 아이콘 확인 (설정 세션이 맡음)
 
 - **상태**: 확인 요청 — 일 1~3. 일 4(들여오기 갈래)는 이어서, 따로 보고.

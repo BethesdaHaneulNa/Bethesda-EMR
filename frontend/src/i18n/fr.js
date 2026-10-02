@@ -1393,6 +1393,7 @@ export default {
   px_mvGoSwap: "Échanger les images",
   px_mvNeed: "Choisissez la bonne demande.",
   px_mvBusyNow: "Correction en cours… ne fermez pas cette fenêtre.",
+  px_mvStillWorking: "Le serveur d'images travaille encore (examen volumineux)… ne fermez pas cette fenêtre.",
   px_mvDone: "C'est fait : les images sont sous la bonne demande.",
   px_mvDoneLater: "La correction est enregistrée. Le serveur d'images termine le rangement tout seul, dans quelques minutes.",
   px_mvCheckList: "Regardez la liste : la ligne d'historique de l'examen dit si la correction a eu lieu.",
