@@ -1421,6 +1421,7 @@ export default {
   px_mvGoSwap: "영상 맞바꾸기",
   px_mvNeed: "맞는 오더를 고르세요.",
   px_mvBusyNow: "바로잡는 중… 이 창을 닫지 마세요.",
+  px_mvStillWorking: "영상 서버가 아직 작업 중입니다(큰 검사)… 이 창을 닫지 마세요.",
   px_mvDone: "끝났습니다. 영상이 맞는 오더로 옮겨졌습니다.",
   px_mvDoneLater: "바로잡았습니다. 영상 서버의 뒷정리는 몇 분 안에 저절로 끝납니다.",
   px_mvCheckList: "목록을 보세요 — 그 검사의 옮긴 기록 줄에 결과가 나옵니다.",

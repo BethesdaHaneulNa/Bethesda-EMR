@@ -491,7 +491,7 @@ export function RadiologyReadings(props) {
       {imaging ? <ImagesPrint exam={imaging} examDate={ymd(imaging.images_received_at) || ymd(imaging.visit_date)} now={ymdhm(new Date().toISOString())}
         patientId={props.patientId} t={t} onClose={function () { setImaging(null); }} /> : null}
       {outsideOpen ? <OutsideViewer study={outsideOpen} t={t} onClose={function () { setOutsideOpen(null); }} /> : null}
-      {moving ? <MoveStudy exam={moving} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
+      {moving ? <MoveStudy exam={moving} patientId={props.patientId} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
     </div>
   );
 }

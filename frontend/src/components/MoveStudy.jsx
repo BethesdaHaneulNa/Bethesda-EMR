@@ -49,6 +49,7 @@ export function MoveStudy(props) {
   var rs = useState(''), reason = rs[0], setReason = rs[1];
   var bs = useState(false), busy = bs[0], setBusy = bs[1];
   var os = useState(null), outcome = os[0], setOutcome = os[1];    // { ok, text }
+  var ws = useState(false), waiting = ws[0], setWaiting = ws[1];   // the request was cut; the server is still at it
 
   useEffect(function () {
     api.get('/pacs/move-targets?order_item_id=' + exam.id)
@@ -60,20 +61,49 @@ export function MoveStudy(props) {
   var chosen = data && target ? data.targets.filter(function (x) { return x.order_item_id === target; })[0] : null;
   var ready = !!chosen && chosen.can && !busy && !outcome;
 
+  // The patient's corrections, most recent first (GET /pacs/moves/patient); null when they cannot be read.
+  function corrections() {
+    if (!props.patientId) return Promise.resolve(null);
+    return api.get('/pacs/moves/patient/' + props.patientId).then(function (r) { return r || []; }).catch(function () { return null; });
+  }
+  // A request that was cut (a study of many large images takes minutes; the web server in
+  // front, or the network, gives up first) has usually gone through: the server finishes a
+  // correction whether or not anyone is still listening. So the correction's own line is
+  // looked up - the one newer than `before`, for these two orders - and asked again every
+  // 4 s until it says how it ended (10 minutes at most). null: no such line, or no answer.
+  async function afterCut(before, to) {
+    for (var i = 0; i < 150; i++) {
+      await new Promise(function (r) { setTimeout(r, 4000); });
+      var list = await corrections();
+      var line = list ? list.filter(function (m) { return m.id > before && m.from_order_item_id === exam.id && m.to_order_item_id === to; })[0] : null;
+      if (!line) { if (i >= 4) return null; continue; }          // 20 s and no line: the request never arrived
+      if (line.state === 'done') return { ok: true, text: t.px_mvDone };
+      if (line.state === 'cleanup-pending') return { ok: true, text: t.px_mvDoneLater };
+      if (line.state === 'rolled-back') return { ok: false, text: moveWhy(t, 'NOT_CORRECTED', '') };
+      if (line.state === 'failed') return { ok: false, text: t.px_mvCheckList };
+      setWaiting(true);                                           // started, emr-done, undo-pending: still at it
+    }
+    return null;
+  }
+
   async function go() {
     if (!ready) return;
-    setBusy(true);
+    setBusy(true); setWaiting(false);
+    var to = chosen.order_item_id;
+    var had = await corrections();
+    var before = had ? had.reduce(function (n, m) { return Math.max(n, m.id); }, 0) : null;
     try {
-      var r = await api.post('/pacs/move', { from_order_item_id: exam.id, to_order_item_id: chosen.order_item_id, reason: reason.trim() });
+      var r = await api.post('/pacs/move', { from_order_item_id: exam.id, to_order_item_id: to, reason: reason.trim() });
       setOutcome({ ok: true, text: r.state === 'done' ? t.px_mvDone : t.px_mvDoneLater });
       if (props.onDone) props.onDone();
     } catch (e) {
-      // A request cut by the network may still have gone through on the server: the list
-      // is read again either way, and the history line says what happened.
-      setOutcome({ ok: false, text: moveWhy(t, e && e.code, (e && e.message) || '') + (e && e.code ? '' : ' ' + t.px_mvCheckList) });
+      // A refusal carries the server's code. Anything else is a request that was cut: it
+      // may still have gone through - ask how the correction ended before saying it failed.
+      var found = (!e || !e.code) && before !== null ? await afterCut(before, to) : null;
+      setOutcome(found || { ok: false, text: moveWhy(t, e && e.code, (e && e.message) || '') + (e && e.code ? '' : ' ' + t.px_mvCheckList) });
       if (props.onDone) props.onDone();
     }
-    setBusy(false);
+    setBusy(false); setWaiting(false);
   }
 
   var bd = 'var(--border)', tx = 'var(--text)', t2 = 'var(--text-2)', t3 = 'var(--text-3)';
@@ -148,7 +178,7 @@ export function MoveStudy(props) {
           {outcome ? <div style={{ fontWeight: 700, color: outcome.ok ? 'var(--ok-text)' : 'var(--danger-text-2)', lineHeight: 1.5 }}>{outcome.ok ? '✓ ' : '✕ '}{outcome.text}</div> : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderTop: '1px solid var(--border-2)', background: 'var(--panel-head)' }}>
-          <span style={{ flex: 1, fontSize: 12, color: t2 }}>{busy ? t.px_mvBusyNow : (src && src.can && !outcome && !ready ? t.px_mvNeed : '')}</span>
+          <span style={{ flex: 1, fontSize: 12, color: t2 }}>{busy ? (waiting ? t.px_mvStillWorking : t.px_mvBusyNow) : (src && src.can && !outcome && !ready ? t.px_mvNeed : '')}</span>
           {outcome ? <button onClick={props.onClose} style={Object.assign({}, btn, { background: 'var(--violet-deep)', color: 'var(--on-fill-violet)', border: '1px solid var(--violet-ink)' })}>{t.close || '닫기'}</button>
             : <button onClick={go} disabled={!ready} style={Object.assign({}, btn, { background: ready ? 'var(--violet-deep)' : 'var(--chip)', color: ready ? 'var(--on-fill-violet)' : t3, border: '1px solid ' + (ready ? 'var(--violet-ink)' : 'var(--border-2)'), cursor: ready ? 'pointer' : 'not-allowed' })}>
               ⇄ {chosen && chosen.kind === 'swap' ? t.px_mvGoSwap : t.px_mvGoMove}</button>}
