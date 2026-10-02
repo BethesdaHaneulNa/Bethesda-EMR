@@ -131,6 +131,11 @@ and the original files, made by the image server itself) with a `README.TXT`; th
 the reading is not on it (it is printed). The program talks to the EMR only: the EMR checks the account,
 refuses cancelled exams and exams with an identity warning, hands the image server's bundle on untouched
 and writes one line in the change log per copy - no line, no copy. Only a blank disc is ever written.
+The disc also carries the clinic's own small viewer, `VOIR.EXE` (about 50 KB, nothing installed, "for
+reference - not for diagnosis"): it opens uncompressed images, JPEG - lossless JPEG is what the clinic's
+ultrasound sends - and RLE. When a chosen exam holds an image in a compression the viewer does not open
+(JPEG 2000, JPEG-LS, ...), the EMR has the image server unpack that copy (lossless, larger) and the log
+line says so.
 
 ### The EMR knows when the images have arrived, and whose they are
 

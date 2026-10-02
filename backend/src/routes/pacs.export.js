@@ -270,6 +270,24 @@ async function sizeOf(cfg, study) {
   if (st.status !== 200 || !st.json) return null;
   return { items: number(st.json.CountInstances) || 0, bytes: Number(st.json.DicomDiskSize) || 0 };
 }
+// The disc carries a small viewer (VOIR.EXE, built by the export program) for those who
+// have no imaging software. These are the transfer syntaxes it opens: uncompressed,
+// JPEG baseline, lossless JPEG (what the clinic's ultrasound sends) and RLE. Images stored
+// in any of these go onto the disc as they are.
+const VIEWER_OPENS = new Set([
+  '1.2.840.10008.1.2', '1.2.840.10008.1.2.1',
+  '1.2.840.10008.1.2.4.50', '1.2.840.10008.1.2.4.57', '1.2.840.10008.1.2.4.70',
+  '1.2.840.10008.1.2.5',
+]);
+const UNPACKED = '1.2.840.10008.1.2.1';         // Explicit VR Little Endian: uncompressed
+// The transfer syntaxes a study's files are stored in (null: the image server did not say).
+async function syntaxesOf(cfg, study) {
+  const f = await ox(cfg, 'POST', '/tools/find', { Level: 'Instance', ParentStudy: study.ID, Query: {}, ResponseContent: ['Metadata'] });
+  if (f.status !== 200 || !Array.isArray(f.json)) return null;
+  const out = new Set();
+  for (const i of f.json) { const ts = i && i.Metadata && i.Metadata.TransferSyntax; if (!ts) return null; out.add(String(ts)); }
+  return out;
+}
 async function inTurns(list, n, fn) {
   const out = new Array(list.length);
   let next = 0;
@@ -330,6 +348,12 @@ router.get('/patient', authMiddleware, mayExport, async (req, res) => {
 // byte for byte: DICOMDIR at the top and the DICOM files under IMAGES/ - copied to the
 // top of a disc, that is a standard DICOM disc. Nothing is added here (the note for the
 // reader of the disc is written by the export program).
+// One thing may be changed on the way: when an image of the chosen exams is stored in a
+// compression the disc's viewer does not open (JPEG 2000, JPEG-LS, 12-bit lossy JPEG, ...),
+// the image server is asked to unpack the bundle - every image of it, one bundle has one
+// form - to "uncompressed". Nothing is lost (it is the decoded picture), the bundle is
+// larger, the log line says so and the answer carries X-Export-Unpacked: 1. If the image
+// server cannot say how the images are stored, they go out as they are.
 // The change-log line (pacs.images.export) is written when the image server has begun to
 // answer and before the first byte leaves: no line, no bundle. `medium` is what the
 // program says it will do with the copy; the line stays if the burn fails afterwards.
@@ -357,6 +381,9 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
     const sizes = await inTurns(wanted, 4, st => sizeOf(cfg, st));
     if (sizes.some(z => !z)) return refuse(res, 'UNREACHABLE');
     const items = sizes.reduce((n, z) => n + z.items, 0), bytes = sizes.reduce((n, z) => n + z.bytes, 0);
+    const stored = await inTurns(wanted, 4, st => syntaxesOf(cfg, st));
+    const others = [...new Set(stored.filter(Boolean).flatMap(set => [...set]))].filter(ts => !VIEWER_OPENS.has(ts)).sort();
+    const unpack = others.length > 0;
 
     // The image server makes the ZIP and sends it as it makes it.
     ctl = new AbortController();
@@ -367,7 +394,7 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
       r = await fetch(new URL(base.pathname.replace(/\/+$/, '') + '/tools/create-media-extended', base.origin), {
         method: 'POST', signal: ctl.signal,
         headers: { Authorization: 'Basic ' + Buffer.from('admin:' + cfg.orthanc_password).toString('base64'), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Resources: wanted.map(st => st.ID), Synchronous: true }),
+        body: JSON.stringify(Object.assign({ Resources: wanted.map(st => st.ID), Synchronous: true }, unpack ? { Transcode: UNPACKED } : {})),
       });
     } catch (e) { return refuse(res, 'UNREACHABLE'); } finally { clearTimeout(head); }
     if (r.status !== 200 || !r.body) { ctl.abort(); return refuse(res, 'UNREACHABLE'); }
@@ -376,8 +403,9 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
     const logged = await writeAudit(pool, req, {
       action: ACTIONS.PACS_IMAGES_EXPORT, patient_id: exams[0].patient_id, visit_id: exams.length === 1 ? exams[0].visit_id : null,
       entity: 'patient', entity_id: exams[0].patient_id,
-      summary: exams.length + ' exam(s), ' + items + ' image(s), ' + (bytes / 1048576).toFixed(1) + ' MB given out (' + medium + '): ' + names.join('; '),
-      after: { medium, exam_count: exams.length, image_count: items, size_mb: Math.round(bytes / 104857.6) / 10, exams: names.join('; ') },
+      summary: exams.length + ' exam(s), ' + items + ' image(s), ' + (bytes / 1048576).toFixed(1) + ' MB given out (' + medium + ')' + (unpack ? ', unpacked' : '') + ': ' + names.join('; '),
+      after: Object.assign({ medium, exam_count: exams.length, image_count: items, size_mb: Math.round(bytes / 104857.6) / 10, exams: names.join('; ') },
+        unpack ? { unpacked_from: others.join(' ') } : {}),
     });
     if (!logged) { ctl.abort(); return refuse(res, 'NOT_LOGGED'); }
 
@@ -388,6 +416,7 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
     res.set('X-Accel-Buffering', 'no');                 // nginx hands it on as it comes, without keeping it on its disk
     res.set('X-Export-Items', String(items));
     res.set('X-Export-Bytes', String(bytes));
+    res.set('X-Export-Unpacked', unpack ? '1' : '0');
     res.on('close', () => { if (!res.writableEnded) ctl.abort(); });     // the program went away: stop asking the image server
     const body = Readable.fromWeb(r.body);
     body.on('error', () => res.destroy());              // the image server broke off: the copy is cut, never ended as if whole
@@ -398,4 +427,4 @@ router.get('/bundle', authMiddleware, mayExport, async (req, res) => {
   }
 });
 
-module.exports = { router, WHY, _test: { examBlock, NOT_PICTURES } };
+module.exports = { router, WHY, _test: { examBlock, NOT_PICTURES, VIEWER_OPENS } };
