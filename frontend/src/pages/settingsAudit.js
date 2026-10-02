@@ -38,6 +38,10 @@ export var AUDIT_ACTIONS = {
   // an exam's images given out of the clinic: printed on paper, or copied to a disc or a file
   // (PACS, routes/pacs.export.js; the copy is still to come when this was written)
   'pacs.images.print': 'se_act_imagesPrint',
+  // a result sheet put on paper (decided 2026-10-02: printed, not issued - one line here and
+  // no document number; document.routes.js POST /print-log): an exam's reading, lab results
+  'pacs.report.print': 'se_act_reportPrint',
+  'laboratory.results.print': 'se_act_labResultsPrint',
   'pacs.images.export': 'se_act_imagesExport',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
@@ -109,7 +113,9 @@ var FIELDS = {
   study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount',
   // pacs.images.print: how many pictures on one sheet. export: megabytes, the exams by name
   per_page: 'se_fld_perPage', size_mb: 'se_fld_sizeMb', exams: 'se_fld_exams',
-  // the language a document or the image sheets were printed in
+  // laboratory.results.print: the days of the results printed (one string, "d, d"), how many tests
+  dates: 'se_fld_printDates', test_count: 'se_fld_testCount',
+  // the language a document, a result sheet or the image sheets were printed in
   lang: 'se_fld_docLang',
   image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
   reading_moved: 'se_fld_readingMoved', readings_exchanged: 'se_fld_readingsExchanged',
@@ -163,7 +169,7 @@ export function auditSummary(t, row) {
   // Printed or copied images: the server's summary is an English sentence ("5 image(s) of X
   // (..) printed", "2 exam(s), 30 image(s), 12.3 MB given out (disc): X (..); Y (..)"); the
   // exam and its number say it in any language, the counts are fields.
-  if (row.action === 'pacs.images.print' && row.after_value && row.after_value.order_name) {
+  if ((row.action === 'pacs.images.print' || row.action === 'pacs.report.print') && row.after_value && row.after_value.order_name) {
     return row.after_value.order_name + (row.after_value.accession_no ? ' (' + row.after_value.accession_no + ')' : '');
   }
   // An export names its exams in one string, "X (..); Y (..)" (pacs.export.js): the first
@@ -171,6 +177,12 @@ export function auditSummary(t, row) {
   if (row.action === 'pacs.images.export' && row.after_value && row.after_value.exams) {
     var list = String(row.after_value.exams).split('; ');
     return list[0] + (list.length > 1 ? ' + ' + (list.length - 1) : '');
+  }
+  // Lab results printed: "Lab results of <day> printed" (or "<first> .. <last>") - the day, or
+  // the first and the last, without the words; every day is in the field.
+  if (row.action === 'laboratory.results.print' && row.after_value && row.after_value.dates) {
+    var days = String(row.after_value.dates).split(', ');
+    return days.length > 1 ? days[0] + ' … ' + days[days.length - 1] : days[0];
   }
   // Receipts printed together: the summary is the receipt numbers, and so is the field
   // "receipts" right beside it - said once, in the field.
