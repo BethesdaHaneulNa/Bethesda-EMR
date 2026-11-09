@@ -132,7 +132,7 @@ Un patient ouvert avec **🔍 Trouver patient** dont la visite n'est pas d'aujou
 ### 11. Articles sans prix, quantité manquante
 
 - **Sans prix** à la place du prix, et le cadre jaune « **N article(s) sans prix — vérifiez les prix** » : le médicament ou l'examen n'a pas de prix. Au moment de **Confirmer**, une fenêtre demande « Encaisser quand même ? ». S'il est donné gratuitement, confirmez. Sinon, annulez et demandez au médecin ou à la pharmacie.
-- **⚠ Quantité manquante** (et dans la liste **Quantité de médicament manquante**) : la quantité totale n'est pas écrite. L'encaissement est bloqué. Demandez au médecin d'enregistrer à nouveau la prescription (pour un sirop ou une crème : le **nombre de flacons / tubes**), puis cliquez sur **↻** et encaissez.
+- **⚠ Quantité manquante** (et dans la liste **Quantité de médicament manquante**) : la quantité totale n'est pas écrite. L'encaissement est bloqué. Demandez au médecin d'enregistrer à nouveau la prescription (pour un sirop ou une crème : **Dose/j × Jours** est le nombre de flacons / tubes), puis cliquez sur **↻** et encaissez.
 - Pour un sirop, une crème, un inhalateur, la quantité s'écrit en flacons ou tubes (par exemple **2 flacons**), aussi sur le relevé détaillé.
 
 ### 12. Le reçu, le relevé détaillé, réimprimer

@@ -729,28 +729,22 @@ async function withForm(db, row) {
 }
 function intOrNull(v) { const n = parseInt(v); return Number.isFinite(n) ? n : null; }
 
-// Pack-unit drugs (H2-B, decided 2026-09-29; columns from the pharmacy's 025): a syrup,
-// a cream, an inhaler is handed out by the bottle, tube or piece, so its line's
-// total_qty is the COUNT the doctor writes (pack_qty), not dose x days. The daily
-// dose, times and days stay on the line as the intake instructions only.
-// The flag and the unit word are copied from the drug table when the line is written
-// (as the price is), so marking the drug later does not change an existing line; what
-// the screen sends for them is not used.
-// pack_qty: a whole number of at least 1 (stock is counted in whole bottles); missing
-// or blank is stored as NULL - the pharmacy then stops on "no total" and the bill has
-// nothing to charge, rather than a wrong number going through.
-const PACK_QTY_BAD = 'pack_qty must be a whole number of at least 1';
-function packQty(v) {
-  if (v === undefined || v === null || String(v).trim() === '') return { qty: null };
-  const n = Number(v);
-  if (!Number.isInteger(n) || n < 1) return { bad: PACK_QTY_BAD };
-  return { qty: n };
-}
+// Pack-unit drugs (columns from the pharmacy's 025): a syrup, a cream, an inhaler is
+// handed out by the bottle, tube or piece. Since 1.7.16 (the clinic's manager, 2026-11-09:
+// « 2 · 1 · 1 means two go out ») its total is worked out like any other line - daily
+// total x days - and the number fields ARE the count; the intake instructions go in the
+// sig or the memo. Until then the count was a separate pack_qty (migration 062 converts
+// the open lines). What stays special: the count must be a whole number of bottles - a
+// line whose product is not whole is refused, not rounded. The flag and the unit word are
+// copied from the drug table when the line is written (as the price is), so marking the
+// drug later does not change an existing line; what the screen sends for them is not used.
+const PACK_TOTAL_BAD = 'the pack-unit total (daily total x days) must be a whole number of at least 1';
+function badPackTotal(total) { return total !== null && !(Number.isInteger(total) && total >= 1); }
 
 // POST /api/consultations/:id/prescriptions
 router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (client) => {
-  // total_qty from the client is ignored: the server works it out (rxTotal), or for a
-  // pack-unit drug takes the count the doctor wrote (pack_qty).
+  // total_qty from the client is ignored: the server works it out (rxTotal), for a
+  // pack-unit drug too (a whole number of bottles, or refused).
   const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
   if (blank(drug_name)) return [400, { error: 'drug_name is required' }];
   const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
@@ -762,12 +756,8 @@ router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (cli
     const d = await client.query('SELECT pack_unit, pack_label FROM drug WHERE id = $1', [drug_id]);
     if (d.rows[0] && d.rows[0].pack_unit) pack = { pack_unit: true, pack_label: d.rows[0].pack_label || 'unit' };
   }
-  let total = rxTotal(dose, days);
-  if (pack.pack_unit) {
-    const pq = packQty(req.body.pack_qty);
-    if (pq.bad) return [400, { error: pq.bad }];
-    total = pq.qty;
-  }
+  const total = rxTotal(dose, days);
+  if (pack.pack_unit && badPackTotal(total)) return [400, { error: PACK_TOTAL_BAD }];
   const result = await client.query(
     `INSERT INTO prescription (consultation_id, drug_id, drug_code, drug_name, dose, frequency, days, route, total_qty, unit_price, memo,
                                pack_unit, pack_label, prescribed_by)
@@ -795,21 +785,17 @@ async function lockRx(client, rxId) {
 
 // PUT /api/consultations/prescription/:rxId - update prescription details
 router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (client) => {
-  // total_qty from the client is ignored: the server works it out (rxTotal), or for a
-  // pack-unit line takes pack_qty.
+  // total_qty from the client is ignored: the server works it out (rxTotal).
   const { dose, frequency, days, route, memo, unit_price } = req.body;
   const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
   if (invalid) return [400, { error: invalid }];
   const freq = intOrNull(frequency), nDays = intOrNull(days);
   const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
-  const packSent = Object.prototype.hasOwnProperty.call(req.body, 'pack_qty');
-  const pq = packSent ? packQty(req.body.pack_qty) : { qty: null };
-  if (pq.bad) return [400, { error: pq.bad }];
   const got = await lockRx(client, req.params.rxId);
   if (got.refuse) return got.refuse;
-  // A pack-unit line (the flag stored on the line): total_qty changes only when
-  // pack_qty is sent; a new daily dose or number of days is instructions, not a count.
-  // Any other line: total_qty is recomputed only when the dose, the times a day or the
+  // A pack-unit line (the flag stored on the line) must come out as whole bottles.
+  if (got.rx.pack_unit && badPackTotal(rxTotal(dose, nDays))) return [400, { error: PACK_TOTAL_BAD }];
+  // total_qty is recomputed only when the dose, the times a day or the
   // days really changed (compared as numbers: "3" and "3.000" are the same dose), or
   // when it is empty (a line saved with no total gets one when it is saved again - the
   // payment session's request). The screen saves a row whenever a field loses focus,
@@ -821,14 +807,13 @@ router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (cli
     `UPDATE prescription
      SET dose=$1, frequency=$2, days=$3, route=$4, memo=$5, unit_price=COALESCE($7, unit_price),
          total_qty = CASE
-           WHEN pack_unit THEN (CASE WHEN $10::boolean THEN $11::numeric ELSE total_qty END)
            WHEN (CASE WHEN dose ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$' THEN dose::numeric END) IS DISTINCT FROM $9::numeric
              OR frequency IS DISTINCT FROM $2
              OR days IS DISTINCT FROM $3
              OR total_qty IS NULL
            THEN $6 ELSE total_qty END
      WHERE id=$8 RETURNING *`,
-    [blankNull(dose), freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose, packSent, pq.qty]
+    [blankNull(dose), freq, nDays, route, memo, rxTotal(dose, nDays), unit_price, req.params.rxId, newDose]
   );
   const rx = result.rows[0];
   await recordEdit(client, req, await consultOf(client, rx.consultation_id), 'prescription', rx, rx.drug_name,

@@ -16,8 +16,8 @@ const canReadSets = permMiddleware('consultation', 'settings');
 // become the total - stock and money. A bad value is a 400 and nothing changes.
 //   drug line:  dose (the daily total) a number > 0 · frequency and days whole numbers
 //               (1-24, 1-365) · route (the sig) at most 10 characters, the prescription
-//               column's size · quantity (the bottle/tube count of a pack-unit drug, which
-//               the consultation server takes only as a whole number) a whole number >= 1
+//               column's size · quantity a whole number >= 1 (kept for old sets; since
+//               1.7.16 a pack-unit drug's count is its daily total x days like any line)
 //   order line: quantity a number > 0 · frequency and days whole numbers
 // An empty field is allowed (an old set, or one not filled in yet); see insertItems.
 const blank = (v) => v === undefined || v === null || String(v).trim() === '';

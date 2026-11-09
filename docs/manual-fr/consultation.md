@@ -92,11 +92,12 @@ Une case laissée vide reste vide : le logiciel ne met jamais « 1 » à votre p
 
 ### 5. Sirop, crème, inhalateur (médicament au flacon)
 
-Certains médicaments sont donnés au flacon, au tube ou à l'unité. Sous leur nom apparaît une case **Quantité** suivie de **flacon(s)**, **tube(s)**…
+Certains médicaments sont donnés au flacon, au tube ou à l'unité. Depuis la version 1.7.16, ils se prescrivent **comme les autres** : **Dose/j × Jours** est le nombre de flacons ou de tubes délivré et facturé.
 
-1. Saisissez le **nombre de flacons** (un nombre entier : 1, 2, 3 — pas de demi-flacon).
-2. **Dose/j**, **Fois** et **Jours** ne servent ici que de posologie pour le patient. Ils ne changent pas la quantité.
-3. La phrase devient par exemple « 15 par jour en 3 prises, pendant 7 jours — 2 flacons ».
+1. Pour 1 flacon : `1` · `1` · `1`. Pour 2 flacons : `2` · `1` · `1`. Le produit doit être un nombre entier (pas de demi-flacon) : sinon la ligne n'est pas enregistrée et un message le dit.
+2. La façon de prendre (« 5 mL, 3 fois par jour, 6 jours ») s'écrit en toutes lettres dans **Posologie** (10 caractères) ou dans le **Mémo** : c'est ce que le patient lit sur l'ordonnance.
+3. Sous la ligne, la phrase donne le nombre : « 2 flacons ».
+4. Les lignes écrites avant la version 1.7.16 (une case **Quantité** à part) gardent leur nombre tel quel.
 
 Tant que la **Quantité** est vide, l'étiquette rouge **Indiquez la quantité** reste affichée.
 
@@ -200,7 +201,7 @@ Impossible si la visite est annulée ou déjà encaissée : une fois la visite e
 | Message à l'écran | Ce que cela veut dire | Que faire |
 |---|---|---|
 | **Indiquez dose/jour, fois et jours** (rouge, à côté du médicament) | Une case est vide : pas de total ou pas de posologie | Remplissez **Dose/j**, **Fois** et **Jours** |
-| **Indiquez la quantité** (rouge) | Médicament au flacon sans nombre de flacons | Saisissez la **Quantité** |
+| **Nombre non entier** (rouge) / « Dose/j × Jours doit être un nombre entier… » | Médicament au flacon : le produit Dose/j × Jours n'est pas un nombre entier de flacons | Corrigez **Dose/j** ou **Jours** (par exemple `2` · `1` · `1`) |
 | **Sans prix** (jaune) | Le prix est 0 : la ligne sera facturée 0 | Prévenez l'administrateur. Un prix saisi plus tard ne change pas les lignes déjà prescrites : il faut retirer la ligne et l'ajouter de nouveau |
 | **dose par prise non divisible** (jaune) | La dose par prise ne tombe pas sur un demi-comprimé | Vérifiez que c'est voulu |
 | **total enregistré selon l'ancien calcul (nouveau calcul : …)** | Ligne d'avant le 29/09/2026, calculée à l'ancienne | Rien si elle est juste. Si vous changez la dose ou les jours, le total est recalculé |

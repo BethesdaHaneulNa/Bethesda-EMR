@@ -26,7 +26,7 @@ var LOCK_MESSAGES = {
   'Visit is not in consultation': 'cs_backNotStarted',
   'Consultation has records': 'cs_backHasRecords',
   'Diagnosis already on this consultation': 'cs_dxDuplicate',
-  'pack_qty must be a whole number of at least 1': 'cs_packQtyWhole',
+  'the pack-unit total (daily total x days) must be a whole number of at least 1': 'cs_packQtyWhole',
 };
 
 // Mirrors the server's rule for a locked order, so the row can show it before anyone
@@ -132,14 +132,14 @@ function noPrice(v){ var n = parseFloat(v); return !(n > 0); }
 // Since decision B (2026-09-29) a drug from the search starts with every field empty,
 // so the times a day count too: they are not in the total, but the label's sentence
 // ("1 cp x 3 fois/jour") cannot be written without them.
-function noDose(rx){ return !isPack(rx) && (!(parseFloat(rx.dose) > 0) || !(parseInt(rx.frequency, 10) > 0) || !(parseInt(rx.days, 10) > 0)); }
+function noDose(rx){ return !(parseFloat(rx.dose) > 0) || !(parseInt(rx.frequency, 10) > 0) || !(parseInt(rx.days, 10) > 0); }
 
 // A pack-unit drug (a syrup, a cream, an inhaler - marked in Settings, copied onto the
-// line by the server) is handed out by the bottle/tube/piece: its total is the count
-// the doctor writes, and the daily dose, times and days are only the instructions. So
-// the thing that must not be empty is the count, not the dose. Stored NULL when empty.
-function noPackQty(rx){ return isPack(rx) && !(parseFloat(rx.total_qty) > 0); }
-function packCount(rx){ return rx.total_qty == null ? '' : String(parseFloat(rx.total_qty)); }
+// line by the server) is handed out by the bottle/tube/piece. Since 1.7.16 (the clinic's
+// manager: « 2 · 1 · 1 means two go out ») its numbers are the count like any line, so
+// the same noDose rule applies; what is flagged here is a product that is not whole
+// bottles (the server refuses such a save, so this shows only a stale row).
+function noPackQty(rx){ var q = parseFloat(rx.total_qty); return isPack(rx) && q > 0 && Math.abs(q - Math.round(q)) > 1e-6; }
 
 // Stored values the screen shows, and the translation key for each. The values
 // themselves (visit.status, order_code.code_type) are what the database and the other
@@ -197,7 +197,7 @@ export default function ConsultationPage() {
   // to send - and before the total formula changed, an old line re-saved for no reason
   // was a line re-priced for no reason.
   var savedRx = useRef({});
-  function rxSnap(r){ return [r.dose, r.frequency, r.days, r.route, r.memo, isPack(r) ? (r.pack_qty!==undefined ? r.pack_qty : packCount(r)) : '']
+  function rxSnap(r){ return [r.dose, r.frequency, r.days, r.route, r.memo, '']
     .map(function(x){ return x==null ? '' : String(x); }).join('|'); }
   function rememberRx(rows){ (rows||[]).forEach(function(r){ savedRx.current[r.id] = rxSnap(r); }); return rows; }
   var ois = useState([]), orderItems = ois[0], setOrderItems = ois[1];
@@ -911,9 +911,6 @@ export default function ConsultationPage() {
         dose:set.default_dose || '', frequency:set.default_freq || '', days:set.default_days || '',
         route:set.default_route || '', unit_price:drug.unit_price,
         memo: drug.unit || '',
-        // Only used when the drug is a pack-unit one (the server looks that up): the
-        // count from an order set. From the search it is empty and the doctor types it.
-        pack_qty: drug.pack_qty,
       });
       rememberRx([rx]);
       setRxList(function(p){ return p.concat([rx]); });
@@ -1155,24 +1152,8 @@ export default function ConsultationPage() {
   function NoPackBadge(){
     return <span title={t.cs_packQtyHint} style={{marginLeft:6,background:'var(--danger-chip)',color:'var(--danger-text-2)',border:'1px solid var(--danger-deep)',borderRadius:3,padding:'0 5px',fontSize:11,fontWeight:700,whiteSpace:'nowrap',cursor:'help',verticalAlign:'middle'}}>{t.cs_noPackQty}</span>;
   }
-  // The count box of a pack-unit line, under the drug name: "Quantité [ 2 ] flacon".
-  // Red border while empty. Saved on blur like the other fields. Called as a function,
-  // not used as <Component/>: defined in here it would be a new component type on every
-  // render, and React would remount the input and drop the focus at each keystroke.
-  function packQtyBox(rx){
-    var v = rx.pack_qty!==undefined ? rx.pack_qty : packCount(rx);
-    var empty = !(parseFloat(v) > 0);
-    return <div title={t.cs_packQtyHint} style={{marginTop:3,display:'flex',alignItems:'center',gap:4,fontSize:12.5,color:t2}}>
-      <span style={{fontWeight:700,whiteSpace:'nowrap'}}>{t.cs_packQty}</span>
-      <input type="number" min="1" step="1" value={v} onChange={function(e){updateRxLocal(rx.id,'pack_qty',e.target.value)}} onBlur={function(e){ if(leftRow(e)) saveRx(rx); }}
-        style={{width:40,background:'var(--field)',border:'1px solid '+(empty?'var(--danger-deep)':'var(--field-border)'),borderRadius:4,padding:'2px 4px',color:tx,fontSize:14,textAlign:'center'}}/>
-      {/* The unit word agrees with the count (1 flacon, 2 flacons); packWord puts the
-          number in front, which the box already shows. Korean has no plural. */}
-      {(function(){ var w = lang==='ko' ? packWord(rx, lang) : packWord(rx, lang, parseFloat(v) > 1 ? 2 : 1).replace(/^[\d.,\s]+/, '');
-        // one line: at 1366 wide « flacons » broke into « flaco / ns »
-        return <span title={w} style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{w}</span>; })()}
-    </div>;
-  }
+  // (1.7.12 had a separate « Quantité [ 2 ] flacon » box here for pack-unit lines; since
+  // 1.7.16 the count is daily total x days like any line - the clinic's manager.)
   var noPriceCount = rxList.filter(function(r){ return r.dispense_type!=='external' && noPrice(r.unit_price); }).length
                    + orderItems.filter(function(o){ return o.status!=='cancelled' && noPrice(o.unit_price); }).length;
 
@@ -1221,10 +1202,7 @@ export default function ConsultationPage() {
       days: rx.days == null ? '' : rx.days,
       route: rx.route || '',
       memo: rx.memo || '',
-      unit_price: rx.unit_price,
-      // pack_qty only for a pack-unit line; left out otherwise so the server keeps
-      // working the total out from the dose and the days.
-      pack_qty: isPack(rx) ? (rx.pack_qty!==undefined ? rx.pack_qty : packCount(rx)) : undefined
+      unit_price: rx.unit_price
     };
   }
   function ordBody(o){
@@ -1366,8 +1344,7 @@ export default function ConsultationPage() {
       } else {
         await addDrugRx({ fromSet:true, id:it.drug_id, code:it.code, name:it.name,
           default_dose:it.dose, default_freq:it.frequency, default_days:it.days,
-          default_route:it.route, unit_price:it.unit_price, unit:'',
-          pack_qty: it.quantity || 1 });
+          default_route:it.route, unit_price:it.unit_price, unit:'' });
       }
     }
     if(skipped.length) alert(String(t.cs_setSkippedHidden||'').replace('{names}', skipped.join(', ')));
@@ -1764,7 +1741,7 @@ export default function ConsultationPage() {
                             ? <span title={t.cs_rxLocked} style={{cursor:'help',fontSize: 12}}>🔒</span>
                             : <span onClick={function(){removeRx(rx)}} style={{cursor:'pointer',color:'var(--danger-text)',fontSize: 14}}>✕</span>}</td>
                           <td style={{padding:'3px 3px',color:'var(--accent-text)',fontFamily:'monospace',fontSize: 12,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={rx.drug_code}>{rx.drug_code}</td>
-                          <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{authorTag(rx.prescribed_by_name)}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}{isPack(rx) && !done ? packQtyBox(rx) : null}</td>
+                          <td style={{padding:'3px 4px',color:tx,fontSize: 15,overflowWrap:'anywhere'}}>{rx.drug_name}{authorTag(rx.prescribed_by_name)}{noDose(rx) ? <NoDoseBadge/> : null}{noPackQty(rx) ? <NoPackBadge/> : null}{rx.dispense_type!=='external' && noPrice(rx.unit_price) ? <NoPriceBadge/> : null}{rxLine(rx)}</td>
                           {done ? <>
                             {roCell(rx.dose, t2)}
                             {roCell(rx.frequency, t2)}

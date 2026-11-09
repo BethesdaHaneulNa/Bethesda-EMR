@@ -40,10 +40,13 @@ export function hasTotal(rx) {
   return q !== null && q > 0;
 }
 
-// Pack-unit line (H2-B, 025_pharmacy_pack_unit.sql): handed out by the bottle, tube
-// or inhaler. Its total_qty is the number the doctor wrote, not daily total x days;
-// the daily total, times and days are instructions only. The flag is the one copied
-// onto the prescription line when it was written, not the drug's current one.
+// Pack-unit line (025_pharmacy_pack_unit.sql): handed out by the bottle, tube or
+// inhaler. Since 1.7.16 its total is daily total x days like any line (the clinic's
+// manager: « 2 · 1 · 1 means two go out »), always whole; what differs is the word the
+// count is said in (« 2 flacons ») and that no intake is worked out from the numbers -
+// the instructions are in the sig or memo. Lines from before carry a count written
+// apart from their numbers; they are shown as saved. The flag is the one copied onto the
+// line when it was written, not the drug's current one.
 export function isPack(rx) { return !!(rx && rx.pack_unit); }
 
 var PACK_WORDS = {
@@ -159,24 +162,12 @@ function missingPackCount(rx, l) {
   return 'number of ' + w.en[1] + ' to check';
 }
 
-// Pack-unit line: the instructions as written, then the count handed out.
-//   « 15 par jour en 3 prises, pendant 7 jours — 2 flacons »  /  « 2 flacons »
-// No unit on the daily amount (mL, puffs): the drug record does not say which.
+// Pack-unit line: the count handed out, and nothing else - « 2 flacons » / « 2병 ».
+// The numbers are the count (1.7.16), so repeating them as a posology would read
+// « 2 par jour pendant 1 jour »; the way to take it is in the sig and the memo, which the
+// screens and papers print beside the line. A total that is missing or not whole says so.
 function packSentence(rx, l) {
-  var daily = parseFloat(rx.dose);
-  var freq = parseInt(rx.frequency, 10);
-  var days = parseInt(rx.days, 10);
-  var count = hasTotal(rx) ? packWord(rx, l, storedTotal(rx)) : missingPackCount(rx, l);
-  var d = fmtAmount(daily);
-  var how = '';
-  if (daily > 0 && freq > 0 && days > 0) {
-    if (l === 'ko') how = '하루 ' + d + ', ' + freq + '회로 나눠 ' + days + '일';
-    else if (l === 'fr') how = d + ' par jour en ' + freq + ' prises, pendant ' + days + (days === 1 ? ' jour' : ' jours');
-    else how = d + ' a day in ' + freq + ' doses for ' + days + (days === 1 ? ' day' : ' days');
-  } else if (freq > 0 && days > 0) {
-    if (l === 'ko') how = '하루 ' + freq + '회, ' + days + '일';
-    else if (l === 'fr') how = freq + ' fois/jour pendant ' + days + (days === 1 ? ' jour' : ' jours');
-    else how = freq + (freq === 1 ? ' time' : ' times') + '/day for ' + days + (days === 1 ? ' day' : ' days');
-  }
-  return how ? how + ' — ' + count : count;
+  var total = storedTotal(rx);
+  if (!(total > 0) || Math.abs(total - Math.round(total)) > 1e-6) return missingPackCount(rx, l);
+  return packWord(rx, l, total);
 }

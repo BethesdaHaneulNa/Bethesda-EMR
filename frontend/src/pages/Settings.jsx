@@ -516,11 +516,8 @@ export default function SettingsPage() {
       n.items=items; return n;
     });
   }
-  // Bottles/tubes for a pack-unit drug line (quantity; the consultation screen prescribes
-  // that many when the set is applied). Other lines keep 1 and show no field. Whether a
-  // drug is pack-unit is read from the drug list as it is now (a hidden drug is not in it
-  // and shows as an ordinary line); the order-set route is the consultation session's.
-  function drugPack(id){ var d=drugs.filter(function(x){return x.id===id;})[0]; return d && d.pack_unit ? (d.pack_label||'unit') : null; }
+  // (Until 1.7.15 a pack-unit drug line had a bottle-count field of its own here; since
+  // 1.7.16 its daily total x days is the count, like any drug line - the clinic's manager.)
   function osItem(idx, key, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ if(i!==idx) return it; var c=Object.assign({},it); c[key]=v; return c; }); return n; }); }
   // A set line's numbers, checked the way the consultation server checks a prescription
   // line (utils/validate.js LIMITS): daily total 0-1000, times 1-24 and days 1-365 whole
@@ -538,7 +535,6 @@ export default function SettingsPage() {
     if(!blank(it.days) && !num(it.days,1,365,true)) return 'bad';
     if(String(it.route||'').length>10) return 'bad';
     if(it.kind==='drug'){
-      if(drugPack(it.drug_id)) return num(it.quantity,1,10000,true) ? null : 'bad';
       if(blank(it.dose) || !(Number(it.dose)>0) || blank(it.days)) return 'missing';
       return null;
     }
@@ -821,10 +817,9 @@ export default function SettingsPage() {
                       {(osEdit.items||[]).length>0?(osEdit.items||[]).map(function(it,idx){
                         // Each line is edited here, in the set (2026-09-29, the clinic's manager): a drug
                         // line gets its daily total, times, days and directions - the same fields,
-                        // order and names as a prescription line in the consultation screen - and
-                        // a pack-unit drug its bottle count as well; an exam / procedure line its
-                        // quantity, times and days.
-                        var pk=it.kind==='drug'?drugPack(it.drug_id):null;
+                        // order and names as a prescription line in the consultation screen (for a
+                        // pack-unit drug the daily total x days is the bottle count, 1.7.16); an exam /
+                        // procedure line its quantity, times and days.
                         var prob=osLineProblem(it);
                         var fld=function(label, key, w, hint, extra){ return <label key={key} title={hint||''} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:t3}}>
                           <span style={{whiteSpace:'nowrap'}}>{label}</span>
@@ -856,9 +851,6 @@ export default function SettingsPage() {
                                     style={Object.assign({},IS,{width:110,padding:'3px 5px'})}/></label>
                               ) : null
                             ]}
-                            {pk ? <label title={t.se_setPackQtyHint} style={{display:'flex',flexDirection:'column',gap:2,fontSize:11,color:'var(--warn-text)'}}>
-                              <span style={{whiteSpace:'nowrap'}}>{t['ph_pack_'+pk]}</span>
-                              <input type="number" min="1" step="1" value={it.quantity==null?1:it.quantity} onChange={function(e){osItem(idx,'quantity',e.target.value)}} style={Object.assign({},IS,{width:56,padding:'3px 5px',textAlign:'center'})}/></label> : null}
                             {need ? <span style={{fontSize:11,color:'var(--danger-text-2)',paddingBottom:4}}>⚠ {t.se_setNeedDoseShort}</span> : null}
                             {prob==='bad' ? <span style={{fontSize:11,color:'var(--danger-text-2)',paddingBottom:4}}>⚠ {t.se_setBadNumberShort}</span> : null}
                           </div>

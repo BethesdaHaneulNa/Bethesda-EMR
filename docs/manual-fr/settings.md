@@ -108,7 +108,7 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
    - **Jours** : pendant combien de jours (par exemple 3).
    - **Posologie** : l'abréviation (par exemple BID).
    Le total délivré est **Dose/j × Jours** (ici 4 × 3 = 12 comprimés).
-5. Pour un médicament délivré par flacon ou tube, une case de plus apparaît (**Flacon**, **Tube**…) : le nombre de flacons.
+5. Pour un médicament délivré par flacon ou tube, **Dose/j × Jours** est le nombre de flacons (depuis la version 1.7.16 ; par exemple `2` · `1` · `1` pour deux flacons, la façon de prendre dans **Posologie**).
 6. Pour un examen : **Qté**, **Fois**, **Jours** (1, 1, 1 en général). Pour un **acte**, une case **Posologie** en plus : des mots (PRN, QD…), 20 caractères au plus ; elle peut rester vide.
 7. **Sauver**. Si **Dose/j** ou **Jours** manque sur une ligne de médicament, la case devient rouge et l'enregistrement est refusé : complétez-la.
 

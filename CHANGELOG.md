@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.7.16 — 2026-11-09
+
+**Syrups, creams and inhalers are counted like any other drug.** The clinic's manager,
+from the site: « the daily-total column is the count too: 2 · 1 · 1 means two go out ».
+The separate « Quantité [ ] flacon » box under a pack-unit line is gone, on the
+consultation screen and in the order-set editor: **Dose/j × Jours is the number of
+bottles or tubes** dispensed, billed and taken from stock, and it must be a whole number
+(a half bottle is refused when the line is saved). How to take it is written in the sig
+or the memo. Under the line the sentence now gives the count only (« 2 flacons »).
+Migration 062 converts the open lines written the old way (count · 1 · 1, the old
+numbers moved into the memo or the sig); finished consultations keep their count.
+Pharmacy, payment and the papers read the same total as before.
+
 ## v1.7.15 — 2026-11-09
 
 **Reception: no standing red line.** The rule of 1.7.14 stays - no department, no
