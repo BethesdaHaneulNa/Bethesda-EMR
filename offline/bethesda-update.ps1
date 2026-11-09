@@ -15,7 +15,9 @@
 #   7. Run the kit's install-offline.ps1 -Update (with -NoPacs when the kit has no PACS; a kit
 #      with PACS starts it with setup.ps1 -Offline, which never builds).
 #   8. Wait for /api/health to answer with the new version.
-#   9. Show the result, large, in French and Korean. A small progress window (steps, percent
+#   9. Show the result, large, in French and Korean. Every box is owned by an invisible
+#      always-on-top window so it cannot hide behind the EMR; a second copy of the updater
+#      only brings the first one forward (mutex Global\BethesdaUpdate). A small progress window (steps, percent
 #      while downloading, a moving bar while installing) stays up the whole time; the console
 #      is hidden - a French Windows console font has no Korean glyphs. Everything is also written to
 #      <EMR folder>\logs\update-<date>.txt.
@@ -74,6 +76,42 @@ if ($gui) {
     $h = [BU.Win]::GetConsoleWindow(); if ($h -ne [IntPtr]::Zero) { [BU.Win]::ShowWindow($h, 0) | Out-Null }
   } catch { }
 }
+# Every message box is owned by one invisible, always-on-top window: a box shown without an
+# owner from a process whose console is hidden lost the foreground and opened BEHIND the
+# other windows (1.7.10 at the clinic: "the update button does nothing" - the question was
+# waiting behind the EMR). An owned box inherits its owner's TopMost.
+$Owner = $null
+if ($gui) {
+  try {
+    $Owner = New-Object Windows.Forms.Form
+    $Owner.FormBorderStyle = 'None'; $Owner.ShowInTaskbar = $false; $Owner.TopMost = $true
+    $Owner.StartPosition = 'Manual'; $Owner.Size = New-Object Drawing.Size(1, 1); $Owner.Location = New-Object Drawing.Point(-32000, -32000)
+    $Owner.Opacity = 0
+    $Owner.Show() | Out-Null; $Owner.Activate(); [Windows.Forms.Application]::DoEvents()
+  } catch { $Owner = $null }
+}
+function Box([string]$text, [string]$title, $buttons, $icon, $default) {
+  if ($Owner) { return [Windows.Forms.MessageBox]::Show($Owner, $text, $title, $buttons, $icon, $default) }
+  return [Windows.Forms.MessageBox]::Show($text, $title, $buttons, $icon, $default, [Windows.Forms.MessageBoxOptions]::DefaultDesktopOnly)
+}
+# One updater at a time. A second double-click (the first box was not seen, 1.7.10) must
+# not start a second download or install: say so and bring the first window forward.
+$Single = $null
+try {
+  $created = $false
+  $Single = New-Object Threading.Mutex($true, 'Global\BethesdaUpdate', [ref]$created)
+  if (-not $created -and -not $Single.WaitOne(0)) {
+    try {
+      Add-Type -Name Fg -Namespace BU -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);' -ErrorAction SilentlyContinue
+      foreach ($pr in (Get-Process -Name powershell -ErrorAction SilentlyContinue)) {
+        if ($pr.Id -ne $PID -and $pr.MainWindowHandle -ne [IntPtr]::Zero -and $pr.MainWindowTitle -like 'Mise à jour Bethesda*') { [BU.Fg]::ShowWindow($pr.MainWindowHandle, 9) | Out-Null; [BU.Fg]::SetForegroundWindow($pr.MainWindowHandle) | Out-Null }
+      }
+    } catch { }
+    if ($gui) { Box "Une mise à jour est déjà ouverte. Répondez dans cette fenêtre (barre des tâches ou Alt+Tab).`n`n이미 업데이트 창이 열려 있습니다. 그 창에서 답하세요(작업표시줄 또는 Alt+Tab)." 'Mise à jour Bethesda' ([Windows.Forms.MessageBoxButtons]::OK) ([Windows.Forms.MessageBoxIcon]::Information) ([Windows.Forms.MessageBoxDefaultButton]::Button1) | Out-Null }
+    else { Write-Host 'Une mise à jour est déjà ouverte. / 이미 업데이트 창이 열려 있습니다.' }
+    exit 3
+  }
+} catch { }
 # One small progress window for the whole run: step (FR / KO), a bar (percent while
 # downloading, moving while installing) and "do not close". Closing it is refused while
 # the update runs. Nothing here blocks: the script pumps the window between steps.
@@ -117,16 +155,16 @@ function Show([string]$title, [string]$text, [string]$kind) {
   if (-not $gui -or $env:BU_TEST_NOBOX) { return }   # BU_TEST_NOBOX: tests run the window without a blocking box
   $icon = switch ($kind) { 'error' { [Windows.Forms.MessageBoxIcon]::Error } 'warn' { [Windows.Forms.MessageBoxIcon]::Warning } default { [Windows.Forms.MessageBoxIcon]::Information } }
   if ($PW) { $PW.form.TopMost = $false }
-  [Windows.Forms.MessageBox]::Show($text, $title, [Windows.Forms.MessageBoxButtons]::OK, $icon, [Windows.Forms.MessageBoxDefaultButton]::Button1, [Windows.Forms.MessageBoxOptions]::DefaultDesktopOnly) | Out-Null
+  Box $text $title ([Windows.Forms.MessageBoxButtons]::OK) $icon ([Windows.Forms.MessageBoxDefaultButton]::Button1) | Out-Null
 }
 function Ask([string]$title, [string]$text) {
   Say ''; Say ("==== " + $title); Say $text
   if ($Yes) { Say '(-Yes: oui)'; return $true }
   if (-not $gui) { $a = Read-Host 'Installer ? (oui / non)'; return ($a -match '^(o|oui|y|yes)$') }
-  $r = [Windows.Forms.MessageBox]::Show($text, $title, [Windows.Forms.MessageBoxButtons]::YesNo, [Windows.Forms.MessageBoxIcon]::Question, [Windows.Forms.MessageBoxDefaultButton]::Button2)
+  $r = Box $text $title ([Windows.Forms.MessageBoxButtons]::YesNo) ([Windows.Forms.MessageBoxIcon]::Question) ([Windows.Forms.MessageBoxDefaultButton]::Button2)
   return ($r -eq [Windows.Forms.DialogResult]::Yes)
 }
-function Stop-Here([int]$code) { Progress-Close; try { Stop-Transcript | Out-Null } catch { }; exit $code }
+function Stop-Here([int]$code) { Progress-Close; try { if ($Owner) { $Owner.Close(); $Owner.Dispose() } } catch { }; try { if ($Single) { $Single.ReleaseMutex() } } catch { }; try { Stop-Transcript | Out-Null } catch { }; exit $code }
 function Fail([string]$fr, [string]$ko) {
   $last = Last-Backup
   $tail = ''

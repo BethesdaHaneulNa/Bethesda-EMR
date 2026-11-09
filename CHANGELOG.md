@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.12 — 2026-11-09
+
+**Updater: the question can no longer hide behind the EMR.** On site the 1.7.10 updater
+seemed to do nothing: it was waiting on « Installer maintenant ? » behind the other windows
+(a message box without an owner, shown by a process whose console is hidden, loses the
+foreground). Every box is now owned by an invisible always-on-top window. A second
+double-click no longer starts a second updater: it says one is already open and brings
+that window forward (mutex `Global\BethesdaUpdate`). Takes effect from the update
+*after* this one, as always with updater changes. Nothing else changes.
+
 ## v1.7.11 — 2026-11-09
 
 **The phone does more than vital signs.** Asked on site: the phone is the tool wherever
