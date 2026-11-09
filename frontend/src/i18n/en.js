@@ -321,6 +321,8 @@ export default {
   rc_completeNoConsultBilled: "Complete {name} without a consultation? This visit already has a receipt: its type does not change. See the cashier for what follows.",
   rc_colVisitState: "Status",
   rc_billNothing: "Nothing to pay",
+  rc_deptRequired: "Choose the department / doctor: without a department the registration is refused (the receipt must show the department).",
+  rc_doctorNoDept: "This doctor has no department in Settings → Staff: set it there first, then register.",
   rc_visitBilledNoMove: "This visit is already paid: its department and doctor can no longer change. Cancel the receipt on the Payment screen first.",
   rc_hasRecordsNoCancel: "This visit already has records (consultation, document or receipt), so the waiting entry cannot be cancelled. The list has been refreshed.",
   rc_hasRecordsNoWaiting: "This visit already has records (consultation, document or receipt), so it cannot go back to waiting. If something must be corrected, the doctor reopens the patient on the Consultation screen.",

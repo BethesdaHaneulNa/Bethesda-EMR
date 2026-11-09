@@ -47,6 +47,8 @@ else {
   fs.writeFileSync(CREDS, JSON.stringify(creds));
 }
 const A = (await call('POST', '/auth/login', creds.admin)).data.token;
+// A visit needs a department (2026-11-09): the first one the stack has.
+const DEPT = (await call('GET', '/admin/departments', null, A)).data[0].id;
 let p2 = await call('POST', '/auth/login', creds.ph2);
 if (p2.status !== 200) {
   await call('POST', '/admin/staff', { ...creds.ph2, name: 'Test Pharmacist', role: 'pharmacy', permissions: ['pharmacy'], status: 'active' }, A);
@@ -61,7 +63,7 @@ async function stock(name) { const code = byCode[name].code; return (await call(
 // patient → visit → consultation → rx lines → complete
 async function scenario(label, lines) {
   const p = (await call('POST', '/patients', { last_name: 'TEST', first_name: label, gender: 'F', date_of_birth: '1990-01-01', allergies: label.startsWith('ALG') ? 'Penicilline' : null }, A)).data;
-  const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit' }, A)).data;
+  const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit', department_id: DEPT }, A)).data;
   const c = (await call('POST', '/consultations', { visit_id: v.id, patient_id: p.id }, A)).data;
   const rx = [];
   for (const [code, qty] of lines) {

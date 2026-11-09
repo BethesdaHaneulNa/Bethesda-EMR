@@ -37,6 +37,8 @@ let fails = 0;
 function check(name, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!ok) fails++; }
 
 const A = (await call('POST', '/auth/login', creds.admin)).data.token;
+// A visit needs a department (2026-11-09): the first one the stack has.
+const DEPT = (await call('GET', '/admin/departments', null, A)).data[0].id;
 
 // Test accounts by role: nurse (pharmacy+lab+registration), doctor (consultation),
 // frontdesk (registration+payment), stats only.
@@ -94,7 +96,7 @@ check('nurse may open the dispensing queue', (await call('GET', '/pharmacy/pendi
 async function prescribe(code, dose, days, label) {
   const d = D[code];
   const p = (await call('POST', '/patients', { last_name: 'STOCK', first_name: label, gender: 'M', date_of_birth: '1990-01-01' }, A)).data;
-  const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit' }, A)).data;
+  const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit', department_id: DEPT }, A)).data;
   const c = (await call('POST', '/consultations', { visit_id: v.id, patient_id: p.id }, A)).data;
   await call('POST', '/consultations/' + c.id + '/prescriptions', { drug_id: d.id, drug_code: d.code, drug_name: d.name, dose, frequency: 1, days, route: 'QD', unit_price: d.unit_price }, A);
   await call('PUT', '/consultations/' + c.id + '/complete', {}, A);

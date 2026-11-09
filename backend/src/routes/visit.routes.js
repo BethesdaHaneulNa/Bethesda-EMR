@@ -122,11 +122,27 @@ function withMemo(complaint, memo) {
   return c.replace(/\s+$/, '') + '\n' + m;
 }
 
+// A visit is registered to a department (the clinic's manager, from the site, 2026-11-09):
+// receipts were leaving with an empty « Service » line. department_id must be an existing
+// department; doctor_id stays optional (the department may assign the doctor later). The
+// same rule on PUT when the body carries department_id, so the edit form cannot clear it;
+// a body without the field (payment sets the visit type alone) is untouched.
+const DEPARTMENT_REQUIRED = 'department_id is required';
+async function missingDepartment(value) {
+  if (value === null || value === undefined || value === '') return { status: 400, code: 'DEPARTMENT_REQUIRED', message: DEPARTMENT_REQUIRED };
+  if (!/^\d+$/.test(String(value))) return { status: 400, code: 'BAD_DEPARTMENT', message: 'department_id must be an active department' };
+  const r = await pool.query('SELECT 1 FROM department WHERE id = $1', [Number(value)]);
+  if (!r.rows.length) return { status: 400, code: 'BAD_DEPARTMENT', message: 'department_id must be an active department' };
+  return null;
+}
+
 // POST /api/visits - register new visit
 router.post('/', permMiddleware('registration'), async (req, res) => {
   try {
     const { patient_id, visit_type, department_id, doctor_id } = req.body;
     const chief_complaint = withMemo(req.body.chief_complaint, req.body.reception_memo);
+    const noDept = await missingDepartment(department_id);
+    if (noDept) return refuse(res, noDept.status, noDept.code, noDept.message);
     // visit_type selects the consultation fee (newVisit -> C01, followUp -> C02 ...),
     // and the billing query falls back to the new-visit price for anything it does
     // not recognise, so an unknown value quietly overcharges the patient.
@@ -358,6 +374,10 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
     // visit holds). No screen sends it here; left open it was a way around those rules.
     if (body.status != null) {
       return refuse(res, 400, 'STATUS_NOT_HERE', 'status is changed with PUT /visits/:id/status');
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'department_id')) {
+      const noDept = await missingDepartment(body.department_id);
+      if (noDept) return refuse(res, noDept.status, noDept.code, noDept.message);
     }
     const sets = [];
     const params = [];

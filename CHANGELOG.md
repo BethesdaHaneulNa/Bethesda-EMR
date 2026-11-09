@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.14 — 2026-11-09
+
+**A visit is always registered to a department.** Asked on site: receipts were leaving
+with an empty « Service » line. Reception now keeps the register button grey, with a red
+reminder, until **Service / Médecin** is chosen, and the edit form cannot set it back to
+« — ». The server refuses the same (400 `DEPARTMENT_REQUIRED` on POST and PUT /api/visits),
+so no other screen can get round it. The doctor stays optional for the API; on the
+reception screen choosing the doctor is what sets the department. Payment, which sets the
+visit type alone, is untouched.
+
 ## v1.7.13 — 2026-11-09
 
 **Drug categories are the clinic's own list.** Asked on site: an « Anesthésie » class was

@@ -65,6 +65,8 @@ if (!creds.admin) {
 const adminLogin = await call('POST', '/auth/login', creds.admin);
 if (adminLogin.status !== 200) throw new Error('admin login failed ' + JSON.stringify(adminLogin));
 const A = adminLogin.data.token;
+// A visit needs a department (the clinic's manager, 2026-11-09): the first active one.
+const DEPT = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false)[0].id;
 
 // ── one account per role. Permissions are sent explicitly: POST /admin/staff stores
 // [] when none are given, not the role's defaults. Defaults mirror
@@ -103,8 +105,16 @@ fs.writeFileSync(CREDS, JSON.stringify(creds));
 
 // ── test data (as admin) ──
 const P = (await call('POST', '/patients', { last_name: 'Permission', first_name: 'Test', gender: 'F' }, A)).data;
-const V = (await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, A)).data;
+const missingDept = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit' }, A);
+check('a visit without a department is refused (400 DEPARTMENT_REQUIRED)', missingDept.status === 400 && missingDept.data.code === 'DEPARTMENT_REQUIRED' && missingDept.data.error === 'department_id is required', { status: missingDept.status, data: missingDept.data });
+const unknownDept = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', department_id: 999999 }, A);
+check('a visit with an unknown department is refused (400 BAD_DEPARTMENT)', unknownDept.status === 400 && unknownDept.data.code === 'BAD_DEPARTMENT', { status: unknownDept.status, data: unknownDept.data });
+const V = (await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', department_id: DEPT }, A)).data;
 if (!P.id || !V.id) throw new Error('could not create test patient/visit');
+const clearDept = await call('PUT', '/visits/' + V.id, { department_id: null, doctor_id: null, chief_complaint: 'x' }, A);
+check('the edit form cannot clear the department (400 DEPARTMENT_REQUIRED)', clearDept.status === 400 && clearDept.data.code === 'DEPARTMENT_REQUIRED', { status: clearDept.status, data: clearDept.data });
+const keepType = await call('PUT', '/visits/' + V.id, { visit_type: 'followUp' }, A);
+check('a body without department_id (payment: visit type alone) still goes through', keepType.status === 200, { status: keepType.status, data: keepType.data });
 
 // ── the table: route → permissions that must pass (OR) ──
 const SEARCH = ['registration', 'consultation', 'payment', 'pharmacy', 'lab'];
@@ -122,7 +132,7 @@ const ROUTES = [
   ['GET', '/visits/day', null, ['registration']],
   ['GET', '/visits/patient/' + P.id, null, ['registration', 'consultation', 'lab', 'payment']],
   // allow_duplicate: the test patient is registered again and again today
-  ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, ['registration']],
+  ['POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, ['registration']],
   ['PUT', '/visits/' + V.id + '/status', { status: 'waiting' }, ['registration']],
   // what the payment screen sends (Payment.jsx): visit_type alone
   ['PUT', '/visits/' + V.id, { visit_type: 'newVisit' }, ['registration', 'payment']],
@@ -179,14 +189,14 @@ check('⑯b phone: another number does not match', ph4.status === 200 && !ids(ph
 
 // ── ④ same-day second visit: warn (409) unless confirmed ──
 const P2 = (await call('POST', '/patients', { last_name: 'Duplicate', first_name: 'Day' + Date.now() }, A)).data;
-const d1 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
-const d2 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
-const d3 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', allow_duplicate: true }, A);
+const d1 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', department_id: DEPT }, A);
+const d2 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', department_id: DEPT }, A);
+const d3 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, A);
 check('④ first visit today is registered', d1.status === 201, { status: d1.status });
 check('④ second visit without confirmation → 409', d2.status === 409 && d2.data.error === 'Patient already registered today', { status: d2.status, data: d2.data });
 check('④ second visit confirmed (allow_duplicate) → 201', d3.status === 201, { status: d3.status });
 for (const v of [d1.data, d3.data]) if (v && v.id) await call('PUT', '/visits/' + v.id + '/status', { status: 'cancelled' }, A);
-const d4 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit' }, A);
+const d4 = await call('POST', '/visits', { patient_id: P2.id, visit_type: 'newVisit', department_id: DEPT }, A);
 check('④ only cancelled visits today → no warning', d4.status === 201, { status: d4.status });
 if (d4.data && d4.data.id) await call('PUT', '/visits/' + d4.data.id + '/status', { status: 'cancelled' }, A);
 
@@ -235,10 +245,10 @@ check('⑩ a date not in YYYY-MM-DD form → 400', wd2.status === 400, { status:
 
 // ── ⑳ waiting → completed without a consultation becomes "no fee"; in progress → completed keeps its type ──
 const P20 = (await call('POST', '/patients', { last_name: 'Complete', first_name: 'Direct' + Date.now(), gender: 'F' }, A)).data;
-const W = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp' }, A)).data;
+const W = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp', department_id: DEPT }, A)).data;
 const w2 = await call('PUT', '/visits/' + W.id + '/status', { status: 'completed' }, A);
 check('⑳ waiting → completed sets visit_type none', w2.status === 200 && w2.data.visit_type === 'none', { status: w2.status, visit_type: w2.data && w2.data.visit_type });
-const I = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp', allow_duplicate: true }, A)).data;
+const I = (await call('POST', '/visits', { patient_id: P20.id, visit_type: 'followUp', department_id: DEPT, allow_duplicate: true }, A)).data;
 await call('PUT', '/visits/' + I.id + '/status', { status: 'in_progress' }, A);
 const i2 = await call('PUT', '/visits/' + I.id + '/status', { status: 'completed' }, A);
 check('⑳ in progress → completed keeps its visit type', i2.status === 200 && i2.data.visit_type === 'followUp', { visit_type: i2.data && i2.data.visit_type });
@@ -261,10 +271,10 @@ check('⑬ POST with gender O → 400', newO.status === 400, { status: newO.stat
 await put({ date_of_birth: null, gender: 'F' });
 
 // ── S1: a permission granted in Settings applies to the same token at once ──
-const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);
+const before = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, T.paymentOnly);
 const staffRow = (await call('GET', '/admin/staff', null, A)).data.find(s => s.id === ID.paymentOnly);
 await call('PUT', '/admin/staff/' + ID.paymentOnly, { ...staffRow, permissions: ['payment', 'registration'] }, A);
-const after = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', allow_duplicate: true }, T.paymentOnly);
+const after = await call('POST', '/visits', { patient_id: P.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, T.paymentOnly);
 check('S1 payment-only 403 before registration is ticked', before.status === 403, { status: before.status });
 check('S1 same token allowed right after ticking registration', after.status === 201, { status: after.status });
 await call('PUT', '/admin/staff/' + ID.paymentOnly, { ...staffRow, permissions: ['payment'] }, A);
@@ -326,9 +336,9 @@ await call('PUT', '/visits/' + VT.id + '/status', { status: 'cancelled' }, A);
 // ── One field (2026-10-01): reception's memo is the visit's complaint. reception_memo is no
 // longer written; a screen from before the update that still sends it loses nothing. ──
 const PM = (await call('POST', '/patients', { last_name: 'Memo', first_name: 'M' + Date.now(), gender: 'M' }, A)).data;
-const m1 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', chief_complaint: 'Toux\nFièvre depuis 3 jours' }, T.frontdesk);
+const m1 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', department_id: DEPT, chief_complaint: 'Toux\nFièvre depuis 3 jours' }, T.frontdesk);
 check('memo: several lines are kept as typed, reception_memo stays empty', m1.status === 201 && m1.data.chief_complaint === 'Toux\nFièvre depuis 3 jours' && m1.data.reception_memo == null, { status: m1.status, cc: m1.data.chief_complaint, memo: m1.data.reception_memo });
-const m2 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', chief_complaint: 'Toux', reception_memo: 'Payer demain', allow_duplicate: true }, T.frontdesk);
+const m2 = await call('POST', '/visits', { patient_id: PM.id, visit_type: 'newVisit', department_id: DEPT, chief_complaint: 'Toux', reception_memo: 'Payer demain', allow_duplicate: true }, T.frontdesk);
 check('memo: an old screen sending both (POST) → memo appended to the complaint', m2.status === 201 && m2.data.chief_complaint === 'Toux\nPayer demain' && m2.data.reception_memo == null, { cc: m2.data.chief_complaint, memo: m2.data.reception_memo });
 const m3 = await call('PUT', '/visits/' + m2.data.id, { chief_complaint: 'Toux', reception_memo: 'Payer demain' }, T.frontdesk);
 const m4 = await call('PUT', '/visits/' + m2.data.id, { chief_complaint: 'Toux\nPayer demain', reception_memo: 'Payer demain' }, T.frontdesk);

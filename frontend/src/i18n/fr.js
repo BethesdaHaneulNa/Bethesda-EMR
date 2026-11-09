@@ -312,6 +312,8 @@ export default {
   rc_completeNoConsultBilled: "Terminer {name} sans consultation ? Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite.",
   rc_colVisitState: "État",
   rc_billNothing: "Rien à payer",
+  rc_deptRequired: "Choisissez le service / médecin : sans service, l'enregistrement est refusé (le reçu doit porter le service).",
+  rc_doctorNoDept: "Ce médecin n'a pas de service dans Paramètres → Personnel : réglez-le là d'abord, puis enregistrez.",
   rc_visitBilledNoMove: "Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement.",
   rc_hasRecordsNoCancel: "Cette visite a déjà des données (consultation, document ou reçu) : impossible d’annuler l’attente. La liste a été actualisée.",
   rc_hasRecordsNoWaiting: "Cette visite a déjà des données (consultation, document ou reçu) : impossible de la remettre en attente. S’il faut corriger, le médecin rouvre le patient à l’écran Consultation.",

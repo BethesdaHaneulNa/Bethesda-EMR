@@ -11,7 +11,7 @@ Enregistrer un patient qui arrive :
 1. En haut à gauche, vérifiez que la **Date de travail** est celle d'aujourd'hui.
 2. Dans **Rechercher patient**, tapez le nom, le N° dossier ou le téléphone, puis appuyez sur Entrée.
 3. Si le patient apparaît, cliquez sur son nom. Sinon, le message « Aucun patient trouvé pour « … » » s'affiche sous la case : cliquez sur **+ Nouveau patient** et remplissez au moins **Nom**, **Prénom** et **Sexe**.
-4. Dans **Service / Médecin**, choisissez le médecin.
+4. Dans **Service / Médecin**, choisissez le médecin. **Obligatoire** depuis la version 1.7.14 : tant que rien n'est choisi, le bouton d'enregistrement reste gris et une ligne rouge le rappelle — le reçu doit porter le service.
 5. Vérifiez le **Type de Visite** : **Nouvelle**, **Suivi** ou **Sans frais**.
 6. Écrivez dans **Mémo Réception** la raison de la visite et ce qu'il faut savoir aujourd'hui (plusieurs lignes possibles).
 7. Cliquez sur **Enregistrer / Mettre en attente**.
@@ -95,7 +95,7 @@ Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. 
 ### 9. Modifier un enregistrement ou annuler l'attente
 
 1. Cliquez sur le patient dans la file. Ses informations se chargent à gauche et le bouton devient **Modifier l'enregistrement**.
-2. Corrigez le médecin, le type de visite ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme.
+2. Corrigez le médecin, le type de visite ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme. Le **Service / Médecin** ne peut pas être remis à « — » : une visite garde toujours un service.
 3. Pour retirer un patient qui attend encore : **Annuler l'attente / Retirer**, puis confirmez.
 
 Si le médecin a déjà commencé la consultation, ou si la visite a déjà des données (note, ordonnance, examen, document, reçu), l'annulation est refusée et un message l'explique.
@@ -198,6 +198,8 @@ Depuis la version 1.7.11, la page du téléphone (**/m**) commence par quatre gr
 |---|---|---|
 | Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient ». | La recherche ne trouve personne | Vérifiez l'orthographe, essayez le N° dossier ou le téléphone. Sinon, **+ Nouveau patient** |
 | Saisissez le nom et le prénom. | Nom ou Prénom vide | Remplissez les deux |
+| Choisissez le service / médecin : sans service, l'enregistrement est refusé… | **Service / Médecin** est à « — » | Choisissez le médecin (son service suit), puis enregistrez |
+| Ce médecin n'a pas de service dans Paramètres → Personnel… | Le médecin choisi n'est rattaché à aucun service | Un administrateur lui donne son **Service** dans **Paramètres → Personnel**, puis enregistrez |
 | Choisissez le sexe (Masculin / Féminin). | Aucun sexe choisi | Cliquez sur **Masculin** ou **Féminin** |
 | Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue. | Date de naissance incomplète | Remplissez les trois cases, ou videz-les |
 | La date de naissance n'est pas valide. Elle ne peut pas être dans le futur. | Date impossible (30 février, mois 13…) ou future | Vérifiez le jour et le mois |

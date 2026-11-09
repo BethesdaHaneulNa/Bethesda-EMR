@@ -479,6 +479,8 @@ export default function RegistrationPage() {
     if (msg === 'The visit has records; it cannot go back to waiting') return t.rc_hasRecordsNoWaiting;
     if (msg === 'Patient not found') return t.rc_patientNotFound;
     if (msg === 'Visit not found') return t.rc_visitNotFound;
+    // 400 DEPARTMENT_REQUIRED / BAD_DEPARTMENT from POST or PUT /visits (2026-11-09).
+    if (msg === 'department_id is required' || msg === 'department_id must be an active department') return t.rc_deptRequired;
     // 409 VISIT_BILLED from PUT /visits/:id: paid while this form was open.
     if (msg === 'The visit is already paid; its department and doctor can no longer change') return t.rc_visitBilledNoMove;
     // 403 from permMiddleware: the account lacks the reception permission. Since
@@ -578,6 +580,7 @@ export default function RegistrationPage() {
           // Department/doctor always go: unchanged values pass even when billed, and a
           // change made before the visit was paid comes back as 409 VISIT_BILLED
           // (rc_visitBilledNoMove) instead of being dropped without a word.
+          if (!visitForm.department) { alert(t.rc_deptRequired); return; }
           var vbody = {
             department_id: visitForm.department || null,
             doctor_id: visitForm.doctor || null,
@@ -587,6 +590,7 @@ export default function RegistrationPage() {
           await api.put('/visits/' + sel.id, vbody);
           alert(fill(t.rc_visitUpdated, { name: nameOf({ last_name: form.lastName, first_name: form.firstName }) }));
         } else {
+          if (!visitForm.department) { alert(t.rc_deptRequired); return; }
           var registered = await postVisit({
             patient_id: patient.id,
             visit_type: visitForm.visitType,
@@ -745,6 +749,9 @@ export default function RegistrationPage() {
               </select>
               {/* Paid: department/doctor stay (office manager, 2026-09-30) - same rule as the server. */}
               {sel && sel.has_active_bill ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 5 }}>{t.rc_visitBilledNoMove}</div> : null}
+              {/* No department chosen: nothing is registered (the clinic's manager, 2026-11-09) - the
+                  receipt's « Service » line was leaving empty. Same rule on the server (400). */}
+              {!visitForm.department && !(sel && sel.has_active_bill) ? <div role="alert" style={{ fontSize: 13, color: 'var(--danger-text)', marginTop: 5, fontWeight: 700 }}>{visitForm.doctor ? t.rc_doctorNoDept : t.rc_deptRequired}</div> : null}
             </div>
             {(function () {
               // First visit / follow-up / no fee - the three the office manager kept.
@@ -770,7 +777,7 @@ export default function RegistrationPage() {
             })()}
             {/* One field (2026-10-01): the label is «접수 메모», the text is the visit's complaint. */}
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
-            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast || !visitForm.department} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast || !visitForm.department) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast || !visitForm.department) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
             {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
             <button onClick={savePatientOnly} disabled={busy} style={{ background: 'var(--chip)', color: 'var(--text-soft)', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
             {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: 'var(--chip)', color: 'var(--violet-text-3)', border: '1px solid var(--violet-2)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}

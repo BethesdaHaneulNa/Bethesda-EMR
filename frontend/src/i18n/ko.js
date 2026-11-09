@@ -312,6 +312,8 @@ export default {
   rc_completeNoConsultBilled: "{name} 환자를 진료 없이 「완료」로 보냅니다. 이미 영수가 있는 내원이라 내원구분은 바뀌지 않습니다. 이후는 수납에서 확인하세요. 계속할까요?",
   rc_colVisitState: "상태",
   rc_billNothing: "받을 돈 없음",
+  rc_deptRequired: "진료과 / 담당 의사를 고르세요. 진료과 없이는 접수되지 않습니다(영수증에 진료과가 찍혀야 합니다).",
+  rc_doctorNoDept: "이 의사는 설정 → 직원에 진료과가 없습니다. 먼저 진료과를 넣은 뒤 접수하세요.",
   rc_visitBilledNoMove: "이미 수납된 내원은 과·의사를 바꿀 수 없습니다. 수납에서 영수를 취소한 뒤 바꾸세요.",
   rc_hasRecordsNoCancel: "이 내원에는 진료 기록(또는 서류·영수)이 있어 대기를 취소할 수 없습니다. 목록을 새로 불러왔습니다.",
   rc_hasRecordsNoWaiting: "이 내원에는 진료 기록(또는 서류·영수)이 있어 「대기」로 되돌릴 수 없습니다. 고칠 것이 있으면 의사가 진료 화면에서 이 환자를 다시 열어 고칩니다.",
