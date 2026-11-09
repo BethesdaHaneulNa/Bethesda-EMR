@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.7.18 — 2026-11-09
+
+**Images that arrived without an order can be put under one.** When an exam is done without
+picking the patient from the device's worklist, the images sit on the image server under
+the device's own number and a typed name, and no order shows them. The imaging window now
+has **📥 Images sans demande…**: the studies without an order (what the images say, the
+device's clock, a thumbnail) on one side, the day's imaging orders without images on the
+other; the person checks them side by side and attaches. The images are corrected on the
+image server (the patient's chart number, name, birth date and sex, the order's accession
+and study number), the order shows them, and the original is deleted only after the copy
+has been checked image by image. Nothing is matched automatically. Written in the Journal;
+an interrupted attach is finished or undone by the server (migration 064).
+
 ## v1.7.17 — 2026-11-09
 
 **Departments can be hidden.** **Paramètres → Services**: Masquer / Afficher on each line. A

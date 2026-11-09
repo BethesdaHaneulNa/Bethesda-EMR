@@ -35,6 +35,9 @@ export var AUDIT_ACTIONS = {
   // the images of one order put under another order of the same patient, or the images
   // of two orders exchanged (PACS, routes/pacs.move.js); the field "kind" says which
   'pacs.study.move': 'se_act_studyMove',
+  // a study that arrived without an order put under one (PACS, routes/pacs.attach.js): the
+  // patient number and name the images came with -> the order's, study numbers, how many images
+  'pacs.study.attach': 'se_act_studyAttach',
   // an exam's images given out of the clinic: printed on paper, or copied to a disc or a file
   // (PACS, routes/pacs.export.js; the copy is still to come when this was written)
   'pacs.images.print': 'se_act_imagesPrint',
@@ -117,6 +120,8 @@ var FIELDS = {
   medium: 'se_fld_medium', exam_count: 'se_fld_examCount',
   // pacs.study.relink: the study now linked, how many images, whose they say they are
   study_uid: 'se_fld_studyUid', image_count: 'se_fld_imageCount',
+  // pacs.study.attach: the typed birth date on the images -> the chart's
+  birth_date: 'se_fld_birthDate',
   // pacs.images.print: how many pictures on one sheet. export: megabytes, the exams by name
   per_page: 'se_fld_perPage', size_mb: 'se_fld_sizeMb', exams: 'se_fld_exams',
   // laboratory.results.print: the days of the results printed (one string, "d, d"), how many tests

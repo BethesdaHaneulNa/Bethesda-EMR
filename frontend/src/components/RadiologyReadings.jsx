@@ -4,6 +4,7 @@ import { useLang } from '../i18n/index.jsx';
 import { printDocument } from '../documents/shared.jsx';
 import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
 import { MoveStudy, moveLine } from './MoveStudy.jsx';
+import { AttachStudy } from './AttachStudy.jsx';
 import { ImagesPrint, imagesBlock } from './ImagesPrint.jsx';
 import { OutsideDetail, OutsideViewer, outsideDate, outsideName } from './OutsideStudies.jsx';
 
@@ -254,6 +255,7 @@ export function RadiologyReadings(props) {
   var ims = useState(null), imaging = ims[0], setImaging = ims[1];     // the row whose images are being printed on paper
   var xs = useState([]), outside = xs[0], setOutside = xs[1];          // the patient's outside studies
   var xvs = useState(null), outsideOpen = xvs[0], setOutsideOpen = xvs[1];   // the outside study shown in the image window
+  var ats = useState(false), attaching = ats[0], setAttaching = ats[1];      // images without an order being put under one
   var lastPatient = useRef(null), listRef = useRef(null);
 
   useEffect(function () {
@@ -296,8 +298,18 @@ export function RadiologyReadings(props) {
     setPicked(picked.concat([r.id]));
   }
 
+  // Images that arrived without an order (the device's worklist was not used): the window
+  // that puts them under the right order is reachable from here - also when this patient
+  // has no exam yet, which is exactly the case after such a scan (the clinic's manager, 2026-11-09).
+  var attachBtn = props.onOpen ? <button onClick={function () { setAttaching(true); }} title={t.px_atIntro}
+    style={{ flex: 'none', background: 'var(--chip)', color: 'var(--text-soft)', border: '1px solid var(--border-2)', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📥 {t.px_atButton}</button> : null;
+  var attachWin = attaching ? <AttachStudy t={t} onClose={function () { setAttaching(false); }} onDone={function () { setAgain(again + 1); }} /> : null;
   if (loading) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.loading || 'Loading…'}</div>;
-  if (!rows.length && !outside.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>;
+  if (!rows.length && !outside.length) return <div style={{ padding: 16, color: t3, fontSize: 14 }}>
+    <div>{t.noImagingOrders || '영상검사 내역이 없습니다'}</div>
+    {attachBtn ? <div style={{ marginTop: 10 }}>{attachBtn}</div> : null}
+    {attachWin}
+  </div>;
 
   // Narrowing the list: by device type (only offered when there are several) and by a
   // word of the exam's name or a piece of its date.
@@ -372,7 +384,8 @@ export function RadiologyReadings(props) {
             style={{ flex: '1 1 90px', minWidth: 0, maxWidth: 220, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid var(--field-border)', borderRadius: 3, color: tx, fontSize: 12, padding: '2px 6px', outline: 'none' }} />
           {/* the outside studies are under the patient's own exams: with a long list, one click goes there */}
           {shownOut.length && shown.length ? <button onClick={toOutside} title={t.px_xGroup} style={Object.assign(act(true), { marginLeft: 'auto' })}>💿 {shownOut.length}</button> : null}
-          <span style={{ flex: 'none', marginLeft: shownOut.length && shown.length ? 0 : 'auto', color: t3, fontSize: 12 }}>{lines.length === rows.length + outside.length ? lines.length : lines.length + ' / ' + (rows.length + outside.length)}</span>
+          <span style={{ flex: 'none', marginLeft: shownOut.length && shown.length ? 0 : 'auto' }}>{attachBtn}</span>
+          <span style={{ flex: 'none', color: t3, fontSize: 12 }}>{lines.length === rows.length + outside.length ? lines.length : lines.length + ' / ' + (rows.length + outside.length)}</span>
         </div>
         <div ref={listRef} tabIndex={0} onKeyDown={keys} style={{ flex: 1, overflow: 'auto', outline: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 8, alignItems: 'center', padding: '5px 10px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--panel-head)', borderBottom: '1px solid ' + bd, color: t3, fontSize: 12, fontWeight: 700 }}>
@@ -492,6 +505,7 @@ export function RadiologyReadings(props) {
         patientId={props.patientId} t={t} onClose={function () { setImaging(null); }} /> : null}
       {outsideOpen ? <OutsideViewer study={outsideOpen} t={t} onClose={function () { setOutsideOpen(null); }} /> : null}
       {moving ? <MoveStudy exam={moving} patientId={props.patientId} t={t} onLook={props.onOpen} onClose={function () { setMoving(null); }} onDone={function () { setAgain(again + 1); }} /> : null}
+      {attachWin}
     </div>
   );
 }

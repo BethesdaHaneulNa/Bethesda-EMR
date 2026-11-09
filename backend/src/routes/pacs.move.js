@@ -1064,4 +1064,6 @@ router.post('/move/resume', authMiddleware, mayMove, async (req, res) => {
   catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-module.exports = { router, moveImages, resumePending, reapplyAfterRestore, supersededNow, OPEN_ON, openKindOn, _test: { replacements, sourceBlock, targetBlock } };
+module.exports = { router, moveImages, resumePending, reapplyAfterRestore, supersededNow, OPEN_ON, openKindOn,
+  // lent to pacs.attach.js (images without an order put under one): the same copy-check-delete steps
+  config, ox, instancesOf, studyUnder, makeChecked, deleteReplaced, _test: { replacements, sourceBlock, targetBlock } };

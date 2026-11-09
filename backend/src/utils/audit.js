@@ -78,6 +78,10 @@ const ACTIONS = {
   // (routes/pacs.import.js; no order): how many, from where, the number and name they came
   // with, whether birth date or sex differed from the chart - and such an import taken out again.
   PACS_IMAGES_IMPORT:   'pacs.images.import',
+  // PACS (2026-11-09): a study that arrived without an order (the device's worklist not used)
+  // put under the order it was taken for (routes/pacs.attach.js): the number, patient id and
+  // name the images came with -> the order's, how many images.
+  PACS_STUDY_ATTACH:    'pacs.study.attach',
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 

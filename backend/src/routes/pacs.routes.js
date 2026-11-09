@@ -11,6 +11,7 @@ const { isExam } = require('./pacs.exam');            // which orders are imagin
 const move = require('./pacs.move');                 // images put under another order
 const exportImages = require('./pacs.export');      // images given out: printed, copied to a disc
 const imports = require('./pacs.import');           // images brought in from another establishment
+const attach = require('./pacs.attach');            // images that arrived without an order, put under one
 const { probeOrthanc, DEFAULT_URL: DEFAULT_ORTHANC_URL } = require('../services/pacs-probe');
 
 const router = express.Router();
@@ -93,6 +94,9 @@ router.use('/viewer', viewer.router);
 router.use('/', move.router);
 // An exam's images given out of the clinic: on paper, on a disc (pacs.export.js).
 router.use('/export', exportImages.router);
+// Images that arrived without an order (the device's worklist was not used), put under the
+// order they were taken for (pacs.attach.js).
+router.use('/', attach.router);
 // Images of another establishment brought in for a patient - no order (pacs.import.js).
 router.use('/import', imports.router);
 

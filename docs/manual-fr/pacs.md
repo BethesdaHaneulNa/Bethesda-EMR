@@ -240,6 +240,18 @@ Quand un patient apporte un CD ou une clé USB d'un autre hôpital, l'**accueil*
 
 - Un examen externe ne peut pas (encore) être comparé dans la même fenêtre avec un examen fait ici, ni imprimé, ni copié sur un CD.
 
+### 14. Des images sont arrivées sans demande (patient non choisi sur l'appareil)
+
+Si le manipulateur n'a pas choisi le patient dans la **liste de travail** de l'appareil (il a tapé le nom à la main), les images arrivent sur le serveur d'images sous le numéro de l'appareil et un nom tapé — souvent avec une faute — et **aucune demande ne les montre**. Depuis la version 1.7.18, on les rattache depuis l'EMR :
+
+1. Dans la fenêtre des examens d'imagerie d'un patient (médecin ou administrateur), cliquez sur **📥 Images sans demande…**.
+2. À gauche, les études sans demande des 30 derniers jours : ce que disent les images (nom, date de naissance, sexe, appareil, nombre d'images, une vignette) et **l'horloge de l'appareil** — souvent fausse, elle n'est là qu'à titre indicatif. Une étude « en cours de réception » ne peut pas encore être choisie.
+3. À droite, les demandes d'imagerie **sans images** du jour (changez la date si besoin), avec le patient, sa date de naissance et l'examen.
+4. Choisissez l'une et l'autre, vérifiez le tableau côte à côte, puis **Rattacher les images à la demande**. Les images reçoivent le numéro de dossier, le nom, la date de naissance du patient et les numéros de la demande ; la demande montre les images ; l'original n'est supprimé qu'après vérification de la copie. L'opération est notée dans le **Journal**.
+5. Rien n'est associé automatiquement : c'est vous qui confirmez que ces images sont bien celles de ce patient.
+
+Le mieux reste de choisir le patient dans la liste de travail de l'appareil : alors cette étape est inutile.
+
 ## Si ce message apparaît
 
 | Message à l'écran | Ce que cela veut dire | Que faire |
