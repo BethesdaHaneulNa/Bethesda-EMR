@@ -95,6 +95,14 @@ Chaque médicament est rangé dans une **catégorie** (Antibiotique, Antalgique,
 
 Chaque ajout, changement de nom, masquage et suppression est noté dans le **Journal** (« Catégorie de médicaments modifiée »).
 
+### Masquer un service qui ne sert pas
+
+**Paramètres** → **Services**. Chaque ligne a **Masquer** / **Afficher** (depuis la version 1.7.17). Un service masqué n'est plus proposé à l'accueil ; ses visites passées, ses comptes et ses statistiques restent. Au moins un service reste actif. Le changement est noté dans le **Journal**.
+
+### Les groupes des codes d'actes
+
+**Paramètres** → **Codes d'actes** → **🗂 Groupes** (depuis la version 1.7.17). Le groupe range un code d'acte (Consultation, Laboratory, Radiology, Supply…). Ici vous ajoutez un groupe (nom, puis **+ Ajouter**), changez un nom (corrigez-le dans sa case puis **Sauver** — les codes suivent), changez l'ordre (**▲▼**), **masquez** un groupe qui ne sert plus (ses codes le gardent) et **supprimez** un groupe qu'aucun code n'utilise. **Other** reste toujours.
+
 ### Créer une ordonnance type
 
 Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la consultation. **La dose, les fois et les jours se décident ici**, pour chaque ligne.

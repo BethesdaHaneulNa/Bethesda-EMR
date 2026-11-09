@@ -56,6 +56,10 @@ export var AUDIT_ACTIONS = {
   'settings.phrase.category': 'se_act_phraseCategory',
   // a drug category made, renamed, hidden/shown or removed (names in three languages, hidden)
   'settings.drug.category': 'se_act_drugCategory',
+  // an order-code group made, renamed (its codes follow), hidden/shown or removed
+  'settings.order.group': 'se_act_orderGroup',
+  // a department hidden or shown
+  'settings.department': 'se_act_department',
   // the list of frequent diagnoses: a row added, edited, switched off or on (code, names, status)
   'settings.diagnosis.code': 'se_act_diagnosisCode',
   // documents (decision 2026-09-30 (다)): issued and voided; the document's content never comes here
@@ -128,6 +132,8 @@ var FIELDS = {
   pack_label: 'se_fld_packLabel',
   // a drug category hidden from the form (its names reuse the diagnosis labels above)
   hidden: 'se_fld_hidden',
+  // an order-code group renamed: how many codes followed
+  codes_renamed: 'se_fld_codesRenamed',
   // consultation: diagnoses
   icd_code: 'se_fld_icdCode', diagnosis_name: 'se_fld_diagnosisName', diagnosis_type: 'se_fld_diagnosisType',
   // Shared, and last in a line: a staff account's, order's or prescription's status,

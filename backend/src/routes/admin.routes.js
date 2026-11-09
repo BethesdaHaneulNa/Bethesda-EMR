@@ -350,6 +350,8 @@ router.get('/order-codes', async (req, res) => {
 
 router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
   try {
+    const badGroup = await badOrderGroup(req.body);
+    if (badGroup) return res.status(400).json({ error: badGroup });
     const { code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo } = req.body;
     if (!CODE_TYPES.includes(String(code_type))) {
       return res.status(400).json({ error: fieldMsg.notOneOf('code_type', CODE_TYPES) });
@@ -377,6 +379,8 @@ router.post('/order-codes', permMiddleware('settings'), async (req, res) => {
 router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
   let client;
   try {
+    const badGroup = await badOrderGroup(req.body);
+    if (badGroup) return res.status(400).json({ error: badGroup });
     const { code, name, name_en, code_type, group_name, default_dose, default_freq, default_days, price, price_clinic, pacs_modality, worklist_enabled, station_ae, body_part, memo } = req.body;
     if (!CODE_TYPES.includes(String(code_type))) {
       return res.status(400).json({ error: fieldMsg.notOneOf('code_type', CODE_TYPES) });
@@ -713,9 +717,14 @@ router.get('/audit', permMiddleware('settings'), roleMiddleware('admin'), async 
 });
 
 // ── DEPARTMENTS ──
+// The active ones, as every screen lists them; ?all=1 (Settings) adds the hidden ones.
+// Hidden (is_active false, the clinic's manager 2026-11-09: « only GEN is in use now »):
+// not offered at reception, kept on its visits, accounts and statistics. At least one
+// department stays active.
 router.get('/departments', async (req, res) => {
   try {
-    const result = await pool.query('SELECT d.*, s.name as head_name FROM department d LEFT JOIN staff s ON d.head_doctor_id = s.id WHERE d.is_active = true ORDER BY d.code');
+    const all = req.query.all === '1' || req.query.all === 'true';
+    const result = await pool.query('SELECT d.*, s.name as head_name FROM department d LEFT JOIN staff s ON d.head_doctor_id = s.id' + (all ? '' : ' WHERE d.is_active = true') + ' ORDER BY d.is_active DESC, d.code');
     res.json(result.rows);
   } catch (err) { sendDbError(res, err); }
 });
@@ -728,13 +737,178 @@ router.post('/departments', permMiddleware('settings'), async (req, res) => {
   } catch (err) { sendDbError(res, err); }
 });
 
+// Only the fields sent change (the Settings row's Masquer / Afficher sends is_active alone;
+// the edit window sends the names). Hiding the last active department is refused.
 router.put('/departments/:id', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { code, name, name_en, name_fr, head_doctor_id } = req.body;
-    const result = await pool.query('UPDATE department SET code=$1, name=$2, name_en=$3, name_fr=$4, head_doctor_id=$5 WHERE id=$6 RETURNING *', [code, name, name_en, name_fr, head_doctor_id, req.params.id]);
-    if (sentMissing(res, result)) return;
+    await client.query('BEGIN');
+    const was = await client.query('SELECT * FROM department WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const cur = was.rows[0], b = req.body || {};
+    const has = f => Object.prototype.hasOwnProperty.call(b, f);
+    const next = {
+      code: has('code') ? b.code : cur.code, name: has('name') ? b.name : cur.name,
+      name_en: has('name_en') ? b.name_en : cur.name_en, name_fr: has('name_fr') ? b.name_fr : cur.name_fr,
+      head_doctor_id: has('head_doctor_id') ? (b.head_doctor_id || null) : cur.head_doctor_id,
+      is_active: has('is_active') ? (b.is_active === true || b.is_active === 'true') : cur.is_active,
+    };
+    if (cur.is_active && !next.is_active) {
+      const others = await client.query('SELECT COUNT(*)::int AS n FROM department WHERE is_active AND id <> $1', [cur.id]);
+      if (!others.rows[0].n) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DEPARTMENT_LAST_ACTIVE }); }
+    }
+    const result = await client.query(
+      'UPDATE department SET code=$1, name=$2, name_en=$3, name_fr=$4, head_doctor_id=$5, is_active=$6 WHERE id=$7 RETURNING *',
+      [next.code, next.name, next.name_en, next.name_fr, next.head_doctor_id, next.is_active, cur.id]);
+    if (cur.is_active !== next.is_active) {
+      await writeAudit(client, req, { action: ACTIONS.DEPARTMENT, entity: 'department', entity_id: cur.id, summary: cur.code + ' ' + (cur.name_fr || cur.name),
+        before: { status: cur.is_active ? 'active' : 'hidden' }, after: { status: next.is_active ? 'active' : 'hidden' } });
+    }
+    await client.query('COMMIT');
     res.json(result.rows[0]);
-  } catch (err) { sendDbError(res, err); }
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// ── ORDER-CODE GROUPS ──
+// The groups an order code is filed under (order_group, migration 063; the clinic's
+// manager, 2026-11-09, like the drug categories). Read by anyone signed in; changed with
+// the settings permission. The name is the key and is stored on the codes
+// (order_code.group_name), so renaming renames it on every code in one transaction; a
+// group still on codes is hidden, not removed. 'Other' can be neither hidden nor removed.
+const ORDER_GROUP_SELECT = `SELECT g.name, g.sort_order, g.is_hidden,
+                                   (SELECT COUNT(*)::int FROM order_code oc WHERE oc.group_name = g.name AND oc.is_active) AS code_count,
+                                   (g.name = 'Other') AS fixed
+                              FROM order_group g`;
+const ORDER_GROUP_ORDER = ' ORDER BY g.sort_order, lower(g.name)';
+function badGroupName(raw) {
+  const name = String(raw == null ? '' : raw).trim();
+  if (!name) return { error: MSG.ORDER_GROUP_NAME_REQUIRED };
+  if (name.length > 50) return { error: MSG.ORDER_GROUP_NAME_LONG };
+  return { name };
+}
+async function groupTaken(db, name, except) {
+  const r = await db.query('SELECT 1 FROM order_group WHERE lower(name) = lower($1) AND name <> $2', [name, except || '']);
+  return r.rows.length > 0;
+}
+// An order code's group must be one of the rows (hidden ones included: an old code keeps
+// its group). Not sent or empty: nothing to check.
+async function badOrderGroup(body) {
+  if (!Object.prototype.hasOwnProperty.call(body, 'group_name')) return null;
+  const v = body.group_name == null ? '' : String(body.group_name).trim();
+  if (!v) return null;
+  const r = await pool.query('SELECT 1 FROM order_group WHERE name = $1', [v]);
+  return r.rows.length ? null : MSG.ORDER_GROUP_UNKNOWN;
+}
+
+router.get('/order-groups', async (req, res) => {
+  try { res.json((await pool.query(ORDER_GROUP_SELECT + ORDER_GROUP_ORDER)).rows); }
+  catch (err) { sendDbError(res, err); }
+});
+
+router.post('/order-groups', permMiddleware('settings'), async (req, res) => {
+  const n = badGroupName(req.body.name);
+  if (n.error) return res.status(400).json({ error: n.error });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('bethesda.order_group'))");
+    if (await groupTaken(client, n.name, null)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.ORDER_GROUP_EXISTS }); }
+    await client.query(
+      `INSERT INTO order_group (name, sort_order) VALUES ($1, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM order_group WHERE name <> 'Other'))`, [n.name]);
+    await writeAudit(client, req, { action: ACTIONS.ORDER_GROUP, entity: 'order_group', entity_id: n.name, summary: n.name, before: null, after: { name: n.name, hidden: false } });
+    await client.query('COMMIT');
+    res.status(201).json((await pool.query(ORDER_GROUP_SELECT + ' WHERE g.name = $1', [n.name])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+router.put('/order-groups/order', permMiddleware('settings'), async (req, res) => {
+  const names = Array.isArray(req.body.names) ? req.body.names.map(String) : [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const have = (await client.query('SELECT name FROM order_group FOR UPDATE')).rows.map(r => r.name);
+    const same = names.length === have.length && new Set(names).size === names.length && names.every(k => have.includes(k));
+    if (!same) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.ORDER_GROUP_ORDER }); }
+    for (let i = 0; i < names.length; i++) {
+      await client.query('UPDATE order_group SET sort_order = $1, updated_at = NOW() WHERE name = $2', [(i + 1) * 10, names[i]]);
+    }
+    await client.query('COMMIT');
+    res.json((await pool.query(ORDER_GROUP_SELECT + ORDER_GROUP_ORDER)).rows);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Rename (the codes follow), hide or show.
+router.put('/order-groups/:name', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT * FROM order_group WHERE name = $1 FOR UPDATE', [req.params.name]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const cur = was.rows[0];
+    let name = cur.name, hidden = cur.is_hidden, renamed = 0;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+      const n = badGroupName(req.body.name);
+      if (n.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: n.error }); }
+      if (n.name !== cur.name) {
+        if (cur.fixed || cur.name === 'Other') { /* 'Other' may be renamed like any group */ }
+        if (await groupTaken(client, n.name, cur.name)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.ORDER_GROUP_EXISTS }); }
+        name = n.name;
+      }
+    }
+    if (req.body.is_hidden !== undefined) {
+      const h = req.body.is_hidden === true || req.body.is_hidden === 'true';
+      if (h && cur.name === 'Other') { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DRUG_CATEGORY_FIXED.replace('"Other"', '"Other"') }); }
+      hidden = h;
+    }
+    if (name !== cur.name) {
+      // The key changes: a new row under the new name, the codes moved, the old row gone,
+      // so the sort order and the hidden flag travel with it.
+      await client.query('INSERT INTO order_group (name, sort_order, is_hidden, created_at) VALUES ($1, $2, $3, $4)', [name, cur.sort_order, hidden, cur.created_at]);
+      renamed = (await client.query('UPDATE order_code SET group_name = $1 WHERE group_name = $2', [name, cur.name])).rowCount;
+      await client.query('DELETE FROM order_group WHERE name = $1', [cur.name]);
+    } else if (hidden !== cur.is_hidden) {
+      await client.query('UPDATE order_group SET is_hidden = $1, updated_at = NOW() WHERE name = $2', [hidden, cur.name]);
+    }
+    if (name !== cur.name || hidden !== cur.is_hidden) {
+      await writeAudit(client, req, { action: ACTIONS.ORDER_GROUP, entity: 'order_group', entity_id: name, summary: name,
+        before: { name: cur.name, hidden: cur.is_hidden, codes_renamed: null }, after: { name, hidden, codes_renamed: name !== cur.name ? renamed : null } });
+    }
+    await client.query('COMMIT');
+    res.json((await pool.query(ORDER_GROUP_SELECT + ' WHERE g.name = $1', [name])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+router.delete('/order-groups/:name', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT * FROM order_group WHERE name = $1 FOR UPDATE', [req.params.name]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const g = was.rows[0];
+    if (g.name === 'Other') { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DRUG_CATEGORY_FIXED }); }
+    // Active codes only: a code taken out of use (is_active false) keeps its old group name as text.
+    const n = (await client.query('SELECT COUNT(*)::int AS n FROM order_code WHERE group_name = $1 AND is_active', [g.name])).rows[0].n;
+    if (n > 0) { await client.query('ROLLBACK'); return res.status(409).json({ error: drugMsg.groupInUse(n), code_count: n }); }
+    await client.query('DELETE FROM order_group WHERE name = $1', [g.name]);
+    await writeAudit(client, req, { action: ACTIONS.ORDER_GROUP, entity: 'order_group', entity_id: g.name, summary: g.name, before: { name: g.name, hidden: g.is_hidden }, after: null });
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
 });
 
 // ── PHRASES ──

@@ -18,6 +18,7 @@ import { ModalityField, ModalityHint } from './settingsModality.jsx';
 // Drug categories: rows the clinic keeps (060), shared with the pharmacy and statistics screens.
 import { useDrugCategories } from '../drugCategories.js';
 import { DrugCategoriesPanel } from './settingsDrugCategories.jsx';
+import { OrderGroupsPanel } from './settingsOrderGroups.jsx';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -26,7 +27,9 @@ export default function SettingsPage() {
   var stS = useState([]), staff = stS[0], setStaff = stS[1];
   var drS = useState([]), drugs = drS[0], setDrugs = drS[1];
   var ocS = useState([]), orderCodes = ocS[0], setOrderCodes = ocS[1];
-  var dpS = useState([]), depts = dpS[0], setDepts = dpS[1];
+  var dpS = useState([]), depts = dpS[0], setDepts = dpS[1];          // every department, hidden ones too (?all=1)
+  var ogS = useState([]), orderGroups = ogS[0], setOrderGroups = ogS[1];
+  var ogM = useState(false), ogManage = ogM[0], setOgManage = ogM[1];  // the group panel on the order-code tab
   var edS = useState(null), editItem = edS[0], setEditItem = edS[1];
   var edT = useState(''), editType = edT[0], setEditType = edT[1];
   var spS = useState(false), showPw = spS[0], setShowPw = spS[1];
@@ -113,7 +116,7 @@ export default function SettingsPage() {
   async function loadAll(){
     var jobs = [
       ['/admin/staff', setStaff], ['/admin/drugs', setDrugs], ['/admin/order-codes', setOrderCodes],
-      ['/admin/departments', setDepts], ['/pacs/config', setPacsConfig],
+      ['/admin/departments?all=1', setDepts], ['/pacs/config', setPacsConfig], ['/admin/order-groups', setOrderGroups],
       ['/admin/clinic', setClinic], ['/order-sets', setOrderSets],
     ];
     var results = await Promise.all(jobs.map(function(j){
@@ -185,6 +188,10 @@ export default function SettingsPage() {
   }
 
   function uclin(k,v){ setClinic(function(p){ var n=Object.assign({},p||{}); n[k]=v; return n; }); }
+  async function toggleDept(d){
+    try { await api.put('/admin/departments/'+d.id, { is_active: d.is_active===false }); setDepts(await api.get('/admin/departments?all=1')); }
+    catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
   async function saveClinic(){
     try {
       var saved = await api.put('/admin/clinic', clinic||{});
@@ -703,8 +710,10 @@ export default function SettingsPage() {
                 return <button key={f} onClick={function(){setOcFilter(f)}} style={{background:ocFilter===f?tint(c,'20'):'transparent',color:ocFilter===f?'var(--'+c+'-ink)':t3,border:ocFilter===f?'1px solid '+tint(c,'40'):'1px solid transparent',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11,fontWeight:600,whiteSpace:'nowrap'}}>{f==='All'?t.se_all:(t['se_typeLong_'+f]||t['se_type_'+f])}</button>;
               })}
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
+              <button onClick={function(){setOgManage(!ogManage)}} style={{background:ogManage?'var(--warn-a20)':'var(--chip)',color:ogManage?'var(--warn-text)':t2,border:'1px solid '+bd2,borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>🗂 {t.se_ogTitle}</button>
               <button onClick={function(){openEdit('order',{code:'',name:'',name_en:'',code_type:'fee',group_name:'Consultation',default_dose:'',default_freq:1,default_days:1,price:0,price_clinic:0,pacs_modality:'',worklist_enabled:false,station_ae:'',body_part:'',memo:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
+            {ogManage ? <OrderGroupsPanel t={t} groups={orderGroups} reload={async function(){ try { setOrderGroups(await api.get('/admin/order-groups')); } catch(e){ /* keeps what it has */ } }} onChanged={async function(){ try { setOrderCodes(await api.get('/admin/order-codes')); } catch(e){ /* keeps what it has */ } }}/> : null}
             {/* Document and other fees live under the fee type, next to the consultation fees:
                 the clinic's manager looked for them and did not find them (2026-10-01). */}
             {ocFilter==='fee'?<div style={{padding:'6px 14px',fontSize:12,color:t3,borderBottom:'1px solid '+bd,lineHeight:1.5}}>{feeHint()}</div>:null}
@@ -743,13 +752,17 @@ export default function SettingsPage() {
               <button onClick={function(){openEdit('dept',{code:'',name:'',name_en:'',name_fr:''})}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>{t.se_addBtn}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 14}}>
-              <thead><tr style={{background:'var(--chip)'}}>{[t.se_colCode,t.se_colName,t.se_colHead,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}</tr></thead>
-              <tbody>{depts.map(function(d){return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
+              <thead><tr style={{background:'var(--chip)'}}>{[t.se_colCode,t.se_colName,t.se_colHead,t.se_colStatus,''].map(function(h,i){return <th key={i} style={{padding:'6px 10px',textAlign:'left',color:t3,fontSize: 12,borderBottom:'1px solid '+bd}}>{h}</th>})}</tr></thead>
+              {/* Hidden (the clinic's manager, 2026-11-09: « only GEN is in use now »): not offered at
+                  reception, kept on its visits and accounts. At least one stays active (server). */}
+              <tbody>{depts.map(function(d){var hid=d.is_active===false; return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)',opacity:hid?0.6:1}}>
                 <td style={{padding:'6px 10px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:600}}>{d.code}</td>
                 <td style={{padding:'6px 10px',color:tx}}>{d.name}</td>
                 <td style={{padding:'6px 10px',color:t2}}>{d.head_name||'—'}</td>
+                <td style={{padding:'6px 10px',color:hid?t3:'var(--ok-text)',fontSize:13,fontWeight:600}}>{hid?t.se_dcHidden:t.se_statusActive}</td>
                 <td style={{padding:'6px 10px',display:'flex',gap:3}}>
                   <button onClick={function(){openEdit('dept',d)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.edit}</button>
+                  <button onClick={function(){toggleDept(d)}} title={t.se_deptHideHint} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{hid?t.se_dcShow:t.se_dcHide}</button>
                 </td>
               </tr>})}</tbody>
             </table></div>
@@ -807,7 +820,7 @@ export default function SettingsPage() {
                     <Fld label={t.department}>
                       <select value={osEdit.department_id||''} onChange={function(e){osField('department_id',e.target.value)}} style={IS}>
                         <option value="">—</option>
-                        {depts.map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
+                        {activeDepts(depts, osEdit.department_id).map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
                       </select>
                     </Fld>
                     <Fld label={t.description||'Description'}><input value={osEdit.description||''} onChange={function(e){osField('description',e.target.value)}} style={IS}/></Fld>
@@ -1367,7 +1380,7 @@ export default function SettingsPage() {
               <Fld label={t.department||'Department'}>
                 <select value={editItem.department_id||''} onChange={function(e){ue('department_id', e.target.value||null)}} style={IS}>
                   <option value="">{t.unassigned||'(none)'}</option>
-                  {depts.map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
+                  {activeDepts(depts, editItem.department_id).map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
                 </select>
               </Fld>
               <Fld label={(t.permissions||'Permissions (accessible screens)')}>
@@ -1461,7 +1474,7 @@ export default function SettingsPage() {
                     window showed "Consultation". Supply: the consumables' group (056 seed) - missing until
                     1.7.13, so a consumable made on screen landed in "Other" (site, 2026-11-09). A group
                     the list does not know is shown as it is stored. */}
-                {ORDER_GROUPS.concat(editItem.group_name && ORDER_GROUPS.indexOf(editItem.group_name)<0 ? [editItem.group_name] : []).map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
+                {orderGroupOptions(orderGroups, editItem.group_name).map(function(g){return <option key={g.name} value={g.name}>{g.name}{g.is_hidden ? ' (' + t.se_dcHidden + ')' : ''}</option>})}</select></Fld>
               </div>
               {(editItem.code_type||'fee')==='fee'?<div style={{fontSize:12,color:t3,lineHeight:1.5}}>{feeHint()}</div>:null}
               {/* A supply (1.7.0): the word it is counted in and the level shown in red. Its
@@ -1558,8 +1571,21 @@ export default function SettingsPage() {
 // statistics grouping use; the names shown come from the rows (FR/KO/EN).
 // Units a pack-unit drug is handed out in; must match drug_pack_label_check.
 var PACK_LABELS = ['bottle','tube','inhaler','unit'];
-// The groups an order code can be filed under (the order-code window).
-var ORDER_GROUPS = ['Consultation','Issuance','Laboratory','Radiology','Ultrasound','Endoscopy','Surgery','Supply','Other'];
+// The groups an order code can be filed under: rows the clinic keeps (order_group, 063; until
+// 1.7.16 a fixed list here). The form offers the shown ones plus the code's own when hidden
+// or unknown, so opening an old code does not silently move it.
+function orderGroupOptions(groups, current){
+  var out = (groups||[]).filter(function(g){ return !g.is_hidden; });
+  if(current && !out.some(function(g){ return g.name===current; })){
+    var own = (groups||[]).filter(function(g){ return g.name===current; })[0];
+    out = out.concat([own || { name: current, is_hidden: false }]);
+  }
+  return out;
+}
+// The departments a select offers: the active ones, plus the one already chosen if hidden.
+function activeDepts(depts, current){
+  return (depts||[]).filter(function(d){ return d.is_active!==false || String(d.id)===String(current||''); });
+}
 // The filter's choices: the rows shown in the form, plus any key an existing drug still
 // carries (hidden, or not in the list at all), in the rows' order then alphabetically.
 function drugCatOptions(cats, drugs){

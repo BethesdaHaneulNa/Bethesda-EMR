@@ -44,6 +44,13 @@ var EXACT = {
   'The category "Other" cannot be hidden or removed': 'se_errDcFixed',
   'keys must list every drug category once': 'se_errDcOrder',
   'Unknown drug category': 'se_errDcUnknown',
+  // order-code groups and departments (settings.messages.js MSG, 2026-11-09)
+  'The group name is required': 'se_errOgName',
+  'The group name is too long (50 characters at most)': 'se_errOgNameLong',
+  'A group with that name already exists': 'se_errOgExists',
+  'names must list every group once': 'se_errOgOrder',
+  'Unknown order-code group': 'se_errOgUnknown',
+  'At least one department must stay active': 'se_errDeptLast',
   // the diagnosis list (settings.messages.js MSG, 2026-10-02)
   'The English name of the diagnosis is required': 'se_errDxName',
   'The diagnosis code is too long (20 characters at most)': 'se_errDxCodeLong',
@@ -101,6 +108,7 @@ var ORDERSET_ITEM = {
 var CATEGORY_IN_USE = /^This category has (\d+) phrase\(s\)\. Move them to another category or delete them first\.$/;
 // settings.messages.js drugMsg.categoryInUse(n): a drug category still on drugs.
 var DRUG_CATEGORY_IN_USE = /^This category is on (\d+) drug\(s\)\. Hide it instead of removing it\.$/;
+var ORDER_GROUP_IN_USE = /^This group is on (\d+) order code\(s\)\. Hide it instead of removing it\.$/;
 
 export function seMessage(t, text) {
   var s = String(text || '');
@@ -109,6 +117,8 @@ export function seMessage(t, text) {
   if (inUse && t.se_errCatInUse) return t.se_errCatInUse.replace('{n}', inUse[1]);
   var dcUse = s.match(DRUG_CATEGORY_IN_USE);
   if (dcUse && t.se_errDcInUse) return t.se_errDcInUse.replace('{n}', dcUse[1]);
+  var ogUse = s.match(ORDER_GROUP_IN_USE);
+  if (ogUse && t.se_errOgInUse) return t.se_errOgInUse.replace('{n}', ogUse[1]);
   var it = s.match(/^items\[(\d+)\]\.(.+)$/);
   if (it && ORDERSET_ITEM[it[2]] && t[ORDERSET_ITEM[it[2]]]) return t[ORDERSET_ITEM[it[2]]].replace('{n}', Number(it[1]) + 1);
   // api/client.js: the server or the proxy in front of it did not answer properly.

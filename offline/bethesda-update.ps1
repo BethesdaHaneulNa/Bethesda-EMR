@@ -206,7 +206,12 @@ if (-not $current) {
 Say "version en service: $current"
 
 # The offer: latest.json on the internet, else a kit on a removable drive.
-$latest = $null; $from = ''
+$latest = $null; $from = ''; $script:latestErr = ''
+# "No internet" errors (the name of the site could not be looked up, no route) as opposed
+# to the site answering badly (504, 503, timeout after a connection).
+function Test-NoInternet([string]$m) {
+  return ($m -match 'could not be resolved|Impossible de r.soudre|Unable to connect|Impossible de se connecter|No such host|network is unreachable|not reachable|Aucune connexion')
+}
 try {
   # A fresh copy every time: a storage edge may cache the file and ignore the request's
   # Cache-Control (a clinic once saw the old version as "up to date" for an hour after a
@@ -220,7 +225,7 @@ try {
   $latest = $body | ConvertFrom-Json
   Say ('latest.json: Date=' + $resp.Headers['Date'] + ' Age=' + $resp.Headers['Age'] + ' Cache-Control=' + $resp.Headers['Cache-Control'])
   $from = 'internet'
-} catch { Say "latest.json injoignable ($($_.Exception.Message)) - je regarde les clés USB." }
+} catch { $script:latestErr = $_.Exception.Message; Say "latest.json injoignable ($latestErr) - je regarde les clés USB." }
 if (-not $latest) {
   $kits = @()
   foreach ($dr in (Get-CimInstance Win32_LogicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.DriveType -eq 2 })) {
@@ -240,6 +245,14 @@ if (-not $latest) {
   }
 }
 if (-not $latest) {
+  # No internet at all (name not resolved, no route) and "GitHub did not answer" are two
+  # different things (the clinic's manager, 2026-11-09, after an afternoon when GitHub's
+  # download address gave 504 to everyone): the second is said as such, with "try again in
+  # a few minutes", so nobody goes looking for a broken cable.
+  if ($latestErr -and -not (Test-NoInternet $latestErr)) {
+    Show 'Mise à jour Bethesda' (Both "Le site de mise à jour (GitHub) n'a pas répondu : $latestErr`n`nCe n'est pas une panne de l'EMR ni de votre connexion. Réessayez dans quelques minutes. L'EMR continue en version $current." "업데이트 사이트(GitHub)가 응답하지 않았습니다: $latestErr`n`nEMR이나 인터넷 고장이 아닙니다. 몇 분 뒤 다시 시도하세요. EMR은 $current 버전으로 계속 동작합니다.") 'warn'
+    Stop-Here 3
+  }
   Show 'Mise à jour Bethesda' (Both "Pas d'internet et pas de kit sur une clé USB : rien à installer pour le moment. L'EMR continue en version $current." "인터넷도 안 되고 USB에 묶음도 없어 지금은 설치할 것이 없습니다. EMR은 $current 그대로입니다.") 'warn'
   Stop-Here 3
 }
@@ -294,7 +307,7 @@ if ($from -eq 'usb') {
   Progress-Step ("Téléchargement de la version $newV…") ("새 버전 $newV 내려받는 중…")
   Say "téléchargement: $($latest.url)"
   try { Fetch-WithProgress $latest.url $zip $total }
-  catch { Fail "Le téléchargement a échoué ($($_.Exception.Message)). Rien n'a été changé. Réessayez plus tard ou utilisez une clé USB." "내려받기에 실패했습니다($($_.Exception.Message)). 아무것도 바꾸지 않았습니다. 나중에 다시 하거나 USB를 쓰세요." }
+  catch { Fail "Le téléchargement depuis le site de mise à jour (GitHub) a échoué ($($_.Exception.Message)). Rien n'a été changé. Ce n'est pas une panne de l'EMR : réessayez dans quelques minutes, ou utilisez une clé USB." "내려받기에 실패했습니다($($_.Exception.Message)). 아무것도 바꾸지 않았습니다. 나중에 다시 하거나 USB를 쓰세요." }
 }
 Progress-Step 'Vérification du fichier (taille, SHA256)…' '파일 확인 중(크기·SHA256)…' -Marquee
 $len = (Get-Item -LiteralPath $zip).Length

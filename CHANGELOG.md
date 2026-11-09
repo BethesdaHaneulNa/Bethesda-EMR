@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.7.17 — 2026-11-09
+
+**Departments can be hidden.** **Paramètres → Services**: Masquer / Afficher on each line. A
+hidden department is no longer offered at reception; its visits, accounts and statistics
+stay. At least one department stays active. Logged in the Journal.
+
+**Order-code groups are the clinic's own list.** **Paramètres → Codes d'actes → 🗂 Groupes**
+adds a group, renames it (the codes follow), orders, hides and removes it (only when no code
+uses it); « Other » stays. The order-code window offers that list; a code saved with an
+unknown group is refused. Migration 063 seeds the nine groups the screen knew plus any
+name a code already carries.
+
+**Updater: GitHub down is said as such.** When the update site does not answer although the
+internet works, the message now says so and asks to try again in a few minutes, instead of
+« no internet and no USB kit ». Takes effect from the update after this one.
+
 ## v1.7.16 — 2026-11-09
 
 **Syrups, creams and inhalers are counted like any other drug.** The clinic's manager,

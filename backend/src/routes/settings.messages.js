@@ -40,6 +40,14 @@ const MSG = Object.freeze({
   DRUG_CATEGORY_FIXED: 'The category "Other" cannot be hidden or removed',
   DRUG_CATEGORY_ORDER: 'keys must list every drug category once',
   DRUG_CATEGORY_UNKNOWN: 'Unknown drug category',
+  // order-code groups (admin.routes.js, 2026-11-09): rows the clinic keeps itself
+  ORDER_GROUP_NAME_REQUIRED: 'The group name is required',
+  ORDER_GROUP_NAME_LONG: 'The group name is too long (50 characters at most)',
+  ORDER_GROUP_EXISTS: 'A group with that name already exists',
+  ORDER_GROUP_ORDER: 'names must list every group once',
+  ORDER_GROUP_UNKNOWN: 'Unknown order-code group',
+  // departments (admin.routes.js, 2026-11-09)
+  DEPARTMENT_LAST_ACTIVE: 'At least one department must stay active',
   // the list of frequent diagnoses (admin.routes.js, 2026-10-02)
   DIAGNOSIS_NAME_REQUIRED: 'The English name of the diagnosis is required',
   DIAGNOSIS_CODE_LONG: 'The diagnosis code is too long (20 characters at most)',
@@ -68,6 +76,7 @@ const phraseMsg = Object.freeze({
 // screen offers "hide" instead.
 const drugMsg = Object.freeze({
   categoryInUse: n => 'This category is on ' + n + ' drug(s). Hide it instead of removing it.',
+  groupInUse: n => 'This group is on ' + n + ' order code(s). Hide it instead of removing it.',
 });
 
 module.exports = { MSG, fieldMsg, phraseMsg, drugMsg };

@@ -66,6 +66,12 @@ for (const n of [1, 24]) {
   const fr = screen.seMessage(langs.fr, text);
   check(`drugMsg.categoryInUse(${n})`, !bad && fr.indexOf(String(n)) >= 0, bad || fr);
 }
+for (const n of [1, 24]) {
+  const text = drugMsg.groupInUse(n);
+  const bad = translatesEverywhere(text);
+  const fr = screen.seMessage(langs.fr, text);
+  check(`drugMsg.groupInUse(${n})`, !bad && fr.indexOf(String(n)) >= 0, bad || fr);
+}
 // middleware/auth.js (the coordinator's file): every error: '...' it sends.
 const mwSrc = fs.readFileSync(path.join(root, 'backend/src/middleware/auth.js'), 'utf8');
 const mwMsgs = [...new Set([...mwSrc.matchAll(/error:\s*'([^']+)'/g)].map(m => m[1]))];
