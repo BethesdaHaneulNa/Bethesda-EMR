@@ -80,6 +80,21 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 
 **Deux lignes avec le même nom** (par exemple deux « Amoxicillin 500mg Gélule » sous deux codes) : ce sont deux codes d'une liste importée. La fenêtre l'indique (« Même nom sous un autre code — … »). Mettez le prix sur **les deux**, et signalez-le à la pharmacie, qui décidera s'il faut n'en garder qu'un.
 
+### Les catégories de médicaments
+
+Chaque médicament est rangé dans une **catégorie** (Antibiotique, Antalgique, Anesthésie…). Elle sert dans la fenêtre du médicament, dans le filtre du **Stock** en pharmacie et dans l'export des statistiques. Depuis la version 1.7.13, la liste des catégories se tient ici — plus besoin d'une mise à jour pour en ajouter une.
+
+1. **Paramètres** → **Médicaments** → **🗂 Catégories**. Le tableau s'ouvre au-dessus de la liste des médicaments ; la liste **Toutes catégories**, à côté de **Rechercher**, filtre les médicaments par catégorie.
+2. Nouvelle catégorie : en bas, écrivez le **Nom (français)** — obligatoire — et, si vous voulez, le nom coréen et le nom anglais (sinon le nom français est affiché sur un écran coréen ou anglais), puis **+ Ajouter**. Elle se place juste avant **Autre**.
+3. Changer un nom : corrigez-le dans sa case, puis **Enregistrer** (ou Entrée). Les médicaments ne changent pas : ils gardent le **code** de la catégorie (la colonne grise, par exemple `Anesthetic`), seul le nom affiché change.
+4. Changer l'ordre : **▲** et **▼**. C'est l'ordre de la liste dans la fenêtre du médicament.
+5. **Masquer** une catégorie que la clinique n'utilise plus : elle disparaît de la fenêtre du médicament et du filtre ; les médicaments qui l'avaient la gardent (leur fenêtre la montre « (masquée) » tant qu'on ne les change pas). **Afficher** la remet.
+6. **Supprimer** n'est possible que pour une catégorie qu'aucun médicament n'utilise (la colonne « n médicament(s) » est à 0). Sinon la ligne montre « — » : masquez-la.
+7. **Autre** est la catégorie par défaut : elle ne peut être ni masquée ni supprimée (son nom, si).
+8. Pour déplacer des médicaments dans une nouvelle catégorie : **Modifier** chaque médicament, choisissez la **Catégorie**, **Sauver**.
+
+Chaque ajout, changement de nom, masquage et suppression est noté dans le **Journal** (« Catégorie de médicaments modifiée »).
+
 ### Créer une ordonnance type
 
 Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la consultation. **La dose, les fois et les jours se décident ici**, pour chaque ligne.
@@ -108,7 +123,7 @@ Les **codes d'actes** sont ce que le médecin demande en consultation : frais de
 2. **+ Ajouter**, ou **Modifier** sur une ligne. Remplissez **Code**, **Nom**, **Type**, **Groupe**, **Prix**, puis **Sauver**.
    - Pour un frais de document (type **Frais (consultation, documents)**, sauf C01 à C04), la case **Montant modifiable au paiement** : cochée, l'écran **Paiement** ouvre une case de montant sur la ligne et le caissier peut y changer le montant ; le **Prix** est le montant proposé au départ. Dans la liste, ces codes portent la marque **✎ montant modifiable**. Cocher ou décocher cette case est noté dans le **Journal**.
    - Pour le type **Acte**, la case **Posologie par défaut (facultatif)** peut rester vide. Si vous y écrivez des mots (QD, PRN…), ils sont recopiés dans la colonne **Posologie** quand l'acte est demandé en consultation. N'y mettez pas un nombre.
-   - Pour le type **Consommable** (gants, seringues, aiguilles, sutures, pansements…) : **Unité de comptage** (Unit, PACKS, ROLL, BOTTLE…) et **Stock minimum**. Le **stock** lui-même ne se change pas ici : voir ci-dessous.
+   - Pour le type **Consommable** (gants, seringues, aiguilles, sutures, pansements…) : le **Groupe** passe de lui-même à **Supply** (depuis la version 1.7.13 ; avant, Supply manquait dans la liste et un consommable créé à l'écran tombait dans « Other » — corrigez-le avec **Modifier** → **Groupe** : Supply), puis **Unité de comptage** (Unit, PACKS, ROLL, BOTTLE…) et **Stock minimum**. Le **stock** lui-même ne se change pas ici : voir ci-dessous.
 
 ### Tenir le stock des consommables
 
@@ -158,6 +173,15 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 <!-- à revoir : onglet de la session Laboratoire ; les valeurs de référence sont en cours de validation par les médecins. -->
 
+### Le papier des reçus (A4 ou A5)
+
+Depuis la version 1.7.13, les reçus peuvent s'imprimer sur une **feuille A4 coupée en deux** (A5, 148 × 210 mm, en hauteur).
+
+1. **Paramètres** → **Établissement** → **Papier des reçus** : **A4** (comme avant) ou **A5**, puis **Sauver**.
+2. Cela concerne le **reçu**, le **relevé détaillé** et le **reçu récapitulatif** (Paiement). Les autres documents (certificats, lettres, ordonnances externes, résultats…) restent en A4.
+3. En A5, l'aperçu du reçu est plus étroit et l'écriture un peu plus petite ; un reçu ordinaire tient sur une demi-feuille, un long relevé continue sur une deuxième.
+4. Côté imprimante : mettez les demi-feuilles dans le bac et réglez le **format de papier par défaut** de l'imprimante sur **A5** (dans Windows : Paramètres → Imprimantes → l'imprimante → Préférences d'impression). Sinon l'imprimante peut attendre du A4 et imprimer en deux morceaux.
+
 ### La sauvegarde
 
 1. **Paramètres** → **Sauvegarde**. Regardez le bandeau en haut :
@@ -184,7 +208,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 ### Lire le Journal
 
-Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes, catégories de phrases types, liste des diagnostics), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
+Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, dossiers terminés, ordonnances, reçus, patients, changements de service ou de médecin d'une visite, comptes du personnel, prix des médicaments, prix des actes, catégories de médicaments, catégories de phrases types, liste des diagnostics), et chaque **document émis ou annulé** (lettre de référence, certificat, ordonnance externe…).
 
 1. **Paramètres** → **Journal** (visible pour les comptes de rôle **Administrateur** seulement, depuis la version 1.7.4 ; la permission Paramètres seule ne suffit plus). Il montre les 7 derniers jours.
 2. Pour chercher : **Du** / **Au** (dates), **Tout le personnel** (une personne), **Tous les types** (un type), **Nom du patient ou n° de dossier** → **Rechercher**.
@@ -216,6 +240,9 @@ Le **Journal** montre qui a modifié ou supprimé quoi (résultats d'analyse, do
 | Ligne 2 : la dose par jour doit être supérieure à 0. (et autres « Ligne n : … ») | Une ligne d'ordonnance type a un nombre refusé | Corrigez la ligne indiquée |
 | … phrase(s) type(s) sont dans cette catégorie. Déplacez-les vers une autre catégorie ou supprimez-les d'abord. | On supprime une catégorie qui contient encore des phrases | Choisissez où les déplacer, ou supprimez d'abord les phrases |
 | Une catégorie porte déjà ce nom. | Deux catégories ne peuvent pas avoir le même nom | Prenez un autre nom |
+| … médicament(s) sont dans cette catégorie. Masquez-la au lieu de la supprimer. | **Médicaments** → **🗂 Catégories** : on supprime une catégorie encore utilisée | **Masquer** au lieu de **Supprimer** |
+| Le nom en français de la catégorie est obligatoire. | La case **Nom (français)** est vide | Écrivez le nom français, puis **+ Ajouter** / **Enregistrer** |
+| La catégorie « Autre » ne peut être ni masquée ni supprimée. | **Autre** est la catégorie par défaut | Normal — ne rien faire |
 | Fenêtre d'état : « Fichier .env de l'EMR — ligne(s) absente(s) … » ou « DB_PASSWORD n'est pas celui de l'EMR en marche » | Le fichier .env de l'EMR a été modifié à la main | **Ne redémarrez pas** le PC serveur ni l'EMR ; prévenez tout de suite le responsable |
 | Le serveur ne répond pas… | Le serveur est arrêté ou lent | Regardez la fenêtre d'état sur le PC serveur ; prévenez le responsable |
 | Fenêtre d'état : « Autres programmes sur les ports — port 9080 : DownloadServer … » | Un autre programme (téléchargement, serveur web…) écoute un port de l'EMR ou du PACS ; l'écran peut s'ouvrir alors que la liste de travail des appareils ne marche plus | Fermez ou désinstallez ce programme, redémarrez le PC ; sinon prévenez le responsable |

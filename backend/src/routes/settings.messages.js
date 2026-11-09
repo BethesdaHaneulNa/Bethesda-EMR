@@ -33,6 +33,13 @@ const MSG = Object.freeze({
   CATEGORY_EXISTS: 'A category with that name already exists',
   CATEGORY_MOVE_TARGET: 'Choose another category to move the phrases to',
   CATEGORY_ORDER: 'ids must list every category once',
+  // drug categories (admin.routes.js, 2026-11-09): rows the clinic keeps itself
+  DRUG_CATEGORY_NAME_REQUIRED: 'The French name of the drug category is required',
+  DRUG_CATEGORY_NAME_LONG: 'A drug category name is too long (60 characters at most)',
+  DRUG_CATEGORY_EXISTS: 'A drug category with that name already exists',
+  DRUG_CATEGORY_FIXED: 'The category "Other" cannot be hidden or removed',
+  DRUG_CATEGORY_ORDER: 'keys must list every drug category once',
+  DRUG_CATEGORY_UNKNOWN: 'Unknown drug category',
   // the list of frequent diagnoses (admin.routes.js, 2026-10-02)
   DIAGNOSIS_NAME_REQUIRED: 'The English name of the diagnosis is required',
   DIAGNOSIS_CODE_LONG: 'The diagnosis code is too long (20 characters at most)',
@@ -57,4 +64,10 @@ const phraseMsg = Object.freeze({
   categoryInUse: n => 'This category has ' + n + ' phrase(s). Move them to another category or delete them first.',
 });
 
-module.exports = { MSG, fieldMsg, phraseMsg };
+// A drug category still on drugs is not removed: the number is part of the message and the
+// screen offers "hide" instead.
+const drugMsg = Object.freeze({
+  categoryInUse: n => 'This category is on ' + n + ' drug(s). Hide it instead of removing it.',
+});
+
+module.exports = { MSG, fieldMsg, phraseMsg, drugMsg };

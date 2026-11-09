@@ -37,6 +37,13 @@ var EXACT = {
   'Choose another category to move the phrases to': 'se_errCatMoveTarget',
   'ids must list every category once': 'se_errCatOrder',
   'Modality must be 1 to 16 letters, digits or underscores (for example US, CR, AS)': 'se_errModality',
+  // drug categories (settings.messages.js MSG, 2026-11-09)
+  'The French name of the drug category is required': 'se_errDcNameFr',
+  'A drug category name is too long (60 characters at most)': 'se_errDcNameLong',
+  'A drug category with that name already exists': 'se_errDcExists',
+  'The category "Other" cannot be hidden or removed': 'se_errDcFixed',
+  'keys must list every drug category once': 'se_errDcOrder',
+  'Unknown drug category': 'se_errDcUnknown',
   // the diagnosis list (settings.messages.js MSG, 2026-10-02)
   'The English name of the diagnosis is required': 'se_errDxName',
   'The diagnosis code is too long (20 characters at most)': 'se_errDxCodeLong',
@@ -68,6 +75,7 @@ var FIELD_KEY = {
   unit_price: 'se_colPrice', price: 'se_colPrice', price_clinic: 'se_colPrice',
   stock_qty: 'se_fStock', min_stock: 'se_fMinStock',
   role: 'se_colRole', code_type: 'se_colType', permissions: 'se_fld_permissions', is_active: 'se_colStatus',
+  receipt_paper: 'se_fReceiptPaper',
 };
 var SHAPES = [
   [/^(\w+) must be a number$/, 'se_errNotNumber'],
@@ -91,12 +99,16 @@ var ORDERSET_ITEM = {
 
 // settings.messages.js phraseMsg.categoryInUse(n): the number of phrases is part of the message.
 var CATEGORY_IN_USE = /^This category has (\d+) phrase\(s\)\. Move them to another category or delete them first\.$/;
+// settings.messages.js drugMsg.categoryInUse(n): a drug category still on drugs.
+var DRUG_CATEGORY_IN_USE = /^This category is on (\d+) drug\(s\)\. Hide it instead of removing it\.$/;
 
 export function seMessage(t, text) {
   var s = String(text || '');
   if (EXACT[s] && t[EXACT[s]]) return t[EXACT[s]];
   var inUse = s.match(CATEGORY_IN_USE);
   if (inUse && t.se_errCatInUse) return t.se_errCatInUse.replace('{n}', inUse[1]);
+  var dcUse = s.match(DRUG_CATEGORY_IN_USE);
+  if (dcUse && t.se_errDcInUse) return t.se_errDcInUse.replace('{n}', dcUse[1]);
   var it = s.match(/^items\[(\d+)\]\.(.+)$/);
   if (it && ORDERSET_ITEM[it[2]] && t[ORDERSET_ITEM[it[2]]]) return t[ORDERSET_ITEM[it[2]]].replace('{n}', Number(it[1]) + 1);
   // api/client.js: the server or the proxy in front of it did not answer properly.

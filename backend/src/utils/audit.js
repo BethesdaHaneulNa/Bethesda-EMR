@@ -45,6 +45,7 @@ const ACTIONS = {
   STAFF_PASSWORD:       'settings.staff.password',      // that it was changed and by whom - never the value
   DRUG_PRICE:           'settings.drug.price',          // unit price changed (decision 2026-09-30): before/after unit_price only
   PHRASE_CATEGORY:      'settings.phrase.category',     // a phrase category made, renamed or removed (2026-10-01): name, status, phrases moved
+  DRUG_CATEGORY:        'settings.drug.category',       // a drug category made, renamed, hidden/shown or removed (2026-11-09): names, hidden
   ORDER_PRICE:          'settings.order.price',         // an order code's price changed (fee, lab, imaging, procedure): same shape
   DIAGNOSIS_CODE:       'settings.diagnosis.code',      // the list of frequent diagnoses (2026-10-02): a row added, edited, switched off or on - code, names, status
   ORDER_PRICE_EDITABLE: 'settings.order.price_editable', // "the amount can be changed at payment" turned on or off for a fee code (2026-10-01)

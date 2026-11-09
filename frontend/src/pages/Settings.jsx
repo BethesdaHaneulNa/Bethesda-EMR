@@ -15,6 +15,9 @@ import { getTemplate } from '../documents/registry.js';
 import { PhrasesTab } from './settingsPhrases.jsx';
 import { DiagnosesTab } from './settingsDiagnoses.jsx';
 import { ModalityField, ModalityHint } from './settingsModality.jsx';
+// Drug categories: rows the clinic keeps (060), shared with the pharmacy and statistics screens.
+import { useDrugCategories } from '../drugCategories.js';
+import { DrugCategoriesPanel } from './settingsDrugCategories.jsx';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -40,6 +43,8 @@ export default function SettingsPage() {
   var AUDIT_LIMIT = 50;
   var toS = useState(''), toast = toS[0], setToast = toS[1];
   var dcS = useState('All'), drugCat = dcS[0], setDrugCat = dcS[1];
+  var dcx = useDrugCategories(), drugCats = dcx.cats, dcLabel = dcx.label;
+  var dmS = useState(false), dcManage = dmS[0], setDcManage = dmS[1];   // the category panel on the drug tab
   var ocF = useState('All'), ocFilter = ocF[0], setOcFilter = ocF[1];
   var pcS = useState(null), pacsConfig = pcS[0], setPacsConfig = pcS[1];
   var ptS = useState({}), pacsTest = ptS[0], setPacsTest = ptS[1];
@@ -660,9 +665,17 @@ export default function SettingsPage() {
           {activeTab==='drug'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
+              {/* The categories a drug can be filed under are rows the clinic keeps (060): the
+                  filter lists those shown in the form and any an existing drug still carries. */}
+              <select value={drugCat} onChange={function(e){setDrugCat(e.target.value)}} aria-label={t.ph_category} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',boxSizing:'border-box',maxWidth:200}}>
+                <option value="All">{t.ph_allCategories}</option>
+                {drugCatOptions(drugCats, drugs).map(function(k){return <option key={k} value={k}>{dcLabel(k)}</option>})}
+              </select>
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
+              <button onClick={function(){setDcManage(!dcManage)}} style={{background:dcManage?'var(--warn-a20)':'var(--chip)',color:dcManage?'var(--warn-text)':t2,border:'1px solid '+bd2,borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>🗂 {t.se_dcTitle}</button>
               <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:0})}} style={{background:'var(--violet-a20)',color:'var(--violet-text)',border:'1px solid var(--violet-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
+            {dcManage ? <DrugCategoriesPanel t={t} cats={drugCats} reload={dcx.reload} onChanged={async function(){ try { setDrugs(await api.get('/admin/drugs')); } catch(e){ /* the table keeps what it has */ } }}/> : null}
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'var(--chip)'}}>
                 {/* No default dose / times / days / posology (decision B, 2026-09-29): a drug
@@ -673,7 +686,7 @@ export default function SettingsPage() {
                 return <tr key={d.id} style={{borderBottom:'1px solid var(--line-soft)'}}>
                   <td style={{padding:'4px 6px',color:'var(--accent-text)',fontFamily:'monospace',fontWeight:600,fontSize: 13}}>{d.code}</td>
                   <td style={{padding:'4px 6px',color:tx}}>{checkOpen(d) ? <span title={checkList(d).map(function(c){return checkText(t,c);}).join('\n')} style={{color:'var(--warn-text)',marginRight:4}}>⚠</span> : null}{d.name}{d.dosage_form ? <span style={{marginLeft:6,fontSize: 11,color:t2}}>{formLabel(t,d.dosage_form)}</span> : null}{d.pack_unit ? <span style={{marginLeft:6,fontSize: 11,color:'var(--warn-text)',border:'1px solid var(--warn-a60)',borderRadius:3,padding:'0 4px'}}>{t['ph_pack_'+(d.pack_label||'unit')]}</span> : null}</td>
-                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{drugCatLabel(t, d.category)}</td>
+                  <td style={{padding:'4px 6px',color:t2,fontSize: 12}}>{dcLabel(d.category)}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',fontFamily:'monospace',color:tx,whiteSpace:'nowrap'}}>{seMoney(d.unit_price, langCtx.lang)}</td>
                   <td style={{padding:'4px 6px',textAlign:'right',color:(Number(d.min_stock)>0&&Number(d.stock_qty)<=Number(d.min_stock))?'var(--danger-text)':'var(--ok-text)',fontWeight:600}}>{d.stock_qty}</td>
                   <td style={{padding:'4px 6px',display:'flex',gap:3}}>
@@ -1295,6 +1308,15 @@ export default function SettingsPage() {
               <Fld label={t.se_fHours}><input value={clinic.working_hours||''} onChange={function(e){uclin('working_hours',e.target.value)}} style={IS}/></Fld>
               {/* Shown under the patient list on the phone page (/m), e.g. which Wi-Fi reaches the server. Empty = nothing shown. */}
               <Fld label={t.se_fMobileHint}><input value={clinic.mobile_hint||''} onChange={function(e){uclin('mobile_hint',e.target.value)}} placeholder={t.se_mobileHintPh} style={IS}/></Fld>
+              {/* The paper the receipts print on (061; asked on site 2026-11-09): A4, or A5 = an A4
+                  sheet cut in two. Receipt, statement and summary receipt only (Receipt.jsx). */}
+              <Fld label={t.se_fReceiptPaper}>
+                <select value={(clinic.receipt_paper||'A4').toUpperCase()} onChange={function(e){uclin('receipt_paper',e.target.value)}} style={IS}>
+                  <option value="A4">{t.se_receiptPaperA4}</option>
+                  <option value="A5">{t.se_receiptPaperA5}</option>
+                </select>
+                <div style={{fontSize:12,color:t3,marginTop:4,lineHeight:1.5}}>{t.se_receiptPaperHint}</div>
+              </Fld>
               <div><button onClick={saveClinic} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 24px',cursor:'pointer',fontSize: 14,fontWeight:800,marginTop:4}}>{t.save||'Save'}</button></div>
             </div>
 
@@ -1390,7 +1412,7 @@ export default function SettingsPage() {
               {/* No default dose / times / days / posology here (decision B, 2026-09-29):
                   the order sets carry the dosing. The columns stay in the table, unused. */}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{DRUG_CATEGORIES.map(function(c){return <option key={c} value={c}>{drugCatLabel(t, c)}</option>})}</select></Fld>
+                <Fld label={t.ph_category}><select value={editItem.category||'Other'} onChange={function(e){ue('category',e.target.value)}} style={IS}>{drugFormCategories(drugCats, editItem.category||'Other').map(function(c){return <option key={c.key} value={c.key}>{dcLabel(c.key)}{c.is_hidden ? ' (' + t.se_dcHidden + ')' : ''}</option>})}</select></Fld>
                 <Fld label={t.ph_form}><select value={editItem.dosage_form||''} onChange={function(e){ue('dosage_form',e.target.value||null)}} style={IS}>
                   <option value="">—</option>
                   {DRUG_FORMS.map(function(f){return <option key={f} value={f}>{formLabel(t,f)}</option>})}
@@ -1442,10 +1464,12 @@ export default function SettingsPage() {
               </div>
               <Fld label={t.se_fNameEn}><input value={editItem.name_en||''} onChange={function(e){ue('name_en',e.target.value)}} style={IS}/></Fld>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.se_fType}><select value={editItem.code_type||'fee'} onChange={function(e){ue('code_type',e.target.value)}} style={IS}>{['fee','lab','imaging','procedure','supply'].map(function(c){return <option key={c} value={c}>{t['se_typeLong_'+c]||t['se_type_'+c]}</option>;})}</select></Fld>
+                <Fld label={t.se_fType}><select value={editItem.code_type||'fee'} onChange={function(e){ var v=e.target.value; setEditItem(function(p){ var n=JSON.parse(JSON.stringify(p)); n.code_type=v; /* a consumable's group is Supply (056) unless the person already chose another */ if(v==='supply' && (!n.group_name || n.group_name==='Consultation' || n.group_name==='Other')) n.group_name='Supply'; return n; }); }} style={IS}>{['fee','lab','imaging','procedure','supply'].map(function(c){return <option key={c} value={c}>{t['se_typeLong_'+c]||t['se_type_'+c]}</option>;})}</select></Fld>
                 <Fld label={t.se_fGroup}><select value={editItem.group_name||''} onChange={function(e){ue('group_name',e.target.value)}} style={IS}>{/* Issuance: the group of the document fees (CDR, CERT, DOC). It was not in the list, so their
-                    window showed "Consultation". A group the list does not know is shown as it is stored. */}
-                {'Consultation,Issuance,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').concat(editItem.group_name && 'Consultation,Issuance,Laboratory,Radiology,Ultrasound,Endoscopy,Surgery,Other'.split(',').indexOf(editItem.group_name)<0 ? [editItem.group_name] : []).map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
+                    window showed "Consultation". Supply: the consumables' group (056 seed) - missing until
+                    1.7.13, so a consumable made on screen landed in "Other" (site, 2026-11-09). A group
+                    the list does not know is shown as it is stored. */}
+                {ORDER_GROUPS.concat(editItem.group_name && ORDER_GROUPS.indexOf(editItem.group_name)<0 ? [editItem.group_name] : []).map(function(g){return <option key={g}>{g}</option>})}</select></Fld>
               </div>
               {(editItem.code_type||'fee')==='fee'?<div style={{fontSize:12,color:t3,lineHeight:1.5}}>{feeHint()}</div>:null}
               {/* A supply (1.7.0): the word it is counted in and the level shown in red. Its
@@ -1536,14 +1560,33 @@ export default function SettingsPage() {
   );
 }
 
-// Drug tab (pharmacy session). The stored category stays the English word the
-// seed data and the statistics grouping use; only what is shown is translated.
-// Widened 2026-09-29 for the clinic's real stock list (old program's classes, see
-// the project notes); 'Other' stays last.
+// Drug tab (pharmacy session). A drug's category is the key of one of the clinic's rows
+// (drug_category, 060; src/drugCategories.js) - until 1.7.12 a fixed list of seventeen
+// English words here. The stored key stays the English word the seed data and the
+// statistics grouping use; the names shown come from the rows (FR/KO/EN).
 // Units a pack-unit drug is handed out in; must match drug_pack_label_check.
 var PACK_LABELS = ['bottle','tube','inhaler','unit'];
-var DRUG_CATEGORIES = ['Analgesic','Antibiotic','Antihistamine','Antimalarial','Antiparasitic','Cardiovascular','Corticosteroid','Dermatology','Endocrine','GI','Gynecology','Musculoskeletal','Ophthalmic','Respiratory','Urology','Vitamin','Other'];
-function drugCatLabel(t, c){ return (c && t['ph_cat_' + c]) || c || ''; }
+// The groups an order code can be filed under (the order-code window).
+var ORDER_GROUPS = ['Consultation','Issuance','Laboratory','Radiology','Ultrasound','Endoscopy','Surgery','Supply','Other'];
+// The filter's choices: the rows shown in the form, plus any key an existing drug still
+// carries (hidden, or not in the list at all), in the rows' order then alphabetically.
+function drugCatOptions(cats, drugs){
+  var out = [], seen = {};
+  (cats||[]).forEach(function(c){ if(!c.is_hidden){ out.push(c.key); seen[c.key]=true; } });
+  var extra = {};
+  (drugs||[]).forEach(function(d){ if(d.category && !seen[d.category]) extra[d.category]=true; });
+  return out.concat(Object.keys(extra).sort());
+}
+// The form's choices: the rows shown, plus the drug's own category when it is hidden or
+// unknown (so opening an old drug does not silently move it to another class).
+function drugFormCategories(cats, current){
+  var out = (cats||[]).filter(function(c){ return !c.is_hidden; });
+  if(current && !out.some(function(c){ return c.key===current; })){
+    var own = (cats||[]).filter(function(c){ return c.key===current; })[0];
+    out = out.concat([own || { key: current, is_hidden: false }]);
+  }
+  return out;
+}
 
 // A new member of staff starts with a random 6-digit temporary password, shown in the
 // form so the admin can pass it on. There is no shared default: a fixed starting

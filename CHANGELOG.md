@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.7.13 — 2026-11-09
+
+**Drug categories are the clinic's own list.** Asked on site: an « Anesthésie » class was
+missing, and the list was seventeen fixed words in the screen. Now **Paramètres →
+Médicaments → 🗂 Catégories** adds a category (name in French, optionally Korean and
+English), renames it, puts it in order, hides one the clinic no longer offers (a drug that
+still carries it keeps it) and removes one no drug uses; « Autre » stays. The same list
+names the classes in the drug window and table, the new category filter there, the
+pharmacy's stock filter and the statistics export. Every change is in the Journal
+(« Catégorie de médicaments modifiée »). Migration 060 keeps the seventeen keys as they
+are stored on the drugs and adds **Anesthetic / Anesthésie / 마취제**; a drug saved with an
+unknown category is refused.
+
+**Receipts on half an A4 sheet.** **Paramètres → Établissement → Papier des reçus**: A4 (as
+before) or A5 (148 × 210 mm, portrait). The receipt, the itemised statement and the summary
+receipt follow it - narrower body, 9 mm margins, slightly smaller type - every other document
+stays A4. Set the printer's default paper to A5 as well (migration 061).
+
+**Order codes: the Supply group.** The group list of the order-code window lacked
+« Supply », so a consumable made on screen landed in « Other » (BETH-DISPO-154 on site).
+Supply is in the list, and choosing the type Consommable picks it.
+
 ## v1.7.12 — 2026-11-09
 
 **Updater: the question can no longer hide behind the EMR.** On site the 1.7.10 updater

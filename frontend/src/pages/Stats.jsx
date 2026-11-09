@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
+import { useDrugCategories } from '../drugCategories.js';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { SIDE_NAV_COL, SIDE_NAV, SIDE_NAV_TITLE, sideNavItem } from '../layout.js';
@@ -24,6 +25,7 @@ var BAR_OF = { summary:'main', money:'main', patients:'patients', dx:'dx', order
 
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
+  var dcx = useDrugCategories();   // the drug categories' names (060) for the usage export
   function fmtAr(n){ return fmtAmount(n, lang); }
   // Which group of parts is on screen (design session, 2026-10-02): the screen had grown to
   // nine parts one under the other. They are shown a group at a time, chosen in a side menu
@@ -204,7 +206,7 @@ export default function StatsPage(){
     var head = ['code','drug','category','unit'].concat(P).concat(['total']);
     var lines = [head.join(',')];
     D.forEach(function(d){
-      var row = ['"'+(d.drug_code||'')+'"','"'+(d.drug_name||'').replace(/"/g,'""')+'"','"'+(d.category||'')+'"','"'+(d.pack_label?packWord(d.pack_label):'')+'"']
+      var row = ['"'+(d.drug_code||'')+'"','"'+(d.drug_name||'').replace(/"/g,'""')+'"','"'+dcx.label(d.category).replace(/"/g,'""')+'"','"'+(d.pack_label?packWord(d.pack_label):'')+'"']
         .concat(P.map(function(p){ return d.by_period[p]||0; }))
         .concat([d.total_qty]);
       lines.push(row.join(','));

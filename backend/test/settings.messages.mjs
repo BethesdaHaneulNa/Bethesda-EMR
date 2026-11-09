@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const imp = p => import(pathToFileURL(path.join(root, p)).href);
-const { MSG, fieldMsg, phraseMsg } = createRequire(import.meta.url)(path.join(root, 'backend/src/routes/settings.messages.js'));
+const { MSG, fieldMsg, phraseMsg, drugMsg } = createRequire(import.meta.url)(path.join(root, 'backend/src/routes/settings.messages.js'));
 const screen = await imp('frontend/src/pages/settingsMessages.js');
 const langs = {};
 for (const l of ['ko', 'en', 'fr']) langs[l] = (await imp(`frontend/src/i18n/${l}.js`)).default;
@@ -48,7 +48,7 @@ for (const f of ['unit_price', 'price', 'price_clinic', 'stock_qty', 'min_stock'
     check(`fieldMsg.${kind}('${f}')`, !bad, bad);
   }
 }
-for (const [f, allowed] of [['role', ['frontdesk', 'admin']], ['code_type', ['fee', 'lab']]]) {
+for (const [f, allowed] of [['role', ['frontdesk', 'admin']], ['code_type', ['fee', 'lab']], ['receipt_paper', ['A4', 'A5']]]) {
   const bad = translatesEverywhere(fieldMsg.notOneOf(f, allowed));
   check(`fieldMsg.notOneOf('${f}')`, !bad, bad);
 }
@@ -58,6 +58,13 @@ for (const n of [1, 24]) {
   const bad = translatesEverywhere(text);
   const fr = screen.seMessage(langs.fr, text);
   check(`phraseMsg.categoryInUse(${n})`, !bad && fr.indexOf(String(n)) === 0, bad || fr);
+}
+// a drug category still on drugs: the number is carried into the translation
+for (const n of [1, 24]) {
+  const text = drugMsg.categoryInUse(n);
+  const bad = translatesEverywhere(text);
+  const fr = screen.seMessage(langs.fr, text);
+  check(`drugMsg.categoryInUse(${n})`, !bad && fr.indexOf(String(n)) >= 0, bad || fr);
 }
 // middleware/auth.js (the coordinator's file): every error: '...' it sends.
 const mwSrc = fs.readFileSync(path.join(root, 'backend/src/middleware/auth.js'), 'utf8');

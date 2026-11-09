@@ -26,10 +26,22 @@ import { packWord } from '../documents/rx-dosing.js';
 
 export var RECEIPT_LANG = 'fr';
 
-// Paper. A4 prints through printDocument() (14 mm margins), leaving a body about
-// 688 px wide. To move to an 80 mm receipt printer later, change this one place
-// (about 272 px) and give it its own print window - printDocument() is A4 only.
-export var RECEIPT_PAGE = { size: 'A4', widthPx: 688 };
+// Paper. The clinic chooses it in Settings -> Clinic (clinic.receipt_paper, 061; asked on
+// site 2026-11-09): A4 through printDocument()'s 14 mm margins, a body about 688 px wide
+// - or A5, an A4 sheet cut in two (148 x 210 mm, portrait), 9 mm margins, a body about
+// 130 mm = 490 px wide, tighter padding and a smaller base size so a usual receipt fits
+// one sheet; a long statement goes on to a second one. Only the receipt papers follow
+// this; every other document stays A4. To move to an 80 mm receipt printer later, add a
+// third entry here (about 272 px). The preview is as wide as the paper's body.
+var RECEIPT_PAPERS = {
+  A4: { paper: 'A4', widthPx: 688, pad: '34px 40px', fontSize: 13, print: { size: 'A4', margin: '14mm' } },
+  A5: { paper: 'A5', widthPx: 484, pad: '14px 16px', fontSize: 12, print: { size: 'A5 portrait', margin: '9mm' } },
+};
+export function receiptPage(clinic) {
+  var k = clinic && clinic.receipt_paper ? String(clinic.receipt_paper).toUpperCase() : 'A4';
+  return RECEIPT_PAPERS[k] || RECEIPT_PAPERS.A4;
+}
+export var RECEIPT_PAGE = RECEIPT_PAPERS.A4;   // what the papers measured until 1.7.12
 
 var RL = {
   title:        { ko: '영수증', en: 'Receipt', fr: 'Reçu' },
@@ -313,7 +325,7 @@ export function ReceiptDoc(props) {
   var cats = categoriesOf(props.data);
 
   return (
-    <A4 innerRef={props.innerRef}>
+    <A4 innerRef={props.innerRef} pad={receiptPage(props.clinic).pad} fontSize={receiptPage(props.clinic).fontSize}>
       <ClinicHeader clinic={clinic} lang={lang} title={L(RL.title, lang)} />
 
       <MetaRow>
@@ -435,7 +447,7 @@ export function StatementDoc(props) {
   }
 
   return (
-    <A4 innerRef={props.innerRef}>
+    <A4 innerRef={props.innerRef} pad={receiptPage(props.clinic).pad} fontSize={receiptPage(props.clinic).fontSize}>
       <ClinicHeader clinic={props.clinic} lang={lang} title={L(RL.stTitle, lang)} />
 
       <MetaRow>
@@ -500,7 +512,7 @@ export function SummaryDoc(props) {
     ' (' + list.length + ' ' + L(RL.nReceipts, lang) + ')';
 
   return (
-    <A4 innerRef={props.innerRef}>
+    <A4 innerRef={props.innerRef} pad={receiptPage(props.clinic).pad} fontSize={receiptPage(props.clinic).fontSize}>
       <ClinicHeader clinic={props.clinic} lang={lang} title={L(RL.sumTitle, lang)} />
 
       <MetaRow>
@@ -568,7 +580,7 @@ export function SummaryDoc(props) {
 // ── windows ──
 var shade = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' };
 var frame = { background: '#f5f5f5', borderRadius: 8, maxHeight: '94vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' };
-var paper = { width: RECEIPT_PAGE.widthPx, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' };
+function paperOf(page) { return { width: page.widthPx, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }; }
 // The up-down bar is always there, so the window is sized with it; with 'auto' it appeared
 // after the sizing and brought a left-right bar with nothing to scroll.
 var scroller = { overflowX: 'auto', overflowY: 'scroll' };
@@ -605,6 +617,7 @@ export function ReceiptModal(props) {
   var hasItems = !!(data && itemsOf(data).length);   // a settlement receipt has no statement
   var showing = view === 'statement' && hasItems ? 'statement' : 'receipt';
   var names = { receipt: t.py_docReceipt || L(RL.title, RECEIPT_LANG), statement: t.py_docStatement || L(RL.stTitle, RECEIPT_LANG) };
+  var page = receiptPage(clinic), paper = paperOf(page);
   return (
     <div style={shade}>
       <div style={frame}>
@@ -622,7 +635,7 @@ export function ReceiptModal(props) {
         </div>
         <div style={{ padding: '10px 14px', borderTop: '1px solid #ddd', display: 'flex', gap: 8, background: '#eee' }}>
           <button onClick={props.onClose} style={closeBtn()}>{t.close}</button>
-          <button onClick={function () { printDocument(ref.current, (showing === 'statement' ? 'Relevé ' : 'Reçu ') + no, RECEIPT_LANG); }} disabled={!data} style={printBtn(!!data)}>{'🖨 ' + String(t.py_printThis || '{doc}').replace('{doc}', names[showing])}</button>
+          <button onClick={function () { printDocument(ref.current, (showing === 'statement' ? 'Relevé ' : 'Reçu ') + no, RECEIPT_LANG, page.print); }} disabled={!data} style={printBtn(!!data)}>{'🖨 ' + String(t.py_printThis || '{doc}').replace('{doc}', names[showing])}</button>
         </div>
       </div>
     </div>
@@ -678,12 +691,13 @@ export function ReprintModal(props) {
   var ready = !!list && !err && papers.length > 0 && !bad.length;
   var combined = papers.some(function (p) { return p.list.length > 1; });
   var printedAt = stampNow(RECEIPT_LANG);
+  var page = receiptPage(clinic), paper = paperOf(page);
   function print() {
     if (!ready) return;
     // Decided 2026-10-02: a change-log line only when receipts are printed together. It is
     // not waited for - a line that cannot be written must not stop the printing.
     if (combined) { try { api.post('/billing/receipts/print-log', { ids: props.ids, document: props.doc, grouping: props.grouping }).catch(function () {}); } catch (e) { /* never stops the print */ } }
-    printDocument(ref.current, 'Reçus ' + (list[0] ? (list[0].bill.chart_no || '') : ''), RECEIPT_LANG);
+    printDocument(ref.current, 'Reçus ' + (list[0] ? (list[0].bill.chart_no || '') : ''), RECEIPT_LANG, page.print);
   }
   var box = Object.assign({}, paper, { padding: 30, boxSizing: 'border-box', overflowWrap: 'anywhere' });
   return (

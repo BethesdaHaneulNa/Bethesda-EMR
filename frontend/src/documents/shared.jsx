@@ -175,7 +175,8 @@ export function A4(props) {
     <div ref={props.innerRef} className="bethesda-a4" style={{
       width: '100%', background: '#fff', color: '#111',
       padding: props.pad || '34px 40px', boxSizing: 'border-box',
-      fontFamily: '"Times New Roman", Georgia, serif', fontSize: 13, lineHeight: 1.45,
+      // fontSize: a smaller paper (the A5 receipts) asks for a smaller base size.
+      fontFamily: '"Times New Roman", Georgia, serif', fontSize: props.fontSize || 13, lineHeight: 1.45,
     }}>
       {/* The preview shows what prints. The app's page sets every table to 16px (index.html,
           for the screens); the print window has no such rule, so a table of the paper that
@@ -196,15 +197,19 @@ var POPUP_BLOCKED = {
   en: 'The browser blocked the print window. Allow pop-ups for this site and try again.',
   fr: "Le navigateur a bloqué la fenêtre d'impression. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
 };
-export function printDocument(node, title, lang) {
+// `page` (optional, 1.7.13): { size, margin } for the @page rule - the receipts pass A5
+// when the clinic prints them on half an A4 sheet (Receipt.jsx receiptPage). Nothing
+// passed: A4 with 14 mm margins, as every other document.
+export function printDocument(node, title, lang, page) {
   if (!node) return;
   var html = node.outerHTML;
+  var pg = page || { size: 'A4', margin: '14mm' };
   var w = window.open('', '_blank', 'width=900,height=1000');
   if (!w) { alert(L(POPUP_BLOCKED, lang || 'ko')); return; }
   w.document.open();
   w.document.write(
     '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (title || 'Document') + '</title>' +
-    '<style>@page{size:A4;margin:14mm} *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box} html,body{margin:0;padding:0;background:#fff}</style>' +
+    '<style>@page{size:' + pg.size + ';margin:' + pg.margin + '} *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box} html,body{margin:0;padding:0;background:#fff}</style>' +
     '</head><body>' + html + '</body></html>'
   );
   w.document.close();

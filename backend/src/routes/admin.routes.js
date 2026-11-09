@@ -3,7 +3,7 @@ const { pool } = require('../config/database');
 const { authMiddleware, permMiddleware, roleMiddleware, ALL_PERMS } = require('../middleware/auth');
 const { sendDbError } = require('../utils/dbError');
 // Messages shown to people - translated by the screen; see settings.messages.js.
-const { MSG, fieldMsg, phraseMsg } = require('./settings.messages');
+const { MSG, fieldMsg, phraseMsg, drugMsg } = require('./settings.messages');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const KNOWN_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -13,6 +13,8 @@ const ROLES = ['frontdesk', 'doctor', 'nurse', 'pharmacy', 'lab', 'admin'];   //
 // 'supply' (1.7.0): a consumable - gloves, a syringe, a suture - found and billed like
 // a procedure, counted like a drug (supply.routes.js).
 const CODE_TYPES = ['fee', 'lab', 'imaging', 'procedure', 'supply'];
+// The paper the receipts print on (clinic.receipt_paper, 061): mirrors clinic_receipt_paper_check.
+const RECEIPT_PAPERS = ['A4', 'A5'];
 
 // Every module permission (ALL_PERMS) comes from middleware/auth.js, the backend's
 // single copy of frontend/src/modules.js.
@@ -148,10 +150,20 @@ function badDrug(body) {
   if (!wholeOrBlank(body.min_stock)) return fieldMsg.notWhole('min_stock');
   return null;
 }
+// The category sent must be one of the clinic's rows (drug_category, 060) - hidden ones
+// included, so a drug whose class was hidden can still be saved with it. Not sent or
+// emptied: nothing to check (sentDrugFields stores NULL).
+async function badDrugCategory(body) {
+  if (!Object.prototype.hasOwnProperty.call(body, 'category')) return null;
+  const v = typeof body.category === 'string' ? body.category.trim() : body.category;
+  if (v === null || v === undefined || v === '') return null;
+  const r = await pool.query('SELECT 1 FROM drug_category WHERE key = $1', [String(v)]);
+  return r.rows.length ? null : MSG.DRUG_CATEGORY_UNKNOWN;
+}
 
 router.post('/drugs', permMiddleware('settings'), async (req, res) => {
   try {
-    const bad = badDrug(req.body);
+    const bad = badDrug(req.body) || await badDrugCategory(req.body);
     if (bad) return res.status(400).json({ error: bad });
     const pack = packFields(req.body);
     if (pack.error) return res.status(400).json({ error: pack.error });
@@ -207,6 +219,8 @@ router.put('/drugs/:id', permMiddleware('settings'), async (req, res) => {
   if (pack.error) return res.status(400).json({ error: pack.error });
   let client;
   try {
+    const badCat = await badDrugCategory(req.body);
+    if (badCat) return res.status(400).json({ error: badCat });
     const f = sentDrugFields(req.body, await drugFieldsHere());
     const sets = [], vals = [];
     Object.keys(f).forEach(c => { vals.push(f[c]); sets.push(c + ' = $' + vals.length); });
@@ -924,6 +938,170 @@ router.delete('/phrase-categories/:id', permMiddleware('settings'), async (req, 
   } finally { client.release(); }
 });
 
+// ── DRUG CATEGORIES ──
+// The classes a drug is filed under (drug_category, migration 060; the clinic's manager,
+// 2026-11-09, from the site: a class was missing and the list was fixed in the screen).
+// Read by anyone signed in (the pharmacy's stock screen and the statistics name the
+// classes); changed with the settings permission. A category still on drugs is never
+// removed - the answer says how many (409) and the screen offers "hide" - and 'Other',
+// the form's fallback, can be neither hidden nor removed. drug.category stores the key,
+// so renaming changes nothing on the drugs. Adding, renaming, hiding, showing and removing
+// go to the change log; the order does not.
+const DRUG_CAT_SELECT = `SELECT c.key, c.name_fr, c.name_ko, c.name_en, c.sort_order, c.is_hidden,
+                                (SELECT COUNT(*)::int FROM drug d WHERE d.category = c.key) AS drug_count,
+                                (c.key = 'Other') AS fixed
+                           FROM drug_category c`;
+const DRUG_CAT_ORDER = ' ORDER BY c.sort_order, lower(c.name_fr), c.key';
+const DRUG_CAT_FIXED = 'Other';
+// {name_fr, name_ko, name_en} trimmed; French required (the clinic works in French), the
+// other two may be empty (the screen then shows the French name). Returns {error} or {names}.
+function badDrugCatNames(body) {
+  const names = {};
+  for (const f of ['name_fr', 'name_ko', 'name_en']) {
+    const v = String(body[f] == null ? '' : body[f]).trim();
+    if (v.length > 60) return { error: MSG.DRUG_CATEGORY_NAME_LONG };
+    names[f] = v || null;
+  }
+  if (!names.name_fr) return { error: MSG.DRUG_CATEGORY_NAME_REQUIRED };
+  return { names };
+}
+// Another row already called that (in any of the three languages, case-insensitive)?
+async function drugCatNameTaken(db, names, exceptKey) {
+  const r = await db.query(
+    `SELECT key FROM drug_category
+      WHERE key <> $4 AND (lower(name_fr) = lower($1)
+         OR ($2::text IS NOT NULL AND lower(name_ko) = lower($2))
+         OR ($3::text IS NOT NULL AND lower(name_en) = lower($3)))`,
+    [names.name_fr, names.name_ko, names.name_en, exceptKey || '']);
+  return r.rows.length > 0;
+}
+// The key a new category is stored under: the English name (or the French one) as plain
+// letters and digits, e.g. "Anesthetic", "Soins_de_plaie"; numbered when taken. Keys never
+// change afterwards - the drugs point at them.
+async function newDrugCatKey(db, names) {
+  const base = String(names.name_en || names.name_fr).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'Category';
+  const have = new Set((await db.query('SELECT key FROM drug_category')).rows.map(r => r.key.toLowerCase()));
+  if (!have.has(base.toLowerCase())) return base;
+  for (let n = 2; ; n++) { const k = base + '_' + n; if (!have.has(k.toLowerCase())) return k; }
+}
+function drugCatAudit(c) {
+  return { name_fr: c.name_fr, name_ko: c.name_ko, name_en: c.name_en, hidden: c.is_hidden };
+}
+
+router.get('/drug-categories', async (req, res) => {
+  try { res.json((await pool.query(DRUG_CAT_SELECT + DRUG_CAT_ORDER)).rows); }
+  catch (err) { sendDbError(res, err); }
+});
+
+router.post('/drug-categories', permMiddleware('settings'), async (req, res) => {
+  const n = badDrugCatNames(req.body);
+  if (n.error) return res.status(400).json({ error: n.error });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('bethesda.drug_category'))");
+    if (await drugCatNameTaken(client, n.names, null)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.DRUG_CATEGORY_EXISTS }); }
+    const key = await newDrugCatKey(client, n.names);
+    // Before 'Other' (999) and after every other row.
+    const made = await client.query(
+      `INSERT INTO drug_category (key, name_fr, name_ko, name_en, sort_order)
+       VALUES ($1, $2, $3, $4, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM drug_category WHERE key <> $5))
+       RETURNING *`,
+      [key, n.names.name_fr, n.names.name_ko, n.names.name_en, DRUG_CAT_FIXED]);
+    await writeAudit(client, req, { action: ACTIONS.DRUG_CATEGORY, entity: 'drug_category', entity_id: key,
+      summary: key + ' ' + n.names.name_fr, before: null, after: drugCatAudit(made.rows[0]) });
+    await client.query('COMMIT');
+    res.status(201).json((await pool.query(DRUG_CAT_SELECT + ' WHERE c.key = $1', [key])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// The order of all categories at once: keys as they should be listed.
+router.put('/drug-categories/order', permMiddleware('settings'), async (req, res) => {
+  const keys = Array.isArray(req.body.keys) ? req.body.keys.map(String) : [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const have = (await client.query('SELECT key FROM drug_category FOR UPDATE')).rows.map(r => r.key);
+    const same = keys.length === have.length && new Set(keys).size === keys.length && keys.every(k => have.includes(k));
+    if (!same) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DRUG_CATEGORY_ORDER }); }
+    for (let i = 0; i < keys.length; i++) {
+      await client.query('UPDATE drug_category SET sort_order = $1, updated_at = NOW() WHERE key = $2', [(i + 1) * 10, keys[i]]);
+    }
+    await client.query('COMMIT');
+    res.json((await pool.query(DRUG_CAT_SELECT + DRUG_CAT_ORDER)).rows);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Rename, hide or show. Names not sent stay as they are; is_hidden only when sent.
+router.put('/drug-categories/:key', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT * FROM drug_category WHERE key = $1 FOR UPDATE', [req.params.key]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const cur = was.rows[0];
+    const next = { name_fr: cur.name_fr, name_ko: cur.name_ko, name_en: cur.name_en, is_hidden: cur.is_hidden };
+    const has = f => Object.prototype.hasOwnProperty.call(req.body, f);
+    if (['name_fr', 'name_ko', 'name_en'].some(has)) {
+      const n = badDrugCatNames({ name_fr: has('name_fr') ? req.body.name_fr : cur.name_fr,
+        name_ko: has('name_ko') ? req.body.name_ko : cur.name_ko, name_en: has('name_en') ? req.body.name_en : cur.name_en });
+      if (n.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: n.error }); }
+      if (await drugCatNameTaken(client, n.names, cur.key)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.DRUG_CATEGORY_EXISTS }); }
+      Object.assign(next, n.names);
+    }
+    if (req.body.is_hidden !== undefined) {
+      const h = req.body.is_hidden === true || req.body.is_hidden === 'true';
+      if (h && cur.key === DRUG_CAT_FIXED) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DRUG_CATEGORY_FIXED }); }
+      next.is_hidden = h;
+    }
+    const upd = await client.query(
+      'UPDATE drug_category SET name_fr = $1, name_ko = $2, name_en = $3, is_hidden = $4, updated_at = NOW() WHERE key = $5 RETURNING *',
+      [next.name_fr, next.name_ko, next.name_en, next.is_hidden, cur.key]);
+    const b = drugCatAudit(cur), a = drugCatAudit(upd.rows[0]);
+    const before = {}, after = {};
+    Object.keys(a).forEach(f => { if (a[f] !== b[f]) { before[f] = b[f]; after[f] = a[f]; } });
+    if (Object.keys(after).length) {
+      await writeAudit(client, req, { action: ACTIONS.DRUG_CATEGORY, entity: 'drug_category', entity_id: cur.key,
+        summary: cur.key + ' ' + next.name_fr, before, after });
+    }
+    await client.query('COMMIT');
+    res.json((await pool.query(DRUG_CAT_SELECT + ' WHERE c.key = $1', [cur.key])).rows[0]);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
+// Remove - only a category no drug carries (active or not). Otherwise 409 with the number:
+// hide it instead.
+router.delete('/drug-categories/:key', permMiddleware('settings'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const was = await client.query('SELECT * FROM drug_category WHERE key = $1 FOR UPDATE', [req.params.key]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const cat = was.rows[0];
+    if (cat.key === DRUG_CAT_FIXED) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.DRUG_CATEGORY_FIXED }); }
+    const n = (await client.query('SELECT COUNT(*)::int AS n FROM drug WHERE category = $1', [cat.key])).rows[0].n;
+    if (n > 0) { await client.query('ROLLBACK'); return res.status(409).json({ error: drugMsg.categoryInUse(n), drug_count: n }); }
+    await client.query('DELETE FROM drug_category WHERE key = $1', [cat.key]);
+    await writeAudit(client, req, { action: ACTIONS.DRUG_CATEGORY, entity: 'drug_category', entity_id: cat.key,
+      summary: cat.key + ' ' + cat.name_fr, before: drugCatAudit(cat), after: null });
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ }
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
 // ── DIAGNOSIS LIST ──
 // The list of frequent diagnoses the consultation screen searches (diagnosis_code, migration
 // 050, made by the consultation session, which reads the active rows through its own route
@@ -1051,18 +1229,21 @@ router.get('/clinic', async (req, res) => {
 
 router.put('/clinic', permMiddleware('settings'), async (req, res) => {
   try {
-    const { name, name_en, name_fr, address, phone, email, working_hours, app_title, mobile_hint } = req.body;
+    const { name, name_en, name_fr, address, phone, email, working_hours, app_title, mobile_hint, receipt_paper } = req.body;
     // mobile_hint (058): the note on the phone page. Not sent (an older screen): kept;
     // sent empty: cleared, and the phone page shows nothing.
     const hintSent = mobile_hint !== undefined;
     const hint = mobile_hint == null ? null : (String(mobile_hint).trim() || null);
+    // receipt_paper (061): A4 or A5 for the receipts. Not sent or empty: kept.
+    const paper = receipt_paper === undefined || receipt_paper === null || receipt_paper === '' ? null : String(receipt_paper).trim().toUpperCase();
+    if (paper !== null && !RECEIPT_PAPERS.includes(paper)) return res.status(400).json({ error: fieldMsg.notOneOf('receipt_paper', RECEIPT_PAPERS) });
     const result = await pool.query(
-      'UPDATE clinic SET name=$1, name_en=$2, name_fr=$3, address=$4, phone=$5, email=$6, working_hours=$7, app_title=COALESCE($8, app_title), mobile_hint=CASE WHEN $9::boolean THEN $10 ELSE mobile_hint END, updated_at=NOW() WHERE id=1 RETURNING *',
+      'UPDATE clinic SET name=$1, name_en=$2, name_fr=$3, address=$4, phone=$5, email=$6, working_hours=$7, app_title=COALESCE($8, app_title), mobile_hint=CASE WHEN $9::boolean THEN $10 ELSE mobile_hint END, receipt_paper=COALESCE($11, receipt_paper), updated_at=NOW() WHERE id=1 RETURNING *',
       // U5 (2026-09-29): an emptied title goes back to the default (011) instead of
       // silently keeping the old one. Not sent at all (an older screen): kept (NULL).
       [name, name_en, name_fr, address, phone, email, working_hours,
        app_title === undefined || app_title === null ? null : (String(app_title).trim() || 'Bethesda EMR'),
-       hintSent, hint]
+       hintSent, hint, paper]
     );
     res.json(result.rows[0]);
   } catch (err) { sendDbError(res, err); }

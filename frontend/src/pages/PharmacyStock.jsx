@@ -9,6 +9,8 @@ import { api } from '../api/client.js';
 import { formLabel, checkList, checkOpen, checkText } from '../documents/drug-info.js';
 import { packWord } from '../documents/rx-dosing.js';
 import { LIST_COL, LIST_SEARCH, ROW_EMPTY } from '../layout.js';
+// The categories' names come from the rows the clinic keeps (Settings, migration 060).
+import { useDrugCategories } from '../drugCategories.js';
 
 // Exact texts from pharmacy.routes.js; the API client passes on only the message.
 var ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
@@ -37,7 +39,6 @@ function stockUnit(d, lang) {
   var n = Number(d.stock_qty);
   return packWord(d, lang, n === 1 ? 1 : 2).replace(/^[\d½.]+\s*/, '');
 }
-function catLabel(t, c) { return (c && t['ph_cat_' + c]) || c || ''; }
 function thisMonth() {
   var d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -56,6 +57,8 @@ function downloadCsv(filename, header, rows) {
 export function PharmacyStock() {
   var lc = useLang(); var t = lc.t;
   var locale = lc.lang === 'ko' ? 'ko-KR' : lc.lang === 'fr' ? 'fr-FR' : 'en-GB';
+  var dcx = useDrugCategories();
+  var catLabel = function (_t, c) { return dcx.label(c); };
   var ds = useState([]), drugs = ds[0], setDrugs = ds[1];
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var qs = useState(''), q = qs[0], setQ = qs[1];

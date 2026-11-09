@@ -1,6 +1,6 @@
 {
   "name": "bethesda-emr-api",
-  "version": "1.7.12",
+  "version": "1.7.13",
   "license": "GPL-3.0-only",
   "description": "Bethesda EMR Backend API",
   "main": "src/index.js",
