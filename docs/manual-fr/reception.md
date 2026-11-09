@@ -1,0 +1,221 @@
+# Enregistrement
+
+L'écran **Enregistrement** sert à accueillir les patients : créer le dossier d'un nouveau patient, mettre un patient en attente pour le médecin, suivre la file du jour et mettre de l'ordre dans les jours précédents. Il est utilisé par le personnel d'accueil et par les infirmier(ère)s.
+
+Pour ouvrir l'écran : cliquez sur **Enregistrement** dans la barre du haut. Si **Enregistrement** n'apparaît pas, votre compte n'a pas cette autorisation (voir « Qui appeler »).
+
+## En bref
+
+Enregistrer un patient qui arrive :
+
+1. En haut à gauche, vérifiez que la **Date de travail** est celle d'aujourd'hui.
+2. Dans **Rechercher patient**, tapez le nom, le N° dossier ou le téléphone, puis appuyez sur Entrée.
+3. Si le patient apparaît, cliquez sur son nom. Sinon, le message « Aucun patient trouvé pour « … » » s'affiche sous la case : cliquez sur **+ Nouveau patient** et remplissez au moins **Nom**, **Prénom** et **Sexe**.
+4. Dans **Service / Médecin**, choisissez le médecin.
+5. Vérifiez le **Type de Visite** : **Nouvelle**, **Suivi** ou **Sans frais**.
+6. Écrivez dans **Mémo Réception** la raison de la visite et ce qu'il faut savoir aujourd'hui (plusieurs lignes possibles).
+7. Cliquez sur **Enregistrer / Mettre en attente**.
+8. Le message « Patient mis en attente — RAKOTO Jean (N° dossier 26-00001) » confirme. Le patient apparaît à droite, dans **En Attente**.
+
+## Pas à pas
+
+### 1. L'écran
+
+L'écran a trois parties :
+
+- *À gauche* — la **Date de travail**, la recherche, les informations du patient, puis la visite du jour (**Service / Type de Visite**).
+- *Au milieu* — **Consultations précédentes** du patient choisi (lecture seule). En haut, si le patient doit de l'argent, un cadre **Dû** avec le montant ; si la clinique doit lui rendre de l'argent, un cadre **Rembours.**. Dans les deux cas, envoyez le patient à la caisse.
+- *À droite* — **Attente / Terminé aujourd'hui** : la file du jour. Elle se met à jour toute seule toutes les 30 secondes. Ce que vous êtes en train de saisir à gauche n'est pas effacé.
+
+### 2. Un nouveau patient
+
+1. Cherchez d'abord le patient (étape 2 de « En bref ») : il est peut-être déjà venu.
+2. S'il n'existe pas, cliquez sur **+ Nouveau patient**.
+3. Saisissez **Nom** et **Prénom**. Les deux sont obligatoires.
+4. **Sexe** : cliquez sur **Masculin** ou **Féminin**. Au départ, aucun n'est choisi : il faut cliquer, sinon l'enregistrement est refusé. Au clavier : touche **Tab** jusqu'à **Masculin**, puis les flèches **←** **→** pour choisir (ou la barre d'espace).
+5. **Date de Naissance** : tapez le jour (**JJ**, 2 chiffres), puis le mois (**MM**, 2 chiffres), puis l'année (**AAAA**, 4 chiffres), par exemple `03` `05` `1990` - l'ordre habituel ici. Le curseur passe tout seul à la case suivante. Vous pouvez aussi coller une date entière (`03/05/1990`, jour d'abord, ou `19900503` / `1990-05-03`) : elle se range toute seule dans les trois cases. Si la date est inconnue, laissez les trois cases vides. Partout à l'écran et sur les documents, la date de naissance s'affiche **JJ/MM/AAAA** (depuis la version 1.7.2).
+6. Remplissez si possible **Téléphone**, **Groupe Sanguin** et **Allergies** (les allergies s'affichent en rouge chez le médecin). Le téléphone se tape en chiffres seulement : les tirets se mettent tout seuls, à la malgache (**034-12-345-67**, **020-22-123-45**) ; « +261 » devient le 0 ; au-delà de dix chiffres rien ne s'ajoute. Deux numéros se séparent par **/** (chacun prend ses tirets). Les numéros déjà enregistrés gardent leur écriture jusqu'à ce qu'on les modifie.
+7. Dans **📌 Note permanente du patient**, écrivez ce qu'il faut toujours savoir sur ce patient (par exemple : « vient avec un accompagnant »). Cette note reste attachée au patient pour toutes ses visites.
+8. Continuez à l'étape 4 de « En bref ». Le **N° dossier** est créé automatiquement quand vous enregistrez.
+
+Pendant l'enregistrement, le bouton affiche **Enregistrement…** et ne réagit plus : n'appuyez pas deux fois. Si un message d'erreur apparaît, corrigez puis appuyez de nouveau sur le même bouton : le même patient sera utilisé, aucun deuxième dossier n'est créé.
+
+### 3. Un patient déjà venu
+
+1. Tapez son nom (dans n'importe quel ordre : « RAKOTO Jean » ou « Jean RAKOTO »), son N° dossier ou son téléphone dans **Rechercher patient**, puis Entrée. Vous pouvez aussi cliquer sur **🔍 Trouver patient**.
+2. Cliquez sur le patient. Ses informations apparaissent à gauche, ses consultations au milieu.
+3. Corrigez les informations si elles ont changé.
+4. Choisissez le médecin, vérifiez le **Type de Visite**, remplissez **Mémo Réception**, puis **Enregistrer / Mettre en attente**.
+
+### 4. Type de Visite
+
+Le type de visite fixe le prix de la consultation à la caisse.
+
+- **Nouvelle** — un nouveau problème, ou un patient qui n'est jamais venu dans ce service.
+- **Suivi** — le patient revient pour *le même problème*, dans le même service.
+- **Sans frais** — pas de frais de consultation.
+
+L'écran choisit pour vous : si le patient est déjà venu dans le service du médecin choisi, **Suivi** est présélectionné et le message « Déjà venu en … : Suivi présélectionné » s'affiche. *Si le patient vient pour un autre problème, cliquez sur Nouvelle.* Le bouton que vous cliquez n'est jamais changé par l'écran.
+
+Quand la visite est déjà payée, les trois boutons sont bloqués : le type se change alors à l'écran **Paiement**.
+
+### 5. « Un patient portant ce nom existe déjà »
+
+Avant de créer un nouveau dossier, l'écran cherche les patients qui ont le même nom (même écrit en majuscules, avec ou sans accents, ou nom et prénom inversés). Une fenêtre montre pour chacun : **N° dossier**, **Nom**, **Naissance**, **Téléphone**, **Dernière visite**.
+
+- C'est la même personne : cliquez sur **Choisir ce patient**. Son dossier est chargé à gauche (le médecin et le motif déjà choisis sont gardés). Vérifiez, puis appuyez de nouveau sur **Enregistrer / Mettre en attente**.
+- C'est une autre personne avec le même nom : cliquez sur **Nouveau dossier quand même**.
+- Pour ne rien faire : **Annuler**.
+
+### 6. « … est déjà enregistré(e) aujourd'hui »
+
+Si le patient est déjà dans la file du jour, l'écran demande « Enregistrer une seconde visite ? ».
+
+- Le patient revient pour autre chose : **OK**.
+- C'est une erreur (double clic, patient déjà enregistré par un collègue) : **Annuler**.
+
+Si le message dit « peut-être à l'autre guichet », un collègue vient de l'enregistrer : regardez la file avant de confirmer.
+
+### 7. Modifier seulement les informations du patient
+
+Choisissez le patient, corrigez, puis cliquez sur **💾 Enregistrer le patient**. Le message « Patient enregistré — N° dossier … » confirme. Le patient n'est pas mis en attente.
+
+### 8. La file : En Attente, En cours, Terminé
+
+En haut à droite : **En Attente**, **En cours**, **Terminé**. Le nombre entre parenthèses est le nombre de patients. **Rechercher dans la file** filtre par nom ou N° dossier.
+
+- **En Attente** — enregistré, attend le médecin.
+- **En cours** — le médecin a commencé la consultation : il a cliqué sur **Commencer la consultation** ou enregistré une première donnée (automatique). Ouvrir le patient ne suffit plus : tant que le médecin n'a rien commencé, le patient reste **En Attente**.
+- **Terminé** — le médecin a fini (automatique). Le patient apparaît alors à la caisse.
+
+Les petits boutons **Terminer →** et **← En attente** sous chaque patient servent seulement dans les cas particuliers (voir 10).
+
+Un nom long s'affiche en entier, sur plusieurs lignes : il n'est jamais coupé. Le **Mémo Réception**, lui, tient sur deux lignes au plus ; laissez la souris dessus pour le lire en entier.
+
+### 9. Modifier un enregistrement ou annuler l'attente
+
+1. Cliquez sur le patient dans la file. Ses informations se chargent à gauche et le bouton devient **Modifier l'enregistrement**.
+2. Corrigez le médecin, le type de visite ou le **Mémo Réception**, puis cliquez sur **Modifier l'enregistrement**. Le message « Enregistrement modifié — … » confirme.
+3. Pour retirer un patient qui attend encore : **Annuler l'attente / Retirer**, puis confirmez.
+
+Si le médecin a déjà commencé la consultation, ou si la visite a déjà des données (note, ordonnance, examen, document, reçu), l'annulation est refusée et un message l'explique.
+
+### 10. Terminer sans consultation
+
+Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n'a pas à passer à la caisse. » Confirmez seulement si c'est bien le cas. Une visite **Sans frais** n'apparaît pas dans la liste de la caisse : il n'y a rien à encaisser.
+
+**Attention : si le médecin a vu le patient, n'utilisez pas ce bouton.** Un patient reste **En Attente** tant que le médecin n'a rien commencé ni enregistré, même s'il l'a examiné. C'est le médecin qui termine à l'écran Consultation ; sinon la consultation n'est pas facturée. Le message de confirmation le rappelle.
+
+Si la visite a déjà un reçu (payée avant la consultation), le message dit « Cette visite a déjà un reçu : son type ne change pas. Voyez la caisse pour la suite. »
+
+Si le médecin avait déjà écrit quelque chose pour cette visite, son type ne change pas non plus et un message vous dit d'envoyer le patient à la caisse.
+
+Pour un patient **En cours**, **Terminer →** ne change pas le type de visite : il a vu le médecin. La consultation est terminée comme si le médecin avait cliqué sur **Terminé**.
+
+**← En attente** (onglets **En cours** et **Terminé**) ne fonctionne que si rien n'a été écrit pour la visite. Sinon l'écran refuse : c'est le médecin qui rouvre le patient à l'écran Consultation.
+
+### 11. Date de travail — voir un autre jour
+
+En haut à gauche, la **Date de travail** choisit le jour affiché dans la file. Par défaut, c'est aujourd'hui.
+
+- **◀** jour précédent, **▶** jour suivant, ou cliquez sur la date pour ouvrir le calendrier. On ne peut pas aller après aujourd'hui.
+- **Aujourd'hui** ramène à la date du jour.
+
+À une date passée, un message l'indique : on peut seulement *consulter et mettre en ordre*.
+
+- Un patient resté **En Attente** : **Annuler l'attente / Retirer**, ou **Terminer →** s'il est parti sans consultation.
+- Un patient resté **En cours** : **Terminer →**.
+- On ne peut *ni enregistrer ni modifier* : revenez à **Aujourd'hui** pour cela.
+
+Le matin, regardez la veille (**◀**) et rangez ce qui est resté **En Attente** ou **En cours**.
+
+Si le médecin a vu le patient mais a oublié de terminer la consultation, terminez-la : la caisse voit alors la visite avec la ligne **📅 … visite d'un jour passé · pas encore encaissée**, et le reçu est daté du jour où l'argent est reçu.
+
+Si l'écran reste ouvert après minuit, il passe tout seul au nouveau jour (en moins de 30 secondes).
+
+### 12. La fenêtre Trouver patient
+
+1. Tapez le nom ou le N° dossier, puis **Rechercher** (ou Entrée). Sans rien taper, les 50 derniers patients créés s'affichent.
+2. Cliquez sur le patient.
+3. **Fermer** ferme la fenêtre.
+
+Si le dossier contient deux numéros de téléphone (« +261 34 … / +261 33 … »), ils s'affichent l'un sous l'autre dans la colonne **Téléphone**.
+
+Dans les autres écrans (Consultation, Paiement, Laboratoire), la même fenêtre montre ensuite les visites du patient (**Visites du patient**) : **Date visite**, **Heure**, **Service**, **Médecin**, **Mémo Réception**, **État** (**En Attente**, **En cours**, **Terminé** ou **Sans frais**) et **Paiement**. Deux visites du même jour se distinguent par le **Mémo Réception** et l'**État**. Une visite **Sans frais** porte **Rien à payer** dans **Paiement**. Une visite annulée à l'accueil est grisée et marquée **Visite annulée**.
+
+### 13. Dossier (vue)
+
+Quand un patient est choisi, **📋 Dossier (vue)** montre les documents déjà émis pour lui (par exemple les comptes rendus opératoires). On ne peut rien y modifier.
+
+### 14. Signes vitaux à l'accueil et sur le téléphone
+
+Les signes vitaux (tension, température, pouls, SpO2, fréquence respiratoire, poids, taille) se saisissent là où on les prend ; le médecin les trouve déjà remplis dans son écran **Consultation** (depuis la version 1.7.8).
+
+**À l'accueil :**
+
+1. Dans la file à droite (**En Attente** ou **En cours**), cliquez sur **🩺 Signes vitaux** sur la ligne du patient. Un **✓** sur le bouton veut dire qu'ils sont déjà saisis.
+2. Remplissez les cases : **TA systolique** et **TA diastolique** (mmHg), **Température** (°C), **Pouls** (/min), **SpO2** (%), **Fréq. resp.** (/min), **Poids** (kg), **Taille** (cm). **Entrée** passe à la case suivante ; dans la dernière case, **Entrée** enregistre. Une case laissée vide efface la valeur.
+3. Cliquez sur **Sauver**. **Échap** ou **Annuler** ferme sans enregistrer.
+
+En bas de la fenêtre, « Saisi par … à … » dit qui a saisi en dernier et à quelle heure. Le bouton n'apparaît que pour les visites d'aujourd'hui.
+
+**Sur le téléphone :**
+
+1. Connectez le téléphone au Wi-Fi qui mène au serveur. Si l'administrateur l'a indiqué, il est écrit sous la liste de la page **/m** : c'est le texte que l'administrateur a mis dans **Paramètres → Établissement** (« Note sur l'écran téléphone »).
+2. Ouvrez l'adresse habituelle de l'EMR dans le navigateur (Samsung Internet) et connectez-vous avec votre compte. Le téléphone arrive tout seul sur la page **Signes vitaux** (adresse **/m**).
+3. Touchez le patient dans la liste (patients **En Attente** et **En cours** d'aujourd'hui, avec le N° dossier et l'heure d'arrivée ; **✓** vert = déjà saisis).
+4. Remplissez les cases, puis **Sauver**. La page revient à la liste et affiche « Signes vitaux enregistrés : … ». **← Liste** revient sans enregistrer.
+
+Pour garder la page sur l'écran d'accueil du téléphone : menu du navigateur → **Ajouter à l'écran d'accueil**. Le lien gris **Version ordinateur / PC 화면** en bas de la page ouvre l'écran normal ; il reste ainsi jusqu'à la **Déconnexion**.
+
+**Qui peut :** tout membre du personnel connecté avec un compte actif, quel que soit son rôle (accueil, infirmier(ère), médecin, caisse, pharmacie, laboratoire…) - décision du directeur, 9/11/2026. « Saisi par » garde le nom de celui qui a saisi.
+
+**À savoir :** enregistrer les signes vitaux **ne commence pas la consultation** : le patient reste **En Attente** jusqu'à ce que le médecin le prenne. Ils ne créent pas non plus de consultation dans l'historique du patient (depuis la version 1.7.9) : la visite peut encore être annulée tant que le médecin n'a rien écrit ; une fois qu'il a commencé, l'annulation est refusée comme avant.
+
+En haut de la page du téléphone, **FR · KO · EN** change la langue (le même choix que sur l'ordinateur).
+
+## Si ce message apparaît
+
+| Message à l'écran | Ce que cela veut dire | Que faire |
+|---|---|---|
+| Aucun patient trouvé pour « … » — cliquez sur « + Nouveau patient ». | La recherche ne trouve personne | Vérifiez l'orthographe, essayez le N° dossier ou le téléphone. Sinon, **+ Nouveau patient** |
+| Saisissez le nom et le prénom. | Nom ou Prénom vide | Remplissez les deux |
+| Choisissez le sexe (Masculin / Féminin). | Aucun sexe choisi | Cliquez sur **Masculin** ou **Féminin** |
+| Complétez la date de naissance (année-mois-jour), ou laissez-la vide si elle est inconnue. | Date de naissance incomplète | Remplissez les trois cases, ou videz-les |
+| La date de naissance n'est pas valide. Elle ne peut pas être dans le futur. | Date impossible (30 février, mois 13…) ou future | Vérifiez le jour et le mois |
+| Un patient portant ce nom existe déjà | Même nom dans les dossiers | Voir « Pas à pas » 5 |
+| Dossier existant chargé. Vérifiez les informations, puis appuyez de nouveau sur le bouton. | Vous avez choisi le patient existant | Vérifiez, puis appuyez de nouveau sur le bouton ; rien n'est encore enregistré |
+| … est déjà enregistré(e) aujourd'hui (…). Enregistrer une seconde visite ? | Le patient est déjà dans la file | **OK** seulement s'il revient pour autre chose |
+| Terminer … sans consultation ? | Le patient part sans voir le médecin | Confirmez seulement si c'est le cas |
+| La consultation de ce patient a déjà commencé ou est terminée : impossible d'annuler l'attente. | Le médecin l'a déjà pris | Parlez au médecin si l'annulation est nécessaire |
+| Cette visite a déjà des données (consultation, document ou reçu) : impossible d'annuler l'attente. | Le médecin a déjà écrit quelque chose, ou un document ou un reçu existe | La visite reste ; parlez au médecin ou à la caisse |
+| Cette visite a déjà des données (consultation, document ou reçu) : impossible de la remettre en attente. S'il faut corriger, le médecin rouvre le patient à l'écran Consultation. | Vous avez cliqué sur **← En attente** pour une visite qui a déjà des données | Rien à faire à l'accueil : le médecin rouvre le patient |
+| … : cette visite a déjà des données de consultation, son type n'a pas changé. La consultation reste à payer : envoyez le patient à la caisse. | Vous avez terminé une visite **En Attente** que le médecin avait déjà commencée | Envoyez le patient à la caisse |
+| Vous consultez une date passée (…) | La Date de travail n'est pas aujourd'hui | Rangez, puis **Aujourd'hui** pour enregistrer |
+| À une date passée, on ne peut ni créer ni modifier un enregistrement. | Idem | Cliquez sur **Aujourd'hui** |
+| Déjà encaissé : le type de visite se change à l'écran Paiement. | La visite est payée | Demandez à la caisse |
+| Visite déjà encaissée : le service et le médecin ne peuvent plus changer. Annulez d'abord le reçu à l'écran Paiement. | La visite est payée : la liste **Service / Médecin** est verrouillée (ou elle a été payée pendant que vous la modifiiez) | Si le patient doit vraiment changer de médecin, la caisse annule d'abord le reçu ; ensuite changez le médecin |
+| Vous n'avez pas l'autorisation pour cette action. | Votre compte n'a pas l'accès **Enregistrement** | Voir « Qui appeler » |
+| Impossible de joindre le serveur. Réessayez dans un instant… | Le serveur ne répond pas | Attendez un peu et recommencez ; ce que vous avez saisi est gardé |
+| Dossier patient introuvable. / Cet enregistrement est introuvable. | Le dossier ou la visite n'existe plus | Cherchez de nouveau |
+| Une valeur saisie n'a pas le bon format. | Date ou nombre mal écrit | Vérifiez les cases |
+| Erreur : … | Autre problème | Notez le message exact et prévenez l'administrateur |
+
+## À ne pas faire
+
+- Ne créez pas un **+ Nouveau patient** sans avoir d'abord cherché le patient : un deuxième dossier pour la même personne ne peut pas être fusionné ensuite.
+- N'appuyez pas deux fois sur **Enregistrer / Mettre en attente** : attendez le message.
+- Ne laissez pas **Suivi** si le patient vient pour un autre problème : choisissez **Nouvelle**.
+- N'utilisez pas **Terminer →** pour un patient qui doit voir le médecin.
+- N'écrivez pas dans **📌 Note permanente du patient** ce qui ne concerne que la visite du jour : utilisez **Mémo Réception**.
+- Ne confirmez pas « Enregistrer une seconde visite ? » par habitude : regardez d'abord la file.
+
+## Qui appeler
+
+Prévenez l'administrateur (le responsable du système à la clinique) si :
+
+- **Enregistrement** n'apparaît pas dans la barre du haut, ou le message « Vous n'avez pas l'autorisation… » s'affiche. L'administrateur doit cocher **🏥 Enregistrement** pour votre compte dans **Paramètres** → **👥 Personnel**.
+- « Impossible de joindre le serveur » continue après quelques minutes.
+- Un message « Erreur : … » revient : notez le texte exact et l'heure.
+- Deux dossiers ont été créés pour la même personne, ou un N° dossier semble faux.
+- Un médecin manque dans la liste **Service / Médecin** (son compte doit être **actif** avec le rôle **Médecin** ; son service s'affiche devant son nom s'il est renseigné).

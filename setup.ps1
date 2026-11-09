@@ -1,0 +1,69 @@
+# First-run setup for Bethesda EMR (Windows).
+# Generates a .env with strong random secrets (only if missing), then starts the stack.
+# Safe to re-run: it never overwrites an existing .env.
+#
+#   .\setup.ps1            normal install (builds the images; needs internet)
+#   .\setup.ps1 -Offline   use images already loaded from the offline kit; never builds
+param([switch]$Offline)
+$ErrorActionPreference = 'Stop'
+Set-Location $PSScriptRoot
+
+function New-Secret([int]$bytes) {
+  $b = New-Object byte[] $bytes
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+  return ([System.BitConverter]::ToString($b) -replace '-', '').ToLower()
+}
+
+if (-not (Test-Path .env)) {
+  Write-Host "First run: generating .env with unique random secrets..."
+  @"
+DB_PASSWORD=$(New-Secret 24)
+JWT_SECRET=$(New-Secret 48)
+
+# Backups are optional. Set a path on another drive to enable, then restart.
+#   Windows: BACKUP_PATH=D:\medconnect-backups   NAS: BACKUP_PATH=/volume2/medconnect-backups
+BACKUP_PATH=
+BACKUP_RETENTION_DAYS=30
+BACKUP_TIME=02:00
+TZ=Indian/Antananarivo
+"@ | Out-File -FilePath .env -Encoding ascii
+  Write-Host ".env created with unique secrets (kept private - never commit it)."
+} else {
+  Write-Host ".env already exists - keeping current secrets."
+  # The compose file has no fallback DB_PASSWORD any more. An .env written before setup
+  # generated one would now stop the stack, so add the line once: the password the
+  # existing database container was created with if there is one (the data volume only
+  # knows that one), otherwise a fresh random value.
+  $envText = Get-Content .env -Raw
+  if ($envText -notmatch '(?m)^DB_PASSWORD=.+') {
+    $dbPw = $null
+    try {
+      $envs = docker inspect bethesda-emr-db --format '{{range .Config.Env}}{{println .}}{{end}}' 2>$null
+      if ($LASTEXITCODE -eq 0) {
+        $line = $envs | Where-Object { $_ -like 'POSTGRES_PASSWORD=*' } | Select-Object -First 1
+        if ($line) { $dbPw = $line.Substring('POSTGRES_PASSWORD='.Length) }
+      }
+    } catch { }
+    if (-not $dbPw) { $dbPw = New-Secret 24 }
+    $global:LASTEXITCODE = 0
+    Add-Content -Path .env -Value "DB_PASSWORD=$dbPw" -Encoding ascii
+    Write-Host "DB_PASSWORD was missing from .env - added it."
+  }
+}
+
+if ($Offline) {
+  # --no-build fails loudly if an image is missing, instead of quietly reaching for
+  # the internet that an offline site does not have.
+  Write-Host "Offline mode: starting from pre-loaded images (no build, no downloads)."
+  docker compose up -d --no-build
+} else {
+  docker compose up -d --build
+}
+
+# A shortcut "Bethesda EMR" on this PC's desktop. Never in the way of the installation.
+try { & (Join-Path $PSScriptRoot 'desktop-shortcut.ps1') | Write-Host }
+catch { Write-Host "The desktop shortcut could not be made ($($_.Exception.Message)) - run desktop-shortcut.ps1 later." -ForegroundColor Yellow }
+
+Write-Host ""
+Write-Host "Bethesda EMR is starting at http://localhost:9080"
+Write-Host "Open it in a browser to create your administrator account."

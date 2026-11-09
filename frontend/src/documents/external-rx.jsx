@@ -1,0 +1,108 @@
+// External / outside prescription (원외 처방전). Lists drugs marked 'external'
+// in the pharmacy so the patient can fill them at an outside pharmacy. A4.
+// The dose column is the daily total (Korean style); under each drug a sentence
+// spells out one intake, e.g. « 1 cp × 3 fois/jour pendant 7 jours (total 21) ».
+import { A4, ClinicHeader, DocMetaRow, PatientBox, DocSection, SignatureBlock, L } from './shared.jsx';
+import { storedTotal, hasTotal, fmtAmount, doseSentence, isLegacyTotal, isPack, packWord } from './rx-dosing.js';
+
+var FL = {
+  destination: { ko: '수신 약국 (선택)', en: 'Pharmacy (optional)', fr: 'Pharmacie (optionnel)' },
+  note:        { ko: '복약지도 / 비고', en: 'Instructions / Notes', fr: 'Conseils / Remarques' },
+};
+var COL = {
+  no:    { ko: 'No', en: 'No', fr: 'N°' },
+  drug:  { ko: '약품명', en: 'Medication', fr: 'Médicament' },
+  dose:  { ko: '1일량', en: 'Per day', fr: 'Dose/j' },
+  freq:  { ko: '횟수', en: 'Freq', fr: 'Fréq.' },
+  days:  { ko: '일수', en: 'Days', fr: 'Jours' },
+  qty:   { ko: '총량', en: 'Qty', fr: 'Qté' },
+  route: { ko: '용법 / 비고', en: 'Directions / Note', fr: 'Posologie / Note' },
+};
+var EMPTY = {
+  ko: '원외로 지정된 처방이 없습니다. (약국 화면에서 약을 "원외"로 지정하세요)',
+  en: 'No prescriptions marked as external. (Mark drugs as "external" in the pharmacy screen.)',
+  fr: 'Aucune ordonnance externe. (Marquez les médicaments comme « externe » dans la pharmacie.)',
+};
+
+var NOTHING_TO_ISSUE = {
+  ko: '원외로 지정된 약이 없어 발급할 수 없습니다. 약국 화면에서 약을 「원외」로 바꾼 뒤 다시 여세요.',
+  en: 'No drug is marked external, so there is nothing to issue. Mark drugs as external in the pharmacy screen, then open this again.',
+  fr: 'Aucun médicament n\'est marqué « Externe » : rien à émettre. Marquez-les « Externe » dans la pharmacie, puis rouvrez.',
+};
+
+// A line with no stored total prints a visible gap for the outside pharmacist to query,
+// never a number worked out here (see rx-dosing.js).
+var NO_TOTAL = { ko: '확인 필요', en: 'to check', fr: 'à vérifier' };
+// Saved before the daily-total rule; see isLegacyTotal.
+var LEGACY = { ko: '예전 계산', en: 'old calculation', fr: 'ancien calcul' };
+
+function Layout(props) {
+  var v = props.values || {}, lang = props.lang;
+  var meds = (props.meds || []).filter(function (m) { return m.dispense_type === 'external'; });
+  var cell = { border: '1px solid #999', padding: '5px 7px', fontSize: 12, textAlign: 'left' };
+  var head = Object.assign({}, cell, { background: '#f0f0f0', fontWeight: 700, textAlign: 'center' });
+  var num = Object.assign({}, cell, { textAlign: 'center' });
+
+  return (
+    <A4 innerRef={props.innerRef}>
+      <ClinicHeader clinic={props.clinic} lang={lang} title={L({ ko: '원 외 처 방 전', en: 'Outside Prescription', fr: 'Ordonnance (pharmacie externe)' }, lang)} />
+      <DocMetaRow lang={lang} docNo={props.docNo} dateStr={props.dateStr} />
+
+      {v.destination ? <div style={{ fontSize: 12.5, marginBottom: 8 }}><b>{L(FL.destination, lang)}:</b> {v.destination}</div> : null}
+
+      <PatientBox patient={props.patient} lang={lang} />
+
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+        <thead>
+          <tr>
+            <th style={Object.assign({}, head, { width: 32 })}>{L(COL.no, lang)}</th>
+            <th style={head}>{L(COL.drug, lang)}</th>
+            <th style={Object.assign({}, head, { width: 52 })}>{L(COL.dose, lang)}</th>
+            <th style={Object.assign({}, head, { width: 48 })}>{L(COL.freq, lang)}</th>
+            <th style={Object.assign({}, head, { width: 48 })}>{L(COL.days, lang)}</th>
+            <th style={Object.assign({}, head, { width: 52 })}>{L(COL.qty, lang)}</th>
+            <th style={Object.assign({}, head, { width: 150 })}>{L(COL.route, lang)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {meds.length === 0
+            ? <tr><td style={Object.assign({}, cell, { textAlign: 'center', color: '#666', padding: '14px' })} colSpan={7}>{L(EMPTY, lang)}</td></tr>
+            : meds.map(function (rx, i) {
+                return <tr key={rx.id || i}>
+                  <td style={num}>{i + 1}</td>
+                  <td style={cell}><b>{rx.drug_name}</b>{rx.drug_code ? <span style={{ color: '#666', marginLeft: 6, fontSize: 11 }}>{rx.drug_code}</span> : null}
+                    {doseSentence(rx, lang) ? <div style={{ fontSize: 11.5, marginTop: 2 }}>{doseSentence(rx, lang)}</div> : null}</td>
+                  <td style={num}>{rx.dose ? fmtAmount(parseFloat(rx.dose)) : ''}</td>
+                  <td style={num}>{rx.frequency || ''}</td>
+                  <td style={num}>{rx.days || ''}</td>
+                  <td style={num}>{!hasTotal(rx) ? <span style={{ color: '#b91c1c', fontSize: 10.5 }}>{L(NO_TOTAL, lang)}</span> : isPack(rx) ? packWord(rx, lang, storedTotal(rx)) : fmtAmount(storedTotal(rx))}
+                    {isLegacyTotal(rx) ? <div style={{ fontSize: 9.5, color: '#666' }}>({L(LEGACY, lang)})</div> : null}</td>
+                  <td style={cell}>{[rx.route, rx.memo].filter(Boolean).join(' · ')}</td>
+                </tr>;
+              })}
+        </tbody>
+      </table>
+
+      <DocSection label={L(FL.note, lang)} value={v.note} />
+
+      <SignatureBlock lang={lang} doctor={props.doctor} clinic={props.clinic} />
+    </A4>
+  );
+}
+
+export default {
+  code: 'external-rx',
+  category: 'prescription',
+  name: { ko: '원외 처방전', en: 'Outside Prescription', fr: 'Ordonnance externe' },
+  needsMeds: true,
+  // Nothing marked external: a number would be spent on an empty paper. The document
+  // window disables "issue" and shows this; the server refuses it as well.
+  issueBlocked: function (meds) {
+    return (meds || []).some(function (m) { return m.dispense_type === 'external'; }) ? null : NOTHING_TO_ISSUE;
+  },
+  fields: [
+    { key: 'destination', label: FL.destination, type: 'text' },
+    { key: 'note', label: FL.note, type: 'textarea', rows: 3 },
+  ],
+  Layout: Layout,
+};

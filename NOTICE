@@ -1,0 +1,108 @@
+Bethesda EMR
+Copyright (C) 2026 Haneul Na and Bethesda EMR contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation,
+version 3 (GPL-3.0-only). It is distributed WITHOUT ANY WARRANTY; see LICENSE.
+
+This file lists the third-party software this repository depends on. The offline install
+kit (container images) is covered separately by offline/THIRD-PARTY-NOTICE.md.
+
+-------------------------------------------------------------------------------
+1. Direct dependencies (versions as locked in package-lock.json)
+-------------------------------------------------------------------------------
+
+Backend (backend/package.json, installed with --omit=dev)
+
+  Package        Version   Licence
+  cors           2.8.6     MIT
+  dotenv         16.6.1    BSD-2-Clause
+  express        4.22.3    MIT
+  helmet         7.2.0     MIT
+  jsonwebtoken   9.0.3     MIT
+  morgan         1.12.1    MIT
+  pg             8.23.1    MIT
+  uuid           9.0.1     MIT
+
+Frontend (frontend/package.json)
+
+  Package                Version   Licence   Shipped
+  react                  18.3.1    MIT       yes, in the built JavaScript
+  react-dom              18.3.1    MIT       yes (with scheduler 0.23.2, MIT)
+  react-router-dom       6.30.6    MIT       yes (with react-router 6.30.6 and
+                                             @remix-run/router 1.23.4, MIT)
+  @vitejs/plugin-react   4.7.0     MIT       no - build tool only
+  vite                   5.4.21    MIT       no - build tool only
+
+Transitive dependencies, checked with license-checker 25.0.1 on 2026-11-09
+(the project itself is the one GPL-3.0-only entry in each count):
+  backend   MIT 95, ISC 5, BSD-3-Clause 2, BSD-2-Clause 1, Apache-2.0 1
+  frontend  MIT 58, ISC 5, BSD-3-Clause 1, Apache-2.0 1, CC-BY-4.0 1 (caniuse-lite,
+            browser data used by the build only; not in the shipped files);
+            shipped (production) part: MIT 8
+
+-------------------------------------------------------------------------------
+2. Orthanc
+-------------------------------------------------------------------------------
+
+Imaging uses Orthanc (core GPL-3.0-or-later; the DICOMweb, Stone Web Viewer and
+Orthanc Explorer 2 plugins AGPL-3.0-or-later) as a separate program: the companion
+Bethesda PACS stack runs the unmodified official Docker image orthancteam/orthanc, and
+this EMR talks to it only over its REST API and the DICOM protocol. No Orthanc code is
+in this repository, linked into it or derived from it.
+
+-------------------------------------------------------------------------------
+3. Notices for code shipped in the built web interface
+-------------------------------------------------------------------------------
+
+The production build keeps only short "@license" markers, so the full notices are here.
+
+react 18.3.1, react-dom 18.3.1, scheduler 0.23.2:
+
+MIT License
+
+Copyright (c) Facebook, Inc. and its affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+react-router 6.30.6, react-router-dom 6.30.6, @remix-run/router 1.23.4:
+
+MIT License
+
+Copyright (c) React Training LLC 2015-2019
+Copyright (c) Remix Software Inc. 2020-2021
+Copyright (c) Shopify Inc. 2022-2023
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

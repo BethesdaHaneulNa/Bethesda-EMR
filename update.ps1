@@ -1,0 +1,89 @@
+# One-click update for Bethesda EMR (Windows).
+# Backs up the database, gets the latest version (via git if present, otherwise by downloading
+# the latest release), rebuilds, and verifies. Your data and .env are preserved.
+$ErrorActionPreference = 'Stop'
+Set-Location $PSScriptRoot
+$repo = 'BethesdaHaneulNa/Bethesda-EMR'
+Write-Host "=== Bethesda EMR - Update ===" -ForegroundColor Cyan
+
+# Is Docker running?
+docker info *> $null
+if ($LASTEXITCODE -ne 0) { Write-Host "[!] Start Docker Desktop first, then run this again." -ForegroundColor Yellow; pause; exit 1 }
+
+# 1) Safety backup (always)
+$stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
+New-Item -ItemType Directory -Force -Path "_pre-update-backups" | Out-Null
+$backup = "_pre-update-backups\preupdate_$stamp.sql.gz"
+Write-Host "[1/5] Backing up the database -> $backup"
+# pipefail: a pipeline reports the status of its last command, so without it a failed
+# pg_dump exits 0 (gzip was fine) and we would update on top of an empty safety backup.
+# gzip -t proves the archive is whole. $ErrorActionPreference does NOT catch a native
+# command's exit code, so each step is checked explicitly.
+docker exec bethesda-emr-db sh -c "set -o pipefail; pg_dump -U medconnect -d medconnect --no-owner --clean --if-exists | gzip > /tmp/_preupdate.sql.gz && gzip -t /tmp/_preupdate.sql.gz"
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "[!] Safety backup failed - update aborted. Nothing has been changed." -ForegroundColor Red
+  docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz *> $null
+  exit 1
+}
+docker cp bethesda-emr-db:/tmp/_preupdate.sql.gz $backup
+docker exec bethesda-emr-db rm -f /tmp/_preupdate.sql.gz
+if (-not (Test-Path $backup) -or (Get-Item $backup).Length -eq 0) {
+  Write-Host "[!] Safety backup is missing or empty - update aborted. Nothing has been changed." -ForegroundColor Red
+  exit 1
+}
+
+# 2) Get the latest version
+Write-Host "[2/5] Getting the latest version..."
+if (Test-Path ".git") {
+  git fetch origin --tags --quiet
+  $tag = git tag --sort=-v:refname | Select-Object -First 1
+  if ($tag) { git checkout --quiet $tag; Write-Host "      -> $tag (git)" } else { git pull --ff-only origin main }
+} else {
+  $rel = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'Bethesda-EMR' }
+  $tag = $rel.tag_name
+  Write-Host "      -> $tag (download)"
+  $tmp = Join-Path $env:TEMP "bethesda-update"
+  if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+  $zip = Join-Path $tmp "src.zip"
+  Invoke-WebRequest "https://github.com/$repo/archive/refs/tags/$tag.zip" -OutFile $zip -UseBasicParsing
+  Expand-Archive $zip -DestinationPath $tmp -Force
+  $src = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
+  # copy new files over the current folder, but keep .env, backups, and pre-update backups
+  robocopy $src $PSScriptRoot /E /NFL /NDL /NJH /NJS /NP /XF ".env" /XD "backups" "_pre-update-backups" ".git" | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "Copying updated files failed (robocopy $LASTEXITCODE)" }
+  Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# 3) Rebuild & restart
+Write-Host "[3/5] Rebuilding and restarting (this can take a few minutes)..."
+docker compose up -d --build
+docker restart bethesda-emr-web | Out-Null
+
+# 4) Verify
+Write-Host "[4/5] Verifying..."
+Start-Sleep -Seconds 8
+$ok = $false
+for ($i = 0; $i -lt 15; $i++) {
+  try { if ((Invoke-RestMethod 'http://localhost:9080/api/health' -TimeoutSec 3).status -eq 'ok') { $ok = $true; break } } catch {}
+  Start-Sleep -Seconds 3
+}
+if (-not $ok) {
+  Write-Host "`n[!] Health check did not pass. Your data is safe. To restore if needed:`n    $backup`n    (see DEPLOYMENT.md - Restore)" -ForegroundColor Yellow
+  exit 1
+}
+
+# 5) A backup of the database as it is now. The one taken in step 1 is of the old
+# version, and a backup restores with the usual steps only onto the version that made
+# it (DEPLOYMENT.md 5b): without this, until tonight's automatic backup every backup
+# on this PC would be older than the app. Made by the app's own backup code, so it has
+# the usual name and place and appears in Settings > Backup.
+Write-Host "[5/5] Backing up the updated database..."
+$post = docker exec bethesda-emr-api node src/services/backup-cli.js update
+if ($LASTEXITCODE -eq 0) {
+  Write-Host "      -> $post"
+  Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green
+} else {
+  Write-Host "`n[OK] Update complete - Bethesda EMR is running at http://localhost:9080" -ForegroundColor Green
+  Write-Host "[!] But the backup after the update failed. Open Settings > Backup and press 'Back up now' (Sauvegarder)." -ForegroundColor Yellow
+}

@@ -1,0 +1,92 @@
+# Fixed project name so the data volume is the same no matter which folder you run from
+# (re-downloading a newer version keeps your existing data).
+name: bethesda-emr
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bethesda-emr-db
+    environment:
+      POSTGRES_DB: medconnect
+      POSTGRES_USER: medconnect
+      # No default (see JWT_SECRET below): setup.sh / setup.ps1 generate it into .env.
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?not set - run setup.sh (or setup.ps1) to generate .env, then start again}
+      # Same clock as the backend and the staff's screens. Columns defaulting to
+      # CURRENT_DATE (visit_date, billing_date) must mean "today at the clinic";
+      # left on UTC they roll over at the wrong moment, so visits and payments
+      # taken after local midnight are filed under the previous day.
+      TZ: ${TZ:-UTC}
+      PGTZ: ${TZ:-UTC}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # NOTE: schema is applied by the backend migration runner (src/config/migrate.js),
+      # not by initdb, so new migrations also reach existing databases on update.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medconnect -d medconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    # Explicit name for the built image. Compose would name it this implicitly, but
+    # spelling it out is what makes `docker save` / `docker load` possible: the offline
+    # install kit (see OFFLINE-INSTALL.md) ships pre-built images by name, so a clinic
+    # with no usable internet never has to build.
+    image: bethesda-emr-backend:latest
+    container_name: bethesda-emr-api
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: medconnect
+      DB_USER: medconnect
+      DB_PASSWORD: ${DB_PASSWORD:?not set - run setup.sh (or setup.ps1) to generate .env, then start again}
+      # No default. A published fallback secret lets anyone forge an admin token
+      # for any install that never overrode it, so this stops the stack instead.
+      JWT_SECRET: ${JWT_SECRET:?not set - run setup.sh (or setup.ps1) to generate .env, then start again}
+      PORT: 3000
+      TZ: ${TZ:-Indian/Antananarivo}
+      # Backups are ON by default and saved to ./backups (a folder next to the app). To save
+      # them on another drive instead, set BACKUP_PATH (e.g. D:\bethesda-backups on Windows,
+      # /volume2/backups on a NAS). You can also download any backup from Settings -> Backup.
+      BACKUP_PATH: ${BACKUP_PATH:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_TIME: ${BACKUP_TIME:-02:00}
+    volumes:
+      # Default: the app's own ./backups folder. Override the host side with BACKUP_PATH.
+      - ${BACKUP_PATH:-./backups}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    # /api/health touches the app itself, not just the port, so a process that
+    # is up but broken still reports as broken. 127.0.0.1 rather than localhost:
+    # inside the container that name resolves to ::1 first and the server only
+    # listens on IPv4, so "localhost" fails against a perfectly healthy app.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    image: bethesda-emr-frontend:latest
+    container_name: bethesda-emr-web
+    ports:
+      - "9080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  pgdata:
