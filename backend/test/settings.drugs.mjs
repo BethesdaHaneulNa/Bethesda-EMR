@@ -38,7 +38,7 @@ const T = login.data.token;
 const code = 'ZZT' + Date.now().toString(36).slice(-5).toUpperCase();
 const made = await call('POST', '/admin/drugs', { code, name: 'Stock test drug', category: 'Other', unit_price: 100, stock_qty: 100 }, T);
 check('a new drug starts at 0, whatever stock_qty says', made.status === 201 && made.data.stock_qty === 0, made);
-check('an empty minimum stock gets the default 10', made.data.min_stock === 10, made.data.min_stock);
+check('an empty minimum stock gets the default 0 (no warning)', made.data.min_stock === 0, made.data.min_stock);
 const id = made.data.id;
 const row = { ...made.data };
 const stockNow = async () => (await call('GET', '/admin/drugs?q=' + code, null, T)).data.find(d => d.id === id).stock_qty;

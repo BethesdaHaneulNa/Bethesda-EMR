@@ -434,3 +434,8 @@ export default function LabPage() {
     </div>
   );
 }
+
+// The phone's lab screen (pages/mobile/LabScreen.jsx, 1.7.11) uses the same flag rule and
+// the same "type it" handling as this screen - one copy, here (backend/test/lab.flag.mjs
+// checks it against the server's). Exported at the end, outside the part that test reads.
+export { flagFor, hasEntry, typedValue, TYPE_IT };

@@ -162,17 +162,35 @@ En bas de la fenêtre, « Saisi par … à … » dit qui a saisi en dernier et 
 **Sur le téléphone :**
 
 1. Connectez le téléphone au Wi-Fi qui mène au serveur. Si l'administrateur l'a indiqué, il est écrit sous la liste de la page **/m** : c'est le texte que l'administrateur a mis dans **Paramètres → Établissement** (« Note sur l'écran téléphone »).
-2. Ouvrez l'adresse habituelle de l'EMR dans le navigateur (Samsung Internet) et connectez-vous avec votre compte. Le téléphone arrive tout seul sur la page **Signes vitaux** (adresse **/m**).
+2. Ouvrez l'adresse habituelle de l'EMR dans le navigateur (Samsung Internet) et connectez-vous avec votre compte. Le téléphone arrive tout seul sur la page du téléphone (adresse **/m**), même si l'adresse d'un écran d'ordinateur s'ouvre (suggestion du navigateur, onglet rouvert). Touchez **🩺 Signes vitaux** (depuis la version 1.7.11, la page commence par quatre gros boutons, voir § 15).
 3. Touchez le patient dans la liste (patients **En Attente** et **En cours** d'aujourd'hui, avec le N° dossier et l'heure d'arrivée ; **✓** vert = déjà saisis).
 4. Remplissez les cases, puis **Sauver**. La page revient à la liste et affiche « Signes vitaux enregistrés : … ». **← Liste** revient sans enregistrer.
 
-Pour garder la page sur l'écran d'accueil du téléphone : menu du navigateur → **Ajouter à l'écran d'accueil**. Le lien gris **Version ordinateur / PC 화면** en bas de la page ouvre l'écran normal ; il reste ainsi jusqu'à la **Déconnexion**.
+Pour garder la page sur l'écran d'accueil du téléphone : menu du navigateur → **Ajouter à l'écran d'accueil**. Le lien gris **Version ordinateur / PC 화면** en bas de la page d'accueil du téléphone est **le seul moyen** d'avoir l'écran d'ordinateur sur un téléphone ; il reste ainsi jusqu'à la **Déconnexion**.
 
-**Qui peut :** tout membre du personnel connecté avec un compte actif, quel que soit son rôle (accueil, infirmier(ère), médecin, caisse, pharmacie, laboratoire…) - décision du directeur, 9/11/2026. « Saisi par » garde le nom de celui qui a saisi.
+**Qui peut :** tout membre du personnel connecté avec un compte actif, quel que soit son rôle (accueil, infirmier(ère), médecin, caisse, pharmacie, laboratoire…). « Saisi par » garde le nom de celui qui a saisi.
 
 **À savoir :** enregistrer les signes vitaux **ne commence pas la consultation** : le patient reste **En Attente** jusqu'à ce que le médecin le prenne. Ils ne créent pas non plus de consultation dans l'historique du patient (depuis la version 1.7.9) : la visite peut encore être annulée tant que le médecin n'a rien écrit ; une fois qu'il a commencé, l'annulation est refusée comme avant.
 
 En haut de la page du téléphone, **FR · KO · EN** change la langue (le même choix que sur l'ordinateur).
+
+### 15. Téléphone : laboratoire, ordres, imagerie
+
+Depuis la version 1.7.11, la page du téléphone (**/m**) commence par quatre gros boutons : **🩺 Signes vitaux**, **🧪 Labo**, **📷 Imagerie**, **📋 Ordres**. Chaque liste ne montre **que la journée d'aujourd'hui** (visites annulées exclues). Le grand bouton **↻ Actualiser** en haut de chaque liste la relit (elle se relit aussi seule toutes les 30 secondes). **← Accueil** revient aux quatre boutons, **← Liste** revient à la liste.
+
+**🧪 Labo** — les patients d'aujourd'hui qui ont des examens de laboratoire, avec le nombre **en attente** et **fait(s)**.
+
+1. Touchez le patient : ses examens s'affichent (**En attente** ou **✓ Résultat saisi**).
+2. Touchez l'examen : une grande case par résultat, avec la valeur de référence et l'unité à côté. Une valeur hors limites s'affiche en rouge (▲ haut, ▼ bas, ! anormal). Les virgules sont acceptées (« 1,4 »).
+3. **Sauver**. Le résultat est enregistré exactement comme depuis l'écran **Laboratoire** de l'ordinateur (même référence, même signal, même « saisi par ») : le médecin le voit dans sa consultation.
+
+**Qui peut saisir :** seulement les comptes qui ont l'autorisation **Laboratoire** (comme sur l'ordinateur). Les autres voient les listes, en lecture seule.
+
+**📋 Ordres** (lecture seule) — les patients d'aujourd'hui qui ont des ordres ; touchez-en un pour voir tout ce que le médecin a demandé : nom, type (acte, laboratoire, imagerie, procédure, consommable), état (**Demandé**, **En cours**, **Terminé**, **Annulé** barré) et mémo.
+
+**📷 Imagerie** (lecture seule) — tous les examens d'imagerie d'aujourd'hui, du plus ancien au plus récent : heure, examen, patient, appareil et région, mémo, et où il en est : **Pas encore envoyé à l'appareil**, **Envoyé à l'appareil**, **Images reçues (n)**, **Sans liste de travail** (examen que l'EMR n'envoie pas à l'appareil) ou **Annulé**. Touchez une ligne pour voir le détail.
+
+**Qui peut :** pour les listes, tout membre du personnel connecté avec un compte actif.
 
 ## Si ce message apparaît
 

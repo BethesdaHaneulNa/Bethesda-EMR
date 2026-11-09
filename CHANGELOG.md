@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.7.11 — 2026-11-09
+
+**The phone does more than vital signs.** Asked on site: the phone is the tool wherever
+there is no PC. `/m` now opens on four big buttons - 🩺 Signes vitaux, 🧪 Labo, 📷 Imagerie,
+📋 Ordres - under the FR · KO · EN switch. Every list is today's only (cancelled visits left
+out), with a big ↻ Actualiser button on top (and a re-read every 30 s); text is 18 px or
+more and everything tapped is at least 48 px tall. Emoji only from the set Windows 10 and
+older Android draw.
+- **🩺 Signes vitaux** - the 1.7.8 flow, unchanged.
+- **🧪 Labo** - today's visits with lab orders and how many are pending / done -> the
+  visit's orders -> one order's result boxes, with this patient's reference range and unit
+  beside each, abnormal values in red, a numeric keyboard where the range is numeric.
+  Saving goes through the PC lab screen's own routes (`GET /api/lab/order/:id/items`,
+  `POST /api/lab/order/:id/results`): same flag, same change log, same `result_by` /
+  `result_at`, so the doctor sees the result exactly as when typed on the PC. Saving needs
+  the PC lab permission (one constant, `LAB_ENTRY_PERMS`); other accounts see the lists
+  read-only.
+- **📋 Ordres** (read-only) - today's visits -> every order the doctor placed: name, type,
+  status (cancelled ones struck through), memo.
+- **📷 Imagerie** (read-only) - today's imaging orders of every visit, oldest first: exam,
+  patient, device type and body part, memo, and where it stands - not sent / sent to the
+  device / images received (n) / no worklist (a code the EMR does not send to the device) /
+  cancelled; a tap shows the details.
+New read-only routes beside the vitals list, token only (any active account):
+`GET /api/visits/today/lab-list`, `/today/orders-list`, `/today/imaging-list`.
+
+**A phone already signed in stays on /m.** Opening a PC screen's address directly (the
+browser's suggestions, a restored tab) used to leave a phone on the PC screen; the route
+guard now sends it to `/m` too. 「Version ordinateur」 (`?pc=1`, kept until sign-out) is the
+way to the PC screens on a phone.
+
+**A new drug's minimum stock starts at 0** (migration 059, and the Settings form): no
+low-stock warning until the pharmacy sets a minimum for that item. Existing rows are not
+changed.
+
 ## v1.7.10 — 2026-11-09
 
 **Preparation for a public, open-source release (GPL-3.0).** Nothing changes in how the

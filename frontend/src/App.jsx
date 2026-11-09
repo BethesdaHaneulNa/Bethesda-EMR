@@ -22,9 +22,15 @@ function AuthGuard(props) {
   var location = useLocation();
   // /registration?pc=1 - the 「Version ordinateur」 link on /m: this phone then stays on
   // the ordinary screens until sign-out (clinic manager, 2026-11-09; vitals.js phoneHome).
-  if (/[?&]pc=1(&|$)/.test(location.search)) { try { localStorage.setItem(FORCE_PC_KEY, '1'); } catch (e) { /* storage blocked */ } }
+  var askedPc = /[?&]pc=1(&|$)/.test(location.search);
+  if (askedPc) { try { localStorage.setItem(FORCE_PC_KEY, '1'); } catch (e) { /* storage blocked */ } }
   if (!isLoggedIn()) return <Navigate to="/login" state={{ from: location }} replace />;
   var user = getUser();
+  // A phone already signed in that opens a PC screen directly (the browser's address
+  // suggestions, a tab brought back) never passed through HomeRedirect and stayed on the PC
+  // screen (found on site, 1.7.11): the same rule sends it to /m. 「Version ordinateur」
+  // (?pc=1, then FORCE_PC_KEY until sign-out) is the way to the PC screens on a phone.
+  if (location.pathname !== '/m' && !askedPc && phoneHome(user) === '/m') return <Navigate to="/m" replace />;
   var need = requiredPerm(location.pathname);
   if (need && userPerms(user).indexOf(need) < 0) {
     return <Navigate to={homePath(user)} replace />;

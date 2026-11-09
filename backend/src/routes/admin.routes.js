@@ -156,8 +156,8 @@ router.post('/drugs', permMiddleware('settings'), async (req, res) => {
     const pack = packFields(req.body);
     if (pack.error) return res.status(400).json({ error: pack.error });
     const f = sentDrugFields(req.body, await drugFieldsHere());
-    // A field not sent takes the column's default. min_stock: the default (10) also when
-    // the form sent it empty. A new drug starts with no stock (3-8).
+    // A field not sent takes the column's default. min_stock: the default (0 since 059, i.e.
+    // no warning until the pharmacy sets one) also when the form sent it empty. A new drug starts with no stock (3-8).
     if (f.min_stock == null) delete f.min_stock;
     const cols = Object.keys(f);
     const vals = cols.map(c => f[c]);

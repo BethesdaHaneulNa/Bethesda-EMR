@@ -661,7 +661,7 @@ export default function SettingsPage() {
             <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:6,background:scBg}}>
               <span style={{fontWeight:700,fontSize: 14,color:tx}}>💊 {t.drugs}</span>
               <input value={q} onChange={function(e){setQ(e.target.value)}} placeholder={t.search} style={{background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:4,padding:'4px 8px',color:tx,fontSize: 13,outline:'none',width:140,marginLeft:'auto',boxSizing:'border-box'}}/>
-              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:10})}} style={{background:'var(--violet-a20)',color:'var(--violet-text)',border:'1px solid var(--violet-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
+              <button onClick={function(){openEdit('drug',{code:'',name:'',category:'Other',dosage_form:'',unit_price:0,stock_qty:0,min_stock:0})}} style={{background:'var(--violet-a20)',color:'var(--violet-text)',border:'1px solid var(--violet-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.add}</button>
             </div>
             <div style={{flex:1,overflow:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize: 13}}>
               <thead><tr style={{background:'var(--chip)'}}>

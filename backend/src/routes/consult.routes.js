@@ -5,6 +5,8 @@ const { badAmounts } = require('../utils/validate');
 const { sendDbError } = require('../utils/dbError');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const { cancelWorklistForOrder } = require('./pacs.cancel');
+// Which orders are imaging exams (the phone's imaging list, 1.7.11) - the PACS's one rule.
+const { isExam } = require('./pacs.exam');
 // A supply line (code_type 'supply', 1.7.0) moves the supply's count: used when put
 // on, returned when taken off or cancelled, the difference when its count changes.
 // Each call runs in this route's transaction, under the order code's row lock.
@@ -1218,6 +1220,86 @@ vitalsRouter.get('/today/vitals-list', authMiddleware, async (req, res) => {
          FROM visit v JOIN patient p ON p.id = v.patient_id
         WHERE v.visit_date = CURRENT_DATE AND v.status IN ('registered', 'waiting', 'in_progress')
         ORDER BY v.reception_time ASC, v.created_at ASC`);
+    res.json(r.rows);
+  } catch (err) { sendDbError(res, err); }
+});
+
+// ── The phone's other lists (1.7.11, clinic manager on site) ──
+// /m became the tool wherever there is no PC: besides the vital signs, the lab's orders,
+// every order of a visit, and the imaging orders - each for TODAY only (the database's
+// CURRENT_DATE, as the queues), visits cancelled at reception left out. They are read-only
+// lists for any signed-in, active member of staff (token only, like the vitals list):
+// what was ordered and where it stands, never a result value. Typing a lab result from
+// the phone goes through the PC lab screen's own routes (lab.routes.js GET
+// /order/:id/items and POST /order/:id/results, permission 'lab'), unchanged.
+
+// GET /api/visits/today/lab-list - today's visits that have lab orders, each with its
+// lab orders (not the cancelled ones) and how many are pending / done.
+vitalsRouter.get('/today/lab-list', authMiddleware, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT v.id, v.status, v.reception_time, p.chart_no, p.last_name, p.first_name,
+              COUNT(*) FILTER (WHERE o.status <> 'completed')::int AS pending,
+              COUNT(*) FILTER (WHERE o.status = 'completed')::int AS done,
+              JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code, 'order_name', o.order_name,
+                'status', o.status, 'result_at', o.result_at, 'memo', o.memo) ORDER BY o.id) AS orders,
+              MIN(o.created_at) AS first_order_at
+         FROM visit v
+         JOIN patient p ON p.id = v.patient_id
+         JOIN order_item o ON o.visit_id = v.id AND o.code_type = 'lab' AND o.status <> 'cancelled'
+        WHERE v.visit_date = CURRENT_DATE AND v.status <> 'cancelled'
+        GROUP BY v.id, p.id
+        ORDER BY MIN(o.created_at) ASC, v.id ASC`);
+    res.json(r.rows);
+  } catch (err) { sendDbError(res, err); }
+});
+
+// GET /api/visits/today/orders-list - today's visits that have orders, each with every
+// order the doctor placed (fee, lab, imaging, procedure, supply; cancelled ones too, marked
+// so): name, type, status, memo, when.
+vitalsRouter.get('/today/orders-list', authMiddleware, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT v.id, v.status, v.reception_time, p.chart_no, p.last_name, p.first_name,
+              COUNT(*) FILTER (WHERE o.status <> 'cancelled')::int AS active,
+              JSON_AGG(JSON_BUILD_OBJECT('order_item_id', o.id, 'order_code', o.order_code, 'order_name', o.order_name,
+                'code_type', o.code_type, 'status', o.status, 'memo', o.memo, 'dose', o.dose,
+                'quantity', o.quantity, 'worklist_status', o.worklist_status, 'result_at', o.result_at,
+                'created_at', o.created_at) ORDER BY o.id) AS orders
+         FROM visit v
+         JOIN patient p ON p.id = v.patient_id
+         JOIN order_item o ON o.visit_id = v.id
+        WHERE v.visit_date = CURRENT_DATE AND v.status <> 'cancelled'
+        GROUP BY v.id, p.id
+        ORDER BY v.reception_time ASC NULLS LAST, v.id ASC`);
+    res.json(r.rows);
+  } catch (err) { sendDbError(res, err); }
+});
+
+// GET /api/visits/today/imaging-list - today's imaging orders of every visit (the PACS's
+// rule: imaging type, or any order carrying a device type), oldest first: patient, exam,
+// body part and device type (the order's copy, else its order code's), memo, the order's
+// status, whether the worklist was sent and whether images arrived (the latest worklist
+// entry: images_received_at, image_count).
+vitalsRouter.get('/today/imaging-list', authMiddleware, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT o.id AS order_item_id, o.visit_id, o.order_code, o.order_name, o.code_type, o.status, o.memo,
+              o.worklist_status, o.worklist_sent_at, o.created_at,
+              COALESCE(NULLIF(o.pacs_modality, ''), oc.pacs_modality) AS modality,
+              COALESCE(NULLIF(o.body_part, ''), oc.body_part) AS body_part,
+              p.chart_no, p.last_name, p.first_name, v.status AS visit_status,
+              wl.status AS worklist_log_status, wl.sent_at AS worklist_log_sent_at,
+              wl.images_received_at, wl.image_count
+         FROM order_item o
+         JOIN visit v ON v.id = o.visit_id
+         JOIN patient p ON p.id = o.patient_id
+         LEFT JOIN order_code oc ON oc.id = o.order_code_id
+         LEFT JOIN LATERAL (SELECT w.status, w.sent_at, w.images_received_at, w.image_count
+                              FROM worklist_log w WHERE w.order_item_id = o.id
+                             ORDER BY w.id DESC LIMIT 1) wl ON true
+        WHERE v.visit_date = CURRENT_DATE AND v.status <> 'cancelled' AND ${isExam('o')}
+        ORDER BY o.created_at ASC, o.id ASC`);
     res.json(r.rows);
   } catch (err) { sendDbError(res, err); }
 });
