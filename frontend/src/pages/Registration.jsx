@@ -750,8 +750,11 @@ export default function RegistrationPage() {
               {/* Paid: department/doctor stay (office manager, 2026-09-30) - same rule as the server. */}
               {sel && sel.has_active_bill ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: 5 }}>{t.rc_visitBilledNoMove}</div> : null}
               {/* No department chosen: nothing is registered (the clinic's manager, 2026-11-09) - the
-                  receipt's « Service » line was leaving empty. Same rule on the server (400). */}
-              {!visitForm.department && !(sel && sel.has_active_bill) ? <div role="alert" style={{ fontSize: 13, color: 'var(--danger-text)', marginTop: 5, fontWeight: 700 }}>{visitForm.doctor ? t.rc_doctorNoDept : t.rc_deptRequired}</div> : null}
+                  receipt's « Service » line was leaving empty. Same rule on the server (400). The
+                  button below stays grey and says why on hover; no standing red line (the manager,
+                  the same evening). Only the case the person cannot fix here - a doctor who has no
+                  department in Settings - is written out. */}
+              {visitForm.doctor && !visitForm.department && !(sel && sel.has_active_bill) ? <div role="alert" style={{ fontSize: 13, color: 'var(--danger-text)', marginTop: 5, fontWeight: 700 }}>{t.rc_doctorNoDept}</div> : null}
             </div>
             {(function () {
               // First visit / follow-up / no fee - the three the office manager kept.
@@ -777,7 +780,7 @@ export default function RegistrationPage() {
             })()}
             {/* One field (2026-10-01): the label is «접수 메모», the text is the visit's complaint. */}
             <div><label style={labelStyle}>{t.receptionMemo}</label><textarea value={visitForm.chiefComplaint} onChange={function (e) { uv('chiefComplaint', e.target.value); }} rows={3} style={Object.assign({}, IS, { resize: 'vertical', lineHeight: 1.5 })} /></div>
-            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast || !visitForm.department} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast || !visitForm.department) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast || !visitForm.department) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
+            <button onClick={createOrUpdateVisit} disabled={busy || viewingPast || selIsPast || !visitForm.department} title={!visitForm.department ? t.rc_deptRequired : undefined} style={{ background: 'var(--accent-strong)', color: 'white', border: 0, borderRadius: 8, padding: '12px 14px', cursor: busy ? 'wait' : ((viewingPast || selIsPast || !visitForm.department) ? 'not-allowed' : 'pointer'), fontSize: 16, fontWeight: 800, opacity: (busy || viewingPast || selIsPast || !visitForm.department) ? 0.5 : 1 }}>{busy ? t.rc_saving : (sel ? t.updateVisit : t.registerWaiting)}</button>
             {(viewingPast || selIsPast) ? <div style={{ fontSize: 13, color: 'var(--warn-text)', marginTop: -4 }}>{t.rc_pastDateNoNew}</div> : null}
             <button onClick={savePatientOnly} disabled={busy} style={{ background: 'var(--chip)', color: 'var(--text-soft)', border: '1px solid '+bd, borderRadius: 8, padding: '10px 14px', cursor: busy ? 'wait' : 'pointer', fontSize: 15, fontWeight: 800, opacity: busy ? 0.6 : 1 }}>💾 {t.savePatientOnly}</button>
             {selectedPatient && selectedPatient.id ? <button onClick={function(){ setChartViewOpen(true); }} style={{ background: 'var(--chip)', color: 'var(--violet-text-3)', border: '1px solid var(--violet-2)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>📋 {t.chartViewer||'차트뷰어'}</button> : null}

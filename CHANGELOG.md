@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.7.15 — 2026-11-09
+
+**Reception: no standing red line.** The rule of 1.7.14 stays - no department, no
+registration, on screen and on the server - but the reminder under « Service / Médecin »
+is gone; the grey button says why on hover. The one message left is for a doctor who has
+no department in Paramètres → Personnel, shown only when that doctor is chosen.
+
 ## v1.7.14 — 2026-11-09
 
 **A visit is always registered to a department.** Asked on site: receipts were leaving
