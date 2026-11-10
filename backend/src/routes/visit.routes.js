@@ -40,7 +40,10 @@ const QUEUE_SELECT = `SELECT v.*, p.chart_no, p.last_name, p.first_name, p.date_
 // visit_date defaults to - and the answer always says which day it is and what today
 // is, so the screen never has to trust the PC's clock to know when midnight passed.
 // Answer: { date, today, visits: [rows like /today] }.
-router.get('/day', permMiddleware('registration'), async (req, res) => {
+// Consultation reads it too since 1.7.19 (asked on site, 2026-11-10): the doctors' queue
+// got the same date picker, so a doctor can find the patients seen on an earlier day.
+// It gives nothing /today did not already give them - the same rows, of another day.
+router.get('/day', permMiddleware('registration', 'consultation'), async (req, res) => {
   try {
     const asked = req.query.date;
     if (asked !== undefined && asked !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(String(asked))) {

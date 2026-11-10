@@ -53,8 +53,8 @@ const ROUTES = [
   ['PUT',  '/patients/' + X,                [REG], {}],
   // visit.routes.js (reception)
   ['GET',  '/visits/today',                 [REG, CONS]],
-  // reception: one working day's visits (?date=YYYY-MM-DD), registration only
-  ['GET',  '/visits/day',                   [REG]],
+  // one working day's visits (?date=YYYY-MM-DD): reception, and consultation since 1.7.19 (the doctors' queue has a date)
+  ['GET',  '/visits/day',                   [REG, CONS]],
   // registration added 2026-09-29 (coordinator): reception reads past visits to suggest new/follow-up
   ['GET',  '/visits/patient/' + X,          [REG, CONS, LAB, PAY]],
   ['POST', '/visits',                       [REG], {}],

@@ -179,6 +179,43 @@ export default function ConsultationPage() {
   var hos = useState(false), histOpen = hos[0], setHistOpen = hos[1];
   var qfs = useState(''), qFilter = qfs[0], setQFilter = qfs[1];
   var qtb = useState('waiting'), qTab = qtb[0], setQTab = qtb[1];
+  // The queue's day (asked on site 2026-11-10, for the doctors): the same date row as
+  // reception, payment and pharmacy, so a doctor picks a day and - with the doctor filter
+  // (⚙) - sees the patients seen that day. The server says what today is (GET /visits/day);
+  // while the list follows today, a refresh after midnight moves to the new day by itself.
+  // Only a date somebody picked stays put. Opening a visit of a past day follows the rules
+  // the chart already had for one (it opens as a finished visit); nothing new is allowed.
+  var qds = useState(''), queueDate = qds[0], setQueueDate = qds[1];
+  var qts = useState(''), serverToday = qts[0], setServerToday = qts[1];
+  var queueDayRef = useRef({ date: '', follow: true });
+  function queueUrl(){ var w = queueDayRef.current; return '/visits/day' + (w.follow || !w.date ? '' : '?date=' + w.date); }
+  function applyQueueDay(d){
+    var rows = d && Array.isArray(d.visits) ? d.visits : [];
+    if(d && d.today) setServerToday(d.today);
+    if(queueDayRef.current.follow && d && d.date) queueDayRef.current.date = d.date;
+    setQueueDate(queueDayRef.current.date);
+    setVisits(rows);
+    return rows;
+  }
+  function reloadQueue(){ var asked = queueUrl(); return api.get(asked).then(function(d){ if(asked === queueUrl()) applyQueueDay(d); }).catch(function(){}); }
+  function chooseQueueDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))) return;
+    if(serverToday && date > serverToday) date = serverToday;   // no future days: nothing is booked ahead
+    var wasPast = queuePast, nowPast = !!(serverToday && date < serverToday);
+    queueDayRef.current = { date: date, follow: date === serverToday };
+    setQueueDate(date);
+    // A past day is opened to find patients already seen: the list goes to "Terminé", and
+    // back to "En attente" when it returns to today.
+    if(nowPast && !wasPast) setQTab('completed');
+    if(!nowPast && wasPast) setQTab('waiting');
+    reloadQueue();
+  }
+  function shiftQueueDate(days){
+    var d = new Date((queueDate || serverToday) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    chooseQueueDate(d.toLocaleDateString('en-CA'));
+  }
+  var queuePast = !!(queueDate && serverToday && queueDate < serverToday);
   // ── Diagnoses (2026-10-02) ──
   // dxList: the open consultation's diagnoses as the server has them, the primary one
   // first. A line is picked from the clinic's list of frequent diagnoses (dxCodes, with
@@ -388,15 +425,14 @@ export default function ConsultationPage() {
   },[consult && consult.id]);
 
   useEffect(function(){
-    var id=setInterval(function(){ api.get('/visits/today').then(function(v){ setVisits(v); }).catch(function(){}); }, 15000);
+    var id=setInterval(function(){ reloadQueue(); }, 15000);
     return function(){ clearInterval(id); };
   },[]);
 
   async function loadData(){
     setLoading(true);
     try {
-      var vData = await api.get('/visits/today');
-      setVisits(vData);
+      var vData = applyQueueDay(await api.get(queueUrl()));
       var drData = await api.get('/admin/drugs');
       setAllDrugs(drData);
       var ocData = await api.get('/admin/order-codes');
@@ -1561,6 +1597,17 @@ export default function ConsultationPage() {
             {/* Whose patients this list shows: the doctors ticked in the window this opens. */}
             <button onClick={openQueueFilter} title={t.cs_qfTitle} aria-label={t.cs_qfTitle} style={toolBtn({flexShrink:0,background:queueRule?'var(--accent-a20)':'var(--chip)',color:queueRule?'var(--accent-text)':t2,border:'1px solid '+(queueRule?'var(--accent-a40)':bd2)})}>⚙</button>
           </div>
+          {/* The queue's day: one row as on reception and payment - label, previous day, date, next day. */}
+          <div data-cs="queue-date" style={{padding:'6px 9px',borderBottom:'1px solid '+bd}}>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:12,fontWeight:700,color:queuePast?'var(--warn-text)':t2,whiteSpace:'nowrap'}}>{t.cs_queueDate}</span>
+              <button type="button" title={t.rc_prevDay} aria-label={t.rc_prevDay} onClick={function(){shiftQueueDate(-1)}} disabled={!queueDate} style={{background:'var(--chip)',color:t2,border:'1px solid var(--border-2)',borderRadius:5,padding:'4px 5px',cursor:'pointer',fontSize:13}}>◀</button>
+              <input type="date" value={queueDate} max={serverToday||undefined} onChange={function(e){chooseQueueDate(e.target.value)}} style={{flex:1,minWidth:0,background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 4px',color:tx,fontSize:13,colorScheme:'var(--scheme)'}}/>
+              <button type="button" title={t.rc_nextDay} aria-label={t.rc_nextDay} onClick={function(){shiftQueueDate(1)}} disabled={!queueDate||!serverToday||queueDate>=serverToday} style={{background:'var(--chip)',color:t2,border:'1px solid var(--border-2)',borderRadius:5,padding:'4px 5px',cursor:'pointer',fontSize:13,opacity:(!queueDate||queueDate>=serverToday)?0.4:1}}>▶</button>
+              {queuePast ? <button type="button" onClick={function(){chooseQueueDate(serverToday)}} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'4px 8px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>{t.rc_backToToday}</button> : null}
+            </div>
+            {queuePast ? <div style={{fontSize:12,color:'var(--warn-text)',marginTop:5,lineHeight:1.4}}>{String(t.cs_queuePast||'').replace('{date}', queueDate)}</div> : null}
+          </div>
           <div style={LIST_SEARCH_WRAP}>
             <input autoComplete="off" value={qFilter} onChange={function(e){setQFilter(e.target.value)}} placeholder={t.search} style={LIST_SEARCH}/>
             {/* One line, cut with "…" (the full list is the tooltip): a long doctor name must
@@ -1568,6 +1615,7 @@ export default function ConsultationPage() {
             <div data-cs="queue-shown" title={queueSummary()} style={{fontSize: 12,color:t2,marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{String(t.cs_qfShown||'').replace('{list}', queueSummary())}</div>
           </div>
           <div style={{flex:1,overflow:'auto'}}>
+            {queuePast && filteredQueue.length===0 ? <div style={{padding:'14px 12px',fontSize:13,color:t3,lineHeight:1.5}}>{t.cs_queuePastEmpty}</div> : null}
             {filteredQueue.map(function(v){
               var isSel=sel&&sel.id===v.id;
               var sc2=SC[v.status]||'text-2';
@@ -1591,8 +1639,8 @@ export default function ConsultationPage() {
         <div style={{width:'42%',borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--bg-col)'}}>
           {/* Queue toggle */}
           <div style={{padding:'4px 10px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',gap:6}}>
-            <button onClick={function(){var willOpen=!queueOpen; setQueueOpen(willOpen); if(willOpen){ api.get('/visits/today').then(function(v){setVisits(v);}).catch(function(){}); }}} style={{background:queueOpen?'var(--accent-a20)':'var(--chip)',color:queueOpen?'var(--accent-text)':t2,border:queueOpen?'1px solid var(--accent-a40)':'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>
-              {queueOpen?'✕':'☰'} {t.patientQueue} ({waitingCount})
+            <button onClick={function(){var willOpen=!queueOpen; setQueueOpen(willOpen); if(willOpen){ reloadQueue(); }}} style={{background:queueOpen?'var(--accent-a20)':'var(--chip)',color:queueOpen?'var(--accent-text)':t2,border:queueOpen?'1px solid var(--accent-a40)':'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>
+              {queueOpen?'✕':'☰'} {t.patientQueue} ({queuePast ? queueDate.slice(8,10)+'/'+queueDate.slice(5,7)+' · ' : ''}{waitingCount})
             </button>
             <button onClick={function(){setFinderOpen(true)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 10px',cursor:'pointer',fontSize:13,fontWeight:600}}>🔍 {t.findPatient}</button>
             {/* The open patient's other visits, beside the finder (clinic manager, 2026-10-01: it

@@ -433,6 +433,9 @@ export default {
   cs_nothingToSave: "저장할 것이 없습니다",
   // 진료대기 현황에 보일 의사
   cs_qfTitle: "대기 현황에 보일 의사",
+  cs_queueDate: "날짜",
+  cs_queuePast: "{date} 목록입니다(지난 날짜). 「오늘로」를 누르면 오늘 목록으로 돌아갑니다.",
+  cs_queuePastEmpty: "이 날짜에 보일 환자가 없습니다. 다른 탭이나 ⚙ 설정을 확인하세요.",
   cs_qfHint: "체크한 의사의 환자만 내 진료대기 현황에 나옵니다. 이 설정은 내 계정에 기억되어 다른 PC에서도 같습니다.",
   cs_qfAllDoctors: "의사 전체",
   cs_qfUnassigned: "의사가 정해지지 않은 환자",

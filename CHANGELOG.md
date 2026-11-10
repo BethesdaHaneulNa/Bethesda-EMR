@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.7.19 — 2026-11-10
+
+**The doctors' waiting list has a date.** The consultation screen's list (☰ File d'Attente)
+showed today only. It now has the same row as reception, payment and pharmacy — **◀ date ▶**
+and **Aujourd’hui** — so a doctor picks a day and, with the doctor filter (⚙) on their own
+name, sees the patients they saw that day. Choosing a past day moves the list to the
+**Terminé** tab and the ☰ button shows the day; coming back to today returns to **En
+attente**. A visit of a past day opens under the rules the chart already had for one.
+`GET /api/visits/day` is readable with the consultation permission as well (it returns the
+same rows `/visits/today` already gave, for another day). No database change.
+
 ## v1.7.18 — 2026-11-09
 
 **Images that arrived without an order can be put under one.** When an exam is done without

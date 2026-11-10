@@ -442,6 +442,9 @@ export default {
   cs_nothingToSave: "Nothing to save",
   // Doctors shown in the waiting list (clinic manager, 2026-10-01)
   cs_qfTitle: "Doctors shown in the waiting list",
+  cs_queueDate: "Date",
+  cs_queuePast: "List of {date} (a past day). “Today” goes back to today’s list.",
+  cs_queuePastEmpty: "No patient to show for this date. Check the other tab or the ⚙ setting.",
   cs_qfHint: "Only the patients of the doctors you tick appear in your waiting list. The choice is kept for your account, on every computer.",
   cs_qfAllDoctors: "All doctors",
   cs_qfUnassigned: "Patients with no doctor",

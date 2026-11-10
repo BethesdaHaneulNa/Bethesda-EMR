@@ -433,6 +433,9 @@ export default {
   cs_nothingToSave: "Rien à enregistrer",
   // Médecins affichés dans la file d'attente (directeur, 2026-10-01)
   cs_qfTitle: "Médecins affichés dans la file",
+  cs_queueDate: "Date",
+  cs_queuePast: "Liste du {date} (jour passé). « Aujourd’hui » revient à la liste du jour.",
+  cs_queuePastEmpty: "Aucun patient à afficher pour cette date. Regardez l’autre onglet ou le réglage ⚙.",
   cs_qfHint: "Seuls les patients des médecins cochés apparaissent dans votre file d'attente. Le choix est gardé pour votre compte, sur tous les ordinateurs.",
   cs_qfAllDoctors: "Tous les médecins",
   cs_qfUnassigned: "Patients sans médecin",

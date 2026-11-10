@@ -30,6 +30,9 @@ Voir un patient de la file :
 
 1. Cliquez sur **☰ File d'Attente**. Le nombre entre parenthèses est le nombre de patients qui attendent. La liste se met à jour toute seule.
 2. Onglet **En Attente** : les patients à voir. Onglet **Terminé** : les patients déjà vus aujourd'hui (on peut les rouvrir).
+   - **Date** (sous les onglets) : la liste montre aujourd'hui. Pour retrouver les patients vus un autre jour, cliquez sur **◀** / **▶** ou choisissez le jour dans le calendrier. La liste passe sur l'onglet **Terminé**, une ligne orange rappelle la date, et le bouton **☰ File d'Attente** affiche le jour (par exemple **09/11 · 0**). Avec **⚙** réglé sur votre nom, ce sont **vos** patients de ce jour-là.
+   - **Aujourd'hui** (bouton à droite de la date) revient à la liste du jour. Après minuit, la liste du jour change toute seule.
+   - Un dossier d'un jour passé s'ouvre comme une visite terminée — les mêmes règles que le point 5 de « Terminer la visite ».
    - Sous la case **Rechercher**, la ligne **Affichés : …** dit de quels médecins vous voyez les patients. Sans réglage : un médecin voit ses patients et les patients sans médecin ; les autres comptes voient tous les patients.
    - Pour changer : cliquez sur **⚙** (à droite des onglets), cochez les médecins voulus — et **Patients sans médecin** si vous voulez les voir —, puis **Sauver**. **Tous les médecins** coche tout d'un coup. Il faut au moins une ligne cochée. **Par défaut** revient au réglage de départ.
    - Le réglage est gardé pour **votre compte** : il est le même sur un autre ordinateur, et ne change rien pour les autres.
