@@ -28,6 +28,8 @@ var EXACT = {
   'The current password is not correct': 'se_errCurrentPw',
   'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.': 'se_errLastAdmin',
   'The administrator account created during setup cannot be deactivated.': 'se_errSetupAdminKept',
+  'Choose the department of the doctor': 'se_errStaffDept',
+  'The department of the doctor must be one of the active departments': 'se_errStaffDeptBad',
   // phrases and their categories (settings.messages.js MSG, 2026-10-01)
   'Phrase text is required': 'se_errPhraseText',
   'Choose a category for the phrase': 'se_errPhraseCategory',

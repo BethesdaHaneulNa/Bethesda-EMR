@@ -103,7 +103,7 @@ Si le médecin a déjà commencé la consultation, ou si la visite a déjà des 
 
 ### 10. Terminer sans consultation
 
-Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n'a pas à passer à la caisse. » Confirmez seulement si c'est bien le cas. Une visite **Sans frais** n'apparaît pas dans la liste de la caisse : il n'y a rien à encaisser.
+Pour un patient **En Attente** qui ne verra pas le médecin (par exemple, il vient seulement chercher un document) : cliquez sur **Terminer →** sous son nom. L'écran demande : « Terminer … sans consultation ? Le type de visite passe à « Sans frais » : rien à payer, le patient n'a pas à passer à la caisse. » Confirmez seulement si c'est bien le cas. Une visite **Sans frais** n'a rien à encaisser. Le jour même, elle reste visible dans la liste **En attente** de la caisse à 0 Ar (pour encaisser par exemple un certificat) ; à partir du lendemain elle n'y est plus.
 
 **Attention : si le médecin a vu le patient, n'utilisez pas ce bouton.** Un patient reste **En Attente** tant que le médecin n'a rien commencé ni enregistré, même s'il l'a examiné. C'est le médecin qui termine à l'écran Consultation ; sinon la consultation n'est pas facturée. Le message de confirmation le rappelle.
 

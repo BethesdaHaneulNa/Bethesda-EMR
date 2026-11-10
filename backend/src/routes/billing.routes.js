@@ -15,6 +15,25 @@ const canSeeBalance = permMiddleware('payment', 'registration');
 // The day's cash (M9): the payment screen and statistics.
 const canSeeCash = permMiddleware('payment', 'stats');
 
+// An id in the address that is not a number used to reach Postgres and come back as a 500
+// carrying the raw driver text (bug hunt round 4, 2026-11-10). The screens never send one.
+['billingId', 'visitId', 'patientId'].forEach(function (name) {
+  router.param(name, function (req, res, next, value) {
+    if (!/^\d{1,9}$/.test(String(value))) return res.status(400).json({ error: name + ' must be a number' });
+    next();
+  });
+});
+// A day from the query string: YYYY-MM-DD that exists (2026-13-45 and 2026-02-30 do not).
+function badDay(value) {
+  const s = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return true;
+  const d = new Date(s + 'T00:00:00Z');
+  return isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s;
+}
+// No receipt figure is larger than this (the columns hold 10 digits; a larger number used
+// to overflow them as a 500).
+const MAX_MONEY = 1000000000;
+
 // Voiding a bill undoes the balances it absorbed: the older bills go back to
 // carrying their own outstanding amount. amount_paid was never touched when the
 // balance was carried, so total_due - amount_paid restores the original figure.
@@ -294,7 +313,7 @@ router.get('/pending', canPay, async (req, res) => {
 router.get('/cash-day', canSeeCash, async (req, res) => {
   try {
     let date = req.query.date;
-    if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    if (date !== undefined && badDay(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     // today: what the payment screen's work date follows (never the PC's clock)
     const today = (await pool.query("SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS d")).rows[0].d;
     if (!date) date = today;
@@ -316,6 +335,7 @@ router.get('/cash-day', canSeeCash, async (req, res) => {
 router.get('/completed', canPay, async (req, res) => {
   try {
     const { date } = req.query;
+    if (date !== undefined && date !== '' && badDay(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     const billDate = date || todayLocal();
     const result = await pool.query(
       `SELECT b.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
@@ -578,10 +598,20 @@ router.post('/', canPay, async (req, res) => {
                     previous_balance, total_due, amount_paid, change_amount, outstanding };
     for (const [field, raw] of Object.entries(money)) {
       const value = parseFloat(raw ?? 0);
-      if (!isFinite(value) || value < 0) {
+      // Number() as well: parseFloat reads "35000abc" as 35000 and the text then reached
+      // the insert (a 500). A figure beyond the columns is refused here too.
+      if (!isFinite(value) || !isFinite(Number(raw ?? 0)) || value < 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: field + ' must be a number >= 0' });
       }
+      if (value > MAX_MONEY) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: field + ' must be at most ' + MAX_MONEY });
+      }
+    }
+    if (!/^\d{1,9}$/.test(String(visit_id)) || !/^\d{1,9}$/.test(String(patient_id))) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'visit_id does not belong to patient_id' });
     }
     if (parseFloat(discount_amount ?? 0) > parseFloat(subtotal ?? 0) + 0.5) {
       await client.query('ROLLBACK');
@@ -618,7 +648,31 @@ router.post('/', canPay, async (req, res) => {
     // same lines, so a real payment always passes; a request whose figures disagree
     // (a stale or hand-made one) would otherwise store a total no line explains.
     // This checks, it does not recompute: nothing a valid request sends is changed.
+    // The lines themselves: a list, each with a type, a name and amounts that are numbers
+    // >= 0. A line of -1 x -20000 = 20000 passed the sums below, and so did a negative line
+    // made up for by a larger one; a text instead of the list was read letter by letter
+    // and ended as a 500 (bug hunt round 4).
+    if (items !== undefined && items !== null && !Array.isArray(items)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'items must be a list' });
+    }
     const lines = Array.isArray(items) ? items : [];
+    const badLine = lines.some(function (it) {
+      if (!it || typeof it !== 'object') return true;
+      if (typeof it.item_type !== 'string' || !it.item_type.trim() || it.item_type.length > 20) return true;
+      if (typeof it.item_name !== 'string' || !it.item_name.trim() || it.item_name.length > 200) return true;
+      if (it.item_code != null && String(it.item_code).length > 20) return true;
+      return ['quantity', 'unit_price', 'total_price'].some(function (k) {
+        const raw = it[k];
+        if (raw === undefined || raw === null || raw === '' || typeof raw === 'boolean') return true;
+        const n = Number(raw);
+        return !isFinite(n) || n < 0 || n > MAX_MONEY;
+      });
+    });
+    if (badLine) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'items: each line needs a type, a name and amounts >= 0' });
+    }
     const lineSum = lines.reduce(function (s, it) { return s + (parseFloat(it.total_price) || 0); }, 0);
     const sub = parseFloat(subtotal) || 0;
     const partsSum = (parseFloat(consult_fee) || 0) + (parseFloat(drug_total) || 0) + (parseFloat(procedure_total) || 0);
@@ -720,8 +774,8 @@ router.post('/', canPay, async (req, res) => {
     // difference went back as change.
     await writeCash(client, req, 'payment', Number(billing.net_paid) - held, billing, held > 0 ? 'held ' + held + ' taken over' : null);
     // Insert billing items
-    if (items && items.length > 0) {
-      for (const item of items) {
+    if (lines.length > 0) {
+      for (const item of lines) {
         await client.query(
           'INSERT INTO billing_item (billing_id, item_type, item_name, item_code, quantity, unit_price, total_price) VALUES ($1,$2,$3,$4,$5,$6,$7)',
           [billing.id, item.item_type, item.item_name, item.item_code, item.quantity, item.unit_price, item.total_price]
@@ -757,6 +811,16 @@ router.post('/', canPay, async (req, res) => {
           [prior.id, billing.id]
         );
         remaining -= amount;
+      }
+      // What was carried must be what those receipts owed, to the ariary. A screen that
+      // showed an older figure (the balance was restored or regrouped meanwhile - a
+      // settlement cancelled in the side panel, another till) sent less than the oldest
+      // receipt owes: nothing was absorbed, the new receipt charged the amount and the old
+      // one went on owing all of it - the same debt twice (bug hunt round 4). Nothing is
+      // written; the screen reloads on BILL_CHANGED.
+      if (remaining > 0.5) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: BILL_CHANGED + ': the previous balance changed while the screen was open' });
       }
     }
 

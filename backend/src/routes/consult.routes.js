@@ -744,6 +744,33 @@ async function withForm(db, row) {
 }
 function intOrNull(v) { const n = parseInt(v); return Number.isFinite(n) ? n : null; }
 
+// Amounts as typed (bug hunt 2026-11-10, with the vital signs of round 2). A French keyboard
+// types the decimal with a comma: "1,5" was refused with "dose must be a number" - the row
+// then kept its OLD dose on the server while the screen showed the new one until the alert
+// was read. A plain decimal number with a comma is read as that number; the text is trimmed
+// ("  2 " was stored with its spaces) and anything else Number() would take - "1e2", "0x10",
+// " " - stays for badAmounts or is refused here, so the dose column holds what the pharmacy
+// can read. Used for a prescription's daily dose and an order's quantity.
+function typedAmount(v) {
+  if (typeof v !== 'string') return v;
+  const s = v.trim();
+  return /^\d+,\d+$/.test(s) ? s.replace(',', '.') : s;
+}
+function badPlainNumber(field, v) {
+  if (v === undefined || v === null || v === '') return null;
+  return typeof v === 'number' || /^\d+(\.\d+)?$/.test(String(v)) ? null : field + ' must be a number';
+}
+// A PUT writes the fields it is sent and leaves the others as they are (bug hunt
+// 2026-11-10): both line routes set every column from the body, so a body without a field
+// emptied it - PUT {frequency: 2} wiped the dose, the days and the total of a prescription,
+// PUT {} put an order back to 1 x 1 and its bill with it. The screen always sends the whole
+// row, so nothing was lost there; any other caller would have. `stored` is the locked row.
+function withStored(body, stored, fields) {
+  const out = Object.assign({}, body || {});
+  fields.forEach(function (k) { if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = stored[k]; });
+  return out;
+}
+
 // Pack-unit drugs (columns from the pharmacy's 025): a syrup, a cream, an inhaler is
 // handed out by the bottle, tube or piece. Since 1.7.16 (the clinic's manager, 2026-11-09:
 // « 2 · 1 · 1 means two go out ») its total is worked out like any other line - daily
@@ -760,9 +787,10 @@ function badPackTotal(total) { return total !== null && !(Number.isInteger(total
 router.post('/:id/prescriptions', canConsult, (req, res) => inTx(res, async (client) => {
   // total_qty from the client is ignored: the server works it out (rxTotal), for a
   // pack-unit drug too (a whole number of bottles, or refused).
+  req.body.dose = typedAmount(req.body.dose);
   const { drug_id, drug_code, drug_name, dose, frequency, days, route, unit_price, memo } = req.body;
   if (blank(drug_name)) return [400, { error: 'drug_name is required' }];
-  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
+  const invalid = badPlainNumber('dose', dose) || badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
   if (invalid) return [400, { error: invalid }];
   const c = await consultOf(client, req.params.id);
   if (!c) return [404, { error: 'Consultation not found' }];
@@ -801,13 +829,15 @@ async function lockRx(client, rxId) {
 // PUT /api/consultations/prescription/:rxId - update prescription details
 router.put('/prescription/:rxId', canConsult, (req, res) => inTx(res, async (client) => {
   // total_qty from the client is ignored: the server works it out (rxTotal).
-  const { dose, frequency, days, route, memo, unit_price } = req.body;
-  const invalid = badAmounts(req.body, ['dose', 'frequency', 'days', 'unit_price']) || badRoute(route);
+  if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'dose')) req.body.dose = typedAmount(req.body.dose);
+  const invalid = badPlainNumber('dose', (req.body || {}).dose) || badAmounts(req.body || {}, ['dose', 'frequency', 'days', 'unit_price']) || badRoute((req.body || {}).route);
   if (invalid) return [400, { error: invalid }];
-  const freq = intOrNull(frequency), nDays = intOrNull(days);
-  const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
   const got = await lockRx(client, req.params.rxId);
   if (got.refuse) return got.refuse;
+  // Fields not sent keep what the line holds (withStored); unit_price already did (COALESCE).
+  const { dose, frequency, days, route, memo, unit_price } = withStored(req.body, got.rx, ['dose', 'frequency', 'days', 'route', 'memo']);
+  const freq = intOrNull(frequency), nDays = intOrNull(days);
+  const newDose = dose === undefined || dose === null || String(dose).trim() === '' ? null : Number(dose);
   // A pack-unit line (the flag stored on the line) must come out as whole bottles.
   if (got.rx.pack_unit && badPackTotal(rxTotal(dose, nDays))) return [400, { error: PACK_TOTAL_BAD }];
   // total_qty is recomputed only when the dose, the times a day or the
@@ -866,14 +896,18 @@ function orderTotal(quantity, days) {
   return Math.round(q * n * 1000) / 1000;   // DECIMAL(10,3)
 }
 
+const ORDER_KINDS = ['fee', 'lab', 'imaging', 'procedure', 'supply'];   // order_code's CHECK (055)
+
 // POST /api/consultations/:id/orders
 router.post('/:id/orders', canConsult, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { order_code_id, order_code, order_name, code_type, dose, frequency, days, quantity, unit_price, memo } = req.body;
+    req.body.quantity = typedAmount(req.body.quantity);
+    const { order_code_id, order_code, order_name, dose, frequency, days, quantity, unit_price, memo } = req.body;
+    let code_type = req.body.code_type;
     if (blank(order_name)) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'order_name is required' }); }
-    const invalid = badAmounts(req.body, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig(dose);
+    const invalid = badPlainNumber('quantity', quantity) || badAmounts(req.body, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig(dose);
     if (invalid) { await client.query('ROLLBACK'); return res.status(400).json({ error: invalid }); }
     // Get consultation info
     const consult = await consultOf(client, req.params.id);
@@ -888,6 +922,11 @@ router.post('/:id/orders', canConsult, async (req, res) => {
       const ocResult = await client.query('SELECT * FROM order_code WHERE id = $1', [order_code_id]);
       if (ocResult.rows.length > 0) {
         const oc = ocResult.rows[0];
+        // The kind of the line is the order code's (bug hunt 2026-11-10): it came from the
+        // request alone, so one line could be an imaging order for the device list (the
+        // modality below is read from the table) and something else for the lab's and the
+        // cashier's lists, which read order_item.code_type.
+        code_type = oc.code_type;
         pacs_modality = oc.pacs_modality;
         // Station AE intentionally ignored by default. The EMR sends modality/order,
         // not a device assignment.
@@ -895,6 +934,12 @@ router.post('/:id/orders', canConsult, async (req, res) => {
         body_part = oc.body_part;
         worklist_enabled = oc.worklist_enabled;
       }
+    }
+
+    // A line without an order code must still be one of the kinds the lists know.
+    if (ORDER_KINDS.indexOf(String(code_type)) < 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'code_type must be one of ' + ORDER_KINDS.join(', ') });
     }
 
     // pacs_config and its one row come from 001_schema.sql. (This used to re-create the
@@ -971,8 +1016,8 @@ function badOrderSig(v) {
 
 // PUT /api/consultations/order/:orderId - update order item dosing/quantity details
 router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client) => {
-  const { dose, frequency, days, quantity, memo, unit_price } = req.body;
-  const invalid = badAmounts(req.body, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig(dose);
+  if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'quantity')) req.body.quantity = typedAmount(req.body.quantity);
+  const invalid = badPlainNumber('quantity', (req.body || {}).quantity) || badAmounts(req.body || {}, ['frequency', 'days', 'quantity', 'unit_price']) || badOrderSig((req.body || {}).dose);
   if (invalid) return [400, { error: invalid }];
   // A cancelled order is a record: its quantity and notes no longer change (and it is
   // out of the bill, so a change would mean nothing anyway). Locked and checked here,
@@ -986,6 +1031,8 @@ router.put('/order/:orderId', canConsult, (req, res) => inTx(res, async (client)
   // old line must not change its bill by being clicked through (same rule as the
   // prescription PUT).
   const was = prev.rows[0];
+  // Fields not sent keep what the line holds (withStored); unit_price already did (COALESCE).
+  const { dose, frequency, days, quantity, memo, unit_price } = withStored(req.body, was, ['dose', 'frequency', 'days', 'quantity', 'memo']);
   const q = orderQty(quantity), nDays = parseInt(days) || 1;
   const changed = was.total_qty === null || Number(was.quantity) !== q || (parseInt(was.days) || 1) !== nDays;
   const result = await client.query(

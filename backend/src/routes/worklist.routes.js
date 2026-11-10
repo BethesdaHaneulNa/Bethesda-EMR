@@ -30,6 +30,7 @@ function bridgeOrAuth(...perms) {
 router.get('/', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
     const { modality, station_ae, date, status } = req.query;
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     let query = `SELECT wl.*, p.chart_no, p.last_name, p.first_name, p.date_of_birth, p.gender,
                  oi.order_name, oi.order_code
                  FROM worklist_log wl
@@ -62,6 +63,7 @@ router.put('/:id/status', bridgeOrAuth('settings'), async (req, res) => {
   if (!WL_TO_ORDER_STATUS[status]) {
     return res.status(400).json({ error: 'status must be one of ' + Object.keys(WL_TO_ORDER_STATUS).join(', ') });
   }
+  if (!/^\d{1,9}$/.test(String(req.params.id))) return res.status(400).json({ error: 'id must be a number' });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

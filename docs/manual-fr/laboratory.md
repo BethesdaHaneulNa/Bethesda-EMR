@@ -27,6 +27,7 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
    - Pour une seule analyse, cliquez sur son bouton. Une analyse déjà enregistrée porte un **✓**.
    - Une ligne rouge **⚠** sous le nom indique une allergie du patient.
 3. Pour chaque ligne, écrivez le résultat dans **Valeur**. Si besoin, ajoutez un commentaire dans **Note**.
+   - **Valeur** accepte 60 caractères au plus. Pour une description plus longue (par exemple un examen des selles ou un sédiment urinaire), écrivez l'essentiel dans **Valeur** et le détail dans **Note**, qui n'a pas de limite.
 4. Cliquez sur **✓ Enregistrer · Terminer** (avec **Tout**, le bouton affiche **✓ Enregistrer · Terminer (Tout)**).
 5. Lisez le message en vert à côté du bouton :
    - **Enregistré et terminé: CBC** — l'analyse est terminée.
@@ -35,13 +36,14 @@ La liste se met à jour toute seule toutes les 30 secondes. Pour la voir tout de
 
 ### Trouver un patient dans la liste
 
-- Sous **Date de travail**, écrivez dans la case **Patient / N° dossier / Analyse** : une partie du nom, le numéro de dossier (exemple : **26-00002**) ou le nom de l'analyse (exemple : **CBC**). La liste se réduit pendant que vous écrivez.
+- Sous **Date de travail**, écrivez dans la case **Patient / N° dossier / Analyse** : une partie du nom, le numéro de dossier (exemple : **26-00002**) ou le nom de l'analyse (exemple : **CBC**). La liste se réduit pendant que vous écrivez. Les accents ne comptent pas : « helene » trouve **Hélène**, « glycemie » trouve **Glycémie**.
 - La case cherche seulement dans la liste affichée (**En attente** ou **Terminé** de la **Date de travail**). Pour un patient d'un autre jour, changez la date ou utilisez **🔍 Trouver patient**.
 - Le texte reste quand vous changez de liste ou de date : **effacez-le** quand vous avez fini, sinon la liste paraît vide.
 
 ### Écrire les chiffres
 
 - La virgule et le point sont acceptés : **12,5** et **12.5** donnent le même résultat.
+- Un résultat écrit comme un intervalle (**3-8**, **2 à 4** par champ) est comparé avec ses deux nombres : **0-2** contre 0–5 est normal, **6-9** est haut, **3-8** n'a pas de signe (une partie seulement dépasse) — au médecin de juger.
 - Les milliers avec un espace sont acceptés : **12 000**.
 - Vous pouvez écrire **<5** ou **>500**. La couleur n'apparaît que si la conclusion est certaine.
 - La couleur change pendant que vous écrivez :

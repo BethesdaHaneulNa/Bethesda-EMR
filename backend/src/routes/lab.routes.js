@@ -10,6 +10,20 @@ router.use(authMiddleware);
 // with a checker against the screen's copies: backend/test/lab.flag.mjs).
 const { flagFor, refFor, rangeError, nullInt, unitNamesOf, unitListError, choiceNames, choiceListError, choicesFor } = require('../utils/labFlag');
 
+// An id in the address that is not a number used to come back as a 500 with the
+// database's text (bug hunt round 6, 2026-11-10).
+['visitId', 'orderItemId', 'patientId'].forEach(function (name) {
+  router.param(name, function (req, res, next, value) {
+    if (!/^\d{1,9}$/.test(String(value))) return res.status(400).json({ error: name + ' must be a number' });
+    next();
+  });
+});
+// The sizes of what a result row holds (lab_result): a longer text used to reach the
+// column and fail the whole save as "value too long for type character varying(60)".
+const VALUE_MAX = 60, NAME_MAX = 120, UNIT_MAX = 30, REF_TEXT_MAX = 60;
+function tooLong(v, max) { return v != null && String(v).length > max; }
+function notNumber(v) { return v != null && v !== '' && !isFinite(Number(v)); }
+
 async function rangesFor(db, itemIds) {
   if (!itemIds.length) return {};
   const r = await db.query('SELECT * FROM lab_ref_range WHERE lab_test_item_id = ANY($1::int[]) ORDER BY sort_order, id', [itemIds]);
@@ -240,6 +254,18 @@ router.post('/order/:orderItemId/results', permMiddleware('lab'), async (req, re
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'At least one result value or comment is required' });
     }
+    // Said in words before anything is deleted. The screens stop the result box at
+    // VALUE_MAX; the longer remark goes in the comment, which has no limit.
+    const long = filled.find((it) => typeof it === 'object' && tooLong(it.value, VALUE_MAX));
+    if (long) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Result value is too long (' + VALUE_MAX + ' characters at most): ' + String(long.name || order.order_name).slice(0, NAME_MAX) });
+    }
+    if (filled.some((it) => typeof it !== 'object' || tooLong(it.name, NAME_MAX) || tooLong(it.unit, UNIT_MAX) || tooLong(it.ref_text, REF_TEXT_MAX)
+                            || notNumber(it.ref_low) || notNumber(it.ref_high))) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'A result row is not valid (name, unit or reference)' });
+    }
 
     // A row that belongs to one of this panel's items takes its name, unit and
     // reference range from the item as it is now, not from what the screen sent:
@@ -370,6 +396,7 @@ async function listTestItems(db, orderCodeId) {
 // the server now gives each route the permission of the screen that uses it
 // (clinic manager's decision S2). 'lab' too, so the lab can read its own templates.
 router.get('/test-items', permMiddleware('lab', 'settings'), async (req, res) => {
+  if (req.query.order_code_id !== undefined && req.query.order_code_id !== '' && !/^\d{1,9}$/.test(String(req.query.order_code_id))) return res.status(400).json({ error: 'order_code_id must be a number' });
   try {
     res.json(await listTestItems(pool, req.query.order_code_id));
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -387,7 +414,20 @@ router.post('/test-items/save', permMiddleware('settings'), async (req, res) => 
   try {
     const { order_code_id, items } = req.body;
     if (!order_code_id) return res.status(400).json({ error: 'order_code_id required' });
+    if (!/^\d{1,9}$/.test(String(order_code_id))) return res.status(400).json({ error: 'order_code_id must be a number' });
+    if (!(await client.query('SELECT 1 FROM order_code WHERE id = $1', [order_code_id])).rows.length) return res.status(404).json({ error: 'Order code not found' });
     const arr = (Array.isArray(items) ? items : []).filter(function (it) { return it && it.name; });
+    // The item's own line: sizes of the columns, numbers where numbers go, and a low
+    // that is not above its high (the rows by sex and age are checked by rangeError;
+    // the item's own range was not, and 16-12 flagged every result).
+    for (let i = 0; i < arr.length; i++) {
+      const it = arr[i], nm = String(it.name).slice(0, NAME_MAX);
+      if (typeof it.name !== 'string' || tooLong(it.name, NAME_MAX)) return res.status(400).json({ error: 'Item name is too long (' + NAME_MAX + ' characters at most): ' + nm });
+      if (tooLong(it.unit, UNIT_MAX)) return res.status(400).json({ error: 'Unit is too long (' + UNIT_MAX + ' characters at most): ' + nm });
+      if (tooLong(it.ref_text, REF_TEXT_MAX) || (Array.isArray(it.ranges) && it.ranges.some(function (x) { return x && tooLong(x.ref_text, REF_TEXT_MAX); }))) return res.status(400).json({ error: 'Reference text is too long (' + REF_TEXT_MAX + ' characters at most): ' + nm });
+      if (notNumber(it.ref_low) || notNumber(it.ref_high) || (Array.isArray(it.ranges) && it.ranges.some(function (x) { return x && (notNumber(x.ref_low) || notNumber(x.ref_high)); }))) return res.status(400).json({ error: 'Reference low and high must be numbers: ' + nm });
+      if (it.ref_low != null && it.ref_low !== '' && it.ref_high != null && it.ref_high !== '' && Number(it.ref_low) > Number(it.ref_high)) return res.status(400).json({ error: 'Reference range low is above high: ' + nm });
+    }
     // every item's sex/age rows are checked before anything is written
     for (let i = 0; i < arr.length; i++) {
       const bad = rangeError(arr[i].name, arr[i].ranges);

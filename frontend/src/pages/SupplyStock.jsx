@@ -7,12 +7,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { LIST_COL, LIST_SEARCH, ROW_EMPTY } from '../layout.js';
 
 // Exact texts from supply.routes.js (the same words as the pharmacy's).
 var ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the shelf first';
 var ERR_MEMO_REQUIRED = 'A note is required';
 var ERR_WHOLE_NUMBER = 'Quantity must be a whole number';
+// More than any shelf holds (a barcode typed into the box): said here and by the server.
+var ERR_TOO_LARGE = 'Quantity is too large';
+var MAX_QTY = 10000000;
 var MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 var MEMO_OPENING = 'Start of the stock record (workbook count of 2026-11-05)';
 
@@ -49,10 +53,10 @@ export function SupplyStock() {
   useEffect(function () { loadMoves(selId); setForm(null); setNotice(''); }, [selId]);
 
   var shown = useMemo(function () {
-    var s = q.trim().toLowerCase();
+    var s = fold(q.trim());   // accents ignored, as in the pharmacy's stock
     if (!s) return items;
     return items.filter(function (d) {
-      return (d.name || '').toLowerCase().indexOf(s) >= 0 || (d.code || '').toLowerCase().indexOf(s) >= 0 || (d.name_en || '').toLowerCase().indexOf(s) >= 0;
+      return fold(d.name).indexOf(s) >= 0 || fold(d.code).indexOf(s) >= 0 || fold(d.name_en).indexOf(s) >= 0;
     });
   }, [items, q]);
   var sel = items.find(function (d) { return d.id === selId; }) || null;
@@ -65,6 +69,7 @@ export function SupplyStock() {
     var n = Number(form.amount);
     var minN = form.kind === 'count' ? 0 : 1;
     if (form.amount === '' || !Number.isInteger(n) || n < minN) { alert(t.ph_errWhole); return; }
+    if (n > MAX_QTY) { alert(t.ph_errTooLarge); return; }
     if (form.kind !== 'receive' && !form.memo.trim()) { alert(t.ph_errMemo); return; }
     if (form.kind === 'discard' && n > Number(sel.stock_qty)) { alert(t.ph_errDiscardMore); return; }
     var body = form.kind === 'count' ? { counted: n, memo: form.memo.trim() } : { qty: n, memo: form.memo.trim() };
@@ -79,6 +84,7 @@ export function SupplyStock() {
       if (err.message === ERR_DISCARD_MORE) alert(t.ph_errDiscardMore);
       else if (err.message === ERR_MEMO_REQUIRED) alert(t.ph_errMemo);
       else if (err.message === ERR_WHOLE_NUMBER) alert(t.ph_errWhole);
+      else if (err.message === ERR_TOO_LARGE) alert(t.ph_errTooLarge);
       else alert('Error: ' + err.message);
       await loadItems();
     }

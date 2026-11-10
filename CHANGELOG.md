@@ -1,5 +1,90 @@
 # Changelog
 
+## v1.7.21 — 2026-11-10
+
+Bug hunt, rounds 3 to 7 (prescriptions and orders, payment, pharmacy and stock, laboratory,
+imaging) and the staff-department rule. Released on the clinic manager's last day on site,
+at his request ("publish what is done so far"). No database change. Rounds 8 to 12 are not
+in it.
+
+### Round 7 — imaging (the database side; no image server on the test stack)
+- **A reading emptied kept its author and date**: the exam list said "read by Dr X on ..."
+  over "no reading". An emptied reading now has neither (server and the viewer window).
+- The imaging list's search ignores accents ("echographie" finds Échographie).
+- A reading that is not a text, ids in the address that are not numbers (reading, readings,
+  viewer-url, moves, worklist), a day that is not one (device feed, worklist): 400 instead
+  of a 500 with the database's text.
+- New test backend/test/imaging.api.mjs (16 checks): order to device feed, the bridge's
+  arrival report and the patient check, the reading, the bridge token.
+- Read only, not run (they need the image server): move, attach, import, export, viewer
+  relay. Their input checks answered properly without one.
+
+### Round 6 — laboratory
+- **A result written as a range was judged by its first number**: "3-8" leucocytes per
+  field against 0-5 was filed normal. A range ("3-8", "2 à 4", "2 a 4") is now judged by
+  both ends and only where the answer is certain: 0-2 normal, 6-9 high, 3-8 no flag. Same
+  code on the server (labFlag.js) and the screens (Lab.jsx, also used by the phone screen).
+- **A result longer than 60 characters failed the whole save** with "value too long for
+  type character varying(60)". The result box stops at 60 (PC and phone); the server says
+  so in words and names the item; the long remark goes in the note.
+- Settings, lab items: the item's own Min above its Max was accepted (every result then
+  flagged); a name over 120 or a reference text over 60 characters was a 500. Checked on
+  the screen and the server.
+- Search ignores accents on the lab's lists and in the results window.
+- Ids that are not numbers, free rows that do not fit, an unknown order code: 400 / 404.
+- New test backend/test/lab.api.mjs (23 checks); lab.flag.mjs has the range cases and what
+  they must answer (1087 cases).
+
+### Round 5 — pharmacy and stock
+- **A quantity too large in Entrée / Inventaire** (a barcode read into the box) reached the
+  integer column and came back as "value ... is out of range for type integer". More than
+  10 000 000 is now refused in the screen's language, by the screen and by the server
+  (drugs and supplies); the count itself cannot pass 2 000 000 000.
+- **Search boxes ignore accents** on the pharmacy's lists, the Stock and Supplies tabs and
+  the payment list ("paracetamol" finds Paracétamol, "helene" Hélène) - as reception and
+  consultation already did. The site's keyboards have no accent keys.
+- A consultation the doctor has not finished cannot be dispensed by its number (it was
+  never on the pharmacy's lists): 404, as for one with nothing waiting.
+- Quantities sent as true or a list were read as 1 and 7; an id that is not a number in
+  dispense / recent-rx / dispense-type was a 500. Both 400.
+- Test: pharmacy.stock.mjs created its doctor without a department (refused since the
+  staff-department rule) - fixed, and 8 checks added for the above.
+
+### Round 4 — payment and receipts
+- **A previous balance carried only in part charged the debt twice.** The screen always
+  carries all that the patient owes, read when the visit was opened. If the balance was
+  regrouped meanwhile (a settlement cancelled in the side panel, another till) and the
+  figure sent was less than the oldest receipt owes, nothing was absorbed: the new receipt
+  charged the amount and the old one went on owing all of it. Now refused (409
+  BILL_CHANGED, the screen reloads), like a balance already settled.
+- **A discount larger than the subtotal** showed a total of 0 Ar and then the server's
+  refusal in English. The screen now says it in its own language before sending.
+- Receipt lines are checked: a list, each line with a type, a name and amounts >= 0
+  (-1 x -20000 = 20000 used to pass the sums). A figure with letters or beyond the columns,
+  an id or a day in the address that is not one: 400 instead of a 500 with the database's
+  text.
+- Manual: reception said a "Sans frais" visit is never on the till's list; the day itself
+  it is, at 0 Ar (payment 5 already said so).
+- New test backend/test/billing.api.mjs (the payment routes had none): 37 checks over
+  payment, refusals, part payment and carry, settlement, correction, supplement, re-bill.
+
+Settings (asked from the site, 2026-11-10):
+- **A staff account has a department only when it is a doctor.** In Personnel the Service box
+  shows for the doctor role only and is required there; another role is saved without one,
+  and a doctor changed to another role loses it. The server applies the same rule.
+
+Round 3, prescriptions and orders:
+- **A daily dose or a quantity typed with a comma is read** (`1,5` = 1.5). It was refused
+  with “dose must be a number”; until the alert was read the row kept its old dose on the
+  server. The text is trimmed, and forms only `Number()` understood (`1e2`) are refused.
+- **`PUT` on a prescription or an order line leaves the fields it is not sent.** Both set
+  every column from the body: `{frequency: 2}` emptied the dose, the days and the total;
+  `{}` put an order back to 1 × 1 and its bill with it. The screen always sends the whole
+  row, so nothing was lost there.
+- **An order's kind is its order code's.** `code_type` came from the request alone, while
+  the modality for the device list came from the table; a line without a code must be one
+  of the five known kinds.
+
 ## v1.7.20 — 2026-11-10
 
 Bug hunt, rounds 1 (reception) and 2 (consultation). Released now rather than at the end of

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { useLang } from '../i18n/index.jsx';
 import { printDocument } from '../documents/shared.jsx';
 import { LabResultsLayout, LAB_RESULTS_NAME, LAB_SHEET_COLUMNS } from '../documents/lab-results.jsx';
@@ -221,8 +222,8 @@ export function LabResults(props) {
   // dates (it keeps those columns); a column left with no value is not shown.
   var kinds = panels.map(function (P) { return P.name; });
   var panelsK = kind ? panels.filter(function (P) { return P.name === kind; }) : panels;
-  var word = query.trim().toLowerCase();
-  function rowHit(P, it) { return (it.name + ' ' + P.name).toLowerCase().indexOf(word) >= 0; }
+  var word = fold(query.trim());   // accents ignored ("glycemie" finds Glycémie)
+  function rowHit(P, it) { return fold(it.name + ' ' + P.name).indexOf(word) >= 0; }
   var anyRow = !!word && panelsK.some(function (P) { return P.items.some(function (it) { return rowHit(P, it); }); });
   var anyCol = !!word && cols.some(function (c) { return c.d.indexOf(word) >= 0; });
   var noMatch = !!word && !anyRow && !anyCol;

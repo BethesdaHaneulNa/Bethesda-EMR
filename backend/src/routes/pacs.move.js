@@ -1047,6 +1047,7 @@ router.post('/move', authMiddleware, mayMove, async (req, res) => {
 
 // The corrections of one patient (both orders show them), and the unfinished ones.
 router.get('/moves/patient/:patientId', authMiddleware, permMiddleware('consultation', 'payment', 'settings'), async (req, res) => {
+  if (!/^\d{1,9}$/.test(String(req.params.patientId))) return res.status(400).json({ error: 'patientId must be a number' });
   try {
     const r = await pool.query(
       `SELECT id, kind, state, from_order_item_id, to_order_item_id, from_order_name, to_order_name, from_accession, to_accession,

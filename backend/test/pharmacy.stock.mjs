@@ -45,7 +45,7 @@ const DEPT = (await call('GET', '/admin/departments', null, A)).data[0].id;
 async function account(key, role, permissions) {
   if (!creds[key]) {
     creds[key] = { login_id: 'st' + key + crypto.randomBytes(3).toString('hex'), password: crypto.randomBytes(9).toString('base64url') };
-    const r = await call('POST', '/admin/staff', { ...creds[key], name: 'Test ' + key, role, permissions, status: 'active' }, A);
+    const r = await call('POST', '/admin/staff', { ...creds[key], name: 'Test ' + key, role, permissions, status: 'active', ...(role === 'doctor' ? { department_id: DEPT } : {}) }, A);   // a doctor has a department (2026-11-10)
     if (r.status >= 300) throw new Error('could not create ' + key + ': ' + JSON.stringify(r.data));
     fs.writeFileSync(CREDS, JSON.stringify(creds));
   }
@@ -171,6 +171,48 @@ async function prescribe(code, dose, days, label) {
   check('report: stats-only 200, front desk 403', (await call('GET', '/pharmacy/stock/report?month=' + month, null, STATS)).status === 200 && (await call('GET', '/pharmacy/stock/report?month=' + month, null, DESK)).status === 403);
   check('report: bad month 400', (await call('GET', '/pharmacy/stock/report?month=2026-13', null, NURSE)).status === 400);
   check('report: a month long before the record is empty', (await call('GET', '/pharmacy/stock/report?month=2000-01', null, NURSE)).data.rows.length === 0);
+}
+
+// ── bug hunt round 5 (2026-11-10): numbers no shelf holds, what is not a number, an open consultation ──
+{
+  const id = D.LORAT.id; const s0 = await stockOf('LORAT');
+  const big = await call('POST', '/pharmacy/stock/' + id + '/receive', { qty: 3000000000, memo: 'a barcode in the box' }, NURSE);
+  const bigCount = await call('POST', '/pharmacy/stock/' + id + '/count', { counted: 1e15, memo: 'x' }, NURSE);
+  check('a quantity too large: 400 in words, not the column\'s overflow', big.status === 400 && big.data.error === 'Quantity is too large' && bigCount.status === 400 && bigCount.data.error === 'Quantity is too large', [big.data, bigCount.data]);
+  const odd = [true, [7], '5abc', '1e3', { n: 1 }];
+  const oddRes = [];
+  for (const q of odd) oddRes.push((await call('POST', '/pharmacy/stock/' + id + '/receive', { qty: q, memo: 'x' }, NURSE)).status);
+  check('true, a list, "5abc", "1e3", an object as quantity: 400', oddRes.every(s => s === 400), oddRes);
+  const text = await call('POST', '/pharmacy/stock/' + id + '/receive', { qty: ' 5 ', memo: 'digits as text' }, NURSE);
+  check('digits sent as text still count', text.status === 200 && text.data.stock_after === s0 + 5, text.data);
+  check('after all that the count moved by 5 only', (await stockOf('LORAT')) === s0 + 5);
+  const codes = (await call('GET', '/admin/order-codes?code_type=supply', null, A)).data || [];
+  if (codes.length) {
+    const sid = codes[0].id;
+    const sb = await call('POST', '/supply/stock/' + sid + '/receive', { qty: 3000000000, memo: 'x' }, NURSE);
+    const st = await call('POST', '/supply/stock/' + sid + '/receive', { qty: true, memo: 'x' }, NURSE);
+    check('supplies: too large and true refused the same way', sb.status === 400 && sb.data.error === 'Quantity is too large' && st.status === 400, [sb.data, st.status]);
+  }
+  const ids = [
+    await call('PUT', '/pharmacy/consultations/abc/dispense', null, NURSE),
+    await call('GET', '/pharmacy/patient/abc/recent-rx', null, NURSE),
+    await call('PUT', '/pharmacy/prescription/abc/dispense-type', { dispense_type: 'external' }, NURSE),
+  ];
+  check('an id that is not a number: 400', ids.every(r => r.status === 400), ids.map(r => r.status));
+}
+{
+  // A consultation the doctor has not finished is not on the pharmacy's lists; dispensing
+  // it by its number is refused the same way as one with nothing waiting.
+  const d = D.IRON; const s0 = await stockOf('IRON');
+  const p = (await call('POST', '/patients', { last_name: 'STOCK', first_name: 'open', gender: 'F', date_of_birth: '1990-01-01' }, A)).data;
+  const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit', department_id: DEPT }, A)).data;
+  const c = (await call('POST', '/consultations', { visit_id: v.id, patient_id: p.id }, A)).data;
+  await call('POST', '/consultations/' + c.id + '/prescriptions', { drug_id: d.id, drug_code: d.code, drug_name: d.name, dose: '1', frequency: 1, days: 2, route: 'QD', unit_price: d.unit_price }, A);
+  const early = await call('PUT', '/pharmacy/consultations/' + c.id + '/dispense', null, NURSE);
+  check('dispensing a consultation still open: 404, nothing leaves the shelf', early.status === 404 && early.data.error === 'No pending prescriptions for this consultation' && (await stockOf('IRON')) === s0, early.data);
+  await call('PUT', '/consultations/' + c.id + '/complete', {}, A);
+  const later = await call('PUT', '/pharmacy/consultations/' + c.id + '/dispense', null, NURSE);
+  check('once the doctor has finished it is dispensed', later.status === 200 && later.data.dispensed_count === 1, later.data && later.data.dispensed_count);
 }
 
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');

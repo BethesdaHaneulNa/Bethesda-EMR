@@ -88,6 +88,22 @@ function configProblem(cfg) {
   return null;
 }
 
+// An id in the address that is not a number, a day that is not one: 400 in words instead of
+// a 500 with the database's text (bug hunt round 7, 2026-11-10).
+const ID_RE = /^\d{1,9}$/;
+['orderItemId', 'patientId'].forEach(function (name) {
+  router.param(name, function (req, res, next, value) {
+    if (!ID_RE.test(String(value))) return res.status(400).json({ error: name + ' must be a number' });
+    next();
+  });
+});
+function badDay(value) {
+  const s = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return true;
+  const d = new Date(s + 'T00:00:00Z');
+  return isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s;
+}
+
 // The viewer relay: its own auth (the cookie above), not the JWT.
 router.use('/viewer', viewer.router);
 // Moving the images of an order to another order of the same patient (pacs.move.js).
@@ -258,6 +274,7 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
       if (!picked) return res.status(409).json({ error: PICK_REFUSED });
     }
     const oid = picked ? picked.opened : req.query.order_item_id;
+    if (oid && !ID_RE.test(String(oid))) return res.status(400).json({ error: 'order_item_id must be a number' });
     if (oid) {
       // Images the server no longer has under the number noted here (a study corrected
       // in Orthanc's own screen gets a new one) are found again by accession first, for
@@ -342,10 +359,18 @@ router.get('/viewer-url', authMiddleware, permMiddleware('consultation'), async 
 // cancel that lands at the same moment cannot be overwritten.
 router.put('/reading/:orderItemId', authMiddleware, permMiddleware('consultation'), async (req, res) => {
   try {
+    // A text, or nothing. (An object used to be stored as its JSON.)
+    const sent = (req.body || {}).result_text;
+    if (sent !== undefined && sent !== null && typeof sent !== 'string') return res.status(400).json({ error: 'result_text must be a text' });
+    const text = sent || '';
+    // A reading emptied (written on the wrong exam, then removed) has no author and no
+    // date: the lists said "read by Dr X on ..." over "no reading" (bug hunt round 7).
+    const empty = text.trim() === '';
     const r = await pool.query(
-      `UPDATE order_item SET result_text = $1, result_by = $2, result_at = NOW(), updated_at = NOW()
+      `UPDATE order_item SET result_text = $1, result_by = CASE WHEN $4 THEN NULL ELSE $2::int END,
+              result_at = CASE WHEN $4 THEN NULL ELSE NOW() END, updated_at = NOW()
         WHERE id = $3 AND ${isExam('order_item')} AND status IS DISTINCT FROM 'cancelled' RETURNING id`,
-      [req.body.result_text || '', req.user.id, req.params.orderItemId]
+      [empty ? '' : text, req.user.id, req.params.orderItemId, empty]
     );
     if (!r.rows.length) {
       const o = await pool.query(`SELECT status FROM order_item WHERE id = $1 AND ${isExam('order_item')}`, [req.params.orderItemId]);
@@ -398,6 +423,7 @@ router.get('/worklist-feed', async (req, res) => {
     if (denied) return res.status(401).json({ error: denied });
 
     const date = req.query.date || todayLocal();
+    if (badDay(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
     const params = [date];
     let idx = 2;
     // Not while the images of another order are being put under this one (pacs.move.js):

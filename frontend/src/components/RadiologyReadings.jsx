@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { useLang } from '../i18n/index.jsx';
 import { printDocument } from '../documents/shared.jsx';
 import { ImagingReportLayout, IMAGING_REPORT_NAME } from '../documents/imaging-report.jsx';
@@ -314,14 +315,14 @@ export function RadiologyReadings(props) {
   // Narrowing the list: by device type (only offered when there are several) and by a
   // word of the exam's name or a piece of its date.
   var kinds = rows.map(function (r) { return r.pacs_modality || ''; }).concat(outside.map(function (x) { return x.modality || ''; })).filter(function (k, i, a) { return k && a.indexOf(k) === i; });
-  var word = query.trim().toLowerCase();
+  var word = fold(query.trim());   // accents ignored: "echographie" finds Échographie
   var shown = rows.filter(function (r) {
     if (kind && (r.pacs_modality || '') !== kind) return false;
-    return !word || (String(r.order_name || '') + ' ' + ymd(r.visit_date)).toLowerCase().indexOf(word) >= 0;
+    return !word || fold(String(r.order_name || '') + ' ' + ymd(r.visit_date)).indexOf(word) >= 0;
   });
   var shownOut = outside.filter(function (x) {
     if (kind && (x.modality || '') !== kind) return false;
-    return !word || (String(x.description || '') + ' ' + String(x.institution || '') + ' ' + outsideDate(x.study_date)).toLowerCase().indexOf(word) >= 0;
+    return !word || fold(String(x.description || '') + ' ' + String(x.institution || '') + ' ' + outsideDate(x.study_date)).indexOf(word) >= 0;
   });
   var selOut = shownOut.filter(function (x) { return 'x' + x.id === selId; })[0] || null;
   var sel = selOut ? null : (shown.filter(function (r) { return r.id === selId; })[0] || shown[0] || null);

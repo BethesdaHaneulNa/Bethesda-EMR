@@ -74,7 +74,7 @@ const DEPT = (await call('GET', '/admin/departments', null, A)).data.filter(d =>
 // accounts the office manager can make by unticking boxes.
 const ACCOUNTS = {
   frontdesk: { role: 'frontdesk', permissions: ['registration', 'payment'] },
-  doctor: { role: 'doctor', permissions: ['consultation', 'pharmacy'] },   // pharmacy added by decision 2026-09-29
+  doctor: { role: 'doctor', permissions: ['consultation', 'pharmacy'], department_id: DEPT },   // pharmacy added by decision 2026-09-29; a doctor has a department (2026-11-10)
   nurse: { role: 'nurse', permissions: ['registration', 'pharmacy', 'lab'] },
   pharmacy: { role: 'pharmacy', permissions: ['pharmacy'] },
   lab: { role: 'lab', permissions: ['lab'] },

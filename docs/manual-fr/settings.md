@@ -39,7 +39,8 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 4. **Mot de passe** : un mot de passe initial est déjà rempli. Vous pouvez le garder ou en taper un autre. Cliquez sur **Afficher** pour le voir. Donnez-le à la personne ; elle pourra le changer elle-même.
 5. **Rôle (étiquette)** : **Accueil**, **Médecin**, **Infirmier(ère)**, **Pharmacie**, **Laboratoire** ou **Administrateur**. Le rôle coche des permissions habituelles.
 6. **Permissions (écrans accessibles)** : vérifiez les cases. Ce sont les cases qui décident ce que la personne peut ouvrir : **Enregistrement**, **Consultation**, **Paiement**, **Pharmacie**, **Laboratoire**, **Statistiques**, **Paramètres**.
-7. **E-mail** si la personne en a un. Pour un médecin, choisissez son **Service** si besoin.
+7. **E-mail** si la personne en a un.
+   - **Service** : la case apparaît seulement quand le rôle est **Médecin**, et elle est obligatoire (l'accueil ne peut pas enregistrer un patient chez un médecin sans service). Pour les autres rôles il n'y a pas de service ; si vous changez un médecin en un autre rôle, son service est retiré.
 8. **Sauver**.
 
 ### Changer les permissions d'un compte
@@ -169,7 +170,7 @@ Ce qui est déjà écrit dans le dossier d'un patient ne change pas quand vous m
 
 1. **Paramètres** → **Items de test**.
 2. **Panel** : choisissez l'analyse (par exemple L01 · CBC).
-3. Sur chaque ligne : **Unité** se choisit dans la liste (**— sans unité —** si l'item n'a pas d'unité), puis **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »).
+3. Sur chaque ligne : **Unité** se choisit dans la liste (**— sans unité —** si l'item n'a pas d'unité), puis **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »). Le **Min** ne peut pas dépasser le **Max** ; le nom a 120 caractères au plus et **Réf. texte** 60.
 4. Pour des valeurs selon le sexe ou l'âge : **▸ Par sexe et âge** → **+ Ajouter une ligne**.
 5. **Sauver**. Si plusieurs tableaux **Par sexe et âge** sont ouverts, faites défiler vers le bas pour voir **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
 

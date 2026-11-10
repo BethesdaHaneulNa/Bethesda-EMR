@@ -27,6 +27,12 @@ const ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the
 const ERR_MEMO_REQUIRED = 'A note is required';
 const ERR_WHOLE_NUMBER = 'Quantity must be a whole number';
 const ERR_NOTHING_TO_CHECK = 'Nothing left to check on this drug';
+// A quantity no shelf holds - a barcode or a phone number typed into the box. It used to
+// reach the integer column and come back as "value ... is out of range for type integer"
+// (bug hunt round 5, 2026-11-10). MAX_STOCK is what the count itself may reach.
+const ERR_TOO_LARGE = 'Quantity is too large';
+const MAX_QTY = 10000000;
+const MAX_STOCK = 2000000000;
 // Stored on the ledger row; the screen recognises it and shows it translated.
 const MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 
@@ -85,6 +91,7 @@ async function moveStock(client, { drugId, kind, qty, counted, memo, prescriptio
     if (before + change < 0) shortfall = -(before + change);
   } else throw new StockError(400, 'Unknown movement');
   const after = before + change + shortfall;
+  if (after > MAX_STOCK) throw new StockError(400, ERR_TOO_LARGE);
 
   await client.query('UPDATE drug SET stock_qty = $1, updated_at = NOW() WHERE id = $2', [after, drugId]);
   const row = await client.query(
@@ -96,8 +103,11 @@ async function moveStock(client, { drugId, kind, qty, counted, memo, prescriptio
 }
 
 function wholeNumber(v, min) {
+  // A number, or a text of digits only: Number(true) is 1 and Number([7]) is 7.
+  if (typeof v === 'string') { if (!/^\s*\d+\s*$/.test(v)) return null; }
+  else if (typeof v !== 'number') return null;
   const n = Number(v);
-  return v !== '' && v !== null && v !== undefined && Number.isInteger(n) && n >= min ? n : null;
+  return Number.isInteger(n) && n >= min ? n : null;
 }
 
 // One row per consultation with its waiting lines. Shared by the day's queue and
@@ -290,6 +300,7 @@ router.get('/completed', canDispense, async (req, res) => {
 
 // GET /api/pharmacy/patient/:patientId/recent-rx - 최근 처방 (중복/조기 재처방 확인용)
 router.get('/patient/:patientId/recent-rx', canDispense, async (req, res) => {
+  if (!wholeNumber(req.params.patientId, 1)) return res.status(400).json({ error: 'patientId must be a number' });
   try {
     const result = await pool.query(
       `SELECT rx.drug_code, rx.drug_name, rx.days, rx.status, c.consult_date, c.id AS consultation_id
@@ -306,6 +317,7 @@ router.get('/patient/:patientId/recent-rx', canDispense, async (req, res) => {
 
 // PUT /api/pharmacy/consultations/:id/dispense - mark all pending prescriptions as dispensed
 router.put('/consultations/:id/dispense', canDispense, async (req, res) => {
+  if (!wholeNumber(req.params.id, 1)) return res.status(400).json({ error: 'id must be a number' });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -329,10 +341,17 @@ router.put('/consultations/:id/dispense', canDispense, async (req, res) => {
     // The screen only offers prescriptions within PAST_RX_DAYS, but it is not the
     // only way to call this.
     const age = await client.query(
-      `SELECT (CURRENT_DATE - v.visit_date) AS days_ago
+      `SELECT (CURRENT_DATE - v.visit_date) AS days_ago, c.status
          FROM consultation c JOIN visit v ON v.id = c.visit_id WHERE c.id = $1`,
       [req.params.id]
     );
+    // Only what the lists show: a consultation the doctor has finished (pendingQuery).
+    // One still open is not waiting at the pharmacy - its lines may still change, and a
+    // dispensed line can no longer be corrected by the doctor (bug hunt round 5).
+    if (age.rows.length && age.rows[0].status !== 'completed') {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: ERR_NOTHING_PENDING });
+    }
     if (age.rows.length && Number(age.rows[0].days_ago) > PAST_RX_DAYS) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: ERR_TOO_OLD, days: PAST_RX_DAYS });
@@ -405,6 +424,7 @@ router.put('/consultations/:id/dispense', canDispense, async (req, res) => {
 // the shelf count. The screen hides the switch on dispensed lines, but the
 // screen is not the only way to call this.
 router.put('/prescription/:id/dispense-type', canDispense, async (req, res) => {
+  if (!wholeNumber(req.params.id, 1)) return res.status(400).json({ error: 'id must be a number' });
   try {
     const dt = req.body.dispense_type === 'external' ? 'external' : 'internal';
     const r = await pool.query(
@@ -484,6 +504,7 @@ function stockWrite(kind) {
       args.qty = wholeNumber(req.body.qty, 1);
       if (args.qty === null) return res.status(400).json({ error: ERR_WHOLE_NUMBER });
     }
+    if ((kind === 'adjust' ? args.counted : args.qty) > MAX_QTY) return res.status(400).json({ error: ERR_TOO_LARGE });
     if (kind !== 'receive' && !memo) return res.status(400).json({ error: ERR_MEMO_REQUIRED });
     const client = await pool.connect();
     try {

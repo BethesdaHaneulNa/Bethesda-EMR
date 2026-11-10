@@ -5,6 +5,7 @@ import { useLang } from '../i18n/index.jsx';
 import { tint } from '../theme.js';
 import { LIST_COL, CHART_COL, TOOL_ROW, toolBtn, tabBtn, LIST_SEARCH_WRAP, LIST_SEARCH, ROW_PAD, ROW_NAME, ROW_SUB, ROW_NOTE, ROW_EMPTY, rowTag, EMPTY_ICON, EMPTY_TEXT, SIDE_HEAD } from '../layout.js';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { LabResults } from '../components/LabResults.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
@@ -76,6 +77,17 @@ function flagFor(value, lo, hi, refText) {
   if (value === null || value === undefined || String(value).trim() === '') return '';
   var L = num(lo), H = num(hi), hasL = !isNaN(L), hasH = !isNaN(H);
   var cmp = String(value).trim().match(/^(<=|>=|≤|≥|<|>)\s*(.*)$/);
+  // A value written as a range ("3-8", "2 à 4" - cells per field) is two numbers, not the
+  // first one: it was read as 3, and "3-8" against 0-5 was filed normal. Judged by both
+  // ends, and only where the answer is certain (bug hunt round 6, 2026-11-10).
+  var rg = !cmp && String(value).trim().match(/^(\d+(?:[.,]\d+)?)(?:\s*[-–—~]\s*|\s+(?:à|a|to)\s+)(\d+(?:[.,]\d+)?)(?![\d.,])/i);
+  if (rg && (hasL || hasH)) {
+    var r1 = readNumber(rg[1]), r2 = readNumber(rg[2]), rlo = Math.min(r1, r2), rhi = Math.max(r1, r2);
+    if (hasL && rhi < L) return 'low';
+    if (hasH && rlo > H) return 'high';
+    if ((!hasL || rlo >= L) && (!hasH || rhi <= H)) return 'normal';
+    return '';
+  }
   var n = readNumber(cmp ? cmp[2] : value);
   if (!isNaN(n) && (hasL || hasH)) {
     if (!cmp) {
@@ -120,11 +132,11 @@ export default function LabPage() {
   // whole day's.
   var qs = useState(''), q = qs[0], setQ = qs[1];
   function matches(g) {
-    var s = q.trim().toLowerCase();
+    var s = fold(q.trim());   // accents ignored: "helene" finds Hélène, "glycemie" Glycémie
     if (!s) return true;
-    var name = (nm(g) + ' ' + (g.first_name || '') + ' ' + (g.last_name || '')).toLowerCase();   // either order of the two names
-    var tests = (g.lab_orders || []).map(function (o) { return (o.order_name || '') + ' ' + (o.order_code || ''); }).join(' ').toLowerCase();
-    return name.indexOf(s) >= 0 || String(g.chart_no || '').toLowerCase().indexOf(s) >= 0 || tests.indexOf(s) >= 0;
+    var name = fold(nm(g) + ' ' + (g.first_name || '') + ' ' + (g.last_name || ''));   // either order of the two names
+    var tests = fold((g.lab_orders || []).map(function (o) { return (o.order_name || '') + ' ' + (o.order_code || ''); }).join(' '));
+    return name.indexOf(s) >= 0 || fold(g.chart_no).indexOf(s) >= 0 || tests.indexOf(s) >= 0;
   }
 
   var viewSeq = useRef(0);   // numbers each loadView, so only the latest one may fill the grid
@@ -313,7 +325,7 @@ export default function LabPage() {
                       {it.choices.map(function (c) { return <option key={c} value={c}>{c}</option>; })}
                       <option value={TYPE_IT}>{t.lb_valueType}</option>
                     </select>
-                  : <input value={it.value || ''} autoFocus={!!it._focus} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />}
+                  : <input value={it.value || ''} maxLength={60} autoFocus={!!it._focus} onChange={function (e) { setVal(gi, ii, 'value', e.target.value); }} aria-describedby={glyph ? flagId : undefined} style={{ flex: 1, width: 0, minWidth: 0, boxSizing: 'border-box', background: 'var(--field)', border: '1px solid ' + (glyph ? vc : 'var(--field-border)'), borderRadius: 4, color: vc, fontSize: 14, fontWeight: 700, padding: '5px 8px', outline: 'none' }} />}
                 {/* back to the list from "type it": what was typed is dropped unless it is one of the list */}
                 {(it.choices || []).length && it._free ? <button type="button" title={t.lb_valueList} aria-label={t.lb_valueList}
                   onClick={function () { if (it.choices.indexOf(it.value) < 0) setVal(gi, ii, 'value', ''); setVal(gi, ii, '_free', false); setVal(gi, ii, '_focus', false); }}

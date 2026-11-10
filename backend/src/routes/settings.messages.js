@@ -25,6 +25,9 @@ const MSG = Object.freeze({
   LAST_ADMIN: 'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.',
   REACTIVATE_ADMIN_ONLY: 'Only an administrator can reactivate a staff account.',
   SETUP_ADMIN_KEPT: 'The administrator account created during setup cannot be deactivated.',
+  // a department belongs to a doctor's account only (admin.routes.js staffDepartment, 2026-11-10)
+  STAFF_DEPT_REQUIRED: 'Choose the department of the doctor',
+  STAFF_DEPT_BAD: 'The department of the doctor must be one of the active departments',
   // phrases and their categories (admin.routes.js, 2026-10-01)
   PHRASE_TEXT_REQUIRED: 'Phrase text is required',
   PHRASE_CATEGORY_REQUIRED: 'Choose a category for the phrase',

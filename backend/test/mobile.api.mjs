@@ -52,10 +52,11 @@ if (adminLogin.status !== 200) throw new Error('admin login failed ' + JSON.stri
 const A = adminLogin.data.token;
 
 // ── accounts ──
+const DOC_DEPT = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false)[0].id;   // a doctor has a department (2026-11-10)
 const ACCOUNTS = {
   lab: { role: 'lab', permissions: ['lab'] },
   frontdesk: { role: 'frontdesk', permissions: ['registration', 'payment'] },
-  doctor: { role: 'doctor', permissions: ['consultation', 'pharmacy'] },
+  doctor: { role: 'doctor', permissions: ['consultation', 'pharmacy'], department_id: DOC_DEPT },
   statsOnly: { role: 'frontdesk', permissions: ['stats'] },
 };
 const staffList = (await call('GET', '/admin/staff', null, A)).data;

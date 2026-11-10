@@ -119,7 +119,7 @@ export function LabScreen(props) {
                   {it.choices.map(function (c) { return <option key={c} value={c}>{c}</option>; })}
                   <option value={TYPE_IT}>{t.lb_valueType}</option>
                 </select>
-              : <input value={it.value || ''} inputMode={numeric ? 'decimal' : 'text'} autoComplete="off" onChange={function (e) { setVal(i, 'value', e.target.value); }} style={Object.assign({}, box, { flex: 1, minWidth: 0 })} />}
+              : <input value={it.value || ''} maxLength={60} inputMode={numeric ? 'decimal' : 'text'} autoComplete="off" onChange={function (e) { setVal(i, 'value', e.target.value); }} style={Object.assign({}, box, { flex: 1, minWidth: 0 })} />}
             {(it.choices || []).length && it._free ? <button type="button" aria-label={t.lb_valueList} onClick={function () { if (it.choices.indexOf(it.value) < 0) setVal(i, 'value', ''); setVal(i, '_free', false); }}
               style={Object.assign({}, bigBtn, { flexShrink: 0, background: 'var(--chip)', color: 'var(--text-2)', border: '1px solid var(--border-2)' })}>☰</button> : null}
           </div>

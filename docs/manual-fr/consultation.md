@@ -83,6 +83,8 @@ Saisir un diagnostic met la visite **En cours**, comme tout autre enregistrement
 
 Dans la case de recherche, les accents ne comptent pas : « paracetamol » trouve **Paracétamol**. C'est pareil pour la recherche dans la file et dans les phrases types.
 
+Dans **Dose/jour** (et dans **Qté** d'un examen ou d'un acte), la virgule et le point sont acceptés tous les deux : `1,5` ou `1.5`.
+
 1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom, la forme (**Comprimé**, **Gélule**, **Sirop**…) et le **Stock** (en rouge s'il est à 0). Deux médicaments du même nom se distinguent par leur code et leur stock. Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Si rien ne correspond, la liste affiche **Aucun résultat**. Vous pouvez aussi utiliser **+ Recherche médicament**.
    - Si la liste se termine par **… 22 autres**, tapez plus de lettres, ou cliquez sur **Médicament** au-dessus de la case : la liste montre alors tous les médicaments trouvés (jusqu'à 50) et se fait défiler. Le bouton vert **+ Recherche médicament** n'existe plus : cette case fait la même chose.
 2. Appuyez sur Entrée (ou cliquez). La ligne arrive **vide**, avec l'étiquette rouge **Indiquez dose/jour, fois et jours**.

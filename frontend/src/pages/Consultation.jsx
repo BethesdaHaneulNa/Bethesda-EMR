@@ -377,7 +377,9 @@ export default function ConsultationPage() {
     if(!viewer) return;
     try {
       await api.put('/pacs/reading/'+viewer.order_item_id, { result_text: readText });
-      setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: readText, result_by_name: (user&&user.name)||'', result_at: new Date().toISOString() }) }); });
+      // an emptied reading has no author and no date (the server clears them too)
+      var cleared = !String(readText||'').trim();
+      setViewer(function(p){ return Object.assign({}, p, { reading: Object.assign({}, p&&p.reading, { result_text: cleared?'':readText, result_by_name: cleared?'':((user&&user.name)||''), result_at: cleared?null:new Date().toISOString() }) }); });
       showToast(t.cs_readingSaved);
     } catch(e){
       // Cancelled in the consultation room while this window was open (pacs.cancel.js

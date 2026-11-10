@@ -282,13 +282,15 @@ const AT = adminLogin.data.token;
 
 // the test accounts: create, or put back to the expected role / permissions / password
 const staff = (await call('GET', '/admin/staff', null, AT)).data;
+// a doctor's account has a department (2026-11-10, admin.routes.js staffDepartment)
+const DOC_DEPT = (await call('GET', '/admin/departments', null, AT)).data.filter(d => d.is_active !== false)[0].id;
 const tokens = { admin: AT };
 const perms = { admin: ALL_PERMS };
 const roles = { admin: 'admin' };
 for (const [login, role, p] of ACCOUNTS) {
   if (!role) continue;
   creds[login] = creds[login] || pw();
-  const body = { login_id: login, password: creds[login], name: 'Test ' + login, role, permissions: p, status: 'active' };
+  const body = { login_id: login, password: creds[login], name: 'Test ' + login, role, permissions: p, status: 'active', department_id: role === 'doctor' ? DOC_DEPT : null };
   const have = staff.find(s => s.login_id === login);
   const r = have ? await call('PUT', '/admin/staff/' + have.id, body, AT) : await call('POST', '/admin/staff', body, AT);
   if (r.status >= 300) throw new Error('could not prepare ' + login + ': ' + r.status + ' ' + JSON.stringify(r.data));

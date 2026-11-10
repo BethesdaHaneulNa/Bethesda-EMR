@@ -46,7 +46,9 @@ function check(label, a, b) {
 const values = ['', '  ', '0', '5', '12.5', '1,5', '12 000', '1 234 567', '-2,5', '5.2 H', 'abc',
   '<5', '<3', '<20', '<=5', '≤5', '>500', '>400', '>=400', '≥400', '>300', '>=90', '>100',
   'Positive', 'positive', 'Negative', 'NEGATIVE', 'Négatif', 'negatif', 'Neg', 'neg.', '-', '(-)', '음성', '양성',
-  'Trace', 'trace', '1+', '++', '+'];
+  'Trace', 'trace', '1+', '++', '+',
+  // ranges (round 6): judged by both ends
+  '3-8', '0-2', '2 à 4', '2 a 4', '6-9', '1,5-2', '5 - 10', '3–8', '12-', '41-50', '0-45', '10 to 20', '1-2+', '100~300'];
 const refs = [
   [null, null, null], ['4.0', '10.0', null], ['0.6', '1.2', null], ['150', '400', null], ['5', '40', null],
   ['90', null, null], [null, '40', null], ['0', '200', null], [null, null, 'Negative'], [null, null, 'Négatif'],
@@ -56,6 +58,13 @@ let n = 0;
 for (const v of values) for (const r of refs) {
   n++;
   check('flag ' + JSON.stringify([v].concat(r)), server.flagFor(v, r[0], r[1], r[2]), screen.flagFor(v, r[0], r[1], r[2]));
+}
+
+// what the range rule must answer (the two sides agreeing is not enough)
+for (const [v, lo, hi, want] of [['3-8', 0, 5, ''], ['0-2', 0, 5, 'normal'], ['6-9', 0, 5, 'high'], ['2 à 4', 0, 5, 'normal'], ['2 a 4', 0, 5, 'normal'],
+  ['1-3', 4, 10, 'low'], ['3-8', null, 5, ''], ['3-8', null, 10, 'normal'], ['12-', 0, 5, 'high'], ['3', 0, 5, 'normal'], ['-2', 0, 5, 'low'], ['8', 0, 5, 'high']]) {
+  n++;
+  check('range rule ' + JSON.stringify([v, lo, hi]), server.flagFor(v, lo, hi, null), want);
 }
 
 // ---- sex/age rows: refused or not ----

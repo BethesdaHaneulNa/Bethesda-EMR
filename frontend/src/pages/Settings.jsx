@@ -253,7 +253,10 @@ export default function SettingsPage() {
   }
   async function saveLabItems(force){
     if(!labCode) return;
-    for(var q=0;q<labItems.length;q++){ if(!labItems[q].name) continue; var bad=rangeProblem(labItems[q]); if(bad){ alert(bad); return; } }
+    for(var q=0;q<labItems.length;q++){ if(!labItems[q].name) continue; var bad=rangeProblem(labItems[q]); if(bad){ alert(bad); return; }
+      // the item's own Min and Max, as the rows by sex and age (16-12 flagged every result)
+      var iL=labItems[q].ref_low, iH=labItems[q].ref_high;
+      if(iL!=null&&iL!==''&&iH!=null&&iH!==''&&parseFloat(iL)>parseFloat(iH)){ alert(t.lb_errRangeLowHigh.replace('{item}',labItems[q].name)); return; } }
     if(force!==true){ var risk=labRisks(); if(risk){ setLabWarn(risk); return; } }
     setLabWarn(null);
     try {
@@ -421,6 +424,11 @@ export default function SettingsPage() {
     try {
       var item = editItem;
       if(editType==='staff'){
+        // The department is the doctor's only; an active doctor must have one (said here in
+        // the screen's language - the server refuses the same).
+        var isDoctor = (item.role||'frontdesk')==='doctor';
+        if(isDoctor && !item.department_id && item.status!=='inactive'){ alert(t.se_errStaffDept); return; }
+        item = Object.assign({}, item, { role: item.role||'frontdesk', department_id: isDoctor ? (item.department_id||null) : null });
         if(item.id) await api.put('/admin/staff/'+item.id, item);
         else await api.post('/admin/staff', item);
         setStaff(await api.get('/admin/staff'));
@@ -1012,7 +1020,7 @@ export default function SettingsPage() {
                 <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div><div></div>
               </div>
               {labItems.map(function(it,i){ var nr=(it.ranges||[]).length; return <div key={i}><div style={{display:'grid',gridTemplateColumns:'1.4fr 1.2fr .6fr .6fr 1fr 150px 32px',gap:6,marginBottom:5,alignItems:'center'}}>
-                <input value={it.name||''} onChange={function(e){uli(i,'name',e.target.value)}} style={IS}/>
+                <input value={it.name||''} maxLength={120} onChange={function(e){uli(i,'name',e.target.value)}} style={IS}/>
                 <select value={it.unit||''} onChange={function(e){uli(i,'unit',e.target.value)}} title={it.unit||''} style={Object.assign({},IS,{minWidth:0,textOverflow:'ellipsis'})}>
                   <option value="">{t.lb_unitNone}</option>
                   {unitExtras(it).map(function(v){ return <option key={'x'+v} value={v}>{v} · {t.lb_unitNotListed}</option>; })}
@@ -1021,7 +1029,7 @@ export default function SettingsPage() {
                 <input type="number" value={it.ref_low!=null?it.ref_low:''} onChange={function(e){uli(i,'ref_low',e.target.value)}} style={IS}/>
                 <input type="number" value={it.ref_high!=null?it.ref_high:''} onChange={function(e){uli(i,'ref_high',e.target.value)}} style={IS}/>
                 <div style={{display:'flex',gap:4,minWidth:0}}>
-                  <input value={it.ref_text||''} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
+                  <input value={it.ref_text||''} maxLength={60} onChange={function(e){uli(i,'ref_text',e.target.value)}} placeholder="Negative…" style={Object.assign({},IS,{flex:1,minWidth:0,width:'auto'})}/>
                   {(function(){ var nc=(it.choices||[]).length; return <button type="button" onClick={function(){openChoiceWin(i)}} title={t.lb_choices+(nc?' ('+nc+')':'')} aria-label={t.lb_choices+(nc?' ('+nc+')':'')}
                     style={{flexShrink:0,background:nc?'var(--cyan-deep-a22)':'var(--chip)',color:nc?'var(--cyan-text)':t2,border:'1px solid '+(nc?'var(--cyan-a55)':bd2),borderRadius:4,padding:'6px 6px',cursor:'pointer',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}}>☰{nc?' '+nc:''}</button>; })()}
                 </div>
@@ -1040,8 +1048,8 @@ export default function SettingsPage() {
                   <select value={r.age_unit||'y'} onChange={function(e){urng(i,j,'age_unit',e.target.value)}} style={IS}><option value="d">{t.lb_unitD}</option><option value="m">{t.lb_unitM}</option><option value="y">{t.lb_unitY}</option></select>
                   <input type="number" value={r.ref_low!=null?r.ref_low:''} onChange={function(e){urng(i,j,'ref_low',e.target.value)}} style={IS}/>
                   <input type="number" value={r.ref_high!=null?r.ref_high:''} onChange={function(e){urng(i,j,'ref_high',e.target.value)}} style={IS}/>
-                  <input value={r.ref_text||''} onChange={function(e){urng(i,j,'ref_text',e.target.value)}} style={IS}/>
-                  <input value={r.note||''} onChange={function(e){urng(i,j,'note',e.target.value)}} style={IS}/>
+                  <input value={r.ref_text||''} maxLength={60} onChange={function(e){urng(i,j,'ref_text',e.target.value)}} style={IS}/>
+                  <input value={r.note||''} maxLength={200} onChange={function(e){urng(i,j,'note',e.target.value)}} style={IS}/>
                   <button onClick={function(){delRng(i,j)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:4,padding:'5px 0',cursor:'pointer',fontSize:12}}>✕</button>
                 </div>; })}
                 <button onClick={function(){addRng(i)}} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'5px 12px',cursor:'pointer',fontSize:12,fontWeight:600,marginTop:2}}>{t.lb_addRange}</button>
@@ -1368,7 +1376,7 @@ export default function SettingsPage() {
                 🔒 {t.adminLocked||'설정 때 만든 관리자 계정입니다. 이름·비밀번호·연락처는 바꿀 수 있지만, 아이디와 역할·권한은 고정입니다 — 여기서 설정 권한을 빼면 아무도 설정 화면에 들어올 수 없게 됩니다.'}
               </div>:null}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                <Fld label={t.se_fRole}><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}>{['frontdesk','doctor','nurse','pharmacy','lab','admin'].map(function(r){return <option key={r} value={r}>{t['se_role_'+r]}</option>;})}</select></Fld>
+                <Fld label={t.se_fRole}><select value={editItem.role||'frontdesk'} onChange={function(e){ var r=e.target.value; ue('role',r); ue('permissions', defaultPermsForRole(r)); if(r!=='doctor') ue('department_id', null); }} disabled={lockedAdmin} style={lockedAdmin?LOCKED_IS:IS}>{['frontdesk','doctor','nurse','pharmacy','lab','admin'].map(function(r){return <option key={r} value={r}>{t['se_role_'+r]}</option>;})}</select></Fld>
                 <Fld label={t.se_fPhone}><input value={editItem.phone||''} onChange={function(e){ue('phone',e.target.value)}} style={IS}/></Fld>
               </div>
               {/* The API has always kept an e-mail; the form had no field for it. */}
@@ -1377,12 +1385,15 @@ export default function SettingsPage() {
                   department_id - there was simply no way to set it, so the column read "-" for
                   everyone. This is the doctor's own department, which is separate from the
                   department chosen per visit at reception. */}
-              <Fld label={t.department||'Department'}>
+              {/* Only a doctor has a department (the clinic's manager, 2026-11-10): the box is
+                  shown for the doctor role, where it is required; any other role is saved
+                  without one (the server empties it too). */}
+              {(editItem.role||'frontdesk')==='doctor' ? <Fld label={(t.department||'Department')+' *'}>
                 <select value={editItem.department_id||''} onChange={function(e){ue('department_id', e.target.value||null)}} style={IS}>
-                  <option value="">{t.unassigned||'(none)'}</option>
+                  <option value="">{t.se_staffDeptChoose}</option>
                   {activeDepts(depts, editItem.department_id).map(function(d){return <option key={d.id} value={d.id}>{d.code} - {d.name}</option>;})}
                 </select>
-              </Fld>
+              </Fld> : null}
               <Fld label={(t.permissions||'Permissions (accessible screens)')}>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',background:'var(--bg)',border:'1px solid var(--border-2)',borderRadius:5,padding:'8px 10px'}}>
                   {MODULES.map(function(m){

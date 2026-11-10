@@ -22,6 +22,11 @@ const ERR_DISCARD_MORE = 'Cannot discard more than the recorded stock; count the
 const ERR_MEMO_REQUIRED = 'A note is required';
 const ERR_WHOLE_NUMBER = 'Quantity must be a whole number';
 const ERR_NOT_SUPPLY = 'Not a supply';
+// As the pharmacy's (pharmacy.routes.js): a number no shelf holds is refused in words,
+// not by the integer column.
+const ERR_TOO_LARGE = 'Quantity is too large';
+const MAX_QTY = 10000000;
+const MAX_STOCK = 2000000000;
 const MEMO_OUTSIDE = 'Changed outside the stock record (settings screen)';
 
 class SupplyError extends Error {
@@ -61,6 +66,7 @@ async function moveSupply(client, { codeId, kind, qty, counted, memo, orderItemI
     if (before + change < 0) shortfall = -(before + change);
   } else throw new SupplyError(400, 'Unknown movement');
   const after = before + change + shortfall;
+  if (after > MAX_STOCK) throw new SupplyError(400, ERR_TOO_LARGE);
 
   await client.query('UPDATE order_code SET stock_qty = $1, updated_at = NOW() WHERE id = $2', [after, codeId]);
   const row = await client.query(
@@ -100,8 +106,11 @@ async function resupplyDiff(client, was, now, staffId) {
 }
 
 function wholeNumber(v, min) {
+  // A number, or a text of digits only: Number(true) is 1 and Number([7]) is 7.
+  if (typeof v === 'string') { if (!/^\s*\d+\s*$/.test(v)) return null; }
+  else if (typeof v !== 'number') return null;
   const n = Number(v);
-  return v !== '' && v !== null && v !== undefined && Number.isInteger(n) && n >= min ? n : null;
+  return Number.isInteger(n) && n >= min ? n : null;
 }
 
 // GET /api/supply/stock - every active supply with its count.
@@ -152,6 +161,7 @@ function stockWrite(kind) {
       args.qty = wholeNumber(req.body.qty, 1);
       if (args.qty === null) return res.status(400).json({ error: ERR_WHOLE_NUMBER });
     }
+    if ((kind === 'adjust' ? args.counted : args.qty) > MAX_QTY) return res.status(400).json({ error: ERR_TOO_LARGE });
     if (kind !== 'receive' && !memo) return res.status(400).json({ error: ERR_MEMO_REQUIRED });
     const client = await pool.connect();
     try {

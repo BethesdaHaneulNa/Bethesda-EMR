@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { TopBar } from '../components/TopBar.jsx';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { PatientChart } from '../components/PatientChart.jsx';
 import { PatientFinder } from '../components/PatientFinder.jsx';
 import { DocumentModal } from '../components/DocumentModal.jsx';
@@ -289,12 +290,12 @@ export default function PharmacyPage() {
   // ignored and the two names match in either order. The tabs' numbers stay the whole
   // day's, and the text stays when the tab or the work date changes.
   var filtered = useMemo(function(){
-    var s = q.trim().toLowerCase();
+    var s = fold(q.trim());   // accents ignored: "helene" finds Hélène, "paracetamol" Paracétamol
     if(!s) return activeList;
     return activeList.filter(function(v){
-      var name = (patientName(v) + ' ' + (v.first_name || '') + ' ' + (v.last_name || '')).toLowerCase();   // either order of the two names
-      var chart = (v.chart_no || '').toLowerCase();
-      var drugs = (v.prescriptions || []).map(function(r){ return (r.drug_name || '') + ' ' + (r.drug_code || ''); }).join(' ').toLowerCase();
+      var name = fold(patientName(v) + ' ' + (v.first_name || '') + ' ' + (v.last_name || ''));   // either order of the two names
+      var chart = fold(v.chart_no);
+      var drugs = fold((v.prescriptions || []).map(function(r){ return (r.drug_name || '') + ' ' + (r.drug_code || ''); }).join(' '));
       return name.indexOf(s) >= 0 || chart.indexOf(s) >= 0 || drugs.indexOf(s) >= 0;
     });
   }, [activeList, q]);

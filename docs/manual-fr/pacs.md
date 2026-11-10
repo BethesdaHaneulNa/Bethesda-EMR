@@ -56,7 +56,7 @@ Médecin :
 
 Attention : un clic sur la zone sombre **autour** de la fenêtre la ferme, et un compte-rendu non enregistré est perdu. Enregistrez d'abord.
 
-Corriger un compte-rendu remplace l'ancien texte (l'ancien n'est pas gardé).
+Corriger un compte-rendu remplace l'ancien texte (l'ancien n'est pas gardé). Si vous videz la case et enregistrez (compte-rendu écrit par erreur sur le mauvais examen), l'examen redevient « sans compte-rendu » : **Lu par** disparaît aussi.
 
 La fenêtre s'ouvre sur les images de la demande ouverte ; les autres examens du même patient ne viennent que si vous demandez une comparaison (8). Jamais les images d'un autre patient. Après 30 minutes, elle affiche **La session d'affichage a expiré** : fermez-la et cliquez de nouveau sur **🖼**.
 

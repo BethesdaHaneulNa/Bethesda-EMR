@@ -37,7 +37,7 @@ Ce qui peut apparaître en jaune ou en rouge :
 ### Remettre les médicaments
 
 1. Cliquez sur **Pharmacie**, puis sur **En attente**. En haut à gauche, **Date de travail** indique la date affichée : aujourd'hui, sauf si vous l'avez changée. Seuls les patients venus ce jour-là et dont la consultation est terminée sont dans la liste, dans l'ordre où le médecin a terminé.
-   - Pour trouver vite un patient, tapez une partie du nom, du numéro de dossier ou du médicament dans **Patient / N° dossier / Médicament**. Le nom et le prénom peuvent être tapés dans un ordre ou dans l'autre. Si rien ne correspond, la liste affiche « … : aucun patient de cette liste ne correspond » : effacez la case pour revoir toute la liste.
+   - Pour trouver vite un patient, tapez une partie du nom, du numéro de dossier ou du médicament dans **Patient / N° dossier / Médicament**. Le nom et le prénom peuvent être tapés dans un ordre ou dans l'autre, et les accents ne comptent pas (« helene » trouve **Hélène**, « paracetamol » trouve **Paracétamol**) ; c'est pareil dans les cases de recherche du **Stock** et des **Consommables**. Si rien ne correspond, la liste affiche « … : aucun patient de cette liste ne correspond » : effacez la case pour revoir toute la liste.
 2. Cliquez sur le patient. Lisez l'encadré **Allergies** s'il y en a un.
    - À droite, **Dossier Patient** montre une carte par consultation : la date, le service et le médecin, puis le début de la note et sa dernière ligne. C'est sur cette dernière ligne que le médecin écrit en général la suite (exemple : « Contrôle dans 3 jours »). Rappelez-la au patient en lui remettant ses médicaments.
    - Pour lire toute la note, cliquez sur la carte ; **← Retour** revient à la liste. Rien ne se modifie ici.
@@ -97,7 +97,7 @@ Cliquez sur **Délivré**. Les patients servis à la **Date de travail** (aujour
 | **Inventaire** | vous avez compté le rayon | **Quantité comptée en rayon** : le nombre compté, tel quel (sans ajouter ni retirer) | obligatoire (exemple : inventaire de fin de mois) |
 | **Mise au rebut** | médicaments cassés, abîmés, périmés | **Quantité jetée** | obligatoire : le motif |
 
-- Nombres entiers seulement. Pour l'inventaire, **0** est accepté (rayon vide).
+- Nombres entiers seulement. Pour l'inventaire, **0** est accepté (rayon vide). Un nombre énorme (plus de 10 000 000 — par exemple un code-barres lu dans la case) est refusé : l'écran dit « Cette quantité est trop grande ».
 - Même si le nombre compté est égal au registre, enregistrez l'**Inventaire** : il reste la trace du contrôle.
 - Les sirops et autres produits au flacon se comptent en flacons (exemple : **59 flacons**).
 - Les médicaments remis avec **✓ Terminer délivrance** sortent du stock tout seuls : ne les notez pas.

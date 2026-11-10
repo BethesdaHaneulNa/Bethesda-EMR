@@ -67,7 +67,8 @@ check('only unknown names: nothing excluded', r.status === 200 && r.data.total =
 
 const login = 'zzad' + crypto.randomBytes(2).toString('hex');
 const pw = crypto.randomBytes(9).toString('base64url');
-const st = await call('POST', '/admin/staff', { login_id: login, password: pw, name: 'Audit docs ' + login, role: 'doctor', permissions: ['consultation'] }, A);
+const docDept = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false)[0].id;   // a doctor has a department (2026-11-10)
+const st = await call('POST', '/admin/staff', { login_id: login, password: pw, name: 'Audit docs ' + login, role: 'doctor', permissions: ['consultation'], department_id: docDept }, A);
 const D = (await call('POST', '/auth/login', { login_id: login, password: pw })).data.token;
 r = await call('GET', '/admin/audit?exclude=documents.issue', null, D);
 check('no settings permission: 403', r.status === 403, r.status);

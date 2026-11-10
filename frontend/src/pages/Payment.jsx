@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
 import { api } from '../api/client.js';
+import { fold } from '../fold.js';
 import { TopBar } from '../components/TopBar.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
@@ -296,10 +297,10 @@ export default function PaymentPage() {
   // can be the same should be): spaces around the text are ignored, and a name is found in
   // either order ("rakoto jean" and "jean rakoto"). Name, chart number, receipt number.
   function matches(v){
-    var s = q.trim().toLowerCase();
+    var s = fold(q.trim());   // accents ignored, as at reception (no accent keys on site)
     if(!s) return true;
-    var name = (((v.last_name||'')+' '+(v.first_name||'')).trim()+' '+(v.first_name||'')+' '+(v.last_name||'')).toLowerCase();
-    return name.indexOf(s)>=0 || String(v.chart_no||'').toLowerCase().indexOf(s)>=0 || String(v.receipt_no||'').toLowerCase().indexOf(s)>=0;
+    var name = fold(((v.last_name||'')+' '+(v.first_name||'')).trim()+' '+(v.first_name||'')+' '+(v.last_name||''));
+    return name.indexOf(s)>=0 || fold(v.chart_no).indexOf(s)>=0 || fold(v.receipt_no).indexOf(s)>=0;
   }
 
   // A visit picked in the patient finder. The finder's row is the bare visit; when the visit
@@ -494,6 +495,10 @@ export default function PaymentPage() {
     // only lines charged now: an additional charge does not ask again about lines already billed
     var zero = chargeRows().filter(function(r){ return r.item_type!=='consultation' && r.item_type!=='fee' && !(r.unit_price>0); }).map(function(r){ return r.item_name; });
     if(zero.length && !window.confirm(t.py_noPriceConfirm.replace('{n}', zero.length).replace('{names}', zero.join(', ')))) return;
+    // A discount larger than what is charged now (a zero too many): the total showed 0 Ar
+    // and the server's refusal came up in English (bug hunt round 4). Said here, in the
+    // screen's language, before anything is sent. The previous balance is not discounted.
+    if(discountAmt() > subtotal()+0.5){ alert(t.py_discountTooBig.replace('{discount}',fmtAr(discountAmt())).replace('{subtotal}',fmtAr(subtotal()))); return; }
     if(status==='paid' && amtPaidNum()<totalDue()){ alert(t.py_amountInsufficient); return; }
     // "Unpaid" means nothing was received, so the whole total stays owed. It used to
     // subtract whatever sat in the cash box from the debt while recording 0 received.

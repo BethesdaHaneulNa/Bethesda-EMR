@@ -148,7 +148,8 @@ check('removing an empty category: no "moved" fields', lines.some(l => l.after_v
 // ── permissions ──
 const login = 'zzph' + crypto.randomBytes(2).toString('hex');
 const pw = crypto.randomBytes(9).toString('base64url');
-const st = await call('POST', '/admin/staff', { login_id: login, password: pw, name: 'Phrases ' + login, role: 'doctor', permissions: ['consultation'] }, A);
+const docDept = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false)[0].id;   // a doctor has a department (2026-11-10)
+const st = await call('POST', '/admin/staff', { login_id: login, password: pw, name: 'Phrases ' + login, role: 'doctor', permissions: ['consultation'], department_id: docDept }, A);
 const D = (await call('POST', '/auth/login', { login_id: login, password: pw })).data.token;
 const reads = [await call('GET', '/admin/phrases', null, D), await call('GET', '/admin/phrase-categories', null, D)];
 check('a doctor reads phrases and categories', reads.every(x => x.status === 200 && Array.isArray(x.data)), reads.map(x => x.status));

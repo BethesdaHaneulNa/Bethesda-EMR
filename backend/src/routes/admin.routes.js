@@ -489,8 +489,28 @@ function badStaffInput(login_id, permissions) {
 
 function staffLabel(row) { return row.name ? row.name + ' (' + row.login_id + ')' : row.login_id; }
 
+// A staff account has a department only when it is a doctor (the clinic's manager, from the
+// site, 2026-11-10): nurses, reception, pharmacy, lab and administrators need none, and the
+// box was one more thing to get wrong. A doctor's is required while the account is active -
+// reception refuses to register a visit to a doctor without one (1.7.14) - and must be a
+// department that is not hidden; the one the account already has stays valid after it is
+// hidden, so the account can still be edited. Any other role is stored without a
+// department, whatever the request says (changing a doctor to another role empties it).
+// -> { value } (what to store) or { error } (the message for a 400).
+async function staffDepartment(db, role, status, sent, stored) {
+  if (String(role) !== 'doctor') return { value: null };
+  if (sent === undefined || sent === null || String(sent).trim() === '') {
+    return String(status) === 'inactive' ? { value: null } : { error: MSG.STAFF_DEPT_REQUIRED };
+  }
+  if (!/^\d+$/.test(String(sent))) return { error: MSG.STAFF_DEPT_BAD };
+  const d = await db.query('SELECT is_active FROM department WHERE id = $1', [Number(sent)]);
+  const same = stored != null && Number(stored) === Number(sent);
+  if (!d.rows.length || (d.rows[0].is_active === false && !same)) return { error: MSG.STAFF_DEPT_BAD };
+  return { value: Number(sent) };
+}
+
 router.post('/staff', permMiddleware('settings'), async (req, res) => {
-  const { password, name, role, permissions, department_id, phone, email, status } = req.body;
+  const { password, name, role, permissions, phone, email, status } = req.body;
   const bad = badStaffInput(req.body.login_id, permissions);
   if (bad) return res.status(400).json({ error: bad });
   const login_id = String(req.body.login_id).trim();
@@ -501,6 +521,9 @@ router.post('/staff', permMiddleware('settings'), async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const dept = await staffDepartment(client, role, status || 'active', req.body.department_id, null);
+    if (dept.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: dept.error }); }
+    const department_id = dept.value;
     const result = await client.query(
       `INSERT INTO staff (login_id, password_hash, name, role, permissions, department_id, phone, email, status)
        VALUES ($1, crypt($2, gen_salt('bf')), $3, $4, $5, $6, $7, $8, $9) RETURNING id, login_id, name, role, permissions, department_id, phone, email, status`,
@@ -520,7 +543,7 @@ router.post('/staff', permMiddleware('settings'), async (req, res) => {
 });
 
 router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
-  const { password, name, role, permissions, department_id, phone, email, status } = req.body;
+  const { password, name, role, permissions, phone, email, status } = req.body;
   const bad = badStaffInput(req.body.login_id, permissions);
   if (bad) return res.status(400).json({ error: bad });
   const login_id = String(req.body.login_id).trim();
@@ -566,6 +589,11 @@ router.put('/staff/:id', permMiddleware('settings'), async (req, res) => {
         return res.status(400).json({ error: MSG.LAST_ADMIN });
       }
     }
+
+    // The department goes with the role the account ends up with (staffDepartment).
+    const dept = await staffDepartment(client, effRole, effStatus, req.body.department_id, was.department_id);
+    if (dept.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: dept.error }); }
+    const department_id = dept.value;
 
     let query, params;
     if (password) {

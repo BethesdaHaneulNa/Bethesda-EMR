@@ -55,6 +55,17 @@ function flagFor(value, lo, hi, refText) {
   if (value === null || value === undefined || String(value).trim() === '') return '';
   var L = num(lo), H = num(hi), hasL = !isNaN(L), hasH = !isNaN(H);
   var cmp = String(value).trim().match(/^(<=|>=|≤|≥|<|>)\s*(.*)$/);
+  // A value written as a range ("3-8", "2 à 4" - cells per field) is two numbers, not the
+  // first one: it was read as 3, and "3-8" against 0-5 was filed normal. Judged by both
+  // ends, and only where the answer is certain (bug hunt round 6, 2026-11-10).
+  var rg = !cmp && String(value).trim().match(/^(\d+(?:[.,]\d+)?)(?:\s*[-–—~]\s*|\s+(?:à|a|to)\s+)(\d+(?:[.,]\d+)?)(?![\d.,])/i);
+  if (rg && (hasL || hasH)) {
+    var r1 = readNumber(rg[1]), r2 = readNumber(rg[2]), rlo = Math.min(r1, r2), rhi = Math.max(r1, r2);
+    if (hasL && rhi < L) return 'low';
+    if (hasH && rlo > H) return 'high';
+    if ((!hasL || rlo >= L) && (!hasH || rhi <= H)) return 'normal';
+    return '';
+  }
   var n = readNumber(cmp ? cmp[2] : value);
   if (!isNaN(n) && (hasL || hasH)) {
     if (!cmp) {
