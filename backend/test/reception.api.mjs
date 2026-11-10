@@ -509,6 +509,45 @@ const n404 = await call('PUT', '/visits/99999999/vitals', vitals1, T.frontdesk);
 check('vitals: a cancelled visit, or one that does not exist → 404', c404.status === 404 && g404.status === 404 && n404.status === 404, { put: c404.status, get: g404.status, missing: n404.status });
 await call('PUT', '/visits/' + VV.id + '/status', { status: 'completed' }, A);
 
+// ── Bug hunt 2026-11-10 (reception round) ──
+{   // its own scope: the names below must not meet the ones above
+// 1. The patient search ignores accents, as the same-name check does.
+const accS = String(Date.now());
+const PACC = (await call('POST', '/patients', { last_name: 'Rakotomalala' + accS, first_name: 'Hélène Zoé', gender: 'F' }, A)).data;
+const accFind = async q => ((await call('GET', '/patients?q=' + encodeURIComponent(q), null, A)).data || []).some(x => x.id === PACC.id);
+check('search: "Helene" finds Hélène (accents ignored)', await accFind('Helene') && await accFind('HELENE ZOE') && await accFind('zoe'));
+check('search: full name in either order, without accents', await accFind('Rakotomalala' + accS + ' Helene') && await accFind('helene zoe rakotomalala' + accS));
+check('search: with the accents it still finds, and an unrelated word does not', await accFind('Hélène') && !(await accFind('Helena' + accS)));
+// 2. POST /patients: '' for the sex or the birth date means "not known", as in PUT.
+const emptyG = await call('POST', '/patients', { last_name: 'Vide' + accS, first_name: 'Genre', gender: '', date_of_birth: '' }, A);
+check('POST /patients with gender "" and date_of_birth "" → created, both null', emptyG.status === 201 && emptyG.data.gender === null && emptyG.data.date_of_birth === null, { status: emptyG.status, data: emptyG.data && { gender: emptyG.data.gender, dob: emptyG.data.date_of_birth, error: emptyG.data.error } });
+// 3. A visit is registered to a department that is not hidden and, when one is given, an active doctor.
+const allDepts = (await call('GET', '/admin/departments?all=1', null, A)).data;
+const hideMe = allDepts.filter(d => d.is_active !== false && d.id !== DEPT).slice(-1)[0];
+await call('PUT', '/admin/departments/' + hideMe.id, { is_active: false }, A);
+const hidPost = await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: hideMe.id }, A);
+check('POST /visits to a hidden department → 400 BAD_DEPARTMENT', hidPost.status === 400 && hidPost.data.code === 'BAD_DEPARTMENT', { status: hidPost.status, data: hidPost.data });
+await call('PUT', '/admin/departments/' + hideMe.id, { is_active: true }, A);
+const BH_VH = (await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: hideMe.id }, A)).data;
+await call('PUT', '/admin/departments/' + hideMe.id, { is_active: false }, A);
+const hidKeep = await call('PUT', '/visits/' + BH_VH.id, { department_id: hideMe.id, doctor_id: null, chief_complaint: 'memo after the department was hidden' }, A);
+check('PUT /visits/:id on a visit whose department was hidden later: the same department still saves', hidKeep.status === 200 && hidKeep.data.chief_complaint === 'memo after the department was hidden', { status: hidKeep.status, data: hidKeep.data && hidKeep.data.error });
+const BH_VO = (await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, A)).data;
+const hidMove = await call('PUT', '/visits/' + BH_VO.id, { department_id: hideMe.id }, A);
+check('PUT /visits/:id changing to a hidden department → 400 BAD_DEPARTMENT', hidMove.status === 400 && hidMove.data.code === 'BAD_DEPARTMENT', { status: hidMove.status });
+await call('PUT', '/admin/departments/' + hideMe.id, { is_active: true }, A);
+const notDoc = await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: DEPT, doctor_id: ID.frontdesk, allow_duplicate: true }, A);
+check('POST /visits with a doctor_id that is not a doctor → 400 BAD_DOCTOR', notDoc.status === 400 && notDoc.data.code === 'BAD_DOCTOR', { status: notDoc.status, data: notDoc.data });
+const txtDoc = await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: DEPT, doctor_id: 'abc', allow_duplicate: true }, A);
+const okDoc = await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: DEPT, doctor_id: ID.doctor, allow_duplicate: true }, A);
+const noDocE = await call('POST', '/visits', { patient_id: PACC.id, visit_type: 'newVisit', department_id: DEPT, doctor_id: '', allow_duplicate: true }, A);
+check('POST /visits: doctor_id "abc" → 400 BAD_DOCTOR; an active doctor → 201; "" → 201 without a doctor', txtDoc.status === 400 && txtDoc.data.code === 'BAD_DOCTOR' && okDoc.status === 201 && okDoc.data.doctor_id === ID.doctor && noDocE.status === 201 && noDocE.data.doctor_id === null, { txt: txtDoc.status, ok: okDoc.status, empty: noDocE.status });
+const putBadDoc = await call('PUT', '/visits/' + BH_VO.id, { doctor_id: ID.frontdesk }, A);
+const putSameDoc = await call('PUT', '/visits/' + okDoc.data.id, { doctor_id: ID.doctor, chief_complaint: 'same doctor' }, A);
+check('PUT /visits/:id: changing to a non-doctor → 400 BAD_DOCTOR; re-sending the stored doctor → 200', putBadDoc.status === 400 && putBadDoc.data.code === 'BAD_DOCTOR' && putSameDoc.status === 200, { bad: putBadDoc.status, same: putSameDoc.status });
+for (const v of [BH_VH, BH_VO, okDoc.data, noDocE.data]) await call('PUT', '/visits/' + v.id + '/status', { status: 'cancelled' }, A);
+}
+
 // Leave no queue behind: cancel the visits this run created.
 const today = (await call('GET', '/visits/today', null, A)).data;
 for (const v of today.filter(v => v.patient_id === P.id && (v.status === 'waiting' || v.status === 'registered'))) {

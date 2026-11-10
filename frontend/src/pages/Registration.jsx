@@ -7,6 +7,7 @@ import { DocumentModal } from '../components/DocumentModal.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
 import { tint } from '../theme.js';
 import { fmtDob } from '../dob.js';
+import { fold } from '../fold.js';
 import { fmtPhoneMg } from '../phone.js';
 import { VitalsModal } from '../components/VitalsModal.jsx';
 
@@ -376,10 +377,13 @@ export default function RegistrationPage() {
     setPatientLoading(true);
     try {
       var data = await api.get('/patients?q=' + encodeURIComponent(s) + '&limit=20');
+      // An answer that comes back after a newer search was sent is dropped: it used to
+      // replace the newer results (a slow "Rak" landing over "Rakoto").
+      if (my !== searchSeq.current) return;
       setPatientResults(data || []);
-      if ((!data || !data.length) && my === searchSeq.current) setNotFoundFor(s);
-    } catch (err) { alert(errText(err)); }
-    setPatientLoading(false);
+      if (!data || !data.length) setNotFoundFor(s);
+    } catch (err) { if (my === searchSeq.current) alert(errText(err)); }
+    if (my === searchSeq.current) setPatientLoading(false);
   }
 
   function startNewPatient() {
@@ -481,6 +485,8 @@ export default function RegistrationPage() {
     if (msg === 'Visit not found') return t.rc_visitNotFound;
     // 400 DEPARTMENT_REQUIRED / BAD_DEPARTMENT from POST or PUT /visits (2026-11-09).
     if (msg === 'department_id is required' || msg === 'department_id must be an active department') return t.rc_deptRequired;
+    // 400 BAD_DOCTOR: the doctor was deactivated (or is no doctor) since this screen loaded its list.
+    if (msg === 'doctor_id must be an active doctor or null') return t.rc_doctorInactive;
     // 409 VISIT_BILLED from PUT /visits/:id: paid while this form was open.
     if (msg === 'The visit is already paid; its department and doctor can no longer change') return t.rc_visitBilledNoMove;
     // 403 from permMiddleware: the account lacks the reception permission. Since
@@ -636,8 +642,8 @@ export default function RegistrationPage() {
     else if (tab === 'in_progress') r = r.filter(function (v) { return v.status === 'in_progress'; });
     else if (tab === 'completed') r = r.filter(function (v) { return v.status === 'completed'; });
     if (q) {
-      var s = q.toLowerCase();
-      r = r.filter(function (v) { return (v.first_name + ' ' + v.last_name).toLowerCase().indexOf(s) >= 0 || (v.last_name + ' ' + v.first_name).toLowerCase().indexOf(s) >= 0 || String(v.chart_no || '').indexOf(s) >= 0; });
+      var s = fold(q);   // accents ignored, as in the patient search
+      r = r.filter(function (v) { return fold(v.first_name + ' ' + v.last_name).indexOf(s) >= 0 || fold(v.last_name + ' ' + v.first_name).indexOf(s) >= 0 || String(v.chart_no || '').indexOf(s) >= 0; });
     }
     return r;
   }, [visits, tab, q]);

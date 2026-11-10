@@ -98,7 +98,9 @@ check('unknown supply 404', r.status === 404, r.data);
 // ── on a consultation ──
 console.log('consultation');
 const p = (await call('POST', '/patients', { last_name: 'SUPPLY', first_name: 'Test' + Date.now(), gender: 'M', date_of_birth: '1990-01-01' }, A)).data;
-const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit' }, A)).data;
+// A visit needs a department since 1.7.14 (this test still registered without one and failed from there on).
+const DEPT = (await call('GET', '/admin/departments', null, A)).data.filter(d => d.is_active !== false)[0].id;
+const v = (await call('POST', '/visits', { patient_id: p.id, visit_type: 'newVisit', department_id: DEPT, allow_duplicate: true }, A)).data;
 const c = (await call('POST', '/consultations', { visit_id: v.id, patient_id: p.id }, A)).data;
 check('patient, visit, consultation', p.id && v.id && c.id, { p: p.id, v: v.id, c: c.id });
 const s0 = await stockOf(gloves.id);

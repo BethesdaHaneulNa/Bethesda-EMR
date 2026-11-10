@@ -81,7 +81,7 @@ fs.writeFileSync(CREDS, JSON.stringify(creds));
 // ── order codes of our own (the migrations no longer seed a clinic's list) ──
 const tag = String(Date.now()).slice(-6);
 const mkCode = async (code, name, code_type, extra) => {
-  const r = await call('POST', '/admin/order-codes', { code, name, code_type, group_name: 'Test', price: 1000, price_clinic: 1000, ...(extra || {}) }, A);
+  const r = await call('POST', '/admin/order-codes', { code, name, code_type, group_name: 'Other', price: 1000, price_clinic: 1000, ...(extra || {}) }, A);
   if (r.status >= 300) throw new Error('order code ' + code + ' ' + JSON.stringify(r));
   return r.data;
 };

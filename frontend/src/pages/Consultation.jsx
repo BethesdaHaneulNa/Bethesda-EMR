@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { fmtDob } from '../dob.js';
+import { fold } from '../fold.js';
+import { vitalsError } from '../vitals.js';
 import { useLang } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -806,17 +808,25 @@ export default function ConsultationPage() {
 
   // The vital signs: one set per visit, often left empty (the doctor writes them in the
   // note) - an empty box is saved as nothing and never stops a save or Terminé.
+  // The boxes as typed, for the server to read (bug hunt 2026-11-10). They went through
+  // parseFloat / parseInt here: "36,5" - the comma a French keyboard types - was saved as
+  // 36, "38,7" as 38, and anything unreadable emptied the stored value without a word.
+  // The server now reads them as reception's and the phone's vital signs are read: the
+  // comma is a decimal point, an impossible value is refused with the field's name.
   function vitalsBody(){
-    var bpParts = (vt.bp||'').split('/');
+    var bpParts = String(vt.bp == null ? '' : vt.bp).split('/');
+    var box = function(x){ x = String(x == null ? '' : x).trim(); return x === '' ? null : x; };
     return {
-      bp_systolic: parseInt(bpParts[0])||null,
-      bp_diastolic: parseInt(bpParts[1])||null,
-      temperature: parseFloat(vt.temp)||null,
-      pulse: parseInt(vt.pulse)||null,
-      spo2: parseInt(vt.spo2)||null,
-      respiratory_rate: parseInt(vt.rr)||null,
+      bp_systolic: box(bpParts[0]),
+      bp_diastolic: box(bpParts[1]),
+      temperature: box(vt.temp),
+      pulse: box(vt.pulse),
+      spo2: box(vt.spo2),
+      respiratory_rate: box(vt.rr),
     };
   }
+  // A refused vital sign ("temperature must be between 25 and 45") in the screen's words.
+  function saveError(err){ return /^\w+ must /.test((err && err.message) || '') ? vitalsError(t, err) : t.cs_errorPrefix + (err && err.message); }
   function anyVital(){ var b = vitalsBody(); return Object.keys(b).some(function(k){ return b[k] != null; }); }
   async function saveVitals(){
     // A visit not started and no vital sign typed: nothing to save, and nothing to start.
@@ -851,7 +861,7 @@ export default function ConsultationPage() {
       showToast(t.cs_noteSaved);
       // Vital signs saved on a consultation whose visit was still waiting start it too.
       rereadStatus();
-    } catch(err){ alert(t.cs_errorPrefix+err.message); }
+    } catch(err){ alert(saveError(err)); }
   }
   // After a save that may have started the visit on the server (startVisit): take the
   // status from the server instead of guessing it.
@@ -883,12 +893,13 @@ export default function ConsultationPage() {
     } catch(err){
       // Cancelled at reception while it was open here: say so and close it.
       if(err && err.message==='Visit was cancelled'){ alert(t.cs_visitCancelled); setSel(null); setConsult(null); loadData(); }
-      else alert(t.cs_errorPrefix+err.message);
+      else alert(saveError(err));
     }
   }
 
   // Drug / exam order autocomplete
-  function itemText(it){ return ((it.code||it.order_code||it.drug_code||'')+' '+(it.name||it.order_name||it.drug_name||'')).toLowerCase(); }
+  // Accents ignored (bug hunt 2026-11-10): "paracetamol" must find « Paracétamol » - the clinic's keyboards have no accent keys.
+  function itemText(it){ return fold((it.code||it.order_code||it.drug_code||'')+' '+(it.name||it.order_name||it.drug_name||'')); }
 
   // The list under the code box. It is the only way to find a drug now: the green
   // "+ Recherche médicament" button and its window were removed (clinic manager, 2026-10-01 -
@@ -898,7 +909,7 @@ export default function ConsultationPage() {
   // out is counted, and the list ends with a line saying how many.
   var SUGG_ONE = 50;
   function buildOrderSuggestions(val, mode){
-    var s=(val||'').toLowerCase();
+    var s=fold(val||'');
     if(s.length<2) return { list: [], more: 0 };
     var copy = function(kind){ return function(d){ var n={}; for(var k in d) n[k]=d[k]; n.kind=kind; return n; }; };
     var drugs = (mode==='all'||mode==='drug') ? allDrugs.filter(function(d){return itemText(d).indexOf(s)>=0;}) : [];
@@ -1504,7 +1515,7 @@ export default function ConsultationPage() {
     if(qTab==='waiting') r=r.filter(function(v){return v.status==='waiting'||v.status==='registered'||v.status==='in_progress';});
     else if(qTab==='completed') r=r.filter(function(v){return v.status==='completed';});
     r=r.filter(queueShows);
-    if(qFilter){var s=qFilter.toLowerCase();r=r.filter(function(v){return (v.first_name+' '+v.last_name).toLowerCase().indexOf(s)>=0||v.chart_no.indexOf(s)>=0;});}
+    if(qFilter){var s=fold(qFilter);r=r.filter(function(v){return fold(v.first_name+' '+v.last_name).indexOf(s)>=0||fold(v.last_name+' '+v.first_name).indexOf(s)>=0||String(v.chart_no||'').indexOf(s)>=0;});}
     return r;
   },[visits,qTab,qFilter,user,queueRule]);
 
@@ -1527,7 +1538,7 @@ export default function ConsultationPage() {
   var filteredPhrases = useMemo(function(){
     var r=phrases;
     if(phraseCatShown) r=r.filter(function(p){return String(p.category_id)===phraseCatShown;});
-    if(phraseQ){var s=phraseQ.toLowerCase();r=r.filter(function(p){return phraseText(p).toLowerCase().indexOf(s)>=0;});}
+    if(phraseQ){var s=fold(phraseQ);r=r.filter(function(p){return fold(phraseText(p)).indexOf(s)>=0;});}
     return r;
   },[phrases,phraseCatShown,phraseQ]);
 

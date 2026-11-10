@@ -43,6 +43,7 @@ Pendant l'enregistrement, le bouton affiche **Enregistrement…** et ne réagit 
 ### 3. Un patient déjà venu
 
 1. Tapez son nom (dans n'importe quel ordre : « RAKOTO Jean » ou « Jean RAKOTO »), son N° dossier ou son téléphone dans **Rechercher patient**, puis Entrée. Vous pouvez aussi cliquer sur **🔍 Trouver patient**.
+   - Les accents ne comptent pas : « helene » trouve **Hélène**. Inutile de chercher la touche é sur le clavier.
 2. Cliquez sur le patient. Ses informations apparaissent à gauche, ses consultations au milieu.
 3. Corrigez les informations si elles ont changé.
 4. Choisissez le médecin, vérifiez le **Type de Visite**, remplissez **Mémo Réception**, puis **Enregistrer / Mettre en attente**.

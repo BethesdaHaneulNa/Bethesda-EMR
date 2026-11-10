@@ -331,9 +331,16 @@ router.post('/', canConsult, async (req, res) => {
     // visit list) used to create a consultation and flip the visit to in_progress,
     // bringing back a visit reception had cancelled. The row is locked so a
     // cancellation landing at the same moment is seen.
-    const vis = await client.query('SELECT id, status, visit_date FROM visit WHERE id = $1 FOR UPDATE', [visit_id]);
+    const vis = await client.query('SELECT id, status, visit_date, patient_id FROM visit WHERE id = $1 FOR UPDATE', [visit_id]);
     if (vis.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Visit not found' }); }
     if (vis.rows[0].status === 'cancelled') { await client.query('ROLLBACK'); return res.status(409).json({ error: VISIT_CANCELLED }); }
+    // The consultation belongs to the visit's patient (bug hunt 2026-11-10): the row took
+    // patient_id from the request, so a wrong id filed the consultation - notes, vitals,
+    // prescriptions - in another patient's history and left it out of the right one.
+    if (String(vis.rows[0].patient_id) !== String(patient_id)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'patient_id is not the patient of this visit', code: 'PATIENT_MISMATCH' });
+    }
 
     // Reuse an existing consultation for this visit instead of creating duplicates
     // every time the doctor clicks the same waiting patient.
@@ -360,7 +367,7 @@ router.post('/', canConsult, async (req, res) => {
 
     // First time this visit is opened for consultation.
     await client.query("UPDATE visit SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [visit_id]);
-    const row = await insertConsultation(client, { id: visit_id, patient_id: patient_id, visit_date: vis.rows[0].visit_date },
+    const row = await insertConsultation(client, { id: visit_id, patient_id: vis.rows[0].patient_id, visit_date: vis.rows[0].visit_date },
       req.user.id, department_id || req.user.department_id);
     await client.query('COMMIT');
     row.opened_by_name = req.user.name || null;
@@ -381,7 +388,13 @@ router.put('/:id', canConsult, (req, res) => inTx(res, async (client) => {
   // subjective/objective/assessment/plan/weight/height on every save. A key sent as
   // null still clears its field (an emptied vital sign).
   const sent = NOTE_FIELDS.filter(function (f) { return Object.prototype.hasOwnProperty.call(req.body, f); });
-  const vals = sent.map(function (f) { return req.body[f]; });
+  // The vital signs go through the same reading as reception's and the phone's (readVitals,
+  // below; bug hunt 2026-11-10): this route wrote whatever came - 99 °C, SpO2 150, a
+  // systolic of -5 - and '' was a database error. Now '36,5' is 36.5, '' empties the field,
+  // and a slip of the finger is refused with the field's name.
+  const rv = readVitals(req.body);
+  if (rv.error) return [400, { error: rv.error }];
+  const vals = sent.map(function (f) { return Object.prototype.hasOwnProperty.call(rv.values, f) ? rv.values[f] : req.body[f]; });
   const sets = sent.map(function (f, i) { return f + '=$' + (i + 1); });
   const prev = await client.query('SELECT * FROM consultation WHERE id = $1 FOR UPDATE', [req.params.id]);
   if (prev.rows.length === 0) return [404, { error: 'Not found' }];
@@ -603,7 +616,9 @@ router.post('/:id/diagnoses', canConsult, (req, res) => inTx(res, async (client)
   if (lock.rows.length === 0) return [404, { error: 'Consultation not found' }];
   const c = await consultOf(client, req.params.id);
   const have = await diagnosesOf(client, req.params.id);
-  if (have.some((d) => (codeId && d.diagnosis_code_id === codeId) || String(d.diagnosis_name).trim().toLowerCase() === name.toLowerCase())) {
+  // The same words: case, repeated spaces and accents aside ("Fièvre  typhoïde" = "fievre typhoide").
+  const dxWords = (x) => String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (have.some((d) => (codeId && d.diagnosis_code_id === codeId) || dxWords(d.diagnosis_name) === dxWords(name))) {
     return [409, { error: DX_DUPLICATE }];
   }
   const hasPrimary = have.some((d) => d.diagnosis_type === 'primary');

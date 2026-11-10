@@ -130,13 +130,28 @@ function withMemo(complaint, memo) {
 // department; doctor_id stays optional (the department may assign the doctor later). The
 // same rule on PUT when the body carries department_id, so the edit form cannot clear it;
 // a body without the field (payment sets the visit type alone) is untouched.
+//
+// Bug hunt 2026-11-10: the message said "active" but the check was only "exists", and the
+// doctor was not checked at all - a screen left open from before a department was hidden
+// (Settings, 1.7.17) or a doctor deactivated still registered visits to them, and any
+// staff id passed as the doctor. Now as PUT /:id/transfer always did: a department that is
+// not hidden, a doctor who is an active doctor. On an edit (PUT /:id) only a CHANGE is
+// judged (activeOnly false when the value is the one already stored): a visit registered
+// before its department was hidden must still take a new memo.
 const DEPARTMENT_REQUIRED = 'department_id is required';
-async function missingDepartment(value) {
+async function missingDepartment(value, activeOnly) {
   if (value === null || value === undefined || value === '') return { status: 400, code: 'DEPARTMENT_REQUIRED', message: DEPARTMENT_REQUIRED };
   if (!/^\d+$/.test(String(value))) return { status: 400, code: 'BAD_DEPARTMENT', message: 'department_id must be an active department' };
-  const r = await pool.query('SELECT 1 FROM department WHERE id = $1', [Number(value)]);
-  if (!r.rows.length) return { status: 400, code: 'BAD_DEPARTMENT', message: 'department_id must be an active department' };
+  const r = await pool.query('SELECT is_active FROM department WHERE id = $1', [Number(value)]);
+  if (!r.rows.length || (activeOnly && r.rows[0].is_active === false)) return { status: 400, code: 'BAD_DEPARTMENT', message: 'department_id must be an active department' };
   return null;
+}
+async function badDoctor(value) {
+  if (value === null || value === undefined || value === '') return null;   // no doctor chosen: allowed
+  const bad = { status: 400, code: 'BAD_DOCTOR', message: 'doctor_id must be an active doctor or null' };
+  if (!/^\d+$/.test(String(value))) return bad;
+  const r = await pool.query(`SELECT 1 FROM staff WHERE id = $1 AND role = 'doctor' AND status = 'active'`, [Number(value)]);
+  return r.rows.length ? null : bad;
 }
 
 // POST /api/visits - register new visit
@@ -144,8 +159,10 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
   try {
     const { patient_id, visit_type, department_id, doctor_id } = req.body;
     const chief_complaint = withMemo(req.body.chief_complaint, req.body.reception_memo);
-    const noDept = await missingDepartment(department_id);
+    const noDept = await missingDepartment(department_id, true);
     if (noDept) return refuse(res, noDept.status, noDept.code, noDept.message);
+    const noDoc = await badDoctor(doctor_id);
+    if (noDoc) return refuse(res, noDoc.status, noDoc.code, noDoc.message);
     // visit_type selects the consultation fee (newVisit -> C01, followUp -> C02 ...),
     // and the billing query falls back to the new-visit price for anything it does
     // not recognise, so an unknown value quietly overcharges the patient.
@@ -168,7 +185,7 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
     const result = await pool.query(
       `INSERT INTO visit (patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, status, registered_by)
        VALUES ($1,$2,$3,$4,$5,$6,'waiting',$7) RETURNING *`,
-      [patient_id, visit_type, department_id, doctor_id, reception_time, chief_complaint, req.user.id]
+      [patient_id, visit_type, department_id, doctor_id === '' ? null : doctor_id, reception_time, chief_complaint, req.user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -378,9 +395,19 @@ router.put('/:id', permMiddleware('registration', 'payment'), async (req, res) =
     if (body.status != null) {
       return refuse(res, 400, 'STATUS_NOT_HERE', 'status is changed with PUT /visits/:id/status');
     }
-    if (Object.prototype.hasOwnProperty.call(body, 'department_id')) {
-      const noDept = await missingDepartment(body.department_id);
-      if (noDept) return refuse(res, noDept.status, noDept.code, noDept.message);
+    // Only a change is held to "active" (see missingDepartment): what the visit already has stays valid.
+    const hasDept = Object.prototype.hasOwnProperty.call(body, 'department_id');
+    const hasDoc = Object.prototype.hasOwnProperty.call(body, 'doctor_id');
+    if (hasDept || hasDoc) {
+      const stored = (await pool.query('SELECT department_id, doctor_id FROM visit WHERE id = $1', [req.params.id])).rows[0] || null;
+      if (hasDept) {
+        const noDept = await missingDepartment(body.department_id, !stored || !sameId(stored.department_id, body.department_id));
+        if (noDept) return refuse(res, noDept.status, noDept.code, noDept.message);
+      }
+      if (hasDoc && body.doctor_id !== '' && body.doctor_id != null && (!stored || !sameId(stored.doctor_id, body.doctor_id))) {
+        const noDoc = await badDoctor(body.doctor_id);
+        if (noDoc) return refuse(res, noDoc.status, noDoc.code, noDoc.message);
+      }
     }
     const sets = [];
     const params = [];

@@ -30,6 +30,12 @@ const PATIENT_FIELDS = ['last_name', 'first_name', 'national_id', 'date_of_birth
 // escape character is ! so no backslash has to survive a JS template literal.
 // limit (1-200, default 50) and offset are read as numbers; anything else falls
 // back to the default instead of reaching Postgres as text.
+// Names are matched without their accents too (bug hunt 2026-11-10): "Helene" found nothing
+// for Hélène, while the same-name check below already treated them as one name. The desk's
+// keyboards (QWERTY, brought from Korea) have no accent keys, so a patient registered with
+// accents could only be found by chart number. Same letters as FOLD in /similar.
+const UNACCENT_FROM = 'àâäáãåæçéèêëíìîïñóòôöõøœúùûüýÿ', UNACCENT_TO = 'aaaaaaaceeeeiiiinooooooouuuuyy';
+function foldSql(sql) { return "translate(lower(" + sql + "), '" + UNACCENT_FROM + "', '" + UNACCENT_TO + "')"; }
 function intParam(v, dflt, min, max) {
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return dflt;
@@ -55,7 +61,11 @@ router.get('/', permMiddleware(...SEARCH_READERS), async (req, res) => {
         chart_no ILIKE $1 ESCAPE '!' OR last_name ILIKE $1 ESCAPE '!' OR first_name ILIKE $1 ESCAPE '!' OR
         national_id ILIKE $1 ESCAPE '!' OR phone ILIKE $1 ESCAPE '!' OR mobile ILIKE $1 ESCAPE '!' OR
         CONCAT(last_name, ' ', first_name) ILIKE $1 ESCAPE '!' OR
-        CONCAT(first_name, ' ', last_name) ILIKE $1 ESCAPE '!'${byDigits}
+        CONCAT(first_name, ' ', last_name) ILIKE $1 ESCAPE '!' OR
+        ${foldSql('last_name')} LIKE ${foldSql('$1::text')} ESCAPE '!' OR
+        ${foldSql('first_name')} LIKE ${foldSql('$1::text')} ESCAPE '!' OR
+        ${foldSql("CONCAT(last_name, ' ', first_name)")} LIKE ${foldSql('$1::text')} ESCAPE '!' OR
+        ${foldSql("CONCAT(first_name, ' ', last_name)")} LIKE ${foldSql('$1::text')} ESCAPE '!'${byDigits}
       ) ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
       params = ['%' + q.replace(/[!%_]/g, '!$&') + '%', limit, offset];
       if (byDigits) params.push('%' + digits + '%');
@@ -153,7 +163,8 @@ router.post('/', permMiddleware('registration'), async (req, res) => {
     const result = await client.query(
       `INSERT INTO patient (chart_no, last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [chart_no, last_name, first_name, national_id, date_of_birth, gender, phone, mobile, address, city, region, blood_type, allergies, reception_note || null]
+      // '' only ever means "not known" (as in PUT): DATE and the gender CHECK refuse it.
+      [chart_no, last_name, first_name, national_id, date_of_birth === '' ? null : date_of_birth, gender === '' ? null : gender, phone, mobile, address, city, region, blood_type, allergies, reception_note || null]
     );
     await client.query('COMMIT');
     res.status(201).json(result.rows[0]);

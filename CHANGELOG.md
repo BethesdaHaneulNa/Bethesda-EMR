@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.7.20 — 2026-11-10
+
+Bug hunt, rounds 1 (reception) and 2 (consultation). Released now rather than at the end of
+the loop because of the vital signs: a value typed with a comma was stored without its decimals.
+
+Round 2, consultation:
+- **Vital signs typed by the doctor lost their decimals.** The boxes went through
+  `parseFloat` on the screen: `38,7` — the comma a French keyboard types — was saved as 38,
+  `36,5` as 36, and text the screen could not read emptied the stored value without a word.
+  The route also wrote any number it was given (99 °C, SpO2 150, a systolic of −5). The
+  screen now sends what was typed and `PUT /consultations/:id` reads it as reception's and
+  the phone's vital signs are read: the comma is a decimal point, `''` empties the field, an
+  impossible value is refused with the field's name and the stored value stays.
+- **A consultation is filed under the visit's patient.** `POST /consultations` took
+  `patient_id` from the request; a wrong one put the consultation in another patient's
+  history. It is now refused (400 `PATIENT_MISMATCH`).
+- The same diagnosis twice is also caught when only spaces or accents differ.
+- **Drug and exam search, the queue filter and the phrase search ignore accents**:
+  “paracetamol” finds Paracétamol.
+- New test file `backend/test/consult.api.mjs`.
+
+Round 1, reception:
+- **Patient search ignores accents.** “Helene” found nothing for Hélène (the same-name check
+  already treated them as one name); the desk keyboards have no accent keys, so such a patient
+  could only be found by chart number. The server search folds accents on the names, and
+  reception's “Rechercher dans la file” does the same.
+- A visit can no longer be registered to a **hidden department** or to a staff member who is
+  **not an active doctor** (a screen left open from before the change still sent them; the
+  transfer route already refused). On an edit only a change is judged, so a visit registered
+  before its department was hidden still takes a new memo. New message for the doctor case.
+- `POST /patients` takes '' for the sex or the birth date as “not known”, as `PUT` did.
+- Reception's patient search drops an answer that arrives after a newer search was sent.
+- Tests: `supply.api.mjs` registered a visit without a department (refused since 1.7.14, 15
+  checks failed from there on) and `mobile.api.mjs` used an order-code group that no longer
+  exists since 1.7.17 — both fixed; new checks in `reception.api.mjs`.
+
 ## v1.7.19 — 2026-11-10
 
 **The doctors' waiting list has a date.** The consultation screen's list (☰ File d'Attente)

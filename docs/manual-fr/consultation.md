@@ -54,6 +54,8 @@ En haut de la colonne du milieu, une ligne indique l'état de la visite : **En a
 ### 3. Signes vitaux et note
 
 1. Saisissez **TA** (par exemple `120/80`), **T°**, **FC**, **FR**, **SpO2**. Laissez vide ce qui n'a pas été mesuré : rien n'est bloqué. Vous pouvez aussi les écrire dans la note.
+   - Écrivez seulement le chiffre. La virgule et le point sont acceptés tous les deux : `38,7` ou `38.7`.
+   - Une valeur impossible est refusée à **Sauver**, avec le nom de la case — par exemple « Température : valeur refusée » pour `387` (oubli de la virgule) ou pour `38°`. Corrigez la case et enregistrez de nouveau ; l'ancienne valeur n'est pas effacée.
 2. Écrivez la consultation dans **Ma note de consultation** (S, O, A, P dans la même case). C'est **votre** note pour cette visite : chaque médecin a la sienne.
 3. Pour ajouter une phrase toute prête : cliquez dessus dans **Phrases types** (sous la note). Pour la trouver : la liste **Catégorie : toutes** (cliquez, puis choisissez une catégorie — ce sont celles créées dans les paramètres, dans leur ordre et avec leur nom) et la case **Rechercher**, qui s'ajoutent l'une à l'autre. Une catégorie sans phrase affiche « Aucune phrase dans cette catégorie. » La catégorie choisie reste la même pour le patient suivant, sur cet ordinateur et pour votre compte.
 4. Cliquez sur **Sauver**. La note reste dans la case, et apparaît à droite dans **Dossier Patient**, dans le cadre bleu de la visite ouverte (**● Dossier ouvert**), avec votre nom et l'heure. Tant qu'elle n'est pas enregistrée, **● Non enregistrée** est affiché à côté du titre.
@@ -78,6 +80,8 @@ Une consultation terminée, ou celle d'un jour passé, peut toujours être corri
 Saisir un diagnostic met la visite **En cours**, comme tout autre enregistrement.
 
 ### 4. Prescrire un médicament
+
+Dans la case de recherche, les accents ne comptent pas : « paracetamol » trouve **Paracétamol**. C'est pareil pour la recherche dans la file et dans les phrases types.
 
 1. Tapez le nom dans **Saisir médicament, code examen ou nom...** (au moins deux lettres). La liste montre **MÉD**, le code, le nom, la forme (**Comprimé**, **Gélule**, **Sirop**…) et le **Stock** (en rouge s'il est à 0). Deux médicaments du même nom se distinguent par leur code et leur stock. Les noms sont en anglais : cherchez `syrup`, pas `sirop`. Si rien ne correspond, la liste affiche **Aucun résultat**. Vous pouvez aussi utiliser **+ Recherche médicament**.
    - Si la liste se termine par **… 22 autres**, tapez plus de lettres, ou cliquez sur **Médicament** au-dessus de la case : la liste montre alors tous les médicaments trouvés (jusqu'à 50) et se fait défiler. Le bouton vert **+ Recherche médicament** n'existe plus : cette case fait la même chose.
