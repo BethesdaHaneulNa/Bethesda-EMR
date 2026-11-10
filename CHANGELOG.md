@@ -1,5 +1,62 @@
 # Changelog
 
+## v1.8.0 — 2026-11-10
+
+The clinic's manager, on his last evening on site: "build everything, run the bug hunt over
+what you built too, and when all is done this is 1.8.0" - so it can be installed the next
+morning. **This version changes the database** (065, folders): the updater backs the
+database up first, as always. Everything below was run on an isolated stack; the whole
+test set passes on the released tree.
+
+### Settings → Lab items and Order sets: a list of everything, in folders inside folders
+The clinic's manager, 2026-11-10: the two tabs were hard to use - the lab items behind one
+"choose a panel" box (an empty screen until one is chosen, one panel at a time), the order
+sets under a group typed as text, one level deep.
+- **Both tabs**: on the left the whole list, filed in folders the clinic makes itself, a
+  folder inside a folder (five levels at most), with a search box that ignores accents; on
+  the right the editor that was there before. `+ Folder`, and on a selected folder
+  `+ Sub-folder`, Rename, Move, ▲▼, Delete (an empty folder only), and `+ Test` /
+  `+ Order set` to make one straight in that folder. A test or a set is filed elsewhere
+  with Move on its line.
+- **Consultation → Order sets** shows the same folders, with the search box.
+- **"+ new lab panel" was broken since 1.7.17**: it sent the order group `Lab`, which
+  stopped existing when the order groups became rows the clinic keeps (063) - the server
+  answered "Unknown order-code group" and nothing was made. A new test now takes the group
+  most lab tests carry (else Laboratory, else Other).
+- Database: `065_item_folder.sql` - `item_folder`, `order_set.folder_id`,
+  `order_code.lab_folder_id`. What exists is filed once at the top level: an order set
+  under the group it carried, a lab test under its order group. Nothing else changes.
+- API `/api/folders` (folder.routes.js); change log `settings.folder`. Tests:
+  `settings.folders.mjs` (31 checks), `settings.access.mjs` (the six routes).
+
+### Bug hunt, rounds 8 on
+- Round 8 (settings): a text too long for its column (a department code of 11 letters, a
+  staff name over 100 characters...) came back as the database's own English; it is now a
+  400 the screen says in its language. Saving an order set that was removed meanwhile
+  answered 200; it is a 404.
+- Round 9 (statistics): every money figure agrees with the till's (cash of the day, by
+  department = by doctor = total, balances); new test `stats.api.mjs` (16 checks). A date
+  that does not exist (the 30th of February) passed the shared date check and was a 500.
+- Round 10 (phone screens): a vital sign out of range was refused with its reason in
+  English on a French screen ("valeur refusée (be between 25 and 45)"); the reason is in
+  the screen's language now, on the phone and on the PC.
+- Round 11 (updater, offline kit): read and syntax-checked only (running it would touch the
+  machine's own EMR); nothing to fix. Round 12 (the PACS repository): one fix there, not
+  released - the bridge cut nothing off an exam name longer than a DICOM value allows.
+- 065 was made unable to fail on the clinic's data: group names that differ only by
+  capitals or spaces become one folder, a name over 80 characters is cut, and it was run
+  twice on deliberately awkward data before release.
+
+### Settings → Personnel: an account that never served can be removed for good
+- On a deactivated line an administrator sees **🗑 Effacer** (not on his own account, not on
+  the setup administrator). `POST /admin/staff/:id/remove`: the server looks at every place
+  that can hold a staff id - every foreign key to `staff` and the id columns without one -
+  and refuses (409) when a single row points at the account; such an account stays,
+  deactivated, so the records keep the person's name. An unused one is deleted, its login is
+  free again, and the change log gets `settings.staff.delete` (who, which account).
+- Asked after two trial accounts had to be removed from the site's database by hand.
+- Test `backend/test/settings.staffremove.mjs` (12 checks); manual: settings.md.
+
 ## v1.7.21 — 2026-11-10
 
 Bug hunt, rounds 3 to 7 (prescriptions and orders, payment, pharmacy and stock, laboratory,

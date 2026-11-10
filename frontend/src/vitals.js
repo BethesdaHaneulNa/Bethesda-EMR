@@ -50,6 +50,15 @@ export function hhmm(ts) {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
+// "be between 25 and 45" / "be a number" (the server's words after "<field> must") in the
+// screen's language; anything else is shown as it came.
+function vitalsReason(t, reason) {
+  var r = /^be between (-?[0-9.]+) and (-?[0-9.]+)$/.exec(reason);
+  if (r && t.vs_reasonRange) return fill(t.vs_reasonRange, { min: r[1], max: r[2] });
+  if (/^be a (whole )?number$/.test(reason) && t.vs_reasonNumber) return t.vs_reasonNumber;
+  return reason;
+}
+
 // The server's English refusal -> the screen's words. "temperature must be between 25 and
 // 45" names the field: the label is put in front of the reason.
 export function vitalsError(t, err) {
@@ -59,7 +68,9 @@ export function vitalsError(t, err) {
   var m = /^(\w+) must (.*)$/.exec(msg);
   if (m) {
     var row = VITALS.filter(function (v) { return v[0] === m[1]; })[0];
-    if (row) return fill(t.vs_badValue, { field: t[row[1]], msg: m[2] });
+    // The reason too is said in the screen's language: it read "Température : valeur
+    // refusée (be between 25 and 45)" on a French phone (bug hunt round 10).
+    if (row) return fill(t.vs_badValue, { field: t[row[1]], msg: vitalsReason(t, m[2]) });
   }
   return fill(t.vs_error, { msg: msg });
 }

@@ -60,6 +60,17 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 1. **Personnel** : sur une ligne **inactif**, cliquez sur **Réactiver** (bouton vert). Seul un compte **Administrateur** voit ce bouton.
 2. Confirmez « Réactiver … ? ». La personne se reconnecte avec le même identifiant, mot de passe et les mêmes permissions qu'avant.
 
+### Un compte créé par erreur : l'effacer
+
+Un compte qui **n'a jamais servi** (créé par erreur, ou un compte d'essai) peut être effacé pour de bon.
+
+1. Désactivez-le d'abord (**Supprimer** sur sa ligne) : il devient **inactif**.
+2. Sur la ligne **inactif**, cliquez sur **🗑 Effacer**. Seul un compte **Administrateur** voit ce bouton ; il n'apparaît ni sur votre propre compte ni sur le compte **admin** de l'installation.
+3. Confirmez. Le compte disparaît de la liste et son identifiant redevient libre.
+
+- Si le compte a déjà servi — un patient enregistré, une ordonnance, un résultat, un reçu, même une seule ligne — l'écran répond « Ce compte a déjà servi : il ne peut pas être effacé ». Laissez-le **inactif** : les dossiers gardent ainsi le nom de la personne.
+- L'effacement est noté dans le journal des modifications (« Compte effacé », par qui, quel compte).
+
 ### Changer mon mot de passe (tout le personnel)
 
 1. En haut à droite, cliquez sur **votre nom** (avec la petite clé 🔑).
@@ -108,8 +119,8 @@ Chaque ajout, changement de nom, masquage et suppression est noté dans le **Jou
 
 Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la consultation. **La dose, les fois et les jours se décident ici**, pour chaque ligne.
 
-1. **Paramètres** → **Ordonnances types** → **Nouvel ensemble**.
-2. **Nom de l'ensemble** (par exemple « Paludisme adulte »). **Groupe (dossier)** si vous voulez les ranger.
+1. **Paramètres** → **Ordonnances types**. À gauche, **toutes** les ordonnances types, rangées en dossiers ; à droite, celle que vous modifiez. Cliquez sur **+ Nouvel ensemble** (en haut de la liste, ou sous un dossier sélectionné pour la créer dans ce dossier).
+2. **Nom de l'ensemble** (par exemple « Paludisme adulte »). **Dossier** : où la ranger (**— Aucun dossier —** = en haut de la liste).
 3. À droite, choisissez **Médicament** ou **Examen / Imagerie**, tapez le nom, **Rechercher**, puis cliquez sur le résultat. La ligne apparaît dans **Éléments**. Sous chaque médicament trouvé : son **Stock** et son **Prix** — utile quand deux médicaments ont le même nom.
 4. Pour un médicament, remplissez sur la ligne :
    - **Dose/j** : la quantité totale par jour (par exemple 4 comprimés par jour).
@@ -120,6 +131,15 @@ Une ordonnance type ajoute plusieurs médicaments et examens en un clic dans la 
 5. Pour un médicament délivré par flacon ou tube, **Dose/j × Jours** est le nombre de flacons (depuis la version 1.7.16 ; par exemple `2` · `1` · `1` pour deux flacons, la façon de prendre dans **Posologie**).
 6. Pour un examen : **Qté**, **Fois**, **Jours** (1, 1, 1 en général). Pour un **acte**, une case **Posologie** en plus : des mots (PRN, QD…), 20 caractères au plus ; elle peut rester vide.
 7. **Sauver**. Si **Dose/j** ou **Jours** manque sur une ligne de médicament, la case devient rouge et l'enregistrement est refusé : complétez-la.
+
+**Les dossiers (ordonnances types et analyses).** La liste de gauche se range en dossiers, et un dossier peut contenir d'autres dossiers (cinq niveaux au plus) — par exemple **Infections** → **Paludisme** → vos ordonnances types.
+
+- **+ Dossier** (en haut) crée un dossier ; écrivez son nom, **OK**.
+- Cliquez sur un dossier : ses boutons apparaissent dessous — **+ Sous-dossier**, **Renommer**, **Déplacer** (choisissez le dossier de destination), **▲ ▼** pour l'ordre, **Supprimer**. Un deuxième clic ferme ou ouvre le dossier.
+- **Supprimer** ne marche que sur un dossier **vide** : déplacez d'abord ce qu'il contient.
+- Pour ranger une ordonnance type (ou une analyse) ailleurs : cliquez dessus, puis **Déplacer** sur sa ligne.
+- La case **Chercher…** réduit la liste pendant que vous écrivez (les accents ne comptent pas) ; elle cherche aussi dans les codes que contient une ordonnance type.
+- Le médecin voit les mêmes dossiers dans **Consultation** → **Ordonnances types**.
 
 **« ⚠ 2 médicament(s) absent(s) de la liste »** sur une ordonnance type : ces médicaments (barrés) ont été retirés de la liste des médicaments. Ils ne sont **pas prescrits** quand on applique l'ordonnance type en consultation. **Modifier** → ✕ sur la ligne barrée, ajoutez le bon médicament de la liste, **Sauver**.
 
@@ -168,8 +188,10 @@ Ce qui est déjà écrit dans le dossier d'un patient ne change pas quand vous m
 
 ### Régler les valeurs de référence des analyses
 
-1. **Paramètres** → **Items de test**.
-2. **Panel** : choisissez l'analyse (par exemple L01 · CBC).
+1. **Paramètres** → **Items de test**. À gauche, **toutes** les analyses, rangées en dossiers, avec le nombre d'items de chacune (« 0 item » en orange : l'analyse n'a pas encore d'items).
+2. Cliquez sur l'analyse (par exemple **CBC**) : ses items apparaissent à droite.
+   - **Nouvelle analyse** : **+ Analyse** (en haut, ou sous un dossier sélectionné pour la créer dedans) → **Code**, **Nom**, **Prix** → **Ajouter**. Elle est aussitôt proposée au médecin dans les examens ; ajoutez ensuite ses items.
+   - Les dossiers s'utilisent comme pour les ordonnances types (voir plus haut « Les dossiers »).
 3. Sur chaque ligne : **Unité** se choisit dans la liste (**— sans unité —** si l'item n'a pas d'unité), puis **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »). Le **Min** ne peut pas dépasser le **Max** ; le nom a 120 caractères au plus et **Réf. texte** 60.
 4. Pour des valeurs selon le sexe ou l'âge : **▸ Par sexe et âge** → **+ Ajouter une ligne**.
 5. **Sauver**. Si plusieurs tableaux **Par sexe et âge** sont ouverts, faites défiler vers le bas pour voir **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
@@ -178,7 +200,7 @@ Les résultats déjà enregistrés gardent leur couleur et leur référence. Seu
 
 **Résultats en texte.** Un item qui a une **Réf. texte** (par exemple **Negative**) se saisit au laboratoire en choisissant dans une liste : **Negative / Positive** par défaut. Pour une autre liste, cliquez sur **☰** à côté de **Réf. texte** : **Remplir avec une série** (par exemple **Negative / Trace / + / ++ / +++**), ou écrivez une valeur puis **+ Ajouter** ; **▲ ▼** pour l'ordre, **✕** pour retirer. Cliquez sur **OK**, puis sur **Sauver** en bas de la page. Le jugement ne change pas : une valeur égale à la **Réf. texte** est normale, une autre est anormale. Les résultats déjà enregistrés ne changent pas.
 
-**Liste des unités.** À droite de **+ Nouveau panel**, **Liste des unités** ouvre la liste proposée dans la case **Unité**. Pour ajouter : écrivez l'unité dans **Nouvelle unité**, puis **+ Ajouter**. Pour changer l'ordre : **▲ ▼**. Pour retirer : **✕**. Cliquez sur **Sauver**. Retirer ou renommer une unité ne change pas les items ni les résultats qui l'utilisent : ils gardent leur unité, affichée **hors liste**. Deux unités qui ne diffèrent que par les majuscules ou les espaces sont la même unité.
+**Liste des unités.** En haut de la liste des analyses, **Liste des unités** ouvre la liste proposée dans la case **Unité**. Pour ajouter : écrivez l'unité dans **Nouvelle unité**, puis **+ Ajouter**. Pour changer l'ordre : **▲ ▼**. Pour retirer : **✕**. Cliquez sur **Sauver**. Retirer ou renommer une unité ne change pas les items ni les résultats qui l'utilisent : ils gardent leur unité, affichée **hors liste**. Deux unités qui ne diffèrent que par les majuscules ou les espaces sont la même unité.
 
 <!-- à revoir : onglet de la session Laboratoire ; les valeurs de référence sont en cours de validation par les médecins. -->
 

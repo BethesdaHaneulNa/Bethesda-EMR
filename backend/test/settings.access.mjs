@@ -221,6 +221,14 @@ const ROUTES = [
   ['PUT',  '/admin/diagnosis-codes/' + X,   [SET], { name_en: 'x' }],
   // settings, and the admin role on top (U2); every account holding settings here is an admin
   ['POST', '/admin/staff/' + X + '/reactivate', [SET], {}],
+  ['POST', '/admin/staff/' + X + '/remove', [SET], {}],
+  // folders of lab tests and order sets (065): read by the screens that show them, written from Settings
+  ['GET',  '/folders/tree?kind=lab',        [SET, CONS, LAB]],
+  ['POST', '/folders',                      [SET], {}],
+  ['PUT',  '/folders/order',                [SET], {}],
+  ['PUT',  '/folders/place',                [SET], {}],
+  ['PUT',  '/folders/' + X,                 [SET], {}],
+  ['DELETE', '/folders/' + X,               [SET]],
   // backup / status / version / auth (settings)
   ['GET',  '/backup/status',                [ALL]],
   ['GET',  '/backup/download/bethesda_does-not-exist.sql.gz', [SET]],

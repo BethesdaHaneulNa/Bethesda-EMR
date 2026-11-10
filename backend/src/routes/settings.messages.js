@@ -26,6 +26,11 @@ const MSG = Object.freeze({
   REACTIVATE_ADMIN_ONLY: 'Only an administrator can reactivate a staff account.',
   SETUP_ADMIN_KEPT: 'The administrator account created during setup cannot be deactivated.',
   // a department belongs to a doctor's account only (admin.routes.js staffDepartment, 2026-11-10)
+  // removing for good an account that never served (admin.routes.js POST /staff/:id/remove, 2026-11-10)
+  REMOVE_ADMIN_ONLY: 'Only an administrator can remove a staff account.',
+  STAFF_REMOVE_SELF: 'You cannot remove your own account.',
+  STAFF_REMOVE_ACTIVE: 'Deactivate the account before removing it.',
+  STAFF_HAS_RECORDS: 'This account has been used: it cannot be removed. Leave it deactivated.',
   STAFF_DEPT_REQUIRED: 'Choose the department of the doctor',
   STAFF_DEPT_BAD: 'The department of the doctor must be one of the active departments',
   // phrases and their categories (admin.routes.js, 2026-10-01)

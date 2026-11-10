@@ -43,9 +43,11 @@ const ACTIONS = {
   STAFF_EDIT:           'settings.staff.edit',          // name, role, status, department
   STAFF_PERMISSIONS:    'settings.staff.permissions',
   STAFF_PASSWORD:       'settings.staff.password',      // that it was changed and by whom - never the value
+  STAFF_DELETE:         'settings.staff.delete',        // an account that never served, removed for good (2026-11-10): what it was
   DRUG_PRICE:           'settings.drug.price',          // unit price changed (decision 2026-09-30): before/after unit_price only
   PHRASE_CATEGORY:      'settings.phrase.category',     // a phrase category made, renamed or removed (2026-10-01): name, status, phrases moved
   DRUG_CATEGORY:        'settings.drug.category',       // a drug category made, renamed, hidden/shown or removed (2026-11-09): names, hidden
+  FOLDER:               'settings.folder',              // a folder of lab tests or order sets made, renamed, moved or removed (2026-11-10): name, parent
   ORDER_GROUP:          'settings.order.group',         // an order-code group made, renamed, hidden/shown or removed (2026-11-09): name, hidden, codes renamed
   DEPARTMENT:           'settings.department',          // a department hidden or shown (2026-11-09): status
   ORDER_PRICE:          'settings.order.price',         // an order code's price changed (fee, lab, imaging, procedure): same shape

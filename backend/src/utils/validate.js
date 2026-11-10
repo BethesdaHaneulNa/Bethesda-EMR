@@ -74,7 +74,10 @@ function badAmounts(body, fields) {
 function badDateRange(from, to) {
   for (const [label, value] of [['from', from], ['to', to]]) {
     if (value === undefined || value === null || value === '') continue;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value)) || isNaN(new Date(value).getTime())) {
+    // a day of the calendar: new Date('2026-02-30') is the 2nd of March for JavaScript, and
+    // the 30th of February then reached the database (bug hunt round 9)
+    const day = new Date(String(value) + 'T00:00:00Z');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value)) || isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== String(value)) {
       return label + ' must be a date in YYYY-MM-DD form';
     }
   }

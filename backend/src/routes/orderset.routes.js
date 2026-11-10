@@ -21,6 +21,14 @@ const canReadSets = permMiddleware('consultation', 'settings');
 //   order line: quantity a number > 0 · frequency and days whole numbers
 // An empty field is allowed (an old set, or one not filled in yet); see insertItems.
 const blank = (v) => v === undefined || v === null || String(v).trim() === '';
+// The folder a set is filed in (item_folder, 065): null = the top level. Only an order-set
+// folder that exists; -> { value } or { error }.
+async function folderOf(db, sent) {
+  if (blank(sent)) return { value: null };
+  if (!/^\d{1,9}$/.test(String(sent))) return { error: 'folder_id must be a folder of order sets' };
+  const r = await db.query("SELECT 1 FROM item_folder WHERE id = $1 AND kind = 'orderset'", [sent]);
+  return r.rows.length ? { value: Number(sent) } : { error: 'folder_id must be a folder of order sets' };
+}
 function badItems(items) {
   for (let i = 0; i < items.length; i++) {
     const it = items[i] || {};
@@ -126,9 +134,11 @@ router.post('/', permMiddleware('settings'), async (req, res) => {
     if (!name) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'name required' }); }
     const badQty = badItems(Array.isArray(items) ? items : []);
     if (badQty) { await client.query('ROLLBACK'); return res.status(400).json({ error: badQty }); }
+    const folder = await folderOf(client, req.body.folder_id);
+    if (folder.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: folder.error }); }
     const s = await client.query(
-      `INSERT INTO order_set (name, group_name, department_id, description) VALUES ($1,$2,$3,$4) RETURNING *`,
-      [name, group_name || null, department_id || null, description || null]
+      `INSERT INTO order_set (name, group_name, department_id, description, folder_id) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [name, group_name || null, department_id || null, description || null, folder.value]
     );
     await insertItems(client, s.rows[0].id, Array.isArray(items) ? items : []);
     await client.query('COMMIT');
@@ -147,10 +157,14 @@ router.put('/:id', permMiddleware('settings'), async (req, res) => {
     const { name, group_name, department_id, description, items, is_active } = req.body;
     const badQty = badItems(Array.isArray(items) ? items : []);
     if (badQty) { await client.query('ROLLBACK'); return res.status(400).json({ error: badQty }); }
+    // The folder changes only when the request carries it (an older screen does not).
+    const hasFolder = Object.prototype.hasOwnProperty.call(req.body, 'folder_id');
+    const folder = hasFolder ? await folderOf(client, req.body.folder_id) : { value: null };
+    if (folder.error) { await client.query('ROLLBACK'); return res.status(400).json({ error: folder.error }); }
     await client.query(
       `UPDATE order_set SET name=COALESCE($1,name), group_name=$2, department_id=$3, description=$4,
-              is_active=COALESCE($5,is_active), updated_at=NOW() WHERE id=$6`,
-      [name, group_name || null, department_id || null, description || null, (is_active === undefined ? null : is_active), req.params.id]
+              is_active=COALESCE($5,is_active), folder_id = CASE WHEN $7 THEN $8::int ELSE folder_id END, updated_at=NOW() WHERE id=$6`,
+      [name, group_name || null, department_id || null, description || null, (is_active === undefined ? null : is_active), req.params.id, hasFolder, folder.value]
     );
     if (Array.isArray(items)) {
       await client.query('DELETE FROM order_set_item WHERE set_id=$1', [req.params.id]);
@@ -158,6 +172,8 @@ router.put('/:id', permMiddleware('settings'), async (req, res) => {
     }
     await client.query('COMMIT');
     const out = await pool.query('SELECT * FROM order_set WHERE id=$1', [req.params.id]);
+    // a set that is not there (removed on another screen) is not "saved": it answered 200 with nothing
+    if (!out.rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(out.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');

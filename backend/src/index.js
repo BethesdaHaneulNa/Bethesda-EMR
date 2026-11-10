@@ -39,6 +39,7 @@ app.use('/api/worklist', require('./routes/worklist.routes'));
 app.use('/api/pacs', require('./routes/pacs.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/order-sets', require('./routes/orderset.routes'));
+app.use('/api/folders', require('./routes/folder.routes'));   // folders of lab tests and order sets (065, 1.8.0)
 app.use('/api/stats', require('./routes/stats.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/lab', require('./routes/lab.routes'));

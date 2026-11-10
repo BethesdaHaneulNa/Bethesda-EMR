@@ -19,6 +19,7 @@ import { ModalityField, ModalityHint } from './settingsModality.jsx';
 import { useDrugCategories } from '../drugCategories.js';
 import { DrugCategoriesPanel } from './settingsDrugCategories.jsx';
 import { OrderGroupsPanel } from './settingsOrderGroups.jsx';
+import { FolderTree, folderChoices, folderPath } from '../components/FolderTree.jsx';
 
 export default function SettingsPage() {
   var langCtx = useLang(); var t = langCtx.t;
@@ -59,6 +60,22 @@ export default function SettingsPage() {
   var osrS = useState([]), osResults = osrS[0], setOsResults = osrS[1];
   var clS = useState(null), clinic = clS[0], setClinic = clS[1];
   var lcS = useState(''), labCode = lcS[0], setLabCode = lcS[1];
+  // The two lists filed in folders (065, the clinic's manager 2026-11-10): the lab tests and
+  // the order sets, each with its own tree of folders (GET /folders/tree).
+  var ltS = useState({folders:[],items:[]}), labTree = ltS[0], setLabTree = ltS[1];
+  var otS = useState({folders:[],items:[]}), osTree = otS[0], setOsTree = otS[1];
+  var npFS = useState(null), newPanelFolder = npFS[0], setNewPanelFolder = npFS[1];   // where "+ test" was pressed
+  async function loadLabTree(){ try { setLabTree(await api.get('/folders/tree?kind=lab')); } catch(e){} }
+  async function loadOsTree(){ try { setOsTree(await api.get('/folders/tree?kind=orderset')); } catch(e){} }
+  function foErr(m){ return seMessage(t, m); }
+  // With the whole list one click away, a click on another line must not throw away what
+  // was typed and not saved: ask first (lab items against what was loaded; an order set
+  // by the mark its editor sets on every change).
+  function labDirty(){
+    var strip=function(list){ return JSON.stringify((list||[]).map(function(x){ var c=Object.assign({},x); delete c._open; return c; })); };
+    return !!labCode && strip(labItems)!==strip(labOrig);
+  }
+  function leaveOk(dirty){ return !dirty || window.confirm(t.fo_discard); }
   var liS = useState([]), labItems = liS[0], setLabItems = liS[1];
   var loS = useState([]), labOrig = loS[0], setLabOrig = loS[1];   // item list as last loaded/saved (with result_count)
   var lwS = useState(null), labWarn = lwS[0], setLabWarn = lwS[1]; // {changed, sameName} while asking before a save
@@ -84,7 +101,7 @@ export default function SettingsPage() {
   // private, so for weeks the check silently found nothing (2026-11-08)).
   var vis=useState(null), verInfo=vis[0], setVerInfo=vis[1];
   useEffect(function(){ if(activeTab==='clinic'){ setVerInfo(null); api.get('/version?force=1').then(setVerInfo).catch(function(e){ setVerInfo({error:String(e&&e.message||e)}); }); } },[activeTab]);
-  useEffect(function(){ if(activeTab==='labitems') loadLabUnits(); },[activeTab]);
+  useEffect(function(){ if(activeTab==='labitems'){ loadLabUnits(); loadLabTree(); } if(activeTab==='orderset') loadOsTree(); },[activeTab]);
   // Back to the default each time the Journal tab is opened, even without leaving Settings.
   useEffect(function(){ if(activeTab==='audit') setAuditIssued(false); },[activeTab]);
   useEffect(function(){ if(activeTab==='audit') loadAudit(auditF, auditPage); },[activeTab, auditPage, auditIssued]);
@@ -263,6 +280,7 @@ export default function SettingsPage() {
       var saved = await api.post('/lab/test-items/save', { order_code_id: labCode, items: labItems });
       setLabOrig(saved||[]);
       setLabItems((saved||[]).map(function(x){return Object.assign({},x);}));
+      loadLabTree();   // the number of items shown in the list on the left
       showToast(t.lb_saved);
     } catch(err){ alert(choiceServerError(err.message) || ((t.se_error)+': '+seMessage(t,err.message))); }
   }
@@ -396,12 +414,25 @@ export default function SettingsPage() {
     }
   }
   function unp(k,v){ setNewPanel(function(p){ var n=Object.assign({},p); n[k]=v; return n; }); }
+  // The order group a new lab test is filed under in the doctor's order window: the one
+  // most lab tests carry, else Laboratory, else Other. It was the fixed text 'Lab', which
+  // stopped being a group when the groups became rows the clinic keeps (063, 1.7.17): since
+  // then "+ new lab panel" answered "Unknown order-code group" and made nothing.
+  function labGroupName(){
+    var n={}; orderCodes.filter(function(o){ return o.code_type==='lab' && o.group_name; }).forEach(function(o){ n[o.group_name]=(n[o.group_name]||0)+1; });
+    var have=function(g){ return orderGroups.some(function(x){ return x.name===g; }); };
+    var best=Object.keys(n).filter(have).sort(function(a,b){ return n[b]-n[a]; })[0];
+    return best || (have('Laboratory') ? 'Laboratory' : 'Other');
+  }
   async function createPanel(){
     if(!newPanel.code || !newPanel.name){ alert(t.lb_codeNameRequired); return; }
     try {
-      var p = await api.post('/admin/order-codes', { code:newPanel.code.trim(), name:newPanel.name.trim(), code_type:'lab', group_name:'Lab', price:Number(newPanel.price)||0, price_clinic:Number(newPanel.price)||0 });
+      var p = await api.post('/admin/order-codes', { code:newPanel.code.trim(), name:newPanel.name.trim(), code_type:'lab', group_name:labGroupName(), price:Number(newPanel.price)||0, price_clinic:Number(newPanel.price)||0 });
+      // filed where "+ test" was pressed; a folder that went meanwhile leaves it at the top level
+      if(newPanelFolder!=null){ try { await api.put('/folders/place', { kind:'lab', id:p.id, folder_id:newPanelFolder }); } catch(e){} }
       var codes = await api.get('/admin/order-codes'); setOrderCodes(codes);
-      setNewPanelOpen(false); setNewPanel({code:'',name:'',price:''});
+      setNewPanelOpen(false); setNewPanel({code:'',name:'',price:''}); setNewPanelFolder(null);
+      await loadLabTree();
       loadLabItems(String(p.id));
       showToast(t.lb_saved);
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
@@ -485,9 +516,21 @@ export default function SettingsPage() {
     catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
 
+  // Remove for good an account that never served (the clinic's manager, 2026-11-10): on a
+  // deactivated line, administrators only. The server decides whether it never served
+  // (POST /admin/staff/:id/remove) - an account with a single record stays, deactivated.
+  var myId = (getUser()||{}).id;
+  function canRemoveStaff(s){ return meIsAdmin && s.status==='inactive' && s.login_id!=='admin' && String(s.id)!==String(myId); }
+  async function removeStaff(s){
+    if(!confirm((t.se_confirmStaffRemove||'').replace('{name}', s.name+' ('+s.login_id+')'))) return;
+    try { await api.post('/admin/staff/'+s.id+'/remove', {}); await loadAll(); }
+    catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
+
   // ── 약속처방(Order Sets) ──
-  async function osReload(){ try { setOrderSets(await api.get('/order-sets')); } catch(e){} }
-  function osNew(){ setOsEdit({name:'',group_name:'',department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
+  async function osReload(){ try { setOrderSets(await api.get('/order-sets')); } catch(e){} await loadOsTree(); }
+  // folderId: the folder "+ order set" was pressed in (null = the top level)
+  function osNew(folderId){ setOsEdit({name:'',group_name:'',folder_id:(typeof folderId==='number'?folderId:null),department_id:'',description:'',items:[]}); setOsQ(''); setOsResults([]); setOsKind('drug'); }
   // A stored number as the field shows it: '3.000' -> '3'; empty stays empty.
   function osNum(v){ if(v==null || String(v).trim()==='') return ''; var n=Number(v); return isFinite(n) ? String(n) : String(v); }
   // A drug line whose drug was hidden from the list (drug_active false) or no longer exists
@@ -508,12 +551,12 @@ export default function SettingsPage() {
   // Where a fee code is used: the payment screen's own words for its section and its list.
   function feeHint(){ return String(t.se_feeHint||'').split('{pay}').join(t.payment||'').split('{section}').join(t.adminCharges||'').split('{add}').join(t.addCharge||''); }
   function osOpen(s){
-    setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', department_id:s.department_id||'', description:s.description||'',
+    setOsEdit({ id:s.id, name:s.name||'', group_name:s.group_name||'', folder_id:(s.folder_id==null?null:s.folder_id), department_id:s.department_id||'', description:s.description||'',
       items:(s.items||[]).map(function(it){ return {kind:it.kind, drug_id:it.drug_id, order_code_id:it.order_code_id, code:it.code, name:it.name, code_type:it.order_code_type,
         dose:(it.kind==='drug' ? osNum(it.dose) : osDir(it.dose)), frequency:osNum(it.frequency), days:osNum(it.days), route:it.route||'', quantity:(it.quantity==null?1:Number(it.quantity)), drug_active:it.drug_active}; }) });
     setOsQ(''); setOsResults([]); setOsKind('drug');
   }
-  function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; return n; }); }
+  function osField(k,v){ setOsEdit(function(e){ var n=Object.assign({},e); n[k]=v; n._dirty=true; return n; }); }
   async function osRunSearch(){
     try {
       if(osKind==='drug'){ var d=await api.get('/admin/drugs?q='+encodeURIComponent(osQ)); setOsResults((d||[]).slice(0,25)); }
@@ -528,12 +571,12 @@ export default function SettingsPage() {
       // An exam / procedure line starts 1 x 1 x 1.
       if(osKind==='drug') items.push({kind:'drug', drug_id:r.id, code:r.code, name:r.name, dose:'', frequency:'', days:'', route:'', quantity:1, drug_active:true});
       else items.push({kind:'order', order_code_id:r.id, code:r.code, name:r.name, code_type:r.code_type, dose:(r.code_type==='procedure' ? osDir(r.default_dose) : ''), frequency:'1', days:'1', quantity:1});
-      n.items=items; return n;
+      n.items=items; n._dirty=true; return n;
     });
   }
   // (Until 1.7.15 a pack-unit drug line had a bottle-count field of its own here; since
   // 1.7.16 its daily total x days is the count, like any drug line - the clinic's manager.)
-  function osItem(idx, key, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ if(i!==idx) return it; var c=Object.assign({},it); c[key]=v; return c; }); return n; }); }
+  function osItem(idx, key, v){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).map(function(it,i){ if(i!==idx) return it; var c=Object.assign({},it); c[key]=v; return c; }); n._dirty=true; return n; }); }
   // A set line's numbers, checked the way the consultation server checks a prescription
   // line (utils/validate.js LIMITS): daily total 0-1000, times 1-24 and days 1-365 whole
   // numbers, directions at most 10 characters. On a drug line (not pack-unit) the daily
@@ -556,7 +599,7 @@ export default function SettingsPage() {
     if(!blank(it.quantity) && !num(it.quantity,0.001,10000,false)) return 'bad';
     return null;
   }
-  function osRemove(idx){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).filter(function(_,i){return i!==idx;}); return n; }); }
+  function osRemove(idx){ setOsEdit(function(e){ var n=Object.assign({},e); n.items=(e.items||[]).filter(function(_,i){return i!==idx;}); n._dirty=true; return n; }); }
   async function osSave(){
     if(!osEdit) return;
     if(!osEdit.name){ alert(t.setName+' ?'); return; }
@@ -573,7 +616,7 @@ export default function SettingsPage() {
           dose:trim(it.dose)||null, frequency:trim(it.frequency)||null, days:trim(it.days)||null, route:trim(it.route)||null, quantity:it.quantity};
         if(it.kind!=='drug'){ c.dose=osDir(it.dose)||null; c.frequency=c.frequency||1; c.days=c.days||1; c.quantity=trim(it.quantity)||1; }
         return c; });
-      var body={ name:osEdit.name, group_name:osEdit.group_name||null, department_id:osEdit.department_id||null, description:osEdit.description||'', items:items };
+      var body={ name:osEdit.name, group_name:osEdit.group_name||null, folder_id:(osEdit.folder_id==null?null:osEdit.folder_id), department_id:osEdit.department_id||null, description:osEdit.description||'', items:items };
       if(osEdit.id) await api.put('/order-sets/'+osEdit.id, body);
       else await api.post('/order-sets', body);
       setOsEdit(null); await osReload(); showToast(t.se_saved);
@@ -581,7 +624,7 @@ export default function SettingsPage() {
   }
   async function osDelete(s){
     if(!confirm(t.se_confirmDelete+' '+s.name)) return;
-    try { await api.del('/order-sets/'+s.id); await osReload(); } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+    try { await api.del('/order-sets/'+s.id); setOsEdit(function(e){ return e && e.id===s.id ? null : e; }); await osReload(); } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
   function osGrouped(){
     var groups={}, order=[];
@@ -666,6 +709,7 @@ export default function SettingsPage() {
                     {s.status==='inactive'
                       ? (meIsAdmin ? <button onClick={function(){reactivateStaff(s)}} style={{background:'var(--ok-2-a15)',color:'var(--ok-text)',border:'1px solid var(--ok-2-a40)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.se_reactivate}</button> : null)
                       : <button onClick={function(){deleteItem('staff',s.id)}} style={{background:'var(--danger-strong-a10)',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>{t.delete}</button>}
+                    {canRemoveStaff(s) ? <button onClick={function(){removeStaff(s)}} title={t.se_staffRemoveHint} style={{background:'transparent',color:'var(--danger-text)',border:'1px solid var(--danger-strong-a30)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize: 11}}>🗑 {t.se_staffRemove}</button> : null}
                   </td>
                 </tr>;
               })}</tbody>
@@ -778,52 +822,47 @@ export default function SettingsPage() {
 
 
           {/* ORDER SETS / 약속처방 */}
-          {activeTab==='orderset'?(<div style={{display:'flex',flexDirection:'column',height:'100%'}}>
+          {activeTab==='orderset'?(<div style={{display:'flex',height:'100%',minHeight:0}}>
+            {/* Left: every order set, filed in folders (065). Right: the one being edited. */}
+            <div style={{width:340,flexShrink:0,borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',minHeight:0}}>
+              <div style={{flexShrink:0,padding:'8px 14px',borderBottom:'1px solid '+bd,background:scBg,fontWeight:700,fontSize: 14,color:tx}}>🧪 {t.orderSets} <span style={{fontWeight:400,fontSize:12,color:t3}}>({orderSets.length})</span></div>
+              <FolderTree kind="orderset" folders={osTree.folders} items={orderSets} selectedId={osEdit&&osEdit.id?osEdit.id:null}
+                onSelect={function(s){ if(osEdit && osEdit.id===s.id) return; if(!leaveOk(osEdit && osEdit._dirty)) return; osOpen(s); }}
+                onAddItem={function(fid){ if(!leaveOk(osEdit && osEdit._dirty)) return; osNew(fid); }} addItemLabel={'+ '+t.newSet}
+                onChanged={osReload} errText={foErr} emptyText={t.noOrderSets} searchPlaceholder={t.se_setSearch}
+                itemText={function(s){ return (s.name||'')+' '+(s.items||[]).map(function(it){ return (it.code||'')+' '+(it.name||''); }).join(' '); }}
+                renderItem={function(s){ return <div>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontWeight:700,fontSize: 14,color:'var(--ok-text)',overflowWrap:'anywhere'}}>{s.name}</span>
+                    {s.dept_code?<span style={{fontSize: 11,color:t2,background:'var(--bg)',border:'1px solid '+bd2,borderRadius:4,padding:'0 5px'}}>{s.dept_code}</span>:null}
+                    <span style={{fontSize: 12,color:t3,marginLeft:'auto',whiteSpace:'nowrap'}}>{(s.items||[]).length} {t.itemsUnit}</span>
+                  </div>
+                  <div style={{fontSize: 12,color:t3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{(s.items||[]).length ? (s.items||[]).map(function(it,i){ return <span key={i}>{i ? ' · ' : ''}<span title={osGone(it) ? t.se_osGoneLine : undefined} style={osGone(it) ? {textDecoration:'line-through'} : undefined}>{it.code}</span></span>; }) : '\u2014'}{osGoneCount(s.items) ? <span title={t.se_osGoneHint} style={{color:'var(--warn-text)'}}> {String(t.se_osGone||'').replace('{n}', osGoneCount(s.items))}</span> : null}</div>
+                </div>; }} />
+            </div>
+            <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',minHeight:0}}>
             {!osEdit?(
-              <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
-                <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
-                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>🧪 {t.orderSets}</span><div style={{flex:1}}></div>
-                  <button onClick={osNew} style={{background:'var(--ok-a20)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.newSet}</button>
-                </div>
-                <div style={{flex:1,overflow:'auto',padding:'10px 14px'}}>
-                  {orderSets.length>0?osGrouped().map(function(grp,gi){
-                    return <div key={gi} style={{marginBottom:14}}>
-                      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,paddingBottom:4,borderBottom:'1px solid '+bd}}>
-                        <span style={{fontSize: 14}}>📁</span>
-                        <span style={{fontWeight:800,fontSize: 14,color:'var(--text)'}}>{grp.group||t.ungrouped}</span>
-                        <span style={{fontSize: 12,color:t3}}>({grp.sets.length})</span>
-                      </div>
-                      {grp.sets.map(function(s){
-                        return <div key={s.id} style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:8}}>
-                          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-                            <span style={{fontWeight:800,fontSize: 14,color:'var(--ok-text)'}}>{s.name}</span>
-                            {s.dept_code?<span style={{fontSize: 12,color:t2,background:'var(--bg)',border:'1px solid '+bd2,borderRadius:4,padding:'1px 6px'}}>{s.dept_code}</span>:null}
-                            <span style={{fontSize: 12,color:t3}}>{(s.items||[]).length} {t.itemsUnit}</span>
-                            {osGoneCount(s.items) ? <span title={t.se_osGoneHint} style={{fontSize: 12,color:'var(--warn-text)'}}>{String(t.se_osGone||'').replace('{n}', osGoneCount(s.items))}</span> : null}
-                            <div style={{flex:1}}></div>
-                            <button onClick={function(){osOpen(s)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.edit}</button>
-                            <button onClick={function(){osDelete(s)}} style={{background:'var(--danger-a18)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:3,padding:'2px 8px',cursor:'pointer',fontSize: 12}}>{t.delete}</button>
-                          </div>
-                          <div style={{fontSize: 12,color:'var(--text-2)'}}>{(s.items||[]).length ? (s.items||[]).map(function(it,i){ return <span key={i}>{i ? ' · ' : ''}<span title={osGone(it) ? t.se_osGoneLine : undefined} style={osGone(it) ? {textDecoration:'line-through',color:'var(--text-3)'} : undefined}>{it.code}</span></span>; }) : '—'}</div>
-                        </div>;
-                      })}
-                    </div>;
-                  }):<div style={{padding:24,textAlign:'center',color:t3,fontStyle:'italic'}}>{t.noOrderSets}</div>}
-                </div>
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:t3,padding:24,textAlign:'center'}}>
+                <div style={{fontSize:40}}>🧪</div>
+                <div style={{fontSize: 14,lineHeight:1.6,maxWidth:420}}>{t.se_setPick}</div>
+                <button onClick={function(){ osNew(null); }} style={{background:'var(--ok-a20)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 14,fontWeight:700}}>+ {t.newSet}</button>
               </div>
             ):(
               <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
                 <div style={{padding:'8px 14px',borderBottom:'1px solid '+bd,display:'flex',alignItems:'center',gap:8,background:scBg}}>
-                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{osEdit.id?t.edit:t.newSet}</span><div style={{flex:1}}></div>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx}}>{osEdit.id?t.edit:t.newSet}{osEdit.folder_id!=null && folderPath(osTree.folders, osEdit.folder_id) ? <span style={{fontWeight:400,fontSize:12,color:t3}}> · 📁 {folderPath(osTree.folders, osEdit.folder_id)}</span> : null}</span><div style={{flex:1}}></div>
+                  {osEdit.id ? <button onClick={function(){ osDelete({id:osEdit.id, name:osEdit.name}); }} style={{background:'var(--danger-a18)',color:'var(--danger-text)',border:'1px solid var(--danger-a40)',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13}}>{t.delete}</button> : null}
                   <button onClick={function(){setOsEdit(null)}} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize: 13}}>{t.cancel||'Cancel'}</button>
                   <button onClick={osSave} style={{background:'linear-gradient(135deg,var(--ok),var(--ok-strong))',color:'var(--on-fill)',border:'none',borderRadius:4,padding:'4px 14px',cursor:'pointer',fontSize: 13,fontWeight:700}}>{t.save}</button>
                 </div>
                 <div style={{flex:1,overflow:'auto',padding:'12px 14px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
                   <div>
                     <Fld label={t.setName}><input value={osEdit.name} onChange={function(e){osField('name',e.target.value)}} style={IS}/></Fld>
-                    <Fld label={t.setGroup}>
-                      <input list="os-groups" value={osEdit.group_name||''} onChange={function(e){osField('group_name',e.target.value)}} placeholder={t.setGroupHint} style={IS}/>
-                      <datalist id="os-groups">{Array.from(new Set((orderSets||[]).map(function(s){return s.group_name;}).filter(Boolean))).map(function(g){return <option key={g} value={g}/>;})}</datalist>
+                    <Fld label={t.fo_folder}>
+                      <select value={osEdit.folder_id==null?'':osEdit.folder_id} onChange={function(e){osField('folder_id', e.target.value===''?null:Number(e.target.value))}} style={IS}>
+                        <option value="">{t.fo_top}</option>
+                        {folderChoices(osTree.folders).map(function(c){ return <option key={c.id} value={c.id}>{c.path}</option>; })}
+                      </select>
                     </Fld>
                     <Fld label={t.department}>
                       <select value={osEdit.department_id||''} onChange={function(e){osField('department_id',e.target.value)}} style={IS}>
@@ -909,6 +948,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>):null}
 
 
@@ -995,18 +1035,27 @@ export default function SettingsPage() {
           {/* CLINIC */}
           {/* Scrolls on its own: the content column clips (overflow hidden), so with a few
               ranges open the save button went below a 1366x768 window, out of reach. */}
-          {activeTab==='labitems'?(<div style={{padding:'16px 20px',overflow:'auto'}}>
-            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:6}}>🧫 {t.labItems||'Lab Test Items'}</div>
-            <div style={{fontSize: 13,color:t3,marginBottom:12}}>{t.lb_itemsHint}</div>
-            <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:12}}>
-              <span style={{fontSize: 14,color:t2}}>{t.labPanel||'Panel'}:</span>
-              <select value={labCode} onChange={function(e){loadLabItems(e.target.value)}} style={Object.assign({},IS,{maxWidth:280})}>
-                <option value="">— {t.lb_selectPanel} —</option>
-                {orderCodes.filter(function(o){return o.code_type==='lab'}).map(function(o){return <option key={o.id} value={o.id}>{o.code} · {o.name}</option>})}
-              </select>
-              <button onClick={function(){ setNewPanelOpen(!newPanelOpen); }} style={{background:'var(--accent-a20)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>+ {t.newLabPanel||'새 검사 패널'}</button>
-              <button onClick={openUnitWin} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'7px 12px',cursor:'pointer',fontSize: 13,fontWeight:700,whiteSpace:'nowrap'}}>{t.lb_unitList}</button>
+          {activeTab==='labitems'?(<div style={{display:'flex',height:'100%',minHeight:0}}>
+            {/* Left: every lab test, filed in folders (065). Right: the items of the one chosen. */}
+            <div style={{width:340,flexShrink:0,borderRight:'1px solid '+bd,display:'flex',flexDirection:'column',minHeight:0}}>
+              <div style={{flexShrink:0,padding:'8px 14px',borderBottom:'1px solid '+bd,background:scBg,display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontWeight:700,fontSize: 14,color:tx}}>🧫 {t.labItems||'Lab Test Items'} <span style={{fontWeight:400,fontSize:12,color:t3}}>({labTree.items.length})</span></span><div style={{flex:1}}></div>
+                <button onClick={openUnitWin} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'3px 9px',cursor:'pointer',fontSize: 12,whiteSpace:'nowrap'}}>{t.lb_unitList}</button>
+              </div>
+              <FolderTree kind="lab" folders={labTree.folders} items={labTree.items} selectedId={labCode?Number(labCode):null}
+                onSelect={function(it){ if(String(it.id)===String(labCode) && !newPanelOpen) return; if(!leaveOk(labDirty())) return; setNewPanelOpen(false); loadLabItems(String(it.id)); }}
+                onAddItem={function(fid){ if(!leaveOk(labDirty())) return; setLabItems(labOrig.map(function(x){ return Object.assign({},x); })); setNewPanelFolder(fid); setNewPanel({code:'',name:'',price:''}); setNewPanelOpen(true); }} addItemLabel={'+ '+t.lb_newTest}
+                onChanged={loadLabTree} errText={foErr} emptyText={t.lb_noTests} searchPlaceholder={t.lb_treeSearch}
+                itemText={function(it){ return (it.name||'')+' '+(it.code||''); }}
+                renderItem={function(it){ return <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+                  <span style={{fontWeight:700,fontSize: 14,color:tx,overflowWrap:'anywhere'}}>{it.name}</span>
+                  <span style={{fontSize: 12,color:t3,fontFamily:'monospace'}}>{it.code}</span>
+                  <span style={{fontSize: 12,color:it.count?t3:'var(--warn-text)',marginLeft:'auto',whiteSpace:'nowrap'}}>{String(t.lb_nItems||'').replace('{n}', it.count)}</span>
+                </div>; }} />
             </div>
+            <div style={{flex:1,minWidth:0,overflow:'auto',padding:'16px 20px'}}>
+            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:6}}>🧫 {(function(){ var c=labTree.items.filter(function(x){ return String(x.id)===String(labCode); })[0]; return c && !newPanelOpen ? c.name+'  ·  '+c.code : (newPanelOpen ? (t.newLabPanel||'') : (t.labItems||'')); })()}{newPanelOpen && newPanelFolder!=null && folderPath(labTree.folders,newPanelFolder) ? <span style={{fontWeight:400,fontSize:12,color:t3}}>  ·  📁 {folderPath(labTree.folders,newPanelFolder)}</span> : null}</div>
+            <div style={{fontSize: 13,color:t3,marginBottom:12}}>{t.lb_itemsHint}</div>
             {newPanelOpen?(<div style={{display:'flex',gap:8,alignItems:'flex-end',marginBottom:14,background:scBg,border:'1px solid '+bd,borderRadius:8,padding:'10px 12px',flexWrap:'wrap'}}>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.lb_code}</label><input value={newPanel.code} onChange={function(e){unp('code',e.target.value)}} placeholder="L09" style={Object.assign({},IS,{width:90})}/></div>
               <div><label style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.name||'Name'}</label><input value={newPanel.name} onChange={function(e){unp('name',e.target.value)}} placeholder="Thyroid Panel" style={Object.assign({},IS,{width:220})}/></div>
@@ -1015,7 +1064,7 @@ export default function SettingsPage() {
               <button onClick={function(){ setNewPanelOpen(false); }} style={{background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:5,padding:'8px 14px',cursor:'pointer',fontSize: 14}}>{t.cancel||'취소'}</button>
               <div style={{fontSize: 12,color:t3,width:'100%',marginTop:2}}>{t.newLabPanelHint||'새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.'}</div>
             </div>):null}
-            {labCode?(<div style={{maxWidth:860}}>
+            {labCode && !newPanelOpen?(<div style={{maxWidth:860}}>
               <div style={{display:'grid',gridTemplateColumns:'1.4fr 1.2fr .6fr .6fr 1fr 150px 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
                 <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div><div></div>
               </div>
@@ -1059,7 +1108,7 @@ export default function SettingsPage() {
                 <button onClick={addLi} style={{background:'var(--chip)',color:'var(--accent-text)',border:'1px solid var(--accent-a40)',borderRadius:5,padding:'7px 14px',cursor:'pointer',fontSize: 13,fontWeight:600}}>+ {t.addItem||'Add item'}</button>
                 <button onClick={function(){ saveLabItems(); }} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'7px 20px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.save||'Save'}</button>
               </div>
-            </div>):<div style={{color:t3,fontSize: 14}}>{t.lb_pickPanel}</div>}
+            </div>):(newPanelOpen ? null : <div style={{color:t3,fontSize: 14,lineHeight:1.6}}>{t.lb_pickTest}</div>)}
             {choiceWin?(function(){
               var item=labItems[choiceWin.i]||{}, dflt=defaultChoices(item.ref_text);
               var mv={background:'var(--chip)',color:t2,border:'1px solid '+bd2,borderRadius:4,padding:'5px 0',width:28,cursor:'pointer',fontSize:11,flexShrink:0};
@@ -1152,6 +1201,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>):null}
+            </div>
           </div>):null}
 
           {activeTab==='backup'?(<div style={{padding:'16px 20px',maxWidth:780,overflow:'auto'}}>

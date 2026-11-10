@@ -50,6 +50,7 @@ export var AUDIT_ACTIONS = {
   'settings.staff.edit': 'se_act_staffEdit',
   'settings.staff.permissions': 'se_act_staffPerms',
   'settings.staff.password': 'se_act_staffPassword',
+  'settings.staff.delete': 'se_act_staffDelete',
   // price only, before -> after (decision 2026-09-30 (나)); no patient
   'settings.drug.price': 'se_act_drugPrice',
   'settings.order.price': 'se_act_orderPrice',
@@ -61,6 +62,7 @@ export var AUDIT_ACTIONS = {
   'settings.drug.category': 'se_act_drugCategory',
   // an order-code group made, renamed (its codes follow), hidden/shown or removed
   'settings.order.group': 'se_act_orderGroup',
+  'settings.folder': 'se_act_folder',
   // a department hidden or shown
   'settings.department': 'se_act_department',
   // the list of frequent diagnoses: a row added, edited, switched off or on (code, names, status)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { fmtDob } from '../dob.js';
 import { fold } from '../fold.js';
+import { FolderTree } from '../components/FolderTree.jsx';
 import { vitalsError } from '../vitals.js';
 import { useLang } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
@@ -312,6 +313,8 @@ export default function ConsultationPage() {
   var ls = useState(true), loading = ls[0], setLoading = ls[1];
   var rtb2 = useState('past'), rightTab = rtb2[0], setRightTab = rtb2[1];
   var osets = useState([]), orderSets = osets[0], setOrderSets = osets[1];
+  // the folders the order sets are filed in (065; Settings > Order sets keeps them)
+  var osfS = useState([]), osFolders = osfS[0], setOsFolders = osfS[1];
   var egs = useState({}), expGroups = egs[0], setExpGroups = egs[1];
   var dcs = useState(false), docOpen = dcs[0], setDocOpen = dcs[1];
   var lbs = useState(false), labOpen = lbs[0], setLabOpen = lbs[1];
@@ -445,6 +448,7 @@ export default function ConsultationPage() {
       setPhrases(phData);
       try { setPhraseCatRows(await api.get('/admin/phrase-categories') || []); } catch(e){ setPhraseCatRows([]); }
       try { var osData = await api.get('/order-sets'); setOrderSets(osData||[]); } catch(e){ setOrderSets([]); }
+      try { var osTree = await api.get('/folders/tree?kind=orderset'); setOsFolders((osTree&&osTree.folders)||[]); } catch(e){ setOsFolders([]); }
       try { setQDoctors(await api.get('/admin/doctors') || []); } catch(e){ setQDoctors([]); }
       try { setDxCodes(await api.get('/consultations/diagnosis-codes') || []); } catch(e){ setDxCodes([]); }
       try { setQueuePref(prefFromServer(await api.get('/consultations/queue-filter'))); } catch(e){ setQueuePref(null); }
@@ -2000,33 +2004,24 @@ export default function ConsultationPage() {
                 {history.filter(function(h){ return !consult || h.id!==consult.id; }).length===0 ? <div style={{padding:'12px 10px',textAlign:'center',color:'var(--text-5)',fontSize: 13,fontStyle:'italic'}}>{t.cs_noPastVisit}</div> : null}
             </>):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.cs_selectPatient}</div>
             ):(
-              orderSets.length>0?osGrouped().map(function(grp,gi){
-                var gkey = grp.group||'\u0000';
-                var open = !!expGroups[gkey];
-                return <div key={gi} style={{marginBottom:6}}>
-                  <div className="pressable" onClick={function(){toggleGroup(gkey)}} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 8px',cursor:'pointer',background:'var(--panel-head)',borderRadius:5,border:'1px solid '+bd}}>
-                    <span style={{fontSize:11,color:t2,width:10}}>{open?'\u25be':'\u25b8'}</span>
-                    <span style={{fontSize:13}}>📁</span>
-                    <span style={{fontSize:13,fontWeight:800,color:'var(--text)'}}>{grp.group||t.ungrouped}</span>
-                    <span style={{fontSize:11,color:t3,marginLeft:'auto'}}>{grp.sets.length}</span>
-                  </div>
-                  {open?<div style={{padding:'4px 0 2px 10px'}}>
-                    {grp.sets.map(function(s){
-                      return <div key={s.id} className="pressable" onClick={function(){applySet(s)}} title={t.applySetHint} style={{background:scBg,borderRadius:5,padding:'7px 9px',marginBottom:5,border:'1px solid '+bd,borderLeft:'3px solid var(--ok-ink)',cursor:'pointer'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                          <span style={{fontSize:13,fontWeight:800,color:'var(--ok-text)'}}>{s.name}</span>
-                          {s.dept_code?<span style={{fontSize:11,color:t2}}>{s.dept_code}</span>:null}
-                          <span style={{fontSize:11,color:t3,marginLeft:'auto'}}>{(s.items||[]).length} {t.itemsUnit}</span>
-                        </div>
-                        <div style={{fontSize:12,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{(s.items||[]).length ? (s.items||[]).map(function(it, k){
-                          var hidden = it.kind!=='order' && it.drug_active===false;
-                          return <span key={k} title={hidden ? t.cs_setHiddenDrug : undefined} style={hidden ? {textDecoration:'line-through',color:'var(--text-4)'} : null}>{(k ? ', ' : '')+it.code}</span>;
-                        }) : '\u2014'}</div>
-                      </div>;
-                    })}
-                  </div>:null}
-                </div>;
-              }):<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.noOrderSets}</div>
+              // Every order set, filed in the clinic's folders - a folder inside a folder (065,
+              // the clinic's manager 2026-11-10). A click applies the set, as before; the box
+              // on top narrows the list by the set's name or by what is in it.
+              orderSets.length>0?<div style={{height:'100%',minHeight:260,margin:'-2px -4px'}}>
+                <FolderTree readOnly kind="orderset" folders={osFolders} items={orderSets} onSelect={function(s){ applySet(s); }} searchPlaceholder={t.cs_setSearch}
+                  itemText={function(s){ return (s.name||'')+' '+(s.items||[]).map(function(it){ return (it.code||'')+' '+(it.name||''); }).join(' '); }}
+                  renderItem={function(s){ return <div title={t.applySetHint} style={{background:scBg,borderRadius:5,padding:'6px 9px',border:'1px solid '+bd,borderLeft:'3px solid var(--ok-ink)'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                      <span style={{fontSize:13,fontWeight:800,color:'var(--ok-text)',overflowWrap:'anywhere'}}>{s.name}</span>
+                      {s.dept_code?<span style={{fontSize:11,color:t2}}>{s.dept_code}</span>:null}
+                      <span style={{fontSize:11,color:t3,marginLeft:'auto',whiteSpace:'nowrap'}}>{(s.items||[]).length} {t.itemsUnit}</span>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text-2)',lineHeight:1.5,whiteSpace:'pre-wrap',maxHeight:38,overflow:'hidden'}}>{(s.items||[]).length ? (s.items||[]).map(function(it, k){
+                      var hidden = it.kind!=='order' && it.drug_active===false;
+                      return <span key={k} title={hidden ? t.cs_setHiddenDrug : undefined} style={hidden ? {textDecoration:'line-through',color:'var(--text-4)'} : null}>{(k ? ', ' : '')+it.code}</span>;
+                    }) : '\u2014'}</div>
+                  </div>; }} />
+              </div>:<div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize: 14,fontStyle:'italic'}}>{t.noOrderSets}</div>
             )}
           </div>
         </div>

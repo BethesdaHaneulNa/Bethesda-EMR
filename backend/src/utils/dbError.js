@@ -12,6 +12,8 @@ const STATUS_BY_PG_CODE = {
   '22007': 400, // invalid_datetime_format
   '22008': 400, // datetime_field_overflow — a date that does not exist (2020-02-30)
   '22003': 400, // numeric_value_out_of_range
+  '22001': 400, // string_data_right_truncation — a text longer than its column (bug hunt round 8:
+                //   a department code of 11 letters came back as "value too long for type character varying(10)")
 };
 
 const MESSAGE_BY_PG_CODE = {
@@ -23,6 +25,7 @@ const MESSAGE_BY_PG_CODE = {
   '22007': 'A date field has the wrong format',
   '22008': 'A date field has a date that does not exist',
   '22003': 'A number is out of range',
+  '22001': 'A text is too long for its field',
 };
 
 // Usage: catch (err) { return sendDbError(res, err); }

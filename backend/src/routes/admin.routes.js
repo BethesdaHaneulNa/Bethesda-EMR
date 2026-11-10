@@ -655,6 +655,84 @@ router.delete('/staff/:id', permMiddleware('settings'), async (req, res) => {
   } finally { client.release(); }
 });
 
+// Remove for good an account that never served (the clinic's manager, 2026-11-10, after two
+// test accounts had to be removed from the database by hand): an account made by mistake,
+// or one from a trial. Administrators only, never one's own account nor the one made at
+// setup, and only an account that is already deactivated - so the button that deactivates
+// stays the everyday one and this is a second, deliberate step.
+// "Never served" is decided here, not by the screen: no row anywhere may point at the
+// account - every foreign key to staff, and the columns that hold a staff id without one
+// (the logs keep working when a table is restored). Lines of the change log ABOUT the
+// account (who made it, who edited it) are another person's acts and stay; a line the
+// account wrote itself counts as use. Its own screen choices go with it.
+const STAFF_PREFS = ['consultation_queue_filter'];
+const STAFF_REFS_EXTRA = [
+  ['audit_log', 'staff_id'], ['billing', 'cancelled_by'], ['billing', 'cashier_id'], ['billing_saved_fee', 'saved_by'],
+  ['cash_movement', 'staff_id'], ['consultation', 'doctor_id'], ['consultation', 'vitals_by'], ['diagnosis', 'created_by'],
+  ['document_log', 'issued_by'], ['document_log', 'voided_by'], ['drug', 'import_check_done_by'], ['lab_result', 'result_by'],
+  ['order_item', 'cancelled_by'], ['order_item', 'ordered_by'], ['order_item', 'result_by'], ['pacs_config', 'updated_by'],
+  ['pacs_import', 'staff_id'], ['pacs_import', 'undone_by'], ['pacs_study_attach', 'staff_id'], ['pacs_study_move', 'staff_id'],
+  ['phrase_dictionary', 'created_by'], ['prescription', 'dispensed_by'], ['prescription', 'prescribed_by'],
+  ['stock_movement', 'staff_id'], ['supply_movement', 'staff_id'], ['visit', 'doctor_id'], ['visit', 'registered_by'],
+];
+const PLAIN_NAME = /^[a-z_][a-z0-9_]*$/;
+// -> the "table.column" places that hold a row of this account ([] = it never served).
+async function staffReferences(db, staffId) {
+  const fk = await db.query(
+    `SELECT c.conrelid::regclass::text AS tbl, a.attname::text AS col
+       FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+      WHERE c.contype = 'f' AND c.confrelid = 'staff'::regclass AND array_length(c.conkey, 1) = 1`);
+  const cols = await db.query(
+    `SELECT table_name::text AS tbl, column_name::text AS col FROM information_schema.columns WHERE table_schema = 'public'`);
+  const exists = new Set(cols.rows.map(function (r) { return r.tbl + '.' + r.col; }));
+  const pairs = {};
+  fk.rows.forEach(function (r) { pairs[r.tbl + '.' + r.col] = [r.tbl, r.col]; });
+  STAFF_REFS_EXTRA.forEach(function (p) { if (exists.has(p[0] + '.' + p[1])) pairs[p[0] + '.' + p[1]] = p; });
+  const found = [];
+  for (const key of Object.keys(pairs).sort()) {
+    const tbl = pairs[key][0], col = pairs[key][1];
+    if (tbl === 'staff' || STAFF_PREFS.indexOf(tbl) >= 0) continue;
+    // a name this cannot read safely is not skipped: the account stays
+    if (!PLAIN_NAME.test(tbl) || !PLAIN_NAME.test(col)) { found.push(key); continue; }
+    const r = await db.query(`SELECT 1 FROM "${tbl}" WHERE "${col}" = $1 LIMIT 1`, [staffId]);
+    if (r.rows.length) found.push(key);
+  }
+  return found;
+}
+
+router.post('/staff/:id/remove', permMiddleware('settings'), async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: MSG.REMOVE_ADMIN_ONLY });
+  if (!/^\d{1,9}$/.test(String(req.params.id))) return res.status(404).json({ error: MSG.NOT_FOUND });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const cur = await client.query(
+      'SELECT id, login_id, name, role, status, department_id, phone, email, permissions FROM staff WHERE id = $1 FOR UPDATE',
+      [req.params.id]);
+    if (cur.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const was = cur.rows[0];
+    if (String(was.id) === String(req.user.id)) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.STAFF_REMOVE_SELF }); }
+    if (was.login_id === BOOTSTRAP_ADMIN_LOGIN) { await client.query('ROLLBACK'); return res.status(400).json({ error: MSG.SETUP_ADMIN_KEPT }); }
+    if (was.status !== 'inactive') { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.STAFF_REMOVE_ACTIVE }); }
+    const used = await staffReferences(client, was.id);
+    if (used.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: MSG.STAFF_HAS_RECORDS, places: used }); }
+    for (const pref of STAFF_PREFS) {
+      const has = await client.query(`SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'staff_id'`, [pref]);
+      if (has.rows.length) await client.query(`DELETE FROM "${pref}" WHERE staff_id = $1`, [was.id]);
+    }
+    await client.query('DELETE FROM staff WHERE id = $1', [was.id]);
+    await writeAudit(client, req, { action: ACTIONS.STAFF_DELETE, entity: 'staff', entity_id: was.id, summary: staffLabel(was),
+      before: staffFields(was), after: null });
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (e) {}
+    // a row this did not know about still points at the account (23503): it has been used
+    if (err && err.code === '23503') return res.status(409).json({ error: MSG.STAFF_HAS_RECORDS });
+    sendDbError(res, err);
+  } finally { client.release(); }
+});
+
 // Bring a deactivated account back (U2, decided 2026-09-29: yes, administrators only,
 // logged). The account comes back as it was: same login, password, role and
 // permissions - nothing is reset, so the person can log in as before. Only the status

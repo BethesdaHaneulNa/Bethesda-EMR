@@ -112,7 +112,7 @@ Tant que la **Quantité** est vide, l'étiquette rouge **Indiquez la quantité**
 
 ### 6. Ordonnances types
 
-1. À droite, cliquez sur **Ordonnances types**, puis sur le nom d'un groupe (📁).
+1. À droite, cliquez sur **Ordonnances types**. Toutes les ordonnances types sont là, rangées dans les dossiers (📁) que la clinique a faits dans **Paramètres** — un dossier peut en contenir d'autres ; un clic sur un dossier le ferme ou l'ouvre. La case **Chercher une ordonnance type…** réduit la liste (nom, ou code d'un médicament / examen qu'elle contient).
 2. Cliquez sur une ordonnance type : toutes ses lignes s'ajoutent à la visite, avec les doses écrites dans l'ordonnance type.
 3. Retirez avec ✕ ce qui ne convient pas. Complétez les cases vides (étiquette rouge).
 4. Un code **barré** dans l'ordonnance type est un médicament retiré de la liste : il n'est pas ajouté, et un message le dit. Cherchez un autre médicament.

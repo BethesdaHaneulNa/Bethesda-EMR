@@ -25,6 +25,19 @@ var EXACT = {
   'login_id is required': 'se_errLoginIdRequired',
   'password is required': 'se_errPasswordRequired',
   'Only an administrator can reactivate a staff account.': 'se_errReactivateAdmin',
+  // folders of lab tests and order sets (folder.routes.js)
+  'A folder needs a name (80 characters at most)': 'fo_errName',
+  'A folder of this name is already here': 'fo_errExists',
+  'The folder it goes into does not exist': 'fo_errParent',
+  'Folders can be five levels deep at most': 'fo_errDeep',
+  'A folder cannot be moved into itself': 'fo_errInside',
+  'This folder is not empty: move or remove what is in it first': 'fo_errNotEmpty',
+  'Nothing to file under this number': 'fo_errItem',
+  'folder_id must be a folder of order sets': 'fo_errParent',
+  'Only an administrator can remove a staff account.': 'se_errRemoveAdmin',
+  'You cannot remove your own account.': 'se_errRemoveSelf',
+  'Deactivate the account before removing it.': 'se_errRemoveActive',
+  'This account has been used: it cannot be removed. Leave it deactivated.': 'se_errStaffHasRecords',
   'The current password is not correct': 'se_errCurrentPw',
   'This is the last active administrator who can open Settings. Give another account the admin role and the settings permission first.': 'se_errLastAdmin',
   'The administrator account created during setup cannot be deactivated.': 'se_errSetupAdminKept',
@@ -67,6 +80,7 @@ var EXACT = {
   'A date field has the wrong format': 'se_errFormat',
   'A date field has a date that does not exist': 'se_errBadDate',
   'A number is out of range': 'se_errRange',
+  'A text is too long for its field': 'se_errTooLong',
   // middleware/auth.js (the coordinator's file). A 401 with a token sent never reaches a
   // screen - api/client.js returns to the login page - so these show only on login.
   'Access denied': 'se_errAccessDenied',
