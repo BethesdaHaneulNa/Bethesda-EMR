@@ -73,7 +73,35 @@ export default function SettingsPage() {
   // by the mark its editor sets on every change).
   function labDirty(){
     var strip=function(list){ return JSON.stringify((list||[]).map(function(x){ var c=Object.assign({},x); delete c._open; return c; })); };
-    return !!labCode && strip(labItems)!==strip(labOrig);
+    return !!labCode && (strip(labItems)!==strip(labOrig) || labPriceDirty());
+  }
+  // The price of the chosen lab test, changed right here (the clinic's manager, 2026-11-11:
+  // a new test's price had to be looked for under Order codes). It is the order code's own
+  // price - there is one, shown in two places. null = not touched since the test was opened.
+  var lpS = useState(null), labPrice = lpS[0], setLabPrice = lpS[1];
+  function labPriceOrig(){
+    var c=(orderCodes||[]).filter(function(o){ return String(o.id)===String(labCode); })[0];
+    if(!c) return '';
+    var v=seMoneyInput(c.price_clinic!=null?c.price_clinic:c.price);
+    return v===''||v==null ? '' : String(v);
+  }
+  function labPriceDirty(){
+    if(!labCode || labPrice==null) return false;
+    var typed=String(labPrice).trim(), orig=labPriceOrig();
+    if(typed==='') return orig!=='';
+    return orig==='' || Number(typed)!==Number(orig);
+  }
+  async function saveLabPrice(quiet){
+    if(!labCode || !labPriceDirty()) return true;
+    var typed=String(labPrice).trim(), n=Number(typed);
+    if(typed==='' || !isFinite(n) || n<0){ alert(t.lb_errPrice); return false; }
+    try {
+      var row = await api.put('/admin/order-codes/'+labCode+'/price', { price: n });
+      setOrderCodes(function(p){ return (p||[]).map(function(o){ return String(o.id)===String(row.id) ? row : o; }); });
+      setLabPrice(null);
+      if(quiet!==true) showToast(t.lb_saved);
+      return true;
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); return false; }
   }
   function leaveOk(dirty){ return !dirty || window.confirm(t.fo_discard); }
   var liS = useState([]), labItems = liS[0], setLabItems = liS[1];
@@ -218,7 +246,7 @@ export default function SettingsPage() {
   }
 
   function loadLabItems(codeId){
-    setLabCode(codeId);
+    setLabCode(codeId); setLabPrice(null);
     if(!codeId){ setLabItems([]); setLabOrig([]); return; }
     api.get('/lab/test-items?order_code_id='+codeId).then(function(r){ setLabOrig(r||[]); setLabItems((r||[]).map(function(x){return Object.assign({},x);})); }).catch(function(){ setLabOrig([]); setLabItems([]); });
   }
@@ -276,6 +304,7 @@ export default function SettingsPage() {
       if(iL!=null&&iL!==''&&iH!=null&&iH!==''&&parseFloat(iL)>parseFloat(iH)){ alert(t.lb_errRangeLowHigh.replace('{item}',labItems[q].name)); return; } }
     if(force!==true){ var risk=labRisks(); if(risk){ setLabWarn(risk); return; } }
     setLabWarn(null);
+    if(!(await saveLabPrice(true))) return;   // the one Save button saves the price too
     try {
       var saved = await api.post('/lab/test-items/save', { order_code_id: labCode, items: labItems });
       setLabOrig(saved||[]);
@@ -1044,7 +1073,7 @@ export default function SettingsPage() {
               </div>
               <FolderTree kind="lab" folders={labTree.folders} items={labTree.items} selectedId={labCode?Number(labCode):null}
                 onSelect={function(it){ if(String(it.id)===String(labCode) && !newPanelOpen) return; if(!leaveOk(labDirty())) return; setNewPanelOpen(false); loadLabItems(String(it.id)); }}
-                onAddItem={function(fid){ if(!leaveOk(labDirty())) return; setLabItems(labOrig.map(function(x){ return Object.assign({},x); })); setNewPanelFolder(fid); setNewPanel({code:'',name:'',price:''}); setNewPanelOpen(true); }} addItemLabel={'+ '+t.lb_newTest}
+                onAddItem={function(fid){ if(!leaveOk(labDirty())) return; setLabItems(labOrig.map(function(x){ return Object.assign({},x); })); setLabPrice(null); setNewPanelFolder(fid); setNewPanel({code:'',name:'',price:''}); setNewPanelOpen(true); }} addItemLabel={'+ '+t.lb_newTest}
                 onChanged={loadLabTree} errText={foErr} emptyText={t.lb_noTests} searchPlaceholder={t.lb_treeSearch}
                 itemText={function(it){ return (it.name||'')+' '+(it.code||''); }}
                 renderItem={function(it){ return <div style={{display:'flex',alignItems:'baseline',gap:6}}>
@@ -1065,6 +1094,13 @@ export default function SettingsPage() {
               <div style={{fontSize: 12,color:t3,width:'100%',marginTop:2}}>{t.newLabPanelHint||'새 패널은 진료실 검사 오더에도 바로 추가됩니다. 만든 뒤 아래에서 검사항목을 정의하세요.'}</div>
             </div>):null}
             {labCode && !newPanelOpen?(<div style={{maxWidth:860}}>
+              <div data-lab-price-row style={{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',marginBottom:14,background:scBg,border:'1px solid '+bd,borderRadius:8,padding:'10px 12px'}}>
+                <div><label htmlFor="labPriceInput" style={{fontSize: 12,color:t3,display:'block',marginBottom:3}}>{t.price||'Price'}</label>
+                  <input id="labPriceInput" type="number" min="0" value={labPrice!=null?labPrice:labPriceOrig()} onChange={function(e){ setLabPrice(e.target.value); }}
+                    onKeyDown={function(e){ if(e.key==='Enter'){ e.preventDefault(); saveLabPrice(); } }} style={Object.assign({},IS,{width:140,textAlign:'right',fontFamily:'monospace'})}/></div>
+                <button data-lab-price-save onClick={function(){ saveLabPrice(); }} disabled={!labPriceDirty()} style={{background:labPriceDirty()?'var(--ok-2)':'var(--chip)',color:labPriceDirty()?'var(--on-fill)':t3,border:labPriceDirty()?'1px solid transparent':'1px solid '+bd2,borderRadius:5,padding:'8px 14px',cursor:labPriceDirty()?'pointer':'default',fontSize: 13,fontWeight:700}}>{t.lb_priceSave}</button>
+                <div style={{fontSize: 12,color:t3,flex:'1 1 260px',lineHeight:1.5}}>{t.lb_priceHint}</div>
+              </div>
               <div style={{display:'grid',gridTemplateColumns:'1.4fr 1.2fr .6fr .6fr 1fr 150px 32px',gap:6,fontSize: 12,color:t3,fontWeight:700,marginBottom:5,padding:'0 2px'}}>
                 <div>{t.testName||'Item name'}</div><div>{t.unit||'Unit'}</div><div>{t.refLow||'Low'}</div><div>{t.refHigh||'High'}</div><div>{t.refTextLabel||'Text ref'}</div><div></div><div></div>
               </div>

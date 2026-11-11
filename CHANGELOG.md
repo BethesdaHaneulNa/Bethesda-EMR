@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.8.1 — 2026-11-11
+
+One addition, asked for by the clinic's manager on site the morning after 1.8.0 was
+installed, and released the same day at his request. No database change.
+
+### Settings → Lab items: the price of a test, changed right there
+The clinic's manager, 2026-11-11, after installing 1.8.0 on site ("the new Settings are very
+good"): a new test is made in Lab items, but to change its price one had to go and find it
+under Order codes. The chosen test now shows its **Price** above its items: type, **Save
+price** (or Enter; the Save button under the items saves it too). It is the order code's own
+price - one price, shown in two places - and the change is one line in the change log, as a
+price changed in the order code form. Leaving with a price typed and not saved asks first.
+- New route `PUT /api/admin/order-codes/:id/price` (settings permission; both prices move
+  together; a code out of use or not there: 404; not a number, negative, too large: 400).
+- Tests: `settings.ordercodes.mjs` (9 checks more), `settings.access.mjs` (158 routes).
+- No database change.
+
 ## v1.8.0 — 2026-11-10
 
 The clinic's manager, on his last evening on site: "build everything, run the bug hunt over

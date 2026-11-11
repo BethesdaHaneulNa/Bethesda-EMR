@@ -201,6 +201,7 @@ const ROUTES = [
   ['DELETE', '/admin/drugs/' + X,           [SET]],
   ['POST', '/admin/order-codes',            [SET], {}],
   ['PUT',  '/admin/order-codes/' + X,       [SET], { code_type: 'fee' }],
+  ['PUT',  '/admin/order-codes/' + X + '/price', [SET], { price: 1 }],
   ['DELETE', '/admin/order-codes/' + X,     [SET]],
   ['POST', '/admin/departments',            [SET], {}],
   ['PUT',  '/admin/departments/' + X,       [SET], {}],

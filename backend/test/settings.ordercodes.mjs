@@ -134,6 +134,31 @@ r = await call('PUT', '/admin/order-codes/' + pe.id, fee('P', { price_editable: 
 check('a save that changes the price and the tick writes one line of each', r.status === 200 && (await priceLines()) === linesBefore + 1 && (await tickLines()).total === ticksBefore + 5,
   [(await priceLines()) - linesBefore, (await tickLines()).total - ticksBefore]);
 
+// ── the price alone (Settings → Lab items, 2026-11-11) ──
+r = await call('POST', '/admin/order-codes', body('L', { code_type: 'lab', group_name: (all.find(o => o.code_type === 'lab') || {}).group_name || 'Lab', price: 1000, price_clinic: 1000, memo: 'kept' }), A);
+check('a lab code to change the price of', (r.status === 201 || r.status === 200) && Number(r.data.price) === 1000, r);
+const lp = r.data;
+const priceLinesL = await priceLines();
+r = await call('PUT', '/admin/order-codes/' + lp.id + '/price', { price: 2500 }, A);
+check('the price alone: both prices move, nothing else does', r.status === 200 && Number(r.data.price) === 2500 && Number(r.data.price_clinic) === 2500
+  && r.data.name === lp.name && r.data.code === lp.code && r.data.group_name === lp.group_name && r.data.memo === 'kept' && r.data.code_type === 'lab', r);
+const lineL = (await call('GET', '/admin/audit?action=settings.order.price&limit=1', null, A)).data.rows[0] || {};
+check('... and it is one line in the change log, 1000 -> 2500', (await priceLines()) === priceLinesL + 1 && String(lineL.entity_id) === String(lp.id)
+  && lineL.before_value && Number(lineL.before_value.price_clinic) === 1000 && lineL.after_value && Number(lineL.after_value.price_clinic) === 2500, lineL);
+r = await call('PUT', '/admin/order-codes/' + lp.id + '/price', { price: '2500' }, A);
+check('the same price again: accepted, no new line', r.status === 200 && (await priceLines()) === priceLinesL + 1, r);
+r = await call('PUT', '/admin/order-codes/' + lp.id + '/price', { price: 0 }, A);
+check('0 is a price (a free test)', r.status === 200 && Number(r.data.price) === 0 && Number(r.data.price_clinic) === 0, r);
+const refused = [];
+for (const v of [-1, 'abc', '', '   ', null, true, [5], { a: 1 }, 1e15]) refused.push((await call('PUT', '/admin/order-codes/' + lp.id + '/price', { price: v }, A)).status);
+refused.push((await call('PUT', '/admin/order-codes/' + lp.id + '/price', {}, A)).status);
+check('a negative price, a word, nothing, a list, a number too large: 400', refused.every(x => x === 400), refused);
+check('... and the price is still 0', Number(((await call('GET', '/admin/order-codes?q=' + lp.code, null, A)).data.find(o => o.id === lp.id) || {}).price) === 0);
+check('a code that is not there, an id that is not a number: 404', (await call('PUT', '/admin/order-codes/999999999/price', { price: 5 }, A)).status === 404
+  && (await call('PUT', '/admin/order-codes/abc/price', { price: 5 }, A)).status === 404);
+await call('DELETE', '/admin/order-codes/' + lp.id, null, A);
+check('a code taken out of use: 404', (await call('PUT', '/admin/order-codes/' + lp.id + '/price', { price: 5 }, A)).status === 404);
+
 // ── the drug table's column is another thing ──
 const drugs = (await call('GET', '/admin/drugs', null, A)).data;
 check('drugs are read as before (their default_dose is a dose, not touched here)', Array.isArray(drugs) && drugs.length > 0, drugs.length);

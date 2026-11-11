@@ -420,6 +420,38 @@ router.put('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
   }
 });
 
+// The price alone (the clinic's manager, 2026-11-11: "can the price of a lab test be changed
+// right in Lab items?"). That tab knows a test by its id, not the rest of the order code's
+// form, so it cannot send the whole row PUT /order-codes/:id wants. Same rules and the same
+// line in the change log as a price changed in the order code form; the two prices move
+// together, as that form moves them.
+router.put('/order-codes/:id/price', permMiddleware('settings'), async (req, res) => {
+  if (!/^\d{1,9}$/.test(String(req.params.id))) return res.status(404).json({ error: MSG.NOT_FOUND });
+  const raw = req.body ? req.body.price : undefined;
+  if (raw === undefined || raw === null || typeof raw === 'boolean' || typeof raw === 'object' || String(raw).trim() === '') {
+    return res.status(400).json({ error: fieldMsg.notNumber('price') });
+  }
+  const invalid = badPrices({ price: raw }, ['price']);
+  if (invalid) return res.status(400).json({ error: invalid });
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const was = await client.query('SELECT id, code, name, price, price_clinic FROM order_code WHERE id = $1 AND is_active = true FOR UPDATE', [req.params.id]);
+    if (!was.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: MSG.NOT_FOUND }); }
+    const result = await client.query('UPDATE order_code SET price = $2, price_clinic = $2, updated_at = NOW() WHERE id = $1 RETURNING *', [req.params.id, Number(raw)]);
+    await auditPrice(client, req, ACTIONS.ORDER_PRICE, 'order_code', was.rows[0], result.rows[0],
+      ['price_clinic', 'price'], { price: 'price_clinic' });
+    await client.query('COMMIT');
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (client) { try { await client.query('ROLLBACK'); } catch (e) { /* not in a transaction */ } }
+    sendDbError(res, err);
+  } finally {
+    if (client) client.release();
+  }
+});
+
 router.delete('/order-codes/:id', permMiddleware('settings'), async (req, res) => {
   try {
     await pool.query('UPDATE order_code SET is_active = false WHERE id = $1', [req.params.id]);

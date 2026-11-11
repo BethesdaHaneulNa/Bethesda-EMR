@@ -192,6 +192,7 @@ Ce qui est déjà écrit dans le dossier d'un patient ne change pas quand vous m
 2. Cliquez sur l'analyse (par exemple **CBC**) : ses items apparaissent à droite.
    - **Nouvelle analyse** : **+ Analyse** (en haut, ou sous un dossier sélectionné pour la créer dedans) → **Code**, **Nom**, **Prix** → **Ajouter**. Elle est aussitôt proposée au médecin dans les examens ; ajoutez ensuite ses items.
    - Les dossiers s'utilisent comme pour les ordonnances types (voir plus haut « Les dossiers »).
+   - **Changer le prix d'une analyse** : la case **Prix**, au-dessus de ses items → tapez le nouveau prix → **Enregistrer le prix** (ou la touche Entrée ; le bouton **Sauver** du bas l'enregistre aussi). C'est le même prix que dans **Codes d'actes** : modifié ici, il l'est aussi là-bas, et le changement est noté dans le **Journal**.
 3. Sur chaque ligne : **Unité** se choisit dans la liste (**— sans unité —** si l'item n'a pas d'unité), puis **Min** et **Max** (valeurs normales), ou **Réf. texte** pour un résultat en mots (par exemple « Négatif »). Le **Min** ne peut pas dépasser le **Max** ; le nom a 120 caractères au plus et **Réf. texte** 60.
 4. Pour des valeurs selon le sexe ou l'âge : **▸ Par sexe et âge** → **+ Ajouter une ligne**.
 5. **Sauver**. Si plusieurs tableaux **Par sexe et âge** sont ouverts, faites défiler vers le bas pour voir **Sauver**. L'écran du laboratoire signale ensuite les résultats hors normes.
