@@ -1,39 +1,90 @@
-# Bethesda EMR
+<p align="center">
+  <img src="docs/screenshots/logo.png" alt="Bethesda EMR" width="96">
+</p>
 
-An electronic medical record (EMR) for a small clinic: reception, consultation, pharmacy,
-laboratory, payment and statistics in one web application, with an optional PACS
-companion for medical imaging. It runs on one server in the clinic with Docker, works
-without internet (an offline install kit exists for sites with no usable connection), and
-staff use it from any browser on the clinic's network. The interface is French first, with
-English and Korean.
+<h1 align="center">Bethesda EMR</h1>
 
-It was first built for a small mission clinic in Madagascar, which runs it every day. This
-repository contains **no clinic data**: no patients, staff, drug or supply lists, prices or
-site settings. A new install starts empty except for a few generic examples (departments,
-example drugs and order codes) that you can edit or hide.
+<p align="center">
+  A complete electronic medical record for a small clinic, in one box.<br>
+  Reception, consultation, pharmacy, laboratory, payment, statistics and medical imaging,
+  running on one server in the clinic, with or without internet.
+</p>
+
+<p align="center">
+  <a href="https://github.com/BethesdaHaneulNa/Bethesda-EMR/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/BethesdaHaneulNa/Bethesda-EMR?label=release&color=2f6f4e"></a>
+  <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/badge/licence-GPL--3.0-blue"></a>
+  <img alt="Docker" src="https://img.shields.io/badge/runs%20with-Docker-2496ED?logo=docker&logoColor=white">
+  <img alt="Languages" src="https://img.shields.io/badge/UI-Fran%C3%A7ais%20%C2%B7%20English%20%C2%B7%20%ED%95%9C%EA%B5%AD%EC%96%B4-555">
+</p>
+
+---
+
+Bethesda EMR was built for, and is used every day by, a small mission clinic in the highlands
+of Madagascar: a few doctors and nurses, one reception desk, a pharmacy, a small laboratory
+and an ultrasound machine, a server in a cupboard, and electricity and internet that come and
+go. Everything a clinic like that needs to see a patient from the front door to the pharmacy
+counter is in this one application, and it keeps working when the connection does not.
+
+- **One server, any browser.** Install with Docker on one machine; staff open a web page on
+  the clinic's network. No software on the desks.
+- **Works offline.** An offline install kit puts the whole thing on a USB stick for sites
+  with no usable internet, and updates come the same way.
+- **French first**, English and Korean built in.
+- **Nothing to configure before you start.** A new install is empty except for a few generic
+  examples; the first login creates the administrator. Drugs, prices, tests, departments,
+  letterhead and staff permissions are all edited in the app.
+- **Backups by default**, a one-window status check anyone can read, and a printed staff
+  guide in French.
+- **Imaging included.** An optional PACS companion built on the open-source
+  [Orthanc](https://www.orthanc-server.com/) server gives DICOM storage, a modality worklist
+  for the ultrasound or X-ray machine, and image viewing inside the patient's chart.
+
+This repository contains **no clinic data**: no patients, staff, drug or supply lists, prices
+or site settings.
 
 Copyright © 2026 Haneul Na and Bethesda EMR contributors. Free software under the
 [GNU General Public License v3.0](LICENSE) (GPL-3.0-only).
 
----
+## Screenshots
+
+The screens below show demonstration data only (made-up patients and names).
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/screenshots/reception.png"><img src="docs/screenshots/reception.png" alt="Reception: the day's queue"></a><br><sub><b>Reception</b> — register a patient, open a visit, follow the queue through the day.</sub></td>
+    <td width="50%"><a href="docs/screenshots/consultation.png"><img src="docs/screenshots/consultation.png" alt="Consultation: note, diagnoses, prescription, orders"></a><br><sub><b>Consultation</b> — SOAP note, diagnoses, prescription, lab and imaging orders, results, chart records.</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/pharmacy.png"><img src="docs/screenshots/pharmacy.png" alt="Pharmacy: dispensing"></a><br><sub><b>Pharmacy</b> — dispense in house or send out, with stock that follows.</sub></td>
+    <td><a href="docs/screenshots/payment.png"><img src="docs/screenshots/payment.png" alt="Payment: bill and receipt"></a><br><sub><b>Payment</b> — bill, receipt, outstanding balances, corrections.</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/lab.png"><img src="docs/screenshots/lab.png" alt="Laboratory: results entry"></a><br><sub><b>Laboratory</b> — results with reference ranges and automatic flags.</sub></td>
+    <td><a href="docs/screenshots/stats.png"><img src="docs/screenshots/stats.png" alt="Statistics"></a><br><sub><b>Statistics</b> — visits, revenue, outstanding and drug use by day, month and year.</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" alt="Settings: lab tests in folders"></a><br><sub><b>Settings</b> — staff and permissions, drugs, order codes, lab panels and order sets in folders, letterhead.</sub></td>
+    <td align="center"><a href="docs/screenshots/mobile.png"><img src="docs/screenshots/mobile.png" alt="Vital signs on a phone" width="260"></a><br><sub><b>On a phone</b> — vital signs, lab, imaging and orders from the ward.</sub></td>
+  </tr>
+</table>
+
+Three screen themes (light, paper and dark); each account keeps its own.
 
 ## What it does
 
-- **Registration** — patient records, chart numbers, visit/queue management
-- **Consultation** — SOAP notes, diagnoses, prescriptions, exam/imaging orders, order sets,
-  chart records (operation notes, consents, …), lab results, radiology readings
-- **Pharmacy** — in-house / external dispensing
+- **Reception** — patient records, chart numbers, visits and the day's queue, transfers
+  between departments
+- **Consultation** — SOAP notes, diagnoses, prescriptions, lab and imaging orders, order
+  sets, chart records (operation notes, consents, …), lab results, radiology readings
+- **Pharmacy** — in-house or external dispensing, stock receipts, counts and discards
 - **Payment** — billing, receipts, void/refund/correction, outstanding balances
-- **Laboratory** — clinical pathology entry with reference ranges and auto-flagging
-- **Statistics** — visits, revenue, outstanding, and drug-usage analytics (daily/monthly/yearly)
-- **Settings** — staff & granular permissions, drugs, order codes, lab panels, departments,
-  order sets, clinic letterhead, app title — all editable in the app
-- **Trilingual** — switch between English / 한국어 / Français anywhere
-
-An optional **PACS companion** (based on the open-source Orthanc) adds DICOM imaging:
-modality worklist, image viewing inside the EMR, and radiology readings.
-
----
+- **Laboratory** — clinical pathology entry with reference ranges and automatic flagging
+- **Statistics** — visits, revenue, outstanding and drug use, by day, month and year
+- **Settings** — staff and granular permissions, drugs, order codes, lab panels, departments,
+  order sets, diagnosis codes, phrases, clinic letterhead, app title: all edited in the
+  app, every change in a change log
+- **Imaging** — with the optional PACS companion: DICOM storage, modality worklist, viewing
+  inside the chart, radiology readings, export to CD
 
 ## Install
 
@@ -69,7 +120,8 @@ security, HTTPS, the PACS, and a go-live checklist.
   does this in one click from the newest GitHub Release (`latest.json`) or from a kit on a
   USB stick.
 
-Database migrations run by themselves on start; data is kept.
+Database migrations run by themselves on start; data is kept. What changed in each version
+is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Is it working? — the status window
 
@@ -89,7 +141,10 @@ is running. Those are the ones this window exists for.
 For scripting, `powershell -File server-status.ps1 -Console` prints the same check once and exits
 `0` when everything is fine, `1` if something needs attention, `2` if something is broken.
 
----
+## Staff guide
+
+A printed guide for the clinic's staff, in French, one chapter per module, is in
+[docs/manual-fr](docs/manual-fr) (`node docs/manual-fr/build.mjs` makes one printable page).
 
 ## Releasing a kit
 
@@ -108,6 +163,7 @@ notice.
 - One exposed port: **9080**
 - Database migrations apply automatically on startup (`backend/sql`)
 - Optional PACS (Orthanc, unmodified official image) as a separate stack on port 9090
+- Every module has an API test set in `backend/test`, run against an isolated stack
 
 Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md). Questions and bug reports: open an
 issue.
