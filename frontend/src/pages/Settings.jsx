@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useLang } from '../i18n/index.jsx';
+import { useLang, readLangs } from '../i18n/index.jsx';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 // Design session: colours are tokens (index.html). tint() names a colour with an alpha.
@@ -11,6 +11,7 @@ import { formLabel, checkList, checkOpen, checkText, DRUG_FORMS } from '../docum
 // The change log tab (the project notes): action sentences and field labels.
 import { AUDIT_ACTIONS, auditActionText, auditEntityText, auditSummary, auditChanges } from './settingsAudit.js';
 import { seMoney, seMoneyInput, seNumber } from './settingsMoney.js';
+import { readCurrency, formatMoney } from '../money.js';
 import { getTemplate } from '../documents/registry.js';
 import { PhrasesTab } from './settingsPhrases.jsx';
 import { DiagnosesTab } from './settingsDiagnoses.jsx';
@@ -124,6 +125,23 @@ export default function SettingsPage() {
 
   useEffect(function(){ loadAll(); },[]);
   useEffect(function(){ if(activeTab==='backup') loadBackup(); },[activeTab]);
+  // Languages tab (066; the clinic's manager, 2026-11-11): the languages the clinic uses.
+  // One chosen: the language buttons are gone and every screen is in that language.
+  var lsS = useState(null), langSel = lsS[0], setLangSel = lsS[1];     // ['fr','ko'] while the tab is open
+  var loS2 = useState(null), langSaved = loS2[0], setLangSaved = loS2[1];
+  useEffect(function(){ if(activeTab==='lang'){ setLangSel(null); api.get('/admin/clinic').then(function(c){ var l=readLangs(c&&c.languages); setLangSel(l); setLangSaved(l); }).catch(function(){ var l=(langCtx.enabled||[]).slice(); setLangSel(l); setLangSaved(l); }); } },[activeTab]);
+  function langDirty(){ return !!langSel && !!langSaved && langSel.join(',')!==langSaved.join(','); }
+  function toggleLang(l){ setLangSel(function(p){ var on=p.indexOf(l)>=0; if(on && p.length===1) return p; return readLangs(on ? p.filter(function(x){ return x!==l; }) : p.concat([l])); }); }
+  async function saveLangs(){
+    if(!langSel || !langDirty()) return;
+    try {
+      var r = await api.put('/admin/clinic/languages', { languages: langSel });
+      var l = readLangs(r && r.languages);
+      setLangSel(l); setLangSaved(l);
+      if(langCtx.setEnabled) langCtx.setEnabled(l);
+      showToast(t.se_saved);
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
   // Établissement tab: what the update check sees (🔔 in the top bar shows only when a
   // newer kit exists; here one also sees 'cannot check' - the clinic's repository is
   // private, so for weeks the check silently found nothing (2026-11-08)).
@@ -241,6 +259,26 @@ export default function SettingsPage() {
     try {
       var saved = await api.put('/admin/clinic', clinic||{});
       setClinic(saved);
+      showToast(t.se_saved);
+    } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
+  }
+  // The clinic's money (067; the clinic's manager, 2026-11-12). Its own box and its own
+  // Save, as the languages: the clinic form sends the whole row and must not touch it.
+  // null = not touched since the row was loaded; then the form shows the row.
+  var cuS = useState(null), curSel = cuS[0], setCurSel = cuS[1];
+  function curForm(){
+    if(curSel) return curSel;
+    var c = readCurrency(clinic||{});
+    return { symbol:c.symbol, position:c.position, decimals:String(c.decimals), quick:c.quick.join(', ') };
+  }
+  function ucur(k,v){ var f = Object.assign({}, curForm()); f[k]=v; setCurSel(f); }
+  function curPreview(){ var f = curForm(); return formatMoney(1234567.5, langCtx.lang, readCurrency({ symbol:f.symbol||'?', position:f.position, decimals:f.decimals })); }
+  async function saveCurrency(){
+    var f = curForm();
+    try {
+      var r = await api.put('/admin/clinic/currency', { symbol:f.symbol, position:f.position, decimals:Number(f.decimals), quick:f.quick });
+      langCtx.setCurrency(r.currency); setCurSel(null);
+      setClinic(function(p){ return Object.assign({}, p||{}, { currency_symbol:r.currency.symbol, currency_position:r.currency.position, currency_decimals:r.currency.decimals, cash_quick:r.currency.quick.join(',') }); });
       showToast(t.se_saved);
     } catch(err){ alert((t.se_error)+': '+seMessage(t,err.message)); }
   }
@@ -693,7 +731,7 @@ export default function SettingsPage() {
 
   var TABS = [
     {key:'staff',label:'👥 '+t.se_tabStaff},{key:'drug',label:'💊 '+t.se_tabDrugs},{key:'order',label:'📋 '+t.se_tabOrderCodes},{key:'labitems',label:'🧫 '+(t.labItems||'Lab Items')},{key:'diag',label:'🩺 '+t.se_tabDiagnoses},
-    {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'clinic',label:'🏢 '+t.se_tabClinic},
+    {key:'phrase',label:'📝 '+t.se_phraseName},{key:'dept',label:'🏥 '+t.se_tabDepts},{key:'orderset',label:'🧪 '+t.orderSets},{key:'pacs',label:'🔗 '+t.orderFeedTab},{key:'backup',label:'💾 '+(t.backupTab||'백업')},{key:'audit',label:'📜 '+t.se_tabAudit},{key:'lang',label:'🌐 '+t.se_tabLang},{key:'clinic',label:'🏢 '+t.se_tabClinic},
   ].filter(function(x){ return x.key!=='audit' || meIsAdmin; });   // the log: administrators only (clinic manager, 2026-11-08); the server refuses it too
 
   return(
@@ -1381,6 +1419,23 @@ export default function SettingsPage() {
             })():null}
           </div>):null}
 
+          {activeTab==='lang'?(<div data-lang-tab style={{padding:'16px 20px',maxWidth:580}}>
+            <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:5}}>🌐 {t.se_tabLang}</div>
+            <div style={{fontSize: 13,color:t3,marginBottom:14,lineHeight:1.6}}>{t.se_langIntro}</div>
+            {!langSel ? <div style={{color:t3}}>{t.loading||'Loading…'}</div> : <div>
+              {[['fr','Français'],['en','English'],['ko','한국어']].map(function(row){ var on=langSel.indexOf(row[0])>=0, last=on&&langSel.length===1;
+                return <div key={row[0]} className="pressable" role="checkbox" aria-checked={on} aria-disabled={last} tabIndex={0} data-lang-box={row[0]}
+                  onClick={function(){ toggleLang(row[0]); }}
+                  onKeyDown={function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleLang(row[0]); } }}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',marginBottom:6,borderRadius:6,cursor:last?'default':'pointer',border:on?'1px solid var(--ok-ink)':'1px solid '+bd2,background:on?'var(--ok-a08)':'transparent'}}>
+                  <div style={{width:16,height:16,borderRadius:3,border:on?'2px solid var(--ok-ink)':'2px solid var(--border-2)',background:on?'var(--ok)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on?<span style={{color:'var(--on-fill)',fontSize: 12}}>✓</span>:null}</div>
+                  <span style={{fontSize: 15,fontWeight:600,color:tx}}>{row[1]}</span>
+                  <span style={{fontSize: 12,color:t3,fontFamily:'monospace'}}>{row[0].toUpperCase()}</span>
+                </div>; })}
+              <div style={{fontSize: 13,color:langSel.length===1?'var(--warn-text)':t3,margin:'10px 0 14px',lineHeight:1.6}}>{langSel.length===1 ? t.se_langHintOne : t.se_langHintMany}</div>
+              <button data-lang-save onClick={saveLangs} disabled={!langDirty()} style={{background:langDirty()?'var(--ok-2)':'var(--chip)',color:langDirty()?'var(--on-fill)':t3,border:langDirty()?'1px solid transparent':'1px solid '+bd2,borderRadius:5,padding:'8px 20px',cursor:langDirty()?'pointer':'default',fontSize: 14,fontWeight:800}}>{t.save}</button>
+            </div>}
+          </div>):null}
           {activeTab==='clinic'&&clinic?(<div style={{padding:'16px 20px',maxWidth:580}}>
             <div style={{fontWeight:700,fontSize: 15,color:tx,marginBottom:5}}>🏢 {t.se_clinicTitle}</div>
             <div style={{fontSize: 13,color:t3,marginBottom:14}}>{t.se_clinicIntro}</div>
@@ -1417,6 +1472,23 @@ export default function SettingsPage() {
                 <div style={{fontSize:12,color:t3,marginTop:4,lineHeight:1.5}}>{t.se_receiptPaperHint}</div>
               </Fld>
               <div><button onClick={saveClinic} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 24px',cursor:'pointer',fontSize: 14,fontWeight:800,marginTop:4}}>{t.save||'Save'}</button></div>
+
+              {/* The clinic's money (067): symbol, place, decimals, the quick amounts at the till.
+                  Its own Save (PUT /admin/clinic/currency); the screens follow at once. */}
+              <div data-currency-box style={{border:'1px solid '+bd,borderRadius:8,padding:'12px 14px',marginTop:10,background:scBg}}>
+                <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>💰 {t.se_curTitle}</div>
+                <div style={{fontSize:12,color:t3,marginBottom:10,lineHeight:1.5}}>{t.se_curIntro}</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1.4fr 1fr',gap:8}}>
+                  <Fld label={t.se_curSymbol}><input id="curSymbol" value={curForm().symbol} maxLength={8} onChange={function(e){ucur('symbol',e.target.value)}} placeholder={t.se_curSymbolPh} style={IS}/></Fld>
+                  <Fld label={t.se_curPosition}><select id="curPosition" value={curForm().position} onChange={function(e){ucur('position',e.target.value)}} style={IS}><option value="after">{t.se_curAfter}</option><option value="before">{t.se_curBefore}</option></select></Fld>
+                  <Fld label={t.se_curDecimals}><select id="curDecimals" value={curForm().decimals} onChange={function(e){ucur('decimals',e.target.value)}} style={IS}><option value="0">{t.se_curDec0}</option><option value="2">{t.se_curDec2}</option></select></Fld>
+                </div>
+                <Fld label={t.se_curQuick}><input id="curQuick" value={curForm().quick} onChange={function(e){ucur('quick',e.target.value)}} style={IS}/><div style={{fontSize:12,color:t3,marginTop:4,lineHeight:1.5}}>{t.se_curQuickHint}</div></Fld>
+                <div style={{display:'flex',gap:12,alignItems:'center',marginTop:8,flexWrap:'wrap'}}>
+                  <button data-currency-save onClick={saveCurrency} style={{background:'var(--ok-2)',color:'var(--on-fill)',border:'none',borderRadius:6,padding:'9px 24px',cursor:'pointer',fontSize: 14,fontWeight:800}}>{t.se_curSave}</button>
+                  <span style={{fontSize:13,color:t2}}>{t.se_curPreview}: <span data-currency-preview style={{fontFamily:'monospace',fontWeight:800,color:tx}}>{curPreview()}</span></span>
+                </div>
+              </div>
             </div>
 
             <div style={{fontSize:13,color:t2,marginTop:16,padding:'8px 10px',border:'1px solid '+bd2,borderRadius:6,display:'flex',gap:8,alignItems:'baseline',flexWrap:'wrap'}}>

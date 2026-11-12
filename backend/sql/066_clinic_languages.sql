@@ -1,0 +1,11 @@
+-- 066: the languages the clinic uses.
+--
+-- The clinic's manager, 2026-11-11, leaving the site: the screens come in three languages
+-- (French, English, Korean) and every screen shows the three buttons, though a clinic may
+-- work in one. Settings -> Languages now says which are in use: one chosen - the buttons
+-- are gone and the screens are in that language; two - those two buttons; three - as before.
+--
+-- A list in a fixed order ('fr,en,ko'), never empty (the route sees to it; a value the
+-- screens cannot read is taken as "all three"). Only adds a column with a default: it
+-- cannot fail on the clinic's data, and an installed clinic keeps its three languages.
+ALTER TABLE clinic ADD COLUMN IF NOT EXISTS languages VARCHAR(20) NOT NULL DEFAULT 'fr,en,ko';

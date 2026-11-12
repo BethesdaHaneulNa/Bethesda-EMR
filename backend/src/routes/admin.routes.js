@@ -4,6 +4,8 @@ const { authMiddleware, permMiddleware, roleMiddleware, ALL_PERMS } = require('.
 const { sendDbError } = require('../utils/dbError');
 // Messages shown to people - translated by the screen; see settings.messages.js.
 const { MSG, fieldMsg, phraseMsg, drugMsg } = require('./settings.messages');
+const { LANGS, readLanguages, cleanLanguages } = require('../utils/languages');
+const { POSITIONS: CURRENCY_POSITIONS, readCurrency, cleanCurrency } = require('../utils/currency');
 const { writeAudit, ACTIONS } = require('../utils/audit');
 const KNOWN_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -1558,6 +1560,39 @@ router.put('/clinic', permMiddleware('settings'), async (req, res) => {
        hintSent, hint, paper]
     );
     res.json(result.rows[0]);
+  } catch (err) { sendDbError(res, err); }
+});
+
+// The languages the clinic uses (066; the clinic's manager, 2026-11-11). Its own route: the
+// form above sends the whole clinic row, and the Languages tab knows nothing of it.
+// Everyone reads them (GET /clinic, and GET /auth/setup-status before signing in).
+router.put('/clinic/languages', permMiddleware('settings'), async (req, res) => {
+  const clean = cleanLanguages(req.body ? req.body.languages : undefined);
+  if (clean.error === 'none') return res.status(400).json({ error: MSG.LANG_NEED_ONE });
+  if (clean.error) return res.status(400).json({ error: fieldMsg.notOneOf('languages', LANGS) });
+  try {
+    const result = await pool.query('UPDATE clinic SET languages = $1, updated_at = NOW() WHERE id = 1 RETURNING languages', [clean.value]);
+    if (sentMissing(res, result)) return;
+    res.json({ languages: readLanguages(result.rows[0].languages) });
+  } catch (err) { sendDbError(res, err); }
+});
+
+// The clinic's money (067; the clinic's manager, 2026-11-12: "this could not be used in
+// another country"). Its own route, as the languages: the clinic form sends the whole row
+// and knows nothing of it. Everyone reads it (GET /clinic, GET /auth/setup-status).
+router.put('/clinic/currency', permMiddleware('settings'), async (req, res) => {
+  const clean = cleanCurrency(req.body);
+  if (clean.error === 'symbol') return res.status(400).json({ error: MSG.CURRENCY_SYMBOL });
+  if (clean.error === 'position') return res.status(400).json({ error: fieldMsg.notOneOf('position', CURRENCY_POSITIONS) });
+  if (clean.error === 'decimals') return res.status(400).json({ error: fieldMsg.notOneOf('decimals', ['0', '2']) });
+  if (clean.error) return res.status(400).json({ error: MSG.CURRENCY_QUICK });
+  try {
+    const v = clean.value;
+    const result = await pool.query(
+      'UPDATE clinic SET currency_symbol = $1, currency_position = $2, currency_decimals = $3, cash_quick = $4, updated_at = NOW() WHERE id = 1 RETURNING currency_symbol, currency_position, currency_decimals, cash_quick',
+      [v.symbol, v.position, v.decimals, v.quick]);
+    if (sentMissing(res, result)) return;
+    res.json({ currency: readCurrency(result.rows[0]) });
   } catch (err) { sendDbError(res, err); }
 });
 

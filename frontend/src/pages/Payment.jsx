@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
+import { fmtNumber } from '../money.js';
 import { api } from '../api/client.js';
 import { fold } from '../fold.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -17,7 +18,7 @@ import { packWord } from '../documents/rx-dosing.js';
 // Amounts: French puts a non-breaking space between thousands (« 108 850 »), as the
 // receipt and the pharmacy screen do; Korean and English a comma. An amount box shows
 // what is typed the same way (MoneyInput below).
-function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
+function fmtAmount(n, lang){ return fmtNumber(n, lang); }   // the number alone, with the money's decimals (money.js)
 function ymd(d){ if(!d) return ''; return String(d).split('T')[0]; }
 
 // A box for an amount of money (2026-10-01, the clinic's manager: "6,000, not 6000"). The value
@@ -70,6 +71,9 @@ var BILL_COLS = 'minmax(0,1fr) minmax(230px,clamp(260px,20.8vw,300px))';
 export default function PaymentPage() {
   var langCtx = useLang(); var t = langCtx.t;
   function fmtAr(n){ return fmtAmount(n, langCtx.lang); }
+  // The amount with the clinic's money (money.js, 067): symbol, place, decimals; cur.quick
+  // makes the quick buttons.
+  var money = langCtx.money, cur = langCtx.currency;
   var ps = useState([]), pending = ps[0], setPending = ps[1];
   var cs = useState([]), completed = cs[0], setCompleted = cs[1];
   var ss = useState(null), sel = ss[0], setSel = ss[1];
@@ -347,8 +351,8 @@ export default function PaymentPage() {
   function corrLine(v){
     var c = v.corr;
     if(!c || c.error) return t.py_listSeeCorrection;
-    if(c.refund > 0.5) return t.py_listRefund+': '+fmtAr(c.refund)+' Ar';
-    if(c.outstanding > 0.5) return t.py_listOwed+': '+fmtAr(c.outstanding)+' Ar';
+    if(c.refund > 0.5) return t.py_listRefund+': '+money(c.refund);
+    if(c.outstanding > 0.5) return t.py_listOwed+': '+money(c.outstanding);
     return t.py_listNoDiff;
   }
   function consultCode(){ return VTYPE_CODE[vType] || 'C01'; }
@@ -498,13 +502,13 @@ export default function PaymentPage() {
     // A discount larger than what is charged now (a zero too many): the total showed 0 Ar
     // and the server's refusal came up in English (bug hunt round 4). Said here, in the
     // screen's language, before anything is sent. The previous balance is not discounted.
-    if(discountAmt() > subtotal()+0.5){ alert(t.py_discountTooBig.replace('{discount}',fmtAr(discountAmt())).replace('{subtotal}',fmtAr(subtotal()))); return; }
+    if(discountAmt() > subtotal()+0.5){ alert(t.py_discountTooBig.replace('{discount}', money(discountAmt())).replace('{subtotal}', money(subtotal()))); return; }
     if(status==='paid' && amtPaidNum()<totalDue()){ alert(t.py_amountInsufficient); return; }
     // "Unpaid" means nothing was received, so the whole total stays owed. It used to
     // subtract whatever sat in the cash box from the debt while recording 0 received.
     if(status==='unpaid' && totalDue()>0){
       var msg = amtPaidNum()>0 ? t.py_unpaidIgnoresAmount : (viaConfirm ? t.py_unpaidConfirm : null);
-      if(msg && !window.confirm(msg.replace('{paid}',fmtAr(amtPaidNum())).replace('{total}',fmtAr(totalDue())))) return;
+      if(msg && !window.confirm(msg.replace('{paid}', money(amtPaidNum())).replace('{total}', money(totalDue())))) return;
     }
     var unpaid = status==='unpaid';
     try {
@@ -544,8 +548,8 @@ export default function PaymentPage() {
   function confirmCorrection(){ return once(confirmCorrectionNow); }
   async function confirmCorrectionNow(){
     if(!sel || !corr || corr.error){ return; }
-    var line = corr.refund>0 ? t.py_refundHandBack.replace('{amount}',fmtAr(corr.refund))
-             : corr.outstanding>0 ? t.py_remainsOwed.replace('{amount}',fmtAr(corr.outstanding))
+    var line = corr.refund>0 ? t.py_refundHandBack.replace('{amount}', money(corr.refund))
+             : corr.outstanding>0 ? t.py_remainsOwed.replace('{amount}', money(corr.outstanding))
              : t.py_noDifference;
     if(!window.confirm(t.py_correctionConfirm+'\n\n'+line)) return;
     try {
@@ -613,7 +617,7 @@ export default function PaymentPage() {
     var amt = parseFloat(settleAmt)||0;
     var out = parseFloat(settleBill.outstanding)||0;
     if(amt<=0){ alert(t.enterAmount||'금액을 입력하세요'); return; }
-    if(amt>out+0.5){ alert((t.maxOutstanding||'미수액보다 클 수 없습니다')+': '+fmtAr(out)+' Ar'); return; }
+    if(amt>out+0.5){ alert((t.maxOutstanding||'미수액보다 클 수 없습니다')+': '+money(out)); return; }
     try {
       // M2: the payment goes on a new receipt dated today (POST /settle), not onto the old bill.
       var settled = await api.post('/billing/settle', { bill_ids:[settleBill.id], amount: amt, expected_outstanding: out });
@@ -636,7 +640,7 @@ export default function PaymentPage() {
     // their own share of the money (statistics asked for this).
     var byVisit = {}, order = [];
     bills.forEach(function(b){ var k=String(b.visit_id); if(!byVisit[k]){ byVisit[k]=[]; order.push(k); } byVisit[k].push(b); });
-    if(!window.confirm((t.settleAllConfirm||'전체 미수를 일괄 수납합니다')+'\n'+(t.outstanding||'미수')+': '+fmtAr(total)+' Ar\n'+t.py_settleAllReceipts.replace('{n}', order.length))) return;
+    if(!window.confirm((t.settleAllConfirm||'전체 미수를 일괄 수납합니다')+'\n'+(t.outstanding||'미수')+': '+money(total)+'\n'+t.py_settleAllReceipts.replace('{n}', order.length))) return;
     var made = [];
     try {
       for(var i=0;i<order.length;i++){
@@ -738,7 +742,7 @@ export default function PaymentPage() {
             <div style={{display:'flex',justifyContent:'space-between',gap:6,fontFamily:'monospace',flexWrap:'wrap'}}>
               <span style={{color:t2}}>{t.py_cashIn} <strong style={{color:'var(--ok-text)'}}>+{fmtAr(cashDay.cash_in)}</strong></span>
               <span style={{color:t2}}>{t.py_cashOut} <strong style={{color:'var(--danger-text)'}}>−{fmtAr(cashDay.cash_out)}</strong></span>
-              <span style={{color:t2}}>{t.py_cashNet} <strong style={{color:tx}}>{fmtAr(cashDay.net)} Ar</strong></span>
+              <span style={{color:t2}}>{t.py_cashNet} <strong style={{color:tx}}>{money(cashDay.net)}</strong></span>
             </div>
           </div>:null}
           <div style={LIST_SEARCH_WRAP}>
@@ -760,17 +764,17 @@ export default function PaymentPage() {
                 <div style={{fontSize:13,color:t2,overflowWrap:'anywhere'}}>{[v.chart_no, v.dept_code, v.doctor_name].filter(Boolean).join(' · ')}</div>
                 {tab==='waiting'&&v.missing_qty?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontWeight:700}}>⚠ {t.py_qtyMissingList}</div>:null}
                 {tab==='waiting'&&v.needs_rebill?<div style={{fontSize:12,color:'var(--danger-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.rebillHint}</div>:null}
-                {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'var(--accent-text)',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {fmtAr(v.extra_due)} Ar</div>:null}
-                {tab==='waiting'&&(v.saved_fee_count>0)?<div style={{fontSize:12,color:t2,marginTop:2}}>📎 {t.py_savedLine.replace('{n}', v.saved_fee_count).replace('{amount}', fmtAr(v.saved_fee_total))}</div>:null}
+                {tab==='waiting'&&v.needs_additional?<div style={{fontSize:12,color:'var(--accent-text)',marginTop:2,fontFamily:'monospace'}}>➕ {t.additionalHint}: {money(v.extra_due)}</div>:null}
+                {tab==='waiting'&&(v.saved_fee_count>0)?<div style={{fontSize:12,color:t2,marginTop:2}}>📎 {t.py_savedLine.replace('{n}', v.saved_fee_count).replace('{amount}', money(v.saved_fee_total))}</div>:null}
                 {tab==='waiting'&&v.needs_refund?<div style={{fontSize:12,color:'var(--violet-text-2)',marginTop:2,fontFamily:'monospace'}}>↩ {corrLine(v)}</div>:null}
                 {tab==='waiting'&&!v.past_unbilled&&!v.needs_rebill&&serverToday&&dayOf(v)&&dayOf(v)!==serverToday?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {dayOf(v)}</div>:null}
                 {tab==='waiting'&&v.past_unbilled?<div style={{fontSize:12,color:'var(--warn-text)',marginTop:2,fontFamily:'monospace'}}>📅 {ymd(v.visit_date)} · {t.py_pastUnbilled}</div>:null}
                 {tab==='completed'?<>
                   <div style={{fontSize:12,color:'var(--accent-text)',marginTop:3,fontFamily:'monospace'}}>{v.receipt_no}</div>
                   {billNote(v)?<div style={{fontSize:12,color:t2,marginTop:2}}>→ {billNote(v)}</div>:null}
-                  <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'var(--ok-text)',fontFamily:'monospace'}}>{fmtAr(v.total_due)} Ar</strong></div>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginTop:3}}><span style={{color:t3}}>{ymd(v.billing_date)}</span><strong style={{color:'var(--ok-text)',fontFamily:'monospace'}}>{money(v.total_due)}</strong></div>
                 </>:null}
-                {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:3}}>+ {t.prevOutstanding}: {fmtAr(v.previous_balance)} Ar</div>:null}
+                {tab==='waiting'&&(parseFloat(v.previous_balance)||0)>0?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:3}}>+ {t.prevOutstanding}: {money(v.previous_balance)}</div>:null}
               </div>;
             })}
             {!loading&&inactiveCount()>0?<div onClick={function(){setShowInactive(!showInactive)}} style={{padding:'8px 12px',cursor:'pointer',fontSize:13,color:t3,borderBottom:'1px solid var(--line-soft)'}}>{showInactive?'▾':'▸'} {t.py_inactiveReceipts.replace('{n}', inactiveCount())}</div>:null}
@@ -795,7 +799,7 @@ export default function PaymentPage() {
               !sel ? <div style={{padding:20,textAlign:'center',color:'var(--text-5)',fontSize:14,fontStyle:'italic'}}>{L.selectWaiting}</div> :
               receipts.length>0 ? <div style={{padding:'6px 8px'}}>
               {patBalance.owed>0?<div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center',justifyContent:'space-between',background:'var(--danger-a12)',border:'1px solid var(--danger-a30)',borderRadius:6,padding:'7px 10px',marginBottom:8}}>
-                <span style={{fontSize:13,color:'var(--danger-text)',fontWeight:800,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(patBalance.owed)} Ar</span>
+                <span style={{fontSize:13,color:'var(--danger-text)',fontWeight:800,fontFamily:'monospace'}}>{t.outstanding}: {money(patBalance.owed)}</span>
                 <button onClick={settleAll} disabled={busy} style={{opacity:busy?0.5:1,background:'var(--ok)',color:'var(--on-fill)',border:'none',borderRadius:5,padding:'5px 10px',cursor:'pointer',fontSize:13,fontWeight:800,whiteSpace:'nowrap'}}>💵 {t.settleAll||'전체 미수 수납'}</button>
               </div>:null}
               <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 8px',marginBottom:6,fontSize:13}}>
@@ -817,9 +821,9 @@ export default function PaymentPage() {
                     <span style={{color:t2}}>{t.totalDue}: {fmtAr(b.total_due)}</span>
                     <span style={{color:'var(--ok-text)'}}>{t.amountPaid}: {fmtAr(b.amount_paid)}</span>
                   </div>
-                  {out>0&&!cancelled?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:2,fontFamily:'monospace'}}>{t.outstanding}: {fmtAr(out)} Ar</div>:null}
+                  {out>0&&!cancelled?<div style={{fontSize:12,color:'var(--danger-ink)',marginTop:2,fontFamily:'monospace'}}>{t.outstanding}: {money(out)}</div>:null}
                   {billNote(b)?<div style={{fontSize:12,color:t2,marginTop:2}}>→ {billNote(b)}</div>:null}
-                  {cancelled&&b.refunded_amount!=null&&heldOn(b)>0.005?<div style={{fontSize:12,color:parseFloat(b.refunded_amount)>0?'var(--danger-text)':t2,marginTop:2,fontFamily:'monospace'}}>{parseFloat(b.refunded_amount)>0?t.py_refundedAt+': '+fmtAr(b.refunded_amount)+' Ar':t.py_keptAt+': '+fmtAr(heldOn(b))+' Ar'}</div>:null}
+                  {cancelled&&b.refunded_amount!=null&&heldOn(b)>0.005?<div style={{fontSize:12,color:parseFloat(b.refunded_amount)>0?'var(--danger-text)':t2,marginTop:2,fontFamily:'monospace'}}>{parseFloat(b.refunded_amount)>0?t.py_refundedAt+': '+money(b.refunded_amount):t.py_keptAt+': '+money(heldOn(b))}</div>:null}
                   <div style={{marginTop:4,display:'flex',flexWrap:'wrap',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
                     {cancelled&&!b.replaced_by_receipt_no? <span style={{fontSize:11,fontWeight:800,color:'var(--danger-text)',background:'var(--danger-a18)',border:'1px solid var(--danger-a40)',borderRadius:4,padding:'1px 7px'}}>{t.cancelledBadge}</span> : billBadge(b)}
                     <div style={{flex:1}}></div>
@@ -839,12 +843,12 @@ export default function PaymentPage() {
           <div style={{background:pn,border:'1px solid '+bd2,color:tx,borderRadius:10,width:380,padding:18}} onClick={function(e){e.stopPropagation()}}>
             <div style={{fontWeight:900,fontSize:16,marginBottom:4,color:'var(--ok-text)'}}>💵 {t.settleOutstanding}</div>
             <div style={{fontSize:13,color:t2,marginBottom:12}}>{settleBill.receipt_no} · {ymd(settleBill.billing_date)}</div>
-            <div style={{display:'flex',justifyContent:'space-between',fontSize:14,marginBottom:6,fontFamily:'monospace'}}><span style={{color:t2}}>{t.outstanding}</span><span style={{color:'var(--danger-ink)',fontWeight:800}}>{fmtAr(settleBill.outstanding)} Ar</span></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:14,marginBottom:6,fontFamily:'monospace'}}><span style={{color:t2}}>{t.outstanding}</span><span style={{color:'var(--danger-ink)',fontWeight:800}}>{money(settleBill.outstanding)}</span></div>
             <label style={{fontSize:12,color:t3,fontWeight:700}}>{t.amountReceived||'받은 금액'}</label>
             <MoneyInput value={settleAmt} onChange={setSettleAmt} autoFocus label={t.amountPaid} style={{width:'100%',boxSizing:'border-box',background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:7,padding:'10px 12px',color:tx,fontSize:18,fontFamily:'monospace',marginTop:4}} />
             <div style={{display:'flex',gap:6,marginTop:8}}>
               <button onClick={function(){ setSettleAmt(String(Math.round(parseFloat(settleBill.outstanding)||0))); }} style={{flex:1,background:'var(--ok-a18)',color:'var(--ok-text)',border:'1px solid var(--ok-a40)',borderRadius:6,padding:'7px',cursor:'pointer',fontSize:13,fontWeight:700}}>{t.fullAmount||'전액'}</button>
-              {[5000,10000,50000].map(function(v){ return <button key={v} onClick={function(){ setSettleAmt(String((parseFloat(settleAmt)||0)+v)); }} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'7px',cursor:'pointer',fontSize:13}}>+{fmtAr(v)}</button>; })}
+              {cur.quick.slice(0,3).map(function(v){ return <button key={v} onClick={function(){ setSettleAmt(String((parseFloat(settleAmt)||0)+v)); }} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:6,padding:'7px',cursor:'pointer',fontSize:13}}>+{fmtAr(v)}</button>; })}
             </div>
             <div style={{display:'flex',gap:8,marginTop:14}}>
               <button onClick={function(){setSettleBill(null)}} style={{flex:1,background:scBg,color:t2,border:'1px solid '+bd2,borderRadius:7,padding:'10px',cursor:'pointer',fontSize:14}}>{t.cancel||'취소'}</button>
@@ -855,12 +859,12 @@ export default function PaymentPage() {
       ):null}
 
       {voidDlg?(function(){
-        var b = voidDlg.bill, held = heldOn(b), amt = fmtAr(held);
+        var b = voidDlg.bill, held = heldOn(b), amt = money(held);
         var btn = {flex:1,border:'none',borderRadius:7,padding:'10px',cursor:busy?'wait':'pointer',fontSize:14,fontWeight:800,opacity:busy?0.5:1};
         return <div style={{position:'fixed',inset:0,background:'var(--scrim)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={function(){setVoidDlg(null)}}>
           <div style={{background:pn,border:'1px solid '+bd2,color:tx,borderRadius:10,width:440,padding:18}} onClick={function(e){e.stopPropagation()}}>
             <div style={{fontWeight:900,fontSize:16,marginBottom:4,color:'var(--danger-text)'}}>{t.py_voidTitle.replace('{receipt}', b.receipt_no)}</div>
-            <div style={{fontSize:13,color:t2,marginBottom:10}}>{ymd(b.billing_date)} · {t.totalDue}: {fmtAr(b.total_due)} Ar</div>
+            <div style={{fontSize:13,color:t2,marginBottom:10}}>{ymd(b.billing_date)} · {t.totalDue}: {money(b.total_due)}</div>
             <div style={{background:'var(--warn-a14)',border:'1px solid var(--warn-a55)',borderRadius:7,padding:'8px 10px',marginBottom:12,color:'var(--warn-text)',fontSize:13,fontWeight:700}}>⚠ {t.py_voidUseCorrection}</div>
             <label style={{fontSize:12,color:t3,fontWeight:700}}>{t.py_voidReasonLabel}</label>
             <input value={voidDlg.reason} onChange={function(e){ setVoidDlg({bill:b, reason:e.target.value}); }} autoFocus style={{width:'100%',boxSizing:'border-box',background:'var(--field-3)',border:'1px solid var(--field-border)',borderRadius:7,padding:'9px 11px',color:tx,fontSize:14,marginTop:4,marginBottom:12}} />
@@ -957,7 +961,7 @@ export default function PaymentPage() {
           <div>
             <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,overflow:'hidden'}}>
               <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:t2}}>{t.currentItems||'현재 항목'}</div>
-              {corr.items.map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid var(--line-soft)':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.pack_label?' · '+packWord(it, langCtx.lang, it.quantity):it.quantity>1?' ×'+fmtAr(it.quantity):''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
+              {corr.items.map(function(it,i){ return <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 12px',borderTop:i?'1px solid var(--line-soft)':'none',fontSize:14}}><span style={{color:tx}}>{it.item_name}{it.pack_label?' · '+packWord(it, langCtx.lang, it.quantity):it.quantity>1?' ×'+fmtNumber(it.quantity, langCtx.lang, 0):''}</span><span style={{color:t2,fontFamily:'monospace'}}>{fmtAr(it.total_price)}</span></div>; })}
             </div>
             {(corr.changes||[]).length?<div style={{background:scBg,border:'1px solid var(--violet-2-a50)',borderRadius:7,overflow:'hidden',marginTop:10}}>
               <div style={{padding:'8px 12px',fontWeight:800,borderBottom:'1px solid '+bd,color:'var(--violet-text-2)'}}>{t.py_changesTitle}</div>
@@ -979,10 +983,10 @@ export default function PaymentPage() {
             <div style={{height:1,background:bd,margin:'8px 0'}}></div>
             {corr.refund>0?<div style={{background:'var(--violet-2-a18)',border:'2px solid var(--violet-2-a50)',borderRadius:6,padding:12}}>
               <div style={{fontSize:13,color:'var(--violet-text-2)',fontWeight:800}}>{t.refundDue}</div>
-              <div style={{fontSize:28,fontWeight:900,color:'var(--violet-text-2)',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(corr.refund)} Ar</div>
+              <div style={{fontSize:28,fontWeight:900,color:'var(--violet-text-2)',fontFamily:'monospace',textAlign:'right'}}>{money(corr.refund)}</div>
             </div>:corr.outstanding>0?<div style={{background:'var(--danger-a12)',border:'2px solid var(--danger-a40)',borderRadius:6,padding:12}}>
               <div style={{fontSize:13,color:'var(--danger-text)',fontWeight:800}}>{t.outstanding}</div>
-              <div style={{fontSize:28,fontWeight:900,color:'var(--danger-text)',fontFamily:'monospace',textAlign:'right'}}>{fmtAr(corr.outstanding)} Ar</div>
+              <div style={{fontSize:28,fontWeight:900,color:'var(--danger-text)',fontFamily:'monospace',textAlign:'right'}}>{money(corr.outstanding)}</div>
               <div style={{fontSize:12,color:t2,marginTop:4}}>{t.py_correctionOwedHint}</div>
             </div>:<div style={{fontSize:13,color:t2,padding:'6px 0'}}>{t.py_noDifference}</div>}
             <button onClick={confirmCorrection} disabled={busy} style={{opacity:busy?0.5:1,marginTop:12,width:'100%',background:'var(--violet-2)',color:'var(--on-fill)',border:'none',borderRadius:7,padding:'12px',fontSize:15,fontWeight:800,cursor:busy?'wait':'pointer'}}>↩ {t.py_processCorrection}</button>
@@ -997,8 +1001,8 @@ export default function PaymentPage() {
       {npLines.length?<div style={{background:'var(--warn-a14)',border:'1px solid var(--warn-a55)',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'var(--warn-text)',fontSize:13,fontWeight:700}}>⚠ {t.py_noPriceBanner.replace('{n}', npLines.length)}: {npLines.join(', ')}</div>:null}
       {mqRows.filter(function(r){ return !r.pack_unit; }).length?<div style={{background:'var(--danger-a18)',border:'1px solid var(--danger-a60)',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'var(--danger-text-2)',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingBlock.replace('{names}', mqRows.filter(function(r){ return !r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
       {mqRows.filter(function(r){ return r.pack_unit; }).length?<div style={{background:'var(--danger-a18)',border:'1px solid var(--danger-a60)',borderRadius:7,padding:'9px 12px',marginBottom:10,color:'var(--danger-text-2)',fontSize:13,fontWeight:700}}>⚠ {t.py_qtyMissingPack.replace('{names}', mqRows.filter(function(r){ return r.pack_unit; }).map(function(r){ return r.drug_name; }).join(', '))}</div>:null}
-      {isAdditional()&&subtotal()>0.0001?<div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--accent-text)'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {fmtAr(billedTotal())} Ar</span></div>:null}
-      {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'var(--warn-a12)',border:'1px solid var(--warn-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--warn-ink)'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'var(--warn-text)',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {fmtAr(sel.prior_paid)} Ar</span></div>:null}
+      {isAdditional()&&subtotal()>0.0001?<div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--accent-text)'}}>➕ {t.additionalBadge}</span><span style={{color:t2}}>{t.additionalBannerHint}</span><span style={{marginLeft:'auto',color:t3,fontFamily:'monospace'}}>{t.alreadyBilled}: {money(billedTotal())}</span></div>:null}
+      {sel&&sel.needs_rebill&&(parseFloat(sel.prior_paid)||0)>0?<div style={{background:'var(--warn-a12)',border:'1px solid var(--warn-a40)',borderRadius:7,padding:'9px 12px',marginBottom:10,display:'flex',alignItems:'center',gap:8,fontSize:13}}><span style={{fontWeight:800,color:'var(--warn-ink)'}}>↺ {t.rebillBadge}</span><span style={{color:t2}}>{t.rebillCarryHint}</span><span style={{marginLeft:'auto',color:'var(--warn-text)',fontFamily:'monospace',fontWeight:700}}>{t.carriedPaid}: {money(sel.prior_paid)}</span></div>:null}
       <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
         <div>
           <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,padding:'10px 12px',marginBottom:10,display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 8px'}}>
@@ -1012,7 +1016,7 @@ export default function PaymentPage() {
               <option value="followUp">{t.followUp}</option>
               <option value="none">{t.noConsult}</option>
             </select>
-            <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtAr(consultFee())} Ar</span>
+            <span style={{marginLeft:'auto',fontSize:17,fontWeight:900,color:tx,fontFamily:'monospace',whiteSpace:'nowrap'}}>{money(consultFee())}</span>
           </div>
           <BillTable title={'💊 '+t.prescriptions} rows={(billItems.prescriptions||[]).map(function(rx){var qty=rxQty(rx);return {code:rx.drug_code,name:rx.drug_name,qty:qty,packRx:rx.pack_unit?rx:null,unit:parseFloat(rx.unit_price)||0,total:(qty||0)*(parseFloat(rx.unit_price)||0),missing:qty==null,noPrice:!(parseFloat(rx.unit_price)>0)};})} />
           <BillTable title={'🧾 '+t.procedures} rows={(billItems.orders||[]).map(function(o){var qty=orderQty(o);return {code:o.order_code,name:o.order_name,qty:qty,unit:parseFloat(o.unit_price)||0,total:qty*(parseFloat(o.unit_price)||0),noPrice:!(parseFloat(o.unit_price)>0)};})} />
@@ -1021,7 +1025,7 @@ export default function PaymentPage() {
               <span style={{whiteSpace:'nowrap'}}>🧾 {t.adminCharges}</span>
               <select value="" onChange={function(e){ if(e.target.value){ addFeeItem(e.target.value); e.target.value=''; } }} style={{marginLeft:'auto',minWidth:0,flex:'0 1 150px',background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'4px 8px',color:tx,fontSize:13,cursor:'pointer'}}>
                 <option value="">+ {t.addCharge}</option>
-                {feeCodes.map(function(c){ return <option key={c.id} value={c.id}>{c.name} ({fmtAr(c.price_clinic||c.price)} Ar)</option>; })}
+                {feeCodes.map(function(c){ return <option key={c.id} value={c.id}>{c.name} ({money(c.price_clinic||c.price)})</option>; })}
               </select>
             </div>
             {/* The state of the saved lines and the Save button share one row under the head (the head
@@ -1040,9 +1044,9 @@ export default function PaymentPage() {
                   ? <td style={{padding:'5px 10px',textAlign:'right',whiteSpace:'nowrap'}}>
                       <MoneyInput value={it.unit_price} onChange={function(v){setFeePrice(idx, v)}} selectOnFocus label={t.py_feeAmount.replace('{name}', it.name)}
                         style={{width:92,background:'var(--field)',border:'1px solid '+((parseFloat(it.unit_price)||0)>0?'var(--field-border)':'var(--danger-text)'),borderRadius:5,padding:'4px 6px',color:'var(--ok-text)',fontSize:15,fontFamily:'monospace',textAlign:'right',boxSizing:'border-box'}}/>
-                      <span style={{color:'var(--ok-text)',fontFamily:'monospace',marginLeft:4}}>Ar</span>
+                      <span style={{color:'var(--ok-text)',fontFamily:'monospace',marginLeft:4}}>{cur.symbol}</span>
                     </td>
-                  : <td style={{padding:'7px 10px',textAlign:'right',color:'var(--ok-text)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtAr((parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1))} Ar</td>}
+                  : <td style={{padding:'7px 10px',textAlign:'right',color:'var(--ok-text)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{money((parseFloat(it.unit_price)||0)*(parseFloat(it.quantity)||1))}</td>}
                 <td style={{padding:'7px 10px',textAlign:'right',width:30}}><button onClick={function(){removeFeeItem(idx)}} style={{background:'transparent',border:'none',color:'var(--danger-text)',cursor:'pointer',fontSize:14}}>✕</button></td>
               </tr>; }) : <tr><td colSpan={4} style={{padding:10,color:t3,fontStyle:'italic',fontSize:13}}>{t.noAdminCharges}</td></tr>}
             </tbody></table>
@@ -1063,11 +1067,11 @@ export default function PaymentPage() {
           <div style={{display:'grid',gridTemplateColumns:'90px 1fr',gap:6,alignItems:'center',marginBottom:6}}><span style={{fontSize:13,color:t2}}>{t.discount}</span><MoneyInput value={discount.value} onChange={function(v){setDiscount({type:'amount',value:v})}} selectOnFocus label={t.discount} style={inputStyle()} /></div>
           {prevBal()>0?<SumRow label={t.prevOutstanding} amount={prevBal()} color="var(--danger-ink)" />:null}
           {patBalance.refund>0?
-            <div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:6,padding:'8px 10px',margin:'8px 0',fontSize:13}}><span style={{color:'var(--accent-text)',fontWeight:800}}>{t.refundDue}: </span><span style={{color:'var(--accent-text)',fontFamily:'monospace',fontWeight:800}}>{fmtAr(patBalance.refund)} Ar</span><div style={{color:t3,fontSize:11,marginTop:2}}>{t.refundHint}</div></div>
+            <div style={{background:'var(--accent-a15)',border:'1px solid var(--accent-a40)',borderRadius:6,padding:'8px 10px',margin:'8px 0',fontSize:13}}><span style={{color:'var(--accent-text)',fontWeight:800}}>{t.refundDue}: </span><span style={{color:'var(--accent-text)',fontFamily:'monospace',fontWeight:800}}>{money(patBalance.refund)}</span><div style={{color:t3,fontSize:11,marginTop:2}}>{t.refundHint}</div></div>
             :null}
-          <div style={{background:'linear-gradient(135deg,var(--ok-a15),var(--ok-strong-a15))',border:'2px solid var(--ok-a40)',borderRadius:6,padding:12,marginTop:10}}><div style={{fontSize:13,color:'var(--ok-text)',fontWeight:800}}>{t.totalDue}</div><div style={{fontSize:26,fontWeight:900,color:'var(--ok-ink)',fontFamily:'monospace',textAlign:'right',whiteSpace:'nowrap'}}>{fmtAr(totalDue())} Ar</div></div>
+          <div style={{background:'linear-gradient(135deg,var(--ok-a15),var(--ok-strong-a15))',border:'2px solid var(--ok-a40)',borderRadius:6,padding:12,marginTop:10}}><div style={{fontSize:13,color:'var(--ok-text)',fontWeight:800}}>{t.totalDue}</div><div style={{fontSize:26,fontWeight:900,color:'var(--ok-ink)',fontFamily:'monospace',textAlign:'right',whiteSpace:'nowrap'}}>{money(totalDue())}</div></div>
           <div style={{marginTop:12}}><div style={{fontSize:13,color:t2,marginBottom:4}}>💵 {t.amountPaid}</div><MoneyInput value={amountPaid} onChange={setAmountPaid} label={t.amountPaid} style={{...inputStyle(),fontSize:20,color:'var(--ok-ink)',fontWeight:800,padding:9}} /></div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>{[totalDue(),5000,10000,20000,50000].map(function(a,i){return <button key={i} onClick={function(){setAmountPaid(String(a))}} style={{flex:'1 0 48px',background:'var(--chip)',border:'1px solid '+bd2,borderRadius:4,padding:'5px 2px',color:t2,cursor:'pointer',fontSize:12}}>{i===0?L.exact:fmtAr(a)}</button>;})}</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>{[totalDue()].concat(cur.quick).map(function(a,i){return <button key={i} onClick={function(){setAmountPaid(String(a))}} style={{flex:'1 0 48px',background:'var(--chip)',border:'1px solid '+bd2,borderRadius:4,padding:'5px 2px',color:t2,cursor:'pointer',fontSize:12}}>{i===0?L.exact:fmtAr(a)}</button>;})}</div>
           {amtPaidNum()>=totalDue()&&amtPaidNum()>0?<InfoLine label={t.change} amount={changeAmt()} color="var(--accent-text)" tint="accent-text" />:null}
           {amtPaidNum()>0&&amtPaidNum()<totalDue()?<InfoLine label={t.outstanding} amount={outstandingAmt()} color="var(--danger-ink)" tint="danger" />:null}
         </div>
@@ -1085,7 +1089,7 @@ export default function PaymentPage() {
       <div style={{display:'grid',gridTemplateColumns:BILL_COLS,gap:12}}>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,overflow:'hidden'}}>
           <div style={{padding:'10px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>🧾 {L.item}</div>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'var(--bg-col-2)'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid var(--line-soft)'}}><td style={tdCode()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtAr(it.quantity)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','var(--ok-text)',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><thead><tr style={{background:'var(--bg-col-2)'}}><th style={th()}>{t.py_code}</th><th style={th()}>{L.item}</th><th style={th('right')}>{L.qty}</th><th style={th('right')}>{L.unitPrice}</th><th style={th('right')}>{L.total}</th></tr></thead><tbody>{items.map(function(it){return <tr key={it.id} style={{borderTop:'1px solid var(--line-soft)'}}><td style={tdCode()}>{it.item_code}</td><td style={td()}>{it.item_name}</td><td style={td('right')}>{it.pack_label?packWord(it, langCtx.lang, parseFloat(it.quantity)):fmtNumber(it.quantity, langCtx.lang, 0)}</td><td style={td('right')}>{fmtAr(it.unit_price)}</td><td style={td('right','var(--ok-text)',800)}>{fmtAr(it.total_price)}</td></tr>;})}</tbody></table>
         </div>
         <div style={{background:scBg,border:'1px solid '+bd,borderRadius:8,padding:12,height:'fit-content'}}>
           <div style={{display:'grid',gap:5,fontSize:15}}>
@@ -1104,20 +1108,20 @@ export default function PaymentPage() {
   }
 
   function PatientHeader(p){ p=p.p; return <div style={{padding:'10px 15px',background:scBg,borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:12}}><div style={{background:'var(--accent-a20)',borderRadius:8,width:42,height:42,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontWeight:900,color:'var(--accent-text)',flexShrink:0}}>{(p.first_name||'?')[0]}</div><div style={{minWidth:0,overflowWrap:'anywhere'}}><div style={{fontWeight:900,fontSize:18,color:'var(--text-strong)'}}>{p.last_name} {p.first_name}</div><div style={{fontSize:14,color:t2}}>{[p.chart_no, p.dept_code, p.doctor_name].filter(Boolean).join(' · ')}</div></div>{serverToday&&dayOf(p)&&dayOf(p)!==serverToday?<span style={{marginLeft:'auto',background:'var(--warn-a18)',color:'var(--warn-text)',borderRadius:5,padding:'3px 9px',fontSize:13,fontWeight:800,fontFamily:'monospace',whiteSpace:'nowrap',flexShrink:0}}>📅 {dayOf(p)}</span>:null}</div>; }
-  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={tdCode()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtAr(r.qty)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
+  function BillTable(p){ return <div style={{background:scBg,border:'1px solid '+bd,borderRadius:7,marginBottom:10,overflow:'hidden'}}><div style={{padding:'9px 12px',fontWeight:900,borderBottom:'1px solid '+bd}}>{p.title}</div><table style={{width:'100%',borderCollapse:'collapse',fontSize:15}}><tbody>{p.rows.length?p.rows.map(function(r,i){return <tr key={i} style={{borderTop:i?'1px solid var(--line-soft)':'none'}}><td style={tdCode()}>{r.code}</td><td style={td()}>{r.name}</td><td style={td('right',r.missing?'var(--danger-text)':null)}>{r.missing?t.py_qtyMissing:r.packRx?packWord(r.packRx, langCtx.lang, r.qty):fmtNumber(r.qty, langCtx.lang, 0)}</td><td style={td('right',r.noPrice?'var(--warn-text)':null)}>{r.noPrice?t.py_noPrice:fmtAr(r.unit)}</td><td style={td('right',r.missing?'var(--danger-text)':'var(--ok-text)',800)}>{r.missing?t.py_qtyMissing:fmtAr(r.total)}</td></tr>;}):<tr><td style={{padding:12,color:t3,fontStyle:'italic'}}>{t.py_noItems}</td></tr>}</tbody></table></div>; }
   function Empty(p){ return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-5)',whiteSpace:'pre-line'}}><div style={{textAlign:'center'}}><div style={{fontSize:54,marginBottom:12,opacity:0.35}}>{p.icon}</div><div style={{fontStyle:'italic',fontSize:17}}>{p.text}</div></div></div>; }
   function inputStyle(){ return {background:'var(--field)',border:'1px solid var(--field-border)',borderRadius:5,padding:'6px 8px',color:tx,fontSize:15,width:'100%',boxSizing:'border-box',fontFamily:'monospace',textAlign:'right'}; }
   function th(align){ return {padding:'7px 7px',textAlign:align||'left',color:'var(--accent-text-3)',fontSize:13,borderBottom:'1px solid '+bd}; }
   function td(align,color,weight){ return {padding:'7px 7px',textAlign:align||'left',color:color||tx,fontWeight:weight||500,fontFamily:align==='right'?'monospace':'inherit',whiteSpace:align==='right'?'nowrap':'normal'}; }
   function tdCode(){ return Object.assign(td(), {fontFamily:'monospace',fontSize:13,color:t2,whiteSpace:'nowrap'}); }
   function Pair(p){ return <div style={{display:'flex',justifyContent:'space-between',gap:10}}><span style={{color:t2}}>{p.k}</span><strong style={{color:tx,textAlign:'right'}}>{p.v}</strong></div>; }
-  function InfoLine(p){ return <div style={{background:tint(p.tint,'15'),borderRadius:5,padding:'7px 9px',marginTop:8,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:14,color:p.color,fontWeight:800}}>{p.label}</span><span style={{fontSize:16,color:p.color,fontWeight:900,fontFamily:'monospace'}}>{fmtAr(p.amount)} Ar</span></div>; }
+  function InfoLine(p){ return <div style={{background:tint(p.tint,'15'),borderRadius:5,padding:'7px 9px',marginTop:8,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:14,color:p.color,fontWeight:800}}>{p.label}</span><span style={{fontSize:16,color:p.color,fontWeight:900,fontFamily:'monospace'}}>{money(p.amount)}</span></div>; }
 }
 
 function SumRow(p){
-  var lang = useLang().lang;
+  var money = useLang().money;
   return <div style={{display:'flex',justifyContent:'space-between',padding:'3px 0'}}>
     <span style={{fontSize:14,color:p.color||'var(--text-2)',fontWeight:p.bold?800:600}}>{p.label}</span>
-    <span style={{fontSize:p.bold?15:14,fontWeight:p.bold?900:600,color:p.color||'var(--text)',fontFamily:'monospace'}}>{fmtAmount(p.amount, lang)} Ar</span>
+    <span style={{fontSize:p.bold?15:14,fontWeight:p.bold?900:600,color:p.color||'var(--text)',fontFamily:'monospace'}}>{money(p.amount)}</span>
   </div>;
 }

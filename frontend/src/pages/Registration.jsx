@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
+import { formatMoney } from '../money.js';
 import { api } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { PatientFinder, phoneLines, phoneText } from '../components/PatientFinder.jsx';
@@ -15,7 +16,6 @@ import { VitalsModal } from '../components/VitalsModal.jsx';
 // Money: 17 300 in French (no-break space, so the number never splits across lines),
 // 17,300 in Korean and English - coordinator decision 2026-09-29, same as fmt() in Pharmacy.jsx.
 // toLocaleString() followed the PC's settings instead of the screen language.
-function fmtAr(n, lang) { return Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? ' ' : ','); }
 
 var GENDERS = ['M', 'F'];
 
@@ -813,8 +813,8 @@ export default function RegistrationPage() {
                 </div>
                 {(patBal.owed>0||patBal.refund>0)?
                   <div style={{ marginLeft:'auto', textAlign:'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.owed, langCtx.lang)} Ar</span></div>:null}
-                    {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)', whiteSpace:'nowrap' }}>{fmtAr(patBal.refund, langCtx.lang)} Ar</span></div>:null}
+                    {patBal.owed>0?<div style={{ background:'var(--danger-a18)', border:'1px solid var(--danger-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--danger-text)', fontWeight:700, marginRight:5 }}>{t.owedLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--danger-text)', whiteSpace:'nowrap' }}>{formatMoney(patBal.owed, langCtx.lang)}</span></div>:null}
+                    {patBal.refund>0?<div style={{ background:'var(--accent-a18)', border:'1px solid var(--accent-a50)', borderRadius:6, padding:'4px 10px' }}><span style={{ fontSize:11, color:'var(--accent-text)', fontWeight:700, marginRight:5 }}>{t.refundLabel}</span><span style={{ fontFamily:'monospace', fontWeight:800, color:'var(--accent-text)', whiteSpace:'nowrap' }}>{formatMoney(patBal.refund, langCtx.lang)}</span></div>:null}
                   </div>
                 :null}
               </div>

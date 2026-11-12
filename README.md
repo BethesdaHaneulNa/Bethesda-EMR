@@ -29,7 +29,8 @@ counter is in this one application, and it keeps working when the connection doe
   the clinic's network. No software on the desks.
 - **Works offline.** An offline install kit puts the whole thing on a USB stick for sites
   with no usable internet, and updates come the same way.
-- **French first**, English and Korean built in.
+- **French first**, English and Korean built in; the clinic chooses which of them its
+  screens offer, and which currency its amounts are written in.
 - **Nothing to configure before you start.** A new install is empty except for a few generic
   examples; the first login creates the administrator. Drugs, prices, tests, departments,
   letterhead and staff permissions are all edited in the app.
@@ -81,8 +82,8 @@ Three screen themes (light, paper and dark); each account keeps its own.
 - **Laboratory** — clinical pathology entry with reference ranges and automatic flagging
 - **Statistics** — visits, revenue, outstanding and drug use, by day, month and year
 - **Settings** — staff and granular permissions, drugs, order codes, lab panels, departments,
-  order sets, diagnosis codes, phrases, clinic letterhead, app title: all edited in the
-  app, every change in a change log
+  order sets, diagnosis codes, phrases, clinic letterhead, app title, languages,
+  currency: all edited in the app, every change in a change log
 - **Imaging** — with the optional PACS companion: DICOM storage, modality worklist, viewing
   inside the chart, radiology readings, export to CD
 

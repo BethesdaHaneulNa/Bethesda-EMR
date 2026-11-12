@@ -159,11 +159,12 @@ export function TopBar() {
           ) : null}
           {canSeeUpdate ? <StatusDot t={t} /> : null}
           <span style={{ background: 'var(--chip)', borderRadius: 5, padding: '3px 8px', fontSize: 13, color: 'var(--text-2)', fontFamily: 'monospace' }}>{now.toLocaleDateString('en-CA')} {now.toLocaleTimeString('en-GB')}</span>
-          <div style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
-            {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].map(function (i) {
+          {/* Only the languages the clinic uses (Settings -> Languages); one alone: no buttons. */}
+          {(langCtx.enabled || []).length > 1 ? <div data-lang-switch style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--border-2)' }}>
+            {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].filter(function (i) { return langCtx.enabled.indexOf(i[0]) >= 0; }).map(function (i) {
               return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? 'var(--accent)' : 'var(--chip)', color: lang === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '3px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{i[1]}</button>;
             })}
-          </div>
+          </div> : null}
           {/* One list instead of three buttons (clinic manager, 2026-10-01: the row was getting long).
               A plain <select>, like the other lists of the EMR: the keyboard works by itself
               and the open list is drawn by the browser. Its rows take their colours from the

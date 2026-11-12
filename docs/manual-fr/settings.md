@@ -22,7 +22,7 @@ Juste après avoir créé le compte **admin**, faites ces huit choses, dans cet 
 ## En bref
 
 1. Cliquez sur **Paramètres** dans la barre du haut.
-2. À gauche, choisissez la partie. Dans l'ordre du menu : **Personnel**, **Médicaments**, **Codes d'actes**, **Items de test**, **Diagnostics**, **Phrases types**, **Services**, **Ordonnances types**, **Flux d'ordres**, **Sauvegarde**, **Journal**, **Établissement**.
+2. À gauche, choisissez la partie. Dans l'ordre du menu : **Personnel**, **Médicaments**, **Codes d'actes**, **Items de test**, **Diagnostics**, **Phrases types**, **Services**, **Ordonnances types**, **Flux d'ordres**, **Sauvegarde**, **Journal**, **Langues**, **Établissement**.
 3. Pour ajouter : **+ Ajouter** (ou **Nouvel ensemble** pour une ordonnance type).
 4. Pour changer une ligne : **Modifier**, changez, puis **Sauver**.
 5. Regardez chaque jour le **petit point** en haut, juste avant l'heure : vert = tout va bien.
@@ -213,6 +213,28 @@ Depuis la version 1.7.13, les reçus peuvent s'imprimer sur une **feuille A4 cou
 2. Cela concerne le **reçu**, le **relevé détaillé** et le **reçu récapitulatif** (Paiement). Les autres documents (certificats, lettres, ordonnances externes, résultats…) restent en A4.
 3. En A5, l'aperçu du reçu est plus étroit et l'écriture un peu plus petite ; un reçu ordinaire tient sur une demi-feuille, un long relevé continue sur une deuxième.
 4. Côté imprimante : mettez les demi-feuilles dans le bac et réglez le **format de papier par défaut** de l'imprimante sur **A5** (dans Windows : Paramètres → Imprimantes → l'imprimante → Préférences d'impression). Sinon l'imprimante peut attendre du A4 et imprimer en deux morceaux.
+
+### La monnaie
+
+Le logiciel a été écrit pour l'ariary ; une clinique d'un autre pays règle sa monnaie ici, une fois.
+
+1. **Paramètres** → **Établissement** → encadré **Monnaie**.
+2. **Symbole** : ce qui s'écrit à côté des montants (**Ar**, **FCFA**, **€**, **$** …, 8 caractères au plus). **Place du symbole** : après le montant (15 000 Ar) ou avant ($ 15). **Décimales** : aucune, ou deux (15,50).
+3. **Boutons de montant à la caisse** : les billets usuels, séparés par des virgules (1 à 6 nombres). Ce sont les boutons sous **Montant reçu** dans Paiement.
+4. L'**Aperçu** montre comment un montant s'écrira. **Enregistrer la monnaie** : tous les écrans et les reçus suivent aussitôt, sur chaque poste.
+
+Les montants déjà enregistrés ne changent pas : seule leur écriture change. Le bouton **Sauver** au-dessus (nom, adresse…) ne touche pas à la monnaie.
+
+### Choisir les langues de l'établissement
+
+Le logiciel existe en français, en anglais et en coréen. **Paramètres** → **Langues** dit lesquelles l'établissement utilise.
+
+1. **Paramètres** → **Langues**. Cochez les langues utilisées (il en faut au moins une : la dernière case cochée ne se décoche pas).
+2. **Sauver**. Le changement se voit tout de suite sur ce PC ; les autres PC et les téléphones le prennent à leur prochaine ouverture de la page.
+
+- **Une seule langue** : les boutons de langue (en haut à droite, sur la page de connexion et sur la page du téléphone) disparaissent, et tous les écrans sont dans cette langue.
+- **Deux ou trois langues** : seuls les boutons de ces langues apparaissent. Chaque PC garde la langue qu'il a choisie ; si elle n'est plus utilisée, il passe à la première langue de la liste.
+- Les documents imprimés ne changent pas.
 
 ### La sauvegarde
 

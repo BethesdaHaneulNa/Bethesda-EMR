@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../i18n/index.jsx';
+import { fmtNumber } from '../money.js';
 import { useDrugCategories } from '../drugCategories.js';
 import { api, getUser } from '../api/client.js';
 import { TopBar } from '../components/TopBar.jsx';
@@ -7,7 +8,7 @@ import { SIDE_NAV_COL, SIDE_NAV, SIDE_NAV_TITLE, sideNavItem } from '../layout.j
 
 // Thousands: a no-break space in French (« 39 300 »), a comma in Korean and English -
 // the same rule as the pharmacy's fmt(n, lang). CSV exports keep plain numbers.
-function fmtAmount(n, lang){ return Math.round(Number(n)||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'fr' ? '\u00a0' : ','); }
+function fmtAmount(n, lang){ return fmtNumber(n, lang); }   // the number alone, with the money's decimals (money.js)
 function ymd(d){ var y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), da=('0'+d.getDate()).slice(-2); return y+'-'+m+'-'+da; }
 function rangeFor(p){
   var now=new Date(), to=ymd(now), from=to;
@@ -26,7 +27,8 @@ var BAR_OF = { summary:'main', money:'main', patients:'patients', dx:'dx', order
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
   var dcx = useDrugCategories();   // the drug categories' names (060) for the usage export
-  function fmtAr(n){ return fmtAmount(n, lang); }
+  function fmtAr(n){ return fmtNumber(n, lang, 0); }   // counts (visits, patients, orders): whole numbers
+  var money = langCtx.money, cur = langCtx.currency;   // the amount with the clinic's money (067)
   // Which group of parts is on screen (design session, 2026-10-02): the screen had grown to
   // nine parts one under the other. They are shown a group at a time, chosen in a side menu
   // like the settings screen's. The choice is remembered per account on this computer
@@ -184,7 +186,7 @@ export default function StatsPage(){
   var CASH_KINDS = ['payment','settlement','correction','cancel','opening'];
   var KIND_KO = { payment:'수납', settlement:'미수 수납', correction:'정정 환불', cancel:'취소 환불', opening:'옛 기록' };
   function kindLabel(k){ return t['st_kind_'+k] || KIND_KO[k]; }
-  function signedAr(n){ n=Math.round(Number(n)||0); return (n>0?'+':n<0?'−':'')+fmtAr(Math.abs(n)); }
+  function signedAr(n){ n=Number(n)||0; return (n>0?'+':n<0?'−':'')+fmtAmount(Math.abs(n), lang); }
   function exportCashCsv(){
     if(!cashData) return;
     var kinds = CASH_KINDS.filter(function(k){ return k!=='opening' || (cashData.total&&cashData.total.byKind.opening); });
@@ -249,7 +251,7 @@ export default function StatsPage(){
         <div style={{ flex:1, background:pn, borderRadius:5, height:22, position:'relative', overflow:'hidden' }}>
           <div data-motion="bar" style={{ width:((r.value||0)/max*100)+'%', background:(r.color||'var(--accent)'), height:'100%', borderRadius:5, minWidth:r.value?3:0, transition:'width 250ms var(--ease-out)' }}></div>
         </div>
-        <div style={{ width:90, fontSize:13, color:tx, fontFamily:'monospace', textAlign:'right' }}>{props.money?fmtAr(r.value)+' Ar':r.value}</div>
+        <div style={{ width:90, fontSize:13, color:tx, fontFamily:'monospace', textAlign:'right' }}>{props.money?money(r.value):r.value}</div>
       </div>; })}
     </div>; }
 
@@ -272,7 +274,7 @@ export default function StatsPage(){
     return <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:140, padding:'4px 2px' }}>
       {rows.length===0?<div style={{color:t3,fontSize:13}}>{t.noData||'데이터 없음'}</div>:null}
       {rows.map(function(r,i){ var h=Math.round((r.value||0)/max*108); return <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, minWidth:30 }}>
-        <div style={{ fontSize:11, color:t2, fontFamily:'monospace', whiteSpace:'nowrap' }}>{props.money?fmtAr(r.value):r.value}</div>
+        <div style={{ fontSize:11, color:t2, fontFamily:'monospace', whiteSpace:'nowrap' }}>{props.money?fmtAmount(r.value, lang):r.value}</div>
         <div title={r.label} data-motion="bar" style={{ width:'72%', height:Math.max(h,2), background:props.color||'var(--accent)', borderRadius:'4px 4px 0 0', transition:'height 250ms var(--ease-out)' }}></div>
         <div style={{ fontSize:11, color:t3 }}>{r.label}</div>
       </div>; })}
@@ -369,16 +371,16 @@ export default function StatsPage(){
             {/* The day's cash (design A, 2026-09-29): what came into the till minus what
                 was handed back, from cash_movement. Replaces the receipt-based figure
                 that moved to the correction day when a receipt was corrected. */}
-            <Card label={t.st_cash||'그날 현금'} value={(cash.net<0?'−':'')+fmtAr(Math.abs(cash.net||0))} unit="Ar" color={cash.net<0?'var(--danger-text)':'var(--ok-ink)'}
-              sub={<><div>{(t.st_cashIn||'들어옴')+' +'+fmtAr(cash.in)+' Ar'}</div><div>{(t.st_cashOut||'나감')+' −'+fmtAr(cash.out)+' Ar'}</div></>} />
+            <Card label={t.st_cash||'그날 현금'} value={(cash.net<0?'−':'')+fmtAmount(Math.abs(cash.net||0), lang)} unit={cur.symbol} color={cash.net<0?'var(--danger-text)':'var(--ok-ink)'}
+              sub={<><div>{(t.st_cashIn||'들어옴')+' +'+money(cash.in)}</div><div>{(t.st_cashOut||'나감')+' −'+money(cash.out)}</div></>} />
             {/* Treatment receipts only; balance settlements (payment M2) are money
                 received, not treatments, so they are shown apart (decision 14).
                 Billed sits here with the other receipt figures. */}
             <Card label={t.st_billCount||'진료 영수'} value={rev.billCount||0} unit={cases} small
-              sub={<><div>{(t.billed||'청구액')+' '+fmtAr(rev.gross)+' Ar'}</div>{rev.settlementCount?<div>{(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount)}</div>:null}</>} />
-            <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAr(rev.avgBilledPerVisit)} unit="Ar" small />
-            <Card label={t.unpaidBalance||'미수'} value={fmtAr(out.owed)} unit="Ar" color="var(--danger-text)" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
-            <Card label={t.refundDue||'환불 예정'} value={fmtAr(out.refund)} unit="Ar" color="var(--violet-text-2)" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
+              sub={<><div>{(t.billed||'청구액')+' '+money(rev.gross)}</div>{rev.settlementCount?<div>{(t.st_settlementsSub||'+ 미수 수납 {n}건').replace('{n}', rev.settlementCount)}</div>:null}</>} />
+            <Card label={t.st_avgPerVisit||'방문당 평균 청구액'} value={fmtAmount(rev.avgBilledPerVisit, lang)} unit={cur.symbol} small />
+            <Card label={t.unpaidBalance||'미수'} value={fmtAmount(out.owed, lang)} unit={cur.symbol} color="var(--danger-text)" small onClick={function(){toggleList('owed')}} active={showList==='owed'} />
+            <Card label={t.refundDue||'환불 예정'} value={fmtAmount(out.refund, lang)} unit={cur.symbol} color="var(--violet-text-2)" small onClick={function(){toggleList('refund')}} active={showList==='refund'} />
             {/* Staff cancellations only; receipts replaced by a correction are not
                 counted (item 20). The cash handed back is in the till figures now. */}
             <Card label={t.voidedReceipts||'취소 영수'} value={data.voidedCount||0} unit={cases} color="var(--warn-ink)" small />
@@ -390,11 +392,11 @@ export default function StatsPage(){
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
               {/* By receipt: whose treatment the money was for, not the day's till — so
                   its total can differ from the cash card on days with corrections. */}
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {fmtAr(rev.paid)} Ar</span></div>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDept||'진료과별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {money(rev.paid)}</span></div>
               <Bars money rows={(data.revenueByDept||[]).map(function(d){ return { label:deptLabel(d), value:d.paid, color:'var(--ok)' }; })} />
             </div>
             <div style={{ flex:1, minWidth:280, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {fmtAr(rev.paid)} Ar</span></div>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.revByDoctor||'의사별 매출'} <span style={{ fontWeight:600, color:t3 }}>— {t.st_byReceipt||'영수 기준'} · {money(rev.paid)}</span></div>
               <Bars money rows={(data.revenueByDoctor||[]).map(function(d){ return { label:doctorLabel(d), value:d.paid, color:'var(--ok-3)' }; })} />
             </div>
           </div>
@@ -418,7 +420,7 @@ export default function StatsPage(){
                     <td style={{ padding:'7px 8px', color:'var(--accent-text-2)', fontFamily:'monospace' }}>{r.chart_no}</td>
                     <td style={{ padding:'7px 8px', color:tx, fontWeight:700 }}>{r.name}</td>
                     <td style={{ padding:'7px 8px', color:t2, fontFamily:'monospace' }}>{r.contact||'—'}</td>
-                    <td style={{ padding:'7px 8px', color:showList==='owed'?'var(--danger-text)':'var(--violet-text-2)', fontFamily:'monospace', fontWeight:800, textAlign:'right' }}>{fmtAr(r.amount)} Ar</td>
+                    <td style={{ padding:'7px 8px', color:showList==='owed'?'var(--danger-text)':'var(--violet-text-2)', fontFamily:'monospace', fontWeight:800, textAlign:'right' }}>{money(r.amount)}</td>
                     {showList==='owed'?<td style={{ padding:'7px 8px', color:t2 }}>{r.since||'—'}</td>:null}
                     <td style={{ padding:'7px 8px', color:t3, textAlign:'right' }}>{r.open_bills}</td>
                   </tr>; })}
@@ -455,8 +457,8 @@ export default function StatsPage(){
             var th = { padding:'7px 10px', textAlign:'right', position:'sticky', top:0, background:scBg, borderBottom:'1px solid '+bd, whiteSpace:'nowrap' };
             var td = { padding:'6px 10px', textAlign:'right', fontFamily:'monospace', whiteSpace:'nowrap' };
             function cells(r, bold){ return [
-              <td key="in" style={Object.assign({}, td, { color:r.in?'var(--ok-text)':'var(--text-faint)', fontWeight:bold?800:400 })}>{r.in?'+'+fmtAr(r.in):'·'}</td>,
-              <td key="out" style={Object.assign({}, td, { color:r.out?'var(--danger-text)':'var(--text-faint)', fontWeight:bold?800:400 })}>{r.out?'−'+fmtAr(r.out):'·'}</td>,
+              <td key="in" style={Object.assign({}, td, { color:r.in?'var(--ok-text)':'var(--text-faint)', fontWeight:bold?800:400 })}>{r.in?'+'+fmtAmount(r.in, lang):'·'}</td>,
+              <td key="out" style={Object.assign({}, td, { color:r.out?'var(--danger-text)':'var(--text-faint)', fontWeight:bold?800:400 })}>{r.out?'−'+fmtAmount(r.out, lang):'·'}</td>,
               <td key="net" style={Object.assign({}, td, { color:r.net<0?'var(--danger-text)':tx, fontWeight:800 })}>{r.net?signedAr(r.net):'0'}</td>
             ].concat(kinds.map(function(k){ var v=r.byKind[k]; return <td key={k} style={Object.assign({}, td, { color:v?t2:'var(--text-faint)', fontWeight:bold?800:400 })}>{v?signedAr(v):'·'}</td>; })); }
             return <div style={{ background:scBg, border:'1px solid '+bd, borderRadius:10, overflow:'hidden' }}>
@@ -635,7 +637,7 @@ export default function StatsPage(){
               {!ordData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!ordRows.length?<div style={empty}>{t.noData||'데이터 없음'}</div>:
               <div style={box}>
                 <div style={head}>
-                  {ordData.from} ~ {ordData.to} · {ordRows.length} {t.st_ordUnit||'가지'} · {t.st_ordCount||'건수'} {fmtAr(ordData.total.count)} · {t.st_ordValue||'오더 금액'} {fmtAr(ordData.total.amount)} Ar
+                  {ordData.from} ~ {ordData.to} · {ordRows.length} {t.st_ordUnit||'가지'} · {t.st_ordCount||'건수'} {fmtAr(ordData.total.count)} · {t.st_ordValue||'오더 금액'} {money(ordData.total.amount)}
                   <div style={{ marginTop:3 }}>{t.st_ordBasis||'오더를 낸 날(내원일) 기준 · 취소된 오더 제외 · 금액은 오더에 적힌 값(수량 × 단가)이며 받은 돈이 아님 — 수납 숫자와 다를 수 있음'}</div>
                 </div>
                 <div style={{ overflow:'auto', maxHeight:'56vh' }}>
@@ -651,7 +653,7 @@ export default function StatsPage(){
                         <td style={{ padding:'6px 10px', color:t3, whiteSpace:'nowrap' }}>{r.code_type?ordTypeLabel(r.code_type):'—'}</td>
                         <td style={Object.assign({}, td, { color:'var(--ok-text)', fontWeight:800 })}>{fmtAr(r.count)}</td>
                         <td style={td}>{fmtQty(r.qty)}</td>
-                        <td style={td}>{fmtAr(r.amount)} Ar</td>
+                        <td style={td}>{money(r.amount)}</td>
                       </tr>; })}
                     </tbody>
                   </table>
@@ -718,7 +720,7 @@ export default function StatsPage(){
               <VBars color="var(--accent-bar)" rows={(monthly||[]).map(function(m){ return { label:(m.ym||'').slice(5), value:m.visits }; })} />
             </div>
             <div style={{ flex:1, minWidth:300, background:scBg, border:'1px solid '+bd, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.st_cash||'그날 현금'} (Ar)</div>
+              <div style={{ fontSize:13, fontWeight:800, color:t2, marginBottom:10 }}>{t.st_cash||'그날 현금'} ({cur.symbol})</div>
               <VBars money color="var(--ok-bar)" rows={(monthly||[]).map(function(m){ return { label:(m.ym||'').slice(5), value:m.revenue }; })} />
             </div>
           </div>

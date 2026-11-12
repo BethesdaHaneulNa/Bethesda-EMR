@@ -1,5 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { readLanguages } = require('../utils/languages');
+const { readCurrency } = require('../utils/currency');
 const { authMiddleware, generateToken, effectivePerms, ALL_PERMS } = require('../middleware/auth');
 // Messages shown to people - translated by the screen; see settings.messages.js.
 const { MSG } = require('./settings.messages');
@@ -14,8 +16,19 @@ async function noAdminExists(db) {
 }
 
 // GET /api/auth/setup-status — frontend shows the setup wizard when needsSetup is true.
+// languages (066): the sign-in page shows the language buttons before anyone has signed
+// in, so the ones the clinic uses are told here. A server that cannot read them says all.
 router.get('/setup-status', async (req, res) => {
-  try { res.json({ needsSetup: await noAdminExists() }); }
+  try {
+    // currency (067): the money, for the same reason - the screens format amounts before
+    // anyone has signed in (what this PC kept), and must not flash the default.
+    let languages = readLanguages(null), currency = readCurrency(null);
+    try {
+      const row = (await pool.query('SELECT languages, currency_symbol, currency_position, currency_decimals, cash_quick FROM clinic LIMIT 1')).rows[0] || {};
+      languages = readLanguages(row.languages); currency = readCurrency(row);
+    } catch (e) { /* all of them, and the default money */ }
+    res.json({ needsSetup: await noAdminExists(), languages, currency });
+  }
   catch (err) { res.status(500).json({ error: MSG.SERVER_ERROR }); }
 });
 

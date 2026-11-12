@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client.js';
 import { A4, ClinicHeader, L, fmtDate, printDocument, DOC_LABELS } from '../documents/shared.jsx';
 import { packWord } from '../documents/rx-dosing.js';
+import { formatMoney } from '../money.js';
 
 // The papers of a payment (수납 영수증). Owned by the payment module.
 //
@@ -153,7 +154,9 @@ function num(v) { return Number(v) || 0; }
 // amount never wraps across two lines. Only the papers - the screen keeps its format.
 // (Written as the escape for U+00A0, so that an editor cannot turn it into an ordinary space unnoticed.)
 function plain(n) { return Math.round(num(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); }
-function money(n) { return plain(n) + '\u00a0Ar'; }
+// The clinic's money (Settings -> Clinic -> Money, 067): symbol, place and decimals; the
+// papers are French, so thousands keep the no-break space.
+function money(n) { return formatMoney(n, 'fr'); }
 function qty(n) { var v = num(n); return (Math.round(v * 1000) / 1000).toString(); }
 function timeOf(ts) {
   if (!ts) return '';

@@ -70,14 +70,14 @@ export default function MobileVitalsPage() {
 
       {/* FR · KO · EN (1.7.9): the same store as the PC's switch (useLang, localStorage
           medconnect_lang), so a choice made on one screen holds on the other. On every screen. */}
-      <div style={Object.assign({}, col, { paddingBottom: 0, display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 10 })}>
-        {[['fr', 'FR'], ['ko', 'KO'], ['en', 'EN']].map(function (l) {
+      {(langCtx.enabled || []).length > 1 ? <div data-lang-switch style={Object.assign({}, col, { paddingBottom: 0, display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 10 })}>
+        {[['fr', 'FR'], ['ko', 'KO'], ['en', 'EN']].filter(function (l) { return langCtx.enabled.indexOf(l[0]) >= 0; }).map(function (l) {
           var on = lang === l[0];
           return <button key={l[0]} type="button" onClick={function () { setLang(l[0]); }} aria-pressed={on}
             style={{ minWidth: 52, minHeight: 48, padding: '0 10px', borderRadius: 8, cursor: 'pointer', fontSize: FS, fontWeight: 700,
               background: on ? 'var(--accent)' : 'transparent', color: on ? 'var(--on-fill)' : 'var(--text-3)', border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border-2)') }}>{l[1]}</button>;
         })}
-      </div>
+      </div> : null}
 
       {screen === 'vitals' ? <VitalsScreen t={t} onHome={home} />
         : screen === 'lab' ? <LabScreen t={t} onHome={home} />

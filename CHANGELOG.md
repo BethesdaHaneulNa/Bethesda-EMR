@@ -1,5 +1,48 @@
 # Changelog
 
+## v1.9.0 — 2026-11-12
+
+Two settings the clinic's manager asked for on the way back from the site, so that the
+EMR can serve a clinic in another country: which languages the screens offer, and which
+money the amounts are written in. **This version changes the database** (066 languages,
+067 currency: columns with defaults on `clinic`); the updater backs the database up
+first, as always. An installed clinic keeps its three languages and the ariary. The whole
+test set passes on the released tree.
+
+### Settings → Clinic → Money: the clinic's currency
+The clinic's manager, 2026-11-12, seeing the screens: "this could not be used in another
+country" - the ariary ("Ar") was written into every screen and every receipt. A **Money**
+box in Settings → Clinic says the **symbol** (Ar, FCFA, €, $ …), whether it goes **after or
+before** the amount, whether amounts have **decimals** (none, or two), and the **quick
+amounts** that make the buttons under "Amount received" at the till. Every screen (payment,
+statistics, reception balances) and the receipt papers follow at once; the amounts
+themselves never change, only how they are written. A new install still starts with the
+ariary.
+- `PUT /api/admin/clinic/currency` (settings permission; `/api/auth/setup-status` tells
+  the money before sign-in, as it tells the languages). **Database change 067** (four
+  columns with defaults on `clinic`).
+- The phone page's "PC version" link said it in two languages at once; it now says it in
+  the screen's language only (the clinic's manager, 2026-11-12).
+- Tests: new `settings.currency.mjs`; `settings.access.mjs` (160 routes).
+
+### Settings → Languages: the languages the clinic uses
+The clinic's manager, 2026-11-11: the screens come in three languages and every screen
+shows the three buttons, though a clinic may work in one. A new **Languages** tab in
+Settings says which of French, English and Korean are in use.
+- **One chosen**: the language buttons are gone (top bar, sign-in page, phone page) and
+  every screen is in that language.
+- **Two or three**: only those buttons appear. A PC keeps the language it chose; if the
+  clinic stops using it, the PC shows the first language in use and comes back to its
+  choice if that language returns.
+- The last language cannot be unticked, and the server refuses an empty list.
+- **This changes the database** (066): one column, `clinic.languages`, default all three
+  - an installed clinic sees no change until someone opens the tab.
+- New route `PUT /api/admin/clinic/languages` (settings permission); the sign-in page is
+  told the languages by `GET /api/auth/setup-status`, which needs no sign-in.
+- Tests: `settings.languages.mjs` (13 checks), `settings.access.mjs` (159 routes).
+- Not changed: printed documents, and the phone page's link to the PC screens, which is
+  written in two languages on purpose.
+
 ## v1.8.1 — 2026-11-11
 
 One addition, asked for by the clinic's manager on site the morning after 1.8.0 was

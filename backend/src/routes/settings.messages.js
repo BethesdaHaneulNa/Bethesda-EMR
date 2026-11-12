@@ -31,6 +31,11 @@ const MSG = Object.freeze({
   STAFF_REMOVE_SELF: 'You cannot remove your own account.',
   STAFF_REMOVE_ACTIVE: 'Deactivate the account before removing it.',
   STAFF_HAS_RECORDS: 'This account has been used: it cannot be removed. Leave it deactivated.',
+  // the languages the clinic uses (admin.routes.js PUT /clinic/languages, 2026-11-11)
+  LANG_NEED_ONE: 'Choose at least one language',
+  // the clinic's money (admin.routes.js, 067)
+  CURRENCY_SYMBOL: 'Currency symbol must be 1 to 8 characters',
+  CURRENCY_QUICK: 'Quick amounts must be 1 to 6 positive numbers',
   STAFF_DEPT_REQUIRED: 'Choose the department of the doctor',
   STAFF_DEPT_BAD: 'The department of the doctor must be one of the active departments',
   // phrases and their categories (admin.routes.js, 2026-10-01)

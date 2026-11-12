@@ -189,6 +189,8 @@ const ROUTES = [
   ['GET',  '/admin/phrases',                [ALL]],
   ['GET',  '/admin/phrase-categories',      [ALL]],
   ['GET',  '/admin/clinic',                 [ALL]],
+  ['PUT',  '/admin/clinic/languages',       [SET], {}],
+  ['PUT',  '/admin/clinic/currency',        [SET], {}],
   ['GET',  '/admin/doctors',                [REG, CONS]],
   ['GET',  '/admin/staff',                  [SET]],
   ['GET',  '/admin/audit?limit=5',          [ADMIN]], // change log: administrators only (2026-11-08; settings permission alone no longer enough)

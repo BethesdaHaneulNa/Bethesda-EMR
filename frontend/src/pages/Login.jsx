@@ -55,7 +55,7 @@ export default function LoginPage() {
   useEffect(function () {
     api.get('/auth/setup-status')
       // The setup account's login id is always admin (S3, auth.routes.js SETUP_LOGIN).
-      .then(function (r) { if (r && r.needsSetup) { setUsername('admin'); setMode('setup'); } else setMode('login'); })
+      .then(function (r) { if (r && r.languages && langCtx.setEnabled) langCtx.setEnabled(r.languages); if (r && r.needsSetup) { setUsername('admin'); setMode('setup'); } else setMode('login'); })
       .catch(function () { setMode('login'); });
   }, []);
 
@@ -101,11 +101,11 @@ export default function LoginPage() {
         <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle,var(--ok-a08),transparent 70%)' }}></div>
       </div>
 
-      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-2)', zIndex: 10 }}>
-        {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].map(function (i) {
+      {(langCtx.enabled || []).length > 1 ? <div data-lang-switch style={{ position: 'absolute', top: 16, right: 16, display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-2)', zIndex: 10 }}>
+        {[['en', 'EN'], ['ko', 'KO'], ['fr', 'FR']].filter(function (i) { return langCtx.enabled.indexOf(i[0]) >= 0; }).map(function (i) {
           return <button key={i[0]} onClick={function () { setLang(i[0]); }} style={{ background: lang === i[0] ? 'var(--accent)' : 'var(--chip)', color: lang === i[0] ? 'var(--on-fill)' : 'var(--text-2)', border: 'none', padding: '4px 12px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{i[1]}</button>;
         })}
-      </div>
+      </div> : null}
 
       {/* 380 wide, narrower on a phone (360 px screens) with a margin either side (2026-11-09). */}
       <div style={{ width: 380, maxWidth: 'calc(100vw - 32px)', zIndex: 5 }}>
