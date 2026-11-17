@@ -21,8 +21,8 @@ function rangeFor(p){
 }
 // The side menu's groups, and which period row each one listens to: the summary and the
 // revenue group read the same /summary, so they share one; the others have their own.
-var GROUP_IDS = ['summary','money','patients','dx','orders','drugs'];
-var BAR_OF = { summary:'main', money:'main', patients:'patients', dx:'dx', orders:'orders', drugs:'drugs' };
+var GROUP_IDS = ['summary','money','patients','dx','daily','orders','drugs'];
+var BAR_OF = { summary:'main', money:'main', patients:'patients', dx:'dx', daily:'daily', orders:'orders', drugs:'drugs' };
 
 export default function StatsPage(){
   var langCtx = useLang(); var t = langCtx.t, lang = langCtx.lang;
@@ -41,15 +41,17 @@ export default function StatsPage(){
   // share its dates and its department / doctor instead of each carrying a pair of its own.
   // `preset` is the button that is lit ('custom' once a date is typed). The drug table
   // starts with no dates: empty means the server's default for its granularity.
-  var pes = useState(function(){ var m = rangeFor('month'), d = rangeFor('30d'); return {
+  var pes = useState(function(){ var m = rangeFor('month'), d = rangeFor('30d'), d1 = rangeFor('today'); return {
     main:     { preset:'month', from:m.from, to:m.to },
     patients: { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
     dx:       { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
+    // The list of patients opens on today: a list of names starts small (2026-11-17).
+    daily:    { preset:'today', from:d1.from, to:d1.to, dept:'', doc:'' },
     orders:   { preset:'30d', from:d.from, to:d.to, dept:'', doc:'' },
     drugs:    { preset:'', from:'', to:'' },
   }; }), per = pes[0], setPer = pes[1];
   function setBar(id, change){ setPer(function(o){ var n = Object.assign({}, o); n[id] = Object.assign({}, o[id], change); return n; }); }
-  var range = per.main, ptF = per.patients, dxF = per.dx, ordF = per.orders, drugRange = per.drugs;
+  var range = per.main, ptF = per.patients, dxF = per.dx, plF = per.daily, ordF = per.orders, drugRange = per.drugs;
   var inMain = group==='summary' || group==='money';
   var ds = useState(null), data = ds[0], setData = ds[1];
   var os = useState(null), outData = os[0], setOutData = os[1];
@@ -76,6 +78,14 @@ export default function StatsPage(){
   var dds = useState(null), dxData = dds[0], setDxData = dds[1];
   var pds = useState(null), ptData = pds[0], setPtData = pds[1];
   var wds = useState(null), wlData = wds[0], setWlData = wds[1];
+  // The patients of the period, one line per visit, with their diagnoses (2026-11-17, asked by
+  // the site: "all the patients in one day, with their diagnosis"). plQ narrows the lines on
+  // the screen by name or chart number; plMsg is what went wrong when printing or saving.
+  var pls = useState('all'), plScope = pls[0], setPlScope = pls[1];
+  var pld = useState(null), plData = pld[0], setPlData = pld[1];
+  var plq = useState(''), plQ = plq[0], setPlQ = plq[1];
+  var plm = useState(''), plMsg = plm[0], setPlMsg = plm[1];
+  var plb = useState(false), plBusy = plb[0], setPlBusy = plb[1];
 
   var bd='var(--border)', bd2='var(--border-2)', scBg='var(--panel-head)', pn='var(--panel)', tx='var(--text)', t2='var(--text-2)', t3='var(--text-3)';
 
@@ -97,7 +107,7 @@ export default function StatsPage(){
   useEffect(function(){
     if(group==='money') ask('cash', '/stats/cash?granularity='+cashGran+'&from='+range.from+'&to='+range.to, setCashData, { periods:[], total:null, from:range.from, to:range.to });
   }, [group, cashGran, range.from, range.to]);
-  useEffect(function(){ if(group==='patients'||group==='dx'||group==='orders') ask('options', '/stats/options', setOpts, { departments:[], doctors:[] }); }, [group]);
+  useEffect(function(){ if(group==='patients'||group==='dx'||group==='daily'||group==='orders') ask('options', '/stats/options', setOpts, { departments:[], doctors:[] }); }, [group]);
   function rankQuery(f){
     var q = [];
     if(f.from && f.to){ q.push('from='+f.from); q.push('to='+f.to); }
@@ -115,6 +125,12 @@ export default function StatsPage(){
     var q = rankQuery(dxF); q.push('scope='+dxScope);
     ask('dx', '/stats/diagnoses?'+q.join('&'), setDxData, { rows:[], total:{ cases:0, patients:0 }, from:dxF.from, to:dxF.to });
   }, [group, dxF.from, dxF.to, dxScope, dxF.dept, dxF.doc]);
+  useEffect(function(){
+    if(group!=='daily') return;
+    var q = rankQuery(plF); q.push('scope='+plScope);
+    setPlMsg('');
+    ask('daily', '/stats/patient-list?'+q.join('&'), setPlData, { rows:[], total:{ visits:0, patients:0, no_dx:0 }, from:plF.from, to:plF.to, failed:true });
+  }, [group, plF.from, plF.to, plScope, plF.dept, plF.doc]);
   // The patient table and the department / doctor tables answer for the same period and
   // the same department / doctor.
   useEffect(function(){
@@ -158,6 +174,62 @@ export default function StatsPage(){
     (dxData.rows||[]).forEach(function(r){ lines.push([csvText(r.code), csvText(dxName(r)), r.typed?1:0, r.cases, r.patients, r.male, r.female, r.age_0_4, r.age_5_14, r.age_15_49, r.age_50, r.age_unknown].join(',')); });
     lines.push(['"TOTAL"','','',dxData.total.cases,dxData.total.patients,'','','','','','',''].join(','));
     downloadCsv('diagnoses-'+(dxData.from||'')+'_'+(dxData.to||'')+'.csv', lines);
+  }
+  // ── The list of patients with their diagnoses ──
+  function plName(r){ return [r.last_name, r.first_name].filter(Boolean).join(' '); }
+  function plDept(r){ if(!r.dept_code) return ''; return lang==='fr' ? (r.dept_name_fr||r.dept_name_en||r.dept_name) : lang==='en' ? (r.dept_name_en||r.dept_name) : r.dept_name; }
+  function plSex(r){ return r.gender==='M' ? (t.st_male||'남') : r.gender==='F' ? (t.st_female||'여') : ''; }
+  function plSexAge(r){ return [plSex(r), r.age==null?'':String(r.age)].filter(function(x){ return x!==''; }).join(' · '); }
+  function plShown(){
+    var rows = (plData&&plData.rows)||[], q = plQ.trim().toLowerCase();
+    if(!q) return rows;
+    return rows.filter(function(r){ return (plName(r)+' '+(r.chart_no||'')).toLowerCase().indexOf(q) >= 0; });
+  }
+  // Printing or saving the list writes one line in the change log first (which days, how
+  // many visits - no name): no line, no paper, as for the result sheets. `then` runs only
+  // when the server answered; `fail` when it did not.
+  function plLogged(medium, then, fail){
+    setPlBusy(true); setPlMsg('');
+    api.post('/stats/patient-list/log', { medium:medium, from:plData.from, to:plData.to, scope:plScope, department_id:plF.dept||'', doctor_id:plF.doc||'' })
+      .then(function(){ setPlBusy(false); then(); })
+      .catch(function(){ setPlBusy(false); if(fail) fail(); setPlMsg(t.st_plNotLogged||'변경록에 남기지 못해 내보내지 않았습니다. 다시 눌러 주세요.'); });
+  }
+  function exportPlCsv(){
+    if(!plData || plBusy) return;
+    plLogged('csv', function(){
+      var lines = [['date','time','chart_no','patient','sex','age','department','doctor','main_diagnosis','main_code','other_diagnoses'].join(',')];
+      plShown().forEach(function(r){
+        var dx = r.diagnoses||[], main = dx.filter(function(d){ return d.primary; })[0] || null;
+        var others = dx.filter(function(d){ return d !== main; });
+        lines.push([csvText(r.visit_date), csvText(r.reception_time||''), csvText(r.chart_no), csvText(plName(r)), csvText(r.gender||''), r.age==null?'':r.age,
+          csvText(plDept(r)), csvText(r.doctor_name||''), csvText(main?dxName(main):''), csvText(main?main.code:''),
+          csvText(others.map(function(d){ return dxName(d)+(d.code?' ('+d.code+')':''); }).join(' ; '))].join(','));
+      });
+      downloadCsv('patients-diagnoses-'+(plData.from||'')+'_'+(plData.to||'')+'.csv', lines);
+    });
+  }
+  function printPl(){
+    if(!plData || plBusy) return;
+    // The window is opened at the click (a browser refuses one opened later) and filled
+    // once the line is written; closed again if it could not be.
+    var w = window.open('', '_blank', 'width=1000,height=800');
+    if(!w){ setPlMsg(t.st_plPopup||'인쇄 창이 막혔습니다. 이 사이트의 팝업을 허용해 주세요.'); return; }
+    function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    plLogged('print', function(){
+      var rows = plShown(), many = plData.from !== plData.to;
+      var title = (t.st_ptList||'그날 환자 목록')+' — '+(many ? plData.from+' ~ '+plData.to : plData.from);
+      var head = (many?'<th>'+esc(t.st_plDate||'날짜')+'</th>':'')+'<th>'+esc(t.st_plTime||'시각')+'</th><th>'+esc(t.st_plChart||'차트번호')+'</th><th>'+esc(t.st_plPatient||'환자')+'</th><th>'+esc(t.st_plSexAge||'성별 · 나이')+'</th><th>'+esc(t.st_plDept||'진료과')+'</th><th>'+esc(t.st_plDoctor||'의사')+'</th><th>'+esc(t.st_plDx||'진단')+'</th>';
+      var body = rows.map(function(r){
+        var dx = (r.diagnoses||[]).map(function(d){ var one = esc(dxName(d))+(d.code?' <small>('+esc(d.code)+')</small>':''); return d.primary?'<b>'+one+'</b>':one; }).join(' ; ');
+        return '<tr>'+(many?'<td class="n">'+esc(r.visit_date)+'</td>':'')+'<td class="n">'+esc(r.reception_time||'')+'</td><td class="n">'+esc(r.chart_no)+'</td><td>'+esc(plName(r))+'</td><td class="n">'+esc(plSexAge(r))+'</td><td>'+esc(plDept(r))+'</td><td>'+esc(r.doctor_name||'')+'</td><td>'+(dx||'—')+'</td></tr>';
+      }).join('');
+      try {
+        w.document.open();
+        w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;margin:0} h1{font-size:15px;margin:0 0 3px} p{margin:0 0 8px;color:#555;font-size:10.5px} table{border-collapse:collapse;width:100%} th,td{border-bottom:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top} th{border-bottom:1.5px solid #111;font-size:10.5px} td.n{white-space:nowrap} thead{display:table-header-group} tr{page-break-inside:avoid} small{color:#555}</style></head><body><h1>'+esc(title)+'</h1><p>'+esc((t.st_visits||'내원 수')+' '+rows.length)+'</p><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></body></html>');
+        w.document.close(); w.focus();
+        setTimeout(function(){ try { w.print(); } catch(e){} }, 350);
+      } catch(e){ /* the window was closed meanwhile */ }
+    }, function(){ try { w.close(); } catch(e){} });
   }
   var BAND_LABEL = { '0_4':'<5', '5_14':'5–14', '15_49':'15–49', '50':'50+' };
   function bandLabel(b){ return BAND_LABEL[b] || (t.st_ageUnknown||'나이 모름'); }
@@ -261,6 +333,7 @@ export default function StatsPage(){
     ['money',    '💰 '+(t.ds_stMoney||'매출 · 현금')],
     ['patients', '👥 '+(t.ds_stPatients||'환자 · 진료량')],
     ['dx',       '🩺 '+(t.st_diagnoses||'진단 통계')],
+    ['daily',    '📋 '+(t.st_ptList||'그날 환자 목록')],
     ['orders',   '🧪 '+(t.ds_stOrders||'오더')],
     ['drugs',    '💊 '+(t.ds_stDrugs||'약품')],
   ];
@@ -311,7 +384,7 @@ export default function StatsPage(){
         var id = BAR_OF[group], b = per[id];
         // The drug table's dates are the server's until one is chosen.
         var shown = id==='drugs' ? { from:b.from||(drugUsage&&drugUsage.from)||'', to:b.to||(drugUsage&&drugUsage.to)||'' } : { from:b.from, to:b.to };
-        var who = id==='patients' || id==='dx' || id==='orders';
+        var who = id==='patients' || id==='dx' || id==='daily' || id==='orders';
         // Sized so the whole row stays on one line at 1366 px in French, the longest labels.
         var inp = Object.assign({}, IS, { fontSize:13, padding:'5px 8px' }), sel = Object.assign({}, inp, { maxWidth:170 });
         return <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:18 }}>
@@ -624,6 +697,66 @@ export default function StatsPage(){
                 </div>
               </div>)}
             </Section>
+
+            {/* Not a <Section>: Section is made anew at every render of this screen, which builds
+                its inside again - and the search box below would lose the cursor at each letter. */}
+            {group!=='daily'?null:<div style={{ marginBottom:18 }}>
+              <div style={{ fontSize:15, fontWeight:900, color:tx, margin:'0 0 10px 2px' }}>{'📋 '+(t.st_ptList||'그날 환자 목록')}</div>
+              {(function(){
+                var rows = plShown(), all = (plData&&plData.rows)||[], tot = (plData&&plData.total)||{}, many = !!plData && plData.from !== plData.to;
+                var cell = { padding:'6px 10px', color:t2, whiteSpace:'nowrap', verticalAlign:'top' };
+                var mono = Object.assign({}, cell, { fontFamily:'monospace', fontSize:12 });
+                return <>
+                <div style={bar}>
+                  <select value={plScope} onChange={function(e){ setPlScope(e.target.value); }} style={selStyle}>
+                    <option value="all">{t.st_dxAll||'전체 진단'}</option>
+                    <option value="primary">{t.st_dxPrimary||'주진단만'}</option>
+                  </select>
+                  <input value={plQ} onChange={function(e){ setPlQ(e.target.value); }} placeholder={t.st_plSearch||'이름 · 차트번호 찾기'} style={Object.assign({}, selStyle, { width:270, maxWidth:270 })} />
+                  <div style={{ flex:1 }}></div>
+                  {plMsg?<span role="alert" style={{ color:'var(--danger-text)', fontSize:13 }}>{plMsg}</span>:null}
+                  <button onClick={printPl} disabled={!rows.length||plBusy} style={csvBtn}>🖨 {t.st_plPrint||'인쇄'}</button>
+                  <button onClick={exportPlCsv} disabled={!rows.length||plBusy} style={csvBtn}>⬇ CSV</button>
+                </div>
+                {!plData?<div style={empty}>{t.loading||'불러오는 중...'}</div>:(!all.length?<div style={empty}>{plData.failed?(t.st_plFailed||'목록을 불러오지 못했습니다. 기간을 다시 골라 주세요.'):(t.st_plNone||'이 기간에 접수된 환자가 없습니다.')}</div>:
+                <div style={box}>
+                  <div style={head}>
+                    {plData.from===plData.to?plData.from:plData.from+' ~ '+plData.to} · {t.st_visits||'내원 수'} {fmtAr(tot.visits)} · {t.st_dxPatients||'환자 수'} {fmtAr(tot.patients)} · {t.st_plNoDx||'진단 없음'} {fmtAr(tot.no_dx)}
+                    {plQ.trim()?<span> · {(t.st_plShown||'보이는 줄 {n}').replace('{n}', rows.length)}</span>:null}
+                    <div style={{ marginTop:3 }}>{t.st_plBasis||'내원일 기준 · 취소된 접수 제외 · 한 줄이 한 번의 내원 · 주진단은 굵게 · 진단이 아직 없는 내원도 줄은 나옵니다 · 인쇄하거나 파일로 받으면 변경록에 한 줄 남습니다'}</div>
+                    {plData.truncated?<div style={{ marginTop:3, color:'var(--warn-text)' }}>{(t.st_plTruncated||'줄이 많아 앞의 {n}줄만 보입니다. 기간을 줄여 주세요.').replace('{n}', fmtAr(plData.max))}</div>:null}
+                  </div>
+                  <div style={{ overflow:'auto', maxHeight:'62vh' }}>
+                    <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
+                      <thead><tr style={{ color:t3 }}>
+                        {many?<th style={thL}>{t.st_plDate||'날짜'}</th>:null}
+                        <th style={thL}>{t.st_plTime||'시각'}</th><th style={thL}>{t.st_plChart||'차트번호'}</th>
+                        <th style={Object.assign({}, thL, { color:tx })}>{t.st_plPatient||'환자'}</th><th style={thL}>{t.st_plSexAge||'성별 · 나이'}</th>
+                        <th style={thL}>{t.st_plDept||'진료과'}</th><th style={thL}>{t.st_plDoctor||'의사'}</th>
+                        <th style={Object.assign({}, thL, { color:tx, width:'38%' })}>{t.st_plDx||'진단'}</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map(function(r){ var dx = r.diagnoses||[]; return <tr key={r.visit_id} style={{ borderBottom:'1px solid var(--line-soft)' }}>
+                          {many?<td style={mono}>{r.visit_date}</td>:null}
+                          <td style={Object.assign({}, mono, { color:t3 })}>{r.reception_time||'—'}</td>
+                          <td style={mono}>{r.chart_no}</td>
+                          <td style={Object.assign({}, cell, { color:tx, fontWeight:700, whiteSpace:'normal' })}>{plName(r)}</td>
+                          <td style={cell}>{plSexAge(r)||'—'}</td>
+                          <td style={cell}>{plDept(r)||unassigned}</td>
+                          <td style={cell}>{r.doctor_name||unassigned}</td>
+                          <td style={{ padding:'6px 10px', color:t2, verticalAlign:'top', lineHeight:1.45 }}>
+                            {dx.length===0?<span style={{ color:'var(--warn-text)' }}>— {t.st_plNoDx||'진단 없음'}</span>:
+                              dx.map(function(d, i){ return <span key={i}>{i?<span style={{ color:t3 }}> ; </span>:null}<span style={d.primary?{ color:tx, fontWeight:800 }:undefined}>{dxName(d)}</span>{d.code?<span style={{ marginLeft:5, fontFamily:'monospace', fontSize:11, color:t3 }}>{d.code}</span>:null}</span>; })}
+                          </td>
+                        </tr>; })}
+                        {rows.length===0?<tr><td colSpan={many?8:7} style={{ padding:'14px 10px', color:t3 }}>{t.st_plNoMatch||'찾는 이름 · 차트번호가 이 목록에 없습니다.'}</td></tr>:null}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>)}
+                </>;
+              })()}
+            </div>}
 
             <Section group="orders" title={'🧪 '+(t.st_orders||'오더 통계')}>
               <div style={bar}>

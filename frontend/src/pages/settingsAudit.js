@@ -45,6 +45,9 @@ export var AUDIT_ACTIONS = {
   // no document number; document.routes.js POST /print-log): an exam's reading, lab results
   'pacs.report.print': 'se_act_reportPrint',
   'laboratory.results.print': 'se_act_labResultsPrint',
+  // the list of a period's patients with their diagnoses, printed or saved as a file (statistics,
+  // stats.routes.js POST /patient-list/log): which days, how many visits - no name, no diagnosis
+  'statistics.patient_list.export': 'se_act_patientListExport',
   'pacs.images.export': 'se_act_imagesExport',
   'settings.staff.create': 'se_act_staffCreate',
   'settings.staff.edit': 'se_act_staffEdit',
@@ -128,6 +131,8 @@ var FIELDS = {
   per_page: 'se_fld_perPage', size_mb: 'se_fld_sizeMb', exams: 'se_fld_exams',
   // laboratory.results.print: the days of the results printed (one string, "d, d"), how many tests
   dates: 'se_fld_printDates', test_count: 'se_fld_testCount',
+  // statistics.patient_list.export: the days, how many visits, all diagnoses or the main one only
+  period: 'se_fld_period', visits: 'se_fld_visits', dx_scope: 'se_fld_dxScope', department: 'se_fld_department',
   // the language a document, a result sheet or the image sheets were printed in
   lang: 'se_fld_docLang',
   image_patient_id: 'se_fld_imagePatientId', patient_check: 'se_fld_patientCheck',
@@ -261,6 +266,7 @@ export function auditValue(t, field, v, ctx) {
   if (field === 'print_grouping') { var pg = { all: 'py_groupAll', visit_day: 'py_groupDay', each: 'py_groupEach' }[v]; return (pg && t[pg]) || String(v); }
   // what a copy of the images was made on: zip (the EMR screen), disc / iso / folder (the CD program)
   if (field === 'medium' && t['se_medium_' + v]) return t['se_medium_' + v];
+  if (field === 'dx_scope' && t['se_dxScope_' + v]) return t['se_dxScope_' + v];
   // megabytes, with the decimal mark of the screen's language and its unit (Mo in French)
   if (field === 'size_mb' && isFinite(Number(v))) return seNumber(Number(v), ctx && ctx.lang) + ' ' + (t.se_unitMb || 'MB');
   if (field === 'price_editable' && typeof v === 'boolean') return v ? (t.se_on || '✓') : (t.se_off || '✗');

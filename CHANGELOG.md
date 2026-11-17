@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.9.1 — 2026-11-17
+
+One table the site asked for, five days after 1.9.0. **This version does not change the
+database.** The statistics tests pass on the released tree (28 checks, 10 of them new).
+
+### Statistics → Patients of the day: every patient of a day with their diagnosis
+The site, 2026-11-17: "Is it possible to find all the patients in one day, with their
+diagnosis? Where do we find it?" It was not: the **Diagnoses** table counts, and the
+consultation screen shows one patient at a time. A new group in the statistics side menu,
+**Patients of the day**, lists them: one line per visit in the order of arrival - time,
+chart number, name, sex and age, department, doctor, and the diagnoses, the main one in
+bold. A visit with no diagnosis yet keeps its line and says so, so the reader sees who is
+missing one. It opens on today; the period row above it takes any day or period, one
+department or one doctor, as for the tables beside it. A box finds a name or a chart number;
+**Print** and **CSV** take the list out.
+- Taking the list out writes one line in the change log first (who, which days, how many
+  visits, on paper or as a file) and prints or saves only when that line is written - the
+  rule of the result sheets. The line names no patient and no diagnosis. Looking at the list
+  on the screen writes nothing, as for a chart.
+- `GET /api/stats/patient-list` (statistics permission; today when no dates are given, at
+  most 5,000 lines) and `POST /api/stats/patient-list/log`. New change-log action
+  `statistics.patient_list.export`.
+
 ## v1.9.0 — 2026-11-12
 
 Two settings the clinic's manager asked for on the way back from the site, so that the

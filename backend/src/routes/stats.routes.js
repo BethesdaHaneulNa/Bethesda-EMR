@@ -816,4 +816,123 @@ router.get('/patients', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── The patients of a day, each with their diagnoses (2026-11-17) ──────────────────
+// The site asked (2026-11-17): "Is it possible to find all the patients in one day, with
+// their diagnosis?" The diagnosis table above counts; this one lists - one line per visit,
+// in the order they were received, with what the doctor wrote as the diagnosis.
+//  - Dated and narrowed like the tables above: by the day of the visit, cancelled
+//    registrations left out, the visit's department and doctor. With no dates it is
+//    today alone (the others default to 30 days; a list of names should start small).
+//  - A visit with no diagnosis yet is still a line, with an empty list: the reader sees
+//    who is missing one. `no_dx` counts them.
+//  - scope=all (default): the main diagnosis first, then the others in the order written.
+//    scope=primary: the main one only.
+//  - A diagnosis picked from the list carries its three names; one typed freely has only
+//    what was written (typed: true) - as in /diagnoses.
+//  - At most PATIENT_LIST_MAX lines are sent (truncated: true says there were more); the
+//    totals are counted on the whole period either way.
+const { writeAudit, ACTIONS } = require('../utils/audit');
+const PATIENT_LIST_MAX = 5000;
+const PATIENT_LIST_NOT_LOGGED = 'The export could not be logged';
+
+// What both routes below ask for, read from the query or from the body.
+async function patientListAsk(src, req) {
+  let { from, to } = src;
+  const bad = badDateRange(from, to);
+  if (bad) return { error: bad };
+  if (!from || !to) {
+    const r = await pool.query(`SELECT ${ymd('CURRENT_DATE')} AS t`);
+    from = from || to || r.rows[0].t;
+    to = to || from;
+    if (from > to) return { error: 'from must not be later than to' };
+  }
+  const scope = src.scope === undefined || src.scope === '' || src.scope === null ? 'all' : src.scope;
+  if (scope !== 'primary' && scope !== 'all') return { error: "scope must be 'primary' or 'all'" };
+  const conds = ['v.visit_date BETWEEN $1 AND $2', "v.status <> 'cancelled'"];
+  const P = [from, to];
+  const badFilter = visitFilters({ query: src }, conds, P);
+  if (badFilter) return { error: badFilter };
+  return { from: from, to: to, scope: scope, conds: conds, P: P };
+}
+
+// GET /api/stats/patient-list?from&to&scope=all|primary&department_id&doctor_id
+router.get('/patient-list', async (req, res) => {
+  try {
+    const q = await patientListAsk(req.query, req);
+    if (q.error) return res.status(400).json({ error: q.error });
+    const WHERE = q.conds.join(' AND ');
+    const visits = await pool.query(
+      `SELECT v.id AS visit_id, ${ymd('v.visit_date')} AS visit_date, to_char(v.reception_time, 'HH24:MI') AS reception_time,
+              v.visit_type, v.status, p.id AS patient_id, p.chart_no, p.last_name, p.first_name, p.gender,
+              CASE WHEN p.date_of_birth IS NULL THEN NULL
+                   ELSE date_part('year', age(v.visit_date, p.date_of_birth))::int END AS age,
+              d.code AS dept_code, d.name AS dept_name, d.name_en AS dept_name_en, d.name_fr AS dept_name_fr,
+              s.name AS doctor_name
+         FROM visit v
+         JOIN patient p ON p.id = v.patient_id
+         LEFT JOIN department d ON d.id = v.department_id
+         LEFT JOIN staff s ON s.id = v.doctor_id
+        WHERE ${WHERE}
+        ORDER BY v.visit_date, v.reception_time NULLS LAST, v.id
+        LIMIT ${PATIENT_LIST_MAX + 1}`, q.P);
+    const truncated = visits.rows.length > PATIENT_LIST_MAX;
+    const rows = truncated ? visits.rows.slice(0, PATIENT_LIST_MAX) : visits.rows;
+    const dx = await pool.query(
+      `SELECT c.visit_id, dx.diagnosis_type, dx.diagnosis_code_id,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN COALESCE(dx.icd_code, '') ELSE COALESCE(dc.code, '') END AS code,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN dx.diagnosis_name ELSE dc.name_en END AS name,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN NULL ELSE dc.name_fr END AS name_fr,
+              CASE WHEN dx.diagnosis_code_id IS NULL THEN NULL ELSE dc.name_ko END AS name_ko
+         FROM diagnosis dx
+         JOIN consultation c ON c.id = dx.consultation_id
+         JOIN visit v ON v.id = c.visit_id
+         LEFT JOIN diagnosis_code dc ON dc.id = dx.diagnosis_code_id
+        WHERE ${WHERE}${q.scope === 'primary' ? " AND dx.diagnosis_type = 'primary'" : ''}
+        ORDER BY c.visit_id, (dx.diagnosis_type = 'primary') DESC, dx.sort_order, dx.id`, q.P);
+    const byVisit = new Map();
+    dx.rows.forEach(function (x) {
+      if (!byVisit.has(x.visit_id)) byVisit.set(x.visit_id, []);
+      byVisit.get(x.visit_id).push({ primary: x.diagnosis_type === 'primary', code: x.code, name: x.name,
+        name_fr: x.name_fr, name_ko: x.name_ko, typed: x.diagnosis_code_id == null });
+    });
+    // Counted on the whole period, not on the lines sent.
+    const tot = await pool.query(
+      `SELECT COUNT(*)::int AS visits, COUNT(DISTINCT v.patient_id)::int AS patients,
+              COUNT(*) FILTER (WHERE NOT EXISTS (
+                SELECT 1 FROM diagnosis dx JOIN consultation c ON c.id = dx.consultation_id
+                 WHERE c.visit_id = v.id${q.scope === 'primary' ? " AND dx.diagnosis_type = 'primary'" : ''}))::int AS no_dx
+         FROM visit v WHERE ${WHERE}`, q.P);
+    res.json({ from: q.from, to: q.to, scope: q.scope, truncated: truncated, max: PATIENT_LIST_MAX,
+      rows: rows.map(function (r) { return Object.assign({}, r, { diagnoses: byVisit.get(r.visit_id) || [] }); }),
+      total: tot.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/stats/patient-list/log - the list is being printed or saved as a file: the
+// change-log line, and nothing else. The screen prints or saves only when this answered
+// 200 - no line, no paper (the rule of the result sheets, document.routes.js /print-log).
+//   { medium: 'print' | 'csv', from, to, scope, department_id, doctor_id }
+// The line is written from what the server itself counts for that period, not from what
+// the screen says: which days, how many visits, which department or doctor. It names no
+// patient and no diagnosis - the log tab is read with the settings permission.
+router.post('/patient-list/log', async (req, res) => {
+  try {
+    const b = req.body || {};
+    if (b.medium !== 'print' && b.medium !== 'csv') return res.status(400).json({ error: "medium must be 'print' or 'csv'" });
+    const q = await patientListAsk(b, req);
+    if (q.error) return res.status(400).json({ error: q.error });
+    const n = await pool.query(`SELECT COUNT(*)::int AS visits FROM visit v WHERE ${q.conds.join(' AND ')}`, q.P);
+    const has = function (v) { return v !== undefined && v !== null && v !== ''; };
+    const dept = has(b.department_id) ? await pool.query('SELECT code, name FROM department WHERE id = $1', [Number(b.department_id)]) : null;
+    const doc = has(b.doctor_id) ? await pool.query('SELECT name FROM staff WHERE id = $1', [Number(b.doctor_id)]) : null;
+    const after = { medium: b.medium, period: q.from === q.to ? q.from : q.from + ' ~ ' + q.to, visits: n.rows[0].visits, dx_scope: q.scope };
+    if (dept) after.department = dept.rows[0] ? [dept.rows[0].code, dept.rows[0].name].filter(Boolean).join(' ') : String(b.department_id);
+    if (doc) after.doctor = doc.rows[0] ? doc.rows[0].name : String(b.doctor_id);
+    const ok = await writeAudit(pool, req, { action: ACTIONS.PATIENT_LIST_EXPORT, entity: 'patient_list',
+      summary: after.period, after: after });
+    if (!ok) return res.status(500).json({ error: PATIENT_LIST_NOT_LOGGED });
+    res.json({ ok: true, visits: after.visits });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

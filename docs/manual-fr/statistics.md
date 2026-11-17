@@ -5,27 +5,28 @@ L'écran **Statistiques** montre l'activité de l'hôpital sur une période : le
 ## En bref
 
 1. En haut de l'écran, cliquez sur **Statistiques**.
-2. À gauche, choisissez le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Examens · actes** ou **Médicaments**. En haut du groupe, choisissez la période : **Aujourd'hui**, **Cette semaine**, **Ce mois**, **30 jours** ou **Cette année** (ou saisissez deux dates).
+2. À gauche, choisissez le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Patients du jour**, **Examens · actes** ou **Médicaments**. En haut du groupe, choisissez la période : **Aujourd'hui**, **Cette semaine**, **Ce mois**, **30 jours** ou **Cette année** (ou saisissez deux dates).
 3. Dans **Résumé**, lisez **Activité** : combien de patients sont venus.
 4. Dans **Recettes · caisse**, lisez **Recettes** : la carte **Caisse** donne l'argent entré moins l'argent rendu.
 5. Pour savoir qui doit encore payer, cliquez sur la carte **Impayé ▼**.
 6. Pour la caisse jour par jour, regardez **Caisse par période**, dans le même groupe.
 7. Pour savoir qui est venu et quel service a le plus travaillé, ouvrez **Patients · activité**.
 8. Pour savoir quelles maladies et quels examens reviennent le plus, ouvrez **Diagnostics** et **Examens · actes**.
-9. Ouvrez **Médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
+9. Pour la liste des patients d'un jour, chacun avec son diagnostic, ouvrez **Patients du jour**.
+10. Ouvrez **Médicaments** pour les médicaments prescrits ou délivrés. **⬇ CSV** télécharge un tableau pour Excel.
 
 ## Pas à pas
 
 ### Choisir le groupe et la période
 
 1. Cliquez sur **Statistiques** dans la barre du haut.
-2. Dans le menu de gauche, cliquez sur le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Examens · actes**, **Médicaments**. L'écran se souvient du dernier groupe ouvert.
+2. Dans le menu de gauche, cliquez sur le groupe à lire : **Résumé**, **Recettes · caisse**, **Patients · activité**, **Diagnostics**, **Patients du jour**, **Examens · actes**, **Médicaments**. L'écran se souvient du dernier groupe ouvert.
 3. En haut de chaque groupe, une seule ligne sert à choisir la période. Elle est la même partout : cliquez sur **Aujourd'hui**, **Cette semaine** (depuis lundi), **Ce mois**, **30 jours** (les 30 derniers jours) ou **Cette année** (depuis le 1er janvier). Le bouton de la période affichée est allumé.
 4. Pour une autre période, saisissez la date de début et la date de fin dans les deux cases à côté. Une date de début placée après la date de fin n'est pas acceptée.
-5. Dans **Patients · activité**, **Diagnostics** et **Examens · actes**, la même ligne permet de choisir un seul service (**Tous les services**) ou un seul médecin (**Tous les médecins**).
+5. Dans **Patients · activité**, **Diagnostics**, **Patients du jour** et **Examens · actes**, la même ligne permet de choisir un seul service (**Tous les services**) ou un seul médecin (**Tous les médecins**).
 6. Tous les tableaux du groupe suivent cette ligne. Les chiffres se mettent à jour tout seuls.
 
-Au départ : **Résumé** et **Recettes · caisse** montrent **Ce mois** (ils partagent la même période) ; **Patients · activité**, **Diagnostics** et **Examens · actes** montrent **30 jours** ; **Médicaments** montre une période adaptée à son tableau.
+Au départ : **Résumé** et **Recettes · caisse** montrent **Ce mois** (ils partagent la même période) ; **Patients · activité**, **Diagnostics** et **Examens · actes** montrent **30 jours** ; **Patients du jour** montre **Aujourd'hui** ; **Médicaments** montre une période adaptée à son tableau.
 
 Les montants s'écrivent avec un espace pour les milliers (**39 300 Ar**) et les nombres avec leur unité (**3 cas**).
 
@@ -134,6 +135,37 @@ Exemple : Paludisme, sans précision · B54 · Consultations 3 · Patients 2 · 
 
 Les enregistrements annulés ne sont pas comptés.
 
+### Tous les patients d'un jour avec leur diagnostic : « Patients du jour »
+
+Le tableau **Diagnostics** compte. Celui-ci donne la liste : une ligne par visite, avec le nom du patient et ce que le médecin a noté comme diagnostic.
+
+1. Dans le menu de gauche, cliquez sur **Patients du jour**. Au départ : **Aujourd'hui**.
+2. Pour un autre jour, saisissez la même date dans les deux cases du haut. Pour plusieurs jours, saisissez la date de début et la date de fin : une colonne **Date** apparaît.
+3. Sur la même ligne, vous pouvez choisir un seul service ou un seul médecin.
+4. Dans la case sous le titre, choisissez **Tous les diagnostics** (choix de départ) ou **Diagnostic principal**.
+5. Lisez le tableau, dans l'ordre d'arrivée des patients :
+
+   | Colonne | Ce qu'elle montre |
+   |---|---|
+   | **Heure** | L'heure de l'inscription à l'accueil. |
+   | **N° de dossier** · **Patient** | Le numéro de dossier et le nom. |
+   | **Sexe · âge** | L'âge le jour de la visite. |
+   | **Service** · **Médecin** | Ceux de la visite. **Non attribué** : aucun n'a été choisi. |
+   | **Diagnostic** | Le diagnostic principal en gras, puis les autres. **Sans diagnostic** : le médecin n'en a pas encore noté. |
+
+6. La première ligne au-dessus du tableau donne le jour, puis **Visites**, **Patients** et **Sans diagnostic** pour l'ensemble.
+7. Pour trouver un patient, tapez une partie de son nom ou de son numéro de dossier dans la case **Chercher un nom ou un n° de dossier**.
+8. **🖨 Imprimer** ouvre la liste dans une fenêtre et l'imprime. **⬇ CSV** télécharge la liste pour Excel. Si vous avez tapé un nom dans la case de recherche, seules les lignes affichées sont imprimées ou téléchargées.
+
+Exemple : 09:12 · 26-00045 · RAKOTO Jean · H · 34 · Médecine générale · Dr Rabe · **Fièvre typhoïde** ; Anémie.
+
+À savoir :
+
+- Un patient venu deux fois dans la période a deux lignes. Le nombre **Patients** le compte une seule fois.
+- Les inscriptions annulées n'apparaissent pas.
+- Chaque impression et chaque téléchargement laisse une ligne dans le **Journal** (écran **Paramètres**) : qui, quel jour, combien de visites. Le journal ne contient ni nom de patient ni diagnostic. Regarder la liste à l'écran ne laisse pas de ligne.
+- Au-delà de 5 000 lignes, seules les 5 000 premières sont affichées : choisissez une période plus courte.
+
 ### Les examens et actes les plus demandés : « Examens et actes prescrits »
 
 1. Dans le menu de gauche, cliquez sur **Examens · actes**. Au départ : **30 jours**.
@@ -183,6 +215,9 @@ Dans **Résumé**, sous **Activité** : les 6 derniers mois, **Visites totales**
 | Les **Patients** de **Par service** additionnés dépassent le total | Un patient a vu deux services (ou deux médecins). | Lisez le total sur la première ligne, au-dessus des tableaux. |
 | Dans **Diagnostics**, la même maladie sur deux lignes | Une des deux lignes porte **saisie libre** : le médecin a écrit le diagnostic à la main au lieu de le choisir dans la liste. | Rien. Pour les prochaines fois, demandez au médecin de choisir le diagnostic dans la liste. |
 | Les lignes de **Diagnostics** additionnées dépassent le total de **Consultations** | Avec **Tous les diagnostics**, une consultation a plusieurs diagnostics. | Choisissez **Diagnostic principal**. |
+| Dans **Patients du jour**, beaucoup de lignes **Sans diagnostic** | Le médecin n'a pas encore noté de diagnostic pour ces visites (ou le patient n'a pas encore été vu). | Rien pour les patients en attente. Pour les consultations terminées, demandez au médecin de noter le diagnostic. |
+| **Le journal n'a pas pu être écrit : rien n'a été imprimé ni enregistré** | La ligne du journal n'a pas pu être enregistrée, donc la liste n'est pas sortie. | Cliquez de nouveau. Si cela continue, prévenez l'administrateur. |
+| **La fenêtre d'impression a été bloquée** | Le navigateur a bloqué la fenêtre. | Autorisez les fenêtres pour ce site, puis cliquez de nouveau sur **🖨 Imprimer**. |
 | **Valeur prescrite** n'est pas égale aux **Recettes** | La valeur prescrite est le prix des actes demandés. Les recettes sont l'argent reçu (remises, impayés, actes non encore payés). | Rien : ces deux chiffres ne sont pas faits pour être égaux. |
 | **Visites totales** plus petit que la liste de l'accueil | Les enregistrements annulés ne sont pas comptés. | Regardez la carte **Annulé**. |
 | Une date saisie ne change pas | La date de début serait après la date de fin : elle n'est pas acceptée. | Changez d'abord l'autre date. |
@@ -191,6 +226,7 @@ Dans **Résumé**, sous **Activité** : les 6 derniers mois, **Visites totales**
 
 - Ne laissez pas l'écran ouvert sans surveillance : la **Liste impayés** montre des noms et des numéros de téléphone.
 - N'envoyez pas le fichier **CSV** ou une capture de la liste des impayés en dehors de l'hôpital.
+- Ne laissez pas traîner la liste **Patients du jour** imprimée, et n'envoyez pas son fichier **CSV** en dehors de l'hôpital : elle porte des noms et des diagnostics.
 - Ne comparez pas **Toutes Rx** avec le rapport de stock : pour le stock, utilisez **Dispensé**.
 - N'additionnez pas les lignes de médicaments entre elles (comprimés et flacons).
 - N'additionnez pas la colonne **Patients** de **Diagnostics** ni celle de **Par service** / **Par médecin** : un patient peut avoir deux diagnostics ou voir deux services.

@@ -84,6 +84,11 @@ const ACTIONS = {
   // put under the order it was taken for (routes/pacs.attach.js): the number, patient id and
   // name the images came with -> the order's, how many images.
   PACS_STUDY_ATTACH:    'pacs.study.attach',
+  // Statistics (2026-11-17): the list of a period's patients with their diagnoses was taken out
+  // of the screen - printed or saved as a file (routes/stats.routes.js POST /patient-list/log).
+  // Looking at it on the screen writes nothing, as for a chart; the line says which days, how
+  // many visits, which department or doctor, on paper or as a file - never a name or a diagnosis.
+  PATIENT_LIST_EXPORT:  'statistics.patient_list.export',
 };
 const KNOWN = new Set(Object.values(ACTIONS));
 
